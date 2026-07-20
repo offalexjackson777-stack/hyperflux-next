@@ -9,6 +9,7 @@ publish.workspace = true
 [dependencies]
 hfx-core = { path = "../hfx-core" }
 hfx-domain = { path = "../hfx-domain" }
+hfx-errors = { path = "../hfx-errors" }
 hfx-protocol = { path = "../hfx-protocol" }
 rustix.workspace = true
 serde.workspace = true

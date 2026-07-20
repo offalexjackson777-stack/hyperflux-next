@@ -4,6 +4,7 @@
 
 mod framing;
 mod persistence;
+mod rpc;
 mod session;
 mod session_registry;
 
@@ -16,6 +17,7 @@ pub use persistence::{
     DEFAULT_MAX_PERSISTED_RECEIVERS, DEFAULT_MAX_PERSISTENCE_BYTES, FilePersistenceConfig,
     FilePersistenceError, FilePersistenceStore, PersistenceCommitter, PersistenceIoStage,
 };
+pub use rpc::{BridgeRpcBackend, ConnectionDispatcher, RpcFailure};
 pub use session::{
     AuthorizedSession, BridgeSession, BridgeSessionConfig, KernelSessionIdentitySource,
     SessionError, SessionIdentityError, SessionIdentitySource,

@@ -45,6 +45,10 @@ The bridge-wide session registry has a fixed capacity and permits one active con
 
 The generated protocol catalog owns request method names, request IDs, session credential access, and feature requirements. Bridge code consumes those generated accessors instead of maintaining a parallel method table. This keeps a future protocol method addition compile-visible and generation-driven.
 
+The connection dispatcher is the only layer that turns a typed RPC request into a method call. It performs negotiation and registry admission, verifies every session-bound envelope, routes only authorized method parameters to an application-neutral backend, and converts failures through the central error catalog. Backend debug text, credentials, payloads, and private paths never become protocol error messages.
+
+Disconnect is ordered deliberately: internal session authority is revoked first, then the backend releases client leases and terminally accounts for queued work. A cleanup failure therefore cannot leave a disconnected client authorized to reach transport. Repeated disconnect is a no-op.
+
 ## Local RPC Framing
 
 The Unix transport uses a four-byte unsigned big-endian payload length followed by one JSON protocol document. A clean EOF before any prefix byte ends the connection. A partial prefix, empty frame, partial payload, malformed document, or payload above 1 MiB is a terminal framing error.
