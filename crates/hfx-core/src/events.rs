@@ -196,4 +196,15 @@ impl BoundedEventLog {
     pub const fn latest_sequence(&self) -> SequenceNumber {
         self.latest
     }
+
+    /// Returns the complete cursor reflected by the current bridge projection.
+    #[must_use]
+    pub fn cursor(&self) -> EventCursor {
+        EventCursor {
+            stream_id: self.stream_id.clone(),
+            stream_epoch: self.stream_epoch,
+            projection_revision: self.projection_revision,
+            sequence: self.latest,
+        }
+    }
 }

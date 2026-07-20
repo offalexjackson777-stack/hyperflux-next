@@ -8,6 +8,7 @@ mod events;
 mod leases;
 mod lifecycle;
 mod ports;
+mod receiver_registry;
 mod restoration;
 mod transactions;
 
@@ -31,6 +32,9 @@ pub use ports::{
     RestoreRecordStatus, RestoreTrigger, SessionAuthority, StableIntentChange,
     StableIntentTombstone, StableLighting, SubmissionBinding, TransportDispatch, TransportFailure,
     TransportFailureFacts, TransportReceipt, TransportReconciliation, TransportTerminal,
+};
+pub use receiver_registry::{
+    DEFAULT_MAX_RECEIVERS, ReceiverLifecycleRegistry, ReceiverRegistryError,
 };
 pub use restoration::{
     CURRENT_PERSISTENCE_SCHEMA_VERSION, MAX_RESTORE_RECORDS_PER_RECEIVER,

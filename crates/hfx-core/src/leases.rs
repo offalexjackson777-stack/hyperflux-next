@@ -3,7 +3,8 @@
 use hfx_domain::{ClientId, LeaseDurationMs, LeaseId, LeaseState, MonotonicMs, RequestId};
 use hfx_protocol::{
     LeaseConflict, LeaseGrant, LeaseRequest, LeaseResult, ProtocolValidationError,
-    ReleaseLeaseRequest, RenewLeaseRequest, ResourceKey, validate_lease_request,
+    ReleaseLeaseRequest, RenewLeaseRequest, ResourceKey, ResourceOwnershipSnapshot,
+    validate_lease_request,
 };
 use std::collections::{BTreeMap, VecDeque};
 use std::fmt;
@@ -375,6 +376,35 @@ impl LeaseManager {
                     .iter()
                     .all(|resource| grant.resources.contains(resource))
         })
+    }
+
+    /// Projects active ownership for one exact receiver generation.
+    ///
+    /// Expired leases are removed before projection. The returned records are
+    /// canonical by resource identity because the ownership index is ordered.
+    #[must_use]
+    pub fn ownership_snapshot(
+        &mut self,
+        receiver_id: &hfx_domain::ReceiverId,
+        generation_id: hfx_domain::GenerationId,
+        now: MonotonicMs,
+    ) -> Vec<ResourceOwnershipSnapshot> {
+        self.expire(now);
+        self.owners
+            .iter()
+            .filter(|(resource, _)| {
+                &resource.receiver_id == receiver_id && resource.generation_id == generation_id
+            })
+            .filter_map(|(resource, lease_id)| {
+                let grant = self.leases.get(lease_id)?;
+                Some(ResourceOwnershipSnapshot {
+                    resource: resource.clone(),
+                    client_id: grant.client_id.clone(),
+                    lease_id: grant.lease_id.clone(),
+                    expires_at_ms: grant.expires_at_ms,
+                })
+            })
+            .collect()
     }
 
     fn expire(&mut self, now: MonotonicMs) {

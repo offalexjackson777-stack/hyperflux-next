@@ -121,6 +121,12 @@ fn initial_subscription_and_pagination_have_truthful_cursors() {
     log.append(draft(EventKind::BatteryUpdated))
         .expect("second event appends");
 
+    let projection_cursor = log.cursor();
+    assert_eq!(projection_cursor.stream_id.as_str(), "stream-1");
+    assert_eq!(projection_cursor.stream_epoch.get(), 1);
+    assert_eq!(projection_cursor.projection_revision.get(), 1);
+    assert_eq!(projection_cursor.sequence.get(), 2);
+
     let first = log
         .read(
             text("subscription-1"),

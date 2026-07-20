@@ -189,6 +189,68 @@ fn expiration_and_generation_replacement_revoke_authority() {
 }
 
 #[test]
+fn ownership_projection_is_canonical_generation_scoped_and_expiry_aware() {
+    let mut manager = LeaseManager::new(4, 8).expect("manager bounds are valid");
+    let receiver_one_mouse = resource("receiver-1", 1, "mouse-1");
+    let receiver_one_keyboard = resource("receiver-1", 1, "keyboard-1");
+    let receiver_two_mouse = resource("receiver-2", 1, "mouse-2");
+    let mut receiver_one_resources =
+        vec![receiver_one_mouse.clone(), receiver_one_keyboard.clone()];
+    receiver_one_resources.sort_unstable();
+    manager
+        .acquire(
+            lease_request("request-a", "client-a", receiver_one_resources),
+            text("lease-a"),
+            time(100),
+        )
+        .expect("first receiver resources are granted");
+    manager
+        .acquire(
+            lease_request("request-b", "client-b", vec![receiver_two_mouse.clone()]),
+            text("lease-b"),
+            time(100),
+        )
+        .expect("second receiver resource is granted");
+
+    let ownership =
+        manager.ownership_snapshot(&text("receiver-1"), common::generation(1), time(101));
+    assert_eq!(ownership.len(), 2);
+    assert!(ownership[0].resource < ownership[1].resource);
+    assert!(
+        ownership
+            .iter()
+            .all(|entry| entry.resource.receiver_id == text("receiver-1"))
+    );
+    assert!(
+        ownership
+            .iter()
+            .all(|entry| entry.client_id == text("client-a"))
+    );
+    assert!(
+        ownership
+            .iter()
+            .all(|entry| entry.lease_id == text("lease-a"))
+    );
+
+    assert!(
+        manager
+            .ownership_snapshot(&text("receiver-1"), common::generation(2), time(101))
+            .is_empty()
+    );
+    assert!(
+        manager
+            .ownership_snapshot(&text("receiver-1"), common::generation(1), time(10_100))
+            .is_empty()
+    );
+    assert!(!manager.owns(
+        &text("client-b"),
+        &text("lease-b"),
+        &[receiver_two_mouse],
+        time(10_100)
+    ));
+}
+
+#[test]
 fn owner_release_and_disconnect_are_explicit() {
     let mut manager = LeaseManager::new(2, 4).expect("manager bounds are valid");
     let mouse = resource("receiver-1", 1, "mouse-1");
