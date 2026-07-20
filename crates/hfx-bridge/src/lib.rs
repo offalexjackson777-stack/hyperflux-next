@@ -4,6 +4,7 @@
 
 mod framing;
 mod persistence;
+mod profile_authority;
 mod rpc;
 mod session;
 mod session_registry;
@@ -17,6 +18,10 @@ pub use persistence::{
     AtomicFileCommitter, BRIDGE_PERSISTENCE_SCHEMA, BridgePersistenceDocument,
     DEFAULT_MAX_PERSISTED_RECEIVERS, DEFAULT_MAX_PERSISTENCE_BYTES, FilePersistenceConfig,
     FilePersistenceError, FilePersistenceStore, PersistenceCommitter, PersistenceIoStage,
+};
+pub use profile_authority::{
+    DEFAULT_MAX_PROFILE_BINDINGS, ProfileBindingOutcome, ReceiverProfileBinding,
+    RuntimeProfileAuthority, RuntimeProfileAuthorityError, RuntimeProfileView,
 };
 pub use rpc::{BridgeRpcBackend, ConnectionDispatcher, RpcFailure};
 pub use session::{

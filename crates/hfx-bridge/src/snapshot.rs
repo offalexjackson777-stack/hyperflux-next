@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
+use crate::RuntimeProfileAuthority;
 use hfx_core::{
     BatteryValue, BoundedEventLog, DeviceLifecycle, EndpointLifecycle, LeaseManager,
     ObservationStamp, ReceiverLifecycleRegistry,
@@ -8,7 +9,6 @@ use hfx_domain::{
     EvidenceConfidence, GenerationId, MonotonicMs, ReceiverId, RestoreState, SupportLevel,
     TelemetryAvailability,
 };
-use hfx_profiles::RuntimeProfileCatalog;
 use hfx_protocol::{
     BatteryObservation, BridgeSnapshot, EndpointSnapshot, LogicalDeviceSnapshot, ReceiverSnapshot,
     SnapshotValidationError, validate_bridge_snapshot,
@@ -82,12 +82,12 @@ impl std::error::Error for SnapshotProjectionError {}
 /// Canonical application-neutral bridge snapshot projection.
 #[derive(Clone, Copy, Debug)]
 pub struct SnapshotProjector<'a> {
-    profiles: &'a RuntimeProfileCatalog,
+    profiles: &'a RuntimeProfileAuthority,
 }
 
 impl<'a> SnapshotProjector<'a> {
     #[must_use]
-    pub const fn new(profiles: &'a RuntimeProfileCatalog) -> Self {
+    pub const fn new(profiles: &'a RuntimeProfileAuthority) -> Self {
         Self { profiles }
     }
 
@@ -114,9 +114,19 @@ impl<'a> SnapshotProjector<'a> {
             let restoration = restoration
                 .restoration(machine.receiver_id(), generation.generation_id())
                 .map_err(SnapshotProjectionError::Restoration)?;
+            let profile_view = self.profiles.view(receivers);
             let devices = generation
                 .devices()
-                .map(|device| self.project_device(device))
+                .map(|device| {
+                    Self::project_device(
+                        profile_view.profile_for_device(
+                            machine.receiver_id(),
+                            generation.generation_id(),
+                            device,
+                        ),
+                        device,
+                    )
+                })
                 .collect();
             projected_receivers.push(ReceiverSnapshot {
                 receiver_id: machine.receiver_id().clone(),
@@ -140,11 +150,10 @@ impl<'a> SnapshotProjector<'a> {
         Ok(snapshot)
     }
 
-    fn project_device(self, device: &DeviceLifecycle) -> LogicalDeviceSnapshot {
-        let profile = self
-            .profiles
-            .child(device.identity().product_id())
-            .filter(|profile| profile.device_kind == device.identity().device_kind());
+    fn project_device(
+        profile: Option<&hfx_profiles::RuntimeProfile>,
+        device: &DeviceLifecycle,
+    ) -> LogicalDeviceSnapshot {
         let mut capabilities = profile.map_or_else(Vec::new, |profile| {
             profile
                 .capabilities

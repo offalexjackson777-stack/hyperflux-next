@@ -2,7 +2,7 @@
 
 use hfx_bridge::{
     DisabledRestorationSource, ReceiverRestorationSnapshot, RestorationProjectionError,
-    RestorationSnapshotSource, SnapshotProjectionError, SnapshotProjector,
+    RestorationSnapshotSource, RuntimeProfileAuthority, SnapshotProjectionError, SnapshotProjector,
 };
 use hfx_core::{
     BoundedEventLog, ChildIdentity, EndpointIdentity, EventDraft, LeaseManager, LifecycleLimits,
@@ -14,7 +14,6 @@ use hfx_domain::{
     MonotonicMs, PairingState, ProductId, ProjectionRevision, ReceiverId, RestoreState, RouteKind,
     RouteState, SequenceNumber, StreamEpoch, SupportLevel, TelemetryAvailability,
 };
-use hfx_profiles::RuntimeProfileCatalog;
 use hfx_protocol::{LeaseRequest, LeaseResult, ResourceKey};
 use std::collections::BTreeMap;
 
@@ -180,7 +179,8 @@ impl RestorationSnapshotSource for TestRestoration {
 
 #[test]
 fn complete_snapshot_is_canonical_profile_qualified_and_truthful() {
-    let profiles = RuntimeProfileCatalog::load().expect("profile catalog is valid");
+    let mut profiles = RuntimeProfileAuthority::load(4).expect("profile authority is valid");
+    bind_profiles(&mut profiles);
     let projector = SnapshotProjector::new(&profiles);
     let receivers = lifecycle_registry();
     let mut leases = LeaseManager::new(4, 8).expect("lease bounds are valid");
@@ -262,7 +262,8 @@ fn complete_snapshot_is_canonical_profile_qualified_and_truthful() {
 
 #[test]
 fn projection_excludes_absent_generations_old_ownership_and_expired_leases() {
-    let profiles = RuntimeProfileCatalog::load().expect("profile catalog is valid");
+    let mut profiles = RuntimeProfileAuthority::load(4).expect("profile authority is valid");
+    bind_profiles(&mut profiles);
     let projector = SnapshotProjector::new(&profiles);
     let receivers = lifecycle_registry();
     let mut leases = LeaseManager::new(2, 4).expect("lease bounds are valid");
@@ -294,7 +295,8 @@ fn projection_excludes_absent_generations_old_ownership_and_expired_leases() {
 
 #[test]
 fn unavailable_restoration_truth_fails_the_complete_snapshot() {
-    let profiles = RuntimeProfileCatalog::load().expect("profile catalog is valid");
+    let mut profiles = RuntimeProfileAuthority::load(4).expect("profile authority is valid");
+    bind_profiles(&mut profiles);
     let projector = SnapshotProjector::new(&profiles);
     let receivers = lifecycle_registry();
     let mut leases = LeaseManager::new(1, 1).expect("lease bounds are valid");
@@ -308,4 +310,15 @@ fn unavailable_restoration_truth_fails_the_complete_snapshot() {
             RestorationProjectionError::Unavailable
         ))
     );
+}
+
+fn bind_profiles(profiles: &mut RuntimeProfileAuthority) {
+    profiles
+        .bind_receiver(
+            text("receiver-1"),
+            generation(1),
+            hfx_domain::VendorId::try_from(0x1532_u16).expect("vendor id is valid"),
+            ProductId::try_from(0x00cf_u16).expect("product id is valid"),
+        )
+        .expect("receiver profile binds");
 }

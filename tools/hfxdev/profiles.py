@@ -48,7 +48,7 @@ CHILD_COMPATIBILITY_KEYS = {
     "required_sibling_kinds",
 }
 SURFACE_COMPATIBILITY_KEYS = {"receiver_protocols", "selection"}
-ROUTE_KINDS = {"hyperflux-wireless", "wired-usb", "bluetooth"}
+ROUTE_KINDS = {"hyperflux-wireless", "direct-usb", "bluetooth"}
 
 
 @dataclass(frozen=True)
