@@ -16,6 +16,14 @@ def _variant(value: str) -> str:
     return "".join(part[:1].upper() + part[1:] for part in value.replace(".", "-").split("-"))
 
 
+def _rust_strings(values: list[str]) -> str:
+    return "&[" + ", ".join(json.dumps(value) for value in values) + "]"
+
+
+def _rust_variants(type_name: str, values: list[str]) -> str:
+    return "&[" + ", ".join(f"{type_name}::{_variant(value)}" for value in values) + "]"
+
+
 def _wrapped_numbers(values: list[int], *, indent: str = "    ", width: int = 100) -> list[str]:
     lines: list[str] = []
     current = indent
@@ -132,7 +140,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "// SPDX-License-Identifier: GPL-2.0-only",
         f"// Profile source SHA-256: {catalog['source_sha256']}",
         "",
-        "use hfx_domain::{DeviceKind, ProfileKind, SupportLevel};",
+        "use hfx_domain::{DeviceKind, ProfileKind, RouteKind, SupportLevel};",
         "",
         "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
         "pub struct CapabilityRecord {",
@@ -160,6 +168,12 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "    pub vendor_id: Option<u16>,",
         "    pub product_id: Option<u16>,",
         "    pub model_name: &'static str,",
+        "    pub protocol_family: Option<&'static str>,",
+        "    pub receiver_protocols: &'static [&'static str],",
+        "    pub routes: &'static [RouteKind],",
+        "    pub supported_child_kinds: &'static [DeviceKind],",
+        "    pub required_sibling_kinds: &'static [DeviceKind],",
+        "    pub exact_child_combinations: bool,",
         "    pub capabilities: &'static [CapabilityRecord],",
         "    pub lighting: Option<LightingTopology>,",
         "}",
@@ -197,8 +211,20 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
     lines.extend(["pub const PROFILES: &[ProfileRecord] = &[",])
     for index, profile in enumerate(catalog["profiles"]):
         identity = profile["identity"]
+        compatibility = profile.get("compatibility", {})
         vendor = f"Some({identity['vendor_id']})" if "vendor_id" in identity else "None"
         product = f"Some({identity['product_id']})" if "product_id" in identity else "None"
+        protocol_family = compatibility.get("protocol_family")
+        protocol_family = f"Some({json.dumps(protocol_family)})" if protocol_family else "None"
+        receiver_protocols = _rust_strings(compatibility.get("receiver_protocols", []))
+        routes = _rust_variants("RouteKind", compatibility.get("routes", []))
+        supported_child_kinds = _rust_variants(
+            "DeviceKind", compatibility.get("supported_child_kinds", [])
+        )
+        required_sibling_kinds = _rust_variants(
+            "DeviceKind", compatibility.get("required_sibling_kinds", [])
+        )
+        exact_child_combinations = str(compatibility.get("exact_child_combinations", False)).lower()
         lighting = profile.get("transport", {}).get("lighting")
         if lighting:
             lighting_value = None
@@ -215,6 +241,12 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                 f"        vendor_id: {vendor},",
                 f"        product_id: {product},",
                 f'        model_name: "{profile["identity"]["model_name"]}",',
+                f"        protocol_family: {protocol_family},",
+                f"        receiver_protocols: {receiver_protocols},",
+                f"        routes: {routes},",
+                f"        supported_child_kinds: {supported_child_kinds},",
+                f"        required_sibling_kinds: {required_sibling_kinds},",
+                f"        exact_child_combinations: {exact_child_combinations},",
                 f"        capabilities: CAPABILITIES_{index},",
                 *(
                     [
@@ -311,6 +343,12 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
         "    std::uint16_t vendor_id;",
         "    std::uint16_t product_id;",
         "    std::string_view model_name;",
+        "    std::string_view protocol_family;",
+        "    std::span<const std::string_view> receiver_protocols;",
+        "    std::span<const RouteKind> routes;",
+        "    std::span<const DeviceKind> supported_child_kinds;",
+        "    std::span<const DeviceKind> required_sibling_kinds;",
+        "    bool exact_child_combinations;",
         "    std::span<const CapabilityRecord> capabilities;",
         "    const LightingTopology* lighting;",
         "};",
@@ -319,6 +357,28 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
         "",
     ]
     for index, profile in enumerate(catalog["profiles"]):
+        compatibility = profile.get("compatibility", {})
+        receiver_protocols = compatibility.get("receiver_protocols", [])
+        routes = compatibility.get("routes", [])
+        supported_child_kinds = compatibility.get("supported_child_kinds", [])
+        required_sibling_kinds = compatibility.get("required_sibling_kinds", [])
+        lines.extend(
+            [
+                f"inline constexpr std::array<std::string_view, {len(receiver_protocols)}> receiver_protocols_{index} {{{{"
+                + ", ".join(json.dumps(value) for value in receiver_protocols)
+                + "}};",
+                f"inline constexpr std::array<RouteKind, {len(routes)}> routes_{index} {{{{"
+                + ", ".join(f"RouteKind::{_variant(value)}" for value in routes)
+                + "}};",
+                f"inline constexpr std::array<DeviceKind, {len(supported_child_kinds)}> supported_child_kinds_{index} {{{{"
+                + ", ".join(f"DeviceKind::{_variant(value)}" for value in supported_child_kinds)
+                + "}};",
+                f"inline constexpr std::array<DeviceKind, {len(required_sibling_kinds)}> required_sibling_kinds_{index} {{{{"
+                + ", ".join(f"DeviceKind::{_variant(value)}" for value in required_sibling_kinds)
+                + "}};",
+                "",
+            ]
+        )
         lines.append(f"inline constexpr std::array<CapabilityRecord, {len(profile['capabilities'])}> capabilities_{index} {{{{")
         for capability in profile["capabilities"]:
             writable = str(capability_defs[capability["id"]]["access"] == "write").lower()
@@ -341,15 +401,19 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
     lines.append(f"inline constexpr std::array<ProfileRecord, {len(catalog['profiles'])}> catalog {{{{")
     for index, profile in enumerate(catalog["profiles"]):
         identity = profile["identity"]
+        compatibility = profile.get("compatibility", {})
         has_usb = "vendor_id" in identity
         vendor = identity.get("vendor_id", 0)
         product = identity.get("product_id", 0)
+        protocol_family = json.dumps(compatibility.get("protocol_family", ""))
+        exact_child_combinations = str(compatibility.get("exact_child_combinations", False)).lower()
         lighting = f"&lighting_{index}" if profile.get("transport", {}).get("lighting") else "nullptr"
         lines.append(
             "    {"
             f'"{profile["profile_id"]}", "{profile["runtime_sha256"]}", {profile["revision"]}, ProfileKind::{_variant(profile["kind"])}, '
             f'DeviceKind::{_variant(profile["device_kind"])}, {str(has_usb).lower()}, {vendor}, {product}, '
-            f'"{profile["identity"]["model_name"]}", capabilities_{index}, {lighting}'
+            f'"{profile["identity"]["model_name"]}", {protocol_family}, receiver_protocols_{index}, routes_{index}, '
+            f'supported_child_kinds_{index}, required_sibling_kinds_{index}, {exact_child_combinations}, capabilities_{index}, {lighting}'
             "},"
         )
     lines.extend(

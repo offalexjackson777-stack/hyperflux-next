@@ -37,6 +37,18 @@ FORBIDDEN_COMBINATION_KEYS = {
     "required_profiles",
     "qualified_pairing",
 }
+RECEIVER_COMPATIBILITY_KEYS = {
+    "protocol_family",
+    "supported_child_kinds",
+    "exact_child_combinations",
+}
+CHILD_COMPATIBILITY_KEYS = {
+    "receiver_protocols",
+    "routes",
+    "required_sibling_kinds",
+}
+SURFACE_COMPATIBILITY_KEYS = {"receiver_protocols", "selection"}
+ROUTE_KINDS = {"hyperflux-wireless", "wired-usb", "bluetooth"}
 
 
 @dataclass(frozen=True)
@@ -111,6 +123,61 @@ def _expect_string_list(value: Any, label: str, *, allow_empty: bool = True) -> 
         raise ModelError(f"{label}: every item must be a non-empty string")
     require_unique(value, label)
     return value
+
+
+def _expect_unique_string_list(
+    value: Any, label: str, *, allow_empty: bool = True
+) -> list[str]:
+    result = _expect_string_list(value, label, allow_empty=allow_empty)
+    if result != sorted(result):
+        raise ModelError(f"{label}: values must be sorted")
+    return result
+
+
+def _validate_compatibility(profile: dict[str, Any]) -> None:
+    identifier = profile["profile_id"]
+    kind = profile["kind"]
+    compatibility = profile.get("compatibility")
+    if not isinstance(compatibility, dict):
+        raise ModelError(f"{identifier}: compatibility is required")
+    if kind == "receiver":
+        _expect_keys(compatibility, RECEIVER_COMPATIBILITY_KEYS, f"{identifier} compatibility")
+        _expect_nonempty_string(
+            compatibility.get("protocol_family"), f"{identifier} protocol family"
+        )
+        child_kinds = _expect_unique_string_list(
+            compatibility.get("supported_child_kinds"),
+            f"{identifier} supported child kinds",
+            allow_empty=False,
+        )
+        if any(value not in {"keyboard", "mouse"} for value in child_kinds):
+            raise ModelError(f"{identifier}: unsupported child kind")
+        if compatibility.get("exact_child_combinations") is not False:
+            raise ModelError(f"{identifier}: receiver must compose children independently")
+        return
+    expected = CHILD_COMPATIBILITY_KEYS if kind == "child" else SURFACE_COMPATIBILITY_KEYS
+    _expect_keys(compatibility, expected, f"{identifier} compatibility")
+    _expect_unique_string_list(
+        compatibility.get("receiver_protocols"),
+        f"{identifier} receiver protocols",
+        allow_empty=False,
+    )
+    if kind == "surface":
+        if compatibility.get("selection") != "explicit-metadata-not-usb-guess":
+            raise ModelError(f"{identifier}: surface selection must remain explicit metadata")
+        return
+    routes = _expect_unique_string_list(
+        compatibility.get("routes"), f"{identifier} routes", allow_empty=False
+    )
+    if any(route not in ROUTE_KINDS for route in routes):
+        raise ModelError(f"{identifier}: invalid route kind")
+    sibling_kinds = _expect_unique_string_list(
+        compatibility.get("required_sibling_kinds"), f"{identifier} required sibling kinds"
+    )
+    if any(value not in {"keyboard", "mouse"} for value in sibling_kinds):
+        raise ModelError(f"{identifier}: invalid sibling kind")
+    if sibling_kinds:
+        raise ModelError(f"{identifier}: child profile must not require a sibling device")
 
 
 def _walk_keys(value: Any) -> set[str]:
@@ -322,6 +389,7 @@ def _validate_profiles(
             raise ModelError(f"{identifier}: surface kind mismatch")
         if kind == "child" and device_kind not in {"mouse", "keyboard"}:
             raise ModelError(f"{identifier}: child must be a mouse or keyboard")
+        _validate_compatibility(profile)
         revision = profile.get("revision")
         if isinstance(revision, bool) or not isinstance(revision, int) or revision < 1:
             raise ModelError(f"{identifier}: invalid revision")
@@ -342,10 +410,6 @@ def _validate_profiles(
             transport = profile.get("transport", {})
             if transport.get("application_raw_frames") is not False:
                 raise ModelError(f"{identifier}: applications must not supply raw receiver frames")
-            if profile.get("compatibility", {}).get("exact_child_combinations") is not False:
-                raise ModelError(f"{identifier}: receiver must compose children independently")
-        if kind == "child" and profile.get("compatibility", {}).get("required_sibling_kinds") != []:
-            raise ModelError(f"{identifier}: child profile must not require a sibling device")
         capabilities = profile.get("capabilities")
         if not isinstance(capabilities, list) or not capabilities:
             raise ModelError(f"{identifier}: profile capabilities are required")

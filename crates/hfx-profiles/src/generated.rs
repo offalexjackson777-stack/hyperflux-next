@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Profile source SHA-256: 261ec79444fa1af6ddf021cd0336089fc58a80e1104c1171c45dde88cdda6b50
 
-use hfx_domain::{DeviceKind, ProfileKind, SupportLevel};
+use hfx_domain::{DeviceKind, ProfileKind, RouteKind, SupportLevel};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CapabilityRecord {
@@ -30,6 +30,12 @@ pub struct ProfileRecord {
     pub vendor_id: Option<u16>,
     pub product_id: Option<u16>,
     pub model_name: &'static str,
+    pub protocol_family: Option<&'static str>,
+    pub receiver_protocols: &'static [&'static str],
+    pub routes: &'static [RouteKind],
+    pub supported_child_kinds: &'static [DeviceKind],
+    pub required_sibling_kinds: &'static [DeviceKind],
+    pub exact_child_combinations: bool,
     pub capabilities: &'static [CapabilityRecord],
     pub lighting: Option<LightingTopology>,
 }
@@ -244,6 +250,12 @@ pub const PROFILES: &[ProfileRecord] = &[
         vendor_id: Some(5426),
         product_id: Some(205),
         model_name: "Razer Basilisk V3 Pro 35K",
+        protocol_family: None,
+        receiver_protocols: &["razer-hyperflux-v2"],
+        routes: &[RouteKind::HyperfluxWireless],
+        supported_child_kinds: &[],
+        required_sibling_kinds: &[],
+        exact_child_combinations: false,
         capabilities: CAPABILITIES_0,
         lighting: Some(LightingTopology {
             physical_led_count: 13,
@@ -262,6 +274,12 @@ pub const PROFILES: &[ProfileRecord] = &[
         vendor_id: Some(5426),
         product_id: Some(662),
         model_name: "Razer DeathStalker V2 Pro Tenkeyless",
+        protocol_family: None,
+        receiver_protocols: &["razer-hyperflux-v2"],
+        routes: &[RouteKind::HyperfluxWireless],
+        supported_child_kinds: &[],
+        required_sibling_kinds: &[],
+        exact_child_combinations: false,
         capabilities: CAPABILITIES_1,
         lighting: Some(LightingTopology {
             physical_led_count: 84,
@@ -280,6 +298,12 @@ pub const PROFILES: &[ProfileRecord] = &[
         vendor_id: Some(5426),
         product_id: Some(207),
         model_name: "Razer HyperFlux V2 Receiver",
+        protocol_family: Some("razer-hyperflux-v2"),
+        receiver_protocols: &[],
+        routes: &[],
+        supported_child_kinds: &[DeviceKind::Keyboard, DeviceKind::Mouse],
+        required_sibling_kinds: &[],
+        exact_child_combinations: false,
         capabilities: CAPABILITIES_2,
         lighting: None,
     },
@@ -292,6 +316,12 @@ pub const PROFILES: &[ProfileRecord] = &[
         vendor_id: None,
         product_id: None,
         model_name: "Razer HyperFlux V2 Hard Edition",
+        protocol_family: None,
+        receiver_protocols: &["razer-hyperflux-v2"],
+        routes: &[],
+        supported_child_kinds: &[],
+        required_sibling_kinds: &[],
+        exact_child_combinations: false,
         capabilities: CAPABILITIES_3,
         lighting: None,
     },

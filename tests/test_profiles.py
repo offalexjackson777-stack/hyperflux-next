@@ -75,6 +75,19 @@ class ProfileCompilerTests(unittest.TestCase):
         with self.assertRaisesRegex(ModelError, "must not require a sibling"):
             _validate_profiles(profiles, capabilities, claims)
 
+    def test_compatibility_is_kind_specific_bounded_and_route_checked(self) -> None:
+        profiles, capabilities, claims = self.validation_copies()
+        child = next(profile for profile in profiles if profile["kind"] == "child")
+        child["compatibility"]["surprise"] = True
+        with self.assertRaisesRegex(ModelError, "unsupported keys: surprise"):
+            _validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        child = next(profile for profile in profiles if profile["kind"] == "child")
+        child["compatibility"]["routes"] = ["imaginary-route"]
+        with self.assertRaisesRegex(ModelError, "invalid route kind"):
+            _validate_profiles(profiles, capabilities, claims)
+
     def test_writable_capability_without_physical_evidence_is_rejected(self) -> None:
         profiles, capabilities, claims = self.validation_copies()
         claim = claims["claim.child.00cd.complete-led-map"]

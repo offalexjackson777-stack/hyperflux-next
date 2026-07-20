@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use hfx_domain::{DeviceKind, ProfileKind};
+use hfx_domain::{DeviceKind, ProfileKind, RouteKind};
 use hfx_profiles::{
     PROFILES, RuntimeProfileCatalog, child_profile_by_product_id, profile_by_id,
     receiver_profile_by_usb_id,
@@ -13,7 +13,16 @@ fn receiver_and_children_resolve_independently() {
     let keyboard = child_profile_by_product_id(0x0296).expect("keyboard is qualified");
 
     assert_eq!(receiver.profile_kind, ProfileKind::Receiver);
+    assert_eq!(receiver.protocol_family, Some("razer-hyperflux-v2"));
+    assert_eq!(
+        receiver.supported_child_kinds,
+        &[DeviceKind::Keyboard, DeviceKind::Mouse]
+    );
+    assert!(!receiver.exact_child_combinations);
     assert_eq!(mouse.device_kind, DeviceKind::Mouse);
+    assert_eq!(mouse.receiver_protocols, &["razer-hyperflux-v2"]);
+    assert_eq!(mouse.routes, &[RouteKind::HyperfluxWireless]);
+    assert!(mouse.required_sibling_kinds.is_empty());
     assert_eq!(keyboard.device_kind, DeviceKind::Keyboard);
     assert_ne!(mouse.id, keyboard.id);
 }

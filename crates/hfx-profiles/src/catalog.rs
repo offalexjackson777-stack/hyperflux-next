@@ -3,7 +3,7 @@
 use crate::{LightingTopology, PROFILES, ProfileRecord};
 use hfx_domain::{
     CapabilityId, CarrierIndex, DeviceKind, DomainValueError, LedCount, ProductId, ProfileDigest,
-    ProfileId, ProfileKind, ProfileRevision, SupportLevel, VendorId,
+    ProfileId, ProfileKind, ProfileRevision, RouteKind, SupportLevel, VendorId,
 };
 use std::collections::BTreeMap;
 use std::fmt;
@@ -85,6 +85,12 @@ pub struct RuntimeProfile {
     pub vendor_id: Option<VendorId>,
     pub product_id: Option<ProductId>,
     pub model_name: &'static str,
+    pub protocol_family: Option<&'static str>,
+    pub receiver_protocols: &'static [&'static str],
+    pub routes: &'static [RouteKind],
+    pub supported_child_kinds: &'static [DeviceKind],
+    pub required_sibling_kinds: &'static [DeviceKind],
+    pub exact_child_combinations: bool,
     pub capabilities: Vec<RuntimeCapability>,
     pub lighting: Option<RuntimeLightingTopology>,
 }
@@ -204,6 +210,12 @@ fn convert_profile(record: &ProfileRecord) -> Result<RuntimeProfile, ProfileCata
         vendor_id: record.vendor_id.map(VendorId::try_from).transpose()?,
         product_id: record.product_id.map(ProductId::try_from).transpose()?,
         model_name: record.model_name,
+        protocol_family: record.protocol_family,
+        receiver_protocols: record.receiver_protocols,
+        routes: record.routes,
+        supported_child_kinds: record.supported_child_kinds,
+        required_sibling_kinds: record.required_sibling_kinds,
+        exact_child_combinations: record.exact_child_combinations,
         capabilities: record
             .capabilities
             .iter()
