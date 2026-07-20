@@ -66,6 +66,8 @@ Inspect migration progress without changing files:
 | --- | --- |
 | `architecture/` | Machine-readable ownership, invariants, boundaries, and release interlocks |
 | `schemas/` | Versioned schemas for canonical project data |
+| `crates/hfx-domain/` | Generated Rust strong types and validation |
+| `sdk/` | Generated language bindings for integrations |
 | `migration/` | Source identities, generated inventories, and reviewed subsystem decisions |
 | `docs/architecture/` | Human design sources and decisions |
 | `docs/generated/` | Deterministic views generated from canonical data |
@@ -77,9 +79,18 @@ tests exist. The engineering and reverse-engineering repositories remain the
 authoritative locations for laboratory code, watched coordinators, captures,
 and historical proof machinery.
 
+Shared identifiers, state enums, ranges, and wire values are defined once in
+[`schemas/domain-catalog.json`](schemas/domain-catalog.json). Rust, C++, Python,
+and the [domain reference](docs/generated/domain-types.md) are generated from
+that source and compile together during verification.
+
+Development tool versions are recorded in
+[`toolchains/pins.json`](toolchains/pins.json). Verification selects the exact
+installed Rust toolchain without triggering an implicit network update; a
+future reproducible environment will provision these pins explicitly.
+
 ## Licensing
 
 Project-owned work is licensed under `GPL-2.0-only`. Imported material retains
 its original license and must pass a provenance and compatibility review before
 admission. See [License Decision](LICENSE-DECISION.md).
-

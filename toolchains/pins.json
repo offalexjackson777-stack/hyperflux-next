@@ -1,0 +1,8 @@
+{
+  "schema": "hyperflux-toolchain-pins-v1",
+  "rustup_toolchain": "1.95.0-x86_64-unknown-linux-gnu",
+  "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
+  "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+  "python": "3.14",
+  "clang_major": 22
+}

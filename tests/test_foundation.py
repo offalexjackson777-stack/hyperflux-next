@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 from hfxdev.migration import summary
 from hfxdev.model import load_foundation
 from hfxdev.render import rendered_files
+from hfxdev.model import load_json
 
 
 class FoundationTests(unittest.TestCase):
@@ -51,7 +52,17 @@ class FoundationTests(unittest.TestCase):
         self.assertIn("Default: REJECT_UNTIL_REVIEWED", text)
         self.assertIn("Subsystem decisions:", text)
 
+    def test_domain_catalog_names_are_unique_across_kinds(self) -> None:
+        catalog = load_json(ROOT / "schemas" / "domain-catalog.json")
+        names = [item["name"] for key in ("numeric_types", "string_types", "enums") for item in catalog[key]]
+        self.assertEqual(len(names), len(set(names)))
+
+    def test_domain_catalog_ranges_are_ordered(self) -> None:
+        catalog = load_json(ROOT / "schemas" / "domain-catalog.json")
+        for item in catalog["numeric_types"]:
+            with self.subTest(type=item["name"]):
+                self.assertLessEqual(item["minimum"], item["maximum"])
+
 
 if __name__ == "__main__":
     unittest.main()
-

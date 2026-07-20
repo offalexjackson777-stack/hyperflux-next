@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -23,7 +24,15 @@ ALLOWED_DISPOSITIONS = {
     "REJECT",
 }
 ALLOWED_STATUSES = {"PENDING_REVIEW", "IN_PROGRESS", "ACCEPTED", "REJECTED"}
-IGNORED_PATH_PARTS = {".git", ".hfx", "__pycache__"}
+IGNORED_PATH_PARTS = {
+    ".git",
+    ".hfx",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "target",
+}
 
 
 def _check_constitution(constitution: dict) -> None:
@@ -119,6 +128,72 @@ def _run_tests(root: Path) -> None:
         raise ModelError("foundation unit tests failed")
 
 
+def _tool_environment(root: Path) -> dict[str, str]:
+    pins = load_json(root / "toolchains" / "pins.json")
+    environment = os.environ.copy()
+    environment["RUSTUP_TOOLCHAIN"] = pins["rustup_toolchain"]
+    return environment
+
+
+def _run_command(root: Path, command: list[str], label: str) -> None:
+    result = subprocess.run(command, cwd=root, check=False, env=_tool_environment(root))
+    if result.returncode != 0:
+        raise ModelError(f"{label} failed")
+
+
+def _check_language_bindings(root: Path) -> None:
+    _run_command(root, ["cargo", "fmt", "--all", "--", "--check"], "Rust formatting")
+    _run_command(root, ["cargo", "clippy", "--workspace", "--all-targets", "--", "-D", "warnings"], "Rust Clippy")
+    _run_command(root, ["cargo", "test", "--workspace", "--all-targets", "--locked"], "Rust tests")
+    binary = root / "build" / "domain-types-smoke"
+    binary.parent.mkdir(parents=True, exist_ok=True)
+    _run_command(
+        root,
+        [
+            "clang++",
+            "-std=c++20",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-Isdk/cpp/include",
+            "tests/cpp/domain_types_smoke.cpp",
+            "-o",
+            str(binary),
+        ],
+        "C++ SDK compile",
+    )
+    _run_command(root, [str(binary)], "C++ SDK smoke test")
+
+
+def _check_toolchain(root: Path) -> None:
+    pins = load_json(root / "toolchains" / "pins.json")
+    environment = _tool_environment(root)
+
+    def output(command: list[str]) -> str:
+        result = subprocess.run(
+            command,
+            cwd=root,
+            check=False,
+            env=environment,
+            text=True,
+            stdout=subprocess.PIPE,
+        )
+        if result.returncode != 0:
+            raise ModelError(f"toolchain command failed: {' '.join(command)}")
+        return result.stdout.strip()
+
+    if output(["rustc", "--version"]) != pins["rustc"]:
+        raise ModelError("rustc does not match toolchains/pins.json")
+    if output(["cargo", "--version"]) != pins["cargo"]:
+        raise ModelError("cargo does not match toolchains/pins.json")
+    if not output([sys.executable, "--version"]).startswith(f"Python {pins['python']}"):
+        raise ModelError("Python does not match toolchains/pins.json")
+    clang = output(["clang++", "--version"])
+    if not clang.startswith(f"clang version {pins['clang_major']}."):
+        raise ModelError("clang++ does not match toolchains/pins.json")
+
+
 def verify_all(root: Path) -> list[str]:
     constitution, sources, ledger = load_foundation(root)
     _check_constitution(constitution)
@@ -127,6 +202,8 @@ def verify_all(root: Path) -> list[str]:
     _check_generated(root)
     _check_repository_paths(root)
     _run_tests(root)
+    _check_toolchain(root)
+    _check_language_bindings(root)
     return [
         "architecture constitution",
         "source identities and inventories",
@@ -134,5 +211,6 @@ def verify_all(root: Path) -> list[str]:
         "generated truth",
         "private-path boundary",
         "foundation unit tests",
+        "pinned toolchain contract",
+        "generated Rust, C++, and Python domain bindings",
     ]
-
