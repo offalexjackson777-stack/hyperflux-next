@@ -83,6 +83,8 @@ Persistence stores semantic stable intent and exact profile identity. It never s
 
 Restoration requires a fresh qualified generation, current routes, a matching profile digest, new ownership, and one durable lifecycle claim. A surviving claim, partial checkpoint, or failed target blocks a false complete result. Software effects remain application computations and restart through the application's saved startup profile.
 
+The production persistence adapter keeps one strict, schema-versioned document in a private service-owned directory. It holds an advisory writer lock, rejects symlinks and broadly readable files, bounds bytes and receiver-scoped records, and writes through a same-directory temporary file followed by file sync, atomic replacement, and directory sync. A failure before replacement changes neither disk nor the in-process compare-and-set view. A directory-sync failure reports uncertain durability after advancing the in-process view to the already-visible replacement, so a stale retry conflicts instead of silently replaying an old revision.
+
 ## Protocol Evolution
 
 Clients offer a protocol range and optional feature identifiers. The bridge selects one exact version and emits that version's exact record shapes. Hardware capability discovery is separate from protocol feature negotiation.

@@ -191,7 +191,7 @@
     },
     {
       "id": "rust-unit",
-      "title": "Rust domain and profile unit tests",
+      "title": "Rust bridge, core, domain, profile, and protocol tests",
       "owned_domain": "rust",
       "lanes": ["fast", "full-software"],
       "runner": "rust-unit",
@@ -202,7 +202,7 @@
       "timeout_seconds": 180,
       "dependencies": ["rust-clippy"],
       "isolation": "exclusive-process",
-      "cache_inputs": ["Cargo.toml", "Cargo.lock", "crates/hfx-core/**/*.rs", "crates/hfx-domain/**/*.rs", "crates/hfx-errors/**/*.rs", "crates/hfx-profiles/**/*.rs", "crates/hfx-protocol/**/*.rs"],
+      "cache_inputs": ["Cargo.toml", "Cargo.lock", "crates/hfx-bridge/**/*.rs", "crates/hfx-core/**/*.rs", "crates/hfx-domain/**/*.rs", "crates/hfx-errors/**/*.rs", "crates/hfx-profiles/**/*.rs", "crates/hfx-protocol/**/*.rs"],
       "produced_evidence": ["rust-unit-result"],
       "resume_policy": "rerun"
     },
