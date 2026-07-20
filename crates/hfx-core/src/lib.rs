@@ -17,7 +17,7 @@ pub use coordinator::{
 };
 pub use diagnostics::{BoundedDiagnosticSink, DiagnosticRegistry, DiagnosticRegistryError};
 pub use events::{BoundedEventLog, EventDraft, EventLogError};
-pub use leases::{LeaseManager, LeaseManagerError};
+pub use leases::{LeaseDecision, LeaseManager, LeaseManagerError};
 pub use lifecycle::{
     BatteryLifecycle, BatteryValue, ChildIdentity, DEFAULT_MAX_DEVICE_ENDPOINTS,
     DEFAULT_MAX_LIFECYCLE_DEVICES, DeviceLifecycle, EndpointIdentity, EndpointLifecycle,

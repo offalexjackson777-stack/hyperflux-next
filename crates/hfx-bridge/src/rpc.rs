@@ -14,6 +14,32 @@ use hfx_protocol::{
 };
 use std::fmt;
 
+/// Immutable authority available to one already-authorized backend call.
+///
+/// Keeping request-scoped authority in one context prevents backend method
+/// signatures from drifting as connection policy gains additional metadata.
+#[derive(Clone, Copy, Debug)]
+pub struct BackendRequestContext<'a> {
+    session: &'a AuthorizedSession,
+    sessions: &'a SessionRegistry,
+}
+
+impl<'a> BackendRequestContext<'a> {
+    const fn new(session: &'a AuthorizedSession, sessions: &'a SessionRegistry) -> Self {
+        Self { session, sessions }
+    }
+
+    #[must_use]
+    pub const fn session(self) -> &'a AuthorizedSession {
+        self.session
+    }
+
+    #[must_use]
+    pub const fn sessions(self) -> &'a SessionRegistry {
+        self.sessions
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct RpcFailure {
     code: ErrorCode,
@@ -125,14 +151,17 @@ pub trait BridgeRpcBackend {
     /// # Errors
     ///
     /// Returns a catalog-backed failure when a snapshot cannot be projected.
-    fn snapshot(&mut self, session: &AuthorizedSession) -> Result<BridgeSnapshot, RpcFailure>;
+    fn snapshot(
+        &mut self,
+        context: BackendRequestContext<'_>,
+    ) -> Result<BridgeSnapshot, RpcFailure>;
 
     /// # Errors
     ///
     /// Returns a catalog-backed lease admission failure.
     fn acquire_lease(
         &mut self,
-        session: &AuthorizedSession,
+        context: BackendRequestContext<'_>,
         request: LeaseRequest,
     ) -> Result<LeaseResult, RpcFailure>;
 
@@ -141,7 +170,7 @@ pub trait BridgeRpcBackend {
     /// Returns a catalog-backed renewal failure.
     fn renew_lease(
         &mut self,
-        session: &AuthorizedSession,
+        context: BackendRequestContext<'_>,
         request: RenewLeaseRequest,
     ) -> Result<LeaseResult, RpcFailure>;
 
@@ -150,7 +179,7 @@ pub trait BridgeRpcBackend {
     /// Returns a catalog-backed release failure.
     fn release_lease(
         &mut self,
-        session: &AuthorizedSession,
+        context: BackendRequestContext<'_>,
         request: ReleaseLeaseRequest,
     ) -> Result<LeaseResult, RpcFailure>;
 
@@ -159,7 +188,7 @@ pub trait BridgeRpcBackend {
     /// Returns a catalog-backed transaction admission failure.
     fn submit_transaction(
         &mut self,
-        session: &AuthorizedSession,
+        context: BackendRequestContext<'_>,
         request: TransactionRequest,
     ) -> Result<TransactionResult, RpcFailure>;
 
@@ -168,7 +197,7 @@ pub trait BridgeRpcBackend {
     /// Returns a catalog-backed outcome lookup failure.
     fn transaction_outcome(
         &mut self,
-        session: &AuthorizedSession,
+        context: BackendRequestContext<'_>,
         request: TransactionLookup,
     ) -> Result<TransactionResult, RpcFailure>;
 
@@ -177,7 +206,7 @@ pub trait BridgeRpcBackend {
     /// Returns a catalog-backed subscription failure.
     fn subscribe(
         &mut self,
-        session: &AuthorizedSession,
+        context: BackendRequestContext<'_>,
         request: SubscriptionRequest,
     ) -> Result<EventBatch, RpcFailure>;
 
@@ -186,7 +215,7 @@ pub trait BridgeRpcBackend {
     /// Returns a catalog-backed diagnostic projection failure.
     fn diagnostics(
         &mut self,
-        session: &AuthorizedSession,
+        context: BackendRequestContext<'_>,
     ) -> Result<DiagnosticSnapshot, RpcFailure>;
 
     /// Releases client-owned resources and invalidates queued work after the
@@ -254,34 +283,35 @@ impl ConnectionDispatcher {
         };
 
         let error_request_id = request_id.clone();
+        let context = BackendRequestContext::new(&authorization, sessions);
         let response = match request {
             RpcRequest::Snapshot(_) => backend
-                .snapshot(&authorization)
+                .snapshot(context)
                 .map(|result| RpcResponse::SnapshotSuccess(self.success(request_id, result))),
             RpcRequest::AcquireLease(envelope) => backend
-                .acquire_lease(&authorization, envelope.params)
+                .acquire_lease(context, envelope.params)
                 .map(|result| RpcResponse::AcquireLeaseSuccess(self.success(request_id, result))),
             RpcRequest::RenewLease(envelope) => backend
-                .renew_lease(&authorization, envelope.params)
+                .renew_lease(context, envelope.params)
                 .map(|result| RpcResponse::RenewLeaseSuccess(self.success(request_id, result))),
             RpcRequest::ReleaseLease(envelope) => backend
-                .release_lease(&authorization, envelope.params)
+                .release_lease(context, envelope.params)
                 .map(|result| RpcResponse::ReleaseLeaseSuccess(self.success(request_id, result))),
             RpcRequest::SubmitTransaction(envelope) => backend
-                .submit_transaction(&authorization, envelope.params)
+                .submit_transaction(context, envelope.params)
                 .map(|result| {
                     RpcResponse::SubmitTransactionSuccess(self.success(request_id, result))
                 }),
             RpcRequest::TransactionOutcome(envelope) => backend
-                .transaction_outcome(&authorization, envelope.params)
+                .transaction_outcome(context, envelope.params)
                 .map(|result| {
                     RpcResponse::TransactionOutcomeSuccess(self.success(request_id, result))
                 }),
             RpcRequest::Subscribe(envelope) => backend
-                .subscribe(&authorization, envelope.params)
+                .subscribe(context, envelope.params)
                 .map(|result| RpcResponse::SubscribeSuccess(self.success(request_id, result))),
             RpcRequest::Diagnostics(_) => backend
-                .diagnostics(&authorization)
+                .diagnostics(context)
                 .map(|result| RpcResponse::DiagnosticsSuccess(self.success(request_id, result))),
             RpcRequest::Negotiate(_) => unreachable!("negotiation returned before method routing"),
         };

@@ -25,6 +25,13 @@ enum LeaseOperation {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LeaseDecision {
+    pub result: LeaseResult,
+    pub changed: bool,
+    pub replayed: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LeaseManagerError {
     InvalidCapacity,
     InvalidRequest(ProtocolValidationError),
@@ -94,6 +101,21 @@ impl LeaseManager {
         lease_id: LeaseId,
         now: MonotonicMs,
     ) -> Result<LeaseResult, LeaseManagerError> {
+        self.acquire_decision(request, lease_id, now)
+            .map(|decision| decision.result)
+    }
+
+    /// Acquires an atomic resource set and reports whether live ownership changed.
+    ///
+    /// # Errors
+    ///
+    /// Matches [`Self::acquire`].
+    pub fn acquire_decision(
+        &mut self,
+        request: LeaseRequest,
+        lease_id: LeaseId,
+        now: MonotonicMs,
+    ) -> Result<LeaseDecision, LeaseManagerError> {
         self.expire(now);
         let operation = LeaseOperation::Acquire(request);
         let LeaseOperation::Acquire(request) = &operation else {
@@ -103,7 +125,11 @@ impl LeaseManager {
         let key = (request.client_id.clone(), request.request_id.clone());
         if let Some(record) = self.history.iter().find(|record| record.key == key) {
             if record.request == operation {
-                return Ok(record.result.clone());
+                return Ok(LeaseDecision {
+                    result: record.result.clone(),
+                    changed: false,
+                    replayed: true,
+                });
             }
             return Err(LeaseManagerError::RequestIdReused);
         }
@@ -123,7 +149,11 @@ impl LeaseManager {
                 result: result.clone(),
                 pinned_lease: None,
             });
-            return Ok(result);
+            return Ok(LeaseDecision {
+                result,
+                changed: false,
+                replayed: false,
+            });
         }
 
         if self.leases.contains_key(&lease_id) || self.leases.len() >= self.max_leases {
@@ -155,7 +185,11 @@ impl LeaseManager {
             result: result.clone(),
             pinned_lease: Some(lease_id),
         });
-        Ok(result)
+        Ok(LeaseDecision {
+            result,
+            changed: true,
+            replayed: false,
+        })
     }
 
     /// Idempotently renews a currently owned lease using the protocol request
@@ -171,6 +205,20 @@ impl LeaseManager {
         request: RenewLeaseRequest,
         now: MonotonicMs,
     ) -> Result<LeaseResult, LeaseManagerError> {
+        self.renew_request_decision(request, now)
+            .map(|decision| decision.result)
+    }
+
+    /// Renews one lease and reports whether its live expiry changed.
+    ///
+    /// # Errors
+    ///
+    /// Matches [`Self::renew_request`].
+    pub fn renew_request_decision(
+        &mut self,
+        request: RenewLeaseRequest,
+        now: MonotonicMs,
+    ) -> Result<LeaseDecision, LeaseManagerError> {
         self.expire(now);
         let operation = LeaseOperation::Renew(request);
         let LeaseOperation::Renew(request) = &operation else {
@@ -179,7 +227,11 @@ impl LeaseManager {
         let key = (request.client_id.clone(), request.request_id.clone());
         if let Some(record) = self.history.iter().find(|record| record.key == key) {
             if record.request == operation {
-                return Ok(record.result.clone());
+                return Ok(LeaseDecision {
+                    result: record.result.clone(),
+                    changed: false,
+                    replayed: true,
+                });
             }
             return Err(LeaseManagerError::RequestIdReused);
         }
@@ -213,7 +265,11 @@ impl LeaseManager {
             result: result.clone(),
             pinned_lease: Some(pinned_lease),
         });
-        Ok(result)
+        Ok(LeaseDecision {
+            result,
+            changed: true,
+            replayed: false,
+        })
     }
 
     /// Idempotently releases a currently owned lease using the protocol
@@ -229,6 +285,20 @@ impl LeaseManager {
         request: ReleaseLeaseRequest,
         now: MonotonicMs,
     ) -> Result<LeaseResult, LeaseManagerError> {
+        self.release_request_decision(request, now)
+            .map(|decision| decision.result)
+    }
+
+    /// Releases one lease and reports whether live ownership changed.
+    ///
+    /// # Errors
+    ///
+    /// Matches [`Self::release_request`].
+    pub fn release_request_decision(
+        &mut self,
+        request: ReleaseLeaseRequest,
+        now: MonotonicMs,
+    ) -> Result<LeaseDecision, LeaseManagerError> {
         self.expire(now);
         let operation = LeaseOperation::Release(request);
         let LeaseOperation::Release(request) = &operation else {
@@ -237,7 +307,11 @@ impl LeaseManager {
         let key = (request.client_id.clone(), request.request_id.clone());
         if let Some(record) = self.history.iter().find(|record| record.key == key) {
             if record.request == operation {
-                return Ok(record.result.clone());
+                return Ok(LeaseDecision {
+                    result: record.result.clone(),
+                    changed: false,
+                    replayed: true,
+                });
             }
             return Err(LeaseManagerError::RequestIdReused);
         }
@@ -262,7 +336,11 @@ impl LeaseManager {
             result: result.clone(),
             pinned_lease: None,
         });
-        Ok(result)
+        Ok(LeaseDecision {
+            result,
+            changed: true,
+            replayed: false,
+        })
     }
 
     /// Renews a currently owned lease without changing its resource set.

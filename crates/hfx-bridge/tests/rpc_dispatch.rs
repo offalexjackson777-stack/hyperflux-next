@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_bridge::{
-    AuthorizedSession, BridgeRpcBackend, BridgeSessionConfig, ConnectionDispatcher, RpcFailure,
-    SessionIdentityError, SessionIdentitySource, SessionRegistry,
+    AuthorizedSession, BackendRequestContext, BridgeRpcBackend, BridgeSessionConfig,
+    ConnectionDispatcher, RpcFailure, SessionIdentityError, SessionIdentitySource, SessionRegistry,
 };
 use hfx_domain::{
     ClientId, ClientName, ComponentVersion, NegotiationToken, ProjectionRevision,
@@ -48,7 +48,10 @@ struct FakeBackend {
 }
 
 impl BridgeRpcBackend for FakeBackend {
-    fn snapshot(&mut self, _session: &AuthorizedSession) -> Result<BridgeSnapshot, RpcFailure> {
+    fn snapshot(
+        &mut self,
+        _context: BackendRequestContext<'_>,
+    ) -> Result<BridgeSnapshot, RpcFailure> {
         self.snapshot_calls += 1;
         if self.fail_snapshot {
             return Err(RpcFailure::new(
@@ -61,7 +64,7 @@ impl BridgeRpcBackend for FakeBackend {
 
     fn acquire_lease(
         &mut self,
-        _session: &AuthorizedSession,
+        _context: BackendRequestContext<'_>,
         _request: LeaseRequest,
     ) -> Result<LeaseResult, RpcFailure> {
         Err(RpcFailure::internal())
@@ -69,7 +72,7 @@ impl BridgeRpcBackend for FakeBackend {
 
     fn renew_lease(
         &mut self,
-        _session: &AuthorizedSession,
+        _context: BackendRequestContext<'_>,
         _request: RenewLeaseRequest,
     ) -> Result<LeaseResult, RpcFailure> {
         Err(RpcFailure::internal())
@@ -77,7 +80,7 @@ impl BridgeRpcBackend for FakeBackend {
 
     fn release_lease(
         &mut self,
-        _session: &AuthorizedSession,
+        _context: BackendRequestContext<'_>,
         _request: ReleaseLeaseRequest,
     ) -> Result<LeaseResult, RpcFailure> {
         Err(RpcFailure::internal())
@@ -85,7 +88,7 @@ impl BridgeRpcBackend for FakeBackend {
 
     fn submit_transaction(
         &mut self,
-        _session: &AuthorizedSession,
+        _context: BackendRequestContext<'_>,
         _request: TransactionRequest,
     ) -> Result<TransactionResult, RpcFailure> {
         Err(RpcFailure::internal())
@@ -93,7 +96,7 @@ impl BridgeRpcBackend for FakeBackend {
 
     fn transaction_outcome(
         &mut self,
-        _session: &AuthorizedSession,
+        _context: BackendRequestContext<'_>,
         _request: TransactionLookup,
     ) -> Result<TransactionResult, RpcFailure> {
         Err(RpcFailure::internal())
@@ -101,7 +104,7 @@ impl BridgeRpcBackend for FakeBackend {
 
     fn subscribe(
         &mut self,
-        _session: &AuthorizedSession,
+        _context: BackendRequestContext<'_>,
         _request: SubscriptionRequest,
     ) -> Result<EventBatch, RpcFailure> {
         Err(RpcFailure::internal())
@@ -109,7 +112,7 @@ impl BridgeRpcBackend for FakeBackend {
 
     fn diagnostics(
         &mut self,
-        _session: &AuthorizedSession,
+        _context: BackendRequestContext<'_>,
     ) -> Result<DiagnosticSnapshot, RpcFailure> {
         Err(RpcFailure::internal())
     }
