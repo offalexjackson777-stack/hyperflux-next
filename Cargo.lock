@@ -75,6 +75,7 @@ dependencies = [
  "hfx-core",
  "hfx-domain",
  "hfx-errors",
+ "hfx-profiles",
  "hfx-protocol",
  "rustix",
  "serde",

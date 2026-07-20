@@ -7,6 +7,7 @@ mod persistence;
 mod rpc;
 mod session;
 mod session_registry;
+mod snapshot;
 
 pub use framing::{
     FRAME_LENGTH_BYTES, FrameError, FrameIoStage, read_rpc_request, write_rpc_response,
@@ -23,3 +24,7 @@ pub use session::{
     SessionError, SessionIdentityError, SessionIdentitySource,
 };
 pub use session_registry::{SessionRegistry, SessionRegistryError};
+pub use snapshot::{
+    DisabledRestorationSource, ReceiverRestorationSnapshot, RestorationProjectionError,
+    RestorationSnapshotSource, SnapshotProjectionError, SnapshotProjector,
+};
