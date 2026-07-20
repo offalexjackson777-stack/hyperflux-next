@@ -1,0 +1,464 @@
+{
+  "$schema": "../schemas/error-catalog.schema.json",
+  "schema": "hyperflux-error-catalog-v1",
+  "remediations": [
+    {
+      "id": "acquire-new-lease",
+      "title": "Acquire a current lease",
+      "safe_action": "Request a new lease for the complete resource set before submitting another operation.",
+      "verification": "Read the ownership snapshot and confirm the new lease is current.",
+      "automatic": false
+    },
+    {
+      "id": "activate-installed-driver",
+      "title": "Activate the installed driver",
+      "safe_action": "Use the platform's documented reboot or receiver-disconnect activation path.",
+      "verification": "Run Doctor and confirm the loaded and installed driver identities match.",
+      "automatic": false
+    },
+    {
+      "id": "collect-support-bundle",
+      "title": "Collect a privacy-safe support bundle",
+      "safe_action": "Preview and create the bounded HyperFlux support bundle for the unresolved internal failure.",
+      "verification": "Confirm the bundle preview excludes private paths, serials, raw reports, and arbitrary logs.",
+      "automatic": false
+    },
+    {
+      "id": "correct-request",
+      "title": "Correct the request",
+      "safe_action": "Correct the named request field and submit a new request with a new request identifier.",
+      "verification": "Validate the corrected request against the negotiated protocol schema.",
+      "automatic": false
+    },
+    {
+      "id": "disable-unsupported-feature",
+      "title": "Disable the unsupported feature",
+      "safe_action": "Continue without the feature or use a peer that advertises it during negotiation.",
+      "verification": "Repeat negotiation and inspect the enabled feature set.",
+      "automatic": false
+    },
+    {
+      "id": "lookup-transaction-outcome",
+      "title": "Resolve the existing transaction",
+      "safe_action": "Look up the existing transaction identifier; do not resubmit the hardware operation.",
+      "verification": "Confirm the transaction reaches exactly one recorded terminal outcome.",
+      "automatic": false
+    },
+    {
+      "id": "qualify-device",
+      "title": "Use a qualified device capability",
+      "safe_action": "Keep the device read-only until an evidence-backed profile qualifies the requested capability.",
+      "verification": "Inspect the capability snapshot and confirm the support level permits the operation.",
+      "automatic": false
+    },
+    {
+      "id": "refresh-generation",
+      "title": "Refresh receiver state",
+      "safe_action": "Discard state from the old generation and request a fresh snapshot before new work.",
+      "verification": "Confirm the request uses the currently active generation identifier.",
+      "automatic": true
+    },
+    {
+      "id": "release-owner",
+      "title": "Release the current owner",
+      "safe_action": "Release control in the owning application or close it, then request ownership again.",
+      "verification": "Read the ownership snapshot and confirm the resource has no conflicting owner.",
+      "automatic": false
+    },
+    {
+      "id": "repair-state-storage",
+      "title": "Repair state storage",
+      "safe_action": "Restore writable, schema-compatible state storage without deleting the last known-good copy.",
+      "verification": "Restart the bridge and confirm it can read and transactionally commit its state.",
+      "automatic": false
+    },
+    {
+      "id": "retry-bounded",
+      "title": "Retry within the declared bound",
+      "safe_action": "Retry with bounded backoff only while the original deadline remains valid.",
+      "verification": "Confirm the new attempt is admitted once and produces one terminal outcome.",
+      "automatic": true
+    },
+    {
+      "id": "start-bridge",
+      "title": "Start the bridge service",
+      "safe_action": "Start or restart the compatible HyperFlux bridge service.",
+      "verification": "Run Doctor and confirm the bridge diagnostic endpoint is ready.",
+      "automatic": true
+    },
+    {
+      "id": "submit-before-deadline",
+      "title": "Submit a fresh operation",
+      "safe_action": "Create a new request with a deadline that has not elapsed; do not revive the expired request.",
+      "verification": "Confirm admission occurs before the new monotonic deadline.",
+      "automatic": false
+    },
+    {
+      "id": "update-integration",
+      "title": "Update the application integration",
+      "safe_action": "Install an integration compatible with the negotiated HyperFlux SDK protocol.",
+      "verification": "Restart the application and confirm protocol negotiation succeeds.",
+      "automatic": false
+    },
+    {
+      "id": "update-protocol-peer",
+      "title": "Update the protocol peer",
+      "safe_action": "Update either peer so their supported protocol version ranges overlap.",
+      "verification": "Repeat negotiation and confirm one common protocol version is selected.",
+      "automatic": false
+    },
+    {
+      "id": "verify-profile-catalog",
+      "title": "Verify the profile catalog",
+      "safe_action": "Reload the generated profile catalog and retain read-only behavior until its digest matches.",
+      "verification": "Confirm the active profile identifier, revision, and digest match the generated catalog.",
+      "automatic": true
+    }
+  ],
+  "errors": [
+    {
+      "code": "HFX-DEADLINE-001",
+      "class": "deadline",
+      "severity": "warning",
+      "retry_policy": "never",
+      "side_effect_certainty_policy": "must-be-none",
+      "remediation_id": "submit-before-deadline",
+      "safe_detail_fields": [
+        {"name": "deadline_ms", "type": "u64-decimal", "required": true, "maximum_length": null, "maximum_value": "18446744073709551615", "allowed_values": [], "privacy": "public", "description": "Expired monotonic deadline."},
+        {"name": "request_id", "type": "identifier", "required": true, "maximum_length": 128, "maximum_value": null, "allowed_values": [], "privacy": "public-summary", "description": "Rejected request identity."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "The request deadline elapsed before transport admission.",
+      "user_explanation": "The operation expired before HyperFlux could safely start it.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-deadline-001"
+    },
+    {
+      "code": "HFX-GENERATION-001",
+      "class": "generation",
+      "severity": "warning",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "must-be-none",
+      "remediation_id": "refresh-generation",
+      "safe_detail_fields": [
+        {"name": "active_generation", "type": "u64-decimal", "required": true, "maximum_length": null, "maximum_value": "18446744073709551615", "allowed_values": [], "privacy": "public", "description": "Current receiver generation."},
+        {"name": "requested_generation", "type": "u64-decimal", "required": true, "maximum_length": null, "maximum_value": "18446744073709551615", "allowed_values": [], "privacy": "public", "description": "Generation carried by the rejected request."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "The request references a receiver generation that is no longer active.",
+      "user_explanation": "The receiver reconnected or resumed, so the application must refresh its device state.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-generation-001"
+    },
+    {
+      "code": "HFX-INTEGRATION-001",
+      "class": "integration",
+      "severity": "error",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "update-integration",
+      "safe_detail_fields": [
+        {"name": "integration", "type": "text", "required": true, "maximum_length": 96, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Application integration name."},
+        {"name": "protocol_range", "type": "text", "required": true, "maximum_length": 32, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Protocol range advertised by the integration."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "integration",
+      "technical_cause": "The application integration is incompatible with the installed SDK protocol.",
+      "user_explanation": "This application adapter must be updated before it can use HyperFlux.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-integration-001"
+    },
+    {
+      "code": "HFX-INTERNAL-001",
+      "class": "internal",
+      "severity": "critical",
+      "retry_policy": "never",
+      "side_effect_certainty_policy": "runtime-reported",
+      "remediation_id": "collect-support-bundle",
+      "safe_detail_fields": [
+        {"name": "invariant_id", "type": "identifier", "required": true, "maximum_length": 64, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Stable violated invariant identifier."},
+        {"name": "subsystem", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["bridge", "kernel", "persistence", "protocol", "sdk", "transport"], "privacy": "public", "description": "Subsystem that raised the invariant failure."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "A declared HyperFlux invariant was violated.",
+      "user_explanation": "HyperFlux stopped the affected operation because an internal safety rule failed.",
+      "privacy": "public-summary",
+      "docs_path": "docs/generated/error-catalog.md#hfx-internal-001"
+    },
+    {
+      "code": "HFX-KERNEL-001",
+      "class": "kernel",
+      "severity": "error",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "activate-installed-driver",
+      "safe_detail_fields": [
+        {"name": "installed_abi", "type": "identifier", "required": true, "maximum_length": 64, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Installed kernel interface identity."},
+        {"name": "loaded_abi", "type": "identifier", "required": true, "maximum_length": 64, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Currently loaded kernel interface identity."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "packaging",
+      "technical_cause": "The loaded kernel interface does not match the installed userspace contract.",
+      "user_explanation": "The newly installed driver is not active yet.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-kernel-001"
+    },
+    {
+      "code": "HFX-OWNERSHIP-001",
+      "class": "ownership",
+      "severity": "warning",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "must-be-none",
+      "remediation_id": "release-owner",
+      "safe_detail_fields": [
+        {"name": "owner_name", "type": "text", "required": false, "maximum_length": 96, "maximum_value": null, "allowed_values": [], "privacy": "public-summary", "description": "Current application owner when available."},
+        {"name": "resource_id", "type": "identifier", "required": true, "maximum_length": 128, "maximum_value": null, "allowed_values": [], "privacy": "public-summary", "description": "Contended logical resource."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "Another live client owns at least one requested resource.",
+      "user_explanation": "Another application currently controls this device function.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-ownership-001"
+    },
+    {
+      "code": "HFX-OWNERSHIP-002",
+      "class": "ownership",
+      "severity": "warning",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "must-be-none",
+      "remediation_id": "acquire-new-lease",
+      "safe_detail_fields": [
+        {"name": "lease_id", "type": "identifier", "required": true, "maximum_length": 128, "maximum_value": null, "allowed_values": [], "privacy": "public-summary", "description": "Expired or revoked lease identity."},
+        {"name": "lease_state", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["expired", "released", "revoked"], "privacy": "public", "description": "Terminal lease state."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "The lease no longer authorizes the requested resource set.",
+      "user_explanation": "The application's control lease ended before the operation started.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-ownership-002"
+    },
+    {
+      "code": "HFX-PERSISTENCE-001",
+      "class": "persistence",
+      "severity": "error",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "repair-state-storage",
+      "safe_detail_fields": [
+        {"name": "operation", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["load", "migrate", "validate"], "privacy": "public", "description": "Failed state-read phase."},
+        {"name": "reason", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["corrupt", "incompatible-schema", "missing", "permission-denied"], "privacy": "public", "description": "Sanitized failure reason."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "Persisted bridge state could not be loaded and validated safely.",
+      "user_explanation": "HyperFlux could not read its saved state and kept hardware restoration disabled.",
+      "privacy": "public-summary",
+      "docs_path": "docs/generated/error-catalog.md#hfx-persistence-001"
+    },
+    {
+      "code": "HFX-PERSISTENCE-002",
+      "class": "persistence",
+      "severity": "error",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "repair-state-storage",
+      "safe_detail_fields": [
+        {"name": "operation", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["commit", "rollback", "snapshot"], "privacy": "public", "description": "Failed state-write phase."},
+        {"name": "reason", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["io-failure", "permission-denied", "validation-failed"], "privacy": "public", "description": "Sanitized failure reason."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "A transactional state update could not be committed or rolled back safely.",
+      "user_explanation": "HyperFlux could not save its latest stable state.",
+      "privacy": "public-summary",
+      "docs_path": "docs/generated/error-catalog.md#hfx-persistence-002"
+    },
+    {
+      "code": "HFX-PROFILE-001",
+      "class": "profile",
+      "severity": "warning",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "must-be-none",
+      "remediation_id": "qualify-device",
+      "safe_detail_fields": [
+        {"name": "capability", "type": "identifier", "required": true, "maximum_length": 96, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Requested semantic capability."},
+        {"name": "product_id", "type": "u16", "required": false, "maximum_length": null, "maximum_value": 65535, "allowed_values": [], "privacy": "public", "description": "Observed USB product identifier when available."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "No evidence-backed profile qualifies the requested device capability.",
+      "user_explanation": "The device is visible, but this operation is not qualified for it.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-profile-001"
+    },
+    {
+      "code": "HFX-PROFILE-002",
+      "class": "profile",
+      "severity": "error",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "must-be-none",
+      "remediation_id": "verify-profile-catalog",
+      "safe_detail_fields": [
+        {"name": "active_digest", "type": "identifier", "required": true, "maximum_length": 64, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Digest bound to the active generation."},
+        {"name": "catalog_digest", "type": "identifier", "required": true, "maximum_length": 64, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Digest from the generated profile catalog."},
+        {"name": "profile_id", "type": "identifier", "required": true, "maximum_length": 128, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Selected profile identity."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "The active profile binding does not match the generated profile catalog.",
+      "user_explanation": "HyperFlux paused writes because its hardware profile changed.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-profile-002"
+    },
+    {
+      "code": "HFX-PROTOCOL-001",
+      "class": "protocol",
+      "severity": "error",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "update-protocol-peer",
+      "safe_detail_fields": [
+        {"name": "client_max_version", "type": "u16", "required": true, "maximum_length": null, "maximum_value": 65535, "allowed_values": [], "privacy": "public", "description": "Highest protocol version supported by the client."},
+        {"name": "client_min_version", "type": "u16", "required": true, "maximum_length": null, "maximum_value": 65535, "allowed_values": [], "privacy": "public", "description": "Lowest protocol version supported by the client."},
+        {"name": "server_max_version", "type": "u16", "required": true, "maximum_length": null, "maximum_value": 65535, "allowed_values": [], "privacy": "public", "description": "Highest protocol version supported by the bridge."},
+        {"name": "server_min_version", "type": "u16", "required": true, "maximum_length": null, "maximum_value": 65535, "allowed_values": [], "privacy": "public", "description": "Lowest protocol version supported by the bridge."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "sdk",
+      "technical_cause": "The client and bridge protocol version ranges do not overlap.",
+      "user_explanation": "The application and HyperFlux service are not protocol-compatible.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-protocol-001"
+    },
+    {
+      "code": "HFX-PROTOCOL-002",
+      "class": "protocol",
+      "severity": "warning",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "disable-unsupported-feature",
+      "safe_detail_fields": [
+        {"name": "feature", "type": "identifier", "required": true, "maximum_length": 64, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Requested protocol feature identifier."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "sdk",
+      "technical_cause": "The request requires a feature that was not enabled during negotiation.",
+      "user_explanation": "This feature is unavailable with the current application and service combination.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-protocol-002"
+    },
+    {
+      "code": "HFX-QUEUE-001",
+      "class": "queue",
+      "severity": "warning",
+      "retry_policy": "bounded-backoff",
+      "side_effect_certainty_policy": "must-be-none",
+      "remediation_id": "retry-bounded",
+      "safe_detail_fields": [
+        {"name": "capacity", "type": "u16", "required": true, "maximum_length": null, "maximum_value": 4096, "allowed_values": [], "privacy": "public", "description": "Configured queue capacity."},
+        {"name": "queue", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["configuration", "diagnostics", "effects", "events", "restore"], "privacy": "public", "description": "Bounded queue that rejected admission."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "The bounded queue had no admissible capacity before the request deadline.",
+      "user_explanation": "HyperFlux is temporarily busy and did not start this operation.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-queue-001"
+    },
+    {
+      "code": "HFX-REQUEST-001",
+      "class": "request",
+      "severity": "error",
+      "retry_policy": "never",
+      "side_effect_certainty_policy": "must-be-none",
+      "remediation_id": "correct-request",
+      "safe_detail_fields": [
+        {"name": "field", "type": "text", "required": true, "maximum_length": 128, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Schema field path without request data."},
+        {"name": "reason", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["duplicate", "missing", "out-of-range", "unknown", "unsupported"], "privacy": "public", "description": "Sanitized validation reason."},
+        {"name": "request_id", "type": "identifier", "required": false, "maximum_length": 128, "maximum_value": null, "allowed_values": [], "privacy": "public-summary", "description": "Request identity when parsing reached it."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "sdk",
+      "technical_cause": "The request violates the negotiated bounded protocol schema.",
+      "user_explanation": "The application sent a request HyperFlux cannot safely accept.",
+      "privacy": "public-summary",
+      "docs_path": "docs/generated/error-catalog.md#hfx-request-001"
+    },
+    {
+      "code": "HFX-SERVICE-001",
+      "class": "service",
+      "severity": "error",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "start-bridge",
+      "safe_detail_fields": [
+        {"name": "service_state", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["activating", "failed", "inactive", "stopping"], "privacy": "public", "description": "Sanitized bridge service state."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "packaging",
+      "technical_cause": "The compatible bridge service is not ready to accept SDK requests.",
+      "user_explanation": "The HyperFlux service is not running yet.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-service-001"
+    },
+    {
+      "code": "HFX-TRANSPORT-001",
+      "class": "transport",
+      "severity": "warning",
+      "retry_policy": "bounded-backoff",
+      "side_effect_certainty_policy": "must-be-none",
+      "remediation_id": "retry-bounded",
+      "safe_detail_fields": [
+        {"name": "reason", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["device-absent", "session-unavailable", "transport-busy"], "privacy": "public", "description": "Sanitized pre-dispatch failure reason."},
+        {"name": "transaction_id", "type": "identifier", "required": true, "maximum_length": 128, "maximum_value": null, "allowed_values": [], "privacy": "public-summary", "description": "Transaction that did not begin transport."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "Transport failed before any hardware frame was dispatched.",
+      "user_explanation": "The receiver was unavailable before HyperFlux sent anything.",
+      "privacy": "public-summary",
+      "docs_path": "docs/generated/error-catalog.md#hfx-transport-001"
+    },
+    {
+      "code": "HFX-TRANSPORT-002",
+      "class": "transport",
+      "severity": "error",
+      "retry_policy": "outcome-lookup-only",
+      "side_effect_certainty_policy": "possible",
+      "remediation_id": "lookup-transaction-outcome",
+      "safe_detail_fields": [
+        {"name": "transaction_id", "type": "identifier", "required": true, "maximum_length": 128, "maximum_value": null, "allowed_values": [], "privacy": "public-summary", "description": "Transaction whose transport outcome is uncertain."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "Transport began, but the bridge could not prove whether the receiver accepted a frame.",
+      "user_explanation": "The operation may have reached the receiver, so HyperFlux will not repeat it automatically.",
+      "privacy": "public-summary",
+      "docs_path": "docs/generated/error-catalog.md#hfx-transport-002"
+    },
+    {
+      "code": "HFX-TRANSPORT-003",
+      "class": "transport",
+      "severity": "error",
+      "retry_policy": "outcome-lookup-only",
+      "side_effect_certainty_policy": "partial",
+      "remediation_id": "lookup-transaction-outcome",
+      "safe_detail_fields": [
+        {"name": "delivered_frames", "type": "u16", "required": true, "maximum_length": null, "maximum_value": 4096, "allowed_values": [], "privacy": "public", "description": "Frames terminally delivered before failure."},
+        {"name": "total_frames", "type": "u16", "required": true, "maximum_length": null, "maximum_value": 4096, "allowed_values": [], "privacy": "public", "description": "Frames declared by the transaction."},
+        {"name": "transaction_id", "type": "identifier", "required": true, "maximum_length": 128, "maximum_value": null, "allowed_values": [], "privacy": "public-summary", "description": "Partially delivered transaction identity."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "At least one declared frame was delivered before a later frame failed.",
+      "user_explanation": "The operation was only partly delivered and will not be repeated automatically.",
+      "privacy": "public-summary",
+      "docs_path": "docs/generated/error-catalog.md#hfx-transport-003"
+    }
+  ]
+}
