@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 
 from .model import ModelError, load_foundation, load_json, require_unique, sha256_file
 from .errors import load_error_catalog
@@ -37,6 +38,7 @@ IGNORED_PATH_PARTS = {
     "dist",
     "target",
 }
+FUTURE_MTIME_TOLERANCE_SECONDS = 5.0
 
 
 def _check_constitution(constitution: dict) -> None:
@@ -207,7 +209,34 @@ def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
     )
 
 
+def _check_build_cache_clock(root: Path, *, now: float | None = None) -> None:
+    target = root / "target"
+    if not target.is_dir():
+        return
+    current = time.time() if now is None else now
+    cutoff = current + FUTURE_MTIME_TOLERANCE_SECONDS
+    future: list[Path] = []
+    for path in target.rglob("*"):
+        if not path.is_file():
+            continue
+        try:
+            modified = path.stat().st_mtime
+        except OSError as error:
+            raise ModelError(f"cannot inspect build cache timestamp: {path}") from error
+        if modified > cutoff:
+            future.append(path.relative_to(root))
+            if len(future) == 3:
+                break
+    if future:
+        sample = ", ".join(path.as_posix() for path in future)
+        raise ModelError(
+            "build cache contains future-dated artifacts and may produce false green results; "
+            f"run cargo clean before verification (examples: {sample})"
+        )
+
+
 def _check_toolchain(root: Path, node: TestNode) -> None:
+    _check_build_cache_clock(root)
     pins = load_json(root / "toolchains" / "pins.json")
     environment = _tool_environment(root)
 
