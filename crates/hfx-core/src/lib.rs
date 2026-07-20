@@ -18,9 +18,10 @@ pub use diagnostics::{BoundedDiagnosticSink, DiagnosticRegistry, DiagnosticRegis
 pub use events::{BoundedEventLog, EventDraft, EventLogError};
 pub use leases::{LeaseManager, LeaseManagerError};
 pub use lifecycle::{
-    ChildIdentity, DEFAULT_MAX_DEVICE_ENDPOINTS, DEFAULT_MAX_LIFECYCLE_DEVICES, DeviceLifecycle,
-    EndpointIdentity, EndpointLifecycle, LifecycleError, LifecycleFact, LifecycleLimits,
-    ObservationStamp, ReceiverGenerationLifecycle, ReceiverLifecycleMachine,
+    BatteryLifecycle, BatteryValue, ChildIdentity, DEFAULT_MAX_DEVICE_ENDPOINTS,
+    DEFAULT_MAX_LIFECYCLE_DEVICES, DeviceLifecycle, EndpointIdentity, EndpointLifecycle,
+    LifecycleError, LifecycleFact, LifecycleLimits, ObservationStamp, ReceiverGenerationLifecycle,
+    ReceiverLifecycleMachine,
 };
 pub use ports::{
     Clock, DeviceStateAuthority, EventDelivery, EventSink, PersistedRestorePolicy,

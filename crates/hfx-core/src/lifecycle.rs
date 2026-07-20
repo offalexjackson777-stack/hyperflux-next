@@ -6,8 +6,8 @@
 //! lease, session, transport, or write-authority type.
 
 use hfx_domain::{
-    ActivityState, ApplyOutcome, ConnectionMode, ContactState, DeviceKind, EndpointId,
-    EvidenceClaimId, EvidenceConfidence, FreshnessState, GenerationId, LogicalDeviceId,
+    ActivityState, ApplyOutcome, BatteryPercent, ConnectionMode, ContactState, DeviceKind,
+    EndpointId, EvidenceClaimId, EvidenceConfidence, FreshnessState, GenerationId, LogicalDeviceId,
     MonotonicMs, PairingState, PowerState, PresenceState, ProductId, ReceiverId,
     ReceiverLifecycleState, RouteKind, RouteState, SequenceNumber, SleepState,
 };
@@ -239,17 +239,70 @@ where
         self.stamp.is_some()
     }
 
-    fn apply(&mut self, value: T, stamp: ObservationStamp) -> bool {
-        if self
-            .stamp
+    fn accepts(&self, stamp: &ObservationStamp) -> bool {
+        self.stamp
             .as_ref()
-            .is_some_and(|current| !stamp.strictly_after(current))
-        {
+            .is_none_or(|current| stamp.strictly_after(current))
+    }
+
+    fn apply(&mut self, value: T, stamp: ObservationStamp) -> bool {
+        if !self.accepts(&stamp) {
             return false;
         }
         self.value = value;
         self.stamp = Some(stamp);
         true
+    }
+}
+
+/// Battery-value semantics kept distinct from freshness and from zero percent.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BatteryValue {
+    Unknown,
+    Unavailable,
+    Reported(BatteryPercent),
+}
+
+/// Independently inspectable battery value and freshness evidence.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BatteryLifecycle {
+    value: LifecycleFact<BatteryValue>,
+    freshness: LifecycleFact<FreshnessState>,
+}
+
+impl BatteryLifecycle {
+    const fn unknown() -> Self {
+        Self {
+            value: LifecycleFact::unknown(BatteryValue::Unknown),
+            freshness: LifecycleFact::unknown(FreshnessState::Unknown),
+        }
+    }
+
+    #[must_use]
+    pub const fn value(&self) -> &LifecycleFact<BatteryValue> {
+        &self.value
+    }
+
+    #[must_use]
+    pub const fn freshness(&self) -> &LifecycleFact<FreshnessState> {
+        &self.freshness
+    }
+
+    fn apply_value(&mut self, value: BatteryValue, stamp: ObservationStamp) -> bool {
+        if !self.value.accepts(&stamp) || !self.freshness.accepts(&stamp) {
+            return false;
+        }
+        let value_applied = self.value.apply(value, stamp.clone());
+        let freshness_applied = self.freshness.apply(FreshnessState::Fresh, stamp);
+        debug_assert!(value_applied && freshness_applied);
+        true
+    }
+
+    fn mark_stale(&mut self, stamp: ObservationStamp) -> bool {
+        if !self.value.is_observed() || !self.freshness.accepts(&stamp) {
+            return false;
+        }
+        self.freshness.apply(FreshnessState::Stale, stamp)
     }
 }
 
@@ -508,6 +561,7 @@ pub struct DeviceLifecycle {
     registered_at: ObservationStamp,
     latest_observation: ObservationStamp,
     pairing: LifecycleFact<PairingState>,
+    battery: BatteryLifecycle,
     endpoints: BTreeMap<EndpointId, EndpointLifecycle>,
 }
 
@@ -518,6 +572,7 @@ impl DeviceLifecycle {
             latest_observation: registered_at.clone(),
             registered_at,
             pairing: LifecycleFact::unknown(PairingState::Unknown),
+            battery: BatteryLifecycle::unknown(),
             endpoints: BTreeMap::new(),
         }
     }
@@ -540,6 +595,11 @@ impl DeviceLifecycle {
     #[must_use]
     pub const fn pairing(&self) -> &LifecycleFact<PairingState> {
         &self.pairing
+    }
+
+    #[must_use]
+    pub const fn battery(&self) -> &BatteryLifecycle {
+        &self.battery
     }
 
     #[must_use]
@@ -855,6 +915,57 @@ impl ReceiverLifecycleMachine {
         self.observe_device_fact(device_id, value, stamp, |device| &mut device.pairing)
     }
 
+    /// Applies a reported battery percentage and marks it fresh atomically.
+    pub fn observe_battery_reported(
+        &mut self,
+        device_id: &LogicalDeviceId,
+        percentage: BatteryPercent,
+        stamp: ObservationStamp,
+    ) -> ApplyOutcome {
+        self.observe_battery_value(device_id, BatteryValue::Reported(percentage), stamp)
+    }
+
+    /// Records that the receiver cannot currently provide a battery value.
+    pub fn observe_battery_unavailable(
+        &mut self,
+        device_id: &LogicalDeviceId,
+        stamp: ObservationStamp,
+    ) -> ApplyOutcome {
+        self.observe_battery_value(device_id, BatteryValue::Unavailable, stamp)
+    }
+
+    /// Marks an existing battery observation stale without discarding its value.
+    pub fn mark_battery_stale(
+        &mut self,
+        device_id: &LogicalDeviceId,
+        stamp: ObservationStamp,
+    ) -> ApplyOutcome {
+        if let Some(outcome) = self.device_observation_rejection(&stamp) {
+            return outcome;
+        }
+        let Some(current) = self.current.as_mut() else {
+            return ApplyOutcome::RejectedReceiverAbsent;
+        };
+        let Some(device) = current.devices.get_mut(device_id) else {
+            return ApplyOutcome::RejectedUnknownDevice;
+        };
+        if !device.accepts(&stamp) {
+            return ApplyOutcome::IgnoredOlderObservation;
+        }
+        if !device.battery.value.is_observed() {
+            return ApplyOutcome::RejectedInvalidTransition;
+        }
+        if !device.battery.freshness.accepts(&stamp) {
+            return ApplyOutcome::IgnoredOlderObservation;
+        }
+        device.note(&stamp);
+        if device.battery.mark_stale(stamp) {
+            ApplyOutcome::Applied
+        } else {
+            ApplyOutcome::IgnoredOlderObservation
+        }
+    }
+
     /// Registers or refreshes one route without modifying its independent facts.
     ///
     /// # Errors
@@ -1096,6 +1207,35 @@ impl ReceiverLifecycleMachine {
             return ApplyOutcome::IgnoredOlderObservation;
         }
         ApplyOutcome::Applied
+    }
+
+    fn observe_battery_value(
+        &mut self,
+        device_id: &LogicalDeviceId,
+        value: BatteryValue,
+        stamp: ObservationStamp,
+    ) -> ApplyOutcome {
+        if let Some(outcome) = self.device_observation_rejection(&stamp) {
+            return outcome;
+        }
+        let Some(current) = self.current.as_mut() else {
+            return ApplyOutcome::RejectedReceiverAbsent;
+        };
+        let Some(device) = current.devices.get_mut(device_id) else {
+            return ApplyOutcome::RejectedUnknownDevice;
+        };
+        if !device.accepts(&stamp) {
+            return ApplyOutcome::IgnoredOlderObservation;
+        }
+        if !device.battery.value.accepts(&stamp) || !device.battery.freshness.accepts(&stamp) {
+            return ApplyOutcome::IgnoredOlderObservation;
+        }
+        device.note(&stamp);
+        if device.battery.apply_value(value, stamp) {
+            ApplyOutcome::Applied
+        } else {
+            ApplyOutcome::IgnoredOlderObservation
+        }
     }
 
     fn observe_endpoint_fact<T>(

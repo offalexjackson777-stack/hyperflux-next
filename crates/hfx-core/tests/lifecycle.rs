@@ -5,14 +5,14 @@
 mod lifecycle;
 
 use hfx_domain::{
-    ActivityState, ApplyOutcome, ConnectionMode, ContactState, DeviceKind, EndpointId,
-    EvidenceClaimId, EvidenceConfidence, FreshnessState, GenerationId, LogicalDeviceId,
+    ActivityState, ApplyOutcome, BatteryPercent, ConnectionMode, ContactState, DeviceKind,
+    EndpointId, EvidenceClaimId, EvidenceConfidence, FreshnessState, GenerationId, LogicalDeviceId,
     MonotonicMs, PairingState, PowerState, PresenceState, ProductId, ReceiverLifecycleState,
     RouteKind, RouteState, SequenceNumber, SleepState,
 };
 use lifecycle::{
-    ChildIdentity, EndpointIdentity, LifecycleError, LifecycleLimits, ObservationStamp,
-    ReceiverLifecycleMachine,
+    BatteryValue, ChildIdentity, EndpointIdentity, LifecycleError, LifecycleLimits,
+    ObservationStamp, ReceiverLifecycleMachine,
 };
 
 fn text<T>(value: &str) -> T
@@ -450,6 +450,97 @@ fn delayed_observations_cannot_overwrite_newer_device_evidence() {
         .expect("keyboard route exists");
     assert_eq!(keyboard_route.route().value(), RouteState::Available);
     assert_eq!(keyboard_route.power().value(), PowerState::On);
+}
+
+#[test]
+fn battery_value_and_freshness_are_atomic_ordered_and_zero_safe() {
+    let mut machine = discovered_machine();
+    let (mouse_id, _) = register_wireless_child(&mut machine, "mouse-1", DeviceKind::Mouse, 2);
+    let zero = BatteryPercent::try_from(0_u8).expect("zero is a real battery value");
+
+    assert_eq!(
+        machine.mark_battery_stale(&mouse_id, stamp(1, 5, 5)),
+        ApplyOutcome::RejectedInvalidTransition
+    );
+    assert_eq!(
+        machine.observe_battery_reported(&mouse_id, zero, stamp(1, 6, 6)),
+        ApplyOutcome::Applied
+    );
+    let battery = machine
+        .current()
+        .expect("receiver exists")
+        .device(&mouse_id)
+        .expect("mouse exists")
+        .battery();
+    assert_eq!(battery.value().value(), BatteryValue::Reported(zero));
+    assert_eq!(battery.freshness().value(), FreshnessState::Fresh);
+    assert_eq!(battery.value().stamp(), battery.freshness().stamp());
+
+    assert_eq!(
+        machine.mark_battery_stale(&mouse_id, stamp(1, 7, 7)),
+        ApplyOutcome::Applied
+    );
+    let battery = machine
+        .current()
+        .expect("receiver exists")
+        .device(&mouse_id)
+        .expect("mouse exists")
+        .battery();
+    assert_eq!(battery.value().value(), BatteryValue::Reported(zero));
+    assert_eq!(battery.freshness().value(), FreshnessState::Stale);
+
+    assert_eq!(
+        machine.observe_battery_unavailable(&mouse_id, stamp(1, 6, 6)),
+        ApplyOutcome::IgnoredOlderObservation
+    );
+    assert_eq!(
+        machine.observe_battery_unavailable(&mouse_id, stamp(1, 8, 8)),
+        ApplyOutcome::Applied
+    );
+    let battery = machine
+        .current()
+        .expect("receiver exists")
+        .device(&mouse_id)
+        .expect("mouse exists")
+        .battery();
+    assert_eq!(battery.value().value(), BatteryValue::Unavailable);
+    assert_eq!(battery.freshness().value(), FreshnessState::Fresh);
+    assert_eq!(battery.value().stamp(), battery.freshness().stamp());
+}
+
+#[test]
+fn replacement_generation_clears_battery_evidence() {
+    let mut machine = discovered_machine();
+    let (mouse_id, _) = register_wireless_child(&mut machine, "mouse-1", DeviceKind::Mouse, 2);
+    assert_eq!(
+        machine.observe_battery_reported(
+            &mouse_id,
+            BatteryPercent::try_from(73_u8).expect("battery is valid"),
+            stamp(1, 6, 6),
+        ),
+        ApplyOutcome::Applied
+    );
+
+    assert_eq!(
+        machine.replace_generation(stamp(2, 10, 10)),
+        ApplyOutcome::Applied
+    );
+    machine
+        .register_device(
+            child("mouse-1", DeviceKind::Mouse, 0x00cd),
+            stamp(2, 11, 11),
+        )
+        .expect("replacement child registration succeeds");
+    let battery = machine
+        .current()
+        .expect("replacement receiver exists")
+        .device(&mouse_id)
+        .expect("replacement mouse exists")
+        .battery();
+    assert_eq!(battery.value().value(), BatteryValue::Unknown);
+    assert_eq!(battery.freshness().value(), FreshnessState::Unknown);
+    assert!(!battery.value().is_observed());
+    assert!(!battery.freshness().is_observed());
 }
 
 #[test]
