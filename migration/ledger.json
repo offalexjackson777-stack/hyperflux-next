@@ -79,7 +79,7 @@
       "id": "HFX-MIG-009",
       "component": "verification, proof coordinators, and fixtures",
       "disposition": "TEST_REFERENCE",
-      "status": "PENDING_REVIEW",
+      "status": "IN_PROGRESS",
       "sources": ["engineering-laboratory", "reverse-engineering-archive"],
       "destination_owner": "verification",
       "rationale": "Convert durable failures and evidence into deterministic replay; keep mission-specific and live sender machinery in the laboratory."

@@ -212,6 +212,28 @@ class EvidenceClaimId:
             raise ValueError("EvidenceClaimId is outside the canonical length")
 
 
+@dataclass(frozen=True, slots=True)
+class ScenarioId:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("ScenarioId requires a string")
+        if not 1 <= len(self.value) <= 128:
+            raise ValueError("ScenarioId is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class RestoreId:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("RestoreId requires a string")
+        if not 1 <= len(self.value) <= 128:
+            raise ValueError("RestoreId is outside the canonical length")
+
+
 class DeviceKind(str, Enum):
     RECEIVER = "receiver"
     MAT = "mat"
@@ -250,6 +272,75 @@ class ConnectionMode(str, Enum):
     DIRECT_USB = "direct-usb"
     BLUETOOTH = "bluetooth"
     UNKNOWN = "unknown"
+
+
+class RouteState(str, Enum):
+    AVAILABLE = "available"
+    UNAVAILABLE = "unavailable"
+    STALE = "stale"
+    UNKNOWN = "unknown"
+
+
+class PowerState(str, Enum):
+    ON = "on"
+    OFF = "off"
+    UNKNOWN = "unknown"
+
+
+class SleepState(str, Enum):
+    AWAKE = "awake"
+    ASLEEP = "asleep"
+    UNKNOWN = "unknown"
+
+
+class ContactState(str, Enum):
+    ON_MAT = "on-mat"
+    OFF_MAT = "off-mat"
+    UNKNOWN = "unknown"
+    NOT_APPLICABLE = "not-applicable"
+
+
+class ActivityState(str, Enum):
+    ACTIVE = "active"
+    IDLE = "idle"
+    UNKNOWN = "unknown"
+
+
+class FreshnessState(str, Enum):
+    FRESH = "fresh"
+    STALE = "stale"
+    UNKNOWN = "unknown"
+
+
+class ReceiverLifecycleState(str, Enum):
+    ACTIVE = "active"
+    SUSPENDED = "suspended"
+    PARTIALLY_SUSPENDED = "partially-suspended"
+    DISCONNECTING = "disconnecting"
+    UNKNOWN = "unknown"
+
+
+class FixtureSource(str, Enum):
+    DETERMINISTIC_SIMULATOR = "deterministic-simulator"
+    SANITIZED_REPLAY = "sanitized-replay"
+
+
+class TransportOutcome(str, Enum):
+    DELIVERED = "delivered"
+    FAILED = "failed"
+
+
+class ApplyOutcome(str, Enum):
+    APPLIED = "applied"
+    IGNORED_OLDER_OBSERVATION = "ignored-older-observation"
+    REJECTED_STALE_GENERATION = "rejected-stale-generation"
+    REJECTED_RECEIVER_ABSENT = "rejected-receiver-absent"
+    REJECTED_UNKNOWN_DEVICE = "rejected-unknown-device"
+    REJECTED_UNAVAILABLE_ROUTE = "rejected-unavailable-route"
+    REJECTED_UNQUALIFIED_WRITE = "rejected-unqualified-write"
+    REJECTED_INVALID_TRANSITION = "rejected-invalid-transition"
+    REJECTED_TRANSPORT_FAILURE = "rejected-transport-failure"
+    RECORDED_MALFORMED_OBSERVATION = "recorded-malformed-observation"
 
 
 class EvidenceConfidence(str, Enum):
@@ -353,12 +444,24 @@ __all__ = [
     "ProfileId",
     "CapabilityId",
     "EvidenceClaimId",
+    "ScenarioId",
+    "RestoreId",
     "DeviceKind",
     "ProfileKind",
     "RouteKind",
     "PairingState",
     "PresenceState",
     "ConnectionMode",
+    "RouteState",
+    "PowerState",
+    "SleepState",
+    "ContactState",
+    "ActivityState",
+    "FreshnessState",
+    "ReceiverLifecycleState",
+    "FixtureSource",
+    "TransportOutcome",
+    "ApplyOutcome",
     "EvidenceConfidence",
     "EvidenceLevel",
     "PrivacyClass",

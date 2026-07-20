@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/simulator-scenario-v1.json",
+  "title": "Privacy-safe deterministic HyperFlux simulator scenario",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "scenario_id", "provenance", "initial", "events"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-simulator-scenario-v1"},
+    "scenario_id": {"$ref": "#/$defs/identifier"},
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "test_fixture", "hardware_claim_authority", "private_identifiers_exported", "sanitization"],
+      "properties": {
+        "source": {"enum": ["deterministic-simulator", "sanitized-replay"]},
+        "test_fixture": {"const": true},
+        "hardware_claim_authority": {"const": false},
+        "private_identifiers_exported": {"const": false},
+        "sanitization": {"const": "no-private-identifiers-v1"}
+      }
+    },
+    "initial": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["receiver_profile_id", "receiver_generation", "surface_profile_id", "children"],
+      "properties": {
+        "receiver_profile_id": {"type": "string"},
+        "receiver_generation": {"type": "integer", "minimum": 1},
+        "surface_profile_id": {"type": ["string", "null"]},
+        "children": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["logical_device_id", "device_kind", "product_id", "profile_id", "pairing"],
+            "properties": {
+              "logical_device_id": {"$ref": "#/$defs/identifier"},
+              "device_kind": {"enum": ["mouse", "keyboard", "unknown"]},
+              "product_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+              "profile_id": {"type": ["string", "null"]},
+              "pairing": {"enum": ["paired", "unpaired", "unknown"]}
+            }
+          }
+        }
+      }
+    },
+    "events": {"type": "array", "maxItems": 4096, "items": {"$ref": "#/$defs/scheduledEvent"}}
+  },
+  "$defs": {
+    "identifier": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+    "deviceId": {"$ref": "#/$defs/identifier"},
+    "targets": {"type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": {"$ref": "#/$defs/deviceId"}},
+    "scheduledEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observed_at_ms", "generation_id", "event"],
+      "properties": {
+        "observed_at_ms": {"type": "integer", "minimum": 0, "maximum": 86400000},
+        "delay_ms": {"type": "integer", "minimum": 0, "maximum": 86400000, "default": 0},
+        "generation_id": {"type": "integer", "minimum": 1},
+        "event": {
+          "oneOf": [
+            {"$ref": "#/$defs/receiverDisconnected"},
+            {"$ref": "#/$defs/receiverConnected"},
+            {"$ref": "#/$defs/receiverLifecycle"},
+            {"$ref": "#/$defs/devicePairing"},
+            {"$ref": "#/$defs/routeObserved"},
+            {"$ref": "#/$defs/powerObserved"},
+            {"$ref": "#/$defs/sleepObserved"},
+            {"$ref": "#/$defs/contactObserved"},
+            {"$ref": "#/$defs/activityObserved"},
+            {"$ref": "#/$defs/freshnessObserved"},
+            {"$ref": "#/$defs/batteryReported"},
+            {"$ref": "#/$defs/batteryUnavailable"},
+            {"$ref": "#/$defs/malformedObservation"},
+            {"$ref": "#/$defs/lightingFrame"},
+            {"$ref": "#/$defs/restoreStarted"},
+            {"$ref": "#/$defs/restoreTarget"}
+          ]
+        }
+      }
+    },
+    "receiverDisconnected": {"type": "object", "additionalProperties": false, "required": ["kind"], "properties": {"kind": {"const": "receiver-disconnected"}}},
+    "receiverConnected": {"type": "object", "additionalProperties": false, "required": ["kind"], "properties": {"kind": {"const": "receiver-connected"}}},
+    "receiverLifecycle": {"type": "object", "additionalProperties": false, "required": ["kind", "state"], "properties": {"kind": {"const": "receiver-lifecycle"}, "state": {"enum": ["active", "suspended", "partially-suspended", "disconnecting"]}}},
+    "devicePairing": {"type": "object", "additionalProperties": false, "required": ["kind", "device_id", "state"], "properties": {"kind": {"const": "device-pairing"}, "device_id": {"$ref": "#/$defs/deviceId"}, "state": {"enum": ["paired", "unpaired"]}}},
+    "routeObserved": {"type": "object", "additionalProperties": false, "required": ["kind", "device_id", "state"], "properties": {"kind": {"const": "route-observed"}, "device_id": {"$ref": "#/$defs/deviceId"}, "state": {"enum": ["available", "unavailable", "stale"]}}},
+    "powerObserved": {"type": "object", "additionalProperties": false, "required": ["kind", "device_id", "state"], "properties": {"kind": {"const": "power-observed"}, "device_id": {"$ref": "#/$defs/deviceId"}, "state": {"enum": ["on", "off"]}}},
+    "sleepObserved": {"type": "object", "additionalProperties": false, "required": ["kind", "device_id", "state"], "properties": {"kind": {"const": "sleep-observed"}, "device_id": {"$ref": "#/$defs/deviceId"}, "state": {"enum": ["awake", "asleep"]}}},
+    "contactObserved": {"type": "object", "additionalProperties": false, "required": ["kind", "device_id", "state"], "properties": {"kind": {"const": "contact-observed"}, "device_id": {"$ref": "#/$defs/deviceId"}, "state": {"enum": ["on-mat", "off-mat"]}}},
+    "activityObserved": {"type": "object", "additionalProperties": false, "required": ["kind", "device_id", "state"], "properties": {"kind": {"const": "activity-observed"}, "device_id": {"$ref": "#/$defs/deviceId"}, "state": {"enum": ["active", "idle"]}}},
+    "freshnessObserved": {"type": "object", "additionalProperties": false, "required": ["kind", "device_id", "state"], "properties": {"kind": {"const": "freshness-observed"}, "device_id": {"$ref": "#/$defs/deviceId"}, "state": {"enum": ["fresh", "stale"]}}},
+    "batteryReported": {"type": "object", "additionalProperties": false, "required": ["kind", "device_id", "percentage"], "properties": {"kind": {"const": "battery-reported"}, "device_id": {"$ref": "#/$defs/deviceId"}, "percentage": {"type": "integer", "minimum": 0, "maximum": 100}}},
+    "batteryUnavailable": {"type": "object", "additionalProperties": false, "required": ["kind", "device_id"], "properties": {"kind": {"const": "battery-unavailable"}, "device_id": {"$ref": "#/$defs/deviceId"}}},
+    "malformedObservation": {"type": "object", "additionalProperties": false, "required": ["kind", "device_id", "dimension", "reason"], "properties": {"kind": {"const": "malformed-observation"}, "device_id": {"$ref": "#/$defs/deviceId"}, "dimension": {"enum": ["identity", "battery", "activity", "contact", "route", "power", "sleep"]}, "reason": {"enum": ["truncated", "invalid-length", "invalid-value", "unsupported"]}}},
+    "lightingFrame": {"type": "object", "additionalProperties": false, "required": ["kind", "transaction_id", "frame_index", "targets", "outcome"], "properties": {"kind": {"const": "lighting-frame"}, "transaction_id": {"$ref": "#/$defs/identifier"}, "frame_index": {"type": "integer", "minimum": 0, "maximum": 4294967295}, "targets": {"$ref": "#/$defs/targets"}, "outcome": {"enum": ["delivered", "failed"]}}},
+    "restoreStarted": {"type": "object", "additionalProperties": false, "required": ["kind", "restore_id", "targets"], "properties": {"kind": {"const": "restore-started"}, "restore_id": {"$ref": "#/$defs/identifier"}, "targets": {"$ref": "#/$defs/targets"}}},
+    "restoreTarget": {"type": "object", "additionalProperties": false, "required": ["kind", "restore_id", "device_id", "outcome"], "properties": {"kind": {"const": "restore-target"}, "restore_id": {"$ref": "#/$defs/identifier"}, "device_id": {"$ref": "#/$defs/deviceId"}, "outcome": {"enum": ["delivered", "failed"]}}}
+  }
+}

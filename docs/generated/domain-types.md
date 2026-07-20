@@ -32,6 +32,8 @@ These types prevent semantically different values from being passed interchangea
 | `ProfileId` | `profile_id` | 1 to 128 bytes |
 | `CapabilityId` | `capability_id` | 1 to 128 bytes |
 | `EvidenceClaimId` | `evidence_claim_id` | 1 to 160 bytes |
+| `ScenarioId` | `scenario_id` | 1 to 128 bytes |
+| `RestoreId` | `restore_id` | 1 to 128 bytes |
 
 ## Enumerations
 
@@ -41,6 +43,16 @@ These types prevent semantically different values from being passed interchangea
 - `PairingState`: `paired`, `unpaired`, `unknown`
 - `PresenceState`: `available`, `sleeping`, `unavailable`, `unknown`
 - `ConnectionMode`: `hyperflux-2.4ghz`, `direct-usb`, `bluetooth`, `unknown`
+- `RouteState`: `available`, `unavailable`, `stale`, `unknown`
+- `PowerState`: `on`, `off`, `unknown`
+- `SleepState`: `awake`, `asleep`, `unknown`
+- `ContactState`: `on-mat`, `off-mat`, `unknown`, `not-applicable`
+- `ActivityState`: `active`, `idle`, `unknown`
+- `FreshnessState`: `fresh`, `stale`, `unknown`
+- `ReceiverLifecycleState`: `active`, `suspended`, `partially-suspended`, `disconnecting`, `unknown`
+- `FixtureSource`: `deterministic-simulator`, `sanitized-replay`
+- `TransportOutcome`: `delivered`, `failed`
+- `ApplyOutcome`: `applied`, `ignored-older-observation`, `rejected-stale-generation`, `rejected-receiver-absent`, `rejected-unknown-device`, `rejected-unavailable-route`, `rejected-unqualified-write`, `rejected-invalid-transition`, `rejected-transport-failure`, `recorded-malformed-observation`
 - `EvidenceConfidence`: `observed`, `derived`, `inferred`, `unknown`
 - `EvidenceLevel`: `requirement`, `source-reviewed`, `simulation-proven`, `hardware-observed`, `hardware-qualified`, `production-qualified`
 - `PrivacyClass`: `public`, `public-summary`, `sensitive`, `private`, `forbidden`

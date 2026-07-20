@@ -445,6 +445,52 @@ private:
     std::string value_;
 };
 
+class ScenarioId
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 128;
+
+    [[nodiscard]] static std::optional<ScenarioId> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return ScenarioId(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const ScenarioId&, const ScenarioId&) = default;
+
+private:
+    explicit ScenarioId(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class RestoreId
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 128;
+
+    [[nodiscard]] static std::optional<RestoreId> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return RestoreId(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const RestoreId&, const RestoreId&) = default;
+
+private:
+    explicit RestoreId(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
 enum class DeviceKind
 {
     Receiver,
@@ -557,6 +603,204 @@ enum class ConnectionMode
         case ConnectionMode::DirectUsb: return "direct-usb";
         case ConnectionMode::Bluetooth: return "bluetooth";
         case ConnectionMode::Unknown: return "unknown";
+    }
+    return "unknown";
+}
+
+enum class RouteState
+{
+    Available,
+    Unavailable,
+    Stale,
+    Unknown,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(RouteState value)
+{
+    switch(value)
+    {
+        case RouteState::Available: return "available";
+        case RouteState::Unavailable: return "unavailable";
+        case RouteState::Stale: return "stale";
+        case RouteState::Unknown: return "unknown";
+    }
+    return "unknown";
+}
+
+enum class PowerState
+{
+    On,
+    Off,
+    Unknown,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(PowerState value)
+{
+    switch(value)
+    {
+        case PowerState::On: return "on";
+        case PowerState::Off: return "off";
+        case PowerState::Unknown: return "unknown";
+    }
+    return "unknown";
+}
+
+enum class SleepState
+{
+    Awake,
+    Asleep,
+    Unknown,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(SleepState value)
+{
+    switch(value)
+    {
+        case SleepState::Awake: return "awake";
+        case SleepState::Asleep: return "asleep";
+        case SleepState::Unknown: return "unknown";
+    }
+    return "unknown";
+}
+
+enum class ContactState
+{
+    OnMat,
+    OffMat,
+    Unknown,
+    NotApplicable,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(ContactState value)
+{
+    switch(value)
+    {
+        case ContactState::OnMat: return "on-mat";
+        case ContactState::OffMat: return "off-mat";
+        case ContactState::Unknown: return "unknown";
+        case ContactState::NotApplicable: return "not-applicable";
+    }
+    return "unknown";
+}
+
+enum class ActivityState
+{
+    Active,
+    Idle,
+    Unknown,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(ActivityState value)
+{
+    switch(value)
+    {
+        case ActivityState::Active: return "active";
+        case ActivityState::Idle: return "idle";
+        case ActivityState::Unknown: return "unknown";
+    }
+    return "unknown";
+}
+
+enum class FreshnessState
+{
+    Fresh,
+    Stale,
+    Unknown,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(FreshnessState value)
+{
+    switch(value)
+    {
+        case FreshnessState::Fresh: return "fresh";
+        case FreshnessState::Stale: return "stale";
+        case FreshnessState::Unknown: return "unknown";
+    }
+    return "unknown";
+}
+
+enum class ReceiverLifecycleState
+{
+    Active,
+    Suspended,
+    PartiallySuspended,
+    Disconnecting,
+    Unknown,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(ReceiverLifecycleState value)
+{
+    switch(value)
+    {
+        case ReceiverLifecycleState::Active: return "active";
+        case ReceiverLifecycleState::Suspended: return "suspended";
+        case ReceiverLifecycleState::PartiallySuspended: return "partially-suspended";
+        case ReceiverLifecycleState::Disconnecting: return "disconnecting";
+        case ReceiverLifecycleState::Unknown: return "unknown";
+    }
+    return "unknown";
+}
+
+enum class FixtureSource
+{
+    DeterministicSimulator,
+    SanitizedReplay,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(FixtureSource value)
+{
+    switch(value)
+    {
+        case FixtureSource::DeterministicSimulator: return "deterministic-simulator";
+        case FixtureSource::SanitizedReplay: return "sanitized-replay";
+    }
+    return "unknown";
+}
+
+enum class TransportOutcome
+{
+    Delivered,
+    Failed,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(TransportOutcome value)
+{
+    switch(value)
+    {
+        case TransportOutcome::Delivered: return "delivered";
+        case TransportOutcome::Failed: return "failed";
+    }
+    return "unknown";
+}
+
+enum class ApplyOutcome
+{
+    Applied,
+    IgnoredOlderObservation,
+    RejectedStaleGeneration,
+    RejectedReceiverAbsent,
+    RejectedUnknownDevice,
+    RejectedUnavailableRoute,
+    RejectedUnqualifiedWrite,
+    RejectedInvalidTransition,
+    RejectedTransportFailure,
+    RecordedMalformedObservation,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(ApplyOutcome value)
+{
+    switch(value)
+    {
+        case ApplyOutcome::Applied: return "applied";
+        case ApplyOutcome::IgnoredOlderObservation: return "ignored-older-observation";
+        case ApplyOutcome::RejectedStaleGeneration: return "rejected-stale-generation";
+        case ApplyOutcome::RejectedReceiverAbsent: return "rejected-receiver-absent";
+        case ApplyOutcome::RejectedUnknownDevice: return "rejected-unknown-device";
+        case ApplyOutcome::RejectedUnavailableRoute: return "rejected-unavailable-route";
+        case ApplyOutcome::RejectedUnqualifiedWrite: return "rejected-unqualified-write";
+        case ApplyOutcome::RejectedInvalidTransition: return "rejected-invalid-transition";
+        case ApplyOutcome::RejectedTransportFailure: return "rejected-transport-failure";
+        case ApplyOutcome::RecordedMalformedObservation: return "recorded-malformed-observation";
     }
     return "unknown";
 }

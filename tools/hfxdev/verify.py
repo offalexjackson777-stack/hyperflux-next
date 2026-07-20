@@ -12,6 +12,7 @@ import sys
 from .model import ModelError, load_foundation, load_json, require_unique, sha256_file
 from .render import rendered_files
 from .profiles import load_profile_inputs
+from .testgraph import TestNode, load_test_catalog
 
 
 ALLOWED_DISPOSITIONS = {
@@ -119,16 +120,6 @@ def _check_repository_paths(root: Path) -> None:
             raise ModelError(f"private absolute path found in {path.relative_to(root)}")
 
 
-def _run_tests(root: Path) -> None:
-    result = subprocess.run(
-        [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"],
-        cwd=root,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise ModelError("repository unit tests failed")
-
-
 def _check_profile_contract(root: Path) -> None:
     load_profile_inputs(root)
 
@@ -140,16 +131,31 @@ def _tool_environment(root: Path) -> dict[str, str]:
     return environment
 
 
-def _run_command(root: Path, command: list[str], label: str) -> None:
-    result = subprocess.run(command, cwd=root, check=False, env=_tool_environment(root))
+def _run_command(root: Path, command: list[str], label: str, timeout_seconds: int) -> None:
+    try:
+        result = subprocess.run(
+            command,
+            cwd=root,
+            check=False,
+            env=_tool_environment(root),
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise ModelError(f"{label} exceeded its {timeout_seconds}s timeout") from error
     if result.returncode != 0:
         raise ModelError(f"{label} failed")
 
 
-def _check_language_bindings(root: Path) -> None:
-    _run_command(root, ["cargo", "fmt", "--all", "--", "--check"], "Rust formatting")
-    _run_command(root, ["cargo", "clippy", "--workspace", "--all-targets", "--", "-D", "warnings"], "Rust Clippy")
-    _run_command(root, ["cargo", "test", "--workspace", "--all-targets", "--locked"], "Rust tests")
+def _run_python_tests(root: Path, node: TestNode) -> None:
+    _run_command(
+        root,
+        [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"],
+        "repository unit tests",
+        node.timeout_seconds,
+    )
+
+
+def _run_cpp_sdk_contracts(root: Path, node: TestNode) -> None:
     binary = root / "build" / "domain-types-smoke"
     binary.parent.mkdir(parents=True, exist_ok=True)
     _run_command(
@@ -167,9 +173,14 @@ def _check_language_bindings(root: Path) -> None:
             str(binary),
         ],
         "C++ SDK compile",
+        node.timeout_seconds,
     )
-    _run_command(root, [str(binary)], "C++ SDK smoke test")
+    _run_command(root, [str(binary)], "C++ SDK smoke test", node.timeout_seconds)
+
+
+def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
     kernel_binary = root / "build" / "kernel-profile-table-smoke"
+    kernel_binary.parent.mkdir(parents=True, exist_ok=True)
     _run_command(
         root,
         [
@@ -184,23 +195,33 @@ def _check_language_bindings(root: Path) -> None:
             str(kernel_binary),
         ],
         "kernel profile table compile",
+        node.timeout_seconds,
     )
-    _run_command(root, [str(kernel_binary)], "kernel profile table smoke test")
+    _run_command(
+        root,
+        [str(kernel_binary)],
+        "kernel profile table smoke test",
+        node.timeout_seconds,
+    )
 
 
-def _check_toolchain(root: Path) -> None:
+def _check_toolchain(root: Path, node: TestNode) -> None:
     pins = load_json(root / "toolchains" / "pins.json")
     environment = _tool_environment(root)
 
     def output(command: list[str]) -> str:
-        result = subprocess.run(
-            command,
-            cwd=root,
-            check=False,
-            env=environment,
-            text=True,
-            stdout=subprocess.PIPE,
-        )
+        try:
+            result = subprocess.run(
+                command,
+                cwd=root,
+                check=False,
+                env=environment,
+                text=True,
+                stdout=subprocess.PIPE,
+                timeout=node.timeout_seconds,
+            )
+        except subprocess.TimeoutExpired as error:
+            raise ModelError(f"toolchain command timed out: {' '.join(command)}") from error
         if result.returncode != 0:
             raise ModelError(f"toolchain command failed: {' '.join(command)}")
         return result.stdout.strip()
@@ -216,25 +237,130 @@ def _check_toolchain(root: Path) -> None:
         raise ModelError("clang++ does not match toolchains/pins.json")
 
 
-def verify_all(root: Path) -> list[str]:
+def _check_schema_contracts(root: Path) -> None:
+    schema_ids: list[str] = []
+    for path in sorted((root / "schemas").glob("*.schema.json")):
+        schema = load_json(path)
+        if schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
+            raise ModelError(f"{path.relative_to(root)}: unsupported JSON Schema draft")
+        schema_id = schema.get("$id")
+        if not isinstance(schema_id, str) or not schema_id.startswith("https://hyperflux.dev/schemas/"):
+            raise ModelError(f"{path.relative_to(root)}: invalid canonical schema id")
+        schema_ids.append(schema_id)
+    require_unique(schema_ids, "JSON Schema id")
+
+    for path in sorted(root.rglob("*.json")):
+        if any(part in IGNORED_PATH_PARTS for part in path.parts):
+            continue
+        value = load_json(path)
+        schema_reference = value.get("$schema")
+        if not isinstance(schema_reference, str) or schema_reference.startswith("https://"):
+            continue
+        if not (path.parent / schema_reference).resolve().is_file():
+            raise ModelError(f"{path.relative_to(root)}: missing schema reference {schema_reference}")
+
+    scenario_schema = load_json(root / "schemas" / "simulator-scenario.schema.json")
+    event_limit = scenario_schema["properties"]["events"]["maxItems"]
+    if event_limit != 4096:
+        raise ModelError("simulator scenario event limit must remain 4096")
+    replay = load_json(root / "tests" / "fixtures" / "replay" / "qualified-lifecycle-v1.json")
+    provenance = replay.get("provenance", {})
+    if provenance.get("source") != "sanitized-replay":
+        raise ModelError("committed replay fixture must identify sanitized-replay provenance")
+    if provenance.get("hardware_claim_authority") is not False:
+        raise ModelError("replay fixture must not claim hardware authority")
+    if provenance.get("private_identifiers_exported") is not False:
+        raise ModelError("replay fixture must declare zero private identifiers")
+    if len(replay.get("events", [])) > event_limit:
+        raise ModelError("replay fixture exceeds the bounded event limit")
+    load_test_catalog(root)
+
+
+def _run_foundation_contracts(root: Path, _node: TestNode) -> None:
     constitution, sources, ledger = load_foundation(root)
     _check_constitution(constitution)
     _check_sources(root, sources)
     _check_ledger(sources, ledger)
+
+
+def _run_schema_contracts(root: Path, _node: TestNode) -> None:
+    _check_schema_contracts(root)
+
+
+def _run_profile_contracts(root: Path, _node: TestNode) -> None:
     _check_profile_contract(root)
+
+
+def _run_generated_freshness(root: Path, _node: TestNode) -> None:
     _check_generated(root)
+
+
+def _run_privacy_boundary(root: Path, _node: TestNode) -> None:
     _check_repository_paths(root)
-    _run_tests(root)
-    _check_toolchain(root)
-    _check_language_bindings(root)
-    return [
-        "architecture constitution",
-        "source identities and inventories",
-        "migration ledger",
-        "composable profile and evidence contract",
-        "generated truth",
-        "private-path boundary",
-        "repository unit tests",
-        "pinned toolchain contract",
-        "generated Rust, C++, Python, and kernel profile bindings",
-    ]
+
+
+def _run_toolchain_contract(root: Path, node: TestNode) -> None:
+    _check_toolchain(root, node)
+
+
+def _run_rust_format(root: Path, node: TestNode) -> None:
+    _run_command(
+        root,
+        ["cargo", "fmt", "--all", "--", "--check"],
+        "Rust formatting",
+        node.timeout_seconds,
+    )
+
+
+def _run_rust_clippy(root: Path, node: TestNode) -> None:
+    _run_command(
+        root,
+        ["cargo", "clippy", "--workspace", "--all-targets", "--", "-D", "warnings"],
+        "Rust Clippy",
+        node.timeout_seconds,
+    )
+
+
+def _run_rust_unit(root: Path, node: TestNode) -> None:
+    _run_command(
+        root,
+        ["cargo", "test", "--workspace", "--exclude", "hfx-sim", "--all-targets", "--locked"],
+        "Rust domain and profile tests",
+        node.timeout_seconds,
+    )
+
+
+def _run_simulator_contracts(root: Path, node: TestNode) -> None:
+    _run_command(
+        root,
+        ["cargo", "test", "-p", "hfx-sim", "--all-targets", "--locked"],
+        "virtual receiver and deterministic replay tests",
+        node.timeout_seconds,
+    )
+
+
+RUNNERS = {
+    "foundation-contracts": _run_foundation_contracts,
+    "schema-contracts": _run_schema_contracts,
+    "profile-contracts": _run_profile_contracts,
+    "generated-freshness": _run_generated_freshness,
+    "privacy-boundary": _run_privacy_boundary,
+    "python-unit": _run_python_tests,
+    "toolchain-contract": _run_toolchain_contract,
+    "rust-format": _run_rust_format,
+    "rust-clippy": _run_rust_clippy,
+    "rust-unit": _run_rust_unit,
+    "simulator-contracts": _run_simulator_contracts,
+    "cpp-sdk-contracts": _run_cpp_sdk_contracts,
+    "kernel-profile-contracts": _run_kernel_profile_contracts,
+}
+
+
+def verify_all(root: Path) -> list[str]:
+    catalog = load_test_catalog(root)
+    passed: list[str] = []
+    for node in catalog.ordered():
+        print(f"[{node.id}] {node.title}", flush=True)
+        RUNNERS[node.runner](root, node)
+        passed.append(node.title)
+    return passed

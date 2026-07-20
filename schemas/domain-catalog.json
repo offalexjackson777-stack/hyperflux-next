@@ -22,7 +22,9 @@
     {"name": "TransactionId", "wire": "transaction_id", "minimum_length": 1, "maximum_length": 128},
     {"name": "ProfileId", "wire": "profile_id", "minimum_length": 1, "maximum_length": 128},
     {"name": "CapabilityId", "wire": "capability_id", "minimum_length": 1, "maximum_length": 128},
-    {"name": "EvidenceClaimId", "wire": "evidence_claim_id", "minimum_length": 1, "maximum_length": 160}
+    {"name": "EvidenceClaimId", "wire": "evidence_claim_id", "minimum_length": 1, "maximum_length": 160},
+    {"name": "ScenarioId", "wire": "scenario_id", "minimum_length": 1, "maximum_length": 128},
+    {"name": "RestoreId", "wire": "restore_id", "minimum_length": 1, "maximum_length": 128}
   ],
   "enums": [
     {"name": "DeviceKind", "values": ["receiver", "mat", "mouse", "keyboard", "unknown"]},
@@ -31,6 +33,16 @@
     {"name": "PairingState", "values": ["paired", "unpaired", "unknown"]},
     {"name": "PresenceState", "values": ["available", "sleeping", "unavailable", "unknown"]},
     {"name": "ConnectionMode", "values": ["hyperflux-2.4ghz", "direct-usb", "bluetooth", "unknown"]},
+    {"name": "RouteState", "values": ["available", "unavailable", "stale", "unknown"]},
+    {"name": "PowerState", "values": ["on", "off", "unknown"]},
+    {"name": "SleepState", "values": ["awake", "asleep", "unknown"]},
+    {"name": "ContactState", "values": ["on-mat", "off-mat", "unknown", "not-applicable"]},
+    {"name": "ActivityState", "values": ["active", "idle", "unknown"]},
+    {"name": "FreshnessState", "values": ["fresh", "stale", "unknown"]},
+    {"name": "ReceiverLifecycleState", "values": ["active", "suspended", "partially-suspended", "disconnecting", "unknown"]},
+    {"name": "FixtureSource", "values": ["deterministic-simulator", "sanitized-replay"]},
+    {"name": "TransportOutcome", "values": ["delivered", "failed"]},
+    {"name": "ApplyOutcome", "values": ["applied", "ignored-older-observation", "rejected-stale-generation", "rejected-receiver-absent", "rejected-unknown-device", "rejected-unavailable-route", "rejected-unqualified-write", "rejected-invalid-transition", "rejected-transport-failure", "recorded-malformed-observation"]},
     {"name": "EvidenceConfidence", "values": ["observed", "derived", "inferred", "unknown"]},
     {"name": "EvidenceLevel", "values": ["requirement", "source-reviewed", "simulation-proven", "hardware-observed", "hardware-qualified", "production-qualified"]},
     {"name": "PrivacyClass", "values": ["public", "public-summary", "sensitive", "private", "forbidden"]},

@@ -9,6 +9,7 @@ import sys
 from .migration import capture_inventory, summary
 from .model import ModelError
 from .render import write_generated
+from .testgraph import format_plan, load_test_catalog
 from .verify import verify_all
 
 
@@ -25,6 +26,11 @@ def _parser() -> argparse.ArgumentParser:
 
     generate = commands.add_parser("generate", help="regenerate canonical derived files")
     generate.add_argument("--check", action="store_true", help="reserved for compatibility; verify performs the check")
+
+    test = commands.add_parser("test", help="inspect typed verification metadata")
+    test_commands = test.add_subparsers(dest="test_command", required=True)
+    plan = test_commands.add_parser("plan", help="show the dependency-ordered verification plan")
+    plan.add_argument("--all", action="store_true", required=True)
 
     migration = commands.add_parser("migration", help="inspect or capture migration inputs")
     migration_commands = migration.add_subparsers(dest="migration_command", required=True)
@@ -49,6 +55,9 @@ def main(arguments: list[str] | None = None) -> int:
             write_generated(root)
             print("Generated repository views are current.")
             return 0
+        if args.command == "test":
+            print(format_plan(load_test_catalog(root)))
+            return 0
         if args.migration_command == "summary":
             print(summary(root))
             return 0
@@ -58,4 +67,3 @@ def main(arguments: list[str] | None = None) -> int:
     except ModelError as error:
         print(f"hfx: {error}", file=sys.stderr)
         return 1
-

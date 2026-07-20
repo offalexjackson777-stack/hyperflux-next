@@ -829,6 +829,102 @@ impl fmt::Display for EvidenceClaimId {
     }
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct ScenarioId(String);
+
+impl ScenarioId {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 128;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for ScenarioId {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "ScenarioId",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for ScenarioId {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<ScenarioId> for String {
+    fn from(value: ScenarioId) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for ScenarioId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct RestoreId(String);
+
+impl RestoreId {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 128;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for RestoreId {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "RestoreId",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for RestoreId {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<RestoreId> for String {
+    fn from(value: RestoreId) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for RestoreId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum DeviceKind {
     #[serde(rename = "receiver")]
@@ -1080,6 +1176,442 @@ impl FromStr for ConnectionMode {
 }
 
 impl fmt::Display for ConnectionMode {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum RouteState {
+    #[serde(rename = "available")]
+    Available,
+    #[serde(rename = "unavailable")]
+    Unavailable,
+    #[serde(rename = "stale")]
+    Stale,
+    #[serde(rename = "unknown")]
+    Unknown,
+}
+
+impl RouteState {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Available => "available",
+            Self::Unavailable => "unavailable",
+            Self::Stale => "stale",
+            Self::Unknown => "unknown",
+        }
+    }
+}
+
+impl FromStr for RouteState {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "available" => Ok(Self::Available),
+            "unavailable" => Ok(Self::Unavailable),
+            "stale" => Ok(Self::Stale),
+            "unknown" => Ok(Self::Unknown),
+            _ => Err(DomainValueError::unknown_wire("RouteState")),
+        }
+    }
+}
+
+impl fmt::Display for RouteState {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum PowerState {
+    #[serde(rename = "on")]
+    On,
+    #[serde(rename = "off")]
+    Off,
+    #[serde(rename = "unknown")]
+    Unknown,
+}
+
+impl PowerState {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::On => "on",
+            Self::Off => "off",
+            Self::Unknown => "unknown",
+        }
+    }
+}
+
+impl FromStr for PowerState {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "on" => Ok(Self::On),
+            "off" => Ok(Self::Off),
+            "unknown" => Ok(Self::Unknown),
+            _ => Err(DomainValueError::unknown_wire("PowerState")),
+        }
+    }
+}
+
+impl fmt::Display for PowerState {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum SleepState {
+    #[serde(rename = "awake")]
+    Awake,
+    #[serde(rename = "asleep")]
+    Asleep,
+    #[serde(rename = "unknown")]
+    Unknown,
+}
+
+impl SleepState {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Awake => "awake",
+            Self::Asleep => "asleep",
+            Self::Unknown => "unknown",
+        }
+    }
+}
+
+impl FromStr for SleepState {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "awake" => Ok(Self::Awake),
+            "asleep" => Ok(Self::Asleep),
+            "unknown" => Ok(Self::Unknown),
+            _ => Err(DomainValueError::unknown_wire("SleepState")),
+        }
+    }
+}
+
+impl fmt::Display for SleepState {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum ContactState {
+    #[serde(rename = "on-mat")]
+    OnMat,
+    #[serde(rename = "off-mat")]
+    OffMat,
+    #[serde(rename = "unknown")]
+    Unknown,
+    #[serde(rename = "not-applicable")]
+    NotApplicable,
+}
+
+impl ContactState {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::OnMat => "on-mat",
+            Self::OffMat => "off-mat",
+            Self::Unknown => "unknown",
+            Self::NotApplicable => "not-applicable",
+        }
+    }
+}
+
+impl FromStr for ContactState {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "on-mat" => Ok(Self::OnMat),
+            "off-mat" => Ok(Self::OffMat),
+            "unknown" => Ok(Self::Unknown),
+            "not-applicable" => Ok(Self::NotApplicable),
+            _ => Err(DomainValueError::unknown_wire("ContactState")),
+        }
+    }
+}
+
+impl fmt::Display for ContactState {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum ActivityState {
+    #[serde(rename = "active")]
+    Active,
+    #[serde(rename = "idle")]
+    Idle,
+    #[serde(rename = "unknown")]
+    Unknown,
+}
+
+impl ActivityState {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Active => "active",
+            Self::Idle => "idle",
+            Self::Unknown => "unknown",
+        }
+    }
+}
+
+impl FromStr for ActivityState {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "active" => Ok(Self::Active),
+            "idle" => Ok(Self::Idle),
+            "unknown" => Ok(Self::Unknown),
+            _ => Err(DomainValueError::unknown_wire("ActivityState")),
+        }
+    }
+}
+
+impl fmt::Display for ActivityState {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum FreshnessState {
+    #[serde(rename = "fresh")]
+    Fresh,
+    #[serde(rename = "stale")]
+    Stale,
+    #[serde(rename = "unknown")]
+    Unknown,
+}
+
+impl FreshnessState {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Fresh => "fresh",
+            Self::Stale => "stale",
+            Self::Unknown => "unknown",
+        }
+    }
+}
+
+impl FromStr for FreshnessState {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "fresh" => Ok(Self::Fresh),
+            "stale" => Ok(Self::Stale),
+            "unknown" => Ok(Self::Unknown),
+            _ => Err(DomainValueError::unknown_wire("FreshnessState")),
+        }
+    }
+}
+
+impl fmt::Display for FreshnessState {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum ReceiverLifecycleState {
+    #[serde(rename = "active")]
+    Active,
+    #[serde(rename = "suspended")]
+    Suspended,
+    #[serde(rename = "partially-suspended")]
+    PartiallySuspended,
+    #[serde(rename = "disconnecting")]
+    Disconnecting,
+    #[serde(rename = "unknown")]
+    Unknown,
+}
+
+impl ReceiverLifecycleState {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Active => "active",
+            Self::Suspended => "suspended",
+            Self::PartiallySuspended => "partially-suspended",
+            Self::Disconnecting => "disconnecting",
+            Self::Unknown => "unknown",
+        }
+    }
+}
+
+impl FromStr for ReceiverLifecycleState {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "active" => Ok(Self::Active),
+            "suspended" => Ok(Self::Suspended),
+            "partially-suspended" => Ok(Self::PartiallySuspended),
+            "disconnecting" => Ok(Self::Disconnecting),
+            "unknown" => Ok(Self::Unknown),
+            _ => Err(DomainValueError::unknown_wire("ReceiverLifecycleState")),
+        }
+    }
+}
+
+impl fmt::Display for ReceiverLifecycleState {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum FixtureSource {
+    #[serde(rename = "deterministic-simulator")]
+    DeterministicSimulator,
+    #[serde(rename = "sanitized-replay")]
+    SanitizedReplay,
+}
+
+impl FixtureSource {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::DeterministicSimulator => "deterministic-simulator",
+            Self::SanitizedReplay => "sanitized-replay",
+        }
+    }
+}
+
+impl FromStr for FixtureSource {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "deterministic-simulator" => Ok(Self::DeterministicSimulator),
+            "sanitized-replay" => Ok(Self::SanitizedReplay),
+            _ => Err(DomainValueError::unknown_wire("FixtureSource")),
+        }
+    }
+}
+
+impl fmt::Display for FixtureSource {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum TransportOutcome {
+    #[serde(rename = "delivered")]
+    Delivered,
+    #[serde(rename = "failed")]
+    Failed,
+}
+
+impl TransportOutcome {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Delivered => "delivered",
+            Self::Failed => "failed",
+        }
+    }
+}
+
+impl FromStr for TransportOutcome {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "delivered" => Ok(Self::Delivered),
+            "failed" => Ok(Self::Failed),
+            _ => Err(DomainValueError::unknown_wire("TransportOutcome")),
+        }
+    }
+}
+
+impl fmt::Display for TransportOutcome {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum ApplyOutcome {
+    #[serde(rename = "applied")]
+    Applied,
+    #[serde(rename = "ignored-older-observation")]
+    IgnoredOlderObservation,
+    #[serde(rename = "rejected-stale-generation")]
+    RejectedStaleGeneration,
+    #[serde(rename = "rejected-receiver-absent")]
+    RejectedReceiverAbsent,
+    #[serde(rename = "rejected-unknown-device")]
+    RejectedUnknownDevice,
+    #[serde(rename = "rejected-unavailable-route")]
+    RejectedUnavailableRoute,
+    #[serde(rename = "rejected-unqualified-write")]
+    RejectedUnqualifiedWrite,
+    #[serde(rename = "rejected-invalid-transition")]
+    RejectedInvalidTransition,
+    #[serde(rename = "rejected-transport-failure")]
+    RejectedTransportFailure,
+    #[serde(rename = "recorded-malformed-observation")]
+    RecordedMalformedObservation,
+}
+
+impl ApplyOutcome {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Applied => "applied",
+            Self::IgnoredOlderObservation => "ignored-older-observation",
+            Self::RejectedStaleGeneration => "rejected-stale-generation",
+            Self::RejectedReceiverAbsent => "rejected-receiver-absent",
+            Self::RejectedUnknownDevice => "rejected-unknown-device",
+            Self::RejectedUnavailableRoute => "rejected-unavailable-route",
+            Self::RejectedUnqualifiedWrite => "rejected-unqualified-write",
+            Self::RejectedInvalidTransition => "rejected-invalid-transition",
+            Self::RejectedTransportFailure => "rejected-transport-failure",
+            Self::RecordedMalformedObservation => "recorded-malformed-observation",
+        }
+    }
+}
+
+impl FromStr for ApplyOutcome {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "applied" => Ok(Self::Applied),
+            "ignored-older-observation" => Ok(Self::IgnoredOlderObservation),
+            "rejected-stale-generation" => Ok(Self::RejectedStaleGeneration),
+            "rejected-receiver-absent" => Ok(Self::RejectedReceiverAbsent),
+            "rejected-unknown-device" => Ok(Self::RejectedUnknownDevice),
+            "rejected-unavailable-route" => Ok(Self::RejectedUnavailableRoute),
+            "rejected-unqualified-write" => Ok(Self::RejectedUnqualifiedWrite),
+            "rejected-invalid-transition" => Ok(Self::RejectedInvalidTransition),
+            "rejected-transport-failure" => Ok(Self::RejectedTransportFailure),
+            "recorded-malformed-observation" => Ok(Self::RecordedMalformedObservation),
+            _ => Err(DomainValueError::unknown_wire("ApplyOutcome")),
+        }
+    }
+}
+
+impl fmt::Display for ApplyOutcome {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(self.as_str())
     }

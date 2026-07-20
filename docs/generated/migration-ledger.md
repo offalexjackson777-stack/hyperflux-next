@@ -14,7 +14,7 @@ Default disposition: `REJECT_UNTIL_REVIEWED`.
 | `HFX-MIG-006` | OpenRGB integration | `REIMPLEMENT` | `PENDING_REVIEW` | `integrations` |
 | `HFX-MIG-007` | OpenRazer metadata and compatibility | `REIMPLEMENT_WITH_PINNED_IMPORT` | `PENDING_REVIEW` | `integrations` |
 | `HFX-MIG-008` | Polychromatic integration | `REIMPLEMENT` | `PENDING_REVIEW` | `integrations` |
-| `HFX-MIG-009` | verification, proof coordinators, and fixtures | `TEST_REFERENCE` | `PENDING_REVIEW` | `verification` |
+| `HFX-MIG-009` | verification, proof coordinators, and fixtures | `TEST_REFERENCE` | `IN_PROGRESS` | `verification` |
 | `HFX-MIG-010` | packaging, activation, diagnostics, and support | `REIMPLEMENT` | `PENDING_REVIEW` | `bridge` |
 | `HFX-MIG-011` | documentation and GitHub governance | `REIMPLEMENT_AND_GENERATE` | `PENDING_REVIEW` | `verification` |
 | `HFX-MIG-012` | license text and project-owned licensing decision | `MIGRATE_AFTER_REVIEW` | `ACCEPTED` | `architecture` |
