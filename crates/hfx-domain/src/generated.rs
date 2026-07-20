@@ -71,6 +71,40 @@ impl fmt::Display for GenerationId {
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(try_from = "u16", into = "u16")]
+pub struct VendorId(u16);
+
+impl VendorId {
+    pub const MIN: u16 = 0;
+    pub const MAX: u16 = 65_535;
+
+    #[must_use]
+    pub const fn get(self) -> u16 {
+        self.0
+    }
+}
+
+impl TryFrom<u16> for VendorId {
+    type Error = DomainValueError;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        Ok(Self(value))
+    }
+}
+
+impl From<VendorId> for u16 {
+    fn from(value: VendorId) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for VendorId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "u16", into = "u16")]
 pub struct ProductId(u16);
 
 impl ProductId {
@@ -98,6 +132,46 @@ impl From<ProductId> for u16 {
 }
 
 impl fmt::Display for ProductId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "u32", into = "u32")]
+pub struct ProfileRevision(u32);
+
+impl ProfileRevision {
+    pub const MIN: u32 = 1;
+    pub const MAX: u32 = 4_294_967_295;
+
+    #[must_use]
+    pub const fn get(self) -> u32 {
+        self.0
+    }
+}
+
+impl TryFrom<u32> for ProfileRevision {
+    type Error = DomainValueError;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        if value < Self::MIN {
+            return Err(DomainValueError::new(
+                "ProfileRevision",
+                "outside the canonical range",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl From<ProfileRevision> for u32 {
+    fn from(value: ProfileRevision) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for ProfileRevision {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(formatter)
     }
@@ -286,6 +360,86 @@ impl From<LedIndex> for u16 {
 }
 
 impl fmt::Display for LedIndex {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "u16", into = "u16")]
+pub struct LedCount(u16);
+
+impl LedCount {
+    pub const MIN: u16 = 0;
+    pub const MAX: u16 = 4_096;
+
+    #[must_use]
+    pub const fn get(self) -> u16 {
+        self.0
+    }
+}
+
+impl TryFrom<u16> for LedCount {
+    type Error = DomainValueError;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        if value > Self::MAX {
+            return Err(DomainValueError::new(
+                "LedCount",
+                "outside the canonical range",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl From<LedCount> for u16 {
+    fn from(value: LedCount) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for LedCount {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "u16", into = "u16")]
+pub struct CarrierIndex(u16);
+
+impl CarrierIndex {
+    pub const MIN: u16 = 0;
+    pub const MAX: u16 = 4_095;
+
+    #[must_use]
+    pub const fn get(self) -> u16 {
+        self.0
+    }
+}
+
+impl TryFrom<u16> for CarrierIndex {
+    type Error = DomainValueError;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        if value > Self::MAX {
+            return Err(DomainValueError::new(
+                "CarrierIndex",
+                "outside the canonical range",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl From<CarrierIndex> for u16 {
+    fn from(value: CarrierIndex) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for CarrierIndex {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(formatter)
     }
@@ -627,6 +781,54 @@ impl fmt::Display for CapabilityId {
     }
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct EvidenceClaimId(String);
+
+impl EvidenceClaimId {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 160;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for EvidenceClaimId {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "EvidenceClaimId",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for EvidenceClaimId {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<EvidenceClaimId> for String {
+    fn from(value: EvidenceClaimId) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for EvidenceClaimId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum DeviceKind {
     #[serde(rename = "receiver")]
@@ -670,6 +872,46 @@ impl FromStr for DeviceKind {
 }
 
 impl fmt::Display for DeviceKind {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum ProfileKind {
+    #[serde(rename = "receiver")]
+    Receiver,
+    #[serde(rename = "child")]
+    Child,
+    #[serde(rename = "surface")]
+    Surface,
+}
+
+impl ProfileKind {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Receiver => "receiver",
+            Self::Child => "child",
+            Self::Surface => "surface",
+        }
+    }
+}
+
+impl FromStr for ProfileKind {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "receiver" => Ok(Self::Receiver),
+            "child" => Ok(Self::Child),
+            "surface" => Ok(Self::Surface),
+            _ => Err(DomainValueError::unknown_wire("ProfileKind")),
+        }
+    }
+}
+
+impl fmt::Display for ProfileKind {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(self.as_str())
     }
@@ -882,6 +1124,106 @@ impl FromStr for EvidenceConfidence {
 }
 
 impl fmt::Display for EvidenceConfidence {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum EvidenceLevel {
+    #[serde(rename = "requirement")]
+    Requirement,
+    #[serde(rename = "source-reviewed")]
+    SourceReviewed,
+    #[serde(rename = "simulation-proven")]
+    SimulationProven,
+    #[serde(rename = "hardware-observed")]
+    HardwareObserved,
+    #[serde(rename = "hardware-qualified")]
+    HardwareQualified,
+    #[serde(rename = "production-qualified")]
+    ProductionQualified,
+}
+
+impl EvidenceLevel {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Requirement => "requirement",
+            Self::SourceReviewed => "source-reviewed",
+            Self::SimulationProven => "simulation-proven",
+            Self::HardwareObserved => "hardware-observed",
+            Self::HardwareQualified => "hardware-qualified",
+            Self::ProductionQualified => "production-qualified",
+        }
+    }
+}
+
+impl FromStr for EvidenceLevel {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "requirement" => Ok(Self::Requirement),
+            "source-reviewed" => Ok(Self::SourceReviewed),
+            "simulation-proven" => Ok(Self::SimulationProven),
+            "hardware-observed" => Ok(Self::HardwareObserved),
+            "hardware-qualified" => Ok(Self::HardwareQualified),
+            "production-qualified" => Ok(Self::ProductionQualified),
+            _ => Err(DomainValueError::unknown_wire("EvidenceLevel")),
+        }
+    }
+}
+
+impl fmt::Display for EvidenceLevel {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum PrivacyClass {
+    #[serde(rename = "public")]
+    Public,
+    #[serde(rename = "public-summary")]
+    PublicSummary,
+    #[serde(rename = "sensitive")]
+    Sensitive,
+    #[serde(rename = "private")]
+    Private,
+    #[serde(rename = "forbidden")]
+    Forbidden,
+}
+
+impl PrivacyClass {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Public => "public",
+            Self::PublicSummary => "public-summary",
+            Self::Sensitive => "sensitive",
+            Self::Private => "private",
+            Self::Forbidden => "forbidden",
+        }
+    }
+}
+
+impl FromStr for PrivacyClass {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "public" => Ok(Self::Public),
+            "public-summary" => Ok(Self::PublicSummary),
+            "sensitive" => Ok(Self::Sensitive),
+            "private" => Ok(Self::Private),
+            "forbidden" => Ok(Self::Forbidden),
+            _ => Err(DomainValueError::unknown_wire("PrivacyClass")),
+        }
+    }
+}
+
+impl fmt::Display for PrivacyClass {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(self.as_str())
     }

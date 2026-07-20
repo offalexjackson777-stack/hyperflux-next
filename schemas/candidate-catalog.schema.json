@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/candidate-catalog-v1.json",
+  "title": "Unqualified compatibility candidate snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "snapshot_id", "retrieved_utc", "source_claim", "candidates"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-candidate-catalog-v1"},
+    "snapshot_id": {"type": "string"},
+    "retrieved_utc": {"type": "string", "format": "date"},
+    "source_claim": {"type": "string"},
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "device_kind", "official_name", "support_level", "writable_capabilities"],
+        "properties": {
+          "id": {"type": "string"},
+          "device_kind": {"enum": ["mouse", "keyboard"]},
+          "official_name": {"type": "string", "minLength": 1},
+          "support_level": {"const": "candidate"},
+          "writable_capabilities": {"type": "array", "maxItems": 0}
+        }
+      }
+    }
+  }
+}

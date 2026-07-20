@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/hardware-profile-v1.json",
+  "title": "Composable HyperFlux hardware profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "profile_id", "revision", "kind", "device_kind", "identity", "capabilities", "evidence_claims", "restrictions"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-hardware-profile-v1"},
+    "profile_id": {"type": "string", "pattern": "^(receiver|child|surface)\\.[a-z0-9.-]+$"},
+    "revision": {"type": "integer", "minimum": 1},
+    "kind": {"enum": ["receiver", "child", "surface"]},
+    "device_kind": {"enum": ["receiver", "mat", "mouse", "keyboard"]},
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manufacturer", "model_name", "authority"],
+      "properties": {
+        "manufacturer": {"type": "string", "minLength": 1},
+        "model_name": {"type": "string", "minLength": 1},
+        "authority": {"enum": ["usb", "paired-product-id", "reviewed-metadata"]},
+        "vendor_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "product_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "variant_key": {"type": "string"}
+      }
+    },
+    "compatibility": {"type": "object"},
+    "transport": {"type": "object"},
+    "presentation": {"type": "object"},
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "support_level", "evidence_claims"],
+        "properties": {
+          "id": {"type": "string"},
+          "support_level": {"enum": ["candidate", "identified", "read-only", "telemetry-qualified", "lighting-qualified", "settings-qualified", "pairing-qualified", "production-qualified"]},
+          "evidence_claims": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}}
+        }
+      }
+    },
+    "evidence_claims": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+    "restrictions": {"type": "array", "items": {"type": "string", "minLength": 1}}
+  }
+}

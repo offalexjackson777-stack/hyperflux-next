@@ -15,6 +15,17 @@ class GenerationId:
 
 
 @dataclass(frozen=True, slots=True)
+class VendorId:
+    value: int
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("VendorId requires an integer")
+        if not 0 <= self.value <= 65535:
+            raise ValueError("VendorId is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
 class ProductId:
     value: int
 
@@ -23,6 +34,17 @@ class ProductId:
             raise TypeError("ProductId requires an integer")
         if not 0 <= self.value <= 65535:
             raise ValueError("ProductId is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class ProfileRevision:
+    value: int
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("ProfileRevision requires an integer")
+        if not 1 <= self.value <= 4294967295:
+            raise ValueError("ProfileRevision is outside the canonical range")
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,6 +100,28 @@ class LedIndex:
             raise TypeError("LedIndex requires an integer")
         if not 0 <= self.value <= 4095:
             raise ValueError("LedIndex is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class LedCount:
+    value: int
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("LedCount requires an integer")
+        if not 0 <= self.value <= 4096:
+            raise ValueError("LedCount is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class CarrierIndex:
+    value: int
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("CarrierIndex requires an integer")
+        if not 0 <= self.value <= 4095:
+            raise ValueError("CarrierIndex is outside the canonical range")
 
 
 @dataclass(frozen=True, slots=True)
@@ -157,12 +201,29 @@ class CapabilityId:
             raise ValueError("CapabilityId is outside the canonical length")
 
 
+@dataclass(frozen=True, slots=True)
+class EvidenceClaimId:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("EvidenceClaimId requires a string")
+        if not 1 <= len(self.value) <= 160:
+            raise ValueError("EvidenceClaimId is outside the canonical length")
+
+
 class DeviceKind(str, Enum):
     RECEIVER = "receiver"
     MAT = "mat"
     MOUSE = "mouse"
     KEYBOARD = "keyboard"
     UNKNOWN = "unknown"
+
+
+class ProfileKind(str, Enum):
+    RECEIVER = "receiver"
+    CHILD = "child"
+    SURFACE = "surface"
 
 
 class RouteKind(str, Enum):
@@ -196,6 +257,23 @@ class EvidenceConfidence(str, Enum):
     DERIVED = "derived"
     INFERRED = "inferred"
     UNKNOWN = "unknown"
+
+
+class EvidenceLevel(str, Enum):
+    REQUIREMENT = "requirement"
+    SOURCE_REVIEWED = "source-reviewed"
+    SIMULATION_PROVEN = "simulation-proven"
+    HARDWARE_OBSERVED = "hardware-observed"
+    HARDWARE_QUALIFIED = "hardware-qualified"
+    PRODUCTION_QUALIFIED = "production-qualified"
+
+
+class PrivacyClass(str, Enum):
+    PUBLIC = "public"
+    PUBLIC_SUMMARY = "public-summary"
+    SENSITIVE = "sensitive"
+    PRIVATE = "private"
+    FORBIDDEN = "forbidden"
 
 
 class SupportLevel(str, Enum):
@@ -257,12 +335,16 @@ class ErrorSeverity(str, Enum):
 
 __all__ = [
     "GenerationId",
+    "VendorId",
     "ProductId",
+    "ProfileRevision",
     "BatteryPercent",
     "Brightness",
     "DurationMs",
     "SequenceNumber",
     "LedIndex",
+    "LedCount",
+    "CarrierIndex",
     "ReceiverId",
     "LogicalDeviceId",
     "EndpointId",
@@ -270,12 +352,16 @@ __all__ = [
     "TransactionId",
     "ProfileId",
     "CapabilityId",
+    "EvidenceClaimId",
     "DeviceKind",
+    "ProfileKind",
     "RouteKind",
     "PairingState",
     "PresenceState",
     "ConnectionMode",
     "EvidenceConfidence",
+    "EvidenceLevel",
+    "PrivacyClass",
     "SupportLevel",
     "ReceiverState",
     "TransactionState",

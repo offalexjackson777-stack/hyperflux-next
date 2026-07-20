@@ -1,0 +1,21 @@
+{
+  "$schema": "../../schemas/hardware-profile.schema.json",
+  "schema": "hyperflux-hardware-profile-v1",
+  "profile_id": "receiver.razer.hyperflux-v2.1532-00cf",
+  "revision": 1,
+  "kind": "receiver",
+  "device_kind": "receiver",
+  "identity": {"manufacturer": "Razer", "model_name": "Razer HyperFlux V2 Receiver", "authority": "usb", "vendor_id": 5426, "product_id": 207},
+  "compatibility": {"protocol_family": "razer-hyperflux-v2", "supported_child_kinds": ["keyboard", "mouse"], "exact_child_combinations": false},
+  "transport": {"backend": "structured-feature-set-report-v1", "backend_id": 1, "maximum_targets": 115, "generation_bound": true, "application_raw_frames": false},
+  "capabilities": [
+    {"id": "identity.model", "support_level": "identified", "evidence_claims": ["claim.receiver.1532-00cf.generation-session"]},
+    {"id": "identity.paired-product-id", "support_level": "read-only", "evidence_claims": ["claim.receiver.1532-00cf.generation-session"]},
+    {"id": "lighting.stable-state-restore", "support_level": "production-qualified", "evidence_claims": ["claim.receiver.stable-state-lifecycle-restore"]},
+    {"id": "receiver.exclusive-writer-session", "support_level": "lighting-qualified", "evidence_claims": ["claim.receiver.1532-00cf.generation-session"]},
+    {"id": "receiver.generation", "support_level": "production-qualified", "evidence_claims": ["claim.receiver.1532-00cf.generation-session"]},
+    {"id": "route.hyperflux-wireless", "support_level": "read-only", "evidence_claims": ["claim.receiver.1532-00cf.generation-session"]}
+  ],
+  "evidence_claims": ["claim.receiver.1532-00cf.generation-session", "claim.receiver.stable-state-lifecycle-restore"],
+  "restrictions": ["Unknown children receive zero writable capabilities.", "Receiver inventory does not imply child availability.", "The receiver and mat do not appear as addressable RGB controllers."]
+}

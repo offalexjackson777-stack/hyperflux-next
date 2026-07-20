@@ -3,12 +3,16 @@
   "schema": "hyperflux-domain-catalog-v1",
   "numeric_types": [
     {"name": "GenerationId", "wire": "generation_id", "rust": "u64", "cpp": "std::uint64_t", "python_min": 1, "minimum": 1, "maximum": 18446744073709551615},
+    {"name": "VendorId", "wire": "vendor_id", "rust": "u16", "cpp": "std::uint16_t", "python_min": 0, "minimum": 0, "maximum": 65535},
     {"name": "ProductId", "wire": "product_id", "rust": "u16", "cpp": "std::uint16_t", "python_min": 0, "minimum": 0, "maximum": 65535},
+    {"name": "ProfileRevision", "wire": "profile_revision", "rust": "u32", "cpp": "std::uint32_t", "python_min": 1, "minimum": 1, "maximum": 4294967295},
     {"name": "BatteryPercent", "wire": "battery_percent", "rust": "u8", "cpp": "std::uint8_t", "python_min": 0, "minimum": 0, "maximum": 100},
     {"name": "Brightness", "wire": "brightness", "rust": "u8", "cpp": "std::uint8_t", "python_min": 0, "minimum": 0, "maximum": 255},
     {"name": "DurationMs", "wire": "duration_ms", "rust": "u64", "cpp": "std::uint64_t", "python_min": 0, "minimum": 0, "maximum": 86400000},
     {"name": "SequenceNumber", "wire": "sequence_number", "rust": "u64", "cpp": "std::uint64_t", "python_min": 0, "minimum": 0, "maximum": 18446744073709551615},
-    {"name": "LedIndex", "wire": "led_index", "rust": "u16", "cpp": "std::uint16_t", "python_min": 0, "minimum": 0, "maximum": 4095}
+    {"name": "LedIndex", "wire": "led_index", "rust": "u16", "cpp": "std::uint16_t", "python_min": 0, "minimum": 0, "maximum": 4095},
+    {"name": "LedCount", "wire": "led_count", "rust": "u16", "cpp": "std::uint16_t", "python_min": 0, "minimum": 0, "maximum": 4096},
+    {"name": "CarrierIndex", "wire": "carrier_index", "rust": "u16", "cpp": "std::uint16_t", "python_min": 0, "minimum": 0, "maximum": 4095}
   ],
   "string_types": [
     {"name": "ReceiverId", "wire": "receiver_id", "minimum_length": 1, "maximum_length": 128},
@@ -17,15 +21,19 @@
     {"name": "LeaseId", "wire": "lease_id", "minimum_length": 1, "maximum_length": 128},
     {"name": "TransactionId", "wire": "transaction_id", "minimum_length": 1, "maximum_length": 128},
     {"name": "ProfileId", "wire": "profile_id", "minimum_length": 1, "maximum_length": 128},
-    {"name": "CapabilityId", "wire": "capability_id", "minimum_length": 1, "maximum_length": 128}
+    {"name": "CapabilityId", "wire": "capability_id", "minimum_length": 1, "maximum_length": 128},
+    {"name": "EvidenceClaimId", "wire": "evidence_claim_id", "minimum_length": 1, "maximum_length": 160}
   ],
   "enums": [
     {"name": "DeviceKind", "values": ["receiver", "mat", "mouse", "keyboard", "unknown"]},
+    {"name": "ProfileKind", "values": ["receiver", "child", "surface"]},
     {"name": "RouteKind", "values": ["hyperflux-wireless", "direct-usb", "bluetooth"]},
     {"name": "PairingState", "values": ["paired", "unpaired", "unknown"]},
     {"name": "PresenceState", "values": ["available", "sleeping", "unavailable", "unknown"]},
     {"name": "ConnectionMode", "values": ["hyperflux-2.4ghz", "direct-usb", "bluetooth", "unknown"]},
     {"name": "EvidenceConfidence", "values": ["observed", "derived", "inferred", "unknown"]},
+    {"name": "EvidenceLevel", "values": ["requirement", "source-reviewed", "simulation-proven", "hardware-observed", "hardware-qualified", "production-qualified"]},
+    {"name": "PrivacyClass", "values": ["public", "public-summary", "sensitive", "private", "forbidden"]},
     {"name": "SupportLevel", "values": ["candidate", "identified", "read-only", "telemetry-qualified", "lighting-qualified", "settings-qualified", "pairing-qualified", "production-qualified"]},
     {"name": "ReceiverState", "values": ["absent", "discovered-read-only", "observed", "profile-qualified", "session-authorized", "degraded-read-only"]},
     {"name": "TransactionState", "values": ["created", "validated", "ownership-bound", "generation-bound", "queued", "sent", "health-pending", "succeeded", "failed", "revoked"]},
@@ -34,4 +42,3 @@
     {"name": "ErrorSeverity", "values": ["info", "warning", "error", "critical"]}
   ]
 }
-

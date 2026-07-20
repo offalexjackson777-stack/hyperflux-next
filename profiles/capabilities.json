@@ -1,0 +1,25 @@
+{
+  "$schema": "../schemas/capability-catalog.schema.json",
+  "schema": "hyperflux-capability-catalog-v1",
+  "capabilities": [
+    {"id": "identity.model", "summary": "Expose a reviewed model identity without granting transport authority.", "access": "read", "owner": "sdk", "resource": null, "profile_kinds": ["receiver", "child", "surface"]},
+    {"id": "identity.paired-product-id", "summary": "Expose a generation-bound paired child product identifier.", "access": "read", "owner": "kernel", "resource": null, "profile_kinds": ["receiver", "child"]},
+    {"id": "lighting.brightness", "summary": "Scale a qualified RGB frame from zero through full intensity.", "access": "write", "owner": "bridge", "resource": "lighting", "profile_kinds": ["child"]},
+    {"id": "lighting.complete-black", "summary": "Deliver an explicit complete-device RGB black request.", "access": "write", "owner": "bridge", "resource": "lighting", "profile_kinds": ["child"]},
+    {"id": "lighting.direct-frame", "summary": "Deliver a bounded application RGB frame through the receiver route.", "access": "write", "owner": "bridge", "resource": "lighting", "profile_kinds": ["child"]},
+    {"id": "lighting.off", "summary": "Represent application lighting Off without claiming physical sleep.", "access": "write", "owner": "bridge", "resource": "lighting", "profile_kinds": ["child"]},
+    {"id": "lighting.per-key", "summary": "Address qualified keyboard transport slots independently.", "access": "write", "owner": "bridge", "resource": "lighting", "profile_kinds": ["child"]},
+    {"id": "lighting.per-led", "summary": "Address qualified non-keyboard LEDs independently.", "access": "write", "owner": "bridge", "resource": "lighting", "profile_kinds": ["child"]},
+    {"id": "lighting.software-effect-frames", "summary": "Carry streamed Direct-mode frames produced by an application effect engine.", "access": "write", "owner": "bridge", "resource": "lighting", "profile_kinds": ["child"]},
+    {"id": "lighting.stable-state-restore", "summary": "Restore a retained stable Static or Off state after a trusted lifecycle event.", "access": "write", "owner": "bridge", "resource": "lighting", "profile_kinds": ["receiver"]},
+    {"id": "lighting.static", "summary": "Retain and deliver one qualified static RGB state.", "access": "write", "owner": "bridge", "resource": "lighting", "profile_kinds": ["child"]},
+    {"id": "presence.passive-evidence", "summary": "Derive availability dimensions from passive generation-bound evidence.", "access": "read", "owner": "bridge", "resource": null, "profile_kinds": ["child"]},
+    {"id": "receiver.exclusive-writer-session", "summary": "Permit one generation-bound structured writer session.", "access": "write", "owner": "kernel", "resource": null, "profile_kinds": ["receiver"]},
+    {"id": "receiver.generation", "summary": "Create a new identity and session generation after receiver discovery.", "access": "read", "owner": "kernel", "resource": null, "profile_kinds": ["receiver"]},
+    {"id": "route.hyperflux-wireless", "summary": "Represent the receiver-backed wireless route independently from logical identity.", "access": "read", "owner": "bridge", "resource": null, "profile_kinds": ["receiver", "child"]},
+    {"id": "surface.firmware-status-indicator", "summary": "Describe a firmware-owned charging or status indicator without exposing RGB control.", "access": "read", "owner": "sdk", "resource": null, "profile_kinds": ["surface"]},
+    {"id": "telemetry.battery-percent", "summary": "Expose bounded battery percentage with age and unknown semantics.", "access": "read", "owner": "bridge", "resource": null, "profile_kinds": ["child"]},
+    {"id": "telemetry.connection-evidence", "summary": "Expose role-specific passive connection evidence without equating it with power state.", "access": "read", "owner": "bridge", "resource": null, "profile_kinds": ["child"]},
+    {"id": "telemetry.mouse-contact", "summary": "Expose passive mouse contact evidence as its own state dimension.", "access": "read", "owner": "bridge", "resource": null, "profile_kinds": ["child"]}
+  ]
+}

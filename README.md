@@ -38,12 +38,18 @@ subset lives in the generated [Architecture Constitution](docs/generated/archite
 
 ## Current Phase
 
-The repository is establishing its foundation before admitting product code:
+The repository has a verified foundation and is building the software-only
+product stack before any real-hardware writer is admitted:
 
 - source repositories are immutable evidence inputs, not templates;
 - every subsystem receives an explicit migration decision;
 - imported facts retain provenance and evidence links;
-- canonical JSON drives generated documentation and later language bindings;
+- canonical JSON drives generated documentation, language bindings, profile
+  catalogs, kernel receiver tables, and composition fixtures;
+- receiver, child, and surface profiles compose independently at runtime;
+- every writable capability requires a public physical evidence claim;
+- official compatibility names remain zero-write candidates until separately
+  qualified;
 - unknown or unreviewed source is excluded by default;
 - publication requires a separate, explicit authorization after all software
   and targeted hardware gates pass.
@@ -67,7 +73,11 @@ Inspect migration progress without changing files:
 | `architecture/` | Machine-readable ownership, invariants, boundaries, and release interlocks |
 | `schemas/` | Versioned schemas for canonical project data |
 | `crates/hfx-domain/` | Generated Rust strong types and validation |
+| `crates/hfx-profiles/` | Generated, queryable Rust hardware profile catalog |
+| `profiles/` | Canonical capabilities, evidence claims, composable hardware profiles, and candidates |
 | `sdk/` | Generated language bindings for integrations |
+| `driver/kernel/generated/` | Receiver-only match tables; no child presentation or application policy |
+| `generated/` | Canonical machine artifacts consumed across components |
 | `migration/` | Source identities, generated inventories, and reviewed subsystem decisions |
 | `docs/architecture/` | Human design sources and decisions |
 | `docs/generated/` | Deterministic views generated from canonical data |
@@ -83,6 +93,13 @@ Shared identifiers, state enums, ranges, and wire values are defined once in
 [`schemas/domain-catalog.json`](schemas/domain-catalog.json). Rust, C++, Python,
 and the [domain reference](docs/generated/domain-types.md) are generated from
 that source and compile together during verification.
+
+Hardware truth begins in [`profiles/`](profiles/). The compiler validates every
+evidence path against an immutable source inventory, forbids exact keyboard and
+mouse combinations, rejects guessed surface USB identities, and grants unknown
+children zero writes. Its generated
+[supported-hardware reference](docs/generated/supported-hardware.md) keeps
+qualified support separate from official compatibility candidates.
 
 Development tool versions are recorded in
 [`toolchains/pins.json`](toolchains/pins.json). Verification selects the exact

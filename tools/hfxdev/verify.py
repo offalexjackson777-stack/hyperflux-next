@@ -11,6 +11,7 @@ import sys
 
 from .model import ModelError, load_foundation, load_json, require_unique, sha256_file
 from .render import rendered_files
+from .profiles import load_profile_inputs
 
 
 ALLOWED_DISPOSITIONS = {
@@ -125,7 +126,11 @@ def _run_tests(root: Path) -> None:
         check=False,
     )
     if result.returncode != 0:
-        raise ModelError("foundation unit tests failed")
+        raise ModelError("repository unit tests failed")
+
+
+def _check_profile_contract(root: Path) -> None:
+    load_profile_inputs(root)
 
 
 def _tool_environment(root: Path) -> dict[str, str]:
@@ -164,6 +169,23 @@ def _check_language_bindings(root: Path) -> None:
         "C++ SDK compile",
     )
     _run_command(root, [str(binary)], "C++ SDK smoke test")
+    kernel_binary = root / "build" / "kernel-profile-table-smoke"
+    _run_command(
+        root,
+        [
+            "clang++",
+            "-std=c++20",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "tests/cpp/kernel_profile_table_smoke.cpp",
+            "-o",
+            str(kernel_binary),
+        ],
+        "kernel profile table compile",
+    )
+    _run_command(root, [str(kernel_binary)], "kernel profile table smoke test")
 
 
 def _check_toolchain(root: Path) -> None:
@@ -199,6 +221,7 @@ def verify_all(root: Path) -> list[str]:
     _check_constitution(constitution)
     _check_sources(root, sources)
     _check_ledger(sources, ledger)
+    _check_profile_contract(root)
     _check_generated(root)
     _check_repository_paths(root)
     _run_tests(root)
@@ -208,9 +231,10 @@ def verify_all(root: Path) -> list[str]:
         "architecture constitution",
         "source identities and inventories",
         "migration ledger",
+        "composable profile and evidence contract",
         "generated truth",
         "private-path boundary",
-        "foundation unit tests",
+        "repository unit tests",
         "pinned toolchain contract",
-        "generated Rust, C++, and Python domain bindings",
+        "generated Rust, C++, Python, and kernel profile bindings",
     ]

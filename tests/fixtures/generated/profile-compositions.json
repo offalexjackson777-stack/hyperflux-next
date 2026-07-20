@@ -1,0 +1,75 @@
+{
+  "cases": [
+    {
+      "child_profile_ids": [],
+      "expected_writable_children": 0,
+      "id": "receiver.razer.hyperflux-v2.1532-00cf:receiver-only",
+      "receiver_profile_id": "receiver.razer.hyperflux-v2.1532-00cf",
+      "surface_profile_id": null
+    },
+    {
+      "child_profile_ids": [
+        "child.razer.basilisk-v3-pro-35k.00cd"
+      ],
+      "expected_writable_capabilities": {
+        "child.razer.basilisk-v3-pro-35k.00cd": [
+          "lighting.brightness",
+          "lighting.complete-black",
+          "lighting.direct-frame",
+          "lighting.off",
+          "lighting.per-led",
+          "lighting.software-effect-frames",
+          "lighting.static"
+        ]
+      },
+      "expected_writable_children": 1,
+      "id": "receiver.razer.hyperflux-v2.1532-00cf:mouse-only",
+      "receiver_profile_id": "receiver.razer.hyperflux-v2.1532-00cf",
+      "surface_profile_id": null
+    },
+    {
+      "child_profile_ids": [
+        "child.razer.deathstalker-v2-pro-tkl.0296"
+      ],
+      "expected_writable_capabilities": {
+        "child.razer.deathstalker-v2-pro-tkl.0296": [
+          "lighting.brightness",
+          "lighting.complete-black",
+          "lighting.direct-frame",
+          "lighting.off",
+          "lighting.per-key",
+          "lighting.software-effect-frames",
+          "lighting.static"
+        ]
+      },
+      "expected_writable_children": 1,
+      "id": "receiver.razer.hyperflux-v2.1532-00cf:keyboard-only",
+      "receiver_profile_id": "receiver.razer.hyperflux-v2.1532-00cf",
+      "surface_profile_id": null
+    },
+    {
+      "child_profile_ids": [
+        "child.razer.basilisk-v3-pro-35k.00cd",
+        "child.razer.deathstalker-v2-pro-tkl.0296"
+      ],
+      "expected_writable_children": 2,
+      "id": "receiver.razer.hyperflux-v2.1532-00cf:all-qualified-children",
+      "receiver_profile_id": "receiver.razer.hyperflux-v2.1532-00cf",
+      "surface_profile_id": "surface.razer.hyperflux-v2-hard-edition"
+    },
+    {
+      "child_profile_ids": [],
+      "expected_unknown_writable_capabilities": [],
+      "expected_writable_children": 0,
+      "id": "receiver.razer.hyperflux-v2.1532-00cf:unknown-child",
+      "receiver_profile_id": "receiver.razer.hyperflux-v2.1532-00cf",
+      "surface_profile_id": null,
+      "unknown_child": {
+        "device_kind": "unknown",
+        "product_id": 65535
+      }
+    }
+  ],
+  "schema": "hyperflux-generated-profile-compositions-v1",
+  "source_sha256": "261ec79444fa1af6ddf021cd0336089fc58a80e1104c1171c45dde88cdda6b50"
+}

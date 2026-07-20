@@ -1,0 +1,126 @@
+{
+  "$schema": "../../schemas/evidence-registry.schema.json",
+  "schema": "hyperflux-evidence-registry-v1",
+  "claims": [
+    {
+      "id": "claim.catalog.razer-hyperflux-v2-20260713",
+      "summary": "A dated Razer compatibility-list snapshot identifies candidate model names but grants no transport or RGB authority.",
+      "evidence_level": "source-reviewed",
+      "privacy": "public",
+      "profile_ids": ["catalog.razer.hyperflux-v2.2026-07-13"],
+      "qualifies_capabilities": [],
+      "source_refs": [{"source_id": "engineering-laboratory", "paths": ["profiles/catalog/hyperflux-v2-official-candidates.yaml"]}],
+      "limitations": ["No candidate PID, carrier map, command semantics, or writable capability is inferred from catalog membership."]
+    },
+    {
+      "id": "claim.child.00cd.complete-led-map",
+      "summary": "All thirteen mouse presentation indexes were physically matched to receiver carriers, including the wheel and logo correction.",
+      "evidence_level": "hardware-qualified",
+      "privacy": "public-summary",
+      "profile_ids": ["child.razer.basilisk-v3-pro-35k.00cd"],
+      "qualifies_capabilities": ["lighting.direct-frame", "lighting.per-led"],
+      "source_refs": [{"source_id": "engineering-laboratory", "paths": ["evidence-index/k9-complete-mouse-led-map-proof-20260715.md", "profiles/product/HW-001-v1.yaml"]}],
+      "limitations": ["The mapping applies only to paired PID 0x00cd through the reviewed HyperFlux V2 protocol."]
+    },
+    {
+      "id": "claim.child.00cd.passive-identity-telemetry",
+      "summary": "Passive reports provide generation-bound mouse identity, contact, connection evidence, and bounded battery telemetry.",
+      "evidence_level": "hardware-qualified",
+      "privacy": "public-summary",
+      "profile_ids": ["child.razer.basilisk-v3-pro-35k.00cd"],
+      "qualifies_capabilities": ["identity.model", "identity.paired-product-id", "presence.passive-evidence", "route.hyperflux-wireless", "telemetry.battery-percent", "telemetry.connection-evidence", "telemetry.mouse-contact"],
+      "source_refs": [{"source_id": "engineering-laboratory", "paths": ["docs/qualification/HW-001.md", "evidence-index/id9-legacy-readonly-capability-audit-20260711.md"]}],
+      "limitations": ["Missing or stale evidence remains unknown; contact does not prove physical power or sleep."]
+    },
+    {
+      "id": "claim.child.0296.complete-keyboard-map",
+      "summary": "The complete 6-by-17 role-local keyboard transport plane and representative GUI-selected keys were physically verified.",
+      "evidence_level": "hardware-qualified",
+      "privacy": "public-summary",
+      "profile_ids": ["child.razer.deathstalker-v2-pro-tkl.0296"],
+      "qualifies_capabilities": ["lighting.direct-frame", "lighting.per-key"],
+      "source_refs": [{"source_id": "engineering-laboratory", "paths": ["evidence-index/k8-interactive-openrgb-mapping-proof-20260715.md", "profiles/product/HW-001-v1.yaml"]}],
+      "limitations": ["The transport map does not qualify another PID or another physical keyboard-layout variant."]
+    },
+    {
+      "id": "claim.child.0296.passive-identity-telemetry",
+      "summary": "Passive reports provide generation-bound keyboard identity, connection evidence, and bounded battery telemetry.",
+      "evidence_level": "hardware-qualified",
+      "privacy": "public-summary",
+      "profile_ids": ["child.razer.deathstalker-v2-pro-tkl.0296"],
+      "qualifies_capabilities": ["identity.model", "identity.paired-product-id", "presence.passive-evidence", "route.hyperflux-wireless", "telemetry.battery-percent", "telemetry.connection-evidence"],
+      "source_refs": [{"source_id": "engineering-laboratory", "paths": ["docs/qualification/HW-001.md", "evidence-index/id9-legacy-readonly-capability-audit-20260711.md"]}],
+      "limitations": ["External USB power does not establish a direct USB data route, battery capacity, or charging semantics."]
+    },
+    {
+      "id": "claim.children.complete-static-black",
+      "summary": "Complete and repeated RGB black requests made both qualified children visibly unlit without semantic-control regressions.",
+      "evidence_level": "hardware-qualified",
+      "privacy": "public-summary",
+      "profile_ids": ["child.razer.basilisk-v3-pro-35k.00cd", "child.razer.deathstalker-v2-pro-tkl.0296"],
+      "qualifies_capabilities": ["lighting.complete-black"],
+      "source_refs": [{"source_id": "engineering-laboratory", "paths": ["evidence-index/o5-watched-openrgb-complete-black-proof-20260716.md"]}],
+      "limitations": ["Visible black is an RGB value, not proof of firmware lighting-off or physical sleep."]
+    },
+    {
+      "id": "claim.children.software-effect-frame-continuity",
+      "summary": "Application-produced Direct frames continued across rescan, controller return, receiver renewal, and measured resume.",
+      "evidence_level": "production-qualified",
+      "privacy": "public-summary",
+      "profile_ids": ["child.razer.basilisk-v3-pro-35k.00cd", "child.razer.deathstalker-v2-pro-tkl.0296"],
+      "qualifies_capabilities": ["lighting.software-effect-frames"],
+      "source_refs": [{"source_id": "engineering-laboratory", "paths": ["evidence-index/o6-watched-openrgb-effect-rescan-continuity-proof-20260718.md", "evidence-index/o6-openrgb-effect-persistence-lifecycle-proof-20260718.md"]}],
+      "limitations": ["Effects are produced by OpenRGB, not by HyperFlux or receiver firmware; exact animation phase is not preserved."]
+    },
+    {
+      "id": "claim.children.static-off-brightness",
+      "summary": "Direct and Static brightness endpoints, explicit Off, and controller-local restoration were physically verified for both children.",
+      "evidence_level": "hardware-qualified",
+      "privacy": "public-summary",
+      "profile_ids": ["child.razer.basilisk-v3-pro-35k.00cd", "child.razer.deathstalker-v2-pro-tkl.0296"],
+      "qualifies_capabilities": ["lighting.brightness", "lighting.off", "lighting.static"],
+      "source_refs": [{"source_id": "engineering-laboratory", "paths": ["evidence-index/o6-watched-openrgb-lighting-capability-proof-20260717.md"]}],
+      "limitations": ["Intermediate brightness linearity and firmware effects are not qualified."]
+    },
+    {
+      "id": "claim.presentation.openrgb-1.0rc3-model-layouts",
+      "summary": "Pinned OpenRGB metadata supplies exact model presentation and keyboard geometry without becoming identity or transport authority.",
+      "evidence_level": "source-reviewed",
+      "privacy": "public",
+      "profile_ids": ["child.razer.basilisk-v3-pro-35k.00cd", "child.razer.deathstalker-v2-pro-tkl.0296"],
+      "qualifies_capabilities": [],
+      "source_refs": [{"source_id": "engineering-laboratory", "paths": ["profiles/catalog/model-layouts-v1.yaml"]}],
+      "limitations": ["Upstream presentation cannot authorize a receiver command or qualify an unknown child."]
+    },
+    {
+      "id": "claim.receiver.1532-00cf.generation-session",
+      "summary": "Receiver reconnect creates a newer generation, invalidates old state, reacquires paired PIDs, and preserves ordinary controls.",
+      "evidence_level": "hardware-qualified",
+      "privacy": "public-summary",
+      "profile_ids": ["receiver.razer.hyperflux-v2.1532-00cf"],
+      "qualifies_capabilities": ["identity.model", "identity.paired-product-id", "receiver.exclusive-writer-session", "receiver.generation", "route.hyperflux-wireless"],
+      "source_refs": [{"source_id": "engineering-laboratory", "paths": ["evidence-index/cr5a-watched-generation-validity-proof-20260711.md", "docs/qualification/HW-001.md"]}],
+      "limitations": ["No generation, session, health, or restore claim survives physical receiver removal."]
+    },
+    {
+      "id": "claim.receiver.stable-state-lifecycle-restore",
+      "summary": "An installed package restored two stable child requests after service startup, receiver renewal, and measured system resume.",
+      "evidence_level": "production-qualified",
+      "privacy": "public-summary",
+      "profile_ids": ["receiver.razer.hyperflux-v2.1532-00cf"],
+      "qualifies_capabilities": ["lighting.stable-state-restore"],
+      "source_refs": [{"source_id": "engineering-laboratory", "paths": ["evidence-index/ops2-pwr1-installed-watched-proof-20260714.md"]}],
+      "limitations": ["Device-wake restoration and speculative retry are not qualified; only retained stable states are restored."]
+    },
+    {
+      "id": "claim.surface.hard-edition.identity-indicator",
+      "summary": "The Hard Edition surface identity and its firmware-owned charging/status indicator are reviewed observations, not a USB identity or writable RGB surface.",
+      "evidence_level": "hardware-observed",
+      "privacy": "public-summary",
+      "profile_ids": ["surface.razer.hyperflux-v2-hard-edition"],
+      "qualifies_capabilities": ["identity.model", "surface.firmware-status-indicator"],
+      "source_refs": [{"source_id": "engineering-laboratory", "paths": ["evidence-index/hw001-mat-indicator-observation-20260715.md", "evidence-index/hw001-mat-no-rgb-operator-observation-20260711.md"]}],
+      "limitations": ["The surface has no independently qualified host-addressable RGB target and no invented product ID."]
+    }
+  ]
+}

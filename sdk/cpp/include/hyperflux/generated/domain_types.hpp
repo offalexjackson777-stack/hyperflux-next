@@ -37,6 +37,26 @@ private:
     value_type value_;
 };
 
+class VendorId
+{
+public:
+    using value_type = std::uint16_t;
+    static constexpr value_type minimum = 0;
+    static constexpr value_type maximum = 65535;
+
+    [[nodiscard]] static constexpr std::optional<VendorId> from(value_type value)
+    {
+        return VendorId(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const VendorId&, const VendorId&) = default;
+
+private:
+    explicit constexpr VendorId(value_type value) : value_(value) {}
+    value_type value_;
+};
+
 class ProductId
 {
 public:
@@ -54,6 +74,30 @@ public:
 
 private:
     explicit constexpr ProductId(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class ProfileRevision
+{
+public:
+    using value_type = std::uint32_t;
+    static constexpr value_type minimum = 1;
+    static constexpr value_type maximum = 4294967295;
+
+    [[nodiscard]] static constexpr std::optional<ProfileRevision> from(value_type value)
+    {
+        if(value < minimum)
+        {
+            return std::nullopt;
+        }
+        return ProfileRevision(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const ProfileRevision&, const ProfileRevision&) = default;
+
+private:
+    explicit constexpr ProfileRevision(value_type value) : value_(value) {}
     value_type value_;
 };
 
@@ -166,6 +210,54 @@ public:
 
 private:
     explicit constexpr LedIndex(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class LedCount
+{
+public:
+    using value_type = std::uint16_t;
+    static constexpr value_type minimum = 0;
+    static constexpr value_type maximum = 4096;
+
+    [[nodiscard]] static constexpr std::optional<LedCount> from(value_type value)
+    {
+        if(value > maximum)
+        {
+            return std::nullopt;
+        }
+        return LedCount(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const LedCount&, const LedCount&) = default;
+
+private:
+    explicit constexpr LedCount(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class CarrierIndex
+{
+public:
+    using value_type = std::uint16_t;
+    static constexpr value_type minimum = 0;
+    static constexpr value_type maximum = 4095;
+
+    [[nodiscard]] static constexpr std::optional<CarrierIndex> from(value_type value)
+    {
+        if(value > maximum)
+        {
+            return std::nullopt;
+        }
+        return CarrierIndex(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const CarrierIndex&, const CarrierIndex&) = default;
+
+private:
+    explicit constexpr CarrierIndex(value_type value) : value_(value) {}
     value_type value_;
 };
 
@@ -330,6 +422,29 @@ private:
     std::string value_;
 };
 
+class EvidenceClaimId
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 160;
+
+    [[nodiscard]] static std::optional<EvidenceClaimId> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return EvidenceClaimId(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const EvidenceClaimId&, const EvidenceClaimId&) = default;
+
+private:
+    explicit EvidenceClaimId(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
 enum class DeviceKind
 {
     Receiver,
@@ -348,6 +463,24 @@ enum class DeviceKind
         case DeviceKind::Mouse: return "mouse";
         case DeviceKind::Keyboard: return "keyboard";
         case DeviceKind::Unknown: return "unknown";
+    }
+    return "unknown";
+}
+
+enum class ProfileKind
+{
+    Receiver,
+    Child,
+    Surface,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(ProfileKind value)
+{
+    switch(value)
+    {
+        case ProfileKind::Receiver: return "receiver";
+        case ProfileKind::Child: return "child";
+        case ProfileKind::Surface: return "surface";
     }
     return "unknown";
 }
@@ -444,6 +577,52 @@ enum class EvidenceConfidence
         case EvidenceConfidence::Derived: return "derived";
         case EvidenceConfidence::Inferred: return "inferred";
         case EvidenceConfidence::Unknown: return "unknown";
+    }
+    return "unknown";
+}
+
+enum class EvidenceLevel
+{
+    Requirement,
+    SourceReviewed,
+    SimulationProven,
+    HardwareObserved,
+    HardwareQualified,
+    ProductionQualified,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(EvidenceLevel value)
+{
+    switch(value)
+    {
+        case EvidenceLevel::Requirement: return "requirement";
+        case EvidenceLevel::SourceReviewed: return "source-reviewed";
+        case EvidenceLevel::SimulationProven: return "simulation-proven";
+        case EvidenceLevel::HardwareObserved: return "hardware-observed";
+        case EvidenceLevel::HardwareQualified: return "hardware-qualified";
+        case EvidenceLevel::ProductionQualified: return "production-qualified";
+    }
+    return "unknown";
+}
+
+enum class PrivacyClass
+{
+    Public,
+    PublicSummary,
+    Sensitive,
+    Private,
+    Forbidden,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(PrivacyClass value)
+{
+    switch(value)
+    {
+        case PrivacyClass::Public: return "public";
+        case PrivacyClass::PublicSummary: return "public-summary";
+        case PrivacyClass::Sensitive: return "sensitive";
+        case PrivacyClass::Private: return "private";
+        case PrivacyClass::Forbidden: return "forbidden";
     }
     return "unknown";
 }

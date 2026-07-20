@@ -7,10 +7,10 @@ Default disposition: `REJECT_UNTIL_REVIEWED`.
 | ID | Component | Decision | Status | Destination |
 | --- | --- | --- | --- | --- |
 | `HFX-MIG-001` | architecture and product requirements | `REIMPLEMENT` | `IN_PROGRESS` | `architecture` |
-| `HFX-MIG-002` | protocol discoveries and physical evidence claims | `SPECIFICATION_ONLY` | `PENDING_REVIEW` | `profiles` |
+| `HFX-MIG-002` | protocol discoveries and physical evidence claims | `SPECIFICATION_ONLY` | `IN_PROGRESS` | `profiles` |
 | `HFX-MIG-003` | Linux HID kernel driver | `REIMPLEMENT` | `PENDING_REVIEW` | `kernel` |
 | `HFX-MIG-004` | bridge runtime and policy | `REIMPLEMENT` | `PENDING_REVIEW` | `bridge` |
-| `HFX-MIG-005` | hardware and presentation profiles | `REIMPLEMENT_AND_GENERATE` | `PENDING_REVIEW` | `profiles` |
+| `HFX-MIG-005` | hardware and presentation profiles | `REIMPLEMENT_AND_GENERATE` | `IN_PROGRESS` | `profiles` |
 | `HFX-MIG-006` | OpenRGB integration | `REIMPLEMENT` | `PENDING_REVIEW` | `integrations` |
 | `HFX-MIG-007` | OpenRazer metadata and compatibility | `REIMPLEMENT_WITH_PINNED_IMPORT` | `PENDING_REVIEW` | `integrations` |
 | `HFX-MIG-008` | Polychromatic integration | `REIMPLEMENT` | `PENDING_REVIEW` | `integrations` |

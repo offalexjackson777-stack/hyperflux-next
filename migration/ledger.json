@@ -16,7 +16,7 @@
       "id": "HFX-MIG-002",
       "component": "protocol discoveries and physical evidence claims",
       "disposition": "SPECIFICATION_ONLY",
-      "status": "PENDING_REVIEW",
+      "status": "IN_PROGRESS",
       "sources": ["reverse-engineering-archive", "engineering-laboratory"],
       "destination_owner": "profiles",
       "rationale": "Claims may be admitted only with provenance, privacy classification, and evidence links; raw captures remain outside the product repository."
@@ -43,7 +43,7 @@
       "id": "HFX-MIG-005",
       "component": "hardware and presentation profiles",
       "disposition": "REIMPLEMENT_AND_GENERATE",
-      "status": "PENDING_REVIEW",
+      "status": "IN_PROGRESS",
       "sources": ["engineering-laboratory"],
       "destination_owner": "profiles",
       "rationale": "Split receiver, child, route, capability, evidence, and upstream presentation metadata into canonical composable registries."
@@ -122,4 +122,3 @@
     }
   ]
 }
-

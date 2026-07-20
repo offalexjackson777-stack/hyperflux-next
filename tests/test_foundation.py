@@ -14,6 +14,7 @@ from hfxdev.migration import summary
 from hfxdev.model import load_foundation
 from hfxdev.render import rendered_files
 from hfxdev.model import load_json
+from hfxdev.profiles import load_profile_inputs
 
 
 class FoundationTests(unittest.TestCase):
@@ -62,6 +63,12 @@ class FoundationTests(unittest.TestCase):
         for item in catalog["numeric_types"]:
             with self.subTest(type=item["name"]):
                 self.assertLessEqual(item["minimum"], item["maximum"])
+
+    def test_profile_sources_are_bound_to_frozen_evidence_inventories(self) -> None:
+        profiles = load_profile_inputs(ROOT)
+        self.assertEqual(len(profiles.profiles), 4)
+        self.assertEqual(len(profiles.candidates), 11)
+        self.assertEqual(len(profiles.source_sha256), 64)
 
 
 if __name__ == "__main__":

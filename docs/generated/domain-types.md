@@ -9,12 +9,16 @@ These types prevent semantically different values from being passed interchangea
 | Type | Wire name | Range |
 | --- | --- | --- |
 | `GenerationId` | `generation_id` | 1 to 18446744073709551615 |
+| `VendorId` | `vendor_id` | 0 to 65535 |
 | `ProductId` | `product_id` | 0 to 65535 |
+| `ProfileRevision` | `profile_revision` | 1 to 4294967295 |
 | `BatteryPercent` | `battery_percent` | 0 to 100 |
 | `Brightness` | `brightness` | 0 to 255 |
 | `DurationMs` | `duration_ms` | 0 to 86400000 |
 | `SequenceNumber` | `sequence_number` | 0 to 18446744073709551615 |
 | `LedIndex` | `led_index` | 0 to 4095 |
+| `LedCount` | `led_count` | 0 to 4096 |
+| `CarrierIndex` | `carrier_index` | 0 to 4095 |
 
 ## Opaque String Types
 
@@ -27,15 +31,19 @@ These types prevent semantically different values from being passed interchangea
 | `TransactionId` | `transaction_id` | 1 to 128 bytes |
 | `ProfileId` | `profile_id` | 1 to 128 bytes |
 | `CapabilityId` | `capability_id` | 1 to 128 bytes |
+| `EvidenceClaimId` | `evidence_claim_id` | 1 to 160 bytes |
 
 ## Enumerations
 
 - `DeviceKind`: `receiver`, `mat`, `mouse`, `keyboard`, `unknown`
+- `ProfileKind`: `receiver`, `child`, `surface`
 - `RouteKind`: `hyperflux-wireless`, `direct-usb`, `bluetooth`
 - `PairingState`: `paired`, `unpaired`, `unknown`
 - `PresenceState`: `available`, `sleeping`, `unavailable`, `unknown`
 - `ConnectionMode`: `hyperflux-2.4ghz`, `direct-usb`, `bluetooth`, `unknown`
 - `EvidenceConfidence`: `observed`, `derived`, `inferred`, `unknown`
+- `EvidenceLevel`: `requirement`, `source-reviewed`, `simulation-proven`, `hardware-observed`, `hardware-qualified`, `production-qualified`
+- `PrivacyClass`: `public`, `public-summary`, `sensitive`, `private`, `forbidden`
 - `SupportLevel`: `candidate`, `identified`, `read-only`, `telemetry-qualified`, `lighting-qualified`, `settings-qualified`, `pairing-qualified`, `production-qualified`
 - `ReceiverState`: `absent`, `discovered-read-only`, `observed`, `profile-qualified`, `session-authorized`, `degraded-read-only`
 - `TransactionState`: `created`, `validated`, `ownership-bound`, `generation-bound`, `queued`, `sent`, `health-pending`, `succeeded`, `failed`, `revoked`

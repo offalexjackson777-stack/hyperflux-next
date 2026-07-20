@@ -1,0 +1,30 @@
+{
+  "$schema": "../../schemas/hardware-profile.schema.json",
+  "schema": "hyperflux-hardware-profile-v1",
+  "profile_id": "child.razer.basilisk-v3-pro-35k.00cd",
+  "revision": 1,
+  "kind": "child",
+  "device_kind": "mouse",
+  "identity": {"manufacturer": "Razer", "model_name": "Razer Basilisk V3 Pro 35K", "authority": "paired-product-id", "vendor_id": 5426, "product_id": 205},
+  "compatibility": {"receiver_protocols": ["razer-hyperflux-v2"], "routes": ["hyperflux-wireless"], "required_sibling_kinds": []},
+  "transport": {"lighting": {"physical_led_count": 13, "application_slot_count": 13, "carrier_count": 13, "rows": 1, "columns": 13, "application_index_to_carrier": [1, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}},
+  "presentation": {"owner": "OpenRGB", "project_version": "1.0rc3", "source_commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0", "model_key": "basilisk_v3_pro_35k_wireless_device", "layout_key": null, "transport_variant": "wireless"},
+  "capabilities": [
+    {"id": "identity.model", "support_level": "identified", "evidence_claims": ["claim.child.00cd.passive-identity-telemetry"]},
+    {"id": "identity.paired-product-id", "support_level": "read-only", "evidence_claims": ["claim.child.00cd.passive-identity-telemetry"]},
+    {"id": "lighting.brightness", "support_level": "lighting-qualified", "evidence_claims": ["claim.children.static-off-brightness"]},
+    {"id": "lighting.complete-black", "support_level": "lighting-qualified", "evidence_claims": ["claim.children.complete-static-black"]},
+    {"id": "lighting.direct-frame", "support_level": "lighting-qualified", "evidence_claims": ["claim.child.00cd.complete-led-map"]},
+    {"id": "lighting.off", "support_level": "lighting-qualified", "evidence_claims": ["claim.children.static-off-brightness"]},
+    {"id": "lighting.per-led", "support_level": "lighting-qualified", "evidence_claims": ["claim.child.00cd.complete-led-map"]},
+    {"id": "lighting.software-effect-frames", "support_level": "production-qualified", "evidence_claims": ["claim.children.software-effect-frame-continuity"]},
+    {"id": "lighting.static", "support_level": "lighting-qualified", "evidence_claims": ["claim.children.static-off-brightness"]},
+    {"id": "presence.passive-evidence", "support_level": "telemetry-qualified", "evidence_claims": ["claim.child.00cd.passive-identity-telemetry"]},
+    {"id": "route.hyperflux-wireless", "support_level": "read-only", "evidence_claims": ["claim.child.00cd.passive-identity-telemetry"]},
+    {"id": "telemetry.battery-percent", "support_level": "telemetry-qualified", "evidence_claims": ["claim.child.00cd.passive-identity-telemetry"]},
+    {"id": "telemetry.connection-evidence", "support_level": "telemetry-qualified", "evidence_claims": ["claim.child.00cd.passive-identity-telemetry"]},
+    {"id": "telemetry.mouse-contact", "support_level": "telemetry-qualified", "evidence_claims": ["claim.child.00cd.passive-identity-telemetry"]}
+  ],
+  "evidence_claims": ["claim.child.00cd.complete-led-map", "claim.child.00cd.passive-identity-telemetry", "claim.children.complete-static-black", "claim.children.software-effect-frame-continuity", "claim.children.static-off-brightness", "claim.presentation.openrgb-1.0rc3-model-layouts"],
+  "restrictions": ["Another Basilisk name or PID inherits no map.", "OpenRGB owns zone labels and geometry presentation.", "Contact, inactivity, darkness, and power-off remain distinct facts."]
+}
