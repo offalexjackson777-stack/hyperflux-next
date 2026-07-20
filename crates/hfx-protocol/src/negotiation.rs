@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use crate::{
-    ClientHello, MAXIMUM_PROTOCOL_VERSION, MINIMUM_PROTOCOL_VERSION, SUPPORTED_FEATURES,
-    ServerHello,
-};
+use crate::{ClientHello, MAXIMUM_PROTOCOL_VERSION, SUPPORTED_FEATURES, ServerHello};
 use hfx_domain::{
     ComponentVersion, NegotiationToken, ProtocolFeatureId, ProtocolSessionId, ProtocolVersion,
     QueueCapacity, ServerInstanceId,
@@ -19,7 +16,7 @@ pub struct ProtocolContract<'a> {
 }
 
 pub const GENERATED_CONTRACT: ProtocolContract<'static> = ProtocolContract {
-    minimum_version: MINIMUM_PROTOCOL_VERSION,
+    minimum_version: crate::v1::MINIMUM_PROTOCOL_VERSION,
     maximum_version: MAXIMUM_PROTOCOL_VERSION,
     features: SUPPORTED_FEATURES,
 };
@@ -60,7 +57,7 @@ impl fmt::Display for NegotiationError {
 
 impl std::error::Error for NegotiationError {}
 
-/// Negotiates against the generated protocol-v1 contract.
+/// Negotiates against every protocol version retained by the generated registry.
 ///
 /// # Errors
 ///

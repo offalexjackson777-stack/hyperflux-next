@@ -977,6 +977,46 @@ impl fmt::Display for ProjectionRevision {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "u16", into = "u16")]
+pub struct PersistenceSchemaVersion(u16);
+
+impl PersistenceSchemaVersion {
+    pub const MIN: u16 = 1;
+    pub const MAX: u16 = 65_535;
+
+    #[must_use]
+    pub const fn get(self) -> u16 {
+        self.0
+    }
+}
+
+impl TryFrom<u16> for PersistenceSchemaVersion {
+    type Error = DomainValueError;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        if value < Self::MIN {
+            return Err(DomainValueError::new(
+                "PersistenceSchemaVersion",
+                "outside the canonical range",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl From<PersistenceSchemaVersion> for u16 {
+    fn from(value: PersistenceSchemaVersion) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for PersistenceSchemaVersion {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(try_from = "String", into = "String")]
 pub struct AuthorizationEpoch(u64);
 

@@ -531,6 +531,31 @@ private:
     value_type value_;
 };
 
+class PersistenceSchemaVersion
+{
+public:
+    using value_type = std::uint16_t;
+    static constexpr value_type minimum = 1;
+    static constexpr value_type maximum = 65535;
+    static constexpr bool wire_as_decimal_string = false;
+
+    [[nodiscard]] static constexpr std::optional<PersistenceSchemaVersion> from(value_type value)
+    {
+        if(value < minimum)
+        {
+            return std::nullopt;
+        }
+        return PersistenceSchemaVersion(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const PersistenceSchemaVersion&, const PersistenceSchemaVersion&) = default;
+
+private:
+    explicit constexpr PersistenceSchemaVersion(value_type value) : value_(value) {}
+    value_type value_;
+};
+
 class AuthorizationEpoch
 {
 public:

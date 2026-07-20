@@ -58,6 +58,7 @@ version = "0.0.0-dev.1"
 dependencies = [
  "hfx-domain",
  "hfx-protocol",
+ "serde",
  "serde_json",
  "sha2",
 ]

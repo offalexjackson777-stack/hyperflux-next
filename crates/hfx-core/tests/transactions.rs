@@ -2,43 +2,22 @@
 
 mod common;
 
-use common::{generation, resource, text, time};
+use common::{generation, text, time, transaction_request};
 use hfx_core::{
     BoundedOutcomeJournal, BoundedTransactionQueue, OutcomeJournalError, OutcomeLookup,
     QueuedTransaction, RequestReplay, TransactionMachine, TransactionQueueError,
     TransactionTransitionError, canonical_request_digest,
 };
 use hfx_domain::{
-    AuthorizationEpoch, ColorChannel, DeliveredFrameCount, DeviceApplicationState, DispatchNonce,
-    FrameCount, FrameIndex, QueueAdmission, SideEffectCertainty, TransactionClass,
-    TransactionState,
+    AuthorizationEpoch, DeliveredFrameCount, DeviceApplicationState, DispatchNonce, FrameCount,
+    QueueAdmission, SideEffectCertainty, TransactionClass, TransactionState,
 };
 use hfx_protocol::{
-    LightingFrame, RgbColor, TransactionProgress, TransactionRequest, TransactionResult,
-    TransactionTerminal,
+    TransactionProgress, TransactionRequest, TransactionResult, TransactionTerminal,
 };
 
 fn request(id: &str, class: TransactionClass, deadline: u64) -> TransactionRequest {
-    TransactionRequest {
-        request_id: text(&format!("request-{id}")),
-        transaction_id: text(&format!("transaction-{id}")),
-        client_id: text("client-1"),
-        lease_id: text("lease-1"),
-        receiver_id: text("receiver-1"),
-        generation_id: generation(1),
-        transaction_class: class,
-        deadline_ms: time(deadline),
-        resources: vec![resource("receiver-1", 1, "mouse-1")],
-        frames: vec![LightingFrame {
-            device_id: text("mouse-1"),
-            frame_index: FrameIndex::try_from(0_u32).expect("frame index is valid"),
-            colors: vec![RgbColor {
-                red: ColorChannel::try_from(1_u8).expect("color is valid"),
-                green: ColorChannel::try_from(2_u8).expect("color is valid"),
-                blue: ColorChannel::try_from(3_u8).expect("color is valid"),
-            }],
-        }],
-    }
+    transaction_request(id, class, deadline, &["mouse-1"])
 }
 
 fn queued(id: &str, class: TransactionClass, deadline: u64) -> QueuedTransaction {
@@ -363,7 +342,7 @@ fn request_digest_is_stable_and_changes_with_semantic_content() {
     let encoded = serde_json::to_string(&first).expect("request is serializable");
     assert_eq!(
         encoded,
-        include_str!("../../../protocol/v1/fixtures/transaction-request-canonical.json").trim_end()
+        include_str!("../../../protocol/v2/fixtures/transaction-request-canonical.json").trim_end()
     );
     let first_digest = canonical_request_digest(&first).expect("request is digestible");
     assert_eq!(
@@ -377,7 +356,7 @@ fn request_digest_is_stable_and_changes_with_semantic_content() {
     assert_eq!(first_digest.as_str().len(), 64);
     assert_eq!(
         first_digest.as_str(),
-        "3aea8d361b4c4cba3d84eaec918e1436048920ef0a9869224edcc6310f3df41a"
+        "52a96f88b7d0b686ebafea4914b9947fbbd3ac7195dab3b56fea972560c2a17b"
     );
     assert!(
         first_digest

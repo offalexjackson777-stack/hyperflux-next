@@ -2,10 +2,12 @@
 
 use hfx_domain::{
     AuthorizationEpoch, DeliveredFrameCount, DeviceApplicationState, DispatchNonce, GenerationId,
-    LogicalDeviceId, MonotonicMs, ProfileDigest, ProfileId, ReceiverId, RestoreClaimId, SessionId,
-    SideEffectCertainty, TransactionId, WallClockUnixMs,
+    LedCount, LogicalDeviceId, MonotonicMs, PersistenceSchemaVersion, ProfileDigest, ProfileId,
+    ReceiverId, RequestDigest, RestoreClaimId, SessionId, SideEffectCertainty, TransactionId,
+    WallClockUnixMs,
 };
-use hfx_protocol::{BridgeEvent, LightingFrame, ResourceKey, RgbColor};
+use hfx_protocol::{BridgeEvent, DeviceProfileBinding, LightingFrame, ResourceKey, RgbColor};
+use serde::{Deserialize, Serialize};
 
 /// Supplies monotonic time for deadlines, leases, and deterministic tests.
 pub trait Clock {
@@ -20,6 +22,10 @@ pub struct TransportDispatch {
     pub receiver_id: ReceiverId,
     pub generation_id: GenerationId,
     pub transaction_id: TransactionId,
+    pub request_digest: RequestDigest,
+    pub receiver_profile_id: ProfileId,
+    pub receiver_profile_digest: ProfileDigest,
+    pub device_profiles: Vec<DeviceProfileBinding>,
     pub frames: Vec<LightingFrame>,
 }
 
@@ -50,6 +56,21 @@ pub struct TransportFailureFacts {
     pub device_application: DeviceApplicationState,
 }
 
+/// Durable adapter knowledge for one exact semantic dispatch.
+///
+/// `NotObserved` is the only state that permits a new write. `Evicted`,
+/// `Unavailable`, and `Conflict` all preserve uncertainty and therefore forbid
+/// automatic replay.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransportReconciliation {
+    NotObserved,
+    Retained(TransportReceipt),
+    RetainedFailure(TransportFailureFacts),
+    Evicted,
+    Unavailable,
+    Conflict,
+}
+
 /// Allows adapter-specific errors to expose a common side-effect contract.
 pub trait TransportFailure {
     fn facts(&self) -> TransportFailureFacts;
@@ -61,7 +82,18 @@ pub trait ReceiverTransport {
 
     fn current_generation(&self, receiver_id: &ReceiverId) -> Option<GenerationId>;
 
+    /// Reconciles one exact dispatch against the adapter's durable outcome log.
+    ///
+    /// The adapter must bind the lookup to session, authorization epoch,
+    /// generation, transaction, nonce, request digest, profile bindings, and
+    /// frames. A conflicting identity must never be reported as `NotObserved`.
+    fn reconcile(&self, dispatch: &TransportDispatch) -> TransportReconciliation;
+
     /// Delivers one validated, fully bound semantic dispatch.
+    ///
+    /// Before any hardware side effect, the adapter must durably reserve the
+    /// exact dispatch identity. Repeating an identical dispatch must return the
+    /// retained terminal facts rather than execute a second physical write.
     ///
     /// # Errors
     ///
@@ -75,25 +107,43 @@ pub trait SessionAuthority {
     fn authorizes(&self, session_id: &SessionId, authorization_epoch: AuthorizationEpoch) -> bool;
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct QualifiedReceiverProfile {
+    pub profile_id: ProfileId,
+    pub profile_digest: ProfileDigest,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct QualifiedDeviceProfile {
+    pub profile_id: ProfileId,
+    pub profile_digest: ProfileDigest,
+    pub application_slot_count: LedCount,
+}
+
 /// Resolves evidence-backed profile and capability facts without presentation data.
 pub trait ProfileRegistry {
     fn supports(&self, resource: &ResourceKey) -> bool;
 
-    fn profile_binding(
+    fn receiver_profile(
         &self,
         receiver_id: &ReceiverId,
-        device_id: &LogicalDeviceId,
-    ) -> Option<(ProfileId, ProfileDigest)>;
+        generation_id: GenerationId,
+    ) -> Option<QualifiedReceiverProfile>;
+
+    fn device_profile(&self, resource: &ResourceKey) -> Option<QualifiedDeviceProfile>;
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "mode", content = "colors", rename_all = "kebab-case")]
 pub enum StableLighting {
     Off,
     Static(Vec<RgbColor>),
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct PersistedStableIntent {
+    pub schema_version: PersistenceSchemaVersion,
     pub receiver_id: ReceiverId,
     pub device_id: LogicalDeviceId,
     pub profile_id: ProfileId,
@@ -102,13 +152,23 @@ pub struct PersistedStableIntent {
     pub captured_at: WallClockUnixMs,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RestoreClaimTarget {
+    pub device_id: LogicalDeviceId,
+    pub profile_id: ProfileId,
+    pub profile_digest: ProfileDigest,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct RestoreClaim {
+    pub schema_version: PersistenceSchemaVersion,
     pub claim_id: RestoreClaimId,
     pub receiver_id: ReceiverId,
     pub generation_id: GenerationId,
-    pub profile_digest: ProfileDigest,
-    pub target_devices: Vec<LogicalDeviceId>,
+    pub plan_digest: RequestDigest,
+    pub targets: Vec<RestoreClaimTarget>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

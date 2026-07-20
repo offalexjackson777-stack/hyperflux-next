@@ -24,9 +24,9 @@ pub use lifecycle::{
 };
 pub use ports::{
     Clock, EventDelivery, EventSink, PersistedStableIntent, PersistenceStore, ProfileRegistry,
-    ReceiverTransport, RestoreClaim, RestoreClaimDisposition, SessionAuthority, StableLighting,
-    TransportDispatch, TransportFailure, TransportFailureFacts, TransportReceipt,
-    TransportTerminal,
+    QualifiedDeviceProfile, QualifiedReceiverProfile, ReceiverTransport, RestoreClaim,
+    RestoreClaimDisposition, SessionAuthority, StableLighting, TransportDispatch, TransportFailure,
+    TransportFailureFacts, TransportReceipt, TransportReconciliation, TransportTerminal,
 };
 pub use transactions::{
     BoundedOutcomeJournal, BoundedTransactionQueue, DequeueDecision, OutcomeJournalError,

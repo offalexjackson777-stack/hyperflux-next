@@ -24,6 +24,7 @@
     {"name": "StreamEpoch", "wire": "stream_epoch", "rust": "u64", "cpp": "std::uint64_t", "json_encoding": "decimal-string", "python_min": 1, "minimum": "1", "maximum": "18446744073709551615"},
     {"name": "DroppedEventCount", "wire": "dropped_event_count", "rust": "u64", "cpp": "std::uint64_t", "json_encoding": "decimal-string", "python_min": 0, "minimum": "0", "maximum": "18446744073709551615"},
     {"name": "ProjectionRevision", "wire": "projection_revision", "rust": "u32", "cpp": "std::uint32_t", "json_encoding": "number", "python_min": 1, "minimum": 1, "maximum": 4294967295},
+    {"name": "PersistenceSchemaVersion", "wire": "persistence_schema_version", "rust": "u16", "cpp": "std::uint16_t", "json_encoding": "number", "python_min": 1, "minimum": 1, "maximum": 65535},
     {"name": "AuthorizationEpoch", "wire": "authorization_epoch", "rust": "u64", "cpp": "std::uint64_t", "json_encoding": "decimal-string", "python_min": 1, "minimum": "1", "maximum": "18446744073709551615"},
     {"name": "DispatchNonce", "wire": "dispatch_nonce", "rust": "u64", "cpp": "std::uint64_t", "json_encoding": "decimal-string", "python_min": 1, "minimum": "1", "maximum": "18446744073709551615"},
     {"name": "WallClockUnixMs", "wire": "wall_clock_unix_ms", "rust": "u64", "cpp": "std::uint64_t", "json_encoding": "decimal-string", "python_min": 0, "minimum": "0", "maximum": "18446744073709551615"},

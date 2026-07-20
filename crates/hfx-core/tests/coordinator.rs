@@ -2,19 +2,23 @@
 
 mod common;
 
-use common::{generation, lease_request, resource, text, time};
+use common::{
+    device_profile_digest, device_profile_id, generation, lease_request, receiver_profile_digest,
+    receiver_profile_id, text, time, transaction_request,
+};
 use hfx_core::{
     BoundedEventLog, EventDelivery, EventSink, LeaseManager, OutcomeLookup, ProfileRegistry,
-    ReceiverTransport, SessionAuthority, SubmissionBinding, SubmissionResult,
-    TransactionCoordinator, TransactionCoordinatorError, TransactionQueueError, TransportDispatch,
-    TransportFailure, TransportFailureFacts, TransportReceipt, TransportTerminal,
+    QualifiedDeviceProfile, QualifiedReceiverProfile, ReceiverTransport, SessionAuthority,
+    SubmissionBinding, SubmissionResult, TransactionCoordinator, TransactionCoordinatorError,
+    TransactionQueueError, TransportDispatch, TransportFailure, TransportFailureFacts,
+    TransportReceipt, TransportReconciliation, TransportTerminal,
 };
 use hfx_domain::{
-    AuthorizationEpoch, ColorChannel, DeliveredFrameCount, DeviceApplicationState, DispatchNonce,
-    FrameIndex, ProfileDigest, ProfileId, ProjectionRevision, ProtocolErrorKind, QueueAdmission,
-    SideEffectCertainty, StreamEpoch, TransactionClass, TransactionState,
+    AuthorizationEpoch, DeliveredFrameCount, DeviceApplicationState, DispatchNonce, LedCount,
+    ProjectionRevision, ProtocolErrorKind, QueueAdmission, ResourceKind, SideEffectCertainty,
+    StreamEpoch, TransactionClass, TransactionState,
 };
-use hfx_protocol::{BridgeEvent, LightingFrame, RgbColor, TransactionRequest, TransactionResult};
+use hfx_protocol::{BridgeEvent, TransactionRequest, TransactionResult};
 
 #[derive(Clone, Debug)]
 struct FakeTransportError(TransportFailureFacts);
@@ -36,6 +40,7 @@ struct FakeTransport {
     receiver_id: hfx_domain::ReceiverId,
     generation_id: hfx_domain::GenerationId,
     plan: PlannedDispatch,
+    reconciliation: TransportReconciliation,
     dispatches: Vec<TransportDispatch>,
 }
 
@@ -47,6 +52,10 @@ impl ReceiverTransport for FakeTransport {
         receiver_id: &hfx_domain::ReceiverId,
     ) -> Option<hfx_domain::GenerationId> {
         (receiver_id == &self.receiver_id).then_some(self.generation_id)
+    }
+
+    fn reconcile(&self, _dispatch: &TransportDispatch) -> TransportReconciliation {
+        self.reconciliation
     }
 
     fn dispatch(&mut self, dispatch: &TransportDispatch) -> Result<TransportReceipt, Self::Error> {
@@ -78,6 +87,7 @@ impl SessionAuthority for FakeSessions {
 #[derive(Clone, Copy, Debug)]
 struct FakeProfiles {
     supported: bool,
+    current: bool,
 }
 
 impl ProfileRegistry for FakeProfiles {
@@ -85,12 +95,46 @@ impl ProfileRegistry for FakeProfiles {
         self.supported
     }
 
-    fn profile_binding(
+    fn receiver_profile(
         &self,
-        _receiver_id: &hfx_domain::ReceiverId,
-        _device_id: &hfx_domain::LogicalDeviceId,
-    ) -> Option<(ProfileId, ProfileDigest)> {
-        None
+        receiver_id: &hfx_domain::ReceiverId,
+        generation_id: hfx_domain::GenerationId,
+    ) -> Option<QualifiedReceiverProfile> {
+        (self.supported && receiver_id.as_str() == "receiver-1" && generation_id == generation(1))
+            .then(|| QualifiedReceiverProfile {
+                profile_id: receiver_profile_id(),
+                profile_digest: if self.current {
+                    receiver_profile_digest()
+                } else {
+                    text(&"c".repeat(64))
+                },
+            })
+    }
+
+    fn device_profile(
+        &self,
+        resource: &hfx_protocol::ResourceKey,
+    ) -> Option<QualifiedDeviceProfile> {
+        (self.supported
+            && resource.receiver_id.as_str() == "receiver-1"
+            && resource.generation_id == generation(1)
+            && resource.kind == ResourceKind::Lighting)
+            .then(|| QualifiedDeviceProfile {
+                profile_id: device_profile_id(resource.device_id.as_str()),
+                profile_digest: if self.current {
+                    device_profile_digest()
+                } else {
+                    text(&"d".repeat(64))
+                },
+                application_slot_count: LedCount::try_from(1_u16).expect("test LED count is valid"),
+            })
+    }
+}
+
+fn fake_profiles(supported: bool) -> FakeProfiles {
+    FakeProfiles {
+        supported,
+        current: true,
     }
 }
 
@@ -113,32 +157,11 @@ fn request(
     deadline: u64,
     device_count: u32,
 ) -> TransactionRequest {
-    let resources = (0..device_count)
-        .map(|index| resource("receiver-1", 1, &format!("device-{index}")))
+    let devices = (0..device_count)
+        .map(|index| format!("device-{index}"))
         .collect::<Vec<_>>();
-    let frames = (0..device_count)
-        .map(|index| LightingFrame {
-            device_id: text(&format!("device-{index}")),
-            frame_index: FrameIndex::try_from(index).expect("frame index is valid"),
-            colors: vec![RgbColor {
-                red: ColorChannel::try_from(10_u8).expect("color is valid"),
-                green: ColorChannel::try_from(20_u8).expect("color is valid"),
-                blue: ColorChannel::try_from(30_u8).expect("color is valid"),
-            }],
-        })
-        .collect();
-    TransactionRequest {
-        request_id: text(&format!("request-{id}")),
-        transaction_id: text(&format!("transaction-{id}")),
-        client_id: text("client-1"),
-        lease_id: text("lease-1"),
-        receiver_id: text("receiver-1"),
-        generation_id: generation(1),
-        transaction_class: class,
-        deadline_ms: time(deadline),
-        resources,
-        frames,
-    }
+    let device_refs = devices.iter().map(String::as_str).collect::<Vec<_>>();
+    transaction_request(id, class, deadline, &device_refs)
 }
 
 fn binding(nonce: u64) -> SubmissionBinding {
@@ -174,6 +197,7 @@ fn transport(plan: PlannedDispatch) -> FakeTransport {
         receiver_id: text("receiver-1"),
         generation_id: generation(1),
         plan,
+        reconciliation: TransportReconciliation::NotObserved,
         dispatches: Vec::new(),
     }
 }
@@ -211,7 +235,7 @@ fn exact_replay_never_queues_or_dispatches_twice() {
     let request = request("one", TransactionClass::StaticLighting, 100, 1);
     let leases = leases(request.resources.clone());
     let sessions = sessions();
-    let profiles = FakeProfiles { supported: true };
+    let profiles = fake_profiles(true);
     let mut transport = transport(PlannedDispatch::Receipt(successful_receipt(1)));
     let mut coordinator = TransactionCoordinator::new(4).expect("capacity is valid");
     let mut events = events();
@@ -269,6 +293,14 @@ fn exact_replay_never_queues_or_dispatches_twice() {
     assert_eq!(terminal.state, TransactionState::Succeeded);
     assert_eq!(terminal.terminal_sequence.get(), 1);
     assert_eq!(transport.dispatches.len(), 1);
+    let hardware_dispatch = &transport.dispatches[0];
+    assert_eq!(hardware_dispatch.receiver_profile_id, receiver_profile_id());
+    assert_eq!(
+        hardware_dispatch.receiver_profile_digest,
+        receiver_profile_digest()
+    );
+    assert_eq!(hardware_dispatch.device_profiles.len(), 1);
+    assert_eq!(hardware_dispatch.request_digest.as_str().len(), 64);
 
     let terminal_replay = coordinator
         .submit(
@@ -296,7 +328,7 @@ fn exact_replay_never_queues_or_dispatches_twice() {
 fn admission_rejects_missing_authority_before_any_transport() {
     let base = request("base", TransactionClass::StaticLighting, 100, 1);
     let leases = leases(base.resources.clone());
-    let profiles = FakeProfiles { supported: true };
+    let profiles = fake_profiles(true);
     let mut transport = transport(PlannedDispatch::Receipt(successful_receipt(1)));
     let mut events = events();
     let mut sink = sink();
@@ -360,7 +392,7 @@ fn admission_rejects_missing_authority_before_any_transport() {
             time(1),
             &live_sessions,
             &leases,
-            &FakeProfiles { supported: false },
+            &fake_profiles(false),
             &transport,
             &mut events,
             &mut sink,
@@ -377,7 +409,7 @@ fn effect_coalescing_is_explicit_but_stable_queue_order_is_strict() {
     let first = request("old", TransactionClass::EffectFrame, 100, 1);
     let leases = leases(first.resources.clone());
     let sessions = sessions();
-    let profiles = FakeProfiles { supported: true };
+    let profiles = fake_profiles(true);
     let transport = transport(PlannedDispatch::Receipt(successful_receipt(1)));
     let mut coordinator = TransactionCoordinator::new(2).expect("capacity is valid");
     let mut events = events();
@@ -460,7 +492,7 @@ fn dispatch_rechecks_session_and_generation_before_hardware() {
     let first_request = request("session", TransactionClass::StaticLighting, 100, 1);
     let leases = leases(first_request.resources.clone());
     let mut sessions = sessions();
-    let profiles = FakeProfiles { supported: true };
+    let profiles = fake_profiles(true);
     let mut transport = transport(PlannedDispatch::Receipt(successful_receipt(1)));
     let mut coordinator = TransactionCoordinator::new(4).expect("capacity is valid");
     let mut events = events();
@@ -536,11 +568,182 @@ fn dispatch_rechecks_session_and_generation_before_hardware() {
 }
 
 #[test]
+fn profile_bindings_are_checked_at_admission_and_immediately_before_dispatch() {
+    let request = request("profile", TransactionClass::StaticLighting, 100, 1);
+    let leases = leases(request.resources.clone());
+    let sessions = sessions();
+    let transport = transport(PlannedDispatch::Receipt(successful_receipt(1)));
+    let mut events = events();
+    let mut sink = sink();
+    let stale_profiles = FakeProfiles {
+        supported: true,
+        current: false,
+    };
+    let mut rejected = TransactionCoordinator::new(4).expect("capacity is valid");
+    assert_eq!(
+        rejected.submit(
+            request.clone(),
+            binding(1),
+            time(1),
+            &sessions,
+            &leases,
+            &stale_profiles,
+            &transport,
+            &mut events,
+            &mut sink,
+        ),
+        Err(TransactionCoordinatorError::ProfileBindingChanged)
+    );
+
+    let mut queued = TransactionCoordinator::new(4).expect("capacity is valid");
+    queued
+        .submit(
+            request,
+            binding(2),
+            time(1),
+            &sessions,
+            &leases,
+            &fake_profiles(true),
+            &transport,
+            &mut events,
+            &mut sink,
+        )
+        .expect("current binding is queued");
+    let mut transport = transport;
+    let terminal = queued
+        .dispatch_next(
+            time(2),
+            &sessions,
+            &leases,
+            &stale_profiles,
+            &mut transport,
+            &mut events,
+            &mut sink,
+        )
+        .expect("profile drift is terminally recorded")
+        .completed
+        .expect("queued transaction is revoked");
+    assert_eq!(terminal.state, TransactionState::Revoked);
+    assert_eq!(
+        terminal.error_kind,
+        Some(ProtocolErrorKind::StaleGeneration)
+    );
+    assert!(transport.dispatches.is_empty());
+}
+
+#[test]
+fn retained_transport_outcome_reconciles_without_a_second_write() {
+    let request = request("retained", TransactionClass::Restore, 100, 1);
+    let leases = leases(request.resources.clone());
+    let sessions = sessions();
+    let profiles = fake_profiles(true);
+    let mut transport = transport(PlannedDispatch::Receipt(successful_receipt(1)));
+    transport.reconciliation = TransportReconciliation::Retained(successful_receipt(1));
+    let mut coordinator = TransactionCoordinator::new(4).expect("capacity is valid");
+    let mut events = events();
+    let mut sink = sink();
+    coordinator
+        .submit(
+            request,
+            binding(1),
+            time(1),
+            &sessions,
+            &leases,
+            &profiles,
+            &transport,
+            &mut events,
+            &mut sink,
+        )
+        .expect("restore is queued");
+    let terminal = coordinator
+        .dispatch_next(
+            time(2),
+            &sessions,
+            &leases,
+            &profiles,
+            &mut transport,
+            &mut events,
+            &mut sink,
+        )
+        .expect("retained outcome reconciles")
+        .completed
+        .expect("transaction reaches terminal state");
+    assert_eq!(terminal.state, TransactionState::Succeeded);
+    assert!(transport.dispatches.is_empty());
+}
+
+#[test]
+fn ambiguous_transport_history_fails_closed_without_replay() {
+    for (suffix, reconciliation, expected_error) in [
+        (
+            "evicted",
+            TransportReconciliation::Evicted,
+            ProtocolErrorKind::OutcomeEvicted,
+        ),
+        (
+            "unavailable",
+            TransportReconciliation::Unavailable,
+            ProtocolErrorKind::OutcomeUnknown,
+        ),
+        (
+            "conflict",
+            TransportReconciliation::Conflict,
+            ProtocolErrorKind::OutcomeUnknown,
+        ),
+    ] {
+        let request = request(suffix, TransactionClass::Restore, 100, 1);
+        let leases = leases(request.resources.clone());
+        let sessions = sessions();
+        let profiles = fake_profiles(true);
+        let mut transport = transport(PlannedDispatch::Receipt(successful_receipt(1)));
+        transport.reconciliation = reconciliation;
+        let mut coordinator = TransactionCoordinator::new(4).expect("capacity is valid");
+        let mut events = events();
+        let mut sink = sink();
+        coordinator
+            .submit(
+                request,
+                binding(1),
+                time(1),
+                &sessions,
+                &leases,
+                &profiles,
+                &transport,
+                &mut events,
+                &mut sink,
+            )
+            .expect("restore is queued");
+        let terminal = coordinator
+            .dispatch_next(
+                time(2),
+                &sessions,
+                &leases,
+                &profiles,
+                &mut transport,
+                &mut events,
+                &mut sink,
+            )
+            .expect("uncertain history becomes terminal")
+            .completed
+            .expect("transaction reaches terminal state");
+        assert_eq!(terminal.state, TransactionState::Failed);
+        assert_eq!(terminal.error_kind, Some(expected_error));
+        assert_eq!(
+            terminal.side_effect_certainty,
+            SideEffectCertainty::Possible
+        );
+        assert!(terminal.live_write_executed);
+        assert!(!terminal.automatic_retry);
+        assert!(transport.dispatches.is_empty());
+    }
+}
+
+#[test]
 fn partial_transport_failure_is_conservative_and_never_auto_retried() {
     let request = request("partial", TransactionClass::StaticLighting, 100, 2);
     let leases = leases(request.resources.clone());
     let sessions = sessions();
-    let profiles = FakeProfiles { supported: true };
+    let profiles = fake_profiles(true);
     let mut transport = transport(PlannedDispatch::Failure(FakeTransportError(
         TransportFailureFacts {
             delivered_frames: DeliveredFrameCount::try_from(1_u16).expect("frame count is valid"),
@@ -599,7 +802,7 @@ fn impossible_transport_counts_fail_internally_instead_of_becoming_success() {
     let request = request("invalid-report", TransactionClass::StaticLighting, 100, 1);
     let leases = leases(request.resources.clone());
     let sessions = sessions();
-    let profiles = FakeProfiles { supported: true };
+    let profiles = fake_profiles(true);
     let mut transport = transport(PlannedDispatch::Receipt(successful_receipt(2)));
     let mut coordinator = TransactionCoordinator::new(4).expect("capacity is valid");
     let mut events = events();
@@ -644,7 +847,7 @@ fn explicit_session_invalidation_terminally_accounts_for_all_removed_work() {
     let first = request("one", TransactionClass::StaticLighting, 100, 1);
     let leases = leases(first.resources.clone());
     let sessions = sessions();
-    let profiles = FakeProfiles { supported: true };
+    let profiles = fake_profiles(true);
     let transport = transport(PlannedDispatch::Receipt(successful_receipt(1)));
     let mut coordinator = TransactionCoordinator::new(4).expect("capacity is valid");
     let mut events = events();

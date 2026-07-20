@@ -30,6 +30,7 @@ These types prevent semantically different values from being passed interchangea
 | `StreamEpoch` | `stream_epoch` | 1 to 18446744073709551615 | `decimal-string` |
 | `DroppedEventCount` | `dropped_event_count` | 0 to 18446744073709551615 | `decimal-string` |
 | `ProjectionRevision` | `projection_revision` | 1 to 4294967295 | `number` |
+| `PersistenceSchemaVersion` | `persistence_schema_version` | 1 to 65535 | `number` |
 | `AuthorizationEpoch` | `authorization_epoch` | 1 to 18446744073709551615 | `decimal-string` |
 | `DispatchNonce` | `dispatch_nonce` | 1 to 18446744073709551615 | `decimal-string` |
 | `WallClockUnixMs` | `wall_clock_unix_ms` | 0 to 18446744073709551615 | `decimal-string` |

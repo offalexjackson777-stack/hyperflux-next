@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_domain::{
-    ColorChannel, FrameIndex, GenerationId, LeaseDurationMs, MonotonicMs, ResourceKind,
+    ColorChannel, FrameIndex, GenerationId, LeaseDurationMs, LedCount, MonotonicMs, ResourceKind,
     TransactionClass,
 };
 use hfx_protocol::{
-    ClientHello, LeaseConflict, LeaseRequest, LeaseResult, LightingFrame, NegotiationContext,
-    NegotiationError, NegotiationRequestEnvelope, ProtocolContract, ResourceKey, RgbColor,
-    RpcRequest, RpcResponse, SuccessEnvelope, TransactionRequest, negotiate,
-    negotiate_with_contract, validate_lease_request, validate_transaction,
+    ClientHello, DeviceProfileBinding, LeaseConflict, LeaseRequest, LeaseResult, LightingFrame,
+    NegotiationContext, NegotiationError, NegotiationRequestEnvelope, ProtocolContract,
+    ProtocolValidationError, ResourceKey, RgbColor, RpcRequest, RpcResponse, SuccessEnvelope,
+    TransactionRequest, negotiate, negotiate_with_contract, validate_lease_request,
+    validate_transaction,
 };
 
 fn value<T: TryFrom<String>>(raw: &str) -> T
@@ -44,6 +45,37 @@ fn resource(device: &str) -> ResourceKey {
     }
 }
 
+fn transaction() -> TransactionRequest {
+    TransactionRequest {
+        request_id: value("request-2"),
+        transaction_id: value("transaction-1"),
+        client_id: value("client-1"),
+        lease_id: value("lease-1"),
+        receiver_id: value("receiver-1"),
+        generation_id: GenerationId::try_from(1_u64).expect("generation is valid"),
+        receiver_profile_id: value("profile.receiver"),
+        receiver_profile_digest: value(&"a".repeat(64)),
+        device_profiles: vec![DeviceProfileBinding {
+            device_id: value("mouse-1"),
+            profile_id: value("profile.mouse-1"),
+            profile_digest: value(&"b".repeat(64)),
+            application_slot_count: LedCount::try_from(1_u16).expect("LED count is valid"),
+        }],
+        transaction_class: TransactionClass::EffectFrame,
+        deadline_ms: MonotonicMs::try_from(100_u64).expect("deadline is valid"),
+        resources: vec![resource("mouse-1")],
+        frames: vec![LightingFrame {
+            device_id: value("mouse-1"),
+            frame_index: FrameIndex::try_from(0_u32).expect("frame index is valid"),
+            colors: vec![RgbColor {
+                red: ColorChannel::try_from(1_u8).expect("color is valid"),
+                green: ColorChannel::try_from(2_u8).expect("color is valid"),
+                blue: ColorChannel::try_from(3_u8).expect("color is valid"),
+            }],
+        }],
+    }
+}
+
 #[test]
 fn feature_negotiation_selects_intersection_and_rejects_incompatible_versions() {
     let hello = ClientHello {
@@ -58,13 +90,23 @@ fn feature_negotiation_selects_intersection_and_rejects_incompatible_versions() 
     assert_eq!(response.selected_version.get(), 1);
     assert_eq!(response.enabled_features, vec![value("ownership-leases")]);
 
-    let incompatible = ClientHello {
+    let v2 = ClientHello {
         minimum_version: number(2),
         maximum_version: number(2),
+        required_features: vec![value("profile-bound-transactions")],
+        optional_features: Vec::new(),
         ..hello
     };
+    let response = negotiate(&v2, context("protocol-session-2")).expect("v2 overlaps");
+    assert_eq!(response.selected_version.get(), 2);
+
+    let incompatible = ClientHello {
+        minimum_version: number(3),
+        maximum_version: number(3),
+        ..v2
+    };
     assert_eq!(
-        negotiate(&incompatible, context("protocol-session-2")),
+        negotiate(&incompatible, context("protocol-session-3")),
         Err(NegotiationError::IncompatibleVersion)
     );
 }
@@ -123,26 +165,7 @@ fn lease_resources_are_generation_scoped_canonical_and_duplicate_free() {
 
 #[test]
 fn transaction_requires_complete_lighting_ownership_set() {
-    let transaction = TransactionRequest {
-        request_id: value("request-2"),
-        transaction_id: value("transaction-1"),
-        client_id: value("client-1"),
-        lease_id: value("lease-1"),
-        receiver_id: value("receiver-1"),
-        generation_id: GenerationId::try_from(1_u64).expect("generation is valid"),
-        transaction_class: TransactionClass::EffectFrame,
-        deadline_ms: MonotonicMs::try_from(100_u64).expect("deadline is valid"),
-        resources: vec![resource("mouse-1")],
-        frames: vec![LightingFrame {
-            device_id: value("mouse-1"),
-            frame_index: FrameIndex::try_from(0_u32).expect("frame index is valid"),
-            colors: vec![RgbColor {
-                red: ColorChannel::try_from(1_u8).expect("color is valid"),
-                green: ColorChannel::try_from(2_u8).expect("color is valid"),
-                blue: ColorChannel::try_from(3_u8).expect("color is valid"),
-            }],
-        }],
-    };
+    let transaction = transaction();
     validate_transaction(&transaction).expect("transaction structure is complete");
 
     let missing = TransactionRequest {
@@ -150,6 +173,55 @@ fn transaction_requires_complete_lighting_ownership_set() {
         ..transaction
     };
     assert!(validate_transaction(&missing).is_err());
+}
+
+#[test]
+fn restore_uses_the_same_bounded_lighting_payload_contract() {
+    let mut restore = transaction();
+    restore.transaction_class = TransactionClass::Restore;
+    validate_transaction(&restore).expect("restore lighting payload is structurally valid");
+
+    restore.frames[0].colors.clear();
+    assert_eq!(
+        validate_transaction(&restore),
+        Err(ProtocolValidationError::EmptyColors)
+    );
+}
+
+#[test]
+fn transaction_profile_bindings_are_exact_canonical_and_dimensioned() {
+    let valid = transaction();
+    validate_transaction(&valid).expect("exact profile binding is valid");
+
+    let mut wrong_size = valid.clone();
+    wrong_size.device_profiles[0].application_slot_count =
+        LedCount::try_from(2_u16).expect("LED count is valid");
+    assert_eq!(
+        validate_transaction(&wrong_size),
+        Err(ProtocolValidationError::FrameColorCountMismatch)
+    );
+
+    let mut extra_binding = valid.clone();
+    extra_binding.device_profiles.push(DeviceProfileBinding {
+        device_id: value("keyboard-1"),
+        profile_id: value("profile.keyboard-1"),
+        profile_digest: value(&"c".repeat(64)),
+        application_slot_count: LedCount::try_from(1_u16).expect("LED count is valid"),
+    });
+    extra_binding
+        .device_profiles
+        .sort_unstable_by(|left, right| left.device_id.cmp(&right.device_id));
+    assert_eq!(
+        validate_transaction(&extra_binding),
+        Err(ProtocolValidationError::ProfileBindingWithoutFrame)
+    );
+
+    let mut extra_resource = valid;
+    extra_resource.resources.push(resource("other-1"));
+    assert_eq!(
+        validate_transaction(&extra_resource),
+        Err(ProtocolValidationError::ResourceWithoutFrame)
+    );
 }
 
 #[test]

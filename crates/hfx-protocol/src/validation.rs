@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::{LeaseRequest, ResourceKey, TransactionRequest};
-use hfx_domain::{ResourceKind, TransactionClass};
+use hfx_domain::{LogicalDeviceId, ResourceKind, TransactionClass};
 use std::collections::BTreeSet;
 use std::fmt;
 
@@ -14,11 +14,21 @@ pub enum ProtocolValidationError {
     EmptyFrames,
     TooManyFrames,
     DuplicateFrameIndex,
+    DuplicateFrameTarget,
     NonCanonicalFrameOrder,
+    EmptyProfileBindings,
+    TooManyProfileBindings,
+    DuplicateProfileBinding,
+    ProfileBindingsNotCanonical,
+    ZeroApplicationSlots,
+    FrameWithoutProfileBinding,
+    ProfileBindingWithoutFrame,
+    FrameColorCountMismatch,
     EmptyColors,
     TooManyColors,
     TooManyAggregateColors,
     FrameWithoutLightingLease,
+    ResourceWithoutFrame,
     ResourceOutsideTransactionGeneration,
     UnsupportedTransactionClass,
 }
@@ -33,17 +43,35 @@ impl fmt::Display for ProtocolValidationError {
             Self::EmptyFrames => "transaction has no frames",
             Self::TooManyFrames => "transaction exceeds the frame bound",
             Self::DuplicateFrameIndex => "transaction contains a duplicate frame index",
+            Self::DuplicateFrameTarget => "transaction contains more than one frame for a device",
             Self::NonCanonicalFrameOrder => {
                 "transaction frame indices are not contiguous and ordered"
+            }
+            Self::EmptyProfileBindings => "transaction has no device profile bindings",
+            Self::TooManyProfileBindings => "transaction exceeds the profile-binding bound",
+            Self::DuplicateProfileBinding => {
+                "transaction contains a duplicate device profile binding"
+            }
+            Self::ProfileBindingsNotCanonical => {
+                "transaction profile bindings are not in canonical device order"
+            }
+            Self::ZeroApplicationSlots => "device profile binding has no application slots",
+            Self::FrameWithoutProfileBinding => "frame target lacks a device profile binding",
+            Self::ProfileBindingWithoutFrame => "device profile binding has no matching frame",
+            Self::FrameColorCountMismatch => {
+                "frame color count does not match its bound device profile"
             }
             Self::EmptyColors => "frame contains no colors",
             Self::TooManyColors => "frame exceeds the color bound",
             Self::TooManyAggregateColors => "transaction exceeds the aggregate color bound",
             Self::FrameWithoutLightingLease => "frame target lacks a lighting resource",
+            Self::ResourceWithoutFrame => "transaction resource has no matching lighting frame",
             Self::ResourceOutsideTransactionGeneration => {
                 "transaction resource is outside the bound receiver generation"
             }
-            Self::UnsupportedTransactionClass => "transaction class has no protocol-v1 payload",
+            Self::UnsupportedTransactionClass => {
+                "transaction class has no current protocol payload"
+            }
         })
     }
 }
@@ -84,9 +112,19 @@ pub fn validate_lease_request(request: &LeaseRequest) -> Result<(), ProtocolVali
 /// frame indices, or frame targets without a declared lighting resource.
 pub fn validate_transaction(request: &TransactionRequest) -> Result<(), ProtocolValidationError> {
     validate_resources(&request.resources)?;
+    validate_transaction_scope(request)?;
+    let frame_devices = validate_frame_topology(request)?;
+    validate_profile_bindings(request, &frame_devices)?;
+    validate_frame_payloads(request)?;
+    validate_resource_coverage(request, &frame_devices)
+}
+
+fn validate_transaction_scope(request: &TransactionRequest) -> Result<(), ProtocolValidationError> {
     if !matches!(
         request.transaction_class,
-        TransactionClass::EffectFrame | TransactionClass::StaticLighting
+        TransactionClass::EffectFrame
+            | TransactionClass::StaticLighting
+            | TransactionClass::Restore
     ) {
         return Err(ProtocolValidationError::UnsupportedTransactionClass);
     }
@@ -96,6 +134,12 @@ pub fn validate_transaction(request: &TransactionRequest) -> Result<(), Protocol
     }) {
         return Err(ProtocolValidationError::ResourceOutsideTransactionGeneration);
     }
+    Ok(())
+}
+
+fn validate_frame_topology(
+    request: &TransactionRequest,
+) -> Result<BTreeSet<&LogicalDeviceId>, ProtocolValidationError> {
     if request.frames.is_empty() {
         return Err(ProtocolValidationError::EmptyFrames);
     }
@@ -115,6 +159,65 @@ pub fn validate_transaction(request: &TransactionRequest) -> Result<(), Protocol
     }) {
         return Err(ProtocolValidationError::NonCanonicalFrameOrder);
     }
+    let frame_devices = request
+        .frames
+        .iter()
+        .map(|frame| &frame.device_id)
+        .collect::<BTreeSet<_>>();
+    if frame_devices.len() != request.frames.len() {
+        return Err(ProtocolValidationError::DuplicateFrameTarget);
+    }
+    Ok(frame_devices)
+}
+
+fn validate_profile_bindings(
+    request: &TransactionRequest,
+    frame_devices: &BTreeSet<&LogicalDeviceId>,
+) -> Result<(), ProtocolValidationError> {
+    if request.device_profiles.is_empty() {
+        return Err(ProtocolValidationError::EmptyProfileBindings);
+    }
+    if request.device_profiles.len() > 32 {
+        return Err(ProtocolValidationError::TooManyProfileBindings);
+    }
+    let profile_devices = request
+        .device_profiles
+        .iter()
+        .map(|binding| &binding.device_id)
+        .collect::<BTreeSet<_>>();
+    if profile_devices.len() != request.device_profiles.len() {
+        return Err(ProtocolValidationError::DuplicateProfileBinding);
+    }
+    if request
+        .device_profiles
+        .windows(2)
+        .any(|pair| pair[0].device_id >= pair[1].device_id)
+    {
+        return Err(ProtocolValidationError::ProfileBindingsNotCanonical);
+    }
+    if request
+        .device_profiles
+        .iter()
+        .any(|binding| binding.application_slot_count.get() == 0)
+    {
+        return Err(ProtocolValidationError::ZeroApplicationSlots);
+    }
+    if frame_devices
+        .iter()
+        .any(|device_id| !profile_devices.contains(device_id))
+    {
+        return Err(ProtocolValidationError::FrameWithoutProfileBinding);
+    }
+    if profile_devices
+        .iter()
+        .any(|device_id| !frame_devices.contains(device_id))
+    {
+        return Err(ProtocolValidationError::ProfileBindingWithoutFrame);
+    }
+    Ok(())
+}
+
+fn validate_frame_payloads(request: &TransactionRequest) -> Result<(), ProtocolValidationError> {
     let mut aggregate_colors = 0_usize;
     for frame in &request.frames {
         if frame.colors.is_empty() {
@@ -129,6 +232,25 @@ pub fn validate_transaction(request: &TransactionRequest) -> Result<(), Protocol
         if aggregate_colors > 16_384 {
             return Err(ProtocolValidationError::TooManyAggregateColors);
         }
+        let Some(binding) = request
+            .device_profiles
+            .iter()
+            .find(|binding| binding.device_id == frame.device_id)
+        else {
+            return Err(ProtocolValidationError::FrameWithoutProfileBinding);
+        };
+        if usize::from(binding.application_slot_count.get()) != frame.colors.len() {
+            return Err(ProtocolValidationError::FrameColorCountMismatch);
+        }
+    }
+    Ok(())
+}
+
+fn validate_resource_coverage(
+    request: &TransactionRequest,
+    frame_devices: &BTreeSet<&LogicalDeviceId>,
+) -> Result<(), ProtocolValidationError> {
+    for frame in &request.frames {
         let resource = ResourceKey {
             receiver_id: request.receiver_id.clone(),
             generation_id: request.generation_id,
@@ -138,6 +260,11 @@ pub fn validate_transaction(request: &TransactionRequest) -> Result<(), Protocol
         if !request.resources.contains(&resource) {
             return Err(ProtocolValidationError::FrameWithoutLightingLease);
         }
+    }
+    if request.resources.iter().any(|resource| {
+        resource.kind != ResourceKind::Lighting || !frame_devices.contains(&resource.device_id)
+    }) {
+        return Err(ProtocolValidationError::ResourceWithoutFrame);
     }
     Ok(())
 }

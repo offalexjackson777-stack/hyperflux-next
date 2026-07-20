@@ -5,13 +5,13 @@ use crate::{
     EventSink, LeaseManager, OutcomeJournalError, OutcomeLookup, ProfileRegistry,
     QueuedTransaction, ReceiverTransport, RequestDigestError, RequestReplay, SessionAuthority,
     TransactionMachine, TransactionQueueError, TransactionTransitionError, TransportDispatch,
-    TransportFailure, TransportFailureFacts, TransportReceipt, TransportTerminal,
-    canonical_request_digest,
+    TransportFailure, TransportFailureFacts, TransportReceipt, TransportReconciliation,
+    TransportTerminal, canonical_request_digest,
 };
 use hfx_domain::{
     AuthorizationEpoch, DeliveredFrameCount, DeviceApplicationState, DispatchNonce, EventKind,
     FrameCount, GenerationId, MonotonicMs, ProtocolErrorKind, QueueAdmission, ReceiverId,
-    SessionId, SideEffectCertainty, TransactionId, TransactionState,
+    ResourceKind, SessionId, SideEffectCertainty, TransactionId, TransactionState,
 };
 use hfx_protocol::{
     TransactionProgress, TransactionRequest, TransactionResult, TransactionTerminal,
@@ -48,6 +48,7 @@ pub enum TransactionCoordinatorError {
     OwnershipDenied,
     StaleGeneration,
     UnsupportedResource,
+    ProfileBindingChanged,
     Queue(TransactionQueueError),
     Outcome(OutcomeJournalError),
     Event(EventLogError),
@@ -67,6 +68,9 @@ impl fmt::Display for TransactionCoordinatorError {
             Self::OwnershipDenied => "the client does not own every requested resource",
             Self::StaleGeneration => "the transaction targets a stale receiver generation",
             Self::UnsupportedResource => "the active profile does not support every resource",
+            Self::ProfileBindingChanged => {
+                "the qualified receiver or device profile binding changed"
+            }
             Self::Queue(_) => "the bounded transaction queue rejected the request",
             Self::Outcome(_) => "the bounded outcome journal rejected the update",
             Self::Event(_) => "the canonical event stream rejected the terminal event",
@@ -205,6 +209,9 @@ impl TransactionCoordinator {
         {
             return Err(TransactionCoordinatorError::UnsupportedResource);
         }
+        if !profiles_match(&request, profiles) {
+            return Err(TransactionCoordinatorError::ProfileBindingChanged);
+        }
 
         let client_id = request.client_id.clone();
         let transaction_id = request.transaction_id.clone();
@@ -283,29 +290,8 @@ impl TransactionCoordinator {
             });
         };
 
-        let preflight_error = if !sessions
-            .authorizes(&queued.session_id, queued.authorization_epoch)
-            || !leases.owns(
-                &queued.request.client_id,
-                &queued.request.lease_id,
-                &queued.request.resources,
-                now,
-            ) {
-            Some(ProtocolErrorKind::OwnershipConflict)
-        } else if transport.current_generation(&queued.request.receiver_id)
-            != Some(queued.request.generation_id)
-        {
-            Some(ProtocolErrorKind::StaleGeneration)
-        } else if !queued
-            .request
-            .resources
-            .iter()
-            .all(|resource| profiles.supports(resource))
-        {
-            Some(ProtocolErrorKind::UnsupportedFeature)
-        } else {
-            None
-        };
+        let preflight_error =
+            dispatch_preflight(&queued, now, sessions, leases, profiles, transport);
         if let Some(error_kind) = preflight_error {
             let completed = self.finish_unsent(
                 queued,
@@ -335,13 +321,14 @@ impl TransactionCoordinator {
             receiver_id: queued.request.receiver_id.clone(),
             generation_id: queued.request.generation_id,
             transaction_id: queued.request.transaction_id.clone(),
+            request_digest: queued.request_digest.clone(),
+            receiver_profile_id: queued.request.receiver_profile_id.clone(),
+            receiver_profile_digest: queued.request.receiver_profile_digest.clone(),
+            device_profiles: queued.request.device_profiles.clone(),
             frames: queued.request.frames.clone(),
         };
-        let transport_result = transport.dispatch(&dispatch);
-        let (state, error_kind, facts) = match transport_result {
-            Ok(receipt) => classify_receipt(receipt, declared_frames(&queued)?),
-            Err(error) => classify_failure(error.facts(), declared_frames(&queued)?),
-        };
+        let declared = declared_frames(&queued)?;
+        let (state, error_kind, facts) = reconcile_or_dispatch(transport, &dispatch, declared)?;
         machine.advance(state)?;
         let completed = self.finish(queued, state, error_kind, None, facts, events, sink)?;
         Ok(DispatchResult {
@@ -524,6 +511,96 @@ fn queued_machine() -> Result<TransactionMachine, TransactionCoordinatorError> {
     Ok(machine)
 }
 
+fn profiles_match<P: ProfileRegistry>(request: &TransactionRequest, profiles: &P) -> bool {
+    let Some(receiver) = profiles.receiver_profile(&request.receiver_id, request.generation_id)
+    else {
+        return false;
+    };
+    if receiver.profile_id != request.receiver_profile_id
+        || receiver.profile_digest != request.receiver_profile_digest
+    {
+        return false;
+    }
+    request.device_profiles.iter().all(|declared| {
+        let resource = hfx_protocol::ResourceKey {
+            receiver_id: request.receiver_id.clone(),
+            generation_id: request.generation_id,
+            device_id: declared.device_id.clone(),
+            kind: ResourceKind::Lighting,
+        };
+        profiles.device_profile(&resource).is_some_and(|current| {
+            current.profile_id == declared.profile_id
+                && current.profile_digest == declared.profile_digest
+                && current.application_slot_count == declared.application_slot_count
+        })
+    })
+}
+
+fn dispatch_preflight<A, P, T>(
+    queued: &QueuedTransaction,
+    now: MonotonicMs,
+    sessions: &A,
+    leases: &LeaseManager,
+    profiles: &P,
+    transport: &T,
+) -> Option<ProtocolErrorKind>
+where
+    A: SessionAuthority,
+    P: ProfileRegistry,
+    T: ReceiverTransport,
+{
+    if !sessions.authorizes(&queued.session_id, queued.authorization_epoch)
+        || !leases.owns(
+            &queued.request.client_id,
+            &queued.request.lease_id,
+            &queued.request.resources,
+            now,
+        )
+    {
+        Some(ProtocolErrorKind::OwnershipConflict)
+    } else if transport.current_generation(&queued.request.receiver_id)
+        != Some(queued.request.generation_id)
+    {
+        Some(ProtocolErrorKind::StaleGeneration)
+    } else if !queued
+        .request
+        .resources
+        .iter()
+        .all(|resource| profiles.supports(resource))
+    {
+        Some(ProtocolErrorKind::UnsupportedFeature)
+    } else if !profiles_match(&queued.request, profiles) {
+        Some(ProtocolErrorKind::StaleGeneration)
+    } else {
+        None
+    }
+}
+
+fn reconcile_or_dispatch<T: ReceiverTransport>(
+    transport: &mut T,
+    dispatch: &TransportDispatch,
+    declared: FrameCount,
+) -> Result<ClassifiedTransport, TransactionCoordinatorError> {
+    Ok(match transport.reconcile(dispatch) {
+        TransportReconciliation::NotObserved => match transport.dispatch(dispatch) {
+            Ok(receipt) => classify_receipt(receipt, declared),
+            Err(error) => classify_failure(error.facts(), declared),
+        },
+        TransportReconciliation::Retained(receipt) => classify_receipt(receipt, declared),
+        TransportReconciliation::RetainedFailure(facts) => classify_failure(facts, declared),
+        TransportReconciliation::Evicted => (
+            TransactionState::Failed,
+            Some(ProtocolErrorKind::OutcomeEvicted),
+            unknown_side_effect_facts()?,
+        ),
+        TransportReconciliation::Unavailable | TransportReconciliation::Conflict => (
+            TransactionState::Failed,
+            Some(ProtocolErrorKind::OutcomeUnknown),
+            unknown_side_effect_facts()?,
+        ),
+    })
+}
+
 fn declared_frames(queued: &QueuedTransaction) -> Result<FrameCount, TransactionCoordinatorError> {
     let count = u16::try_from(queued.request.frames.len())
         .map_err(|_| TransactionCoordinatorError::FrameCount)?;
@@ -534,14 +611,23 @@ fn zero_delivered() -> Result<DeliveredFrameCount, TransactionCoordinatorError> 
     DeliveredFrameCount::try_from(0_u16).map_err(|_| TransactionCoordinatorError::FrameCount)
 }
 
-fn classify_receipt(
-    receipt: TransportReceipt,
-    declared: FrameCount,
-) -> (
+fn unknown_side_effect_facts() -> Result<TransportFailureFacts, TransactionCoordinatorError> {
+    Ok(TransportFailureFacts {
+        delivered_frames: zero_delivered()?,
+        side_effect_certainty: SideEffectCertainty::Possible,
+        live_write_executed: true,
+        automatic_retry_safe: false,
+        device_application: DeviceApplicationState::Unverified,
+    })
+}
+
+type ClassifiedTransport = (
     TransactionState,
     Option<ProtocolErrorKind>,
     TransportFailureFacts,
-) {
+);
+
+fn classify_receipt(receipt: TransportReceipt, declared: FrameCount) -> ClassifiedTransport {
     let reported_too_many = receipt.delivered_frames.get() > declared.get();
     let facts = normalize_facts(
         TransportFailureFacts {
@@ -581,14 +667,7 @@ fn classify_receipt(
     }
 }
 
-fn classify_failure(
-    facts: TransportFailureFacts,
-    declared: FrameCount,
-) -> (
-    TransactionState,
-    Option<ProtocolErrorKind>,
-    TransportFailureFacts,
-) {
+fn classify_failure(facts: TransportFailureFacts, declared: FrameCount) -> ClassifiedTransport {
     let error_kind = if facts.delivered_frames.get() > declared.get() {
         ProtocolErrorKind::InternalFailure
     } else {

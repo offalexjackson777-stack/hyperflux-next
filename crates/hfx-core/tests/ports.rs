@@ -2,10 +2,10 @@
 
 mod common;
 
-use common::{generation, text, time};
+use common::{generation, receiver_profile_digest, receiver_profile_id, text, time};
 use hfx_core::{
     Clock, ReceiverTransport, TransportDispatch, TransportFailure, TransportFailureFacts,
-    TransportReceipt, TransportTerminal,
+    TransportReceipt, TransportReconciliation, TransportTerminal,
 };
 use hfx_domain::{DeliveredFrameCount, DeviceApplicationState, SideEffectCertainty};
 
@@ -48,6 +48,10 @@ impl ReceiverTransport for FakeTransport {
         (receiver_id == &self.receiver).then_some(self.generation)
     }
 
+    fn reconcile(&self, _dispatch: &TransportDispatch) -> TransportReconciliation {
+        TransportReconciliation::NotObserved
+    }
+
     fn dispatch(&mut self, dispatch: &TransportDispatch) -> Result<TransportReceipt, Self::Error> {
         self.captured = Some(dispatch.clone());
         Ok(TransportReceipt {
@@ -78,6 +82,10 @@ fn core_ports_are_deterministic_and_transport_bindings_remain_distinct() {
         receiver_id: text("receiver-1"),
         generation_id: generation(7),
         transaction_id: text("transaction-1"),
+        request_digest: text(&"a".repeat(64)),
+        receiver_profile_id: receiver_profile_id(),
+        receiver_profile_digest: receiver_profile_digest(),
+        device_profiles: Vec::new(),
         frames: Vec::new(),
     };
     let receipt = transport

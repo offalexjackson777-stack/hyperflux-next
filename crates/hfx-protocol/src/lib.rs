@@ -7,6 +7,8 @@ mod negotiation;
 mod snapshot;
 #[path = "generated_v1.rs"]
 pub mod v1;
+#[path = "generated_v2.rs"]
+pub mod v2;
 mod validation;
 mod wire;
 

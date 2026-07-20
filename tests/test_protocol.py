@@ -21,9 +21,31 @@ from hfxdev.protocol import (
 class ProtocolCompilerTests(unittest.TestCase):
     def test_catalog_is_versioned_and_generated_deterministically(self) -> None:
         registry = load_protocol_registry(ROOT)
-        self.assertEqual(registry.current_version, 1)
-        self.assertEqual([item.version for item in registry.versions], [1])
-        self.assertEqual(len(registry.versions[0].source_sha256), 64)
+        self.assertEqual(registry.current_version, 2)
+        self.assertEqual([item.version for item in registry.versions], [1, 2])
+        self.assertEqual(
+            registry.versions[0].source_sha256,
+            "ed3df1f1627ca8a836f509ead3ab7dc7a4cbc6116f6da4accb2cc53e7500859f",
+        )
+        self.assertTrue(
+            all(len(item.source_sha256) == 64 for item in registry.versions)
+        )
+        v1_transaction = next(
+            record
+            for record in registry.versions[0].catalog.records
+            if record.name == "TransactionRequest"
+        )
+        v2_transaction = next(
+            record
+            for record in registry.versions[1].catalog.records
+            if record.name == "TransactionRequest"
+        )
+        self.assertNotIn(
+            "device_profiles", [field.name for field in v1_transaction.fields]
+        )
+        self.assertIn(
+            "device_profiles", [field.name for field in v2_transaction.fields]
+        )
         first = load_protocol_catalog(ROOT)
         second = load_protocol_catalog(ROOT)
         self.assertEqual(first, second)

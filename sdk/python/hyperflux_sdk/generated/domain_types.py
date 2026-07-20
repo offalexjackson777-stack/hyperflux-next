@@ -269,6 +269,18 @@ class ProjectionRevision:
 
 
 @dataclass(frozen=True, slots=True)
+class PersistenceSchemaVersion:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("PersistenceSchemaVersion requires an integer")
+        if not 1 <= self.value <= 65535:
+            raise ValueError("PersistenceSchemaVersion is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
 class AuthorizationEpoch:
     value: int
     WIRE_ENCODING: ClassVar[str] = "decimal-string"
@@ -915,6 +927,7 @@ __all__ = [
     "StreamEpoch",
     "DroppedEventCount",
     "ProjectionRevision",
+    "PersistenceSchemaVersion",
     "AuthorizationEpoch",
     "DispatchNonce",
     "WallClockUnixMs",

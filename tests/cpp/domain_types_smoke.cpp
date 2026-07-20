@@ -5,6 +5,7 @@
 #include <hyperflux/generated/profile_catalog.hpp>
 #include <hyperflux/generated/protocol_types.hpp>
 #include <hyperflux/generated/protocol_v1_types.hpp>
+#include <hyperflux/generated/protocol_v2_types.hpp>
 
 #include <cassert>
 #include <string_view>
@@ -29,10 +30,12 @@ int main()
     assert(mouse->lighting->application_index_to_carrier.size() == 13);
     assert(mouse->lighting->application_index_to_carrier[0] == 1);
     assert(profiles::profile_by_id("child.unknown") == nullptr);
-    static_assert(minimum_protocol_version == 1);
-    static_assert(maximum_protocol_version == 1);
+    static_assert(minimum_protocol_version == 2);
+    static_assert(maximum_protocol_version == 2);
     static_assert(v1::minimum_protocol_version == 1);
     static_assert(v1::maximum_protocol_version == 1);
+    static_assert(v2::minimum_protocol_version == 2);
+    static_assert(v2::maximum_protocol_version == 2);
     assert(methods[0].name == std::string_view{"negotiate"});
     assert(!methods[0].required_feature.has_value());
     const auto* generation_error = errors::error_by_code(errors::ErrorCode::HfxGeneration001);
