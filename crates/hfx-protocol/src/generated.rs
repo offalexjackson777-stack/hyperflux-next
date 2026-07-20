@@ -736,3 +736,65 @@ pub const METHODS: &[MethodDescriptor] = &[
         required_feature: Some("structured-diagnostics"),
     },
 ];
+
+impl RpcRequest {
+    /// Returns the request identity carried by every method envelope.
+    #[must_use]
+    pub fn request_id(&self) -> &RequestId {
+        match self {
+            Self::Negotiate(envelope) => &envelope.request_id,
+            Self::Snapshot(envelope) | Self::Diagnostics(envelope) => &envelope.request_id,
+            Self::AcquireLease(envelope) => &envelope.request_id,
+            Self::RenewLease(envelope) => &envelope.request_id,
+            Self::ReleaseLease(envelope) => &envelope.request_id,
+            Self::SubmitTransaction(envelope) => &envelope.request_id,
+            Self::TransactionOutcome(envelope) => &envelope.request_id,
+            Self::Subscribe(envelope) => &envelope.request_id,
+        }
+    }
+
+    /// Returns the generated descriptor for this request variant.
+    #[must_use]
+    pub const fn method_descriptor(&self) -> &'static MethodDescriptor {
+        match self {
+            Self::Negotiate(_) => &METHODS[0],
+            Self::Snapshot(_) => &METHODS[1],
+            Self::AcquireLease(_) => &METHODS[2],
+            Self::RenewLease(_) => &METHODS[3],
+            Self::ReleaseLease(_) => &METHODS[4],
+            Self::SubmitTransaction(_) => &METHODS[5],
+            Self::TransactionOutcome(_) => &METHODS[6],
+            Self::Subscribe(_) => &METHODS[7],
+            Self::Diagnostics(_) => &METHODS[8],
+        }
+    }
+
+    /// Returns negotiated connection credentials for session-bound methods.
+    #[must_use]
+    pub fn session_credentials(&self) -> Option<(&ProtocolSessionId, &NegotiationToken)> {
+        match self {
+            Self::Negotiate(_) => None,
+            Self::Snapshot(envelope) | Self::Diagnostics(envelope) => {
+                Some((&envelope.protocol_session_id, &envelope.negotiation_token))
+            }
+            Self::AcquireLease(envelope) => {
+                Some((&envelope.protocol_session_id, &envelope.negotiation_token))
+            }
+            Self::RenewLease(envelope) => {
+                Some((&envelope.protocol_session_id, &envelope.negotiation_token))
+            }
+            Self::ReleaseLease(envelope) => {
+                Some((&envelope.protocol_session_id, &envelope.negotiation_token))
+            }
+            Self::SubmitTransaction(envelope) => {
+                Some((&envelope.protocol_session_id, &envelope.negotiation_token))
+            }
+            Self::TransactionOutcome(envelope) => {
+                Some((&envelope.protocol_session_id, &envelope.negotiation_token))
+            }
+            Self::Subscribe(envelope) => {
+                Some((&envelope.protocol_session_id, &envelope.negotiation_token))
+            }
+        }
+    }
+}

@@ -33,6 +33,24 @@ The following identities solve different problems and must not be merged:
 
 A reconnect creates a newer generation and invalidates generation-scoped observations, leases, queued work, and partial restoration. An event from an older generation cannot reactivate itself.
 
+## Connection Sessions
+
+Every accepted bridge connection begins unnegotiated. The only legal first method is `negotiate`, which selects one protocol version and the intersection of offered bridge features. The bridge then issues a protocol session ID and an opaque negotiation token. Every later request carries both values, and methods that contain a client or nested request identity must agree with the negotiated client and outer request envelope.
+
+The exact initial negotiation request is replayable and returns the same server hello without minting new credentials. A different second negotiation on the same connection is rejected. Closing or revoking the connection invalidates its independent internal session ID and authorization epoch, which makes queued work fail its authority recheck even if a client retained old protocol credentials.
+
+Protocol session IDs, negotiation tokens, internal session IDs, and authorization epochs are generated from operating-system entropy. Tokens are treated as credentials: mismatch errors never echo either the supplied or expected value. The connection layer must additionally enforce peer credentials and bounded concurrent sessions; a token does not replace local socket authorization.
+
+The generated protocol catalog owns request method names, request IDs, session credential access, and feature requirements. Bridge code consumes those generated accessors instead of maintaining a parallel method table. This keeps a future protocol method addition compile-visible and generation-driven.
+
+## Local RPC Framing
+
+The Unix transport uses a four-byte unsigned big-endian payload length followed by one JSON protocol document. A clean EOF before any prefix byte ends the connection. A partial prefix, empty frame, partial payload, malformed document, or payload above 1 MiB is a terminal framing error.
+
+The length bound is checked before allocation. Responses are validated and serialized through a bounded writer before any bytes are emitted, then written with complete-write semantics and flushed. Framing errors preserve the I/O stage without including payloads, tokens, or private paths.
+
+Framing is not the SDK contract; generated protocol records are. Protocol v1 and v2 currently share the same request shape, so the first bridge framing implementation normalizes that common shape. The production dispatcher must still select and encode the exact negotiated version before this boundary can claim support for divergent future versions.
+
 ## Transaction Meaning
 
 A transaction moves through declared states:

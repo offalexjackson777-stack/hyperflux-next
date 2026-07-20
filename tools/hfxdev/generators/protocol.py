@@ -192,7 +192,63 @@ def rust_types(catalog: ProtocolCatalog) -> str:
                 "    },",
             ]
         )
-    lines.extend(["];"])
+    lines.extend([
+        "];",
+        "",
+        "impl RpcRequest {",
+        "    /// Returns the request identity carried by every method envelope.",
+        "    #[must_use]",
+        "    pub fn request_id(&self) -> &RequestId {",
+        "        match self {",
+    ])
+    request_groups: dict[str, list[str]] = {}
+    for method in catalog.methods:
+        envelope = (
+            "NegotiationRequestEnvelope"
+            if method.name == "negotiate"
+            else f"SessionRequestEnvelope<{method.request}>"
+        )
+        request_groups.setdefault(envelope, []).append(_pascal(method.name))
+    for variants in request_groups.values():
+        pattern = " | ".join(f"Self::{variant}(envelope)" for variant in variants)
+        lines.append(f"            {pattern} => &envelope.request_id,")
+    lines.extend([
+        "        }",
+        "    }",
+        "",
+        "    /// Returns the generated descriptor for this request variant.",
+        "    #[must_use]",
+        "    pub const fn method_descriptor(&self) -> &'static MethodDescriptor {",
+        "        match self {",
+    ])
+    for index, method in enumerate(catalog.methods):
+        variant = _pascal(method.name)
+        lines.append(f"            Self::{variant}(_) => &METHODS[{index}],")
+    lines.extend([
+        "        }",
+        "    }",
+        "",
+        "    /// Returns negotiated connection credentials for session-bound methods.",
+        "    #[must_use]",
+        "    pub fn session_credentials(&self) -> Option<(&ProtocolSessionId, &NegotiationToken)> {",
+        "        match self {",
+    ])
+    negotiation_variant = _pascal(
+        next(method.name for method in catalog.methods if method.name == "negotiate")
+    )
+    lines.append(f"            Self::{negotiation_variant}(_) => None,")
+    session_groups: dict[str, list[str]] = {}
+    for method in catalog.methods:
+        if method.name != "negotiate":
+            session_groups.setdefault(method.request, []).append(_pascal(method.name))
+    for variants in session_groups.values():
+        pattern = " | ".join(f"Self::{variant}(envelope)" for variant in variants)
+        lines.extend([
+            f"            {pattern} => {{",
+            "                Some((&envelope.protocol_session_id, &envelope.negotiation_token))",
+            "            }",
+        ])
+    lines.extend(["        }", "    }", "}"])
     return "\n".join(lines) + "\n"
 
 

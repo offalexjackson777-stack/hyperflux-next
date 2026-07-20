@@ -2,6 +2,8 @@
 
 The bridge persists only semantic stable-lighting intent, restoration policy, and durable per-device restoration claims. It does not persist sessions, leases, route observations, battery values, raw reports, effect phase, application widgets, or private hardware identifiers.
 
+Persistence is independent of RPC connection sessions. Protocol credentials, internal authorization epochs, leases, and queued requests become invalid when their owning connection ends and never enter the durable document.
+
 ## Trust Boundary
 
 `FilePersistenceStore` opens one absolute path beneath a private directory owned by the service user. The directory, state file, and advisory lock must be ordinary filesystem objects with no group or other permission bits. Linux `O_NOFOLLOW` prevents a state or lock symlink from entering the boundary. The held exclusive advisory lock gives one bridge process write authority and is released automatically if that process exits.

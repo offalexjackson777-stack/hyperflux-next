@@ -74,6 +74,7 @@ version = "0.0.0-dev.1"
 dependencies = [
  "hfx-core",
  "hfx-domain",
+ "hfx-protocol",
  "rustix",
  "serde",
  "serde_json",
