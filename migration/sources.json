@@ -1,0 +1,37 @@
+{
+  "$schema": "../schemas/migration-sources.schema.json",
+  "schema": "hyperflux-migration-sources-v1",
+  "sources": [
+    {
+      "id": "design-book",
+      "kind": "imported-document",
+      "role": "governing product design",
+      "imported_path": "docs/architecture/design-book.md",
+      "sha256": "37e177e4983375673ad26945b5c772254151e4de44e43aba3aedfec6ef9d161d"
+    },
+    {
+      "id": "reverse-engineering-archive",
+      "kind": "git",
+      "role": "protocol research, captures, experiments, and historical failures",
+      "remote": "https://github.com/offalexjackson777-stack/hyperflux-v2-reverse-engineering.git",
+      "commit": "fc6045ab",
+      "inventory": "migration/inventory/reverse-engineering-archive.json"
+    },
+    {
+      "id": "engineering-laboratory",
+      "kind": "git",
+      "role": "current evidence-backed engineering implementation and watched proof history",
+      "remote": "https://github.com/offalexjackson777-stack/hyperflux-v2-linux.git",
+      "commit": "5ec780ac79e11346567a2055caec76e25e2ceca4",
+      "inventory": "migration/inventory/engineering-laboratory.json"
+    },
+    {
+      "id": "engineering-protected-main",
+      "kind": "git",
+      "role": "published engineering baseline used to distinguish unmerged laboratory work",
+      "remote": "https://github.com/offalexjackson777-stack/hyperflux-v2-linux.git",
+      "commit": "84f48166f282289bfff26986276a31ec07f99a5e",
+      "inventory": "migration/inventory/engineering-protected-main.json"
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+# HyperFlux Next
+
+HyperFlux Next is a clean, universal Linux foundation for devices connected
+through the Razer HyperFlux V2 system. It separates hardware transport from
+device policy and application presentation so new qualified devices can be
+added without rewriting unrelated kernel, bridge, packaging, and UI code.
+
+> [!IMPORTANT]
+> This repository is a local architectural reconstruction. It is not a
+> published driver, package, release candidate, or authorized GitHub product
+> repository. It performs no hardware writes in its current phase.
+
+## Product Direction
+
+```mermaid
+flowchart TB
+    Apps["OpenRGB, Polychromatic, OpenRazer clients, CLI"]
+    Integrations["Independent application integrations"]
+    SDK["Versioned HyperFlux SDK"]
+    Bridge["Bridge, policy and transaction authority"]
+    Kernel["Minimal Linux HID driver"]
+    Receiver["HyperFlux receiver and paired devices"]
+    Apps --> Integrations --> SDK --> Bridge --> Kernel --> Receiver
+```
+
+The architecture is governed by three rules:
+
+1. Applications describe intent and presentation; they never encode receiver
+   reports.
+2. The bridge is the sole userspace write authority and owns policy,
+   qualification, ownership, scheduling, and structured outcomes.
+3. The kernel remains small: it preserves HID input, observes receiver state,
+   owns generations and one writer session, and transports bounded envelopes.
+
+The complete governing specification is the
+[HyperFlux Next Design Book](docs/architecture/design-book.md). Its enforceable
+subset lives in the generated [Architecture Constitution](docs/generated/architecture.md).
+
+## Current Phase
+
+The repository is establishing its foundation before admitting product code:
+
+- source repositories are immutable evidence inputs, not templates;
+- every subsystem receives an explicit migration decision;
+- imported facts retain provenance and evidence links;
+- canonical JSON drives generated documentation and later language bindings;
+- unknown or unreviewed source is excluded by default;
+- publication requires a separate, explicit authorization after all software
+  and targeted hardware gates pass.
+
+Run the complete current verification entry point:
+
+```sh
+./hfx verify --all
+```
+
+Inspect migration progress without changing files:
+
+```sh
+./hfx migration summary
+```
+
+## Repository Map
+
+| Path | Responsibility |
+| --- | --- |
+| `architecture/` | Machine-readable ownership, invariants, boundaries, and release interlocks |
+| `schemas/` | Versioned schemas for canonical project data |
+| `migration/` | Source identities, generated inventories, and reviewed subsystem decisions |
+| `docs/architecture/` | Human design sources and decisions |
+| `docs/generated/` | Deterministic views generated from canonical data |
+| `tools/hfxdev/` | Bootstrap verification and generation tooling |
+| `tests/` | Independent foundation tests |
+
+Future product directories are created only when their owning contract and
+tests exist. The engineering and reverse-engineering repositories remain the
+authoritative locations for laboratory code, watched coordinators, captures,
+and historical proof machinery.
+
+## Licensing
+
+Project-owned work is licensed under `GPL-2.0-only`. Imported material retains
+its original license and must pass a provenance and compatibility review before
+admission. See [License Decision](LICENSE-DECISION.md).
+

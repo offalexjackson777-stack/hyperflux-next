@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/architecture-constitution-v1.json",
+  "title": "HyperFlux architecture constitution",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "product", "phase", "direction", "invariants", "components", "publication_interlock"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-architecture-constitution-v1"},
+    "product": {"type": "string", "minLength": 1},
+    "phase": {"type": "string", "minLength": 1},
+    "direction": {
+      "type": "array",
+      "minItems": 6,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "invariants": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "statement"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^HFX-INV-[0-9]{3}$"},
+          "statement": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "owns", "must_not_own"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "owns": {"type": "array", "items": {"type": "string"}},
+          "must_not_own": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "publication_interlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["local_first", "remote_repository_created", "publication_authorized", "required_gate_ids"],
+      "properties": {
+        "local_first": {"const": true},
+        "remote_repository_created": {"const": false},
+        "publication_authorized": {"const": false},
+        "required_gate_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^HFX-GATE-[A-Z-]+$"}
+        }
+      }
+    }
+  }
+}
+

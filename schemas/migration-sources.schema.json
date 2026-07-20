@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/migration-sources-v1.json",
+  "title": "HyperFlux migration sources",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "sources"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-migration-sources-v1"},
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "role"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+          "kind": {"enum": ["git", "imported-document"]},
+          "role": {"type": "string", "minLength": 1},
+          "remote": {"type": "string"},
+          "commit": {"type": "string", "pattern": "^[0-9a-f]{7,40}$"},
+          "inventory": {"type": "string"},
+          "imported_path": {"type": "string"},
+          "sha256": {"type": "string", "pattern": "^([0-9a-f]{64}|TO_BE_CAPTURED)$"}
+        }
+      }
+    }
+  }
+}
+
