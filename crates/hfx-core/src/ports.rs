@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_domain::{
-    AuthorizationEpoch, DeliveredFrameCount, DispatchNonce, GenerationId, LogicalDeviceId,
-    MonotonicMs, ProfileDigest, ProfileId, ReceiverId, RestoreClaimId, SessionId,
+    AuthorizationEpoch, DeliveredFrameCount, DeviceApplicationState, DispatchNonce, GenerationId,
+    LogicalDeviceId, MonotonicMs, ProfileDigest, ProfileId, ReceiverId, RestoreClaimId, SessionId,
     SideEffectCertainty, TransactionId, WallClockUnixMs,
 };
 use hfx_protocol::{BridgeEvent, LightingFrame, ResourceKey, RgbColor};
@@ -36,12 +36,28 @@ pub struct TransportReceipt {
     pub delivered_frames: DeliveredFrameCount,
     pub side_effect_certainty: SideEffectCertainty,
     pub live_write_executed: bool,
-    pub device_application_confirmed: bool,
+    pub automatic_retry_safe: bool,
+    pub device_application: DeviceApplicationState,
+}
+
+/// Truthful hardware-side facts carried by every typed transport failure.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TransportFailureFacts {
+    pub delivered_frames: DeliveredFrameCount,
+    pub side_effect_certainty: SideEffectCertainty,
+    pub live_write_executed: bool,
+    pub automatic_retry_safe: bool,
+    pub device_application: DeviceApplicationState,
+}
+
+/// Allows adapter-specific errors to expose a common side-effect contract.
+pub trait TransportFailure {
+    fn facts(&self) -> TransportFailureFacts;
 }
 
 /// The sole hardware-facing core port. Raw reports remain behind its adapter.
 pub trait ReceiverTransport {
-    type Error;
+    type Error: TransportFailure;
 
     fn current_generation(&self, receiver_id: &ReceiverId) -> Option<GenerationId>;
 
@@ -52,6 +68,11 @@ pub trait ReceiverTransport {
     /// Returns the adapter's typed transport failure. Callers must preserve
     /// possible side effects and must not infer that retry is safe.
     fn dispatch(&mut self, dispatch: &TransportDispatch) -> Result<TransportReceipt, Self::Error>;
+}
+
+/// Confirms that queued work still belongs to one live writer session.
+pub trait SessionAuthority {
+    fn authorizes(&self, session_id: &SessionId, authorization_epoch: AuthorizationEpoch) -> bool;
 }
 
 /// Resolves evidence-backed profile and capability facts without presentation data.

@@ -56,6 +56,7 @@ ERROR_CLASSES = {
     "integration",
     "internal",
     "kernel",
+    "outcome",
     "ownership",
     "persistence",
     "profile",

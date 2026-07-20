@@ -3,8 +3,11 @@
 mod common;
 
 use common::{generation, text, time};
-use hfx_core::{Clock, ReceiverTransport, TransportDispatch, TransportReceipt, TransportTerminal};
-use hfx_domain::{DeliveredFrameCount, SideEffectCertainty};
+use hfx_core::{
+    Clock, ReceiverTransport, TransportDispatch, TransportFailure, TransportFailureFacts,
+    TransportReceipt, TransportTerminal,
+};
+use hfx_domain::{DeliveredFrameCount, DeviceApplicationState, SideEffectCertainty};
 
 struct FakeClock(hfx_domain::MonotonicMs);
 
@@ -20,8 +23,23 @@ struct FakeTransport {
     captured: Option<TransportDispatch>,
 }
 
+#[derive(Clone, Copy, Debug)]
+struct FakeTransportError;
+
+impl TransportFailure for FakeTransportError {
+    fn facts(&self) -> TransportFailureFacts {
+        TransportFailureFacts {
+            delivered_frames: DeliveredFrameCount::try_from(0_u16).expect("frame count is valid"),
+            side_effect_certainty: SideEffectCertainty::None,
+            live_write_executed: false,
+            automatic_retry_safe: true,
+            device_application: DeviceApplicationState::Unverified,
+        }
+    }
+}
+
 impl ReceiverTransport for FakeTransport {
-    type Error = ();
+    type Error = FakeTransportError;
 
     fn current_generation(
         &self,
@@ -37,7 +55,8 @@ impl ReceiverTransport for FakeTransport {
             delivered_frames: DeliveredFrameCount::try_from(0_u16).expect("frame count is valid"),
             side_effect_certainty: SideEffectCertainty::Committed,
             live_write_executed: true,
-            device_application_confirmed: false,
+            automatic_retry_safe: false,
+            device_application: DeviceApplicationState::Unverified,
         })
     }
 }

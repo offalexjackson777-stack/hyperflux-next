@@ -14,6 +14,8 @@ class ErrorCode(str, Enum):
     HFX_INTEGRATION_001 = "HFX-INTEGRATION-001"
     HFX_INTERNAL_001 = "HFX-INTERNAL-001"
     HFX_KERNEL_001 = "HFX-KERNEL-001"
+    HFX_OUTCOME_001 = "HFX-OUTCOME-001"
+    HFX_OUTCOME_002 = "HFX-OUTCOME-002"
     HFX_OWNERSHIP_001 = "HFX-OWNERSHIP-001"
     HFX_OWNERSHIP_002 = "HFX-OWNERSHIP-002"
     HFX_PERSISTENCE_001 = "HFX-PERSISTENCE-001"
@@ -38,6 +40,7 @@ class RemediationId(str, Enum):
     DISABLE_UNSUPPORTED_FEATURE = "disable-unsupported-feature"
     LOOKUP_TRANSACTION_OUTCOME = "lookup-transaction-outcome"
     QUALIFY_DEVICE = "qualify-device"
+    RECONCILE_TRANSACTION_STATE = "reconcile-transaction-state"
     REFRESH_GENERATION = "refresh-generation"
     RELEASE_OWNER = "release-owner"
     REPAIR_STATE_STORAGE = "repair-state-storage"
@@ -55,6 +58,7 @@ class ErrorClass(str, Enum):
     INTEGRATION = "integration"
     INTERNAL = "internal"
     KERNEL = "kernel"
+    OUTCOME = "outcome"
     OWNERSHIP = "ownership"
     PERSISTENCE = "persistence"
     PROFILE = "profile"
@@ -151,7 +155,7 @@ class ErrorDescriptor:
     docs_path: str
 
 
-ERROR_CATALOG_SHA256: Final = "e43963471ea69fbbabcb18efdcb3d2e2e075eb6a99e743465ed8c2ce72923950"
+ERROR_CATALOG_SHA256: Final = "e5047af79969e00a9010d3d23f5c741feb4f406828539444cf91c605a8801aa9"
 MAX_ERROR_COUNT: Final = 256
 MAX_REMEDIATION_COUNT: Final = 128
 MAX_SAFE_DETAIL_FIELDS: Final = 12
@@ -205,6 +209,13 @@ REMEDIATIONS: Final = (
         title="Use a qualified device capability",
         safe_action="Keep the device read-only until an evidence-backed profile qualifies the requested capability.",
         verification="Inspect the capability snapshot and confirm the support level permits the operation.",
+        automatic=False,
+    ),
+    RemediationDescriptor(
+        id=RemediationId.RECONCILE_TRANSACTION_STATE,
+        title="Reconcile the current device state",
+        safe_action="Do not repeat the old hardware operation automatically; refresh device state and submit only a new intentional request.",
+        verification="Confirm the application has refreshed the active generation and is not replaying the unavailable transaction.",
         automatic=False,
     ),
     RemediationDescriptor(
@@ -389,6 +400,42 @@ DETAILS_4: Final = (
 
 DETAILS_5: Final = (
     SafeDetailFieldDescriptor(
+        name="transaction_id",
+        kind=SafeDetailKind.IDENTIFIER,
+        required=True,
+        maximum_length=128,
+        maximum_value=None,
+        allowed_values=(),
+        privacy=PrivacyClass.PUBLIC_SUMMARY,
+        description="Transaction identity that has no retained or eviction record.",
+    ),
+)
+
+DETAILS_6: Final = (
+    SafeDetailFieldDescriptor(
+        name="history_capacity",
+        kind=SafeDetailKind.U16,
+        required=True,
+        maximum_length=None,
+        maximum_value=4096,
+        allowed_values=(),
+        privacy=PrivacyClass.PUBLIC,
+        description="Configured retained outcome capacity.",
+    ),
+    SafeDetailFieldDescriptor(
+        name="transaction_id",
+        kind=SafeDetailKind.IDENTIFIER,
+        required=True,
+        maximum_length=128,
+        maximum_value=None,
+        allowed_values=(),
+        privacy=PrivacyClass.PUBLIC_SUMMARY,
+        description="Transaction identity whose terminal record aged out.",
+    ),
+)
+
+DETAILS_7: Final = (
+    SafeDetailFieldDescriptor(
         name="owner_name",
         kind=SafeDetailKind.TEXT,
         required=False,
@@ -410,7 +457,7 @@ DETAILS_5: Final = (
     ),
 )
 
-DETAILS_6: Final = (
+DETAILS_8: Final = (
     SafeDetailFieldDescriptor(
         name="lease_id",
         kind=SafeDetailKind.IDENTIFIER,
@@ -433,7 +480,7 @@ DETAILS_6: Final = (
     ),
 )
 
-DETAILS_7: Final = (
+DETAILS_9: Final = (
     SafeDetailFieldDescriptor(
         name="operation",
         kind=SafeDetailKind.ENUM,
@@ -456,7 +503,7 @@ DETAILS_7: Final = (
     ),
 )
 
-DETAILS_8: Final = (
+DETAILS_10: Final = (
     SafeDetailFieldDescriptor(
         name="operation",
         kind=SafeDetailKind.ENUM,
@@ -479,7 +526,7 @@ DETAILS_8: Final = (
     ),
 )
 
-DETAILS_9: Final = (
+DETAILS_11: Final = (
     SafeDetailFieldDescriptor(
         name="capability",
         kind=SafeDetailKind.IDENTIFIER,
@@ -502,7 +549,7 @@ DETAILS_9: Final = (
     ),
 )
 
-DETAILS_10: Final = (
+DETAILS_12: Final = (
     SafeDetailFieldDescriptor(
         name="active_digest",
         kind=SafeDetailKind.IDENTIFIER,
@@ -535,7 +582,7 @@ DETAILS_10: Final = (
     ),
 )
 
-DETAILS_11: Final = (
+DETAILS_13: Final = (
     SafeDetailFieldDescriptor(
         name="client_max_version",
         kind=SafeDetailKind.U16,
@@ -578,7 +625,7 @@ DETAILS_11: Final = (
     ),
 )
 
-DETAILS_12: Final = (
+DETAILS_14: Final = (
     SafeDetailFieldDescriptor(
         name="feature",
         kind=SafeDetailKind.IDENTIFIER,
@@ -591,7 +638,7 @@ DETAILS_12: Final = (
     ),
 )
 
-DETAILS_13: Final = (
+DETAILS_15: Final = (
     SafeDetailFieldDescriptor(
         name="capacity",
         kind=SafeDetailKind.U16,
@@ -614,7 +661,7 @@ DETAILS_13: Final = (
     ),
 )
 
-DETAILS_14: Final = (
+DETAILS_16: Final = (
     SafeDetailFieldDescriptor(
         name="field",
         kind=SafeDetailKind.TEXT,
@@ -647,7 +694,7 @@ DETAILS_14: Final = (
     ),
 )
 
-DETAILS_15: Final = (
+DETAILS_17: Final = (
     SafeDetailFieldDescriptor(
         name="service_state",
         kind=SafeDetailKind.ENUM,
@@ -660,7 +707,7 @@ DETAILS_15: Final = (
     ),
 )
 
-DETAILS_16: Final = (
+DETAILS_18: Final = (
     SafeDetailFieldDescriptor(
         name="reason",
         kind=SafeDetailKind.ENUM,
@@ -683,7 +730,7 @@ DETAILS_16: Final = (
     ),
 )
 
-DETAILS_17: Final = (
+DETAILS_19: Final = (
     SafeDetailFieldDescriptor(
         name="transaction_id",
         kind=SafeDetailKind.IDENTIFIER,
@@ -696,7 +743,7 @@ DETAILS_17: Final = (
     ),
 )
 
-DETAILS_18: Final = (
+DETAILS_20: Final = (
     SafeDetailFieldDescriptor(
         name="delivered_frames",
         kind=SafeDetailKind.U16,
@@ -831,13 +878,53 @@ ERRORS: Final = (
         docs_path="docs/generated/error-catalog.md#hfx-kernel-001",
     ),
     ErrorDescriptor(
+        code=ErrorCode.HFX_OUTCOME_001,
+        error_class=ErrorClass.OUTCOME,
+        severity=ErrorSeverity.WARNING,
+        retry_policy=RetryPolicy.NEVER,
+        side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
+        remediation_id=RemediationId.RECONCILE_TRANSACTION_STATE,
+        safe_detail_fields=DETAILS_5,
+        lifecycle=LifecycleDescriptor(
+            state=ErrorLifecycleState.ACTIVE,
+            introduced_in="0.0.0-dev.1",
+            deprecated_in=None,
+            replacement_code=None,
+        ),
+        owner=ErrorOwner.BRIDGE,
+        technical_cause="The bounded bridge history has no retained or eviction record for the requested transaction.",
+        user_explanation="HyperFlux cannot determine the result of this transaction from its current history.",
+        privacy=PrivacyClass.PUBLIC_SUMMARY,
+        docs_path="docs/generated/error-catalog.md#hfx-outcome-001",
+    ),
+    ErrorDescriptor(
+        code=ErrorCode.HFX_OUTCOME_002,
+        error_class=ErrorClass.OUTCOME,
+        severity=ErrorSeverity.INFO,
+        retry_policy=RetryPolicy.NEVER,
+        side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
+        remediation_id=RemediationId.RECONCILE_TRANSACTION_STATE,
+        safe_detail_fields=DETAILS_6,
+        lifecycle=LifecycleDescriptor(
+            state=ErrorLifecycleState.ACTIVE,
+            introduced_in="0.0.0-dev.1",
+            deprecated_in=None,
+            replacement_code=None,
+        ),
+        owner=ErrorOwner.BRIDGE,
+        technical_cause="The transaction was known, but its terminal result aged out of bounded retained history.",
+        user_explanation="The transaction result is older than the history HyperFlux keeps in memory.",
+        privacy=PrivacyClass.PUBLIC_SUMMARY,
+        docs_path="docs/generated/error-catalog.md#hfx-outcome-002",
+    ),
+    ErrorDescriptor(
         code=ErrorCode.HFX_OWNERSHIP_001,
         error_class=ErrorClass.OWNERSHIP,
         severity=ErrorSeverity.WARNING,
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.RELEASE_OWNER,
-        safe_detail_fields=DETAILS_5,
+        safe_detail_fields=DETAILS_7,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -857,7 +944,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.ACQUIRE_NEW_LEASE,
-        safe_detail_fields=DETAILS_6,
+        safe_detail_fields=DETAILS_8,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -877,7 +964,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.REPAIR_STATE_STORAGE,
-        safe_detail_fields=DETAILS_7,
+        safe_detail_fields=DETAILS_9,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -897,7 +984,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.REPAIR_STATE_STORAGE,
-        safe_detail_fields=DETAILS_8,
+        safe_detail_fields=DETAILS_10,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -917,7 +1004,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.QUALIFY_DEVICE,
-        safe_detail_fields=DETAILS_9,
+        safe_detail_fields=DETAILS_11,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -937,7 +1024,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.VERIFY_PROFILE_CATALOG,
-        safe_detail_fields=DETAILS_10,
+        safe_detail_fields=DETAILS_12,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -957,7 +1044,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.UPDATE_PROTOCOL_PEER,
-        safe_detail_fields=DETAILS_11,
+        safe_detail_fields=DETAILS_13,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -977,7 +1064,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.DISABLE_UNSUPPORTED_FEATURE,
-        safe_detail_fields=DETAILS_12,
+        safe_detail_fields=DETAILS_14,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -997,7 +1084,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.BOUNDED_BACKOFF,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.RETRY_BOUNDED,
-        safe_detail_fields=DETAILS_13,
+        safe_detail_fields=DETAILS_15,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1017,7 +1104,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.NEVER,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.CORRECT_REQUEST,
-        safe_detail_fields=DETAILS_14,
+        safe_detail_fields=DETAILS_16,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1037,7 +1124,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.START_BRIDGE,
-        safe_detail_fields=DETAILS_15,
+        safe_detail_fields=DETAILS_17,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1057,7 +1144,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.BOUNDED_BACKOFF,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.RETRY_BOUNDED,
-        safe_detail_fields=DETAILS_16,
+        safe_detail_fields=DETAILS_18,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1077,7 +1164,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.OUTCOME_LOOKUP_ONLY,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.POSSIBLE,
         remediation_id=RemediationId.LOOKUP_TRANSACTION_OUTCOME,
-        safe_detail_fields=DETAILS_17,
+        safe_detail_fields=DETAILS_19,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1097,7 +1184,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.OUTCOME_LOOKUP_ONLY,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.PARTIAL,
         remediation_id=RemediationId.LOOKUP_TRANSACTION_OUTCOME,
-        safe_detail_fields=DETAILS_18,
+        safe_detail_fields=DETAILS_20,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",

@@ -9,9 +9,10 @@ publish.workspace = true
 [dependencies]
 hfx-domain = { path = "../hfx-domain" }
 hfx-protocol = { path = "../hfx-protocol" }
+serde_json.workspace = true
+sha2.workspace = true
 
 [dev-dependencies]
-serde_json.workspace = true
 
 [lints]
 workspace = true

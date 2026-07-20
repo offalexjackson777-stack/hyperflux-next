@@ -59,6 +59,7 @@ dependencies = [
  "hfx-domain",
  "hfx-protocol",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]

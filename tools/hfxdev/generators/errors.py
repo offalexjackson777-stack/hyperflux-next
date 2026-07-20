@@ -6,24 +6,11 @@ import json
 import re
 
 from .domain import HEADER_CPP, HEADER_PYTHON, HEADER_RUST
+from ..errors import ERROR_CLASSES as MODEL_ERROR_CLASSES
 from ..errors import ErrorCatalog, ErrorSpec, SafeDetailFieldSpec
 
 
-ERROR_CLASSES = (
-    "deadline",
-    "generation",
-    "integration",
-    "internal",
-    "kernel",
-    "ownership",
-    "persistence",
-    "profile",
-    "protocol",
-    "queue",
-    "request",
-    "service",
-    "transport",
-)
+ERROR_CLASSES = tuple(sorted(MODEL_ERROR_CLASSES))
 RETRY_POLICIES = ("never", "bounded-backoff", "after-remediation", "outcome-lookup-only")
 SIDE_EFFECT_POLICIES = ("not-applicable", "must-be-none", "runtime-reported", "possible", "partial")
 LIFECYCLE_STATES = ("active", "deprecated", "retired")

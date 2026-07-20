@@ -52,6 +52,13 @@
       "automatic": false
     },
     {
+      "id": "reconcile-transaction-state",
+      "title": "Reconcile the current device state",
+      "safe_action": "Do not repeat the old hardware operation automatically; refresh device state and submit only a new intentional request.",
+      "verification": "Confirm the application has refreshed the active generation and is not replaying the unavailable transaction.",
+      "automatic": false
+    },
+    {
       "id": "refresh-generation",
       "title": "Refresh receiver state",
       "safe_action": "Discard state from the old generation and request a fresh snapshot before new work.",
@@ -205,6 +212,41 @@
       "user_explanation": "The newly installed driver is not active yet.",
       "privacy": "public",
       "docs_path": "docs/generated/error-catalog.md#hfx-kernel-001"
+    },
+    {
+      "code": "HFX-OUTCOME-001",
+      "class": "outcome",
+      "severity": "warning",
+      "retry_policy": "never",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "reconcile-transaction-state",
+      "safe_detail_fields": [
+        {"name": "transaction_id", "type": "identifier", "required": true, "maximum_length": 128, "maximum_value": null, "allowed_values": [], "privacy": "public-summary", "description": "Transaction identity that has no retained or eviction record."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "The bounded bridge history has no retained or eviction record for the requested transaction.",
+      "user_explanation": "HyperFlux cannot determine the result of this transaction from its current history.",
+      "privacy": "public-summary",
+      "docs_path": "docs/generated/error-catalog.md#hfx-outcome-001"
+    },
+    {
+      "code": "HFX-OUTCOME-002",
+      "class": "outcome",
+      "severity": "info",
+      "retry_policy": "never",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "reconcile-transaction-state",
+      "safe_detail_fields": [
+        {"name": "history_capacity", "type": "u16", "required": true, "maximum_length": null, "maximum_value": 4096, "allowed_values": [], "privacy": "public", "description": "Configured retained outcome capacity."},
+        {"name": "transaction_id", "type": "identifier", "required": true, "maximum_length": 128, "maximum_value": null, "allowed_values": [], "privacy": "public-summary", "description": "Transaction identity whose terminal record aged out."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "The transaction was known, but its terminal result aged out of bounded retained history.",
+      "user_explanation": "The transaction result is older than the history HyperFlux keeps in memory.",
+      "privacy": "public-summary",
+      "docs_path": "docs/generated/error-catalog.md#hfx-outcome-002"
     },
     {
       "code": "HFX-OWNERSHIP-001",

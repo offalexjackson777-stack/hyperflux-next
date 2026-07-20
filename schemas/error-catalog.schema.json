@@ -228,6 +228,7 @@
             "service",
             "kernel",
             "integration",
+            "outcome",
             "internal"
           ]
         },
