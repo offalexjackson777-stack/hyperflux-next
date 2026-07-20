@@ -271,6 +271,23 @@ impl BridgeSession {
         }
     }
 
+    /// Returns the internal authority record to register with the bridge-wide
+    /// session authority after successful negotiation.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error before negotiation or after revocation.
+    pub fn authorization(&self) -> Result<AuthorizedSession, SessionError> {
+        let negotiated = self
+            .negotiated
+            .as_ref()
+            .ok_or(SessionError::NegotiationRequired)?;
+        if !negotiated.active {
+            return Err(SessionError::SessionRevoked);
+        }
+        Ok(negotiated.authorization.clone())
+    }
+
     #[must_use]
     pub fn is_negotiated(&self) -> bool {
         self.negotiated.as_ref().is_some_and(|state| state.active)

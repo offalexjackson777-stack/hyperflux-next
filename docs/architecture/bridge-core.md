@@ -41,6 +41,8 @@ The exact initial negotiation request is replayable and returns the same server 
 
 Protocol session IDs, negotiation tokens, internal session IDs, and authorization epochs are generated from operating-system entropy. Tokens are treated as credentials: mismatch errors never echo either the supplied or expected value. The connection layer must additionally enforce peer credentials and bounded concurrent sessions; a token does not replace local socket authorization.
 
+The bridge-wide session registry has a fixed capacity and permits one active connection for each client ID. This prevents two connections that chose the same client identity from operating one another's leases. Registration rejects capacity, session-ID collision, and duplicate-client cases without changing existing authority. Disconnect revokes the internal session before releasing client leases and invalidating queued work.
+
 The generated protocol catalog owns request method names, request IDs, session credential access, and feature requirements. Bridge code consumes those generated accessors instead of maintaining a parallel method table. This keeps a future protocol method addition compile-visible and generation-driven.
 
 ## Local RPC Framing

@@ -5,6 +5,7 @@
 mod framing;
 mod persistence;
 mod session;
+mod session_registry;
 
 pub use framing::{
     FRAME_LENGTH_BYTES, FrameError, FrameIoStage, read_rpc_request, write_rpc_response,
@@ -19,3 +20,4 @@ pub use session::{
     AuthorizedSession, BridgeSession, BridgeSessionConfig, KernelSessionIdentitySource,
     SessionError, SessionIdentityError, SessionIdentitySource,
 };
+pub use session_registry::{SessionRegistry, SessionRegistryError};
