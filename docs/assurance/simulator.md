@@ -23,7 +23,19 @@ These dimensions are deliberately not collapsed into one online flag. A sleeping
 
 A receiver reconnect creates a strictly newer generation. Disconnect invalidates generation-scoped observations and partial restore work. Events from an older generation fail closed, and delayed observations cannot replace newer evidence.
 
-Restore scenarios declare all targets before delivery begins. A restore completes only after every declared target has one terminal delivery. Disconnect, transport failure, duplicate delivery, and unknown targets prevent a false complete result.
+Stable restoration uses the production coordinator against simulator implementations of the same persistence and receiver-transport ports. Durable intent, per-device claims, exact dispatch identities, transport terminals, and bounded eviction tombstones survive a simulated bridge-process crash. Sessions, leases, transaction queues, and event buffers do not. A process restart is therefore distinct from a receiver disconnect and does not invent a newer generation.
+
+The fault harness can stop before or after a restore-record compare-and-set, after transport reservation, after the physical write, and after either transport or restore terminal persistence. Tests establish these software invariants:
+
+- only an exact `NotObserved` reconciliation may begin a new physical write;
+- retained success completes without a second write;
+- reservation, write-start, lookup loss, conflict, and eviction ambiguity fail closed;
+- forgotten bounded history never regresses to `NotObserved` within that generation;
+- a new receiver generation receives an independent history floor;
+- one sleeping child cannot block a ready sibling;
+- repeating one trigger is idempotent, while a distinct lifecycle trigger is separately accountable.
+
+The simulator proves policy and crash behavior, not a physical color, battery meaning, report format, or device capability. Those claims still require linked hardware evidence.
 
 ## Replay Boundary
 

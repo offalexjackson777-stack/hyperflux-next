@@ -100,8 +100,10 @@ dependencies = [
 name = "hfx-sim"
 version = "0.0.0-dev.1"
 dependencies = [
+ "hfx-core",
  "hfx-domain",
  "hfx-profiles",
+ "hfx-protocol",
  "serde",
  "serde_json",
  "sha2",

@@ -5,8 +5,11 @@
 mod clock;
 mod engine;
 mod event;
+mod persistence;
 mod replay;
+mod restoration;
 mod state;
+mod transport;
 
 pub use clock::{ClockError, VirtualClock};
 pub use engine::Simulator;
@@ -14,8 +17,18 @@ pub use event::{
     InitialChild, InitialState, MalformedDimension, MalformedReason, Provenance, Scenario,
     ScheduledEvent, SimulatorEvent,
 };
+pub use persistence::{SimPersistenceError, SimPersistenceStore};
 pub use replay::{MAX_EVENTS, MAX_REPLAY_BYTES, MAX_SCENARIO_TIME_MS, parse_replay, run_replay};
+pub use restoration::{
+    CrashCheckpoint, CrashExecution, SimDeviceProfile, SimRestorationConfig, SimRestorationError,
+    SimRestorationHarness,
+};
 pub use state::{
     BatteryState, DeviceSnapshot, EvidenceCell, ReplayMetrics, ReplayResult, RestoreSnapshot,
     SimulatorError, StateSnapshot, TraceRecord,
+};
+pub use transport::{
+    SimJournalState, SimReceiverTransport, SimTransportConfigError, SimTransportCrashPoint,
+    SimTransportError, SimTransportErrorKind, SimTransportFailurePlan, SimTransportJournalRecord,
+    SimTransportMetrics,
 };

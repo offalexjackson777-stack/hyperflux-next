@@ -22,7 +22,7 @@ impl VirtualClock {
     ///
     /// # Errors
     ///
-    /// Returns [`ClockError::MovedBackwards`] when the target predates the
+    /// Returns [`ClockError::WentBackwards`] when the target predates the
     /// current virtual timestamp.
     pub fn advance_to(&mut self, target_ms: u64) -> Result<(), ClockError> {
         if target_ms < self.now_ms {
