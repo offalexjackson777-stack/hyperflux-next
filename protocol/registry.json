@@ -1,0 +1,12 @@
+{
+  "$schema": "../schemas/protocol-registry.schema.json",
+  "schema": "hyperflux-protocol-registry-v1",
+  "current_version": 1,
+  "versions": [
+    {
+      "version": 1,
+      "catalog": "v1/catalog.json",
+      "sha256": "ed3df1f1627ca8a836f509ead3ab7dc7a4cbc6116f6da4accb2cc53e7500859f"
+    }
+  ]
+}

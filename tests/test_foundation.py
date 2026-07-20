@@ -62,7 +62,10 @@ class FoundationTests(unittest.TestCase):
         catalog = load_json(ROOT / "schemas" / "domain-catalog.json")
         for item in catalog["numeric_types"]:
             with self.subTest(type=item["name"]):
-                self.assertLessEqual(item["minimum"], item["maximum"])
+                self.assertLessEqual(int(item["minimum"]), int(item["maximum"]))
+                expected_type = str if item["json_encoding"] == "decimal-string" else int
+                self.assertIsInstance(item["minimum"], expected_type)
+                self.assertIsInstance(item["maximum"], expected_type)
 
     def test_profile_sources_are_bound_to_frozen_evidence_inventories(self) -> None:
         profiles = load_profile_inputs(ROOT)

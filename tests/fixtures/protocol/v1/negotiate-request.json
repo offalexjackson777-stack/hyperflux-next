@@ -1,0 +1,1 @@
+{"method":"negotiate","request":{"request_id":"request-1","params":{"client_id":"client-1","client_name":"OpenRGB","minimum_version":1,"maximum_version":1,"required_features":["ownership-leases"],"optional_features":["atomic-transactions"]}}}

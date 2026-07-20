@@ -17,6 +17,11 @@ RUST_MAXIMUM = {
 }
 
 
+def _numeric_bounds(item: dict[str, Any]) -> tuple[int, int]:
+    """Return catalog bounds as integers regardless of their JSON wire metadata."""
+    return int(item["minimum"]), int(item["maximum"])
+
+
 def _variant(value: str) -> str:
     return "".join(part[:1].upper() + part[1:] for part in value.replace(".", "-").split("-"))
 
@@ -58,8 +63,7 @@ def rust_types(catalog: dict[str, Any]) -> str:
         name = item["name"]
         rust = item["rust"]
         wire_type = "String" if item["json_encoding"] == "decimal-string" else rust
-        minimum = item["minimum"]
-        maximum = item["maximum"]
+        minimum, maximum = _numeric_bounds(item)
         bounds = []
         if minimum > 0:
             bounds.append("value < Self::MIN")
@@ -251,6 +255,7 @@ def python_types(catalog: dict[str, Any]) -> str:
     exports: list[str] = []
     for item in catalog["numeric_types"]:
         name = item["name"]
+        minimum, maximum = _numeric_bounds(item)
         exports.append(name)
         lines.extend(
             [
@@ -262,7 +267,7 @@ def python_types(catalog: dict[str, Any]) -> str:
                 "    def __post_init__(self) -> None:",
                 "        if isinstance(self.value, bool) or not isinstance(self.value, int):",
                 f'            raise TypeError("{name} requires an integer")',
-                f"        if not {item['minimum']} <= self.value <= {item['maximum']}:",
+                f"        if not {minimum} <= self.value <= {maximum}:",
                 f'            raise ValueError("{name} is outside the canonical range")',
                 "",
                 "",
@@ -319,6 +324,7 @@ def cpp_types(catalog: dict[str, Any]) -> str:
     for item in catalog["numeric_types"]:
         name = item["name"]
         cpp = item["cpp"]
+        minimum, maximum_value = _numeric_bounds(item)
         rust_equivalent = {
             "std::uint8_t": "u8",
             "std::uint16_t": "u16",
@@ -326,18 +332,18 @@ def cpp_types(catalog: dict[str, Any]) -> str:
             "std::uint64_t": "u64",
         }[cpp]
         bounds = []
-        if item["minimum"] > 0:
+        if minimum > 0:
             bounds.append("value < minimum")
-        if item["maximum"] < RUST_MAXIMUM[rust_equivalent]:
+        if maximum_value < RUST_MAXIMUM[rust_equivalent]:
             bounds.append("value > maximum")
-        maximum = f"{item['maximum']}ULL" if cpp == "std::uint64_t" else str(item["maximum"])
+        maximum = f"{maximum_value}ULL" if cpp == "std::uint64_t" else str(maximum_value)
         lines.extend(
             [
                 f"class {name}",
                 "{",
                 "public:",
                 f"    using value_type = {cpp};",
-                f"    static constexpr value_type minimum = {item['minimum']};",
+                f"    static constexpr value_type minimum = {minimum};",
                 f"    static constexpr value_type maximum = {maximum};",
                 f"    static constexpr bool wire_as_decimal_string = {str(item['json_encoding'] == 'decimal-string').lower()};",
                 "",
@@ -423,7 +429,12 @@ def markdown(catalog: dict[str, Any]) -> str:
         "| Type | Wire name | Range | JSON encoding |",
         "| --- | --- | --- | --- |",
     ]
-    lines.extend(f"| `{item['name']}` | `{item['wire']}` | {item['minimum']} to {item['maximum']} | `{item['json_encoding']}` |" for item in catalog["numeric_types"])
+    for item in catalog["numeric_types"]:
+        minimum, maximum = _numeric_bounds(item)
+        lines.append(
+            f"| `{item['name']}` | `{item['wire']}` | {minimum} to {maximum} | "
+            f"`{item['json_encoding']}` |"
+        )
     lines.extend(["", "## Opaque String Types", "", "| Type | Wire name | Length |", "| --- | --- | --- |"])
     lines.extend(f"| `{item['name']}` | `{item['wire']}` | {item['minimum_length']} to {item['maximum_length']} bytes |" for item in catalog["string_types"])
     lines.extend(["", "## Enumerations", ""])

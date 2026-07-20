@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 #include <hyperflux/generated/domain_types.hpp>
+#include <hyperflux/generated/error_catalog.hpp>
 #include <hyperflux/generated/profile_catalog.hpp>
 #include <hyperflux/generated/protocol_types.hpp>
+#include <hyperflux/generated/protocol_v1_types.hpp>
 
 #include <cassert>
 #include <string_view>
@@ -29,7 +31,12 @@ int main()
     assert(profiles::profile_by_id("child.unknown") == nullptr);
     static_assert(minimum_protocol_version == 1);
     static_assert(maximum_protocol_version == 1);
+    static_assert(v1::minimum_protocol_version == 1);
+    static_assert(v1::maximum_protocol_version == 1);
     assert(methods[0].name == std::string_view{"negotiate"});
     assert(!methods[0].required_feature.has_value());
+    const auto* generation_error = errors::error_by_code(errors::ErrorCode::HfxGeneration001);
+    assert(generation_error != nullptr);
+    assert(generation_error->retry_policy == errors::RetryPolicy::AfterRemediation);
     return 0;
 }

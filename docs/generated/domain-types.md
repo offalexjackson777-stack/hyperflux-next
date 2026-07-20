@@ -30,6 +30,10 @@ These types prevent semantically different values from being passed interchangea
 | `StreamEpoch` | `stream_epoch` | 1 to 18446744073709551615 | `decimal-string` |
 | `DroppedEventCount` | `dropped_event_count` | 0 to 18446744073709551615 | `decimal-string` |
 | `ProjectionRevision` | `projection_revision` | 1 to 4294967295 | `number` |
+| `AuthorizationEpoch` | `authorization_epoch` | 1 to 18446744073709551615 | `decimal-string` |
+| `DispatchNonce` | `dispatch_nonce` | 1 to 18446744073709551615 | `decimal-string` |
+| `WallClockUnixMs` | `wall_clock_unix_ms` | 0 to 18446744073709551615 | `decimal-string` |
+| `EventBatchLimit` | `event_batch_limit` | 1 to 256 | `number` |
 
 ## Opaque String Types
 
@@ -54,6 +58,15 @@ These types prevent semantically different values from being passed interchangea
 | `HumanMessage` | `human_message` | 1 to 512 bytes |
 | `DocumentationPath` | `documentation_path` | 1 to 256 bytes |
 | `StreamId` | `stream_id` | 1 to 128 bytes |
+| `SessionId` | `session_id` | 1 to 128 bytes |
+| `ServerInstanceId` | `server_instance_id` | 1 to 128 bytes |
+| `NegotiationToken` | `negotiation_token` | 1 to 160 bytes |
+| `RestoreClaimId` | `restore_claim_id` | 1 to 128 bytes |
+| `ProfileDigest` | `profile_digest` | 64 to 64 bytes |
+| `CorrelationId` | `correlation_id` | 1 to 128 bytes |
+| `ProtocolFeatureId` | `protocol_feature_id` | 1 to 128 bytes |
+| `ProtocolSessionId` | `protocol_session_id` | 1 to 128 bytes |
+| `RequestDigest` | `request_digest` | 64 to 64 bytes |
 
 ## Enumerations
 
@@ -78,14 +91,16 @@ These types prevent semantically different values from being passed interchangea
 - `PrivacyClass`: `public`, `public-summary`, `sensitive`, `private`, `forbidden`
 - `SupportLevel`: `candidate`, `identified`, `read-only`, `telemetry-qualified`, `lighting-qualified`, `settings-qualified`, `pairing-qualified`, `production-qualified`
 - `ReceiverState`: `absent`, `discovered-read-only`, `observed`, `profile-qualified`, `session-authorized`, `degraded-read-only`
-- `TransactionState`: `created`, `validated`, `ownership-bound`, `generation-bound`, `queued`, `sent`, `health-pending`, `succeeded`, `failed`, `revoked`
+- `TransactionState`: `created`, `validated`, `ownership-bound`, `generation-bound`, `queued`, `sent`, `health-pending`, `succeeded`, `failed`, `revoked`, `superseded`
 - `LeaseState`: `requested`, `granted`, `renewed`, `released`, `expired`, `revoked`
 - `ResourceKind`: `lighting`, `settings`, `pairing`
 - `TransactionClass`: `effect-frame`, `static-lighting`, `device-setting`, `restore`, `pairing`
 - `QueueAdmission`: `enqueued`, `coalesced`, `rejected-full`, `rejected-deadline`, `rejected-invalid`
 - `RestoreState`: `idle`, `planned`, `ownership-bound`, `generation-bound`, `queued`, `applying`, `succeeded`, `failed`, `invalidated`
 - `EventKind`: `device-available`, `device-sleeping`, `device-unavailable`, `battery-updated`, `ownership-changed`, `generation-replaced`, `transaction-completed`, `restore-completed`, `diagnostic-raised`
-- `ProtocolErrorKind`: `incompatible-version`, `unsupported-feature`, `invalid-request`, `ownership-conflict`, `stale-generation`, `deadline-exceeded`, `queue-full`, `transport-failure`, `internal-failure`
+- `ProtocolErrorKind`: `incompatible-version`, `unsupported-feature`, `invalid-request`, `ownership-conflict`, `stale-generation`, `deadline-exceeded`, `queue-full`, `transport-failure`, `outcome-unknown`, `outcome-evicted`, `internal-failure`
 - `SideEffectCertainty`: `none`, `possible`, `partial`, `committed`
+- `DeviceApplicationState`: `unverified`, `confirmed`, `rejected`
+- `TelemetryAvailability`: `unknown`, `unavailable`, `reported`
 - `LeaseOutcome`: `granted`, `conflict`, `rejected`
 - `ErrorSeverity`: `info`, `warning`, `error`, `critical`

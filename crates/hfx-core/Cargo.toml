@@ -1,5 +1,5 @@
 [package]
-name = "hfx-protocol"
+name = "hfx-core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,10 +8,10 @@ publish.workspace = true
 
 [dependencies]
 hfx-domain = { path = "../hfx-domain" }
-serde.workspace = true
-serde_json.workspace = true
+hfx-protocol = { path = "../hfx-protocol" }
 
 [dev-dependencies]
+serde_json.workspace = true
 
 [lints]
 workspace = true

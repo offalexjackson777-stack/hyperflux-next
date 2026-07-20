@@ -66,8 +66,25 @@
       "timeout_seconds": 10,
       "dependencies": ["schema-contracts"],
       "isolation": "shared",
-      "cache_inputs": ["protocol/catalog.json", "schemas/protocol-catalog.schema.json", "schemas/domain-catalog.json", "tools/hfxdev/protocol.py"],
+      "cache_inputs": ["protocol/**/*.json", "schemas/protocol-*.schema.json", "schemas/domain-catalog.json", "tests/fixtures/protocol/**/*.json", "tools/hfxdev/protocol.py"],
       "produced_evidence": ["protocol-result"],
+      "resume_policy": "reuse-verified"
+    },
+    {
+      "id": "error-contracts",
+      "title": "Central error authority and remediation contracts",
+      "owned_domain": "errors",
+      "lanes": ["fast", "full-software"],
+      "runner": "error-contracts",
+      "required_capabilities": [],
+      "hardware_requirement": "none",
+      "writes_hardware": false,
+      "expected_duration_seconds": 1,
+      "timeout_seconds": 10,
+      "dependencies": ["schema-contracts"],
+      "isolation": "shared",
+      "cache_inputs": ["errors/catalog.json", "schemas/error-catalog.schema.json", "schemas/domain-catalog.json", "tools/hfxdev/errors.py"],
+      "produced_evidence": ["error-catalog-result"],
       "resume_policy": "reuse-verified"
     },
     {
@@ -81,9 +98,9 @@
       "writes_hardware": false,
       "expected_duration_seconds": 1,
       "timeout_seconds": 15,
-      "dependencies": ["profile-contracts", "protocol-contracts"],
+      "dependencies": ["profile-contracts", "protocol-contracts", "error-contracts"],
       "isolation": "shared",
-      "cache_inputs": ["schemas/*.json", "profiles/**/*.json", "protocol/catalog.json", "tools/hfxdev/generators/*.py", "tools/hfxdev/render.py", "verification/tests.json"],
+      "cache_inputs": ["schemas/*.json", "profiles/**/*.json", "protocol/**/*.json", "errors/catalog.json", "tools/hfxdev/generators/*.py", "tools/hfxdev/render.py", "verification/tests.json"],
       "produced_evidence": ["generation-result"],
       "resume_policy": "reuse-verified"
     },
@@ -185,7 +202,7 @@
       "timeout_seconds": 180,
       "dependencies": ["rust-clippy"],
       "isolation": "exclusive-process",
-      "cache_inputs": ["Cargo.toml", "Cargo.lock", "crates/hfx-domain/**/*.rs", "crates/hfx-profiles/**/*.rs", "crates/hfx-protocol/**/*.rs"],
+      "cache_inputs": ["Cargo.toml", "Cargo.lock", "crates/hfx-core/**/*.rs", "crates/hfx-domain/**/*.rs", "crates/hfx-errors/**/*.rs", "crates/hfx-profiles/**/*.rs", "crates/hfx-protocol/**/*.rs"],
       "produced_evidence": ["rust-unit-result"],
       "resume_policy": "rerun"
     },

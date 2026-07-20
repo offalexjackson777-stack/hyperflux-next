@@ -269,6 +269,54 @@ class ProjectionRevision:
 
 
 @dataclass(frozen=True, slots=True)
+class AuthorizationEpoch:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "decimal-string"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("AuthorizationEpoch requires an integer")
+        if not 1 <= self.value <= 18446744073709551615:
+            raise ValueError("AuthorizationEpoch is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class DispatchNonce:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "decimal-string"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("DispatchNonce requires an integer")
+        if not 1 <= self.value <= 18446744073709551615:
+            raise ValueError("DispatchNonce is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class WallClockUnixMs:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "decimal-string"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("WallClockUnixMs requires an integer")
+        if not 0 <= self.value <= 18446744073709551615:
+            raise ValueError("WallClockUnixMs is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class EventBatchLimit:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("EventBatchLimit requires an integer")
+        if not 1 <= self.value <= 256:
+            raise ValueError("EventBatchLimit is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
 class ReceiverId:
     value: str
 
@@ -477,6 +525,105 @@ class StreamId:
             raise ValueError("StreamId is outside the canonical length")
 
 
+@dataclass(frozen=True, slots=True)
+class SessionId:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("SessionId requires a string")
+        if not 1 <= len(self.value) <= 128:
+            raise ValueError("SessionId is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class ServerInstanceId:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("ServerInstanceId requires a string")
+        if not 1 <= len(self.value) <= 128:
+            raise ValueError("ServerInstanceId is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class NegotiationToken:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("NegotiationToken requires a string")
+        if not 1 <= len(self.value) <= 160:
+            raise ValueError("NegotiationToken is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class RestoreClaimId:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("RestoreClaimId requires a string")
+        if not 1 <= len(self.value) <= 128:
+            raise ValueError("RestoreClaimId is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class ProfileDigest:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("ProfileDigest requires a string")
+        if not 64 <= len(self.value) <= 64:
+            raise ValueError("ProfileDigest is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class CorrelationId:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("CorrelationId requires a string")
+        if not 1 <= len(self.value) <= 128:
+            raise ValueError("CorrelationId is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class ProtocolFeatureId:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("ProtocolFeatureId requires a string")
+        if not 1 <= len(self.value) <= 128:
+            raise ValueError("ProtocolFeatureId is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class ProtocolSessionId:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("ProtocolSessionId requires a string")
+        if not 1 <= len(self.value) <= 128:
+            raise ValueError("ProtocolSessionId is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class RequestDigest:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("RequestDigest requires a string")
+        if not 64 <= len(self.value) <= 64:
+            raise ValueError("RequestDigest is outside the canonical length")
+
+
 class DeviceKind(str, Enum):
     RECEIVER = "receiver"
     MAT = "mat"
@@ -641,6 +788,7 @@ class TransactionState(str, Enum):
     SUCCEEDED = "succeeded"
     FAILED = "failed"
     REVOKED = "revoked"
+    SUPERSEDED = "superseded"
 
 
 class LeaseState(str, Enum):
@@ -707,6 +855,8 @@ class ProtocolErrorKind(str, Enum):
     DEADLINE_EXCEEDED = "deadline-exceeded"
     QUEUE_FULL = "queue-full"
     TRANSPORT_FAILURE = "transport-failure"
+    OUTCOME_UNKNOWN = "outcome-unknown"
+    OUTCOME_EVICTED = "outcome-evicted"
     INTERNAL_FAILURE = "internal-failure"
 
 
@@ -715,6 +865,18 @@ class SideEffectCertainty(str, Enum):
     POSSIBLE = "possible"
     PARTIAL = "partial"
     COMMITTED = "committed"
+
+
+class DeviceApplicationState(str, Enum):
+    UNVERIFIED = "unverified"
+    CONFIRMED = "confirmed"
+    REJECTED = "rejected"
+
+
+class TelemetryAvailability(str, Enum):
+    UNKNOWN = "unknown"
+    UNAVAILABLE = "unavailable"
+    REPORTED = "reported"
 
 
 class LeaseOutcome(str, Enum):
@@ -753,6 +915,10 @@ __all__ = [
     "StreamEpoch",
     "DroppedEventCount",
     "ProjectionRevision",
+    "AuthorizationEpoch",
+    "DispatchNonce",
+    "WallClockUnixMs",
+    "EventBatchLimit",
     "ReceiverId",
     "LogicalDeviceId",
     "EndpointId",
@@ -772,6 +938,15 @@ __all__ = [
     "HumanMessage",
     "DocumentationPath",
     "StreamId",
+    "SessionId",
+    "ServerInstanceId",
+    "NegotiationToken",
+    "RestoreClaimId",
+    "ProfileDigest",
+    "CorrelationId",
+    "ProtocolFeatureId",
+    "ProtocolSessionId",
+    "RequestDigest",
     "DeviceKind",
     "ProfileKind",
     "RouteKind",
@@ -802,6 +977,8 @@ __all__ = [
     "EventKind",
     "ProtocolErrorKind",
     "SideEffectCertainty",
+    "DeviceApplicationState",
+    "TelemetryAvailability",
     "LeaseOutcome",
     "ErrorSeverity",
 ]

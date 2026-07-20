@@ -531,6 +531,102 @@ private:
     value_type value_;
 };
 
+class AuthorizationEpoch
+{
+public:
+    using value_type = std::uint64_t;
+    static constexpr value_type minimum = 1;
+    static constexpr value_type maximum = 18446744073709551615ULL;
+    static constexpr bool wire_as_decimal_string = true;
+
+    [[nodiscard]] static constexpr std::optional<AuthorizationEpoch> from(value_type value)
+    {
+        if(value < minimum)
+        {
+            return std::nullopt;
+        }
+        return AuthorizationEpoch(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const AuthorizationEpoch&, const AuthorizationEpoch&) = default;
+
+private:
+    explicit constexpr AuthorizationEpoch(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class DispatchNonce
+{
+public:
+    using value_type = std::uint64_t;
+    static constexpr value_type minimum = 1;
+    static constexpr value_type maximum = 18446744073709551615ULL;
+    static constexpr bool wire_as_decimal_string = true;
+
+    [[nodiscard]] static constexpr std::optional<DispatchNonce> from(value_type value)
+    {
+        if(value < minimum)
+        {
+            return std::nullopt;
+        }
+        return DispatchNonce(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const DispatchNonce&, const DispatchNonce&) = default;
+
+private:
+    explicit constexpr DispatchNonce(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class WallClockUnixMs
+{
+public:
+    using value_type = std::uint64_t;
+    static constexpr value_type minimum = 0;
+    static constexpr value_type maximum = 18446744073709551615ULL;
+    static constexpr bool wire_as_decimal_string = true;
+
+    [[nodiscard]] static constexpr std::optional<WallClockUnixMs> from(value_type value)
+    {
+        return WallClockUnixMs(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const WallClockUnixMs&, const WallClockUnixMs&) = default;
+
+private:
+    explicit constexpr WallClockUnixMs(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class EventBatchLimit
+{
+public:
+    using value_type = std::uint16_t;
+    static constexpr value_type minimum = 1;
+    static constexpr value_type maximum = 256;
+    static constexpr bool wire_as_decimal_string = false;
+
+    [[nodiscard]] static constexpr std::optional<EventBatchLimit> from(value_type value)
+    {
+        if(value < minimum || value > maximum)
+        {
+            return std::nullopt;
+        }
+        return EventBatchLimit(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const EventBatchLimit&, const EventBatchLimit&) = default;
+
+private:
+    explicit constexpr EventBatchLimit(value_type value) : value_(value) {}
+    value_type value_;
+};
+
 class ReceiverId
 {
 public:
@@ -965,6 +1061,213 @@ public:
 
 private:
     explicit StreamId(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class SessionId
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 128;
+
+    [[nodiscard]] static std::optional<SessionId> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return SessionId(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const SessionId&, const SessionId&) = default;
+
+private:
+    explicit SessionId(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class ServerInstanceId
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 128;
+
+    [[nodiscard]] static std::optional<ServerInstanceId> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return ServerInstanceId(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const ServerInstanceId&, const ServerInstanceId&) = default;
+
+private:
+    explicit ServerInstanceId(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class NegotiationToken
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 160;
+
+    [[nodiscard]] static std::optional<NegotiationToken> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return NegotiationToken(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const NegotiationToken&, const NegotiationToken&) = default;
+
+private:
+    explicit NegotiationToken(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class RestoreClaimId
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 128;
+
+    [[nodiscard]] static std::optional<RestoreClaimId> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return RestoreClaimId(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const RestoreClaimId&, const RestoreClaimId&) = default;
+
+private:
+    explicit RestoreClaimId(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class ProfileDigest
+{
+public:
+    static constexpr std::size_t minimum_length = 64;
+    static constexpr std::size_t maximum_length = 64;
+
+    [[nodiscard]] static std::optional<ProfileDigest> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return ProfileDigest(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const ProfileDigest&, const ProfileDigest&) = default;
+
+private:
+    explicit ProfileDigest(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class CorrelationId
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 128;
+
+    [[nodiscard]] static std::optional<CorrelationId> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return CorrelationId(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const CorrelationId&, const CorrelationId&) = default;
+
+private:
+    explicit CorrelationId(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class ProtocolFeatureId
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 128;
+
+    [[nodiscard]] static std::optional<ProtocolFeatureId> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return ProtocolFeatureId(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const ProtocolFeatureId&, const ProtocolFeatureId&) = default;
+
+private:
+    explicit ProtocolFeatureId(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class ProtocolSessionId
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 128;
+
+    [[nodiscard]] static std::optional<ProtocolSessionId> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return ProtocolSessionId(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const ProtocolSessionId&, const ProtocolSessionId&) = default;
+
+private:
+    explicit ProtocolSessionId(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class RequestDigest
+{
+public:
+    static constexpr std::size_t minimum_length = 64;
+    static constexpr std::size_t maximum_length = 64;
+
+    [[nodiscard]] static std::optional<RequestDigest> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return RequestDigest(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const RequestDigest&, const RequestDigest&) = default;
+
+private:
+    explicit RequestDigest(std::string value) : value_(std::move(value)) {}
     std::string value_;
 };
 
@@ -1412,6 +1715,7 @@ enum class TransactionState
     Succeeded,
     Failed,
     Revoked,
+    Superseded,
 };
 
 [[nodiscard]] constexpr std::string_view to_string(TransactionState value)
@@ -1428,6 +1732,7 @@ enum class TransactionState
         case TransactionState::Succeeded: return "succeeded";
         case TransactionState::Failed: return "failed";
         case TransactionState::Revoked: return "revoked";
+        case TransactionState::Superseded: return "superseded";
     }
     return "unknown";
 }
@@ -1588,6 +1893,8 @@ enum class ProtocolErrorKind
     DeadlineExceeded,
     QueueFull,
     TransportFailure,
+    OutcomeUnknown,
+    OutcomeEvicted,
     InternalFailure,
 };
 
@@ -1603,6 +1910,8 @@ enum class ProtocolErrorKind
         case ProtocolErrorKind::DeadlineExceeded: return "deadline-exceeded";
         case ProtocolErrorKind::QueueFull: return "queue-full";
         case ProtocolErrorKind::TransportFailure: return "transport-failure";
+        case ProtocolErrorKind::OutcomeUnknown: return "outcome-unknown";
+        case ProtocolErrorKind::OutcomeEvicted: return "outcome-evicted";
         case ProtocolErrorKind::InternalFailure: return "internal-failure";
     }
     return "unknown";
@@ -1624,6 +1933,42 @@ enum class SideEffectCertainty
         case SideEffectCertainty::Possible: return "possible";
         case SideEffectCertainty::Partial: return "partial";
         case SideEffectCertainty::Committed: return "committed";
+    }
+    return "unknown";
+}
+
+enum class DeviceApplicationState
+{
+    Unverified,
+    Confirmed,
+    Rejected,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(DeviceApplicationState value)
+{
+    switch(value)
+    {
+        case DeviceApplicationState::Unverified: return "unverified";
+        case DeviceApplicationState::Confirmed: return "confirmed";
+        case DeviceApplicationState::Rejected: return "rejected";
+    }
+    return "unknown";
+}
+
+enum class TelemetryAvailability
+{
+    Unknown,
+    Unavailable,
+    Reported,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(TelemetryAvailability value)
+{
+    switch(value)
+    {
+        case TelemetryAvailability::Unknown: return "unknown";
+        case TelemetryAvailability::Unavailable: return "unavailable";
+        case TelemetryAvailability::Reported: return "reported";
     }
     return "unknown";
 }

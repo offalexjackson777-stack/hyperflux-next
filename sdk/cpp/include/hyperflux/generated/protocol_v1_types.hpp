@@ -12,7 +12,7 @@
 #include <variant>
 #include <vector>
 
-namespace hyperflux
+namespace hyperflux::v1
 {
 
 inline constexpr std::uint16_t minimum_protocol_version = 1;
@@ -580,4 +580,4 @@ inline constexpr MethodDescriptor methods[9] = {
     {"diagnostics", "EmptyRequest", "DiagnosticSnapshot", std::optional<std::string_view>("structured-diagnostics")},
 };
 
-} // namespace hyperflux
+} // namespace hyperflux::v1

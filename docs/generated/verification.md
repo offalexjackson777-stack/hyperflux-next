@@ -13,14 +13,15 @@ Every current node is software-only and has zero hardware-write authority.
 | 4 | `toolchain-contract` | `toolchains` | `none` | `false` | 20s | `reuse-verified` |
 | 5 | `profile-contracts` | `profiles` | `none` | `false` | 10s | `reuse-verified` |
 | 6 | `protocol-contracts` | `protocol` | `none` | `false` | 10s | `reuse-verified` |
-| 7 | `rust-format` | `rust` | `none` | `false` | 60s | `rerun` |
-| 8 | `generated-freshness` | `generation` | `none` | `false` | 15s | `reuse-verified` |
-| 9 | `python-unit` | `tooling` | `none` | `false` | 60s | `rerun` |
-| 10 | `rust-clippy` | `rust` | `none` | `false` | 180s | `rerun` |
-| 11 | `cpp-sdk-contracts` | `sdk` | `none` | `false` | 60s | `rerun` |
-| 12 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 60s | `rerun` |
-| 13 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
-| 14 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
+| 7 | `error-contracts` | `errors` | `none` | `false` | 10s | `reuse-verified` |
+| 8 | `rust-format` | `rust` | `none` | `false` | 60s | `rerun` |
+| 9 | `generated-freshness` | `generation` | `none` | `false` | 15s | `reuse-verified` |
+| 10 | `python-unit` | `tooling` | `none` | `false` | 60s | `rerun` |
+| 11 | `rust-clippy` | `rust` | `none` | `false` | 180s | `rerun` |
+| 12 | `cpp-sdk-contracts` | `sdk` | `none` | `false` | 60s | `rerun` |
+| 13 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 60s | `rerun` |
+| 14 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
+| 15 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
 
 ## Dependencies
 
@@ -32,6 +33,7 @@ flowchart LR
     toolchain_contract["toolchain-contract"]
     profile_contracts["profile-contracts"]
     protocol_contracts["protocol-contracts"]
+    error_contracts["error-contracts"]
     rust_format["rust-format"]
     generated_freshness["generated-freshness"]
     python_unit["python-unit"]
@@ -45,9 +47,11 @@ flowchart LR
     foundation_contracts --> toolchain_contract
     schema_contracts --> profile_contracts
     schema_contracts --> protocol_contracts
+    schema_contracts --> error_contracts
     toolchain_contract --> rust_format
     profile_contracts --> generated_freshness
     protocol_contracts --> generated_freshness
+    error_contracts --> generated_freshness
     generated_freshness --> python_unit
     privacy_boundary --> python_unit
     generated_freshness --> rust_clippy

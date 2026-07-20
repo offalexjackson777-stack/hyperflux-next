@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 from typing import Any
 
-from .model import ModelError, load_json, require_unique
+from .model import ModelError, load_json, require_unique, sha256_file
 
 
 CATALOG_KEYS = {
@@ -15,13 +15,19 @@ CATALOG_KEYS = {
     "schema",
     "minimum_version",
     "maximum_version",
+    "limits",
     "features",
     "records",
+    "unions",
     "methods",
 }
+REGISTRY_KEYS = {"$schema", "schema", "current_version", "versions"}
+VERSION_KEYS = {"version", "catalog", "sha256"}
 RECORD_KEYS = {"name", "description", "fields"}
 FIELD_KEYS = {"name", "type", "required", "many", "max_items", "description"}
 METHOD_KEYS = {"name", "request", "response", "required_feature", "description"}
+UNION_KEYS = {"name", "description", "tag", "content", "variants"}
+VARIANT_KEYS = {"name", "wire", "type", "description"}
 TYPE_NAME = re.compile(r"^[A-Z][A-Za-z0-9]+$")
 FIELD_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 IDENTIFIER = re.compile(r"^[a-z][a-z0-9.-]*$")
@@ -116,6 +122,23 @@ class RecordSpec:
 
 
 @dataclass(frozen=True)
+class VariantSpec:
+    name: str
+    wire: str
+    type_name: str
+    description: str
+
+
+@dataclass(frozen=True)
+class UnionSpec:
+    name: str
+    description: str
+    tag: str
+    content: str
+    variants: tuple[VariantSpec, ...]
+
+
+@dataclass(frozen=True)
 class MethodSpec:
     name: str
     request: str
@@ -128,9 +151,32 @@ class MethodSpec:
 class ProtocolCatalog:
     minimum_version: int
     maximum_version: int
+    max_message_bytes: int
+    max_json_depth: int
     features: tuple[str, ...]
     records: tuple[RecordSpec, ...]
+    unions: tuple[UnionSpec, ...]
     methods: tuple[MethodSpec, ...]
+
+
+@dataclass(frozen=True)
+class ProtocolVersion:
+    version: int
+    catalog_path: str
+    source_sha256: str
+    catalog: ProtocolCatalog
+
+
+@dataclass(frozen=True)
+class ProtocolRegistry:
+    current_version: int
+    versions: tuple[ProtocolVersion, ...]
+
+    @property
+    def current(self) -> ProtocolCatalog:
+        return next(
+            item.catalog for item in self.versions if item.version == self.current_version
+        )
 
 
 def _exact(value: dict[str, Any], keys: set[str], label: str) -> None:
@@ -201,8 +247,6 @@ def _record(value: Any, index: int, known_types: set[str]) -> RecordSpec:
     label = f"protocol record {value.get('name', index)}"
     _exact(value, RECORD_KEYS, label)
     name = _named(value["name"], TYPE_NAME, f"{label} name")
-    if name in known_types:
-        raise ModelError(f"{label}: type name is already defined")
     fields_value = value["fields"]
     if not isinstance(fields_value, list):
         raise ModelError(f"{label}: fields must be an array")
@@ -212,6 +256,47 @@ def _record(value: Any, index: int, known_types: set[str]) -> RecordSpec:
         name=name,
         description=_description(value["description"], label),
         fields=fields,
+    )
+
+
+def _union(value: Any, index: int, record_names: set[str]) -> UnionSpec:
+    if not isinstance(value, dict):
+        raise ModelError(f"protocol union {index}: must be an object")
+    label = f"protocol union {value.get('name', index)}"
+    _exact(value, UNION_KEYS, label)
+    name = _named(value["name"], TYPE_NAME, f"{label} name")
+    tag = _named(value["tag"], FIELD_NAME, f"{label} tag")
+    content = _named(value["content"], FIELD_NAME, f"{label} content")
+    if tag == content:
+        raise ModelError(f"{label}: tag and content fields must differ")
+    variants_value = value["variants"]
+    if not isinstance(variants_value, list) or not variants_value:
+        raise ModelError(f"{label}: variants must be a non-empty array")
+    variants: list[VariantSpec] = []
+    for variant_index, variant in enumerate(variants_value):
+        variant_label = f"{label} variant {variant_index}"
+        if not isinstance(variant, dict):
+            raise ModelError(f"{variant_label}: must be an object")
+        _exact(variant, VARIANT_KEYS, variant_label)
+        type_name = _named(variant["type"], TYPE_NAME, f"{variant_label} type")
+        if type_name not in record_names:
+            raise ModelError(f"{variant_label}: variant type must name a protocol record")
+        variants.append(
+            VariantSpec(
+                name=_named(variant["name"], TYPE_NAME, f"{variant_label} name"),
+                wire=_named(variant["wire"], IDENTIFIER, f"{variant_label} wire"),
+                type_name=type_name,
+                description=_description(variant["description"], variant_label),
+            )
+        )
+    require_unique([variant.name for variant in variants], f"{name} variant name")
+    require_unique([variant.wire for variant in variants], f"{name} variant wire")
+    return UnionSpec(
+        name=name,
+        description=_description(value["description"], label),
+        tag=tag,
+        content=content,
+        variants=tuple(variants),
     )
 
 
@@ -239,8 +324,8 @@ def _method(value: Any, index: int, records: set[str], features: set[str]) -> Me
     )
 
 
-def load_protocol_catalog(root: Path) -> ProtocolCatalog:
-    value = load_json(root / "protocol" / "catalog.json")
+def _load_protocol_catalog(root: Path, path: Path) -> ProtocolCatalog:
+    value = load_json(path)
     _exact(value, CATALOG_KEYS, "protocol catalog")
     if value["schema"] != "hyperflux-protocol-catalog-v1":
         raise ModelError("unsupported protocol catalog schema")
@@ -254,6 +339,20 @@ def load_protocol_catalog(root: Path) -> ProtocolCatalog:
         or not 1 <= minimum <= maximum <= 65_535
     ):
         raise ModelError("protocol version range is invalid")
+    limits = value["limits"]
+    if not isinstance(limits, dict):
+        raise ModelError("protocol limits must be an object")
+    _exact(limits, {"max_message_bytes", "max_json_depth"}, "protocol limits")
+    max_message_bytes = limits["max_message_bytes"]
+    max_json_depth = limits["max_json_depth"]
+    if (
+        isinstance(max_message_bytes, bool)
+        or not isinstance(max_message_bytes, int)
+        or not 4_096 <= max_message_bytes <= 16_777_216
+    ):
+        raise ModelError("protocol message byte bound is invalid")
+    if max_json_depth != 128:
+        raise ModelError("protocol JSON depth must match serde_json's bounded default of 128")
     features_value = value["features"]
     if not isinstance(features_value, list):
         raise ModelError("protocol features must be an array")
@@ -263,27 +362,125 @@ def load_protocol_catalog(root: Path) -> ProtocolCatalog:
     records_value = value["records"]
     if not isinstance(records_value, list) or not records_value:
         raise ModelError("protocol catalog must contain records")
-    known_types = _domain_names(root) | BUILTIN_TYPES
+    record_names_declared = {
+        _named(item.get("name"), TYPE_NAME, f"protocol record {index} name")
+        for index, item in enumerate(records_value)
+        if isinstance(item, dict)
+    }
+    if len(record_names_declared) != len(records_value):
+        raise ModelError("protocol record declarations are invalid or duplicated")
+    unions_value = value["unions"]
+    if not isinstance(unions_value, list):
+        raise ModelError("protocol unions must be an array")
+    union_names_declared = {
+        _named(item.get("name"), TYPE_NAME, f"protocol union {index} name")
+        for index, item in enumerate(unions_value)
+        if isinstance(item, dict)
+    }
+    if len(union_names_declared) != len(unions_value):
+        raise ModelError("protocol union declarations are invalid or duplicated")
+    base_types = _domain_names(root) | BUILTIN_TYPES
+    if record_names_declared & base_types:
+        raise ModelError("protocol record names collide with domain or built-in types")
+    if union_names_declared & base_types:
+        raise ModelError("protocol union names collide with domain or built-in types")
+    if record_names_declared & union_names_declared:
+        raise ModelError("protocol record and union names must be disjoint")
+    known_types = base_types | record_names_declared | union_names_declared
     records: list[RecordSpec] = []
     for index, item in enumerate(records_value):
         record = _record(item, index, known_types)
         records.append(record)
-        known_types.add(record.name)
     require_unique([record.name for record in records], "protocol record name")
     record_names = {record.name for record in records}
+    unions = tuple(
+        _union(item, index, record_names) for index, item in enumerate(unions_value)
+    )
+    require_unique([union.name for union in unions], "protocol union name")
+    protocol_types = record_names | {union.name for union in unions}
 
     methods_value = value["methods"]
     if not isinstance(methods_value, list) or not methods_value:
         raise ModelError("protocol catalog must contain methods")
     methods = tuple(
-        _method(item, index, record_names, set(features))
+        _method(item, index, protocol_types, set(features))
         for index, item in enumerate(methods_value)
     )
     require_unique([method.name for method in methods], "protocol method name")
     return ProtocolCatalog(
         minimum_version=minimum,
         maximum_version=maximum,
+        max_message_bytes=max_message_bytes,
+        max_json_depth=max_json_depth,
         features=features,
         records=tuple(records),
+        unions=unions,
         methods=methods,
     )
+
+
+def load_protocol_registry(root: Path) -> ProtocolRegistry:
+    value = load_json(root / "protocol" / "registry.json")
+    _exact(value, REGISTRY_KEYS, "protocol registry")
+    if value["schema"] != "hyperflux-protocol-registry-v1":
+        raise ModelError("unsupported protocol registry schema")
+    current_version = value["current_version"]
+    if (
+        isinstance(current_version, bool)
+        or not isinstance(current_version, int)
+        or not 1 <= current_version <= 65_535
+    ):
+        raise ModelError("protocol current version is invalid")
+    raw_versions = value["versions"]
+    if not isinstance(raw_versions, list) or not raw_versions:
+        raise ModelError("protocol registry must contain at least one version")
+
+    versions: list[ProtocolVersion] = []
+    for index, entry in enumerate(raw_versions):
+        label = f"protocol registry version {index}"
+        if not isinstance(entry, dict):
+            raise ModelError(f"{label}: must be an object")
+        _exact(entry, VERSION_KEYS, label)
+        version = entry["version"]
+        if (
+            isinstance(version, bool)
+            or not isinstance(version, int)
+            or not 1 <= version <= 65_535
+        ):
+            raise ModelError(f"{label}: invalid version")
+        expected_path = f"v{version}/catalog.json"
+        if entry["catalog"] != expected_path:
+            raise ModelError(f"{label}: catalog path must be {expected_path}")
+        digest = entry["sha256"]
+        if (
+            not isinstance(digest, str)
+            or len(digest) != 64
+            or any(character not in "0123456789abcdef" for character in digest)
+        ):
+            raise ModelError(f"{label}: invalid source digest")
+        path = root / "protocol" / expected_path
+        if not path.is_file() or sha256_file(path) != digest:
+            raise ModelError(f"{label}: frozen catalog digest mismatch")
+        catalog = _load_protocol_catalog(root, path)
+        if catalog.minimum_version != version or catalog.maximum_version != version:
+            raise ModelError(f"{label}: catalog must describe exactly version {version}")
+        versions.append(
+            ProtocolVersion(
+                version=version,
+                catalog_path=expected_path,
+                source_sha256=digest,
+                catalog=catalog,
+            )
+        )
+
+    version_numbers = [item.version for item in versions]
+    require_unique(version_numbers, "protocol registry version")
+    if version_numbers != sorted(version_numbers):
+        raise ModelError("protocol registry versions must be sorted")
+    if current_version not in version_numbers:
+        raise ModelError("protocol current version is not registered")
+    return ProtocolRegistry(current_version=current_version, versions=tuple(versions))
+
+
+def load_protocol_catalog(root: Path) -> ProtocolCatalog:
+    return load_protocol_registry(root).current

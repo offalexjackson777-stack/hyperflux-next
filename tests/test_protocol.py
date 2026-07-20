@@ -11,15 +11,25 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.generators.protocol import cpp_types, python_types, rust_types
-from hfxdev.protocol import RESERVED_FIELD_NAMES, load_protocol_catalog
+from hfxdev.protocol import (
+    RESERVED_FIELD_NAMES,
+    load_protocol_catalog,
+    load_protocol_registry,
+)
 
 
 class ProtocolCompilerTests(unittest.TestCase):
     def test_catalog_is_versioned_and_generated_deterministically(self) -> None:
+        registry = load_protocol_registry(ROOT)
+        self.assertEqual(registry.current_version, 1)
+        self.assertEqual([item.version for item in registry.versions], [1])
+        self.assertEqual(len(registry.versions[0].source_sha256), 64)
         first = load_protocol_catalog(ROOT)
         second = load_protocol_catalog(ROOT)
         self.assertEqual(first, second)
         self.assertLessEqual(first.minimum_version, first.maximum_version)
+        self.assertEqual(first.max_message_bytes, 1_048_576)
+        self.assertEqual(first.max_json_depth, 128)
         self.assertEqual(rust_types(first), rust_types(second))
         self.assertEqual(cpp_types(first), cpp_types(second))
         self.assertEqual(python_types(first), python_types(second))
@@ -32,15 +42,19 @@ class ProtocolCompilerTests(unittest.TestCase):
                     if field.many:
                         self.assertIsNotNone(field.max_items)
                         self.assertLessEqual(field.max_items, 4096)
-        records = {record.name for record in catalog.records}
+        protocol_types = {record.name for record in catalog.records}
+        protocol_types.update(union.name for union in catalog.unions)
         for method in catalog.methods:
-            self.assertIn(method.request, records)
-            self.assertIn(method.response, records)
+            self.assertIn(method.request, protocol_types)
+            self.assertIn(method.response, protocol_types)
 
     def test_resource_keys_are_device_scoped_and_not_mouse_keyboard_specific(self) -> None:
         catalog = load_protocol_catalog(ROOT)
         resource = next(record for record in catalog.records if record.name == "ResourceKey")
-        self.assertEqual([field.name for field in resource.fields], ["device_id", "kind"])
+        self.assertEqual(
+            [field.name for field in resource.fields],
+            ["receiver_id", "generation_id", "device_id", "kind"],
+        )
         domain = (ROOT / "schemas" / "domain-catalog.json").read_text(encoding="utf-8")
         self.assertNotIn('"mouse-lighting"', domain)
         self.assertNotIn('"keyboard-lighting"', domain)
@@ -59,6 +73,18 @@ class ProtocolCompilerTests(unittest.TestCase):
             for field in record.fields:
                 with self.subTest(record=record.name, field=field.name):
                     self.assertNotIn(field.name, RESERVED_FIELD_NAMES)
+
+    def test_outcomes_use_tagged_unions_instead_of_optional_field_combinations(self) -> None:
+        catalog = load_protocol_catalog(ROOT)
+        unions = {union.name: union for union in catalog.unions}
+        self.assertEqual(
+            [variant.wire for variant in unions["LeaseResult"].variants],
+            ["granted", "conflict", "rejected"],
+        )
+        self.assertEqual(
+            [variant.wire for variant in unions["TransactionResult"].variants],
+            ["progress", "terminal", "unavailable"],
+        )
 
 
 if __name__ == "__main__":

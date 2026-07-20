@@ -13,6 +13,16 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {"properties": {"json_encoding": {"const": "number"}}},
+            "then": {"properties": {"minimum": {"type": "integer"}, "maximum": {"type": "integer"}}}
+          },
+          {
+            "if": {"properties": {"json_encoding": {"const": "decimal-string"}}},
+            "then": {"properties": {"minimum": {"type": "string", "pattern": "^(0|[1-9][0-9]*)$"}, "maximum": {"type": "string", "pattern": "^(0|[1-9][0-9]*)$"}}}
+          }
+        ],
         "required": ["name", "wire", "rust", "cpp", "json_encoding", "python_min", "minimum", "maximum"],
         "properties": {
           "name": {"type": "string", "pattern": "^[A-Z][A-Za-z0-9]+$"},
@@ -21,8 +31,8 @@
           "cpp": {"enum": ["std::uint8_t", "std::uint16_t", "std::uint32_t", "std::uint64_t"]},
           "json_encoding": {"enum": ["number", "decimal-string"]},
           "python_min": {"type": "integer", "minimum": 0},
-          "minimum": {"type": "integer", "minimum": 0},
-          "maximum": {"type": "integer", "minimum": 0}
+          "minimum": {"type": ["integer", "string"]},
+          "maximum": {"type": ["integer", "string"]}
         }
       }
     },

@@ -53,9 +53,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "hfx-core"
+version = "0.0.0-dev.1"
+dependencies = [
+ "hfx-domain",
+ "hfx-protocol",
+ "serde_json",
+]
+
+[[package]]
 name = "hfx-domain"
 version = "0.0.0-dev.1"
 dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "hfx-errors"
+version = "0.0.0-dev.1"
+dependencies = [
+ "hfx-domain",
  "serde",
  "serde_json",
 ]
