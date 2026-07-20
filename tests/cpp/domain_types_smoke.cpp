@@ -2,6 +2,7 @@
 
 #include <hyperflux/generated/domain_types.hpp>
 #include <hyperflux/generated/profile_catalog.hpp>
+#include <hyperflux/generated/protocol_types.hpp>
 
 #include <cassert>
 #include <string_view>
@@ -26,5 +27,9 @@ int main()
     assert(mouse->lighting->application_index_to_carrier.size() == 13);
     assert(mouse->lighting->application_index_to_carrier[0] == 1);
     assert(profiles::profile_by_id("child.unknown") == nullptr);
+    static_assert(minimum_protocol_version == 1);
+    static_assert(maximum_protocol_version == 1);
+    assert(methods[0].name == std::string_view{"negotiate"});
+    assert(!methods[0].required_feature.has_value());
     return 0;
 }

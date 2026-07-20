@@ -18,7 +18,7 @@ pub fn scenario(children: Value, events: Value) -> Scenario {
         },
         "initial": {
             "receiver_profile_id": "receiver.razer.hyperflux-v2.1532-00cf",
-            "receiver_generation": 1,
+            "receiver_generation": "1",
             "surface_profile_id": null,
             "children": []
         },
@@ -60,7 +60,11 @@ pub fn unknown_mouse() -> Value {
 }
 
 pub fn event(time: u64, generation: u64, value: Value) -> Value {
-    let mut event = json!({"observed_at_ms": time, "generation_id": generation, "event": {}});
+    let mut event = json!({
+        "observed_at_ms": time,
+        "generation_id": generation.to_string(),
+        "event": {}
+    });
     event["event"] = value;
     event
 }
@@ -69,7 +73,7 @@ pub fn delayed_event(time: u64, delay: u64, generation: u64, value: Value) -> Va
     let mut event = json!({
         "observed_at_ms": time,
         "delay_ms": delay,
-        "generation_id": generation,
+        "generation_id": generation.to_string(),
         "event": {}
     });
     event["event"] = value;

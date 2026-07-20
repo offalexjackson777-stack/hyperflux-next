@@ -15,8 +15,15 @@ from .generators.profiles import (
     python_catalog as profile_python_catalog,
     rust_catalog as profile_rust_catalog,
 )
+from .generators.protocol import (
+    cpp_types as protocol_cpp_types,
+    markdown as protocol_markdown,
+    python_types as protocol_python_types,
+    rust_types as protocol_rust_types,
+)
 from .model import load_foundation, load_json
 from .profiles import compiled_catalog, composition_fixtures
+from .protocol import load_protocol_catalog
 from .testgraph import load_test_catalog, markdown as testgraph_markdown
 
 
@@ -113,6 +120,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
     domain_catalog = load_json(root / "schemas" / "domain-catalog.json")
     profiles = compiled_catalog(root)
     profile_fixtures = composition_fixtures(root)
+    protocol = load_protocol_catalog(root)
     test_catalog = load_test_catalog(root)
     return {
         root / "docs" / "generated" / "architecture.md": architecture_markdown(constitution),
@@ -129,6 +137,10 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "profile_catalog.hpp": profile_cpp_catalog(profiles),
         root / "driver" / "kernel" / "generated" / "hyperflux_receiver_profiles.inc": kernel_receiver_table(profiles),
         root / "docs" / "generated" / "verification.md": testgraph_markdown(test_catalog),
+        root / "docs" / "generated" / "bridge-protocol.md": protocol_markdown(protocol),
+        root / "crates" / "hfx-protocol" / "src" / "generated.rs": protocol_rust_types(protocol),
+        root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "protocol_types.py": protocol_python_types(protocol),
+        root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "protocol_types.hpp": protocol_cpp_types(protocol),
     }
 
 

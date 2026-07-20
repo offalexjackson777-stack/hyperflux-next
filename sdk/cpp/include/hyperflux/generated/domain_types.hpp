@@ -19,6 +19,7 @@ public:
     using value_type = std::uint64_t;
     static constexpr value_type minimum = 1;
     static constexpr value_type maximum = 18446744073709551615ULL;
+    static constexpr bool wire_as_decimal_string = true;
 
     [[nodiscard]] static constexpr std::optional<GenerationId> from(value_type value)
     {
@@ -43,6 +44,7 @@ public:
     using value_type = std::uint16_t;
     static constexpr value_type minimum = 0;
     static constexpr value_type maximum = 65535;
+    static constexpr bool wire_as_decimal_string = false;
 
     [[nodiscard]] static constexpr std::optional<VendorId> from(value_type value)
     {
@@ -63,6 +65,7 @@ public:
     using value_type = std::uint16_t;
     static constexpr value_type minimum = 0;
     static constexpr value_type maximum = 65535;
+    static constexpr bool wire_as_decimal_string = false;
 
     [[nodiscard]] static constexpr std::optional<ProductId> from(value_type value)
     {
@@ -83,6 +86,7 @@ public:
     using value_type = std::uint32_t;
     static constexpr value_type minimum = 1;
     static constexpr value_type maximum = 4294967295;
+    static constexpr bool wire_as_decimal_string = false;
 
     [[nodiscard]] static constexpr std::optional<ProfileRevision> from(value_type value)
     {
@@ -107,6 +111,7 @@ public:
     using value_type = std::uint8_t;
     static constexpr value_type minimum = 0;
     static constexpr value_type maximum = 100;
+    static constexpr bool wire_as_decimal_string = false;
 
     [[nodiscard]] static constexpr std::optional<BatteryPercent> from(value_type value)
     {
@@ -131,6 +136,7 @@ public:
     using value_type = std::uint8_t;
     static constexpr value_type minimum = 0;
     static constexpr value_type maximum = 255;
+    static constexpr bool wire_as_decimal_string = false;
 
     [[nodiscard]] static constexpr std::optional<Brightness> from(value_type value)
     {
@@ -151,6 +157,7 @@ public:
     using value_type = std::uint64_t;
     static constexpr value_type minimum = 0;
     static constexpr value_type maximum = 86400000ULL;
+    static constexpr bool wire_as_decimal_string = false;
 
     [[nodiscard]] static constexpr std::optional<DurationMs> from(value_type value)
     {
@@ -175,6 +182,7 @@ public:
     using value_type = std::uint64_t;
     static constexpr value_type minimum = 0;
     static constexpr value_type maximum = 18446744073709551615ULL;
+    static constexpr bool wire_as_decimal_string = true;
 
     [[nodiscard]] static constexpr std::optional<SequenceNumber> from(value_type value)
     {
@@ -195,6 +203,7 @@ public:
     using value_type = std::uint16_t;
     static constexpr value_type minimum = 0;
     static constexpr value_type maximum = 4095;
+    static constexpr bool wire_as_decimal_string = false;
 
     [[nodiscard]] static constexpr std::optional<LedIndex> from(value_type value)
     {
@@ -219,6 +228,7 @@ public:
     using value_type = std::uint16_t;
     static constexpr value_type minimum = 0;
     static constexpr value_type maximum = 4096;
+    static constexpr bool wire_as_decimal_string = false;
 
     [[nodiscard]] static constexpr std::optional<LedCount> from(value_type value)
     {
@@ -243,6 +253,7 @@ public:
     using value_type = std::uint16_t;
     static constexpr value_type minimum = 0;
     static constexpr value_type maximum = 4095;
+    static constexpr bool wire_as_decimal_string = false;
 
     [[nodiscard]] static constexpr std::optional<CarrierIndex> from(value_type value)
     {
@@ -258,6 +269,265 @@ public:
 
 private:
     explicit constexpr CarrierIndex(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class ProtocolVersion
+{
+public:
+    using value_type = std::uint16_t;
+    static constexpr value_type minimum = 1;
+    static constexpr value_type maximum = 65535;
+    static constexpr bool wire_as_decimal_string = false;
+
+    [[nodiscard]] static constexpr std::optional<ProtocolVersion> from(value_type value)
+    {
+        if(value < minimum)
+        {
+            return std::nullopt;
+        }
+        return ProtocolVersion(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const ProtocolVersion&, const ProtocolVersion&) = default;
+
+private:
+    explicit constexpr ProtocolVersion(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class MonotonicMs
+{
+public:
+    using value_type = std::uint64_t;
+    static constexpr value_type minimum = 0;
+    static constexpr value_type maximum = 18446744073709551615ULL;
+    static constexpr bool wire_as_decimal_string = true;
+
+    [[nodiscard]] static constexpr std::optional<MonotonicMs> from(value_type value)
+    {
+        return MonotonicMs(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const MonotonicMs&, const MonotonicMs&) = default;
+
+private:
+    explicit constexpr MonotonicMs(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class QueueCapacity
+{
+public:
+    using value_type = std::uint16_t;
+    static constexpr value_type minimum = 1;
+    static constexpr value_type maximum = 4096;
+    static constexpr bool wire_as_decimal_string = false;
+
+    [[nodiscard]] static constexpr std::optional<QueueCapacity> from(value_type value)
+    {
+        if(value < minimum || value > maximum)
+        {
+            return std::nullopt;
+        }
+        return QueueCapacity(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const QueueCapacity&, const QueueCapacity&) = default;
+
+private:
+    explicit constexpr QueueCapacity(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class FrameIndex
+{
+public:
+    using value_type = std::uint32_t;
+    static constexpr value_type minimum = 0;
+    static constexpr value_type maximum = 4294967295;
+    static constexpr bool wire_as_decimal_string = false;
+
+    [[nodiscard]] static constexpr std::optional<FrameIndex> from(value_type value)
+    {
+        return FrameIndex(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const FrameIndex&, const FrameIndex&) = default;
+
+private:
+    explicit constexpr FrameIndex(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class FrameCount
+{
+public:
+    using value_type = std::uint16_t;
+    static constexpr value_type minimum = 1;
+    static constexpr value_type maximum = 4096;
+    static constexpr bool wire_as_decimal_string = false;
+
+    [[nodiscard]] static constexpr std::optional<FrameCount> from(value_type value)
+    {
+        if(value < minimum || value > maximum)
+        {
+            return std::nullopt;
+        }
+        return FrameCount(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const FrameCount&, const FrameCount&) = default;
+
+private:
+    explicit constexpr FrameCount(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class ColorChannel
+{
+public:
+    using value_type = std::uint8_t;
+    static constexpr value_type minimum = 0;
+    static constexpr value_type maximum = 255;
+    static constexpr bool wire_as_decimal_string = false;
+
+    [[nodiscard]] static constexpr std::optional<ColorChannel> from(value_type value)
+    {
+        return ColorChannel(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const ColorChannel&, const ColorChannel&) = default;
+
+private:
+    explicit constexpr ColorChannel(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class DeliveredFrameCount
+{
+public:
+    using value_type = std::uint16_t;
+    static constexpr value_type minimum = 0;
+    static constexpr value_type maximum = 4096;
+    static constexpr bool wire_as_decimal_string = false;
+
+    [[nodiscard]] static constexpr std::optional<DeliveredFrameCount> from(value_type value)
+    {
+        if(value > maximum)
+        {
+            return std::nullopt;
+        }
+        return DeliveredFrameCount(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const DeliveredFrameCount&, const DeliveredFrameCount&) = default;
+
+private:
+    explicit constexpr DeliveredFrameCount(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class LeaseDurationMs
+{
+public:
+    using value_type = std::uint32_t;
+    static constexpr value_type minimum = 1000;
+    static constexpr value_type maximum = 3600000;
+    static constexpr bool wire_as_decimal_string = false;
+
+    [[nodiscard]] static constexpr std::optional<LeaseDurationMs> from(value_type value)
+    {
+        if(value < minimum || value > maximum)
+        {
+            return std::nullopt;
+        }
+        return LeaseDurationMs(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const LeaseDurationMs&, const LeaseDurationMs&) = default;
+
+private:
+    explicit constexpr LeaseDurationMs(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class StreamEpoch
+{
+public:
+    using value_type = std::uint64_t;
+    static constexpr value_type minimum = 1;
+    static constexpr value_type maximum = 18446744073709551615ULL;
+    static constexpr bool wire_as_decimal_string = true;
+
+    [[nodiscard]] static constexpr std::optional<StreamEpoch> from(value_type value)
+    {
+        if(value < minimum)
+        {
+            return std::nullopt;
+        }
+        return StreamEpoch(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const StreamEpoch&, const StreamEpoch&) = default;
+
+private:
+    explicit constexpr StreamEpoch(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class DroppedEventCount
+{
+public:
+    using value_type = std::uint64_t;
+    static constexpr value_type minimum = 0;
+    static constexpr value_type maximum = 18446744073709551615ULL;
+    static constexpr bool wire_as_decimal_string = true;
+
+    [[nodiscard]] static constexpr std::optional<DroppedEventCount> from(value_type value)
+    {
+        return DroppedEventCount(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const DroppedEventCount&, const DroppedEventCount&) = default;
+
+private:
+    explicit constexpr DroppedEventCount(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class ProjectionRevision
+{
+public:
+    using value_type = std::uint32_t;
+    static constexpr value_type minimum = 1;
+    static constexpr value_type maximum = 4294967295;
+    static constexpr bool wire_as_decimal_string = false;
+
+    [[nodiscard]] static constexpr std::optional<ProjectionRevision> from(value_type value)
+    {
+        if(value < minimum)
+        {
+            return std::nullopt;
+        }
+        return ProjectionRevision(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const ProjectionRevision&, const ProjectionRevision&) = default;
+
+private:
+    explicit constexpr ProjectionRevision(value_type value) : value_(value) {}
     value_type value_;
 };
 
@@ -488,6 +758,213 @@ public:
 
 private:
     explicit RestoreId(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class ClientId
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 128;
+
+    [[nodiscard]] static std::optional<ClientId> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return ClientId(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const ClientId&, const ClientId&) = default;
+
+private:
+    explicit ClientId(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class RequestId
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 128;
+
+    [[nodiscard]] static std::optional<RequestId> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return RequestId(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const RequestId&, const RequestId&) = default;
+
+private:
+    explicit RequestId(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class SubscriptionId
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 128;
+
+    [[nodiscard]] static std::optional<SubscriptionId> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return SubscriptionId(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const SubscriptionId&, const SubscriptionId&) = default;
+
+private:
+    explicit SubscriptionId(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class FindingId
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 128;
+
+    [[nodiscard]] static std::optional<FindingId> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return FindingId(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const FindingId&, const FindingId&) = default;
+
+private:
+    explicit FindingId(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class ComponentVersion
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 64;
+
+    [[nodiscard]] static std::optional<ComponentVersion> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return ComponentVersion(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const ComponentVersion&, const ComponentVersion&) = default;
+
+private:
+    explicit ComponentVersion(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class ClientName
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 128;
+
+    [[nodiscard]] static std::optional<ClientName> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return ClientName(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const ClientName&, const ClientName&) = default;
+
+private:
+    explicit ClientName(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class HumanMessage
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 512;
+
+    [[nodiscard]] static std::optional<HumanMessage> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return HumanMessage(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const HumanMessage&, const HumanMessage&) = default;
+
+private:
+    explicit HumanMessage(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class DocumentationPath
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 256;
+
+    [[nodiscard]] static std::optional<DocumentationPath> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return DocumentationPath(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const DocumentationPath&, const DocumentationPath&) = default;
+
+private:
+    explicit DocumentationPath(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class StreamId
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 128;
+
+    [[nodiscard]] static std::optional<StreamId> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return StreamId(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const StreamId&, const StreamId&) = default;
+
+private:
+    explicit StreamId(std::string value) : value_(std::move(value)) {}
     std::string value_;
 };
 
@@ -981,22 +1458,190 @@ enum class LeaseState
 
 enum class ResourceKind
 {
-    MouseLighting,
-    KeyboardLighting,
-    MouseSettings,
-    KeyboardSettings,
-    ReceiverPairing,
+    Lighting,
+    Settings,
+    Pairing,
 };
 
 [[nodiscard]] constexpr std::string_view to_string(ResourceKind value)
 {
     switch(value)
     {
-        case ResourceKind::MouseLighting: return "mouse-lighting";
-        case ResourceKind::KeyboardLighting: return "keyboard-lighting";
-        case ResourceKind::MouseSettings: return "mouse-settings";
-        case ResourceKind::KeyboardSettings: return "keyboard-settings";
-        case ResourceKind::ReceiverPairing: return "receiver-pairing";
+        case ResourceKind::Lighting: return "lighting";
+        case ResourceKind::Settings: return "settings";
+        case ResourceKind::Pairing: return "pairing";
+    }
+    return "unknown";
+}
+
+enum class TransactionClass
+{
+    EffectFrame,
+    StaticLighting,
+    DeviceSetting,
+    Restore,
+    Pairing,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(TransactionClass value)
+{
+    switch(value)
+    {
+        case TransactionClass::EffectFrame: return "effect-frame";
+        case TransactionClass::StaticLighting: return "static-lighting";
+        case TransactionClass::DeviceSetting: return "device-setting";
+        case TransactionClass::Restore: return "restore";
+        case TransactionClass::Pairing: return "pairing";
+    }
+    return "unknown";
+}
+
+enum class QueueAdmission
+{
+    Enqueued,
+    Coalesced,
+    RejectedFull,
+    RejectedDeadline,
+    RejectedInvalid,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(QueueAdmission value)
+{
+    switch(value)
+    {
+        case QueueAdmission::Enqueued: return "enqueued";
+        case QueueAdmission::Coalesced: return "coalesced";
+        case QueueAdmission::RejectedFull: return "rejected-full";
+        case QueueAdmission::RejectedDeadline: return "rejected-deadline";
+        case QueueAdmission::RejectedInvalid: return "rejected-invalid";
+    }
+    return "unknown";
+}
+
+enum class RestoreState
+{
+    Idle,
+    Planned,
+    OwnershipBound,
+    GenerationBound,
+    Queued,
+    Applying,
+    Succeeded,
+    Failed,
+    Invalidated,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(RestoreState value)
+{
+    switch(value)
+    {
+        case RestoreState::Idle: return "idle";
+        case RestoreState::Planned: return "planned";
+        case RestoreState::OwnershipBound: return "ownership-bound";
+        case RestoreState::GenerationBound: return "generation-bound";
+        case RestoreState::Queued: return "queued";
+        case RestoreState::Applying: return "applying";
+        case RestoreState::Succeeded: return "succeeded";
+        case RestoreState::Failed: return "failed";
+        case RestoreState::Invalidated: return "invalidated";
+    }
+    return "unknown";
+}
+
+enum class EventKind
+{
+    DeviceAvailable,
+    DeviceSleeping,
+    DeviceUnavailable,
+    BatteryUpdated,
+    OwnershipChanged,
+    GenerationReplaced,
+    TransactionCompleted,
+    RestoreCompleted,
+    DiagnosticRaised,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(EventKind value)
+{
+    switch(value)
+    {
+        case EventKind::DeviceAvailable: return "device-available";
+        case EventKind::DeviceSleeping: return "device-sleeping";
+        case EventKind::DeviceUnavailable: return "device-unavailable";
+        case EventKind::BatteryUpdated: return "battery-updated";
+        case EventKind::OwnershipChanged: return "ownership-changed";
+        case EventKind::GenerationReplaced: return "generation-replaced";
+        case EventKind::TransactionCompleted: return "transaction-completed";
+        case EventKind::RestoreCompleted: return "restore-completed";
+        case EventKind::DiagnosticRaised: return "diagnostic-raised";
+    }
+    return "unknown";
+}
+
+enum class ProtocolErrorKind
+{
+    IncompatibleVersion,
+    UnsupportedFeature,
+    InvalidRequest,
+    OwnershipConflict,
+    StaleGeneration,
+    DeadlineExceeded,
+    QueueFull,
+    TransportFailure,
+    InternalFailure,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(ProtocolErrorKind value)
+{
+    switch(value)
+    {
+        case ProtocolErrorKind::IncompatibleVersion: return "incompatible-version";
+        case ProtocolErrorKind::UnsupportedFeature: return "unsupported-feature";
+        case ProtocolErrorKind::InvalidRequest: return "invalid-request";
+        case ProtocolErrorKind::OwnershipConflict: return "ownership-conflict";
+        case ProtocolErrorKind::StaleGeneration: return "stale-generation";
+        case ProtocolErrorKind::DeadlineExceeded: return "deadline-exceeded";
+        case ProtocolErrorKind::QueueFull: return "queue-full";
+        case ProtocolErrorKind::TransportFailure: return "transport-failure";
+        case ProtocolErrorKind::InternalFailure: return "internal-failure";
+    }
+    return "unknown";
+}
+
+enum class SideEffectCertainty
+{
+    None,
+    Possible,
+    Partial,
+    Committed,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(SideEffectCertainty value)
+{
+    switch(value)
+    {
+        case SideEffectCertainty::None: return "none";
+        case SideEffectCertainty::Possible: return "possible";
+        case SideEffectCertainty::Partial: return "partial";
+        case SideEffectCertainty::Committed: return "committed";
+    }
+    return "unknown";
+}
+
+enum class LeaseOutcome
+{
+    Granted,
+    Conflict,
+    Rejected,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(LeaseOutcome value)
+{
+    switch(value)
+    {
+        case LeaseOutcome::Granted: return "granted";
+        case LeaseOutcome::Conflict: return "conflict";
+        case LeaseOutcome::Rejected: return "rejected";
     }
     return "unknown";
 }

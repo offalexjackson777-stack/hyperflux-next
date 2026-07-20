@@ -30,7 +30,7 @@ impl fmt::Display for DomainValueError {
 impl std::error::Error for DomainValueError {}
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-#[serde(try_from = "u64", into = "u64")]
+#[serde(try_from = "String", into = "String")]
 pub struct GenerationId(u64);
 
 impl GenerationId {
@@ -66,6 +66,29 @@ impl From<GenerationId> for u64 {
 impl fmt::Display for GenerationId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(formatter)
+    }
+}
+
+impl TryFrom<String> for GenerationId {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let parsed = value
+            .parse::<u64>()
+            .map_err(|_| DomainValueError::new("GenerationId", "invalid decimal string"))?;
+        if parsed.to_string() != value {
+            return Err(DomainValueError::new(
+                "GenerationId",
+                "non-canonical decimal string",
+            ));
+        }
+        Self::try_from(parsed)
+    }
+}
+
+impl From<GenerationId> for String {
+    fn from(value: GenerationId) -> Self {
+        value.0.to_string()
     }
 }
 
@@ -292,7 +315,7 @@ impl fmt::Display for DurationMs {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-#[serde(try_from = "u64", into = "u64")]
+#[serde(try_from = "String", into = "String")]
 pub struct SequenceNumber(u64);
 
 impl SequenceNumber {
@@ -322,6 +345,29 @@ impl From<SequenceNumber> for u64 {
 impl fmt::Display for SequenceNumber {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(formatter)
+    }
+}
+
+impl TryFrom<String> for SequenceNumber {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let parsed = value
+            .parse::<u64>()
+            .map_err(|_| DomainValueError::new("SequenceNumber", "invalid decimal string"))?;
+        if parsed.to_string() != value {
+            return Err(DomainValueError::new(
+                "SequenceNumber",
+                "non-canonical decimal string",
+            ));
+        }
+        Self::try_from(parsed)
+    }
+}
+
+impl From<SequenceNumber> for String {
+    fn from(value: SequenceNumber) -> Self {
+        value.0.to_string()
     }
 }
 
@@ -440,6 +486,491 @@ impl From<CarrierIndex> for u16 {
 }
 
 impl fmt::Display for CarrierIndex {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "u16", into = "u16")]
+pub struct ProtocolVersion(u16);
+
+impl ProtocolVersion {
+    pub const MIN: u16 = 1;
+    pub const MAX: u16 = 65_535;
+
+    #[must_use]
+    pub const fn get(self) -> u16 {
+        self.0
+    }
+}
+
+impl TryFrom<u16> for ProtocolVersion {
+    type Error = DomainValueError;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        if value < Self::MIN {
+            return Err(DomainValueError::new(
+                "ProtocolVersion",
+                "outside the canonical range",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl From<ProtocolVersion> for u16 {
+    fn from(value: ProtocolVersion) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for ProtocolVersion {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct MonotonicMs(u64);
+
+impl MonotonicMs {
+    pub const MIN: u64 = 0;
+    pub const MAX: u64 = 18_446_744_073_709_551_615;
+
+    #[must_use]
+    pub const fn get(self) -> u64 {
+        self.0
+    }
+}
+
+impl TryFrom<u64> for MonotonicMs {
+    type Error = DomainValueError;
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        Ok(Self(value))
+    }
+}
+
+impl From<MonotonicMs> for u64 {
+    fn from(value: MonotonicMs) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for MonotonicMs {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+impl TryFrom<String> for MonotonicMs {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let parsed = value
+            .parse::<u64>()
+            .map_err(|_| DomainValueError::new("MonotonicMs", "invalid decimal string"))?;
+        if parsed.to_string() != value {
+            return Err(DomainValueError::new(
+                "MonotonicMs",
+                "non-canonical decimal string",
+            ));
+        }
+        Self::try_from(parsed)
+    }
+}
+
+impl From<MonotonicMs> for String {
+    fn from(value: MonotonicMs) -> Self {
+        value.0.to_string()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "u16", into = "u16")]
+pub struct QueueCapacity(u16);
+
+impl QueueCapacity {
+    pub const MIN: u16 = 1;
+    pub const MAX: u16 = 4_096;
+
+    #[must_use]
+    pub const fn get(self) -> u16 {
+        self.0
+    }
+}
+
+impl TryFrom<u16> for QueueCapacity {
+    type Error = DomainValueError;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        if !(Self::MIN..=Self::MAX).contains(&value) {
+            return Err(DomainValueError::new(
+                "QueueCapacity",
+                "outside the canonical range",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl From<QueueCapacity> for u16 {
+    fn from(value: QueueCapacity) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for QueueCapacity {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "u32", into = "u32")]
+pub struct FrameIndex(u32);
+
+impl FrameIndex {
+    pub const MIN: u32 = 0;
+    pub const MAX: u32 = 4_294_967_295;
+
+    #[must_use]
+    pub const fn get(self) -> u32 {
+        self.0
+    }
+}
+
+impl TryFrom<u32> for FrameIndex {
+    type Error = DomainValueError;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        Ok(Self(value))
+    }
+}
+
+impl From<FrameIndex> for u32 {
+    fn from(value: FrameIndex) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for FrameIndex {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "u16", into = "u16")]
+pub struct FrameCount(u16);
+
+impl FrameCount {
+    pub const MIN: u16 = 1;
+    pub const MAX: u16 = 4_096;
+
+    #[must_use]
+    pub const fn get(self) -> u16 {
+        self.0
+    }
+}
+
+impl TryFrom<u16> for FrameCount {
+    type Error = DomainValueError;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        if !(Self::MIN..=Self::MAX).contains(&value) {
+            return Err(DomainValueError::new(
+                "FrameCount",
+                "outside the canonical range",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl From<FrameCount> for u16 {
+    fn from(value: FrameCount) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for FrameCount {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "u8", into = "u8")]
+pub struct ColorChannel(u8);
+
+impl ColorChannel {
+    pub const MIN: u8 = 0;
+    pub const MAX: u8 = 255;
+
+    #[must_use]
+    pub const fn get(self) -> u8 {
+        self.0
+    }
+}
+
+impl TryFrom<u8> for ColorChannel {
+    type Error = DomainValueError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        Ok(Self(value))
+    }
+}
+
+impl From<ColorChannel> for u8 {
+    fn from(value: ColorChannel) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for ColorChannel {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "u16", into = "u16")]
+pub struct DeliveredFrameCount(u16);
+
+impl DeliveredFrameCount {
+    pub const MIN: u16 = 0;
+    pub const MAX: u16 = 4_096;
+
+    #[must_use]
+    pub const fn get(self) -> u16 {
+        self.0
+    }
+}
+
+impl TryFrom<u16> for DeliveredFrameCount {
+    type Error = DomainValueError;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        if value > Self::MAX {
+            return Err(DomainValueError::new(
+                "DeliveredFrameCount",
+                "outside the canonical range",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl From<DeliveredFrameCount> for u16 {
+    fn from(value: DeliveredFrameCount) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for DeliveredFrameCount {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "u32", into = "u32")]
+pub struct LeaseDurationMs(u32);
+
+impl LeaseDurationMs {
+    pub const MIN: u32 = 1_000;
+    pub const MAX: u32 = 3_600_000;
+
+    #[must_use]
+    pub const fn get(self) -> u32 {
+        self.0
+    }
+}
+
+impl TryFrom<u32> for LeaseDurationMs {
+    type Error = DomainValueError;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        if !(Self::MIN..=Self::MAX).contains(&value) {
+            return Err(DomainValueError::new(
+                "LeaseDurationMs",
+                "outside the canonical range",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl From<LeaseDurationMs> for u32 {
+    fn from(value: LeaseDurationMs) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for LeaseDurationMs {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct StreamEpoch(u64);
+
+impl StreamEpoch {
+    pub const MIN: u64 = 1;
+    pub const MAX: u64 = 18_446_744_073_709_551_615;
+
+    #[must_use]
+    pub const fn get(self) -> u64 {
+        self.0
+    }
+}
+
+impl TryFrom<u64> for StreamEpoch {
+    type Error = DomainValueError;
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        if value < Self::MIN {
+            return Err(DomainValueError::new(
+                "StreamEpoch",
+                "outside the canonical range",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl From<StreamEpoch> for u64 {
+    fn from(value: StreamEpoch) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for StreamEpoch {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+impl TryFrom<String> for StreamEpoch {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let parsed = value
+            .parse::<u64>()
+            .map_err(|_| DomainValueError::new("StreamEpoch", "invalid decimal string"))?;
+        if parsed.to_string() != value {
+            return Err(DomainValueError::new(
+                "StreamEpoch",
+                "non-canonical decimal string",
+            ));
+        }
+        Self::try_from(parsed)
+    }
+}
+
+impl From<StreamEpoch> for String {
+    fn from(value: StreamEpoch) -> Self {
+        value.0.to_string()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct DroppedEventCount(u64);
+
+impl DroppedEventCount {
+    pub const MIN: u64 = 0;
+    pub const MAX: u64 = 18_446_744_073_709_551_615;
+
+    #[must_use]
+    pub const fn get(self) -> u64 {
+        self.0
+    }
+}
+
+impl TryFrom<u64> for DroppedEventCount {
+    type Error = DomainValueError;
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        Ok(Self(value))
+    }
+}
+
+impl From<DroppedEventCount> for u64 {
+    fn from(value: DroppedEventCount) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for DroppedEventCount {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+impl TryFrom<String> for DroppedEventCount {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let parsed = value
+            .parse::<u64>()
+            .map_err(|_| DomainValueError::new("DroppedEventCount", "invalid decimal string"))?;
+        if parsed.to_string() != value {
+            return Err(DomainValueError::new(
+                "DroppedEventCount",
+                "non-canonical decimal string",
+            ));
+        }
+        Self::try_from(parsed)
+    }
+}
+
+impl From<DroppedEventCount> for String {
+    fn from(value: DroppedEventCount) -> Self {
+        value.0.to_string()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "u32", into = "u32")]
+pub struct ProjectionRevision(u32);
+
+impl ProjectionRevision {
+    pub const MIN: u32 = 1;
+    pub const MAX: u32 = 4_294_967_295;
+
+    #[must_use]
+    pub const fn get(self) -> u32 {
+        self.0
+    }
+}
+
+impl TryFrom<u32> for ProjectionRevision {
+    type Error = DomainValueError;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        if value < Self::MIN {
+            return Err(DomainValueError::new(
+                "ProjectionRevision",
+                "outside the canonical range",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl From<ProjectionRevision> for u32 {
+    fn from(value: ProjectionRevision) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for ProjectionRevision {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(formatter)
     }
@@ -920,6 +1451,438 @@ impl From<RestoreId> for String {
 }
 
 impl fmt::Display for RestoreId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct ClientId(String);
+
+impl ClientId {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 128;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for ClientId {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "ClientId",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for ClientId {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<ClientId> for String {
+    fn from(value: ClientId) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for ClientId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct RequestId(String);
+
+impl RequestId {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 128;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for RequestId {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "RequestId",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for RequestId {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<RequestId> for String {
+    fn from(value: RequestId) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for RequestId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct SubscriptionId(String);
+
+impl SubscriptionId {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 128;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for SubscriptionId {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "SubscriptionId",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for SubscriptionId {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<SubscriptionId> for String {
+    fn from(value: SubscriptionId) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for SubscriptionId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct FindingId(String);
+
+impl FindingId {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 128;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for FindingId {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "FindingId",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for FindingId {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<FindingId> for String {
+    fn from(value: FindingId) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for FindingId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct ComponentVersion(String);
+
+impl ComponentVersion {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 64;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for ComponentVersion {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "ComponentVersion",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for ComponentVersion {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<ComponentVersion> for String {
+    fn from(value: ComponentVersion) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for ComponentVersion {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct ClientName(String);
+
+impl ClientName {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 128;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for ClientName {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "ClientName",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for ClientName {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<ClientName> for String {
+    fn from(value: ClientName) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for ClientName {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct HumanMessage(String);
+
+impl HumanMessage {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 512;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for HumanMessage {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "HumanMessage",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for HumanMessage {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<HumanMessage> for String {
+    fn from(value: HumanMessage) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for HumanMessage {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct DocumentationPath(String);
+
+impl DocumentationPath {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 256;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for DocumentationPath {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "DocumentationPath",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for DocumentationPath {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<DocumentationPath> for String {
+    fn from(value: DocumentationPath) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for DocumentationPath {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct StreamId(String);
+
+impl StreamId {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 128;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for StreamId {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "StreamId",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for StreamId {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<StreamId> for String {
+    fn from(value: StreamId) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for StreamId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(formatter)
     }
@@ -1995,27 +2958,21 @@ impl fmt::Display for LeaseState {
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum ResourceKind {
-    #[serde(rename = "mouse-lighting")]
-    MouseLighting,
-    #[serde(rename = "keyboard-lighting")]
-    KeyboardLighting,
-    #[serde(rename = "mouse-settings")]
-    MouseSettings,
-    #[serde(rename = "keyboard-settings")]
-    KeyboardSettings,
-    #[serde(rename = "receiver-pairing")]
-    ReceiverPairing,
+    #[serde(rename = "lighting")]
+    Lighting,
+    #[serde(rename = "settings")]
+    Settings,
+    #[serde(rename = "pairing")]
+    Pairing,
 }
 
 impl ResourceKind {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::MouseLighting => "mouse-lighting",
-            Self::KeyboardLighting => "keyboard-lighting",
-            Self::MouseSettings => "mouse-settings",
-            Self::KeyboardSettings => "keyboard-settings",
-            Self::ReceiverPairing => "receiver-pairing",
+            Self::Lighting => "lighting",
+            Self::Settings => "settings",
+            Self::Pairing => "pairing",
         }
     }
 }
@@ -2025,17 +2982,387 @@ impl FromStr for ResourceKind {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
-            "mouse-lighting" => Ok(Self::MouseLighting),
-            "keyboard-lighting" => Ok(Self::KeyboardLighting),
-            "mouse-settings" => Ok(Self::MouseSettings),
-            "keyboard-settings" => Ok(Self::KeyboardSettings),
-            "receiver-pairing" => Ok(Self::ReceiverPairing),
+            "lighting" => Ok(Self::Lighting),
+            "settings" => Ok(Self::Settings),
+            "pairing" => Ok(Self::Pairing),
             _ => Err(DomainValueError::unknown_wire("ResourceKind")),
         }
     }
 }
 
 impl fmt::Display for ResourceKind {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum TransactionClass {
+    #[serde(rename = "effect-frame")]
+    EffectFrame,
+    #[serde(rename = "static-lighting")]
+    StaticLighting,
+    #[serde(rename = "device-setting")]
+    DeviceSetting,
+    #[serde(rename = "restore")]
+    Restore,
+    #[serde(rename = "pairing")]
+    Pairing,
+}
+
+impl TransactionClass {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::EffectFrame => "effect-frame",
+            Self::StaticLighting => "static-lighting",
+            Self::DeviceSetting => "device-setting",
+            Self::Restore => "restore",
+            Self::Pairing => "pairing",
+        }
+    }
+}
+
+impl FromStr for TransactionClass {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "effect-frame" => Ok(Self::EffectFrame),
+            "static-lighting" => Ok(Self::StaticLighting),
+            "device-setting" => Ok(Self::DeviceSetting),
+            "restore" => Ok(Self::Restore),
+            "pairing" => Ok(Self::Pairing),
+            _ => Err(DomainValueError::unknown_wire("TransactionClass")),
+        }
+    }
+}
+
+impl fmt::Display for TransactionClass {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum QueueAdmission {
+    #[serde(rename = "enqueued")]
+    Enqueued,
+    #[serde(rename = "coalesced")]
+    Coalesced,
+    #[serde(rename = "rejected-full")]
+    RejectedFull,
+    #[serde(rename = "rejected-deadline")]
+    RejectedDeadline,
+    #[serde(rename = "rejected-invalid")]
+    RejectedInvalid,
+}
+
+impl QueueAdmission {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Enqueued => "enqueued",
+            Self::Coalesced => "coalesced",
+            Self::RejectedFull => "rejected-full",
+            Self::RejectedDeadline => "rejected-deadline",
+            Self::RejectedInvalid => "rejected-invalid",
+        }
+    }
+}
+
+impl FromStr for QueueAdmission {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "enqueued" => Ok(Self::Enqueued),
+            "coalesced" => Ok(Self::Coalesced),
+            "rejected-full" => Ok(Self::RejectedFull),
+            "rejected-deadline" => Ok(Self::RejectedDeadline),
+            "rejected-invalid" => Ok(Self::RejectedInvalid),
+            _ => Err(DomainValueError::unknown_wire("QueueAdmission")),
+        }
+    }
+}
+
+impl fmt::Display for QueueAdmission {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum RestoreState {
+    #[serde(rename = "idle")]
+    Idle,
+    #[serde(rename = "planned")]
+    Planned,
+    #[serde(rename = "ownership-bound")]
+    OwnershipBound,
+    #[serde(rename = "generation-bound")]
+    GenerationBound,
+    #[serde(rename = "queued")]
+    Queued,
+    #[serde(rename = "applying")]
+    Applying,
+    #[serde(rename = "succeeded")]
+    Succeeded,
+    #[serde(rename = "failed")]
+    Failed,
+    #[serde(rename = "invalidated")]
+    Invalidated,
+}
+
+impl RestoreState {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Idle => "idle",
+            Self::Planned => "planned",
+            Self::OwnershipBound => "ownership-bound",
+            Self::GenerationBound => "generation-bound",
+            Self::Queued => "queued",
+            Self::Applying => "applying",
+            Self::Succeeded => "succeeded",
+            Self::Failed => "failed",
+            Self::Invalidated => "invalidated",
+        }
+    }
+}
+
+impl FromStr for RestoreState {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "idle" => Ok(Self::Idle),
+            "planned" => Ok(Self::Planned),
+            "ownership-bound" => Ok(Self::OwnershipBound),
+            "generation-bound" => Ok(Self::GenerationBound),
+            "queued" => Ok(Self::Queued),
+            "applying" => Ok(Self::Applying),
+            "succeeded" => Ok(Self::Succeeded),
+            "failed" => Ok(Self::Failed),
+            "invalidated" => Ok(Self::Invalidated),
+            _ => Err(DomainValueError::unknown_wire("RestoreState")),
+        }
+    }
+}
+
+impl fmt::Display for RestoreState {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum EventKind {
+    #[serde(rename = "device-available")]
+    DeviceAvailable,
+    #[serde(rename = "device-sleeping")]
+    DeviceSleeping,
+    #[serde(rename = "device-unavailable")]
+    DeviceUnavailable,
+    #[serde(rename = "battery-updated")]
+    BatteryUpdated,
+    #[serde(rename = "ownership-changed")]
+    OwnershipChanged,
+    #[serde(rename = "generation-replaced")]
+    GenerationReplaced,
+    #[serde(rename = "transaction-completed")]
+    TransactionCompleted,
+    #[serde(rename = "restore-completed")]
+    RestoreCompleted,
+    #[serde(rename = "diagnostic-raised")]
+    DiagnosticRaised,
+}
+
+impl EventKind {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::DeviceAvailable => "device-available",
+            Self::DeviceSleeping => "device-sleeping",
+            Self::DeviceUnavailable => "device-unavailable",
+            Self::BatteryUpdated => "battery-updated",
+            Self::OwnershipChanged => "ownership-changed",
+            Self::GenerationReplaced => "generation-replaced",
+            Self::TransactionCompleted => "transaction-completed",
+            Self::RestoreCompleted => "restore-completed",
+            Self::DiagnosticRaised => "diagnostic-raised",
+        }
+    }
+}
+
+impl FromStr for EventKind {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "device-available" => Ok(Self::DeviceAvailable),
+            "device-sleeping" => Ok(Self::DeviceSleeping),
+            "device-unavailable" => Ok(Self::DeviceUnavailable),
+            "battery-updated" => Ok(Self::BatteryUpdated),
+            "ownership-changed" => Ok(Self::OwnershipChanged),
+            "generation-replaced" => Ok(Self::GenerationReplaced),
+            "transaction-completed" => Ok(Self::TransactionCompleted),
+            "restore-completed" => Ok(Self::RestoreCompleted),
+            "diagnostic-raised" => Ok(Self::DiagnosticRaised),
+            _ => Err(DomainValueError::unknown_wire("EventKind")),
+        }
+    }
+}
+
+impl fmt::Display for EventKind {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum ProtocolErrorKind {
+    #[serde(rename = "incompatible-version")]
+    IncompatibleVersion,
+    #[serde(rename = "unsupported-feature")]
+    UnsupportedFeature,
+    #[serde(rename = "invalid-request")]
+    InvalidRequest,
+    #[serde(rename = "ownership-conflict")]
+    OwnershipConflict,
+    #[serde(rename = "stale-generation")]
+    StaleGeneration,
+    #[serde(rename = "deadline-exceeded")]
+    DeadlineExceeded,
+    #[serde(rename = "queue-full")]
+    QueueFull,
+    #[serde(rename = "transport-failure")]
+    TransportFailure,
+    #[serde(rename = "internal-failure")]
+    InternalFailure,
+}
+
+impl ProtocolErrorKind {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::IncompatibleVersion => "incompatible-version",
+            Self::UnsupportedFeature => "unsupported-feature",
+            Self::InvalidRequest => "invalid-request",
+            Self::OwnershipConflict => "ownership-conflict",
+            Self::StaleGeneration => "stale-generation",
+            Self::DeadlineExceeded => "deadline-exceeded",
+            Self::QueueFull => "queue-full",
+            Self::TransportFailure => "transport-failure",
+            Self::InternalFailure => "internal-failure",
+        }
+    }
+}
+
+impl FromStr for ProtocolErrorKind {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "incompatible-version" => Ok(Self::IncompatibleVersion),
+            "unsupported-feature" => Ok(Self::UnsupportedFeature),
+            "invalid-request" => Ok(Self::InvalidRequest),
+            "ownership-conflict" => Ok(Self::OwnershipConflict),
+            "stale-generation" => Ok(Self::StaleGeneration),
+            "deadline-exceeded" => Ok(Self::DeadlineExceeded),
+            "queue-full" => Ok(Self::QueueFull),
+            "transport-failure" => Ok(Self::TransportFailure),
+            "internal-failure" => Ok(Self::InternalFailure),
+            _ => Err(DomainValueError::unknown_wire("ProtocolErrorKind")),
+        }
+    }
+}
+
+impl fmt::Display for ProtocolErrorKind {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum SideEffectCertainty {
+    #[serde(rename = "none")]
+    None,
+    #[serde(rename = "possible")]
+    Possible,
+    #[serde(rename = "partial")]
+    Partial,
+    #[serde(rename = "committed")]
+    Committed,
+}
+
+impl SideEffectCertainty {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Possible => "possible",
+            Self::Partial => "partial",
+            Self::Committed => "committed",
+        }
+    }
+}
+
+impl FromStr for SideEffectCertainty {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "none" => Ok(Self::None),
+            "possible" => Ok(Self::Possible),
+            "partial" => Ok(Self::Partial),
+            "committed" => Ok(Self::Committed),
+            _ => Err(DomainValueError::unknown_wire("SideEffectCertainty")),
+        }
+    }
+}
+
+impl fmt::Display for SideEffectCertainty {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum LeaseOutcome {
+    #[serde(rename = "granted")]
+    Granted,
+    #[serde(rename = "conflict")]
+    Conflict,
+    #[serde(rename = "rejected")]
+    Rejected,
+}
+
+impl LeaseOutcome {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Granted => "granted",
+            Self::Conflict => "conflict",
+            Self::Rejected => "rejected",
+        }
+    }
+}
+
+impl FromStr for LeaseOutcome {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "granted" => Ok(Self::Granted),
+            "conflict" => Ok(Self::Conflict),
+            "rejected" => Ok(Self::Rejected),
+            _ => Err(DomainValueError::unknown_wire("LeaseOutcome")),
+        }
+    }
+}
+
+impl fmt::Display for LeaseOutcome {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(self.as_str())
     }

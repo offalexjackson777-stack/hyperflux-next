@@ -36,6 +36,7 @@ KNOWN_RUNNERS = {
     "foundation-contracts",
     "schema-contracts",
     "profile-contracts",
+    "protocol-contracts",
     "generated-freshness",
     "privacy-boundary",
     "python-unit",

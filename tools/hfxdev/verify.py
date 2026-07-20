@@ -12,6 +12,7 @@ import sys
 from .model import ModelError, load_foundation, load_json, require_unique, sha256_file
 from .render import rendered_files
 from .profiles import load_profile_inputs
+from .protocol import load_protocol_catalog
 from .testgraph import TestNode, load_test_catalog
 
 
@@ -276,6 +277,10 @@ def _check_schema_contracts(root: Path) -> None:
     load_test_catalog(root)
 
 
+def _check_protocol_contract(root: Path) -> None:
+    load_protocol_catalog(root)
+
+
 def _run_foundation_contracts(root: Path, _node: TestNode) -> None:
     constitution, sources, ledger = load_foundation(root)
     _check_constitution(constitution)
@@ -289,6 +294,10 @@ def _run_schema_contracts(root: Path, _node: TestNode) -> None:
 
 def _run_profile_contracts(root: Path, _node: TestNode) -> None:
     _check_profile_contract(root)
+
+
+def _run_protocol_contracts(root: Path, _node: TestNode) -> None:
+    _check_protocol_contract(root)
 
 
 def _run_generated_freshness(root: Path, _node: TestNode) -> None:
@@ -343,6 +352,7 @@ RUNNERS = {
     "foundation-contracts": _run_foundation_contracts,
     "schema-contracts": _run_schema_contracts,
     "profile-contracts": _run_profile_contracts,
+    "protocol-contracts": _run_protocol_contracts,
     "generated-freshness": _run_generated_freshness,
     "privacy-boundary": _run_privacy_boundary,
     "python-unit": _run_python_tests,

@@ -27,7 +27,7 @@
       "required": ["receiver_profile_id", "receiver_generation", "surface_profile_id", "children"],
       "properties": {
         "receiver_profile_id": {"type": "string"},
-        "receiver_generation": {"type": "integer", "minimum": 1},
+        "receiver_generation": {"$ref": "#/$defs/generationId"},
         "surface_profile_id": {"type": ["string", "null"]},
         "children": {
           "type": "array",
@@ -51,6 +51,7 @@
   },
   "$defs": {
     "identifier": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+    "generationId": {"type": "string", "minLength": 1, "maxLength": 20, "pattern": "^[1-9][0-9]*$"},
     "deviceId": {"$ref": "#/$defs/identifier"},
     "targets": {"type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": {"$ref": "#/$defs/deviceId"}},
     "scheduledEvent": {
@@ -60,7 +61,7 @@
       "properties": {
         "observed_at_ms": {"type": "integer", "minimum": 0, "maximum": 86400000},
         "delay_ms": {"type": "integer", "minimum": 0, "maximum": 86400000, "default": 0},
-        "generation_id": {"type": "integer", "minimum": 1},
+        "generation_id": {"$ref": "#/$defs/generationId"},
         "event": {
           "oneOf": [
             {"$ref": "#/$defs/receiverDisconnected"},

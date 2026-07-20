@@ -13,12 +13,13 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "wire", "rust", "cpp", "python_min", "minimum", "maximum"],
+        "required": ["name", "wire", "rust", "cpp", "json_encoding", "python_min", "minimum", "maximum"],
         "properties": {
           "name": {"type": "string", "pattern": "^[A-Z][A-Za-z0-9]+$"},
           "wire": {"type": "string", "pattern": "^[a-z][a-z0-9_]+$"},
           "rust": {"enum": ["u8", "u16", "u32", "u64"]},
           "cpp": {"enum": ["std::uint8_t", "std::uint16_t", "std::uint32_t", "std::uint64_t"]},
+          "json_encoding": {"enum": ["number", "decimal-string"]},
           "python_min": {"type": "integer", "minimum": 0},
           "minimum": {"type": "integer", "minimum": 0},
           "maximum": {"type": "integer", "minimum": 0}
@@ -58,4 +59,3 @@
     }
   }
 }
-

@@ -34,7 +34,7 @@
       "id": "HFX-MIG-004",
       "component": "bridge runtime and policy",
       "disposition": "REIMPLEMENT",
-      "status": "PENDING_REVIEW",
+      "status": "IN_PROGRESS",
       "sources": ["engineering-laboratory"],
       "destination_owner": "bridge",
       "rationale": "Replace profile-combination coupling and presentation leakage with typed state machines, composable profiles, leases, and bounded actors."

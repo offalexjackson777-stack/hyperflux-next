@@ -6,19 +6,30 @@ These types prevent semantically different values from being passed interchangea
 
 ## Bounded Numeric Types
 
-| Type | Wire name | Range |
-| --- | --- | --- |
-| `GenerationId` | `generation_id` | 1 to 18446744073709551615 |
-| `VendorId` | `vendor_id` | 0 to 65535 |
-| `ProductId` | `product_id` | 0 to 65535 |
-| `ProfileRevision` | `profile_revision` | 1 to 4294967295 |
-| `BatteryPercent` | `battery_percent` | 0 to 100 |
-| `Brightness` | `brightness` | 0 to 255 |
-| `DurationMs` | `duration_ms` | 0 to 86400000 |
-| `SequenceNumber` | `sequence_number` | 0 to 18446744073709551615 |
-| `LedIndex` | `led_index` | 0 to 4095 |
-| `LedCount` | `led_count` | 0 to 4096 |
-| `CarrierIndex` | `carrier_index` | 0 to 4095 |
+| Type | Wire name | Range | JSON encoding |
+| --- | --- | --- | --- |
+| `GenerationId` | `generation_id` | 1 to 18446744073709551615 | `decimal-string` |
+| `VendorId` | `vendor_id` | 0 to 65535 | `number` |
+| `ProductId` | `product_id` | 0 to 65535 | `number` |
+| `ProfileRevision` | `profile_revision` | 1 to 4294967295 | `number` |
+| `BatteryPercent` | `battery_percent` | 0 to 100 | `number` |
+| `Brightness` | `brightness` | 0 to 255 | `number` |
+| `DurationMs` | `duration_ms` | 0 to 86400000 | `number` |
+| `SequenceNumber` | `sequence_number` | 0 to 18446744073709551615 | `decimal-string` |
+| `LedIndex` | `led_index` | 0 to 4095 | `number` |
+| `LedCount` | `led_count` | 0 to 4096 | `number` |
+| `CarrierIndex` | `carrier_index` | 0 to 4095 | `number` |
+| `ProtocolVersion` | `protocol_version` | 1 to 65535 | `number` |
+| `MonotonicMs` | `monotonic_ms` | 0 to 18446744073709551615 | `decimal-string` |
+| `QueueCapacity` | `queue_capacity` | 1 to 4096 | `number` |
+| `FrameIndex` | `frame_index` | 0 to 4294967295 | `number` |
+| `FrameCount` | `frame_count` | 1 to 4096 | `number` |
+| `ColorChannel` | `color_channel` | 0 to 255 | `number` |
+| `DeliveredFrameCount` | `delivered_frame_count` | 0 to 4096 | `number` |
+| `LeaseDurationMs` | `lease_duration_ms` | 1000 to 3600000 | `number` |
+| `StreamEpoch` | `stream_epoch` | 1 to 18446744073709551615 | `decimal-string` |
+| `DroppedEventCount` | `dropped_event_count` | 0 to 18446744073709551615 | `decimal-string` |
+| `ProjectionRevision` | `projection_revision` | 1 to 4294967295 | `number` |
 
 ## Opaque String Types
 
@@ -34,6 +45,15 @@ These types prevent semantically different values from being passed interchangea
 | `EvidenceClaimId` | `evidence_claim_id` | 1 to 160 bytes |
 | `ScenarioId` | `scenario_id` | 1 to 128 bytes |
 | `RestoreId` | `restore_id` | 1 to 128 bytes |
+| `ClientId` | `client_id` | 1 to 128 bytes |
+| `RequestId` | `request_id` | 1 to 128 bytes |
+| `SubscriptionId` | `subscription_id` | 1 to 128 bytes |
+| `FindingId` | `finding_id` | 1 to 128 bytes |
+| `ComponentVersion` | `component_version` | 1 to 64 bytes |
+| `ClientName` | `client_name` | 1 to 128 bytes |
+| `HumanMessage` | `human_message` | 1 to 512 bytes |
+| `DocumentationPath` | `documentation_path` | 1 to 256 bytes |
+| `StreamId` | `stream_id` | 1 to 128 bytes |
 
 ## Enumerations
 
@@ -60,5 +80,12 @@ These types prevent semantically different values from being passed interchangea
 - `ReceiverState`: `absent`, `discovered-read-only`, `observed`, `profile-qualified`, `session-authorized`, `degraded-read-only`
 - `TransactionState`: `created`, `validated`, `ownership-bound`, `generation-bound`, `queued`, `sent`, `health-pending`, `succeeded`, `failed`, `revoked`
 - `LeaseState`: `requested`, `granted`, `renewed`, `released`, `expired`, `revoked`
-- `ResourceKind`: `mouse-lighting`, `keyboard-lighting`, `mouse-settings`, `keyboard-settings`, `receiver-pairing`
+- `ResourceKind`: `lighting`, `settings`, `pairing`
+- `TransactionClass`: `effect-frame`, `static-lighting`, `device-setting`, `restore`, `pairing`
+- `QueueAdmission`: `enqueued`, `coalesced`, `rejected-full`, `rejected-deadline`, `rejected-invalid`
+- `RestoreState`: `idle`, `planned`, `ownership-bound`, `generation-bound`, `queued`, `applying`, `succeeded`, `failed`, `invalidated`
+- `EventKind`: `device-available`, `device-sleeping`, `device-unavailable`, `battery-updated`, `ownership-changed`, `generation-replaced`, `transaction-completed`, `restore-completed`, `diagnostic-raised`
+- `ProtocolErrorKind`: `incompatible-version`, `unsupported-feature`, `invalid-request`, `ownership-conflict`, `stale-generation`, `deadline-exceeded`, `queue-full`, `transport-failure`, `internal-failure`
+- `SideEffectCertainty`: `none`, `possible`, `partial`, `committed`
+- `LeaseOutcome`: `granted`, `conflict`, `rejected`
 - `ErrorSeverity`: `info`, `warning`, `error`, `critical`

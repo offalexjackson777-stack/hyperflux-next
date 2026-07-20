@@ -36,3 +36,14 @@ fn unusual_enum_wire_values_round_trip_through_serde() {
     let decoded: ConnectionMode = serde_json::from_str(&encoded).expect("wire value deserializes");
     assert_eq!(decoded, ConnectionMode::Hyperflux24ghz);
 }
+
+#[test]
+fn cross_language_u64_values_use_canonical_decimal_strings() {
+    let generation = GenerationId::try_from(u64::MAX).expect("maximum generation is valid");
+    let encoded = serde_json::to_string(&generation).expect("generation serializes");
+    assert_eq!(encoded, format!("\"{}\"", u64::MAX));
+    let decoded: GenerationId = serde_json::from_str(&encoded).expect("generation deserializes");
+    assert_eq!(decoded, generation);
+    assert!(serde_json::from_str::<GenerationId>("18446744073709551615").is_err());
+    assert!(serde_json::from_str::<GenerationId>("\"01\"").is_err());
+}

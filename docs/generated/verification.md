@@ -12,14 +12,15 @@ Every current node is software-only and has zero hardware-write authority.
 | 3 | `privacy-boundary` | `security` | `none` | `false` | 15s | `rerun` |
 | 4 | `toolchain-contract` | `toolchains` | `none` | `false` | 20s | `reuse-verified` |
 | 5 | `profile-contracts` | `profiles` | `none` | `false` | 10s | `reuse-verified` |
-| 6 | `rust-format` | `rust` | `none` | `false` | 60s | `rerun` |
-| 7 | `generated-freshness` | `generation` | `none` | `false` | 15s | `reuse-verified` |
-| 8 | `python-unit` | `tooling` | `none` | `false` | 60s | `rerun` |
-| 9 | `rust-clippy` | `rust` | `none` | `false` | 180s | `rerun` |
-| 10 | `cpp-sdk-contracts` | `sdk` | `none` | `false` | 60s | `rerun` |
-| 11 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 60s | `rerun` |
-| 12 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
-| 13 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
+| 6 | `protocol-contracts` | `protocol` | `none` | `false` | 10s | `reuse-verified` |
+| 7 | `rust-format` | `rust` | `none` | `false` | 60s | `rerun` |
+| 8 | `generated-freshness` | `generation` | `none` | `false` | 15s | `reuse-verified` |
+| 9 | `python-unit` | `tooling` | `none` | `false` | 60s | `rerun` |
+| 10 | `rust-clippy` | `rust` | `none` | `false` | 180s | `rerun` |
+| 11 | `cpp-sdk-contracts` | `sdk` | `none` | `false` | 60s | `rerun` |
+| 12 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 60s | `rerun` |
+| 13 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
+| 14 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
 
 ## Dependencies
 
@@ -30,6 +31,7 @@ flowchart LR
     privacy_boundary["privacy-boundary"]
     toolchain_contract["toolchain-contract"]
     profile_contracts["profile-contracts"]
+    protocol_contracts["protocol-contracts"]
     rust_format["rust-format"]
     generated_freshness["generated-freshness"]
     python_unit["python-unit"]
@@ -42,8 +44,10 @@ flowchart LR
     foundation_contracts --> privacy_boundary
     foundation_contracts --> toolchain_contract
     schema_contracts --> profile_contracts
+    schema_contracts --> protocol_contracts
     toolchain_contract --> rust_format
     profile_contracts --> generated_freshness
+    protocol_contracts --> generated_freshness
     generated_freshness --> python_unit
     privacy_boundary --> python_unit
     generated_freshness --> rust_clippy

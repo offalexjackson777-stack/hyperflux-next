@@ -57,6 +57,7 @@ def rust_types(catalog: dict[str, Any]) -> str:
     for item in catalog["numeric_types"]:
         name = item["name"]
         rust = item["rust"]
+        wire_type = "String" if item["json_encoding"] == "decimal-string" else rust
         minimum = item["minimum"]
         maximum = item["maximum"]
         bounds = []
@@ -67,7 +68,7 @@ def rust_types(catalog: dict[str, Any]) -> str:
         lines.extend(
             [
                 "#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]",
-                f"#[serde(try_from = \"{rust}\", into = \"{rust}\")]",
+                f"#[serde(try_from = \"{wire_type}\", into = \"{wire_type}\")]",
                 f"pub struct {name}({rust});",
                 "",
                 f"impl {name} {{",
@@ -87,9 +88,14 @@ def rust_types(catalog: dict[str, Any]) -> str:
             ]
         )
         if bounds:
+            condition = (
+                "!(Self::MIN..=Self::MAX).contains(&value)"
+                if len(bounds) == 2
+                else bounds[0]
+            )
             lines.extend(
                 [
-                    f"        if {' || '.join(bounds)} {{",
+                    f"        if {condition} {{",
                     "            return Err(DomainValueError::new(",
                     f'                "{name}",',
                     '                "outside the canonical range",',
@@ -117,6 +123,34 @@ def rust_types(catalog: dict[str, Any]) -> str:
                 "",
             ]
         )
+        if item["json_encoding"] == "decimal-string":
+            lines.extend(
+                [
+                    f"impl TryFrom<String> for {name} {{",
+                    "    type Error = DomainValueError;",
+                    "",
+                    "    fn try_from(value: String) -> Result<Self, Self::Error> {",
+                    f"        let parsed = value",
+                    f"            .parse::<{rust}>()",
+                    f'            .map_err(|_| DomainValueError::new("{name}", "invalid decimal string"))?;',
+                    "        if parsed.to_string() != value {",
+                    "            return Err(DomainValueError::new(",
+                    f'                "{name}",',
+                    '                "non-canonical decimal string",',
+                    "            ));",
+                    "        }",
+                    "        Self::try_from(parsed)",
+                    "    }",
+                    "}",
+                    "",
+                    f"impl From<{name}> for String {{",
+                    f"    fn from(value: {name}) -> Self {{",
+                    "        value.0.to_string()",
+                    "    }",
+                    "}",
+                    "",
+                ]
+            )
     for item in catalog["string_types"]:
         name = item["name"]
         minimum = item["minimum_length"]
@@ -211,6 +245,7 @@ def python_types(catalog: dict[str, Any]) -> str:
         "",
         "from dataclasses import dataclass",
         "from enum import Enum",
+        "from typing import ClassVar",
         "",
     ]
     exports: list[str] = []
@@ -222,6 +257,7 @@ def python_types(catalog: dict[str, Any]) -> str:
                 "@dataclass(frozen=True, slots=True)",
                 f"class {name}:",
                 "    value: int",
+                f'    WIRE_ENCODING: ClassVar[str] = "{item["json_encoding"]}"',
                 "",
                 "    def __post_init__(self) -> None:",
                 "        if isinstance(self.value, bool) or not isinstance(self.value, int):",
@@ -303,6 +339,7 @@ def cpp_types(catalog: dict[str, Any]) -> str:
                 f"    using value_type = {cpp};",
                 f"    static constexpr value_type minimum = {item['minimum']};",
                 f"    static constexpr value_type maximum = {maximum};",
+                f"    static constexpr bool wire_as_decimal_string = {str(item['json_encoding'] == 'decimal-string').lower()};",
                 "",
                 f"    [[nodiscard]] static constexpr std::optional<{name}> from(value_type value)",
                 "    {",
@@ -383,10 +420,10 @@ def markdown(catalog: dict[str, Any]) -> str:
         "",
         "## Bounded Numeric Types",
         "",
-        "| Type | Wire name | Range |",
-        "| --- | --- | --- |",
+        "| Type | Wire name | Range | JSON encoding |",
+        "| --- | --- | --- | --- |",
     ]
-    lines.extend(f"| `{item['name']}` | `{item['wire']}` | {item['minimum']} to {item['maximum']} |" for item in catalog["numeric_types"])
+    lines.extend(f"| `{item['name']}` | `{item['wire']}` | {item['minimum']} to {item['maximum']} | `{item['json_encoding']}` |" for item in catalog["numeric_types"])
     lines.extend(["", "## Opaque String Types", "", "| Type | Wire name | Length |", "| --- | --- | --- |"])
     lines.extend(f"| `{item['name']}` | `{item['wire']}` | {item['minimum_length']} to {item['maximum_length']} bytes |" for item in catalog["string_types"])
     lines.extend(["", "## Enumerations", ""])

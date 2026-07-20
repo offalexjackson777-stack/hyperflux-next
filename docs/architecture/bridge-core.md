@@ -1,0 +1,90 @@
+# Bridge Core Boundaries
+
+The HyperFlux bridge is the sole userspace policy and write authority between application SDKs and a generation-bound receiver transport. It does not own application presentation, effects, hardware report layouts, or physical qualification claims.
+
+## Dependency Direction
+
+```mermaid
+flowchart LR
+    Apps["Applications"] --> Integrations["Application integrations"]
+    Integrations --> SDK["Generated SDK"]
+    SDK --> Protocol["Versioned protocol"]
+    Bridge["Bridge service"] --> Protocol
+    Bridge --> Core["Pure bridge core"]
+    Core --> Profiles["Composable profiles"]
+    Bridge --> Transport["ReceiverTransport"]
+    Transport --> Kernel["Kernel-backed adapter"]
+    Transport --> Simulator["Virtual receiver adapter"]
+```
+
+The protocol, core state machines, and profile registry point inward. Application integrations never become bridge dependencies. Linux ioctl details and raw receiver reports remain behind the concrete kernel adapter.
+
+## Distinct Safety Bindings
+
+The following identities solve different problems and must not be merged:
+
+- receiver generation rejects state from a previous physical connection;
+- client identity owns connection-scoped resources;
+- lease identity proves current application ownership;
+- transaction identity provides idempotent outcome lookup;
+- request identity deduplicates one method invocation;
+- event stream identity and epoch detect service restart;
+- event sequence detects a missed bounded event.
+
+A reconnect creates a newer generation and invalidates generation-scoped observations, leases, queued work, and partial restoration. An event from an older generation cannot reactivate itself.
+
+## Transaction Meaning
+
+A transaction moves through declared states:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Created
+    Created --> Validated
+    Validated --> OwnershipBound
+    OwnershipBound --> GenerationBound
+    GenerationBound --> Queued
+    Queued --> Sent
+    Sent --> HealthPending
+    HealthPending --> Succeeded
+    HealthPending --> Failed
+    OwnershipBound --> Revoked
+    GenerationBound --> Revoked
+    Queued --> Revoked
+```
+
+`Succeeded` means every declared frame received one terminal receiver-transport delivery and required finalization completed. It does not claim that a child applied the frame or that a person observed the intended result. The protocol therefore reports delivered frame count, transport side-effect certainty, whether live transport began, automatic-retry policy, and separate child-application confirmation.
+
+Partial or uncertain transport is never retried automatically. A client resolves an ambiguous response through transaction outcome lookup, not by submitting the write again. A later visible result does not rewrite a terminal timeout history.
+
+## Ownership And Atomicity
+
+Resources are keyed by logical device and generic domain: lighting, settings, or pairing. This supports arbitrary receivers and multiple children without fixed mouse/keyboard slots.
+
+Lease acquisition is atomic. If any requested resource is owned by another client, none are granted. Forced takeover is not part of protocol version 1. Read-only snapshots, telemetry, and diagnostics remain shared.
+
+Atomicity describes admission, ownership, ordering, and complete transaction accounting. It does not invent physical rollback or simultaneous visible child application where hardware cannot prove either claim.
+
+## Backpressure
+
+Backpressure is policy-specific:
+
+- current unsent effect frames may be coalesced per resource because an older frame is obsolete;
+- static lighting, settings, pairing, and restoration preserve strict order and return busy when their bounded queue cannot accept work;
+- one logical device's outage must not stall its sibling;
+- event and diagnostic journals are bounded history rings, not work queues;
+- logging output is best effort through a bounded nonblocking sink and can never stop transport.
+
+Every deadline uses an injected monotonic clock. Kernel session expiration may use Linux boottime inside the concrete kernel boundary so suspend remains meaningful. Durable capture timestamps use a separate wall-clock boundary.
+
+## Restoration
+
+Persistence stores semantic stable intent and exact profile identity. It never stores a live lease, session authorization, route observation, raw frame, or software-effect phase.
+
+Restoration requires a fresh qualified generation, current routes, a matching profile digest, new ownership, and one durable lifecycle claim. A surviving claim, partial checkpoint, or failed target blocks a false complete result. Software effects remain application computations and restart through the application's saved startup profile.
+
+## Protocol Evolution
+
+Clients offer a protocol range and optional feature identifiers. The bridge selects one exact version and emits that version's exact record shapes. Hardware capability discovery is separate from protocol feature negotiation.
+
+Values that may exceed IEEE-754's exact integer range, including receiver generations, monotonic instants, event sequences, and stream epochs, use canonical decimal strings on JSON-compatible wire surfaces. They remain bounded integer types inside native implementations.

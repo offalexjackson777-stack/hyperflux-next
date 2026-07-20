@@ -54,6 +54,23 @@
       "resume_policy": "reuse-verified"
     },
     {
+      "id": "protocol-contracts",
+      "title": "Versioned bridge protocol and SDK contract",
+      "owned_domain": "protocol",
+      "lanes": ["fast", "full-software"],
+      "runner": "protocol-contracts",
+      "required_capabilities": [],
+      "hardware_requirement": "none",
+      "writes_hardware": false,
+      "expected_duration_seconds": 1,
+      "timeout_seconds": 10,
+      "dependencies": ["schema-contracts"],
+      "isolation": "shared",
+      "cache_inputs": ["protocol/catalog.json", "schemas/protocol-catalog.schema.json", "schemas/domain-catalog.json", "tools/hfxdev/protocol.py"],
+      "produced_evidence": ["protocol-result"],
+      "resume_policy": "reuse-verified"
+    },
+    {
       "id": "generated-freshness",
       "title": "Generated bindings and documentation freshness",
       "owned_domain": "generation",
@@ -64,9 +81,9 @@
       "writes_hardware": false,
       "expected_duration_seconds": 1,
       "timeout_seconds": 15,
-      "dependencies": ["profile-contracts"],
+      "dependencies": ["profile-contracts", "protocol-contracts"],
       "isolation": "shared",
-      "cache_inputs": ["schemas/*.json", "profiles/**/*.json", "tools/hfxdev/generators/*.py", "tools/hfxdev/render.py", "verification/tests.json"],
+      "cache_inputs": ["schemas/*.json", "profiles/**/*.json", "protocol/catalog.json", "tools/hfxdev/generators/*.py", "tools/hfxdev/render.py", "verification/tests.json"],
       "produced_evidence": ["generation-result"],
       "resume_policy": "reuse-verified"
     },
@@ -168,7 +185,7 @@
       "timeout_seconds": 180,
       "dependencies": ["rust-clippy"],
       "isolation": "exclusive-process",
-      "cache_inputs": ["Cargo.toml", "Cargo.lock", "crates/hfx-domain/**/*.rs", "crates/hfx-profiles/**/*.rs"],
+      "cache_inputs": ["Cargo.toml", "Cargo.lock", "crates/hfx-domain/**/*.rs", "crates/hfx-profiles/**/*.rs", "crates/hfx-protocol/**/*.rs"],
       "produced_evidence": ["rust-unit-result"],
       "resume_policy": "rerun"
     },

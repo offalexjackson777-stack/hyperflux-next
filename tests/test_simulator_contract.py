@@ -63,6 +63,16 @@ class SimulatorContractTests(unittest.TestCase):
             referenced.extend(event.get("targets", []))
             self.assertLessEqual(set(referenced), declared)
 
+    def test_replay_generations_use_canonical_decimal_strings(self) -> None:
+        fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        generations = [fixture["initial"]["receiver_generation"]]
+        generations.extend(event["generation_id"] for event in fixture["events"])
+        for generation in generations:
+            with self.subTest(generation=generation):
+                self.assertIsInstance(generation, str)
+                self.assertRegex(generation, r"^[1-9][0-9]*$")
+                self.assertEqual(str(int(generation)), generation)
+
 
 if __name__ == "__main__":
     unittest.main()

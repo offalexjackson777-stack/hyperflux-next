@@ -33,7 +33,10 @@ class GeneratedDomainTests(unittest.TestCase):
     def test_enum_wire_value_is_stable(self) -> None:
         self.assertEqual(DeviceKind.KEYBOARD.value, "keyboard")
 
+    def test_cross_language_integer_wire_encoding_is_declared(self) -> None:
+        self.assertEqual(GenerationId.WIRE_ENCODING, "decimal-string")
+        self.assertEqual(BatteryPercent.WIRE_ENCODING, "number")
+
 
 if __name__ == "__main__":
     unittest.main()
-

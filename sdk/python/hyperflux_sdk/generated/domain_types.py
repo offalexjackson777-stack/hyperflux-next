@@ -2,10 +2,12 @@
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import ClassVar
 
 @dataclass(frozen=True, slots=True)
 class GenerationId:
     value: int
+    WIRE_ENCODING: ClassVar[str] = "decimal-string"
 
     def __post_init__(self) -> None:
         if isinstance(self.value, bool) or not isinstance(self.value, int):
@@ -17,6 +19,7 @@ class GenerationId:
 @dataclass(frozen=True, slots=True)
 class VendorId:
     value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
 
     def __post_init__(self) -> None:
         if isinstance(self.value, bool) or not isinstance(self.value, int):
@@ -28,6 +31,7 @@ class VendorId:
 @dataclass(frozen=True, slots=True)
 class ProductId:
     value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
 
     def __post_init__(self) -> None:
         if isinstance(self.value, bool) or not isinstance(self.value, int):
@@ -39,6 +43,7 @@ class ProductId:
 @dataclass(frozen=True, slots=True)
 class ProfileRevision:
     value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
 
     def __post_init__(self) -> None:
         if isinstance(self.value, bool) or not isinstance(self.value, int):
@@ -50,6 +55,7 @@ class ProfileRevision:
 @dataclass(frozen=True, slots=True)
 class BatteryPercent:
     value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
 
     def __post_init__(self) -> None:
         if isinstance(self.value, bool) or not isinstance(self.value, int):
@@ -61,6 +67,7 @@ class BatteryPercent:
 @dataclass(frozen=True, slots=True)
 class Brightness:
     value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
 
     def __post_init__(self) -> None:
         if isinstance(self.value, bool) or not isinstance(self.value, int):
@@ -72,6 +79,7 @@ class Brightness:
 @dataclass(frozen=True, slots=True)
 class DurationMs:
     value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
 
     def __post_init__(self) -> None:
         if isinstance(self.value, bool) or not isinstance(self.value, int):
@@ -83,6 +91,7 @@ class DurationMs:
 @dataclass(frozen=True, slots=True)
 class SequenceNumber:
     value: int
+    WIRE_ENCODING: ClassVar[str] = "decimal-string"
 
     def __post_init__(self) -> None:
         if isinstance(self.value, bool) or not isinstance(self.value, int):
@@ -94,6 +103,7 @@ class SequenceNumber:
 @dataclass(frozen=True, slots=True)
 class LedIndex:
     value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
 
     def __post_init__(self) -> None:
         if isinstance(self.value, bool) or not isinstance(self.value, int):
@@ -105,6 +115,7 @@ class LedIndex:
 @dataclass(frozen=True, slots=True)
 class LedCount:
     value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
 
     def __post_init__(self) -> None:
         if isinstance(self.value, bool) or not isinstance(self.value, int):
@@ -116,12 +127,145 @@ class LedCount:
 @dataclass(frozen=True, slots=True)
 class CarrierIndex:
     value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
 
     def __post_init__(self) -> None:
         if isinstance(self.value, bool) or not isinstance(self.value, int):
             raise TypeError("CarrierIndex requires an integer")
         if not 0 <= self.value <= 4095:
             raise ValueError("CarrierIndex is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class ProtocolVersion:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("ProtocolVersion requires an integer")
+        if not 1 <= self.value <= 65535:
+            raise ValueError("ProtocolVersion is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class MonotonicMs:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "decimal-string"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("MonotonicMs requires an integer")
+        if not 0 <= self.value <= 18446744073709551615:
+            raise ValueError("MonotonicMs is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class QueueCapacity:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("QueueCapacity requires an integer")
+        if not 1 <= self.value <= 4096:
+            raise ValueError("QueueCapacity is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class FrameIndex:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("FrameIndex requires an integer")
+        if not 0 <= self.value <= 4294967295:
+            raise ValueError("FrameIndex is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class FrameCount:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("FrameCount requires an integer")
+        if not 1 <= self.value <= 4096:
+            raise ValueError("FrameCount is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class ColorChannel:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("ColorChannel requires an integer")
+        if not 0 <= self.value <= 255:
+            raise ValueError("ColorChannel is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class DeliveredFrameCount:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("DeliveredFrameCount requires an integer")
+        if not 0 <= self.value <= 4096:
+            raise ValueError("DeliveredFrameCount is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class LeaseDurationMs:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("LeaseDurationMs requires an integer")
+        if not 1000 <= self.value <= 3600000:
+            raise ValueError("LeaseDurationMs is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class StreamEpoch:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "decimal-string"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("StreamEpoch requires an integer")
+        if not 1 <= self.value <= 18446744073709551615:
+            raise ValueError("StreamEpoch is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class DroppedEventCount:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "decimal-string"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("DroppedEventCount requires an integer")
+        if not 0 <= self.value <= 18446744073709551615:
+            raise ValueError("DroppedEventCount is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectionRevision:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("ProjectionRevision requires an integer")
+        if not 1 <= self.value <= 4294967295:
+            raise ValueError("ProjectionRevision is outside the canonical range")
 
 
 @dataclass(frozen=True, slots=True)
@@ -232,6 +376,105 @@ class RestoreId:
             raise TypeError("RestoreId requires a string")
         if not 1 <= len(self.value) <= 128:
             raise ValueError("RestoreId is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class ClientId:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("ClientId requires a string")
+        if not 1 <= len(self.value) <= 128:
+            raise ValueError("ClientId is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class RequestId:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("RequestId requires a string")
+        if not 1 <= len(self.value) <= 128:
+            raise ValueError("RequestId is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class SubscriptionId:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("SubscriptionId requires a string")
+        if not 1 <= len(self.value) <= 128:
+            raise ValueError("SubscriptionId is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class FindingId:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("FindingId requires a string")
+        if not 1 <= len(self.value) <= 128:
+            raise ValueError("FindingId is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class ComponentVersion:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("ComponentVersion requires a string")
+        if not 1 <= len(self.value) <= 64:
+            raise ValueError("ComponentVersion is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class ClientName:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("ClientName requires a string")
+        if not 1 <= len(self.value) <= 128:
+            raise ValueError("ClientName is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class HumanMessage:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("HumanMessage requires a string")
+        if not 1 <= len(self.value) <= 512:
+            raise ValueError("HumanMessage is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class DocumentationPath:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("DocumentationPath requires a string")
+        if not 1 <= len(self.value) <= 256:
+            raise ValueError("DocumentationPath is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class StreamId:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("StreamId requires a string")
+        if not 1 <= len(self.value) <= 128:
+            raise ValueError("StreamId is outside the canonical length")
 
 
 class DeviceKind(str, Enum):
@@ -410,11 +653,74 @@ class LeaseState(str, Enum):
 
 
 class ResourceKind(str, Enum):
-    MOUSE_LIGHTING = "mouse-lighting"
-    KEYBOARD_LIGHTING = "keyboard-lighting"
-    MOUSE_SETTINGS = "mouse-settings"
-    KEYBOARD_SETTINGS = "keyboard-settings"
-    RECEIVER_PAIRING = "receiver-pairing"
+    LIGHTING = "lighting"
+    SETTINGS = "settings"
+    PAIRING = "pairing"
+
+
+class TransactionClass(str, Enum):
+    EFFECT_FRAME = "effect-frame"
+    STATIC_LIGHTING = "static-lighting"
+    DEVICE_SETTING = "device-setting"
+    RESTORE = "restore"
+    PAIRING = "pairing"
+
+
+class QueueAdmission(str, Enum):
+    ENQUEUED = "enqueued"
+    COALESCED = "coalesced"
+    REJECTED_FULL = "rejected-full"
+    REJECTED_DEADLINE = "rejected-deadline"
+    REJECTED_INVALID = "rejected-invalid"
+
+
+class RestoreState(str, Enum):
+    IDLE = "idle"
+    PLANNED = "planned"
+    OWNERSHIP_BOUND = "ownership-bound"
+    GENERATION_BOUND = "generation-bound"
+    QUEUED = "queued"
+    APPLYING = "applying"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    INVALIDATED = "invalidated"
+
+
+class EventKind(str, Enum):
+    DEVICE_AVAILABLE = "device-available"
+    DEVICE_SLEEPING = "device-sleeping"
+    DEVICE_UNAVAILABLE = "device-unavailable"
+    BATTERY_UPDATED = "battery-updated"
+    OWNERSHIP_CHANGED = "ownership-changed"
+    GENERATION_REPLACED = "generation-replaced"
+    TRANSACTION_COMPLETED = "transaction-completed"
+    RESTORE_COMPLETED = "restore-completed"
+    DIAGNOSTIC_RAISED = "diagnostic-raised"
+
+
+class ProtocolErrorKind(str, Enum):
+    INCOMPATIBLE_VERSION = "incompatible-version"
+    UNSUPPORTED_FEATURE = "unsupported-feature"
+    INVALID_REQUEST = "invalid-request"
+    OWNERSHIP_CONFLICT = "ownership-conflict"
+    STALE_GENERATION = "stale-generation"
+    DEADLINE_EXCEEDED = "deadline-exceeded"
+    QUEUE_FULL = "queue-full"
+    TRANSPORT_FAILURE = "transport-failure"
+    INTERNAL_FAILURE = "internal-failure"
+
+
+class SideEffectCertainty(str, Enum):
+    NONE = "none"
+    POSSIBLE = "possible"
+    PARTIAL = "partial"
+    COMMITTED = "committed"
+
+
+class LeaseOutcome(str, Enum):
+    GRANTED = "granted"
+    CONFLICT = "conflict"
+    REJECTED = "rejected"
 
 
 class ErrorSeverity(str, Enum):
@@ -436,6 +742,17 @@ __all__ = [
     "LedIndex",
     "LedCount",
     "CarrierIndex",
+    "ProtocolVersion",
+    "MonotonicMs",
+    "QueueCapacity",
+    "FrameIndex",
+    "FrameCount",
+    "ColorChannel",
+    "DeliveredFrameCount",
+    "LeaseDurationMs",
+    "StreamEpoch",
+    "DroppedEventCount",
+    "ProjectionRevision",
     "ReceiverId",
     "LogicalDeviceId",
     "EndpointId",
@@ -446,6 +763,15 @@ __all__ = [
     "EvidenceClaimId",
     "ScenarioId",
     "RestoreId",
+    "ClientId",
+    "RequestId",
+    "SubscriptionId",
+    "FindingId",
+    "ComponentVersion",
+    "ClientName",
+    "HumanMessage",
+    "DocumentationPath",
+    "StreamId",
     "DeviceKind",
     "ProfileKind",
     "RouteKind",
@@ -470,5 +796,12 @@ __all__ = [
     "TransactionState",
     "LeaseState",
     "ResourceKind",
+    "TransactionClass",
+    "QueueAdmission",
+    "RestoreState",
+    "EventKind",
+    "ProtocolErrorKind",
+    "SideEffectCertainty",
+    "LeaseOutcome",
     "ErrorSeverity",
 ]

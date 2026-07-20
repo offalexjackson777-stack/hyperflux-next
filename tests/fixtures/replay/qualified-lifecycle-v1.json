@@ -11,7 +11,7 @@
   },
   "initial": {
     "receiver_profile_id": "receiver.razer.hyperflux-v2.1532-00cf",
-    "receiver_generation": 1,
+    "receiver_generation": "1",
     "surface_profile_id": "surface.razer.hyperflux-v2-hard-edition",
     "children": [
       {"logical_device_id": "keyboard-1", "device_kind": "keyboard", "product_id": 662, "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296", "pairing": "paired"},
@@ -19,22 +19,22 @@
     ]
   },
   "events": [
-    {"observed_at_ms": 10, "generation_id": 1, "event": {"kind": "route-observed", "device_id": "keyboard-1", "state": "available"}},
-    {"observed_at_ms": 11, "generation_id": 1, "event": {"kind": "route-observed", "device_id": "mouse-1", "state": "available"}},
-    {"observed_at_ms": 12, "generation_id": 1, "event": {"kind": "battery-reported", "device_id": "keyboard-1", "percentage": 70}},
-    {"observed_at_ms": 13, "generation_id": 1, "event": {"kind": "battery-reported", "device_id": "mouse-1", "percentage": 78}},
-    {"observed_at_ms": 20, "generation_id": 1, "event": {"kind": "sleep-observed", "device_id": "mouse-1", "state": "asleep"}},
-    {"observed_at_ms": 30, "generation_id": 1, "event": {"kind": "sleep-observed", "device_id": "mouse-1", "state": "awake"}},
-    {"observed_at_ms": 31, "generation_id": 1, "event": {"kind": "activity-observed", "device_id": "mouse-1", "state": "active"}},
-    {"observed_at_ms": 40, "generation_id": 1, "event": {"kind": "lighting-frame", "transaction_id": "frame-1", "frame_index": 1, "targets": ["keyboard-1", "mouse-1"], "outcome": "delivered"}},
-    {"observed_at_ms": 50, "generation_id": 1, "event": {"kind": "receiver-disconnected"}},
-    {"observed_at_ms": 60, "generation_id": 2, "event": {"kind": "receiver-connected"}},
-    {"observed_at_ms": 61, "generation_id": 2, "event": {"kind": "device-pairing", "device_id": "keyboard-1", "state": "paired"}},
-    {"observed_at_ms": 62, "generation_id": 2, "event": {"kind": "route-observed", "device_id": "keyboard-1", "state": "available"}},
-    {"observed_at_ms": 63, "generation_id": 2, "event": {"kind": "device-pairing", "device_id": "mouse-1", "state": "paired"}},
-    {"observed_at_ms": 64, "generation_id": 2, "event": {"kind": "route-observed", "device_id": "mouse-1", "state": "available"}},
-    {"observed_at_ms": 70, "generation_id": 2, "event": {"kind": "restore-started", "restore_id": "restore-2", "targets": ["keyboard-1", "mouse-1"]}},
-    {"observed_at_ms": 71, "generation_id": 2, "event": {"kind": "restore-target", "restore_id": "restore-2", "device_id": "keyboard-1", "outcome": "delivered"}},
-    {"observed_at_ms": 72, "generation_id": 2, "event": {"kind": "restore-target", "restore_id": "restore-2", "device_id": "mouse-1", "outcome": "delivered"}}
+    {"observed_at_ms": 10, "generation_id": "1", "event": {"kind": "route-observed", "device_id": "keyboard-1", "state": "available"}},
+    {"observed_at_ms": 11, "generation_id": "1", "event": {"kind": "route-observed", "device_id": "mouse-1", "state": "available"}},
+    {"observed_at_ms": 12, "generation_id": "1", "event": {"kind": "battery-reported", "device_id": "keyboard-1", "percentage": 70}},
+    {"observed_at_ms": 13, "generation_id": "1", "event": {"kind": "battery-reported", "device_id": "mouse-1", "percentage": 78}},
+    {"observed_at_ms": 20, "generation_id": "1", "event": {"kind": "sleep-observed", "device_id": "mouse-1", "state": "asleep"}},
+    {"observed_at_ms": 30, "generation_id": "1", "event": {"kind": "sleep-observed", "device_id": "mouse-1", "state": "awake"}},
+    {"observed_at_ms": 31, "generation_id": "1", "event": {"kind": "activity-observed", "device_id": "mouse-1", "state": "active"}},
+    {"observed_at_ms": 40, "generation_id": "1", "event": {"kind": "lighting-frame", "transaction_id": "frame-1", "frame_index": 1, "targets": ["keyboard-1", "mouse-1"], "outcome": "delivered"}},
+    {"observed_at_ms": 50, "generation_id": "1", "event": {"kind": "receiver-disconnected"}},
+    {"observed_at_ms": 60, "generation_id": "2", "event": {"kind": "receiver-connected"}},
+    {"observed_at_ms": 61, "generation_id": "2", "event": {"kind": "device-pairing", "device_id": "keyboard-1", "state": "paired"}},
+    {"observed_at_ms": 62, "generation_id": "2", "event": {"kind": "route-observed", "device_id": "keyboard-1", "state": "available"}},
+    {"observed_at_ms": 63, "generation_id": "2", "event": {"kind": "device-pairing", "device_id": "mouse-1", "state": "paired"}},
+    {"observed_at_ms": 64, "generation_id": "2", "event": {"kind": "route-observed", "device_id": "mouse-1", "state": "available"}},
+    {"observed_at_ms": 70, "generation_id": "2", "event": {"kind": "restore-started", "restore_id": "restore-2", "targets": ["keyboard-1", "mouse-1"]}},
+    {"observed_at_ms": 71, "generation_id": "2", "event": {"kind": "restore-target", "restore_id": "restore-2", "device_id": "keyboard-1", "outcome": "delivered"}},
+    {"observed_at_ms": 72, "generation_id": "2", "event": {"kind": "restore-target", "restore_id": "restore-2", "device_id": "mouse-1", "outcome": "delivered"}}
   ]
 }

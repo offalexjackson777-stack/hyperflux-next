@@ -68,6 +68,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "hfx-protocol"
+version = "0.0.0-dev.1"
+dependencies = [
+ "hfx-domain",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "hfx-sim"
 version = "0.0.0-dev.1"
 dependencies = [
