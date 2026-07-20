@@ -5,7 +5,7 @@ mod common;
 use common::{lease_request, resource, text, time};
 use hfx_core::{LeaseManager, LeaseManagerError};
 use hfx_domain::{LeaseDurationMs, LeaseState};
-use hfx_protocol::LeaseResult;
+use hfx_protocol::{LeaseResult, ReleaseLeaseRequest, RenewLeaseRequest};
 
 #[test]
 fn conflict_grants_none_of_an_atomic_resource_set() {
@@ -71,6 +71,36 @@ fn conflict_is_reported_even_when_the_lease_table_is_full() {
         panic!("full tables must preserve the typed ownership conflict");
     };
     assert_eq!(detail.conflicting_resource, mouse);
+}
+
+#[test]
+fn conflict_history_is_bounded_even_when_every_retained_grant_is_pinned() {
+    let mut manager = LeaseManager::new(2, 2).expect("manager bounds are valid");
+    let mouse = resource("receiver-1", 1, "mouse-1");
+    let keyboard = resource("receiver-1", 1, "keyboard-1");
+    manager
+        .acquire(
+            lease_request("request-a", "client-a", vec![mouse.clone()]),
+            text("lease-a"),
+            time(1),
+        )
+        .expect("first lease is granted");
+    manager
+        .acquire(
+            lease_request("request-b", "client-b", vec![keyboard]),
+            text("lease-b"),
+            time(1),
+        )
+        .expect("second lease is granted");
+
+    assert_eq!(
+        manager.acquire(
+            lease_request("request-conflict", "client-c", vec![mouse]),
+            text("lease-unused"),
+            time(2),
+        ),
+        Err(LeaseManagerError::HistoryCapacity)
+    );
 }
 
 #[test]
@@ -188,4 +218,92 @@ fn owner_release_and_disconnect_are_explicit() {
     let disconnected = manager.release_client(&text("client-1"));
     assert_eq!(disconnected.len(), 1);
     assert_eq!(disconnected[0].state, LeaseState::Revoked);
+}
+
+#[test]
+fn protocol_renew_and_release_are_exactly_idempotent() {
+    let mut manager = LeaseManager::new(2, 8).expect("manager bounds are valid");
+    manager
+        .acquire(
+            lease_request(
+                "request-acquire",
+                "client-1",
+                vec![resource("receiver-1", 1, "mouse-1")],
+            ),
+            text("lease-1"),
+            time(1),
+        )
+        .expect("lease is granted");
+
+    let renew = RenewLeaseRequest {
+        request_id: text("request-renew"),
+        client_id: text("client-1"),
+        lease_id: text("lease-1"),
+        duration_ms: LeaseDurationMs::try_from(1_000_u32).expect("duration is valid"),
+    };
+    let first_renewal = manager
+        .renew_request(renew.clone(), time(10))
+        .expect("renewal succeeds");
+    let replayed_renewal = manager
+        .renew_request(renew.clone(), time(50))
+        .expect("renewal replay succeeds");
+    assert_eq!(replayed_renewal, first_renewal);
+    let LeaseResult::Granted(grant) = replayed_renewal else {
+        panic!("renewal must return a grant");
+    };
+    assert_eq!(grant.expires_at_ms, time(1_010));
+    assert_eq!(grant.state, LeaseState::Renewed);
+
+    let mut changed_renewal = renew;
+    changed_renewal.duration_ms = LeaseDurationMs::try_from(2_000_u32).expect("duration is valid");
+    assert_eq!(
+        manager.renew_request(changed_renewal, time(60)),
+        Err(LeaseManagerError::RequestIdReused)
+    );
+
+    let release = ReleaseLeaseRequest {
+        request_id: text("request-release"),
+        client_id: text("client-1"),
+        lease_id: text("lease-1"),
+    };
+    let first_release = manager
+        .release_request(release.clone(), time(70))
+        .expect("release succeeds");
+    let replayed_release = manager
+        .release_request(release, time(80))
+        .expect("release replay succeeds after the live lease is gone");
+    assert_eq!(replayed_release, first_release);
+    let LeaseResult::Granted(grant) = replayed_release else {
+        panic!("release must return a grant");
+    };
+    assert_eq!(grant.state, LeaseState::Released);
+}
+
+#[test]
+fn request_identity_cannot_cross_lease_methods() {
+    let mut manager = LeaseManager::new(2, 8).expect("manager bounds are valid");
+    manager
+        .acquire(
+            lease_request(
+                "request-shared",
+                "client-1",
+                vec![resource("receiver-1", 1, "mouse-1")],
+            ),
+            text("lease-1"),
+            time(1),
+        )
+        .expect("lease is granted");
+
+    assert_eq!(
+        manager.renew_request(
+            RenewLeaseRequest {
+                request_id: text("request-shared"),
+                client_id: text("client-1"),
+                lease_id: text("lease-1"),
+                duration_ms: LeaseDurationMs::try_from(1_000_u32).expect("duration is valid"),
+            },
+            time(2),
+        ),
+        Err(LeaseManagerError::RequestIdReused)
+    );
 }

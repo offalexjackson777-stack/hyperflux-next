@@ -81,6 +81,8 @@ Resources are keyed by logical device and generic domain: lighting, settings, or
 
 Lease acquisition is atomic. If any requested resource is owned by another client, none are granted. Forced takeover is not part of protocol version 1. Read-only snapshots, telemetry, and diagnostics remain shared.
 
+Acquire, renew, and release share one bounded client-and-request idempotency history. Exact replay returns the retained result; reuse across methods or with changed content is rejected. Conflict outcomes consume the same bounded history budget as grants, so a stream of losing acquisition requests cannot create unbounded bridge state.
+
 Atomicity describes admission, ownership, ordering, and complete transaction accounting. It does not invent physical rollback or simultaneous visible child application where hardware cannot prove either claim.
 
 ## Backpressure

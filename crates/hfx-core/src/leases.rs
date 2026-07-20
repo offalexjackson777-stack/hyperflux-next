@@ -2,8 +2,8 @@
 
 use hfx_domain::{ClientId, LeaseDurationMs, LeaseId, LeaseState, MonotonicMs, RequestId};
 use hfx_protocol::{
-    LeaseConflict, LeaseGrant, LeaseRequest, LeaseResult, ProtocolValidationError, ResourceKey,
-    validate_lease_request,
+    LeaseConflict, LeaseGrant, LeaseRequest, LeaseResult, ProtocolValidationError,
+    ReleaseLeaseRequest, RenewLeaseRequest, ResourceKey, validate_lease_request,
 };
 use std::collections::{BTreeMap, VecDeque};
 use std::fmt;
@@ -11,9 +11,16 @@ use std::fmt;
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct RequestRecord {
     key: (ClientId, RequestId),
-    request: LeaseRequest,
+    request: LeaseOperation,
     result: LeaseResult,
     pinned_lease: Option<LeaseId>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum LeaseOperation {
+    Acquire(LeaseRequest),
+    Renew(RenewLeaseRequest),
+    Release(ReleaseLeaseRequest),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -87,10 +94,14 @@ impl LeaseManager {
         now: MonotonicMs,
     ) -> Result<LeaseResult, LeaseManagerError> {
         self.expire(now);
-        validate_lease_request(&request).map_err(LeaseManagerError::InvalidRequest)?;
+        let operation = LeaseOperation::Acquire(request);
+        let LeaseOperation::Acquire(request) = &operation else {
+            unreachable!("operation was constructed as acquire");
+        };
+        validate_lease_request(request).map_err(LeaseManagerError::InvalidRequest)?;
         let key = (request.client_id.clone(), request.request_id.clone());
         if let Some(record) = self.history.iter().find(|record| record.key == key) {
-            if record.request == request {
+            if record.request == operation {
                 return Ok(record.result.clone());
             }
             return Err(LeaseManagerError::RequestIdReused);
@@ -104,9 +115,10 @@ impl LeaseManager {
                 conflicting_client: owner,
                 conflicting_resource: resource,
             });
+            self.reserve_history_slot()?;
             self.remember(RequestRecord {
                 key,
-                request,
+                request: operation,
                 result: result.clone(),
                 pinned_lease: None,
             });
@@ -138,9 +150,116 @@ impl LeaseManager {
         let result = LeaseResult::Granted(grant);
         self.remember(RequestRecord {
             key,
-            request,
+            request: operation,
             result: result.clone(),
             pinned_lease: Some(lease_id),
+        });
+        Ok(result)
+    }
+
+    /// Idempotently renews a currently owned lease using the protocol request
+    /// identity. Replaying the exact request returns its retained expiry and
+    /// never extends the lease a second time.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for request-identity reuse, exhausted history, an
+    /// unknown lease, a non-owner, or monotonic overflow.
+    pub fn renew_request(
+        &mut self,
+        request: RenewLeaseRequest,
+        now: MonotonicMs,
+    ) -> Result<LeaseResult, LeaseManagerError> {
+        self.expire(now);
+        let operation = LeaseOperation::Renew(request);
+        let LeaseOperation::Renew(request) = &operation else {
+            unreachable!("operation was constructed as renew");
+        };
+        let key = (request.client_id.clone(), request.request_id.clone());
+        if let Some(record) = self.history.iter().find(|record| record.key == key) {
+            if record.request == operation {
+                return Ok(record.result.clone());
+            }
+            return Err(LeaseManagerError::RequestIdReused);
+        }
+
+        let grant = self
+            .leases
+            .get(&request.lease_id)
+            .ok_or(LeaseManagerError::UnknownLease)?;
+        if grant.client_id != request.client_id {
+            return Err(LeaseManagerError::NotOwner);
+        }
+        let expires = now
+            .get()
+            .checked_add(u64::from(request.duration_ms.get()))
+            .ok_or(LeaseManagerError::ClockOverflow)?;
+        let expires_at_ms =
+            MonotonicMs::try_from(expires).map_err(|_| LeaseManagerError::ClockOverflow)?;
+        self.reserve_history_slot()?;
+
+        let grant = self
+            .leases
+            .get_mut(&request.lease_id)
+            .ok_or(LeaseManagerError::UnknownLease)?;
+        grant.expires_at_ms = expires_at_ms;
+        grant.state = LeaseState::Renewed;
+        let result = LeaseResult::Granted(grant.clone());
+        let pinned_lease = request.lease_id.clone();
+        self.remember(RequestRecord {
+            key,
+            request: operation,
+            result: result.clone(),
+            pinned_lease: Some(pinned_lease),
+        });
+        Ok(result)
+    }
+
+    /// Idempotently releases a currently owned lease using the protocol
+    /// request identity. Replaying the exact request returns the retained
+    /// released grant even though the live lease no longer exists.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for request-identity reuse, exhausted history, an
+    /// unknown lease, or a non-owner.
+    pub fn release_request(
+        &mut self,
+        request: ReleaseLeaseRequest,
+        now: MonotonicMs,
+    ) -> Result<LeaseResult, LeaseManagerError> {
+        self.expire(now);
+        let operation = LeaseOperation::Release(request);
+        let LeaseOperation::Release(request) = &operation else {
+            unreachable!("operation was constructed as release");
+        };
+        let key = (request.client_id.clone(), request.request_id.clone());
+        if let Some(record) = self.history.iter().find(|record| record.key == key) {
+            if record.request == operation {
+                return Ok(record.result.clone());
+            }
+            return Err(LeaseManagerError::RequestIdReused);
+        }
+
+        let grant = self
+            .leases
+            .get(&request.lease_id)
+            .ok_or(LeaseManagerError::UnknownLease)?;
+        if grant.client_id != request.client_id {
+            return Err(LeaseManagerError::NotOwner);
+        }
+        self.reserve_history_slot()?;
+
+        let mut released = self
+            .remove_lease(&request.lease_id)
+            .ok_or(LeaseManagerError::UnknownLease)?;
+        released.state = LeaseState::Released;
+        let result = LeaseResult::Granted(released);
+        self.remember(RequestRecord {
+            key,
+            request: operation,
+            result: result.clone(),
+            pinned_lease: None,
         });
         Ok(result)
     }
@@ -296,6 +415,7 @@ impl LeaseManager {
     }
 
     fn remember(&mut self, record: RequestRecord) {
+        debug_assert!(self.history.len() < self.max_history);
         self.history.push_back(record);
     }
 }
