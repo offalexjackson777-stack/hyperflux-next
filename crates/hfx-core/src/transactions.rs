@@ -268,19 +268,28 @@ impl BoundedTransactionQueue {
     }
 
     pub fn take_next(&mut self, now: MonotonicMs) -> DequeueDecision {
-        let mut expired = Vec::new();
-        self.pending.retain(|transaction| {
-            if transaction.request.deadline_ms <= now {
-                expired.push(transaction.clone());
-                false
-            } else {
-                true
-            }
-        });
+        let expired = self.expire_pending(now);
         DequeueDecision {
             expired,
             next: self.pending.pop_front(),
         }
+    }
+
+    /// Removes one exact transaction after expiring elapsed work.
+    ///
+    /// Other live queue entries retain their relative order.
+    pub fn take_transaction(
+        &mut self,
+        transaction_id: &TransactionId,
+        now: MonotonicMs,
+    ) -> DequeueDecision {
+        let expired = self.expire_pending(now);
+        let next = self
+            .pending
+            .iter()
+            .position(|queued| &queued.request.transaction_id == transaction_id)
+            .and_then(|position| self.pending.remove(position));
+        DequeueDecision { expired, next }
     }
 
     pub fn invalidate_generation(
@@ -333,6 +342,19 @@ impl BoundedTransactionQueue {
             }
         });
         removed
+    }
+
+    fn expire_pending(&mut self, now: MonotonicMs) -> Vec<QueuedTransaction> {
+        let mut expired = Vec::new();
+        self.pending.retain(|transaction| {
+            if transaction.request.deadline_ms <= now {
+                expired.push(transaction.clone());
+                false
+            } else {
+                true
+            }
+        });
+        expired
     }
 }
 

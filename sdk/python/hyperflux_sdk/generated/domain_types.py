@@ -281,6 +281,42 @@ class PersistenceSchemaVersion:
 
 
 @dataclass(frozen=True, slots=True)
+class IntentRevision:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "decimal-string"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("IntentRevision requires an integer")
+        if not 1 <= self.value <= 18446744073709551615:
+            raise ValueError("IntentRevision is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class PersistenceRevision:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "decimal-string"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("PersistenceRevision requires an integer")
+        if not 1 <= self.value <= 18446744073709551615:
+            raise ValueError("PersistenceRevision is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class RestoreAttemptNumber:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("RestoreAttemptNumber requires an integer")
+        if not 1 <= self.value <= 4294967295:
+            raise ValueError("RestoreAttemptNumber is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
 class AuthorizationEpoch:
     value: int
     WIRE_ENCODING: ClassVar[str] = "decimal-string"
@@ -636,6 +672,28 @@ class RequestDigest:
             raise ValueError("RequestDigest is outside the canonical length")
 
 
+@dataclass(frozen=True, slots=True)
+class IntentDigest:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("IntentDigest requires a string")
+        if not 64 <= len(self.value) <= 64:
+            raise ValueError("IntentDigest is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class RestoreTriggerId:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("RestoreTriggerId requires a string")
+        if not 1 <= len(self.value) <= 128:
+            raise ValueError("RestoreTriggerId is outside the canonical length")
+
+
 class DeviceKind(str, Enum):
     RECEIVER = "receiver"
     MAT = "mat"
@@ -846,6 +904,49 @@ class RestoreState(str, Enum):
     INVALIDATED = "invalidated"
 
 
+class RestoreTriggerKind(str, Enum):
+    SERVICE_START = "service-start"
+    RECEIVER_GENERATION = "receiver-generation"
+    SYSTEM_RESUME = "system-resume"
+    DEVICE_RETURN = "device-return"
+
+
+class RestoreRecordState(str, Enum):
+    PLANNED = "planned"
+    DEFERRED = "deferred"
+    PREPARED = "prepared"
+    QUEUED = "queued"
+    APPLYING = "applying"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    INVALIDATED = "invalidated"
+
+
+class RestoreDeferReason(str, Enum):
+    DEVICE_SLEEPING = "device-sleeping"
+    DEVICE_UNAVAILABLE = "device-unavailable"
+    DEVICE_UNKNOWN = "device-unknown"
+    OWNERSHIP_CONFLICT = "ownership-conflict"
+    SESSION_UNAVAILABLE = "session-unavailable"
+    DEADLINE_ELAPSED = "deadline-elapsed"
+    SAFE_TRANSACTION_FAILURE = "safe-transaction-failure"
+
+
+class RestoreInvalidationReason(str, Enum):
+    SUPERSEDED_TRIGGER = "superseded-trigger"
+    STALE_GENERATION = "stale-generation"
+    INTENT_CHANGED = "intent-changed"
+    PROFILE_CHANGED = "profile-changed"
+    RESTORE_DISABLED = "restore-disabled"
+
+
+class DeviceWriteReadiness(str, Enum):
+    READY = "ready"
+    SLEEPING = "sleeping"
+    UNAVAILABLE = "unavailable"
+    UNKNOWN = "unknown"
+
+
 class EventKind(str, Enum):
     DEVICE_AVAILABLE = "device-available"
     DEVICE_SLEEPING = "device-sleeping"
@@ -928,6 +1029,9 @@ __all__ = [
     "DroppedEventCount",
     "ProjectionRevision",
     "PersistenceSchemaVersion",
+    "IntentRevision",
+    "PersistenceRevision",
+    "RestoreAttemptNumber",
     "AuthorizationEpoch",
     "DispatchNonce",
     "WallClockUnixMs",
@@ -960,6 +1064,8 @@ __all__ = [
     "ProtocolFeatureId",
     "ProtocolSessionId",
     "RequestDigest",
+    "IntentDigest",
+    "RestoreTriggerId",
     "DeviceKind",
     "ProfileKind",
     "RouteKind",
@@ -987,6 +1093,11 @@ __all__ = [
     "TransactionClass",
     "QueueAdmission",
     "RestoreState",
+    "RestoreTriggerKind",
+    "RestoreRecordState",
+    "RestoreDeferReason",
+    "RestoreInvalidationReason",
+    "DeviceWriteReadiness",
     "EventKind",
     "ProtocolErrorKind",
     "SideEffectCertainty",

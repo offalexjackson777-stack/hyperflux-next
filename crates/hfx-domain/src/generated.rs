@@ -1018,6 +1018,172 @@ impl fmt::Display for PersistenceSchemaVersion {
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(try_from = "String", into = "String")]
+pub struct IntentRevision(u64);
+
+impl IntentRevision {
+    pub const MIN: u64 = 1;
+    pub const MAX: u64 = 18_446_744_073_709_551_615;
+
+    #[must_use]
+    pub const fn get(self) -> u64 {
+        self.0
+    }
+}
+
+impl TryFrom<u64> for IntentRevision {
+    type Error = DomainValueError;
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        if value < Self::MIN {
+            return Err(DomainValueError::new(
+                "IntentRevision",
+                "outside the canonical range",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl From<IntentRevision> for u64 {
+    fn from(value: IntentRevision) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for IntentRevision {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+impl TryFrom<String> for IntentRevision {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let parsed = value
+            .parse::<u64>()
+            .map_err(|_| DomainValueError::new("IntentRevision", "invalid decimal string"))?;
+        if parsed.to_string() != value {
+            return Err(DomainValueError::new(
+                "IntentRevision",
+                "non-canonical decimal string",
+            ));
+        }
+        Self::try_from(parsed)
+    }
+}
+
+impl From<IntentRevision> for String {
+    fn from(value: IntentRevision) -> Self {
+        value.0.to_string()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct PersistenceRevision(u64);
+
+impl PersistenceRevision {
+    pub const MIN: u64 = 1;
+    pub const MAX: u64 = 18_446_744_073_709_551_615;
+
+    #[must_use]
+    pub const fn get(self) -> u64 {
+        self.0
+    }
+}
+
+impl TryFrom<u64> for PersistenceRevision {
+    type Error = DomainValueError;
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        if value < Self::MIN {
+            return Err(DomainValueError::new(
+                "PersistenceRevision",
+                "outside the canonical range",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl From<PersistenceRevision> for u64 {
+    fn from(value: PersistenceRevision) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for PersistenceRevision {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+impl TryFrom<String> for PersistenceRevision {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let parsed = value
+            .parse::<u64>()
+            .map_err(|_| DomainValueError::new("PersistenceRevision", "invalid decimal string"))?;
+        if parsed.to_string() != value {
+            return Err(DomainValueError::new(
+                "PersistenceRevision",
+                "non-canonical decimal string",
+            ));
+        }
+        Self::try_from(parsed)
+    }
+}
+
+impl From<PersistenceRevision> for String {
+    fn from(value: PersistenceRevision) -> Self {
+        value.0.to_string()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "u32", into = "u32")]
+pub struct RestoreAttemptNumber(u32);
+
+impl RestoreAttemptNumber {
+    pub const MIN: u32 = 1;
+    pub const MAX: u32 = 4_294_967_295;
+
+    #[must_use]
+    pub const fn get(self) -> u32 {
+        self.0
+    }
+}
+
+impl TryFrom<u32> for RestoreAttemptNumber {
+    type Error = DomainValueError;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        if value < Self::MIN {
+            return Err(DomainValueError::new(
+                "RestoreAttemptNumber",
+                "outside the canonical range",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl From<RestoreAttemptNumber> for u32 {
+    fn from(value: RestoreAttemptNumber) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for RestoreAttemptNumber {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
 pub struct AuthorizationEpoch(u64);
 
 impl AuthorizationEpoch {
@@ -2583,6 +2749,102 @@ impl fmt::Display for RequestDigest {
     }
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct IntentDigest(String);
+
+impl IntentDigest {
+    pub const MIN_LENGTH: usize = 64;
+    pub const MAX_LENGTH: usize = 64;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for IntentDigest {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "IntentDigest",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for IntentDigest {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<IntentDigest> for String {
+    fn from(value: IntentDigest) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for IntentDigest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct RestoreTriggerId(String);
+
+impl RestoreTriggerId {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 128;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for RestoreTriggerId {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "RestoreTriggerId",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for RestoreTriggerId {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<RestoreTriggerId> for String {
+    fn from(value: RestoreTriggerId) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for RestoreTriggerId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum DeviceKind {
     #[serde(rename = "receiver")]
@@ -3850,6 +4112,258 @@ impl FromStr for RestoreState {
 }
 
 impl fmt::Display for RestoreState {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum RestoreTriggerKind {
+    #[serde(rename = "service-start")]
+    ServiceStart,
+    #[serde(rename = "receiver-generation")]
+    ReceiverGeneration,
+    #[serde(rename = "system-resume")]
+    SystemResume,
+    #[serde(rename = "device-return")]
+    DeviceReturn,
+}
+
+impl RestoreTriggerKind {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::ServiceStart => "service-start",
+            Self::ReceiverGeneration => "receiver-generation",
+            Self::SystemResume => "system-resume",
+            Self::DeviceReturn => "device-return",
+        }
+    }
+}
+
+impl FromStr for RestoreTriggerKind {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "service-start" => Ok(Self::ServiceStart),
+            "receiver-generation" => Ok(Self::ReceiverGeneration),
+            "system-resume" => Ok(Self::SystemResume),
+            "device-return" => Ok(Self::DeviceReturn),
+            _ => Err(DomainValueError::unknown_wire("RestoreTriggerKind")),
+        }
+    }
+}
+
+impl fmt::Display for RestoreTriggerKind {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum RestoreRecordState {
+    #[serde(rename = "planned")]
+    Planned,
+    #[serde(rename = "deferred")]
+    Deferred,
+    #[serde(rename = "prepared")]
+    Prepared,
+    #[serde(rename = "queued")]
+    Queued,
+    #[serde(rename = "applying")]
+    Applying,
+    #[serde(rename = "succeeded")]
+    Succeeded,
+    #[serde(rename = "failed")]
+    Failed,
+    #[serde(rename = "invalidated")]
+    Invalidated,
+}
+
+impl RestoreRecordState {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Planned => "planned",
+            Self::Deferred => "deferred",
+            Self::Prepared => "prepared",
+            Self::Queued => "queued",
+            Self::Applying => "applying",
+            Self::Succeeded => "succeeded",
+            Self::Failed => "failed",
+            Self::Invalidated => "invalidated",
+        }
+    }
+}
+
+impl FromStr for RestoreRecordState {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "planned" => Ok(Self::Planned),
+            "deferred" => Ok(Self::Deferred),
+            "prepared" => Ok(Self::Prepared),
+            "queued" => Ok(Self::Queued),
+            "applying" => Ok(Self::Applying),
+            "succeeded" => Ok(Self::Succeeded),
+            "failed" => Ok(Self::Failed),
+            "invalidated" => Ok(Self::Invalidated),
+            _ => Err(DomainValueError::unknown_wire("RestoreRecordState")),
+        }
+    }
+}
+
+impl fmt::Display for RestoreRecordState {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum RestoreDeferReason {
+    #[serde(rename = "device-sleeping")]
+    DeviceSleeping,
+    #[serde(rename = "device-unavailable")]
+    DeviceUnavailable,
+    #[serde(rename = "device-unknown")]
+    DeviceUnknown,
+    #[serde(rename = "ownership-conflict")]
+    OwnershipConflict,
+    #[serde(rename = "session-unavailable")]
+    SessionUnavailable,
+    #[serde(rename = "deadline-elapsed")]
+    DeadlineElapsed,
+    #[serde(rename = "safe-transaction-failure")]
+    SafeTransactionFailure,
+}
+
+impl RestoreDeferReason {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::DeviceSleeping => "device-sleeping",
+            Self::DeviceUnavailable => "device-unavailable",
+            Self::DeviceUnknown => "device-unknown",
+            Self::OwnershipConflict => "ownership-conflict",
+            Self::SessionUnavailable => "session-unavailable",
+            Self::DeadlineElapsed => "deadline-elapsed",
+            Self::SafeTransactionFailure => "safe-transaction-failure",
+        }
+    }
+}
+
+impl FromStr for RestoreDeferReason {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "device-sleeping" => Ok(Self::DeviceSleeping),
+            "device-unavailable" => Ok(Self::DeviceUnavailable),
+            "device-unknown" => Ok(Self::DeviceUnknown),
+            "ownership-conflict" => Ok(Self::OwnershipConflict),
+            "session-unavailable" => Ok(Self::SessionUnavailable),
+            "deadline-elapsed" => Ok(Self::DeadlineElapsed),
+            "safe-transaction-failure" => Ok(Self::SafeTransactionFailure),
+            _ => Err(DomainValueError::unknown_wire("RestoreDeferReason")),
+        }
+    }
+}
+
+impl fmt::Display for RestoreDeferReason {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum RestoreInvalidationReason {
+    #[serde(rename = "superseded-trigger")]
+    SupersededTrigger,
+    #[serde(rename = "stale-generation")]
+    StaleGeneration,
+    #[serde(rename = "intent-changed")]
+    IntentChanged,
+    #[serde(rename = "profile-changed")]
+    ProfileChanged,
+    #[serde(rename = "restore-disabled")]
+    RestoreDisabled,
+}
+
+impl RestoreInvalidationReason {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::SupersededTrigger => "superseded-trigger",
+            Self::StaleGeneration => "stale-generation",
+            Self::IntentChanged => "intent-changed",
+            Self::ProfileChanged => "profile-changed",
+            Self::RestoreDisabled => "restore-disabled",
+        }
+    }
+}
+
+impl FromStr for RestoreInvalidationReason {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "superseded-trigger" => Ok(Self::SupersededTrigger),
+            "stale-generation" => Ok(Self::StaleGeneration),
+            "intent-changed" => Ok(Self::IntentChanged),
+            "profile-changed" => Ok(Self::ProfileChanged),
+            "restore-disabled" => Ok(Self::RestoreDisabled),
+            _ => Err(DomainValueError::unknown_wire("RestoreInvalidationReason")),
+        }
+    }
+}
+
+impl fmt::Display for RestoreInvalidationReason {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum DeviceWriteReadiness {
+    #[serde(rename = "ready")]
+    Ready,
+    #[serde(rename = "sleeping")]
+    Sleeping,
+    #[serde(rename = "unavailable")]
+    Unavailable,
+    #[serde(rename = "unknown")]
+    Unknown,
+}
+
+impl DeviceWriteReadiness {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Ready => "ready",
+            Self::Sleeping => "sleeping",
+            Self::Unavailable => "unavailable",
+            Self::Unknown => "unknown",
+        }
+    }
+}
+
+impl FromStr for DeviceWriteReadiness {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "ready" => Ok(Self::Ready),
+            "sleeping" => Ok(Self::Sleeping),
+            "unavailable" => Ok(Self::Unavailable),
+            "unknown" => Ok(Self::Unknown),
+            _ => Err(DomainValueError::unknown_wire("DeviceWriteReadiness")),
+        }
+    }
+}
+
+impl fmt::Display for DeviceWriteReadiness {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(self.as_str())
     }

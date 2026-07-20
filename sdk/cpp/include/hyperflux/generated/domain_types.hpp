@@ -556,6 +556,81 @@ private:
     value_type value_;
 };
 
+class IntentRevision
+{
+public:
+    using value_type = std::uint64_t;
+    static constexpr value_type minimum = 1;
+    static constexpr value_type maximum = 18446744073709551615ULL;
+    static constexpr bool wire_as_decimal_string = true;
+
+    [[nodiscard]] static constexpr std::optional<IntentRevision> from(value_type value)
+    {
+        if(value < minimum)
+        {
+            return std::nullopt;
+        }
+        return IntentRevision(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const IntentRevision&, const IntentRevision&) = default;
+
+private:
+    explicit constexpr IntentRevision(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class PersistenceRevision
+{
+public:
+    using value_type = std::uint64_t;
+    static constexpr value_type minimum = 1;
+    static constexpr value_type maximum = 18446744073709551615ULL;
+    static constexpr bool wire_as_decimal_string = true;
+
+    [[nodiscard]] static constexpr std::optional<PersistenceRevision> from(value_type value)
+    {
+        if(value < minimum)
+        {
+            return std::nullopt;
+        }
+        return PersistenceRevision(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const PersistenceRevision&, const PersistenceRevision&) = default;
+
+private:
+    explicit constexpr PersistenceRevision(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class RestoreAttemptNumber
+{
+public:
+    using value_type = std::uint32_t;
+    static constexpr value_type minimum = 1;
+    static constexpr value_type maximum = 4294967295;
+    static constexpr bool wire_as_decimal_string = false;
+
+    [[nodiscard]] static constexpr std::optional<RestoreAttemptNumber> from(value_type value)
+    {
+        if(value < minimum)
+        {
+            return std::nullopt;
+        }
+        return RestoreAttemptNumber(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const RestoreAttemptNumber&, const RestoreAttemptNumber&) = default;
+
+private:
+    explicit constexpr RestoreAttemptNumber(value_type value) : value_(value) {}
+    value_type value_;
+};
+
 class AuthorizationEpoch
 {
 public:
@@ -1296,6 +1371,52 @@ private:
     std::string value_;
 };
 
+class IntentDigest
+{
+public:
+    static constexpr std::size_t minimum_length = 64;
+    static constexpr std::size_t maximum_length = 64;
+
+    [[nodiscard]] static std::optional<IntentDigest> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return IntentDigest(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const IntentDigest&, const IntentDigest&) = default;
+
+private:
+    explicit IntentDigest(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class RestoreTriggerId
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 128;
+
+    [[nodiscard]] static std::optional<RestoreTriggerId> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return RestoreTriggerId(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const RestoreTriggerId&, const RestoreTriggerId&) = default;
+
+private:
+    explicit RestoreTriggerId(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
 enum class DeviceKind
 {
     Receiver,
@@ -1874,6 +1995,122 @@ enum class RestoreState
         case RestoreState::Succeeded: return "succeeded";
         case RestoreState::Failed: return "failed";
         case RestoreState::Invalidated: return "invalidated";
+    }
+    return "unknown";
+}
+
+enum class RestoreTriggerKind
+{
+    ServiceStart,
+    ReceiverGeneration,
+    SystemResume,
+    DeviceReturn,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(RestoreTriggerKind value)
+{
+    switch(value)
+    {
+        case RestoreTriggerKind::ServiceStart: return "service-start";
+        case RestoreTriggerKind::ReceiverGeneration: return "receiver-generation";
+        case RestoreTriggerKind::SystemResume: return "system-resume";
+        case RestoreTriggerKind::DeviceReturn: return "device-return";
+    }
+    return "unknown";
+}
+
+enum class RestoreRecordState
+{
+    Planned,
+    Deferred,
+    Prepared,
+    Queued,
+    Applying,
+    Succeeded,
+    Failed,
+    Invalidated,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(RestoreRecordState value)
+{
+    switch(value)
+    {
+        case RestoreRecordState::Planned: return "planned";
+        case RestoreRecordState::Deferred: return "deferred";
+        case RestoreRecordState::Prepared: return "prepared";
+        case RestoreRecordState::Queued: return "queued";
+        case RestoreRecordState::Applying: return "applying";
+        case RestoreRecordState::Succeeded: return "succeeded";
+        case RestoreRecordState::Failed: return "failed";
+        case RestoreRecordState::Invalidated: return "invalidated";
+    }
+    return "unknown";
+}
+
+enum class RestoreDeferReason
+{
+    DeviceSleeping,
+    DeviceUnavailable,
+    DeviceUnknown,
+    OwnershipConflict,
+    SessionUnavailable,
+    DeadlineElapsed,
+    SafeTransactionFailure,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(RestoreDeferReason value)
+{
+    switch(value)
+    {
+        case RestoreDeferReason::DeviceSleeping: return "device-sleeping";
+        case RestoreDeferReason::DeviceUnavailable: return "device-unavailable";
+        case RestoreDeferReason::DeviceUnknown: return "device-unknown";
+        case RestoreDeferReason::OwnershipConflict: return "ownership-conflict";
+        case RestoreDeferReason::SessionUnavailable: return "session-unavailable";
+        case RestoreDeferReason::DeadlineElapsed: return "deadline-elapsed";
+        case RestoreDeferReason::SafeTransactionFailure: return "safe-transaction-failure";
+    }
+    return "unknown";
+}
+
+enum class RestoreInvalidationReason
+{
+    SupersededTrigger,
+    StaleGeneration,
+    IntentChanged,
+    ProfileChanged,
+    RestoreDisabled,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(RestoreInvalidationReason value)
+{
+    switch(value)
+    {
+        case RestoreInvalidationReason::SupersededTrigger: return "superseded-trigger";
+        case RestoreInvalidationReason::StaleGeneration: return "stale-generation";
+        case RestoreInvalidationReason::IntentChanged: return "intent-changed";
+        case RestoreInvalidationReason::ProfileChanged: return "profile-changed";
+        case RestoreInvalidationReason::RestoreDisabled: return "restore-disabled";
+    }
+    return "unknown";
+}
+
+enum class DeviceWriteReadiness
+{
+    Ready,
+    Sleeping,
+    Unavailable,
+    Unknown,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(DeviceWriteReadiness value)
+{
+    switch(value)
+    {
+        case DeviceWriteReadiness::Ready: return "ready";
+        case DeviceWriteReadiness::Sleeping: return "sleeping";
+        case DeviceWriteReadiness::Unavailable: return "unavailable";
+        case DeviceWriteReadiness::Unknown: return "unknown";
     }
     return "unknown";
 }

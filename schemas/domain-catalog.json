@@ -25,6 +25,9 @@
     {"name": "DroppedEventCount", "wire": "dropped_event_count", "rust": "u64", "cpp": "std::uint64_t", "json_encoding": "decimal-string", "python_min": 0, "minimum": "0", "maximum": "18446744073709551615"},
     {"name": "ProjectionRevision", "wire": "projection_revision", "rust": "u32", "cpp": "std::uint32_t", "json_encoding": "number", "python_min": 1, "minimum": 1, "maximum": 4294967295},
     {"name": "PersistenceSchemaVersion", "wire": "persistence_schema_version", "rust": "u16", "cpp": "std::uint16_t", "json_encoding": "number", "python_min": 1, "minimum": 1, "maximum": 65535},
+    {"name": "IntentRevision", "wire": "intent_revision", "rust": "u64", "cpp": "std::uint64_t", "json_encoding": "decimal-string", "python_min": 1, "minimum": "1", "maximum": "18446744073709551615"},
+    {"name": "PersistenceRevision", "wire": "persistence_revision", "rust": "u64", "cpp": "std::uint64_t", "json_encoding": "decimal-string", "python_min": 1, "minimum": "1", "maximum": "18446744073709551615"},
+    {"name": "RestoreAttemptNumber", "wire": "restore_attempt_number", "rust": "u32", "cpp": "std::uint32_t", "json_encoding": "number", "python_min": 1, "minimum": 1, "maximum": 4294967295},
     {"name": "AuthorizationEpoch", "wire": "authorization_epoch", "rust": "u64", "cpp": "std::uint64_t", "json_encoding": "decimal-string", "python_min": 1, "minimum": "1", "maximum": "18446744073709551615"},
     {"name": "DispatchNonce", "wire": "dispatch_nonce", "rust": "u64", "cpp": "std::uint64_t", "json_encoding": "decimal-string", "python_min": 1, "minimum": "1", "maximum": "18446744073709551615"},
     {"name": "WallClockUnixMs", "wire": "wall_clock_unix_ms", "rust": "u64", "cpp": "std::uint64_t", "json_encoding": "decimal-string", "python_min": 0, "minimum": "0", "maximum": "18446744073709551615"},
@@ -58,7 +61,9 @@
     {"name": "CorrelationId", "wire": "correlation_id", "minimum_length": 1, "maximum_length": 128},
     {"name": "ProtocolFeatureId", "wire": "protocol_feature_id", "minimum_length": 1, "maximum_length": 128},
     {"name": "ProtocolSessionId", "wire": "protocol_session_id", "minimum_length": 1, "maximum_length": 128},
-    {"name": "RequestDigest", "wire": "request_digest", "minimum_length": 64, "maximum_length": 64}
+    {"name": "RequestDigest", "wire": "request_digest", "minimum_length": 64, "maximum_length": 64},
+    {"name": "IntentDigest", "wire": "intent_digest", "minimum_length": 64, "maximum_length": 64},
+    {"name": "RestoreTriggerId", "wire": "restore_trigger_id", "minimum_length": 1, "maximum_length": 128}
   ],
   "enums": [
     {"name": "DeviceKind", "values": ["receiver", "mat", "mouse", "keyboard", "unknown"]},
@@ -88,6 +93,11 @@
     {"name": "TransactionClass", "values": ["effect-frame", "static-lighting", "device-setting", "restore", "pairing"]},
     {"name": "QueueAdmission", "values": ["enqueued", "coalesced", "rejected-full", "rejected-deadline", "rejected-invalid"]},
     {"name": "RestoreState", "values": ["idle", "planned", "ownership-bound", "generation-bound", "queued", "applying", "succeeded", "failed", "invalidated"]},
+    {"name": "RestoreTriggerKind", "values": ["service-start", "receiver-generation", "system-resume", "device-return"]},
+    {"name": "RestoreRecordState", "values": ["planned", "deferred", "prepared", "queued", "applying", "succeeded", "failed", "invalidated"]},
+    {"name": "RestoreDeferReason", "values": ["device-sleeping", "device-unavailable", "device-unknown", "ownership-conflict", "session-unavailable", "deadline-elapsed", "safe-transaction-failure"]},
+    {"name": "RestoreInvalidationReason", "values": ["superseded-trigger", "stale-generation", "intent-changed", "profile-changed", "restore-disabled"]},
+    {"name": "DeviceWriteReadiness", "values": ["ready", "sleeping", "unavailable", "unknown"]},
     {"name": "EventKind", "values": ["device-available", "device-sleeping", "device-unavailable", "battery-updated", "ownership-changed", "generation-replaced", "transaction-completed", "restore-completed", "diagnostic-raised"]},
     {"name": "ProtocolErrorKind", "values": ["incompatible-version", "unsupported-feature", "invalid-request", "ownership-conflict", "stale-generation", "deadline-exceeded", "queue-full", "transport-failure", "outcome-unknown", "outcome-evicted", "internal-failure"]},
     {"name": "SideEffectCertainty", "values": ["none", "possible", "partial", "committed"]},

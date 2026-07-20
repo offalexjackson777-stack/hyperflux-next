@@ -1,12 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_domain::{
-    AuthorizationEpoch, DeliveredFrameCount, DeviceApplicationState, DispatchNonce, GenerationId,
-    LedCount, LogicalDeviceId, MonotonicMs, PersistenceSchemaVersion, ProfileDigest, ProfileId,
-    ReceiverId, RequestDigest, RestoreClaimId, SessionId, SideEffectCertainty, TransactionId,
+    AuthorizationEpoch, DeliveredFrameCount, DeviceApplicationState, DeviceWriteReadiness,
+    DispatchNonce, GenerationId, IntentDigest, IntentRevision, LedCount, LogicalDeviceId,
+    MonotonicMs, PersistenceRevision, PersistenceSchemaVersion, ProfileDigest, ProfileId,
+    ProtocolErrorKind, ReceiverId, RequestDigest, RestoreAttemptNumber, RestoreClaimId,
+    RestoreDeferReason, RestoreInvalidationReason, RestoreRecordState, RestoreTriggerId,
+    RestoreTriggerKind, SessionId, SideEffectCertainty, TransactionId, TransactionState,
     WallClockUnixMs,
 };
-use hfx_protocol::{BridgeEvent, DeviceProfileBinding, LightingFrame, ResourceKey, RgbColor};
+use hfx_protocol::{
+    BridgeEvent, DeviceProfileBinding, LeaseRequest, LightingFrame, ResourceKey, RgbColor,
+    TransactionRequest,
+};
 use serde::{Deserialize, Serialize};
 
 /// Supplies monotonic time for deadlines, leases, and deterministic tests.
@@ -14,7 +20,16 @@ pub trait Clock {
     fn now(&self) -> MonotonicMs;
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SubmissionBinding {
+    pub session_id: SessionId,
+    pub authorization_epoch: AuthorizationEpoch,
+    pub dispatch_nonce: DispatchNonce,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct TransportDispatch {
     pub session_id: SessionId,
     pub authorization_epoch: AuthorizationEpoch,
@@ -29,14 +44,16 @@ pub struct TransportDispatch {
     pub frames: Vec<LightingFrame>,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum TransportTerminal {
     Delivered,
     Failed,
     Revoked,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct TransportReceipt {
     pub terminal: TransportTerminal,
     pub delivered_frames: DeliveredFrameCount,
@@ -47,7 +64,8 @@ pub struct TransportReceipt {
 }
 
 /// Truthful hardware-side facts carried by every typed transport failure.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct TransportFailureFacts {
     pub delivered_frames: DeliveredFrameCount,
     pub side_effect_certainty: SideEffectCertainty,
@@ -146,75 +164,264 @@ pub struct PersistedStableIntent {
     pub schema_version: PersistenceSchemaVersion,
     pub receiver_id: ReceiverId,
     pub device_id: LogicalDeviceId,
+    pub receiver_profile_id: ProfileId,
+    pub receiver_profile_digest: ProfileDigest,
     pub profile_id: ProfileId,
     pub profile_digest: ProfileDigest,
+    pub application_slot_count: LedCount,
+    pub revision: IntentRevision,
+    pub content_digest: IntentDigest,
+    pub source_transaction_id: TransactionId,
+    pub source_request_digest: RequestDigest,
     pub lighting: StableLighting,
     pub captured_at: WallClockUnixMs,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
-pub struct RestoreClaimTarget {
+pub struct StableIntentTombstone {
+    pub schema_version: PersistenceSchemaVersion,
+    pub receiver_id: ReceiverId,
     pub device_id: LogicalDeviceId,
-    pub profile_id: ProfileId,
-    pub profile_digest: ProfileDigest,
+    pub revision: IntentRevision,
+    pub previous_content_digest: Option<IntentDigest>,
+    pub deleted_at: WallClockUnixMs,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "record_state", content = "record", rename_all = "kebab-case")]
+pub enum PersistedStableEntry {
+    Present(PersistedStableIntent),
+    Deleted(StableIntentTombstone),
+}
+
+impl PersistedStableEntry {
+    #[must_use]
+    pub const fn revision(&self) -> IntentRevision {
+        match self {
+            Self::Present(intent) => intent.revision,
+            Self::Deleted(tombstone) => tombstone.revision,
+        }
+    }
+
+    #[must_use]
+    pub const fn receiver_id(&self) -> &ReceiverId {
+        match self {
+            Self::Present(intent) => &intent.receiver_id,
+            Self::Deleted(tombstone) => &tombstone.receiver_id,
+        }
+    }
+
+    #[must_use]
+    pub const fn device_id(&self) -> &LogicalDeviceId {
+        match self {
+            Self::Present(intent) => &intent.device_id,
+            Self::Deleted(tombstone) => &tombstone.device_id,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
-pub struct RestoreClaim {
+pub struct StableIntentChange {
+    pub expected_revision: Option<IntentRevision>,
+    pub entry: PersistedStableEntry,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct PersistedRestorePolicy {
     pub schema_version: PersistenceSchemaVersion,
-    pub claim_id: RestoreClaimId,
+    pub receiver_id: ReceiverId,
+    pub enabled: bool,
+    pub revision: PersistenceRevision,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RestoreTrigger {
+    pub trigger_id: RestoreTriggerId,
+    pub kind: RestoreTriggerKind,
     pub receiver_id: ReceiverId,
     pub generation_id: GenerationId,
-    pub plan_digest: RequestDigest,
-    pub targets: Vec<RestoreClaimTarget>,
+    pub target_device_id: Option<LogicalDeviceId>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RestoreAttempt {
+    pub attempt_number: RestoreAttemptNumber,
+    pub lease_request: LeaseRequest,
+    pub request: TransactionRequest,
+    pub request_digest: RequestDigest,
+    pub submission: SubmissionBinding,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RestoreCompletion {
+    pub attempt_number: RestoreAttemptNumber,
+    pub transaction_id: TransactionId,
+    pub request_digest: RequestDigest,
+    pub state: TransactionState,
+    pub delivered_frames: DeliveredFrameCount,
+    pub side_effect_certainty: SideEffectCertainty,
+    pub live_write_executed: bool,
+    pub automatic_retry: bool,
+    pub device_application: DeviceApplicationState,
+    pub error_kind: Option<ProtocolErrorKind>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RestoreDeferred {
+    pub reason: RestoreDeferReason,
+    pub prior_outcome: Option<RestoreCompletion>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RestoreInvalidation {
+    pub reason: RestoreInvalidationReason,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "state", content = "detail", rename_all = "kebab-case")]
+pub enum RestoreRecordStatus {
+    Planned,
+    Deferred(RestoreDeferred),
+    Prepared(RestoreAttempt),
+    Queued(RestoreAttempt),
+    Applying(RestoreAttempt),
+    Succeeded(RestoreCompletion),
+    Failed(RestoreCompletion),
+    Invalidated(RestoreInvalidation),
+}
+
+impl RestoreRecordStatus {
+    #[must_use]
+    pub const fn state(&self) -> RestoreRecordState {
+        match self {
+            Self::Planned => RestoreRecordState::Planned,
+            Self::Deferred(_) => RestoreRecordState::Deferred,
+            Self::Prepared(_) => RestoreRecordState::Prepared,
+            Self::Queued(_) => RestoreRecordState::Queued,
+            Self::Applying(_) => RestoreRecordState::Applying,
+            Self::Succeeded(_) => RestoreRecordState::Succeeded,
+            Self::Failed(_) => RestoreRecordState::Failed,
+            Self::Invalidated(_) => RestoreRecordState::Invalidated,
+        }
+    }
+
+    #[must_use]
+    pub const fn is_terminal(&self) -> bool {
+        matches!(
+            self,
+            Self::Succeeded(_) | Self::Failed(_) | Self::Invalidated(_)
+        )
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RestoreRecord {
+    pub schema_version: PersistenceSchemaVersion,
+    pub claim_id: RestoreClaimId,
+    pub trigger_id: RestoreTriggerId,
+    pub trigger_kind: RestoreTriggerKind,
+    pub receiver_id: ReceiverId,
+    pub generation_id: GenerationId,
+    pub device_id: LogicalDeviceId,
+    pub intent_revision: IntentRevision,
+    pub intent_digest: IntentDigest,
+    pub revision: PersistenceRevision,
+    pub last_attempt: Option<RestoreAttemptNumber>,
+    pub status: RestoreRecordStatus,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum RestoreClaimDisposition {
-    Claimed,
-    AlreadyClaimed,
-    ConflictingClaim,
+pub enum PersistenceCasOutcome {
+    Applied,
+    Conflict,
 }
 
-/// Stores semantic stable intent and lifecycle claims, never live authority.
+/// Supplies the current generation-bound device write readiness.
+pub trait DeviceStateAuthority {
+    fn write_readiness(&self, resource: &ResourceKey) -> DeviceWriteReadiness;
+}
+
+/// Stores versioned semantic intent and durable restore records, never live authority.
 pub trait PersistenceStore {
     type Error;
 
-    /// Loads the bounded semantic stable intents for one receiver.
+    /// Loads the optional restore policy for one receiver. Missing means disabled.
     ///
     /// # Errors
     ///
     /// Returns a typed storage or schema failure.
-    fn stable_intents(
+    fn restore_policy(
         &self,
         receiver_id: &ReceiverId,
-    ) -> Result<Vec<PersistedStableIntent>, Self::Error>;
+    ) -> Result<Option<PersistedRestorePolicy>, Self::Error>;
 
-    /// Transactionally stores one validated stable intent.
+    /// Atomically compare-and-sets one restore policy record.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed storage or migration failure.
+    fn compare_and_set_restore_policy(
+        &mut self,
+        expected_revision: Option<PersistenceRevision>,
+        policy: &PersistedRestorePolicy,
+    ) -> Result<PersistenceCasOutcome, Self::Error>;
+
+    /// Loads bounded active intent records and tombstones for one receiver.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed storage or schema failure.
+    fn stable_entries(
+        &self,
+        receiver_id: &ReceiverId,
+    ) -> Result<Vec<PersistedStableEntry>, Self::Error>;
+
+    /// Atomically compare-and-sets a canonical batch of intent records.
     ///
     /// # Errors
     ///
     /// Returns a typed storage, migration, or validation failure.
-    fn save_stable_intent(&mut self, intent: &PersistedStableIntent) -> Result<(), Self::Error>;
-
-    /// Durably claims one generation-bound restoration attempt.
-    ///
-    /// # Errors
-    ///
-    /// Returns a typed storage or validation failure.
-    fn claim_restore(
+    fn compare_and_set_stable_entries(
         &mut self,
-        claim: &RestoreClaim,
-    ) -> Result<RestoreClaimDisposition, Self::Error>;
+        changes: &[StableIntentChange],
+    ) -> Result<PersistenceCasOutcome, Self::Error>;
 
-    /// Marks a previously durable restoration claim complete.
+    /// Loads bounded durable restoration history for one receiver.
     ///
     /// # Errors
     ///
-    /// Returns a typed storage failure or unknown-claim error.
-    fn complete_restore(&mut self, claim_id: &RestoreClaimId) -> Result<(), Self::Error>;
+    /// Returns a typed storage or schema failure.
+    fn restore_records(&self, receiver_id: &ReceiverId) -> Result<Vec<RestoreRecord>, Self::Error>;
+
+    /// Loads one durable restoration record by claim identity.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed storage or schema failure.
+    fn restore_record(
+        &self,
+        claim_id: &RestoreClaimId,
+    ) -> Result<Option<RestoreRecord>, Self::Error>;
+
+    /// Atomically creates or advances one durable per-device restoration record.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed storage, migration, or validation failure.
+    fn compare_and_set_restore_record(
+        &mut self,
+        expected_revision: Option<PersistenceRevision>,
+        record: &RestoreRecord,
+    ) -> Result<PersistenceCasOutcome, Self::Error>;
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

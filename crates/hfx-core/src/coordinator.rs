@@ -4,26 +4,19 @@ use crate::{
     BoundedEventLog, BoundedOutcomeJournal, BoundedTransactionQueue, EventDraft, EventLogError,
     EventSink, LeaseManager, OutcomeJournalError, OutcomeLookup, ProfileRegistry,
     QueuedTransaction, ReceiverTransport, RequestDigestError, RequestReplay, SessionAuthority,
-    TransactionMachine, TransactionQueueError, TransactionTransitionError, TransportDispatch,
-    TransportFailure, TransportFailureFacts, TransportReceipt, TransportReconciliation,
-    TransportTerminal, canonical_request_digest,
+    SubmissionBinding, TransactionMachine, TransactionQueueError, TransactionTransitionError,
+    TransportDispatch, TransportFailure, TransportFailureFacts, TransportReceipt,
+    TransportReconciliation, TransportTerminal, canonical_request_digest,
 };
 use hfx_domain::{
-    AuthorizationEpoch, DeliveredFrameCount, DeviceApplicationState, DispatchNonce, EventKind,
-    FrameCount, GenerationId, MonotonicMs, ProtocolErrorKind, QueueAdmission, ReceiverId,
-    ResourceKind, SessionId, SideEffectCertainty, TransactionId, TransactionState,
+    DeliveredFrameCount, DeviceApplicationState, EventKind, FrameCount, GenerationId, MonotonicMs,
+    ProtocolErrorKind, QueueAdmission, ReceiverId, ResourceKind, SessionId, SideEffectCertainty,
+    TransactionId, TransactionState,
 };
 use hfx_protocol::{
     TransactionProgress, TransactionRequest, TransactionResult, TransactionTerminal,
 };
 use std::fmt;
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct SubmissionBinding {
-    pub session_id: SessionId,
-    pub authorization_epoch: AuthorizationEpoch,
-    pub dispatch_nonce: DispatchNonce,
-}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SubmissionResult {
@@ -54,6 +47,7 @@ pub enum TransactionCoordinatorError {
     Event(EventLogError),
     Transition(TransactionTransitionError),
     FrameCount,
+    TransactionNotQueued(TransactionId),
 }
 
 impl fmt::Display for TransactionCoordinatorError {
@@ -76,6 +70,7 @@ impl fmt::Display for TransactionCoordinatorError {
             Self::Event(_) => "the canonical event stream rejected the terminal event",
             Self::Transition(_) => "the transaction attempted an invalid state transition",
             Self::FrameCount => "the transaction frame count cannot be represented",
+            Self::TransactionNotQueued(_) => "the exact transaction is not queued",
         })
     }
 }
@@ -272,6 +267,72 @@ impl TransactionCoordinator {
         S: EventSink,
     {
         let decision = self.queue.take_next(now);
+        self.dispatch_decision(
+            decision, now, sessions, leases, profiles, transport, events, sink,
+        )
+    }
+
+    /// Dispatches one exact queued transaction after rechecking every authority.
+    ///
+    /// Other live queue entries remain queued. This is used by durable workflows
+    /// that must persist an applying checkpoint before one named hardware write.
+    ///
+    /// # Errors
+    ///
+    /// Returns `TransactionNotQueued` when the target is neither live nor among
+    /// the elapsed entries completed during this call. Other failures match
+    /// [`Self::dispatch_next`].
+    #[allow(clippy::too_many_arguments)]
+    pub fn dispatch_transaction<A, P, T, S>(
+        &mut self,
+        transaction_id: &TransactionId,
+        now: MonotonicMs,
+        sessions: &A,
+        leases: &LeaseManager,
+        profiles: &P,
+        transport: &mut T,
+        events: &mut BoundedEventLog,
+        sink: &mut S,
+    ) -> Result<DispatchResult, TransactionCoordinatorError>
+    where
+        A: SessionAuthority,
+        P: ProfileRegistry,
+        T: ReceiverTransport,
+        S: EventSink,
+    {
+        let decision = self.queue.take_transaction(transaction_id, now);
+        let target_expired = decision
+            .expired
+            .iter()
+            .any(|queued| &queued.request.transaction_id == transaction_id);
+        if decision.next.is_none() && !target_expired {
+            return Err(TransactionCoordinatorError::TransactionNotQueued(
+                transaction_id.clone(),
+            ));
+        }
+        self.dispatch_decision(
+            decision, now, sessions, leases, profiles, transport, events, sink,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn dispatch_decision<A, P, T, S>(
+        &mut self,
+        decision: crate::DequeueDecision,
+        now: MonotonicMs,
+        sessions: &A,
+        leases: &LeaseManager,
+        profiles: &P,
+        transport: &mut T,
+        events: &mut BoundedEventLog,
+        sink: &mut S,
+    ) -> Result<DispatchResult, TransactionCoordinatorError>
+    where
+        A: SessionAuthority,
+        P: ProfileRegistry,
+        T: ReceiverTransport,
+        S: EventSink,
+    {
         let mut expired = Vec::with_capacity(decision.expired.len());
         for queued in decision.expired {
             expired.push(self.finish_unsent(
@@ -366,6 +427,29 @@ impl TransactionCoordinator {
     ) -> Result<Vec<TransactionTerminal>, TransactionCoordinatorError> {
         let removed = self.queue.invalidate_session(session_id);
         self.finish_removed(removed, ProtocolErrorKind::OwnershipConflict, events, sink)
+    }
+
+    /// Revokes one exact unsent transaction with a retry-safe terminal outcome.
+    ///
+    /// This never invokes transport and leaves unrelated queue entries intact.
+    ///
+    /// # Errors
+    ///
+    /// Returns `TransactionNotQueued` when the target is absent, or a typed
+    /// outcome/event failure while recording the immutable cancellation.
+    pub fn cancel_transaction<S: EventSink>(
+        &mut self,
+        transaction_id: &TransactionId,
+        events: &mut BoundedEventLog,
+        sink: &mut S,
+    ) -> Result<TransactionTerminal, TransactionCoordinatorError> {
+        let queued = self
+            .queue
+            .remove_transaction(transaction_id)
+            .ok_or_else(|| {
+                TransactionCoordinatorError::TransactionNotQueued(transaction_id.clone())
+            })?;
+        self.finish_unsent(queued, TransactionState::Revoked, None, None, events, sink)
     }
 
     #[must_use]

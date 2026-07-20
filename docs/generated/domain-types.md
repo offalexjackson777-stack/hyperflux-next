@@ -31,6 +31,9 @@ These types prevent semantically different values from being passed interchangea
 | `DroppedEventCount` | `dropped_event_count` | 0 to 18446744073709551615 | `decimal-string` |
 | `ProjectionRevision` | `projection_revision` | 1 to 4294967295 | `number` |
 | `PersistenceSchemaVersion` | `persistence_schema_version` | 1 to 65535 | `number` |
+| `IntentRevision` | `intent_revision` | 1 to 18446744073709551615 | `decimal-string` |
+| `PersistenceRevision` | `persistence_revision` | 1 to 18446744073709551615 | `decimal-string` |
+| `RestoreAttemptNumber` | `restore_attempt_number` | 1 to 4294967295 | `number` |
 | `AuthorizationEpoch` | `authorization_epoch` | 1 to 18446744073709551615 | `decimal-string` |
 | `DispatchNonce` | `dispatch_nonce` | 1 to 18446744073709551615 | `decimal-string` |
 | `WallClockUnixMs` | `wall_clock_unix_ms` | 0 to 18446744073709551615 | `decimal-string` |
@@ -68,6 +71,8 @@ These types prevent semantically different values from being passed interchangea
 | `ProtocolFeatureId` | `protocol_feature_id` | 1 to 128 bytes |
 | `ProtocolSessionId` | `protocol_session_id` | 1 to 128 bytes |
 | `RequestDigest` | `request_digest` | 64 to 64 bytes |
+| `IntentDigest` | `intent_digest` | 64 to 64 bytes |
+| `RestoreTriggerId` | `restore_trigger_id` | 1 to 128 bytes |
 
 ## Enumerations
 
@@ -98,6 +103,11 @@ These types prevent semantically different values from being passed interchangea
 - `TransactionClass`: `effect-frame`, `static-lighting`, `device-setting`, `restore`, `pairing`
 - `QueueAdmission`: `enqueued`, `coalesced`, `rejected-full`, `rejected-deadline`, `rejected-invalid`
 - `RestoreState`: `idle`, `planned`, `ownership-bound`, `generation-bound`, `queued`, `applying`, `succeeded`, `failed`, `invalidated`
+- `RestoreTriggerKind`: `service-start`, `receiver-generation`, `system-resume`, `device-return`
+- `RestoreRecordState`: `planned`, `deferred`, `prepared`, `queued`, `applying`, `succeeded`, `failed`, `invalidated`
+- `RestoreDeferReason`: `device-sleeping`, `device-unavailable`, `device-unknown`, `ownership-conflict`, `session-unavailable`, `deadline-elapsed`, `safe-transaction-failure`
+- `RestoreInvalidationReason`: `superseded-trigger`, `stale-generation`, `intent-changed`, `profile-changed`, `restore-disabled`
+- `DeviceWriteReadiness`: `ready`, `sleeping`, `unavailable`, `unknown`
 - `EventKind`: `device-available`, `device-sleeping`, `device-unavailable`, `battery-updated`, `ownership-changed`, `generation-replaced`, `transaction-completed`, `restore-completed`, `diagnostic-raised`
 - `ProtocolErrorKind`: `incompatible-version`, `unsupported-feature`, `invalid-request`, `ownership-conflict`, `stale-generation`, `deadline-exceeded`, `queue-full`, `transport-failure`, `outcome-unknown`, `outcome-evicted`, `internal-failure`
 - `SideEffectCertainty`: `none`, `possible`, `partial`, `committed`
