@@ -158,6 +158,17 @@ std::size_t DispatchQueue::effect_target_size() const noexcept
     return effects_.size();
 }
 
+std::set<std::string> DispatchQueue::effect_target_ids() const
+{
+    std::set<std::string> result;
+    for(const auto& [stable_id, frame] : effects_)
+    {
+        (void)frame;
+        result.insert(stable_id);
+    }
+    return result;
+}
+
 bool DispatchQueue::empty() const noexcept
 {
     return stable_.empty() && effects_.empty();

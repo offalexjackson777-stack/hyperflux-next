@@ -10,7 +10,10 @@ namespace hyperflux::openrgb
 {
 
 RuntimeCore::RuntimeCore(RuntimeBridge& bridge, RuntimeConfig config)
-    : bridge_(&bridge), config_(config), queue_(config.dispatch_queue)
+    : bridge_(&bridge),
+      config_(config),
+      queue_(config.dispatch_queue),
+      connection_epoch_(bridge.connection_epoch())
 {
 }
 
@@ -76,13 +79,33 @@ sdk::Result<RuntimeStep> RuntimeCore::step(std::uint64_t now_ms)
     {
         return sdk::Result<RuntimeStep>::failure(events.error());
     }
+    auto refreshed = refresh_if_required(output);
+    if(!refreshed)
+    {
+        return sdk::Result<RuntimeStep>::failure(refreshed.error());
+    }
     auto outcomes = poll_outcomes(output);
     if(!outcomes)
     {
         return sdk::Result<RuntimeStep>::failure(outcomes.error());
     }
+    refreshed = refresh_if_required(output);
+    if(!refreshed)
+    {
+        return sdk::Result<RuntimeStep>::failure(refreshed.error());
+    }
     renew_sessions(now_ms, output);
+    refreshed = refresh_if_required(output);
+    if(!refreshed)
+    {
+        return sdk::Result<RuntimeStep>::failure(refreshed.error());
+    }
     dispatch_ready(now_ms, output);
+    refreshed = refresh_if_required(output);
+    if(!refreshed)
+    {
+        return sdk::Result<RuntimeStep>::failure(refreshed.error());
+    }
     return sdk::Result<RuntimeStep>::success(std::move(output));
 }
 
@@ -125,6 +148,7 @@ RuntimeStep RuntimeCore::shutdown()
     queue_.clear();
     subscription_id_.reset();
     cursor_.reset();
+    refresh_required_ = false;
     initialized_ = false;
     return output;
 }
@@ -156,6 +180,16 @@ const std::vector<ControllerModel>& RuntimeCore::controllers() const noexcept
 std::size_t RuntimeCore::pending_transaction_count() const noexcept
 {
     return pending_.size();
+}
+
+std::size_t RuntimeCore::queued_stable_count() const noexcept
+{
+    return queue_.stable_size();
+}
+
+std::set<std::string> RuntimeCore::queued_effect_targets() const
+{
+    return queue_.effect_target_ids();
 }
 
 } // namespace hyperflux::openrgb

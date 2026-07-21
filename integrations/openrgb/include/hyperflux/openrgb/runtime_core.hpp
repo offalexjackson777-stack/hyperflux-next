@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -95,6 +96,8 @@ public:
     [[nodiscard]] bool initialized() const noexcept;
     [[nodiscard]] const std::vector<ControllerModel>& controllers() const noexcept;
     [[nodiscard]] std::size_t pending_transaction_count() const noexcept;
+    [[nodiscard]] std::size_t queued_stable_count() const noexcept;
+    [[nodiscard]] std::set<std::string> queued_effect_targets() const;
 
 private:
     struct ReceiverSession
@@ -119,6 +122,7 @@ private:
     [[nodiscard]] sdk::Result<void> refresh_controllers(
         RuntimeStep& output,
         bool cursor_gap);
+    [[nodiscard]] sdk::Result<void> refresh_if_required(RuntimeStep& output);
     [[nodiscard]] sdk::Result<void> poll_events(RuntimeStep& output);
     [[nodiscard]] sdk::Result<void> poll_outcomes(RuntimeStep& output);
     void renew_sessions(std::uint64_t now_ms, RuntimeStep& output);
@@ -129,6 +133,7 @@ private:
         const GenerationId& generation_id,
         RuntimeStep& output);
     void invalidate_changed_sessions();
+    [[nodiscard]] bool synchronize_connection(RuntimeStep& output);
     void consume_transaction_result(
         std::uint64_t sequence,
         sdk::LightingIntent intent,
@@ -142,6 +147,8 @@ private:
     RuntimeConfig config_;
     DispatchQueue queue_;
     bool initialized_ = false;
+    std::uint64_t connection_epoch_ = 0;
+    bool refresh_required_ = false;
     std::vector<ControllerModel> controllers_;
     std::optional<SubscriptionId> subscription_id_;
     std::optional<v5::EventCursor> cursor_;

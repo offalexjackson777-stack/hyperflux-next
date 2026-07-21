@@ -4,6 +4,7 @@
 
 #include <hyperflux/openrgb/runtime_core.hpp>
 
+#include <atomic>
 #include <cstdint>
 #include <deque>
 #include <map>
@@ -186,14 +187,25 @@ public:
     v5::IntegrationView current;
     std::deque<v5::EventBatch> event_batches;
     std::vector<sdk::TransactionSubmission> submissions;
+    std::atomic_size_t submission_count {0};
     std::map<std::string, v5::TransactionResult> outcomes;
     std::vector<v5::ResourceKey> leased_resources;
     bool conflict = false;
     bool terminal_on_submit = false;
+    bool unavailable_on_submit = false;
     std::size_t acquire_count = 0;
     std::size_t renew_count = 0;
     std::size_t release_count = 0;
     std::uint64_t lease_expiry_ms = 100'000;
+    std::uint64_t connection_epoch_value = 1;
+    std::optional<std::uint64_t> fail_integration_call;
+    std::optional<std::uint64_t> fail_acquire_call;
+    std::uint64_t integration_calls = 0;
+
+    std::uint64_t connection_epoch() const noexcept override
+    {
+        return connection_epoch_value;
+    }
 
     sdk::Result<TransactionId> next_transaction_id() override
     {
@@ -204,6 +216,15 @@ public:
 
     sdk::Result<v5::IntegrationView> integration_view() override
     {
+        ++integration_calls;
+        if(fail_integration_call == integration_calls)
+        {
+            return sdk::Result<v5::IntegrationView>::failure({
+                sdk::ErrorCode::ReadFailed,
+                "injected OpenRGB bridge interruption",
+                "HFX-SERVICE-001",
+            });
+        }
         return sdk::Result<v5::IntegrationView>::success(current);
     }
 
@@ -212,6 +233,14 @@ public:
         LeaseDurationMs) override
     {
         ++acquire_count;
+        if(fail_acquire_call == acquire_count)
+        {
+            return sdk::Result<v5::LeaseResult>::failure({
+                sdk::ErrorCode::SocketConnect,
+                "injected lease transport interruption",
+                "HFX-SERVICE-001",
+            });
+        }
         if(conflict)
         {
             return sdk::Result<v5::LeaseResult>::success(v5::LeaseResultConflict {{
@@ -244,6 +273,16 @@ public:
         sdk::TransactionSubmission submission) override
     {
         submissions.push_back(submission);
+        submission_count.fetch_add(1, std::memory_order_release);
+        if(unavailable_on_submit)
+        {
+            return sdk::Result<v5::TransactionResult>::success(
+                v5::TransactionResultUnavailable {{
+                    submission.transaction_id,
+                    ProtocolErrorKind::OutcomeUnknown,
+                    text<FindingId>("HFX-OUTCOME-001"),
+                }});
+        }
         if(terminal_on_submit)
         {
             return sdk::Result<v5::TransactionResult>::success(

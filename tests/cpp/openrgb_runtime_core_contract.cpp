@@ -285,6 +285,102 @@ int main()
     {
         return failure(__LINE__);
     }
+
+    bridge.terminal_on_submit = false;
+    if(runtime.enqueue_effect(frame(model(runtime, DeviceKind::Mouse), 70), 146)
+           != EnqueueDisposition::Accepted
+       || runtime.enqueue_effect(frame(model(runtime, DeviceKind::Keyboard), 71), 146)
+           != EnqueueDisposition::Accepted
+       || !runtime.step(150) || runtime.pending_transaction_count() != 1)
+    {
+        return failure(__LINE__);
+    }
+    bridge.complete_last(
+        TransactionState::Succeeded,
+        2,
+        SideEffectCertainty::Committed,
+        true);
+    const auto submissions_before_reconnect = bridge.submissions.size();
+    const auto releases_before_reconnect = bridge.release_count;
+    const auto acquisitions_before_reconnect = bridge.acquire_count;
+    ++bridge.connection_epoch_value;
+    const auto reconnected = runtime.step(151);
+    if(!reconnected || !reconnected.value().full_refresh
+       || !reconnected.value().cursor_gap_recovered
+       || reconnected.value().dispatch_outcomes.size() != 1
+       || reconnected.value().dispatch_outcomes.front().state
+           != DispatchOutcomeState::Succeeded
+       || runtime.pending_transaction_count() != 0
+       || bridge.submissions.size() != submissions_before_reconnect
+       || bridge.release_count != releases_before_reconnect)
+    {
+        return failure(__LINE__);
+    }
+
+    bridge.terminal_on_submit = true;
+    if(runtime.enqueue_effect(frame(model(runtime, DeviceKind::Mouse), 72), 152)
+           != EnqueueDisposition::Accepted
+       || runtime.enqueue_effect(frame(model(runtime, DeviceKind::Keyboard), 73), 152)
+           != EnqueueDisposition::Accepted)
+    {
+        return failure(__LINE__);
+    }
+    const auto post_reconnect = runtime.step(156);
+    if(!post_reconnect || bridge.acquire_count != acquisitions_before_reconnect + 1
+       || bridge.submissions.size() != submissions_before_reconnect + 1
+       || bridge.submissions.back().frames.size() != 2)
+    {
+        return failure(__LINE__);
+    }
+
+    ++bridge.connection_epoch_value;
+    if(!runtime.step(157))
+    {
+        return failure(__LINE__);
+    }
+    bridge.fail_acquire_call = bridge.acquire_count + 1;
+    const auto submissions_before_outage = bridge.submissions.size();
+    if(runtime.enqueue_stable(
+           sdk::LightingIntent::Static,
+           {frame(model(runtime, DeviceKind::Mouse), 80)})
+           != EnqueueDisposition::Accepted)
+    {
+        return failure(__LINE__);
+    }
+    const auto interrupted = runtime.step(158);
+    if(!interrupted || interrupted.value().notices.empty()
+       || interrupted.value().notices.back().code != sdk::ErrorCode::SocketConnect
+       || runtime.queued_stable_count() != 1
+       || bridge.submissions.size() != submissions_before_outage)
+    {
+        return failure(__LINE__);
+    }
+    const auto resumed = runtime.step(159);
+    if(!resumed || runtime.queued_stable_count() != 0
+       || bridge.submissions.size() != submissions_before_outage + 1)
+    {
+        return failure(__LINE__);
+    }
+    bridge.unavailable_on_submit = true;
+    const auto unavailable_submission_count = bridge.submissions.size();
+    if(runtime.enqueue_effect(frame(model(runtime, DeviceKind::Mouse), 81), 160)
+           != EnqueueDisposition::Accepted)
+    {
+        return failure(__LINE__);
+    }
+    const auto unavailable = runtime.step(164);
+    if(!unavailable || unavailable.value().dispatch_outcomes.size() != 1
+       || unavailable.value().dispatch_outcomes.front().state
+           != DispatchOutcomeState::Unavailable
+       || unavailable.value().dispatch_outcomes.front().side_effect_certainty
+           != SideEffectCertainty::Possible
+       || unavailable.value().dispatch_outcomes.front().protocol_error
+           != ProtocolErrorKind::OutcomeUnknown
+       || bridge.submissions.size() != unavailable_submission_count + 1)
+    {
+        return failure(__LINE__);
+    }
+    bridge.unavailable_on_submit = false;
     const auto releases_before_shutdown = bridge.release_count;
     const auto shutdown = runtime.shutdown();
     if(runtime.initialized()

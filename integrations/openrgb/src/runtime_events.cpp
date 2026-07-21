@@ -20,6 +20,7 @@ sdk::Result<void> RuntimeCore::refresh_controllers(
     {
         return sdk::Result<void>::failure(view.error());
     }
+    const auto connection_changed = synchronize_connection(output);
     auto projected = project_controllers(view.value());
     if(!projected)
     {
@@ -28,7 +29,7 @@ sdk::Result<void> RuntimeCore::refresh_controllers(
     auto changes = reconcile_controllers(controllers_, projected.value());
     controllers_ = std::move(projected).value();
     cursor_ = view.value().cursor;
-    if(cursor_gap)
+    if(cursor_gap || connection_changed)
     {
         subscription_id_.reset();
         output.cursor_gap_recovered = true;
@@ -39,7 +40,14 @@ sdk::Result<void> RuntimeCore::refresh_controllers(
         std::make_move_iterator(changes.begin()),
         std::make_move_iterator(changes.end()));
     invalidate_changed_sessions();
+    refresh_required_ = false;
     return sdk::Result<void>::success();
+}
+
+sdk::Result<void> RuntimeCore::refresh_if_required(RuntimeStep& output)
+{
+    return refresh_required_ ? refresh_controllers(output, true)
+                             : sdk::Result<void>::success();
 }
 
 sdk::Result<void> RuntimeCore::poll_events(RuntimeStep& output)
@@ -58,9 +66,10 @@ sdk::Result<void> RuntimeCore::poll_events(RuntimeStep& output)
         {
             return sdk::Result<void>::failure(batch.error());
         }
+        const auto connection_changed = synchronize_connection(output);
         subscription_id_ = batch.value().subscription_id;
         cursor_ = batch.value().next_cursor;
-        if(batch.value().cursor_gap)
+        if(batch.value().cursor_gap || connection_changed)
         {
             return refresh_controllers(output, true);
         }
@@ -71,6 +80,7 @@ sdk::Result<void> RuntimeCore::poll_events(RuntimeStep& output)
                 [](const v5::BridgeEvent& event) {
                     return runtime_detail::refresh_event(event.kind);
                 });
+        refresh_required_ = refresh_required_ || requires_refresh;
         if(!batch.value().has_more)
         {
             break;
@@ -78,6 +88,27 @@ sdk::Result<void> RuntimeCore::poll_events(RuntimeStep& output)
     }
     return requires_refresh ? refresh_controllers(output, false)
                             : sdk::Result<void>::success();
+}
+
+bool RuntimeCore::synchronize_connection(RuntimeStep& output)
+{
+    const auto current = bridge_->connection_epoch();
+    if(current == connection_epoch_)
+    {
+        return false;
+    }
+    for(auto& [key, session] : sessions_)
+    {
+        (void)key;
+        session.lighting.abandon();
+    }
+    sessions_.clear();
+    subscription_id_.reset();
+    cursor_.reset();
+    connection_epoch_ = current;
+    refresh_required_ = true;
+    output.cursor_gap_recovered = true;
+    return true;
 }
 
 } // namespace hyperflux::openrgb

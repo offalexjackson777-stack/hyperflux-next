@@ -9,6 +9,7 @@
 #include <deque>
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -70,6 +71,7 @@ public:
     [[nodiscard]] std::optional<std::uint64_t> next_effect_due_ms() const noexcept;
     [[nodiscard]] std::size_t stable_size() const noexcept;
     [[nodiscard]] std::size_t effect_target_size() const noexcept;
+    [[nodiscard]] std::set<std::string> effect_target_ids() const;
     [[nodiscard]] bool empty() const noexcept;
 
     void clear() noexcept;

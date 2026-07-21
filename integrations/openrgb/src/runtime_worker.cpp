@@ -4,6 +4,7 @@
 
 #include <hyperflux/sdk/clock.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <exception>
 #include <set>
@@ -62,10 +63,12 @@ sdk::Result<std::unique_ptr<RuntimeWorker>> RuntimeWorker::create(
     WorkerConfig config,
     WorkerCallbacks callbacks)
 {
-    if(bridge == nullptr || config.poll_interval_ms == 0)
+    if(bridge == nullptr || config.poll_interval_ms == 0
+       || config.reconnect_initial_ms == 0 || config.reconnect_max_ms == 0
+       || config.reconnect_initial_ms > config.reconnect_max_ms)
     {
         return sdk::Result<std::unique_ptr<RuntimeWorker>>::failure(
-            worker_error("OpenRGB worker requires a bridge and a nonzero poll interval"));
+            worker_error("OpenRGB worker requires a bridge and valid nonzero timing bounds"));
     }
     auto core = RuntimeCore::create(*bridge, config.runtime);
     if(!core)
@@ -159,17 +162,23 @@ sdk::Result<EnqueueDisposition> RuntimeWorker::enqueue_effect(
         return sdk::Result<EnqueueDisposition>::success(
             EnqueueDisposition::Coalesced);
     }
-    if(effect_commands_.size() >= config_.runtime.dispatch_queue.effect_target_capacity)
+    const auto already_reserved = effect_reservations_.contains(frame.stable_id);
+    if(!already_reserved
+       && effect_reservations_.size()
+           >= config_.runtime.dispatch_queue.effect_target_capacity)
     {
         return sdk::Result<EnqueueDisposition>::success(
             EnqueueDisposition::RejectedCapacity);
     }
     auto stable_id = frame.stable_id;
+    effect_reservations_.insert(stable_id);
     effect_commands_.emplace(
         std::move(stable_id),
         EffectCommand {std::move(frame), now.value().value()});
     wake_.notify_one();
-    return sdk::Result<EnqueueDisposition>::success(EnqueueDisposition::Accepted);
+    return sdk::Result<EnqueueDisposition>::success(
+        already_reserved ? EnqueueDisposition::Coalesced
+                         : EnqueueDisposition::Accepted);
 }
 
 EnqueueDisposition RuntimeWorker::enqueue_stable(
@@ -194,15 +203,17 @@ EnqueueDisposition RuntimeWorker::enqueue_stable(
     {
         return EnqueueDisposition::RejectedInvalid;
     }
-    if(stable_commands_.size() >= config_.runtime.dispatch_queue.stable_capacity)
+    if(stable_reservations_ >= config_.runtime.dispatch_queue.stable_capacity)
     {
         return EnqueueDisposition::RejectedCapacity;
     }
     for(const auto& frame : frames)
     {
         effect_commands_.erase(frame.stable_id);
+        effect_reservations_.erase(frame.stable_id);
     }
     stable_commands_.emplace_back(intent, std::move(frames));
+    ++stable_reservations_;
     wake_.notify_one();
     return EnqueueDisposition::Accepted;
 }
@@ -241,7 +252,7 @@ std::optional<sdk::Error> RuntimeWorker::last_error() const
 bool RuntimeWorker::accepts_commands() const noexcept
 {
     return state_ == WorkerState::Created || state_ == WorkerState::Starting
-        || state_ == WorkerState::Running;
+        || state_ == WorkerState::Running || state_ == WorkerState::Recovering;
 }
 
 void RuntimeWorker::deliver(RuntimeStep output) noexcept
@@ -290,29 +301,116 @@ void RuntimeWorker::fail(sdk::Error error) noexcept
     wake_.notify_all();
 }
 
-void RuntimeWorker::run() noexcept
+bool RuntimeWorker::wait_for_recovery(
+    sdk::Error error,
+    std::uint32_t& delay_ms) noexcept
 {
-    auto initialized = core_.initialize();
-    if(!initialized)
-    {
-        fail(initialized.error());
-        return;
-    }
     {
         std::lock_guard lock(mutex_);
         if(stop_requested_)
         {
-            state_ = WorkerState::Stopping;
+            return false;
         }
-        else
-        {
-            state_ = WorkerState::Running;
-        }
+        state_ = WorkerState::Recovering;
+        last_error_ = error;
     }
-    deliver(std::move(initialized).value());
 
+    RuntimeStep notice;
+    notice.notices.push_back(std::move(error));
+    deliver(std::move(notice));
+
+    std::unique_lock lock(mutex_);
+    if(state_ == WorkerState::Failed || stop_requested_)
+    {
+        return false;
+    }
+    wake_.wait_for(
+        lock,
+        std::chrono::milliseconds(delay_ms),
+        [this] { return stop_requested_; });
+    if(stop_requested_)
+    {
+        return false;
+    }
+    const auto doubled = static_cast<std::uint64_t>(delay_ms) * 2;
+    delay_ms = static_cast<std::uint32_t>(std::min<std::uint64_t>(
+        config_.reconnect_max_ms,
+        doubled));
+    return true;
+}
+
+void RuntimeWorker::mark_running() noexcept
+{
+    std::lock_guard lock(mutex_);
+    if(!stop_requested_ && state_ != WorkerState::Failed)
+    {
+        state_ = WorkerState::Running;
+        last_error_.reset();
+    }
+}
+
+void RuntimeWorker::refresh_reservations() noexcept
+{
+    auto effects = core_.queued_effect_targets();
+    const auto stable = core_.queued_stable_count();
+    std::lock_guard lock(mutex_);
+    stable_reservations_ = stable_commands_.size() + stable;
+    for(const auto& [stable_id, command] : effect_commands_)
+    {
+        (void)command;
+        effects.insert(stable_id);
+    }
+    effect_reservations_ = std::move(effects);
+}
+
+void RuntimeWorker::run() noexcept
+{
+    auto reconnect_delay_ms = config_.reconnect_initial_ms;
     while(true)
     {
+        auto initialized = core_.initialize();
+        if(initialized)
+        {
+            mark_running();
+            deliver(std::move(initialized).value());
+            break;
+        }
+        if(!sdk::is_connection_error(initialized.error().code))
+        {
+            fail(initialized.error());
+            return;
+        }
+        if(!wait_for_recovery(initialized.error(), reconnect_delay_ms))
+        {
+            break;
+        }
+    }
+
+    bool recovery_required = false;
+    while(core_.initialized())
+    {
+        if(recovery_required)
+        {
+            auto recovered = core_.rescan();
+            if(!recovered)
+            {
+                if(!sdk::is_connection_error(recovered.error().code))
+                {
+                    fail(recovered.error());
+                    break;
+                }
+                if(!wait_for_recovery(recovered.error(), reconnect_delay_ms))
+                {
+                    break;
+                }
+                continue;
+            }
+            recovery_required = false;
+            reconnect_delay_ms = config_.reconnect_initial_ms;
+            mark_running();
+            deliver(std::move(recovered).value());
+        }
+
         std::deque<std::pair<sdk::LightingIntent, std::vector<QueuedLightingFrame>>>
             stable;
         std::map<std::string, EffectCommand> effects;
@@ -361,6 +459,7 @@ void RuntimeWorker::run() noexcept
                 break;
             }
         }
+        refresh_reservations();
         if(state() == WorkerState::Failed)
         {
             break;
@@ -370,6 +469,15 @@ void RuntimeWorker::run() noexcept
             auto rescanned = core_.rescan();
             if(!rescanned)
             {
+                if(sdk::is_connection_error(rescanned.error().code))
+                {
+                    recovery_required = true;
+                    if(!wait_for_recovery(rescanned.error(), reconnect_delay_ms))
+                    {
+                        break;
+                    }
+                    continue;
+                }
                 fail(rescanned.error());
                 break;
             }
@@ -385,15 +493,32 @@ void RuntimeWorker::run() noexcept
         auto output = core_.step(now.value().value());
         if(!output)
         {
+            refresh_reservations();
+            if(sdk::is_connection_error(output.error().code))
+            {
+                recovery_required = true;
+                if(!wait_for_recovery(output.error(), reconnect_delay_ms))
+                {
+                    break;
+                }
+                continue;
+            }
             fail(output.error());
             break;
         }
+        refresh_reservations();
+        reconnect_delay_ms = config_.reconnect_initial_ms;
+        mark_running();
         deliver(std::move(output).value());
     }
 
     deliver(core_.shutdown());
     {
         std::lock_guard lock(mutex_);
+        stable_commands_.clear();
+        effect_commands_.clear();
+        stable_reservations_ = 0;
+        effect_reservations_.clear();
         if(state_ != WorkerState::Failed)
         {
             state_ = WorkerState::Stopped;

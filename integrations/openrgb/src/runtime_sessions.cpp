@@ -25,6 +25,10 @@ void RuntimeCore::renew_sessions(std::uint64_t now_ms, RuntimeStep& output)
         }
         auto renewed = iterator->second.lighting.renew(
             LeaseDurationMs::from(config_.lease_duration_ms).value());
+        if(synchronize_connection(output))
+        {
+            return;
+        }
         if(renewed)
         {
             ++iterator;
@@ -88,6 +92,7 @@ RuntimeCore::ReceiverSession* RuntimeCore::ensure_session(
         output.notices.push_back(acquired.error());
         return nullptr;
     }
+    (void)synchronize_connection(output);
     auto inserted = sessions_.emplace(
         key,
         ReceiverSession {receiver_id, generation_id, std::move(acquired).value()});

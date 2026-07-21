@@ -16,35 +16,26 @@ namespace hyperflux::openrgb
 
 sdk::Result<void> RuntimeCore::poll_outcomes(RuntimeStep& output)
 {
-    std::vector<std::string> receivers;
-    receivers.reserve(pending_.size());
-    for(const auto& [key, pending] : pending_)
+    if(pending_.empty())
     {
-        (void)pending;
-        receivers.push_back(key);
+        return sdk::Result<void>::success();
     }
-    for(const auto& key : receivers)
+
+    const auto pending = pending_.begin()->second;
+    auto result = bridge_->transaction_outcome(pending.transaction_id);
+    (void)synchronize_connection(output);
+    if(!result)
     {
-        const auto current = pending_.find(key);
-        if(current == pending_.end())
-        {
-            continue;
-        }
-        const auto pending = current->second;
-        auto result = bridge_->transaction_outcome(pending.transaction_id);
-        if(!result)
-        {
-            return sdk::Result<void>::failure(result.error());
-        }
-        consume_transaction_result(
-            pending.sequence,
-            pending.intent,
-            pending.expected_frames,
-            pending.receiver_id,
-            pending.generation_id,
-            result.value(),
-            output);
+        return sdk::Result<void>::failure(result.error());
     }
+    consume_transaction_result(
+        pending.sequence,
+        pending.intent,
+        pending.expected_frames,
+        pending.receiver_id,
+        pending.generation_id,
+        result.value(),
+        output);
     return sdk::Result<void>::success();
 }
 
@@ -100,7 +91,7 @@ void RuntimeCore::consume_transaction_result(
         DispatchOutcomeState::Unavailable,
         expected_frames,
         0,
-        SideEffectCertainty::None,
+        SideEffectCertainty::Possible,
         false,
         unavailable.error_kind,
         std::nullopt,
@@ -180,6 +171,32 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
         return;
     }
 
+    std::map<std::string, sdk::Error> session_errors;
+    for(const auto& [key, authority] : authorities)
+    {
+        const auto notice_count = output.notices.size();
+        auto* session = ensure_session(authority.first, authority.second, output);
+        if(refresh_required_)
+        {
+            return;
+        }
+        if(session != nullptr)
+        {
+            continue;
+        }
+        const auto error = output.notices.size() > notice_count
+            ? output.notices.back()
+            : runtime_detail::error(
+                  sdk::ErrorCode::LeaseRejected,
+                  "OpenRGB could not acquire a lighting session",
+                  "HFX-OWNERSHIP-002");
+        if(sdk::is_connection_error(error.code))
+        {
+            return;
+        }
+        session_errors.insert_or_assign(key, error);
+    }
+
     auto batch = queue_.pop_ready(now_ms);
     if(!batch.has_value())
     {
@@ -222,8 +239,9 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
     for(auto& [key, frames] : groups)
     {
         const auto authority = authorities.at(key);
-        auto* session = ensure_session(authority.first, authority.second, output);
-        if(session == nullptr)
+        const auto session_error = session_errors.find(key);
+        const auto session = sessions_.find(key);
+        if(session_error != session_errors.end() || session == sessions_.end())
         {
             output.dispatch_outcomes.push_back({
                 batch->sequence,
@@ -237,9 +255,9 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
                 SideEffectCertainty::None,
                 false,
                 std::nullopt,
-                output.notices.empty()
+                session_error == session_errors.end()
                     ? std::optional<sdk::Error> {}
-                    : std::optional<sdk::Error> {output.notices.back()},
+                    : std::optional<sdk::Error> {session_error->second},
             });
             continue;
         }
@@ -255,10 +273,11 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
         const auto deadline = MonotonicMs::from(runtime_detail::saturating_add(
             now_ms,
             config_.transaction_timeout_ms)).value();
-        auto submitted = session->lighting.submit(
+        auto submitted = session->second.lighting.submit(
             batch->intent,
             std::move(updates),
             deadline);
+        (void)synchronize_connection(output);
         if(!submitted)
         {
             output.dispatch_outcomes.push_back({

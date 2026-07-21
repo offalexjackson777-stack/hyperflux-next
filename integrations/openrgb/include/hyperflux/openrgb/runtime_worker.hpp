@@ -13,6 +13,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -25,6 +26,7 @@ enum class WorkerState
     Created,
     Starting,
     Running,
+    Recovering,
     Stopping,
     Stopped,
     Failed,
@@ -34,6 +36,8 @@ struct WorkerConfig
 {
     RuntimeConfig runtime {};
     std::uint32_t poll_interval_ms = 10;
+    std::uint32_t reconnect_initial_ms = 25;
+    std::uint32_t reconnect_max_ms = 2'000;
 };
 
 struct WorkerCallbacks
@@ -91,6 +95,11 @@ private:
     void run() noexcept;
     void deliver(RuntimeStep output) noexcept;
     void fail(sdk::Error error) noexcept;
+    [[nodiscard]] bool wait_for_recovery(
+        sdk::Error error,
+        std::uint32_t& delay_ms) noexcept;
+    void mark_running() noexcept;
+    void refresh_reservations() noexcept;
     [[nodiscard]] bool accepts_commands() const noexcept;
 
     std::unique_ptr<RuntimeBridge> bridge_;
@@ -107,6 +116,8 @@ private:
     std::deque<std::pair<sdk::LightingIntent, std::vector<QueuedLightingFrame>>>
         stable_commands_;
     std::map<std::string, EffectCommand> effect_commands_;
+    std::size_t stable_reservations_ = 0;
+    std::set<std::string> effect_reservations_;
     std::vector<ControllerModel> controllers_;
     std::optional<sdk::Error> last_error_;
 };
