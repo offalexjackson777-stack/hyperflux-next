@@ -21,6 +21,7 @@ from hfxdev.model import ModelError, sha256_file
 from hfxdev.package_pipeline import (
     BuiltArtifact,
     _base_environment,
+    _build_python,
     _install_wheels,
     _inspect_staged_files,
     _tree_digest,
@@ -161,6 +162,35 @@ class PackagePipelineTests(unittest.TestCase):
             self.assertIn(f"--remap-path-prefix={private}=", environment["RUSTFLAGS"])
             self.assertIn(f"-ffile-prefix-map={private}=", environment["CFLAGS"])
             self.assertIn(f"-fdebug-prefix-map={private}=", environment["CXXFLAGS"])
+
+    def test_python_build_uses_only_the_tracked_source_projection(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            build = next(
+                item
+                for item in load_install_manifest(ROOT).builds
+                if item.id == "python-sdk"
+            )
+            source = ROOT / (build.source or "")
+            residue = source / "hyperflux_sdk" / "__pycache__" / "ignored.pyc"
+            residue.parent.mkdir(exist_ok=True)
+            residue.write_bytes(b"ignored")
+
+            def fake_wheel(command: list[str], **_: object) -> None:
+                projected = Path(command[-1])
+                self.assertFalse((projected / "hyperflux_sdk/__pycache__").exists())
+                wheel_directory = Path(command[command.index("--wheel-dir") + 1])
+                self._wheel(
+                    wheel_directory / "hyperflux_next_sdk-1-py3-none-any.whl",
+                    "hyperflux-next-sdk",
+                )
+
+            try:
+                with patch("hfxdev.package_pipeline._run", side_effect=fake_wheel):
+                    artifact = _build_python(ROOT, output, {}, build)
+                self.assertEqual(artifact.distribution, "hyperflux-next-sdk")
+            finally:
+                residue.unlink(missing_ok=True)
 
     def test_wheel_staging_is_repeatable_without_persistent_scratch(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

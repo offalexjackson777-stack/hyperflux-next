@@ -330,6 +330,41 @@ def _build_python(
     environment: dict[str, str],
     build: BuildSpec,
 ) -> BuiltArtifact:
+    source = root / (build.source or "")
+    projection = output / "work" / "python-sources" / build.id
+    if (root / ".git").is_dir():
+        tracked = _output(
+            ["git", "ls-files", "--", build.source or ""],
+            cwd=root,
+            label=f"Python source inventory {build.id}",
+        ).splitlines()
+        if not tracked:
+            raise ModelError(f"build {build.id}: Python source has no tracked files")
+        projection.mkdir(parents=True)
+        for value in tracked:
+            repository_path = root / value
+            try:
+                relative = repository_path.relative_to(source)
+            except ValueError as error:
+                raise ModelError(
+                    f"build {build.id}: tracked Python source escaped its project"
+                ) from error
+            if not repository_path.is_file() or repository_path.is_symlink():
+                raise ModelError(
+                    f"build {build.id}: tracked Python source is not a regular file"
+                )
+            target = projection / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(repository_path, target, follow_symlinks=False)
+    else:
+        shutil.copytree(
+            source,
+            projection,
+            symlinks=False,
+            ignore=shutil.ignore_patterns(
+                "__pycache__", "*.pyc", "*.pyo", "build", "dist", "*.egg-info"
+            ),
+        )
     wheel_directory = output / "work" / "wheels" / build.id
     wheel_directory.mkdir(parents=True, exist_ok=True)
     _run(
@@ -344,7 +379,7 @@ def _build_python(
             "--no-cache-dir",
             "--wheel-dir",
             str(wheel_directory),
-            str(root / (build.source or "")),
+            str(projection),
         ],
         cwd=root,
         environment=environment,
