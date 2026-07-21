@@ -15,16 +15,19 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "sdk" / "python"))
 
 from hyperflux_sdk.channel import UnixRpcChannel
-from hyperflux_sdk.client import Client, ClientConfig
+from hyperflux_sdk.client import Client, ClientConfig, TransactionSubmission
 from hyperflux_sdk.codec import CodecError, decode_message, encode_message, to_wire
+from hyperflux_sdk.errors import ConnectionClosed
 from hyperflux_sdk.generated.domain_types import (
     ClientId,
     ClientName,
     ProtocolFeatureId,
     RequestId,
+    TransactionId,
 )
 from hyperflux_sdk.generated.protocol_v5_types import RpcRequest, RpcResponse, TransactionRequest
 from hyperflux_sdk.identity import ProcessIdentitySource
+from hyperflux_sdk.recovery import RecoveringClient
 
 
 def _read_frame(connection: socket.socket) -> dict:
@@ -168,6 +171,105 @@ class PythonSdkTests(unittest.TestCase):
         response = decode_message(RpcResponse, json.dumps(payload).encode())
         self.assertEqual(to_wire(response), payload)
         self.assertEqual(response.request_id, RequestId("request-1"))
+
+    def test_recovering_client_reconciles_an_uncertain_write_without_replay(self) -> None:
+        transaction_id = TransactionId("transaction-1")
+        expected = object()
+
+        class FakeClient:
+            def __init__(self, *, fail_submit=False):
+                self.fail_submit = fail_submit
+                self.submit_calls = 0
+                self.outcome_calls = 0
+                self.closed = False
+
+            def submit_transaction(self, submission):
+                self.submit_calls += 1
+                if self.fail_submit:
+                    raise ConnectionClosed("response was lost")
+                raise AssertionError("an uncertain transaction was replayed")
+
+            def transaction_outcome(self, requested):
+                self.outcome_calls += 1
+                self.assert_transaction(requested)
+                return expected
+
+            def close(self):
+                self.closed = True
+
+            @staticmethod
+            def assert_transaction(requested):
+                if requested != transaction_id:
+                    raise AssertionError("transaction reconciliation used the wrong identity")
+
+        first = FakeClient(fail_submit=True)
+        second = FakeClient()
+
+        class Factory:
+            def __init__(self):
+                self.clients = iter((first, second))
+
+            def connect(self):
+                return next(self.clients)
+
+        recovering = RecoveringClient(Factory())
+        submission = object.__new__(TransactionSubmission)
+        object.__setattr__(submission, "transaction_id", transaction_id)
+        result = recovering.submit_transaction(submission)
+        self.assertIs(result, expected)
+        self.assertEqual(first.submit_calls, 1)
+        self.assertEqual(second.submit_calls, 0)
+        self.assertEqual(second.outcome_calls, 1)
+        self.assertTrue(first.closed)
+        self.assertEqual(recovering.connection_epoch, 2)
+
+    def test_recovering_client_close_invalidates_the_connection_epoch(self) -> None:
+        class FakeClient:
+            closed = False
+
+            def close(self):
+                self.closed = True
+
+        client = FakeClient()
+
+        class Factory:
+            @staticmethod
+            def connect():
+                return client
+
+        recovering = RecoveringClient(Factory(), connect_immediately=True)
+        self.assertEqual(recovering.connection_epoch, 1)
+        recovering.close()
+        self.assertTrue(client.closed)
+        self.assertEqual(recovering.connection_epoch, 2)
+
+    def test_failed_reconnect_still_invalidates_the_connection_epoch(self) -> None:
+        class FirstClient:
+            closed = False
+
+            @staticmethod
+            def integration_view():
+                raise ConnectionClosed("bridge restarted")
+
+            def close(self):
+                self.closed = True
+
+        first = FirstClient()
+
+        class Factory:
+            calls = 0
+
+            def connect(self):
+                self.calls += 1
+                if self.calls == 1:
+                    return first
+                raise ConnectionClosed("bridge is still unavailable")
+
+        recovering = RecoveringClient(Factory(), connect_immediately=True)
+        with self.assertRaisesRegex(ConnectionClosed, "still unavailable"):
+            recovering.integration_view()
+        self.assertTrue(first.closed)
+        self.assertEqual(recovering.connection_epoch, 2)
 
 
 if __name__ == "__main__":

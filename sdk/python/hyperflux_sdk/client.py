@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 from __future__ import annotations
 
@@ -119,10 +119,11 @@ class Client:
         cls,
         channel_config: UnixChannelConfig,
         client_config: ClientConfig,
+        identities: IdentitySource | None = None,
     ) -> Client:
         channel = UnixRpcChannel.connect(channel_config)
         try:
-            return cls.connect(channel, client_config)
+            return cls.connect(channel, client_config, identities)
         except BaseException:
             channel.close()
             raise
@@ -134,6 +135,10 @@ class Client:
     @property
     def server_hello(self) -> v5.ServerHello:
         return self._hello
+
+    @property
+    def connection_epoch(self) -> int:
+        return 1
 
     def next_transaction_id(self) -> TransactionId:
         return self._identities.next_transaction_id()

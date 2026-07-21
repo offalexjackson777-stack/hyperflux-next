@@ -129,6 +129,8 @@ future reproducible environment will provision these pins explicitly.
 
 ## Licensing
 
-Project-owned work is licensed under `GPL-2.0-only`. Imported material retains
-its original license and must pass a provenance and compatibility review before
-admission. See [License Decision](LICENSE-DECISION.md).
+Project-owned kernel and core work is licensed under `GPL-2.0-only`.
+Cross-application SDKs and application-specific adapters declare compatible
+per-file exceptions. Imported material retains its original license and must
+pass a provenance and compatibility review before admission. See
+[License Decision](LICENSE-DECISION.md).

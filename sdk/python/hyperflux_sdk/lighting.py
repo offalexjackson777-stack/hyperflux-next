@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 from __future__ import annotations
 
@@ -59,6 +59,9 @@ class LightingUpdate:
 
 
 class LightingBridge(Protocol):
+    @property
+    def connection_epoch(self) -> int: ...
+
     def acquire_lease(
         self, resources: tuple[v5.ResourceKey, ...], duration_ms: LeaseDurationMs
     ) -> v5.LeaseResult: ...
@@ -150,6 +153,7 @@ class LightingSession:
         self._bridge = bridge
         self._targets = targets
         self._grant: v5.LeaseGrant | None = grant
+        self._connection_epoch = bridge.connection_epoch
 
     @classmethod
     def acquire(
@@ -219,13 +223,17 @@ class LightingSession:
     def release(self) -> None:
         if self._grant is None:
             return
-        grant = self._grant
-        _grant(
-            self._bridge.release_lease(grant.lease_id),
-            _resources(self._targets),
-            LeaseState.RELEASED,
-            grant.lease_id,
-        )
+        grant = self._require_grant()
+        try:
+            _grant(
+                self._bridge.release_lease(grant.lease_id),
+                _resources(self._targets),
+                LeaseState.RELEASED,
+                grant.lease_id,
+            )
+        except BaseException:
+            self.abandon()
+            raise
         self._grant = None
 
     def abandon(self) -> None:
@@ -312,6 +320,11 @@ class LightingSession:
     def _require_grant(self) -> v5.LeaseGrant:
         if self._grant is None:
             raise SessionInactive("the HyperFlux lighting session is no longer active")
+        if self._bridge.connection_epoch != self._connection_epoch:
+            self.abandon()
+            raise SessionInactive(
+                "the bridge connection changed and invalidated the lighting lease"
+            )
         return self._grant
 
     def __enter__(self) -> LightingSession:

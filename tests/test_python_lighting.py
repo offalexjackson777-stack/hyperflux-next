@@ -93,6 +93,7 @@ class FakeBridge:
         self.resources: tuple[v5.ResourceKey, ...] = ()
         self.submissions: list[TransactionSubmission] = []
         self.counter = 0
+        self.connection_epoch = 1
 
     def acquire_lease(self, resources, duration_ms):
         self.resources = resources
@@ -189,6 +190,19 @@ class PythonLightingTests(unittest.TestCase):
 
         with self.assertRaisesRegex(OwnershipConflict, "openrgb"):
             LightingSession.acquire(ConflictBridge(), (target,), LeaseDurationMs(5_000))
+
+    def test_connection_epoch_change_invalidates_an_existing_lease(self) -> None:
+        target = lighting_target(_controller())
+        bridge = FakeBridge()
+        session = LightingSession.acquire(bridge, (target,), LeaseDurationMs(5_000))
+        bridge.connection_epoch += 1
+        with self.assertRaisesRegex(SessionInactive, "connection changed"):
+            session.submit(
+                LightingIntent.STATIC,
+                (LightingUpdate(target, tuple(rgb(1, 2, 3) for _ in range(13))),),
+                MonotonicMs(9_000),
+            )
+        self.assertFalse(session.active)
 
 
 if __name__ == "__main__":
