@@ -272,6 +272,13 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/development-environment.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/development-environment.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/distribution-package-build.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/distribution-package-build.schema.json",
       "mode": "0644",
@@ -813,6 +820,13 @@
       "component": "documentation",
       "source": "docs/generated/design-coverage.md",
       "destination": "/usr/share/doc/hyperflux-next/generated/design-coverage.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/development-environment.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/development-environment.md",
       "mode": "0644",
       "preserve": false
     },

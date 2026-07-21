@@ -14,6 +14,7 @@ import time
 
 from .model import ModelError, load_foundation, load_json, require_unique, sha256_file
 from .assurance import load_design_coverage
+from .development import load_development_environment
 from .errors import load_error_catalog
 from .formal_model import load_formal_model, run_formal_model
 from .integrations import load_integration_catalog, load_openrazer_compatibility_contract
@@ -449,7 +450,17 @@ def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
     if configured:
         build_directories = [Path(value) for value in configured.split(os.pathsep) if value]
     else:
-        build_directories = [Path("/lib/modules") / os.uname().release / "build"]
+        running = Path("/lib/modules") / os.uname().release / "build"
+        if (running / "Makefile").is_file():
+            build_directories = [running]
+        else:
+            build_directories = sorted(
+                path
+                for root_path in (Path("/lib/modules"), Path("/usr/lib/modules"))
+                if root_path.is_dir()
+                for path in root_path.glob("*/build")
+                if (path / "Makefile").is_file()
+            )
     if not build_directories:
         raise ModelError("kernel module verification has no configured header directory")
     for build_directory in build_directories:
@@ -506,14 +517,14 @@ def _pinned_upstream_source(
     label: str,
 ) -> Path:
     value = os.environ.get(environment_name)
-    if value is None:
-        raise ModelError(f"{environment_name} is required for the pinned {label} contract")
-    source = Path(value)
+    source = Path(value) if value is not None else root / ".hfx" / "upstreams" / upstream_id
     if not source.is_absolute():
         raise ModelError(f"{environment_name} must name an absolute path")
     source = source.resolve()
     if not source.is_dir() or not all((source / path).is_file() for path in required_paths):
-        raise ModelError(f"{environment_name} is not a {label} checkout")
+        raise ModelError(
+            f"pinned {label} checkout is unavailable; run ./hfx upstream prepare"
+        )
     expected = {
         upstream["id"]: upstream["commit"]
         for upstream in load_integration_catalog(root)["upstreams"]
@@ -919,6 +930,10 @@ def _run_toolchain_contract(root: Path, node: TestNode) -> None:
     _check_toolchain(root, node)
 
 
+def _run_development_environment_contracts(root: Path, _node: TestNode) -> None:
+    load_development_environment(root)
+
+
 def _run_assurance_contracts(root: Path, _node: TestNode) -> None:
     load_dependency_inventory(root)
     load_release_gates(root)
@@ -1089,6 +1104,7 @@ RUNNERS = {
     "privacy-boundary": _run_privacy_boundary,
     "python-unit": _run_python_tests,
     "toolchain-contract": _run_toolchain_contract,
+    "development-environment-contracts": _run_development_environment_contracts,
     "assurance-contracts": _run_assurance_contracts,
     "formal-model-contracts": _run_formal_model_contracts,
     "rust-format": _run_rust_format,

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .assurance import load_design_coverage
+from .development import load_development_environment
 from .errors import load_error_catalog
 from .formal_model import load_formal_model, run_formal_model
 from .generators.assurance import design_coverage_markdown
@@ -21,6 +22,11 @@ from .generators.domain import (
     rust_types,
 )
 from .generators.distributions import markdown as distribution_markdown
+from .generators.development import (
+    containerfile as development_containerfile,
+    devcontainer as development_devcontainer,
+    markdown as development_markdown,
+)
 from .generators.errors import (
     cpp_catalog as error_cpp_catalog,
     markdown as error_markdown,
@@ -203,7 +209,17 @@ def rendered_files(root: Path) -> dict[Path, str]:
     performance_budgets = load_performance_budgets(root)
     formal_model = load_formal_model(root)
     formal_model_result = run_formal_model(formal_model)
+    development_environment = load_development_environment(root)
     files = {
+        root / ".devcontainer" / "Containerfile": development_containerfile(
+            development_environment
+        ),
+        root / ".devcontainer" / "devcontainer.json": development_devcontainer(
+            development_environment
+        ),
+        root / "docs" / "generated" / "development-environment.md": development_markdown(
+            development_environment, integrations["upstreams"]
+        ),
         root / "docs" / "generated" / "architecture.md": architecture_markdown(constitution),
         root / "docs" / "generated" / "design-coverage.md": design_coverage_markdown(
             design_coverage

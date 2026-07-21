@@ -132,9 +132,11 @@ documents the private default identity, isolated legacy mode, qualified method
 subset, and non-replay rules.
 
 Development tool versions are recorded in
-[`toolchains/pins.json`](toolchains/pins.json). Verification selects the exact
-installed Rust toolchain without triggering an implicit network update; a
-future reproducible environment will provision these pins explicitly.
+[`toolchains/pins.json`](toolchains/pins.json). The generated, digest-pinned
+[development container](docs/generated/development-environment.md) provisions
+those exact tools from one dated Arch snapshot. Run `./hfx upstream prepare`
+once to create clean detached checkouts at the application commits in the
+integration catalog; verification then stays offline and uses them by default.
 
 ## Licensing
 

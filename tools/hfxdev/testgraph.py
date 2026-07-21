@@ -45,6 +45,7 @@ KNOWN_RUNNERS = {
     "privacy-boundary",
     "python-unit",
     "toolchain-contract",
+    "development-environment-contracts",
     "rust-format",
     "rust-clippy",
     "rust-unit",

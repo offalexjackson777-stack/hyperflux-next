@@ -13,6 +13,7 @@ from .openrazer import write_imported_metadata
 from .package_pipeline import build_artifacts, stage_rootfs
 from .render import write_generated
 from .testgraph import format_plan, load_test_catalog
+from .upstreams import prepare_upstreams
 from .verification_run import git_changed_paths, run_verification
 from .verify import RUNNERS
 
@@ -71,6 +72,17 @@ def _parser() -> argparse.ArgumentParser:
     imports = commands.add_parser("import", help="transform pinned upstream metadata")
     imports.add_argument("upstream", choices=["openrazer"])
     imports.add_argument("--source", required=True, type=Path)
+
+    upstream = commands.add_parser("upstream", help="manage immutable upstream checkouts")
+    upstream_commands = upstream.add_subparsers(dest="upstream_command", required=True)
+    upstream_prepare = upstream_commands.add_parser(
+        "prepare", help="fetch or verify every exact cataloged upstream commit"
+    )
+    upstream_prepare.add_argument(
+        "--output",
+        type=Path,
+        help="checkout root; defaults to .hfx/upstreams",
+    )
 
     package = commands.add_parser("package", help="build and stage canonical package payloads")
     package_commands = package.add_subparsers(dest="package_command", required=True)
@@ -137,6 +149,14 @@ def main(arguments: list[str] | None = None) -> int:
         if args.command == "import":
             destination = write_imported_metadata(root, args.source.resolve())
             print(f"Imported {args.upstream}: {destination.relative_to(root)}")
+            return 0
+        if args.command == "upstream":
+            prepared = prepare_upstreams(root, args.output)
+            for identifier in prepared.fetched:
+                print(f"Fetched {identifier} at its catalog commit.")
+            for identifier in prepared.reused:
+                print(f"Verified existing {identifier} checkout.")
+            print(f"Upstream lock: {prepared.manifest}")
             return 0
         if args.command == "package":
             if args.package_command == "build":

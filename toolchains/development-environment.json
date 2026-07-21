@@ -1,0 +1,63 @@
+{
+  "$schema": "../schemas/development-environment.schema.json",
+  "schema": "hyperflux-development-environment-v1",
+  "platform": "linux/amd64",
+  "base_image": {
+    "repository": "docker.io/library/archlinux",
+    "tag": "base-devel",
+    "digest": "sha256:412efebb0eeef0ef322ff24ad73f82b1ba2d3b12377db4c5fbe3074c7e7e8678"
+  },
+  "archive": {
+    "date": "2026-07-20",
+    "mirror": "https://archive.archlinux.org/repos/2026/07/20/$repo/os/$arch"
+  },
+  "system_packages": [
+    {"name": "bash", "version": "5.3.15-1"},
+    {"name": "binutils", "version": "2.46.1+r3+g046eeeef4721-1"},
+    {"name": "ca-certificates", "version": "20240618-1"},
+    {"name": "clang", "version": "22.1.6-1"},
+    {"name": "cmake", "version": "4.3.4-1"},
+    {"name": "curl", "version": "8.21.0-1"},
+    {"name": "dbus", "version": "1.16.2-1"},
+    {"name": "dkms", "version": "3.4.1-1"},
+    {"name": "dpkg", "version": "1.23.7-1"},
+    {"name": "fakeroot", "version": "1:1.37.2-2"},
+    {"name": "gcc", "version": "16.1.1+r346+g4e03491b401d-1"},
+    {"name": "git", "version": "2.55.0-1"},
+    {"name": "hidapi", "version": "0.15.0-1"},
+    {"name": "jq", "version": "1.8.2-1"},
+    {"name": "kmod", "version": "34.2-1"},
+    {"name": "linux-headers", "version": "7.0.14.arch1-1"},
+    {"name": "make", "version": "4.4.1-3"},
+    {"name": "ninja", "version": "1.13.2-3"},
+    {"name": "patchelf", "version": "0.19.1-1"},
+    {"name": "pkgconf", "version": "2.5.1-1"},
+    {"name": "python", "version": "3.14.6-1"},
+    {"name": "python-dbus", "version": "1.4.0-2"},
+    {"name": "python-gobject", "version": "3.56.3-1"},
+    {"name": "python-pip", "version": "26.1.2-1"},
+    {"name": "python-setuptools", "version": "1:82.0.1-1"},
+    {"name": "python-wheel", "version": "0.47.0-1"},
+    {"name": "qt5-base", "version": "5.15.19+kde+r96-1"},
+    {"name": "rpm-tools", "version": "6.0.1-2"},
+    {"name": "rustup", "version": "1.29.0-2"},
+    {"name": "sudo", "version": "1.9.17.p2-6"},
+    {"name": "zstd", "version": "1.5.7-3"}
+  ],
+  "rust": {
+    "installer": "arch-rustup-package",
+    "toolchain": "1.95.0-x86_64-unknown-linux-gnu",
+    "profile": "minimal",
+    "components": ["clippy", "rustfmt"]
+  },
+  "workspace": {
+    "user": "hyperflux",
+    "uid": 1000,
+    "path": "/workspaces/hyperflux-next"
+  },
+  "network_policy": {
+    "container_build": ["arch-snapshot-packages", "pinned-rust-toolchain"],
+    "post_create": ["pinned-upstream-checkouts"],
+    "verification": "forbidden"
+  }
+}
