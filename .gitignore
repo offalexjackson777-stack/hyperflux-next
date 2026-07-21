@@ -6,6 +6,6 @@
 __pycache__/
 *.py[cod]
 build/
+CMakeFiles/
 dist/
 target/
-

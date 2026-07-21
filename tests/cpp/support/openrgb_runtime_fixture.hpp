@@ -19,8 +19,7 @@
 namespace hyperflux::test
 {
 
-template<typename T>
-T text(std::string_view value)
+template <typename T> T text(std::string_view value)
 {
     auto decoded = T::from(value);
     if(!decoded.has_value())
@@ -30,8 +29,7 @@ T text(std::string_view value)
     return *decoded;
 }
 
-template<typename T>
-T number(std::uint64_t value)
+template <typename T> T number(std::uint64_t value)
 {
     auto decoded = T::from(static_cast<typename T::value_type>(value));
     if(!decoded.has_value())
@@ -60,8 +58,7 @@ inline v5::EventCursor cursor(std::uint64_t sequence)
     };
 }
 
-inline v5::ControllerView controller(
-    std::string_view device,
+inline v5::ControllerView controller(std::string_view device,
     DeviceKind kind,
     std::uint64_t generation,
     std::uint16_t product,
@@ -121,8 +118,7 @@ inline v5::ControllerView controller(
     };
 }
 
-inline v5::IntegrationView view(
-    std::uint64_t generation,
+inline v5::IntegrationView view(std::uint64_t generation,
     std::uint64_t sequence,
     ControllerAvailability mouse = ControllerAvailability::Ready,
     ControllerAvailability keyboard = ControllerAvailability::Ready)
@@ -140,34 +136,24 @@ inline v5::IntegrationView view(
             {},
             {
                 controller("mouse", DeviceKind::Mouse, generation, 205, 13, mouse),
-                controller(
-                    "keyboard",
-                    DeviceKind::Keyboard,
-                    generation,
-                    662,
-                    102,
-                    keyboard),
+                controller("keyboard", DeviceKind::Keyboard, generation, 662, 102, keyboard),
             },
         }},
     };
 }
 
 inline openrgb::QueuedLightingFrame frame(
-    const openrgb::ControllerModel& controller_model,
-    std::uint8_t red)
+    const openrgb::ControllerModel& controller_model, std::uint8_t red)
 {
     return {
         controller_model.stable_id,
         controller_model.lighting.application_slot_count.value(),
         std::vector<v5::RgbColor>(
-            controller_model.lighting.application_slot_count.value(),
-            color(red)),
+            controller_model.lighting.application_slot_count.value(), color(red)),
     };
 }
 
-inline const openrgb::ControllerModel& model(
-    const openrgb::RuntimeCore& runtime,
-    DeviceKind kind)
+inline const openrgb::ControllerModel& model(const openrgb::RuntimeCore& runtime, DeviceKind kind)
 {
     for(const auto& controller_model : runtime.controllers())
     {
@@ -182,7 +168,10 @@ inline const openrgb::ControllerModel& model(
 class FakeBridge final : public openrgb::RuntimeBridge
 {
 public:
-    explicit FakeBridge(v5::IntegrationView initial) : current(std::move(initial)) {}
+    explicit FakeBridge(v5::IntegrationView initial)
+        : current(std::move(initial))
+    {
+    }
 
     v5::IntegrationView current;
     std::deque<v5::EventBatch> event_batches;
@@ -200,7 +189,7 @@ public:
     std::uint64_t connection_epoch_value = 1;
     std::optional<std::uint64_t> fail_integration_call;
     std::optional<std::uint64_t> fail_acquire_call;
-    std::uint64_t integration_calls = 0;
+    std::atomic_uint64_t integration_calls {0};
 
     std::uint64_t connection_epoch() const noexcept override
     {
@@ -216,8 +205,8 @@ public:
 
     sdk::Result<v5::IntegrationView> integration_view() override
     {
-        ++integration_calls;
-        if(fail_integration_call == integration_calls)
+        const auto call = integration_calls.fetch_add(1, std::memory_order_acq_rel) + 1;
+        if(fail_integration_call == call)
         {
             return sdk::Result<v5::IntegrationView>::failure({
                 sdk::ErrorCode::ReadFailed,
@@ -229,8 +218,7 @@ public:
     }
 
     sdk::Result<v5::LeaseResult> acquire_lease(
-        std::vector<v5::ResourceKey> resources,
-        LeaseDurationMs) override
+        std::vector<v5::ResourceKey> resources, LeaseDurationMs) override
     {
         ++acquire_count;
         if(fail_acquire_call == acquire_count)
@@ -253,9 +241,7 @@ public:
             v5::LeaseResultGranted {grant(LeaseState::Granted)});
     }
 
-    sdk::Result<v5::LeaseResult> renew_lease(
-        LeaseId,
-        LeaseDurationMs) override
+    sdk::Result<v5::LeaseResult> renew_lease(LeaseId, LeaseDurationMs) override
     {
         ++renew_count;
         return sdk::Result<v5::LeaseResult>::success(
@@ -276,12 +262,11 @@ public:
         submission_count.fetch_add(1, std::memory_order_release);
         if(unavailable_on_submit)
         {
-            return sdk::Result<v5::TransactionResult>::success(
-                v5::TransactionResultUnavailable {{
-                    submission.transaction_id,
-                    ProtocolErrorKind::OutcomeUnknown,
-                    text<FindingId>("HFX-OUTCOME-001"),
-                }});
+            return sdk::Result<v5::TransactionResult>::success(v5::TransactionResultUnavailable {{
+                submission.transaction_id,
+                ProtocolErrorKind::OutcomeUnknown,
+                text<FindingId>("HFX-OUTCOME-001"),
+            }});
         }
         if(terminal_on_submit)
         {
@@ -305,15 +290,13 @@ public:
         return sdk::Result<v5::TransactionResult>::success(result);
     }
 
-    sdk::Result<v5::TransactionResult> transaction_outcome(
-        TransactionId transaction_id) override
+    sdk::Result<v5::TransactionResult> transaction_outcome(TransactionId transaction_id) override
     {
         return sdk::Result<v5::TransactionResult>::success(
             outcomes.at(std::string(transaction_id.value())));
     }
 
-    sdk::Result<v5::EventBatch> subscribe(
-        sdk::EventSubscription subscription) override
+    sdk::Result<v5::EventBatch> subscribe(sdk::EventSubscription subscription) override
     {
         if(!event_batches.empty())
         {
@@ -333,16 +316,14 @@ public:
         });
     }
 
-    void complete_last(
-        TransactionState state,
+    void complete_last(TransactionState state,
         std::uint16_t delivered,
         SideEffectCertainty certainty,
         bool live,
         std::optional<ProtocolErrorKind> error = std::nullopt)
     {
         const auto& submission = submissions.back();
-        outcomes.insert_or_assign(
-            std::string(submission.transaction_id.value()),
+        outcomes.insert_or_assign(std::string(submission.transaction_id.value()),
             terminal(submission, state, delivered, certainty, live, error));
     }
 
@@ -386,8 +367,7 @@ private:
         };
     }
 
-    v5::TransactionResult terminal(
-        const sdk::TransactionSubmission& submission,
+    v5::TransactionResult terminal(const sdk::TransactionSubmission& submission,
         TransactionState state,
         std::size_t delivered,
         SideEffectCertainty certainty = SideEffectCertainty::Committed,

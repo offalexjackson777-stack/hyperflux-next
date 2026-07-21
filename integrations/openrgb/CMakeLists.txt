@@ -136,6 +136,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
         STATIC
             src/controller_registry.cpp
             src/native_controller.cpp
+            src/plugin_coordinator.cpp
             "${HFX_OPENRGB_SOURCE_DIR}/RGBController/RGBController.cpp"
     )
     set_target_properties(
@@ -227,6 +228,26 @@ if(HFX_OPENRGB_SOURCE_DIR)
         add_test(
             NAME openrgb-controller-registry-contract
             COMMAND openrgb-controller-registry-contract
+        )
+
+        add_executable(
+            openrgb-plugin-coordinator-contract
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_plugin_coordinator_contract.cpp"
+        )
+        target_link_libraries(
+            openrgb-plugin-coordinator-contract
+            PRIVATE hyperflux_openrgb_native_controller Threads::Threads
+        )
+        hfx_openrgb_enable_thread_sanitizer(openrgb-plugin-coordinator-contract)
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            target_compile_options(
+                openrgb-plugin-coordinator-contract
+                PRIVATE -Wall -Wextra -Werror -pedantic
+            )
+        endif()
+        add_test(
+            NAME openrgb-plugin-coordinator-contract
+            COMMAND openrgb-plugin-coordinator-contract
         )
     endif()
 else()
