@@ -83,6 +83,7 @@ public:
     [[nodiscard]] sdk::Result<RuntimeStep> initialize();
     [[nodiscard]] sdk::Result<RuntimeStep> rescan();
     [[nodiscard]] sdk::Result<RuntimeStep> step(std::uint64_t now_ms);
+    [[nodiscard]] RuntimeStep shutdown();
 
     [[nodiscard]] EnqueueDisposition enqueue_effect(
         QueuedLightingFrame frame,

@@ -14,6 +14,10 @@ add_library(
         src/dispatch_queue.cpp
         src/runtime_bridge.cpp
         src/runtime_core.cpp
+        src/runtime_dispatch.cpp
+        src/runtime_events.cpp
+        src/runtime_sessions.cpp
+        src/runtime_worker.cpp
 )
 set_target_properties(hyperflux_openrgb_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_features(hyperflux_openrgb_core PUBLIC cxx_std_20)
@@ -166,4 +170,17 @@ if(BUILD_TESTING)
         )
     endif()
     add_test(NAME openrgb-runtime-core-contract COMMAND openrgb-runtime-core-contract)
+
+    add_executable(
+        openrgb-runtime-worker-contract
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_runtime_worker_contract.cpp"
+    )
+    target_link_libraries(openrgb-runtime-worker-contract PRIVATE hyperflux_openrgb_core)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(
+            openrgb-runtime-worker-contract
+            PRIVATE -Wall -Wextra -Werror -pedantic
+        )
+    endif()
+    add_test(NAME openrgb-runtime-worker-contract COMMAND openrgb-runtime-worker-contract)
 endif()

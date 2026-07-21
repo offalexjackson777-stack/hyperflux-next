@@ -47,7 +47,8 @@ EnqueueDisposition DispatchQueue::enqueue_effect(
     {
         return EnqueueDisposition::RejectedCapacity;
     }
-    effects_.emplace(frame.stable_id, std::move(frame));
+    auto stable_id = frame.stable_id;
+    effects_.emplace(std::move(stable_id), std::move(frame));
     if(!effect_due_ms_.has_value())
     {
         effect_due_ms_ = now_ms > std::numeric_limits<std::uint64_t>::max()
