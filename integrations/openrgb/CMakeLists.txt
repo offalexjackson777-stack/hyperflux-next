@@ -85,6 +85,7 @@ add_library(
         src/controller_model.cpp
         src/dispatch_queue.cpp
         src/native_command.cpp
+        src/plugin_runtime.cpp
         src/runtime_bridge.cpp
         src/runtime_core.cpp
         src/runtime_dispatch.cpp
@@ -303,6 +304,26 @@ if(HFX_OPENRGB_SOURCE_DIR)
         add_test(
             NAME openrgb-plugin-coordinator-contract
             COMMAND openrgb-plugin-coordinator-contract
+        )
+
+        add_executable(
+            openrgb-plugin-runtime-contract
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_plugin_runtime_contract.cpp"
+        )
+        target_link_libraries(
+            openrgb-plugin-runtime-contract
+            PRIVATE hyperflux_openrgb_native_controller
+        )
+        hfx_openrgb_enable_thread_sanitizer(openrgb-plugin-runtime-contract)
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            target_compile_options(
+                openrgb-plugin-runtime-contract
+                PRIVATE -Wall -Wextra -Werror -pedantic
+            )
+        endif()
+        add_test(
+            NAME openrgb-plugin-runtime-contract
+            COMMAND openrgb-plugin-runtime-contract
         )
     endif()
 else()
