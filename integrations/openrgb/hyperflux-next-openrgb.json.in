@@ -1,0 +1,6 @@
+{
+  "Id": "org.hyperflux.next.openrgb",
+  "Name": "HyperFlux Next",
+  "Version": "@HFX_COMPONENT_VERSION@",
+  "OpenRGBPluginAPIVersion": 4
+}

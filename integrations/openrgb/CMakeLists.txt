@@ -114,6 +114,8 @@ if(NOT HFX_OPENRGB_SOURCE_DIR AND DEFINED ENV{HFX_OPENRGB_SOURCE_DIR})
 endif()
 
 if(HFX_OPENRGB_SOURCE_DIR)
+    find_package(Qt5 5.15 REQUIRED COMPONENTS Core Gui Widgets)
+
     execute_process(
         COMMAND git rev-parse HEAD
         WORKING_DIRECTORY "${HFX_OPENRGB_SOURCE_DIR}"
@@ -228,6 +230,78 @@ if(HFX_OPENRGB_SOURCE_DIR)
         )
     endif()
 
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/hyperflux-next-openrgb.json.in"
+        "${HFX_OPENRGB_GENERATED_INCLUDE_DIR}/hyperflux-next-openrgb.json"
+        @ONLY
+    )
+
+    add_library(
+        hyperflux_openrgb_qt_shell
+        STATIC
+            src/plugin_application.cpp
+            src/qt_dispatcher.cpp
+    )
+    set_target_properties(
+        hyperflux_openrgb_qt_shell
+        PROPERTIES POSITION_INDEPENDENT_CODE ON
+    )
+    target_compile_features(hyperflux_openrgb_qt_shell PUBLIC cxx_std_20)
+    target_include_directories(
+        hyperflux_openrgb_qt_shell
+        PUBLIC
+            "${CMAKE_CURRENT_SOURCE_DIR}/include"
+            "${HFX_OPENRGB_GENERATED_INCLUDE_DIR}"
+        PRIVATE
+            "${HFX_OPENRGB_SOURCE_DIR}"
+            "${HFX_OPENRGB_SOURCE_DIR}/RGBController"
+            "${HFX_OPENRGB_SOURCE_DIR}/i2c_smbus"
+    )
+    target_link_libraries(
+        hyperflux_openrgb_qt_shell
+        PUBLIC hyperflux_openrgb_native_controller Qt5::Core
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(
+            hyperflux_openrgb_qt_shell
+            PRIVATE -Wall -Wextra -Werror -pedantic
+        )
+    endif()
+
+    add_library(
+        hyperflux-next-openrgb
+        MODULE
+            src/openrgb_plugin.cpp
+            "${HFX_OPENRGB_GENERATED_INCLUDE_DIR}/hyperflux-next-openrgb.json"
+    )
+    set_target_properties(
+        hyperflux-next-openrgb
+        PROPERTIES
+            AUTOMOC ON
+            PREFIX ""
+            OUTPUT_NAME "hyperflux-next-openrgb"
+    )
+    target_compile_features(hyperflux-next-openrgb PRIVATE cxx_std_20)
+    target_include_directories(
+        hyperflux-next-openrgb
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/include"
+            "${HFX_OPENRGB_GENERATED_INCLUDE_DIR}"
+            "${HFX_OPENRGB_SOURCE_DIR}"
+            "${HFX_OPENRGB_SOURCE_DIR}/RGBController"
+            "${HFX_OPENRGB_SOURCE_DIR}/i2c_smbus"
+    )
+    target_link_libraries(
+        hyperflux-next-openrgb
+        PRIVATE hyperflux_openrgb_qt_shell Qt5::Core Qt5::Gui Qt5::Widgets
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(
+            hyperflux-next-openrgb
+            PRIVATE -Wall -Wextra -Werror -pedantic
+        )
+    endif()
+
     if(BUILD_TESTING)
         add_executable(
             openrgb-razer-registry-contract
@@ -324,6 +398,55 @@ if(HFX_OPENRGB_SOURCE_DIR)
         add_test(
             NAME openrgb-plugin-runtime-contract
             COMMAND openrgb-plugin-runtime-contract
+        )
+
+        add_executable(
+            openrgb-plugin-application-contract
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_plugin_application_contract.cpp"
+        )
+        target_link_libraries(
+            openrgb-plugin-application-contract
+            PRIVATE hyperflux_openrgb_qt_shell Qt5::Core
+        )
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            target_compile_options(
+                openrgb-plugin-application-contract
+                PRIVATE -Wall -Wextra -Werror -pedantic
+            )
+        endif()
+        add_test(
+            NAME openrgb-plugin-application-contract
+            COMMAND openrgb-plugin-application-contract
+        )
+
+        add_executable(
+            openrgb-plugin-loader-contract
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_plugin_loader_contract.cpp"
+        )
+        target_compile_features(openrgb-plugin-loader-contract PRIVATE cxx_std_20)
+        target_include_directories(
+            openrgb-plugin-loader-contract
+            PRIVATE
+                "${HFX_OPENRGB_SOURCE_DIR}"
+                "${HFX_OPENRGB_SOURCE_DIR}/i2c_smbus"
+        )
+        target_link_libraries(
+            openrgb-plugin-loader-contract
+            PRIVATE Qt5::Core Qt5::Gui Qt5::Widgets
+        )
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            target_compile_options(
+                openrgb-plugin-loader-contract
+                PRIVATE -Wall -Wextra -Werror -pedantic
+            )
+        endif()
+        add_test(
+            NAME openrgb-plugin-loader-contract
+            COMMAND openrgb-plugin-loader-contract $<TARGET_FILE:hyperflux-next-openrgb>
+        )
+        set_tests_properties(
+            openrgb-plugin-loader-contract
+            PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
         )
     endif()
 else()
