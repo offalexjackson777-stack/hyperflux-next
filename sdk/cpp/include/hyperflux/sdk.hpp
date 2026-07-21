@@ -6,4 +6,5 @@
 #include <hyperflux/sdk/client.hpp>
 #include <hyperflux/sdk/error.hpp>
 #include <hyperflux/sdk/identity.hpp>
+#include <hyperflux/sdk/lighting.hpp>
 #include <hyperflux/sdk/result.hpp>

@@ -46,7 +46,26 @@ struct TransactionSubmission
     std::vector<v5::LightingFrame> frames;
 };
 
-class Client
+class LightingBridge
+{
+public:
+    virtual ~LightingBridge() = default;
+
+    [[nodiscard]] virtual Result<TransactionId> next_transaction_id() = 0;
+    [[nodiscard]] virtual Result<v5::LeaseResult> acquire_lease(
+        std::vector<v5::ResourceKey> resources,
+        LeaseDurationMs duration_ms) = 0;
+    [[nodiscard]] virtual Result<v5::LeaseResult> renew_lease(
+        LeaseId lease_id,
+        LeaseDurationMs duration_ms) = 0;
+    [[nodiscard]] virtual Result<v5::LeaseResult> release_lease(LeaseId lease_id) = 0;
+    [[nodiscard]] virtual Result<v5::TransactionResult> submit_transaction(
+        TransactionSubmission submission) = 0;
+    [[nodiscard]] virtual Result<v5::TransactionResult> transaction_outcome(
+        TransactionId transaction_id) = 0;
+};
+
+class Client final : public LightingBridge
 {
 public:
     Client(const Client&) = delete;
@@ -66,20 +85,20 @@ public:
     [[nodiscard]] const v5::ServerHello& server_hello() const noexcept;
     [[nodiscard]] const ClientId& client_id() const noexcept;
 
-    [[nodiscard]] Result<TransactionId> next_transaction_id();
+    [[nodiscard]] Result<TransactionId> next_transaction_id() override;
     [[nodiscard]] Result<v5::BridgeSnapshot> snapshot();
     [[nodiscard]] Result<v5::IntegrationView> integration_view();
     [[nodiscard]] Result<v5::LeaseResult> acquire_lease(
         std::vector<v5::ResourceKey> resources,
-        LeaseDurationMs duration_ms);
+        LeaseDurationMs duration_ms) override;
     [[nodiscard]] Result<v5::LeaseResult> renew_lease(
         LeaseId lease_id,
-        LeaseDurationMs duration_ms);
-    [[nodiscard]] Result<v5::LeaseResult> release_lease(LeaseId lease_id);
+        LeaseDurationMs duration_ms) override;
+    [[nodiscard]] Result<v5::LeaseResult> release_lease(LeaseId lease_id) override;
     [[nodiscard]] Result<v5::TransactionResult> submit_transaction(
-        TransactionSubmission submission);
+        TransactionSubmission submission) override;
     [[nodiscard]] Result<v5::TransactionResult> transaction_outcome(
-        TransactionId transaction_id);
+        TransactionId transaction_id) override;
     [[nodiscard]] Result<v5::EventBatch> subscribe(EventSubscription subscription);
     [[nodiscard]] Result<v5::DiagnosticSnapshot> diagnostics();
 

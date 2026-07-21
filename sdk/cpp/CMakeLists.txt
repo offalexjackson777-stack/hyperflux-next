@@ -9,6 +9,7 @@ add_library(
         src/channel.cpp
         src/client.cpp
         src/identity.cpp
+        src/lighting.cpp
 )
 set_target_properties(hyperflux_sdk PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_features(hyperflux_sdk PUBLIC cxx_std_20)
@@ -38,4 +39,5 @@ if(BUILD_TESTING)
     add_hyperflux_sdk_contract(protocol-json-contract protocol_json_contract.cpp)
     add_hyperflux_sdk_contract(sdk-client-contract sdk_client_contract.cpp)
     add_hyperflux_sdk_contract(sdk-channel-contract sdk_channel_contract.cpp)
+    add_hyperflux_sdk_contract(sdk-lighting-contract sdk_lighting_contract.cpp)
 endif()

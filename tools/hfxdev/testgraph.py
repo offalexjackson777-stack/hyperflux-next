@@ -48,6 +48,7 @@ KNOWN_RUNNERS = {
     "rust-unit",
     "simulator-contracts",
     "cpp-sdk-contracts",
+    "openrgb-adapter-contracts",
     "kernel-profile-contracts",
 }
 IDENTIFIER = re.compile(r"^[a-z0-9][a-z0-9._-]{0,127}$")

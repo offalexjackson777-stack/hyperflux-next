@@ -31,6 +31,12 @@ enum class ErrorCode
     ResponseRequestMismatch,
     ServerInstanceChanged,
     ServerRejected,
+    InvalidController,
+    InvalidLightingFrame,
+    MixedReceiverGeneration,
+    OwnershipConflict,
+    LeaseRejected,
+    SessionInactive,
 };
 
 struct Error

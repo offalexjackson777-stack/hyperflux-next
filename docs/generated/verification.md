@@ -23,6 +23,7 @@ Every current node is software-only and has zero hardware-write authority.
 | 14 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 180s | `rerun` |
 | 15 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
 | 16 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
+| 17 | `openrgb-adapter-contracts` | `integrations` | `none` | `false` | 120s | `rerun` |
 
 ## Dependencies
 
@@ -44,6 +45,7 @@ flowchart LR
     kernel_profile_contracts["kernel-profile-contracts"]
     rust_unit["rust-unit"]
     simulator_contracts["simulator-contracts"]
+    openrgb_adapter_contracts["openrgb-adapter-contracts"]
     foundation_contracts --> schema_contracts
     foundation_contracts --> privacy_boundary
     foundation_contracts --> toolchain_contract
@@ -68,4 +70,7 @@ flowchart LR
     rust_clippy --> simulator_contracts
     schema_contracts --> simulator_contracts
     profile_contracts --> simulator_contracts
+    cpp_sdk_contracts --> openrgb_adapter_contracts
+    integration_contracts --> openrgb_adapter_contracts
+    profile_contracts --> openrgb_adapter_contracts
 ```

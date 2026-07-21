@@ -291,6 +291,32 @@ def _run_cpp_sdk_contracts(root: Path, node: TestNode) -> None:
         "C++ SDK channel contract",
         node.timeout_seconds,
     )
+    sdk_lighting_binary = root / "build" / "sdk-lighting-contract"
+    _run_command(
+        root,
+        [
+            "clang++",
+            "-std=c++20",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-Isdk/cpp/include",
+            "-Isdk/cpp/vendor/include",
+            "tests/cpp/sdk_lighting_contract.cpp",
+            "sdk/cpp/src/lighting.cpp",
+            "-o",
+            str(sdk_lighting_binary),
+        ],
+        "C++ SDK lighting contract compile",
+        node.timeout_seconds,
+    )
+    _run_command(
+        root,
+        [str(sdk_lighting_binary)],
+        "C++ SDK lighting contract",
+        node.timeout_seconds,
+    )
 
 
 def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
@@ -393,6 +419,48 @@ def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
             f"kernel module build ({label})",
             node.timeout_seconds,
         )
+
+
+def _run_openrgb_adapter_contracts(root: Path, node: TestNode) -> None:
+    configured = os.environ.get("HFX_OPENRGB_SOURCE_DIR")
+    if not configured:
+        raise ModelError(
+            "OpenRGB adapter verification requires HFX_OPENRGB_SOURCE_DIR to name "
+            "the pinned OpenRGB checkout"
+        )
+    source = Path(configured)
+    if not source.is_absolute() or not (source / "OpenRGBPluginInterface.h").is_file():
+        raise ModelError(f"pinned OpenRGB source is unavailable: {source}")
+
+    build_directory = root / "build" / "openrgb-adapter"
+    if build_directory.exists():
+        shutil.rmtree(build_directory)
+    _run_command(
+        root,
+        [
+            "cmake",
+            "-S",
+            "integrations/openrgb",
+            "-B",
+            str(build_directory),
+            "-DCMAKE_BUILD_TYPE=Release",
+            f"-DHFX_OPENRGB_SOURCE_DIR={source}",
+        ],
+        "OpenRGB adapter configure",
+        node.timeout_seconds,
+    )
+    _run_command(
+        root,
+        ["cmake", "--build", str(build_directory), "--parallel", "4"],
+        "OpenRGB adapter build",
+        node.timeout_seconds,
+    )
+    _run_command(
+        root,
+        ["ctest", "--test-dir", str(build_directory), "--output-on-failure"],
+        "OpenRGB adapter contracts",
+        node.timeout_seconds,
+    )
 
 
 def _check_build_cache_clock(root: Path, *, now: float | None = None) -> None:
@@ -592,6 +660,7 @@ RUNNERS = {
     "rust-unit": _run_rust_unit,
     "simulator-contracts": _run_simulator_contracts,
     "cpp-sdk-contracts": _run_cpp_sdk_contracts,
+    "openrgb-adapter-contracts": _run_openrgb_adapter_contracts,
     "kernel-profile-contracts": _run_kernel_profile_contracts,
 }
 
