@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/linux-runtime-v1.json",
+  "title": "HyperFlux Linux runtime authority",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "bridge", "kernel"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-linux-runtime-v1"},
+    "bridge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["service_account", "runtime_directory", "socket_name", "state_directory", "configuration_directory"],
+      "properties": {
+        "service_account": {"type": "string", "pattern": "^[a-z_][a-z0-9_-]{0,31}$"},
+        "runtime_directory": {"type": "string", "pattern": "^/run/[a-z0-9][a-z0-9_-]{0,63}$"},
+        "socket_name": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}\\.sock$"},
+        "state_directory": {"type": "string", "pattern": "^/var/lib/[a-z0-9][a-z0-9_-]{0,63}$"},
+        "configuration_directory": {"type": "string", "pattern": "^/etc/[a-z0-9][a-z0-9_-]{0,63}$"}
+      }
+    },
+    "kernel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["module_name", "device_prefix"],
+      "properties": {
+        "module_name": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"},
+        "device_prefix": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"}
+      }
+    }
+  }
+}

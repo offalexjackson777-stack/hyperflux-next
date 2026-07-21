@@ -4,6 +4,60 @@ project(hyperflux_openrgb LANGUAGES CXX)
 include(CTest)
 find_package(Threads REQUIRED)
 
+get_filename_component(
+    HFX_REPOSITORY_ROOT
+    "${CMAKE_CURRENT_SOURCE_DIR}/../.."
+    ABSOLUTE
+)
+
+file(READ "${HFX_REPOSITORY_ROOT}/runtime/linux.json" HFX_LINUX_RUNTIME_JSON)
+string(JSON HFX_LINUX_RUNTIME_SCHEMA GET "${HFX_LINUX_RUNTIME_JSON}" schema)
+if(NOT HFX_LINUX_RUNTIME_SCHEMA STREQUAL "hyperflux-linux-runtime-v1")
+    message(FATAL_ERROR "runtime/linux.json uses an unsupported schema")
+endif()
+string(
+    JSON HFX_BRIDGE_SERVICE_ACCOUNT
+    GET "${HFX_LINUX_RUNTIME_JSON}" bridge service_account
+)
+string(
+    JSON HFX_BRIDGE_RUNTIME_DIRECTORY
+    GET "${HFX_LINUX_RUNTIME_JSON}" bridge runtime_directory
+)
+string(
+    JSON HFX_BRIDGE_SOCKET_NAME
+    GET "${HFX_LINUX_RUNTIME_JSON}" bridge socket_name
+)
+
+file(
+    STRINGS "${HFX_REPOSITORY_ROOT}/Cargo.toml" HFX_COMPONENT_VERSION_LINES
+    REGEX "^version = \"[^\"]+\"$"
+)
+list(LENGTH HFX_COMPONENT_VERSION_LINES HFX_COMPONENT_VERSION_LINE_COUNT)
+if(NOT HFX_COMPONENT_VERSION_LINE_COUNT EQUAL 1)
+    message(FATAL_ERROR "Cargo.toml must contain exactly one workspace package version")
+endif()
+list(GET HFX_COMPONENT_VERSION_LINES 0 HFX_COMPONENT_VERSION_LINE)
+string(
+    REGEX REPLACE "^version = \"([^\"]+)\"$" "\\1"
+    HFX_COMPONENT_VERSION "${HFX_COMPONENT_VERSION_LINE}"
+)
+
+set(
+    HFX_SOURCE_REVISION "development"
+    CACHE STRING "Source revision embedded in the OpenRGB plugin"
+)
+if(HFX_SOURCE_REVISION STREQUAL "")
+    message(FATAL_ERROR "HFX_SOURCE_REVISION may not be empty")
+endif()
+
+set(HFX_OPENRGB_GENERATED_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+file(MAKE_DIRECTORY "${HFX_OPENRGB_GENERATED_INCLUDE_DIR}/hyperflux/openrgb")
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/hyperflux/openrgb/build_config.hpp.in"
+    "${HFX_OPENRGB_GENERATED_INCLUDE_DIR}/hyperflux/openrgb/build_config.hpp"
+    @ONLY
+)
+
 option(
     HFX_OPENRGB_THREAD_SANITIZER
     "Instrument HyperFlux-owned OpenRGB code with ThreadSanitizer"
@@ -44,6 +98,7 @@ target_include_directories(
     hyperflux_openrgb_core
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${HFX_OPENRGB_GENERATED_INCLUDE_DIR}"
 )
 target_link_libraries(hyperflux_openrgb_core PUBLIC hyperflux_sdk)
 hfx_openrgb_enable_thread_sanitizer(hyperflux_openrgb_core)

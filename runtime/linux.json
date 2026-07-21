@@ -1,0 +1,15 @@
+{
+  "$schema": "../schemas/linux-runtime.schema.json",
+  "schema": "hyperflux-linux-runtime-v1",
+  "bridge": {
+    "service_account": "hyperflux-next",
+    "runtime_directory": "/run/hyperflux-next",
+    "socket_name": "bridge.sock",
+    "state_directory": "/var/lib/hyperflux-next",
+    "configuration_directory": "/etc/hyperflux-next"
+  },
+  "kernel": {
+    "module_name": "hid-hyperflux-next",
+    "device_prefix": "hyperflux-next"
+  }
+}
