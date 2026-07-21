@@ -41,6 +41,12 @@ public:
     RecoveringClient(RecoveringClient&&) = delete;
     RecoveringClient& operator=(RecoveringClient&&) = delete;
 
+    /// Creates a disconnected client. The first SDK operation establishes the
+    /// connection, allowing application plugins to load before the service.
+    [[nodiscard]] static Result<std::unique_ptr<RecoveringClient>> create(
+        std::unique_ptr<ClientFactory> factory);
+
+    /// Creates a client and verifies the first connection immediately.
     [[nodiscard]] static Result<std::unique_ptr<RecoveringClient>> connect(
         std::unique_ptr<ClientFactory> factory);
 
@@ -68,6 +74,7 @@ private:
         std::unique_ptr<ClientFactory> factory,
         std::unique_ptr<ClientApi> connection);
 
+    [[nodiscard]] Result<void> ensure_connected();
     [[nodiscard]] Result<void> reconnect();
     [[nodiscard]] Result<v5::TransactionResult> unknown_outcome(
         TransactionId transaction_id) const;
@@ -75,6 +82,11 @@ private:
     template<typename T, typename Operation>
     [[nodiscard]] Result<T> retry_read(Operation operation)
     {
+        auto ready = ensure_connected();
+        if(!ready)
+        {
+            return Result<T>::failure(ready.error());
+        }
         auto result = operation();
         if(result || !is_connection_error(result.error().code))
         {
@@ -90,7 +102,7 @@ private:
 
     std::unique_ptr<ClientFactory> factory_;
     std::unique_ptr<ClientApi> connection_;
-    std::uint64_t connection_epoch_ = 1;
+    std::uint64_t connection_epoch_ = 0;
 };
 
 } // namespace hyperflux::sdk

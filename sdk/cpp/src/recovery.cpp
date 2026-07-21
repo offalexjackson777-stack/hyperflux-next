@@ -69,6 +69,22 @@ RecoveringClient::RecoveringClient(
 Result<std::unique_ptr<RecoveringClient>> RecoveringClient::connect(
     std::unique_ptr<ClientFactory> factory)
 {
+    auto client = create(std::move(factory));
+    if(!client)
+    {
+        return client;
+    }
+    auto connected = client.value()->ensure_connected();
+    if(!connected)
+    {
+        return Result<std::unique_ptr<RecoveringClient>>::failure(connected.error());
+    }
+    return client;
+}
+
+Result<std::unique_ptr<RecoveringClient>> RecoveringClient::create(
+    std::unique_ptr<ClientFactory> factory)
+{
     if(factory == nullptr)
     {
         return Result<std::unique_ptr<RecoveringClient>>::failure({
@@ -77,20 +93,20 @@ Result<std::unique_ptr<RecoveringClient>> RecoveringClient::connect(
             std::nullopt,
         });
     }
-    auto connection = factory->connect();
-    if(!connection)
-    {
-        return Result<std::unique_ptr<RecoveringClient>>::failure(connection.error());
-    }
     return Result<std::unique_ptr<RecoveringClient>>::success(
         std::unique_ptr<RecoveringClient>(new RecoveringClient(
             std::move(factory),
-            std::move(connection).value())));
+            nullptr)));
 }
 
 std::uint64_t RecoveringClient::connection_epoch() const noexcept
 {
     return connection_epoch_;
+}
+
+Result<void> RecoveringClient::ensure_connected()
+{
+    return connection_ == nullptr ? reconnect() : Result<void>::success();
 }
 
 Result<void> RecoveringClient::reconnect()
@@ -115,7 +131,7 @@ Result<void> RecoveringClient::reconnect()
 
 Result<TransactionId> RecoveringClient::next_transaction_id()
 {
-    return connection_->next_transaction_id();
+    return retry_read<TransactionId>([this] { return connection_->next_transaction_id(); });
 }
 
 Result<v5::BridgeSnapshot> RecoveringClient::snapshot()
@@ -141,6 +157,11 @@ Result<v5::LeaseResult> RecoveringClient::renew_lease(
     LeaseId lease_id,
     LeaseDurationMs duration_ms)
 {
+    auto ready = ensure_connected();
+    if(!ready)
+    {
+        return Result<v5::LeaseResult>::failure(ready.error());
+    }
     auto result = connection_->renew_lease(std::move(lease_id), duration_ms);
     if(result || !is_connection_error(result.error().code))
     {
@@ -153,6 +174,11 @@ Result<v5::LeaseResult> RecoveringClient::renew_lease(
 
 Result<v5::LeaseResult> RecoveringClient::release_lease(LeaseId lease_id)
 {
+    auto ready = ensure_connected();
+    if(!ready)
+    {
+        return Result<v5::LeaseResult>::failure(ready.error());
+    }
     auto result = connection_->release_lease(std::move(lease_id));
     if(result || !is_connection_error(result.error().code))
     {
@@ -166,6 +192,11 @@ Result<v5::LeaseResult> RecoveringClient::release_lease(LeaseId lease_id)
 Result<v5::TransactionResult> RecoveringClient::submit_transaction(
     TransactionSubmission submission)
 {
+    auto ready = ensure_connected();
+    if(!ready)
+    {
+        return Result<v5::TransactionResult>::failure(ready.error());
+    }
     const auto transaction_id = submission.transaction_id;
     auto result = connection_->submit_transaction(std::move(submission));
     if(result || !is_connection_error(result.error().code))

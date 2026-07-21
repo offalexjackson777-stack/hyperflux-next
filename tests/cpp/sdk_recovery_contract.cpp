@@ -269,6 +269,34 @@ private:
     std::shared_ptr<Counters> counters_;
 };
 
+class DelayedFactory final : public hyperflux::sdk::ClientFactory
+{
+public:
+    explicit DelayedFactory(std::shared_ptr<Counters> counters)
+        : counters_(std::move(counters))
+    {
+    }
+
+    hyperflux::sdk::Result<std::unique_ptr<hyperflux::sdk::ClientApi>> connect() override
+    {
+        using namespace hyperflux;
+        ++counters_->connections;
+        if(counters_->connections == 1)
+        {
+            return sdk::Result<std::unique_ptr<sdk::ClientApi>>::failure(
+                failure(sdk::ErrorCode::SocketConnect));
+        }
+        return sdk::Result<std::unique_ptr<sdk::ClientApi>>::success(
+            std::make_unique<FaultClient>(
+                Scenario::ServerRejection,
+                counters_->connections,
+                counters_));
+    }
+
+private:
+    std::shared_ptr<Counters> counters_;
+};
+
 struct Fixture
 {
     std::shared_ptr<Counters> counters;
@@ -323,12 +351,34 @@ int main()
 {
     using namespace hyperflux;
 
+    auto delayed_counters = std::make_shared<Counters>();
+    auto delayed = sdk::RecoveringClient::create(
+        std::make_unique<DelayedFactory>(delayed_counters));
+    if(!delayed || delayed.value()->connection_epoch() != 0
+       || delayed_counters->connections != 0)
+    {
+        return 1;
+    }
+    const auto service_unavailable = delayed.value()->integration_view();
+    if(service_unavailable
+       || service_unavailable.error().code != sdk::ErrorCode::SocketConnect
+       || delayed.value()->connection_epoch() != 0 || delayed_counters->connections != 1)
+    {
+        return 2;
+    }
+    const auto available = delayed.value()->integration_view();
+    if(available || available.error().code != sdk::ErrorCode::ServerRejected
+       || delayed.value()->connection_epoch() != 1 || delayed_counters->connections != 2)
+    {
+        return 3;
+    }
+
     auto reads = fixture(Scenario::ReadRetry);
     const auto view = reads.client->integration_view();
     if(!view || reads.client->connection_epoch() != 2 || reads.counters->connections != 2
        || reads.counters->integration_reads != 2)
     {
-        return 1;
+        return 4;
     }
 
     auto acquisitions = fixture(Scenario::AcquireRetry);
@@ -338,7 +388,7 @@ int main()
     if(!acquired || acquisitions.client->connection_epoch() != 2
        || acquisitions.counters->acquisitions != 2)
     {
-        return 2;
+        return 5;
     }
 
     auto retained = fixture(Scenario::AmbiguousWriteRetained);
@@ -347,7 +397,7 @@ int main()
        || retained.counters->submissions != 1 || retained.counters->outcome_lookups != 1
        || retained.client->connection_epoch() != 2)
     {
-        return 3;
+        return 6;
     }
 
     auto unknown = fixture(Scenario::AmbiguousWriteReconnectFailure);
@@ -361,7 +411,7 @@ int main()
        || unknown.counters->submissions != 1 || unknown.counters->connections != 2
        || unknown.client->connection_epoch() != 1)
     {
-        return 4;
+        return 7;
     }
 
     auto stale = fixture(Scenario::StaleLease);
@@ -371,7 +421,7 @@ int main()
     if(renewed || renewed.error().code != sdk::ErrorCode::SessionInactive
        || stale.counters->renewals != 1 || stale.client->connection_epoch() != 2)
     {
-        return 5;
+        return 8;
     }
 
     auto events = fixture(Scenario::SubscriptionReset);
@@ -384,7 +434,7 @@ int main()
        || !events.counters->fresh_subscription_seen || events.counters->subscriptions != 2
        || events.client->connection_epoch() != 2)
     {
-        return 6;
+        return 9;
     }
 
     auto rejected = fixture(Scenario::ServerRejection);
@@ -393,7 +443,7 @@ int main()
        || rejected.counters->connections != 1 || rejected.counters->integration_reads != 1
        || rejected.client->connection_epoch() != 1)
     {
-        return 7;
+        return 10;
     }
 
     return 0;

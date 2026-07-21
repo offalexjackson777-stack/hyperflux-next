@@ -52,6 +52,54 @@ int main()
         return failure(__LINE__);
     }
 
+    auto startup_bridge = std::make_unique<FakeBridge>(view(1, 1));
+    startup_bridge->fail_integration_call = 1;
+    std::mutex startup_mutex;
+    std::condition_variable startup_changed;
+    std::size_t startup_refreshes = 0;
+    std::size_t startup_notices = 0;
+    WorkerConfig startup_config;
+    startup_config.poll_interval_ms = 1;
+    startup_config.reconnect_initial_ms = 1;
+    startup_config.reconnect_max_ms = 4;
+    auto startup_created = RuntimeWorker::create(
+        std::move(startup_bridge),
+        startup_config,
+        {[&](RuntimeStep output) {
+             std::lock_guard lock(startup_mutex);
+             startup_refreshes += output.full_refresh ? 1U : 0U;
+             startup_notices += output.notices.size();
+             startup_changed.notify_all();
+         },
+         {}});
+    if(!startup_created)
+    {
+        return failure(__LINE__);
+    }
+    auto startup_worker = std::move(startup_created).value();
+    if(!startup_worker->start())
+    {
+        return failure(__LINE__);
+    }
+    {
+        std::unique_lock lock(startup_mutex);
+        if(!startup_changed.wait_for(lock, std::chrono::seconds(2), [&] {
+               return startup_refreshes == 1 && startup_notices == 1;
+           }))
+        {
+            startup_worker->stop();
+            return failure(__LINE__);
+        }
+    }
+    if(startup_worker->state() != WorkerState::Running
+       || startup_worker->controllers().size() != 2
+       || startup_worker->last_error().has_value())
+    {
+        startup_worker->stop();
+        return failure(__LINE__);
+    }
+    startup_worker->stop();
+
     auto bridge = std::make_unique<FakeBridge>(view(1, 1));
     auto* bridge_observer = bridge.get();
     bridge_observer->terminal_on_submit = true;
