@@ -93,6 +93,13 @@ OpenRgbPluginApplication::OpenRgbPluginApplication()
 }
 
 OpenRgbPluginApplication::OpenRgbPluginApplication(
+    std::function<void()> on_state_changed)
+    : OpenRgbPluginApplication()
+{
+    coordinator_config_.on_state_changed = std::move(on_state_changed);
+}
+
+OpenRgbPluginApplication::OpenRgbPluginApplication(
     RuntimeFactory runtime_factory,
     PluginCoordinatorConfig coordinator_config)
     : runtime_factory_(std::move(runtime_factory)),
@@ -290,6 +297,17 @@ std::vector<ControllerModel> OpenRgbPluginApplication::controllers() const
     }
     return coordinator == nullptr ? std::vector<ControllerModel> {}
                                   : coordinator->controllers();
+}
+
+std::vector<InventoryReceiverModel> OpenRgbPluginApplication::inventory() const
+{
+    std::shared_ptr<PluginCoordinator> coordinator;
+    {
+        std::lock_guard lock(lifecycle_mutex_);
+        coordinator = coordinator_;
+    }
+    return coordinator == nullptr ? std::vector<InventoryReceiverModel> {}
+                                  : coordinator->inventory();
 }
 
 void OpenRgbPluginApplication::detection_started_callback(void* context) noexcept

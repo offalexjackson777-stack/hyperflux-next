@@ -243,6 +243,12 @@ std::vector<ControllerModel> RuntimeWorker::controllers() const
     return controllers_;
 }
 
+RuntimeSnapshot RuntimeWorker::snapshot() const
+{
+    std::lock_guard lock(mutex_);
+    return {controllers_, inventory_};
+}
+
 std::optional<sdk::Error> RuntimeWorker::last_error() const
 {
     std::lock_guard lock(mutex_);
@@ -260,6 +266,7 @@ void RuntimeWorker::deliver(RuntimeStep output) noexcept
     {
         std::lock_guard lock(mutex_);
         controllers_ = core_.controllers();
+        inventory_ = core_.inventory();
     }
     if(!meaningful(output) || !callbacks_.on_step)
     {

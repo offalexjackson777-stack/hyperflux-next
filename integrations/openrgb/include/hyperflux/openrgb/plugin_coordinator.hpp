@@ -29,6 +29,9 @@ struct PluginCoordinatorConfig
     WorkerConfig worker {};
     KeyboardLayoutVariant keyboard_layout = KeyboardLayoutVariant::AnsiQwerty;
     std::string component_version;
+    /// Edge-triggered state notification. The callback can run on the runtime
+    /// worker thread, must be thread-safe and should return promptly.
+    std::function<void()> on_state_changed;
 };
 
 struct PluginCoordinatorStatus
@@ -69,13 +72,15 @@ public:
 
     [[nodiscard]] PluginCoordinatorStatus status() const;
     [[nodiscard]] std::vector<ControllerModel> controllers() const;
+    [[nodiscard]] std::vector<InventoryReceiverModel> inventory() const;
 
 private:
     PluginCoordinator(ControllerHost& host, ApplicationDispatcher& dispatcher) noexcept;
 
     void queue_runtime_snapshot() noexcept;
-    void apply_runtime_snapshot(std::vector<ControllerModel> models) noexcept;
+    void apply_runtime_snapshot(RuntimeSnapshot snapshot) noexcept;
     void record_error(sdk::Error error) noexcept;
+    void notify_state_changed() noexcept;
 
     ControllerHost* host_;
     ApplicationDispatcher* dispatcher_;
@@ -91,6 +96,10 @@ private:
     bool started_ = false;
     bool stopped_ = false;
     std::optional<sdk::Error> last_error_;
+    std::vector<InventoryReceiverModel> inventory_;
+    // Assigned before the worker starts and immutable for the coordinator's
+    // lifetime, so notification never needs a potentially-throwing copy.
+    std::function<void()> on_state_changed_;
 };
 
 } // namespace hyperflux::openrgb::native

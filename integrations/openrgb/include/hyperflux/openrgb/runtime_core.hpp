@@ -4,6 +4,7 @@
 
 #include "controller_model.hpp"
 #include "dispatch_queue.hpp"
+#include "inventory_model.hpp"
 #include "runtime_bridge.hpp"
 
 #include <cstddef>
@@ -97,6 +98,7 @@ public:
 
     [[nodiscard]] bool initialized() const noexcept;
     [[nodiscard]] const std::vector<ControllerModel>& controllers() const noexcept;
+    [[nodiscard]] const std::vector<InventoryReceiverModel>& inventory() const noexcept;
     [[nodiscard]] std::size_t pending_transaction_count() const noexcept;
     [[nodiscard]] std::size_t queued_stable_count() const noexcept;
     [[nodiscard]] std::set<std::string> queued_effect_targets() const;
@@ -152,6 +154,7 @@ private:
     std::uint64_t connection_epoch_ = 0;
     bool refresh_required_ = false;
     std::vector<ControllerModel> controllers_;
+    std::vector<InventoryReceiverModel> inventory_;
     std::optional<SubscriptionId> subscription_id_;
     std::optional<v5::EventCursor> cursor_;
     std::map<std::string, ReceiverSession> sessions_;

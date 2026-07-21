@@ -6,6 +6,7 @@
 
 #include <QCoreApplication>
 
+#include <atomic>
 #include <chrono>
 #include <cstdlib>
 #include <functional>
@@ -161,11 +162,16 @@ int main(int argc, char** argv)
     using namespace hyperflux::openrgb::native;
 
     auto state = std::make_shared<HostState>();
+    std::atomic_size_t notifications {0};
     PluginCoordinatorConfig config;
     config.component_version = "0.0.0-dev.1";
     config.worker.poll_interval_ms = 1;
     config.worker.reconnect_initial_ms = 1;
     config.worker.reconnect_max_ms = 4;
+    config.on_state_changed = [&notifications]
+    {
+        notifications.fetch_add(1, std::memory_order_relaxed);
+    };
     OpenRgbPluginApplication plugin(
         []() -> sdk::Result<std::unique_ptr<RuntimeBridge>>
         {
@@ -177,6 +183,12 @@ int main(int argc, char** argv)
 
     if(!plugin.load(std::make_unique<Host>(state))
        || !wait_until([&] { return plugin.status().coordinator.controllers == 2; }))
+    {
+        return failure(__LINE__);
+    }
+    if(notifications.load(std::memory_order_relaxed) == 0
+       || plugin.inventory().size() != 1
+       || plugin.inventory().front().devices.size() != 2)
     {
         return failure(__LINE__);
     }
@@ -234,7 +246,7 @@ int main(int argc, char** argv)
             return failure(__LINE__);
         }
     }
-    if(plugin.status().loaded || !plugin.controllers().empty())
+    if(plugin.status().loaded || !plugin.controllers().empty() || !plugin.inventory().empty())
     {
         return failure(__LINE__);
     }

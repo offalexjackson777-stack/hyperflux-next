@@ -126,6 +126,50 @@ inline v5::ControllerView native_controller_view(DeviceKind kind,
     };
 }
 
+inline v5::DeviceInventoryView native_inventory_view(DeviceKind kind,
+    ControllerAvailability availability = ControllerAvailability::Ready)
+{
+    const auto fixture = native_device_fixture(kind);
+    const auto device_id = text<LogicalDeviceId>(fixture.device_id);
+    const auto sleeping = availability == ControllerAvailability::Sleeping;
+    return {
+        device_id,
+        fixture.kind,
+        number<ProductId>(fixture.product_id),
+        v5::ProfileBindingView {
+            text<ProfileId>(std::string("child.test.") + std::string(fixture.device_id)),
+            text<ProfileDigest>(std::string(64, 'b')),
+        },
+        text<ModelName>(fixture.model_name),
+        PairingState::Paired,
+        sleeping ? PresenceState::Sleeping : PresenceState::Available,
+        sleeping ? InventoryAvailability::Sleeping : InventoryAvailability::Available,
+        SupportLevel::ProductionQualified,
+        {{
+            text<EndpointId>(std::string("endpoint-") + std::string(fixture.device_id)),
+            RouteKind::HyperfluxWireless,
+            RouteState::Available,
+            ConnectionMode::Hyperflux24ghz,
+            PowerState::On,
+            sleeping ? SleepState::Asleep : SleepState::Awake,
+            sleeping ? ActivityState::Idle : ActivityState::Active,
+            kind == DeviceKind::Mouse ? ContactState::OnMat : ContactState::NotApplicable,
+            FreshnessState::Fresh,
+            EvidenceConfidence::Observed,
+            std::nullopt,
+            number<MonotonicMs>(100),
+        }},
+        {
+            TelemetryAvailability::Unavailable,
+            std::nullopt,
+            FreshnessState::Unknown,
+            EvidenceConfidence::Unknown,
+            std::nullopt,
+        },
+        {text<CapabilityId>("lighting.direct-frame")},
+    };
+}
+
 inline v5::IntegrationView native_integration_view(std::uint64_t generation,
     std::uint64_t sequence,
     ControllerAvailability mouse = ControllerAvailability::Ready,
@@ -142,6 +186,9 @@ inline v5::IntegrationView native_integration_view(std::uint64_t generation,
         {},
         {},
     };
+    receiver.inventory.reserve(2);
+    receiver.inventory.push_back(native_inventory_view(DeviceKind::Mouse, mouse));
+    receiver.inventory.push_back(native_inventory_view(DeviceKind::Keyboard, keyboard));
     receiver.controllers.reserve(2);
     receiver.controllers.push_back(native_controller_view(DeviceKind::Mouse, generation, mouse));
     receiver.controllers.push_back(

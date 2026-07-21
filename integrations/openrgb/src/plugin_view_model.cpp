@@ -4,6 +4,8 @@
 #include <hyperflux/openrgb/plugin_view_model.hpp>
 
 #include <algorithm>
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <string_view>
 
@@ -22,14 +24,35 @@ std::string controller_type(DeviceKind kind)
     }
 }
 
-std::string availability(ControllerAvailability value)
+std::string pairing(PairingState value)
 {
     switch(value)
     {
-        case ControllerAvailability::Ready: return "Ready";
-        case ControllerAvailability::Sleeping: return "Sleeping";
+        case PairingState::Paired: return "Paired";
+        case PairingState::Unpaired: return "Not paired";
+        case PairingState::Unknown: return "Unknown";
     }
     return "Unknown";
+}
+
+std::string availability(InventoryAvailability value)
+{
+    switch(value)
+    {
+        case InventoryAvailability::Available: return "Available";
+        case InventoryAvailability::Sleeping: return "Sleeping";
+        case InventoryAvailability::Unavailable: return "Unavailable";
+        case InventoryAvailability::Unknown: return "Status unknown";
+        case InventoryAvailability::Unpaired: return "Not paired";
+        case InventoryAvailability::PairingUnknown: return "Pairing unknown";
+        case InventoryAvailability::ReceiverUnavailable: return "Receiver unavailable";
+    }
+    return "Status unknown";
+}
+
+std::string availability(ControllerAvailability value)
+{
+    return value == ControllerAvailability::Ready ? "Available" : "Sleeping";
 }
 
 std::string battery(const v5::BatteryObservation& observation)
@@ -84,16 +107,80 @@ std::string control(const ControllerControlState& state)
     return "Unknown";
 }
 
-PluginControllerRow row(const ControllerModel& controller)
+std::string support(SupportLevel value)
+{
+    switch(value)
+    {
+        case SupportLevel::Candidate: return "Candidate";
+        case SupportLevel::Identified: return "Identified";
+        case SupportLevel::ReadOnly: return "Read only";
+        case SupportLevel::TelemetryQualified: return "Telemetry qualified";
+        case SupportLevel::LightingQualified: return "Lighting qualified";
+        case SupportLevel::SettingsQualified: return "Settings qualified";
+        case SupportLevel::PairingQualified: return "Pairing qualified";
+        case SupportLevel::ProductionQualified: return "Production qualified";
+    }
+    return "Unknown";
+}
+
+std::string fallback_device_name(const InventoryDeviceModel& device)
+{
+    if(device.model_name.has_value())
+    {
+        return std::string(device.model_name->value());
+    }
+    std::ostringstream output;
+    output << "Unknown " << controller_type(device.device_kind) << " (PID 0x"
+           << std::hex << std::uppercase << std::setw(4) << std::setfill('0')
+           << device.product_id.value() << ')';
+    return output.str();
+}
+
+const ControllerModel* controller_for(
+    const InventoryDeviceModel& device,
+    const std::vector<ControllerModel>& controllers)
+{
+    const auto found = std::find_if(
+        controllers.begin(),
+        controllers.end(),
+        [&device](const ControllerModel& controller) {
+            return controller.authority.receiver_id == device.receiver_id
+                && controller.authority.generation_id == device.generation_id
+                && controller.authority.device_id == device.device_id;
+        });
+    return found == controllers.end() ? nullptr : &*found;
+}
+
+PluginDeviceRow row(
+    const InventoryDeviceModel& device,
+    const std::vector<ControllerModel>& controllers)
+{
+    const auto* controller = controller_for(device, controllers);
+    return {
+        device.stable_id,
+        fallback_device_name(device),
+        controller_type(device.device_kind),
+        pairing(device.pairing),
+        availability(device.availability),
+        battery(device.battery),
+        support(device.support_level),
+        controller == nullptr
+            ? "Not exposed"
+            : lighting(*controller) + " | " + control(controller->control),
+    };
+}
+
+PluginDeviceRow fallback_row(const ControllerModel& controller)
 {
     return {
         controller.stable_id,
         std::string(controller.model_name.value()),
         controller_type(controller.device_kind),
+        "Unknown",
         availability(controller.availability),
         battery(controller.battery),
-        lighting(controller),
-        control(controller.control),
+        "Qualified controller",
+        lighting(controller) + " | " + control(controller.control),
     };
 }
 
@@ -116,13 +203,29 @@ void runtime_summary(
     {
         case WorkerState::Running:
             result.tone = PluginHealthTone::Positive;
-            result.headline = result.controllers.empty() ? "No controllable devices" : "Ready";
-            result.summary = result.controllers.empty()
-                ? "The bridge is connected; no qualified controller is currently available."
-                : std::to_string(result.controllers.size())
-                    + (result.controllers.size() == 1
-                           ? " controller is available in OpenRGB."
-                           : " controllers are available in OpenRGB.");
+            result.headline = status.coordinator.controllers == 0
+                ? "No controllable devices"
+                : "Ready";
+            if(result.devices.empty())
+            {
+                result.summary = "The bridge is connected; no paired device is reported.";
+            }
+            else if(status.coordinator.controllers == 0)
+            {
+                result.summary = std::to_string(result.devices.size())
+                    + (result.devices.size() == 1
+                           ? " paired device is known, but it is not currently exposed for lighting."
+                           : " paired devices are known, but none is currently exposed for lighting.");
+            }
+            else
+            {
+                result.summary = std::to_string(result.devices.size())
+                    + (result.devices.size() == 1 ? " paired device; " : " paired devices; ")
+                    + std::to_string(status.coordinator.controllers)
+                    + (status.coordinator.controllers == 1
+                           ? " controller is exposed in OpenRGB."
+                           : " controllers are exposed in OpenRGB.");
+            }
             return;
         case WorkerState::Created:
         case WorkerState::Starting:
@@ -149,19 +252,29 @@ void runtime_summary(
 
 PluginInformationViewModel make_plugin_information_view_model(
     const PluginApplicationStatus& status,
+    const std::vector<InventoryReceiverModel>& inventory,
     const std::vector<ControllerModel>& controllers)
 {
     PluginInformationViewModel result;
-    result.controllers.reserve(controllers.size());
-    std::transform(
-        controllers.begin(),
-        controllers.end(),
-        std::back_inserter(result.controllers),
-        row);
+    for(const auto& receiver : inventory)
+    {
+        for(const auto& device : receiver.devices)
+        {
+            result.devices.push_back(row(device, controllers));
+        }
+    }
+    if(result.devices.empty() && !controllers.empty())
+    {
+        std::transform(
+            controllers.begin(),
+            controllers.end(),
+            std::back_inserter(result.devices),
+            fallback_row);
+    }
     std::sort(
-        result.controllers.begin(),
-        result.controllers.end(),
-        [](const PluginControllerRow& left, const PluginControllerRow& right)
+        result.devices.begin(),
+        result.devices.end(),
+        [](const PluginDeviceRow& left, const PluginDeviceRow& right)
         {
             if(left.type != right.type)
             {

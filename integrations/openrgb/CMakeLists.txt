@@ -84,6 +84,7 @@ add_library(
     STATIC
         src/controller_model.cpp
         src/dispatch_queue.cpp
+        src/inventory_model.cpp
         src/native_command.cpp
         src/plugin_runtime.cpp
         src/runtime_bridge.cpp
@@ -574,6 +575,20 @@ if(BUILD_TESTING)
         )
     endif()
     add_test(NAME openrgb-controller-model-contract COMMAND openrgb-controller-model-contract)
+
+    add_executable(
+        openrgb-inventory-model-contract
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_inventory_model_contract.cpp"
+    )
+    target_link_libraries(openrgb-inventory-model-contract PRIVATE hyperflux_openrgb_core)
+    hfx_openrgb_enable_thread_sanitizer(openrgb-inventory-model-contract)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(
+            openrgb-inventory-model-contract
+            PRIVATE -Wall -Wextra -Werror -pedantic
+        )
+    endif()
+    add_test(NAME openrgb-inventory-model-contract COMMAND openrgb-inventory-model-contract)
 
     add_executable(
         openrgb-dispatch-queue-contract

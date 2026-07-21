@@ -198,7 +198,9 @@ int main()
         coordinator->shutdown();
         return failure(__LINE__);
     }
-    if(host.size() != 2 || coordinator->controllers().size() != 2 || !host.is_valid())
+    if(host.size() != 2 || coordinator->controllers().size() != 2
+       || coordinator->inventory().size() != 1
+       || coordinator->inventory().front().devices.size() != 2 || !host.is_valid())
     {
         coordinator->shutdown();
         return failure(__LINE__);

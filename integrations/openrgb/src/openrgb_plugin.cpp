@@ -27,6 +27,17 @@ class HyperFluxNextOpenRgbPlugin final : public QObject, public OpenRGBPluginInt
     Q_INTERFACES(OpenRGBPluginInterface)
 
 public:
+    HyperFluxNextOpenRgbPlugin()
+        : application_([this]
+          {
+              QMetaObject::invokeMethod(
+                  this,
+                  [this] { emit status_changed(); },
+                  Qt::QueuedConnection);
+          })
+    {
+    }
+
     ~HyperFluxNextOpenRgbPlugin() override
     {
         Unload();
@@ -65,11 +76,20 @@ public:
 
     QWidget* GetWidget() override
     {
-        return new PluginInformationWidget([this]
+        auto* widget = new PluginInformationWidget([this]
         {
             return make_plugin_information_view_model(
-                application_.status(), application_.controllers());
+                application_.status(),
+                application_.inventory(),
+                application_.controllers());
         });
+        connect(
+            this,
+            &HyperFluxNextOpenRgbPlugin::status_changed,
+            widget,
+            &PluginInformationWidget::refresh,
+            Qt::QueuedConnection);
+        return widget;
     }
 
     QMenu* GetTrayMenu() override
@@ -81,6 +101,9 @@ public:
     {
         application_.unload();
     }
+
+signals:
+    void status_changed();
 
 private:
     OpenRgbPluginApplication application_;

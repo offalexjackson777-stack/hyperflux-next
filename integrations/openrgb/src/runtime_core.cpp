@@ -149,6 +149,7 @@ RuntimeStep RuntimeCore::shutdown()
     pending_.clear();
     outcome_poll_cursor_.reset();
     queue_.clear();
+    inventory_.clear();
     subscription_id_.reset();
     cursor_.reset();
     refresh_required_ = false;
@@ -178,6 +179,11 @@ bool RuntimeCore::initialized() const noexcept
 const std::vector<ControllerModel>& RuntimeCore::controllers() const noexcept
 {
     return controllers_;
+}
+
+const std::vector<InventoryReceiverModel>& RuntimeCore::inventory() const noexcept
+{
+    return inventory_;
 }
 
 std::size_t RuntimeCore::pending_transaction_count() const noexcept

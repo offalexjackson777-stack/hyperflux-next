@@ -44,6 +44,7 @@ sdk::Result<std::shared_ptr<PluginCoordinator>> PluginCoordinator::create(Contro
     }
 
     auto coordinator = std::shared_ptr<PluginCoordinator>(new PluginCoordinator(host, dispatcher));
+    coordinator->on_state_changed_ = std::move(config.on_state_changed);
     const std::weak_ptr<PluginCoordinator> weak = coordinator;
     auto worker = RuntimeWorker::create(std::move(bridge),
         config.worker,
@@ -100,6 +101,7 @@ sdk::Result<void> PluginCoordinator::start()
         started_ = false;
         last_error_ = started.error();
     }
+    notify_state_changed();
     return started;
 }
 
@@ -112,14 +114,14 @@ void PluginCoordinator::queue_runtime_snapshot() noexcept
             return;
         }
     }
-    auto models = worker_->controllers();
+    auto snapshot = worker_->snapshot();
     const std::weak_ptr<PluginCoordinator> weak = weak_from_this();
     const bool posted = dispatcher_->post(
-        [weak, models = std::move(models)]() mutable
+        [weak, snapshot = std::move(snapshot)]() mutable
         {
             if(const auto owner = weak.lock())
             {
-                owner->apply_runtime_snapshot(std::move(models));
+                owner->apply_runtime_snapshot(std::move(snapshot));
             }
         });
     if(!posted)
@@ -129,7 +131,7 @@ void PluginCoordinator::queue_runtime_snapshot() noexcept
     }
 }
 
-void PluginCoordinator::apply_runtime_snapshot(std::vector<ControllerModel> models) noexcept
+void PluginCoordinator::apply_runtime_snapshot(RuntimeSnapshot snapshot) noexcept
 {
     {
         std::lock_guard lock(state_mutex_);
@@ -138,25 +140,47 @@ void PluginCoordinator::apply_runtime_snapshot(std::vector<ControllerModel> mode
             return;
         }
     }
-    auto applied = registry_->apply(std::move(models));
+    auto applied = registry_->apply(std::move(snapshot.controllers));
     if(!applied)
     {
         record_error(applied.error());
         return;
     }
-    std::lock_guard lock(state_mutex_);
-    if(worker_->state() != WorkerState::Failed)
     {
-        last_error_.reset();
+        std::lock_guard lock(state_mutex_);
+        inventory_ = std::move(snapshot.inventory);
+        if(worker_->state() != WorkerState::Failed)
+        {
+            last_error_.reset();
+        }
     }
+    notify_state_changed();
 }
 
 void PluginCoordinator::record_error(sdk::Error error) noexcept
 {
-    std::lock_guard lock(state_mutex_);
-    if(!stopped_)
     {
+        std::lock_guard lock(state_mutex_);
+        if(stopped_)
+        {
+            return;
+        }
         last_error_ = std::move(error);
+    }
+    notify_state_changed();
+}
+
+void PluginCoordinator::notify_state_changed() noexcept
+{
+    if(on_state_changed_)
+    {
+        try
+        {
+            on_state_changed_();
+        }
+        catch(...)
+        {
+        }
     }
 }
 
@@ -170,6 +194,7 @@ void PluginCoordinator::detection_started() noexcept
         }
     }
     registry_->suspend_for_detection();
+    notify_state_changed();
 }
 
 void PluginCoordinator::detection_finished() noexcept
@@ -186,6 +211,10 @@ void PluginCoordinator::detection_finished() noexcept
     if(!requested)
     {
         record_error(requested.error());
+    }
+    else
+    {
+        notify_state_changed();
     }
 }
 
@@ -207,6 +236,7 @@ void PluginCoordinator::shutdown() noexcept
     {
         registry_->shutdown();
     }
+    notify_state_changed();
 }
 
 PluginCoordinatorStatus PluginCoordinator::status() const
@@ -234,6 +264,12 @@ PluginCoordinatorStatus PluginCoordinator::status() const
 std::vector<ControllerModel> PluginCoordinator::controllers() const
 {
     return registry_ == nullptr ? std::vector<ControllerModel> {} : registry_->models();
+}
+
+std::vector<InventoryReceiverModel> PluginCoordinator::inventory() const
+{
+    std::lock_guard lock(state_mutex_);
+    return inventory_;
 }
 
 } // namespace hyperflux::openrgb::native

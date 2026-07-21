@@ -47,6 +47,7 @@ public:
         std::function<sdk::Result<std::unique_ptr<RuntimeBridge>>()>;
 
     OpenRgbPluginApplication();
+    explicit OpenRgbPluginApplication(std::function<void()> on_state_changed);
     OpenRgbPluginApplication(
         RuntimeFactory runtime_factory,
         PluginCoordinatorConfig coordinator_config);
@@ -62,6 +63,7 @@ public:
 
     [[nodiscard]] PluginApplicationStatus status() const;
     [[nodiscard]] std::vector<ControllerModel> controllers() const;
+    [[nodiscard]] std::vector<InventoryReceiverModel> inventory() const;
 
 private:
     enum class State

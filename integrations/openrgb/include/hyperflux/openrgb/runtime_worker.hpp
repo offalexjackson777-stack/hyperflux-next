@@ -46,6 +46,14 @@ struct WorkerCallbacks
     std::function<void(sdk::Error)> on_error;
 };
 
+struct RuntimeSnapshot
+{
+    std::vector<ControllerModel> controllers;
+    std::vector<InventoryReceiverModel> inventory;
+
+    friend bool operator==(const RuntimeSnapshot&, const RuntimeSnapshot&) = default;
+};
+
 /// Thread boundary between OpenRGB callbacks and the serialized SDK client.
 ///
 /// Public methods only touch a bounded mailbox. The worker alone owns the
@@ -77,6 +85,7 @@ public:
 
     [[nodiscard]] WorkerState state() const noexcept;
     [[nodiscard]] std::vector<ControllerModel> controllers() const;
+    [[nodiscard]] RuntimeSnapshot snapshot() const;
     [[nodiscard]] std::optional<sdk::Error> last_error() const;
 
 private:
@@ -119,6 +128,7 @@ private:
     std::size_t stable_reservations_ = 0;
     std::set<std::string> effect_reservations_;
     std::vector<ControllerModel> controllers_;
+    std::vector<InventoryReceiverModel> inventory_;
     std::optional<sdk::Error> last_error_;
 };
 

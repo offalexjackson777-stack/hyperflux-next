@@ -5,6 +5,7 @@
 #include <QApplication>
 #include <QLabel>
 #include <QTableWidget>
+#include <QTimer>
 
 #include <cstdlib>
 #include <iostream>
@@ -28,15 +29,16 @@ int main(int argc, char** argv)
     PluginInformationViewModel model;
     model.tone = PluginHealthTone::Positive;
     model.headline = "Ready";
-    model.summary = "1 controller is available in OpenRGB.";
-    model.controllers.push_back({
+    model.summary = "1 paired device; 1 controller is exposed in OpenRGB.";
+    model.devices.push_back({
         "receiver-1/mouse-1/profile",
         "Test Mouse",
         "Mouse",
-        "Ready",
-        "76%",
-        "13 LEDs",
+        "Paired",
         "Available",
+        "76%",
+        "Production qualified",
+        "13 LEDs | Available",
     });
     model.lighting_transport = "Lighting transport";
     model.effects_authority = "Effects authority";
@@ -44,12 +46,14 @@ int main(int argc, char** argv)
 
     PluginInformationWidget widget([&model] { return model; });
     auto* health = widget.findChild<QLabel*>("hyperfluxHealthTitle");
-    auto* table = widget.findChild<QTableWidget*>("hyperfluxControllerTable");
+    auto* table = widget.findChild<QTableWidget*>("hyperfluxInventoryTable");
     auto* effects = widget.findChild<QLabel*>("hyperfluxEffectsAuthority");
     if(health == nullptr || health->text() != "Ready" || table == nullptr
-       || table->isHidden() || table->rowCount() != 1 || table->columnCount() != 6
+       || table->isHidden() || table->rowCount() != 1 || table->columnCount() != 7
        || table->item(0, 0)->text() != "Test Mouse"
-       || table->item(0, 2)->text() != "Ready"
+       || table->item(0, 2)->text() != "Paired"
+       || table->item(0, 3)->text() != "Available"
+       || widget.findChild<QTimer*>() != nullptr
        || effects == nullptr || effects->text() != "Effects authority")
     {
         return failure(__LINE__);
@@ -58,7 +62,7 @@ int main(int argc, char** argv)
     model.tone = PluginHealthTone::Warning;
     model.headline = "Connecting";
     model.summary = "Waiting for the local HyperFlux bridge.";
-    model.controllers.clear();
+    model.devices.clear();
     widget.refresh();
     auto* empty = widget.findChild<QLabel*>("hyperfluxControllerEmptyState");
     if(health->text() != "Connecting" || !table->isHidden()

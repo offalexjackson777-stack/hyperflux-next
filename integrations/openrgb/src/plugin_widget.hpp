@@ -10,7 +10,6 @@
 
 class QLabel;
 class QTableWidget;
-class QTimer;
 
 namespace hyperflux::openrgb::native
 {
@@ -36,11 +35,10 @@ private:
     QLabel* health_title_;
     QLabel* health_summary_;
     QLabel* empty_state_;
-    QTableWidget* controllers_;
+    QTableWidget* devices_;
     QLabel* lighting_transport_;
     QLabel* effects_authority_;
     QLabel* build_identity_;
-    QTimer* refresh_timer_;
 };
 
 } // namespace hyperflux::openrgb::native

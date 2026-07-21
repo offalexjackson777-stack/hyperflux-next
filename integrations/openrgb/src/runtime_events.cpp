@@ -21,6 +21,11 @@ sdk::Result<void> RuntimeCore::refresh_controllers(
         return sdk::Result<void>::failure(view.error());
     }
     const auto connection_changed = synchronize_connection(output);
+    auto inventory = project_inventory(view.value());
+    if(!inventory)
+    {
+        return sdk::Result<void>::failure(inventory.error());
+    }
     auto projected = project_controllers(view.value());
     if(!projected)
     {
@@ -28,6 +33,7 @@ sdk::Result<void> RuntimeCore::refresh_controllers(
     }
     auto changes = reconcile_controllers(controllers_, projected.value());
     controllers_ = std::move(projected).value();
+    inventory_ = std::move(inventory).value();
     cursor_ = view.value().cursor;
     if(cursor_gap || connection_changed)
     {

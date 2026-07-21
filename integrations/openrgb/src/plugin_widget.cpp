@@ -9,7 +9,6 @@
 #include <QStyle>
 #include <QTableWidget>
 #include <QTableWidgetItem>
-#include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
 
@@ -59,11 +58,10 @@ PluginInformationWidget::PluginInformationWidget(
       health_title_(new QLabel(this)),
       health_summary_(new QLabel(this)),
       empty_state_(new QLabel(this)),
-      controllers_(new QTableWidget(this)),
+      devices_(new QTableWidget(this)),
       lighting_transport_(new QLabel(this)),
       effects_authority_(new QLabel(this)),
-      build_identity_(new QLabel(this)),
-      refresh_timer_(new QTimer(this))
+      build_identity_(new QLabel(this))
 {
     setObjectName("hyperfluxNextInformation");
     auto* page = new QVBoxLayout(this);
@@ -107,30 +105,30 @@ PluginInformationWidget::PluginInformationWidget(
     page->addLayout(health);
     page->addWidget(separator(this));
 
-    auto* controller_title = new QLabel("Controllers", this);
-    QFont section_font = controller_title->font();
+    auto* inventory_title = new QLabel("Paired inventory", this);
+    QFont section_font = inventory_title->font();
     section_font.setBold(true);
-    controller_title->setFont(section_font);
-    page->addWidget(controller_title);
+    inventory_title->setFont(section_font);
+    page->addWidget(inventory_title);
     empty_state_->setObjectName("hyperfluxControllerEmptyState");
     empty_state_->setWordWrap(true);
     page->addWidget(empty_state_);
 
-    controllers_->setObjectName("hyperfluxControllerTable");
-    controllers_->setColumnCount(6);
-    controllers_->setHorizontalHeaderLabels(
-        {"Device", "Type", "State", "Battery", "Lighting", "Control"});
-    controllers_->verticalHeader()->setVisible(false);
-    controllers_->setAlternatingRowColors(true);
-    controllers_->setSelectionMode(QAbstractItemView::NoSelection);
-    controllers_->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    controllers_->setFocusPolicy(Qt::NoFocus);
-    controllers_->setMinimumHeight(110);
-    controllers_->setMaximumHeight(260);
-    controllers_->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    controllers_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    controllers_->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Stretch);
-    page->addWidget(controllers_);
+    devices_->setObjectName("hyperfluxInventoryTable");
+    devices_->setColumnCount(7);
+    devices_->setHorizontalHeaderLabels(
+        {"Device", "Type", "Pairing", "Current state", "Battery", "Support", "OpenRGB"});
+    devices_->verticalHeader()->setVisible(false);
+    devices_->setAlternatingRowColors(true);
+    devices_->setSelectionMode(QAbstractItemView::NoSelection);
+    devices_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    devices_->setFocusPolicy(Qt::NoFocus);
+    devices_->setMinimumHeight(110);
+    devices_->setMaximumHeight(260);
+    devices_->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    devices_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    devices_->horizontalHeader()->setSectionResizeMode(6, QHeaderView::Stretch);
+    page->addWidget(devices_);
     page->addWidget(separator(this));
 
     auto* lighting_title = new QLabel("Lighting compatibility", this);
@@ -147,9 +145,6 @@ PluginInformationWidget::PluginInformationWidget(
     build_identity_->setObjectName("hyperfluxBuildIdentity");
     page->addWidget(build_identity_);
 
-    refresh_timer_->setInterval(500);
-    connect(refresh_timer_, &QTimer::timeout, this, [this] { refresh(); });
-    refresh_timer_->start();
     refresh();
 }
 
@@ -178,31 +173,32 @@ void PluginInformationWidget::render(const PluginInformationViewModel& model)
             ? QString::fromStdString(*model.technical_detail)
             : QString());
 
-    const bool empty = model.controllers.empty();
+    const bool empty = model.devices.empty();
     empty_state_->setVisible(empty);
-    empty_state_->setText(empty ? "No qualified controller is currently available." : "");
-    controllers_->setVisible(!empty);
-    controllers_->setRowCount(static_cast<int>(model.controllers.size()));
-    for(std::size_t row_index = 0; row_index < model.controllers.size(); ++row_index)
+    empty_state_->setText(empty ? "No paired device is reported by the bridge." : "");
+    devices_->setVisible(!empty);
+    devices_->setRowCount(static_cast<int>(model.devices.size()));
+    for(std::size_t row_index = 0; row_index < model.devices.size(); ++row_index)
     {
-        const auto& controller = model.controllers[row_index];
-        const std::array<std::string, 6> values = {
-            controller.device,
-            controller.type,
-            controller.availability,
-            controller.battery,
-            controller.lighting,
-            controller.control,
+        const auto& device = model.devices[row_index];
+        const std::array<std::string, 7> values = {
+            device.device,
+            device.type,
+            device.pairing,
+            device.availability,
+            device.battery,
+            device.support,
+            device.openrgb,
         };
         for(std::size_t column = 0; column < values.size(); ++column)
         {
-            controllers_->setItem(
+            devices_->setItem(
                 static_cast<int>(row_index),
                 static_cast<int>(column),
                 item(values[column]));
         }
     }
-    controllers_->resizeRowsToContents();
+    devices_->resizeRowsToContents();
     lighting_transport_->setText(QString::fromStdString(model.lighting_transport));
     effects_authority_->setText(QString::fromStdString(model.effects_authority));
     build_identity_->setText(QString::fromStdString(model.build_identity));
