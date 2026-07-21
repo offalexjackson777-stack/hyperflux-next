@@ -1,0 +1,235 @@
+{
+  "$schema": "../schemas/install-manifest.schema.json",
+  "schema": "hyperflux-install-manifest-v1",
+  "policy": {
+    "hardware_writes_on_install": false,
+    "start_service_on_install": false,
+    "enable_service_on_install": false,
+    "preserve_configuration": true
+  },
+  "builds": [
+    {
+      "id": "bridge-daemon",
+      "kind": "cargo-binary",
+      "package": "hfx-daemon",
+      "target": "hyperflux-next-bridge",
+      "destination": "@bridge_executable_path@",
+      "mode": "0755",
+      "required": true
+    },
+    {
+      "id": "operations-cli",
+      "kind": "cargo-binary",
+      "package": "hfx-ops",
+      "target": "hyperfluxctl",
+      "destination": "@operations_cli_path@",
+      "mode": "0755",
+      "required": true
+    },
+    {
+      "id": "activation-utility",
+      "kind": "cargo-binary",
+      "package": "hfx-ops",
+      "target": "hyperflux-next-activate",
+      "destination": "@activation_utility_path@",
+      "mode": "0755",
+      "required": true
+    },
+    {
+      "id": "openrgb-native",
+      "kind": "cmake-module",
+      "source": "integrations/openrgb",
+      "target": "hyperflux-next-openrgb",
+      "output": "hyperflux-next-openrgb.so",
+      "destination": "/usr/lib/openrgb/plugins/hyperflux-next-openrgb.so",
+      "mode": "0755",
+      "required": false,
+      "capability": "openrgb-source"
+    },
+    {
+      "id": "python-sdk",
+      "kind": "python-project",
+      "source": "sdk/python",
+      "distribution": "hyperflux-next-sdk",
+      "required": true
+    },
+    {
+      "id": "polychromatic-native",
+      "kind": "python-project",
+      "source": "integrations/polychromatic",
+      "distribution": "hyperflux-next-polychromatic",
+      "required": false
+    },
+    {
+      "id": "openrazer-compatibility",
+      "kind": "python-project",
+      "source": "integrations/openrazer/compatibility",
+      "distribution": "hyperflux-next-openrazer-compat",
+      "required": false
+    }
+  ],
+  "payloads": [
+    {
+      "id": "kernel-source",
+      "kind": "tree",
+      "source": "driver/kernel",
+      "destination": "@kernel_source_directory@",
+      "mode": "0644",
+      "preserve": false,
+      "include": ["Makefile", "*.c", "*.h", "generated/*.inc", "uapi/*.h"]
+    },
+    {
+      "id": "dkms-configuration",
+      "kind": "file",
+      "source": "packaging/generated/dkms.conf",
+      "destination": "@kernel_dkms_configuration_path@",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "bridge-service",
+      "kind": "file",
+      "source": "packaging/generated/hyperflux-next-bridge.service",
+      "destination": "/usr/lib/systemd/system/hyperflux-next-bridge.service",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "system-users",
+      "kind": "file",
+      "source": "packaging/generated/hyperflux-next.sysusers",
+      "destination": "/usr/lib/sysusers.d/hyperflux-next.conf",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "runtime-directories",
+      "kind": "file",
+      "source": "packaging/generated/hyperflux-next.tmpfiles",
+      "destination": "/usr/lib/tmpfiles.d/hyperflux-next.conf",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "device-permissions",
+      "kind": "file",
+      "source": "packaging/generated/99-hyperflux-next.rules",
+      "destination": "/usr/lib/udev/rules.d/99-hyperflux-next.rules",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "default-configuration",
+      "kind": "file",
+      "source": "packaging/generated/bridge.json",
+      "destination": "@bridge_configuration_file_path@",
+      "mode": "0644",
+      "preserve": true,
+      "include": []
+    },
+    {
+      "id": "runtime-environment",
+      "kind": "file",
+      "source": "packaging/generated/runtime.env",
+      "destination": "/usr/share/hyperflux-next/runtime.env",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "schemas",
+      "kind": "tree",
+      "source": "schemas",
+      "destination": "/usr/share/hyperflux-next/schemas",
+      "mode": "0644",
+      "preserve": false,
+      "include": ["*.json"]
+    },
+    {
+      "id": "compiled-catalogs",
+      "kind": "tree",
+      "source": "generated",
+      "destination": "/usr/share/hyperflux-next/catalogs",
+      "mode": "0644",
+      "preserve": false,
+      "include": ["integrations/*.json", "profiles/*.json"]
+    },
+    {
+      "id": "runtime-authority",
+      "kind": "file",
+      "source": "runtime/linux.json",
+      "destination": "/usr/share/hyperflux-next/runtime/linux.json",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "integration-authority",
+      "kind": "tree",
+      "source": "integrations",
+      "destination": "/usr/share/hyperflux-next/integrations",
+      "mode": "0644",
+      "preserve": false,
+      "include": ["catalog.json", "openrazer/*.json", "openrazer/compatibility.json"]
+    },
+    {
+      "id": "cpp-sdk-headers",
+      "kind": "tree",
+      "source": "sdk/cpp/include",
+      "destination": "/usr/include",
+      "mode": "0644",
+      "preserve": false,
+      "include": ["**/*.hpp"]
+    },
+    {
+      "id": "documentation",
+      "kind": "tree",
+      "source": "docs",
+      "destination": "/usr/share/doc/hyperflux-next",
+      "mode": "0644",
+      "preserve": false,
+      "include": ["architecture/*.md", "assurance/*.md", "generated/*.md"]
+    },
+    {
+      "id": "readme",
+      "kind": "file",
+      "source": "README.md",
+      "destination": "/usr/share/doc/hyperflux-next/README.md",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "security-policy",
+      "kind": "file",
+      "source": "SECURITY.md",
+      "destination": "/usr/share/doc/hyperflux-next/SECURITY.md",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "license",
+      "kind": "file",
+      "source": "LICENSE",
+      "destination": "/usr/share/licenses/hyperflux-next/LICENSE",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "install-contract",
+      "kind": "file",
+      "source": "packaging/install.json",
+      "destination": "/usr/share/hyperflux-next/install.json",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    }
+  ]
+}

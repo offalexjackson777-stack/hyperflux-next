@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hyperflux-next-sdk"
+dynamic = ["version"]
+description = "Stable Python SDK for the local HyperFlux Next bridge"
+requires-python = ">=3.11"
+license = "GPL-2.0-or-later"
+
+[tool.setuptools]
+packages = ["hyperflux_sdk", "hyperflux_sdk.generated"]
+
+[tool.setuptools.dynamic]
+version = {attr = "hyperflux_sdk._version.__version__"}

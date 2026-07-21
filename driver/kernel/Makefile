@@ -19,4 +19,6 @@ all:
 
 clean:
 	$(MAKE) -C $(KDIR) M=$(CURDIR) clean
+	@test ! -L $(CURDIR)/source || test "$$(readlink $(CURDIR)/source)" = "."
+	$(RM) $(CURDIR)/source
 	$(RM) -r $(MO)

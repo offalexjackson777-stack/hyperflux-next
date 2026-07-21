@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/install-manifest-v1.json",
+  "title": "HyperFlux canonical installation manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "policy", "builds", "payloads"],
+  "properties": {
+    "$schema": {"const": "../schemas/install-manifest.schema.json"},
+    "schema": {"const": "hyperflux-install-manifest-v1"},
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hardware_writes_on_install",
+        "start_service_on_install",
+        "enable_service_on_install",
+        "preserve_configuration"
+      ],
+      "properties": {
+        "hardware_writes_on_install": {"const": false},
+        "start_service_on_install": {"const": false},
+        "enable_service_on_install": {"const": false},
+        "preserve_configuration": {"const": true}
+      }
+    },
+    "builds": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {"$ref": "#/$defs/build"}
+    },
+    "payloads": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {"$ref": "#/$defs/payload"}
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "destination": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?:/[A-Za-z0-9@+_.-]+(?:/[A-Za-z0-9@+_.-]+)*|@[a-z_]+@)$"
+    },
+    "mode": {"enum": ["0644", "0755"]},
+    "build": {
+      "oneOf": [
+        {"$ref": "#/$defs/cargoBuild"},
+        {"$ref": "#/$defs/cmakeBuild"},
+        {"$ref": "#/$defs/pythonBuild"}
+      ]
+    },
+    "cargoBuild": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "package", "target", "destination", "mode", "required"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "kind": {"const": "cargo-binary"},
+        "package": {"$ref": "#/$defs/identifier"},
+        "target": {"$ref": "#/$defs/identifier"},
+        "destination": {"$ref": "#/$defs/destination"},
+        "mode": {"const": "0755"},
+        "required": {"const": true}
+      }
+    },
+    "cmakeBuild": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "source", "target", "output", "destination", "mode", "required", "capability"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "kind": {"const": "cmake-module"},
+        "source": {"$ref": "#/$defs/relativePath"},
+        "target": {"$ref": "#/$defs/identifier"},
+        "output": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9+_.-]*\\.so$", "maxLength": 128},
+        "destination": {"$ref": "#/$defs/destination"},
+        "mode": {"const": "0755"},
+        "required": {"type": "boolean"},
+        "capability": {"$ref": "#/$defs/identifier"}
+      }
+    },
+    "pythonBuild": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "source", "distribution", "required"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "kind": {"const": "python-project"},
+        "source": {"$ref": "#/$defs/relativePath"},
+        "distribution": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 96},
+        "required": {"type": "boolean"}
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "source", "destination", "mode", "preserve", "include"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "kind": {"enum": ["file", "tree"]},
+        "source": {"$ref": "#/$defs/relativePath"},
+        "destination": {"$ref": "#/$defs/destination"},
+        "mode": {"$ref": "#/$defs/mode"},
+        "preserve": {"type": "boolean"},
+        "include": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 128}
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"kind": {"const": "file"}}},
+          "then": {"properties": {"include": {"maxItems": 0}}}
+        },
+        {
+          "if": {"properties": {"kind": {"const": "tree"}}},
+          "then": {"properties": {"include": {"minItems": 1}}}
+        }
+      ]
+    }
+  }
+}

@@ -9,6 +9,7 @@ import sys
 from .migration import capture_inventory, summary
 from .model import ModelError
 from .openrazer import write_imported_metadata
+from .package_pipeline import build_artifacts, stage_rootfs
 from .render import write_generated
 from .testgraph import format_plan, load_test_catalog
 from .verify import verify_all
@@ -43,6 +44,20 @@ def _parser() -> argparse.ArgumentParser:
     imports = commands.add_parser("import", help="transform pinned upstream metadata")
     imports.add_argument("upstream", choices=["openrazer"])
     imports.add_argument("--source", required=True, type=Path)
+
+    package = commands.add_parser("package", help="build and stage canonical package payloads")
+    package_commands = package.add_subparsers(dest="package_command", required=True)
+    package_build = package_commands.add_parser(
+        "build", help="build source-bound package artifacts"
+    )
+    package_build.add_argument("--output", required=True, type=Path)
+    package_build.add_argument("--openrgb-source", type=Path)
+    package_build.add_argument("--source-revision")
+    package_stage = package_commands.add_parser(
+        "stage", help="create one deterministic package root filesystem"
+    )
+    package_stage.add_argument("--build-manifest", required=True, type=Path)
+    package_stage.add_argument("--root", required=True, type=Path)
     return parser
 
 
@@ -66,6 +81,25 @@ def main(arguments: list[str] | None = None) -> int:
         if args.command == "import":
             destination = write_imported_metadata(root, args.source.resolve())
             print(f"Imported {args.upstream}: {destination.relative_to(root)}")
+            return 0
+        if args.command == "package":
+            if args.package_command == "build":
+                capabilities = {}
+                if args.openrgb_source is not None:
+                    capabilities["openrgb-source"] = args.openrgb_source.resolve()
+                manifest = build_artifacts(
+                    root,
+                    args.output,
+                    capabilities=capabilities,
+                    revision=args.source_revision,
+                )
+                print(f"Package build manifest: {manifest}")
+                return 0
+            result = stage_rootfs(root, args.build_manifest, args.root)
+            print(f"Staged package root: {result.root}")
+            print(f"Installed files: {result.file_count}")
+            print(f"Payload SHA-256: {result.payload_sha256}")
+            print(f"Inventory: {result.inventory}")
             return 0
         if args.migration_command == "summary":
             print(summary(root))

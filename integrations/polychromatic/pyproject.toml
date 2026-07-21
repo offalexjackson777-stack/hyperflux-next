@@ -4,15 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hyperflux-next-polychromatic"
-version = "0.0.0.dev1"
+dynamic = ["version"]
 description = "Native Polychromatic backend for HyperFlux Next"
 requires-python = ">=3.11"
 license = "GPL-3.0-only"
 license-files = ["LICENSE"]
-dependencies = []
+dependencies = ["hyperflux-next-sdk"]
 
 [project.entry-points."polychromatic.backends"]
 hyperflux = "hyperflux_polychromatic:HyperFluxBackend"
 
 [tool.setuptools]
 packages = ["hyperflux_polychromatic"]
+
+[tool.setuptools.dynamic]
+version = {attr = "hyperflux_polychromatic._version.__version__"}

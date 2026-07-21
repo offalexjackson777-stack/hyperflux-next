@@ -14,6 +14,7 @@ import time
 from .model import ModelError, load_foundation, load_json, require_unique, sha256_file
 from .errors import load_error_catalog
 from .integrations import load_integration_catalog, load_openrazer_compatibility_contract
+from .install import load_install_manifest
 from .linux_runtime import load_linux_runtime
 from .openrazer import load_imported_metadata, transformed_metadata
 from .render import rendered_files
@@ -459,6 +460,11 @@ def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
             f"legacy kernel source cleanup ({label})",
             node.timeout_seconds,
         )
+        source_link = root / "driver" / "kernel" / "source"
+        if source_link.is_symlink() and os.readlink(source_link) == ".":
+            source_link.unlink()
+        elif source_link.exists() or source_link.is_symlink():
+            raise ModelError("kernel build left an unexpected source-tree artifact")
         if output_directory.exists():
             shutil.rmtree(output_directory)
         output_directory.mkdir(parents=True)
@@ -476,6 +482,10 @@ def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
             f"kernel module build ({label})",
             node.timeout_seconds,
         )
+        if source_link.is_symlink() and os.readlink(source_link) == ".":
+            source_link.unlink()
+        elif source_link.exists() or source_link.is_symlink():
+            raise ModelError("kernel build left an unexpected source-tree artifact")
 
 
 def _pinned_upstream_source(
@@ -851,6 +861,7 @@ def _check_schema_contracts(root: Path) -> None:
         raise ModelError("replay fixture exceeds the bounded event limit")
     load_test_catalog(root)
     load_linux_runtime(root)
+    load_install_manifest(root)
 
 
 def _resolve_schema_reference(

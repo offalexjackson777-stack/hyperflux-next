@@ -1,0 +1,813 @@
+{
+  "schema": "hyperflux-compiled-install-plan-v1",
+  "install_manifest_sha256": "344bd8c031362072e2de69b35a844086c535b1cdd3d896cbcd13b5cf370e76f6",
+  "product": {
+    "name": "hyperflux-next-linux",
+    "version": "0.0.0-dev.1",
+    "release": 1
+  },
+  "policy": {
+    "hardware_writes_on_install": false,
+    "start_service_on_install": false,
+    "enable_service_on_install": false,
+    "preserve_configuration": true
+  },
+  "builds": [
+    {
+      "id": "bridge-daemon",
+      "kind": "cargo-binary",
+      "required": true,
+      "package": "hfx-daemon",
+      "target": "hyperflux-next-bridge",
+      "destination": "/usr/lib/hyperflux-next/hyperflux-next-bridge",
+      "mode": "0755"
+    },
+    {
+      "id": "operations-cli",
+      "kind": "cargo-binary",
+      "required": true,
+      "package": "hfx-ops",
+      "target": "hyperfluxctl",
+      "destination": "/usr/bin/hyperfluxctl",
+      "mode": "0755"
+    },
+    {
+      "id": "activation-utility",
+      "kind": "cargo-binary",
+      "required": true,
+      "package": "hfx-ops",
+      "target": "hyperflux-next-activate",
+      "destination": "/usr/lib/hyperflux-next/hyperflux-next-activate",
+      "mode": "0755"
+    },
+    {
+      "id": "openrgb-native",
+      "kind": "cmake-module",
+      "required": false,
+      "source": "integrations/openrgb",
+      "target": "hyperflux-next-openrgb",
+      "output": "hyperflux-next-openrgb.so",
+      "destination": "/usr/lib/openrgb/plugins/hyperflux-next-openrgb.so",
+      "mode": "0755",
+      "capability": "openrgb-source"
+    },
+    {
+      "id": "python-sdk",
+      "kind": "python-project",
+      "required": true,
+      "source": "sdk/python",
+      "distribution": "hyperflux-next-sdk"
+    },
+    {
+      "id": "polychromatic-native",
+      "kind": "python-project",
+      "required": false,
+      "source": "integrations/polychromatic",
+      "distribution": "hyperflux-next-polychromatic"
+    },
+    {
+      "id": "openrazer-compatibility",
+      "kind": "python-project",
+      "required": false,
+      "source": "integrations/openrazer/compatibility",
+      "distribution": "hyperflux-next-openrazer-compat"
+    }
+  ],
+  "payloads": [
+    {
+      "component": "kernel-source",
+      "source": "driver/kernel/Makefile",
+      "destination": "/usr/src/hid-hyperflux-next-0.0.0-dev.1/Makefile",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
+      "source": "driver/kernel/generated/hyperflux_receiver_profiles.inc",
+      "destination": "/usr/src/hid-hyperflux-next-0.0.0-dev.1/generated/hyperflux_receiver_profiles.inc",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
+      "source": "driver/kernel/hyperflux-next-core.c",
+      "destination": "/usr/src/hid-hyperflux-next-0.0.0-dev.1/hyperflux-next-core.c",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
+      "source": "driver/kernel/hyperflux-next-internal.h",
+      "destination": "/usr/src/hid-hyperflux-next-0.0.0-dev.1/hyperflux-next-internal.h",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
+      "source": "driver/kernel/hyperflux-next-observation.c",
+      "destination": "/usr/src/hid-hyperflux-next-0.0.0-dev.1/hyperflux-next-observation.c",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
+      "source": "driver/kernel/hyperflux-next-passive.h",
+      "destination": "/usr/src/hid-hyperflux-next-0.0.0-dev.1/hyperflux-next-passive.h",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
+      "source": "driver/kernel/hyperflux-next-profile.c",
+      "destination": "/usr/src/hid-hyperflux-next-0.0.0-dev.1/hyperflux-next-profile.c",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
+      "source": "driver/kernel/hyperflux-next-profile.h",
+      "destination": "/usr/src/hid-hyperflux-next-0.0.0-dev.1/hyperflux-next-profile.h",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
+      "source": "driver/kernel/hyperflux-next-session.c",
+      "destination": "/usr/src/hid-hyperflux-next-0.0.0-dev.1/hyperflux-next-session.c",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
+      "source": "driver/kernel/hyperflux-next-transport.c",
+      "destination": "/usr/src/hid-hyperflux-next-0.0.0-dev.1/hyperflux-next-transport.c",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
+      "source": "driver/kernel/hyperflux-next-version.h",
+      "destination": "/usr/src/hid-hyperflux-next-0.0.0-dev.1/hyperflux-next-version.h",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
+      "source": "driver/kernel/hyperflux-next-wire.h",
+      "destination": "/usr/src/hid-hyperflux-next-0.0.0-dev.1/hyperflux-next-wire.h",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
+      "source": "driver/kernel/uapi/hyperflux_next.h",
+      "destination": "/usr/src/hid-hyperflux-next-0.0.0-dev.1/uapi/hyperflux_next.h",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "dkms-configuration",
+      "source": "packaging/generated/dkms.conf",
+      "destination": "/usr/src/hid-hyperflux-next-0.0.0-dev.1/dkms.conf",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "bridge-service",
+      "source": "packaging/generated/hyperflux-next-bridge.service",
+      "destination": "/usr/lib/systemd/system/hyperflux-next-bridge.service",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "system-users",
+      "source": "packaging/generated/hyperflux-next.sysusers",
+      "destination": "/usr/lib/sysusers.d/hyperflux-next.conf",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "runtime-directories",
+      "source": "packaging/generated/hyperflux-next.tmpfiles",
+      "destination": "/usr/lib/tmpfiles.d/hyperflux-next.conf",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "device-permissions",
+      "source": "packaging/generated/99-hyperflux-next.rules",
+      "destination": "/usr/lib/udev/rules.d/99-hyperflux-next.rules",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "default-configuration",
+      "source": "packaging/generated/bridge.json",
+      "destination": "/etc/hyperflux-next/bridge.json",
+      "mode": "0644",
+      "preserve": true
+    },
+    {
+      "component": "runtime-environment",
+      "source": "packaging/generated/runtime.env",
+      "destination": "/usr/share/hyperflux-next/runtime.env",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/architecture-constitution.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/architecture-constitution.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/bridge-config.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/bridge-config.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/candidate-catalog.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/candidate-catalog.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/capability-catalog.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/capability-catalog.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/domain-catalog.json",
+      "destination": "/usr/share/hyperflux-next/schemas/domain-catalog.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/domain-catalog.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/domain-catalog.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/error-catalog.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/error-catalog.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/evidence-registry.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/evidence-registry.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/hardware-profile.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/hardware-profile.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/imported-device-metadata.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/imported-device-metadata.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/install-manifest.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/install-manifest.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/integration-catalog.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/integration-catalog.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/kernel-uapi.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/kernel-uapi.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/linux-runtime.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/linux-runtime.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/migration-ledger.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/migration-ledger.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/migration-sources.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/migration-sources.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/openrazer-compatibility.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/openrazer-compatibility.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/package-build-manifest.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/package-build-manifest.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/polychromatic-state.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/polychromatic-state.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/protocol-catalog.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/protocol-catalog.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/protocol-registry.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/protocol-registry.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/simulator-scenario.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/simulator-scenario.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/test-catalog.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/test-catalog.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/upstream-metadata-import.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/upstream-metadata-import.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "compiled-catalogs",
+      "source": "generated/integrations/catalog.json",
+      "destination": "/usr/share/hyperflux-next/catalogs/integrations/catalog.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "compiled-catalogs",
+      "source": "generated/profiles/catalog.json",
+      "destination": "/usr/share/hyperflux-next/catalogs/profiles/catalog.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "runtime-authority",
+      "source": "runtime/linux.json",
+      "destination": "/usr/share/hyperflux-next/runtime/linux.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "integration-authority",
+      "source": "integrations/catalog.json",
+      "destination": "/usr/share/hyperflux-next/integrations/catalog.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "integration-authority",
+      "source": "integrations/openrazer/compatibility.json",
+      "destination": "/usr/share/hyperflux-next/integrations/openrazer/compatibility.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "integration-authority",
+      "source": "integrations/openrazer/import.json",
+      "destination": "/usr/share/hyperflux-next/integrations/openrazer/import.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "integration-authority",
+      "source": "integrations/openrazer/metadata.json",
+      "destination": "/usr/share/hyperflux-next/integrations/openrazer/metadata.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/domain_json.hpp",
+      "destination": "/usr/include/hyperflux/generated/domain_json.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/domain_types.hpp",
+      "destination": "/usr/include/hyperflux/generated/domain_types.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/error_catalog.hpp",
+      "destination": "/usr/include/hyperflux/generated/error_catalog.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/integration_catalog.hpp",
+      "destination": "/usr/include/hyperflux/generated/integration_catalog.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/profile_catalog.hpp",
+      "destination": "/usr/include/hyperflux/generated/profile_catalog.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/protocol_json.hpp",
+      "destination": "/usr/include/hyperflux/generated/protocol_json.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/protocol_types.hpp",
+      "destination": "/usr/include/hyperflux/generated/protocol_types.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/protocol_v1_json.hpp",
+      "destination": "/usr/include/hyperflux/generated/protocol_v1_json.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/protocol_v1_types.hpp",
+      "destination": "/usr/include/hyperflux/generated/protocol_v1_types.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/protocol_v2_json.hpp",
+      "destination": "/usr/include/hyperflux/generated/protocol_v2_json.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/protocol_v2_types.hpp",
+      "destination": "/usr/include/hyperflux/generated/protocol_v2_types.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/protocol_v3_json.hpp",
+      "destination": "/usr/include/hyperflux/generated/protocol_v3_json.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/protocol_v3_types.hpp",
+      "destination": "/usr/include/hyperflux/generated/protocol_v3_types.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/protocol_v4_json.hpp",
+      "destination": "/usr/include/hyperflux/generated/protocol_v4_json.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/protocol_v4_types.hpp",
+      "destination": "/usr/include/hyperflux/generated/protocol_v4_types.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/protocol_v5_json.hpp",
+      "destination": "/usr/include/hyperflux/generated/protocol_v5_json.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/protocol_v5_types.hpp",
+      "destination": "/usr/include/hyperflux/generated/protocol_v5_types.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/sdk.hpp",
+      "destination": "/usr/include/hyperflux/sdk.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/sdk/channel.hpp",
+      "destination": "/usr/include/hyperflux/sdk/channel.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/sdk/client.hpp",
+      "destination": "/usr/include/hyperflux/sdk/client.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/sdk/clock.hpp",
+      "destination": "/usr/include/hyperflux/sdk/clock.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/sdk/error.hpp",
+      "destination": "/usr/include/hyperflux/sdk/error.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/sdk/identity.hpp",
+      "destination": "/usr/include/hyperflux/sdk/identity.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/sdk/lighting.hpp",
+      "destination": "/usr/include/hyperflux/sdk/lighting.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/sdk/recovery.hpp",
+      "destination": "/usr/include/hyperflux/sdk/recovery.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/sdk/result.hpp",
+      "destination": "/usr/include/hyperflux/sdk/result.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/architecture/bridge-core.md",
+      "destination": "/usr/share/doc/hyperflux-next/architecture/bridge-core.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/architecture/design-book.md",
+      "destination": "/usr/share/doc/hyperflux-next/architecture/design-book.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/architecture/integrations.md",
+      "destination": "/usr/share/doc/hyperflux-next/architecture/integrations.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/architecture/kernel.md",
+      "destination": "/usr/share/doc/hyperflux-next/architecture/kernel.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/architecture/openrazer-compatibility.md",
+      "destination": "/usr/share/doc/hyperflux-next/architecture/openrazer-compatibility.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/architecture/persistence.md",
+      "destination": "/usr/share/doc/hyperflux-next/architecture/persistence.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/architecture/sdk.md",
+      "destination": "/usr/share/doc/hyperflux-next/architecture/sdk.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/assurance/simulator.md",
+      "destination": "/usr/share/doc/hyperflux-next/assurance/simulator.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/architecture.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/architecture.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/bridge-protocol-v1.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/bridge-protocol-v1.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/bridge-protocol-v2.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/bridge-protocol-v2.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/bridge-protocol-v3.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/bridge-protocol-v3.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/bridge-protocol-v4.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/bridge-protocol-v4.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/bridge-protocol-v5.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/bridge-protocol-v5.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/bridge-protocol.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/bridge-protocol.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/domain-types.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/domain-types.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/error-catalog.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/error-catalog.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/installation.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/installation.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/integrations.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/integrations.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/kernel-uapi.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/kernel-uapi.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/linux-runtime.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/linux-runtime.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/migration-ledger.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/migration-ledger.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/supported-hardware.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/supported-hardware.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/verification.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/verification.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "readme",
+      "source": "README.md",
+      "destination": "/usr/share/doc/hyperflux-next/README.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "security-policy",
+      "source": "SECURITY.md",
+      "destination": "/usr/share/doc/hyperflux-next/SECURITY.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "license",
+      "source": "LICENSE",
+      "destination": "/usr/share/licenses/hyperflux-next/LICENSE",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "install-contract",
+      "source": "packaging/install.json",
+      "destination": "/usr/share/hyperflux-next/install.json",
+      "mode": "0644",
+      "preserve": false
+    }
+  ]
+}

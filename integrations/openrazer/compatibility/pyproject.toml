@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hyperflux-next-openrazer-compat"
-version = "0.0.0.dev1"
+dynamic = ["version"]
 description = "Private OpenRazer D-Bus compatibility provider for HyperFlux Next"
 requires-python = ">=3.11"
 license = "GPL-2.0-or-later"
 license-files = ["LICENSE"]
-dependencies = ["dbus-python>=1.3.2,<2", "PyGObject>=3.42,<4"]
+dependencies = ["hyperflux-next-sdk", "dbus-python>=1.3.2,<2", "PyGObject>=3.42,<4"]
 
 [project.scripts]
 hyperflux-openrazer-compat = "hyperflux_openrazer_compat.cli:main"
@@ -17,3 +17,6 @@ hyperflux-openrazer-session = "hyperflux_openrazer_compat.session:main"
 
 [tool.setuptools]
 packages = ["hyperflux_openrazer_compat"]
+
+[tool.setuptools.dynamic]
+version = {attr = "hyperflux_openrazer_compat._version.__version__"}

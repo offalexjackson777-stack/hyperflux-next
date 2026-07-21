@@ -26,10 +26,12 @@ from .generators.kernel_uapi import (
 )
 from .generators.linux_runtime import (
     default_bridge_configuration,
+    dkms_configuration,
     kernel_version_header,
     markdown as linux_runtime_markdown,
     package_environment,
     python_constants as linux_runtime_python_constants,
+    python_version_module,
     rust_constants as linux_runtime_rust_constants,
     systemd_service,
     sysusers,
@@ -67,6 +69,9 @@ from .generators.integrations import (
     python_openrazer_metadata,
     rust_catalog as integration_rust_catalog,
 )
+from .generators.install import compiled_plan as compiled_install_plan
+from .generators.install import markdown as install_markdown
+from .install import load_install_manifest
 from .model import load_foundation, load_json
 from .linux_runtime import load_linux_runtime
 from .openrazer import load_imported_metadata
@@ -177,6 +182,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
     openrazer_compatibility = load_openrazer_compatibility_contract(root)
     test_catalog = load_test_catalog(root)
     linux_runtime = load_linux_runtime(root)
+    install_manifest = load_install_manifest(root)
     files = {
         root / "docs" / "generated" / "architecture.md": architecture_markdown(constitution),
         root / "docs" / "generated" / "migration-ledger.md": migration_markdown(sources, ledger),
@@ -216,6 +222,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "crates" / "hfx-runtime" / "src" / "generated.rs": linux_runtime_rust_constants(linux_runtime),
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "linux_runtime.py": linux_runtime_python_constants(linux_runtime),
         root / "driver" / "kernel" / "hyperflux-next-version.h": kernel_version_header(linux_runtime),
+        root / "packaging" / "generated" / "dkms.conf": dkms_configuration(linux_runtime),
         root / "packaging" / "generated" / "hyperflux-next-bridge.service": systemd_service(linux_runtime),
         root / "packaging" / "generated" / "hyperflux-next.sysusers": sysusers(linux_runtime),
         root / "packaging" / "generated" / "hyperflux-next.tmpfiles": tmpfiles(linux_runtime),
@@ -223,6 +230,26 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "packaging" / "generated" / "bridge.json": default_bridge_configuration(linux_runtime),
         root / "packaging" / "generated" / "runtime.env": package_environment(linux_runtime),
         root / "docs" / "generated" / "linux-runtime.md": linux_runtime_markdown(linux_runtime),
+        root / "packaging" / "generated" / "install-plan.json": compiled_install_plan(
+            install_manifest, linux_runtime
+        ),
+        root / "docs" / "generated" / "installation.md": install_markdown(
+            install_manifest, linux_runtime
+        ),
+        root / "sdk" / "python" / "hyperflux_sdk" / "_version.py": python_version_module(
+            linux_runtime, "GPL-2.0-or-later"
+        ),
+        root
+        / "integrations"
+        / "polychromatic"
+        / "hyperflux_polychromatic"
+        / "_version.py": python_version_module(linux_runtime, "GPL-3.0-only"),
+        root
+        / "integrations"
+        / "openrazer"
+        / "compatibility"
+        / "hyperflux_openrazer_compat"
+        / "_version.py": python_version_module(linux_runtime, "GPL-2.0-or-later"),
     }
     for version in protocol_registry.versions:
         suffix = f"v{version.version}"

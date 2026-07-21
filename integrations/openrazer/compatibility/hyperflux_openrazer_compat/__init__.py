@@ -4,6 +4,7 @@
 
 from .contract import CONTRACT, IdentityMode, ServiceIdentity
 from .model import ControllerRecord, controller_serial
+from ._version import __version__
 
 __all__ = [
     "CONTRACT",
@@ -11,6 +12,5 @@ __all__ = [
     "IdentityMode",
     "ServiceIdentity",
     "controller_serial",
+    "__version__",
 ]
-
-__version__ = "0.0.0.dev1"

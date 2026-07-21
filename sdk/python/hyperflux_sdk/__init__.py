@@ -13,3 +13,4 @@ from .generated.protocol_types import *  # noqa: F401,F403
 from .identity import IdentitySource, ProcessIdentitySource
 from .lighting import LightingIntent, LightingSession, LightingTarget, LightingUpdate, lighting_target, rgb
 from .recovery import ClientFactory, RecoveringClient, UnixClientFactory
+from ._version import __version__
