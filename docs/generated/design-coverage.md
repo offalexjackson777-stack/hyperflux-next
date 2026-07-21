@@ -7,11 +7,11 @@ Software verification never substitutes for required physical evidence or public
 
 ## Summary
 
-- `blocked-by-physical-evidence`: 2
-- `partially-implemented`: 16
+- `blocked-by-physical-evidence`: 3
+- `partially-implemented`: 14
 - `policy-defined`: 2
 - `publication-locked`: 1
-- `software-verified`: 46
+- `software-verified`: 47
 
 | Section | Subject | Status | Owner | Physical proof | Release block |
 | ---: | --- | --- | --- | --- | --- |
@@ -60,7 +60,7 @@ Software verification never substitutes for required physical evidence or public
 | 43 | Typed Test Metadata | `software-verified` | `verification` | no | no |
 | 44 | Verification Outputs | `partially-implemented` | `verification` | no | yes |
 | 45 | Advanced Testing Methods | `partially-implemented` | `verification` | no | no |
-| 46 | Formal Model Checking | `partially-implemented` | `verification` | no | yes |
+| 46 | Formal Model Checking | `software-verified` | `verification` | no | no |
 | 47 | Language-Specific Tooling | `partially-implemented` | `toolchains` | no | no |
 | 48 | Declarative Application UI | `software-verified` | `integrations` | no | no |
 | 49 | Central Error Catalog | `software-verified` | `errors` | no | no |
@@ -71,7 +71,7 @@ Software verification never substitutes for required physical evidence or public
 | 54 | Kernel Activation | `software-verified` | `operations` | required | yes |
 | 55 | Reproducible Development Environment | `partially-implemented` | `toolchains` | no | yes |
 | 56 | Supply-Chain Security | `partially-implemented` | `security` | no | yes |
-| 57 | Performance Budgets | `partially-implemented` | `verification` | required | yes |
+| 57 | Performance Budgets | `blocked-by-physical-evidence` | `verification` | required | yes |
 | 58 | Change-Aware CI | `partially-implemented` | `verification` | no | yes |
 | 59 | Dependency Updates | `partially-implemented` | `security` | no | yes |
 | 60 | Documentation Portal | `partially-implemented` | `documentation` | no | yes |
@@ -357,9 +357,9 @@ Evidence: [`crates/hfx-sim/tests/restoration_crash.rs`](../../crates/hfx-sim/tes
 
 ### 46. Formal Model Checking
 
-Evidence: [`crates/hfx-core/tests/leases.rs`](../../crates/hfx-core/tests/leases.rs), [`crates/hfx-sim/tests/generation_and_evidence.rs`](../../crates/hfx-sim/tests/generation_and_evidence.rs).
+Evidence: [`assurance/formal-model.json`](../../assurance/formal-model.json), [`tools/hfxdev/formal_model.py`](../../tools/hfxdev/formal_model.py), [`docs/generated/formal-model.md`](../../docs/generated/formal-model.md).
 
-- Add an independently executable bounded state-space model for lease, generation, delivery, and crash invariants.
+- No remaining gap in the current software scope.
 
 ### 47. Language-Specific Tooling
 
@@ -417,15 +417,15 @@ Evidence: [`toolchains/pins.json`](../../toolchains/pins.json), [`Cargo.lock`](.
 
 ### 56. Supply-Chain Security
 
-Evidence: [`Cargo.lock`](../../Cargo.lock), [`integrations/catalog.json`](../../integrations/catalog.json), [`sdk/cpp/vendor/manifest.json`](../../sdk/cpp/vendor/manifest.json).
+Evidence: [`assurance/dependencies.json`](../../assurance/dependencies.json), [`assurance/generated/hyperflux-next.spdx.json`](../../assurance/generated/hyperflux-next.spdx.json), [`schemas/package-build-manifest.schema.json`](../../schemas/package-build-manifest.schema.json), [`tools/hfxdev/package_pipeline.py`](../../tools/hfxdev/package_pipeline.py).
 
-- Generate a complete SBOM and source-bound provenance, enforce dependency/license policy, and reserve signing and attestations for an authorized release.
+- Add publication-locked signed-tag, package-signing, Sigstore attestation, and SLSA provenance workflows without authorizing or executing a release.
 
 ### 57. Performance Budgets
 
-Evidence: [`runtime/linux.json`](../../runtime/linux.json), [`crates/hfx-bridge/tests/connection_runtime.rs`](../../crates/hfx-bridge/tests/connection_runtime.rs).
+Evidence: [`assurance/performance-budgets.json`](../../assurance/performance-budgets.json), [`tools/hfxdev/performance.py`](../../tools/hfxdev/performance.py), [`docs/generated/performance-budgets.md`](../../docs/generated/performance-budgets.md).
 
-- Define canonical budgets and record repeatable runtime, package-size, and effect-stream measurements.
+- Record repeatable installed startup, visible effect latency, reconnect recovery, CPU, and memory measurements against the exact release candidate.
 
 ### 58. Change-Aware CI
 

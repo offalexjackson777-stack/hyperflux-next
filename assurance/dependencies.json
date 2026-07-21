@@ -1,0 +1,70 @@
+{
+  "$schema": "../schemas/dependency-policy.schema.json",
+  "schema": "hyperflux-dependency-policy-v1",
+  "inventory_created": "2026-07-20T00:00:00Z",
+  "repository_license": "GPL-2.0-only",
+  "allowed_license_expressions": [
+    "(MIT OR Apache-2.0) AND Unicode-3.0",
+    "Apache-2.0 OR MIT",
+    "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+    "CC-BY-SA-4.0",
+    "GPL-2.0-only",
+    "GPL-2.0-or-later",
+    "GPL-2.0-or-later AND CC-BY-SA-4.0",
+    "GPL-3.0-only",
+    "LGPL-2.1-or-later",
+    "MIT",
+    "MIT OR Apache-2.0",
+    "Unlicense OR MIT"
+  ],
+  "rust_lock": "Cargo.lock",
+  "rust_registry_packages": [
+    {"name": "bitflags", "version": "2.13.1", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "block-buffer", "version": "0.12.0", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "cfg-if", "version": "1.0.4", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "const-oid", "version": "0.10.2", "license_expression": "Apache-2.0 OR MIT"},
+    {"name": "cpufeatures", "version": "0.3.0", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "crypto-common", "version": "0.2.1", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "digest", "version": "0.11.2", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "errno", "version": "0.3.14", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "hybrid-array", "version": "0.4.10", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "itoa", "version": "1.0.18", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "libc", "version": "0.2.183", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "linux-raw-sys", "version": "0.12.1", "license_expression": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"},
+    {"name": "memchr", "version": "2.8.3", "license_expression": "Unlicense OR MIT"},
+    {"name": "proc-macro2", "version": "1.0.107", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "quote", "version": "1.0.47", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "rustix", "version": "1.1.4", "license_expression": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"},
+    {"name": "serde", "version": "1.0.229", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "serde_core", "version": "1.0.229", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "serde_derive", "version": "1.0.229", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "serde_json", "version": "1.0.150", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "sha2", "version": "0.11.0", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "signal-hook", "version": "0.4.4", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "signal-hook-registry", "version": "1.4.8", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "syn", "version": "3.0.2", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "typenum", "version": "1.19.0", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "unicode-ident", "version": "1.0.24", "license_expression": "(MIT OR Apache-2.0) AND Unicode-3.0"},
+    {"name": "windows-link", "version": "0.2.1", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "windows-sys", "version": "0.61.2", "license_expression": "MIT OR Apache-2.0"},
+    {"name": "zmij", "version": "1.0.23", "license_expression": "MIT"}
+  ],
+  "python_projects": [
+    {"path": "sdk/python/pyproject.toml", "name": "hyperflux-next-sdk", "license_expression": "GPL-2.0-or-later"},
+    {"path": "integrations/openrazer/compatibility/pyproject.toml", "name": "hyperflux-next-openrazer-compat", "license_expression": "GPL-2.0-or-later"},
+    {"path": "integrations/polychromatic/pyproject.toml", "name": "hyperflux-next-polychromatic", "license_expression": "GPL-3.0-only"}
+  ],
+  "python_external_packages": [
+    {"name": "setuptools", "specifier": "==82.0.1", "license_expression": "MIT", "scope": "build-system"},
+    {"name": "dbus-python", "specifier": ">=1.3.2,<2", "license_expression": "MIT", "scope": "optional-runtime"},
+    {"name": "PyGObject", "specifier": ">=3.42,<4", "license_expression": "LGPL-2.1-or-later", "scope": "optional-runtime"}
+  ],
+  "vendored_manifests": ["sdk/cpp/vendor/manifest.json"],
+  "upstream_catalog": "integrations/catalog.json",
+  "build_policy": {
+    "network_access": false,
+    "locked_rust_dependencies": true,
+    "isolated_python_dependency_resolution": false,
+    "dirty_upstream_sources": "reject"
+  }
+}

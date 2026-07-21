@@ -24,9 +24,12 @@ from hfxdev.package_pipeline import (
     _build_python,
     _install_wheels,
     _inspect_staged_files,
+    _provenance_inputs,
+    _provenance_materials,
     _tree_digest,
     load_artifact_set,
 )
+from hfxdev.toolchains import load_toolchain_pins
 
 
 class PackagePipelineTests(unittest.TestCase):
@@ -63,6 +66,8 @@ class PackagePipelineTests(unittest.TestCase):
     def _artifact_manifest(self, directory: Path) -> Path:
         install = load_install_manifest(ROOT)
         runtime = load_linux_runtime(ROOT)
+        pins = load_toolchain_pins(ROOT)
+        inputs = _provenance_inputs(ROOT, install, runtime)
         artifacts = []
         for build in install.builds:
             path = directory / "files" / build.id / (
@@ -84,15 +89,29 @@ class PackagePipelineTests(unittest.TestCase):
                 value["distribution"] = build.distribution
             artifacts.append(value)
         manifest = {
-            "$schema": "https://hyperflux.dev/schemas/package-build-manifest-v1.json",
-            "schema": "hyperflux-package-build-manifest-v1",
+            "$schema": "https://hyperflux.dev/schemas/package-build-manifest-v2.json",
+            "schema": "hyperflux-package-build-manifest-v2",
             "source": {"revision": "a" * 40, "source_date_epoch": 1_700_000_000},
-            "inputs": {
-                "install_manifest_sha256": install.source_sha256,
-                "linux_runtime_sha256": runtime.source_sha256,
+            "builder": {
+                "id": "https://hyperflux.dev/builders/hfx-package-v2",
+                "network_access": False,
+            },
+            "toolchain": {
+                "rustc": pins.rustc,
+                "cargo": pins.cargo,
                 "python": "3.14.0",
+                "pip": pins.pip,
+                "setuptools": pins.setuptools,
+                "wheel": pins.wheel,
+                "clang": pins.clang,
+                "cmake": pins.cmake,
+                "ninja": pins.ninja,
                 "target": "x86_64-unknown-linux-gnu",
             },
+            "inputs": inputs,
+            "materials": _provenance_materials(
+                ROOT, inputs, {"openrgb-source"}
+            ),
             "artifacts": artifacts,
             "omitted": [],
         }
@@ -123,6 +142,30 @@ class PackagePipelineTests(unittest.TestCase):
                 "hfxdev.package_pipeline._source_identity",
                 return_value=("a" * 40, 1_700_000_000),
             ), self.assertRaisesRegex(ModelError, "digest mismatch"):
+                load_artifact_set(ROOT, path)
+
+    def test_toolchain_tamper_is_rejected_before_staging(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = self._artifact_manifest(Path(temporary))
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+            manifest["toolchain"]["cargo"] = "cargo 0.0.0 (forged)"
+            path.write_text(json.dumps(manifest), encoding="utf-8")
+            with patch(
+                "hfxdev.package_pipeline._source_identity",
+                return_value=("a" * 40, 1_700_000_000),
+            ), self.assertRaisesRegex(ModelError, "toolchain differs"):
+                load_artifact_set(ROOT, path)
+
+    def test_material_tamper_is_rejected_before_staging(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = self._artifact_manifest(Path(temporary))
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+            manifest["materials"][0]["sha256"] = "0" * 64
+            path.write_text(json.dumps(manifest), encoding="utf-8")
+            with patch(
+                "hfxdev.package_pipeline._source_identity",
+                return_value=("a" * 40, 1_700_000_000),
+            ), self.assertRaisesRegex(ModelError, "materials differ"):
                 load_artifact_set(ROOT, path)
 
     def test_tree_digest_is_order_independent_and_mode_sensitive(self) -> None:
@@ -162,6 +205,10 @@ class PackagePipelineTests(unittest.TestCase):
             self.assertIn(f"--remap-path-prefix={private}=", environment["RUSTFLAGS"])
             self.assertIn(f"-ffile-prefix-map={private}=", environment["CFLAGS"])
             self.assertIn(f"-fdebug-prefix-map={private}=", environment["CXXFLAGS"])
+        self.assertEqual(environment["CARGO_NET_OFFLINE"], "true")
+        self.assertEqual(environment["PIP_NO_INDEX"], "1")
+        self.assertEqual(environment["CC"], "clang")
+        self.assertEqual(environment["CMAKE_GENERATOR"], "Ninja")
 
     def test_python_build_uses_only_the_tracked_source_projection(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -179,6 +226,8 @@ class PackagePipelineTests(unittest.TestCase):
             def fake_wheel(command: list[str], **_: object) -> None:
                 projected = Path(command[-1])
                 self.assertFalse((projected / "hyperflux_sdk/__pycache__").exists())
+                self.assertIn("--no-index", command)
+                self.assertIn("--no-build-isolation", command)
                 wheel_directory = Path(command[command.index("--wheel-dir") + 1])
                 self._wheel(
                     wheel_directory / "hyperflux_next_sdk-1-py3-none-any.whl",

@@ -1,0 +1,106 @@
+{
+  "$schema": "../schemas/release-gates.schema.json",
+  "schema": "hyperflux-release-gates-v1",
+  "gates": [
+    {
+      "id": "HFX-GATE-FOUNDATION",
+      "title": "Architecture and migration foundation",
+      "status": "software-satisfied",
+      "criteria": ["The architecture constitution is internally consistent.", "Every design-book section has one truthful evidence and gap entry."],
+      "evidence": ["architecture/constitution.json", "assurance/design-coverage.json"],
+      "remaining": [],
+      "physical_evidence_required": false,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-SCHEMAS",
+      "title": "Canonical schemas and generated contracts",
+      "status": "software-satisfied",
+      "criteria": ["Shared facts have strict canonical schemas.", "Generated bindings and documents are reproducible in one pass."],
+      "evidence": ["schemas/domain-catalog.json", "tools/hfxdev/render.py", "tests/test_generated_domain.py"],
+      "remaining": [],
+      "physical_evidence_required": false,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-SIMULATION",
+      "title": "Virtual receiver and deterministic replay",
+      "status": "software-satisfied",
+      "criteria": ["The simulator exercises generation, presence, qualification, transport, and restoration without hardware authority.", "Committed replay is sanitized and deterministic."],
+      "evidence": ["crates/hfx-sim", "tests/fixtures/replay/qualified-lifecycle-v1.json"],
+      "remaining": [],
+      "physical_evidence_required": false,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-BRIDGE-SDK",
+      "title": "Bridge, ownership, restoration, and SDK",
+      "status": "software-satisfied",
+      "criteria": ["The bridge is the sole userspace receiver writer.", "SDK requests are versioned, bounded, lease-owned, generation-bound, and conservatively reconciled."],
+      "evidence": ["crates/hfx-bridge", "crates/hfx-core", "crates/hfx-sdk", "sdk/cpp", "sdk/python"],
+      "remaining": [],
+      "physical_evidence_required": false,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-KERNEL",
+      "title": "Kernel transport and activation",
+      "status": "blocked-by-physical-evidence",
+      "criteria": ["The module builds warning-clean against supported headers.", "Input preservation, generations, passive observation, and bounded writer transport are qualified on an exact candidate."],
+      "evidence": ["driver/kernel", "uapi/kernel-uapi.json", "crates/hfx-kernel-transport"],
+      "remaining": ["Execute targeted installed-candidate input-preservation, reconnect, suspend, and writer-session qualification on supported hardware."],
+      "physical_evidence_required": true,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-INTEGRATIONS",
+      "title": "Application integrations",
+      "status": "blocked-by-physical-evidence",
+      "criteria": ["Adapters use only the SDK and preserve unrelated devices.", "OpenRGB, Polychromatic, and optional compatibility behavior are qualified as installed candidates."],
+      "evidence": ["integrations/catalog.json", "integrations/openrgb", "integrations/polychromatic", "integrations/openrazer/compatibility"],
+      "remaining": ["Qualify the rewritten OpenRGB integration and selected application coexistence paths against the exact release candidate."],
+      "physical_evidence_required": true,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-PACKAGING",
+      "title": "Native package lifecycle",
+      "status": "blocked-by-lifecycle-evidence",
+      "criteria": ["Arch, Debian, and RPM artifacts derive from one canonical root and are reproducible.", "Fresh install, upgrade, rollback, uninstall, activation, and configuration preservation pass in disposable native systems."],
+      "evidence": ["packaging/install.json", "packaging/distributions.json", "tools/hfxdev/distribution_package.py"],
+      "remaining": ["Run complete package-manager lifecycle scenarios in disposable Arch, Debian, and RPM-family images."],
+      "physical_evidence_required": false,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-SOFTWARE",
+      "title": "Complete software verification",
+      "status": "software-satisfied",
+      "criteria": ["Every full-software graph node passes from a clean source revision.", "No software result is presented as physical qualification or publication authorization."],
+      "evidence": ["verification/tests.json", "tools/hfxdev/verify.py", "assurance/design-coverage.json"],
+      "remaining": [],
+      "physical_evidence_required": false,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-HARDWARE",
+      "title": "Targeted hardware qualification",
+      "status": "blocked-by-physical-evidence",
+      "criteria": ["Every promoted writable capability has exact candidate-bound physical evidence.", "Unknown models remain safe and non-writable."],
+      "evidence": ["profiles/evidence/claims.json", "migration/ledger.json"],
+      "remaining": ["Select the exact release candidate and execute the bounded qualification plan without importing laboratory writers into the product."],
+      "physical_evidence_required": true,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-PUBLICATION-DECISION",
+      "title": "Explicit publication decision",
+      "status": "publication-locked",
+      "criteria": ["Every preceding release-blocking gate is satisfied.", "A human publication decision explicitly authorizes the chosen channel and artifacts."],
+      "evidence": ["architecture/constitution.json", "assurance/release-gates.json"],
+      "remaining": ["Publication remains unauthorized. Do not create a release, tag, or public repository claim from software evidence alone."],
+      "physical_evidence_required": true,
+      "publication_authorization_required": true
+    }
+  ]
+}

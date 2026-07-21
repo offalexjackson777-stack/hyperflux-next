@@ -1,0 +1,1904 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "HyperFlux Next source dependency inventory",
+  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/f401fc3d5bfac4f7d4e501224da1861ff406f1eb6625c0d76be39925803cfb69",
+  "creationInfo": {
+    "created": "2026-07-20T00:00:00Z",
+    "creators": [
+      "Tool: hyperflux-next-hfxdev"
+    ],
+    "licenseListVersion": "3.27"
+  },
+  "documentDescribes": [
+    "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
+  ],
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Cargo-bitflags-2.13.1",
+      "name": "bitflags",
+      "versionInfo": "2.13.1",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b588b76d00fde79687d7646a9b5bdf3cc0f655e0bbd080335a95d7e96f3587da"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/bitflags@2.13.1"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-block-buffer-0.12.0",
+      "name": "block-buffer",
+      "versionInfo": "0.12.0",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "cdd35008169921d80bc60d3d0ab416eecb028c4cd653352907921d95084790be"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/block-buffer@0.12.0"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-cfg-if-1.0.4",
+      "name": "cfg-if",
+      "versionInfo": "1.0.4",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/cfg-if@1.0.4"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-const-oid-0.10.2",
+      "name": "const-oid",
+      "versionInfo": "0.10.2",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0 OR MIT",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/const-oid@0.10.2"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-cpufeatures-0.3.0",
+      "name": "cpufeatures",
+      "versionInfo": "0.3.0",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "8b2a41393f66f16b0823bb79094d54ac5fbd34ab292ddafb9a0456ac9f87d201"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/cpufeatures@0.3.0"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-crypto-common-0.2.1",
+      "name": "crypto-common",
+      "versionInfo": "0.2.1",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "77727bb15fa921304124b128af125e7e3b968275d1b108b379190264f4423710"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/crypto-common@0.2.1"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-digest-0.11.2",
+      "name": "digest",
+      "versionInfo": "0.11.2",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "4850db49bf08e663084f7fb5c87d202ef91a3907271aff24a94eb97ff039153c"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/digest@0.11.2"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-errno-0.3.14",
+      "name": "errno",
+      "versionInfo": "0.3.14",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/errno@0.3.14"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-hfx-bridge-0.0.0-dev.1",
+      "name": "hfx-bridge",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/hfx-bridge@0.0.0-dev.1"
+        }
+      ],
+      "comment": "HyperFlux workspace crate."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-hfx-core-0.0.0-dev.1",
+      "name": "hfx-core",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/hfx-core@0.0.0-dev.1"
+        }
+      ],
+      "comment": "HyperFlux workspace crate."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-hfx-daemon-0.0.0-dev.1",
+      "name": "hfx-daemon",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/hfx-daemon@0.0.0-dev.1"
+        }
+      ],
+      "comment": "HyperFlux workspace crate."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-hfx-domain-0.0.0-dev.1",
+      "name": "hfx-domain",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/hfx-domain@0.0.0-dev.1"
+        }
+      ],
+      "comment": "HyperFlux workspace crate."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-hfx-errors-0.0.0-dev.1",
+      "name": "hfx-errors",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/hfx-errors@0.0.0-dev.1"
+        }
+      ],
+      "comment": "HyperFlux workspace crate."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-hfx-integration-model-0.0.0-dev.1",
+      "name": "hfx-integration-model",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/hfx-integration-model@0.0.0-dev.1"
+        }
+      ],
+      "comment": "HyperFlux workspace crate."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-hfx-kernel-transport-0.0.0-dev.1",
+      "name": "hfx-kernel-transport",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/hfx-kernel-transport@0.0.0-dev.1"
+        }
+      ],
+      "comment": "HyperFlux workspace crate."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-hfx-ops-0.0.0-dev.1",
+      "name": "hfx-ops",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/hfx-ops@0.0.0-dev.1"
+        }
+      ],
+      "comment": "HyperFlux workspace crate."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-hfx-profiles-0.0.0-dev.1",
+      "name": "hfx-profiles",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/hfx-profiles@0.0.0-dev.1"
+        }
+      ],
+      "comment": "HyperFlux workspace crate."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-hfx-protocol-0.0.0-dev.1",
+      "name": "hfx-protocol",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/hfx-protocol@0.0.0-dev.1"
+        }
+      ],
+      "comment": "HyperFlux workspace crate."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-hfx-runtime-0.0.0-dev.1",
+      "name": "hfx-runtime",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/hfx-runtime@0.0.0-dev.1"
+        }
+      ],
+      "comment": "HyperFlux workspace crate."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-hfx-sdk-0.0.0-dev.1",
+      "name": "hfx-sdk",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/hfx-sdk@0.0.0-dev.1"
+        }
+      ],
+      "comment": "HyperFlux workspace crate."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-hfx-sim-0.0.0-dev.1",
+      "name": "hfx-sim",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/hfx-sim@0.0.0-dev.1"
+        }
+      ],
+      "comment": "HyperFlux workspace crate."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-hybrid-array-0.4.10",
+      "name": "hybrid-array",
+      "versionInfo": "0.4.10",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "3944cf8cf766b40e2a1a333ee5e9b563f854d5fa49d6a8ca2764e97c6eddb214"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/hybrid-array@0.4.10"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-itoa-1.0.18",
+      "name": "itoa",
+      "versionInfo": "1.0.18",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/itoa@1.0.18"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-libc-0.2.183",
+      "name": "libc",
+      "versionInfo": "0.2.183",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b5b646652bf6661599e1da8901b3b9522896f01e736bad5f723fe7a3a27f899d"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/libc@0.2.183"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-linux-raw-sys-0.12.1",
+      "name": "linux-raw-sys",
+      "versionInfo": "0.12.1",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/linux-raw-sys@0.12.1"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-memchr-2.8.3",
+      "name": "memchr",
+      "versionInfo": "2.8.3",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Unlicense OR MIT",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/memchr@2.8.3"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-proc-macro2-1.0.107",
+      "name": "proc-macro2",
+      "versionInfo": "1.0.107",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/proc-macro2@1.0.107"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-quote-1.0.47",
+      "name": "quote",
+      "versionInfo": "1.0.47",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/quote@1.0.47"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-rustix-1.1.4",
+      "name": "rustix",
+      "versionInfo": "1.1.4",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b6fe4565b9518b83ef4f91bb47ce29620ca828bd32cb7e408f0062e9930ba190"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/rustix@1.1.4"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-serde-1.0.229",
+      "name": "serde",
+      "versionInfo": "1.0.229",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "4148590afebada386688f18773da617792bf2ef03ffc1e4cbd2b1d45b023e0ba"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/serde@1.0.229"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-serde-core-1.0.229",
+      "name": "serde_core",
+      "versionInfo": "1.0.229",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "67dca2c9c51e58a4791a4b1ed58308b39c64224d349a935ab5039aa360942a48"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/serde_core@1.0.229"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-serde-derive-1.0.229",
+      "name": "serde_derive",
+      "versionInfo": "1.0.229",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e7a5d71263a5a7d47b41f6b3f06ba276f10cc18b0931f1799f710578e2309348"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/serde_derive@1.0.229"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-serde-json-1.0.150",
+      "name": "serde_json",
+      "versionInfo": "1.0.150",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e8014e44b4736ed0538adeecded0fce2a272f22dc9578a7eb6b2d9993c74cfb9"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/serde_json@1.0.150"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-sha2-0.11.0",
+      "name": "sha2",
+      "versionInfo": "0.11.0",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "446ba717509524cb3f22f17ecc096f10f4822d76ab5c0b9822c5f9c284e825f4"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/sha2@0.11.0"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-signal-hook-0.4.4",
+      "name": "signal-hook",
+      "versionInfo": "0.4.4",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b2a0c28ca5908dbdbcd52e6fdaa00358ab88637f8ab33e1f188dd510eb44b53d"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/signal-hook@0.4.4"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-signal-hook-registry-1.4.8",
+      "name": "signal-hook-registry",
+      "versionInfo": "1.4.8",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "c4db69cba1110affc0e9f7bcd48bbf87b3f4fc7c61fc9155afd4c469eb3d6c1b"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/signal-hook-registry@1.4.8"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-syn-3.0.2",
+      "name": "syn",
+      "versionInfo": "3.0.2",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a207d6d6a2b7fc470b80443726053f18a2481b7e1eee970597051596567987a3"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/syn@3.0.2"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-typenum-1.19.0",
+      "name": "typenum",
+      "versionInfo": "1.19.0",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "562d481066bde0658276a35467c4af00bdc6ee726305698a55b86e61d7ad82bb"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/typenum@1.19.0"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-unicode-ident-1.0.24",
+      "name": "unicode-ident",
+      "versionInfo": "1.0.24",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "(MIT OR Apache-2.0) AND Unicode-3.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/unicode-ident@1.0.24"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-windows-link-0.2.1",
+      "name": "windows-link",
+      "versionInfo": "0.2.1",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/windows-link@0.2.1"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-windows-sys-0.61.2",
+      "name": "windows-sys",
+      "versionInfo": "0.61.2",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT OR Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/windows-sys@0.61.2"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-zmij-1.0.23",
+      "name": "zmij",
+      "versionInfo": "1.0.23",
+      "downloadLocation": "https://crates.io/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/zmij@1.0.23"
+        }
+      ],
+      "comment": "Checksummed Cargo.lock registry dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "name": "hyperflux-next",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only",
+      "copyrightText": "NOASSERTION",
+      "comment": "Canonical source package described by this repository inventory."
+    },
+    {
+      "SPDXID": "SPDXRef-Python-hyperflux-next-openrazer-compat-0.0.0-dev.1",
+      "name": "hyperflux-next-openrazer-compat",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-or-later",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/hyperflux-next-openrazer-compat@0.0.0-dev.1"
+        }
+      ],
+      "comment": "Repository Python project declared by integrations/openrazer/compatibility/pyproject.toml."
+    },
+    {
+      "SPDXID": "SPDXRef-Python-hyperflux-next-polychromatic-0.0.0-dev.1",
+      "name": "hyperflux-next-polychromatic",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-3.0-only",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/hyperflux-next-polychromatic@0.0.0-dev.1"
+        }
+      ],
+      "comment": "Repository Python project declared by integrations/polychromatic/pyproject.toml."
+    },
+    {
+      "SPDXID": "SPDXRef-Python-hyperflux-next-sdk-0.0.0-dev.1",
+      "name": "hyperflux-next-sdk",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-or-later",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/hyperflux-next-sdk@0.0.0-dev.1"
+        }
+      ],
+      "comment": "Repository Python project declared by sdk/python/pyproject.toml."
+    },
+    {
+      "SPDXID": "SPDXRef-PythonExternal-PyGObject--3.42-4",
+      "name": "PyGObject",
+      "versionInfo": ">=3.42,<4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "LGPL-2.1-or-later",
+      "copyrightText": "NOASSERTION",
+      "comment": "Optional distribution-provided runtime dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-PythonExternal-dbus-python--1.3.2-2",
+      "name": "dbus-python",
+      "versionInfo": ">=1.3.2,<2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "comment": "Optional distribution-provided runtime dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-PythonExternal-setuptools--82.0.1",
+      "name": "setuptools",
+      "versionInfo": "==82.0.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "comment": "Distribution-provided build dependency."
+    },
+    {
+      "SPDXID": "SPDXRef-Upstream-openrazer-6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+      "name": "OpenRazer",
+      "versionInfo": "3.12.1-41-g6820f9d",
+      "downloadLocation": "https://github.com/openrazer/openrazer.git",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-or-later AND CC-BY-SA-4.0",
+      "copyrightText": "NOASSERTION",
+      "comment": "Pinned integration source commit 6820f9da169d354bc7e6e93a0aa8683a6bb75792."
+    },
+    {
+      "SPDXID": "SPDXRef-Upstream-openrgb-6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0",
+      "name": "OpenRGB",
+      "versionInfo": "1.0rc3",
+      "downloadLocation": "https://github.com/CalcProgrammer1/OpenRGB.git",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only",
+      "copyrightText": "NOASSERTION",
+      "comment": "Pinned integration source commit 6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0."
+    },
+    {
+      "SPDXID": "SPDXRef-Upstream-polychromatic-716737bf444ab7e962f4d3b7a5188b2f07c0c4a1",
+      "name": "Polychromatic",
+      "versionInfo": "0.9.7-7-g716737b",
+      "downloadLocation": "https://github.com/polychromatic/polychromatic.git",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-3.0-only",
+      "copyrightText": "NOASSERTION",
+      "comment": "Pinned integration source commit 716737bf444ab7e962f4d3b7a5188b2f07c0c4a1."
+    },
+    {
+      "SPDXID": "SPDXRef-Vendored-nlohmann-json-3.11.3",
+      "name": "nlohmann-json",
+      "versionInfo": "3.11.3",
+      "downloadLocation": "https://github.com/nlohmann/json.git",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6"
+        }
+      ],
+      "comment": "Vendored source at sdk/cpp/vendor/include/nlohmann/json.hpp."
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-Cargo-block-buffer-0.12.0",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hybrid-array-0.4.10"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-cpufeatures-0.3.0",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-libc-0.2.183"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-crypto-common-0.2.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hybrid-array-0.4.10"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-digest-0.11.2",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-block-buffer-0.12.0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-digest-0.11.2",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-const-oid-0.10.2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-digest-0.11.2",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-crypto-common-0.2.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-errno-0.3.14",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-libc-0.2.183"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-errno-0.3.14",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-windows-sys-0.61.2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-bridge-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-core-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-bridge-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-domain-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-bridge-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-errors-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-bridge-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-integration-model-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-bridge-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-profiles-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-bridge-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-protocol-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-bridge-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.4"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-bridge-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-bridge-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-core-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-domain-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-core-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-protocol-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-core-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-core-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-core-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-daemon-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-bridge-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-daemon-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-core-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-daemon-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-domain-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-daemon-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-kernel-transport-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-daemon-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-profiles-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-daemon-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-protocol-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-daemon-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-runtime-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-daemon-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-sdk-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-daemon-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.4"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-daemon-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-daemon-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-daemon-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-signal-hook-0.4.4"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-domain-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-domain-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-errors-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-domain-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-errors-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-errors-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-integration-model-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-domain-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-integration-model-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-profiles-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-integration-model-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-protocol-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-integration-model-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-integration-model-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-kernel-transport-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-core-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-kernel-transport-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-domain-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-kernel-transport-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-profiles-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-kernel-transport-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-protocol-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-kernel-transport-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.4"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-kernel-transport-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-kernel-transport-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-ops-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-domain-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-ops-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-errors-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-ops-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-protocol-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-ops-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-runtime-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-ops-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-sdk-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-ops-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.4"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-ops-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-ops-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-ops-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-profiles-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-domain-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-protocol-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-domain-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-protocol-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-protocol-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-runtime-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-runtime-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-sdk-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-bridge-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-sdk-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-domain-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-sdk-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-protocol-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-sdk-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.4"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-sdk-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-sim-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-core-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-sim-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-domain-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-sim-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-profiles-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-sim-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-protocol-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-sim-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-sim-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-sim-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hybrid-array-0.4.10",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-typenum-1.19.0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-proc-macro2-1.0.107",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-unicode-ident-1.0.24"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-quote-1.0.47",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-proc-macro2-1.0.107"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-rustix-1.1.4",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-bitflags-2.13.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-rustix-1.1.4",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-errno-0.3.14"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-rustix-1.1.4",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-libc-0.2.183"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-rustix-1.1.4",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-linux-raw-sys-0.12.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-rustix-1.1.4",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-windows-sys-0.61.2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-serde-1.0.229",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-core-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-serde-1.0.229",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-derive-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-serde-core-1.0.229",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-derive-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-serde-derive-1.0.229",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-proc-macro2-1.0.107"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-serde-derive-1.0.229",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-quote-1.0.47"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-serde-derive-1.0.229",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-syn-3.0.2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.150",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-itoa-1.0.18"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.150",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-memchr-2.8.3"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.150",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.150",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-core-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.150",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-zmij-1.0.23"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-sha2-0.11.0",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-cfg-if-1.0.4"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-sha2-0.11.0",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-cpufeatures-0.3.0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-sha2-0.11.0",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-digest-0.11.2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-signal-hook-0.4.4",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-libc-0.2.183"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-signal-hook-0.4.4",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-signal-hook-registry-1.4.8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-signal-hook-registry-1.4.8",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-errno-0.3.14"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-signal-hook-registry-1.4.8",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-libc-0.2.183"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-syn-3.0.2",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-proc-macro2-1.0.107"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-syn-3.0.2",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-quote-1.0.47"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-syn-3.0.2",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-unicode-ident-1.0.24"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-windows-sys-0.61.2",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-windows-link-0.2.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-bridge-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-core-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-daemon-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-domain-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-errors-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-integration-model-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-kernel-transport-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-ops-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-profiles-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-protocol-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-runtime-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-sdk-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-sim-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Python-hyperflux-next-openrazer-compat-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Python-hyperflux-next-polychromatic-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Python-hyperflux-next-sdk-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Vendored-nlohmann-json-3.11.3"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-bitflags-2.13.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-block-buffer-0.12.0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-cfg-if-1.0.4"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-const-oid-0.10.2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-cpufeatures-0.3.0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-crypto-common-0.2.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-digest-0.11.2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-errno-0.3.14"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hybrid-array-0.4.10"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-itoa-1.0.18"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-libc-0.2.183"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-linux-raw-sys-0.12.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-memchr-2.8.3"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-proc-macro2-1.0.107"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-quote-1.0.47"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.4"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-core-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-derive-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-signal-hook-0.4.4"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-signal-hook-registry-1.4.8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-syn-3.0.2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-typenum-1.19.0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-unicode-ident-1.0.24"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-windows-link-0.2.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-windows-sys-0.61.2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-zmij-1.0.23"
+    },
+    {
+      "spdxElementId": "SPDXRef-PythonExternal-PyGObject--3.42-4",
+      "relationshipType": "OPTIONAL_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-PythonExternal-dbus-python--1.3.2-2",
+      "relationshipType": "OPTIONAL_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-PythonExternal-setuptools--82.0.1",
+      "relationshipType": "BUILD_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Upstream-openrazer-6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+      "relationshipType": "BUILD_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Upstream-openrgb-6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0",
+      "relationshipType": "BUILD_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Upstream-polychromatic-716737bf444ab7e962f4d3b7a5188b2f07c0c4a1",
+      "relationshipType": "BUILD_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/dependency-policy-v1.json",
+  "title": "HyperFlux dependency and license policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "inventory_created",
+    "repository_license",
+    "allowed_license_expressions",
+    "rust_lock",
+    "rust_registry_packages",
+    "python_projects",
+    "python_external_packages",
+    "vendored_manifests",
+    "upstream_catalog",
+    "build_policy"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-dependency-policy-v1"},
+    "inventory_created": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "repository_license": {"$ref": "#/$defs/license"},
+    "allowed_license_expressions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/license"}
+    },
+    "rust_lock": {"$ref": "#/$defs/path"},
+    "rust_registry_packages": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 512,
+      "items": {"$ref": "#/$defs/rustPackage"}
+    },
+    "python_projects": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {"$ref": "#/$defs/pythonProject"}
+    },
+    "python_external_packages": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {"$ref": "#/$defs/pythonPackage"}
+    },
+    "vendored_manifests": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/path"}
+    },
+    "upstream_catalog": {"$ref": "#/$defs/path"},
+    "build_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "network_access",
+        "locked_rust_dependencies",
+        "isolated_python_dependency_resolution",
+        "dirty_upstream_sources"
+      ],
+      "properties": {
+        "network_access": {"const": false},
+        "locked_rust_dependencies": {"const": true},
+        "isolated_python_dependency_resolution": {"const": false},
+        "dirty_upstream_sources": {"const": "reject"}
+      }
+    }
+  },
+  "$defs": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]*$"
+    },
+    "version": {"type": "string", "minLength": 1, "maxLength": 128},
+    "license": {"type": "string", "minLength": 1, "maxLength": 160},
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "rustPackage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "license_expression"],
+      "properties": {
+        "name": {"$ref": "#/$defs/name"},
+        "version": {"$ref": "#/$defs/version"},
+        "license_expression": {"$ref": "#/$defs/license"}
+      }
+    },
+    "pythonProject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "name", "license_expression"],
+      "properties": {
+        "path": {"$ref": "#/$defs/path"},
+        "name": {"$ref": "#/$defs/name"},
+        "license_expression": {"$ref": "#/$defs/license"}
+      }
+    },
+    "pythonPackage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "specifier", "license_expression", "scope"],
+      "properties": {
+        "name": {"$ref": "#/$defs/name"},
+        "specifier": {"type": "string", "maxLength": 128},
+        "license_expression": {"$ref": "#/$defs/license"},
+        "scope": {"enum": ["build-system", "optional-runtime"]}
+      }
+    }
+  }
+}

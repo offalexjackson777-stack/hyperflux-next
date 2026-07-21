@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://hyperflux.dev/schemas/package-build-manifest-v1.json",
+  "$id": "https://hyperflux.dev/schemas/package-build-manifest-v2.json",
   "title": "HyperFlux package build artifact manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "schema", "source", "inputs", "artifacts", "omitted"],
+  "required": ["$schema", "schema", "source", "builder", "toolchain", "inputs", "materials", "artifacts", "omitted"],
   "properties": {
-    "$schema": {"const": "https://hyperflux.dev/schemas/package-build-manifest-v1.json"},
-    "schema": {"const": "hyperflux-package-build-manifest-v1"},
+    "$schema": {"const": "https://hyperflux.dev/schemas/package-build-manifest-v2.json"},
+    "schema": {"const": "hyperflux-package-build-manifest-v2"},
     "source": {
       "type": "object",
       "additionalProperties": false,
@@ -17,16 +17,59 @@
         "source_date_epoch": {"type": "integer", "minimum": 1, "maximum": 4102444800}
       }
     },
+    "builder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "network_access"],
+      "properties": {
+        "id": {"const": "https://hyperflux.dev/builders/hfx-package-v2"},
+        "network_access": {"const": false}
+      }
+    },
+    "toolchain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rustc", "cargo", "python", "pip", "setuptools", "wheel", "clang", "cmake", "ninja", "target"],
+      "properties": {
+        "rustc": {"type": "string", "minLength": 1, "maxLength": 160},
+        "cargo": {"type": "string", "minLength": 1, "maxLength": 160},
+        "python": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$", "maxLength": 32},
+        "pip": {"type": "string", "minLength": 1, "maxLength": 64},
+        "setuptools": {"type": "string", "minLength": 1, "maxLength": 64},
+        "wheel": {"type": "string", "minLength": 1, "maxLength": 64},
+        "clang": {"type": "string", "minLength": 1, "maxLength": 160},
+        "cmake": {"type": "string", "minLength": 1, "maxLength": 160},
+        "ninja": {"type": "string", "minLength": 1, "maxLength": 64},
+        "target": {"type": "string", "pattern": "^[A-Za-z0-9_+.]+(?:-[A-Za-z0-9_+.]+){2,4}$", "maxLength": 128}
+      }
+    },
     "inputs": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["install_manifest_sha256", "linux_runtime_sha256", "python", "target"],
+      "required": [
+        "install_manifest_sha256",
+        "linux_runtime_sha256",
+        "dependency_policy_sha256",
+        "sbom_sha256",
+        "toolchain_pins_sha256",
+        "cargo_lock_sha256",
+        "integration_catalog_sha256"
+      ],
       "properties": {
         "install_manifest_sha256": {"$ref": "#/$defs/digest"},
         "linux_runtime_sha256": {"$ref": "#/$defs/digest"},
-        "python": {"type": "string", "minLength": 1, "maxLength": 64},
-        "target": {"type": "string", "minLength": 1, "maxLength": 128}
+        "dependency_policy_sha256": {"$ref": "#/$defs/digest"},
+        "sbom_sha256": {"$ref": "#/$defs/digest"},
+        "toolchain_pins_sha256": {"$ref": "#/$defs/digest"},
+        "cargo_lock_sha256": {"$ref": "#/$defs/digest"},
+        "integration_catalog_sha256": {"$ref": "#/$defs/digest"}
       }
+    },
+    "materials": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 16,
+      "items": {"$ref": "#/$defs/material"}
     },
     "artifacts": {
       "type": "array",
@@ -43,6 +86,7 @@
   "$defs": {
     "identifier": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
     "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
     "relativePath": {
       "type": "string",
       "minLength": 1,
@@ -66,6 +110,21 @@
       "oneOf": [
         {"required": ["destination"], "not": {"required": ["distribution"]}},
         {"required": ["distribution"], "not": {"required": ["destination"]}}
+      ]
+    },
+    "material": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "uri"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "uri": {"type": "string", "minLength": 1, "maxLength": 256},
+        "sha256": {"$ref": "#/$defs/digest"},
+        "revision": {"$ref": "#/$defs/revision"}
+      },
+      "oneOf": [
+        {"required": ["sha256"], "not": {"required": ["revision"]}},
+        {"required": ["revision"], "not": {"required": ["sha256"]}}
       ]
     },
     "omission": {

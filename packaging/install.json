@@ -169,6 +169,15 @@
       "include": ["*.json"]
     },
     {
+      "id": "assurance-artifacts",
+      "kind": "tree",
+      "source": "assurance",
+      "destination": "/usr/share/doc/hyperflux-next/assurance",
+      "mode": "0644",
+      "preserve": false,
+      "include": ["generated/*.json"]
+    },
+    {
       "id": "compiled-catalogs",
       "kind": "tree",
       "source": "generated",

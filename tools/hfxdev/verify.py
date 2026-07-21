@@ -15,15 +15,24 @@ import time
 from .model import ModelError, load_foundation, load_json, require_unique, sha256_file
 from .assurance import load_design_coverage
 from .errors import load_error_catalog
+from .formal_model import load_formal_model, run_formal_model
 from .integrations import load_integration_catalog, load_openrazer_compatibility_contract
 from .install import load_install_manifest
 from .linux_runtime import load_linux_runtime
 from .openrazer import load_imported_metadata, transformed_metadata
 from .package_pipeline import build_artifacts, load_artifact_set, stage_rootfs
+from .performance import (
+    load_performance_budgets,
+    verify_package_performance_budgets,
+    verify_static_performance_budgets,
+)
 from .render import rendered_files
 from .profiles import load_profile_inputs
 from .protocol import load_protocol_catalog
+from .release import load_release_gates
+from .supply_chain import load_dependency_inventory
 from .testgraph import TestNode, load_test_catalog
+from .toolchains import toolchain_environment, verify_current_toolchain
 
 
 ALLOWED_DISPOSITIONS = {
@@ -144,10 +153,7 @@ def _check_integration_contract(root: Path) -> None:
 
 
 def _tool_environment(root: Path) -> dict[str, str]:
-    pins = load_json(root / "toolchains" / "pins.json")
-    environment = os.environ.copy()
-    environment["RUSTUP_TOOLCHAIN"] = pins["rustup_toolchain"]
-    return environment
+    return toolchain_environment(root)
 
 
 def _run_command(
@@ -525,6 +531,19 @@ def _pinned_upstream_source(
         raise ModelError(f"cannot inspect pinned {label} source: {error}") from error
     if result.stdout.strip() != expected:
         raise ModelError(f"{label} source checkout does not match the integration catalog pin")
+    try:
+        status = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=source,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise ModelError(f"cannot inspect pinned {label} worktree: {error}") from error
+    if status.stdout:
+        raise ModelError(f"pinned {label} source checkout has local modifications")
     return source
 
 
@@ -792,37 +811,9 @@ def _check_build_cache_clock(root: Path, *, now: float | None = None) -> None:
         )
 
 
-def _check_toolchain(root: Path, node: TestNode) -> None:
+def _check_toolchain(root: Path, _node: TestNode) -> None:
     _check_build_cache_clock(root)
-    pins = load_json(root / "toolchains" / "pins.json")
-    environment = _tool_environment(root)
-
-    def output(command: list[str]) -> str:
-        try:
-            result = subprocess.run(
-                command,
-                cwd=root,
-                check=False,
-                env=environment,
-                text=True,
-                stdout=subprocess.PIPE,
-                timeout=node.timeout_seconds,
-            )
-        except subprocess.TimeoutExpired as error:
-            raise ModelError(f"toolchain command timed out: {' '.join(command)}") from error
-        if result.returncode != 0:
-            raise ModelError(f"toolchain command failed: {' '.join(command)}")
-        return result.stdout.strip()
-
-    if output(["rustc", "--version"]) != pins["rustc"]:
-        raise ModelError("rustc does not match toolchains/pins.json")
-    if output(["cargo", "--version"]) != pins["cargo"]:
-        raise ModelError("cargo does not match toolchains/pins.json")
-    if not output([sys.executable, "--version"]).startswith(f"Python {pins['python']}"):
-        raise ModelError("Python does not match toolchains/pins.json")
-    clang = output(["clang++", "--version"])
-    if not clang.startswith(f"clang version {pins['clang_major']}."):
-        raise ModelError("clang++ does not match toolchains/pins.json")
+    verify_current_toolchain(root)
 
 
 def _check_schema_contracts(root: Path) -> None:
@@ -926,6 +917,17 @@ def _run_privacy_boundary(root: Path, _node: TestNode) -> None:
 
 def _run_toolchain_contract(root: Path, node: TestNode) -> None:
     _check_toolchain(root, node)
+
+
+def _run_assurance_contracts(root: Path, _node: TestNode) -> None:
+    load_dependency_inventory(root)
+    load_release_gates(root)
+    metrics = load_performance_budgets(root)
+    verify_static_performance_budgets(root, metrics)
+
+
+def _run_formal_model_contracts(root: Path, _node: TestNode) -> None:
+    run_formal_model(load_formal_model(root))
 
 
 def _run_rust_format(root: Path, node: TestNode) -> None:
@@ -1066,6 +1068,15 @@ def _run_package_contracts(root: Path, node: TestNode) -> None:
     if dynamic.returncode != 0 or "(RPATH)" in dynamic.stdout or "(RUNPATH)" in dynamic.stdout:
         raise ModelError("staged OpenRGB module has an invalid dynamic-library contract")
 
+    staged_payload_size = sum(
+        path.stat().st_size for path in first.root.rglob("*") if path.is_file()
+    )
+    verify_package_performance_budgets(
+        load_performance_budgets(root),
+        {artifact.build_id: artifact.size for artifact in artifacts.artifacts},
+        staged_payload_size,
+    )
+
 
 RUNNERS = {
     "foundation-contracts": _run_foundation_contracts,
@@ -1078,6 +1089,8 @@ RUNNERS = {
     "privacy-boundary": _run_privacy_boundary,
     "python-unit": _run_python_tests,
     "toolchain-contract": _run_toolchain_contract,
+    "assurance-contracts": _run_assurance_contracts,
+    "formal-model-contracts": _run_formal_model_contracts,
     "rust-format": _run_rust_format,
     "rust-clippy": _run_rust_clippy,
     "rust-unit": _run_rust_unit,

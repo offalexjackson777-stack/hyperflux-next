@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/release-gates-v1.json",
+  "title": "HyperFlux release-gate ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "gates"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-release-gates-v1"},
+    "gates": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": {"$ref": "#/$defs/gate"}
+    }
+  },
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "status",
+        "criteria",
+        "evidence",
+        "remaining",
+        "physical_evidence_required",
+        "publication_authorization_required"
+      ],
+      "properties": {
+        "id": {"type": "string", "pattern": "^HFX-GATE-[A-Z0-9-]+$", "maxLength": 96},
+        "title": {"type": "string", "minLength": 1, "maxLength": 160},
+        "status": {
+          "enum": [
+            "software-satisfied",
+            "blocked-by-lifecycle-evidence",
+            "blocked-by-physical-evidence",
+            "publication-locked"
+          ]
+        },
+        "criteria": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 300}
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/path"}
+        },
+        "remaining": {
+          "type": "array",
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 300}
+        },
+        "physical_evidence_required": {"type": "boolean"},
+        "publication_authorization_required": {"type": "boolean"}
+      }
+    }
+  }
+}

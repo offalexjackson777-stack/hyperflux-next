@@ -1,6 +1,6 @@
 {
   "schema": "hyperflux-compiled-install-plan-v1",
-  "install_manifest_sha256": "9fc6cba7d924b639b67be3acae6ca518b0d3f743d1d60f120714be95505de1fe",
+  "install_manifest_sha256": "778c6945605eeeda2b2cef1e7572bc046f6beef47f6c38d34244b6d087341af2",
   "product": {
     "name": "hyperflux-next-linux",
     "version": "0.0.0-dev.1",
@@ -258,6 +258,13 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/dependency-policy.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/dependency-policy.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/design-coverage.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/design-coverage.schema.json",
       "mode": "0644",
@@ -302,6 +309,13 @@
       "component": "schemas",
       "source": "schemas/evidence-registry.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/evidence-registry.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/formal-model.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/formal-model.schema.json",
       "mode": "0644",
       "preserve": false
     },
@@ -377,6 +391,13 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/performance-budgets.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/performance-budgets.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/polychromatic-state.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/polychromatic-state.schema.json",
       "mode": "0644",
@@ -398,6 +419,13 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/release-gates.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/release-gates.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/simulator-scenario.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/simulator-scenario.schema.json",
       "mode": "0644",
@@ -412,8 +440,22 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/toolchain-pins.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/toolchain-pins.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/upstream-metadata-import.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/upstream-metadata-import.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "assurance-artifacts",
+      "source": "assurance/generated/hyperflux-next.spdx.json",
+      "destination": "/usr/share/doc/hyperflux-next/assurance/generated/hyperflux-next.spdx.json",
       "mode": "0644",
       "preserve": false
     },
@@ -783,6 +825,13 @@
     },
     {
       "component": "documentation",
+      "source": "docs/generated/formal-model.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/formal-model.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
       "source": "docs/generated/installation.md",
       "destination": "/usr/share/doc/hyperflux-next/generated/installation.md",
       "mode": "0644",
@@ -813,6 +862,27 @@
       "component": "documentation",
       "source": "docs/generated/migration-ledger.md",
       "destination": "/usr/share/doc/hyperflux-next/generated/migration-ledger.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/performance-budgets.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/performance-budgets.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/release-gates.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/release-gates.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/supply-chain.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/supply-chain.md",
       "mode": "0644",
       "preserve": false
     },

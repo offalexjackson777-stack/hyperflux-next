@@ -33,12 +33,14 @@ HARDWARE_REQUIREMENTS = {"none", "optional", "required"}
 ISOLATION_LEVELS = {"shared", "exclusive-process", "exclusive-system", "exclusive-hardware"}
 RESUME_POLICIES = {"rerun", "reuse-verified", "checkpoint"}
 KNOWN_RUNNERS = {
+    "assurance-contracts",
     "foundation-contracts",
     "schema-contracts",
     "integration-contracts",
     "profile-contracts",
     "protocol-contracts",
     "error-contracts",
+    "formal-model-contracts",
     "generated-freshness",
     "privacy-boundary",
     "python-unit",

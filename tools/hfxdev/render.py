@@ -7,7 +7,12 @@ from typing import Any
 
 from .assurance import load_design_coverage
 from .errors import load_error_catalog
+from .formal_model import load_formal_model, run_formal_model
 from .generators.assurance import design_coverage_markdown
+from .generators.formal_model import formal_model_markdown
+from .generators.performance import performance_budgets_markdown
+from .generators.release import release_gates_markdown
+from .generators.supply_chain import spdx_json, supply_chain_markdown
 from .generators.domain import (
     cpp_json as domain_cpp_json,
     cpp_types,
@@ -81,8 +86,11 @@ from .distributions import load_distribution_catalog
 from .model import load_foundation, load_json
 from .linux_runtime import load_linux_runtime
 from .openrazer import load_imported_metadata
+from .performance import load_performance_budgets
 from .profiles import compiled_catalog, composition_fixtures
 from .protocol import load_protocol_registry
+from .release import load_release_gates
+from .supply_chain import load_dependency_inventory
 from .testgraph import load_test_catalog, markdown as testgraph_markdown
 
 
@@ -190,10 +198,30 @@ def rendered_files(root: Path) -> dict[Path, str]:
     linux_runtime = load_linux_runtime(root)
     distribution_catalog = load_distribution_catalog(root)
     design_coverage = load_design_coverage(root)
+    dependency_inventory = load_dependency_inventory(root)
+    release_gates = load_release_gates(root)
+    performance_budgets = load_performance_budgets(root)
+    formal_model = load_formal_model(root)
+    formal_model_result = run_formal_model(formal_model)
     files = {
         root / "docs" / "generated" / "architecture.md": architecture_markdown(constitution),
         root / "docs" / "generated" / "design-coverage.md": design_coverage_markdown(
             design_coverage
+        ),
+        root / "docs" / "generated" / "formal-model.md": formal_model_markdown(
+            formal_model, formal_model_result
+        ),
+        root / "docs" / "generated" / "performance-budgets.md": performance_budgets_markdown(
+            performance_budgets
+        ),
+        root / "docs" / "generated" / "release-gates.md": release_gates_markdown(
+            release_gates
+        ),
+        root / "docs" / "generated" / "supply-chain.md": supply_chain_markdown(
+            dependency_inventory
+        ),
+        root / "assurance" / "generated" / "hyperflux-next.spdx.json": spdx_json(
+            dependency_inventory
         ),
         root / "docs" / "generated" / "migration-ledger.md": migration_markdown(sources, ledger),
         root / "docs" / "generated" / "domain-types.md": domain_markdown(domain_catalog),

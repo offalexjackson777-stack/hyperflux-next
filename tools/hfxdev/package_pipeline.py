@@ -9,7 +9,6 @@ import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
-import platform
 import re
 import shutil
 import stat
@@ -19,9 +18,12 @@ from typing import Any
 import zipfile
 
 from .install import BuildSpec, InstallManifest, load_install_manifest
+from .generators.supply_chain import spdx_json
 from .integrations import load_integration_catalog
 from .linux_runtime import LinuxRuntime, load_linux_runtime
 from .model import ModelError, load_json, require_unique, sha256_file
+from .supply_chain import load_dependency_inventory
+from .toolchains import load_toolchain_pins, verify_current_toolchain
 
 
 REVISION = re.compile(r"^[0-9a-f]{40}$")
@@ -168,8 +170,14 @@ def _base_environment(root: Path, output: Path, epoch: int) -> dict[str, str]:
             "SOURCE_DATE_EPOCH": str(epoch),
             "PYTHONHASHSEED": "0",
             "CARGO_INCREMENTAL": "0",
+            "CARGO_NET_OFFLINE": "true",
             "CARGO_TARGET_DIR": str(output / "work" / "cargo-target"),
             "RUSTFLAGS": rust_remap,
+            "PIP_DISABLE_PIP_VERSION_CHECK": "1",
+            "PIP_NO_INDEX": "1",
+            "CC": "clang",
+            "CXX": "clang++",
+            "CMAKE_GENERATOR": "Ninja",
         }
     )
     remap = " ".join(
@@ -223,7 +231,15 @@ def _build_cargo(
             raise ModelError(f"build {build.id}: incomplete Cargo declaration")
         by_package.setdefault(build.package, []).append(build)
     for package, package_builds in sorted(by_package.items()):
-        command = ["cargo", "build", "--release", "--locked", "--package", package]
+        command = [
+            "cargo",
+            "build",
+            "--release",
+            "--locked",
+            "--offline",
+            "--package",
+            package,
+        ]
         for build in package_builds:
             command.extend(["--bin", build.target or ""])
         _run(
@@ -377,6 +393,7 @@ def _build_python(
             "--no-build-isolation",
             "--no-deps",
             "--no-cache-dir",
+            "--no-index",
             "--wheel-dir",
             str(wheel_directory),
             str(projection),
@@ -414,6 +431,71 @@ def _artifact_json(artifact: BuiltArtifact, root: Path) -> dict[str, Any]:
     return value
 
 
+def _provenance_inputs(
+    root: Path, install: InstallManifest, runtime: LinuxRuntime
+) -> dict[str, str]:
+    inventory = load_dependency_inventory(root)
+    sbom_path = root / "assurance" / "generated" / "hyperflux-next.spdx.json"
+    expected_sbom = spdx_json(inventory)
+    if not sbom_path.is_file() or sbom_path.read_text(encoding="utf-8") != expected_sbom:
+        raise ModelError("generated SPDX inventory is stale; run ./hfx generate")
+    return {
+        "install_manifest_sha256": install.source_sha256,
+        "linux_runtime_sha256": runtime.source_sha256,
+        "dependency_policy_sha256": sha256_file(root / "assurance" / "dependencies.json"),
+        "sbom_sha256": sha256_file(sbom_path),
+        "toolchain_pins_sha256": sha256_file(root / "toolchains" / "pins.json"),
+        "cargo_lock_sha256": sha256_file(root / "Cargo.lock"),
+        "integration_catalog_sha256": sha256_file(root / "integrations" / "catalog.json"),
+    }
+
+
+def _provenance_materials(
+    root: Path,
+    inputs: dict[str, str],
+    supplied_capabilities: set[str],
+) -> list[dict[str, str]]:
+    paths = {
+        "cargo-lock": ("Cargo.lock", "cargo_lock_sha256"),
+        "dependency-policy": (
+            "assurance/dependencies.json",
+            "dependency_policy_sha256",
+        ),
+        "install-manifest": ("packaging/install.json", "install_manifest_sha256"),
+        "integration-catalog": (
+            "integrations/catalog.json",
+            "integration_catalog_sha256",
+        ),
+        "linux-runtime": ("runtime/linux.json", "linux_runtime_sha256"),
+        "source-sbom": (
+            "assurance/generated/hyperflux-next.spdx.json",
+            "sbom_sha256",
+        ),
+        "toolchain-pins": ("toolchains/pins.json", "toolchain_pins_sha256"),
+    }
+    materials = [
+        {"id": material_id, "uri": path, "sha256": inputs[input_id]}
+        for material_id, (path, input_id) in sorted(paths.items())
+    ]
+    upstreams = {
+        f"{upstream['id']}-source": upstream
+        for upstream in load_integration_catalog(root)["upstreams"]
+    }
+    unknown = sorted(supplied_capabilities - upstreams.keys())
+    if unknown:
+        raise ModelError(f"package build received unknown source capabilities: {', '.join(unknown)}")
+    for capability in sorted(supplied_capabilities):
+        upstream = upstreams[capability]
+        materials.append(
+            {
+                "id": f"upstream-{upstream['id']}",
+                "uri": upstream["repository"],
+                "revision": upstream["commit"],
+            }
+        )
+    return sorted(materials, key=lambda item: item["id"])
+
+
 def build_artifacts(
     root: Path,
     output: Path,
@@ -428,6 +510,8 @@ def build_artifacts(
     output = _new_output_directory(output, "package build")
     environment = _base_environment(root, output, epoch)
     capabilities = capabilities or {}
+    toolchain = verify_current_toolchain(root)
+    inputs = _provenance_inputs(root, install, runtime)
 
     artifacts: list[BuiltArtifact] = []
     cargo = [build for build in install.builds if build.kind == "cargo-binary"]
@@ -446,17 +530,16 @@ def build_artifacts(
             artifacts.append(_build_python(root, output, environment, build))
 
     manifest = {
-        "$schema": "https://hyperflux.dev/schemas/package-build-manifest-v1.json",
-        "schema": "hyperflux-package-build-manifest-v1",
+        "$schema": "https://hyperflux.dev/schemas/package-build-manifest-v2.json",
+        "schema": "hyperflux-package-build-manifest-v2",
         "source": {"revision": revision, "source_date_epoch": epoch},
-        "inputs": {
-            "install_manifest_sha256": install.source_sha256,
-            "linux_runtime_sha256": runtime.source_sha256,
-            "python": platform.python_version(),
-            "target": _output(["rustc", "-vV"], cwd=root, label="Rust target")
-            .split("host: ", 1)[-1]
-            .splitlines()[0],
+        "builder": {
+            "id": "https://hyperflux.dev/builders/hfx-package-v2",
+            "network_access": False,
         },
+        "toolchain": toolchain,
+        "inputs": inputs,
+        "materials": _provenance_materials(root, inputs, set(capabilities)),
         "artifacts": [
             _artifact_json(artifact, output)
             for artifact in sorted(artifacts, key=lambda item: item.build_id)
@@ -543,27 +626,113 @@ def _manifest_artifact(root: Path, value: Any, label: str) -> BuiltArtifact:
     )
 
 
+def _manifest_material(value: Any, label: str) -> dict[str, str]:
+    if not isinstance(value, dict) or not {"id", "uri"} <= value.keys():
+        raise ModelError(f"{label}: malformed material")
+    if set(value) not in ({"id", "uri", "sha256"}, {"id", "uri", "revision"}):
+        raise ModelError(f"{label}: material must carry exactly one identity digest")
+    material_id = value["id"]
+    uri = value["uri"]
+    if (
+        not isinstance(material_id, str)
+        or not re.fullmatch(r"[a-z][a-z0-9-]{0,63}", material_id)
+        or not isinstance(uri, str)
+        or not uri
+        or len(uri) > 256
+        or "/home/" in uri
+    ):
+        raise ModelError(f"{label}: invalid material identity")
+    if "sha256" in value and (
+        not isinstance(value["sha256"], str) or not DIGEST.fullmatch(value["sha256"])
+    ):
+        raise ModelError(f"{label}: invalid material digest")
+    if "revision" in value and (
+        not isinstance(value["revision"], str) or not REVISION.fullmatch(value["revision"])
+    ):
+        raise ModelError(f"{label}: invalid material revision")
+    return dict(value)
+
+
 def load_artifact_set(root: Path, manifest_path: Path) -> ArtifactSet:
     root = root.resolve()
     manifest_path = manifest_path.resolve()
     value = load_json(manifest_path)
-    expected_keys = {"$schema", "schema", "source", "inputs", "artifacts", "omitted"}
+    expected_keys = {
+        "$schema",
+        "schema",
+        "source",
+        "builder",
+        "toolchain",
+        "inputs",
+        "materials",
+        "artifacts",
+        "omitted",
+    }
     if (
         set(value) != expected_keys
         or value["$schema"]
-        != "https://hyperflux.dev/schemas/package-build-manifest-v1.json"
-        or value["schema"] != "hyperflux-package-build-manifest-v1"
+        != "https://hyperflux.dev/schemas/package-build-manifest-v2.json"
+        or value["schema"] != "hyperflux-package-build-manifest-v2"
     ):
         raise ModelError("unsupported package build manifest")
     source = value["source"]
+    builder = value["builder"]
+    toolchain = value["toolchain"]
     inputs = value["inputs"]
     if not isinstance(source, dict) or set(source) != {"revision", "source_date_epoch"}:
         raise ModelError("package build source identity is malformed")
+    if builder != {
+        "id": "https://hyperflux.dev/builders/hfx-package-v2",
+        "network_access": False,
+    }:
+        raise ModelError("package builder identity is malformed")
+    toolchain_keys = {
+        "rustc",
+        "cargo",
+        "python",
+        "pip",
+        "setuptools",
+        "wheel",
+        "clang",
+        "cmake",
+        "ninja",
+        "target",
+    }
+    if (
+        not isinstance(toolchain, dict)
+        or set(toolchain) != toolchain_keys
+        or not all(isinstance(toolchain[key], str) and toolchain[key] for key in toolchain_keys)
+    ):
+        raise ModelError("package build toolchain identity is malformed")
+    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", toolchain["python"]):
+        raise ModelError("package Python identity is malformed")
+    if not re.fullmatch(
+        r"[A-Za-z0-9_+.]+(?:-[A-Za-z0-9_+.]+){2,4}", toolchain["target"]
+    ):
+        raise ModelError("package target identity is malformed")
+    pins = load_toolchain_pins(root)
+    pinned_toolchain = {
+        "rustc": pins.rustc,
+        "cargo": pins.cargo,
+        "pip": pins.pip,
+        "setuptools": pins.setuptools,
+        "wheel": pins.wheel,
+        "clang": pins.clang,
+        "cmake": pins.cmake,
+        "ninja": pins.ninja,
+    }
+    if any(toolchain[key] != expected for key, expected in pinned_toolchain.items()):
+        raise ModelError("package build toolchain differs from the repository pins")
+    if ".".join(toolchain["python"].split(".")[:2]) != pins.python:
+        raise ModelError("package Python identity differs from the repository pin")
     if not isinstance(inputs, dict) or set(inputs) != {
         "install_manifest_sha256",
         "linux_runtime_sha256",
-        "python",
-        "target",
+        "dependency_policy_sha256",
+        "sbom_sha256",
+        "toolchain_pins_sha256",
+        "cargo_lock_sha256",
+        "integration_catalog_sha256",
     }:
         raise ModelError("package build inputs are malformed")
     revision = source["revision"]
@@ -580,14 +749,20 @@ def load_artifact_set(root: Path, manifest_path: Path) -> ArtifactSet:
 
     install = load_install_manifest(root)
     runtime = load_linux_runtime(root)
-    if inputs["install_manifest_sha256"] != install.source_sha256:
-        raise ModelError("package build manifest uses a stale installation contract")
-    if inputs["linux_runtime_sha256"] != runtime.source_sha256:
-        raise ModelError("package build manifest uses a stale Linux runtime contract")
-    if not isinstance(inputs["python"], str) or not inputs["python"]:
-        raise ModelError("package Python identity is malformed")
-    if not isinstance(inputs["target"], str) or not inputs["target"]:
-        raise ModelError("package target identity is malformed")
+    expected_inputs = _provenance_inputs(root, install, runtime)
+    if inputs != expected_inputs:
+        raise ModelError("package build manifest uses stale or incomplete source materials")
+
+    material_values = value["materials"]
+    if not isinstance(material_values, list):
+        raise ModelError("package build materials are malformed")
+    materials = [
+        _manifest_material(item, f"material {index}")
+        for index, item in enumerate(material_values)
+    ]
+    require_unique([item["id"] for item in materials], "package material id")
+    if materials != sorted(materials, key=lambda item: item["id"]):
+        raise ModelError("package build materials are not canonical")
 
     artifact_values = value["artifacts"]
     omitted_values = value["omitted"]
@@ -630,14 +805,21 @@ def load_artifact_set(root: Path, manifest_path: Path) -> ArtifactSet:
         build = declared.get(build_id)
         if build is None or build.required:
             raise ModelError(f"omission {build_id}: required or unknown build cannot be omitted")
+    supplied_capabilities = {
+        build.capability
+        for artifact in artifacts
+        if (build := declared[artifact.build_id]).capability is not None
+    }
+    if materials != _provenance_materials(root, inputs, supplied_capabilities):
+        raise ModelError("package build materials differ from the declared source inputs")
     return ArtifactSet(
         root=manifest_path.parent,
         revision=revision,
         source_date_epoch=epoch,
         install_manifest_sha256=inputs["install_manifest_sha256"],
         linux_runtime_sha256=inputs["linux_runtime_sha256"],
-        python=inputs["python"],
-        target=inputs["target"],
+        python=toolchain["python"],
+        target=toolchain["target"],
         artifacts=artifacts,
         omitted=tuple(omitted),
     )

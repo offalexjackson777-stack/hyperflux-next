@@ -1,0 +1,35 @@
+{
+  "$schema": "../schemas/formal-model.schema.json",
+  "schema": "hyperflux-formal-model-v1",
+  "bounds": {
+    "maximum_depth": 10,
+    "maximum_states": 50000,
+    "receiver_generations": 2
+  },
+  "invariants": [
+    {"id": "HFX-MODEL-001", "statement": "Only one receiver generation is active and an active generation is never retired."},
+    {"id": "HFX-MODEL-002", "statement": "A lease is owned by one actor and is bound to the current active qualified generation."},
+    {"id": "HFX-MODEL-003", "statement": "Every nonterminal transaction is bound to the current active qualified generation and lease."},
+    {"id": "HFX-MODEL-004", "statement": "Hardware dispatch occurs at most once for one modeled transaction identity."},
+    {"id": "HFX-MODEL-005", "statement": "Confirmed success requires one hardware attempt and safe failure requires none."},
+    {"id": "HFX-MODEL-006", "statement": "An uncertain hardware outcome is terminal and cannot enter automatic retry transitions."},
+    {"id": "HFX-MODEL-007", "statement": "Generation replacement revokes old lease and nonterminal transaction authority."},
+    {"id": "HFX-MODEL-008", "statement": "Stable intent can be captured only from confirmed delivery."}
+  ],
+  "required_transitions": [
+    "acquire-application-lease",
+    "acquire-restoration-lease",
+    "authorize-transaction",
+    "capture-stable-intent",
+    "clear-safe-terminal",
+    "connect-generation",
+    "disconnect-generation",
+    "dispatch-safe-failure",
+    "dispatch-success",
+    "dispatch-uncertain",
+    "qualify-generation",
+    "queue-transaction",
+    "release-lease",
+    "reserve-transport"
+  ]
+}
