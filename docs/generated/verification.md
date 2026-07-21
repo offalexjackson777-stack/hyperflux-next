@@ -16,15 +16,16 @@ Every current node is software-only and has zero hardware-write authority.
 | 7 | `error-contracts` | `errors` | `none` | `false` | 10s | `reuse-verified` |
 | 8 | `rust-format` | `rust` | `none` | `false` | 60s | `rerun` |
 | 9 | `profile-contracts` | `profiles` | `none` | `false` | 10s | `reuse-verified` |
-| 10 | `generated-freshness` | `generation` | `none` | `false` | 15s | `reuse-verified` |
-| 11 | `python-unit` | `tooling` | `none` | `false` | 60s | `rerun` |
-| 12 | `rust-clippy` | `rust` | `none` | `false` | 180s | `rerun` |
-| 13 | `cpp-sdk-contracts` | `sdk` | `none` | `false` | 60s | `rerun` |
-| 14 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 180s | `rerun` |
-| 15 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
-| 16 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
-| 17 | `openrgb-adapter-contracts` | `integrations` | `none` | `false` | 120s | `rerun` |
-| 18 | `openrgb-thread-sanitizer` | `integrations` | `none` | `false` | 300s | `rerun` |
+| 10 | `openrazer-metadata-contracts` | `integrations` | `none` | `false` | 30s | `rerun` |
+| 11 | `generated-freshness` | `generation` | `none` | `false` | 15s | `reuse-verified` |
+| 12 | `python-unit` | `tooling` | `none` | `false` | 60s | `rerun` |
+| 13 | `rust-clippy` | `rust` | `none` | `false` | 180s | `rerun` |
+| 14 | `cpp-sdk-contracts` | `sdk` | `none` | `false` | 60s | `rerun` |
+| 15 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 180s | `rerun` |
+| 16 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
+| 17 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
+| 18 | `openrgb-adapter-contracts` | `integrations` | `none` | `false` | 120s | `rerun` |
+| 19 | `openrgb-thread-sanitizer` | `integrations` | `none` | `false` | 300s | `rerun` |
 
 ## Dependencies
 
@@ -39,6 +40,7 @@ flowchart LR
     error_contracts["error-contracts"]
     rust_format["rust-format"]
     profile_contracts["profile-contracts"]
+    openrazer_metadata_contracts["openrazer-metadata-contracts"]
     generated_freshness["generated-freshness"]
     python_unit["python-unit"]
     rust_clippy["rust-clippy"]
@@ -56,6 +58,8 @@ flowchart LR
     schema_contracts --> error_contracts
     toolchain_contract --> rust_format
     integration_contracts --> profile_contracts
+    integration_contracts --> openrazer_metadata_contracts
+    profile_contracts --> openrazer_metadata_contracts
     profile_contracts --> generated_freshness
     protocol_contracts --> generated_freshness
     error_contracts --> generated_freshness

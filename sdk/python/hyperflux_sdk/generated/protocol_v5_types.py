@@ -88,6 +88,31 @@ MINIMUM_PROTOCOL_VERSION = 5
 MAXIMUM_PROTOCOL_VERSION = 5
 MAX_WIRE_MESSAGE_BYTES = 1048576
 MAX_JSON_DEPTH = 128
+FIELD_LIMITS = {
+    ("ClientHello", "required_features"): 64,
+    ("ClientHello", "optional_features"): 64,
+    ("ServerHello", "enabled_features"): 64,
+    ("LeaseRequest", "resources"): 32,
+    ("LeaseGrant", "resources"): 32,
+    ("LogicalDeviceSnapshot", "endpoints"): 8,
+    ("LogicalDeviceSnapshot", "capabilities"): 128,
+    ("ReceiverSnapshot", "devices"): 32,
+    ("ReceiverSnapshot", "ownership"): 96,
+    ("BridgeSnapshot", "receivers"): 16,
+    ("LightingFrame", "colors"): 4096,
+    ("TransactionRequest", "device_profiles"): 32,
+    ("TransactionRequest", "stable_intents"): 32,
+    ("TransactionRequest", "resources"): 32,
+    ("TransactionRequest", "frames"): 32,
+    ("EventBatch", "events"): 256,
+    ("DiagnosticSnapshot", "findings"): 128,
+    ("DeviceInventoryView", "endpoints"): 8,
+    ("DeviceInventoryView", "capabilities"): 128,
+    ("ControllerView", "capabilities"): 128,
+    ("IntegrationReceiverView", "inventory"): 32,
+    ("IntegrationReceiverView", "controllers"): 32,
+    ("IntegrationView", "receivers"): 16,
+}
 SUPPORTED_FEATURES = (
     "ownership-leases",
     "atomic-transactions",
@@ -795,6 +820,7 @@ METHODS = (
 
 __all__ = [
     "MAXIMUM_PROTOCOL_VERSION",
+    "FIELD_LIMITS",
     "MAX_JSON_DEPTH",
     "MAX_WIRE_MESSAGE_BYTES",
     "METHODS",

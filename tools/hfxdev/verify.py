@@ -14,6 +14,7 @@ import time
 from .model import ModelError, load_foundation, load_json, require_unique, sha256_file
 from .errors import load_error_catalog
 from .integrations import load_integration_catalog
+from .openrazer import load_imported_metadata, transformed_metadata
 from .render import rendered_files
 from .profiles import load_profile_inputs
 from .protocol import load_protocol_catalog
@@ -132,6 +133,7 @@ def _check_profile_contract(root: Path) -> None:
 
 def _check_integration_contract(root: Path) -> None:
     load_integration_catalog(root)
+    load_imported_metadata(root)
 
 
 def _tool_environment(root: Path) -> dict[str, str]:
@@ -474,6 +476,41 @@ def _openrgb_source() -> Path:
     return source
 
 
+def _openrazer_source(root: Path) -> Path:
+    value = os.environ.get("HFX_OPENRAZER_SOURCE_DIR")
+    if value is None:
+        raise ModelError("HFX_OPENRAZER_SOURCE_DIR is required for pinned metadata verification")
+    source = Path(value).resolve()
+    if not source.is_dir():
+        raise ModelError("HFX_OPENRAZER_SOURCE_DIR is not a directory")
+    expected = {
+        upstream["id"]: upstream["commit"]
+        for upstream in load_integration_catalog(root)["upstreams"]
+    }["openrazer"]
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=source,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise ModelError(f"cannot inspect pinned OpenRazer source: {error}") from error
+    if result.stdout.strip() != expected:
+        raise ModelError("OpenRazer source checkout does not match the integration catalog pin")
+    return source
+
+
+def _run_openrazer_metadata_contracts(root: Path, _node: TestNode) -> None:
+    source = _openrazer_source(root)
+    expected = transformed_metadata(root, source)
+    actual = load_imported_metadata(root)
+    if actual != expected:
+        raise ModelError("committed OpenRazer metadata is stale; rerun ./hfx import openrazer")
+
+
 def _run_openrgb_cmake_contracts(
     root: Path,
     node: TestNode,
@@ -748,6 +785,7 @@ RUNNERS = {
     "cpp-sdk-contracts": _run_cpp_sdk_contracts,
     "openrgb-adapter-contracts": _run_openrgb_adapter_contracts,
     "openrgb-thread-sanitizer": _run_openrgb_thread_sanitizer,
+    "openrazer-metadata-contracts": _run_openrazer_metadata_contracts,
     "kernel-profile-contracts": _run_kernel_profile_contracts,
 }
 

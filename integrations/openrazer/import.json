@@ -1,0 +1,22 @@
+{
+  "$schema": "../../schemas/upstream-metadata-import.schema.json",
+  "schema": "hyperflux-upstream-metadata-import-v1",
+  "upstream_id": "openrazer",
+  "source_commit": "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+  "devices": [
+    {
+      "profile_id": "child.razer.basilisk-v3-pro-35k.00cd",
+      "source_path": "daemon/openrazer_daemon/hardware/mouse.py",
+      "class_name": "RazerBasiliskV3Pro35KWireless",
+      "device_kind": "mouse",
+      "transport_variant": "wireless"
+    },
+    {
+      "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296",
+      "source_path": "daemon/openrazer_daemon/hardware/keyboards.py",
+      "class_name": "RazerDeathStalkerV2ProTKLWireless",
+      "device_kind": "keyboard",
+      "transport_variant": "wireless"
+    }
+  ]
+}

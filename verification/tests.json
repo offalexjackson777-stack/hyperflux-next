@@ -49,7 +49,7 @@
       "timeout_seconds": 10,
       "dependencies": ["schema-contracts"],
       "isolation": "shared",
-      "cache_inputs": ["integrations/*.json", "schemas/integration-catalog.schema.json", "tools/hfxdev/integrations.py"],
+      "cache_inputs": ["integrations/**/*.json", "schemas/integration-catalog.schema.json", "tools/hfxdev/integrations.py", "tools/hfxdev/openrazer.py"],
       "produced_evidence": ["integration-contract-result"],
       "resume_policy": "reuse-verified"
     },
@@ -69,6 +69,23 @@
       "cache_inputs": ["profiles/**/*.json", "profiles/evidence/*.json", "migration/inventory/*.json"],
       "produced_evidence": ["profile-result"],
       "resume_policy": "reuse-verified"
+    },
+    {
+      "id": "openrazer-metadata-contracts",
+      "title": "Pinned OpenRazer metadata transformation contracts",
+      "owned_domain": "integrations",
+      "lanes": ["full-software"],
+      "runner": "openrazer-metadata-contracts",
+      "required_capabilities": ["openrazer-source"],
+      "hardware_requirement": "none",
+      "writes_hardware": false,
+      "expected_duration_seconds": 1,
+      "timeout_seconds": 30,
+      "dependencies": ["integration-contracts", "profile-contracts"],
+      "isolation": "exclusive-process",
+      "cache_inputs": ["integrations/openrazer/*.json", "profiles/children/*.json", "schemas/imported-device-metadata.schema.json", "schemas/upstream-metadata-import.schema.json", "tools/hfxdev/openrazer.py"],
+      "produced_evidence": ["openrazer-metadata-result"],
+      "resume_policy": "rerun"
     },
     {
       "id": "protocol-contracts",
@@ -117,7 +134,7 @@
       "timeout_seconds": 15,
       "dependencies": ["profile-contracts", "protocol-contracts", "error-contracts", "integration-contracts"],
       "isolation": "shared",
-      "cache_inputs": ["schemas/*.json", "profiles/**/*.json", "integrations/*.json", "protocol/**/*.json", "uapi/*.json", "errors/catalog.json", "tools/hfxdev/generators/*.py", "tools/hfxdev/render.py", "verification/tests.json"],
+      "cache_inputs": ["schemas/*.json", "profiles/**/*.json", "integrations/**/*.json", "protocol/**/*.json", "uapi/*.json", "errors/catalog.json", "tools/hfxdev/generators/*.py", "tools/hfxdev/render.py", "verification/tests.json"],
       "produced_evidence": ["generation-result"],
       "resume_policy": "reuse-verified"
     },
@@ -151,7 +168,7 @@
       "timeout_seconds": 60,
       "dependencies": ["generated-freshness", "privacy-boundary"],
       "isolation": "exclusive-process",
-      "cache_inputs": ["tools/hfxdev/**/*.py", "tests/test_*.py", "schemas/*.json", "profiles/**/*.json", "uapi/*.json", "verification/tests.json"],
+      "cache_inputs": ["tools/hfxdev/**/*.py", "sdk/python/**/*.py", "tests/test_*.py", "schemas/*.json", "profiles/**/*.json", "integrations/**/*.json", "uapi/*.json", "verification/tests.json"],
       "produced_evidence": ["python-unit-result"],
       "resume_policy": "rerun"
     },

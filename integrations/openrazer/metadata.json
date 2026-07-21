@@ -1,0 +1,127 @@
+{
+  "$schema": "../../schemas/imported-device-metadata.schema.json",
+  "schema": "hyperflux-imported-device-metadata-v1",
+  "upstream": {
+    "id": "openrazer",
+    "repository": "https://github.com/openrazer/openrazer.git",
+    "version": "3.12.1-41-g6820f9d",
+    "commit": "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+    "license_expression": "GPL-2.0-or-later AND CC-BY-SA-4.0"
+  },
+  "selection_sha256": "0bd97b07f4c8f9d2c99ac3a3622477704661d5069bd984a0ef8d4a72bf32998f",
+  "devices": [
+    {
+      "profile_id": "child.razer.basilisk-v3-pro-35k.00cd",
+      "source": {
+        "path": "daemon/openrazer_daemon/hardware/mouse.py",
+        "class_name": "RazerBasiliskV3Pro35KWireless",
+        "sha256": "c36180167f3f07f2299eb2653dd171ce6086a5cb0c30a898d9ee2be3dc3c4c03"
+      },
+      "identity": {
+        "vendor_id": 5426,
+        "product_id": 205,
+        "model_name": "Razer Basilisk V3 Pro 35K (Wireless)",
+        "device_kind": "mouse",
+        "transport_variant": "wireless"
+      },
+      "presentation": {
+        "image_url": "https://dl.razerzone.com/src2/14676/14676-1-en-v1.png",
+        "has_matrix": true,
+        "matrix_rows": 1,
+        "matrix_columns": 13
+      },
+      "advertised_methods": [
+        "get_battery",
+        "get_brightness",
+        "get_device_type_mouse",
+        "get_dpi_stages",
+        "get_dpi_xy",
+        "get_idle_time",
+        "get_logo_brightness",
+        "get_low_battery_threshold",
+        "get_poll_rate",
+        "get_scroll_acceleration",
+        "get_scroll_brightness",
+        "get_scroll_mode",
+        "get_scroll_smart_reel",
+        "is_charging",
+        "max_dpi",
+        "set_brightness",
+        "set_custom_effect",
+        "set_dpi_stages",
+        "set_dpi_xy",
+        "set_idle_time",
+        "set_key_row",
+        "set_logo_brightness",
+        "set_logo_none",
+        "set_logo_spectrum",
+        "set_logo_static",
+        "set_logo_wave",
+        "set_low_battery_threshold",
+        "set_none_effect",
+        "set_poll_rate",
+        "set_scroll_acceleration",
+        "set_scroll_brightness",
+        "set_scroll_mode",
+        "set_scroll_none",
+        "set_scroll_smart_reel",
+        "set_scroll_spectrum",
+        "set_scroll_static",
+        "set_scroll_wave",
+        "set_spectrum_effect",
+        "set_static_effect",
+        "set_wave_effect"
+      ]
+    },
+    {
+      "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296",
+      "source": {
+        "path": "daemon/openrazer_daemon/hardware/keyboards.py",
+        "class_name": "RazerDeathStalkerV2ProTKLWireless",
+        "sha256": "a4d6b54f4e6da3a7ff65a727ccc5b047efb345d3170d0a2f8256b5f0a7c1d5e9"
+      },
+      "identity": {
+        "vendor_id": 5426,
+        "product_id": 662,
+        "model_name": "Razer DeathStalker V2 Pro TKL (Wireless)",
+        "device_kind": "keyboard",
+        "transport_variant": "wireless"
+      },
+      "presentation": {
+        "image_url": "https://dl.razerzone.com/src/6117/6117-1-en-v1.png",
+        "has_matrix": true,
+        "matrix_rows": 6,
+        "matrix_columns": 17
+      },
+      "advertised_methods": [
+        "add_macro",
+        "delete_macro",
+        "get_battery",
+        "get_device_type_keyboard",
+        "get_game_mode",
+        "get_macro_effect",
+        "get_macro_mode",
+        "get_macros",
+        "is_charging",
+        "set_breath_dual_effect",
+        "set_breath_random_effect",
+        "set_breath_single_effect",
+        "set_custom_effect",
+        "set_game_mode",
+        "set_key_row",
+        "set_macro_effect",
+        "set_macro_mode",
+        "set_none_effect",
+        "set_reactive_effect",
+        "set_ripple_effect",
+        "set_ripple_effect_random_colour",
+        "set_spectrum_effect",
+        "set_starlight_dual_effect",
+        "set_starlight_random_effect",
+        "set_starlight_single_effect",
+        "set_static_effect",
+        "set_wave_effect"
+      ]
+    }
+  ]
+}

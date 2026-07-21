@@ -943,6 +943,16 @@ def python_types(catalog: ProtocolCatalog) -> str:
         f"MAXIMUM_PROTOCOL_VERSION = {catalog.maximum_version}",
         f"MAX_WIRE_MESSAGE_BYTES = {catalog.max_message_bytes}",
         f"MAX_JSON_DEPTH = {catalog.max_json_depth}",
+        "FIELD_LIMITS = {",
+    ])
+    for record in catalog.records:
+        for field in record.fields:
+            if field.max_items is not None:
+                lines.append(
+                    f'    ("{record.name}", "{field.name}"): {field.max_items},'
+                )
+    lines.extend([
+        "}",
         "SUPPORTED_FEATURES = (",
     ])
     lines.extend(f'    "{feature}",' for feature in catalog.features)
@@ -1077,6 +1087,7 @@ def python_types(catalog: ProtocolCatalog) -> str:
         "",
         "__all__ = [",
         '    "MAXIMUM_PROTOCOL_VERSION",',
+        '    "FIELD_LIMITS",',
         '    "MAX_JSON_DEPTH",',
         '    "MAX_WIRE_MESSAGE_BYTES",',
         '    "METHODS",',

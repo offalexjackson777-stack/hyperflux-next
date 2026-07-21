@@ -8,6 +8,7 @@ import sys
 
 from .migration import capture_inventory, summary
 from .model import ModelError
+from .openrazer import write_imported_metadata
 from .render import write_generated
 from .testgraph import format_plan, load_test_catalog
 from .verify import verify_all
@@ -38,6 +39,10 @@ def _parser() -> argparse.ArgumentParser:
     capture = migration_commands.add_parser("capture", help="capture an immutable git source inventory")
     capture.add_argument("--source", required=True)
     capture.add_argument("--path", required=True, type=Path)
+
+    imports = commands.add_parser("import", help="transform pinned upstream metadata")
+    imports.add_argument("upstream", choices=["openrazer"])
+    imports.add_argument("--source", required=True, type=Path)
     return parser
 
 
@@ -57,6 +62,10 @@ def main(arguments: list[str] | None = None) -> int:
             return 0
         if args.command == "test":
             print(format_plan(load_test_catalog(root)))
+            return 0
+        if args.command == "import":
+            destination = write_imported_metadata(root, args.source.resolve())
+            print(f"Imported {args.upstream}: {destination.relative_to(root)}")
             return 0
         if args.migration_command == "summary":
             print(summary(root))
