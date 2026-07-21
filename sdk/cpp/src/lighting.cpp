@@ -3,7 +3,9 @@
 #include <hyperflux/sdk/lighting.hpp>
 
 #include <algorithm>
+#include <map>
 #include <optional>
+#include <set>
 #include <string>
 #include <utility>
 #include <variant>
@@ -12,6 +14,28 @@ namespace hyperflux::sdk
 {
 namespace
 {
+
+constexpr std::size_t max_lighting_resources = 32;
+
+struct ResourceLess
+{
+    bool operator()(const v5::ResourceKey& left, const v5::ResourceKey& right) const noexcept
+    {
+        if(left.receiver_id.value() != right.receiver_id.value())
+        {
+            return left.receiver_id.value() < right.receiver_id.value();
+        }
+        if(left.generation_id.value() != right.generation_id.value())
+        {
+            return left.generation_id.value() < right.generation_id.value();
+        }
+        if(left.device_id.value() != right.device_id.value())
+        {
+            return left.device_id.value() < right.device_id.value();
+        }
+        return static_cast<int>(left.kind) < static_cast<int>(right.kind);
+    }
+};
 
 Error error(ErrorCode code, std::string message, std::optional<std::string> finding = std::nullopt)
 {
@@ -71,23 +95,16 @@ Result<v5::LeaseGrant> require_grant(
 
 Result<void> validate_targets(const std::vector<LightingTarget>& targets)
 {
-    if(targets.empty())
+    if(targets.empty() || targets.size() > max_lighting_resources)
     {
         return Result<void>::failure(error(
             ErrorCode::InvalidArgument,
-            "a lighting session requires at least one controller"));
+            "a lighting session requires between one and 32 controllers"));
     }
-    const auto& first = targets.front();
-    for(std::size_t index = 0; index < targets.size(); ++index)
+    std::set<v5::ResourceKey, ResourceLess> unique_resources;
+    std::map<std::string, std::pair<GenerationId, v5::ProfileBindingView>> receivers;
+    for(const auto& target : targets)
     {
-        const auto& target = targets[index];
-        if(target.receiver_id != first.receiver_id || target.generation_id != first.generation_id)
-        {
-            return Result<void>::failure(error(
-                ErrorCode::MixedReceiverGeneration,
-                "one lighting session cannot span receiver generations",
-                "HFX-GENERATION-001"));
-        }
         if(target.application_slot_count.value() == 0
            || target.resource.kind != ResourceKind::Lighting
            || target.resource.receiver_id != target.receiver_id
@@ -99,18 +116,25 @@ Result<void> validate_targets(const std::vector<LightingTarget>& targets)
                 "a lighting target is not bound to one exact controller resource",
                 "HFX-REQUEST-001"));
         }
-        if(std::count_if(
-               targets.begin(),
-               targets.end(),
-               [&target](const LightingTarget& candidate) {
-                   return candidate.resource == target.resource;
-               })
-           != 1)
+        if(!unique_resources.insert(target.resource).second)
         {
             return Result<void>::failure(error(
                 ErrorCode::InvalidController,
                 "a lighting session contains a duplicate controller resource",
                 "HFX-REQUEST-001"));
+        }
+        const auto key = std::string(target.receiver_id.value());
+        const auto [receiver, inserted] = receivers.emplace(
+            key,
+            std::make_pair(target.generation_id, target.receiver_profile));
+        if(!inserted
+           && (receiver->second.first != target.generation_id
+               || receiver->second.second != target.receiver_profile))
+        {
+            return Result<void>::failure(error(
+                ErrorCode::MixedReceiverGeneration,
+                "one lighting session cannot contain conflicting authority for one receiver",
+                "HFX-GENERATION-001"));
         }
     }
     return Result<void>::success();
@@ -141,8 +165,18 @@ Result<void> validate_updates(
             "a lighting transaction requires at least one frame",
             "HFX-REQUEST-001"));
     }
+    const auto& authority = updates.front().target;
     for(const auto& update : updates)
     {
+        if(update.target.receiver_id != authority.receiver_id
+           || update.target.generation_id != authority.generation_id
+           || update.target.receiver_profile != authority.receiver_profile)
+        {
+            return Result<void>::failure(error(
+                ErrorCode::MixedReceiverGeneration,
+                "one lighting transaction must remain inside one receiver generation",
+                "HFX-GENERATION-001"));
+        }
         const auto* target = owned_target(targets, update.target);
         if(target == nullptr)
         {
@@ -191,6 +225,7 @@ std::vector<v5::ResourceKey> resources(const std::vector<LightingTarget>& target
     {
         result.push_back(target.resource);
     }
+    std::sort(result.begin(), result.end(), ResourceLess {});
     return result;
 }
 
@@ -388,6 +423,12 @@ Result<v5::TransactionResult> LightingSession::submit(
     {
         return Result<v5::TransactionResult>::failure(validation.error());
     }
+    std::sort(
+        updates.begin(),
+        updates.end(),
+        [](const LightingUpdate& left, const LightingUpdate& right) {
+            return ResourceLess {}(left.target.resource, right.target.resource);
+        });
     auto transaction_id = bridge_->next_transaction_id();
     if(!transaction_id)
     {
@@ -414,7 +455,7 @@ Result<v5::TransactionResult> LightingSession::submit(
         frame_index = FrameIndex::from(frame_index.value() + 1).value();
     }
 
-    const auto& receiver = targets_.front();
+    const auto& receiver = updates.front().target;
     return bridge_->submit_transaction({
         std::move(transaction_id).value(),
         grant_->lease_id,

@@ -46,11 +46,13 @@ struct LightingUpdate
 /// excluded because it never authorizes a hardware operation.
 [[nodiscard]] Result<LightingTarget> lighting_target(const v5::ControllerView& controller);
 
-/// Owns one atomic set of lighting resources in a single receiver generation.
+/// Owns one atomic set of lighting resources across active receiver generations.
 ///
 /// The bridge also revokes these resources when the underlying SDK connection
 /// closes. Call `release` for a deliberate hand-off; call `abandon` after a
-/// generation replacement or an unrecoverable connection failure.
+/// generation replacement or an unrecoverable connection failure. Each
+/// submitted hardware transaction remains scoped to exactly one receiver
+/// generation even when the lease covers several receivers.
 class LightingSession
 {
 public:

@@ -48,14 +48,15 @@ hyperflux::v5::RgbColor color(std::uint8_t red, std::uint8_t green, std::uint8_t
 hyperflux::v5::ControllerView controller(
     std::string_view device,
     std::uint64_t generation,
-    std::uint16_t slots)
+    std::uint16_t slots,
+    std::string_view receiver = "receiver-1")
 {
     using namespace hyperflux;
-    const auto receiver_id = text<ReceiverId>("receiver-1");
+    const auto receiver_id = text<ReceiverId>(receiver);
     const auto generation_id = number<GenerationId>(generation);
     const auto device_id = text<LogicalDeviceId>(device);
     const v5::ProfileBindingView receiver_profile {
-        text<ProfileId>("receiver.razer.hyperflux-v2.00cf"),
+        text<ProfileId>(std::string("receiver.test.") + std::string(receiver)),
         text<ProfileDigest>(std::string(64, 'a')),
     };
     const v5::ProfileBindingView device_profile {
@@ -107,6 +108,11 @@ class FakeBridge final : public hyperflux::sdk::LightingBridge
 public:
     bool conflict = false;
     std::optional<hyperflux::sdk::TransactionSubmission> submission;
+
+    const std::vector<hyperflux::v5::ResourceKey>& leased_resources() const noexcept
+    {
+        return resources_;
+    }
 
     hyperflux::sdk::Result<hyperflux::TransactionId> next_transaction_id() override
     {
@@ -273,6 +279,53 @@ int main()
         return 8;
     }
 
+    const auto second_receiver = sdk::lighting_target(
+        controller("keyboard", 1, 3, "receiver-2"));
+    auto multi_receiver = sdk::LightingSession::acquire(
+        bridge,
+        {second_receiver.value(), mouse.value()},
+        number<LeaseDurationMs>(30'000));
+    if(!multi_receiver || multi_receiver.value().targets().size() != 2
+       || bridge.leased_resources().size() != 2
+       || bridge.leased_resources().front().receiver_id.value() != "receiver-1"
+       || bridge.leased_resources().back().receiver_id.value() != "receiver-2")
+    {
+        return 9;
+    }
+    const auto receiver_one_submission = multi_receiver.value().submit(
+        sdk::LightingIntent::Static,
+        {{mouse.value(), {color(1, 0, 0), color(2, 0, 0)}}},
+        number<MonotonicMs>(5'000));
+    if(!receiver_one_submission || !bridge.submission.has_value()
+       || bridge.submission->receiver_id.value() != "receiver-1"
+       || bridge.submission->resources.size() != 1)
+    {
+        return 10;
+    }
+    const auto receiver_two_submission = multi_receiver.value().submit(
+        sdk::LightingIntent::EffectFrame,
+        {{second_receiver.value(), {color(3, 0, 0), color(4, 0, 0), color(5, 0, 0)}}},
+        number<MonotonicMs>(5'000));
+    if(!receiver_two_submission || !bridge.submission.has_value()
+       || bridge.submission->receiver_id.value() != "receiver-2"
+       || bridge.submission->resources.size() != 1)
+    {
+        return 11;
+    }
+    const auto cross_receiver_transaction = multi_receiver.value().submit(
+        sdk::LightingIntent::Static,
+        {
+            {mouse.value(), {color(1, 0, 0), color(2, 0, 0)}},
+            {second_receiver.value(), {color(3, 0, 0), color(4, 0, 0), color(5, 0, 0)}},
+        },
+        number<MonotonicMs>(5'000));
+    if(cross_receiver_transaction
+       || cross_receiver_transaction.error().code
+           != sdk::ErrorCode::MixedReceiverGeneration)
+    {
+        return 12;
+    }
+
     FakeBridge contended;
     contended.conflict = true;
     auto conflict = sdk::LightingSession::acquire(
@@ -282,7 +335,7 @@ int main()
     if(conflict || conflict.error().code != sdk::ErrorCode::OwnershipConflict
        || conflict.error().finding_id != "HFX-OWNERSHIP-001")
     {
-        return 9;
+        return 13;
     }
     return 0;
 }
