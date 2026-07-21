@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import shutil
 import stat
@@ -987,6 +987,18 @@ def _staged_tree_snapshot(root: Path) -> tuple[tuple[object, ...], ...]:
     return tuple(snapshot)
 
 
+def _python_sdk_license_files(
+    staged_root: Path, module_directory: str
+) -> tuple[Path, ...]:
+    installed = PurePosixPath(module_directory)
+    if not installed.is_absolute() or ".." in installed.parts:
+        raise ModelError("Python module directory is not a safe installed path")
+    module_root = staged_root.joinpath(*installed.parts[1:])
+    return tuple(
+        sorted(module_root.glob("hyperflux_next_sdk-*.dist-info/licenses/LICENSE"))
+    )
+
+
 def _run_package_contracts(root: Path, node: TestNode) -> None:
     workspace = root / "build" / "package-contracts"
     if workspace.exists():
@@ -1011,11 +1023,10 @@ def _run_package_contracts(root: Path, node: TestNode) -> None:
     ):
         raise ModelError("independent package stages are not byte-for-byte reproducible")
 
-    license_files = tuple(
-        first.root.glob(
-            "usr/lib/python*/site-packages/"
-            "hyperflux_next_sdk-*.dist-info/licenses/LICENSE"
-        )
+    runtime = load_linux_runtime(root)
+    license_files = _python_sdk_license_files(
+        first.root,
+        runtime.operations.python_module_directory,
     )
     if len(license_files) != 1 or license_files[0].read_bytes() != (
         root / "LICENSE"

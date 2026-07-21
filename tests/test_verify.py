@@ -12,6 +12,7 @@ from unittest.mock import patch
 from tools.hfxdev.model import ModelError
 from tools.hfxdev.verify import (
     _check_build_cache_clock,
+    _python_sdk_license_files,
     _resolve_schema_reference,
     _run_openrgb_adapter_contracts,
     _run_openrgb_thread_sanitizer,
@@ -19,6 +20,29 @@ from tools.hfxdev.verify import (
 
 
 class VerificationGuardTests(unittest.TestCase):
+    def test_python_sdk_license_uses_the_canonical_version_neutral_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            canonical = (
+                root
+                / "usr/lib/hyperflux-next/python"
+                / "hyperflux_next_sdk-0.0.0.dist-info/licenses/LICENSE"
+            )
+            canonical.parent.mkdir(parents=True)
+            canonical.write_text("canonical\n", encoding="utf-8")
+            stale = (
+                root
+                / "usr/lib/python3.14/site-packages"
+                / "hyperflux_next_sdk-0.0.0.dist-info/licenses/LICENSE"
+            )
+            stale.parent.mkdir(parents=True)
+            stale.write_text("stale\n", encoding="utf-8")
+
+            self.assertEqual(
+                _python_sdk_license_files(root, "/usr/lib/hyperflux-next/python"),
+                (canonical,),
+            )
+
     def test_missing_and_current_build_caches_are_accepted(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
