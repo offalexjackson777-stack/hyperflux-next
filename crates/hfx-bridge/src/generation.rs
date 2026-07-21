@@ -2,12 +2,13 @@
 
 use crate::{
     ReceiverProfileBinding, RuntimeProfileAuthority, RuntimeProfileAuthorityError,
-    staged_events::StagedEvents,
+    restoration_runtime::GenerationRestorationRuntime, staged_events::StagedEvents,
 };
 use hfx_core::{
     BoundedEventLog, EventLogError, EventSink, LeaseManager, LifecycleError, LifecycleLimits,
     ObservationStamp, ReceiverLifecycleMachine, ReceiverLifecycleRegistry, ReceiverRegistryError,
-    ReceiverTransport, TransactionCoordinator, TransactionCoordinatorError,
+    ReceiverTransport, RestorationError, RestoreGenerationRetirement, TransactionCoordinator,
+    TransactionCoordinatorError,
 };
 use hfx_domain::{
     ApplyOutcome, EventKind, GenerationId, LeaseId, ProductId, ReceiverId, ReceiverLifecycleState,
@@ -38,6 +39,7 @@ pub struct GenerationActivation {
     pub qualification: GenerationQualification,
     pub revoked_leases: Vec<LeaseId>,
     pub revoked_transactions: Vec<TransactionId>,
+    pub restoration_retirement: Option<Box<RestoreGenerationRetirement>>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -59,6 +61,7 @@ pub struct ReceiverDisconnectBegan {
     pub generation_id: GenerationId,
     pub revoked_leases: Vec<LeaseId>,
     pub revoked_transactions: Vec<TransactionId>,
+    pub restoration_retirement: Box<RestoreGenerationRetirement>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -100,6 +103,7 @@ pub enum GenerationOrchestrationError {
         generation_id: GenerationId,
     },
     Transaction(TransactionCoordinatorError),
+    Restoration(RestorationError),
     Event(EventLogError),
 }
 
@@ -138,6 +142,7 @@ impl fmt::Display for GenerationOrchestrationError {
                 "qualified profile binding is missing for {receiver_id} generation {generation_id}"
             ),
             Self::Transaction(error) => write!(formatter, "{error}"),
+            Self::Restoration(error) => write!(formatter, "{error}"),
             Self::Event(error) => write!(formatter, "{error}"),
         }
     }
@@ -163,6 +168,12 @@ impl From<TransactionCoordinatorError> for GenerationOrchestrationError {
     }
 }
 
+impl From<RestorationError> for GenerationOrchestrationError {
+    fn from(error: RestorationError) -> Self {
+        Self::Restoration(error)
+    }
+}
+
 impl From<EventLogError> for GenerationOrchestrationError {
     fn from(error: EventLogError) -> Self {
         Self::Event(error)
@@ -185,10 +196,11 @@ impl GenerationOrchestrator {
     /// Returns a typed error when transport and observation disagree or any
     /// bounded lifecycle, profile, transaction, or event invariant fails.
     #[allow(clippy::too_many_arguments)]
-    pub fn activate<T, S>(
+    pub fn activate<T, R, S>(
         observation: ReceiverGenerationObservation,
         limits: LifecycleLimits,
         transport: &T,
+        restoration: &mut R,
         receivers: &mut ReceiverLifecycleRegistry,
         profiles: &mut RuntimeProfileAuthority,
         leases: &mut LeaseManager,
@@ -198,6 +210,7 @@ impl GenerationOrchestrator {
     ) -> Result<GenerationActivationOutcome, GenerationOrchestrationError>
     where
         T: ReceiverTransport,
+        R: GenerationRestorationRuntime,
         S: EventSink,
     {
         let ReceiverGenerationObservation {
@@ -207,6 +220,7 @@ impl GenerationOrchestrator {
             stamp,
         } = observation;
         let generation_id = stamp.generation_id();
+        let now = stamp.observed_at_ms();
         let transport_generation = transport.current_generation(&receiver_id);
         if transport_generation != Some(generation_id) {
             return Err(GenerationOrchestrationError::TransportGenerationMismatch {
@@ -229,41 +243,22 @@ impl GenerationOrchestrator {
             return Ok(GenerationActivationOutcome::Ignored(lifecycle_outcome));
         }
 
-        let mut revoked_leases = Vec::new();
-        let mut revoked_transactions = Vec::new();
-        if let Some(previous) = previous_generation {
-            let _ = next_profiles.retire(&receiver_id, previous);
-            revoked_transactions = next_transactions
-                .invalidate_generation(&receiver_id, previous, &mut next_events, &mut emitted)?
-                .into_iter()
-                .map(|terminal| terminal.transaction_id)
-                .collect();
-            for grant in next_leases.invalidate_generation(&receiver_id, previous) {
-                revoked_leases.push(grant.lease_id.clone());
-                emitted.append_ownership(&mut next_events, grant.lease_id)?;
-            }
-        }
-
-        let qualification = match next_profiles.bind_receiver(
-            receiver_id.clone(),
+        let (revoked_leases, revoked_transactions) = stage_previous_authority(
+            &receiver_id,
+            previous_generation,
+            &mut next_profiles,
+            &mut next_leases,
+            &mut next_transactions,
+            &mut next_events,
+            &mut emitted,
+        )?;
+        let qualification = stage_qualification(
+            &receiver_id,
             generation_id,
             vendor_id,
             product_id,
-        ) {
-            Ok(_) => {
-                let Some(binding) = next_profiles.binding(&receiver_id).cloned() else {
-                    return Err(GenerationOrchestrationError::MissingQualifiedBinding {
-                        receiver_id,
-                        generation_id,
-                    });
-                };
-                GenerationQualification::Qualified(binding)
-            }
-            Err(RuntimeProfileAuthorityError::UnsupportedReceiver(_, _)) => {
-                GenerationQualification::Unqualified
-            }
-            Err(error) => return Err(GenerationOrchestrationError::Profile(error)),
-        };
+            &mut next_profiles,
+        )?;
 
         if previous_generation.is_some() {
             emitted.append_lifecycle(
@@ -284,6 +279,21 @@ impl GenerationOrchestrator {
             )?;
         }
 
+        let restoration_retirement = if let Some(previous) = previous_generation {
+            Some(Box::new(restoration.retire_generation(
+                &receiver_id,
+                previous,
+                now,
+                transport,
+                &mut next_leases,
+                &next_transactions,
+                &mut next_events,
+                &mut emitted,
+            )?))
+        } else {
+            None
+        };
+
         *receivers = next_receivers;
         *profiles = next_profiles;
         *leases = next_leases;
@@ -298,6 +308,7 @@ impl GenerationOrchestrator {
             qualification,
             revoked_leases,
             revoked_transactions,
+            restoration_retirement,
         }))
     }
 
@@ -309,9 +320,10 @@ impl GenerationOrchestrator {
     /// Returns a typed error without partial mutation when transport still
     /// reports the receiver or any bounded state/event operation fails.
     #[allow(clippy::too_many_arguments)]
-    pub fn begin_disconnect<T, S>(
+    pub fn begin_disconnect<T, R, S>(
         observation: ReceiverDisconnectObservation,
         transport: &T,
+        restoration: &mut R,
         receivers: &mut ReceiverLifecycleRegistry,
         leases: &mut LeaseManager,
         transactions: &mut TransactionCoordinator,
@@ -320,10 +332,12 @@ impl GenerationOrchestrator {
     ) -> Result<ReceiverDisconnectOutcome, GenerationOrchestrationError>
     where
         T: ReceiverTransport,
+        R: GenerationRestorationRuntime,
         S: EventSink,
     {
         let receiver_id = observation.receiver_id;
         let generation_id = observation.stamp.generation_id();
+        let now = observation.stamp.observed_at_ms();
         if let Some(transport_generation) = transport.current_generation(&receiver_id) {
             return Err(GenerationOrchestrationError::TransportStillPresent {
                 receiver_id,
@@ -383,6 +397,16 @@ impl GenerationOrchestrator {
             revoked_leases.push(grant.lease_id.clone());
             emitted.append_ownership(&mut next_events, grant.lease_id)?;
         }
+        let restoration_retirement = Box::new(restoration.retire_generation(
+            &receiver_id,
+            generation_id,
+            now,
+            transport,
+            &mut next_leases,
+            &next_transactions,
+            &mut next_events,
+            &mut emitted,
+        )?);
 
         *receivers = next_receivers;
         *leases = next_leases;
@@ -396,6 +420,7 @@ impl GenerationOrchestrator {
                 generation_id,
                 revoked_leases,
                 revoked_transactions,
+                restoration_retirement,
             },
         ))
     }
@@ -447,6 +472,56 @@ impl GenerationOrchestrator {
                 profile_retired,
             },
         ))
+    }
+}
+
+fn stage_previous_authority(
+    receiver_id: &ReceiverId,
+    previous_generation: Option<GenerationId>,
+    profiles: &mut RuntimeProfileAuthority,
+    leases: &mut LeaseManager,
+    transactions: &mut TransactionCoordinator,
+    events: &mut BoundedEventLog,
+    emitted: &mut StagedEvents,
+) -> Result<(Vec<LeaseId>, Vec<TransactionId>), GenerationOrchestrationError> {
+    let Some(previous) = previous_generation else {
+        return Ok((Vec::new(), Vec::new()));
+    };
+    let _ = profiles.retire(receiver_id, previous);
+    let revoked_transactions = transactions
+        .invalidate_generation(receiver_id, previous, events, emitted)?
+        .into_iter()
+        .map(|terminal| terminal.transaction_id)
+        .collect();
+    let mut revoked_leases = Vec::new();
+    for grant in leases.invalidate_generation(receiver_id, previous) {
+        revoked_leases.push(grant.lease_id.clone());
+        emitted.append_ownership(events, grant.lease_id)?;
+    }
+    Ok((revoked_leases, revoked_transactions))
+}
+
+fn stage_qualification(
+    receiver_id: &ReceiverId,
+    generation_id: GenerationId,
+    vendor_id: VendorId,
+    product_id: ProductId,
+    profiles: &mut RuntimeProfileAuthority,
+) -> Result<GenerationQualification, GenerationOrchestrationError> {
+    match profiles.bind_receiver(receiver_id.clone(), generation_id, vendor_id, product_id) {
+        Ok(_) => profiles.binding(receiver_id).cloned().map_or_else(
+            || {
+                Err(GenerationOrchestrationError::MissingQualifiedBinding {
+                    receiver_id: receiver_id.clone(),
+                    generation_id,
+                })
+            },
+            |binding| Ok(GenerationQualification::Qualified(binding)),
+        ),
+        Err(RuntimeProfileAuthorityError::UnsupportedReceiver(_, _)) => {
+            Ok(GenerationQualification::Unqualified)
+        }
+        Err(error) => Err(GenerationOrchestrationError::Profile(error)),
     }
 }
 

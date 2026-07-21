@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_bridge::{
-    BRIDGE_PERSISTENCE_SCHEMA, BridgePersistenceDocument, FilePersistenceConfig,
-    FilePersistenceError, FilePersistenceStore, PersistenceCommitter, PersistenceIoStage,
+    BRIDGE_PERSISTENCE_SCHEMA, BridgePersistenceDocument, DurableRestorationRuntime,
+    FilePersistenceConfig, FilePersistenceError, FilePersistenceStore, PersistenceCommitter,
+    PersistenceIoStage, RestorationSnapshotSource,
 };
 use hfx_core::{
     CURRENT_PERSISTENCE_SCHEMA_VERSION, PersistedRestorePolicy, PersistedStableEntry,
-    PersistenceCasOutcome, PersistenceStore, RestoreRecord, RestoreRecordStatus,
-    StableIntentChange, StableIntentTombstone,
+    PersistenceCasOutcome, PersistenceStore, RestoreInvalidation, RestoreRecord,
+    RestoreRecordChange, RestoreRecordStatus, StableIntentChange, StableIntentTombstone,
 };
 use hfx_domain::{
     GenerationId, IntentDigest, IntentRevision, LogicalDeviceId, PersistenceRevision,
-    PersistenceSchemaVersion, ReceiverId, RestoreClaimId, RestoreTriggerId, RestoreTriggerKind,
-    WallClockUnixMs,
+    PersistenceSchemaVersion, ReceiverId, RestoreClaimId, RestoreInvalidationReason, RestoreState,
+    RestoreTriggerId, RestoreTriggerKind, WallClockUnixMs,
 };
 use std::fs::{self, OpenOptions};
 use std::io::Write as _;
@@ -317,6 +318,130 @@ fn stable_batch_is_atomic_and_capacity_is_per_receiver() {
         FilePersistenceError::Capacity
     );
     assert_eq!(store.document(), &before);
+}
+
+#[test]
+fn restore_batch_conflict_changes_no_sibling_and_success_is_one_durable_commit() {
+    let directory = TestDirectory::new();
+    let path = directory.state_path();
+    let config = FilePersistenceConfig::new(&path);
+    let receiver_id = receiver(1);
+    let first = restore_record(receiver_id.clone(), "claim-01");
+    let second = restore_record(receiver_id.clone(), "claim-02");
+    let mut store = FilePersistenceStore::open(config.clone()).expect("store opens");
+    assert_eq!(
+        store
+            .compare_and_set_restore_records(&[
+                RestoreRecordChange {
+                    expected_revision: None,
+                    record: first.clone(),
+                },
+                RestoreRecordChange {
+                    expected_revision: None,
+                    record: second.clone(),
+                },
+            ])
+            .expect("initial restore batch commits"),
+        PersistenceCasOutcome::Applied
+    );
+
+    let retire = |mut record: RestoreRecord| {
+        record.revision = revision(2);
+        record.status = RestoreRecordStatus::Invalidated(RestoreInvalidation {
+            reason: RestoreInvalidationReason::StaleGeneration,
+        });
+        record
+    };
+    let retired_first = retire(first);
+    let retired_second = retire(second);
+    let before = store.document().clone();
+    assert_eq!(
+        store
+            .compare_and_set_restore_records(&[
+                RestoreRecordChange {
+                    expected_revision: Some(revision(1)),
+                    record: retired_first.clone(),
+                },
+                RestoreRecordChange {
+                    expected_revision: None,
+                    record: retired_second.clone(),
+                },
+            ])
+            .expect("revision conflict is data"),
+        PersistenceCasOutcome::Conflict
+    );
+    assert_eq!(store.document(), &before);
+
+    assert_eq!(
+        store
+            .compare_and_set_restore_records(&[
+                RestoreRecordChange {
+                    expected_revision: Some(revision(1)),
+                    record: retired_first.clone(),
+                },
+                RestoreRecordChange {
+                    expected_revision: Some(revision(1)),
+                    record: retired_second.clone(),
+                },
+            ])
+            .expect("retirement batch commits"),
+        PersistenceCasOutcome::Applied
+    );
+    drop(store);
+
+    let reopened = FilePersistenceStore::open(config).expect("durable state reopens");
+    assert_eq!(
+        reopened
+            .restore_records(&receiver_id)
+            .expect("restore records load"),
+        vec![retired_first, retired_second]
+    );
+}
+
+#[test]
+fn durable_runtime_projects_policy_and_generation_bound_restore_truth() {
+    let directory = TestDirectory::new();
+    let receiver_id = receiver(1);
+    let mut store = FilePersistenceStore::open(FilePersistenceConfig::new(directory.state_path()))
+        .expect("store opens");
+    assert_eq!(
+        store
+            .compare_and_set_restore_policy(None, &policy(receiver_id.clone(), 1, true))
+            .expect("policy commits"),
+        PersistenceCasOutcome::Applied
+    );
+    assert_eq!(
+        store
+            .compare_and_set_restore_record(None, &restore_record(receiver_id.clone(), "claim-01"))
+            .expect("restore claim commits"),
+        PersistenceCasOutcome::Applied
+    );
+
+    let runtime = DurableRestorationRuntime::new(store);
+    assert_eq!(
+        runtime
+            .restoration(
+                &receiver_id,
+                GenerationId::try_from(1_u64).expect("test generation")
+            )
+            .expect("restoration snapshot projects"),
+        hfx_bridge::ReceiverRestorationSnapshot {
+            stable_restore_enabled: true,
+            restore_state: RestoreState::Planned,
+        }
+    );
+    assert_eq!(
+        runtime
+            .restoration(
+                &receiver_id,
+                GenerationId::try_from(2_u64).expect("test generation")
+            )
+            .expect("unclaimed generation projects idle"),
+        hfx_bridge::ReceiverRestorationSnapshot {
+            stable_restore_enabled: true,
+            restore_state: RestoreState::Idle,
+        }
+    );
 }
 
 #[test]

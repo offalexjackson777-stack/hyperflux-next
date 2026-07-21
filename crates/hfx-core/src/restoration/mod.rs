@@ -7,8 +7,8 @@ mod intent;
 
 use crate::{EventLogError, LeaseManagerError, RestoreRecord, RestoreRecordStatus};
 use hfx_domain::{
-    IntentRevision, LogicalDeviceId, PersistenceRevision, PersistenceSchemaVersion,
-    RestoreRecordState,
+    GenerationId, IntentRevision, LogicalDeviceId, PersistenceRevision, PersistenceSchemaVersion,
+    ReceiverId, RestoreRecordState,
 };
 use serde::Serialize;
 use sha2::{Digest, Sha256};
@@ -36,6 +36,14 @@ pub enum RestoreAdvanceResult {
     Deferred(RestoreRecord),
     Queued(RestoreRecord),
     Terminal(RestoreRecord),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RestoreGenerationRetirement {
+    pub receiver_id: ReceiverId,
+    pub generation_id: GenerationId,
+    pub updated: Vec<RestoreRecord>,
+    pub already_terminal: usize,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -71,6 +79,10 @@ pub enum RestorationError {
     UnknownClaim,
     PriorClaimUnresolved,
     PriorOutcomeUncertain,
+    GenerationStillActive {
+        receiver_id: ReceiverId,
+        generation_id: GenerationId,
+    },
     RecordIdentityConflict,
     InvalidTransition {
         from: RestoreRecordState,
@@ -130,6 +142,13 @@ impl fmt::Display for RestorationError {
                 .write_str("an earlier restore attempt must be reconciled before another write"),
             Self::PriorOutcomeUncertain => formatter.write_str(
                 "an earlier restore outcome has possible side effects and blocks automatic replay",
+            ),
+            Self::GenerationStillActive {
+                receiver_id,
+                generation_id,
+            } => write!(
+                formatter,
+                "receiver {receiver_id} generation {generation_id} is still active"
             ),
             Self::RecordIdentityConflict => {
                 formatter.write_str("durable record identity conflicts with its key")

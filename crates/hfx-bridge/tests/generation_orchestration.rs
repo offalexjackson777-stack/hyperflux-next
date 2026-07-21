@@ -1,24 +1,27 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_bridge::{
-    GenerationActivationOutcome, GenerationOrchestrationError, GenerationOrchestrator,
-    GenerationQualification, ReceiverDisconnectCompletionOutcome, ReceiverDisconnectObservation,
-    ReceiverDisconnectOutcome, ReceiverGenerationObservation, RuntimeProfileAuthority,
+    DisabledRestorationSource, GenerationActivationOutcome, GenerationOrchestrationError,
+    GenerationOrchestrator, GenerationQualification, GenerationRestorationRuntime,
+    ReceiverDisconnectCompletionOutcome, ReceiverDisconnectObservation, ReceiverDisconnectOutcome,
+    ReceiverGenerationObservation, ReceiverRestorationSnapshot, RestorationProjectionError,
+    RestorationSnapshotSource, RuntimeProfileAuthority,
 };
 use hfx_core::{
     BoundedEventLog, ChildIdentity, EndpointIdentity, EventDelivery, EventSink, LeaseManager,
-    LifecycleLimits, ObservationStamp, OutcomeLookup, ProfileRegistry, ReceiverLifecycleMachine,
-    ReceiverLifecycleRegistry, ReceiverTransport, SessionAuthority, SubmissionBinding,
-    TransactionCoordinator, TransportDispatch, TransportFailure, TransportFailureFacts,
-    TransportReceipt, TransportReconciliation,
+    LifecycleLimits, ObservationStamp, OutcomeLookup, PersistenceOperation, ProfileRegistry,
+    ReceiverLifecycleMachine, ReceiverLifecycleRegistry, ReceiverTransport, RestorationError,
+    RestoreGenerationRetirement, SessionAuthority, SubmissionBinding, TransactionCoordinator,
+    TransportDispatch, TransportFailure, TransportFailureFacts, TransportReceipt,
+    TransportReconciliation,
 };
 use hfx_domain::{
     ApplyOutcome, AuthorizationEpoch, ColorChannel, ConnectionMode, DeliveredFrameCount,
     DeviceApplicationState, DeviceKind, DispatchNonce, EventKind, EvidenceClaimId,
     EvidenceConfidence, FrameIndex, GenerationId, LeaseDurationMs, LogicalDeviceId, MonotonicMs,
     ProductId, ProjectionRevision, QueueAdmission, ReceiverId, ReceiverLifecycleState,
-    ResourceKind, RouteKind, RouteState, SequenceNumber, SideEffectCertainty, StreamEpoch,
-    TransactionClass, TransactionId, TransactionState, VendorId,
+    ResourceKind, RestoreState, RouteKind, RouteState, SequenceNumber, SideEffectCertainty,
+    StreamEpoch, TransactionClass, TransactionId, TransactionState, VendorId,
 };
 use hfx_protocol::{
     BridgeEvent, DeviceProfileBinding, LeaseRequest, LeaseResult, LightingFrame, ResourceKey,
@@ -176,6 +179,44 @@ impl EventSink for TestSink {
     }
 }
 
+#[derive(Debug)]
+struct FailingRestoration;
+
+impl RestorationSnapshotSource for FailingRestoration {
+    fn restoration(
+        &self,
+        _receiver_id: &ReceiverId,
+        _generation_id: GenerationId,
+    ) -> Result<ReceiverRestorationSnapshot, RestorationProjectionError> {
+        Ok(ReceiverRestorationSnapshot {
+            stable_restore_enabled: true,
+            restore_state: RestoreState::Idle,
+        })
+    }
+}
+
+impl GenerationRestorationRuntime for FailingRestoration {
+    fn retire_generation<T, E>(
+        &mut self,
+        _receiver_id: &ReceiverId,
+        _generation_id: GenerationId,
+        _now: MonotonicMs,
+        _transport: &T,
+        _leases: &mut LeaseManager,
+        _transactions: &TransactionCoordinator,
+        _events: &mut BoundedEventLog,
+        _sink: &mut E,
+    ) -> Result<RestoreGenerationRetirement, RestorationError>
+    where
+        T: ReceiverTransport,
+        E: EventSink,
+    {
+        Err(RestorationError::Persistence(
+            PersistenceOperation::SaveRestore,
+        ))
+    }
+}
+
 fn event_log() -> BoundedEventLog {
     BoundedEventLog::new(
         text("stream-1"),
@@ -265,6 +306,7 @@ struct GenerationHarness {
     events: BoundedEventLog,
     sink: TestSink,
     transport: TestTransport,
+    restoration: DisabledRestorationSource,
 }
 
 fn queued_generation_one_harness() -> GenerationHarness {
@@ -308,6 +350,7 @@ fn queued_generation_one_harness() -> GenerationHarness {
         events,
         sink,
         transport,
+        restoration: DisabledRestorationSource,
     }
 }
 
@@ -335,6 +378,7 @@ fn transport_generation_mismatch_changes_nothing() {
             generation_two_observation(),
             LifecycleLimits::default(),
             &harness.transport,
+            &mut harness.restoration,
             &mut harness.receivers,
             &mut harness.profiles,
             &mut harness.leases,
@@ -355,6 +399,54 @@ fn transport_generation_mismatch_changes_nothing() {
 }
 
 #[test]
+fn restoration_failure_commits_no_staged_generation_replacement() {
+    let mut harness = queued_generation_one_harness();
+    harness.transport.generation_id = Some(generation(2));
+    let events_before = harness.sink.0.len();
+    let result = GenerationOrchestrator::activate(
+        generation_two_observation(),
+        LifecycleLimits::default(),
+        &harness.transport,
+        &mut FailingRestoration,
+        &mut harness.receivers,
+        &mut harness.profiles,
+        &mut harness.leases,
+        &mut harness.transactions,
+        &mut harness.events,
+        &mut harness.sink,
+    );
+    assert!(matches!(
+        result,
+        Err(GenerationOrchestrationError::Restoration(
+            RestorationError::Persistence(PersistenceOperation::SaveRestore)
+        ))
+    ));
+    assert_eq!(
+        harness
+            .receivers
+            .get(&text("receiver-1"))
+            .and_then(ReceiverLifecycleMachine::current)
+            .map(hfx_core::ReceiverGenerationLifecycle::generation_id),
+        Some(generation(1))
+    );
+    assert_eq!(
+        harness
+            .profiles
+            .binding(&text("receiver-1"))
+            .map(|binding| binding.generation_id),
+        Some(generation(1))
+    );
+    assert_eq!(harness.transactions.queued_len(), 1);
+    assert!(harness.leases.owns(
+        &text("client-1"),
+        &text("lease-1"),
+        &[resource(1)],
+        time(20)
+    ));
+    assert_eq!(harness.sink.0.len(), events_before);
+}
+
+#[test]
 fn replacement_atomically_revokes_old_authority_and_publishes_one_transition() {
     let mut harness = queued_generation_one_harness();
     let observation = generation_two_observation();
@@ -363,6 +455,7 @@ fn replacement_atomically_revokes_old_authority_and_publishes_one_transition() {
         observation.clone(),
         LifecycleLimits::default(),
         &harness.transport,
+        &mut harness.restoration,
         &mut harness.receivers,
         &mut harness.profiles,
         &mut harness.leases,
@@ -430,6 +523,7 @@ fn replacement_atomically_revokes_old_authority_and_publishes_one_transition() {
         observation,
         LifecycleLimits::default(),
         &harness.transport,
+        &mut harness.restoration,
         &mut harness.receivers,
         &mut harness.profiles,
         &mut harness.leases,
@@ -468,6 +562,7 @@ fn unknown_receiver_generation_remains_visible_without_write_qualification() {
         },
         LifecycleLimits::default(),
         &transport,
+        &mut DisabledRestorationSource,
         &mut receivers,
         &mut profiles,
         &mut leases,
@@ -499,6 +594,7 @@ fn disconnect_revokes_once_retires_later_and_reconnects_as_a_new_generation() {
     let began = GenerationOrchestrator::begin_disconnect(
         disconnect_observation(30),
         &harness.transport,
+        &mut harness.restoration,
         &mut harness.receivers,
         &mut harness.leases,
         &mut harness.transactions,
@@ -532,6 +628,7 @@ fn disconnect_revokes_once_retires_later_and_reconnects_as_a_new_generation() {
     let duplicate = GenerationOrchestrator::begin_disconnect(
         disconnect_observation(31),
         &harness.transport,
+        &mut harness.restoration,
         &mut harness.receivers,
         &mut harness.leases,
         &mut harness.transactions,
@@ -575,6 +672,7 @@ fn disconnect_revokes_once_retires_later_and_reconnects_as_a_new_generation() {
         },
         LifecycleLimits::default(),
         &harness.transport,
+        &mut harness.restoration,
         &mut harness.receivers,
         &mut harness.profiles,
         &mut harness.leases,
@@ -600,6 +698,7 @@ fn disconnect_observation_is_rejected_while_transport_still_reports_present() {
     let result = GenerationOrchestrator::begin_disconnect(
         disconnect_observation(30),
         &harness.transport,
+        &mut harness.restoration,
         &mut harness.receivers,
         &mut harness.leases,
         &mut harness.transactions,

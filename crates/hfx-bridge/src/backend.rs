@@ -2,12 +2,13 @@
 
 use crate::{
     AuthorizedSession, BackendRequestContext, BridgeRpcBackend, GenerationActivationOutcome,
-    GenerationOrchestrationError, GenerationOrchestrator, LifecycleObservation,
-    LifecycleObservationError, LifecycleObservationOrchestrator, LifecycleObservationOutcome,
-    ReceiverDisconnectCompletionOutcome, ReceiverDisconnectObservation, ReceiverDisconnectOutcome,
-    ReceiverGenerationObservation, RestorationSnapshotSource, RpcFailure, RuntimeIdentityError,
-    RuntimeIdentityIssuer, RuntimeProfileAuthority, SessionIdentitySource, SessionRegistry,
-    SnapshotProjectionError, SnapshotProjector, SubscriptionRegistry, SubscriptionRegistryError,
+    GenerationOrchestrationError, GenerationOrchestrator, GenerationRestorationRuntime,
+    LifecycleObservation, LifecycleObservationError, LifecycleObservationOrchestrator,
+    LifecycleObservationOutcome, ReceiverDisconnectCompletionOutcome,
+    ReceiverDisconnectObservation, ReceiverDisconnectOutcome, ReceiverGenerationObservation,
+    RpcFailure, RuntimeIdentityError, RuntimeIdentityIssuer, RuntimeProfileAuthority,
+    SessionIdentitySource, SessionRegistry, SnapshotProjectionError, SnapshotProjector,
+    SubscriptionRegistry, SubscriptionRegistryError,
 };
 use hfx_core::{
     BoundedEventLog, Clock, DiagnosticRegistry, DiagnosticRegistryError, DispatchResult,
@@ -89,7 +90,7 @@ impl<C, T, R, S> CoreBridgeBackend<C, T, R, S>
 where
     C: Clock,
     T: ReceiverTransport,
-    R: RestorationSnapshotSource,
+    R: GenerationRestorationRuntime,
     S: EventSink,
 {
     /// Composes validated state owners and bounded runtime services.
@@ -198,6 +199,7 @@ where
             observation,
             self.config.lifecycle_limits,
             &self.transport,
+            &mut self.restoration,
             &mut self.receivers,
             &mut self.profiles,
             &mut self.leases,
@@ -220,6 +222,7 @@ where
         GenerationOrchestrator::begin_disconnect(
             observation,
             &self.transport,
+            &mut self.restoration,
             &mut self.receivers,
             &mut self.leases,
             &mut self.transactions,
@@ -393,7 +396,7 @@ impl<C, T, R, S> BridgeRpcBackend for CoreBridgeBackend<C, T, R, S>
 where
     C: Clock,
     T: ReceiverTransport,
-    R: RestorationSnapshotSource,
+    R: GenerationRestorationRuntime,
     S: EventSink,
 {
     fn snapshot(

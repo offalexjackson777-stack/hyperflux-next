@@ -339,6 +339,12 @@ pub struct RestoreRecord {
     pub status: RestoreRecordStatus,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RestoreRecordChange {
+    pub expected_revision: Option<PersistenceRevision>,
+    pub record: RestoreRecord,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PersistenceCasOutcome {
     Applied,
@@ -412,16 +418,35 @@ pub trait PersistenceStore {
         claim_id: &RestoreClaimId,
     ) -> Result<Option<RestoreRecord>, Self::Error>;
 
-    /// Atomically creates or advances one durable per-device restoration record.
+    /// Atomically creates or advances a batch of durable per-device restoration records.
+    ///
+    /// The complete batch must compare and commit as one operation. This is
+    /// required when retiring a generation so one failure cannot leave sibling
+    /// device claims split across old and new lifecycle truth.
     ///
     /// # Errors
     ///
     /// Returns a typed storage, migration, or validation failure.
+    fn compare_and_set_restore_records(
+        &mut self,
+        changes: &[RestoreRecordChange],
+    ) -> Result<PersistenceCasOutcome, Self::Error>;
+
+    /// Atomically creates or advances one durable per-device restoration record.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same failures as [`Self::compare_and_set_restore_records`].
     fn compare_and_set_restore_record(
         &mut self,
         expected_revision: Option<PersistenceRevision>,
         record: &RestoreRecord,
-    ) -> Result<PersistenceCasOutcome, Self::Error>;
+    ) -> Result<PersistenceCasOutcome, Self::Error> {
+        self.compare_and_set_restore_records(&[RestoreRecordChange {
+            expected_revision,
+            record: record.clone(),
+        }])
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

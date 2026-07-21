@@ -29,7 +29,7 @@ pub use ports::{
     PersistedStableEntry, PersistedStableIntent, PersistenceCasOutcome, PersistenceStore,
     ProfileRegistry, QualifiedDeviceProfile, QualifiedReceiverProfile, ReceiverTransport,
     RestoreAttempt, RestoreCompletion, RestoreDeferred, RestoreInvalidation, RestoreRecord,
-    RestoreRecordStatus, RestoreTrigger, SessionAuthority, StableIntentChange,
+    RestoreRecordChange, RestoreRecordStatus, RestoreTrigger, SessionAuthority, StableIntentChange,
     StableIntentTombstone, StableLighting, SubmissionBinding, TransportDispatch, TransportFailure,
     TransportFailureFacts, TransportReceipt, TransportReconciliation, TransportTerminal,
 };
@@ -39,8 +39,8 @@ pub use receiver_registry::{
 pub use restoration::{
     CURRENT_PERSISTENCE_SCHEMA_VERSION, MAX_RESTORE_RECORDS_PER_RECEIVER,
     MAX_STABLE_ENTRIES_PER_RECEIVER, PersistenceOperation, RestorationAuthority,
-    RestorationCoordinator, RestorationError, RestoreAdvanceResult, RestorePlanResult,
-    StableIntentCapture,
+    RestorationCoordinator, RestorationError, RestoreAdvanceResult, RestoreGenerationRetirement,
+    RestorePlanResult, StableIntentCapture,
 };
 pub use transactions::{
     BoundedOutcomeJournal, BoundedTransactionQueue, DequeueDecision, OutcomeJournalError,

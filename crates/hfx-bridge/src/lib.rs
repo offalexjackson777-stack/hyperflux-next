@@ -9,6 +9,7 @@ mod generation;
 mod observation;
 mod persistence;
 mod profile_authority;
+mod restoration_runtime;
 mod rpc;
 mod runtime_identity;
 mod session;
@@ -42,6 +43,7 @@ pub use profile_authority::{
     DEFAULT_MAX_PROFILE_BINDINGS, ProfileBindingOutcome, ReceiverProfileBinding,
     RuntimeProfileAuthority, RuntimeProfileAuthorityError, RuntimeProfileView,
 };
+pub use restoration_runtime::{DurableRestorationRuntime, GenerationRestorationRuntime};
 pub use rpc::{BackendRequestContext, BridgeRpcBackend, ConnectionDispatcher, RpcFailure};
 pub use runtime_identity::{RuntimeIdentityError, RuntimeIdentityIssuer};
 pub use session::{

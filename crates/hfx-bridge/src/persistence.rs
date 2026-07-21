@@ -5,7 +5,8 @@
 use hfx_core::{
     CURRENT_PERSISTENCE_SCHEMA_VERSION, MAX_RESTORE_RECORDS_PER_RECEIVER,
     MAX_STABLE_ENTRIES_PER_RECEIVER, PersistedRestorePolicy, PersistedStableEntry,
-    PersistenceCasOutcome, PersistenceStore, RestoreRecord, StableIntentChange,
+    PersistenceCasOutcome, PersistenceStore, RestoreRecord, RestoreRecordChange,
+    StableIntentChange,
 };
 use hfx_domain::{PersistenceRevision, ReceiverId, RestoreClaimId};
 use rustix::fs::{FlockOperation, Mode, OFlags, flock, open};
@@ -431,34 +432,49 @@ impl<C: PersistenceCommitter> PersistenceStore for FilePersistenceStore<C> {
             .cloned())
     }
 
-    fn compare_and_set_restore_record(
+    fn compare_and_set_restore_records(
         &mut self,
-        expected_revision: Option<PersistenceRevision>,
-        record: &RestoreRecord,
+        changes: &[RestoreRecordChange],
     ) -> Result<PersistenceCasOutcome, Self::Error> {
-        validate_restore_record(record)?;
-        let position = self
-            .document
-            .restore_records
-            .iter()
-            .position(|current| current.claim_id == record.claim_id);
-        if position.is_some_and(|index| {
-            let current = &self.document.restore_records[index];
-            current.receiver_id != record.receiver_id
-                || current.device_id != record.device_id
-                || current.trigger_id != record.trigger_id
-        }) {
-            return Err(FilePersistenceError::IdentityConflict);
+        if changes.is_empty() {
+            return Ok(PersistenceCasOutcome::Applied);
         }
-        let actual = position.map(|index| self.document.restore_records[index].revision);
-        if actual != expected_revision {
-            return Ok(PersistenceCasOutcome::Conflict);
+        let claims = changes
+            .iter()
+            .map(|change| change.record.claim_id.clone())
+            .collect::<BTreeSet<_>>();
+        if claims.len() != changes.len() {
+            return Err(FilePersistenceError::DuplicateChange);
+        }
+        for change in changes {
+            validate_restore_record(&change.record)?;
+            let current = self
+                .document
+                .restore_records
+                .iter()
+                .find(|current| current.claim_id == change.record.claim_id);
+            if current.is_some_and(|current| {
+                current.receiver_id != change.record.receiver_id
+                    || current.device_id != change.record.device_id
+                    || current.trigger_id != change.record.trigger_id
+            }) {
+                return Err(FilePersistenceError::IdentityConflict);
+            }
+            if current.map(|record| record.revision) != change.expected_revision {
+                return Ok(PersistenceCasOutcome::Conflict);
+            }
         }
         let mut candidate = self.document.clone();
-        if let Some(index) = position {
-            candidate.restore_records[index] = record.clone();
-        } else {
-            candidate.restore_records.push(record.clone());
+        for change in changes {
+            if let Some(index) = candidate
+                .restore_records
+                .iter()
+                .position(|current| current.claim_id == change.record.claim_id)
+            {
+                candidate.restore_records[index] = change.record.clone();
+            } else {
+                candidate.restore_records.push(change.record.clone());
+            }
         }
         canonicalize(&mut candidate);
         self.commit(candidate)?;

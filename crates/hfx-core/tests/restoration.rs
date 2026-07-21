@@ -8,8 +8,9 @@ use hfx_core::{
     PersistedRestorePolicy, PersistedStableEntry, PersistenceCasOutcome, PersistenceOperation,
     PersistenceStore, ProfileRegistry, QualifiedDeviceProfile, QualifiedReceiverProfile,
     ReceiverTransport, RestorationAuthority, RestorationCoordinator, RestorationError,
-    RestoreAdvanceResult, RestorePlanResult, RestoreRecord, RestoreRecordStatus, RestoreTrigger,
-    SessionAuthority, StableIntentCapture, StableIntentChange, StableLighting, SubmissionBinding,
+    RestoreAdvanceResult, RestoreGenerationRetirement, RestorePlanResult, RestoreRecord,
+    RestoreRecordChange, RestoreRecordStatus, RestoreTrigger, SessionAuthority,
+    StableIntentCapture, StableIntentChange, StableLighting, SubmissionBinding,
     TransactionCoordinator, TransportDispatch, TransportFailure, TransportFailureFacts,
     TransportReceipt, TransportReconciliation, TransportTerminal, canonical_request_digest,
 };
@@ -177,27 +178,30 @@ impl PersistenceStore for MemoryPersistenceStore {
         Ok(self.durable.restore_records.get(claim_id).cloned())
     }
 
-    fn compare_and_set_restore_record(
+    fn compare_and_set_restore_records(
         &mut self,
-        expected_revision: Option<PersistenceRevision>,
-        record: &RestoreRecord,
+        changes: &[RestoreRecordChange],
     ) -> Result<PersistenceCasOutcome, Self::Error> {
         self.restore_cas_calls += 1;
         if self.conflict_restore_cas_call == Some(self.restore_cas_calls) {
             return Ok(PersistenceCasOutcome::Conflict);
         }
-        let actual_revision = self
-            .durable
-            .restore_records
-            .get(&record.claim_id)
-            .map(|current| current.revision);
-        if actual_revision != expected_revision {
+        let revisions_match = changes.iter().all(|change| {
+            self.durable
+                .restore_records
+                .get(&change.record.claim_id)
+                .map(|current| current.revision)
+                == change.expected_revision
+        });
+        if !revisions_match {
             return Ok(PersistenceCasOutcome::Conflict);
         }
 
-        self.durable
-            .restore_records
-            .insert(record.claim_id.clone(), record.clone());
+        for change in changes {
+            self.durable
+                .restore_records
+                .insert(change.record.claim_id.clone(), change.record.clone());
+        }
         Ok(PersistenceCasOutcome::Applied)
     }
 }
@@ -287,6 +291,7 @@ enum PlannedTransport {
 struct FakeTransport {
     receiver_id: ReceiverId,
     generation_id: hfx_domain::GenerationId,
+    present: bool,
     forced_reconciliation: Option<TransportReconciliation>,
     retained: Option<(TransportDispatch, TransportReconciliation)>,
     reconcile_calls: RefCell<Vec<TransportDispatch>>,
@@ -299,7 +304,7 @@ impl ReceiverTransport for FakeTransport {
     type Error = FakeTransportError;
 
     fn current_generation(&self, receiver_id: &ReceiverId) -> Option<hfx_domain::GenerationId> {
-        (receiver_id == &self.receiver_id).then_some(self.generation_id)
+        (self.present && receiver_id == &self.receiver_id).then_some(self.generation_id)
     }
 
     fn reconcile(&self, dispatch: &TransportDispatch) -> TransportReconciliation {
@@ -478,6 +483,7 @@ fn fake_transport() -> FakeTransport {
     FakeTransport {
         receiver_id: text("receiver-1"),
         generation_id: generation(1),
+        present: true,
         forced_reconciliation: None,
         retained: None,
         reconcile_calls: RefCell::new(Vec::new()),
@@ -607,6 +613,20 @@ impl RestoreRuntime {
             &mut self.store,
             &mut self.leases,
             &mut self.transactions,
+            &mut self.events,
+            &mut self.sink,
+        )
+    }
+
+    fn retire_generation(&mut self) -> Result<RestoreGenerationRetirement, RestorationError> {
+        RestorationCoordinator.retire_generation(
+            &text("receiver-1"),
+            generation(1),
+            monotonic(12),
+            &self.transport,
+            &mut self.store,
+            &mut self.leases,
+            &self.transactions,
             &mut self.events,
             &mut self.sink,
         )
@@ -1569,4 +1589,178 @@ fn trigger_replay_is_idempotent_and_device_return_is_scoped() {
         coordinator.plan_restore(&invalid, &mut store),
         Err(RestorationError::InvalidTrigger)
     );
+}
+
+#[test]
+fn generation_retirement_atomically_invalidates_unattempted_sibling_claims() {
+    let mut store = MemoryPersistenceStore::default();
+    let claims = seed_restore(
+        RestorationCoordinator,
+        &mut store,
+        &["keyboard-1", "mouse-1"],
+    );
+    let mouse = claims
+        .iter()
+        .find(|claim| claim.device_id.as_str() == "mouse-1")
+        .expect("mouse claim exists")
+        .claim_id
+        .clone();
+    let mut runtime = RestoreRuntime::new(
+        store,
+        devices(&[("mouse-1", DeviceWriteReadiness::Sleeping)]),
+    );
+    assert!(matches!(
+        runtime.advance(&mouse),
+        Ok(RestoreAdvanceResult::Deferred(_))
+    ));
+    runtime.transport.present = false;
+    let cas_before = runtime.store.restore_cas_calls;
+
+    let retired = runtime
+        .retire_generation()
+        .expect("retirement invalidates both claims atomically");
+    assert_eq!(retired.updated.len(), 2);
+    assert_eq!(retired.already_terminal, 0);
+    assert_eq!(runtime.store.restore_cas_calls, cas_before + 1);
+    assert!(retired.updated.iter().all(|record| matches!(
+        record.status,
+        RestoreRecordStatus::Invalidated(ref detail)
+            if detail.reason == RestoreInvalidationReason::StaleGeneration
+    )));
+    assert_eq!(runtime.sink.events.len(), 2);
+
+    let replay = runtime
+        .retire_generation()
+        .expect("retirement replay is idempotent");
+    assert!(replay.updated.is_empty());
+    assert_eq!(replay.already_terminal, 2);
+    assert_eq!(runtime.store.restore_cas_calls, cas_before + 1);
+    assert_eq!(runtime.sink.events.len(), 2);
+}
+
+#[test]
+fn generation_retirement_consumes_revoked_queue_terminal_without_transport_guessing() {
+    let mut store = MemoryPersistenceStore::default();
+    let claim = seed_restore(RestorationCoordinator, &mut store, &["mouse-1"])
+        .remove(0)
+        .claim_id;
+    let mut runtime =
+        RestoreRuntime::new(store, devices(&[("mouse-1", DeviceWriteReadiness::Ready)]));
+    runtime.advance(&claim).expect("restore claim queues");
+    runtime.transport.present = false;
+    runtime
+        .transactions
+        .invalidate_generation(
+            &text("receiver-1"),
+            generation(1),
+            &mut runtime.events,
+            &mut runtime.sink,
+        )
+        .expect("generation queue is revoked");
+    let _ = runtime
+        .leases
+        .invalidate_generation(&text("receiver-1"), generation(1));
+
+    let retired = runtime
+        .retire_generation()
+        .expect("revoked queued claim retires");
+    assert!(matches!(
+        retired.updated[0].status,
+        RestoreRecordStatus::Invalidated(ref detail)
+            if detail.reason == RestoreInvalidationReason::StaleGeneration
+    ));
+    assert!(runtime.transport.reconcile_calls.borrow().is_empty());
+    assert!(runtime.transport.dispatches.is_empty());
+}
+
+#[test]
+fn generation_retirement_preserves_confirmed_delivery_after_terminal_cas_failure() {
+    let mut store = MemoryPersistenceStore::default();
+    let claim = seed_restore(RestorationCoordinator, &mut store, &["mouse-1"])
+        .remove(0)
+        .claim_id;
+    let mut runtime =
+        RestoreRuntime::new(store, devices(&[("mouse-1", DeviceWriteReadiness::Ready)]));
+    runtime.advance(&claim).expect("restore claim queues");
+    runtime.store.conflict_restore_cas_call = Some(runtime.store.restore_cas_calls + 2);
+    assert!(matches!(
+        runtime.dispatch(&claim),
+        Err(RestorationError::PersistenceConflict(
+            PersistenceOperation::SaveRestore
+        ))
+    ));
+    assert_eq!(runtime.transport.physical_writes, 1);
+    runtime.store.conflict_restore_cas_call = None;
+    runtime.transport.present = false;
+
+    let retired = runtime
+        .retire_generation()
+        .expect("confirmed delivery survives retirement");
+    assert!(matches!(
+        retired.updated[0].status,
+        RestoreRecordStatus::Succeeded(_)
+    ));
+    assert_eq!(runtime.transport.physical_writes, 1);
+}
+
+#[test]
+fn generation_retirement_preserves_ambiguous_transport_history_as_failure() {
+    let mut store = MemoryPersistenceStore::default();
+    let claim = seed_restore(RestorationCoordinator, &mut store, &["mouse-1"])
+        .remove(0)
+        .claim_id;
+    let mut runtime =
+        RestoreRuntime::new(store, devices(&[("mouse-1", DeviceWriteReadiness::Ready)]));
+    runtime.advance(&claim).expect("restore claim queues");
+    runtime.restart_volatile();
+    runtime.transport.present = false;
+    runtime.transport.forced_reconciliation = Some(TransportReconciliation::Evicted);
+
+    let retired = runtime
+        .retire_generation()
+        .expect("ambiguous history becomes terminal failure");
+    let RestoreRecordStatus::Failed(completion) = &retired.updated[0].status else {
+        panic!("evicted outcome must not be labeled safely stale")
+    };
+    assert_eq!(
+        completion.error_kind,
+        Some(ProtocolErrorKind::OutcomeEvicted)
+    );
+    assert_eq!(
+        completion.side_effect_certainty,
+        SideEffectCertainty::Possible
+    );
+    assert!(completion.live_write_executed);
+    assert!(!completion.automatic_retry);
+}
+
+#[test]
+fn generation_retirement_rejects_active_generation_and_batch_conflict_is_atomic() {
+    let mut store = MemoryPersistenceStore::default();
+    seed_restore(
+        RestorationCoordinator,
+        &mut store,
+        &["keyboard-1", "mouse-1"],
+    );
+    let mut runtime = RestoreRuntime::new(store, FakeDevices::default());
+    assert_eq!(
+        runtime.retire_generation(),
+        Err(RestorationError::GenerationStillActive {
+            receiver_id: text("receiver-1"),
+            generation_id: generation(1),
+        })
+    );
+
+    runtime.transport.present = false;
+    let durable_before = runtime.store.durable_snapshot();
+    let events_before = runtime.sink.events.len();
+    runtime.store.conflict_restore_cas_call = Some(runtime.store.restore_cas_calls + 1);
+    assert_eq!(
+        runtime.retire_generation(),
+        Err(RestorationError::PersistenceConflict(
+            PersistenceOperation::SaveRestore
+        ))
+    );
+    assert_eq!(runtime.store.durable_snapshot(), durable_before);
+    assert_eq!(runtime.sink.events.len(), events_before);
 }

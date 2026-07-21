@@ -6,7 +6,7 @@ use crate::transport::SimCrashSignal;
 use hfx_core::{
     MAX_RESTORE_RECORDS_PER_RECEIVER, MAX_STABLE_ENTRIES_PER_RECEIVER, PersistedRestorePolicy,
     PersistedStableEntry, PersistenceCasOutcome, PersistenceStore, RestoreRecord,
-    StableIntentChange,
+    RestoreRecordChange, StableIntentChange,
 };
 use hfx_domain::{
     LogicalDeviceId, PersistenceRevision, ReceiverId, RestoreClaimId, RestoreRecordState,
@@ -227,37 +227,57 @@ impl PersistenceStore for SimPersistenceStore {
         Ok(self.restore_records.get(claim_id).cloned())
     }
 
-    fn compare_and_set_restore_record(
+    fn compare_and_set_restore_records(
         &mut self,
-        expected_revision: Option<PersistenceRevision>,
-        record: &RestoreRecord,
+        changes: &[RestoreRecordChange],
     ) -> Result<PersistenceCasOutcome, Self::Error> {
-        if self
-            .restore_records
-            .get(&record.claim_id)
-            .is_some_and(|current| {
-                current.receiver_id != record.receiver_id
-                    || current.device_id != record.device_id
-                    || current.trigger_id != record.trigger_id
-            })
-        {
-            return Err(SimPersistenceError::IdentityConflict);
+        if changes.is_empty() {
+            return Ok(PersistenceCasOutcome::Applied);
         }
-        let actual = self
-            .restore_records
-            .get(&record.claim_id)
-            .map(|current| current.revision);
-        if actual != expected_revision {
-            return Ok(PersistenceCasOutcome::Conflict);
+        let claims = changes
+            .iter()
+            .map(|change| change.record.claim_id.clone())
+            .collect::<BTreeSet<_>>();
+        if claims.len() != changes.len() {
+            return Err(SimPersistenceError::DuplicateChange);
         }
-        if actual.is_none() && self.restore_records.len() >= self.max_restore_records {
+        for change in changes {
+            if self
+                .restore_records
+                .get(&change.record.claim_id)
+                .is_some_and(|current| {
+                    current.receiver_id != change.record.receiver_id
+                        || current.device_id != change.record.device_id
+                        || current.trigger_id != change.record.trigger_id
+                })
+            {
+                return Err(SimPersistenceError::IdentityConflict);
+            }
+            let actual = self
+                .restore_records
+                .get(&change.record.claim_id)
+                .map(|current| current.revision);
+            if actual != change.expected_revision {
+                return Ok(PersistenceCasOutcome::Conflict);
+            }
+        }
+        let additions = changes
+            .iter()
+            .filter(|change| !self.restore_records.contains_key(&change.record.claim_id))
+            .count();
+        if self.restore_records.len().saturating_add(additions) > self.max_restore_records {
             return Err(SimPersistenceError::Capacity);
         }
-        let state = record.status.state();
-        self.crash_if_armed(RestoreCasCrashPhase::Before, state);
-        self.restore_records
-            .insert(record.claim_id.clone(), record.clone());
-        self.crash_if_armed(RestoreCasCrashPhase::After, state);
+        for change in changes {
+            self.crash_if_armed(RestoreCasCrashPhase::Before, change.record.status.state());
+        }
+        for change in changes {
+            self.restore_records
+                .insert(change.record.claim_id.clone(), change.record.clone());
+        }
+        for change in changes {
+            self.crash_if_armed(RestoreCasCrashPhase::After, change.record.status.state());
+        }
         Ok(PersistenceCasOutcome::Applied)
     }
 }
