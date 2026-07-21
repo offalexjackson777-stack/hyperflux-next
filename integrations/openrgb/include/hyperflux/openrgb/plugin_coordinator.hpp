@@ -75,14 +75,13 @@ public:
     [[nodiscard]] std::vector<InventoryReceiverModel> inventory() const;
 
 private:
-    PluginCoordinator(ControllerHost& host, ApplicationDispatcher& dispatcher) noexcept;
+    explicit PluginCoordinator(ApplicationDispatcher& dispatcher) noexcept;
 
     void queue_runtime_snapshot() noexcept;
     void apply_runtime_snapshot(RuntimeSnapshot snapshot) noexcept;
     void record_error(sdk::Error error) noexcept;
     void notify_state_changed() noexcept;
 
-    ControllerHost* host_;
     ApplicationDispatcher* dispatcher_;
 
     // Declaration order is the lifetime contract: registry is destroyed before

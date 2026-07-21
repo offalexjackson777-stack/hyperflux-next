@@ -20,10 +20,8 @@ sdk::Error coordinator_error(std::string message)
 
 } // namespace
 
-PluginCoordinator::PluginCoordinator(
-    ControllerHost& host, ApplicationDispatcher& dispatcher) noexcept
-    : host_(&host),
-      dispatcher_(&dispatcher)
+PluginCoordinator::PluginCoordinator(ApplicationDispatcher& dispatcher) noexcept
+    : dispatcher_(&dispatcher)
 {
 }
 
@@ -43,7 +41,7 @@ sdk::Result<std::shared_ptr<PluginCoordinator>> PluginCoordinator::create(Contro
             coordinator_error("OpenRGB plugin coordinator requires a component version"));
     }
 
-    auto coordinator = std::shared_ptr<PluginCoordinator>(new PluginCoordinator(host, dispatcher));
+    auto coordinator = std::shared_ptr<PluginCoordinator>(new PluginCoordinator(dispatcher));
     coordinator->on_state_changed_ = std::move(config.on_state_changed);
     const std::weak_ptr<PluginCoordinator> weak = coordinator;
     auto worker = RuntimeWorker::create(std::move(bridge),
