@@ -25,6 +25,44 @@ std::uint64_t due_at(std::uint64_t now_ms, std::uint64_t window_ms) noexcept
         : now_ms + window_ms;
 }
 
+DispatchTarget target(const QueuedLightingFrame& frame)
+{
+    return {frame.receiver_id, frame.stable_id, frame.expected_slot_count};
+}
+
+void sort_targets(std::vector<DispatchTarget>& targets)
+{
+    std::sort(targets.begin(), targets.end(), [](const auto& left, const auto& right) {
+        return left.stable_id < right.stable_id;
+    });
+}
+
+std::vector<QueuedLightingFrame> copied_frames(
+    const std::map<std::string, QueuedLightingFrame>& source)
+{
+    std::vector<QueuedLightingFrame> result;
+    result.reserve(source.size());
+    for(const auto& [stable_id, frame] : source)
+    {
+        (void)stable_id;
+        result.push_back(frame);
+    }
+    return result;
+}
+
+std::vector<QueuedLightingFrame> moved_frames(
+    std::map<std::string, QueuedLightingFrame>& source)
+{
+    std::vector<QueuedLightingFrame> result;
+    result.reserve(source.size());
+    for(auto& [stable_id, frame] : source)
+    {
+        (void)stable_id;
+        result.push_back(std::move(frame));
+    }
+    return result;
+}
+
 } // namespace
 
 DispatchQueue::DispatchQueue(DispatchQueueConfig config) : config_(config) {}
@@ -55,39 +93,42 @@ EnqueueDisposition DispatchQueue::enqueue_effect(
         return EnqueueDisposition::RejectedInvalid;
     }
     const auto key = receiver_key(frame.receiver_id);
-    for(auto& [existing_key, group] : effects_)
+    for(auto& request : effects_)
     {
-        const auto existing = group.frames.find(frame.stable_id);
-        if(existing == group.frames.end())
+        for(auto& [existing_key, group] : request.receiver_frames)
         {
-            continue;
+            const auto existing = group.find(frame.stable_id);
+            if(existing == group.end())
+            {
+                continue;
+            }
+            if(existing_key != key)
+            {
+                return EnqueueDisposition::RejectedInvalid;
+            }
+            existing->second = std::move(frame);
+            return EnqueueDisposition::Coalesced;
         }
-        if(existing_key != key)
-        {
-            return EnqueueDisposition::RejectedInvalid;
-        }
-        existing->second = std::move(frame);
-        return EnqueueDisposition::Coalesced;
     }
     if(effect_target_size_ >= config_.effect_target_capacity)
     {
         return EnqueueDisposition::RejectedCapacity;
     }
-    auto stable_id = frame.stable_id;
-    auto group = effects_.find(key);
-    if(group == effects_.end())
+    if(effects_.empty() || effects_.back().started)
     {
-        group = effects_
-                    .emplace(
-                        key,
-                        EffectGroup {
-                            frame.receiver_id,
-                            {},
-                            due_at(now_ms, config_.effect_window_ms),
-                        })
-                    .first;
+        effects_.push_back({
+            take_sequence(),
+            {},
+            {},
+            due_at(now_ms, config_.effect_window_ms),
+            false,
+        });
     }
-    group->second.frames.emplace(std::move(stable_id), std::move(frame));
+    auto& request = effects_.back();
+    request.targets.push_back(target(frame));
+    sort_targets(request.targets);
+    auto stable_id = frame.stable_id;
+    request.receiver_frames[key].emplace(std::move(stable_id), std::move(frame));
     ++effect_target_size_;
     return EnqueueDisposition::Accepted;
 }
@@ -118,7 +159,19 @@ EnqueueDisposition DispatchQueue::enqueue_stable(
         erase_effect_target(frame.stable_id);
         receiver_frames[receiver_key(frame.receiver_id)].push_back(std::move(frame));
     }
-    stable_.push_back({take_sequence(), intent, std::move(receiver_frames)});
+    std::vector<DispatchTarget> targets;
+    targets.reserve(frames.size());
+    for(const auto& [key, group] : receiver_frames)
+    {
+        (void)key;
+        for(const auto& frame : group)
+        {
+            targets.push_back(target(frame));
+        }
+    }
+    sort_targets(targets);
+    stable_.push_back(
+        {take_sequence(), intent, std::move(receiver_frames), std::move(targets)});
     return EnqueueDisposition::Accepted;
 }
 
@@ -144,12 +197,19 @@ std::optional<std::string> DispatchQueue::select_ready_receiver(
             ready.insert(key);
         }
     }
-    for(const auto& [key, group] : effects_)
+    for(const auto& request : effects_)
     {
-        if(!stable_receivers.contains(key) && !blocked_receiver_keys.contains(key)
-           && now_ms >= group.due_ms)
+        if(now_ms < request.due_ms)
         {
-            ready.insert(key);
+            continue;
+        }
+        for(const auto& [key, frames] : request.receiver_frames)
+        {
+            (void)frames;
+            if(!stable_receivers.contains(key) && !blocked_receiver_keys.contains(key))
+            {
+                ready.insert(key);
+            }
         }
     }
     if(ready.empty())
@@ -184,27 +244,26 @@ std::optional<DispatchBatch> DispatchQueue::preview_ready(
                 frames->second.front().receiver_id,
                 request.intent,
                 frames->second,
+                request.targets,
             };
         }
     }
-    const auto group = effects_.find(*selected);
-    if(group == effects_.end() || now_ms < group->second.due_ms)
+    for(const auto& request : effects_)
     {
-        return std::nullopt;
+        const auto group = request.receiver_frames.find(*selected);
+        if(group == request.receiver_frames.end() || now_ms < request.due_ms)
+        {
+            continue;
+        }
+        return DispatchBatch {
+            request.sequence,
+            group->second.begin()->second.receiver_id,
+            sdk::LightingIntent::EffectFrame,
+            copied_frames(group->second),
+            request.targets,
+        };
     }
-    std::vector<QueuedLightingFrame> frames;
-    frames.reserve(group->second.frames.size());
-    for(const auto& [stable_id, frame] : group->second.frames)
-    {
-        (void)stable_id;
-        frames.push_back(frame);
-    }
-    return DispatchBatch {
-        next_sequence_,
-        group->second.receiver_id,
-        sdk::LightingIntent::EffectFrame,
-        std::move(frames),
-    };
+    return std::nullopt;
 }
 
 std::optional<DispatchBatch> DispatchQueue::pop_ready_for(
@@ -224,6 +283,7 @@ std::optional<DispatchBatch> DispatchQueue::pop_ready_for(
             group->second.front().receiver_id,
             request->intent,
             std::move(group->second),
+            request->targets,
         };
         request->receiver_frames.erase(group);
         if(request->receiver_frames.empty())
@@ -234,39 +294,42 @@ std::optional<DispatchBatch> DispatchQueue::pop_ready_for(
         return batch;
     }
 
-    const auto group = effects_.find(key);
-    if(group == effects_.end() || now_ms < group->second.due_ms)
+    for(auto request = effects_.begin(); request != effects_.end(); ++request)
     {
-        return std::nullopt;
+        const auto group = request->receiver_frames.find(key);
+        if(group == request->receiver_frames.end() || now_ms < request->due_ms)
+        {
+            continue;
+        }
+        request->started = true;
+        auto frames = moved_frames(group->second);
+        effect_target_size_ -= frames.size();
+        DispatchBatch batch {
+            request->sequence,
+            frames.front().receiver_id,
+            sdk::LightingIntent::EffectFrame,
+            std::move(frames),
+            request->targets,
+        };
+        request->receiver_frames.erase(group);
+        if(request->receiver_frames.empty())
+        {
+            effects_.erase(request);
+        }
+        last_receiver_key_ = key;
+        return batch;
     }
-    std::vector<QueuedLightingFrame> frames;
-    frames.reserve(group->second.frames.size());
-    for(auto& [stable_id, frame] : group->second.frames)
-    {
-        (void)stable_id;
-        frames.push_back(std::move(frame));
-    }
-    effect_target_size_ -= frames.size();
-    const auto selected_receiver = group->second.receiver_id;
-    effects_.erase(group);
-    last_receiver_key_ = key;
-    return DispatchBatch {
-        take_sequence(),
-        selected_receiver,
-        sdk::LightingIntent::EffectFrame,
-        std::move(frames),
-    };
+    return std::nullopt;
 }
 
 std::optional<std::uint64_t> DispatchQueue::next_effect_due_ms() const noexcept
 {
     std::optional<std::uint64_t> result;
-    for(const auto& [key, group] : effects_)
+    for(const auto& request : effects_)
     {
-        (void)key;
-        result = !result.has_value() ? std::optional<std::uint64_t> {group.due_ms}
+        result = !result.has_value() ? std::optional<std::uint64_t> {request.due_ms}
                                      : std::optional<std::uint64_t> {
-                                           std::min(*result, group.due_ms)};
+                                           std::min(*result, request.due_ms)};
     }
     return result;
 }
@@ -284,13 +347,16 @@ std::size_t DispatchQueue::effect_target_size() const noexcept
 std::set<std::string> DispatchQueue::effect_target_ids() const
 {
     std::set<std::string> result;
-    for(const auto& [key, group] : effects_)
+    for(const auto& request : effects_)
     {
-        (void)key;
-        for(const auto& [stable_id, frame] : group.frames)
+        for(const auto& [key, group] : request.receiver_frames)
         {
-            (void)frame;
-            result.insert(stable_id);
+            (void)key;
+            for(const auto& [stable_id, frame] : group)
+            {
+                (void)frame;
+                result.insert(stable_id);
+            }
         }
     }
     return result;
@@ -299,6 +365,66 @@ std::set<std::string> DispatchQueue::effect_target_ids() const
 bool DispatchQueue::empty() const noexcept
 {
     return stable_.empty() && effects_.empty();
+}
+
+bool DispatchQueue::contains_sequence(std::uint64_t sequence) const noexcept
+{
+    return std::any_of(stable_.begin(), stable_.end(), [sequence](const auto& request) {
+               return request.sequence == sequence;
+           })
+        || std::any_of(effects_.begin(), effects_.end(), [sequence](const auto& request) {
+               return request.sequence == sequence;
+           });
+}
+
+std::vector<DispatchBatch> DispatchQueue::discard_request(std::uint64_t sequence)
+{
+    std::vector<DispatchBatch> result;
+    const auto stable = std::find_if(
+        stable_.begin(),
+        stable_.end(),
+        [sequence](const auto& request) { return request.sequence == sequence; });
+    if(stable != stable_.end())
+    {
+        result.reserve(stable->receiver_frames.size());
+        for(auto& [key, frames] : stable->receiver_frames)
+        {
+            (void)key;
+            result.push_back({
+                stable->sequence,
+                frames.front().receiver_id,
+                stable->intent,
+                std::move(frames),
+                stable->targets,
+            });
+        }
+        stable_.erase(stable);
+        return result;
+    }
+    const auto effect = std::find_if(
+        effects_.begin(),
+        effects_.end(),
+        [sequence](const auto& request) { return request.sequence == sequence; });
+    if(effect == effects_.end())
+    {
+        return result;
+    }
+    result.reserve(effect->receiver_frames.size());
+    for(auto& [key, frames] : effect->receiver_frames)
+    {
+        (void)key;
+        auto moved = moved_frames(frames);
+        effect_target_size_ -= moved.size();
+        result.push_back({
+            effect->sequence,
+            moved.front().receiver_id,
+            sdk::LightingIntent::EffectFrame,
+            std::move(moved),
+            effect->targets,
+        });
+    }
+    effects_.erase(effect);
+    return result;
 }
 
 void DispatchQueue::clear() noexcept
@@ -311,20 +437,37 @@ void DispatchQueue::clear() noexcept
 
 void DispatchQueue::erase_effect_target(const std::string& stable_id)
 {
-    for(auto group = effects_.begin(); group != effects_.end(); ++group)
+    for(auto request = effects_.begin(); request != effects_.end(); ++request)
     {
-        const auto frame = group->second.frames.find(stable_id);
-        if(frame == group->second.frames.end())
+        for(auto group = request->receiver_frames.begin();
+            group != request->receiver_frames.end();
+            ++group)
         {
-            continue;
+            const auto frame = group->second.find(stable_id);
+            if(frame == group->second.end())
+            {
+                continue;
+            }
+            group->second.erase(frame);
+            request->targets.erase(
+                std::remove_if(
+                    request->targets.begin(),
+                    request->targets.end(),
+                    [&stable_id](const DispatchTarget& value) {
+                        return value.stable_id == stable_id;
+                    }),
+                request->targets.end());
+            --effect_target_size_;
+            if(group->second.empty())
+            {
+                request->receiver_frames.erase(group);
+            }
+            if(request->receiver_frames.empty())
+            {
+                effects_.erase(request);
+            }
+            return;
         }
-        group->second.frames.erase(frame);
-        --effect_target_size_;
-        if(group->second.frames.empty())
-        {
-            effects_.erase(group);
-        }
-        return;
     }
 }
 
@@ -333,6 +476,14 @@ void DispatchQueue::discard_controller(const std::string& stable_id)
     erase_effect_target(stable_id);
     for(auto request = stable_.begin(); request != stable_.end();)
     {
+        request->targets.erase(
+            std::remove_if(
+                request->targets.begin(),
+                request->targets.end(),
+                [&stable_id](const DispatchTarget& value) {
+                    return value.stable_id == stable_id;
+                }),
+            request->targets.end());
         for(auto group = request->receiver_frames.begin();
             group != request->receiver_frames.end();)
         {

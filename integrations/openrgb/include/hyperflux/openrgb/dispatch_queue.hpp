@@ -26,12 +26,22 @@ struct QueuedLightingFrame
     friend bool operator==(const QueuedLightingFrame&, const QueuedLightingFrame&) = default;
 };
 
+struct DispatchTarget
+{
+    ReceiverId receiver_id;
+    std::string stable_id;
+    std::size_t expected_slot_count;
+
+    friend bool operator==(const DispatchTarget&, const DispatchTarget&) = default;
+};
+
 struct DispatchBatch
 {
     std::uint64_t sequence;
     ReceiverId receiver_id;
     sdk::LightingIntent intent;
     std::vector<QueuedLightingFrame> frames;
+    std::vector<DispatchTarget> targets;
 
     friend bool operator==(const DispatchBatch&, const DispatchBatch&) = default;
 };
@@ -81,6 +91,8 @@ public:
     [[nodiscard]] std::size_t effect_target_size() const noexcept;
     [[nodiscard]] std::set<std::string> effect_target_ids() const;
     [[nodiscard]] bool empty() const noexcept;
+    [[nodiscard]] bool contains_sequence(std::uint64_t sequence) const noexcept;
+    [[nodiscard]] std::vector<DispatchBatch> discard_request(std::uint64_t sequence);
 
     void clear() noexcept;
     void discard_controller(const std::string& stable_id);
@@ -91,13 +103,16 @@ private:
         std::uint64_t sequence;
         sdk::LightingIntent intent;
         std::map<std::string, std::vector<QueuedLightingFrame>> receiver_frames;
+        std::vector<DispatchTarget> targets;
     };
 
-    struct EffectGroup
+    struct EffectRequest
     {
-        ReceiverId receiver_id;
-        std::map<std::string, QueuedLightingFrame> frames;
+        std::uint64_t sequence;
+        std::map<std::string, std::map<std::string, QueuedLightingFrame>> receiver_frames;
+        std::vector<DispatchTarget> targets;
         std::uint64_t due_ms;
+        bool started = false;
     };
 
     [[nodiscard]] bool valid_frame(const QueuedLightingFrame& frame) const noexcept;
@@ -110,7 +125,7 @@ private:
     DispatchQueueConfig config_;
     std::uint64_t next_sequence_ = 1;
     std::deque<StableRequest> stable_;
-    std::map<std::string, EffectGroup> effects_;
+    std::deque<EffectRequest> effects_;
     std::size_t effect_target_size_ = 0;
     std::optional<std::string> last_receiver_key_;
 };

@@ -124,7 +124,7 @@ int main()
     }
     const auto first_scope = scoped.preview_ready(500);
     if(!first_scope || first_scope->receiver_id != receiver_one
-       || first_scope->frames.size() != 1)
+       || first_scope->frames.size() != 1 || first_scope->targets.size() != 2)
     {
         return EXIT_FAILURE;
     }
@@ -132,6 +132,7 @@ int main()
     const auto second_scope = scoped.preview_ready(500);
     if(!first_scope_popped || !second_scope || second_scope->receiver_id != receiver_two
        || second_scope->sequence != first_scope_popped->sequence
+       || second_scope->targets != first_scope_popped->targets
        || scoped.stable_size() != 1)
     {
         return EXIT_FAILURE;
@@ -151,17 +152,18 @@ int main()
     const auto first_due = scoped.preview_ready(604);
     if(!first_due || first_due->receiver_id != receiver_one
        || scoped.pop_ready_for(receiver_one, 604)->frames.front().colors.front().red.value()
-           != 30
-       || scoped.preview_ready(605).has_value())
+           != 30)
     {
         return EXIT_FAILURE;
     }
-    const auto second_due = scoped.preview_ready(606);
-    if(!second_due || second_due->receiver_id != receiver_two)
+    const auto second_due = scoped.preview_ready(605);
+    if(!second_due || second_due->receiver_id != receiver_two
+       || second_due->sequence != first_due->sequence
+       || second_due->targets.size() != 2)
     {
         return EXIT_FAILURE;
     }
-    if(!scoped.pop_ready_for(receiver_two, 606))
+    if(!scoped.pop_ready_for(receiver_two, 605))
     {
         return EXIT_FAILURE;
     }
@@ -200,7 +202,39 @@ int main()
     if(!pressure_one || !pressure_two
        || pressure_one->frames.front().colors.front().red.value() != latest_one
        || pressure_two->frames.front().colors.front().red.value() != latest_two
+       || pressure_one->sequence != pressure_two->sequence
        || !pressure.empty())
+    {
+        return EXIT_FAILURE;
+    }
+
+    DispatchQueue lifecycle({4, 4, 4});
+    if(lifecycle.enqueue_effect(frame("receiver-1/mouse", 1), 800)
+           != EnqueueDisposition::Accepted
+       || lifecycle.enqueue_effect(frame("receiver-2/mouse", 2, 2, "receiver-2"), 800)
+           != EnqueueDisposition::Accepted)
+    {
+        return EXIT_FAILURE;
+    }
+    const auto first_wave = lifecycle.pop_ready_for(receiver_one, 804);
+    if(!first_wave || !lifecycle.contains_sequence(first_wave->sequence)
+       || lifecycle.enqueue_effect(frame("receiver-1/mouse", 3), 805)
+           != EnqueueDisposition::Accepted)
+    {
+        return EXIT_FAILURE;
+    }
+    const auto sibling_wave = lifecycle.pop_ready_for(receiver_two, 805);
+    const auto next_wave = lifecycle.preview_ready(809);
+    if(!sibling_wave || sibling_wave->sequence != first_wave->sequence
+       || lifecycle.contains_sequence(first_wave->sequence) || !next_wave
+       || next_wave->sequence == first_wave->sequence
+       || next_wave->frames.front().colors.front().red.value() != 3)
+    {
+        return EXIT_FAILURE;
+    }
+    const auto discarded = lifecycle.discard_request(next_wave->sequence);
+    if(discarded.size() != 1 || lifecycle.contains_sequence(next_wave->sequence)
+       || !lifecycle.empty())
     {
         return EXIT_FAILURE;
     }
