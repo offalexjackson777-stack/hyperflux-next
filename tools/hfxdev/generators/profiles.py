@@ -160,6 +160,17 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "}",
         "",
         "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct PresentationRecord {",
+        "    pub upstream_id: &'static str,",
+        "    pub owner: &'static str,",
+        "    pub project_version: &'static str,",
+        "    pub source_commit: &'static str,",
+        "    pub model_key: &'static str,",
+        "    pub layout_key: Option<&'static str>,",
+        "    pub transport_variant: &'static str,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
         "pub struct ProfileRecord {",
         "    pub id: &'static str,",
         "    pub runtime_sha256: &'static str,",
@@ -178,6 +189,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "    pub exact_child_combinations: bool,",
         "    pub capabilities: &'static [CapabilityRecord],",
         "    pub lighting: Option<LightingTopology>,",
+        "    pub presentation: Option<PresentationRecord>,",
         "}",
         "",
         "pub const PROFILE_SOURCE_SHA256: &str =",
@@ -234,6 +246,26 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
             lighting_value = None
         else:
             lighting_value = "None"
+        presentation = profile.get("presentation")
+        if presentation:
+            layout_key = (
+                f"Some({json.dumps(presentation['layout_key'])})"
+                if presentation["layout_key"] is not None
+                else "None"
+            )
+            presentation_lines = [
+                "        presentation: Some(PresentationRecord {",
+                f"            upstream_id: {json.dumps(presentation['upstream_id'])},",
+                f"            owner: {json.dumps(presentation['owner'])},",
+                f"            project_version: {json.dumps(presentation['project_version'])},",
+                f"            source_commit: {json.dumps(presentation['source_commit'])},",
+                f"            model_key: {json.dumps(presentation['model_key'])},",
+                f"            layout_key: {layout_key},",
+                f"            transport_variant: {json.dumps(presentation['transport_variant'])},",
+                "        }),",
+            ]
+        else:
+            presentation_lines = ["        presentation: None,"]
         lines.extend(
             [
                 "    ProfileRecord {",
@@ -267,6 +299,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                     if lighting
                     else [f"        lighting: {lighting_value},"]
                 ),
+                *presentation_lines,
                 "    },",
             ]
         )
@@ -340,6 +373,17 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
         "    std::span<const std::uint16_t> application_index_to_carrier;",
         "};",
         "",
+        "struct PresentationRecord",
+        "{",
+        "    std::string_view upstream_id;",
+        "    std::string_view owner;",
+        "    std::string_view project_version;",
+        "    std::string_view source_commit;",
+        "    std::string_view model_key;",
+        "    std::optional<std::string_view> layout_key;",
+        "    std::string_view transport_variant;",
+        "};",
+        "",
         "struct ProfileRecord",
         "{",
         "    std::string_view id;",
@@ -360,6 +404,7 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
         "    bool exact_child_combinations;",
         "    std::span<const CapabilityRecord> capabilities;",
         "    const LightingTopology* lighting;",
+        "    const PresentationRecord* presentation;",
         "};",
         "",
         f'inline constexpr std::string_view profile_source_sha256 = "{catalog["source_sha256"]}";',
@@ -407,6 +452,24 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
                     "",
                 ]
             )
+        presentation = profile.get("presentation")
+        if presentation:
+            layout_key = (
+                f"std::string_view{{{json.dumps(presentation['layout_key'])}}}"
+                if presentation["layout_key"] is not None
+                else "std::nullopt"
+            )
+            lines.extend(
+                [
+                    f"inline constexpr PresentationRecord presentation_{index} {{",
+                    f"    {json.dumps(presentation['upstream_id'])}, {json.dumps(presentation['owner'])},",
+                    f"    {json.dumps(presentation['project_version'])}, {json.dumps(presentation['source_commit'])},",
+                    f"    {json.dumps(presentation['model_key'])}, {layout_key},",
+                    f"    {json.dumps(presentation['transport_variant'])}",
+                    "};",
+                    "",
+                ]
+            )
     lines.append(f"inline constexpr std::array<ProfileRecord, {len(catalog['profiles'])}> catalog {{{{")
     for index, profile in enumerate(catalog["profiles"]):
         identity = profile["identity"]
@@ -421,12 +484,13 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
         )
         exact_child_combinations = str(compatibility.get("exact_child_combinations", False)).lower()
         lighting = f"&lighting_{index}" if profile.get("transport", {}).get("lighting") else "nullptr"
+        presentation = f"&presentation_{index}" if profile.get("presentation") else "nullptr"
         lines.append(
             "    {"
             f'"{profile["profile_id"]}", "{profile["runtime_sha256"]}", {profile["revision"]}, ProfileKind::{_variant(profile["kind"])}, '
             f'DeviceKind::{_variant(profile["device_kind"])}, {str(has_usb).lower()}, {vendor}, {product}, '
             f'"{profile["identity"]["model_name"]}", {backend_id}, {protocol_family}, receiver_protocols_{index}, routes_{index}, '
-            f'supported_child_kinds_{index}, required_sibling_kinds_{index}, {exact_child_combinations}, capabilities_{index}, {lighting}'
+            f'supported_child_kinds_{index}, required_sibling_kinds_{index}, {exact_child_combinations}, capabilities_{index}, {lighting}, {presentation}'
             "},"
         )
     lines.extend(

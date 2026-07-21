@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use crate::{LightingTopology, PROFILES, ProfileRecord};
+use crate::{LightingTopology, PROFILES, PresentationRecord, ProfileRecord};
 use hfx_domain::{
     CapabilityId, CarrierIndex, DeviceKind, DomainValueError, LedCount, ProductId, ProfileDigest,
     ProfileId, ProfileKind, ProfileRevision, RouteKind, SupportLevel, VendorId,
@@ -15,6 +15,8 @@ pub enum ProfileCatalogError {
     DuplicateReceiverIdentity(VendorId, ProductId),
     DuplicateChildIdentity(ProductId),
     MissingUsbIdentity(ProfileId),
+    MissingPresentation(ProfileId),
+    UnexpectedPresentation(ProfileId),
     InvalidProfileKind(ProfileId),
 }
 
@@ -41,6 +43,16 @@ impl fmt::Display for ProfileCatalogError {
                     "hardware profile lacks its required identity: {profile_id}"
                 )
             }
+            Self::MissingPresentation(profile_id) => {
+                write!(
+                    formatter,
+                    "child profile lacks presentation metadata: {profile_id}"
+                )
+            }
+            Self::UnexpectedPresentation(profile_id) => write!(
+                formatter,
+                "non-child profile contains application presentation metadata: {profile_id}"
+            ),
             Self::InvalidProfileKind(profile_id) => {
                 write!(
                     formatter,
@@ -77,6 +89,17 @@ pub struct RuntimeLightingTopology {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RuntimePresentation {
+    pub upstream_id: &'static str,
+    pub owner: &'static str,
+    pub project_version: &'static str,
+    pub source_commit: &'static str,
+    pub model_key: &'static str,
+    pub layout_key: Option<&'static str>,
+    pub transport_variant: &'static str,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RuntimeProfile {
     pub profile_id: ProfileId,
     pub runtime_digest: ProfileDigest,
@@ -95,6 +118,7 @@ pub struct RuntimeProfile {
     pub exact_child_combinations: bool,
     pub capabilities: Vec<RuntimeCapability>,
     pub lighting: Option<RuntimeLightingTopology>,
+    pub presentation: Option<RuntimePresentation>,
 }
 
 impl RuntimeProfile {
@@ -231,7 +255,20 @@ fn convert_profile(record: &ProfileRecord) -> Result<RuntimeProfile, ProfileCata
             })
             .collect::<Result<Vec<_>, ProfileCatalogError>>()?,
         lighting: record.lighting.map(convert_lighting).transpose()?,
+        presentation: record.presentation.map(convert_presentation),
     })
+}
+
+fn convert_presentation(presentation: PresentationRecord) -> RuntimePresentation {
+    RuntimePresentation {
+        upstream_id: presentation.upstream_id,
+        owner: presentation.owner,
+        project_version: presentation.project_version,
+        source_commit: presentation.source_commit,
+        model_key: presentation.model_key,
+        layout_key: presentation.layout_key,
+        transport_variant: presentation.transport_variant,
+    }
 }
 
 fn convert_lighting(
@@ -262,11 +299,18 @@ fn validate_kind(profile: &RuntimeProfile) -> Result<(), ProfileCatalogError> {
             )
             | (ProfileKind::Surface, DeviceKind::Mat)
     );
-    if valid {
-        Ok(())
-    } else {
-        Err(ProfileCatalogError::InvalidProfileKind(
+    if !valid {
+        return Err(ProfileCatalogError::InvalidProfileKind(
             profile.profile_id.clone(),
-        ))
+        ));
+    }
+    match (profile.profile_kind, profile.presentation.is_some()) {
+        (ProfileKind::Child, false) => Err(ProfileCatalogError::MissingPresentation(
+            profile.profile_id.clone(),
+        )),
+        (ProfileKind::Receiver | ProfileKind::Surface, true) => Err(
+            ProfileCatalogError::UnexpectedPresentation(profile.profile_id.clone()),
+        ),
+        _ => Ok(()),
     }
 }

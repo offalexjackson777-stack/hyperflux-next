@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import hashlib
 import json
 from pathlib import Path
+import re
 from typing import Any
 
 from .model import ModelError, load_json, require_unique
@@ -49,6 +50,23 @@ CHILD_COMPATIBILITY_KEYS = {
 }
 SURFACE_COMPATIBILITY_KEYS = {"receiver_protocols", "selection"}
 ROUTE_KINDS = {"hyperflux-wireless", "direct-usb", "bluetooth"}
+PRESENTATION_KEYS = {
+    "upstream_id",
+    "owner",
+    "project_version",
+    "source_commit",
+    "model_key",
+    "layout_key",
+    "transport_variant",
+}
+PRESENTATION_VARIANT_ROUTES = {
+    "wireless": "hyperflux-wireless",
+    "wired": "direct-usb",
+    "bluetooth": "bluetooth",
+}
+UPSTREAM_ID_PATTERN = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
+PRESENTATION_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,127}$")
+GIT_COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 
 
 @dataclass(frozen=True)
@@ -359,6 +377,55 @@ def _validate_lighting(profile: dict[str, Any]) -> None:
         raise ModelError(f"{profile['profile_id']}: lighting map exceeds carrier count")
 
 
+def _validate_presentation(profile: dict[str, Any]) -> None:
+    identifier = profile["profile_id"]
+    presentation = profile.get("presentation")
+    if profile["kind"] != "child":
+        if presentation is not None:
+            raise ModelError(f"{identifier}: only child profiles may declare application presentation")
+        return
+    if not isinstance(presentation, dict):
+        raise ModelError(f"{identifier}: child presentation metadata is required")
+    _expect_keys(presentation, PRESENTATION_KEYS, f"{identifier} presentation")
+    missing = sorted(PRESENTATION_KEYS - set(presentation))
+    if missing:
+        raise ModelError(f"{identifier}: incomplete presentation metadata: {', '.join(missing)}")
+
+    upstream_id = _expect_nonempty_string(
+        presentation["upstream_id"], f"{identifier} presentation upstream"
+    )
+    if UPSTREAM_ID_PATTERN.fullmatch(upstream_id) is None:
+        raise ModelError(f"{identifier}: invalid presentation upstream id")
+    _expect_nonempty_string(presentation["owner"], f"{identifier} presentation owner")
+    _expect_nonempty_string(
+        presentation["project_version"], f"{identifier} presentation project version"
+    )
+    source_commit = _expect_nonempty_string(
+        presentation["source_commit"], f"{identifier} presentation source commit"
+    )
+    if GIT_COMMIT_PATTERN.fullmatch(source_commit) is None:
+        raise ModelError(f"{identifier}: presentation source commit must be 40 lowercase hex characters")
+    model_key = _expect_nonempty_string(
+        presentation["model_key"], f"{identifier} presentation model key"
+    )
+    if PRESENTATION_KEY_PATTERN.fullmatch(model_key) is None:
+        raise ModelError(f"{identifier}: invalid presentation model key")
+    layout_key = presentation["layout_key"]
+    if layout_key is not None and (
+        not isinstance(layout_key, str)
+        or PRESENTATION_KEY_PATTERN.fullmatch(layout_key) is None
+    ):
+        raise ModelError(f"{identifier}: invalid presentation layout key")
+    variant = presentation["transport_variant"]
+    expected_route = PRESENTATION_VARIANT_ROUTES.get(variant)
+    if expected_route is None:
+        raise ModelError(f"{identifier}: invalid presentation transport variant")
+    if expected_route not in profile["compatibility"]["routes"]:
+        raise ModelError(
+            f"{identifier}: presentation transport variant has no matching device route"
+        )
+
+
 def _validate_profiles(
     profiles: list[dict[str, Any]],
     capability_index: dict[str, dict[str, Any]],
@@ -410,6 +477,7 @@ def _validate_profiles(
             transport = profile.get("transport", {})
             if transport.get("application_raw_frames") is not False:
                 raise ModelError(f"{identifier}: applications must not supply raw receiver frames")
+        _validate_presentation(profile)
         capabilities = profile.get("capabilities")
         if not isinstance(capabilities, list) or not capabilities:
             raise ModelError(f"{identifier}: profile capabilities are required")

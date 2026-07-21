@@ -57,6 +57,34 @@ class ProfileCompilerTests(unittest.TestCase):
         self.assertNotEqual(_runtime_profile_digest(mouse, capabilities), mouse_before)
         self.assertEqual(_runtime_profile_digest(keyboard, capabilities), keyboard_before)
 
+    def test_child_presentation_is_exact_typed_and_route_bound(self) -> None:
+        profiles, capabilities, claims = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        mouse["presentation"]["surprise"] = "drift"
+        with self.assertRaisesRegex(ModelError, "unsupported keys: surprise"):
+            _validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        mouse["presentation"]["source_commit"] = "short"
+        with self.assertRaisesRegex(ModelError, "40 lowercase hex"):
+            _validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        mouse["presentation"]["transport_variant"] = "wired"
+        with self.assertRaisesRegex(ModelError, "no matching device route"):
+            _validate_profiles(profiles, capabilities, claims)
+
+    def test_non_child_presentation_is_rejected(self) -> None:
+        profiles, capabilities, claims = self.validation_copies()
+        receiver = next(profile for profile in profiles if profile["kind"] == "receiver")
+        receiver["presentation"] = deepcopy(
+            next(profile for profile in profiles if profile["kind"] == "child")["presentation"]
+        )
+        with self.assertRaisesRegex(ModelError, "only child profiles"):
+            _validate_profiles(profiles, capabilities, claims)
+
     def test_mouse_and_keyboard_require_no_sibling(self) -> None:
         for profile in self.inputs.profiles:
             if profile["kind"] == "child":

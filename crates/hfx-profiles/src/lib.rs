@@ -6,7 +6,7 @@ mod catalog;
 mod generated;
 
 pub use catalog::{
-    ProfileCatalogError, RuntimeCapability, RuntimeLightingTopology, RuntimeProfile,
-    RuntimeProfileCatalog,
+    ProfileCatalogError, RuntimeCapability, RuntimeLightingTopology, RuntimePresentation,
+    RuntimeProfile, RuntimeProfileCatalog,
 };
 pub use generated::*;

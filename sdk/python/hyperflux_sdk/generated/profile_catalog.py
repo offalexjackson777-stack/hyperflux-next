@@ -3,7 +3,7 @@
 from types import MappingProxyType
 from typing import Final
 
-PROFILE_SOURCE_SHA256: Final = '261ec79444fa1af6ddf021cd0336089fc58a80e1104c1171c45dde88cdda6b50'
+PROFILE_SOURCE_SHA256: Final = '48a47c9da52af48ffa2fb4063e5e31c5b3e6e4c09ba894acfe9c35021f126371'
 PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                  'id': 'razer-basilisk-v3-pro',
                  'official_name': 'Razer Basilisk V3 Pro',
@@ -434,7 +434,8 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                                 'owner': 'OpenRGB',
                                 'project_version': '1.0rc3',
                                 'source_commit': '6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0',
-                                'transport_variant': 'wireless'},
+                                'transport_variant': 'wireless',
+                                'upstream_id': 'openrgb'},
                'profile_id': 'child.razer.basilisk-v3-pro-35k.00cd',
                'restrictions': ['Another Basilisk name or PID inherits no map.',
                                 'OpenRGB owns zone labels and geometry presentation.',
@@ -522,7 +523,8 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                                 'owner': 'OpenRGB',
                                 'project_version': '1.0rc3',
                                 'source_commit': '6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0',
-                                'transport_variant': 'wireless'},
+                                'transport_variant': 'wireless',
+                                'upstream_id': 'openrgb'},
                'profile_id': 'child.razer.deathstalker-v2-pro-tkl.0296',
                'restrictions': ['Another DeathStalker name, PID, or physical layout inherits no map.',
                                 'OpenRGB owns key names, geometry, and ANSI or ISO presentation.',
@@ -713,7 +715,7 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                'schema': 'hyperflux-hardware-profile-v1',
                'source_path': 'profiles/surfaces/razer-hyperflux-v2-hard-edition.json'}],
  'schema': 'hyperflux-compiled-profile-catalog-v1',
- 'source_sha256': '261ec79444fa1af6ddf021cd0336089fc58a80e1104c1171c45dde88cdda6b50'}
+ 'source_sha256': '48a47c9da52af48ffa2fb4063e5e31c5b3e6e4c09ba894acfe9c35021f126371'}
 PROFILES_BY_ID: Final = MappingProxyType({profile['profile_id']: profile for profile in PROFILE_CATALOG['profiles']})
 
 __all__ = ["PROFILE_CATALOG", "PROFILE_SOURCE_SHA256", "PROFILES_BY_ID"]

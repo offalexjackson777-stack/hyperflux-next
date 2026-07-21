@@ -46,6 +46,13 @@ fn runtime_catalog_is_typed_profile_local_and_canonical() {
         "child.razer.basilisk-v3-pro-35k.00cd"
     );
     assert_eq!(mouse.runtime_digest.as_str().len(), 64);
+    let presentation = mouse
+        .presentation
+        .as_ref()
+        .expect("qualified child presentation exists");
+    assert_eq!(presentation.upstream_id, "openrgb");
+    assert_eq!(presentation.project_version, "1.0rc3");
+    assert_eq!(presentation.transport_variant, "wireless");
     assert_eq!(
         mouse
             .lighting
@@ -85,6 +92,7 @@ fn surface_has_no_invented_usb_identity_or_lighting_map() {
     assert_eq!(surface.vendor_id, None);
     assert_eq!(surface.product_id, None);
     assert_eq!(surface.lighting, None);
+    assert_eq!(surface.presentation, None);
     assert!(
         surface
             .capabilities
