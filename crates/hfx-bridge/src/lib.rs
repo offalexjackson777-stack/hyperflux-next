@@ -5,6 +5,7 @@
 mod backend;
 mod clock;
 mod framing;
+mod generation;
 mod persistence;
 mod profile_authority;
 mod rpc;
@@ -18,6 +19,10 @@ pub use backend::{CoreBridgeBackend, CoreBridgeBackendError, CoreBridgeConfig};
 pub use clock::LinuxMonotonicClock;
 pub use framing::{
     FRAME_LENGTH_BYTES, FrameError, FrameIoStage, read_rpc_request, write_rpc_response,
+};
+pub use generation::{
+    GenerationActivation, GenerationActivationOutcome, GenerationOrchestrationError,
+    GenerationOrchestrator, GenerationQualification, ReceiverGenerationObservation,
 };
 
 pub use persistence::{

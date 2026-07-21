@@ -194,6 +194,7 @@ fn backend() -> TestBackend {
     let capacity = QueueCapacity::try_from(16_u16).expect("capacity is canonical");
     CoreBridgeBackend::new(
         CoreBridgeConfig {
+            lifecycle_limits: LifecycleLimits::default(),
             lease_capacity: capacity,
             lease_history_capacity: capacity,
             transaction_capacity: capacity,

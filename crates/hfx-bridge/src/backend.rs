@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::{
-    AuthorizedSession, BackendRequestContext, BridgeRpcBackend, RestorationSnapshotSource,
-    RpcFailure, RuntimeIdentityError, RuntimeIdentityIssuer, RuntimeProfileAuthority,
-    SessionIdentitySource, SessionRegistry, SnapshotProjectionError, SnapshotProjector,
-    SubscriptionRegistry, SubscriptionRegistryError,
+    AuthorizedSession, BackendRequestContext, BridgeRpcBackend, GenerationActivationOutcome,
+    GenerationOrchestrationError, GenerationOrchestrator, ReceiverGenerationObservation,
+    RestorationSnapshotSource, RpcFailure, RuntimeIdentityError, RuntimeIdentityIssuer,
+    RuntimeProfileAuthority, SessionIdentitySource, SessionRegistry, SnapshotProjectionError,
+    SnapshotProjector, SubscriptionRegistry, SubscriptionRegistryError,
 };
 use hfx_core::{
     BoundedEventLog, Clock, DiagnosticRegistry, DiagnosticRegistryError, DispatchResult,
-    EventDraft, EventLogError, EventSink, LeaseManager, LeaseManagerError, OutcomeJournalError,
-    OutcomeLookup, ProfileRegistry, ReceiverLifecycleRegistry, ReceiverTransport, SessionAuthority,
-    SubmissionResult, TransactionCoordinator, TransactionCoordinatorError, TransactionQueueError,
+    EventDraft, EventLogError, EventSink, LeaseManager, LeaseManagerError, LifecycleLimits,
+    OutcomeJournalError, OutcomeLookup, ProfileRegistry, ReceiverLifecycleRegistry,
+    ReceiverTransport, SessionAuthority, SubmissionResult, TransactionCoordinator,
+    TransactionCoordinatorError, TransactionQueueError,
 };
 use hfx_domain::{
     EventKind, FindingId, ProjectionRevision, ProtocolErrorKind, QueueCapacity, StreamEpoch,
@@ -26,6 +28,7 @@ use std::fmt;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CoreBridgeConfig {
+    pub lifecycle_limits: LifecycleLimits,
     pub lease_capacity: QueueCapacity,
     pub lease_history_capacity: QueueCapacity,
     pub transaction_capacity: QueueCapacity,
@@ -177,6 +180,29 @@ where
     /// ownership transition.
     pub fn tick(&mut self) -> Result<(), RpcFailure> {
         self.expire_leases()
+    }
+
+    /// Atomically activates one transport-confirmed receiver generation.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed orchestration error without partially changing
+    /// generation-bound lifecycle, profiles, ownership, transactions, or events.
+    pub fn activate_generation(
+        &mut self,
+        observation: ReceiverGenerationObservation,
+    ) -> Result<GenerationActivationOutcome, GenerationOrchestrationError> {
+        GenerationOrchestrator::activate(
+            observation,
+            self.config.lifecycle_limits,
+            &self.transport,
+            &mut self.receivers,
+            &mut self.profiles,
+            &mut self.leases,
+            &mut self.transactions,
+            &mut self.events,
+            &mut self.event_sink,
+        )
     }
 
     #[must_use]

@@ -7,8 +7,8 @@ use hfx_core::{
 };
 use hfx_domain::{
     ConnectionMode, DeviceKind, DeviceWriteReadiness, EvidenceClaimId, EvidenceConfidence,
-    GenerationId, LogicalDeviceId, MonotonicMs, PowerState, ProductId, ResourceKind, RouteKind,
-    RouteState, SequenceNumber, SleepState, VendorId,
+    GenerationId, LogicalDeviceId, MonotonicMs, PowerState, ProductId, ReceiverLifecycleState,
+    ResourceKind, RouteKind, RouteState, SequenceNumber, SleepState, VendorId,
 };
 use hfx_protocol::ResourceKey;
 
@@ -214,6 +214,29 @@ fn write_readiness_comes_from_exact_current_lifecycle_state() {
         authority.view(&receivers).write_readiness(&mouse),
         DeviceWriteReadiness::Unavailable
     );
+}
+
+#[test]
+fn receiver_suspend_blocks_writes_without_erasing_profile_identity() {
+    let mut receivers = lifecycle(RouteKind::HyperfluxWireless);
+    let mut authority = RuntimeProfileAuthority::load(4).expect("authority loads");
+    bind(&mut authority, "receiver-a", 1);
+    let mouse = resource("mouse", ResourceKind::Lighting, 1);
+
+    assert_eq!(
+        receivers
+            .get_mut(&text("receiver-a"))
+            .expect("receiver is registered")
+            .transition_receiver(ReceiverLifecycleState::Suspended, stamp(1, 100)),
+        hfx_domain::ApplyOutcome::Applied
+    );
+    let view = authority.view(&receivers);
+    assert!(
+        view.receiver_profile(&text("receiver-a"), generation(1))
+            .is_some()
+    );
+    assert!(view.device_profile(&mouse).is_some());
+    assert_eq!(view.write_readiness(&mouse), DeviceWriteReadiness::Sleeping);
 }
 
 #[test]

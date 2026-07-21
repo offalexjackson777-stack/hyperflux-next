@@ -6,7 +6,7 @@ use hfx_core::{
 };
 use hfx_domain::{
     DeviceWriteReadiness, GenerationId, PresenceState, ProductId, ProfileDigest, ProfileId,
-    ProfileKind, ReceiverId, ResourceKind, VendorId,
+    ProfileKind, ReceiverId, ReceiverLifecycleState, ResourceKind, VendorId,
 };
 use hfx_profiles::{ProfileCatalogError, RuntimeProfile, RuntimeProfileCatalog};
 use hfx_protocol::ResourceKey;
@@ -354,6 +354,14 @@ impl DeviceStateAuthority for RuntimeProfileView<'_> {
         else {
             return DeviceWriteReadiness::Unknown;
         };
+        match generation.lifecycle().value() {
+            ReceiverLifecycleState::Active => {}
+            ReceiverLifecycleState::Suspended => return DeviceWriteReadiness::Sleeping,
+            ReceiverLifecycleState::PartiallySuspended | ReceiverLifecycleState::Disconnecting => {
+                return DeviceWriteReadiness::Unavailable;
+            }
+            ReceiverLifecycleState::Unknown => return DeviceWriteReadiness::Unknown,
+        }
         let Some(device) = generation.device(&resource.device_id) else {
             return DeviceWriteReadiness::Unknown;
         };
