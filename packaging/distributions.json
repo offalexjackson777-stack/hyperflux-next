@@ -1,0 +1,79 @@
+{
+  "$schema": "../schemas/distribution-packages.schema.json",
+  "schema": "hyperflux-distribution-packages-v1",
+  "metadata": {
+    "description": "Universal Linux transport, bridge, SDK, and application adapters for Razer HyperFlux V2",
+    "licenses": ["GPL-2.0-only", "GPL-2.0-or-later", "GPL-3.0-only"]
+  },
+  "targets": {
+    "arch": {
+      "architectures": {
+        "x86_64-unknown-linux-gnu": "x86_64",
+        "aarch64-unknown-linux-gnu": "aarch64"
+      },
+      "dependency_roles": {
+        "dkms": "dkms",
+        "c-runtime": "glibc",
+        "compiler-runtime": "gcc-libs",
+        "python": "python>=3.11",
+        "service-manager": "systemd",
+        "device-manager": "systemd"
+      },
+      "optional_dependencies": [
+        {"package": "openrgb", "purpose": "native OpenRGB controller integration"},
+        {"package": "polychromatic", "purpose": "native Polychromatic backend"},
+        {"package": "python-dbus", "purpose": "private OpenRazer compatibility service"},
+        {"package": "python-gobject", "purpose": "private OpenRazer compatibility event loop"},
+        {"package": "linux-headers", "purpose": "DKMS build for the standard Arch kernel"}
+      ],
+      "conflicts": ["hyperflux-v2-linux-dkms"],
+      "python_discovery_path": "/usr/lib/python@python_major_minor@/site-packages/hyperflux-next.pth"
+    },
+    "debian": {
+      "architectures": {
+        "x86_64-unknown-linux-gnu": "amd64",
+        "aarch64-unknown-linux-gnu": "arm64"
+      },
+      "dependency_roles": {
+        "dkms": "dkms",
+        "c-runtime": "libc6",
+        "compiler-runtime": "libgcc-s1",
+        "python": "python3 (>= 3.11)",
+        "service-manager": "systemd",
+        "device-manager": "udev"
+      },
+      "optional_dependencies": [
+        {"package": "openrgb", "purpose": "native OpenRGB controller integration"},
+        {"package": "polychromatic", "purpose": "native Polychromatic backend"},
+        {"package": "python3-dbus", "purpose": "private OpenRazer compatibility service"},
+        {"package": "python3-gi", "purpose": "private OpenRazer compatibility event loop"},
+        {"package": "linux-headers-amd64", "purpose": "DKMS build for Debian amd64 kernels"}
+      ],
+      "conflicts": ["hyperflux-v2-linux-dkms"],
+      "python_discovery_path": "/usr/lib/python3/dist-packages/hyperflux-next.pth"
+    },
+    "rpm": {
+      "architectures": {
+        "x86_64-unknown-linux-gnu": "x86_64",
+        "aarch64-unknown-linux-gnu": "aarch64"
+      },
+      "dependency_roles": {
+        "dkms": "dkms",
+        "c-runtime": "glibc",
+        "compiler-runtime": "libgcc",
+        "python": "python3 >= 3.11",
+        "service-manager": "systemd",
+        "device-manager": "systemd-udev"
+      },
+      "optional_dependencies": [
+        {"package": "openrgb", "purpose": "native OpenRGB controller integration"},
+        {"package": "polychromatic", "purpose": "native Polychromatic backend"},
+        {"package": "python3-dbus", "purpose": "private OpenRazer compatibility service"},
+        {"package": "python3-gobject", "purpose": "private OpenRazer compatibility event loop"},
+        {"package": "kernel-devel", "purpose": "DKMS build for the running kernel"}
+      ],
+      "conflicts": ["hyperflux-v2-linux-dkms"],
+      "python_discovery_path": "/usr/lib/python3/site-packages/hyperflux-next.pth"
+    }
+  }
+}

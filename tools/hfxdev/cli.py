@@ -8,6 +8,7 @@ import sys
 
 from .migration import capture_inventory, summary
 from .model import ModelError
+from .distribution_package import build_distribution_package
 from .openrazer import write_imported_metadata
 from .package_pipeline import build_artifacts, stage_rootfs
 from .render import write_generated
@@ -58,6 +59,14 @@ def _parser() -> argparse.ArgumentParser:
     )
     package_stage.add_argument("--build-manifest", required=True, type=Path)
     package_stage.add_argument("--root", required=True, type=Path)
+    package_distro = package_commands.add_parser(
+        "distro", help="build one native distribution package from the canonical root"
+    )
+    package_distro.add_argument(
+        "--distribution", required=True, choices=["arch", "debian", "rpm"]
+    )
+    package_distro.add_argument("--build-manifest", required=True, type=Path)
+    package_distro.add_argument("--output", required=True, type=Path)
     return parser
 
 
@@ -95,11 +104,23 @@ def main(arguments: list[str] | None = None) -> int:
                 )
                 print(f"Package build manifest: {manifest}")
                 return 0
-            result = stage_rootfs(root, args.build_manifest, args.root)
-            print(f"Staged package root: {result.root}")
-            print(f"Installed files: {result.file_count}")
-            print(f"Payload SHA-256: {result.payload_sha256}")
-            print(f"Inventory: {result.inventory}")
+            if args.package_command == "stage":
+                result = stage_rootfs(root, args.build_manifest, args.root)
+                print(f"Staged package root: {result.root}")
+                print(f"Installed files: {result.file_count}")
+                print(f"Payload SHA-256: {result.payload_sha256}")
+                print(f"Inventory: {result.inventory}")
+                return 0
+            result = build_distribution_package(
+                root,
+                args.build_manifest,
+                args.distribution,
+                args.output,
+            )
+            print(f"Distribution package: {result.package}")
+            print(f"Build manifest: {result.manifest}")
+            print(f"Common payload SHA-256: {result.common_payload_sha256}")
+            print(f"Distribution payload SHA-256: {result.distribution_payload_sha256}")
             return 0
         if args.migration_command == "summary":
             print(summary(root))

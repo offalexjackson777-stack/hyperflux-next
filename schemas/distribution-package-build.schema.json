@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/distribution-package-build-v1.json",
+  "title": "HyperFlux built distribution package manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "source", "package", "payload"],
+  "properties": {
+    "$schema": {"const": "https://hyperflux.dev/schemas/distribution-package-build-v1.json"},
+    "schema": {"const": "hyperflux-distribution-package-build-v1"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "source_date_epoch", "distribution_catalog_sha256"],
+      "properties": {
+        "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "source_date_epoch": {"type": "integer", "minimum": 1, "maximum": 4102444800},
+        "distribution_catalog_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["distribution", "name", "version", "release", "architecture", "file", "sha256", "size"],
+      "properties": {
+        "distribution": {"enum": ["arch", "debian", "rpm"]},
+        "name": {"type": "string", "pattern": "^[a-z][a-z0-9+_.-]{0,63}$"},
+        "version": {"type": "string", "minLength": 1, "maxLength": 64},
+        "release": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "architecture": {"type": "string", "pattern": "^[A-Za-z0-9_.-]{1,31}$"},
+        "file": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9+_.~-]{0,191}$"},
+        "sha256": {"$ref": "#/$defs/digest"},
+        "size": {"type": "integer", "minimum": 1, "maximum": 2147483648}
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["common_sha256", "distribution_sha256", "common_files", "distribution_files"],
+      "properties": {
+        "common_sha256": {"$ref": "#/$defs/digest"},
+        "distribution_sha256": {"$ref": "#/$defs/digest"},
+        "common_files": {"type": "integer", "minimum": 1, "maximum": 100000},
+        "distribution_files": {"type": "integer", "minimum": 1, "maximum": 100000}
+      }
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

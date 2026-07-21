@@ -13,6 +13,7 @@ from .generators.domain import (
     python_types,
     rust_types,
 )
+from .generators.distributions import markdown as distribution_markdown
 from .generators.errors import (
     cpp_catalog as error_cpp_catalog,
     markdown as error_markdown,
@@ -74,6 +75,7 @@ from .generators.integrations import (
 from .generators.install import compiled_plan as compiled_install_plan
 from .generators.install import markdown as install_markdown
 from .install import load_install_manifest
+from .distributions import load_distribution_catalog
 from .model import load_foundation, load_json
 from .linux_runtime import load_linux_runtime
 from .openrazer import load_imported_metadata
@@ -185,6 +187,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
     test_catalog = load_test_catalog(root)
     linux_runtime = load_linux_runtime(root)
     install_manifest = load_install_manifest(root)
+    distribution_catalog = load_distribution_catalog(root)
     files = {
         root / "docs" / "generated" / "architecture.md": architecture_markdown(constitution),
         root / "docs" / "generated" / "migration-ledger.md": migration_markdown(sources, ledger),
@@ -239,6 +242,9 @@ def rendered_files(root: Path) -> dict[Path, str]:
         ),
         root / "docs" / "generated" / "installation.md": install_markdown(
             install_manifest, linux_runtime
+        ),
+        root / "docs" / "generated" / "distributions.md": distribution_markdown(
+            distribution_catalog, linux_runtime
         ),
         root / "sdk" / "python" / "hyperflux_sdk" / "_version.py": python_version_module(
             linux_runtime, "GPL-2.0-or-later"

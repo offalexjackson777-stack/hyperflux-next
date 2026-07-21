@@ -258,6 +258,20 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/distribution-package-build.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/distribution-package-build.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/distribution-packages.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/distribution-packages.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/domain-catalog.json",
       "destination": "/usr/share/hyperflux-next/schemas/domain-catalog.json",
       "mode": "0644",
@@ -729,6 +743,13 @@
       "component": "documentation",
       "source": "docs/generated/bridge-protocol.md",
       "destination": "/usr/share/doc/hyperflux-next/generated/bridge-protocol.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/distributions.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/distributions.md",
       "mode": "0644",
       "preserve": false
     },
