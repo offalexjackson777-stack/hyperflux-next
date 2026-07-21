@@ -11,6 +11,7 @@ add_library(
     hyperflux_openrgb_core
     STATIC
         src/controller_model.cpp
+        src/dispatch_queue.cpp
 )
 set_target_properties(hyperflux_openrgb_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_features(hyperflux_openrgb_core PUBLIC cxx_std_20)
@@ -137,4 +138,17 @@ if(BUILD_TESTING)
         )
     endif()
     add_test(NAME openrgb-controller-model-contract COMMAND openrgb-controller-model-contract)
+
+    add_executable(
+        openrgb-dispatch-queue-contract
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_dispatch_queue_contract.cpp"
+    )
+    target_link_libraries(openrgb-dispatch-queue-contract PRIVATE hyperflux_openrgb_core)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(
+            openrgb-dispatch-queue-contract
+            PRIVATE -Wall -Wextra -Werror -pedantic
+        )
+    endif()
+    add_test(NAME openrgb-dispatch-queue-contract COMMAND openrgb-dispatch-queue-contract)
 endif()
