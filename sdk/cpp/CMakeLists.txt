@@ -6,6 +6,7 @@ include(CTest)
 add_library(
     hyperflux_sdk
     STATIC
+        src/clock.cpp
         src/channel.cpp
         src/client.cpp
         src/identity.cpp

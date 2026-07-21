@@ -65,6 +65,7 @@ public:
         sdk::LightingIntent intent,
         std::vector<QueuedLightingFrame> frames);
 
+    [[nodiscard]] std::optional<DispatchBatch> preview_ready(std::uint64_t now_ms) const;
     [[nodiscard]] std::optional<DispatchBatch> pop_ready(std::uint64_t now_ms);
     [[nodiscard]] std::optional<std::uint64_t> next_effect_due_ms() const noexcept;
     [[nodiscard]] std::size_t stable_size() const noexcept;

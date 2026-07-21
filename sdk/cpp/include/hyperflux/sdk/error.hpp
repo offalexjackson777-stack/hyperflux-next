@@ -37,6 +37,9 @@ enum class ErrorCode
     OwnershipConflict,
     LeaseRejected,
     SessionInactive,
+    ClockUnavailable,
+    RuntimeConfiguration,
+    RuntimeNotInitialized,
 };
 
 struct Error

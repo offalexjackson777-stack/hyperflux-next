@@ -118,6 +118,30 @@ std::optional<DispatchBatch> DispatchQueue::pop_ready(std::uint64_t now_ms)
     };
 }
 
+std::optional<DispatchBatch> DispatchQueue::preview_ready(std::uint64_t now_ms) const
+{
+    if(!stable_.empty())
+    {
+        return stable_.front();
+    }
+    if(effects_.empty() || !effect_due_ms_.has_value() || now_ms < *effect_due_ms_)
+    {
+        return std::nullopt;
+    }
+    std::vector<QueuedLightingFrame> frames;
+    frames.reserve(effects_.size());
+    for(const auto& [stable_id, frame] : effects_)
+    {
+        (void)stable_id;
+        frames.push_back(frame);
+    }
+    return DispatchBatch {
+        next_sequence_,
+        sdk::LightingIntent::EffectFrame,
+        std::move(frames),
+    };
+}
+
 std::optional<std::uint64_t> DispatchQueue::next_effect_due_ms() const noexcept
 {
     return effect_due_ms_;

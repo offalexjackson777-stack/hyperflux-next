@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <hyperflux/sdk/clock.hpp>
 #include <hyperflux/sdk/channel.hpp>
 #include <hyperflux/sdk/client.hpp>
 #include <hyperflux/sdk/error.hpp>

@@ -66,6 +66,7 @@ public:
 
     [[nodiscard]] bool active() const noexcept;
     [[nodiscard]] const LeaseId* lease_id() const noexcept;
+    [[nodiscard]] const MonotonicMs* expires_at_ms() const noexcept;
     [[nodiscard]] const std::vector<LightingTarget>& targets() const noexcept;
     [[nodiscard]] bool matches(const LightingTarget& target) const noexcept;
 

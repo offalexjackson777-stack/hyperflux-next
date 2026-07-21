@@ -294,6 +294,11 @@ const LeaseId* LightingSession::lease_id() const noexcept
     return grant_.has_value() ? &grant_->lease_id : nullptr;
 }
 
+const MonotonicMs* LightingSession::expires_at_ms() const noexcept
+{
+    return grant_.has_value() ? &grant_->expires_at_ms : nullptr;
+}
+
 const std::vector<LightingTarget>& LightingSession::targets() const noexcept
 {
     return targets_;
