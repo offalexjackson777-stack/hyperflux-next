@@ -8,10 +8,10 @@ use hfx_domain::{
 };
 use hfx_protocol::{
     BridgeSnapshot, ClientHello, DeviceProfileBinding, DiagnosticSnapshot, EmptyRequest,
-    EventBatch, EventCursor, LeaseRequest, LeaseResult, LightingFrame, NegotiationRequestEnvelope,
-    ReleaseLeaseRequest, RenewLeaseRequest, RpcRequest, RpcResponse, ServerHello,
-    SessionRequestEnvelope, StableLightingIntent, SubscriptionRequest, TransactionLookup,
-    TransactionRequest, TransactionResult,
+    EventBatch, EventCursor, IntegrationView, LeaseRequest, LeaseResult, LightingFrame,
+    NegotiationRequestEnvelope, ReleaseLeaseRequest, RenewLeaseRequest, RpcRequest, RpcResponse,
+    ServerHello, SessionRequestEnvelope, StableLightingIntent, SubscriptionRequest,
+    TransactionLookup, TransactionRequest, TransactionResult,
 };
 use std::io::{Read, Write};
 
@@ -148,6 +148,26 @@ where
             RpcResponse::SnapshotSuccess(envelope) => Ok(envelope.result),
             _ => Err(SdkError::UnexpectedResponse {
                 expected: SdkMethod::Snapshot,
+            }),
+        }
+    }
+
+    /// Returns the bridge's canonical, viewer-specific application projection.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed local or server error. The negotiated protocol must
+    /// include the `integration-view-projection` feature.
+    pub fn integration_view(&mut self) -> Result<IntegrationView, SdkError> {
+        let request_id = self.next_request_id()?;
+        let response = self.exchange(
+            &RpcRequest::IntegrationView(self.envelope(request_id.clone(), EmptyRequest {})),
+            &request_id,
+        )?;
+        match response {
+            RpcResponse::IntegrationViewSuccess(envelope) => Ok(envelope.result),
+            _ => Err(SdkError::UnexpectedResponse {
+                expected: SdkMethod::IntegrationView,
             }),
         }
     }

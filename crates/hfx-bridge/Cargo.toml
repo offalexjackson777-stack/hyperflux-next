@@ -10,6 +10,7 @@ publish.workspace = true
 hfx-core = { path = "../hfx-core" }
 hfx-domain = { path = "../hfx-domain" }
 hfx-errors = { path = "../hfx-errors" }
+hfx-integration-model = { path = "../hfx-integration-model" }
 hfx-profiles = { path = "../hfx-profiles" }
 hfx-protocol = { path = "../hfx-protocol" }
 rustix.workspace = true

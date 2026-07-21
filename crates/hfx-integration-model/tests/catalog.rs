@@ -11,11 +11,11 @@ fn generated_catalog_keeps_upstreams_exact_and_network_free() {
 }
 
 #[test]
-fn adapters_require_profile_complete_protocol_v4_and_have_distinct_coexistence_contracts() {
+fn adapters_require_canonical_protocol_v5_views_and_distinct_coexistence_contracts() {
     assert!(
         ADAPTERS
             .iter()
-            .all(|adapter| adapter.sdk_protocol_versions == [4])
+            .all(|adapter| adapter.sdk_protocol_versions == [5])
     );
     assert_eq!(
         adapter_by_id("openrgb-native")

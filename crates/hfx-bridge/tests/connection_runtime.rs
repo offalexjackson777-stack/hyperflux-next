@@ -11,10 +11,10 @@ use hfx_domain::{
 };
 use hfx_protocol::{
     BridgeSnapshot, ClientHello, DiagnosticSnapshot, EmptyRequest, EventBatch, EventCursor,
-    LeaseRequest, LeaseResult, NegotiationRequestEnvelope, ReleaseLeaseRequest, RenewLeaseRequest,
-    RpcRequest, RpcResponse, SessionRequestEnvelope, SubscriptionRequest, TransactionLookup,
-    TransactionRequest, TransactionResult, read_rpc_response, read_rpc_response_for_version,
-    write_rpc_request, write_rpc_request_for_version,
+    IntegrationView, LeaseRequest, LeaseResult, NegotiationRequestEnvelope, ReleaseLeaseRequest,
+    RenewLeaseRequest, RpcRequest, RpcResponse, SessionRequestEnvelope, SubscriptionRequest,
+    TransactionLookup, TransactionRequest, TransactionResult, read_rpc_response,
+    read_rpc_response_for_version, write_rpc_request, write_rpc_request_for_version,
 };
 use std::io::Write;
 use std::os::unix::net::UnixStream;
@@ -56,6 +56,17 @@ impl BridgeRpcBackend for FakeBackend {
     ) -> Result<BridgeSnapshot, RpcFailure> {
         self.snapshot_calls += 1;
         Ok(empty_snapshot())
+    }
+
+    fn integration_view(
+        &mut self,
+        _context: BackendRequestContext<'_>,
+    ) -> Result<IntegrationView, RpcFailure> {
+        let snapshot = empty_snapshot();
+        Ok(IntegrationView {
+            cursor: snapshot.cursor,
+            receivers: Vec::new(),
+        })
     }
 
     fn acquire_lease(

@@ -26,7 +26,7 @@ pub struct AdapterRecord {
 }
 
 pub const INTEGRATION_SOURCE_SHA256: &str =
-    "5174b3a4a6cd59dc6e1059b8be44ec924ebdff35712f7bf5ebfa3612c4fae356";
+    "4127f17f7323915366239f50bc058f0e2fb4064f1c5bd79f52bb0e5d25e0e35c";
 
 pub const UPSTREAMS: &[UpstreamRecord] = &[
     UpstreamRecord {
@@ -72,7 +72,7 @@ pub const ADAPTERS: &[AdapterRecord] = &[
         kind: "compatibility-service",
         status: "planned",
         upstream_ids: &["openrazer"],
-        sdk_protocol_versions: &[4],
+        sdk_protocol_versions: &[5],
         feature_families: &["inventory", "lighting", "ownership", "telemetry"],
         coexistence_policy: "private-explicit-service-only",
     },
@@ -82,7 +82,7 @@ pub const ADAPTERS: &[AdapterRecord] = &[
         kind: "native-plugin",
         status: "in-progress",
         upstream_ids: &["openrgb"],
-        sdk_protocol_versions: &[4],
+        sdk_protocol_versions: &[5],
         feature_families: &[
             "effects",
             "inventory",
@@ -99,7 +99,7 @@ pub const ADAPTERS: &[AdapterRecord] = &[
         kind: "native-backend",
         status: "planned",
         upstream_ids: &["openrazer", "polychromatic"],
-        sdk_protocol_versions: &[4],
+        sdk_protocol_versions: &[5],
         feature_families: &[
             "inventory",
             "lighting",

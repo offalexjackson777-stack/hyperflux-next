@@ -72,6 +72,12 @@ These types prevent semantically different values from being passed interchangea
 | `ProtocolSessionId` | `protocol_session_id` | 1 to 128 bytes |
 | `RequestDigest` | `request_digest` | 64 to 64 bytes |
 | `IntentDigest` | `intent_digest` | 64 to 64 bytes |
+| `ModelName` | `model_name` | 1 to 160 bytes |
+| `UpstreamId` | `upstream_id` | 1 to 64 bytes |
+| `UpstreamOwner` | `upstream_owner` | 1 to 128 bytes |
+| `SourceRevision` | `source_revision` | 1 to 64 bytes |
+| `PresentationKey` | `presentation_key` | 1 to 160 bytes |
+| `TransportVariant` | `transport_variant` | 1 to 64 bytes |
 | `RestoreTriggerId` | `restore_trigger_id` | 1 to 128 bytes |
 
 ## Enumerations
@@ -111,6 +117,8 @@ These types prevent semantically different values from being passed interchangea
 - `DeviceWriteReadiness`: `ready`, `sleeping`, `unavailable`, `unknown`
 - `EventKind`: `receiver-available`, `receiver-suspended`, `receiver-unavailable`, `device-available`, `device-sleeping`, `device-unavailable`, `device-unknown`, `battery-updated`, `ownership-changed`, `generation-replaced`, `transaction-completed`, `restore-completed`, `diagnostic-raised`
 - `ProtocolErrorKind`: `incompatible-version`, `unsupported-feature`, `invalid-request`, `ownership-conflict`, `stale-generation`, `deadline-exceeded`, `queue-full`, `transport-failure`, `outcome-unknown`, `outcome-evicted`, `internal-failure`
+- `InventoryAvailability`: `available`, `sleeping`, `unavailable`, `unknown`, `unpaired`, `pairing-unknown`, `receiver-unavailable`
+- `ControllerAvailability`: `ready`, `sleeping`
 - `SideEffectCertainty`: `none`, `possible`, `partial`, `committed`
 - `DeviceApplicationState`: `unverified`, `confirmed`, `rejected`
 - `TelemetryAvailability`: `unknown`, `unavailable`, `reported`

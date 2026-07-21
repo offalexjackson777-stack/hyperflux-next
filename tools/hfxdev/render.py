@@ -6,7 +6,13 @@ from pathlib import Path
 from typing import Any
 
 from .errors import load_error_catalog
-from .generators.domain import cpp_types, markdown as domain_markdown, python_types, rust_types
+from .generators.domain import (
+    cpp_json as domain_cpp_json,
+    cpp_types,
+    markdown as domain_markdown,
+    python_types,
+    rust_types,
+)
 from .generators.errors import (
     cpp_catalog as error_cpp_catalog,
     markdown as error_markdown,
@@ -28,6 +34,7 @@ from .generators.profiles import (
     rust_catalog as profile_rust_catalog,
 )
 from .generators.protocol import (
+    cpp_json as protocol_cpp_json,
     cpp_types as protocol_cpp_types,
     markdown as protocol_markdown,
     python_types as protocol_python_types,
@@ -155,6 +162,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "crates" / "hfx-domain" / "src" / "generated.rs": rust_types(domain_catalog),
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "domain_types.py": python_types(domain_catalog),
         root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "domain_types.hpp": cpp_types(domain_catalog),
+        root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "domain_json.hpp": domain_cpp_json(domain_catalog),
         root / "generated" / "profiles" / "catalog.json": profile_compiled_json(profiles),
         root / "tests" / "fixtures" / "generated" / "profile-compositions.json": profile_fixtures_json(profile_fixtures),
         root / "docs" / "generated" / "supported-hardware.md": profile_markdown(profiles),
@@ -168,6 +176,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "crates" / "hfx-protocol" / "src" / "generated_versions.rs": protocol_rust_registry(protocol_registry),
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "protocol_types.py": protocol_python_types(protocol),
         root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "protocol_types.hpp": protocol_cpp_types(protocol),
+        root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "protocol_json.hpp": protocol_cpp_json(protocol),
         root / "docs" / "generated" / "error-catalog.md": error_markdown(errors),
         root / "crates" / "hfx-errors" / "src" / "generated.rs": error_rust_catalog(errors),
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "error_catalog.py": error_python_catalog(errors),
@@ -203,6 +212,19 @@ def rendered_files(root: Path) -> dict[Path, str]:
             / "generated"
             / f"protocol_{suffix}_types.hpp"
         ] = protocol_cpp_types(version.catalog, namespace=f"hyperflux::{suffix}")
+        files[
+            root
+            / "sdk"
+            / "cpp"
+            / "include"
+            / "hyperflux"
+            / "generated"
+            / f"protocol_{suffix}_json.hpp"
+        ] = protocol_cpp_json(
+            version.catalog,
+            namespace=f"hyperflux::{suffix}",
+            types_header=f"protocol_{suffix}_types.hpp",
+        )
         files[root / "docs" / "generated" / f"bridge-protocol-{suffix}.md"] = (
             protocol_markdown(version.catalog, title=f"Bridge Protocol {suffix.upper()}")
         )

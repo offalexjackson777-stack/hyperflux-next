@@ -1,0 +1,15 @@
+{
+  "schema": "hyperflux-vendored-cpp-dependencies-v1",
+  "dependencies": [
+    {
+      "id": "nlohmann-json",
+      "version": "3.11.3",
+      "license_expression": "MIT",
+      "source_repository": "https://github.com/nlohmann/json.git",
+      "source_via_repository": "https://github.com/CalcProgrammer1/OpenRGB.git",
+      "source_via_commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0",
+      "path": "sdk/cpp/vendor/include/nlohmann/json.hpp",
+      "sha256": "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6"
+    }
+  ]
+}

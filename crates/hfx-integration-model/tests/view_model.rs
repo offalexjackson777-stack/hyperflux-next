@@ -1,20 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_domain::{
-    ActivityState, BatteryPercent, ClientId, ConnectionMode, ContactState, DeviceKind,
-    EvidenceConfidence, FreshnessState, GenerationId, LeaseId, MonotonicMs, PairingState,
-    PowerState, PresenceState, ProductId, ProfileId, ProjectionRevision, ReceiverLifecycleState,
-    RestoreState, RouteKind, RouteState, SequenceNumber, SleepState, StreamEpoch, SupportLevel,
-    TelemetryAvailability, VendorId,
+    ActivityState, BatteryPercent, ClientId, ConnectionMode, ContactState, ControllerAvailability,
+    DeviceKind, EvidenceConfidence, FreshnessState, GenerationId, InventoryAvailability, LeaseId,
+    MonotonicMs, PairingState, PowerState, PresenceState, PresentationKey, ProductId, ProfileId,
+    ProjectionRevision, ReceiverLifecycleState, RestoreState, RouteKind, RouteState,
+    SequenceNumber, SleepState, StreamEpoch, SupportLevel, TelemetryAvailability, VendorId,
 };
-use hfx_integration_model::{
-    ControllerAvailability, ControllerOwnership, InventoryAvailability, ViewModelError,
-    project_integration_view,
-};
+use hfx_integration_model::{ViewModelError, project_integration_view};
 use hfx_profiles::RuntimeProfileCatalog;
 use hfx_protocol::{
-    BatteryObservation, BridgeSnapshot, EndpointSnapshot, EventCursor, LogicalDeviceSnapshot,
-    ReceiverSnapshot, ResourceKey, ResourceOwnershipSnapshot, SnapshotValidationError,
+    BatteryObservation, BridgeSnapshot, ControllerOwnership, EndpointSnapshot, EventCursor,
+    LogicalDeviceSnapshot, ReceiverSnapshot, ResourceKey, ResourceOwnershipSnapshot,
+    SnapshotValidationError,
 };
 
 fn text<T>(value: &str) -> T
@@ -318,7 +316,7 @@ fn ownership_actions_are_viewer_specific_and_generation_scoped() {
     let controller = &view.receivers[0].controllers[0];
     assert!(matches!(
         controller.ownership,
-        ControllerOwnership::OwnedByViewer { .. }
+        ControllerOwnership::OwnedByViewer(_)
     ));
     assert!(controller.actions.can_release);
     assert!(controller.actions.can_submit_now);
@@ -329,7 +327,7 @@ fn ownership_actions_are_viewer_specific_and_generation_scoped() {
     let controller = &view.receivers[0].controllers[0];
     assert!(matches!(
         controller.ownership,
-        ControllerOwnership::OwnedByOther { .. }
+        ControllerOwnership::OwnedByOther(_)
     ));
     assert!(!controller.actions.can_acquire);
     assert!(!controller.actions.can_submit_now);
@@ -359,9 +357,9 @@ fn exact_upstream_presentation_and_application_topology_are_exposed() {
         .iter()
         .find(|controller| controller.device_kind == DeviceKind::Mouse)
         .expect("mouse controller exists");
-    assert_eq!(mouse.presentation.owner, "OpenRGB");
+    assert_eq!(mouse.presentation.owner.as_str(), "OpenRGB");
     assert_eq!(
-        mouse.presentation.model_key,
+        mouse.presentation.model_key.as_str(),
         "basilisk_v3_pro_35k_wireless_device"
     );
     assert_eq!(mouse.lighting.application_slot_count.get(), 13);
@@ -371,11 +369,21 @@ fn exact_upstream_presentation_and_application_topology_are_exposed() {
         .find(|controller| controller.device_kind == DeviceKind::Keyboard)
         .expect("keyboard controller exists");
     assert_eq!(
-        keyboard.presentation.layout_key.as_deref(),
+        keyboard
+            .presentation
+            .layout_key
+            .as_ref()
+            .map(PresentationKey::as_str),
         Some("razer_deathstalker_v2_pro_tkl_layout")
     );
     assert_eq!(keyboard.lighting.application_slot_count.get(), 102);
-    assert_eq!((keyboard.lighting.rows, keyboard.lighting.columns), (6, 17));
+    assert_eq!(
+        (
+            keyboard.lighting.rows.get(),
+            keyboard.lighting.columns.get()
+        ),
+        (6, 17)
+    );
     serde_json::to_vec(&view).expect("view has a portable serialized form");
 }
 

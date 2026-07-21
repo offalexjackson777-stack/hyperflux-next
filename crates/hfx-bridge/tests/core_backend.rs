@@ -15,13 +15,14 @@ use hfx_core::{
     TransportTerminal, WallClock,
 };
 use hfx_domain::{
-    ClientId, ClientName, ColorChannel, ComponentVersion, ConnectionMode, DeliveredFrameCount,
-    DeviceApplicationState, DeviceKind, EventBatchLimit, EventKind, EvidenceClaimId,
-    EvidenceConfidence, FrameIndex, GenerationId, LeaseDurationMs, LogicalDeviceId, MonotonicMs,
-    ProductId, ProjectionRevision, ProtocolErrorKind, ProtocolFeatureId, ProtocolVersion,
-    QueueCapacity, ReceiverId, RequestId, ResourceKind, RouteKind, RouteState, SequenceNumber,
-    ServerInstanceId, SideEffectCertainty, StableLightingMode, StreamEpoch, StreamId,
-    TransactionClass, TransactionId, TransactionState, VendorId, WallClockUnixMs,
+    ActivityState, ApplyOutcome, ClientId, ClientName, ColorChannel, ComponentVersion,
+    ConnectionMode, DeliveredFrameCount, DeviceApplicationState, DeviceKind, EventBatchLimit,
+    EventKind, EvidenceClaimId, EvidenceConfidence, FrameIndex, FreshnessState, GenerationId,
+    LeaseDurationMs, LogicalDeviceId, MonotonicMs, PairingState, PowerState, ProductId,
+    ProjectionRevision, ProtocolErrorKind, ProtocolFeatureId, ProtocolVersion, QueueCapacity,
+    ReceiverId, RequestId, ResourceKind, RouteKind, RouteState, SequenceNumber, ServerInstanceId,
+    SideEffectCertainty, SleepState, StableLightingMode, StreamEpoch, StreamId, TransactionClass,
+    TransactionId, TransactionState, VendorId, WallClockUnixMs,
 };
 use hfx_protocol::{
     DeviceProfileBinding, EmptyRequest, EventCursor, LeaseRequest, LeaseResult, LightingFrame,
@@ -167,6 +168,10 @@ fn runtime_state() -> (ReceiverLifecycleRegistry, RuntimeProfileAuthority) {
             stamp(2),
         )
         .expect("mouse registers");
+    assert_eq!(
+        machine.observe_pairing(&mouse_id, PairingState::Paired, stamp(3)),
+        ApplyOutcome::Applied
+    );
     machine
         .register_endpoint(
             &mouse_id,
@@ -176,7 +181,7 @@ fn runtime_state() -> (ReceiverLifecycleRegistry, RuntimeProfileAuthority) {
                 ConnectionMode::Hyperflux24ghz,
             )
             .expect("endpoint is canonical"),
-            stamp(3),
+            stamp(4),
         )
         .expect("endpoint registers");
     machine
@@ -184,9 +189,41 @@ fn runtime_state() -> (ReceiverLifecycleRegistry, RuntimeProfileAuthority) {
             &mouse_id,
             &text("mouse-hyperflux"),
             RouteState::Available,
-            stamp(4),
+            stamp(5),
         )
         .expect("mouse route becomes available");
+    machine
+        .observe_power(
+            &mouse_id,
+            &text("mouse-hyperflux"),
+            PowerState::On,
+            stamp(6),
+        )
+        .expect("mouse power observation succeeds");
+    machine
+        .observe_sleep(
+            &mouse_id,
+            &text("mouse-hyperflux"),
+            SleepState::Awake,
+            stamp(7),
+        )
+        .expect("mouse sleep observation succeeds");
+    machine
+        .observe_activity(
+            &mouse_id,
+            &text("mouse-hyperflux"),
+            ActivityState::Active,
+            stamp(8),
+        )
+        .expect("mouse activity observation succeeds");
+    machine
+        .observe_freshness(
+            &mouse_id,
+            &text("mouse-hyperflux"),
+            FreshnessState::Fresh,
+            stamp(9),
+        )
+        .expect("mouse freshness observation succeeds");
     let mut receivers = ReceiverLifecycleRegistry::default();
     receivers.register(machine).expect("receiver registers");
     let mut profiles = RuntimeProfileAuthority::load(4).expect("profiles load");
@@ -307,6 +344,7 @@ fn negotiate<R: RestorationRuntime>(
         "ownership-leases",
         "atomic-transactions",
         "event-subscriptions",
+        "integration-view-projection",
         "profile-bound-transactions",
         "semantic-stable-lighting",
         "structured-diagnostics",
@@ -318,7 +356,7 @@ fn negotiate<R: RestorationRuntime>(
                 client_id: text::<ClientId>("client-1"),
                 client_name: text::<ClientName>("Core backend test"),
                 minimum_version: ProtocolVersion::try_from(1_u16).expect("version is canonical"),
-                maximum_version: ProtocolVersion::try_from(3_u16).expect("version is canonical"),
+                maximum_version: ProtocolVersion::try_from(5_u16).expect("version is canonical"),
                 required_features: Vec::new(),
                 optional_features: features
                     .into_iter()
@@ -447,6 +485,31 @@ fn production_backend_composes_authority_replay_dispatch_events_and_cleanup() {
             .as_ref()
             .map(hfx_domain::ProfileId::as_str),
         Some("child.razer.basilisk-v3-pro-35k.00cd")
+    );
+
+    let integration_view = dispatcher.dispatch(
+        RpcRequest::IntegrationView(SessionRequestEnvelope {
+            request_id: text("request-integration-view"),
+            protocol_session_id: hello.protocol_session_id.clone(),
+            negotiation_token: hello.negotiation_token.clone(),
+            params: EmptyRequest {},
+        }),
+        &mut session_identities,
+        &mut sessions,
+        &mut backend,
+    );
+    let RpcResponse::IntegrationViewSuccess(integration_view) = integration_view else {
+        panic!("integration view must succeed: {integration_view:?}");
+    };
+    assert_eq!(integration_view.result.receivers.len(), 1);
+    assert_eq!(integration_view.result.receivers[0].inventory.len(), 1);
+    assert_eq!(integration_view.result.receivers[0].controllers.len(), 1);
+    assert_eq!(
+        integration_view.result.receivers[0].controllers[0]
+            .presentation
+            .owner
+            .as_str(),
+        "OpenRGB"
     );
 
     for (request_id, target, expected_finding, expected_kind) in [

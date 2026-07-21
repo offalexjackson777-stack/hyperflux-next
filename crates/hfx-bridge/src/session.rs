@@ -313,6 +313,7 @@ fn validate_nested_request_id(request: &RpcRequest) -> Result<(), SessionError> 
         RpcRequest::TransactionOutcome(envelope) => Some(&envelope.params.request_id),
         RpcRequest::Negotiate(_)
         | RpcRequest::Snapshot(_)
+        | RpcRequest::IntegrationView(_)
         | RpcRequest::Subscribe(_)
         | RpcRequest::Diagnostics(_) => None,
     };
@@ -330,7 +331,10 @@ fn validate_client_id(request: &RpcRequest, expected: &ClientId) -> Result<(), S
         RpcRequest::SubmitTransaction(envelope) => Some(&envelope.params.client_id),
         RpcRequest::TransactionOutcome(envelope) => Some(&envelope.params.client_id),
         RpcRequest::Subscribe(envelope) => Some(&envelope.params.client_id),
-        RpcRequest::Negotiate(_) | RpcRequest::Snapshot(_) | RpcRequest::Diagnostics(_) => None,
+        RpcRequest::Negotiate(_)
+        | RpcRequest::Snapshot(_)
+        | RpcRequest::IntegrationView(_)
+        | RpcRequest::Diagnostics(_) => None,
     };
     if actual.is_some_and(|client_id| client_id != expected) {
         return Err(SessionError::ClientIdMismatch);

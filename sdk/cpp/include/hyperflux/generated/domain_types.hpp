@@ -1394,6 +1394,144 @@ private:
     std::string value_;
 };
 
+class ModelName
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 160;
+
+    [[nodiscard]] static std::optional<ModelName> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return ModelName(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const ModelName&, const ModelName&) = default;
+
+private:
+    explicit ModelName(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class UpstreamId
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 64;
+
+    [[nodiscard]] static std::optional<UpstreamId> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return UpstreamId(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const UpstreamId&, const UpstreamId&) = default;
+
+private:
+    explicit UpstreamId(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class UpstreamOwner
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 128;
+
+    [[nodiscard]] static std::optional<UpstreamOwner> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return UpstreamOwner(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const UpstreamOwner&, const UpstreamOwner&) = default;
+
+private:
+    explicit UpstreamOwner(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class SourceRevision
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 64;
+
+    [[nodiscard]] static std::optional<SourceRevision> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return SourceRevision(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const SourceRevision&, const SourceRevision&) = default;
+
+private:
+    explicit SourceRevision(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class PresentationKey
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 160;
+
+    [[nodiscard]] static std::optional<PresentationKey> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return PresentationKey(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const PresentationKey&, const PresentationKey&) = default;
+
+private:
+    explicit PresentationKey(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class TransportVariant
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 64;
+
+    [[nodiscard]] static std::optional<TransportVariant> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return TransportVariant(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const TransportVariant&, const TransportVariant&) = default;
+
+private:
+    explicit TransportVariant(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
 class RestoreTriggerId
 {
 public:
@@ -2199,6 +2337,48 @@ enum class ProtocolErrorKind
         case ProtocolErrorKind::OutcomeUnknown: return "outcome-unknown";
         case ProtocolErrorKind::OutcomeEvicted: return "outcome-evicted";
         case ProtocolErrorKind::InternalFailure: return "internal-failure";
+    }
+    return "unknown";
+}
+
+enum class InventoryAvailability
+{
+    Available,
+    Sleeping,
+    Unavailable,
+    Unknown,
+    Unpaired,
+    PairingUnknown,
+    ReceiverUnavailable,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(InventoryAvailability value)
+{
+    switch(value)
+    {
+        case InventoryAvailability::Available: return "available";
+        case InventoryAvailability::Sleeping: return "sleeping";
+        case InventoryAvailability::Unavailable: return "unavailable";
+        case InventoryAvailability::Unknown: return "unknown";
+        case InventoryAvailability::Unpaired: return "unpaired";
+        case InventoryAvailability::PairingUnknown: return "pairing-unknown";
+        case InventoryAvailability::ReceiverUnavailable: return "receiver-unavailable";
+    }
+    return "unknown";
+}
+
+enum class ControllerAvailability
+{
+    Ready,
+    Sleeping,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(ControllerAvailability value)
+{
+    switch(value)
+    {
+        case ControllerAvailability::Ready: return "ready";
+        case ControllerAvailability::Sleeping: return "sleeping";
     }
     return "unknown";
 }

@@ -63,6 +63,12 @@
     {"name": "ProtocolSessionId", "wire": "protocol_session_id", "minimum_length": 1, "maximum_length": 128},
     {"name": "RequestDigest", "wire": "request_digest", "minimum_length": 64, "maximum_length": 64},
     {"name": "IntentDigest", "wire": "intent_digest", "minimum_length": 64, "maximum_length": 64},
+    {"name": "ModelName", "wire": "model_name", "minimum_length": 1, "maximum_length": 160},
+    {"name": "UpstreamId", "wire": "upstream_id", "minimum_length": 1, "maximum_length": 64},
+    {"name": "UpstreamOwner", "wire": "upstream_owner", "minimum_length": 1, "maximum_length": 128},
+    {"name": "SourceRevision", "wire": "source_revision", "minimum_length": 1, "maximum_length": 64},
+    {"name": "PresentationKey", "wire": "presentation_key", "minimum_length": 1, "maximum_length": 160},
+    {"name": "TransportVariant", "wire": "transport_variant", "minimum_length": 1, "maximum_length": 64},
     {"name": "RestoreTriggerId", "wire": "restore_trigger_id", "minimum_length": 1, "maximum_length": 128}
   ],
   "enums": [
@@ -101,6 +107,8 @@
     {"name": "DeviceWriteReadiness", "values": ["ready", "sleeping", "unavailable", "unknown"]},
     {"name": "EventKind", "values": ["receiver-available", "receiver-suspended", "receiver-unavailable", "device-available", "device-sleeping", "device-unavailable", "device-unknown", "battery-updated", "ownership-changed", "generation-replaced", "transaction-completed", "restore-completed", "diagnostic-raised"]},
     {"name": "ProtocolErrorKind", "values": ["incompatible-version", "unsupported-feature", "invalid-request", "ownership-conflict", "stale-generation", "deadline-exceeded", "queue-full", "transport-failure", "outcome-unknown", "outcome-evicted", "internal-failure"]},
+    {"name": "InventoryAvailability", "values": ["available", "sleeping", "unavailable", "unknown", "unpaired", "pairing-unknown", "receiver-unavailable"]},
+    {"name": "ControllerAvailability", "values": ["ready", "sleeping"]},
     {"name": "SideEffectCertainty", "values": ["none", "possible", "partial", "committed"]},
     {"name": "DeviceApplicationState", "values": ["unverified", "confirmed", "rejected"]},
     {"name": "TelemetryAvailability", "values": ["unknown", "unavailable", "reported"]},

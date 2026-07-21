@@ -33,19 +33,19 @@ struct AdapterRecord
     std::string_view coexistence_policy;
 };
 
-inline constexpr std::string_view integration_source_sha256 = "5174b3a4a6cd59dc6e1059b8be44ec924ebdff35712f7bf5ebfa3612c4fae356";
+inline constexpr std::string_view integration_source_sha256 = "4127f17f7323915366239f50bc058f0e2fb4064f1c5bd79f52bb0e5d25e0e35c";
 
 inline constexpr std::array<std::string_view, 2> upstream_uses_0 {{"compatibility-contract", "metadata-import"}};
 inline constexpr std::array<std::string_view, 3> upstream_uses_1 {{"effect-engine", "model-layout-registry", "plugin-build-contract"}};
 inline constexpr std::array<std::string_view, 2> upstream_uses_2 {{"backend-contract", "presentation-reference"}};
 inline constexpr std::array<std::string_view, 1> adapter_upstreams_0 {{"openrazer"}};
-inline constexpr std::array<std::uint16_t, 1> adapter_protocols_0 {{4}};
+inline constexpr std::array<std::uint16_t, 1> adapter_protocols_0 {{5}};
 inline constexpr std::array<std::string_view, 4> adapter_features_0 {{"inventory", "lighting", "ownership", "telemetry"}};
 inline constexpr std::array<std::string_view, 1> adapter_upstreams_1 {{"openrgb"}};
-inline constexpr std::array<std::uint16_t, 1> adapter_protocols_1 {{4}};
+inline constexpr std::array<std::uint16_t, 1> adapter_protocols_1 {{5}};
 inline constexpr std::array<std::string_view, 6> adapter_features_1 {{"effects", "inventory", "lighting", "ownership", "presentation", "telemetry"}};
 inline constexpr std::array<std::string_view, 2> adapter_upstreams_2 {{"openrazer", "polychromatic"}};
-inline constexpr std::array<std::uint16_t, 1> adapter_protocols_2 {{4}};
+inline constexpr std::array<std::uint16_t, 1> adapter_protocols_2 {{5}};
 inline constexpr std::array<std::string_view, 5> adapter_features_2 {{"inventory", "lighting", "ownership", "presentation", "telemetry"}};
 
 inline constexpr std::array<UpstreamRecord, 3> upstreams {{

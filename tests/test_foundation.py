@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import hashlib
 import sys
 import unittest
 
@@ -72,6 +73,17 @@ class FoundationTests(unittest.TestCase):
         self.assertEqual(len(profiles.profiles), 4)
         self.assertEqual(len(profiles.candidates), 11)
         self.assertEqual(len(profiles.source_sha256), 64)
+
+    def test_vendored_cpp_dependencies_match_their_manifest(self) -> None:
+        manifest = load_json(ROOT / "sdk" / "cpp" / "vendor" / "manifest.json")
+        self.assertEqual(manifest["schema"], "hyperflux-vendored-cpp-dependencies-v1")
+        self.assertTrue(manifest["dependencies"])
+        for dependency in manifest["dependencies"]:
+            with self.subTest(dependency=dependency["id"]):
+                path = ROOT / dependency["path"]
+                digest = hashlib.sha256(path.read_bytes()).hexdigest()
+                self.assertEqual(digest, dependency["sha256"])
+                self.assertTrue(dependency["license_expression"])
 
 
 if __name__ == "__main__":

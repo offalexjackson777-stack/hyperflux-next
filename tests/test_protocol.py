@@ -21,8 +21,8 @@ from hfxdev.protocol import (
 class ProtocolCompilerTests(unittest.TestCase):
     def test_catalog_is_versioned_and_generated_deterministically(self) -> None:
         registry = load_protocol_registry(ROOT)
-        self.assertEqual(registry.current_version, 4)
-        self.assertEqual([item.version for item in registry.versions], [1, 2, 3, 4])
+        self.assertEqual(registry.current_version, 5)
+        self.assertEqual([item.version for item in registry.versions], [1, 2, 3, 4, 5])
         self.assertEqual(
             registry.versions[0].source_sha256,
             "ed3df1f1627ca8a836f509ead3ab7dc7a4cbc6116f6da4accb2cc53e7500859f",
@@ -50,6 +50,7 @@ class ProtocolCompilerTests(unittest.TestCase):
             for record in registry.versions[3].catalog.records
             if record.name == "ReceiverSnapshot"
         )
+        v5 = registry.versions[4].catalog
         self.assertNotIn(
             "device_profiles", [field.name for field in v1_transaction.fields]
         )
@@ -78,6 +79,8 @@ class ProtocolCompilerTests(unittest.TestCase):
             "snapshot-profile-bindings", registry.versions[3].served_features
         )
         self.assertIn("profile_digest", [field.name for field in v4_snapshot.fields])
+        self.assertIn("integration-view-projection", registry.versions[4].served_features)
+        self.assertIn("ControllerOwnership", [union.name for union in v5.unions])
         first = load_protocol_catalog(ROOT)
         second = load_protocol_catalog(ROOT)
         self.assertEqual(first, second)
@@ -87,6 +90,26 @@ class ProtocolCompilerTests(unittest.TestCase):
         self.assertEqual(rust_types(first), rust_types(second))
         self.assertEqual(cpp_types(first), cpp_types(second))
         self.assertEqual(python_types(first), python_types(second))
+
+    def test_generated_declarations_follow_record_and_union_dependencies(self) -> None:
+        catalog = load_protocol_catalog(ROOT)
+        rust = rust_types(catalog)
+        cpp = cpp_types(catalog)
+        python = python_types(catalog)
+        self.assertIn(
+            "Self::Snapshot(envelope)\n"
+            "            | Self::IntegrationView(envelope)\n"
+            "            | Self::Diagnostics(envelope) => &envelope.request_id,",
+            rust,
+        )
+        self.assertLess(
+            cpp.index("using ControllerOwnership ="),
+            cpp.index("struct ControllerView"),
+        )
+        self.assertLess(
+            python.index("ControllerOwnership: TypeAlias ="),
+            python.index("class ControllerView:"),
+        )
 
     def test_all_collections_and_protocol_methods_are_bounded(self) -> None:
         catalog = load_protocol_catalog(ROOT)

@@ -5,14 +5,14 @@ use hfx_bridge::{
     SessionIdentityError, SessionIdentitySource, SessionRegistry, serve_connection,
 };
 use hfx_domain::{
-    ClientId, ClientName, ColorChannel, ComponentVersion, ProjectionRevision, ProtocolVersion,
-    QueueCapacity, RequestId, SequenceNumber, ServerInstanceId, StableLightingMode, StreamEpoch,
-    StreamId,
+    ClientId, ClientName, ColorChannel, ComponentVersion, ProjectionRevision, ProtocolFeatureId,
+    ProtocolVersion, QueueCapacity, RequestId, SequenceNumber, ServerInstanceId,
+    StableLightingMode, StreamEpoch, StreamId,
 };
 use hfx_protocol::{
-    BridgeSnapshot, DiagnosticSnapshot, EventBatch, EventCursor, FrameError, LeaseRequest,
-    LeaseResult, ProtocolWireError, ReleaseLeaseRequest, RenewLeaseRequest, RpcRequest,
-    RpcResponse, ServerHello, SubscriptionRequest, SuccessEnvelope, TransactionLookup,
+    BridgeSnapshot, DiagnosticSnapshot, EventBatch, EventCursor, FrameError, IntegrationView,
+    LeaseRequest, LeaseResult, ProtocolWireError, ReleaseLeaseRequest, RenewLeaseRequest,
+    RpcRequest, RpcResponse, ServerHello, SubscriptionRequest, SuccessEnvelope, TransactionLookup,
     TransactionRequest, TransactionResult, decode_rpc_request_for_version, read_rpc_request,
     read_rpc_request_for_version, write_rpc_response, write_rpc_response_for_version,
 };
@@ -63,6 +63,7 @@ impl RequestIdentitySource for DeterministicRequestIdentities {
 #[derive(Debug, Default)]
 struct SnapshotBackend {
     snapshot_calls: usize,
+    integration_view_calls: usize,
     disconnect_calls: usize,
     observed_client: Option<ClientId>,
 }
@@ -75,6 +76,15 @@ impl BridgeRpcBackend for SnapshotBackend {
         self.snapshot_calls += 1;
         self.observed_client = Some(context.session().client_id.clone());
         Ok(empty_snapshot())
+    }
+
+    fn integration_view(
+        &mut self,
+        context: BackendRequestContext<'_>,
+    ) -> Result<IntegrationView, RpcFailure> {
+        self.integration_view_calls += 1;
+        self.observed_client = Some(context.session().client_id.clone());
+        Ok(empty_integration_view())
     }
 
     fn acquire_lease(
@@ -157,6 +167,17 @@ fn client_config() -> SdkClientConfig {
     }
 }
 
+fn integration_client_config() -> SdkClientConfig {
+    SdkClientConfig {
+        client_id: id::<ClientId>("sdk-integration-client-test"),
+        client_name: id::<ClientName>("SDK integration projection test"),
+        minimum_version: ProtocolVersion::try_from(5_u16).expect("v5 is valid"),
+        maximum_version: ProtocolVersion::try_from(5_u16).expect("v5 is valid"),
+        required_features: vec![id::<ProtocolFeatureId>("integration-view-projection")],
+        optional_features: Vec::new(),
+    }
+}
+
 fn bridge_config() -> BridgeSessionConfig {
     BridgeSessionConfig {
         server_instance_id: id::<ServerInstanceId>("sdk-server-test"),
@@ -173,6 +194,14 @@ fn empty_snapshot() -> BridgeSnapshot {
             projection_revision: ProjectionRevision::try_from(1_u32).expect("revision is valid"),
             sequence: SequenceNumber::try_from(0_u64).expect("sequence is valid"),
         },
+        receivers: Vec::new(),
+    }
+}
+
+fn empty_integration_view() -> IntegrationView {
+    let snapshot = empty_snapshot();
+    IntegrationView {
+        cursor: snapshot.cursor,
         receivers: Vec::new(),
     }
 }
@@ -259,6 +288,49 @@ fn sdk_negotiates_and_binds_session_data_over_the_real_bridge_runtime() {
     assert_eq!(backend.snapshot_calls, 1);
     assert_eq!(backend.disconnect_calls, 1);
     assert_eq!(backend.observed_client, Some(id("sdk-client-test")));
+    assert_eq!(remaining_sessions, 0);
+}
+
+#[test]
+fn sdk_requests_the_v5_view_over_the_real_bridge_runtime() {
+    let (client_stream, mut server_stream) = configured_pair();
+    let server = thread::spawn(move || {
+        let mut identities = DeterministicSessionIdentities::new();
+        let mut sessions =
+            SessionRegistry::new(QueueCapacity::try_from(4).expect("capacity is valid"));
+        let mut backend = SnapshotBackend::default();
+        let result = serve_connection(
+            &mut server_stream,
+            bridge_config(),
+            &mut identities,
+            &mut sessions,
+            &mut backend,
+        );
+        (result, backend, sessions.len())
+    });
+
+    let mut client = HyperFluxClient::connect(
+        client_stream,
+        integration_client_config(),
+        DeterministicRequestIdentities::default(),
+    )
+    .expect("SDK v5 negotiation succeeds");
+    assert_eq!(client.server_hello().selected_version.get(), 5);
+    assert_eq!(client.integration_view(), Ok(empty_integration_view()));
+    client
+        .into_inner()
+        .shutdown(std::net::Shutdown::Write)
+        .expect("client closes its write side");
+
+    let (result, backend, remaining_sessions) = server.join().expect("server thread joins");
+    let report = result.expect("bridge connection exits cleanly");
+    assert_eq!(report.requests_served, 2);
+    assert_eq!(backend.integration_view_calls, 1);
+    assert_eq!(backend.disconnect_calls, 1);
+    assert_eq!(
+        backend.observed_client,
+        Some(id("sdk-integration-client-test"))
+    );
     assert_eq!(remaining_sessions, 0);
 }
 

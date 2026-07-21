@@ -684,6 +684,72 @@ class IntentDigest:
 
 
 @dataclass(frozen=True, slots=True)
+class ModelName:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("ModelName requires a string")
+        if not 1 <= len(self.value) <= 160:
+            raise ValueError("ModelName is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class UpstreamId:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("UpstreamId requires a string")
+        if not 1 <= len(self.value) <= 64:
+            raise ValueError("UpstreamId is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class UpstreamOwner:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("UpstreamOwner requires a string")
+        if not 1 <= len(self.value) <= 128:
+            raise ValueError("UpstreamOwner is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class SourceRevision:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("SourceRevision requires a string")
+        if not 1 <= len(self.value) <= 64:
+            raise ValueError("SourceRevision is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class PresentationKey:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("PresentationKey requires a string")
+        if not 1 <= len(self.value) <= 160:
+            raise ValueError("PresentationKey is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class TransportVariant:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("TransportVariant requires a string")
+        if not 1 <= len(self.value) <= 64:
+            raise ValueError("TransportVariant is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
 class RestoreTriggerId:
     value: str
 
@@ -982,6 +1048,21 @@ class ProtocolErrorKind(str, Enum):
     INTERNAL_FAILURE = "internal-failure"
 
 
+class InventoryAvailability(str, Enum):
+    AVAILABLE = "available"
+    SLEEPING = "sleeping"
+    UNAVAILABLE = "unavailable"
+    UNKNOWN = "unknown"
+    UNPAIRED = "unpaired"
+    PAIRING_UNKNOWN = "pairing-unknown"
+    RECEIVER_UNAVAILABLE = "receiver-unavailable"
+
+
+class ControllerAvailability(str, Enum):
+    READY = "ready"
+    SLEEPING = "sleeping"
+
+
 class SideEffectCertainty(str, Enum):
     NONE = "none"
     POSSIBLE = "possible"
@@ -1074,6 +1155,12 @@ __all__ = [
     "ProtocolSessionId",
     "RequestDigest",
     "IntentDigest",
+    "ModelName",
+    "UpstreamId",
+    "UpstreamOwner",
+    "SourceRevision",
+    "PresentationKey",
+    "TransportVariant",
     "RestoreTriggerId",
     "DeviceKind",
     "ProfileKind",
@@ -1110,6 +1197,8 @@ __all__ = [
     "DeviceWriteReadiness",
     "EventKind",
     "ProtocolErrorKind",
+    "InventoryAvailability",
+    "ControllerAvailability",
     "SideEffectCertainty",
     "DeviceApplicationState",
     "TelemetryAvailability",

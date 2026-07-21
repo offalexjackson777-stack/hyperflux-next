@@ -1,148 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_domain::{
-    CapabilityId, ClientId, DeviceKind, EndpointId, FreshnessState, GenerationId, LeaseId,
-    LogicalDeviceId, MonotonicMs, PairingState, PowerState, PresenceState, ProductId,
-    ProfileDigest, ProfileId, ProfileKind, ReceiverId, ReceiverLifecycleState, ResourceKind,
-    RestoreState, RouteKind, RouteState, SleepState, SupportLevel,
+    ClientId, ComponentVersion, ControllerAvailability, FreshnessState, InventoryAvailability,
+    LedCount, LogicalDeviceId, ModelName, PairingState, PowerState, PresenceState, PresentationKey,
+    ProfileId, ProfileKind, ReceiverLifecycleState, ResourceKind, RouteKind, RouteState,
+    SleepState, SourceRevision, SupportLevel, TransportVariant, UpstreamId, UpstreamOwner,
 };
 use hfx_profiles::{RuntimeProfile, RuntimeProfileCatalog};
 use hfx_protocol::{
-    BatteryObservation, BridgeSnapshot, EndpointSnapshot, EventCursor, LogicalDeviceSnapshot,
-    ReceiverSnapshot, ResourceKey, SnapshotValidationError, validate_bridge_snapshot,
+    BridgeSnapshot, ControllerActions, ControllerOwnership, ControllerView, DeviceInventoryView,
+    EndpointSnapshot, IntegrationReceiverView, IntegrationView, LightingTopologyView,
+    LogicalDeviceSnapshot, OtherOwnedController, PresentationView, ProfileBindingView,
+    ReceiverSnapshot, ResourceKey, SnapshotValidationError, UnownedController,
+    ViewerOwnedController, validate_bridge_snapshot,
 };
-use serde::{Deserialize, Serialize};
 use std::fmt;
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct IntegrationView {
-    pub cursor: EventCursor,
-    pub receivers: Vec<ReceiverView>,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct ReceiverView {
-    pub receiver_id: ReceiverId,
-    pub generation_id: GenerationId,
-    pub profile: Option<ProfileBindingView>,
-    pub model_name: Option<String>,
-    pub lifecycle: ReceiverLifecycleState,
-    pub stable_restore_enabled: bool,
-    pub restore_state: RestoreState,
-    pub inventory: Vec<DeviceInventoryView>,
-    pub controllers: Vec<ControllerView>,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct ProfileBindingView {
-    pub profile_id: ProfileId,
-    pub profile_digest: ProfileDigest,
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum InventoryAvailability {
-    Available,
-    Sleeping,
-    Unavailable,
-    Unknown,
-    Unpaired,
-    PairingUnknown,
-    ReceiverUnavailable,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct DeviceInventoryView {
-    pub device_id: LogicalDeviceId,
-    pub device_kind: DeviceKind,
-    pub product_id: ProductId,
-    pub profile: Option<ProfileBindingView>,
-    pub model_name: Option<String>,
-    pub pairing: PairingState,
-    pub presence: PresenceState,
-    pub availability: InventoryAvailability,
-    pub support_level: SupportLevel,
-    pub endpoints: Vec<EndpointSnapshot>,
-    pub battery: BatteryObservation,
-    pub capabilities: Vec<CapabilityId>,
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum ControllerAvailability {
-    Ready,
-    Sleeping,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct PresentationView {
-    pub upstream_id: String,
-    pub owner: String,
-    pub project_version: String,
-    pub source_commit: String,
-    pub model_key: String,
-    pub layout_key: Option<String>,
-    pub transport_variant: String,
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct LightingTopologyView {
-    pub physical_led_count: hfx_domain::LedCount,
-    pub application_slot_count: hfx_domain::LedCount,
-    pub rows: u16,
-    pub columns: u16,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(tag = "state", rename_all = "kebab-case")]
-pub enum ControllerOwnership {
-    Unowned,
-    OwnedByViewer {
-        lease_id: LeaseId,
-        expires_at_ms: MonotonicMs,
-    },
-    OwnedByOther {
-        client_id: ClientId,
-        lease_id: LeaseId,
-        expires_at_ms: MonotonicMs,
-    },
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct ControllerActions {
-    pub can_acquire: bool,
-    pub can_release: bool,
-    pub can_submit_now: bool,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct ControllerView {
-    pub receiver_id: ReceiverId,
-    pub generation_id: GenerationId,
-    pub device_id: LogicalDeviceId,
-    pub endpoint_id: EndpointId,
-    pub device_kind: DeviceKind,
-    pub product_id: ProductId,
-    pub receiver_profile: ProfileBindingView,
-    pub device_profile: ProfileBindingView,
-    pub model_name: String,
-    pub presentation: PresentationView,
-    pub availability: ControllerAvailability,
-    pub battery: BatteryObservation,
-    pub capabilities: Vec<CapabilityId>,
-    pub lighting: LightingTopologyView,
-    pub resource: ResourceKey,
-    pub ownership: ControllerOwnership,
-    pub actions: ControllerActions,
-}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ViewModelError {
@@ -163,6 +35,7 @@ pub enum ViewModelError {
     DeviceSupportMismatch(LogicalDeviceId),
     UnqualifiedDeviceClaimsCapabilities(LogicalDeviceId),
     AmbiguousHyperfluxRoute(LogicalDeviceId),
+    InvalidProfilePresentation(ProfileId),
 }
 
 impl fmt::Display for ViewModelError {
@@ -227,6 +100,10 @@ impl fmt::Display for ViewModelError {
                     "device has multiple usable HyperFlux routes: {device_id}"
                 )
             }
+            Self::InvalidProfilePresentation(profile_id) => write!(
+                formatter,
+                "profile presentation cannot be represented by the integration protocol: {profile_id}"
+            ),
         }
     }
 }
@@ -264,7 +141,7 @@ fn project_receiver(
     receiver: &ReceiverSnapshot,
     catalog: &RuntimeProfileCatalog,
     viewer: Option<&ClientId>,
-) -> Result<ReceiverView, ViewModelError> {
+) -> Result<IntegrationReceiverView, ViewModelError> {
     let receiver_profile = resolve_receiver_profile(receiver, catalog)?;
     let receiver_binding = receiver_profile.map(|profile| ProfileBindingView {
         profile_id: profile.profile_id.clone(),
@@ -274,18 +151,18 @@ fn project_receiver(
     let mut controllers = Vec::with_capacity(receiver.devices.len());
     for device in &receiver.devices {
         let profile = resolve_device_profile(device, receiver_profile, catalog)?;
-        inventory.push(project_inventory(receiver, device, profile));
+        inventory.push(project_inventory(receiver, device, profile)?);
         if let Some(controller) =
             project_controller(receiver, device, receiver_profile, profile, viewer)?
         {
             controllers.push(controller);
         }
     }
-    Ok(ReceiverView {
+    Ok(IntegrationReceiverView {
         receiver_id: receiver.receiver_id.clone(),
         generation_id: receiver.generation_id,
         profile: receiver_binding,
-        model_name: receiver_profile.map(|profile| profile.model_name.to_owned()),
+        model_name: receiver_profile.map(model_name).transpose()?,
         lifecycle: receiver.lifecycle,
         stable_restore_enabled: receiver.stable_restore_enabled,
         restore_state: receiver.restore_state,
@@ -388,8 +265,8 @@ fn project_inventory(
     receiver: &ReceiverSnapshot,
     device: &LogicalDeviceSnapshot,
     profile: Option<&RuntimeProfile>,
-) -> DeviceInventoryView {
-    DeviceInventoryView {
+) -> Result<DeviceInventoryView, ViewModelError> {
+    Ok(DeviceInventoryView {
         device_id: device.device_id.clone(),
         device_kind: device.device_kind,
         product_id: device.product_id,
@@ -397,7 +274,7 @@ fn project_inventory(
             profile_id: profile.profile_id.clone(),
             profile_digest: profile.runtime_digest.clone(),
         }),
-        model_name: profile.map(|profile| profile.model_name.to_owned()),
+        model_name: profile.map(model_name).transpose()?,
         pairing: device.pairing,
         presence: device.presence,
         availability: inventory_availability(receiver.lifecycle, device.pairing, device.presence),
@@ -405,7 +282,12 @@ fn project_inventory(
         endpoints: device.endpoints.clone(),
         battery: device.battery.clone(),
         capabilities: device.capabilities.clone(),
-    }
+    })
+}
+
+fn model_name(profile: &RuntimeProfile) -> Result<ModelName, ViewModelError> {
+    ModelName::try_from(profile.model_name)
+        .map_err(|_| ViewModelError::InvalidProfilePresentation(profile.profile_id.clone()))
 }
 
 const fn inventory_availability(
@@ -496,29 +378,52 @@ fn project_controller(
             profile_id: device_profile.profile_id.clone(),
             profile_digest: device_profile.runtime_digest.clone(),
         },
-        model_name: device_profile.model_name.to_owned(),
-        presentation: PresentationView {
-            upstream_id: presentation.upstream_id.to_owned(),
-            owner: presentation.owner.to_owned(),
-            project_version: presentation.project_version.to_owned(),
-            source_commit: presentation.source_commit.to_owned(),
-            model_key: presentation.model_key.to_owned(),
-            layout_key: presentation.layout_key.map(str::to_owned),
-            transport_variant: presentation.transport_variant.to_owned(),
-        },
+        model_name: model_name(device_profile)?,
+        presentation: presentation_view(device_profile, presentation)?,
         availability,
         battery: device.battery.clone(),
         capabilities: device.capabilities.clone(),
-        lighting: LightingTopologyView {
-            physical_led_count: lighting.physical_led_count,
-            application_slot_count: lighting.application_slot_count,
-            rows: lighting.rows,
-            columns: lighting.columns,
-        },
+        lighting: lighting_topology_view(device_profile, lighting)?,
         resource,
         ownership,
         actions,
     }))
+}
+
+fn presentation_view(
+    profile: &RuntimeProfile,
+    presentation: &hfx_profiles::RuntimePresentation,
+) -> Result<PresentationView, ViewModelError> {
+    let invalid = || ViewModelError::InvalidProfilePresentation(profile.profile_id.clone());
+    Ok(PresentationView {
+        upstream_id: UpstreamId::try_from(presentation.upstream_id).map_err(|_| invalid())?,
+        owner: UpstreamOwner::try_from(presentation.owner).map_err(|_| invalid())?,
+        project_version: ComponentVersion::try_from(presentation.project_version)
+            .map_err(|_| invalid())?,
+        source_revision: SourceRevision::try_from(presentation.source_commit)
+            .map_err(|_| invalid())?,
+        model_key: PresentationKey::try_from(presentation.model_key).map_err(|_| invalid())?,
+        layout_key: presentation
+            .layout_key
+            .map(PresentationKey::try_from)
+            .transpose()
+            .map_err(|_| invalid())?,
+        transport_variant: TransportVariant::try_from(presentation.transport_variant)
+            .map_err(|_| invalid())?,
+    })
+}
+
+fn lighting_topology_view(
+    profile: &RuntimeProfile,
+    lighting: &hfx_profiles::RuntimeLightingTopology,
+) -> Result<LightingTopologyView, ViewModelError> {
+    let invalid = || ViewModelError::InvalidProfilePresentation(profile.profile_id.clone());
+    Ok(LightingTopologyView {
+        physical_led_count: lighting.physical_led_count,
+        application_slot_count: lighting.application_slot_count,
+        rows: LedCount::try_from(lighting.rows).map_err(|_| invalid())?,
+        columns: LedCount::try_from(lighting.columns).map_err(|_| invalid())?,
+    })
 }
 
 fn usable_hyperflux_endpoint(
@@ -546,19 +451,19 @@ fn controller_ownership(
         .iter()
         .find(|ownership| ownership.resource == *resource)
     else {
-        return ControllerOwnership::Unowned;
+        return ControllerOwnership::Unowned(UnownedController {});
     };
     if viewer.is_some_and(|client_id| *client_id == ownership.client_id) {
-        ControllerOwnership::OwnedByViewer {
+        ControllerOwnership::OwnedByViewer(ViewerOwnedController {
             lease_id: ownership.lease_id.clone(),
             expires_at_ms: ownership.expires_at_ms,
-        }
+        })
     } else {
-        ControllerOwnership::OwnedByOther {
+        ControllerOwnership::OwnedByOther(OtherOwnedController {
             client_id: ownership.client_id.clone(),
             lease_id: ownership.lease_id.clone(),
             expires_at_ms: ownership.expires_at_ms,
-        }
+        })
     }
 }
 
@@ -567,9 +472,9 @@ const fn controller_actions(
     ownership: &ControllerOwnership,
     has_viewer: bool,
 ) -> ControllerActions {
-    let owned_by_viewer = matches!(ownership, ControllerOwnership::OwnedByViewer { .. });
+    let owned_by_viewer = matches!(ownership, ControllerOwnership::OwnedByViewer(_));
     ControllerActions {
-        can_acquire: has_viewer && matches!(ownership, ControllerOwnership::Unowned),
+        can_acquire: has_viewer && matches!(ownership, ControllerOwnership::Unowned(_)),
         can_release: owned_by_viewer,
         can_submit_now: owned_by_viewer && matches!(availability, ControllerAvailability::Ready),
     }

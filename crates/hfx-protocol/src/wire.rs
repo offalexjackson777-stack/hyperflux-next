@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::{
-    CURRENT_PROTOCOL_VERSION, DiagnosticSnapshot, EventBatch, LeaseResult, MAX_WIRE_MESSAGE_BYTES,
-    ProtocolValidationError, RpcRequest, RpcResponse, SnapshotValidationError,
-    StableLightingIntent, TransactionResult, TransactionTerminal, TransactionUnavailable, v1, v2,
-    v3, v4, validate_bridge_snapshot, validate_lease_request, validate_transaction,
+    CURRENT_PROTOCOL_VERSION, ControllerOwnership, ControllerView, DeviceInventoryView,
+    DiagnosticSnapshot, EndpointSnapshot, EventBatch, IntegrationReceiverView, IntegrationView,
+    LeaseResult, MAX_WIRE_MESSAGE_BYTES, ProtocolValidationError, RpcRequest, RpcResponse,
+    SnapshotValidationError, StableLightingIntent, TransactionResult, TransactionTerminal,
+    TransactionUnavailable, v1, v2, v3, v4, v5, validate_bridge_snapshot, validate_lease_request,
+    validate_transaction,
 };
 use hfx_domain::{
-    ProtocolErrorKind, ProtocolVersion, SideEffectCertainty, StableLightingMode, TransactionClass,
-    TransactionState,
+    ConnectionMode, ControllerAvailability, FreshnessState, InventoryAvailability, PairingState,
+    PowerState, PresenceState, ProtocolErrorKind, ProtocolVersion, ReceiverLifecycleState,
+    ResourceKind, RouteKind, RouteState, SideEffectCertainty, SleepState, StableLightingMode,
+    TransactionClass, TransactionState,
 };
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
@@ -238,6 +242,7 @@ pub fn validate_rpc_request(request: &RpcRequest) -> Result<(), ProtocolWireErro
             validate_transaction(&envelope.params).map_err(ProtocolWireError::InvalidRequest)
         }
         RpcRequest::Snapshot(_)
+        | RpcRequest::IntegrationView(_)
         | RpcRequest::RenewLease(_)
         | RpcRequest::ReleaseLease(_)
         | RpcRequest::TransactionOutcome(_)
@@ -412,6 +417,183 @@ fn validate_diagnostics(snapshot: &DiagnosticSnapshot) -> Result<(), ProtocolWir
     Ok(())
 }
 
+fn validate_integration_view(view: &IntegrationView) -> Result<(), ProtocolWireError> {
+    if view.receivers.len() > 16
+        || !view
+            .receivers
+            .windows(2)
+            .all(|pair| pair[0].receiver_id < pair[1].receiver_id)
+    {
+        return Err(ProtocolWireError::InvalidResponse(
+            "integration receivers are oversized, duplicated, or unordered",
+        ));
+    }
+    for receiver in &view.receivers {
+        validate_integration_receiver(receiver)?;
+    }
+    Ok(())
+}
+
+fn validate_integration_receiver(
+    receiver: &IntegrationReceiverView,
+) -> Result<(), ProtocolWireError> {
+    if receiver.profile.is_some() != receiver.model_name.is_some()
+        || receiver.inventory.len() > 32
+        || receiver.controllers.len() > 32
+        || !receiver
+            .inventory
+            .windows(2)
+            .all(|pair| pair[0].device_id < pair[1].device_id)
+        || !receiver
+            .controllers
+            .windows(2)
+            .all(|pair| pair[0].device_id < pair[1].device_id)
+    {
+        return Err(ProtocolWireError::InvalidResponse(
+            "integration receiver contents are contradictory or noncanonical",
+        ));
+    }
+    for inventory in &receiver.inventory {
+        validate_integration_inventory(receiver.lifecycle, inventory)?;
+    }
+    for controller in &receiver.controllers {
+        validate_integration_controller(receiver, controller)?;
+    }
+    Ok(())
+}
+
+fn validate_integration_inventory(
+    lifecycle: ReceiverLifecycleState,
+    inventory: &DeviceInventoryView,
+) -> Result<(), ProtocolWireError> {
+    if inventory.profile.is_some() != inventory.model_name.is_some()
+        || inventory.endpoints.len() > 8
+        || inventory.capabilities.len() > 128
+        || !strictly_ordered(&inventory.capabilities)
+        || !inventory
+            .endpoints
+            .windows(2)
+            .all(|pair| pair[0].endpoint_id < pair[1].endpoint_id)
+        || inventory.availability
+            != expected_inventory_availability(lifecycle, inventory.pairing, inventory.presence)
+    {
+        return Err(ProtocolWireError::InvalidResponse(
+            "integration inventory is contradictory or noncanonical",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_integration_controller(
+    receiver: &IntegrationReceiverView,
+    controller: &ControllerView,
+) -> Result<(), ProtocolWireError> {
+    let Some(inventory) = receiver
+        .inventory
+        .iter()
+        .find(|inventory| inventory.device_id == controller.device_id)
+    else {
+        return Err(ProtocolWireError::InvalidResponse(
+            "integration controller is absent from receiver inventory",
+        ));
+    };
+    let expected_availability = match controller.availability {
+        ControllerAvailability::Ready => InventoryAvailability::Available,
+        ControllerAvailability::Sleeping => InventoryAvailability::Sleeping,
+    };
+    let endpoint = inventory
+        .endpoints
+        .iter()
+        .find(|endpoint| endpoint.endpoint_id == controller.endpoint_id);
+    let lighting_slots = u32::from(controller.lighting.rows.get())
+        .saturating_mul(u32::from(controller.lighting.columns.get()));
+    if controller.receiver_id != receiver.receiver_id
+        || controller.generation_id != receiver.generation_id
+        || receiver.lifecycle != ReceiverLifecycleState::Active
+        || receiver.profile.as_ref() != Some(&controller.receiver_profile)
+        || inventory.profile.as_ref() != Some(&controller.device_profile)
+        || inventory.model_name.as_ref() != Some(&controller.model_name)
+        || inventory.pairing != PairingState::Paired
+        || inventory.availability != expected_availability
+        || inventory.device_kind != controller.device_kind
+        || inventory.product_id != controller.product_id
+        || inventory.battery != controller.battery
+        || inventory.capabilities != controller.capabilities
+        || controller.capabilities.len() > 128
+        || controller.resource.receiver_id != receiver.receiver_id
+        || controller.resource.generation_id != receiver.generation_id
+        || controller.resource.device_id != controller.device_id
+        || controller.resource.kind != ResourceKind::Lighting
+        || controller.lighting.physical_led_count > controller.lighting.application_slot_count
+        || u32::from(controller.lighting.application_slot_count.get()) > lighting_slots
+        || !endpoint_is_controller_route(endpoint, controller.availability)
+        || !controller_actions_are_consistent(controller)
+    {
+        return Err(ProtocolWireError::InvalidResponse(
+            "integration controller contradicts inventory, route, or ownership authority",
+        ));
+    }
+    Ok(())
+}
+
+fn endpoint_is_controller_route(
+    endpoint: Option<&EndpointSnapshot>,
+    availability: ControllerAvailability,
+) -> bool {
+    endpoint.is_some_and(|endpoint| {
+        endpoint.route_kind == RouteKind::HyperfluxWireless
+            && endpoint.route_state == RouteState::Available
+            && endpoint.connection_mode == ConnectionMode::Hyperflux24ghz
+            && endpoint.freshness == FreshnessState::Fresh
+            && endpoint.power_state != PowerState::Off
+            && match availability {
+                ControllerAvailability::Ready => endpoint.sleep_state != SleepState::Asleep,
+                ControllerAvailability::Sleeping => endpoint.sleep_state == SleepState::Asleep,
+            }
+    })
+}
+
+const fn expected_inventory_availability(
+    lifecycle: ReceiverLifecycleState,
+    pairing: PairingState,
+    presence: PresenceState,
+) -> InventoryAvailability {
+    if !matches!(lifecycle, ReceiverLifecycleState::Active) {
+        return InventoryAvailability::ReceiverUnavailable;
+    }
+    match pairing {
+        PairingState::Unpaired => InventoryAvailability::Unpaired,
+        PairingState::Unknown => InventoryAvailability::PairingUnknown,
+        PairingState::Paired => match presence {
+            PresenceState::Available => InventoryAvailability::Available,
+            PresenceState::Sleeping => InventoryAvailability::Sleeping,
+            PresenceState::Unavailable => InventoryAvailability::Unavailable,
+            PresenceState::Unknown => InventoryAvailability::Unknown,
+        },
+    }
+}
+
+fn controller_actions_are_consistent(controller: &crate::ControllerView) -> bool {
+    match &controller.ownership {
+        ControllerOwnership::Unowned(_) => {
+            controller.actions.can_acquire
+                && !controller.actions.can_release
+                && !controller.actions.can_submit_now
+        }
+        ControllerOwnership::OwnedByViewer(_) => {
+            !controller.actions.can_acquire
+                && controller.actions.can_release
+                && controller.actions.can_submit_now
+                    == (controller.availability == ControllerAvailability::Ready)
+        }
+        ControllerOwnership::OwnedByOther(_) => {
+            !controller.actions.can_acquire
+                && !controller.actions.can_release
+                && !controller.actions.can_submit_now
+        }
+    }
+}
+
 /// Validates generated response invariants after bounded decoding.
 ///
 /// # Errors
@@ -431,6 +613,9 @@ pub fn validate_rpc_response(response: &RpcResponse) -> Result<(), ProtocolWireE
         }
         RpcResponse::SnapshotSuccess(envelope) => {
             validate_bridge_snapshot(&envelope.result).map_err(ProtocolWireError::InvalidSnapshot)
+        }
+        RpcResponse::IntegrationViewSuccess(envelope) => {
+            validate_integration_view(&envelope.result)
         }
         RpcResponse::AcquireLeaseSuccess(envelope)
         | RpcResponse::RenewLeaseSuccess(envelope)
@@ -486,6 +671,9 @@ fn encode_rpc_request_version(
     version: u16,
 ) -> Result<Vec<u8>, ProtocolWireError> {
     validate_rpc_request(request)?;
+    if version < 5 && matches!(request, RpcRequest::IntegrationView(_)) {
+        return Err(ProtocolWireError::UnsupportedVersionMethod);
+    }
     let mut value =
         serde_json::to_value(request).map_err(|_| ProtocolWireError::VersionTranslation)?;
     match version {
@@ -511,6 +699,7 @@ fn encode_rpc_request_version(
         }
         3 => frozen_encoding::<v3::RpcRequest>(value),
         4 => frozen_encoding::<v4::RpcRequest>(value),
+        5 => frozen_encoding::<v5::RpcRequest>(value),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
     }
 }
@@ -537,6 +726,7 @@ fn decode_rpc_request_version(bytes: &[u8], version: u16) -> Result<RpcRequest, 
         2 => normalize_v2_request(decode::<v2::RpcRequest>(bytes)?),
         3 => transcode_request(decode::<v3::RpcRequest>(bytes)?),
         4 => transcode_request(decode::<v4::RpcRequest>(bytes)?),
+        5 => transcode_request(decode::<v5::RpcRequest>(bytes)?),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
     }
 }
@@ -574,6 +764,7 @@ fn decode_rpc_response_version(
         2 => transcode_response(decode::<v2::RpcResponse>(bytes)?),
         3 => transcode_response(decode::<v3::RpcResponse>(bytes)?),
         4 => transcode_response(decode::<v4::RpcResponse>(bytes)?),
+        5 => transcode_response(decode::<v5::RpcResponse>(bytes)?),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
     }
 }
@@ -606,6 +797,9 @@ fn encode_rpc_response_version(
     version: u16,
 ) -> Result<Vec<u8>, ProtocolWireError> {
     validate_rpc_response(response)?;
+    if version < 5 && matches!(response, RpcResponse::IntegrationViewSuccess(_)) {
+        return Err(ProtocolWireError::UnsupportedVersionMethod);
+    }
     let mut value =
         serde_json::to_value(response).map_err(|_| ProtocolWireError::VersionTranslation)?;
     match version {
@@ -622,6 +816,7 @@ fn encode_rpc_response_version(
             frozen_encoding::<v3::RpcResponse>(value)
         }
         4 => frozen_encoding::<v4::RpcResponse>(value),
+        5 => frozen_encoding::<v5::RpcResponse>(value),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
     }
 }

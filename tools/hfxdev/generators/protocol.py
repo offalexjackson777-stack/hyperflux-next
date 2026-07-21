@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from .domain import HEADER_CPP, HEADER_PYTHON, HEADER_RUST
-from ..protocol import FieldSpec, ProtocolCatalog, ProtocolRegistry
+from ..model import ModelError
+from ..protocol import FieldSpec, ProtocolCatalog, ProtocolRegistry, RecordSpec, UnionSpec
 
 
 def _pascal(identifier: str) -> str:
@@ -37,6 +38,48 @@ def _python_type(field: FieldSpec) -> str:
     return base
 
 
+def _declaration_order(
+    catalog: ProtocolCatalog,
+) -> list[tuple[str, RecordSpec | UnionSpec]]:
+    internal_names = {record.name for record in catalog.records}
+    internal_names.update(union.name for union in catalog.unions)
+    pending: list[tuple[str, RecordSpec | UnionSpec]] = [
+        *(('record', record) for record in catalog.records),
+        *(('union', union) for union in catalog.unions),
+    ]
+    emitted: set[str] = set()
+    ordered: list[tuple[str, RecordSpec | UnionSpec]] = []
+    while pending:
+        next_pending: list[tuple[str, RecordSpec | UnionSpec]] = []
+        progressed = False
+        for kind, declaration in pending:
+            if kind == "record":
+                assert isinstance(declaration, RecordSpec)
+                dependencies = {
+                    field.type_name
+                    for field in declaration.fields
+                    if field.type_name in internal_names
+                }
+            else:
+                assert isinstance(declaration, UnionSpec)
+                dependencies = {
+                    variant.type_name
+                    for variant in declaration.variants
+                    if variant.type_name in internal_names
+                }
+            if dependencies <= emitted:
+                ordered.append((kind, declaration))
+                emitted.add(declaration.name)
+                progressed = True
+            else:
+                next_pending.append((kind, declaration))
+        if not progressed:
+            blocked = ", ".join(declaration.name for _, declaration in next_pending)
+            raise ModelError(f"recursive generated protocol type dependency: {blocked}")
+        pending = next_pending
+    return ordered
+
+
 def _rust_domain_imports(names: list[str]) -> list[str]:
     lines = ["use hfx_domain::{"]
     current = "    "
@@ -51,13 +94,19 @@ def _rust_domain_imports(names: list[str]) -> list[str]:
     return lines
 
 
-def _rust_response_match_arm(variants: list[str], result: str) -> list[str]:
-    if len(variants) == 1:
-        return [f"            Self::{variants[0]}(envelope) => {result},"]
+def _rust_match_pattern(variants: list[str], suffix: str) -> list[str]:
+    pattern = " | ".join(f"Self::{variant}(envelope)" for variant in variants)
+    candidate = f"            {pattern} {suffix}"
+    if len(candidate) <= 100:
+        return [candidate]
     lines = [f"            Self::{variants[0]}(envelope)"]
     lines.extend(f"            | Self::{variant}(envelope)" for variant in variants[1:])
-    lines[-1] += f" => {result},"
+    lines[-1] += f" {suffix}"
     return lines
+
+
+def _rust_response_match_arm(variants: list[str], result: str) -> list[str]:
+    return _rust_match_pattern(variants, f"=> {result},")
 
 
 def rust_types(catalog: ProtocolCatalog) -> str:
@@ -219,8 +268,7 @@ def rust_types(catalog: ProtocolCatalog) -> str:
         )
         request_groups.setdefault(envelope, []).append(_pascal(method.name))
     for variants in request_groups.values():
-        pattern = " | ".join(f"Self::{variant}(envelope)" for variant in variants)
-        lines.append(f"            {pattern} => &envelope.request_id,")
+        lines.extend(_rust_match_pattern(variants, "=> &envelope.request_id,"))
     lines.extend([
         "        }",
         "    }",
@@ -251,9 +299,8 @@ def rust_types(catalog: ProtocolCatalog) -> str:
         if method.name != "negotiate":
             session_groups.setdefault(method.request, []).append(_pascal(method.name))
     for variants in session_groups.values():
-        pattern = " | ".join(f"Self::{variant}(envelope)" for variant in variants)
+        lines.extend(_rust_match_pattern(variants, "=> {"))
         lines.extend([
-            f"            {pattern} => {{",
             "                Some((&envelope.protocol_session_id, &envelope.negotiation_token))",
             "            }",
         ])
@@ -359,13 +406,25 @@ def cpp_types(catalog: ProtocolCatalog, namespace: str = "hyperflux") -> str:
         f"inline constexpr std::size_t max_wire_message_bytes = {catalog.max_message_bytes};",
         f"inline constexpr std::size_t max_json_depth = {catalog.max_json_depth};",
     ]
-    for record in catalog.records:
-        lines.extend(["", f"// {record.description}", f"struct {record.name}", "{"])
-        for field in record.fields:
-            lines.append(f"    {_cpp_type(field)} {field.name};")
-        lines.append(f"    friend bool operator==(const {record.name}&, const {record.name}&) = default;")
-        lines.append("};")
-    for union in catalog.unions:
+    for kind, declaration in _declaration_order(catalog):
+        if kind == "record":
+            assert isinstance(declaration, RecordSpec)
+            lines.extend([
+                "",
+                f"// {declaration.description}",
+                f"struct {declaration.name}",
+                "{",
+            ])
+            for field in declaration.fields:
+                lines.append(f"    {_cpp_type(field)} {field.name};")
+            lines.append(
+                f"    friend bool operator==(const {declaration.name}&, "
+                f"const {declaration.name}&) = default;"
+            )
+            lines.append("};")
+            continue
+        assert isinstance(declaration, UnionSpec)
+        union = declaration
         alternatives: list[str] = []
         for variant in union.variants:
             alternative = f"{union.name}{variant.name}"
@@ -465,6 +524,396 @@ def cpp_types(catalog: ProtocolCatalog, namespace: str = "hyperflux") -> str:
     return "\n".join(lines)
 
 
+def cpp_json(
+    catalog: ProtocolCatalog,
+    namespace: str = "hyperflux",
+    types_header: str = "protocol_types.hpp",
+) -> str:
+    record_names = {record.name for record in catalog.records}
+    union_names = {union.name for union in catalog.unions}
+
+    def qualify(type_name: str) -> str:
+        if type_name == "Boolean":
+            return "bool"
+        if type_name in record_names or type_name in union_names:
+            return f"::{namespace}::{type_name}"
+        return f"::hyperflux::{type_name}"
+
+    def record_type(name: str) -> str:
+        return f"::{namespace}::{name}"
+
+    def field_decode(field: FieldSpec) -> str:
+        field_type = qualify(field.type_name)
+        if field.many:
+            return (
+                f' decode_vector<{field_type}>(required_field(value, "{field.name}"), '
+                f"{field.max_items})"
+            )
+        if field.required:
+            return f' decode<{field_type}>(required_field(value, "{field.name}"))'
+        return f' decode_optional_field<{field_type}>(value, "{field.name}")'
+
+    lines = [
+        HEADER_CPP.rstrip(),
+        "",
+        "#pragma once",
+        "",
+        '#include "domain_json.hpp"',
+        f'#include "{types_header}"',
+        "",
+        "#include <string>",
+        "#include <type_traits>",
+        "#include <utility>",
+        "#include <variant>",
+        "",
+        "namespace hyperflux::json_codec",
+        "{",
+    ]
+    specialized_types = [record_type(record.name) for record in catalog.records]
+    specialized_types.extend(record_type(union.name) for union in catalog.unions)
+    specialized_types.extend(
+        [
+            record_type("NegotiationRequestEnvelope"),
+            record_type("ErrorEnvelope"),
+            record_type("RpcRequest"),
+            record_type("RpcResponse"),
+        ]
+    )
+    for type_name in specialized_types:
+        lines.extend(
+            [
+                "",
+                "template<>",
+                f"[[nodiscard]] {type_name} decode<{type_name}>(const Json& value);",
+                "",
+                "template<>",
+                f"[[nodiscard]] Json encode<{type_name}>(const {type_name}& value);",
+            ]
+        )
+    for record in catalog.records:
+        type_name = record_type(record.name)
+        allowed = ", ".join(f'"{field.name}"' for field in record.fields)
+        lines.extend(
+            [
+                "",
+                "template<>",
+                f"[[nodiscard]] inline {type_name} decode<{type_name}>(const Json& value)",
+                "{",
+                f"    require_object(value, {{{allowed}}});",
+            ]
+        )
+        if record.fields:
+            lines.append(f"    return {type_name} {{")
+            lines.extend(f"       {field_decode(field)}," for field in record.fields)
+            lines.append("    };")
+        else:
+            lines.append(f"    return {type_name} {{}};")
+        lines.extend(
+            [
+                "}",
+                "",
+                "template<>",
+                f"[[nodiscard]] inline Json encode<{type_name}>(const {type_name}& value)",
+                "{",
+                "    Json result = Json::object();",
+            ]
+        )
+        if not record.fields:
+            lines.append("    static_cast<void>(value);")
+        for field in record.fields:
+            if field.many:
+                expression = f"encode_vector(value.{field.name})"
+            elif not field.required:
+                expression = (
+                    f"value.{field.name}.has_value() "
+                    f"? encode(*value.{field.name}) : Json(nullptr)"
+                )
+            else:
+                expression = f"encode(value.{field.name})"
+            lines.append(f'    result["{field.name}"] = {expression};')
+        lines.extend(["    return result;", "}"])
+    for union in catalog.unions:
+        type_name = record_type(union.name)
+        lines.extend(
+            [
+                "",
+                "template<>",
+                f"[[nodiscard]] inline {type_name} decode<{type_name}>(const Json& value)",
+                "{",
+                f'    require_object(value, {{"{union.tag}", "{union.content}"}});',
+                f'    const auto& tag_value = required_field(value, "{union.tag}");',
+                "    if(!tag_value.is_string())",
+                "    {",
+                f'        throw CodecError("{union.name} tag must be a string");',
+                "    }",
+                "    const auto tag = tag_value.get<std::string>();",
+            ]
+        )
+        for variant in union.variants:
+            alternative = record_type(f"{union.name}{variant.name}")
+            content_type = qualify(variant.type_name)
+            lines.extend(
+                [
+                    f'    if(tag == "{variant.wire}")',
+                    "    {",
+                    f"        return {type_name} {{{alternative} {{",
+                    f'            decode<{content_type}>(required_field(value, "{union.content}"))',
+                    "        }};",
+                    "    }",
+                ]
+            )
+        lines.extend(
+            [
+                f'    throw CodecError("unknown {union.name} tag");',
+                "}",
+                "",
+                "template<>",
+                f"[[nodiscard]] inline Json encode<{type_name}>(const {type_name}& value)",
+                "{",
+                "    return std::visit(",
+                "        [](const auto& alternative) {",
+                "            using Alternative = std::decay_t<decltype(alternative)>;",
+                "            return Json {",
+                f'                {{"{union.tag}", std::string(Alternative::{union.tag})}},',
+                f'                {{"{union.content}", encode(alternative.{union.content})}},',
+                "            };",
+                "        },",
+                "        value);",
+                "}",
+            ]
+        )
+    negotiation = record_type("NegotiationRequestEnvelope")
+    lines.extend(
+        [
+            "",
+            "template<>",
+            f"[[nodiscard]] inline {negotiation} decode<{negotiation}>(const Json& value)",
+            "{",
+            '    require_object(value, {"request_id", "params"});',
+            f"    return {negotiation} {{",
+            '        decode<::hyperflux::RequestId>(required_field(value, "request_id")),',
+            f'        decode<{record_type("ClientHello")}>(required_field(value, "params")),',
+            "    };",
+            "}",
+            "",
+            "template<>",
+            f"[[nodiscard]] inline Json encode<{negotiation}>(const {negotiation}& value)",
+            "{",
+            "    return Json {",
+            '        {"request_id", encode(value.request_id)},',
+            '        {"params", encode(value.params)},',
+            "    };",
+            "}",
+            "",
+            "template<typename T>",
+            f"[[nodiscard]] {record_type('SessionRequestEnvelope')}<T> decode_session_request(",
+            "    const Json& value)",
+            "{",
+            '    require_object(value, {"request_id", "protocol_session_id", "negotiation_token", "params"});',
+            f"    return {record_type('SessionRequestEnvelope')}<T> {{",
+            '        decode<::hyperflux::RequestId>(required_field(value, "request_id")),',
+            '        decode<::hyperflux::ProtocolSessionId>(required_field(value, "protocol_session_id")),',
+            '        decode<::hyperflux::NegotiationToken>(required_field(value, "negotiation_token")),',
+            '        decode<T>(required_field(value, "params")),',
+            "    };",
+            "}",
+            "",
+            "template<typename T>",
+            "[[nodiscard]] Json encode_session_request(",
+            f"    const {record_type('SessionRequestEnvelope')}<T>& value)",
+            "{",
+            "    return Json {",
+            '        {"request_id", encode(value.request_id)},',
+            '        {"protocol_session_id", encode(value.protocol_session_id)},',
+            '        {"negotiation_token", encode(value.negotiation_token)},',
+            '        {"params", encode(value.params)},',
+            "    };",
+            "}",
+            "",
+            "template<typename T>",
+            f"[[nodiscard]] {record_type('SuccessEnvelope')}<T> decode_success(const Json& value)",
+            "{",
+            '    require_object(value, {"request_id", "server_instance_id", "result"});',
+            f"    return {record_type('SuccessEnvelope')}<T> {{",
+            '        decode<::hyperflux::RequestId>(required_field(value, "request_id")),',
+            '        decode<::hyperflux::ServerInstanceId>(required_field(value, "server_instance_id")),',
+            '        decode<T>(required_field(value, "result")),',
+            "    };",
+            "}",
+            "",
+            "template<typename T>",
+            "[[nodiscard]] Json encode_success(",
+            f"    const {record_type('SuccessEnvelope')}<T>& value)",
+            "{",
+            "    return Json {",
+            '        {"request_id", encode(value.request_id)},',
+            '        {"server_instance_id", encode(value.server_instance_id)},',
+            '        {"result", encode(value.result)},',
+            "    };",
+            "}",
+        ]
+    )
+    error_envelope = record_type("ErrorEnvelope")
+    lines.extend(
+        [
+            "",
+            "template<>",
+            f"[[nodiscard]] inline {error_envelope} decode<{error_envelope}>(const Json& value)",
+            "{",
+            '    require_object(value, {"request_id", "server_instance_id", "error"});',
+            f"    return {error_envelope} {{",
+            '        decode_optional_field<::hyperflux::RequestId>(value, "request_id"),',
+            '        decode<::hyperflux::ServerInstanceId>(required_field(value, "server_instance_id")),',
+            f'        decode<{record_type("RpcError")}>(required_field(value, "error")),',
+            "    };",
+            "}",
+            "",
+            "template<>",
+            f"[[nodiscard]] inline Json encode<{error_envelope}>(const {error_envelope}& value)",
+            "{",
+            "    return Json {",
+            '        {"request_id", value.request_id.has_value() ? encode(*value.request_id) : Json(nullptr)},',
+            '        {"server_instance_id", encode(value.server_instance_id)},',
+            '        {"error", encode(value.error)},',
+            "    };",
+            "}",
+        ]
+    )
+    request_type = record_type("RpcRequest")
+    lines.extend(
+        [
+            "",
+            "template<>",
+            f"[[nodiscard]] inline {request_type} decode<{request_type}>(const Json& value)",
+            "{",
+            '    require_object(value, {"method", "request"});',
+            '    const auto& method_value = required_field(value, "method");',
+            "    if(!method_value.is_string())",
+            "    {",
+            '        throw CodecError("RPC request method must be a string");',
+            "    }",
+            "    const auto method = method_value.get<std::string>();",
+            '    const auto& envelope = required_field(value, "request");',
+        ]
+    )
+    for method in catalog.methods:
+        wrapper = record_type(f"RpcRequest{_pascal(method.name)}")
+        envelope_decode = (
+            f"decode<{negotiation}>(envelope)"
+            if method.name == "negotiate"
+            else f"decode_session_request<{qualify(method.request)}>(envelope)"
+        )
+        lines.extend(
+            [
+                f'    if(method == "{method.name}")',
+                "    {",
+                f"        return {request_type} {{{wrapper} {{{envelope_decode}}}}};",
+                "    }",
+            ]
+        )
+    lines.extend(
+        [
+            '    throw CodecError("unknown RPC request method");',
+            "}",
+            "",
+            "template<>",
+            f"[[nodiscard]] inline Json encode<{request_type}>(const {request_type}& value)",
+            "{",
+            "    return std::visit(",
+            "        [](const auto& request) {",
+            "            using Request = std::decay_t<decltype(request)>;",
+            "            Json envelope;",
+        ]
+    )
+    negotiation_wrapper = record_type("RpcRequestNegotiate")
+    lines.extend(
+        [
+            f"            if constexpr(std::is_same_v<Request, {negotiation_wrapper}>)",
+            "            {",
+            "                envelope = encode(request.request);",
+            "            }",
+            "            else",
+            "            {",
+            "                envelope = encode_session_request(request.request);",
+            "            }",
+            "            return Json {",
+            '                {"method", std::string(Request::method)},',
+            '                {"request", std::move(envelope)},',
+            "            };",
+            "        },",
+            "        value);",
+            "}",
+        ]
+    )
+    response_type = record_type("RpcResponse")
+    lines.extend(
+        [
+            "",
+            "template<>",
+            f"[[nodiscard]] inline {response_type} decode<{response_type}>(const Json& value)",
+            "{",
+            '    require_object(value, {"type", "response"});',
+            '    const auto& type_value = required_field(value, "type");',
+            "    if(!type_value.is_string())",
+            "    {",
+            '        throw CodecError("RPC response type must be a string");',
+            "    }",
+            "    const auto type = type_value.get<std::string>();",
+            '    const auto& envelope = required_field(value, "response");',
+        ]
+    )
+    for method in catalog.methods:
+        wrapper = record_type(f"RpcResponse{_pascal(method.name)}Success")
+        lines.extend(
+            [
+                f'    if(type == "{method.name}-success")',
+                "    {",
+                f"        return {response_type} {{{wrapper} {{",
+                f"            decode_success<{qualify(method.response)}>(envelope)",
+                "        }};",
+                "    }",
+            ]
+        )
+    lines.extend(
+        [
+            '    if(type == "error")',
+            "    {",
+            f"        return {response_type} {{decode<{error_envelope}>(envelope)}};",
+            "    }",
+            '    throw CodecError("unknown RPC response type");',
+            "}",
+            "",
+            "template<>",
+            f"[[nodiscard]] inline Json encode<{response_type}>(const {response_type}& value)",
+            "{",
+            "    return std::visit(",
+            "        [](const auto& response) {",
+            "            using Response = std::decay_t<decltype(response)>;",
+            f"            if constexpr(std::is_same_v<Response, {error_envelope}>)",
+            "            {",
+            "                return Json {",
+            '                    {"type", "error"},',
+            '                    {"response", encode(response)},',
+            "                };",
+            "            }",
+            "            else",
+            "            {",
+            "                return Json {",
+            '                    {"type", std::string(Response::type)},',
+            '                    {"response", encode_success(response.response)},',
+            "                };",
+            "            }",
+            "        },",
+            "        value);",
+            "}",
+            "",
+            "} // namespace hyperflux::json_codec",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def python_types(catalog: ProtocolCatalog) -> str:
     domain_names = sorted(
         {
@@ -499,16 +948,24 @@ def python_types(catalog: ProtocolCatalog) -> str:
     lines.extend(f'    "{feature}",' for feature in catalog.features)
     lines.extend([")", ""])
     exports: list[str] = []
-    for record in catalog.records:
-        exports.append(record.name)
-        lines.extend(["@dataclass(frozen=True, slots=True)", f"class {record.name}:", f'    """{record.description}"""'])
-        if not record.fields:
-            lines.append("    pass")
-        else:
-            for field in record.fields:
-                lines.append(f"    {field.name}: {_python_type(field)}")
-        lines.extend(["", ""])
-    for union in catalog.unions:
+    for kind, declaration in _declaration_order(catalog):
+        if kind == "record":
+            assert isinstance(declaration, RecordSpec)
+            exports.append(declaration.name)
+            lines.extend([
+                "@dataclass(frozen=True, slots=True)",
+                f"class {declaration.name}:",
+                f'    """{declaration.description}"""',
+            ])
+            if not declaration.fields:
+                lines.append("    pass")
+            else:
+                for field in declaration.fields:
+                    lines.append(f"    {field.name}: {_python_type(field)}")
+            lines.extend(["", ""])
+            continue
+        assert isinstance(declaration, UnionSpec)
+        union = declaration
         alternatives: list[str] = []
         for variant in union.variants:
             alternative = f"{union.name}{variant.name}"

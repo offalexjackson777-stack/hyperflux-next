@@ -146,13 +146,27 @@ fn feature_negotiation_selects_intersection_and_rejects_incompatible_versions() 
             .contains(&value("snapshot-profile-bindings"))
     );
 
-    let incompatible = ClientHello {
+    let v5 = ClientHello {
         minimum_version: number(5),
         maximum_version: number(5),
+        required_features: vec![value("integration-view-projection")],
         ..v4
     };
+    let response = negotiate(&v5, context("protocol-session-5")).expect("v5 overlaps");
+    assert_eq!(response.selected_version.get(), 5);
+    assert!(
+        response
+            .enabled_features
+            .contains(&value("integration-view-projection"))
+    );
+
+    let incompatible = ClientHello {
+        minimum_version: number(6),
+        maximum_version: number(6),
+        ..v5
+    };
     assert_eq!(
-        negotiate(&incompatible, context("protocol-session-5")),
+        negotiate(&incompatible, context("protocol-session-6")),
         Err(NegotiationError::IncompatibleVersion)
     );
 }

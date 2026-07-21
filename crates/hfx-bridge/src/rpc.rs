@@ -8,9 +8,9 @@ use hfx_core::SessionAuthority;
 use hfx_domain::{FindingId, HumanMessage, ProtocolErrorKind, RequestId, ServerInstanceId};
 use hfx_errors::{ErrorCode, error_by_code};
 use hfx_protocol::{
-    BridgeSnapshot, DiagnosticSnapshot, ErrorEnvelope, EventBatch, LeaseRequest, LeaseResult,
-    ReleaseLeaseRequest, RenewLeaseRequest, RpcError, RpcRequest, RpcResponse, SubscriptionRequest,
-    SuccessEnvelope, TransactionLookup, TransactionRequest, TransactionResult,
+    BridgeSnapshot, DiagnosticSnapshot, ErrorEnvelope, EventBatch, IntegrationView, LeaseRequest,
+    LeaseResult, ReleaseLeaseRequest, RenewLeaseRequest, RpcError, RpcRequest, RpcResponse,
+    SubscriptionRequest, SuccessEnvelope, TransactionLookup, TransactionRequest, TransactionResult,
 };
 use std::fmt;
 
@@ -158,6 +158,15 @@ pub trait BridgeRpcBackend {
 
     /// # Errors
     ///
+    /// Returns a catalog-backed failure when the canonical application view
+    /// cannot be projected from the same snapshot and profile authority.
+    fn integration_view(
+        &mut self,
+        context: BackendRequestContext<'_>,
+    ) -> Result<IntegrationView, RpcFailure>;
+
+    /// # Errors
+    ///
     /// Returns a catalog-backed lease admission failure.
     fn acquire_lease(
         &mut self,
@@ -288,6 +297,9 @@ impl ConnectionDispatcher {
             RpcRequest::Snapshot(_) => backend
                 .snapshot(context)
                 .map(|result| RpcResponse::SnapshotSuccess(self.success(request_id, result))),
+            RpcRequest::IntegrationView(_) => backend.integration_view(context).map(|result| {
+                RpcResponse::IntegrationViewSuccess(self.success(request_id, result))
+            }),
             RpcRequest::AcquireLease(envelope) => backend
                 .acquire_lease(context, envelope.params)
                 .map(|result| RpcResponse::AcquireLeaseSuccess(self.success(request_id, result))),

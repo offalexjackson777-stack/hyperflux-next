@@ -22,10 +22,11 @@ use hfx_domain::{
     StreamId,
 };
 use hfx_errors::ErrorCode;
+use hfx_integration_model::project_integration_view;
 use hfx_protocol::{
-    BridgeSnapshot, DiagnosticSnapshot, EventBatch, LeaseRequest, LeaseResult, ReleaseLeaseRequest,
-    RenewLeaseRequest, SubscriptionRequest, TransactionLookup, TransactionRequest,
-    TransactionResult, TransactionUnavailable, validate_lease_request,
+    BridgeSnapshot, DiagnosticSnapshot, EventBatch, IntegrationView, LeaseRequest, LeaseResult,
+    ReleaseLeaseRequest, RenewLeaseRequest, SubscriptionRequest, TransactionLookup,
+    TransactionRequest, TransactionResult, TransactionUnavailable, validate_lease_request,
 };
 use std::fmt;
 use std::ops::Deref;
@@ -477,6 +478,19 @@ where
                 self.clock.now(),
             )
             .map_err(|error| snapshot_failure(&error))
+    }
+
+    fn integration_view(
+        &mut self,
+        context: BackendRequestContext<'_>,
+    ) -> Result<IntegrationView, RpcFailure> {
+        let snapshot = self.snapshot(context)?;
+        project_integration_view(
+            &snapshot,
+            self.profiles.catalog(),
+            Some(&context.session().client_id),
+        )
+        .map_err(|_| RpcFailure::internal())
     }
 
     fn acquire_lease(

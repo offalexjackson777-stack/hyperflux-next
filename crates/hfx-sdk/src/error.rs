@@ -8,6 +8,7 @@ use std::fmt;
 pub enum SdkMethod {
     Negotiate,
     Snapshot,
+    IntegrationView,
     AcquireLease,
     RenewLease,
     ReleaseLease,
@@ -22,6 +23,7 @@ impl SdkMethod {
         match self {
             Self::Negotiate => "negotiate",
             Self::Snapshot => "snapshot",
+            Self::IntegrationView => "integration view",
             Self::AcquireLease => "acquire lease",
             Self::RenewLease => "renew lease",
             Self::ReleaseLease => "release lease",

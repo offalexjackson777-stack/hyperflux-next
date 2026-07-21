@@ -15,8 +15,8 @@
 namespace hyperflux
 {
 
-inline constexpr std::uint16_t minimum_protocol_version = 4;
-inline constexpr std::uint16_t maximum_protocol_version = 4;
+inline constexpr std::uint16_t minimum_protocol_version = 5;
+inline constexpr std::uint16_t maximum_protocol_version = 5;
 inline constexpr std::size_t max_wire_message_bytes = 1048576;
 inline constexpr std::size_t max_json_depth = 128;
 
@@ -379,6 +379,87 @@ struct DiagnosticSnapshot
     friend bool operator==(const DiagnosticSnapshot&, const DiagnosticSnapshot&) = default;
 };
 
+// Exact immutable profile authority exposed to integrations.
+struct ProfileBindingView
+{
+    ProfileId profile_id;
+    ProfileDigest profile_digest;
+    friend bool operator==(const ProfileBindingView&, const ProfileBindingView&) = default;
+};
+
+// Truthful paired-device inventory independent of application controller registration.
+struct DeviceInventoryView
+{
+    LogicalDeviceId device_id;
+    DeviceKind device_kind;
+    ProductId product_id;
+    std::optional<ProfileBindingView> profile;
+    std::optional<ModelName> model_name;
+    PairingState pairing;
+    PresenceState presence;
+    InventoryAvailability availability;
+    SupportLevel support_level;
+    std::vector<EndpointSnapshot> endpoints;
+    BatteryObservation battery;
+    std::vector<CapabilityId> capabilities;
+    friend bool operator==(const DeviceInventoryView&, const DeviceInventoryView&) = default;
+};
+
+// Pinned upstream presentation authority without hardware transport policy.
+struct PresentationView
+{
+    UpstreamId upstream_id;
+    UpstreamOwner owner;
+    ComponentVersion project_version;
+    SourceRevision source_revision;
+    PresentationKey model_key;
+    std::optional<PresentationKey> layout_key;
+    TransportVariant transport_variant;
+    friend bool operator==(const PresentationView&, const PresentationView&) = default;
+};
+
+// Application-facing lighting dimensions without receiver carrier mapping.
+struct LightingTopologyView
+{
+    LedCount physical_led_count;
+    LedCount application_slot_count;
+    LedCount rows;
+    LedCount columns;
+    friend bool operator==(const LightingTopologyView&, const LightingTopologyView&) = default;
+};
+
+// Writable controller currently has no application owner.
+struct UnownedController
+{
+    friend bool operator==(const UnownedController&, const UnownedController&) = default;
+};
+
+// Writable controller is owned by the requesting client.
+struct ViewerOwnedController
+{
+    LeaseId lease_id;
+    MonotonicMs expires_at_ms;
+    friend bool operator==(const ViewerOwnedController&, const ViewerOwnedController&) = default;
+};
+
+// Writable controller is owned by another application client.
+struct OtherOwnedController
+{
+    ClientId client_id;
+    LeaseId lease_id;
+    MonotonicMs expires_at_ms;
+    friend bool operator==(const OtherOwnedController&, const OtherOwnedController&) = default;
+};
+
+// Viewer-specific actions derived from availability and ownership.
+struct ControllerActions
+{
+    bool can_acquire;
+    bool can_release;
+    bool can_submit_now;
+    friend bool operator==(const ControllerActions&, const ControllerActions&) = default;
+};
+
 // Stable structured request failure.
 struct RpcError
 {
@@ -443,6 +524,79 @@ struct TransactionResultUnavailable
 // Contradiction-free current, terminal, or unavailable transaction outcome.
 using TransactionResult = std::variant<TransactionResultProgress, TransactionResultTerminal, TransactionResultUnavailable>;
 
+// No application currently owns the controller.
+struct ControllerOwnershipUnowned
+{
+    static constexpr std::string_view state = "unowned";
+    UnownedController detail;
+    friend bool operator==(const ControllerOwnershipUnowned&, const ControllerOwnershipUnowned&) = default;
+};
+
+// The requesting client owns the controller.
+struct ControllerOwnershipOwnedByViewer
+{
+    static constexpr std::string_view state = "owned-by-viewer";
+    ViewerOwnedController detail;
+    friend bool operator==(const ControllerOwnershipOwnedByViewer&, const ControllerOwnershipOwnedByViewer&) = default;
+};
+
+// Another application client owns the controller.
+struct ControllerOwnershipOwnedByOther
+{
+    static constexpr std::string_view state = "owned-by-other";
+    OtherOwnedController detail;
+    friend bool operator==(const ControllerOwnershipOwnedByOther&, const ControllerOwnershipOwnedByOther&) = default;
+};
+
+// Contradiction-free viewer-specific controller ownership.
+using ControllerOwnership = std::variant<ControllerOwnershipUnowned, ControllerOwnershipOwnedByViewer, ControllerOwnershipOwnedByOther>;
+
+// Exact qualified receiver-backed application controller.
+struct ControllerView
+{
+    ReceiverId receiver_id;
+    GenerationId generation_id;
+    LogicalDeviceId device_id;
+    EndpointId endpoint_id;
+    DeviceKind device_kind;
+    ProductId product_id;
+    ProfileBindingView receiver_profile;
+    ProfileBindingView device_profile;
+    ModelName model_name;
+    PresentationView presentation;
+    ControllerAvailability availability;
+    BatteryObservation battery;
+    std::vector<CapabilityId> capabilities;
+    LightingTopologyView lighting;
+    ResourceKey resource;
+    ControllerOwnership ownership;
+    ControllerActions actions;
+    friend bool operator==(const ControllerView&, const ControllerView&) = default;
+};
+
+// One receiver generation with complete inventory and qualified controllers.
+struct IntegrationReceiverView
+{
+    ReceiverId receiver_id;
+    GenerationId generation_id;
+    std::optional<ProfileBindingView> profile;
+    std::optional<ModelName> model_name;
+    ReceiverLifecycleState lifecycle;
+    bool stable_restore_enabled;
+    RestoreState restore_state;
+    std::vector<DeviceInventoryView> inventory;
+    std::vector<ControllerView> controllers;
+    friend bool operator==(const IntegrationReceiverView&, const IntegrationReceiverView&) = default;
+};
+
+// Client-specific application view projected once by bridge policy.
+struct IntegrationView
+{
+    EventCursor cursor;
+    std::vector<IntegrationReceiverView> receivers;
+    friend bool operator==(const IntegrationView&, const IntegrationView&) = default;
+};
+
 struct NegotiationRequestEnvelope
 {
     RequestId request_id;
@@ -467,6 +621,12 @@ struct RpcRequestNegotiate
 struct RpcRequestSnapshot
 {
     static constexpr std::string_view method = "snapshot";
+    SessionRequestEnvelope<EmptyRequest> request;
+};
+
+struct RpcRequestIntegrationView
+{
+    static constexpr std::string_view method = "integration-view";
     SessionRequestEnvelope<EmptyRequest> request;
 };
 
@@ -512,7 +672,7 @@ struct RpcRequestDiagnostics
     SessionRequestEnvelope<EmptyRequest> request;
 };
 
-using RpcRequest = std::variant<RpcRequestNegotiate, RpcRequestSnapshot, RpcRequestAcquireLease, RpcRequestRenewLease, RpcRequestReleaseLease, RpcRequestSubmitTransaction, RpcRequestTransactionOutcome, RpcRequestSubscribe, RpcRequestDiagnostics>;
+using RpcRequest = std::variant<RpcRequestNegotiate, RpcRequestSnapshot, RpcRequestIntegrationView, RpcRequestAcquireLease, RpcRequestRenewLease, RpcRequestReleaseLease, RpcRequestSubmitTransaction, RpcRequestTransactionOutcome, RpcRequestSubscribe, RpcRequestDiagnostics>;
 
 template<typename T>
 struct SuccessEnvelope
@@ -539,6 +699,12 @@ struct RpcResponseSnapshotSuccess
 {
     static constexpr std::string_view type = "snapshot-success";
     SuccessEnvelope<BridgeSnapshot> response;
+};
+
+struct RpcResponseIntegrationViewSuccess
+{
+    static constexpr std::string_view type = "integration-view-success";
+    SuccessEnvelope<IntegrationView> response;
 };
 
 struct RpcResponseAcquireLeaseSuccess
@@ -583,7 +749,7 @@ struct RpcResponseDiagnosticsSuccess
     SuccessEnvelope<DiagnosticSnapshot> response;
 };
 
-using RpcResponse = std::variant<RpcResponseNegotiateSuccess, RpcResponseSnapshotSuccess, RpcResponseAcquireLeaseSuccess, RpcResponseRenewLeaseSuccess, RpcResponseReleaseLeaseSuccess, RpcResponseSubmitTransactionSuccess, RpcResponseTransactionOutcomeSuccess, RpcResponseSubscribeSuccess, RpcResponseDiagnosticsSuccess, ErrorEnvelope>;
+using RpcResponse = std::variant<RpcResponseNegotiateSuccess, RpcResponseSnapshotSuccess, RpcResponseIntegrationViewSuccess, RpcResponseAcquireLeaseSuccess, RpcResponseRenewLeaseSuccess, RpcResponseReleaseLeaseSuccess, RpcResponseSubmitTransactionSuccess, RpcResponseTransactionOutcomeSuccess, RpcResponseSubscribeSuccess, RpcResponseDiagnosticsSuccess, ErrorEnvelope>;
 
 struct MethodDescriptor
 {
@@ -593,9 +759,10 @@ struct MethodDescriptor
     std::optional<std::string_view> required_feature;
 };
 
-inline constexpr MethodDescriptor methods[9] = {
+inline constexpr MethodDescriptor methods[10] = {
     {"negotiate", "ClientHello", "ServerHello", std::nullopt},
     {"snapshot", "EmptyRequest", "BridgeSnapshot", std::nullopt},
+    {"integration-view", "EmptyRequest", "IntegrationView", std::optional<std::string_view>("integration-view-projection")},
     {"acquire-lease", "LeaseRequest", "LeaseResult", std::optional<std::string_view>("ownership-leases")},
     {"renew-lease", "RenewLeaseRequest", "LeaseResult", std::optional<std::string_view>("ownership-leases")},
     {"release-lease", "ReleaseLeaseRequest", "LeaseResult", std::optional<std::string_view>("ownership-leases")},

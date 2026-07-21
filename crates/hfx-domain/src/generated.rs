@@ -2799,6 +2799,294 @@ impl fmt::Display for IntentDigest {
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(try_from = "String", into = "String")]
+pub struct ModelName(String);
+
+impl ModelName {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 160;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for ModelName {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "ModelName",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for ModelName {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<ModelName> for String {
+    fn from(value: ModelName) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for ModelName {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct UpstreamId(String);
+
+impl UpstreamId {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 64;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for UpstreamId {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "UpstreamId",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for UpstreamId {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<UpstreamId> for String {
+    fn from(value: UpstreamId) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for UpstreamId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct UpstreamOwner(String);
+
+impl UpstreamOwner {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 128;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for UpstreamOwner {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "UpstreamOwner",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for UpstreamOwner {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<UpstreamOwner> for String {
+    fn from(value: UpstreamOwner) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for UpstreamOwner {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct SourceRevision(String);
+
+impl SourceRevision {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 64;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for SourceRevision {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "SourceRevision",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for SourceRevision {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<SourceRevision> for String {
+    fn from(value: SourceRevision) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for SourceRevision {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct PresentationKey(String);
+
+impl PresentationKey {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 160;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for PresentationKey {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "PresentationKey",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for PresentationKey {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<PresentationKey> for String {
+    fn from(value: PresentationKey) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for PresentationKey {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct TransportVariant(String);
+
+impl TransportVariant {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 64;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for TransportVariant {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "TransportVariant",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for TransportVariant {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<TransportVariant> for String {
+    fn from(value: TransportVariant) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for TransportVariant {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
 pub struct RestoreTriggerId(String);
 
 impl RestoreTriggerId {
@@ -4552,6 +4840,98 @@ impl FromStr for ProtocolErrorKind {
 }
 
 impl fmt::Display for ProtocolErrorKind {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum InventoryAvailability {
+    #[serde(rename = "available")]
+    Available,
+    #[serde(rename = "sleeping")]
+    Sleeping,
+    #[serde(rename = "unavailable")]
+    Unavailable,
+    #[serde(rename = "unknown")]
+    Unknown,
+    #[serde(rename = "unpaired")]
+    Unpaired,
+    #[serde(rename = "pairing-unknown")]
+    PairingUnknown,
+    #[serde(rename = "receiver-unavailable")]
+    ReceiverUnavailable,
+}
+
+impl InventoryAvailability {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Available => "available",
+            Self::Sleeping => "sleeping",
+            Self::Unavailable => "unavailable",
+            Self::Unknown => "unknown",
+            Self::Unpaired => "unpaired",
+            Self::PairingUnknown => "pairing-unknown",
+            Self::ReceiverUnavailable => "receiver-unavailable",
+        }
+    }
+}
+
+impl FromStr for InventoryAvailability {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "available" => Ok(Self::Available),
+            "sleeping" => Ok(Self::Sleeping),
+            "unavailable" => Ok(Self::Unavailable),
+            "unknown" => Ok(Self::Unknown),
+            "unpaired" => Ok(Self::Unpaired),
+            "pairing-unknown" => Ok(Self::PairingUnknown),
+            "receiver-unavailable" => Ok(Self::ReceiverUnavailable),
+            _ => Err(DomainValueError::unknown_wire("InventoryAvailability")),
+        }
+    }
+}
+
+impl fmt::Display for InventoryAvailability {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum ControllerAvailability {
+    #[serde(rename = "ready")]
+    Ready,
+    #[serde(rename = "sleeping")]
+    Sleeping,
+}
+
+impl ControllerAvailability {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Ready => "ready",
+            Self::Sleeping => "sleeping",
+        }
+    }
+}
+
+impl FromStr for ControllerAvailability {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "ready" => Ok(Self::Ready),
+            "sleeping" => Ok(Self::Sleeping),
+            _ => Err(DomainValueError::unknown_wire("ControllerAvailability")),
+        }
+    }
+}
+
+impl fmt::Display for ControllerAvailability {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(self.as_str())
     }

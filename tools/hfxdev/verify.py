@@ -210,6 +210,87 @@ def _run_cpp_sdk_contracts(root: Path, node: TestNode) -> None:
         "C++ integration catalog smoke test",
         node.timeout_seconds,
     )
+    protocol_json_binary = root / "build" / "protocol-json-contract"
+    _run_command(
+        root,
+        [
+            "clang++",
+            "-std=c++20",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-Isdk/cpp/include",
+            "-Isdk/cpp/vendor/include",
+            "tests/cpp/protocol_json_contract.cpp",
+            "-o",
+            str(protocol_json_binary),
+        ],
+        "C++ protocol JSON contract compile",
+        node.timeout_seconds,
+    )
+    _run_command(
+        root,
+        [str(protocol_json_binary)],
+        "C++ protocol JSON contract",
+        node.timeout_seconds,
+    )
+    sdk_client_binary = root / "build" / "sdk-client-contract"
+    _run_command(
+        root,
+        [
+            "clang++",
+            "-std=c++20",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-Isdk/cpp/include",
+            "-Isdk/cpp/vendor/include",
+            "tests/cpp/sdk_client_contract.cpp",
+            "sdk/cpp/src/client.cpp",
+            "sdk/cpp/src/channel.cpp",
+            "sdk/cpp/src/identity.cpp",
+            "-pthread",
+            "-o",
+            str(sdk_client_binary),
+        ],
+        "C++ SDK client contract compile",
+        node.timeout_seconds,
+    )
+    _run_command(
+        root,
+        [str(sdk_client_binary)],
+        "C++ SDK client contract",
+        node.timeout_seconds,
+    )
+    sdk_channel_binary = root / "build" / "sdk-channel-contract"
+    _run_command(
+        root,
+        [
+            "clang++",
+            "-std=c++20",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-Isdk/cpp/include",
+            "-Isdk/cpp/vendor/include",
+            "tests/cpp/sdk_channel_contract.cpp",
+            "sdk/cpp/src/channel.cpp",
+            "-pthread",
+            "-o",
+            str(sdk_channel_binary),
+        ],
+        "C++ SDK channel contract compile",
+        node.timeout_seconds,
+    )
+    _run_command(
+        root,
+        [str(sdk_channel_binary)],
+        "C++ SDK channel contract",
+        node.timeout_seconds,
+    )
 
 
 def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:

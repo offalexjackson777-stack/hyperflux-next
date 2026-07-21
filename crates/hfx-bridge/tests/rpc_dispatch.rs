@@ -11,9 +11,9 @@ use hfx_domain::{
 };
 use hfx_errors::ErrorCode;
 use hfx_protocol::{
-    BridgeSnapshot, DiagnosticSnapshot, EmptyRequest, EventBatch, EventCursor, LeaseRequest,
-    LeaseResult, NegotiationRequestEnvelope, ReleaseLeaseRequest, RenewLeaseRequest, RpcRequest,
-    RpcResponse, SessionRequestEnvelope, SubscriptionRequest, TransactionLookup,
+    BridgeSnapshot, DiagnosticSnapshot, EmptyRequest, EventBatch, EventCursor, IntegrationView,
+    LeaseRequest, LeaseResult, NegotiationRequestEnvelope, ReleaseLeaseRequest, RenewLeaseRequest,
+    RpcRequest, RpcResponse, SessionRequestEnvelope, SubscriptionRequest, TransactionLookup,
     TransactionRequest, TransactionResult,
 };
 
@@ -60,6 +60,17 @@ impl BridgeRpcBackend for FakeBackend {
             ));
         }
         Ok(empty_snapshot())
+    }
+
+    fn integration_view(
+        &mut self,
+        _context: BackendRequestContext<'_>,
+    ) -> Result<IntegrationView, RpcFailure> {
+        let snapshot = empty_snapshot();
+        Ok(IntegrationView {
+            cursor: snapshot.cursor,
+            receivers: Vec::new(),
+        })
     }
 
     fn acquire_lease(

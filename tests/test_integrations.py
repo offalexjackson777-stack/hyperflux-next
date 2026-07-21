@@ -49,7 +49,7 @@ class IntegrationCatalogTests(unittest.TestCase):
         for adapter in self.catalog["adapters"]:
             self.assertEqual(adapter["transport_access"], "sdk-only")
             self.assertEqual(adapter["unrelated_device_policy"], "preserve")
-            self.assertEqual(adapter["sdk_protocol_versions"], [4])
+            self.assertEqual(adapter["sdk_protocol_versions"], [5])
             self.assertTrue(adapter["owns"])
             self.assertTrue(adapter["must_not_own"])
 

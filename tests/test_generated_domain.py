@@ -9,8 +9,11 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "sdk" / "python"))
+sys.path.insert(0, str(ROOT / "tools"))
 
 from hyperflux_sdk import BatteryPercent, DeviceKind, GenerationId, ReceiverId
+from hfxdev.generators.domain import cpp_json
+from hfxdev.model import load_json
 
 
 class GeneratedDomainTests(unittest.TestCase):
@@ -36,6 +39,11 @@ class GeneratedDomainTests(unittest.TestCase):
     def test_cross_language_integer_wire_encoding_is_declared(self) -> None:
         self.assertEqual(GenerationId.WIRE_ENCODING, "decimal-string")
         self.assertEqual(BatteryPercent.WIRE_ENCODING, "number")
+
+    def test_cpp_fallback_codecs_are_explicitly_non_returning(self) -> None:
+        generated = cpp_json(load_json(ROOT / "schemas" / "domain-catalog.json"))
+        self.assertIn('throw CodecError("missing generated JSON decoder");', generated)
+        self.assertIn('throw CodecError("missing generated JSON encoder");', generated)
 
 
 if __name__ == "__main__":

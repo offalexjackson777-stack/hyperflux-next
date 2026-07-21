@@ -2,15 +2,20 @@
 
 use hfx_domain::{
     ActivityState, BatteryPercent, ClientId, ClientName, ColorChannel, ConnectionMode,
-    ContactState, DeviceKind, EvidenceConfidence, FreshnessState, GenerationId, PairingState,
-    PowerState, PresenceState, ProductId, ProjectionRevision, ProtocolFeatureId, ProtocolVersion,
-    ReceiverLifecycleState, RestoreState, RouteKind, RouteState, SequenceNumber, SleepState,
-    StableLightingMode, StreamEpoch, SupportLevel, TelemetryAvailability, TransactionClass,
+    ContactState, ControllerAvailability, DeviceKind, EvidenceConfidence, FreshnessState,
+    GenerationId, InventoryAvailability, LedCount, ModelName, PairingState, PowerState,
+    PresenceState, ProductId, ProjectionRevision, ProtocolFeatureId, ProtocolVersion,
+    ReceiverLifecycleState, ResourceKind, RestoreState, RouteKind, RouteState, SequenceNumber,
+    SleepState, StableLightingMode, StreamEpoch, SupportLevel, TelemetryAvailability,
+    TransactionClass,
 };
 use hfx_protocol::{
-    BatteryObservation, BridgeSnapshot, ClientHello, EndpointSnapshot, EventCursor,
-    LogicalDeviceSnapshot, MAX_WIRE_MESSAGE_BYTES, NegotiationRequestEnvelope, ProtocolWireError,
-    ReceiverSnapshot, RpcRequest, RpcResponse, SnapshotValidationError, SuccessEnvelope,
+    BatteryObservation, BridgeSnapshot, ClientHello, ControllerActions, ControllerOwnership,
+    ControllerView, DeviceInventoryView, EmptyRequest, EndpointSnapshot, EventCursor,
+    IntegrationReceiverView, IntegrationView, LightingTopologyView, LogicalDeviceSnapshot,
+    MAX_WIRE_MESSAGE_BYTES, NegotiationRequestEnvelope, PresentationView, ProfileBindingView,
+    ProtocolWireError, ReceiverSnapshot, ResourceKey, RpcRequest, RpcResponse,
+    SessionRequestEnvelope, SnapshotValidationError, SuccessEnvelope, UnownedController,
     decode_rpc_request, decode_rpc_request_for_version, decode_rpc_response,
     decode_rpc_response_for_version, encode_rpc_request_for_version,
     encode_rpc_response_for_version, validate_bridge_snapshot, validate_rpc_response_for_version,
@@ -98,6 +103,90 @@ fn snapshot(battery: BatteryObservation) -> BridgeSnapshot {
     }
 }
 
+fn integration_view() -> IntegrationView {
+    let receiver_profile = ProfileBindingView {
+        profile_id: text("receiver.razer.hyperflux-v2.1532-00cf"),
+        profile_digest: text(&"a".repeat(64)),
+    };
+    let device_profile = ProfileBindingView {
+        profile_id: text("child.razer.basilisk-v3-pro-35k.00cd"),
+        profile_digest: text(&"b".repeat(64)),
+    };
+    let model_name = text::<ModelName>("Razer Basilisk V3 Pro 35K");
+    let battery = battery(TelemetryAvailability::Reported, Some(73));
+    let capabilities = vec![text("lighting.direct-frame")];
+    let inventory = DeviceInventoryView {
+        device_id: text("mouse-1"),
+        device_kind: DeviceKind::Mouse,
+        product_id: ProductId::try_from(0x00cd_u16).expect("product id is valid"),
+        profile: Some(device_profile.clone()),
+        model_name: Some(model_name.clone()),
+        pairing: PairingState::Paired,
+        presence: PresenceState::Available,
+        availability: InventoryAvailability::Available,
+        support_level: SupportLevel::LightingQualified,
+        endpoints: vec![endpoint()],
+        battery: battery.clone(),
+        capabilities: capabilities.clone(),
+    };
+    let resource = ResourceKey {
+        receiver_id: text("receiver-1"),
+        generation_id: GenerationId::try_from(1_u64).expect("generation is valid"),
+        device_id: text("mouse-1"),
+        kind: ResourceKind::Lighting,
+    };
+    let controller = ControllerView {
+        receiver_id: text("receiver-1"),
+        generation_id: GenerationId::try_from(1_u64).expect("generation is valid"),
+        device_id: text("mouse-1"),
+        endpoint_id: text("endpoint-hyperflux"),
+        device_kind: DeviceKind::Mouse,
+        product_id: ProductId::try_from(0x00cd_u16).expect("product id is valid"),
+        receiver_profile: receiver_profile.clone(),
+        device_profile,
+        model_name,
+        presentation: PresentationView {
+            upstream_id: text("openrgb-razer-basilisk-v3-pro-35k"),
+            owner: text("OpenRGB"),
+            project_version: text("1.0rc3"),
+            source_revision: text("0123456789abcdef"),
+            model_key: text("basilisk_v3_pro_35k_wireless_device"),
+            layout_key: None,
+            transport_variant: text("wireless"),
+        },
+        availability: ControllerAvailability::Ready,
+        battery,
+        capabilities,
+        lighting: LightingTopologyView {
+            physical_led_count: number::<LedCount>(13),
+            application_slot_count: number::<LedCount>(13),
+            rows: number::<LedCount>(1),
+            columns: number::<LedCount>(13),
+        },
+        resource,
+        ownership: ControllerOwnership::Unowned(UnownedController {}),
+        actions: ControllerActions {
+            can_acquire: true,
+            can_release: false,
+            can_submit_now: false,
+        },
+    };
+    IntegrationView {
+        cursor: cursor(),
+        receivers: vec![IntegrationReceiverView {
+            receiver_id: text("receiver-1"),
+            generation_id: GenerationId::try_from(1_u64).expect("generation is valid"),
+            profile: Some(receiver_profile),
+            model_name: Some(text("Razer HyperFlux V2")),
+            lifecycle: ReceiverLifecycleState::Active,
+            stable_restore_enabled: false,
+            restore_state: RestoreState::Idle,
+            inventory: vec![inventory],
+            controllers: vec![controller],
+        }],
+    }
+}
+
 fn framed_transaction_value() -> Value {
     let transaction: Value = serde_json::from_str(include_str!(
         "../../../protocol/v2/fixtures/transaction-request-canonical.json"
@@ -170,6 +259,62 @@ fn valid_snapshot_response_round_trips_through_bounded_decoder() {
         decode_rpc_response(&encoded).expect("bounded response is valid"),
         response
     );
+}
+
+#[test]
+fn v5_integration_view_round_trips_and_cannot_downgrade() {
+    let request = RpcRequest::IntegrationView(SessionRequestEnvelope {
+        request_id: text("request-integration-view"),
+        protocol_session_id: text("protocol-session-1"),
+        negotiation_token: text("negotiation-1"),
+        params: EmptyRequest {},
+    });
+    let encoded = encode_rpc_request_for_version(&request, number(5))
+        .expect("v5 integration request encodes");
+    assert_eq!(
+        decode_rpc_request_for_version(&encoded, number(5)),
+        Ok(request.clone())
+    );
+    for version in 1_u16..=4 {
+        assert_eq!(
+            encode_rpc_request_for_version(&request, number(version)),
+            Err(ProtocolWireError::UnsupportedVersionMethod)
+        );
+    }
+
+    let response = RpcResponse::IntegrationViewSuccess(SuccessEnvelope {
+        request_id: text("request-integration-view"),
+        server_instance_id: text("bridge-instance-1"),
+        result: integration_view(),
+    });
+    let encoded = encode_rpc_response_for_version(&response, number(5))
+        .expect("v5 integration response encodes");
+    assert_eq!(
+        decode_rpc_response_for_version(&encoded, number(5)),
+        Ok(response.clone())
+    );
+    for version in 1_u16..=4 {
+        assert_eq!(
+            encode_rpc_response_for_version(&response, number(version)),
+            Err(ProtocolWireError::UnsupportedVersionMethod)
+        );
+    }
+}
+
+#[test]
+fn integration_view_rejects_cross_generation_controller_claims() {
+    let mut view = integration_view();
+    view.receivers[0].controllers[0].generation_id =
+        GenerationId::try_from(2_u64).expect("generation is valid");
+    let response = RpcResponse::IntegrationViewSuccess(SuccessEnvelope {
+        request_id: text("request-contradictory-view"),
+        server_instance_id: text("bridge-instance-1"),
+        result: view,
+    });
+    assert!(matches!(
+        validate_rpc_response_for_version(&response, number(5)),
+        Err(ProtocolWireError::InvalidResponse(_))
+    ));
 }
 
 #[test]
@@ -291,10 +436,14 @@ fn versioned_decoders_reject_changed_or_unknown_wire_shapes_instead_of_guessing(
     );
     assert_eq!(
         decode_rpc_request_for_version(&v3, number(4)),
-        Ok(normalized)
+        Ok(normalized.clone())
     );
     assert_eq!(
         decode_rpc_request_for_version(&v3, number(5)),
+        Ok(normalized)
+    );
+    assert_eq!(
+        decode_rpc_request_for_version(&v3, number(6)),
         Err(ProtocolWireError::UnsupportedProtocolVersion)
     );
 }
@@ -369,8 +518,19 @@ fn responses_are_checked_against_the_exact_negotiated_schema() {
         decode_rpc_response_for_version(&encoded, v4),
         Ok(response.clone())
     );
+    let v5 = number(5);
+    validate_rpc_response_for_version(&response, v5).expect("v5 preserves complete bindings");
+    let encoded = encode_rpc_response_for_version(&response, v5).expect("v5 response encodes");
+    assert_eq!(decode_rpc_response_for_version(&encoded, v5), Ok(response));
     assert_eq!(
-        validate_rpc_response_for_version(&response, number(5)),
+        validate_rpc_response_for_version(
+            &RpcResponse::SnapshotSuccess(SuccessEnvelope {
+                request_id: text("request-unsupported-version"),
+                server_instance_id: text("bridge-instance-1"),
+                result: snapshot(battery(TelemetryAvailability::Reported, Some(73))),
+            }),
+            number(6)
+        ),
         Err(ProtocolWireError::UnsupportedProtocolVersion)
     );
 }
