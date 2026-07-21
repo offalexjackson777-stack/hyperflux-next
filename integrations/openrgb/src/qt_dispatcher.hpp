@@ -6,7 +6,10 @@
 
 #include <QObject>
 
-#include <atomic>
+#include <deque>
+#include <mutex>
+
+class QSocketNotifier;
 
 namespace hyperflux::openrgb::native
 {
@@ -14,14 +17,20 @@ namespace hyperflux::openrgb::native
 class QtApplicationDispatcher final : public QObject, public ApplicationDispatcher
 {
 public:
-    explicit QtApplicationDispatcher(QObject* parent = nullptr) noexcept;
+    explicit QtApplicationDispatcher(QObject* parent = nullptr);
     ~QtApplicationDispatcher() override;
 
     [[nodiscard]] bool post(std::function<void()> task) noexcept override;
     void stop() noexcept;
 
 private:
-    std::atomic_bool accepting_ {true};
+    void drain() noexcept;
+
+    std::mutex queue_mutex_;
+    std::deque<std::function<void()>> tasks_;
+    QSocketNotifier* notifier_ = nullptr;
+    int event_fd_ = -1;
+    bool accepting_ = true;
 };
 
 } // namespace hyperflux::openrgb::native

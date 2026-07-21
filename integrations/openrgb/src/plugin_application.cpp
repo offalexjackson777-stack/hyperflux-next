@@ -157,7 +157,23 @@ sdk::Result<void> OpenRgbPluginApplication::load(std::unique_ptr<PluginHost> hos
         return sdk::Result<void>::failure(runtime.error());
     }
 
-    auto dispatcher = std::make_unique<QtApplicationDispatcher>();
+    std::unique_ptr<QtApplicationDispatcher> dispatcher;
+    try
+    {
+        dispatcher = std::make_unique<QtApplicationDispatcher>();
+    }
+    catch(const std::exception& error)
+    {
+        reset_loading_state();
+        return sdk::Result<void>::failure(application_error(
+            "OpenRGB application dispatcher failed: " + std::string(error.what())));
+    }
+    catch(...)
+    {
+        reset_loading_state();
+        return sdk::Result<void>::failure(application_error(
+            "OpenRGB application dispatcher failed with an unknown exception"));
+    }
     auto coordinator = PluginCoordinator::create(
         *host,
         *dispatcher,

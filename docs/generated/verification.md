@@ -24,6 +24,7 @@ Every current node is software-only and has zero hardware-write authority.
 | 15 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
 | 16 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
 | 17 | `openrgb-adapter-contracts` | `integrations` | `none` | `false` | 120s | `rerun` |
+| 18 | `openrgb-thread-sanitizer` | `integrations` | `none` | `false` | 300s | `rerun` |
 
 ## Dependencies
 
@@ -46,6 +47,7 @@ flowchart LR
     rust_unit["rust-unit"]
     simulator_contracts["simulator-contracts"]
     openrgb_adapter_contracts["openrgb-adapter-contracts"]
+    openrgb_thread_sanitizer["openrgb-thread-sanitizer"]
     foundation_contracts --> schema_contracts
     foundation_contracts --> privacy_boundary
     foundation_contracts --> toolchain_contract
@@ -73,4 +75,5 @@ flowchart LR
     cpp_sdk_contracts --> openrgb_adapter_contracts
     integration_contracts --> openrgb_adapter_contracts
     profile_contracts --> openrgb_adapter_contracts
+    openrgb_adapter_contracts --> openrgb_thread_sanitizer
 ```

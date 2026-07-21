@@ -141,13 +141,23 @@ def _tool_environment(root: Path) -> dict[str, str]:
     return environment
 
 
-def _run_command(root: Path, command: list[str], label: str, timeout_seconds: int) -> None:
+def _run_command(
+    root: Path,
+    command: list[str],
+    label: str,
+    timeout_seconds: int,
+    *,
+    environment: dict[str, str] | None = None,
+) -> None:
+    process_environment = _tool_environment(root)
+    if environment is not None:
+        process_environment.update(environment)
     try:
         result = subprocess.run(
             command,
             cwd=root,
             check=False,
-            env=_tool_environment(root),
+            env=process_environment,
             timeout=timeout_seconds,
         )
     except subprocess.TimeoutExpired as error:
@@ -451,7 +461,7 @@ def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
         )
 
 
-def _run_openrgb_adapter_contracts(root: Path, node: TestNode) -> None:
+def _openrgb_source() -> Path:
     configured = os.environ.get("HFX_OPENRGB_SOURCE_DIR")
     if not configured:
         raise ModelError(
@@ -461,35 +471,81 @@ def _run_openrgb_adapter_contracts(root: Path, node: TestNode) -> None:
     source = Path(configured)
     if not source.is_absolute() or not (source / "OpenRGBPluginInterface.h").is_file():
         raise ModelError(f"pinned OpenRGB source is unavailable: {source}")
+    return source
 
-    build_directory = root / "build" / "openrgb-adapter"
+
+def _run_openrgb_cmake_contracts(
+    root: Path,
+    node: TestNode,
+    *,
+    build_name: str,
+    build_type: str,
+    label: str,
+    thread_sanitizer: bool,
+) -> None:
+    source = _openrgb_source()
+    build_directory = root / "build" / build_name
     if build_directory.exists():
         shutil.rmtree(build_directory)
+    configure = [
+        "cmake",
+        "-S",
+        "integrations/openrgb",
+        "-B",
+        str(build_directory),
+        f"-DCMAKE_BUILD_TYPE={build_type}",
+        "-DBUILD_TESTING=ON",
+        f"-DHFX_OPENRGB_SOURCE_DIR={source}",
+    ]
+    if thread_sanitizer:
+        configure.append("-DHFX_OPENRGB_THREAD_SANITIZER=ON")
     _run_command(
         root,
-        [
-            "cmake",
-            "-S",
-            "integrations/openrgb",
-            "-B",
-            str(build_directory),
-            "-DCMAKE_BUILD_TYPE=Release",
-            f"-DHFX_OPENRGB_SOURCE_DIR={source}",
-        ],
-        "OpenRGB adapter configure",
+        configure,
+        f"{label} configure",
         node.timeout_seconds,
     )
     _run_command(
         root,
         ["cmake", "--build", str(build_directory), "--parallel", "4"],
-        "OpenRGB adapter build",
+        f"{label} build",
         node.timeout_seconds,
     )
+    ctest = ["ctest", "--test-dir", str(build_directory), "--output-on-failure"]
+    environment = None
+    if thread_sanitizer:
+        ctest.extend(["--timeout", "60"])
+        environment = {
+            "TSAN_OPTIONS": "halt_on_error=1 history_size=7 second_deadlock_stack=1"
+        }
     _run_command(
         root,
-        ["ctest", "--test-dir", str(build_directory), "--output-on-failure"],
-        "OpenRGB adapter contracts",
+        ctest,
+        f"{label} contracts",
         node.timeout_seconds,
+        environment=environment,
+    )
+
+
+def _run_openrgb_adapter_contracts(root: Path, node: TestNode) -> None:
+    _run_openrgb_cmake_contracts(
+        root,
+        node,
+        build_name="openrgb-adapter",
+        build_type="Release",
+        label="OpenRGB adapter",
+        thread_sanitizer=False,
+    )
+
+
+def _run_openrgb_thread_sanitizer(root: Path, node: TestNode) -> None:
+    _run_openrgb_cmake_contracts(
+        root,
+        node,
+        build_name="openrgb-tsan",
+        build_type="RelWithDebInfo",
+        label="OpenRGB ThreadSanitizer",
+        thread_sanitizer=True,
     )
 
 
@@ -691,6 +747,7 @@ RUNNERS = {
     "simulator-contracts": _run_simulator_contracts,
     "cpp-sdk-contracts": _run_cpp_sdk_contracts,
     "openrgb-adapter-contracts": _run_openrgb_adapter_contracts,
+    "openrgb-thread-sanitizer": _run_openrgb_thread_sanitizer,
     "kernel-profile-contracts": _run_kernel_profile_contracts,
 }
 

@@ -49,6 +49,7 @@ KNOWN_RUNNERS = {
     "simulator-contracts",
     "cpp-sdk-contracts",
     "openrgb-adapter-contracts",
+    "openrgb-thread-sanitizer",
     "kernel-profile-contracts",
 }
 IDENTIFIER = re.compile(r"^[a-z0-9][a-z0-9._-]{0,127}$")
