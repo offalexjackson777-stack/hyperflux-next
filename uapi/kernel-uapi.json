@@ -1,0 +1,228 @@
+{
+  "$schema": "../schemas/kernel-uapi.schema.json",
+  "schema": "hyperflux-kernel-uapi-v1",
+  "abi_version": 1,
+  "ioctl_magic": 183,
+  "limits": {
+    "digest_bytes": 32,
+    "nonce_bytes": 32,
+    "max_session_ns": 300000000000,
+    "max_frame_bytes": 96,
+    "max_frames": 16,
+    "max_observations": 32
+  },
+  "enums": [
+    {
+      "name": "info_flag",
+      "values": [
+        {"name": "disconnecting", "value": 1},
+        {"name": "suspended", "value": 2},
+        {"name": "writer_open", "value": 4},
+        {"name": "session_active", "value": 8}
+      ]
+    },
+    {
+      "name": "revoke_reason",
+      "values": [
+        {"name": "none", "value": 0},
+        {"name": "close", "value": 1},
+        {"name": "explicit", "value": 2},
+        {"name": "disconnect", "value": 3},
+        {"name": "generation_change", "value": 4},
+        {"name": "timeout", "value": 5},
+        {"name": "suspend", "value": 6},
+        {"name": "transport_failure", "value": 7},
+        {"name": "service_loss", "value": 8}
+      ]
+    },
+    {
+      "name": "frame_kind",
+      "values": [
+        {"name": "feature_set_report", "value": 1}
+      ]
+    },
+    {
+      "name": "transport_status",
+      "values": [
+        {"name": "reserved", "value": 1},
+        {"name": "started", "value": 2},
+        {"name": "succeeded", "value": 3},
+        {"name": "failed", "value": 4},
+        {"name": "revoked", "value": 5},
+        {"name": "evicted", "value": 6},
+        {"name": "unavailable", "value": 7},
+        {"name": "conflict", "value": 8}
+      ]
+    },
+    {
+      "name": "result_flag",
+      "values": [
+        {"name": "write_started", "value": 1},
+        {"name": "automatic_retry_safe", "value": 2}
+      ]
+    },
+    {
+      "name": "observation_kind",
+      "values": [
+        {"name": "receiver_available", "value": 1},
+        {"name": "receiver_suspended", "value": 2},
+        {"name": "endpoint_product_id", "value": 3},
+        {"name": "endpoint_route_raw", "value": 4},
+        {"name": "endpoint_battery_raw", "value": 5},
+        {"name": "endpoint_contact_raw", "value": 6},
+        {"name": "endpoint_charge_raw", "value": 7},
+        {"name": "endpoint_activity", "value": 8},
+        {"name": "identity_conflict", "value": 9}
+      ]
+    },
+    {
+      "name": "endpoint_slot",
+      "values": [
+        {"name": "receiver", "value": 0},
+        {"name": "pointer_lane", "value": 1},
+        {"name": "keyboard_lane", "value": 2}
+      ]
+    },
+    {
+      "name": "observation_source",
+      "values": [
+        {"name": "hid_passive", "value": 1},
+        {"name": "hid_input", "value": 2},
+        {"name": "power_management", "value": 3}
+      ]
+    },
+    {
+      "name": "observation_confidence",
+      "values": [
+        {"name": "raw", "value": 1},
+        {"name": "observed", "value": 2},
+        {"name": "exact", "value": 3}
+      ]
+    },
+    {
+      "name": "observation_batch_flag",
+      "values": [
+        {"name": "cursor_gap", "value": 1}
+      ]
+    }
+  ],
+  "structs": [
+    {
+      "name": "info",
+      "fields": [
+        {"name": "version", "type": "u32"},
+        {"name": "size", "type": "u32"},
+        {"name": "receiver_generation", "type": "u64"},
+        {"name": "authorization_epoch", "type": "u64"},
+        {"name": "flags", "type": "u32"},
+        {"name": "revoke_reason", "type": "u32"},
+        {"name": "vendor_id", "type": "u16"},
+        {"name": "product_id", "type": "u16"},
+        {"name": "bound_interfaces", "type": "u16"},
+        {"name": "reserved", "type": "u16"}
+      ]
+    },
+    {
+      "name": "begin_session",
+      "fields": [
+        {"name": "version", "type": "u32"},
+        {"name": "size", "type": "u32"},
+        {"name": "receiver_generation", "type": "u64"},
+        {"name": "expires_boottime_ns", "type": "u64"},
+        {"name": "profile_digest", "type": "u8", "count": "digest_bytes"},
+        {"name": "capability_digest", "type": "u8", "count": "digest_bytes"},
+        {"name": "daemon_nonce", "type": "u8", "count": "nonce_bytes"},
+        {"name": "authorization_epoch", "type": "u64"}
+      ]
+    },
+    {
+      "name": "end_session",
+      "fields": [
+        {"name": "version", "type": "u32"},
+        {"name": "size", "type": "u32"},
+        {"name": "receiver_generation", "type": "u64"},
+        {"name": "authorization_epoch", "type": "u64"},
+        {"name": "reason", "type": "u32"},
+        {"name": "reserved", "type": "u32"}
+      ]
+    },
+    {
+      "name": "frame",
+      "fields": [
+        {"name": "backend_id", "type": "u32"},
+        {"name": "kind", "type": "u16"},
+        {"name": "payload_length", "type": "u16"},
+        {"name": "payload", "type": "u8", "count": "max_frame_bytes"}
+      ]
+    },
+    {
+      "name": "submit",
+      "fields": [
+        {"name": "version", "type": "u32"},
+        {"name": "size", "type": "u32"},
+        {"name": "receiver_generation", "type": "u64"},
+        {"name": "authorization_epoch", "type": "u64"},
+        {"name": "dispatch_nonce", "type": "u64"},
+        {"name": "request_digest", "type": "u8", "count": "digest_bytes"},
+        {"name": "frame_count", "type": "u32"},
+        {"name": "flags", "type": "u32"},
+        {"name": "frames", "type": "frame", "count": "max_frames"},
+        {"name": "kernel_sequence", "type": "u64"}
+      ]
+    },
+    {
+      "name": "transaction_result",
+      "fields": [
+        {"name": "version", "type": "u32"},
+        {"name": "size", "type": "u32"},
+        {"name": "receiver_generation", "type": "u64"},
+        {"name": "authorization_epoch", "type": "u64"},
+        {"name": "kernel_sequence", "type": "u64"},
+        {"name": "dispatch_nonce", "type": "u64"},
+        {"name": "request_digest", "type": "u8", "count": "digest_bytes"},
+        {"name": "status", "type": "u32"},
+        {"name": "frames_planned", "type": "u32"},
+        {"name": "frames_completed", "type": "u32"},
+        {"name": "failed_frame", "type": "u32"},
+        {"name": "transport_errno", "type": "i32"},
+        {"name": "revoke_reason", "type": "u32"},
+        {"name": "flags", "type": "u32"}
+      ]
+    },
+    {
+      "name": "observation",
+      "fields": [
+        {"name": "sequence", "type": "u64"},
+        {"name": "observed_boottime_ns", "type": "u64"},
+        {"name": "kind", "type": "u32"},
+        {"name": "endpoint_slot", "type": "u32"},
+        {"name": "source", "type": "u32"},
+        {"name": "confidence", "type": "u32"},
+        {"name": "value", "type": "u32"},
+        {"name": "auxiliary", "type": "u32"}
+      ]
+    },
+    {
+      "name": "read_observations",
+      "fields": [
+        {"name": "version", "type": "u32"},
+        {"name": "size", "type": "u32"},
+        {"name": "receiver_generation", "type": "u64"},
+        {"name": "after_sequence", "type": "u64"},
+        {"name": "oldest_sequence", "type": "u64"},
+        {"name": "latest_sequence", "type": "u64"},
+        {"name": "flags", "type": "u32"},
+        {"name": "count", "type": "u32"},
+        {"name": "observations", "type": "observation", "count": "max_observations"}
+      ]
+    }
+  ],
+  "ioctls": [
+    {"name": "get_info", "number": 0, "direction": "read", "struct": "info"},
+    {"name": "begin_session", "number": 1, "direction": "read_write", "struct": "begin_session"},
+    {"name": "end_session", "number": 2, "direction": "write", "struct": "end_session"},
+    {"name": "submit", "number": 3, "direction": "read_write", "struct": "submit"},
+    {"name": "get_transaction_result", "number": 4, "direction": "read_write", "struct": "transaction_result"},
+    {"name": "read_observations", "number": 5, "direction": "read_write", "struct": "read_observations"}
+  ]
+}

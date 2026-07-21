@@ -75,9 +75,12 @@ Inspect migration progress without changing files:
 | `crates/hfx-domain/` | Generated Rust strong types and validation |
 | `crates/hfx-profiles/` | Generated, queryable Rust hardware profile catalog |
 | `crates/hfx-sdk/` | Native application SDK, exact-version channel, and typed client boundary |
+| `crates/hfx-kernel-transport/` | Generated kernel ABI and isolated userspace transport boundary |
 | `profiles/` | Canonical capabilities, evidence claims, composable hardware profiles, and candidates |
 | `sdk/` | Generated non-Rust language bindings for integrations |
 | `driver/kernel/generated/` | Receiver-only match tables; no child presentation or application policy |
+| `driver/kernel/uapi/` | Generated fixed-width Linux userspace ABI; no pointers or product policy |
+| `uapi/` | Canonical kernel ABI model and bounds |
 | `generated/` | Canonical machine artifacts consumed across components |
 | `migration/` | Source identities, generated inventories, and reviewed subsystem decisions |
 | `docs/architecture/` | Human design sources and decisions |

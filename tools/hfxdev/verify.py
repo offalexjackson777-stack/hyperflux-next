@@ -207,6 +207,25 @@ def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
         "kernel profile table smoke test",
         node.timeout_seconds,
     )
+    uapi_binary = root / "build" / "kernel-uapi-smoke"
+    _run_command(
+        root,
+        [
+            "clang",
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-Idriver/kernel/uapi",
+            "tests/c/kernel_uapi_smoke.c",
+            "-o",
+            str(uapi_binary),
+        ],
+        "kernel UAPI compile",
+        node.timeout_seconds,
+    )
+    _run_command(root, [str(uapi_binary)], "kernel UAPI smoke test", node.timeout_seconds)
 
 
 def _check_build_cache_clock(root: Path, *, now: float | None = None) -> None:
