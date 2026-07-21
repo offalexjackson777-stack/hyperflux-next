@@ -21,6 +21,7 @@ from .model import ModelError
 RPM_BUILDHOST = "hyperflux.invalid"
 RPM_CONFIGURATION = "/etc/hyperflux-next/bridge.json"
 RPM_LICENSE_PATH = "/usr/share/licenses/hyperflux-next/LICENSE"
+RPM_DOCUMENT_ROOT = "/usr/share/doc/hyperflux-next/"
 RPM_SCRIPT_TAGS = {
     "pre": ("PREINPROG", "PREIN"),
     "post": ("POSTINPROG", "POSTIN"),
@@ -139,6 +140,8 @@ def _rpm_files(context: NativePackageContext) -> list[str]:
             prefix = f"%config(noreplace) {prefix}"
         elif destination == RPM_LICENSE_PATH:
             prefix = f"%license {prefix}"
+        elif destination.startswith(RPM_DOCUMENT_ROOT):
+            prefix = f"%doc {prefix}"
         result.append(f"{prefix} {destination}")
     return result
 
@@ -408,6 +411,8 @@ def _verify_rpm_package(context: NativePackageContext, package: Path) -> None:
         flags = "17" if destination == RPM_CONFIGURATION else "0"
         if destination == RPM_LICENSE_PATH:
             flags = "128"
+        elif destination.startswith(RPM_DOCUMENT_ROOT):
+            flags = "2"
         expected_files[destination] = (
             f"{stat.S_IFREG | stat.S_IMODE(path.stat().st_mode):o}",
             "root",
@@ -422,7 +427,23 @@ def _verify_rpm_package(context: NativePackageContext, package: Path) -> None:
             raise ModelError("RPM package file metadata is malformed")
         actual_files[fields[0]] = tuple(fields[1:])
     if actual_files != expected_files:
-        raise ModelError("RPM package file metadata differs from the staged root")
+        missing = sorted(set(expected_files) - set(actual_files))
+        extra = sorted(set(actual_files) - set(expected_files))
+        if missing:
+            detail = f"missing {missing[0]}"
+        elif extra:
+            detail = f"unexpected {extra[0]}"
+        else:
+            path = next(
+                path
+                for path in sorted(expected_files)
+                if expected_files[path] != actual_files[path]
+            )
+            detail = (
+                f"{path}: expected {expected_files[path]}, "
+                f"found {actual_files[path]}"
+            )
+        raise ModelError(f"RPM package file metadata differs from the staged root: {detail}")
 
     extracted = context.workspace_root / "rpm-extracted"
     _extract_rpm(package, extracted)

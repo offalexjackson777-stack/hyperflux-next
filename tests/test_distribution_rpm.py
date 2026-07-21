@@ -21,6 +21,7 @@ from hfxdev.distribution_native import (
 from hfxdev.distribution_rpm import (
     RPM_BUILDHOST,
     RPM_CONFIGURATION,
+    RPM_DOCUMENT_ROOT,
     RPM_LICENSE_PATH,
     _rpm_scripts,
     _rpm_spec,
@@ -45,6 +46,7 @@ class RpmPackageTests(unittest.TestCase):
             "etc/hyperflux-next/bridge.json": ("{}\n", 0o640),
             "usr/share/licenses/hyperflux-next/LICENSE": ("license\n", 0o644),
             "usr/lib/hyperflux-next/value": ("stable\n", 0o755),
+            "usr/share/doc/hyperflux-next/README.md": ("documentation\n", 0o644),
         }
         for relative, (content, mode) in files.items():
             path = package_root / relative
@@ -95,6 +97,9 @@ class RpmPackageTests(unittest.TestCase):
             self.assertIn(f"Suggests: {item.package}\n", spec)
         self.assertIn(f"%config(noreplace) %attr(0640,root,root) {RPM_CONFIGURATION}", spec)
         self.assertIn(f"%license %attr(0644,root,root) {RPM_LICENSE_PATH}", spec)
+        self.assertIn(
+            f"%doc %attr(0644,root,root) {RPM_DOCUMENT_ROOT}README.md", spec
+        )
 
     def test_scriptlets_are_posix_and_use_safe_dkms_upgrade_semantics(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
