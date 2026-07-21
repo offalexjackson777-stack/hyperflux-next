@@ -154,6 +154,7 @@
       "required": [
         "cli_path",
         "activation_path",
+        "python_module_directory",
         "update_state_file_name",
         "support_bundle_prefix",
         "max_receiver_generations",
@@ -165,6 +166,7 @@
       "properties": {
         "cli_path": {"type": "string", "pattern": "^/usr/bin/[a-z0-9][a-z0-9_.-]{0,63}$"},
         "activation_path": {"type": "string", "pattern": "^/usr/lib/[a-z0-9][a-z0-9_./-]{0,191}$"},
+        "python_module_directory": {"type": "string", "pattern": "^/usr/lib/[a-z0-9][a-z0-9_./-]{0,191}$"},
         "update_state_file_name": {"$ref": "#/$defs/fileName"},
         "support_bundle_prefix": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
         "max_receiver_generations": {"type": "integer", "minimum": 1, "maximum": 64},

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 pub const LINUX_RUNTIME_SHA256: &str =
-    "6df1eb292e65d18a25cdb5dc054473a63b1ae82ecd927f355a8e6953982fb7fc";
+    "254165df17063edbd36d006f53c054730d8233c6c42a9154caa722c0dfd859d1";
 pub const PRODUCT_DISPLAY_NAME: &str = "HyperFlux Next";
 pub const PRODUCT_VERSION: &str = "0.0.0-dev.1";
 pub const PACKAGE_NAME: &str = "hyperflux-next-linux";
@@ -26,6 +26,7 @@ pub const KERNEL_DEVICE_PREFIX: &str = "hyperflux-next";
 pub const KERNEL_SOURCE_DIRECTORY: &str = "/usr/src/hid-hyperflux-next-0.0.0-dev.1";
 pub const OPERATIONS_CLI_PATH: &str = "/usr/bin/hyperfluxctl";
 pub const ACTIVATION_UTILITY_PATH: &str = "/usr/lib/hyperflux-next/hyperflux-next-activate";
+pub const PYTHON_MODULE_DIRECTORY: &str = "/usr/lib/hyperflux-next/python";
 pub const UPDATE_STATE_PATH: &str = "/run/hyperflux-next/package-update.json";
 pub const SUPPORT_BUNDLE_PREFIX: &str = "hyperflux-next-support";
 pub const PACKAGE_RELEASE: u16 = 1;

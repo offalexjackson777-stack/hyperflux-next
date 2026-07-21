@@ -61,6 +61,7 @@
   "operations": {
     "cli_path": "/usr/bin/hyperfluxctl",
     "activation_path": "/usr/lib/hyperflux-next/hyperflux-next-activate",
+    "python_module_directory": "/usr/lib/hyperflux-next/python",
     "update_state_file_name": "package-update.json",
     "support_bundle_prefix": "hyperflux-next-support",
     "max_receiver_generations": 16,

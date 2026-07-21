@@ -69,6 +69,7 @@ KERNEL_KEYS = {
 OPERATIONS_KEYS = {
     "cli_path",
     "activation_path",
+    "python_module_directory",
     "update_state_file_name",
     "support_bundle_prefix",
     "max_receiver_generations",
@@ -182,6 +183,7 @@ class KernelRuntime:
 class OperationsRuntime:
     cli_path: str
     activation_path: str
+    python_module_directory: str
     update_state_file_name: str
     support_bundle_prefix: str
     max_receiver_generations: int
@@ -508,6 +510,11 @@ def load_linux_runtime(root: Path) -> LinuxRuntime:
         activation_path=_absolute_path(
             operations_value["activation_path"], "activation utility", ("/", "usr", "lib")
         ),
+        python_module_directory=_absolute_path(
+            operations_value["python_module_directory"],
+            "private Python module directory",
+            ("/", "usr", "lib"),
+        ),
         update_state_file_name=_string(
             operations_value["update_state_file_name"], "update state file name", FILE_NAME, 64
         ),
@@ -541,6 +548,10 @@ def load_linux_runtime(root: Path) -> LinuxRuntime:
     )
     if PurePosixPath(operations.activation_path).parent != PurePosixPath(bridge.executable_path).parent:
         raise ModelError("bridge and activation utilities must share one private executable directory")
+    if PurePosixPath(operations.python_module_directory).parent != PurePosixPath(
+        bridge.executable_path
+    ).parent:
+        raise ModelError("private executables and Python modules must share one product directory")
 
     return LinuxRuntime(
         source_sha256=sha256_file(path),

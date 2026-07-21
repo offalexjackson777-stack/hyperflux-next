@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,6 +29,36 @@ from hfxdev.package_pipeline import (
 
 
 class PackagePipelineTests(unittest.TestCase):
+    def _wheel(
+        self,
+        path: Path,
+        distribution: str,
+        *,
+        package_file: str = "hyperflux_sdk.py",
+        entry_point: str | None = None,
+    ) -> None:
+        normalized = distribution.replace("-", "_")
+        info = f"{normalized}-1.dist-info"
+        with zipfile.ZipFile(path, "w") as archive:
+            archive.writestr(package_file, "VERSION = 1\n")
+            archive.writestr(
+                f"{info}/METADATA",
+                f"Metadata-Version: 2.4\nName: {distribution}\nVersion: 1\n",
+            )
+            archive.writestr(
+                f"{info}/WHEEL",
+                "Wheel-Version: 1.0\nRoot-Is-Purelib: true\nTag: py3-none-any\n",
+            )
+            archive.writestr(f"{info}/RECORD", "")
+            if entry_point is not None:
+                archive.writestr(
+                    f"{info}/entry_points.txt",
+                    "[polychromatic.backends]\n"
+                    "hyperflux = hyperflux_sdk:Backend\n"
+                    "[console_scripts]\n"
+                    f"{entry_point}\n",
+                )
+
     def _artifact_manifest(self, directory: Path) -> Path:
         install = load_install_manifest(ROOT)
         runtime = load_linux_runtime(ROOT)
@@ -136,7 +167,11 @@ class PackagePipelineTests(unittest.TestCase):
             root = Path(temporary)
             wheel_path = root / "artifacts" / "hyperflux_next_sdk-1-py3-none-any.whl"
             wheel_path.parent.mkdir()
-            wheel_path.write_bytes(b"wheel")
+            self._wheel(
+                wheel_path,
+                "hyperflux-next-sdk",
+                entry_point="hyperflux-tool = hyperflux_sdk:main",
+            )
             wheel = BuiltArtifact(
                 build_id="python-sdk",
                 kind="python-wheel",
@@ -148,24 +183,20 @@ class PackagePipelineTests(unittest.TestCase):
                 distribution="hyperflux-next-sdk",
             )
 
-            def fake_pip(command: list[str], **_: object) -> None:
-                install_root = Path(command[command.index("--root") + 1])
-                installed = install_root / "usr/lib/python/site-packages/hyperflux_sdk.py"
-                installed.parent.mkdir(parents=True)
-                installed.write_text("VERSION = 1\n", encoding="utf-8")
-                installed.chmod(0o644)
-
             first = root / "first"
             second = root / "second"
             first.mkdir()
             second.mkdir()
-            with patch("hfxdev.package_pipeline._run", side_effect=fake_pip):
-                _install_wheels(first, [wheel], {})
-                _install_wheels(second, [wheel], {})
+            module_directory = "/usr/lib/hyperflux-next/python"
+            _install_wheels(first, [wheel], module_directory)
+            _install_wheels(second, [wheel], module_directory)
 
-            relative = Path("usr/lib/python/site-packages/hyperflux_sdk.py")
+            relative = Path("usr/lib/hyperflux-next/python/hyperflux_sdk.py")
             self.assertEqual((first / relative).read_bytes(), (second / relative).read_bytes())
-            self.assertFalse((root / "artifacts" / "wheelhouse").exists())
+            launcher = first / "usr/bin/hyperflux-tool"
+            self.assertTrue(launcher.is_file())
+            self.assertIn(module_directory, launcher.read_text(encoding="utf-8"))
+            self.assertNotIn("python3.14", launcher.read_text(encoding="utf-8"))
 
     def test_wheel_file_collision_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -176,7 +207,7 @@ class PackagePipelineTests(unittest.TestCase):
                 ("python-adapter", "hyperflux-next-adapter"),
             ):
                 path = root / f"{distribution}-1-py3-none-any.whl"
-                path.write_bytes(distribution.encode())
+                self._wheel(path, distribution, package_file="shared.py")
                 wheels.append(
                     BuiltArtifact(
                         build_id=build_id,
@@ -190,18 +221,10 @@ class PackagePipelineTests(unittest.TestCase):
                     )
                 )
 
-            def fake_pip(command: list[str], **_: object) -> None:
-                install_root = Path(command[command.index("--root") + 1])
-                installed = install_root / "usr/bin/shared-command"
-                installed.parent.mkdir(parents=True)
-                installed.write_text("collision\n", encoding="utf-8")
-                installed.chmod(0o755)
-
             stage = root / "stage"
             stage.mkdir()
-            with patch("hfxdev.package_pipeline._run", side_effect=fake_pip):
-                with self.assertRaisesRegex(ModelError, "destination collision"):
-                    _install_wheels(stage, wheels, {})
+            with self.assertRaisesRegex(ModelError, "destination collision"):
+                _install_wheels(stage, wheels, "/usr/lib/hyperflux-next/python")
 
 
 if __name__ == "__main__":

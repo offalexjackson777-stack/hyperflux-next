@@ -75,6 +75,10 @@ class LinuxRuntimeTests(unittest.TestCase):
         self.assertEqual(
             self.runtime.update_state_path, "/run/hyperflux-next/package-update.json"
         )
+        self.assertEqual(
+            self.runtime.operations.python_module_directory,
+            "/usr/lib/hyperflux-next/python",
+        )
         self.assertLess(len(bridge.socket_path.encode()), 108)
         self.assertNotEqual(bridge.kernel_access_group, bridge.client_group)
         self.assertGreater(

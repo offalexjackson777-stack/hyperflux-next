@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import configparser
 from dataclasses import dataclass
+from email.parser import Parser
 import hashlib
 import json
 import os
@@ -13,8 +15,8 @@ import shutil
 import stat
 import subprocess
 import sys
-import tempfile
 from typing import Any
+import zipfile
 
 from .install import BuildSpec, InstallManifest, load_install_manifest
 from .integrations import load_integration_catalog
@@ -623,10 +625,75 @@ def _copy_to_stage(source: Path, destination: Path, mode: int) -> None:
     destination.chmod(mode)
 
 
+def _write_to_stage(destination: Path, payload: bytes, mode: int) -> None:
+    if destination.exists() or destination.is_symlink():
+        raise ModelError(f"staged destination collision: {destination}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(payload)
+    destination.chmod(mode)
+
+
+def _wheel_member_path(name: str, label: str) -> PurePosixPath | None:
+    if not name or "\\" in name or any(ord(character) < 32 for character in name):
+        raise ModelError(f"{label}: wheel member path is invalid")
+    directory = name.endswith("/")
+    normalized = name[:-1] if directory else name
+    path = PurePosixPath(normalized)
+    if (
+        not normalized
+        or normalized.startswith("/")
+        or ".." in path.parts
+        or str(path) != normalized
+    ):
+        raise ModelError(f"{label}: wheel member path is not normalized")
+    if directory:
+        return None
+    if path.parts[0].endswith(".data"):
+        if len(path.parts) < 3 or path.parts[1] not in {"purelib", "platlib"}:
+            raise ModelError(f"{label}: wheel data target is not portable")
+        path = PurePosixPath(*path.parts[2:])
+    return path
+
+
+def _console_scripts(payload: bytes, label: str) -> tuple[tuple[str, str, str], ...]:
+    parser = configparser.ConfigParser(interpolation=None, strict=True)
+    parser.optionxform = str
+    try:
+        parser.read_string(payload.decode("utf-8"))
+    except (UnicodeDecodeError, configparser.Error) as error:
+        raise ModelError(f"{label}: invalid wheel entry points") from error
+    scripts: list[tuple[str, str, str]] = []
+    if not parser.has_section("console_scripts"):
+        return ()
+    for command, target in parser.items("console_scripts"):
+        if not re.fullmatch(r"[a-z][a-z0-9-]{0,63}", command):
+            raise ModelError(f"{label}: invalid console command")
+        match = re.fullmatch(
+            r"([A-Za-z_][A-Za-z0-9_.]*):([A-Za-z_][A-Za-z0-9_]*)", target.strip()
+        )
+        if match is None:
+            raise ModelError(f"{label}: unsupported console entry point")
+        scripts.append((command, match.group(1), match.group(2)))
+    require_unique([command for command, _, _ in scripts], f"{label} console command")
+    return tuple(sorted(scripts))
+
+
+def _launcher(module_directory: str, module: str, function: str) -> bytes:
+    return (
+        "#!/usr/bin/python3\n"
+        "# Generated from a source-bound HyperFlux Next wheel.\n"
+        "import sys\n"
+        f"sys.path.insert(0, {module_directory!r})\n"
+        f"from {module} import {function}\n"
+        "if __name__ == '__main__':\n"
+        f"    raise SystemExit({function}())\n"
+    ).encode("ascii")
+
+
 def _install_wheels(
     stage_root: Path,
     wheels: list[BuiltArtifact],
-    environment: dict[str, str],
+    module_directory: str,
 ) -> None:
     if not wheels:
         return
@@ -635,61 +702,60 @@ def _install_wheels(
         "Python wheel distribution",
     )
     require_unique([wheel.path.name for wheel in wheels], "Python wheel filename")
-    with tempfile.TemporaryDirectory(prefix="hyperflux-wheel-stage-") as temporary:
-        scratch = Path(temporary)
-        wheelhouse = scratch / "wheelhouse"
-        wheelhouse.mkdir()
-        for wheel in wheels:
-            shutil.copyfile(
-                wheel.path,
-                wheelhouse / wheel.path.name,
-                follow_symlinks=False,
-            )
-        for wheel in sorted(wheels, key=lambda item: item.build_id):
-            install_root = scratch / f"root-{wheel.build_id}"
-            install_root.mkdir()
-            _run(
-                [
-                    sys.executable,
-                    "-m",
-                    "pip",
-                    "install",
-                    "--disable-pip-version-check",
-                    "--no-input",
-                    "--no-index",
-                    "--no-deps",
-                    "--no-compile",
-                    "--no-cache-dir",
-                    "--ignore-installed",
-                    "--root",
-                    str(install_root),
-                    "--prefix",
-                    "/usr",
-                    "--find-links",
-                    str(wheelhouse),
-                    wheel.distribution or "",
-                ],
-                cwd=install_root,
-                environment=environment,
-                label=f"offline Python wheel staging ({wheel.build_id})",
-            )
-            for source in sorted(install_root.rglob("*")):
-                if source.is_symlink():
-                    raise ModelError(
-                        f"Python wheel {wheel.build_id} installed a symbolic link"
-                    )
-                if not source.is_file():
+    module_root = _stage_path(stage_root, module_directory)
+    entry_points: list[tuple[str, str, str]] = []
+    for wheel in sorted(wheels, key=lambda item: item.build_id):
+        label = f"Python wheel {wheel.build_id}"
+        try:
+            archive = zipfile.ZipFile(wheel.path)
+        except (OSError, zipfile.BadZipFile) as error:
+            raise ModelError(f"{label}: invalid wheel archive") from error
+        with archive:
+            members = archive.infolist()
+            if not 1 <= len(members) <= 10_000:
+                raise ModelError(f"{label}: wheel member count is outside bounds")
+            if sum(member.file_size for member in members) > 64 * 1024 * 1024:
+                raise ModelError(f"{label}: expanded wheel exceeds its size bound")
+            if archive.testzip() is not None:
+                raise ModelError(f"{label}: wheel checksum verification failed")
+            files: dict[PurePosixPath, zipfile.ZipInfo] = {}
+            for member in members:
+                mode = (member.external_attr >> 16) & 0xFFFF
+                if stat.S_ISLNK(mode):
+                    raise ModelError(f"{label}: symbolic links are forbidden")
+                path = _wheel_member_path(member.filename, label)
+                if path is None:
                     continue
-                mode = stat.S_IMODE(source.stat().st_mode)
-                if mode not in {0o644, 0o755}:
-                    raise ModelError(
-                        f"Python wheel {wheel.build_id} installed unsupported mode {mode:04o}"
-                    )
-                _copy_to_stage(
-                    source,
-                    stage_root / source.relative_to(install_root),
-                    mode,
-                )
+                if path in files:
+                    raise ModelError(f"{label}: duplicate wheel member")
+                files[path] = member
+            metadata_paths = [
+                path for path in files if len(path.parts) == 2 and path.parts[0].endswith(".dist-info") and path.name == "METADATA"
+            ]
+            wheel_paths = [
+                path for path in files if len(path.parts) == 2 and path.parts[0].endswith(".dist-info") and path.name == "WHEEL"
+            ]
+            if len(metadata_paths) != 1 or len(wheel_paths) != 1:
+                raise ModelError(f"{label}: wheel metadata is incomplete")
+            metadata = Parser().parsestr(archive.read(files[metadata_paths[0]]).decode("utf-8"))
+            expected_name = (wheel.distribution or "").replace("-", "_").lower()
+            actual_name = metadata.get("Name", "").replace("-", "_").lower()
+            if actual_name != expected_name:
+                raise ModelError(f"{label}: distribution identity mismatch")
+            wheel_metadata = archive.read(files[wheel_paths[0]]).decode("utf-8")
+            if "Root-Is-Purelib: true" not in wheel_metadata:
+                raise ModelError(f"{label}: native Python wheels are not portable")
+            for path, member in sorted(files.items(), key=lambda item: str(item[0])):
+                _write_to_stage(module_root.joinpath(*path.parts), archive.read(member), 0o644)
+                if path.name == "entry_points.txt" and path.parts[0].endswith(".dist-info"):
+                    entry_points.extend(_console_scripts(archive.read(member), label))
+    require_unique([command for command, _, _ in entry_points], "Python console command")
+    for command, module, function in sorted(entry_points):
+        _write_to_stage(
+            _stage_path(stage_root, f"/usr/bin/{command}"),
+            _launcher(module_directory, module, function),
+            0o755,
+        )
 
 
 def _tree_digest(files: list[Path], root: Path) -> str:
@@ -753,15 +819,12 @@ def stage_rootfs(root: Path, manifest_path: Path, stage_root: Path) -> StageResu
             artifact.mode,
         )
 
-    environment = os.environ.copy()
-    environment.update(
-        {
-            "SOURCE_DATE_EPOCH": str(artifacts.source_date_epoch),
-            "PYTHONHASHSEED": "0",
-            "PIP_NO_INDEX": "1",
-        }
+    runtime = load_linux_runtime(root)
+    _install_wheels(
+        stage_root,
+        wheels,
+        runtime.operations.python_module_directory,
     )
-    _install_wheels(stage_root, wheels, environment)
     _normalize_tree(stage_root, artifacts.source_date_epoch)
     private = (str(root).encode(), str(artifacts.root).encode())
     staged_files = _inspect_staged_files(stage_root, private)
