@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <limits>
 #include <optional>
 #include <string>
 #include <utility>
@@ -21,10 +22,12 @@ hyperflux::openrgb::QueuedLightingFrame frame(
     std::string stable_id,
     std::uint8_t red,
     std::size_t count = 2,
-    std::string receiver = "receiver-1")
+    std::string receiver = "receiver-1",
+    std::uint64_t generation = 1)
 {
     return {
         hyperflux::ReceiverId::from(receiver).value(),
+        hyperflux::GenerationId::from(generation).value(),
         std::move(stable_id),
         count,
         std::vector<hyperflux::v5::RgbColor>(
@@ -232,9 +235,79 @@ int main()
     {
         return EXIT_FAILURE;
     }
+    if(lifecycle.request_sequences()
+       != std::vector<std::uint64_t> {next_wave->sequence})
+    {
+        return EXIT_FAILURE;
+    }
     const auto discarded = lifecycle.discard_request(next_wave->sequence);
     if(discarded.size() != 1 || lifecycle.contains_sequence(next_wave->sequence)
        || !lifecycle.empty())
+    {
+        return EXIT_FAILURE;
+    }
+
+    DispatchQueue generation_queue({2, 2, 4});
+    if(generation_queue.enqueue_effect(
+           frame("receiver-1/mouse", 4, 2, "receiver-1", 1), 900)
+           != EnqueueDisposition::Accepted
+       || generation_queue.enqueue_effect(
+              frame("receiver-1/mouse", 5, 2, "receiver-1", 2), 901)
+           != EnqueueDisposition::Coalesced)
+    {
+        return EXIT_FAILURE;
+    }
+    const auto current_generation = generation_queue.preview_ready(904);
+    if(!current_generation
+       || current_generation->frames.front().generation_id.value() != 2
+       || current_generation->targets.front().generation_id.value() != 2)
+    {
+        return EXIT_FAILURE;
+    }
+
+    DispatchQueue sequence_boundary(
+        {2, 2, 4},
+        std::numeric_limits<std::uint64_t>::max());
+    if(sequence_boundary.enqueue_stable(
+           sdk::LightingIntent::Static,
+           {frame("receiver-1/mouse", 6)})
+           != EnqueueDisposition::Accepted)
+    {
+        return EXIT_FAILURE;
+    }
+    const auto final_sequence = sequence_boundary.pop_ready_for(receiver_one, 1'000);
+    if(!final_sequence
+       || final_sequence->sequence != std::numeric_limits<std::uint64_t>::max()
+       || sequence_boundary.enqueue_stable(
+              sdk::LightingIntent::Static,
+              {frame("receiver-1/mouse", 7)})
+           != EnqueueDisposition::RejectedCapacity
+       || !sequence_boundary.empty())
+    {
+        return EXIT_FAILURE;
+    }
+
+    DispatchQueue protocol_bounds({2, 2, 4});
+    std::vector<QueuedLightingFrame> oversized_request;
+    oversized_request.reserve(static_cast<std::size_t>(FrameCount::maximum) + 1U);
+    for(std::size_t index = 0;
+        index < static_cast<std::size_t>(FrameCount::maximum) + 1U;
+        ++index)
+    {
+        oversized_request.push_back(frame("controller-" + std::to_string(index), 1, 1));
+    }
+    if(protocol_bounds.enqueue_stable(
+           sdk::LightingIntent::Static,
+           std::move(oversized_request))
+           != EnqueueDisposition::RejectedInvalid
+       || protocol_bounds.enqueue_effect(
+              frame(
+                  "oversized-controller",
+                  1,
+                  static_cast<std::size_t>(LedCount::maximum) + 1U),
+              1'100)
+           != EnqueueDisposition::RejectedInvalid
+       || !protocol_bounds.empty())
     {
         return EXIT_FAILURE;
     }

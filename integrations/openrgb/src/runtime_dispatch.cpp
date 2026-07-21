@@ -96,7 +96,7 @@ void RuntimeCore::consume_transaction_result(
     pending_.erase(runtime_detail::receiver_key(receiver_id));
     if(const auto* terminal = std::get_if<v5::TransactionResultTerminal>(&result))
     {
-        output.dispatch_outcomes.push_back({
+        record_dispatch_outcome({
             sequence,
             intent,
             terminal->detail.receiver_id,
@@ -109,11 +109,11 @@ void RuntimeCore::consume_transaction_result(
             terminal->detail.live_write_executed,
             terminal->detail.error_kind,
             std::nullopt,
-        });
+        }, output);
         return;
     }
     const auto& unavailable = std::get<v5::TransactionResultUnavailable>(result).detail;
-    output.dispatch_outcomes.push_back({
+    record_dispatch_outcome({
         sequence,
         intent,
         receiver_id,
@@ -126,16 +126,17 @@ void RuntimeCore::consume_transaction_result(
         false,
         unavailable.error_kind,
         std::nullopt,
-    });
+    }, output);
 }
 
 void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
 {
+    std::set<std::string> deferred_receivers;
     for(std::size_t dispatch_index = 0;
         dispatch_index < config_.max_dispatches_per_step;
         ++dispatch_index)
     {
-        std::set<std::string> blocked_receivers;
+        std::set<std::string> blocked_receivers = deferred_receivers;
         for(const auto& [key, pending] : pending_)
         {
             (void)pending;
@@ -145,6 +146,34 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
         if(!preview.has_value())
         {
             return;
+        }
+
+        const auto binding = bind_request(*preview, now_ms, output);
+        if(refresh_required_)
+        {
+            return;
+        }
+        if(binding.state == RequestBindState::Deferred)
+        {
+            for(const auto& target : preview->targets)
+            {
+                deferred_receivers.insert(runtime_detail::receiver_key(target.receiver_id));
+            }
+            continue;
+        }
+        if(binding.state == RequestBindState::Rejected)
+        {
+            const auto error = binding.error.value_or(runtime_detail::error(
+                sdk::ErrorCode::SessionInactive,
+                "OpenRGB request binding was rejected without a diagnostic",
+                "HFX-OWNERSHIP-002"));
+            discard_queued_request(
+                preview->sequence,
+                DispatchOutcomeState::Rejected,
+                std::nullopt,
+                error,
+                output);
+            continue;
         }
 
         struct FrameValidation
@@ -173,6 +202,7 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
                 continue;
             }
             if(controller->authority.receiver_id != frame.receiver_id
+               || controller->authority.generation_id != frame.generation_id
                || frame.receiver_id != preview->receiver_id)
             {
                 validations.push_back({
@@ -226,30 +256,6 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
             validations.push_back({controller, std::nullopt});
         }
 
-        std::optional<sdk::Error> session_error;
-        if(authority.has_value())
-        {
-            const auto notice_count = output.notices.size();
-            auto* session = ensure_session(authority->first, authority->second, output);
-            if(refresh_required_)
-            {
-                return;
-            }
-            if(session == nullptr)
-            {
-                session_error = output.notices.size() > notice_count
-                    ? output.notices.back()
-                    : runtime_detail::error(
-                          sdk::ErrorCode::LeaseRejected,
-                          "OpenRGB could not acquire a lighting session",
-                          "HFX-OWNERSHIP-002");
-                if(sdk::is_connection_error(session_error->code))
-                {
-                    return;
-                }
-            }
-        }
-
         auto batch = queue_.pop_ready_for(preview->receiver_id, now_ms);
         if(!batch.has_value())
         {
@@ -264,14 +270,11 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
             auto& validation = validations[index];
             if(validation.error.has_value())
             {
-                output.dispatch_outcomes.push_back({
+                record_dispatch_outcome({
                     batch->sequence,
                     batch->intent,
                     batch->receiver_id,
-                    validation.controller == nullptr
-                        ? std::optional<GenerationId> {}
-                        : std::optional<GenerationId> {
-                              validation.controller->authority.generation_id},
+                    frame.generation_id,
                     std::nullopt,
                     DispatchOutcomeState::Rejected,
                     1,
@@ -280,7 +283,7 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
                     false,
                     std::nullopt,
                     std::move(validation.error),
-                });
+                }, output);
                 continue;
             }
             updates.push_back(
@@ -289,14 +292,14 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
 
         if(updates.empty() || !authority.has_value())
         {
+            retire_completed_requests(now_ms, output);
             continue;
         }
 
-        const auto key = runtime_detail::receiver_key(authority->first);
-        const auto session = sessions_.find(key);
-        if(session_error.has_value() || session == sessions_.end())
+        auto* session = session_for_request(batch->sequence);
+        if(session == nullptr)
         {
-            output.dispatch_outcomes.push_back({
+            record_dispatch_outcome({
                 batch->sequence,
                 batch->intent,
                 authority->first,
@@ -308,22 +311,26 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
                 SideEffectCertainty::None,
                 false,
                 std::nullopt,
-                session_error,
-            });
+                runtime_detail::error(
+                    sdk::ErrorCode::SessionInactive,
+                    "OpenRGB request has no active ownership session",
+                    "HFX-OWNERSHIP-002"),
+            }, output);
+            retire_completed_requests(now_ms, output);
             continue;
         }
         const auto deadline = MonotonicMs::from(runtime_detail::saturating_add(
             now_ms,
             config_.transaction_timeout_ms)).value();
         const auto expected_frames = static_cast<std::uint16_t>(updates.size());
-        auto submitted = session->second.lighting.submit(
+        auto submitted = session->lighting.submit(
             batch->intent,
             std::move(updates),
             deadline);
         (void)synchronize_connection(output);
         if(!submitted)
         {
-            output.dispatch_outcomes.push_back({
+            record_dispatch_outcome({
                 batch->sequence,
                 batch->intent,
                 authority->first,
@@ -336,7 +343,8 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
                 false,
                 std::nullopt,
                 submitted.error(),
-            });
+            }, output);
+            retire_completed_requests(now_ms, output);
             continue;
         }
         consume_transaction_result(
@@ -347,6 +355,7 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
             authority->second,
             submitted.value(),
             output);
+        retire_completed_requests(now_ms, output);
     }
 }
 

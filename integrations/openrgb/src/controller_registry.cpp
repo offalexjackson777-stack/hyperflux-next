@@ -144,6 +144,8 @@ sdk::Result<RegistryUpdate> ControllerRegistry::apply(std::vector<ControllerMode
                 ++update.retained;
                 break;
             case ReconcileKind::StateUpdated:
+                entries_.at(change.stable_id).controller->update_generation(
+                    change.after->authority.generation_id);
                 entries_.at(change.stable_id).model = *change.after;
                 ++update.state_updated;
                 break;

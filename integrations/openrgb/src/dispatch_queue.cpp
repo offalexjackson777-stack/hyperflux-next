@@ -27,7 +27,12 @@ std::uint64_t due_at(std::uint64_t now_ms, std::uint64_t window_ms) noexcept
 
 DispatchTarget target(const QueuedLightingFrame& frame)
 {
-    return {frame.receiver_id, frame.stable_id, frame.expected_slot_count};
+    return {
+        frame.receiver_id,
+        frame.generation_id,
+        frame.stable_id,
+        frame.expected_slot_count,
+    };
 }
 
 void sort_targets(std::vector<DispatchTarget>& targets)
@@ -65,18 +70,32 @@ std::vector<QueuedLightingFrame> moved_frames(
 
 } // namespace
 
-DispatchQueue::DispatchQueue(DispatchQueueConfig config) : config_(config) {}
+DispatchQueue::DispatchQueue(
+    DispatchQueueConfig config,
+    std::uint64_t initial_sequence)
+    : config_(config), next_sequence_(initial_sequence)
+{
+}
 
 bool DispatchQueue::valid_frame(const QueuedLightingFrame& frame) const noexcept
 {
     return !frame.stable_id.empty() && frame.expected_slot_count > 0
+        && frame.expected_slot_count <= LedCount::maximum
         && frame.colors.size() == frame.expected_slot_count;
 }
 
-std::uint64_t DispatchQueue::take_sequence() noexcept
+std::optional<std::uint64_t> DispatchQueue::take_sequence() noexcept
 {
+    if(sequence_exhausted_)
+    {
+        return std::nullopt;
+    }
     const auto current = next_sequence_;
-    if(next_sequence_ != std::numeric_limits<std::uint64_t>::max())
+    if(next_sequence_ == std::numeric_limits<std::uint64_t>::max())
+    {
+        sequence_exhausted_ = true;
+    }
+    else
     {
         ++next_sequence_;
     }
@@ -88,6 +107,7 @@ EnqueueDisposition DispatchQueue::enqueue_effect(
     std::uint64_t now_ms)
 {
     if(!valid_frame(frame) || config_.effect_target_capacity == 0
+       || config_.effect_target_capacity > QueueCapacity::maximum
        || config_.effect_window_ms == 0)
     {
         return EnqueueDisposition::RejectedInvalid;
@@ -107,6 +127,18 @@ EnqueueDisposition DispatchQueue::enqueue_effect(
                 return EnqueueDisposition::RejectedInvalid;
             }
             existing->second = std::move(frame);
+            const auto updated = target(existing->second);
+            const auto target_entry = std::find_if(
+                request.targets.begin(),
+                request.targets.end(),
+                [&updated](const DispatchTarget& value) {
+                    return value.stable_id == updated.stable_id;
+                });
+            if(target_entry != request.targets.end())
+            {
+                *target_entry = updated;
+                sort_targets(request.targets);
+            }
             return EnqueueDisposition::Coalesced;
         }
     }
@@ -116,8 +148,13 @@ EnqueueDisposition DispatchQueue::enqueue_effect(
     }
     if(effects_.empty() || effects_.back().started)
     {
+        const auto sequence = take_sequence();
+        if(!sequence.has_value())
+        {
+            return EnqueueDisposition::RejectedCapacity;
+        }
         effects_.push_back({
-            take_sequence(),
+            *sequence,
             {},
             {},
             due_at(now_ms, config_.effect_window_ms),
@@ -138,7 +175,9 @@ EnqueueDisposition DispatchQueue::enqueue_stable(
     std::vector<QueuedLightingFrame> frames)
 {
     if((intent != sdk::LightingIntent::Static && intent != sdk::LightingIntent::Off)
-       || frames.empty() || config_.stable_capacity == 0
+       || frames.empty() || frames.size() > FrameCount::maximum
+       || config_.stable_capacity == 0
+       || config_.stable_capacity > QueueCapacity::maximum
        || stable_.size() >= config_.stable_capacity)
     {
         return stable_.size() >= config_.stable_capacity
@@ -153,6 +192,11 @@ EnqueueDisposition DispatchQueue::enqueue_stable(
         {
             return EnqueueDisposition::RejectedInvalid;
         }
+    }
+    const auto sequence = take_sequence();
+    if(!sequence.has_value())
+    {
+        return EnqueueDisposition::RejectedCapacity;
     }
     for(auto& frame : frames)
     {
@@ -171,7 +215,7 @@ EnqueueDisposition DispatchQueue::enqueue_stable(
     }
     sort_targets(targets);
     stable_.push_back(
-        {take_sequence(), intent, std::move(receiver_frames), std::move(targets)});
+        {*sequence, intent, std::move(receiver_frames), std::move(targets)});
     return EnqueueDisposition::Accepted;
 }
 
@@ -374,7 +418,24 @@ bool DispatchQueue::contains_sequence(std::uint64_t sequence) const noexcept
            })
         || std::any_of(effects_.begin(), effects_.end(), [sequence](const auto& request) {
                return request.sequence == sequence;
-           });
+        });
+}
+
+std::vector<std::uint64_t> DispatchQueue::request_sequences() const
+{
+    std::vector<std::uint64_t> result;
+    result.reserve(stable_.size() + effects_.size());
+    for(const auto& request : stable_)
+    {
+        result.push_back(request.sequence);
+    }
+    for(const auto& request : effects_)
+    {
+        result.push_back(request.sequence);
+    }
+    std::sort(result.begin(), result.end());
+    result.erase(std::unique(result.begin(), result.end()), result.end());
+    return result;
 }
 
 std::vector<DispatchBatch> DispatchQueue::discard_request(std::uint64_t sequence)

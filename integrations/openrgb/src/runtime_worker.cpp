@@ -7,9 +7,11 @@
 #include <algorithm>
 #include <chrono>
 #include <exception>
+#include <iterator>
 #include <set>
-#include <system_error>
 #include <string>
+#include <string_view>
+#include <system_error>
 #include <utility>
 
 namespace hyperflux::openrgb
@@ -29,14 +31,35 @@ sdk::Error worker_error(std::string message)
 bool valid_frame(const QueuedLightingFrame& frame) noexcept
 {
     return !frame.stable_id.empty() && frame.expected_slot_count > 0
+        && frame.expected_slot_count <= LedCount::maximum
         && frame.colors.size() == frame.expected_slot_count;
+}
+
+bool disjoint_frames(
+    const std::vector<QueuedLightingFrame>& left,
+    const std::vector<QueuedLightingFrame>& right)
+{
+    return std::none_of(left.begin(), left.end(), [&right](const auto& candidate) {
+        return std::any_of(right.begin(), right.end(), [&candidate](const auto& value) {
+            return value.stable_id == candidate.stable_id;
+        });
+    });
+}
+
+bool contains_frame(
+    const std::vector<QueuedLightingFrame>& frames,
+    std::string_view stable_id)
+{
+    return std::any_of(frames.begin(), frames.end(), [stable_id](const auto& frame) {
+        return frame.stable_id == stable_id;
+    });
 }
 
 bool meaningful(const RuntimeStep& output) noexcept
 {
     return output.full_refresh || output.cursor_gap_recovered
         || !output.controller_changes.empty() || !output.dispatch_outcomes.empty()
-        || !output.notices.empty();
+        || !output.logical_outcomes.empty() || !output.notices.empty();
 }
 
 } // namespace
@@ -64,6 +87,7 @@ sdk::Result<std::unique_ptr<RuntimeWorker>> RuntimeWorker::create(
     WorkerCallbacks callbacks)
 {
     if(bridge == nullptr || config.poll_interval_ms == 0
+       || config.stable_callback_window_ms == 0
        || config.reconnect_initial_ms == 0 || config.reconnect_max_ms == 0
        || config.reconnect_initial_ms > config.reconnect_max_ms)
     {
@@ -154,6 +178,15 @@ sdk::Result<EnqueueDisposition> RuntimeWorker::enqueue_effect(
         return sdk::Result<EnqueueDisposition>::failure(
             worker_error("OpenRGB worker is not accepting lighting commands"));
     }
+    const auto stable_now = std::chrono::steady_clock::now();
+    for(auto& command : stable_commands_)
+    {
+        if(contains_frame(command.frames, frame.stable_id))
+        {
+            command.due_at = std::min(command.due_at, stable_now);
+            break;
+        }
+    }
     const auto existing = effect_commands_.find(frame.stable_id);
     if(existing != effect_commands_.end())
     {
@@ -181,41 +214,69 @@ sdk::Result<EnqueueDisposition> RuntimeWorker::enqueue_effect(
                          : EnqueueDisposition::Accepted);
 }
 
-EnqueueDisposition RuntimeWorker::enqueue_stable(
+sdk::Result<EnqueueDisposition> RuntimeWorker::enqueue_stable(
     sdk::LightingIntent intent,
     std::vector<QueuedLightingFrame> frames)
 {
     if((intent != sdk::LightingIntent::Static && intent != sdk::LightingIntent::Off)
-       || frames.empty())
+       || frames.empty() || frames.size() > FrameCount::maximum)
     {
-        return EnqueueDisposition::RejectedInvalid;
+        return sdk::Result<EnqueueDisposition>::success(
+            EnqueueDisposition::RejectedInvalid);
     }
     std::set<std::string> identities;
     for(const auto& frame : frames)
     {
         if(!valid_frame(frame) || !identities.insert(frame.stable_id).second)
         {
-            return EnqueueDisposition::RejectedInvalid;
+            return sdk::Result<EnqueueDisposition>::success(
+                EnqueueDisposition::RejectedInvalid);
         }
     }
+    const auto now = std::chrono::steady_clock::now();
     std::lock_guard lock(mutex_);
     if(!accepts_commands())
     {
-        return EnqueueDisposition::RejectedInvalid;
+        return sdk::Result<EnqueueDisposition>::failure(
+            worker_error("OpenRGB worker is not accepting lighting commands"));
     }
-    if(stable_reservations_ >= config_.runtime.dispatch_queue.stable_capacity)
+    const auto mergeable = !stable_commands_.empty()
+        && stable_commands_.back().intent == intent
+        && now <= stable_commands_.back().due_at
+        && disjoint_frames(stable_commands_.back().frames, frames)
+        && stable_commands_.back().frames.size()
+            <= FrameCount::maximum - frames.size();
+    if(!mergeable
+       && stable_reservations_ >= config_.runtime.dispatch_queue.stable_capacity)
     {
-        return EnqueueDisposition::RejectedCapacity;
+        return sdk::Result<EnqueueDisposition>::success(
+            EnqueueDisposition::RejectedCapacity);
     }
     for(const auto& frame : frames)
     {
         effect_commands_.erase(frame.stable_id);
         effect_reservations_.erase(frame.stable_id);
     }
-    stable_commands_.emplace_back(intent, std::move(frames));
-    ++stable_reservations_;
+    if(mergeable)
+    {
+        auto& target = stable_commands_.back().frames;
+        target.insert(
+            target.end(),
+            std::make_move_iterator(frames.begin()),
+            std::make_move_iterator(frames.end()));
+    }
+    else
+    {
+        stable_commands_.push_back({
+            intent,
+            std::move(frames),
+            now + std::chrono::milliseconds(config_.stable_callback_window_ms),
+        });
+        ++stable_reservations_;
+    }
     wake_.notify_one();
-    return EnqueueDisposition::Accepted;
+    return sdk::Result<EnqueueDisposition>::success(
+        mergeable ? EnqueueDisposition::Coalesced : EnqueueDisposition::Accepted);
 }
 
 sdk::Result<void> RuntimeWorker::request_rescan()
@@ -257,8 +318,8 @@ std::optional<sdk::Error> RuntimeWorker::last_error() const
 
 bool RuntimeWorker::accepts_commands() const noexcept
 {
-    return state_ == WorkerState::Created || state_ == WorkerState::Starting
-        || state_ == WorkerState::Running || state_ == WorkerState::Recovering;
+    return state_ == WorkerState::Starting || state_ == WorkerState::Running
+        || state_ == WorkerState::Recovering;
 }
 
 void RuntimeWorker::deliver(RuntimeStep output) noexcept
@@ -370,6 +431,52 @@ void RuntimeWorker::refresh_reservations() noexcept
     effect_reservations_ = std::move(effects);
 }
 
+RuntimeStep RuntimeWorker::terminalize_mailbox()
+{
+    std::deque<StableCommand> stable;
+    std::map<std::string, EffectCommand> effects;
+    {
+        std::lock_guard lock(mutex_);
+        stable.swap(stable_commands_);
+        effects.swap(effect_commands_);
+    }
+
+    RuntimeStep output;
+    for(auto& command : stable)
+    {
+        if(core_.enqueue_stable(command.intent, std::move(command.frames))
+           != EnqueueDisposition::Accepted)
+        {
+            output.notices.push_back(worker_error(
+                "OpenRGB could not terminally account for a stable mailbox command"));
+        }
+    }
+    for(auto& [stable_id, command] : effects)
+    {
+        (void)stable_id;
+        const auto disposition = core_.enqueue_effect(
+            std::move(command.frame), command.first_enqueued_ms);
+        if(disposition != EnqueueDisposition::Accepted
+           && disposition != EnqueueDisposition::Coalesced)
+        {
+            output.notices.push_back(worker_error(
+                "OpenRGB could not terminally account for an effect mailbox command"));
+        }
+    }
+
+    auto shutdown = core_.shutdown();
+    output.controller_changes = std::move(shutdown.controller_changes);
+    output.dispatch_outcomes = std::move(shutdown.dispatch_outcomes);
+    output.logical_outcomes = std::move(shutdown.logical_outcomes);
+    output.notices.insert(
+        output.notices.end(),
+        std::make_move_iterator(shutdown.notices.begin()),
+        std::make_move_iterator(shutdown.notices.end()));
+    output.full_refresh = shutdown.full_refresh;
+    output.cursor_gap_recovered = shutdown.cursor_gap_recovered;
+    return output;
+}
+
 void RuntimeWorker::run() noexcept
 {
     auto reconnect_delay_ms = config_.reconnect_initial_ms;
@@ -418,31 +525,54 @@ void RuntimeWorker::run() noexcept
             deliver(std::move(recovered).value());
         }
 
-        std::deque<std::pair<sdk::LightingIntent, std::vector<QueuedLightingFrame>>>
-            stable;
+        std::deque<StableCommand> stable;
         std::map<std::string, EffectCommand> effects;
         bool rescan = false;
         {
             std::unique_lock lock(mutex_);
-            wake_.wait_for(
-                lock,
-                std::chrono::milliseconds(config_.poll_interval_ms),
-                [this] {
-                    return stop_requested_ || rescan_requested_
-                        || !stable_commands_.empty() || !effect_commands_.empty();
-                });
+            auto wait_duration = std::chrono::milliseconds(config_.poll_interval_ms);
+            if(!stable_commands_.empty())
+            {
+                const auto now = std::chrono::steady_clock::now();
+                if(stable_commands_.front().due_at <= now)
+                {
+                    wait_duration = std::chrono::milliseconds::zero();
+                }
+                else
+                {
+                    wait_duration = std::min(
+                        wait_duration,
+                        std::chrono::ceil<std::chrono::milliseconds>(
+                            stable_commands_.front().due_at - now));
+                }
+            }
+            wake_.wait_for(lock, wait_duration, [this] {
+                return stop_requested_ || rescan_requested_
+                    || !effect_commands_.empty()
+                    || (!stable_commands_.empty()
+                        && stable_commands_.front().due_at
+                            <= std::chrono::steady_clock::now());
+            });
             if(stop_requested_)
             {
                 break;
             }
-            stable.swap(stable_commands_);
+            const auto stable_now = std::chrono::steady_clock::now();
+            while(!stable_commands_.empty()
+                  && stable_commands_.front().due_at <= stable_now)
+            {
+                stable.push_back(std::move(stable_commands_.front()));
+                stable_commands_.pop_front();
+            }
             effects.swap(effect_commands_);
             rescan = std::exchange(rescan_requested_, false);
         }
 
-        for(auto& [intent, frames] : stable)
+        for(auto& command : stable)
         {
-            const auto disposition = core_.enqueue_stable(intent, std::move(frames));
+            const auto disposition = core_.enqueue_stable(
+                command.intent,
+                std::move(command.frames));
             if(disposition != EnqueueDisposition::Accepted)
             {
                 fail(worker_error("OpenRGB stable command exceeded the runtime queue contract"));
@@ -519,7 +649,7 @@ void RuntimeWorker::run() noexcept
         deliver(std::move(output).value());
     }
 
-    deliver(core_.shutdown());
+    deliver(terminalize_mailbox());
     {
         std::lock_guard lock(mutex_);
         stable_commands_.clear();

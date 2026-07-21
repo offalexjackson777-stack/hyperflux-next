@@ -87,9 +87,19 @@ int main()
     controller->active_mode = static_cast<int>(ControllerMode::Direct);
     controller->DeviceUpdateLEDs();
     if(sink.effects.size() != 1 || sink.effects.front().colors.size() != 13
+        || sink.effects.front().generation_id.value() != 1
         || sink.effects.front().colors.front().red.value() != 100
         || sink.effects.front().colors.front().green.value() != 50
         || sink.effects.front().colors.front().blue.value() != 25)
+    {
+        return failure(__LINE__);
+    }
+
+    auto next_generation = mouse;
+    next_generation.authority.generation_id = number<GenerationId>(2);
+    controller->update_generation(next_generation.authority.generation_id);
+    controller->DeviceUpdateLEDs();
+    if(sink.effects.size() != 2 || sink.effects.back().generation_id.value() != 2)
     {
         return failure(__LINE__);
     }

@@ -30,6 +30,13 @@ int main()
     {
         return failure(__LINE__);
     }
+    invalid_config = RuntimeConfig {};
+    invalid_config.dispatch_queue.effect_target_capacity =
+        static_cast<std::size_t>(QueueCapacity::maximum) + 1U;
+    if(RuntimeCore::create(bridge, invalid_config))
+    {
+        return failure(__LINE__);
+    }
 
     auto created = RuntimeCore::create(bridge);
     if(!created)
@@ -88,6 +95,9 @@ int main()
     const auto first_terminal = runtime.step(105);
     if(!first_terminal || first_terminal.value().dispatch_outcomes.size() != 1
        || first_terminal.value().dispatch_outcomes.front().state
+           != DispatchOutcomeState::Succeeded
+       || first_terminal.value().logical_outcomes.size() != 1
+       || first_terminal.value().logical_outcomes.front().state
            != DispatchOutcomeState::Succeeded
        || runtime.pending_transaction_count() != 0)
     {
@@ -210,9 +220,37 @@ int main()
     bridge.conflict = false;
     bridge.current = view(3, 5, ControllerAvailability::Sleeping);
     bridge.event(EventKind::DeviceSleeping);
-    if(!runtime.step(128)
-       || runtime.enqueue_effect(frame(model(runtime, DeviceKind::Mouse), 50), 128)
+    if(!runtime.step(128))
+    {
+        return failure(__LINE__);
+    }
+    const auto submissions_before_sleeping_stable = bridge.submissions.size();
+    const auto acquisitions_before_sleeping_stable = bridge.acquire_count;
+    if(runtime.enqueue_stable(
+           sdk::LightingIntent::Static,
+           {
+               frame(model(runtime, DeviceKind::Mouse), 49),
+               frame(model(runtime, DeviceKind::Keyboard), 49),
+           })
            != EnqueueDisposition::Accepted)
+    {
+        return failure(__LINE__);
+    }
+    const auto sleeping_stable = runtime.step(128);
+    if(!sleeping_stable || sleeping_stable.value().dispatch_outcomes.size() != 1
+       || sleeping_stable.value().dispatch_outcomes.front().state
+           != DispatchOutcomeState::Rejected
+       || sleeping_stable.value().dispatch_outcomes.front().declared_frames != 2
+       || sleeping_stable.value().logical_outcomes.size() != 1
+       || sleeping_stable.value().logical_outcomes.front().state
+           != DispatchOutcomeState::Rejected
+       || bridge.submissions.size() != submissions_before_sleeping_stable
+       || bridge.acquire_count != acquisitions_before_sleeping_stable)
+    {
+        return failure(__LINE__);
+    }
+    if(runtime.enqueue_effect(frame(model(runtime, DeviceKind::Mouse), 50), 128)
+       != EnqueueDisposition::Accepted)
     {
         return failure(__LINE__);
     }
@@ -251,7 +289,7 @@ int main()
     bridge.event(EventKind::DeviceAvailable);
     const auto releases_before_return = bridge.release_count;
     if(!runtime.step(138)
-       || bridge.release_count != releases_before_return + 1
+       || bridge.release_count != releases_before_return
        || runtime.enqueue_effect(frame(model(runtime, DeviceKind::Mouse), 53), 139)
            != EnqueueDisposition::Accepted
        || runtime.enqueue_effect(frame(model(runtime, DeviceKind::Keyboard), 54), 139)
@@ -386,6 +424,96 @@ int main()
     if(runtime.initialized()
        || bridge.release_count != releases_before_shutdown + 1
        || !shutdown.dispatch_outcomes.empty())
+    {
+        return failure(__LINE__);
+    }
+
+    FakeBridge stale_bridge(view(1, 1));
+    stale_bridge.terminal_on_submit = true;
+    auto stale_created = RuntimeCore::create(stale_bridge);
+    if(!stale_created)
+    {
+        return failure(__LINE__);
+    }
+    auto stale_runtime = std::move(stale_created).value();
+    if(!stale_runtime.initialize()
+       || stale_runtime.enqueue_effect(
+              frame(model(stale_runtime, DeviceKind::Mouse), 90), 200)
+           != EnqueueDisposition::Accepted)
+    {
+        return failure(__LINE__);
+    }
+    stale_bridge.current = view(2, 2);
+    stale_bridge.event(EventKind::GenerationReplaced);
+    const auto stale = stale_runtime.step(204);
+    if(!stale || stale_bridge.acquire_count != 0 || !stale_bridge.submissions.empty()
+       || stale.value().dispatch_outcomes.size() != 1
+       || stale.value().dispatch_outcomes.front().state
+           != DispatchOutcomeState::Rejected
+       || stale.value().dispatch_outcomes.front().generation_id
+           != number<GenerationId>(1)
+       || stale.value().logical_outcomes.size() != 1
+       || stale.value().logical_outcomes.front().state
+           != DispatchOutcomeState::Rejected
+       || !stale.value().dispatch_outcomes.front().local_error.has_value()
+       || stale.value().dispatch_outcomes.front().local_error->finding_id
+           != "HFX-GENERATION-001")
+    {
+        return failure(__LINE__);
+    }
+
+    FakeBridge queued_shutdown_bridge(view(1, 1));
+    auto queued_shutdown_created = RuntimeCore::create(queued_shutdown_bridge);
+    if(!queued_shutdown_created)
+    {
+        return failure(__LINE__);
+    }
+    auto queued_shutdown_runtime = std::move(queued_shutdown_created).value();
+    if(!queued_shutdown_runtime.initialize()
+       || queued_shutdown_runtime.enqueue_effect(
+              frame(model(queued_shutdown_runtime, DeviceKind::Mouse), 91), 300)
+           != EnqueueDisposition::Accepted)
+    {
+        return failure(__LINE__);
+    }
+    const auto queued_shutdown = queued_shutdown_runtime.shutdown();
+    if(!queued_shutdown_bridge.submissions.empty()
+       || queued_shutdown.dispatch_outcomes.size() != 1
+       || queued_shutdown.dispatch_outcomes.front().state
+           != DispatchOutcomeState::Revoked
+       || queued_shutdown.logical_outcomes.size() != 1
+       || queued_shutdown.logical_outcomes.front().state
+           != DispatchOutcomeState::Revoked)
+    {
+        return failure(__LINE__);
+    }
+
+    FakeBridge pending_shutdown_bridge(view(1, 1));
+    auto pending_shutdown_created = RuntimeCore::create(pending_shutdown_bridge);
+    if(!pending_shutdown_created)
+    {
+        return failure(__LINE__);
+    }
+    auto pending_shutdown_runtime = std::move(pending_shutdown_created).value();
+    if(!pending_shutdown_runtime.initialize()
+       || pending_shutdown_runtime.enqueue_stable(
+              sdk::LightingIntent::Static,
+              {frame(model(pending_shutdown_runtime, DeviceKind::Mouse), 92)})
+           != EnqueueDisposition::Accepted
+       || !pending_shutdown_runtime.step(400)
+       || pending_shutdown_runtime.pending_transaction_count() != 1)
+    {
+        return failure(__LINE__);
+    }
+    const auto pending_shutdown = pending_shutdown_runtime.shutdown();
+    if(pending_shutdown.dispatch_outcomes.size() != 1
+       || pending_shutdown.dispatch_outcomes.front().state
+           != DispatchOutcomeState::Unavailable
+       || pending_shutdown.logical_outcomes.size() != 1
+       || pending_shutdown.logical_outcomes.front().state
+           != DispatchOutcomeState::Unavailable
+       || pending_shutdown.logical_outcomes.front().side_effect_certainty
+           != SideEffectCertainty::Possible)
     {
         return failure(__LINE__);
     }

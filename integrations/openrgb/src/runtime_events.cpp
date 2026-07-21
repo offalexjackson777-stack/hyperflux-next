@@ -45,7 +45,7 @@ sdk::Result<void> RuntimeCore::refresh_controllers(
         output.controller_changes.end(),
         std::make_move_iterator(changes.begin()),
         std::make_move_iterator(changes.end()));
-    invalidate_changed_sessions();
+    invalidate_changed_sessions(output);
     refresh_required_ = false;
     return sdk::Result<void>::success();
 }
@@ -109,6 +109,19 @@ bool RuntimeCore::synchronize_connection(RuntimeStep& output)
         session.lighting.abandon();
     }
     sessions_.clear();
+    for(const auto& [sequence, request] : active_requests_)
+    {
+        (void)request;
+        discard_queued_request(
+            sequence,
+            DispatchOutcomeState::Revoked,
+            ProtocolErrorKind::TransportFailure,
+            runtime_detail::error(
+                sdk::ErrorCode::SessionInactive,
+                "OpenRGB request was interrupted by a bridge connection replacement",
+                "HFX-SERVICE-001"),
+            output);
+    }
     subscription_id_.reset();
     cursor_.reset();
     connection_epoch_ = current;

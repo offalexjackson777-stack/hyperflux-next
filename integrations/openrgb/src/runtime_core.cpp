@@ -23,12 +23,15 @@ sdk::Result<RuntimeCore> RuntimeCore::create(RuntimeBridge& bridge, RuntimeConfi
     const auto event_limit = EventBatchLimit::from(config.event_batch_limit);
     if(!lease_duration.has_value() || !event_limit.has_value()
        || config.lease_renew_margin_ms >= config.lease_duration_ms
+       || config.ownership_idle_ms == 0
        || config.transaction_timeout_ms == 0
        || config.max_event_batches_per_step == 0
        || config.max_outcomes_per_step == 0
        || config.max_dispatches_per_step == 0
        || config.dispatch_queue.stable_capacity == 0
+       || config.dispatch_queue.stable_capacity > QueueCapacity::maximum
        || config.dispatch_queue.effect_target_capacity == 0
+       || config.dispatch_queue.effect_target_capacity > QueueCapacity::maximum
        || config.dispatch_queue.effect_window_ms == 0)
     {
         return sdk::Result<RuntimeCore>::failure(runtime_detail::error(
@@ -96,6 +99,7 @@ sdk::Result<RuntimeStep> RuntimeCore::step(std::uint64_t now_ms)
     {
         return sdk::Result<RuntimeStep>::failure(refreshed.error());
     }
+    retire_completed_requests(now_ms, output);
     renew_sessions(now_ms, output);
     refreshed = refresh_if_required(output);
     if(!refreshed)
@@ -103,6 +107,7 @@ sdk::Result<RuntimeStep> RuntimeCore::step(std::uint64_t now_ms)
         return sdk::Result<RuntimeStep>::failure(refreshed.error());
     }
     dispatch_ready(now_ms, output);
+    retire_completed_requests(now_ms, output);
     refreshed = refresh_if_required(output);
     if(!refreshed)
     {
@@ -125,10 +130,23 @@ RuntimeStep RuntimeCore::shutdown()
         }
     }
     sessions_.clear();
+    const auto queued_requests = queue_.request_sequences();
+    for(const auto sequence : queued_requests)
+    {
+        discard_queued_request(
+            sequence,
+            DispatchOutcomeState::Revoked,
+            std::nullopt,
+            runtime_detail::error(
+                sdk::ErrorCode::SessionInactive,
+                "OpenRGB runtime stopped before the queued request was submitted",
+                "HFX-OUTCOME-001"),
+            output);
+    }
     for(const auto& [key, pending] : pending_)
     {
         (void)key;
-        output.dispatch_outcomes.push_back({
+        record_dispatch_outcome({
             pending.sequence,
             pending.intent,
             pending.receiver_id,
@@ -144,16 +162,19 @@ RuntimeStep RuntimeCore::shutdown()
                 sdk::ErrorCode::SessionInactive,
                 "OpenRGB runtime stopped before the transaction reached a terminal outcome",
                 "HFX-OUTCOME-001"),
-        });
+        }, output);
     }
     pending_.clear();
     outcome_poll_cursor_.reset();
+    retire_completed_requests(0, output);
+    active_requests_.clear();
     queue_.clear();
     inventory_.clear();
     subscription_id_.reset();
     cursor_.reset();
     refresh_required_ = false;
     initialized_ = false;
+    next_ownership_session_id_ = 1;
     return output;
 }
 

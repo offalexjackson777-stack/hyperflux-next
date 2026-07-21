@@ -4,6 +4,7 @@
 
 #include "runtime_core.hpp"
 
+#include <chrono>
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
@@ -36,6 +37,7 @@ struct WorkerConfig
 {
     RuntimeConfig runtime {};
     std::uint32_t poll_interval_ms = 10;
+    std::uint32_t stable_callback_window_ms = 4;
     std::uint32_t reconnect_initial_ms = 25;
     std::uint32_t reconnect_max_ms = 2'000;
 };
@@ -78,7 +80,7 @@ public:
 
     [[nodiscard]] sdk::Result<EnqueueDisposition> enqueue_effect(
         QueuedLightingFrame frame);
-    [[nodiscard]] EnqueueDisposition enqueue_stable(
+    [[nodiscard]] sdk::Result<EnqueueDisposition> enqueue_stable(
         sdk::LightingIntent intent,
         std::vector<QueuedLightingFrame> frames);
     [[nodiscard]] sdk::Result<void> request_rescan();
@@ -89,6 +91,13 @@ public:
     [[nodiscard]] std::optional<sdk::Error> last_error() const;
 
 private:
+    struct StableCommand
+    {
+        sdk::LightingIntent intent;
+        std::vector<QueuedLightingFrame> frames;
+        std::chrono::steady_clock::time_point due_at;
+    };
+
     struct EffectCommand
     {
         QueuedLightingFrame frame;
@@ -109,6 +118,7 @@ private:
         std::uint32_t& delay_ms) noexcept;
     void mark_running() noexcept;
     void refresh_reservations() noexcept;
+    [[nodiscard]] RuntimeStep terminalize_mailbox();
     [[nodiscard]] bool accepts_commands() const noexcept;
 
     std::unique_ptr<RuntimeBridge> bridge_;
@@ -122,8 +132,7 @@ private:
     WorkerState state_ = WorkerState::Created;
     bool stop_requested_ = false;
     bool rescan_requested_ = false;
-    std::deque<std::pair<sdk::LightingIntent, std::vector<QueuedLightingFrame>>>
-        stable_commands_;
+    std::deque<StableCommand> stable_commands_;
     std::map<std::string, EffectCommand> effect_commands_;
     std::size_t stable_reservations_ = 0;
     std::set<std::string> effect_reservations_;

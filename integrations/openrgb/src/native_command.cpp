@@ -20,8 +20,7 @@ sdk::Result<EnqueueDisposition> WorkerLightingCommandSink::enqueue_effect(Queued
 sdk::Result<EnqueueDisposition> WorkerLightingCommandSink::enqueue_stable(
     sdk::LightingIntent intent, std::vector<QueuedLightingFrame> frames)
 {
-    return sdk::Result<EnqueueDisposition>::success(
-        worker_->enqueue_stable(intent, std::move(frames)));
+    return worker_->enqueue_stable(intent, std::move(frames));
 }
 
 } // namespace hyperflux::openrgb::native

@@ -23,6 +23,7 @@ struct RuntimeConfig
     DispatchQueueConfig dispatch_queue {};
     std::uint32_t lease_duration_ms = 30'000;
     std::uint32_t lease_renew_margin_ms = 10'000;
+    std::uint64_t ownership_idle_ms = 1'000;
     std::uint64_t transaction_timeout_ms = 2'000;
     std::uint16_t event_batch_limit = 128;
     std::size_t max_event_batches_per_step = 4;
@@ -58,12 +59,30 @@ struct DispatchOutcome
     friend bool operator==(const DispatchOutcome&, const DispatchOutcome&) = default;
 };
 
+struct LogicalDispatchOutcome
+{
+    std::uint64_t sequence;
+    sdk::LightingIntent intent;
+    DispatchOutcomeState state;
+    std::uint16_t expected_receivers;
+    std::uint16_t terminal_receivers;
+    std::uint16_t declared_frames;
+    std::uint16_t delivered_frames;
+    SideEffectCertainty side_effect_certainty;
+    bool live_write_executed;
+    std::optional<ProtocolErrorKind> protocol_error;
+    std::optional<sdk::Error> local_error;
+
+    friend bool operator==(const LogicalDispatchOutcome&, const LogicalDispatchOutcome&) = default;
+};
+
 struct RuntimeStep
 {
     bool full_refresh = false;
     bool cursor_gap_recovered = false;
     std::vector<ControllerChange> controller_changes;
     std::vector<DispatchOutcome> dispatch_outcomes;
+    std::vector<LogicalDispatchOutcome> logical_outcomes;
     std::vector<sdk::Error> notices;
 };
 
@@ -104,11 +123,33 @@ public:
     [[nodiscard]] std::set<std::string> queued_effect_targets() const;
 
 private:
-    struct ReceiverSession
+    struct OwnershipSession
     {
-        ReceiverId receiver_id;
-        GenerationId generation_id;
         sdk::LightingSession lighting;
+        std::size_t active_requests = 0;
+        std::uint64_t last_used_ms = 0;
+    };
+
+    struct ActiveRequest
+    {
+        std::uint64_t session_id;
+        sdk::LightingIntent intent;
+        std::uint16_t expected_receivers;
+        std::uint16_t expected_frames;
+        std::vector<DispatchOutcome> outcomes;
+    };
+
+    enum class RequestBindState
+    {
+        Ready,
+        Deferred,
+        Rejected,
+    };
+
+    struct RequestBindResult
+    {
+        RequestBindState state;
+        std::optional<sdk::Error> error;
     };
 
     struct PendingTransaction
@@ -130,13 +171,29 @@ private:
     [[nodiscard]] sdk::Result<void> poll_events(RuntimeStep& output);
     [[nodiscard]] sdk::Result<void> poll_outcomes(RuntimeStep& output);
     void renew_sessions(std::uint64_t now_ms, RuntimeStep& output);
+    void retire_completed_requests(std::uint64_t now_ms, RuntimeStep& output);
     void dispatch_ready(std::uint64_t now_ms, RuntimeStep& output);
-
-    [[nodiscard]] ReceiverSession* ensure_session(
-        const ReceiverId& receiver_id,
-        const GenerationId& generation_id,
+    void discard_queued_request(
+        std::uint64_t sequence,
+        DispatchOutcomeState state,
+        std::optional<ProtocolErrorKind> protocol_error,
+        const sdk::Error& error,
         RuntimeStep& output);
-    void invalidate_changed_sessions();
+    void record_dispatch_outcome(DispatchOutcome outcome, RuntimeStep& output);
+    void emit_logical_outcome(
+        std::uint64_t sequence,
+        sdk::LightingIntent intent,
+        std::uint16_t expected_receivers,
+        std::uint16_t expected_frames,
+        const std::vector<DispatchOutcome>& outcomes,
+        RuntimeStep& output);
+
+    [[nodiscard]] RequestBindResult bind_request(
+        const DispatchBatch& request,
+        std::uint64_t now_ms,
+        RuntimeStep& output);
+    [[nodiscard]] OwnershipSession* session_for_request(std::uint64_t sequence);
+    void invalidate_changed_sessions(RuntimeStep& output);
     [[nodiscard]] bool synchronize_connection(RuntimeStep& output);
     void consume_transaction_result(
         std::uint64_t sequence,
@@ -157,7 +214,9 @@ private:
     std::vector<InventoryReceiverModel> inventory_;
     std::optional<SubscriptionId> subscription_id_;
     std::optional<v5::EventCursor> cursor_;
-    std::map<std::string, ReceiverSession> sessions_;
+    std::map<std::uint64_t, OwnershipSession> sessions_;
+    std::map<std::uint64_t, ActiveRequest> active_requests_;
+    std::uint64_t next_ownership_session_id_ = 1;
     std::map<std::string, PendingTransaction> pending_;
     std::optional<std::string> outcome_poll_cursor_;
 };

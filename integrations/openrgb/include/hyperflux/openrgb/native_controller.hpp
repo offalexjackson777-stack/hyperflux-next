@@ -7,6 +7,7 @@
 
 #include "RGBController.h"
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -50,6 +51,7 @@ public:
 
     [[nodiscard]] const std::string& stable_id() const noexcept;
     [[nodiscard]] CommandStatus command_status() const;
+    void update_generation(const GenerationId& generation_id) noexcept;
 
     void SetupZones() override;
     void ResizeZone(int zone, int new_size) override;
@@ -79,6 +81,7 @@ private:
     void record(sdk::Result<EnqueueDisposition> result);
 
     ReceiverId receiver_id_;
+    std::atomic_uint64_t generation_id_;
     std::string stable_id_;
     std::size_t application_slots_;
     RazerPresentation presentation_;

@@ -134,6 +134,7 @@ NativeController::NativeController(const ControllerModel& model,
     LightingCommandSink& sink,
     std::string component_version)
     : receiver_id_(model.authority.receiver_id),
+      generation_id_(model.authority.generation_id.value()),
       stable_id_(model.stable_id),
       application_slots_(model.lighting.application_slot_count.value()),
       presentation_(std::move(presentation)),
@@ -152,6 +153,11 @@ CommandStatus NativeController::command_status() const
 {
     std::lock_guard lock(status_mutex_);
     return status_;
+}
+
+void NativeController::update_generation(const GenerationId& generation_id) noexcept
+{
+    generation_id_.store(generation_id.value(), std::memory_order_release);
 }
 
 void NativeController::configure()
@@ -281,7 +287,14 @@ void NativeController::dispatch(ControllerMode requested_mode)
         case ControllerMode::Direct:
             requested = direct_colors(active_brightness());
             record(sink_->enqueue_effect(
-                {receiver_id_, stable_id_, application_slots_, std::move(requested)}));
+                {
+                    receiver_id_,
+                    GenerationId::from(
+                        generation_id_.load(std::memory_order_acquire)).value(),
+                    stable_id_,
+                    application_slots_,
+                    std::move(requested),
+                }));
             return;
         case ControllerMode::Off:
             intent = sdk::LightingIntent::Off;
@@ -299,7 +312,13 @@ void NativeController::dispatch(ControllerMode requested_mode)
     }
     record(sink_->enqueue_stable(
         intent,
-        {{receiver_id_, stable_id_, application_slots_, std::move(requested)}}));
+        {{
+            receiver_id_,
+            GenerationId::from(generation_id_.load(std::memory_order_acquire)).value(),
+            stable_id_,
+            application_slots_,
+            std::move(requested),
+        }}));
 }
 
 void NativeController::record(sdk::Result<EnqueueDisposition> result)

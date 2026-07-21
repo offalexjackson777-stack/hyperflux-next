@@ -5,6 +5,7 @@
 #include <hyperflux/openrgb/runtime_core.hpp>
 #include <hyperflux/generated/protocol_v5_json.hpp>
 
+#include <algorithm>
 #include <atomic>
 #include <cstdint>
 #include <deque>
@@ -216,6 +217,7 @@ inline openrgb::QueuedLightingFrame frame(
 {
     return {
         controller_model.authority.receiver_id,
+        controller_model.authority.generation_id,
         controller_model.stable_id,
         controller_model.lighting.application_slot_count.value(),
         std::vector<v5::RgbColor>(
@@ -273,6 +275,7 @@ public:
     std::atomic_size_t submission_count {0};
     std::map<std::string, v5::TransactionResult> outcomes;
     std::vector<v5::ResourceKey> leased_resources;
+    std::vector<std::vector<v5::ResourceKey>> lease_acquisitions;
     bool conflict = false;
     bool terminal_on_submit = false;
     bool unavailable_on_submit = false;
@@ -283,6 +286,7 @@ public:
     std::uint64_t connection_epoch_value = 1;
     std::optional<std::uint64_t> fail_integration_call;
     std::optional<std::uint64_t> fail_acquire_call;
+    std::optional<std::uint64_t> fail_renew_call;
     std::atomic_uint64_t integration_calls {0};
 
     std::uint64_t connection_epoch() const noexcept override
@@ -308,6 +312,7 @@ public:
                 "HFX-SERVICE-001",
             });
         }
+        project_leases();
         return sdk::Result<v5::IntegrationView>::success(copy_integration_view(current));
     }
 
@@ -330,28 +335,81 @@ public:
                 resources.front(),
             }});
         }
-        leased_resources = std::move(resources);
+        leased_resources = resources;
+        lease_acquisitions.push_back(resources);
+        const auto lease_id = text<LeaseId>("lease-" + std::to_string(acquire_count));
+        leases_.insert_or_assign(std::string(lease_id.value()), std::move(resources));
+        mark_owned(lease_id, leases_.at(std::string(lease_id.value())));
         return sdk::Result<v5::LeaseResult>::success(
-            v5::LeaseResultGranted {grant(LeaseState::Granted)});
+            v5::LeaseResultGranted {grant(lease_id, LeaseState::Granted)});
     }
 
-    sdk::Result<v5::LeaseResult> renew_lease(LeaseId, LeaseDurationMs) override
+    sdk::Result<v5::LeaseResult> renew_lease(LeaseId lease_id, LeaseDurationMs) override
     {
         ++renew_count;
+        if(!leases_.contains(std::string(lease_id.value())))
+        {
+            return sdk::Result<v5::LeaseResult>::failure({
+                sdk::ErrorCode::LeaseRejected,
+                "test bridge cannot renew an unknown lease",
+                "HFX-OWNERSHIP-002",
+            });
+        }
+        if(fail_renew_call == renew_count)
+        {
+            mark_unowned(lease_id, leases_.at(std::string(lease_id.value())));
+            leases_.erase(std::string(lease_id.value()));
+            return sdk::Result<v5::LeaseResult>::failure({
+                sdk::ErrorCode::LeaseRejected,
+                "injected lease renewal rejection",
+                "HFX-OWNERSHIP-002",
+            });
+        }
+        mark_owned(lease_id, leases_.at(std::string(lease_id.value())));
         return sdk::Result<v5::LeaseResult>::success(
-            v5::LeaseResultGranted {grant(LeaseState::Renewed)});
+            v5::LeaseResultGranted {grant(lease_id, LeaseState::Renewed)});
     }
 
-    sdk::Result<v5::LeaseResult> release_lease(LeaseId) override
+    sdk::Result<v5::LeaseResult> release_lease(LeaseId lease_id) override
     {
         ++release_count;
+        if(!leases_.contains(std::string(lease_id.value())))
+        {
+            return sdk::Result<v5::LeaseResult>::failure({
+                sdk::ErrorCode::LeaseRejected,
+                "test bridge cannot release an unknown lease",
+                "HFX-OWNERSHIP-002",
+            });
+        }
+        auto released = grant(lease_id, LeaseState::Released);
+        mark_unowned(lease_id, leases_.at(std::string(lease_id.value())));
+        leases_.erase(std::string(lease_id.value()));
         return sdk::Result<v5::LeaseResult>::success(
-            v5::LeaseResultGranted {grant(LeaseState::Released)});
+            v5::LeaseResultGranted {std::move(released)});
     }
 
     sdk::Result<v5::TransactionResult> submit_transaction(
         sdk::TransactionSubmission submission) override
     {
+        const auto lease = leases_.find(std::string(submission.lease_id.value()));
+        if(lease == leases_.end()
+           || !std::all_of(
+               submission.resources.begin(),
+               submission.resources.end(),
+               [&lease](const v5::ResourceKey& resource) {
+                   return std::find(
+                              lease->second.begin(),
+                              lease->second.end(),
+                              resource)
+                       != lease->second.end();
+               }))
+        {
+            return sdk::Result<v5::TransactionResult>::failure({
+                sdk::ErrorCode::LeaseRejected,
+                "test transaction names a resource outside its lease",
+                "HFX-OWNERSHIP-002",
+            });
+        }
         submissions.push_back(submission);
         submission_count.fetch_add(1, std::memory_order_release);
         if(unavailable_on_submit)
@@ -463,12 +521,76 @@ public:
     }
 
 private:
-    v5::LeaseGrant grant(LeaseState state) const
+    void project_leases()
+    {
+        for(const auto& [lease_id, resources] : leases_)
+        {
+            mark_owned(text<LeaseId>(lease_id), resources);
+        }
+    }
+
+    void mark_owned(
+        const LeaseId& lease_id,
+        const std::vector<v5::ResourceKey>& resources)
+    {
+        for(auto& receiver : current.receivers)
+        {
+            for(auto& controller : receiver.controllers)
+            {
+                if(std::find(resources.begin(), resources.end(), controller.resource)
+                   == resources.end())
+                {
+                    continue;
+                }
+                controller.ownership = v5::ControllerOwnershipOwnedByViewer {{
+                    lease_id,
+                    number<MonotonicMs>(lease_expiry_ms),
+                }};
+                controller.actions = {
+                    false,
+                    true,
+                    controller.availability == ControllerAvailability::Ready,
+                };
+            }
+        }
+    }
+
+    void mark_unowned(
+        const LeaseId& lease_id,
+        const std::vector<v5::ResourceKey>& resources)
+    {
+        for(auto& receiver : current.receivers)
+        {
+            for(auto& controller : receiver.controllers)
+            {
+                if(std::find(resources.begin(), resources.end(), controller.resource)
+                   == resources.end())
+                {
+                    continue;
+                }
+                const auto* owned = std::get_if<v5::ControllerOwnershipOwnedByViewer>(
+                    &controller.ownership);
+                if(owned == nullptr || owned->detail.lease_id != lease_id)
+                {
+                    continue;
+                }
+                controller.ownership =
+                    v5::ControllerOwnershipUnowned {v5::UnownedController {}};
+                controller.actions = {
+                    controller.availability == ControllerAvailability::Ready,
+                    false,
+                    false,
+                };
+            }
+        }
+    }
+
+    v5::LeaseGrant grant(const LeaseId& lease_id, LeaseState state) const
     {
         return {
-            text<LeaseId>("lease-1"),
+            lease_id,
             text<ClientId>("openrgb"),
-            leased_resources,
+            leases_.at(std::string(lease_id.value())),
             number<MonotonicMs>(lease_expiry_ms),
             state,
         };
@@ -501,6 +623,7 @@ private:
     }
 
     std::uint64_t transaction_counter_ = 0;
+    std::map<std::string, std::vector<v5::ResourceKey>> leases_;
 };
 
 } // namespace hyperflux::test
