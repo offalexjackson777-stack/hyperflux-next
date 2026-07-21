@@ -240,6 +240,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
         hyperflux_openrgb_qt_shell
         STATIC
             src/plugin_application.cpp
+            src/plugin_view_model.cpp
             src/qt_dispatcher.cpp
     )
     set_target_properties(
@@ -269,6 +270,35 @@ if(HFX_OPENRGB_SOURCE_DIR)
     endif()
 
     add_library(
+        hyperflux_openrgb_qt_widget
+        STATIC
+            src/plugin_widget.cpp
+    )
+    set_target_properties(
+        hyperflux_openrgb_qt_widget
+        PROPERTIES POSITION_INDEPENDENT_CODE ON
+    )
+    target_compile_features(hyperflux_openrgb_qt_widget PUBLIC cxx_std_20)
+    target_include_directories(
+        hyperflux_openrgb_qt_widget
+        PUBLIC
+            "${CMAKE_CURRENT_SOURCE_DIR}/include"
+            "${HFX_OPENRGB_GENERATED_INCLUDE_DIR}"
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    )
+    target_link_libraries(
+        hyperflux_openrgb_qt_widget
+        PUBLIC hyperflux_openrgb_qt_shell Qt5::Core Qt5::Gui Qt5::Widgets
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(
+            hyperflux_openrgb_qt_widget
+            PRIVATE -Wall -Wextra -Werror -pedantic
+        )
+    endif()
+
+    add_library(
         hyperflux-next-openrgb
         MODULE
             src/openrgb_plugin.cpp
@@ -293,7 +323,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
     )
     target_link_libraries(
         hyperflux-next-openrgb
-        PRIVATE hyperflux_openrgb_qt_shell Qt5::Core Qt5::Gui Qt5::Widgets
+        PRIVATE hyperflux_openrgb_qt_widget Qt5::Core Qt5::Gui Qt5::Widgets
     )
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         target_compile_options(
@@ -417,6 +447,52 @@ if(HFX_OPENRGB_SOURCE_DIR)
         add_test(
             NAME openrgb-plugin-application-contract
             COMMAND openrgb-plugin-application-contract
+        )
+
+        add_executable(
+            openrgb-plugin-view-model-contract
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_plugin_view_model_contract.cpp"
+        )
+        target_link_libraries(
+            openrgb-plugin-view-model-contract
+            PRIVATE hyperflux_openrgb_qt_shell
+        )
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            target_compile_options(
+                openrgb-plugin-view-model-contract
+                PRIVATE -Wall -Wextra -Werror -pedantic
+            )
+        endif()
+        add_test(
+            NAME openrgb-plugin-view-model-contract
+            COMMAND openrgb-plugin-view-model-contract
+        )
+
+        add_executable(
+            openrgb-plugin-widget-contract
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_plugin_widget_contract.cpp"
+        )
+        target_include_directories(
+            openrgb-plugin-widget-contract
+            PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
+        )
+        target_link_libraries(
+            openrgb-plugin-widget-contract
+            PRIVATE hyperflux_openrgb_qt_widget
+        )
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            target_compile_options(
+                openrgb-plugin-widget-contract
+                PRIVATE -Wall -Wextra -Werror -pedantic
+            )
+        endif()
+        add_test(
+            NAME openrgb-plugin-widget-contract
+            COMMAND openrgb-plugin-widget-contract
+        )
+        set_tests_properties(
+            openrgb-plugin-widget-contract
+            PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
         )
 
         add_executable(

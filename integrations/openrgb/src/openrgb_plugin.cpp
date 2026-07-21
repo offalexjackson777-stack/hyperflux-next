@@ -2,12 +2,13 @@
 
 #include <hyperflux/openrgb/build_config.hpp>
 #include <hyperflux/openrgb/plugin_application.hpp>
+#include <hyperflux/openrgb/plugin_view_model.hpp>
+
+#include "plugin_widget.hpp"
 
 #include "OpenRGBPluginInterface.h"
 
 #include <QDebug>
-#include <QLabel>
-#include <QVBoxLayout>
 #include <QWidget>
 
 #include <string>
@@ -64,21 +65,11 @@ public:
 
     QWidget* GetWidget() override
     {
-        auto* widget = new QWidget();
-        widget->setObjectName("hyperfluxNextInformation");
-        auto* layout = new QVBoxLayout(widget);
-        layout->setContentsMargins(18, 18, 18, 18);
-        layout->setSpacing(8);
-        auto* title = new QLabel("HyperFlux Next", widget);
-        QFont title_font = title->font();
-        title_font.setBold(true);
-        title_font.setPointSize(title_font.pointSize() + 3);
-        title->setFont(title_font);
-        layout->addWidget(title);
-        layout->addWidget(new QLabel(
-            "Controller and bridge status will appear here.", widget));
-        layout->addStretch(1);
-        return widget;
+        return new PluginInformationWidget([this]
+        {
+            return make_plugin_information_view_model(
+                application_.status(), application_.controllers());
+        });
     }
 
     QMenu* GetTrayMenu() override
