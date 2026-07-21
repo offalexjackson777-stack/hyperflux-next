@@ -317,6 +317,36 @@ def _run_cpp_sdk_contracts(root: Path, node: TestNode) -> None:
         "C++ SDK lighting contract",
         node.timeout_seconds,
     )
+    sdk_recovery_binary = root / "build" / "sdk-recovery-contract"
+    _run_command(
+        root,
+        [
+            "clang++",
+            "-std=c++20",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-Isdk/cpp/include",
+            "-Isdk/cpp/vendor/include",
+            "tests/cpp/sdk_recovery_contract.cpp",
+            "sdk/cpp/src/recovery.cpp",
+            "sdk/cpp/src/client.cpp",
+            "sdk/cpp/src/channel.cpp",
+            "sdk/cpp/src/identity.cpp",
+            "-pthread",
+            "-o",
+            str(sdk_recovery_binary),
+        ],
+        "C++ SDK recovery contract compile",
+        node.timeout_seconds,
+    )
+    _run_command(
+        root,
+        [str(sdk_recovery_binary)],
+        "C++ SDK recovery contract",
+        node.timeout_seconds,
+    )
 
 
 def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:

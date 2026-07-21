@@ -217,6 +217,11 @@ const ClientId& Client::client_id() const noexcept
     return client_id_;
 }
 
+std::uint64_t Client::connection_epoch() const noexcept
+{
+    return 1;
+}
+
 Result<RequestId> Client::next_request_id()
 {
     return identities_->next_request_id();

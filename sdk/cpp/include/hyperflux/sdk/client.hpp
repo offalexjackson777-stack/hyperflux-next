@@ -8,6 +8,7 @@
 
 #include <hyperflux/generated/protocol_v5_types.hpp>
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -65,7 +66,21 @@ public:
         TransactionId transaction_id) = 0;
 };
 
-class Client final : public LightingBridge
+/// Complete application-facing SDK connection used by native integrations.
+class ClientApi : public LightingBridge
+{
+public:
+    ~ClientApi() override = default;
+
+    [[nodiscard]] virtual Result<v5::BridgeSnapshot> snapshot() = 0;
+    [[nodiscard]] virtual Result<v5::IntegrationView> integration_view() = 0;
+    [[nodiscard]] virtual Result<v5::EventBatch> subscribe(
+        EventSubscription subscription) = 0;
+    [[nodiscard]] virtual Result<v5::DiagnosticSnapshot> diagnostics() = 0;
+    [[nodiscard]] virtual std::uint64_t connection_epoch() const noexcept = 0;
+};
+
+class Client final : public ClientApi
 {
 public:
     Client(const Client&) = delete;
@@ -84,10 +99,11 @@ public:
 
     [[nodiscard]] const v5::ServerHello& server_hello() const noexcept;
     [[nodiscard]] const ClientId& client_id() const noexcept;
+    [[nodiscard]] std::uint64_t connection_epoch() const noexcept override;
 
     [[nodiscard]] Result<TransactionId> next_transaction_id() override;
-    [[nodiscard]] Result<v5::BridgeSnapshot> snapshot();
-    [[nodiscard]] Result<v5::IntegrationView> integration_view();
+    [[nodiscard]] Result<v5::BridgeSnapshot> snapshot() override;
+    [[nodiscard]] Result<v5::IntegrationView> integration_view() override;
     [[nodiscard]] Result<v5::LeaseResult> acquire_lease(
         std::vector<v5::ResourceKey> resources,
         LeaseDurationMs duration_ms) override;
@@ -99,8 +115,8 @@ public:
         TransactionSubmission submission) override;
     [[nodiscard]] Result<v5::TransactionResult> transaction_outcome(
         TransactionId transaction_id) override;
-    [[nodiscard]] Result<v5::EventBatch> subscribe(EventSubscription subscription);
-    [[nodiscard]] Result<v5::DiagnosticSnapshot> diagnostics();
+    [[nodiscard]] Result<v5::EventBatch> subscribe(EventSubscription subscription) override;
+    [[nodiscard]] Result<v5::DiagnosticSnapshot> diagnostics() override;
 
 private:
     Client(
