@@ -453,6 +453,20 @@
       "preserve": false
     },
     {
+      "component": "schemas",
+      "source": "schemas/verification-evidence.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/verification-evidence.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/verification-run.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/verification-run.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
       "component": "assurance-artifacts",
       "source": "assurance/generated/hyperflux-next.spdx.json",
       "destination": "/usr/share/doc/hyperflux-next/assurance/generated/hyperflux-next.spdx.json",

@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/verification-evidence-v1.json",
+  "title": "HyperFlux source-bound verification evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "run_id", "result", "source", "materials", "toolchain", "upstreams", "hardware", "publication_authorized", "claims", "artifacts", "measurements"],
+  "properties": {
+    "$schema": {"const": "https://hyperflux.dev/schemas/verification-evidence-v1.json"},
+    "schema": {"const": "hyperflux-verification-evidence-v1"},
+    "run_id": {"type": "string", "pattern": "^hfxv-[0-9a-f]{20}$"},
+    "result": {"const": "result.json"},
+    "source": {"$ref": "#/$defs/source"},
+    "materials": {"type": "array", "minItems": 10, "maxItems": 64, "items": {"$ref": "#/$defs/material"}},
+    "toolchain": {"$ref": "#/$defs/toolchain"},
+    "upstreams": {"type": "array", "minItems": 3, "maxItems": 16, "items": {"$ref": "#/$defs/upstream"}},
+    "hardware": {"$ref": "#/$defs/hardware"},
+    "publication_authorized": {"const": false},
+    "claims": {"type": "array", "maxItems": 2048, "items": {"$ref": "#/$defs/claim"}},
+    "artifacts": {"type": "array", "maxItems": 256, "items": {"$ref": "#/$defs/artifact"}},
+    "measurements": {"type": "array", "maxItems": 256, "items": {"$ref": "#/$defs/measurement"}}
+  },
+  "$defs": {
+    "identifier": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"},
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "path": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "commit_epoch", "worktree", "worktree_sha256"],
+      "properties": {
+        "revision": {"$ref": "#/$defs/revision"},
+        "commit_epoch": {"type": "integer", "minimum": 1, "maximum": 4102444800},
+        "worktree": {"enum": ["clean", "dirty"]},
+        "worktree_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "material": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "kind", "sha256"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "path": {"$ref": "#/$defs/path"},
+        "kind": {"enum": ["file", "tree"]},
+        "sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "toolchain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rustup_toolchain", "rustc", "cargo", "python", "pip", "setuptools", "wheel", "clang", "cmake", "ninja"],
+      "properties": {
+        "rustup_toolchain": {"type": "string", "minLength": 1, "maxLength": 160},
+        "rustc": {"type": "string", "minLength": 1, "maxLength": 160},
+        "cargo": {"type": "string", "minLength": 1, "maxLength": 160},
+        "python": {"type": "string", "minLength": 1, "maxLength": 32},
+        "pip": {"type": "string", "minLength": 1, "maxLength": 64},
+        "setuptools": {"type": "string", "minLength": 1, "maxLength": 64},
+        "wheel": {"type": "string", "minLength": 1, "maxLength": 64},
+        "clang": {"type": "string", "minLength": 1, "maxLength": 160},
+        "cmake": {"type": "string", "minLength": 1, "maxLength": 160},
+        "ninja": {"type": "string", "minLength": 1, "maxLength": 64}
+      }
+    },
+    "upstream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "repository", "revision"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "repository": {"type": "string", "pattern": "^https://", "maxLength": 256},
+        "revision": {"$ref": "#/$defs/revision"}
+      }
+    },
+    "hardware": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["queried", "writes_executed", "generations"],
+      "properties": {
+        "queried": {"const": false},
+        "writes_executed": {"const": false},
+        "generations": {"type": "array", "maxItems": 0}
+      }
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_id", "evidence_id", "status"],
+      "properties": {
+        "node_id": {"$ref": "#/$defs/identifier"},
+        "evidence_id": {"$ref": "#/$defs/identifier"},
+        "status": {"enum": ["pending", "running", "passed", "failed", "blocked"]}
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "node_id", "path", "sha256", "size"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "node_id": {"$ref": "#/$defs/identifier"},
+        "path": {"$ref": "#/$defs/path"},
+        "sha256": {"$ref": "#/$defs/digest"},
+        "size": {"type": "integer", "minimum": 0, "maximum": 1073741824}
+      }
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "node_id", "value", "unit"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "node_id": {"$ref": "#/$defs/identifier"},
+        "value": {"type": "integer", "minimum": 0, "maximum": 86400000},
+        "unit": {"const": "milliseconds"}
+      }
+    }
+  }
+}

@@ -13,7 +13,8 @@ from .openrazer import write_imported_metadata
 from .package_pipeline import build_artifacts, stage_rootfs
 from .render import write_generated
 from .testgraph import format_plan, load_test_catalog
-from .verify import verify_all
+from .verification_run import git_changed_paths, run_verification
+from .verify import RUNNERS
 
 
 def _root() -> Path:
@@ -25,7 +26,20 @@ def _parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
 
     verify = commands.add_parser("verify", help="run repository verification")
-    verify.add_argument("--all", action="store_true", required=True)
+    verify_lane = verify.add_mutually_exclusive_group(required=True)
+    verify_lane.add_argument("--fast", action="store_true", help="run the fast software lane")
+    verify_lane.add_argument("--full", action="store_true", help="run the complete software lane")
+    verify_lane.add_argument(
+        "--all",
+        action="store_true",
+        help="compatibility alias for the complete software lane",
+    )
+    verify.add_argument(
+        "--changed-from",
+        metavar="REVISION",
+        help="select tests from changes since a Git revision; unknown paths fail closed",
+    )
+    verify.add_argument("--output", type=Path, help="empty directory for structured evidence")
 
     generate = commands.add_parser("generate", help="regenerate canonical derived files")
     generate.add_argument("--check", action="store_true", help="reserved for compatibility; verify performs the check")
@@ -33,7 +47,19 @@ def _parser() -> argparse.ArgumentParser:
     test = commands.add_parser("test", help="inspect typed verification metadata")
     test_commands = test.add_subparsers(dest="test_command", required=True)
     plan = test_commands.add_parser("plan", help="show the dependency-ordered verification plan")
-    plan.add_argument("--all", action="store_true", required=True)
+    plan_lane = plan.add_mutually_exclusive_group(required=True)
+    plan_lane.add_argument("--fast", action="store_true", help="plan the fast software lane")
+    plan_lane.add_argument("--full", action="store_true", help="plan the complete software lane")
+    plan_lane.add_argument(
+        "--all",
+        action="store_true",
+        help="compatibility alias for the complete software lane",
+    )
+    plan.add_argument(
+        "--changed-from",
+        metavar="REVISION",
+        help="select tests from changes since a Git revision; unknown paths fail closed",
+    )
 
     migration = commands.add_parser("migration", help="inspect or capture migration inputs")
     migration_commands = migration.add_subparsers(dest="migration_command", required=True)
@@ -75,17 +101,38 @@ def main(arguments: list[str] | None = None) -> int:
     root = _root()
     try:
         if args.command == "verify":
-            checks = verify_all(root)
-            print("HyperFlux Next verification: PASS")
-            for check in checks:
+            lane = "fast" if args.fast else "full-software"
+            outcome = run_verification(
+                root,
+                load_test_catalog(root),
+                RUNNERS,
+                lane=lane,
+                output=args.output,
+                changed_from=args.changed_from,
+            )
+            print(f"HyperFlux Next verification: {outcome.status.upper()}")
+            for check in outcome.passed_titles:
                 print(f"  PASS  {check}")
-            return 0
+            for node_id in outcome.failed_nodes:
+                print(f"  FAIL  {node_id}")
+            print(f"Evidence: {outcome.output / 'evidence.json'}")
+            return 0 if outcome.status == "passed" else 1
         if args.command == "generate":
             write_generated(root)
             print("Generated repository views are current.")
             return 0
         if args.command == "test":
-            print(format_plan(load_test_catalog(root)))
+            lane = "fast" if args.fast else "full-software"
+            changed_paths = None
+            if args.changed_from is not None:
+                _, changed_paths = git_changed_paths(root, args.changed_from)
+            print(
+                format_plan(
+                    load_test_catalog(root),
+                    lane=lane,
+                    changed_paths=changed_paths,
+                )
+            )
             return 0
         if args.command == "import":
             destination = write_imported_metadata(root, args.source.resolve())

@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.model import ModelError
-from hfxdev.testgraph import TestCatalog, format_plan, load_test_catalog
+from hfxdev.testgraph import TestCatalog, format_plan, load_test_catalog, select_tests
 
 
 class TestGraphTests(unittest.TestCase):
@@ -52,6 +52,52 @@ class TestGraphTests(unittest.TestCase):
         self.assertIn("zero hardware writes", plan)
         self.assertIn("depends=", plan)
         self.assertIn("simulator-contracts", plan)
+
+    def test_openrgb_change_selects_dependencies_and_downstream_consumers(self) -> None:
+        selection = select_tests(
+            load_test_catalog(ROOT),
+            "full-software",
+            ("integrations/openrgb/src/plugin.cpp",),
+        )
+        selected = {node.id for node in selection.nodes}
+        self.assertEqual(selection.mode, "changed-paths")
+        self.assertLessEqual(
+            {
+                "foundation-contracts",
+                "integration-contracts",
+                "profile-contracts",
+                "cpp-sdk-contracts",
+                "openrgb-adapter-contracts",
+                "openrgb-thread-sanitizer",
+                "package-contracts",
+            },
+            selected,
+        )
+
+    def test_unknown_change_fails_closed_to_the_entire_lane(self) -> None:
+        catalog = load_test_catalog(ROOT)
+        selection = select_tests(catalog, "fast", ("new-domain/unknown.file",))
+        expected = {node.id for node in catalog.nodes if "fast" in node.lanes}
+        self.assertEqual(selection.mode, "changed-paths-fail-closed")
+        self.assertEqual(selection.unmatched_paths, ("new-domain/unknown.file",))
+        self.assertEqual({node.id for node in selection.nodes}, expected)
+
+    def test_verifier_change_selects_the_entire_lane(self) -> None:
+        catalog = load_test_catalog(ROOT)
+        selection = select_tests(
+            catalog,
+            "fast",
+            ("tools/hfxdev/verification_run.py",),
+        )
+        expected = {node.id for node in catalog.nodes if "fast" in node.lanes}
+        self.assertEqual(selection.mode, "changed-paths-critical")
+        self.assertEqual({node.id for node in selection.nodes}, expected)
+
+    def test_changed_path_must_remain_inside_the_repository(self) -> None:
+        with self.assertRaisesRegex(ModelError, "invalid changed repository path"):
+            select_tests(load_test_catalog(ROOT), "fast", ("../outside",))
+        with self.assertRaisesRegex(ModelError, "invalid changed repository path"):
+            select_tests(load_test_catalog(ROOT), "fast", ("unsafe\npath",))
 
 
 if __name__ == "__main__":

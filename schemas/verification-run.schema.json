@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/verification-run-v1.json",
+  "title": "HyperFlux structured verification run",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "run_id", "lane", "selection", "source", "started_at", "finished_at", "status", "duration_ms", "nodes"],
+  "properties": {
+    "$schema": {"const": "https://hyperflux.dev/schemas/verification-run-v1.json"},
+    "schema": {"const": "hyperflux-verification-run-v1"},
+    "run_id": {"$ref": "#/$defs/runId"},
+    "lane": {"enum": ["fast", "full-software"]},
+    "selection": {"$ref": "#/$defs/selection"},
+    "source": {"$ref": "#/$defs/source"},
+    "started_at": {"$ref": "#/$defs/timestamp"},
+    "finished_at": {"$ref": "#/$defs/nullableTimestamp"},
+    "status": {"enum": ["running", "passed", "failed"]},
+    "duration_ms": {"$ref": "#/$defs/nullableDuration"},
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {"$ref": "#/$defs/node"}
+    }
+  },
+  "$defs": {
+    "identifier": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"},
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "runId": {"type": "string", "pattern": "^hfxv-[0-9a-f]{20}$"},
+    "timestamp": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "nullableTimestamp": {"oneOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
+    "nullableDuration": {"oneOf": [{"type": "integer", "minimum": 0, "maximum": 86400000}, {"type": "null"}]},
+    "path": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "base_revision", "changed_paths", "unmatched_paths"],
+      "properties": {
+        "mode": {"enum": ["lane", "changed-paths", "changed-paths-critical", "changed-paths-fail-closed", "changed-paths-no-diff"]},
+        "base_revision": {"oneOf": [{"$ref": "#/$defs/revision"}, {"type": "null"}]},
+        "changed_paths": {"type": "array", "maxItems": 4096, "uniqueItems": true, "items": {"$ref": "#/$defs/path"}},
+        "unmatched_paths": {"type": "array", "maxItems": 4096, "uniqueItems": true, "items": {"$ref": "#/$defs/path"}}
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "commit_epoch", "worktree", "worktree_sha256"],
+      "properties": {
+        "revision": {"$ref": "#/$defs/revision"},
+        "commit_epoch": {"type": "integer", "minimum": 1, "maximum": 4102444800},
+        "worktree": {"enum": ["clean", "dirty"]},
+        "worktree_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "domain", "runner", "dependencies", "input_sha256", "status", "started_at", "finished_at", "duration_ms", "produced_evidence", "error"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "title": {"type": "string", "minLength": 1, "maxLength": 160},
+        "domain": {"$ref": "#/$defs/identifier"},
+        "runner": {"$ref": "#/$defs/identifier"},
+        "dependencies": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/identifier"}},
+        "input_sha256": {"$ref": "#/$defs/digest"},
+        "status": {"enum": ["pending", "running", "passed", "failed", "blocked"]},
+        "started_at": {"$ref": "#/$defs/nullableTimestamp"},
+        "finished_at": {"$ref": "#/$defs/nullableTimestamp"},
+        "duration_ms": {"$ref": "#/$defs/nullableDuration"},
+        "produced_evidence": {"type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": {"$ref": "#/$defs/identifier"}},
+        "error": {"oneOf": [{"type": "string", "minLength": 1, "maxLength": 512}, {"type": "null"}]}
+      }
+    }
+  }
+}

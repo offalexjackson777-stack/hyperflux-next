@@ -105,6 +105,124 @@ class TestCatalog:
         return tuple(ordered)
 
 
+@dataclass(frozen=True)
+class TestSelection:
+    lane: str
+    mode: str
+    nodes: tuple[TestNode, ...]
+    changed_paths: tuple[str, ...]
+    unmatched_paths: tuple[str, ...]
+
+
+CRITICAL_CHANGE_PATTERNS = (
+    "hfx",
+    "schemas/test-catalog.schema.json",
+    "schemas/verification-*.schema.json",
+    "tools/hfxdev/cli.py",
+    "tools/hfxdev/testgraph.py",
+    "tools/hfxdev/verification_run.py",
+    "tools/hfxdev/verify.py",
+    "verification/tests.json",
+)
+
+
+def _matches(path: str, pattern: str) -> bool:
+    return PurePosixPath(path).full_match(pattern)
+
+
+def _changed_path(value: str) -> str:
+    path = PurePosixPath(value)
+    if (
+        not value
+        or path.is_absolute()
+        or ".." in path.parts
+        or path.as_posix() != value
+        or len(value) > 512
+        or any(ord(character) < 32 or ord(character) == 127 for character in value)
+    ):
+        raise ModelError(f"invalid changed repository path: {value}")
+    return value
+
+
+def select_tests(
+    catalog: TestCatalog,
+    lane: str,
+    changed_paths: tuple[str, ...] | list[str] | None = None,
+) -> TestSelection:
+    if lane not in {"fast", "full-software"}:
+        raise ModelError(f"unsupported software verification lane: {lane}")
+    ordered = catalog.ordered()
+    eligible = {node.id for node in ordered if lane in node.lanes}
+    if not eligible:
+        raise ModelError(f"verification lane has no tests: {lane}")
+    if changed_paths is None:
+        return TestSelection(lane, "lane", tuple(node for node in ordered if node.id in eligible), (), ())
+
+    changed = tuple(sorted({_changed_path(value) for value in changed_paths}))
+    if not changed:
+        return TestSelection(
+            lane,
+            "changed-paths-no-diff",
+            tuple(node for node in ordered if node.id in eligible),
+            (),
+            (),
+        )
+    if any(
+        _matches(path, pattern)
+        for path in changed
+        for pattern in CRITICAL_CHANGE_PATTERNS
+    ):
+        return TestSelection(
+            lane,
+            "changed-paths-critical",
+            tuple(node for node in ordered if node.id in eligible),
+            changed,
+            (),
+        )
+
+    selected: set[str] = set()
+    unmatched: list[str] = []
+    for path in changed:
+        matched = {
+            node.id
+            for node in ordered
+            if node.id in eligible
+            and any(_matches(path, pattern) for pattern in node.cache_inputs)
+        }
+        if not matched:
+            unmatched.append(path)
+        selected.update(matched)
+    if unmatched:
+        return TestSelection(
+            lane,
+            "changed-paths-fail-closed",
+            tuple(node for node in ordered if node.id in eligible),
+            changed,
+            tuple(unmatched),
+        )
+
+    by_id = catalog.by_id
+    expanded = True
+    while expanded:
+        expanded = False
+        for node in ordered:
+            if node.id in eligible and node.id not in selected and set(node.dependencies) & selected:
+                selected.add(node.id)
+                expanded = True
+        for node_id in tuple(selected):
+            for dependency in by_id[node_id].dependencies:
+                if dependency not in selected:
+                    selected.add(dependency)
+                    expanded = True
+    return TestSelection(
+        lane,
+        "changed-paths",
+        tuple(node for node in ordered if node.id in selected),
+        changed,
+        (),
+    )
+
+
 def _require_exact_keys(value: dict[str, Any], expected: set[str], label: str) -> None:
     missing = sorted(expected - value.keys())
     extra = sorted(value.keys() - expected)
@@ -181,6 +299,8 @@ def _node(root: Path, value: Any, index: int) -> TestNode:
         raise ModelError(f"{label}: a hardware-writing test must require hardware")
     if "hardware" in lanes and hardware != "required":
         raise ModelError(f"{label}: hardware lane tests must require hardware")
+    if set(lanes) & {"fast", "full-software"} and hardware != "none":
+        raise ModelError(f"{label}: software lanes may not require hardware")
     expected = _positive_integer(
         value["expected_duration_seconds"], f"{label} expected_duration_seconds", allow_zero=True
     )
@@ -239,13 +359,19 @@ def load_test_catalog(root: Path) -> TestCatalog:
     return catalog
 
 
-def format_plan(catalog: TestCatalog) -> str:
-    nodes = catalog.ordered()
+def format_plan(
+    catalog: TestCatalog,
+    *,
+    lane: str = "full-software",
+    changed_paths: tuple[str, ...] | list[str] | None = None,
+) -> str:
+    selection = select_tests(catalog, lane, changed_paths)
+    nodes = selection.nodes
     expected = sum(node.expected_duration_seconds for node in nodes)
     lines = [
         "HyperFlux Next verification plan",
         f"Tests: {len(nodes)} | expected serial duration: {expected}s",
-        "Selection: --all (every catalog node and dependency)",
+        f"Selection: {selection.lane} ({selection.mode})",
         "",
     ]
     for index, node in enumerate(nodes, start=1):

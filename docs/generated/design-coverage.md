@@ -8,10 +8,10 @@ Software verification never substitutes for required physical evidence or public
 ## Summary
 
 - `blocked-by-physical-evidence`: 3
-- `partially-implemented`: 14
+- `partially-implemented`: 12
 - `policy-defined`: 2
 - `publication-locked`: 1
-- `software-verified`: 47
+- `software-verified`: 49
 
 | Section | Subject | Status | Owner | Physical proof | Release block |
 | ---: | --- | --- | --- | --- | --- |
@@ -53,12 +53,12 @@ Software verification never substitutes for required physical evidence or public
 | 36 | Virtual Receiver | `software-verified` | `verification` | no | no |
 | 37 | Deterministic Replay | `software-verified` | `verification` | no | no |
 | 38 | One Verification Entry Point | `software-verified` | `verification` | no | no |
-| 39 | Fast Verification | `partially-implemented` | `verification` | no | yes |
+| 39 | Fast Verification | `software-verified` | `verification` | no | no |
 | 40 | Full Software Verification | `software-verified` | `verification` | no | yes |
 | 41 | Hardware Qualification | `blocked-by-physical-evidence` | `verification` | required | yes |
 | 42 | Watched-Test Application | `partially-implemented` | `verification` | required | yes |
 | 43 | Typed Test Metadata | `software-verified` | `verification` | no | no |
-| 44 | Verification Outputs | `partially-implemented` | `verification` | no | yes |
+| 44 | Verification Outputs | `software-verified` | `verification` | no | no |
 | 45 | Advanced Testing Methods | `partially-implemented` | `verification` | no | no |
 | 46 | Formal Model Checking | `software-verified` | `verification` | no | no |
 | 47 | Language-Specific Tooling | `partially-implemented` | `toolchains` | no | no |
@@ -309,15 +309,15 @@ Evidence: [`crates/hfx-sim/src/replay.rs`](../../crates/hfx-sim/src/replay.rs), 
 
 ### 38. One Verification Entry Point
 
-Evidence: [`hfx`](../../hfx), [`tools/hfxdev/verify.py`](../../tools/hfxdev/verify.py).
+Evidence: [`hfx`](../../hfx), [`tools/hfxdev/cli.py`](../../tools/hfxdev/cli.py), [`tools/hfxdev/verification_run.py`](../../tools/hfxdev/verification_run.py).
 
 - No remaining gap in the current software scope.
 
 ### 39. Fast Verification
 
-Evidence: [`verification/tests.json`](../../verification/tests.json), [`tools/hfxdev/testgraph.py`](../../tools/hfxdev/testgraph.py).
+Evidence: [`verification/tests.json`](../../verification/tests.json), [`tools/hfxdev/testgraph.py`](../../tools/hfxdev/testgraph.py), [`tools/hfxdev/verification_run.py`](../../tools/hfxdev/verification_run.py), [`tests/test_testgraph.py`](../../tests/test_testgraph.py).
 
-- Expose the existing fast-lane metadata as an executable CLI selection with structured results.
+- No remaining gap in the current software scope.
 
 ### 40. Full Software Verification
 
@@ -345,9 +345,9 @@ Evidence: [`schemas/test-catalog.schema.json`](../../schemas/test-catalog.schema
 
 ### 44. Verification Outputs
 
-Evidence: [`tools/hfxdev/verify.py`](../../tools/hfxdev/verify.py), [`schemas/package-build-manifest.schema.json`](../../schemas/package-build-manifest.schema.json).
+Evidence: [`tools/hfxdev/verification_run.py`](../../tools/hfxdev/verification_run.py), [`schemas/verification-run.schema.json`](../../schemas/verification-run.schema.json), [`schemas/verification-evidence.schema.json`](../../schemas/verification-evidence.schema.json), [`tests/test_verification_run.py`](../../tests/test_verification_run.py).
 
-- Emit JSON, JUnit, annotations, timings, and a source-bound evidence manifest from the main verifier.
+- No remaining gap in the current software scope.
 
 ### 45. Advanced Testing Methods
 
@@ -429,9 +429,9 @@ Evidence: [`assurance/performance-budgets.json`](../../assurance/performance-bud
 
 ### 58. Change-Aware CI
 
-Evidence: [`verification/tests.json`](../../verification/tests.json), [`tools/hfxdev/testgraph.py`](../../tools/hfxdev/testgraph.py).
+Evidence: [`verification/tests.json`](../../verification/tests.json), [`tools/hfxdev/testgraph.py`](../../tools/hfxdev/testgraph.py), [`tests/test_testgraph.py`](../../tests/test_testgraph.py).
 
-- Add hosted SHA-pinned workflows and a fail-closed changed-domain selector.
+- Add hosted SHA-pinned workflows that consume the fail-closed changed-domain selector and structured verification artifacts.
 
 ### 59. Dependency Updates
 
