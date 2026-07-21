@@ -475,8 +475,8 @@ def kernel_receiver_table(catalog: dict[str, Any]) -> str:
         identity = profile["identity"]
         transport = profile["transport"]
         lines.append(
-            f'HFX_RECEIVER_PROFILE("{profile["profile_id"]}", 0x{identity["vendor_id"]:04x}, '
-            f'0x{identity["product_id"]:04x}, {transport["backend_id"]}, {transport["maximum_targets"]})'
+            f'HFX_RECEIVER_PROFILE(0x{identity["vendor_id"]:04x}, '
+            f'0x{identity["product_id"]:04x}, {transport["backend_id"]})'
         )
     lines.extend(["", "#undef HFX_RECEIVER_PROFILE", ""])
     return "\n".join(lines)

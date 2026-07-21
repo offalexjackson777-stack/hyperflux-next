@@ -6,6 +6,6 @@
 #error "Define HFX_RECEIVER_PROFILE before including this table"
 #endif
 
-HFX_RECEIVER_PROFILE("receiver.razer.hyperflux-v2.1532-00cf", 0x1532, 0x00cf, 1, 115)
+HFX_RECEIVER_PROFILE(0x1532, 0x00cf, 1)
 
 #undef HFX_RECEIVER_PROFILE

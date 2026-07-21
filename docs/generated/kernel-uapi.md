@@ -13,8 +13,8 @@ The UAPI contains fixed-width values, no pointers, and no application or product
 | `hfx_uapi_info` | 40 | `get_info` |
 | `hfx_uapi_begin_session` | 128 | `begin_session` |
 | `hfx_uapi_end_session` | 32 | `end_session` |
-| `hfx_uapi_frame` | 104 | `nested payload` |
-| `hfx_uapi_submit` | 1744 | `submit` |
+| `hfx_uapi_frame` | 112 | `nested payload` |
+| `hfx_uapi_submit` | 1872 | `submit` |
 | `hfx_uapi_transaction_result` | 104 | `get_transaction_result` |
 | `hfx_uapi_observation` | 40 | `nested payload` |
 | `hfx_uapi_read_observations` | 1328 | `read_observations` |

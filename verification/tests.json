@@ -242,18 +242,18 @@
     },
     {
       "id": "kernel-profile-contracts",
-      "title": "Kernel generated profile and UAPI contracts",
+      "title": "Kernel profile, UAPI, protocol, and module contracts",
       "owned_domain": "kernel",
       "lanes": ["fast", "full-software"],
       "runner": "kernel-profile-contracts",
-      "required_capabilities": [],
+      "required_capabilities": ["kernel-headers"],
       "hardware_requirement": "none",
       "writes_hardware": false,
-      "expected_duration_seconds": 2,
-      "timeout_seconds": 60,
+      "expected_duration_seconds": 8,
+      "timeout_seconds": 180,
       "dependencies": ["generated-freshness", "toolchain-contract"],
       "isolation": "exclusive-process",
-      "cache_inputs": ["driver/kernel/**/*", "uapi/*.json", "tests/cpp/kernel_profile_table_smoke.cpp", "tests/c/kernel_uapi_smoke.c"],
+      "cache_inputs": ["driver/kernel/**/*", "uapi/*.json", "tests/cpp/kernel_profile_table_smoke.cpp", "tests/c/kernel_uapi_smoke.c", "tests/c/kernel_protocol_smoke.c"],
       "produced_evidence": ["kernel-profile-result"],
       "resume_policy": "rerun"
     }

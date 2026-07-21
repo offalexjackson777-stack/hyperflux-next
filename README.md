@@ -46,6 +46,9 @@ product stack before any real-hardware writer is admitted:
 - imported facts retain provenance and evidence links;
 - canonical JSON drives generated documentation, language bindings, profile
   catalogs, kernel receiver tables, and composition fixtures;
+- the minimal HID module preserves ordinary input, exposes passive observations,
+  and compiles warning-fatal against supported local kernel headers without
+  loading the module or writing hardware;
 - receiver, child, and surface profiles compose independently at runtime;
 - every writable capability requires a public physical evidence claim;
 - official compatibility names remain zero-write candidates until separately
@@ -80,6 +83,7 @@ Inspect migration progress without changing files:
 | `sdk/` | Generated non-Rust language bindings for integrations |
 | `driver/kernel/generated/` | Receiver-only match tables; no child presentation or application policy |
 | `driver/kernel/uapi/` | Generated fixed-width Linux userspace ABI; no pointers or product policy |
+| `driver/kernel/` | Minimal HID lifecycle, passive observation, writer-session, and validated-envelope transport |
 | `uapi/` | Canonical kernel ABI model and bounds |
 | `generated/` | Canonical machine artifacts consumed across components |
 | `migration/` | Source identities, generated inventories, and reviewed subsystem decisions |

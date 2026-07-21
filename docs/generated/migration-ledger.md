@@ -8,7 +8,7 @@ Default disposition: `REJECT_UNTIL_REVIEWED`.
 | --- | --- | --- | --- | --- |
 | `HFX-MIG-001` | architecture and product requirements | `REIMPLEMENT` | `IN_PROGRESS` | `architecture` |
 | `HFX-MIG-002` | protocol discoveries and physical evidence claims | `SPECIFICATION_ONLY` | `IN_PROGRESS` | `profiles` |
-| `HFX-MIG-003` | Linux HID kernel driver | `REIMPLEMENT` | `PENDING_REVIEW` | `kernel` |
+| `HFX-MIG-003` | Linux HID kernel driver | `REIMPLEMENT` | `IN_PROGRESS` | `kernel` |
 | `HFX-MIG-004` | bridge runtime and policy | `REIMPLEMENT` | `IN_PROGRESS` | `bridge` |
 | `HFX-MIG-005` | hardware and presentation profiles | `REIMPLEMENT_AND_GENERATE` | `IN_PROGRESS` | `profiles` |
 | `HFX-MIG-006` | OpenRGB integration | `REIMPLEMENT` | `PENDING_REVIEW` | `integrations` |

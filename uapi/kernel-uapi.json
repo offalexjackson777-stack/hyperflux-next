@@ -8,6 +8,8 @@
     "nonce_bytes": 32,
     "max_session_ns": 300000000000,
     "max_frame_bytes": 96,
+    "max_frame_delay_us": 100000,
+    "max_transaction_delay_us": 1000000,
     "max_frames": 16,
     "max_observations": 32
   },
@@ -38,12 +40,13 @@
     {
       "name": "frame_kind",
       "values": [
-        {"name": "feature_set_report", "value": 1}
+        {"name": "usb_class_set_report", "value": 1}
       ]
     },
     {
       "name": "transport_status",
       "values": [
+        {"name": "not_observed", "value": 0},
         {"name": "reserved", "value": 1},
         {"name": "started", "value": 2},
         {"name": "succeeded", "value": 3},
@@ -152,6 +155,8 @@
         {"name": "backend_id", "type": "u32"},
         {"name": "kind", "type": "u16"},
         {"name": "payload_length", "type": "u16"},
+        {"name": "delay_after_us", "type": "u32"},
+        {"name": "flags", "type": "u32"},
         {"name": "payload", "type": "u8", "count": "max_frame_bytes"}
       ]
     },

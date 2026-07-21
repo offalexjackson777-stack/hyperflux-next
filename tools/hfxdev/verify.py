@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -226,6 +227,62 @@ def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
         node.timeout_seconds,
     )
     _run_command(root, [str(uapi_binary)], "kernel UAPI smoke test", node.timeout_seconds)
+
+    protocol_binary = root / "build" / "kernel-protocol-smoke"
+    _run_command(
+        root,
+        [
+            "clang",
+            "-std=c11",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-Idriver/kernel",
+            "-Idriver/kernel/uapi",
+            "tests/c/kernel_protocol_smoke.c",
+            "-o",
+            str(protocol_binary),
+        ],
+        "kernel protocol compile",
+        node.timeout_seconds,
+    )
+    _run_command(
+        root,
+        [str(protocol_binary)],
+        "kernel protocol smoke test",
+        node.timeout_seconds,
+    )
+
+    configured = os.environ.get("HFX_KERNEL_BUILD_DIRS")
+    if configured:
+        build_directories = [Path(value) for value in configured.split(os.pathsep) if value]
+    else:
+        build_directories = [Path("/lib/modules") / os.uname().release / "build"]
+    if not build_directories:
+        raise ModelError("kernel module verification has no configured header directory")
+    for build_directory in build_directories:
+        if not build_directory.is_absolute() or not (build_directory / "Makefile").is_file():
+            raise ModelError(f"kernel header directory is unavailable: {build_directory}")
+        label = build_directory.resolve().parent.name
+        output_directory = root / "build" / "kernel" / label
+        if output_directory.exists():
+            shutil.rmtree(output_directory)
+        output_directory.mkdir(parents=True)
+        _run_command(
+            root,
+            [
+                "make",
+                "-C",
+                str(build_directory),
+                f"M={root / 'driver' / 'kernel'}",
+                f"MO={output_directory}",
+                "W=1",
+                "modules",
+            ],
+            f"kernel module build ({label})",
+            node.timeout_seconds,
+        )
 
 
 def _check_build_cache_clock(root: Path, *, now: float | None = None) -> None:

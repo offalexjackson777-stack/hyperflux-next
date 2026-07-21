@@ -19,7 +19,7 @@ Every current node is software-only and has zero hardware-write authority.
 | 10 | `python-unit` | `tooling` | `none` | `false` | 60s | `rerun` |
 | 11 | `rust-clippy` | `rust` | `none` | `false` | 180s | `rerun` |
 | 12 | `cpp-sdk-contracts` | `sdk` | `none` | `false` | 60s | `rerun` |
-| 13 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 60s | `rerun` |
+| 13 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 180s | `rerun` |
 | 14 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
 | 15 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
 

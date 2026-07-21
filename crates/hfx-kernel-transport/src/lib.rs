@@ -19,8 +19,8 @@ mod tests {
         assert_eq!(size_of::<HfxUapiInfo>(), 40);
         assert_eq!(size_of::<HfxUapiBeginSession>(), 128);
         assert_eq!(size_of::<HfxUapiEndSession>(), 32);
-        assert_eq!(size_of::<HfxUapiFrame>(), 104);
-        assert_eq!(size_of::<HfxUapiSubmit>(), 1_744);
+        assert_eq!(size_of::<HfxUapiFrame>(), 112);
+        assert_eq!(size_of::<HfxUapiSubmit>(), 1_872);
         assert_eq!(size_of::<HfxUapiTransactionResult>(), 104);
         assert_eq!(size_of::<HfxUapiObservation>(), 40);
         assert_eq!(size_of::<HfxUapiReadObservations>(), 1_328);

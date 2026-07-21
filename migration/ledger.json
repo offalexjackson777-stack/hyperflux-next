@@ -25,7 +25,7 @@
       "id": "HFX-MIG-003",
       "component": "Linux HID kernel driver",
       "disposition": "REIMPLEMENT",
-      "status": "PENDING_REVIEW",
+      "status": "IN_PROGRESS",
       "sources": ["engineering-laboratory"],
       "destination_owner": "kernel",
       "rationale": "Retain proven behavior, UAPI lessons, and failure tests while rebuilding a minimal generation-owned transport boundary."
