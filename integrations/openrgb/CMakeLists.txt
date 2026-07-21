@@ -12,6 +12,7 @@ add_library(
     STATIC
         src/controller_model.cpp
         src/dispatch_queue.cpp
+        src/native_command.cpp
         src/runtime_bridge.cpp
         src/runtime_core.cpp
         src/runtime_dispatch.cpp
@@ -110,6 +111,35 @@ if(HFX_OPENRGB_SOURCE_DIR)
         )
     endif()
 
+    add_library(
+        hyperflux_openrgb_native_controller
+        STATIC
+            src/native_controller.cpp
+            "${HFX_OPENRGB_SOURCE_DIR}/RGBController/RGBController.cpp"
+    )
+    set_target_properties(
+        hyperflux_openrgb_native_controller
+        PROPERTIES POSITION_INDEPENDENT_CODE ON
+    )
+    target_compile_features(hyperflux_openrgb_native_controller PUBLIC cxx_std_20)
+    target_include_directories(
+        hyperflux_openrgb_native_controller
+        PUBLIC
+            "${CMAKE_CURRENT_SOURCE_DIR}/include"
+            "${HFX_OPENRGB_SOURCE_DIR}"
+            "${HFX_OPENRGB_SOURCE_DIR}/RGBController"
+    )
+    target_link_libraries(
+        hyperflux_openrgb_native_controller
+        PUBLIC hyperflux_openrgb_razer_registry
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(
+            hyperflux_openrgb_native_controller
+            PRIVATE -Wall -Wextra -Werror -pedantic
+        )
+    endif()
+
     if(BUILD_TESTING)
         add_executable(
             openrgb-razer-registry-contract
@@ -126,6 +156,25 @@ if(HFX_OPENRGB_SOURCE_DIR)
             )
         endif()
         add_test(NAME openrgb-razer-registry-contract COMMAND openrgb-razer-registry-contract)
+
+        add_executable(
+            openrgb-native-controller-contract
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_native_controller_contract.cpp"
+        )
+        target_link_libraries(
+            openrgb-native-controller-contract
+            PRIVATE hyperflux_openrgb_native_controller
+        )
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            target_compile_options(
+                openrgb-native-controller-contract
+                PRIVATE -Wall -Wextra -Werror -pedantic
+            )
+        endif()
+        add_test(
+            NAME openrgb-native-controller-contract
+            COMMAND openrgb-native-controller-contract
+        )
     endif()
 else()
     message(STATUS "Pinned OpenRGB source not configured; building adapter core only")
