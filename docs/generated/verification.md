@@ -28,6 +28,7 @@ Every current node is software-only and has zero hardware-write authority.
 | 19 | `polychromatic-adapter-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
 | 20 | `openrazer-compatibility-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
 | 21 | `openrgb-thread-sanitizer` | `integrations` | `none` | `false` | 300s | `rerun` |
+| 22 | `package-contracts` | `packaging` | `none` | `false` | 600s | `rerun` |
 
 ## Dependencies
 
@@ -54,6 +55,7 @@ flowchart LR
     polychromatic_adapter_contracts["polychromatic-adapter-contracts"]
     openrazer_compatibility_contracts["openrazer-compatibility-contracts"]
     openrgb_thread_sanitizer["openrgb-thread-sanitizer"]
+    package_contracts["package-contracts"]
     foundation_contracts --> schema_contracts
     foundation_contracts --> privacy_boundary
     foundation_contracts --> toolchain_contract
@@ -88,4 +90,9 @@ flowchart LR
     openrazer_metadata_contracts --> openrazer_compatibility_contracts
     python_unit --> openrazer_compatibility_contracts
     openrgb_adapter_contracts --> openrgb_thread_sanitizer
+    kernel_profile_contracts --> package_contracts
+    openrgb_adapter_contracts --> package_contracts
+    polychromatic_adapter_contracts --> package_contracts
+    openrazer_compatibility_contracts --> package_contracts
+    rust_unit --> package_contracts
 ```

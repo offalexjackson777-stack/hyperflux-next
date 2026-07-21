@@ -52,6 +52,16 @@ class InstallManifestTests(unittest.TestCase):
             destinations,
         )
 
+    def test_python_sdk_license_is_generated_from_repository_authority(self) -> None:
+        self.assertEqual(
+            (ROOT / "sdk/python/LICENSE").read_bytes(),
+            (ROOT / "LICENSE").read_bytes(),
+        )
+        self.assertIn(
+            'license-files = ["LICENSE"]',
+            (ROOT / "sdk/python/pyproject.toml").read_text(encoding="utf-8"),
+        )
+
     def test_destinations_are_unique_and_machine_independent(self) -> None:
         destinations = [str(file.destination) for file in self.manifest.files]
         destinations.extend(

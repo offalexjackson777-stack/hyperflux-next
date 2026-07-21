@@ -8,6 +8,7 @@ dynamic = ["version"]
 description = "Stable Python SDK for the local HyperFlux Next bridge"
 requires-python = ">=3.11"
 license = "GPL-2.0-or-later"
+license-files = ["LICENSE"]
 
 [tool.setuptools]
 packages = ["hyperflux_sdk", "hyperflux_sdk.generated"]

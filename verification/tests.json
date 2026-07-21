@@ -358,6 +358,45 @@
       "cache_inputs": ["driver/kernel/**/*", "uapi/*.json", "tests/cpp/kernel_profile_table_smoke.cpp", "tests/c/kernel_uapi_smoke.c", "tests/c/kernel_protocol_smoke.c"],
       "produced_evidence": ["kernel-profile-result"],
       "resume_policy": "rerun"
+    },
+    {
+      "id": "package-contracts",
+      "title": "Canonical build artifacts and reproducible installation root",
+      "owned_domain": "packaging",
+      "lanes": ["full-software"],
+      "runner": "package-contracts",
+      "required_capabilities": ["openrgb-source"],
+      "hardware_requirement": "none",
+      "writes_hardware": false,
+      "expected_duration_seconds": 150,
+      "timeout_seconds": 600,
+      "dependencies": [
+        "kernel-profile-contracts",
+        "openrgb-adapter-contracts",
+        "polychromatic-adapter-contracts",
+        "openrazer-compatibility-contracts",
+        "rust-unit"
+      ],
+      "isolation": "exclusive-process",
+      "cache_inputs": [
+        "Cargo.lock",
+        "Cargo.toml",
+        "crates/**/*.rs",
+        "driver/kernel/**/*",
+        "integrations/**/*",
+        "packaging/**/*",
+        "runtime/linux.json",
+        "schemas/*.json",
+        "sdk/**/*",
+        "tools/hfxdev/install.py",
+        "tools/hfxdev/package_pipeline.py"
+      ],
+      "produced_evidence": [
+        "package-build-manifest",
+        "installed-files-inventory",
+        "reproducible-payload-digest"
+      ],
+      "resume_policy": "rerun"
     }
   ]
 }

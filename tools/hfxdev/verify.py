@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -17,6 +18,7 @@ from .integrations import load_integration_catalog, load_openrazer_compatibility
 from .install import load_install_manifest
 from .linux_runtime import load_linux_runtime
 from .openrazer import load_imported_metadata, transformed_metadata
+from .package_pipeline import build_artifacts, load_artifact_set, stage_rootfs
 from .render import rendered_files
 from .profiles import load_profile_inputs
 from .protocol import load_protocol_catalog
@@ -960,6 +962,98 @@ def _run_simulator_contracts(root: Path, node: TestNode) -> None:
     )
 
 
+def _staged_tree_snapshot(root: Path) -> tuple[tuple[object, ...], ...]:
+    snapshot: list[tuple[object, ...]] = []
+    for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root).as_posix()
+        if path.is_symlink():
+            raise ModelError(f"package stage contains a symbolic link: {relative}")
+        mode = stat.S_IMODE(path.stat().st_mode)
+        if path.is_dir():
+            snapshot.append((relative, "directory", mode, path.stat().st_mtime_ns))
+        elif path.is_file():
+            snapshot.append(
+                (
+                    relative,
+                    "file",
+                    mode,
+                    path.stat().st_size,
+                    path.stat().st_mtime_ns,
+                    sha256_file(path),
+                )
+            )
+        else:
+            raise ModelError(f"package stage contains an unsupported file type: {relative}")
+    return tuple(snapshot)
+
+
+def _run_package_contracts(root: Path, node: TestNode) -> None:
+    workspace = root / "build" / "package-contracts"
+    if workspace.exists():
+        shutil.rmtree(workspace)
+    workspace.mkdir(parents=True)
+    manifest_path = build_artifacts(
+        root,
+        workspace / "artifacts",
+        capabilities={"openrgb-source": _openrgb_source(root)},
+    )
+    artifacts = load_artifact_set(root, manifest_path)
+    if artifacts.omitted:
+        raise ModelError("complete package contract unexpectedly omitted a build product")
+
+    first = stage_rootfs(root, manifest_path, workspace / "root-a")
+    second = stage_rootfs(root, manifest_path, workspace / "root-b")
+    if (
+        first.payload_sha256 != second.payload_sha256
+        or first.file_count != second.file_count
+        or first.inventory.read_bytes() != second.inventory.read_bytes()
+        or _staged_tree_snapshot(first.root) != _staged_tree_snapshot(second.root)
+    ):
+        raise ModelError("independent package stages are not byte-for-byte reproducible")
+
+    license_files = tuple(
+        first.root.glob(
+            "usr/lib/python*/site-packages/"
+            "hyperflux_next_sdk-*.dist-info/licenses/LICENSE"
+        )
+    )
+    if len(license_files) != 1 or license_files[0].read_bytes() != (
+        root / "LICENSE"
+    ).read_bytes():
+        raise ModelError("packaged Python SDK does not carry the canonical license")
+
+    _run_command(
+        root,
+        [str(first.root / "usr/bin/hyperfluxctl"), "--help"],
+        "staged operations CLI",
+        node.timeout_seconds,
+    )
+    _run_command(
+        root,
+        [
+            str(first.root / "usr/lib/hyperflux-next/hyperflux-next-bridge"),
+            "--help",
+        ],
+        "staged bridge CLI",
+        node.timeout_seconds,
+    )
+    plugin = first.root / "usr/lib/openrgb/plugins/hyperflux-next-openrgb.so"
+    try:
+        dynamic = subprocess.run(
+            ["readelf", "-d", str(plugin)],
+            cwd=root,
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=node.timeout_seconds,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise ModelError(f"cannot inspect staged OpenRGB module: {error}") from error
+    if dynamic.returncode != 0 or "(RPATH)" in dynamic.stdout or "(RUNPATH)" in dynamic.stdout:
+        raise ModelError("staged OpenRGB module has an invalid dynamic-library contract")
+
+
 RUNNERS = {
     "foundation-contracts": _run_foundation_contracts,
     "schema-contracts": _run_schema_contracts,
@@ -982,6 +1076,7 @@ RUNNERS = {
     "openrazer-compatibility-contracts": _run_openrazer_compatibility_contracts,
     "polychromatic-adapter-contracts": _run_polychromatic_adapter_contracts,
     "kernel-profile-contracts": _run_kernel_profile_contracts,
+    "package-contracts": _run_package_contracts,
 }
 
 

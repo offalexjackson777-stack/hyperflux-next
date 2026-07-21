@@ -239,6 +239,9 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "sdk" / "python" / "hyperflux_sdk" / "_version.py": python_version_module(
             linux_runtime, "GPL-2.0-or-later"
         ),
+        root / "sdk" / "python" / "LICENSE": (root / "LICENSE").read_text(
+            encoding="utf-8"
+        ),
         root
         / "integrations"
         / "polychromatic"

@@ -54,6 +54,7 @@ KNOWN_RUNNERS = {
     "openrazer-compatibility-contracts",
     "polychromatic-adapter-contracts",
     "kernel-profile-contracts",
+    "package-contracts",
 }
 IDENTIFIER = re.compile(r"^[a-z0-9][a-z0-9._-]{0,127}$")
 
