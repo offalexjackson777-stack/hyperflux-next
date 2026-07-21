@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use crate::{ReceiverProfileBinding, RuntimeProfileAuthority, RuntimeProfileAuthorityError};
+use crate::{
+    ReceiverProfileBinding, RuntimeProfileAuthority, RuntimeProfileAuthorityError,
+    staged_events::StagedEvents,
+};
 use hfx_core::{
-    BoundedEventLog, EventDelivery, EventDraft, EventLogError, EventSink, LeaseManager,
-    LifecycleError, LifecycleLimits, ObservationStamp, ReceiverLifecycleMachine,
-    ReceiverLifecycleRegistry, ReceiverRegistryError, ReceiverTransport, TransactionCoordinator,
-    TransactionCoordinatorError,
+    BoundedEventLog, EventLogError, EventSink, LeaseManager, LifecycleError, LifecycleLimits,
+    ObservationStamp, ReceiverLifecycleMachine, ReceiverLifecycleRegistry, ReceiverRegistryError,
+    ReceiverTransport, TransactionCoordinator, TransactionCoordinatorError,
 };
 use hfx_domain::{
-    ApplyOutcome, EventKind, GenerationId, LeaseId, ProductId, ReceiverId, TransactionId, VendorId,
+    ApplyOutcome, EventKind, GenerationId, LeaseId, ProductId, ReceiverId, ReceiverLifecycleState,
+    TransactionId, VendorId,
 };
-use hfx_protocol::BridgeEvent;
 use std::fmt;
 
 /// Identity evidence for one transport-confirmed receiver generation.
@@ -44,6 +46,40 @@ pub enum GenerationActivationOutcome {
     Ignored(ApplyOutcome),
 }
 
+/// Transport-confirmed removal evidence for one active generation.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ReceiverDisconnectObservation {
+    pub receiver_id: ReceiverId,
+    pub stamp: ObservationStamp,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ReceiverDisconnectBegan {
+    pub receiver_id: ReceiverId,
+    pub generation_id: GenerationId,
+    pub revoked_leases: Vec<LeaseId>,
+    pub revoked_transactions: Vec<TransactionId>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ReceiverDisconnectOutcome {
+    Applied(ReceiverDisconnectBegan),
+    Ignored(ApplyOutcome),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ReceiverDisconnectCompleted {
+    pub receiver_id: ReceiverId,
+    pub generation_id: GenerationId,
+    pub profile_retired: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ReceiverDisconnectCompletionOutcome {
+    Applied(ReceiverDisconnectCompleted),
+    Ignored(ApplyOutcome),
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum GenerationOrchestrationError {
     TransportGenerationMismatch {
@@ -51,6 +87,11 @@ pub enum GenerationOrchestrationError {
         observed_generation: GenerationId,
         transport_generation: Option<GenerationId>,
     },
+    TransportStillPresent {
+        receiver_id: ReceiverId,
+        generation_id: GenerationId,
+    },
+    MissingReceiver(ReceiverId),
     Lifecycle(LifecycleError),
     Registry(ReceiverRegistryError),
     Profile(RuntimeProfileAuthorityError),
@@ -73,6 +114,19 @@ impl fmt::Display for GenerationOrchestrationError {
                 formatter,
                 "transport generation mismatch for {receiver_id}: observed {observed_generation}, transport {transport_generation:?}"
             ),
+            Self::TransportStillPresent {
+                receiver_id,
+                generation_id,
+            } => write!(
+                formatter,
+                "receiver {receiver_id} generation {generation_id} is still present in transport"
+            ),
+            Self::MissingReceiver(receiver_id) => {
+                write!(
+                    formatter,
+                    "receiver state disappeared during staging: {receiver_id}"
+                )
+            }
             Self::Lifecycle(error) => write!(formatter, "{error}"),
             Self::Registry(error) => write!(formatter, "{error}"),
             Self::Profile(error) => write!(formatter, "{error}"),
@@ -146,8 +200,13 @@ impl GenerationOrchestrator {
         T: ReceiverTransport,
         S: EventSink,
     {
-        let receiver_id = observation.receiver_id;
-        let generation_id = observation.stamp.generation_id();
+        let ReceiverGenerationObservation {
+            receiver_id,
+            vendor_id,
+            product_id,
+            stamp,
+        } = observation;
+        let generation_id = stamp.generation_id();
         let transport_generation = transport.current_generation(&receiver_id);
         if transport_generation != Some(generation_id) {
             return Err(GenerationOrchestrationError::TransportGenerationMismatch {
@@ -162,26 +221,10 @@ impl GenerationOrchestrator {
         let mut next_leases = leases.clone();
         let mut next_transactions = transactions.clone();
         let mut next_events = events.clone();
-        let mut emitted = CollectedEvents::default();
+        let mut emitted = StagedEvents::default();
 
-        let previous_generation = next_receivers
-            .get(&receiver_id)
-            .and_then(ReceiverLifecycleMachine::current)
-            .map(hfx_core::ReceiverGenerationLifecycle::generation_id);
-        let lifecycle_outcome = if let Some(machine) = next_receivers.get_mut(&receiver_id) {
-            if machine.current().is_some() {
-                machine.replace_generation(observation.stamp)
-            } else {
-                machine.discover(observation.stamp)
-            }
-        } else {
-            let mut machine = ReceiverLifecycleMachine::new(receiver_id.clone(), limits)?;
-            let outcome = machine.discover(observation.stamp);
-            if outcome == ApplyOutcome::Applied {
-                next_receivers.register(machine)?;
-            }
-            outcome
-        };
+        let (lifecycle_outcome, previous_generation, was_absent) =
+            stage_activation_lifecycle(&mut next_receivers, &receiver_id, stamp, limits)?;
         if lifecycle_outcome != ApplyOutcome::Applied {
             return Ok(GenerationActivationOutcome::Ignored(lifecycle_outcome));
         }
@@ -197,15 +240,15 @@ impl GenerationOrchestrator {
                 .collect();
             for grant in next_leases.invalidate_generation(&receiver_id, previous) {
                 revoked_leases.push(grant.lease_id.clone());
-                append_ownership_event(&mut next_events, &mut emitted, grant.lease_id)?;
+                emitted.append_ownership(&mut next_events, grant.lease_id)?;
             }
         }
 
         let qualification = match next_profiles.bind_receiver(
             receiver_id.clone(),
             generation_id,
-            observation.vendor_id,
-            observation.product_id,
+            vendor_id,
+            product_id,
         ) {
             Ok(_) => {
                 let Some(binding) = next_profiles.binding(&receiver_id).cloned() else {
@@ -222,25 +265,31 @@ impl GenerationOrchestrator {
             Err(error) => return Err(GenerationOrchestrationError::Profile(error)),
         };
 
-        let generation_event = next_events.append(EventDraft {
-            kind: EventKind::GenerationReplaced,
-            receiver_id: Some(receiver_id.clone()),
-            generation_id: Some(generation_id),
-            device_id: None,
-            lease_id: None,
-            transaction_id: None,
-            finding_id: None,
-        })?;
-        let _ = emitted.try_emit(&generation_event);
+        if previous_generation.is_some() {
+            emitted.append_lifecycle(
+                &mut next_events,
+                EventKind::GenerationReplaced,
+                receiver_id.clone(),
+                generation_id,
+                None,
+            )?;
+        }
+        if was_absent {
+            emitted.append_lifecycle(
+                &mut next_events,
+                EventKind::ReceiverAvailable,
+                receiver_id.clone(),
+                generation_id,
+                None,
+            )?;
+        }
 
         *receivers = next_receivers;
         *profiles = next_profiles;
         *leases = next_leases;
         *transactions = next_transactions;
         *events = next_events;
-        for event in emitted.events {
-            let _ = sink.try_emit(&event);
-        }
+        emitted.publish(sink);
 
         Ok(GenerationActivationOutcome::Applied(GenerationActivation {
             receiver_id,
@@ -251,34 +300,181 @@ impl GenerationOrchestrator {
             revoked_transactions,
         }))
     }
-}
 
-#[derive(Clone, Debug, Default)]
-struct CollectedEvents {
-    events: Vec<BridgeEvent>,
-}
+    /// Begins an observed physical disconnect and immediately revokes every
+    /// lease and unsent transaction bound to that generation.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed error without partial mutation when transport still
+    /// reports the receiver or any bounded state/event operation fails.
+    #[allow(clippy::too_many_arguments)]
+    pub fn begin_disconnect<T, S>(
+        observation: ReceiverDisconnectObservation,
+        transport: &T,
+        receivers: &mut ReceiverLifecycleRegistry,
+        leases: &mut LeaseManager,
+        transactions: &mut TransactionCoordinator,
+        events: &mut BoundedEventLog,
+        sink: &mut S,
+    ) -> Result<ReceiverDisconnectOutcome, GenerationOrchestrationError>
+    where
+        T: ReceiverTransport,
+        S: EventSink,
+    {
+        let receiver_id = observation.receiver_id;
+        let generation_id = observation.stamp.generation_id();
+        if let Some(transport_generation) = transport.current_generation(&receiver_id) {
+            return Err(GenerationOrchestrationError::TransportStillPresent {
+                receiver_id,
+                generation_id: transport_generation,
+            });
+        }
 
-impl EventSink for CollectedEvents {
-    fn try_emit(&mut self, event: &BridgeEvent) -> EventDelivery {
-        self.events.push(event.clone());
-        EventDelivery::Accepted
+        let Some(machine) = receivers.get(&receiver_id) else {
+            return Ok(ReceiverDisconnectOutcome::Ignored(
+                ApplyOutcome::RejectedReceiverAbsent,
+            ));
+        };
+        let Some(current) = machine.current() else {
+            return Ok(ReceiverDisconnectOutcome::Ignored(
+                if machine
+                    .highest_generation()
+                    .is_some_and(|highest| generation_id <= highest)
+                {
+                    ApplyOutcome::RejectedStaleGeneration
+                } else {
+                    ApplyOutcome::RejectedReceiverAbsent
+                },
+            ));
+        };
+        if current.lifecycle().value() == ReceiverLifecycleState::Disconnecting {
+            return Ok(ReceiverDisconnectOutcome::Ignored(
+                ApplyOutcome::RejectedInvalidTransition,
+            ));
+        }
+        let mut next_receivers = receivers.clone();
+        let mut next_leases = leases.clone();
+        let mut next_transactions = transactions.clone();
+        let mut next_events = events.clone();
+        let mut emitted = StagedEvents::default();
+        let lifecycle_outcome = next_receivers
+            .get_mut(&receiver_id)
+            .ok_or_else(|| GenerationOrchestrationError::MissingReceiver(receiver_id.clone()))?
+            .transition_receiver(ReceiverLifecycleState::Disconnecting, observation.stamp);
+        if lifecycle_outcome != ApplyOutcome::Applied {
+            return Ok(ReceiverDisconnectOutcome::Ignored(lifecycle_outcome));
+        }
+
+        emitted.append_lifecycle(
+            &mut next_events,
+            EventKind::ReceiverUnavailable,
+            receiver_id.clone(),
+            generation_id,
+            None,
+        )?;
+        let revoked_transactions = next_transactions
+            .invalidate_generation(&receiver_id, generation_id, &mut next_events, &mut emitted)?
+            .into_iter()
+            .map(|terminal| terminal.transaction_id)
+            .collect();
+        let mut revoked_leases = Vec::new();
+        for grant in next_leases.invalidate_generation(&receiver_id, generation_id) {
+            revoked_leases.push(grant.lease_id.clone());
+            emitted.append_ownership(&mut next_events, grant.lease_id)?;
+        }
+
+        *receivers = next_receivers;
+        *leases = next_leases;
+        *transactions = next_transactions;
+        *events = next_events;
+        emitted.publish(sink);
+
+        Ok(ReceiverDisconnectOutcome::Applied(
+            ReceiverDisconnectBegan {
+                receiver_id,
+                generation_id,
+                revoked_leases,
+                revoked_transactions,
+            },
+        ))
+    }
+
+    /// Retires a generation only after a later disconnect-completion
+    /// observation. The earlier begin step has already revoked live authority.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed error without partial mutation when transport again
+    /// reports the receiver or lifecycle/profile state cannot be committed.
+    pub fn complete_disconnect<T>(
+        observation: ReceiverDisconnectObservation,
+        transport: &T,
+        receivers: &mut ReceiverLifecycleRegistry,
+        profiles: &mut RuntimeProfileAuthority,
+    ) -> Result<ReceiverDisconnectCompletionOutcome, GenerationOrchestrationError>
+    where
+        T: ReceiverTransport,
+    {
+        let receiver_id = observation.receiver_id;
+        let generation_id = observation.stamp.generation_id();
+        if let Some(transport_generation) = transport.current_generation(&receiver_id) {
+            return Err(GenerationOrchestrationError::TransportStillPresent {
+                receiver_id,
+                generation_id: transport_generation,
+            });
+        }
+
+        let mut next_receivers = receivers.clone();
+        let mut next_profiles = profiles.clone();
+        let Some(machine) = next_receivers.get_mut(&receiver_id) else {
+            return Ok(ReceiverDisconnectCompletionOutcome::Ignored(
+                ApplyOutcome::RejectedReceiverAbsent,
+            ));
+        };
+        let outcome = machine.complete_disconnect(observation.stamp);
+        if outcome != ApplyOutcome::Applied {
+            return Ok(ReceiverDisconnectCompletionOutcome::Ignored(outcome));
+        }
+        let profile_retired = next_profiles.retire(&receiver_id, generation_id);
+        *receivers = next_receivers;
+        *profiles = next_profiles;
+
+        Ok(ReceiverDisconnectCompletionOutcome::Applied(
+            ReceiverDisconnectCompleted {
+                receiver_id,
+                generation_id,
+                profile_retired,
+            },
+        ))
     }
 }
 
-fn append_ownership_event(
-    events: &mut BoundedEventLog,
-    emitted: &mut CollectedEvents,
-    lease_id: LeaseId,
-) -> Result<(), EventLogError> {
-    let event = events.append(EventDraft {
-        kind: EventKind::OwnershipChanged,
-        receiver_id: None,
-        generation_id: None,
-        device_id: None,
-        lease_id: Some(lease_id),
-        transaction_id: None,
-        finding_id: None,
-    })?;
-    let _ = emitted.try_emit(&event);
-    Ok(())
+fn stage_activation_lifecycle(
+    receivers: &mut ReceiverLifecycleRegistry,
+    receiver_id: &ReceiverId,
+    stamp: ObservationStamp,
+    limits: LifecycleLimits,
+) -> Result<(ApplyOutcome, Option<GenerationId>, bool), GenerationOrchestrationError> {
+    let was_absent = receivers
+        .get(receiver_id)
+        .is_none_or(|machine| machine.current().is_none());
+    let previous_generation = receivers
+        .get(receiver_id)
+        .and_then(ReceiverLifecycleMachine::highest_generation);
+    let outcome = if let Some(machine) = receivers.get_mut(receiver_id) {
+        if machine.current().is_some() {
+            machine.replace_generation(stamp)
+        } else {
+            machine.discover(stamp)
+        }
+    } else {
+        let mut machine = ReceiverLifecycleMachine::new(receiver_id.clone(), limits)?;
+        let outcome = machine.discover(stamp);
+        if outcome == ApplyOutcome::Applied {
+            receivers.register(machine)?;
+        }
+        outcome
+    };
+    Ok((outcome, previous_generation, was_absent))
 }

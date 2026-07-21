@@ -6,6 +6,7 @@ mod backend;
 mod clock;
 mod framing;
 mod generation;
+mod observation;
 mod persistence;
 mod profile_authority;
 mod rpc;
@@ -13,6 +14,7 @@ mod runtime_identity;
 mod session;
 mod session_registry;
 mod snapshot;
+mod staged_events;
 mod subscriptions;
 
 pub use backend::{CoreBridgeBackend, CoreBridgeBackendError, CoreBridgeConfig};
@@ -22,7 +24,13 @@ pub use framing::{
 };
 pub use generation::{
     GenerationActivation, GenerationActivationOutcome, GenerationOrchestrationError,
-    GenerationOrchestrator, GenerationQualification, ReceiverGenerationObservation,
+    GenerationOrchestrator, GenerationQualification, ReceiverDisconnectBegan,
+    ReceiverDisconnectCompleted, ReceiverDisconnectCompletionOutcome,
+    ReceiverDisconnectObservation, ReceiverDisconnectOutcome, ReceiverGenerationObservation,
+};
+pub use observation::{
+    AppliedLifecycleObservation, LifecycleObservation, LifecycleObservationError,
+    LifecycleObservationKind, LifecycleObservationOrchestrator, LifecycleObservationOutcome,
 };
 
 pub use persistence::{

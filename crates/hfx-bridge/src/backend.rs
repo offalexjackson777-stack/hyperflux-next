@@ -2,10 +2,12 @@
 
 use crate::{
     AuthorizedSession, BackendRequestContext, BridgeRpcBackend, GenerationActivationOutcome,
-    GenerationOrchestrationError, GenerationOrchestrator, ReceiverGenerationObservation,
-    RestorationSnapshotSource, RpcFailure, RuntimeIdentityError, RuntimeIdentityIssuer,
-    RuntimeProfileAuthority, SessionIdentitySource, SessionRegistry, SnapshotProjectionError,
-    SnapshotProjector, SubscriptionRegistry, SubscriptionRegistryError,
+    GenerationOrchestrationError, GenerationOrchestrator, LifecycleObservation,
+    LifecycleObservationError, LifecycleObservationOrchestrator, LifecycleObservationOutcome,
+    ReceiverDisconnectCompletionOutcome, ReceiverDisconnectObservation, ReceiverDisconnectOutcome,
+    ReceiverGenerationObservation, RestorationSnapshotSource, RpcFailure, RuntimeIdentityError,
+    RuntimeIdentityIssuer, RuntimeProfileAuthority, SessionIdentitySource, SessionRegistry,
+    SnapshotProjectionError, SnapshotProjector, SubscriptionRegistry, SubscriptionRegistryError,
 };
 use hfx_core::{
     BoundedEventLog, Clock, DiagnosticRegistry, DiagnosticRegistryError, DispatchResult,
@@ -200,6 +202,64 @@ where
             &mut self.profiles,
             &mut self.leases,
             &mut self.transactions,
+            &mut self.events,
+            &mut self.event_sink,
+        )
+    }
+
+    /// Begins a transport-confirmed receiver disconnect and revokes all live
+    /// authority belonging to its generation.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed orchestration error without partial state mutation.
+    pub fn begin_receiver_disconnect(
+        &mut self,
+        observation: ReceiverDisconnectObservation,
+    ) -> Result<ReceiverDisconnectOutcome, GenerationOrchestrationError> {
+        GenerationOrchestrator::begin_disconnect(
+            observation,
+            &self.transport,
+            &mut self.receivers,
+            &mut self.leases,
+            &mut self.transactions,
+            &mut self.events,
+            &mut self.event_sink,
+        )
+    }
+
+    /// Completes a previously begun receiver disconnect and retires its
+    /// generation profile binding.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed orchestration error without partial state mutation.
+    pub fn complete_receiver_disconnect(
+        &mut self,
+        observation: ReceiverDisconnectObservation,
+    ) -> Result<ReceiverDisconnectCompletionOutcome, GenerationOrchestrationError> {
+        GenerationOrchestrator::complete_disconnect(
+            observation,
+            &self.transport,
+            &mut self.receivers,
+            &mut self.profiles,
+        )
+    }
+
+    /// Applies one passive, transport-confirmed receiver or child observation.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed observation error without partial state or event
+    /// mutation.
+    pub fn observe_lifecycle(
+        &mut self,
+        observation: LifecycleObservation,
+    ) -> Result<LifecycleObservationOutcome, LifecycleObservationError> {
+        LifecycleObservationOrchestrator::apply(
+            observation,
+            &self.transport,
+            &mut self.receivers,
             &mut self.events,
             &mut self.event_sink,
         )

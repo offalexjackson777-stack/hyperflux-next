@@ -4371,12 +4371,20 @@ impl fmt::Display for DeviceWriteReadiness {
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum EventKind {
+    #[serde(rename = "receiver-available")]
+    ReceiverAvailable,
+    #[serde(rename = "receiver-suspended")]
+    ReceiverSuspended,
+    #[serde(rename = "receiver-unavailable")]
+    ReceiverUnavailable,
     #[serde(rename = "device-available")]
     DeviceAvailable,
     #[serde(rename = "device-sleeping")]
     DeviceSleeping,
     #[serde(rename = "device-unavailable")]
     DeviceUnavailable,
+    #[serde(rename = "device-unknown")]
+    DeviceUnknown,
     #[serde(rename = "battery-updated")]
     BatteryUpdated,
     #[serde(rename = "ownership-changed")]
@@ -4395,9 +4403,13 @@ impl EventKind {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
+            Self::ReceiverAvailable => "receiver-available",
+            Self::ReceiverSuspended => "receiver-suspended",
+            Self::ReceiverUnavailable => "receiver-unavailable",
             Self::DeviceAvailable => "device-available",
             Self::DeviceSleeping => "device-sleeping",
             Self::DeviceUnavailable => "device-unavailable",
+            Self::DeviceUnknown => "device-unknown",
             Self::BatteryUpdated => "battery-updated",
             Self::OwnershipChanged => "ownership-changed",
             Self::GenerationReplaced => "generation-replaced",
@@ -4413,9 +4425,13 @@ impl FromStr for EventKind {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
+            "receiver-available" => Ok(Self::ReceiverAvailable),
+            "receiver-suspended" => Ok(Self::ReceiverSuspended),
+            "receiver-unavailable" => Ok(Self::ReceiverUnavailable),
             "device-available" => Ok(Self::DeviceAvailable),
             "device-sleeping" => Ok(Self::DeviceSleeping),
             "device-unavailable" => Ok(Self::DeviceUnavailable),
+            "device-unknown" => Ok(Self::DeviceUnknown),
             "battery-updated" => Ok(Self::BatteryUpdated),
             "ownership-changed" => Ok(Self::OwnershipChanged),
             "generation-replaced" => Ok(Self::GenerationReplaced),

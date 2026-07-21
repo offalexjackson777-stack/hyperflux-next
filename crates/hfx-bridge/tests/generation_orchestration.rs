@@ -2,7 +2,8 @@
 
 use hfx_bridge::{
     GenerationActivationOutcome, GenerationOrchestrationError, GenerationOrchestrator,
-    GenerationQualification, ReceiverGenerationObservation, RuntimeProfileAuthority,
+    GenerationQualification, ReceiverDisconnectCompletionOutcome, ReceiverDisconnectObservation,
+    ReceiverDisconnectOutcome, ReceiverGenerationObservation, RuntimeProfileAuthority,
 };
 use hfx_core::{
     BoundedEventLog, ChildIdentity, EndpointIdentity, EventDelivery, EventSink, LeaseManager,
@@ -15,9 +16,9 @@ use hfx_domain::{
     ApplyOutcome, AuthorizationEpoch, ColorChannel, ConnectionMode, DeliveredFrameCount,
     DeviceApplicationState, DeviceKind, DispatchNonce, EventKind, EvidenceClaimId,
     EvidenceConfidence, FrameIndex, GenerationId, LeaseDurationMs, LogicalDeviceId, MonotonicMs,
-    ProductId, ProjectionRevision, QueueAdmission, ReceiverId, ResourceKind, RouteKind, RouteState,
-    SequenceNumber, SideEffectCertainty, StreamEpoch, TransactionClass, TransactionId,
-    TransactionState, VendorId,
+    ProductId, ProjectionRevision, QueueAdmission, ReceiverId, ReceiverLifecycleState,
+    ResourceKind, RouteKind, RouteState, SequenceNumber, SideEffectCertainty, StreamEpoch,
+    TransactionClass, TransactionId, TransactionState, VendorId,
 };
 use hfx_protocol::{
     BridgeEvent, DeviceProfileBinding, LeaseRequest, LeaseResult, LightingFrame, ResourceKey,
@@ -114,7 +115,7 @@ fn qualified_runtime() -> (ReceiverLifecycleRegistry, RuntimeProfileAuthority) {
 #[derive(Clone, Debug)]
 struct TestTransport {
     receiver_id: ReceiverId,
-    generation_id: GenerationId,
+    generation_id: Option<GenerationId>,
     dispatches: Vec<TransportDispatch>,
 }
 
@@ -137,7 +138,9 @@ impl ReceiverTransport for TestTransport {
     type Error = TestTransportError;
 
     fn current_generation(&self, receiver_id: &ReceiverId) -> Option<GenerationId> {
-        (receiver_id == &self.receiver_id).then_some(self.generation_id)
+        (receiver_id == &self.receiver_id)
+            .then_some(self.generation_id)
+            .flatten()
     }
 
     fn reconcile(&self, _dispatch: &TransportDispatch) -> TransportReconciliation {
@@ -285,7 +288,7 @@ fn queued_generation_one_harness() -> GenerationHarness {
     let mut sink = TestSink::default();
     let transport = TestTransport {
         receiver_id: text("receiver-1"),
-        generation_id: generation(1),
+        generation_id: Some(generation(1)),
         dispatches: Vec::new(),
     };
     queue_generation_one_transaction(
@@ -314,6 +317,13 @@ fn generation_two_observation() -> ReceiverGenerationObservation {
         vendor_id: VendorId::try_from(0x1532_u16).expect("vendor id is canonical"),
         product_id: ProductId::try_from(0x00cf_u16).expect("product id is canonical"),
         stamp: stamp(2, 20),
+    }
+}
+
+fn disconnect_observation(sequence: u64) -> ReceiverDisconnectObservation {
+    ReceiverDisconnectObservation {
+        receiver_id: text("receiver-1"),
+        stamp: stamp(1, sequence),
     }
 }
 
@@ -348,7 +358,7 @@ fn transport_generation_mismatch_changes_nothing() {
 fn replacement_atomically_revokes_old_authority_and_publishes_one_transition() {
     let mut harness = queued_generation_one_harness();
     let observation = generation_two_observation();
-    harness.transport.generation_id = generation(2);
+    harness.transport.generation_id = Some(generation(2));
     let applied = GenerationOrchestrator::activate(
         observation.clone(),
         LifecycleLimits::default(),
@@ -445,7 +455,7 @@ fn unknown_receiver_generation_remains_visible_without_write_qualification() {
     let mut sink = TestSink::default();
     let transport = TestTransport {
         receiver_id: text("receiver-unknown"),
-        generation_id: generation(1),
+        generation_id: Some(generation(1)),
         dispatches: Vec::new(),
     };
 
@@ -479,5 +489,133 @@ fn unknown_receiver_generation_remains_visible_without_write_qualification() {
     );
     assert!(profiles.binding(&text("receiver-unknown")).is_none());
     assert_eq!(sink.0.len(), 1);
-    assert_eq!(sink.0[0].kind, EventKind::GenerationReplaced);
+    assert_eq!(sink.0[0].kind, EventKind::ReceiverAvailable);
+}
+
+#[test]
+fn disconnect_revokes_once_retires_later_and_reconnects_as_a_new_generation() {
+    let mut harness = queued_generation_one_harness();
+    harness.transport.generation_id = None;
+    let began = GenerationOrchestrator::begin_disconnect(
+        disconnect_observation(30),
+        &harness.transport,
+        &mut harness.receivers,
+        &mut harness.leases,
+        &mut harness.transactions,
+        &mut harness.events,
+        &mut harness.sink,
+    )
+    .expect("disconnect begins atomically");
+    let ReceiverDisconnectOutcome::Applied(began) = began else {
+        panic!("current generation disconnect must begin");
+    };
+    assert_eq!(began.revoked_leases, vec![text("lease-1")]);
+    assert_eq!(
+        began.revoked_transactions,
+        vec![text::<TransactionId>("transaction-1")]
+    );
+    let current = harness
+        .receivers
+        .get(&text("receiver-1"))
+        .and_then(ReceiverLifecycleMachine::current)
+        .expect("disconnecting generation remains inspectable");
+    assert_eq!(
+        current.lifecycle().value(),
+        ReceiverLifecycleState::Disconnecting
+    );
+    assert!(harness.profiles.binding(&text("receiver-1")).is_some());
+    assert_eq!(harness.sink.0.len(), 3);
+    assert_eq!(harness.sink.0[0].kind, EventKind::ReceiverUnavailable);
+    assert_eq!(harness.sink.0[1].kind, EventKind::TransactionCompleted);
+    assert_eq!(harness.sink.0[2].kind, EventKind::OwnershipChanged);
+
+    let duplicate = GenerationOrchestrator::begin_disconnect(
+        disconnect_observation(31),
+        &harness.transport,
+        &mut harness.receivers,
+        &mut harness.leases,
+        &mut harness.transactions,
+        &mut harness.events,
+        &mut harness.sink,
+    )
+    .expect("duplicate disconnect is a typed no-op");
+    assert_eq!(
+        duplicate,
+        ReceiverDisconnectOutcome::Ignored(ApplyOutcome::RejectedInvalidTransition)
+    );
+    assert_eq!(harness.sink.0.len(), 3);
+
+    let completed = GenerationOrchestrator::complete_disconnect(
+        disconnect_observation(40),
+        &harness.transport,
+        &mut harness.receivers,
+        &mut harness.profiles,
+    )
+    .expect("disconnect completes atomically");
+    assert!(matches!(
+        completed,
+        ReceiverDisconnectCompletionOutcome::Applied(ref result) if result.profile_retired
+    ));
+    assert!(
+        harness
+            .receivers
+            .get(&text("receiver-1"))
+            .and_then(ReceiverLifecycleMachine::current)
+            .is_none()
+    );
+    assert!(harness.profiles.binding(&text("receiver-1")).is_none());
+
+    harness.transport.generation_id = Some(generation(2));
+    let reconnected = GenerationOrchestrator::activate(
+        ReceiverGenerationObservation {
+            receiver_id: text("receiver-1"),
+            vendor_id: VendorId::try_from(0x1532_u16).expect("vendor id is canonical"),
+            product_id: ProductId::try_from(0x00cf_u16).expect("product id is canonical"),
+            stamp: stamp(2, 50),
+        },
+        LifecycleLimits::default(),
+        &harness.transport,
+        &mut harness.receivers,
+        &mut harness.profiles,
+        &mut harness.leases,
+        &mut harness.transactions,
+        &mut harness.events,
+        &mut harness.sink,
+    )
+    .expect("new transport generation reconnects");
+    assert!(matches!(
+        reconnected,
+        GenerationActivationOutcome::Applied(ref activation)
+            if activation.previous_generation == Some(generation(1))
+    ));
+    assert_eq!(harness.sink.0.len(), 5);
+    assert_eq!(harness.sink.0[3].kind, EventKind::GenerationReplaced);
+    assert_eq!(harness.sink.0[4].kind, EventKind::ReceiverAvailable);
+    assert!(harness.transport.dispatches.is_empty());
+}
+
+#[test]
+fn disconnect_observation_is_rejected_while_transport_still_reports_present() {
+    let mut harness = queued_generation_one_harness();
+    let result = GenerationOrchestrator::begin_disconnect(
+        disconnect_observation(30),
+        &harness.transport,
+        &mut harness.receivers,
+        &mut harness.leases,
+        &mut harness.transactions,
+        &mut harness.events,
+        &mut harness.sink,
+    );
+    assert!(matches!(
+        result,
+        Err(GenerationOrchestrationError::TransportStillPresent { .. })
+    ));
+    assert_eq!(harness.transactions.queued_len(), 1);
+    assert!(harness.leases.owns(
+        &text("client-1"),
+        &text("lease-1"),
+        &[resource(1)],
+        time(30)
+    ));
+    assert!(harness.sink.0.is_empty());
 }

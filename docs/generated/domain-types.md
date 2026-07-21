@@ -108,7 +108,7 @@ These types prevent semantically different values from being passed interchangea
 - `RestoreDeferReason`: `device-sleeping`, `device-unavailable`, `device-unknown`, `ownership-conflict`, `session-unavailable`, `deadline-elapsed`, `safe-transaction-failure`
 - `RestoreInvalidationReason`: `superseded-trigger`, `stale-generation`, `intent-changed`, `profile-changed`, `restore-disabled`
 - `DeviceWriteReadiness`: `ready`, `sleeping`, `unavailable`, `unknown`
-- `EventKind`: `device-available`, `device-sleeping`, `device-unavailable`, `battery-updated`, `ownership-changed`, `generation-replaced`, `transaction-completed`, `restore-completed`, `diagnostic-raised`
+- `EventKind`: `receiver-available`, `receiver-suspended`, `receiver-unavailable`, `device-available`, `device-sleeping`, `device-unavailable`, `device-unknown`, `battery-updated`, `ownership-changed`, `generation-replaced`, `transaction-completed`, `restore-completed`, `diagnostic-raised`
 - `ProtocolErrorKind`: `incompatible-version`, `unsupported-feature`, `invalid-request`, `ownership-conflict`, `stale-generation`, `deadline-exceeded`, `queue-full`, `transport-failure`, `outcome-unknown`, `outcome-evicted`, `internal-failure`
 - `SideEffectCertainty`: `none`, `possible`, `partial`, `committed`
 - `DeviceApplicationState`: `unverified`, `confirmed`, `rejected`

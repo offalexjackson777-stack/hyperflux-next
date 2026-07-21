@@ -88,6 +88,14 @@ stateDiagram-v2
 
 Partial or uncertain transport is never retried automatically. A client resolves an ambiguous response through transaction outcome lookup, not by submitting the write again. A later visible result does not rewrite a terminal timeout history.
 
+## Lifecycle Ingress
+
+The bridge accepts passive lifecycle evidence through one typed, generation-checked ingress. Receiver identity, child identity, endpoint registration, pairing, route, power, sleep, activity, mat contact, freshness, and battery values are distinct observations. Unsupported children remain visible but receive no write authority. A malformed, stale, conflicting, or wrong-generation observation changes neither canonical state nor the event stream.
+
+Receiver events and child events describe different facts. Receiver suspend emits `receiver-suspended` without rewriting retained child endpoint evidence. Child `available`, `sleeping`, `unavailable`, and `unknown` events are emitted only when child evidence changes the corresponding projected presence. Applications combine the receiver lifecycle and child endpoint facts rather than forcing either one to impersonate the other.
+
+Generation activation stages lifecycle, profile qualification, old lease revocation, queued transaction revocation, and canonical events before committing any of them. Initial discovery emits `receiver-available`. A replacement emits `generation-replaced`; reconnect after a completed removal additionally emits `receiver-available`. Physical disconnect is two-stage: the first transport-confirmed absence moves the generation to `disconnecting`, revokes live authority, and emits `receiver-unavailable`; a later observation retires the generation and its profile binding. Ordinary lifecycle observations cannot enter `disconnecting`, so no adapter can bypass revocation.
+
 ## Ownership And Atomicity
 
 Resources are keyed by logical device and generic domain: lighting, settings, or pairing. This supports arbitrary receivers and multiple children without fixed mouse/keyboard slots.

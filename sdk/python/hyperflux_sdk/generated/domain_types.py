@@ -948,9 +948,13 @@ class DeviceWriteReadiness(str, Enum):
 
 
 class EventKind(str, Enum):
+    RECEIVER_AVAILABLE = "receiver-available"
+    RECEIVER_SUSPENDED = "receiver-suspended"
+    RECEIVER_UNAVAILABLE = "receiver-unavailable"
     DEVICE_AVAILABLE = "device-available"
     DEVICE_SLEEPING = "device-sleeping"
     DEVICE_UNAVAILABLE = "device-unavailable"
+    DEVICE_UNKNOWN = "device-unknown"
     BATTERY_UPDATED = "battery-updated"
     OWNERSHIP_CHANGED = "ownership-changed"
     GENERATION_REPLACED = "generation-replaced"

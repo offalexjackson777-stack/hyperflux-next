@@ -98,7 +98,7 @@
     {"name": "RestoreDeferReason", "values": ["device-sleeping", "device-unavailable", "device-unknown", "ownership-conflict", "session-unavailable", "deadline-elapsed", "safe-transaction-failure"]},
     {"name": "RestoreInvalidationReason", "values": ["superseded-trigger", "stale-generation", "intent-changed", "profile-changed", "restore-disabled"]},
     {"name": "DeviceWriteReadiness", "values": ["ready", "sleeping", "unavailable", "unknown"]},
-    {"name": "EventKind", "values": ["device-available", "device-sleeping", "device-unavailable", "battery-updated", "ownership-changed", "generation-replaced", "transaction-completed", "restore-completed", "diagnostic-raised"]},
+    {"name": "EventKind", "values": ["receiver-available", "receiver-suspended", "receiver-unavailable", "device-available", "device-sleeping", "device-unavailable", "device-unknown", "battery-updated", "ownership-changed", "generation-replaced", "transaction-completed", "restore-completed", "diagnostic-raised"]},
     {"name": "ProtocolErrorKind", "values": ["incompatible-version", "unsupported-feature", "invalid-request", "ownership-conflict", "stale-generation", "deadline-exceeded", "queue-full", "transport-failure", "outcome-unknown", "outcome-evicted", "internal-failure"]},
     {"name": "SideEffectCertainty", "values": ["none", "possible", "partial", "committed"]},
     {"name": "DeviceApplicationState", "values": ["unverified", "confirmed", "rejected"]},

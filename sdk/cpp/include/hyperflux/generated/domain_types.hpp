@@ -2117,9 +2117,13 @@ enum class DeviceWriteReadiness
 
 enum class EventKind
 {
+    ReceiverAvailable,
+    ReceiverSuspended,
+    ReceiverUnavailable,
     DeviceAvailable,
     DeviceSleeping,
     DeviceUnavailable,
+    DeviceUnknown,
     BatteryUpdated,
     OwnershipChanged,
     GenerationReplaced,
@@ -2132,9 +2136,13 @@ enum class EventKind
 {
     switch(value)
     {
+        case EventKind::ReceiverAvailable: return "receiver-available";
+        case EventKind::ReceiverSuspended: return "receiver-suspended";
+        case EventKind::ReceiverUnavailable: return "receiver-unavailable";
         case EventKind::DeviceAvailable: return "device-available";
         case EventKind::DeviceSleeping: return "device-sleeping";
         case EventKind::DeviceUnavailable: return "device-unavailable";
+        case EventKind::DeviceUnknown: return "device-unknown";
         case EventKind::BatteryUpdated: return "battery-updated";
         case EventKind::OwnershipChanged: return "ownership-changed";
         case EventKind::GenerationReplaced: return "generation-replaced";
