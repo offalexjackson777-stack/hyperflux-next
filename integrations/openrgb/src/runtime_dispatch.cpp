@@ -115,10 +115,15 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
         return;
     }
 
+    struct FrameValidation
+    {
+        const ControllerModel* controller;
+        std::optional<sdk::Error> error;
+    };
+
     std::map<std::string, std::pair<ReceiverId, GenerationId>> authorities;
-    std::optional<sdk::Error> invalid;
-    std::optional<ReceiverId> invalid_receiver;
-    std::optional<GenerationId> invalid_generation;
+    std::vector<FrameValidation> validations;
+    validations.reserve(preview->frames.size());
     for(const auto& frame : preview->frames)
     {
         const auto* controller = runtime_detail::find_controller(
@@ -126,48 +131,53 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
             frame.stable_id);
         if(controller == nullptr)
         {
-            invalid = runtime_detail::error(
-                sdk::ErrorCode::InvalidController,
-                "queued OpenRGB frame names a controller outside the canonical view",
-                "HFX-INTEGRATION-001");
-            break;
+            validations.push_back({
+                nullptr,
+                runtime_detail::error(
+                    sdk::ErrorCode::InvalidController,
+                    "queued OpenRGB frame names a controller outside the canonical view",
+                    "HFX-INTEGRATION-001"),
+            });
+            continue;
         }
-        invalid_receiver = controller->authority.receiver_id;
-        invalid_generation = controller->authority.generation_id;
         if(controller->availability != ControllerAvailability::Ready)
         {
-            invalid = runtime_detail::error(
-                sdk::ErrorCode::InvalidController,
-                "queued OpenRGB frame targets a sleeping controller",
-                "HFX-LIFECYCLE-001");
-            break;
+            validations.push_back({
+                controller,
+                runtime_detail::error(
+                    sdk::ErrorCode::InvalidController,
+                    "queued OpenRGB frame targets a sleeping controller",
+                    "HFX-LIFECYCLE-001"),
+            });
+            continue;
         }
         if(frame.expected_slot_count
                != controller->lighting.application_slot_count.value()
            || frame.colors.size() != frame.expected_slot_count)
         {
-            invalid = runtime_detail::error(
-                sdk::ErrorCode::InvalidLightingFrame,
-                "queued OpenRGB frame no longer matches the controller topology",
-                "HFX-REQUEST-001");
-            break;
+            validations.push_back({
+                controller,
+                runtime_detail::error(
+                    sdk::ErrorCode::InvalidLightingFrame,
+                    "queued OpenRGB frame no longer matches the controller topology",
+                    "HFX-REQUEST-001"),
+            });
+            continue;
         }
+        validations.push_back({controller, std::nullopt});
         authorities.insert_or_assign(
             runtime_detail::receiver_key(controller->authority.receiver_id),
             std::make_pair(
                 controller->authority.receiver_id,
                 controller->authority.generation_id));
     }
-    if(!invalid.has_value())
+    const auto blocked = std::any_of(
+        authorities.begin(),
+        authorities.end(),
+        [this](const auto& entry) { return pending_.contains(entry.first); });
+    if(blocked)
     {
-        const auto blocked = std::any_of(
-            authorities.begin(),
-            authorities.end(),
-            [this](const auto& entry) { return pending_.contains(entry.first); });
-        if(blocked)
-        {
-            return;
-        }
+        return;
     }
 
     auto batch = queue_.pop_ready(now_ms);
@@ -175,33 +185,39 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
     {
         return;
     }
-    if(invalid.has_value())
-    {
-        output.dispatch_outcomes.push_back({
-            batch->sequence,
-            batch->intent,
-            invalid_receiver,
-            invalid_generation,
-            std::nullopt,
-            DispatchOutcomeState::Rejected,
-            static_cast<std::uint16_t>(batch->frames.size()),
-            0,
-            SideEffectCertainty::None,
-            false,
-            std::nullopt,
-            std::move(invalid),
-        });
-        return;
-    }
 
     std::map<std::string, std::vector<QueuedLightingFrame>> groups;
-    for(auto& frame : batch->frames)
+    for(std::size_t index = 0; index < batch->frames.size(); ++index)
     {
-        const auto* controller = runtime_detail::find_controller(
-            controllers_,
-            frame.stable_id);
-        groups[runtime_detail::receiver_key(controller->authority.receiver_id)].push_back(
-            std::move(frame));
+        auto& frame = batch->frames[index];
+        auto& validation = validations[index];
+        if(validation.error.has_value())
+        {
+            output.dispatch_outcomes.push_back({
+                batch->sequence,
+                batch->intent,
+                validation.controller == nullptr
+                    ? std::optional<ReceiverId> {}
+                    : std::optional<ReceiverId> {
+                          validation.controller->authority.receiver_id},
+                validation.controller == nullptr
+                    ? std::optional<GenerationId> {}
+                    : std::optional<GenerationId> {
+                          validation.controller->authority.generation_id},
+                std::nullopt,
+                DispatchOutcomeState::Rejected,
+                1,
+                0,
+                SideEffectCertainty::None,
+                false,
+                std::nullopt,
+                std::move(validation.error),
+            });
+            continue;
+        }
+        groups[runtime_detail::receiver_key(
+                   validation.controller->authority.receiver_id)]
+            .push_back(std::move(frame));
     }
     for(auto& [key, frames] : groups)
     {

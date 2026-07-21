@@ -227,10 +227,50 @@ int main()
         return failure(__LINE__);
     }
 
-    bridge.current = view(4, 6);
-    bridge.event(EventKind::GenerationReplaced);
+    if(runtime.enqueue_effect(frame(model(runtime, DeviceKind::Mouse), 51), 133)
+           != EnqueueDisposition::Accepted
+       || runtime.enqueue_effect(frame(model(runtime, DeviceKind::Keyboard), 52), 133)
+           != EnqueueDisposition::Accepted)
+    {
+        return failure(__LINE__);
+    }
     bridge.terminal_on_submit = true;
-    if(!runtime.step(133)
+    const auto sleeping_sibling = runtime.step(137);
+    if(!sleeping_sibling || sleeping_sibling.value().dispatch_outcomes.size() != 2
+       || sleeping_sibling.value().dispatch_outcomes[0].state
+           != DispatchOutcomeState::Rejected
+       || sleeping_sibling.value().dispatch_outcomes[1].state
+           != DispatchOutcomeState::Succeeded
+       || bridge.submissions.back().frames.size() != 1
+       || bridge.submissions.back().frames.front().device_id.value() != "keyboard")
+    {
+        return failure(__LINE__);
+    }
+
+    bridge.current = view(3, 6);
+    bridge.event(EventKind::DeviceAvailable);
+    const auto releases_before_return = bridge.release_count;
+    if(!runtime.step(138)
+       || bridge.release_count != releases_before_return + 1
+       || runtime.enqueue_effect(frame(model(runtime, DeviceKind::Mouse), 53), 139)
+           != EnqueueDisposition::Accepted
+       || runtime.enqueue_effect(frame(model(runtime, DeviceKind::Keyboard), 54), 139)
+           != EnqueueDisposition::Accepted)
+    {
+        return failure(__LINE__);
+    }
+    const auto returned_siblings = runtime.step(143);
+    if(!returned_siblings || returned_siblings.value().dispatch_outcomes.size() != 1
+       || returned_siblings.value().dispatch_outcomes.front().state
+           != DispatchOutcomeState::Succeeded
+       || bridge.submissions.back().frames.size() != 2)
+    {
+        return failure(__LINE__);
+    }
+
+    bridge.current = view(4, 7);
+    bridge.event(EventKind::GenerationReplaced);
+    if(!runtime.step(144)
        || runtime.enqueue_stable(
               sdk::LightingIntent::Static,
               {frame(model(runtime, DeviceKind::Mouse), 60)})
@@ -238,7 +278,7 @@ int main()
     {
         return failure(__LINE__);
     }
-    const auto final_dispatch = runtime.step(134);
+    const auto final_dispatch = runtime.step(145);
     if(!final_dispatch || final_dispatch.value().dispatch_outcomes.size() != 1
        || final_dispatch.value().dispatch_outcomes.front().state
            != DispatchOutcomeState::Succeeded)
