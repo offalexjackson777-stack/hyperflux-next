@@ -133,7 +133,8 @@ NativeController::NativeController(const ControllerModel& model,
     RazerPresentation presentation,
     LightingCommandSink& sink,
     std::string component_version)
-    : stable_id_(model.stable_id),
+    : receiver_id_(model.authority.receiver_id),
+      stable_id_(model.stable_id),
       application_slots_(model.lighting.application_slot_count.value()),
       presentation_(std::move(presentation)),
       sink_(&sink),
@@ -279,7 +280,8 @@ void NativeController::dispatch(ControllerMode requested_mode)
     {
         case ControllerMode::Direct:
             requested = direct_colors(active_brightness());
-            record(sink_->enqueue_effect({stable_id_, application_slots_, std::move(requested)}));
+            record(sink_->enqueue_effect(
+                {receiver_id_, stable_id_, application_slots_, std::move(requested)}));
             return;
         case ControllerMode::Off:
             intent = sdk::LightingIntent::Off;
@@ -295,7 +297,9 @@ void NativeController::dispatch(ControllerMode requested_mode)
             break;
         }
     }
-    record(sink_->enqueue_stable(intent, {{stable_id_, application_slots_, std::move(requested)}}));
+    record(sink_->enqueue_stable(
+        intent,
+        {{receiver_id_, stable_id_, application_slots_, std::move(requested)}}));
 }
 
 void NativeController::record(sdk::Result<EnqueueDisposition> result)

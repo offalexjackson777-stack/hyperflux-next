@@ -604,6 +604,26 @@ if(BUILD_TESTING)
     add_test(NAME openrgb-runtime-core-contract COMMAND openrgb-runtime-core-contract)
 
     add_executable(
+        openrgb-multi-receiver-dispatch-contract
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_multi_receiver_dispatch_contract.cpp"
+    )
+    target_link_libraries(
+        openrgb-multi-receiver-dispatch-contract
+        PRIVATE hyperflux_openrgb_core
+    )
+    hfx_openrgb_enable_thread_sanitizer(openrgb-multi-receiver-dispatch-contract)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(
+            openrgb-multi-receiver-dispatch-contract
+            PRIVATE -Wall -Wextra -Werror -pedantic
+        )
+    endif()
+    add_test(
+        NAME openrgb-multi-receiver-dispatch-contract
+        COMMAND openrgb-multi-receiver-dispatch-contract
+    )
+
+    add_executable(
         openrgb-runtime-worker-contract
         "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_runtime_worker_contract.cpp"
     )

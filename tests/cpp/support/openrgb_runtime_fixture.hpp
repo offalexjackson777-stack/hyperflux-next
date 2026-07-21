@@ -59,14 +59,15 @@ inline v5::EventCursor cursor(std::uint64_t sequence)
     };
 }
 
-inline v5::ControllerView controller(std::string_view device,
+inline v5::ControllerView controller_for(std::string_view receiver,
+    std::string_view device,
     DeviceKind kind,
     std::uint64_t generation,
     std::uint16_t product,
     std::uint16_t slots,
     ControllerAvailability availability)
 {
-    const auto receiver_id = text<ReceiverId>("receiver-1");
+    const auto receiver_id = text<ReceiverId>(receiver);
     const auto generation_id = number<GenerationId>(generation);
     const auto device_id = text<LogicalDeviceId>(device);
     const v5::ProfileBindingView receiver_profile {
@@ -119,6 +120,40 @@ inline v5::ControllerView controller(std::string_view device,
     };
 }
 
+inline v5::ControllerView controller(std::string_view device,
+    DeviceKind kind,
+    std::uint64_t generation,
+    std::uint16_t product,
+    std::uint16_t slots,
+    ControllerAvailability availability)
+{
+    return controller_for(
+        "receiver-1",
+        device,
+        kind,
+        generation,
+        product,
+        slots,
+        availability);
+}
+
+inline v5::IntegrationReceiverView receiver_view(std::string_view receiver,
+    std::uint64_t generation,
+    std::vector<v5::ControllerView> controllers)
+{
+    return {
+        text<ReceiverId>(receiver),
+        number<GenerationId>(generation),
+        std::nullopt,
+        std::nullopt,
+        ReceiverLifecycleState::Active,
+        false,
+        RestoreState::Idle,
+        {},
+        std::move(controllers),
+    };
+}
+
 inline v5::IntegrationView view(std::uint64_t generation,
     std::uint64_t sequence,
     ControllerAvailability mouse = ControllerAvailability::Ready,
@@ -143,10 +178,44 @@ inline v5::IntegrationView view(std::uint64_t generation,
     };
 }
 
+inline v5::IntegrationView multi_receiver_view(
+    std::uint64_t generation,
+    std::uint64_t sequence)
+{
+    return {
+        cursor(sequence),
+        {
+            receiver_view(
+                "receiver-1",
+                generation,
+                {controller_for(
+                    "receiver-1",
+                    "mouse-a",
+                    DeviceKind::Mouse,
+                    generation,
+                    205,
+                    13,
+                    ControllerAvailability::Ready)}),
+            receiver_view(
+                "receiver-2",
+                generation,
+                {controller_for(
+                    "receiver-2",
+                    "mouse-b",
+                    DeviceKind::Mouse,
+                    generation,
+                    205,
+                    13,
+                    ControllerAvailability::Ready)}),
+        },
+    };
+}
+
 inline openrgb::QueuedLightingFrame frame(
     const openrgb::ControllerModel& controller_model, std::uint8_t red)
 {
     return {
+        controller_model.authority.receiver_id,
         controller_model.stable_id,
         controller_model.lighting.application_slot_count.value(),
         std::vector<v5::RgbColor>(
@@ -164,6 +233,22 @@ inline const openrgb::ControllerModel& model(const openrgb::RuntimeCore& runtime
         }
     }
     throw std::runtime_error("missing test controller");
+}
+
+inline const openrgb::ControllerModel& model(
+    const openrgb::RuntimeCore& runtime,
+    std::string_view receiver,
+    DeviceKind kind)
+{
+    for(const auto& controller_model : runtime.controllers())
+    {
+        if(controller_model.authority.receiver_id.value() == receiver
+           && controller_model.device_kind == kind)
+        {
+            return controller_model;
+        }
+    }
+    throw std::runtime_error("missing receiver-scoped test controller");
 }
 
 inline v5::IntegrationView copy_integration_view(const v5::IntegrationView& value)
@@ -184,6 +269,7 @@ public:
     v5::IntegrationView current;
     std::deque<v5::EventBatch> event_batches;
     std::vector<sdk::TransactionSubmission> submissions;
+    std::vector<TransactionId> outcome_queries;
     std::atomic_size_t submission_count {0};
     std::map<std::string, v5::TransactionResult> outcomes;
     std::vector<v5::ResourceKey> leased_resources;
@@ -300,6 +386,7 @@ public:
 
     sdk::Result<v5::TransactionResult> transaction_outcome(TransactionId transaction_id) override
     {
+        outcome_queries.push_back(transaction_id);
         return sdk::Result<v5::TransactionResult>::success(
             outcomes.at(std::string(transaction_id.value())));
     }
@@ -331,6 +418,18 @@ public:
         std::optional<ProtocolErrorKind> error = std::nullopt)
     {
         const auto& submission = submissions.back();
+        outcomes.insert_or_assign(std::string(submission.transaction_id.value()),
+            terminal(submission, state, delivered, certainty, live, error));
+    }
+
+    void complete_submission(std::size_t index,
+        TransactionState state,
+        std::uint16_t delivered,
+        SideEffectCertainty certainty,
+        bool live,
+        std::optional<ProtocolErrorKind> error = std::nullopt)
+    {
+        const auto& submission = submissions.at(index);
         outcomes.insert_or_assign(std::string(submission.transaction_id.value()),
             terminal(submission, state, delivered, certainty, live, error));
     }

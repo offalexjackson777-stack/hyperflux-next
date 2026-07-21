@@ -25,6 +25,8 @@ struct RuntimeConfig
     std::uint64_t transaction_timeout_ms = 2'000;
     std::uint16_t event_batch_limit = 128;
     std::size_t max_event_batches_per_step = 4;
+    std::size_t max_outcomes_per_step = 4;
+    std::size_t max_dispatches_per_step = 4;
 };
 
 enum class DispatchOutcomeState
@@ -154,6 +156,7 @@ private:
     std::optional<v5::EventCursor> cursor_;
     std::map<std::string, ReceiverSession> sessions_;
     std::map<std::string, PendingTransaction> pending_;
+    std::optional<std::string> outcome_poll_cursor_;
 };
 
 } // namespace hyperflux::openrgb

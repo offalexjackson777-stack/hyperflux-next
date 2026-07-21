@@ -31,6 +31,7 @@ hyperflux::openrgb::QueuedLightingFrame queued(
     std::string stable_id, std::size_t slots, std::uint8_t red)
 {
     return {
+        hyperflux::test::text<hyperflux::ReceiverId>("receiver-1"),
         std::move(stable_id),
         slots,
         std::vector<hyperflux::v5::RgbColor>(slots, hyperflux::test::color(red)),

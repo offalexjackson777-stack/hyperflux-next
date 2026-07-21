@@ -25,6 +25,8 @@ sdk::Result<RuntimeCore> RuntimeCore::create(RuntimeBridge& bridge, RuntimeConfi
        || config.lease_renew_margin_ms >= config.lease_duration_ms
        || config.transaction_timeout_ms == 0
        || config.max_event_batches_per_step == 0
+       || config.max_outcomes_per_step == 0
+       || config.max_dispatches_per_step == 0
        || config.dispatch_queue.stable_capacity == 0
        || config.dispatch_queue.effect_target_capacity == 0
        || config.dispatch_queue.effect_window_ms == 0)
@@ -145,6 +147,7 @@ RuntimeStep RuntimeCore::shutdown()
         });
     }
     pending_.clear();
+    outcome_poll_cursor_.reset();
     queue_.clear();
     subscription_id_.reset();
     cursor_.reset();

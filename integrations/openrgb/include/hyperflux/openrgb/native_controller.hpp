@@ -78,6 +78,7 @@ private:
     void dispatch(ControllerMode requested_mode);
     void record(sdk::Result<EnqueueDisposition> result);
 
+    ReceiverId receiver_id_;
     std::string stable_id_;
     std::size_t application_slots_;
     RazerPresentation presentation_;

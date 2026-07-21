@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <map>
 #include <optional>
+#include <set>
+#include <string>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -21,21 +23,50 @@ sdk::Result<void> RuntimeCore::poll_outcomes(RuntimeStep& output)
         return sdk::Result<void>::success();
     }
 
-    const auto pending = pending_.begin()->second;
-    auto result = bridge_->transaction_outcome(pending.transaction_id);
-    (void)synchronize_connection(output);
-    if(!result)
+    std::vector<std::string> keys;
+    keys.reserve(pending_.size());
+    for(const auto& [key, pending] : pending_)
     {
-        return sdk::Result<void>::failure(result.error());
+        (void)pending;
+        keys.push_back(key);
     }
-    consume_transaction_result(
-        pending.sequence,
-        pending.intent,
-        pending.expected_frames,
-        pending.receiver_id,
-        pending.generation_id,
-        result.value(),
-        output);
+    if(outcome_poll_cursor_.has_value())
+    {
+        const auto start = std::upper_bound(
+            keys.begin(),
+            keys.end(),
+            *outcome_poll_cursor_);
+        std::rotate(keys.begin(), start, keys.end());
+    }
+    if(keys.size() > config_.max_outcomes_per_step)
+    {
+        keys.resize(config_.max_outcomes_per_step);
+    }
+
+    for(const auto& key : keys)
+    {
+        const auto found = pending_.find(key);
+        if(found == pending_.end())
+        {
+            continue;
+        }
+        const auto pending = found->second;
+        auto result = bridge_->transaction_outcome(pending.transaction_id);
+        (void)synchronize_connection(output);
+        if(!result)
+        {
+            return sdk::Result<void>::failure(result.error());
+        }
+        outcome_poll_cursor_ = key;
+        consume_transaction_result(
+            pending.sequence,
+            pending.intent,
+            pending.expected_frames,
+            pending.receiver_id,
+            pending.generation_id,
+            result.value(),
+            output);
+    }
     return sdk::Result<void>::success();
 }
 
@@ -100,179 +131,191 @@ void RuntimeCore::consume_transaction_result(
 
 void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
 {
-    const auto preview = queue_.preview_ready(now_ms);
-    if(!preview.has_value())
+    for(std::size_t dispatch_index = 0;
+        dispatch_index < config_.max_dispatches_per_step;
+        ++dispatch_index)
     {
-        return;
-    }
-
-    struct FrameValidation
-    {
-        const ControllerModel* controller;
-        std::optional<sdk::Error> error;
-    };
-
-    std::map<std::string, std::pair<ReceiverId, GenerationId>> authorities;
-    std::vector<FrameValidation> validations;
-    validations.reserve(preview->frames.size());
-    for(const auto& frame : preview->frames)
-    {
-        const auto* controller = runtime_detail::find_controller(
-            controllers_,
-            frame.stable_id);
-        if(controller == nullptr)
+        std::set<std::string> blocked_receivers;
+        for(const auto& [key, pending] : pending_)
         {
-            validations.push_back({
-                nullptr,
-                runtime_detail::error(
-                    sdk::ErrorCode::InvalidController,
-                    "queued OpenRGB frame names a controller outside the canonical view",
-                    "HFX-INTEGRATION-001"),
-            });
-            continue;
+            (void)pending;
+            blocked_receivers.insert(key);
         }
-        if(controller->availability != ControllerAvailability::Ready)
-        {
-            validations.push_back({
-                controller,
-                runtime_detail::error(
-                    sdk::ErrorCode::InvalidController,
-                    "queued OpenRGB frame targets a sleeping controller",
-                    "HFX-LIFECYCLE-001"),
-            });
-            continue;
-        }
-        if(frame.expected_slot_count
-               != controller->lighting.application_slot_count.value()
-           || frame.colors.size() != frame.expected_slot_count)
-        {
-            validations.push_back({
-                controller,
-                runtime_detail::error(
-                    sdk::ErrorCode::InvalidLightingFrame,
-                    "queued OpenRGB frame no longer matches the controller topology",
-                    "HFX-REQUEST-001"),
-            });
-            continue;
-        }
-        validations.push_back({controller, std::nullopt});
-        authorities.insert_or_assign(
-            runtime_detail::receiver_key(controller->authority.receiver_id),
-            std::make_pair(
-                controller->authority.receiver_id,
-                controller->authority.generation_id));
-    }
-    const auto blocked = std::any_of(
-        authorities.begin(),
-        authorities.end(),
-        [this](const auto& entry) { return pending_.contains(entry.first); });
-    if(blocked)
-    {
-        return;
-    }
-
-    std::map<std::string, sdk::Error> session_errors;
-    for(const auto& [key, authority] : authorities)
-    {
-        const auto notice_count = output.notices.size();
-        auto* session = ensure_session(authority.first, authority.second, output);
-        if(refresh_required_)
+        const auto preview = queue_.preview_ready(now_ms, blocked_receivers);
+        if(!preview.has_value())
         {
             return;
         }
-        if(session != nullptr)
-        {
-            continue;
-        }
-        const auto error = output.notices.size() > notice_count
-            ? output.notices.back()
-            : runtime_detail::error(
-                  sdk::ErrorCode::LeaseRejected,
-                  "OpenRGB could not acquire a lighting session",
-                  "HFX-OWNERSHIP-002");
-        if(sdk::is_connection_error(error.code))
-        {
-            return;
-        }
-        session_errors.insert_or_assign(key, error);
-    }
 
-    auto batch = queue_.pop_ready(now_ms);
-    if(!batch.has_value())
-    {
-        return;
-    }
+        struct FrameValidation
+        {
+            const ControllerModel* controller;
+            std::optional<sdk::Error> error;
+        };
 
-    std::map<std::string, std::vector<QueuedLightingFrame>> groups;
-    for(std::size_t index = 0; index < batch->frames.size(); ++index)
-    {
-        auto& frame = batch->frames[index];
-        auto& validation = validations[index];
-        if(validation.error.has_value())
-        {
-            output.dispatch_outcomes.push_back({
-                batch->sequence,
-                batch->intent,
-                validation.controller == nullptr
-                    ? std::optional<ReceiverId> {}
-                    : std::optional<ReceiverId> {
-                          validation.controller->authority.receiver_id},
-                validation.controller == nullptr
-                    ? std::optional<GenerationId> {}
-                    : std::optional<GenerationId> {
-                          validation.controller->authority.generation_id},
-                std::nullopt,
-                DispatchOutcomeState::Rejected,
-                1,
-                0,
-                SideEffectCertainty::None,
-                false,
-                std::nullopt,
-                std::move(validation.error),
-            });
-            continue;
-        }
-        groups[runtime_detail::receiver_key(
-                   validation.controller->authority.receiver_id)]
-            .push_back(std::move(frame));
-    }
-    for(auto& [key, frames] : groups)
-    {
-        const auto authority = authorities.at(key);
-        const auto session_error = session_errors.find(key);
-        const auto session = sessions_.find(key);
-        if(session_error != session_errors.end() || session == sessions_.end())
-        {
-            output.dispatch_outcomes.push_back({
-                batch->sequence,
-                batch->intent,
-                authority.first,
-                authority.second,
-                std::nullopt,
-                DispatchOutcomeState::Rejected,
-                static_cast<std::uint16_t>(frames.size()),
-                0,
-                SideEffectCertainty::None,
-                false,
-                std::nullopt,
-                session_error == session_errors.end()
-                    ? std::optional<sdk::Error> {}
-                    : std::optional<sdk::Error> {session_error->second},
-            });
-            continue;
-        }
-        std::vector<sdk::LightingUpdate> updates;
-        updates.reserve(frames.size());
-        for(auto& frame : frames)
+        std::optional<std::pair<ReceiverId, GenerationId>> authority;
+        std::vector<FrameValidation> validations;
+        validations.reserve(preview->frames.size());
+        for(const auto& frame : preview->frames)
         {
             const auto* controller = runtime_detail::find_controller(
                 controllers_,
                 frame.stable_id);
-            updates.push_back({controller->lighting_target, std::move(frame.colors)});
+            if(controller == nullptr)
+            {
+                validations.push_back({
+                    nullptr,
+                    runtime_detail::error(
+                        sdk::ErrorCode::InvalidController,
+                        "queued OpenRGB frame names a controller outside the canonical view",
+                        "HFX-INTEGRATION-001"),
+                });
+                continue;
+            }
+            if(controller->authority.receiver_id != frame.receiver_id
+               || frame.receiver_id != preview->receiver_id)
+            {
+                validations.push_back({
+                    controller,
+                    runtime_detail::error(
+                        sdk::ErrorCode::InvalidController,
+                        "queued OpenRGB frame no longer matches its receiver authority",
+                        "HFX-GENERATION-001"),
+                });
+                continue;
+            }
+            if(controller->availability != ControllerAvailability::Ready)
+            {
+                validations.push_back({
+                    controller,
+                    runtime_detail::error(
+                        sdk::ErrorCode::InvalidController,
+                        "queued OpenRGB frame targets a sleeping controller",
+                        "HFX-LIFECYCLE-001"),
+                });
+                continue;
+            }
+            if(frame.expected_slot_count
+                   != controller->lighting.application_slot_count.value()
+               || frame.colors.size() != frame.expected_slot_count)
+            {
+                validations.push_back({
+                    controller,
+                    runtime_detail::error(
+                        sdk::ErrorCode::InvalidLightingFrame,
+                        "queued OpenRGB frame no longer matches the controller topology",
+                        "HFX-REQUEST-001"),
+                });
+                continue;
+            }
+            const auto candidate = std::make_pair(
+                controller->authority.receiver_id,
+                controller->authority.generation_id);
+            if(authority.has_value() && *authority != candidate)
+            {
+                validations.push_back({
+                    controller,
+                    runtime_detail::error(
+                        sdk::ErrorCode::InvalidController,
+                        "one receiver-scoped OpenRGB batch crossed generation authority",
+                        "HFX-GENERATION-001"),
+                });
+                continue;
+            }
+            authority = candidate;
+            validations.push_back({controller, std::nullopt});
+        }
+
+        std::optional<sdk::Error> session_error;
+        if(authority.has_value())
+        {
+            const auto notice_count = output.notices.size();
+            auto* session = ensure_session(authority->first, authority->second, output);
+            if(refresh_required_)
+            {
+                return;
+            }
+            if(session == nullptr)
+            {
+                session_error = output.notices.size() > notice_count
+                    ? output.notices.back()
+                    : runtime_detail::error(
+                          sdk::ErrorCode::LeaseRejected,
+                          "OpenRGB could not acquire a lighting session",
+                          "HFX-OWNERSHIP-002");
+                if(sdk::is_connection_error(session_error->code))
+                {
+                    return;
+                }
+            }
+        }
+
+        auto batch = queue_.pop_ready_for(preview->receiver_id, now_ms);
+        if(!batch.has_value())
+        {
+            continue;
+        }
+
+        std::vector<sdk::LightingUpdate> updates;
+        updates.reserve(batch->frames.size());
+        for(std::size_t index = 0; index < batch->frames.size(); ++index)
+        {
+            auto& frame = batch->frames[index];
+            auto& validation = validations[index];
+            if(validation.error.has_value())
+            {
+                output.dispatch_outcomes.push_back({
+                    batch->sequence,
+                    batch->intent,
+                    batch->receiver_id,
+                    validation.controller == nullptr
+                        ? std::optional<GenerationId> {}
+                        : std::optional<GenerationId> {
+                              validation.controller->authority.generation_id},
+                    std::nullopt,
+                    DispatchOutcomeState::Rejected,
+                    1,
+                    0,
+                    SideEffectCertainty::None,
+                    false,
+                    std::nullopt,
+                    std::move(validation.error),
+                });
+                continue;
+            }
+            updates.push_back(
+                {validation.controller->lighting_target, std::move(frame.colors)});
+        }
+
+        if(updates.empty() || !authority.has_value())
+        {
+            continue;
+        }
+
+        const auto key = runtime_detail::receiver_key(authority->first);
+        const auto session = sessions_.find(key);
+        if(session_error.has_value() || session == sessions_.end())
+        {
+            output.dispatch_outcomes.push_back({
+                batch->sequence,
+                batch->intent,
+                authority->first,
+                authority->second,
+                std::nullopt,
+                DispatchOutcomeState::Rejected,
+                static_cast<std::uint16_t>(updates.size()),
+                0,
+                SideEffectCertainty::None,
+                false,
+                std::nullopt,
+                session_error,
+            });
+            continue;
         }
         const auto deadline = MonotonicMs::from(runtime_detail::saturating_add(
             now_ms,
             config_.transaction_timeout_ms)).value();
+        const auto expected_frames = static_cast<std::uint16_t>(updates.size());
         auto submitted = session->second.lighting.submit(
             batch->intent,
             std::move(updates),
@@ -283,11 +326,11 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
             output.dispatch_outcomes.push_back({
                 batch->sequence,
                 batch->intent,
-                authority.first,
-                authority.second,
+                authority->first,
+                authority->second,
                 std::nullopt,
                 DispatchOutcomeState::Rejected,
-                static_cast<std::uint16_t>(frames.size()),
+                expected_frames,
                 0,
                 SideEffectCertainty::None,
                 false,
@@ -299,9 +342,9 @@ void RuntimeCore::dispatch_ready(std::uint64_t now_ms, RuntimeStep& output)
         consume_transaction_result(
             batch->sequence,
             batch->intent,
-            static_cast<std::uint16_t>(frames.size()),
-            authority.first,
-            authority.second,
+            expected_frames,
+            authority->first,
+            authority->second,
             submitted.value(),
             output);
     }
