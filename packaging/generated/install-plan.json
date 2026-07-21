@@ -1,6 +1,6 @@
 {
   "schema": "hyperflux-compiled-install-plan-v1",
-  "install_manifest_sha256": "344bd8c031362072e2de69b35a844086c535b1cdd3d896cbcd13b5cf370e76f6",
+  "install_manifest_sha256": "9fc6cba7d924b639b67be3acae6ca518b0d3f743d1d60f120714be95505de1fe",
   "product": {
     "name": "hyperflux-next-linux",
     "version": "0.0.0-dev.1",
@@ -176,6 +176,20 @@
       "component": "bridge-service",
       "source": "packaging/generated/hyperflux-next-bridge.service",
       "destination": "/usr/lib/systemd/system/hyperflux-next-bridge.service",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "activation-service",
+      "source": "packaging/generated/hyperflux-next-activation.service",
+      "destination": "/usr/lib/systemd/system/hyperflux-next-activation.service",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "confirmation-service",
+      "source": "packaging/generated/hyperflux-next-confirmation.service",
+      "destination": "/usr/lib/systemd/system/hyperflux-next-confirmation.service",
       "mode": "0644",
       "preserve": false
     },

@@ -18,7 +18,6 @@ pub struct UpdateIntent {
     pub runtime_sha256: String,
     pub previous_package_version: String,
     pub bridge_was_active: bool,
-    pub fresh_install: bool,
     pub loaded_module_identity: Option<String>,
 }
 
@@ -30,22 +29,13 @@ impl UpdateIntent {
             runtime_sha256: LINUX_RUNTIME_SHA256.to_owned(),
             previous_package_version: PRODUCT_VERSION.to_owned(),
             bridge_was_active,
-            fresh_install: false,
             loaded_module_identity,
-        }
-    }
-
-    #[must_use]
-    pub fn fresh_install() -> Self {
-        Self {
-            fresh_install: true,
-            ..Self::new(false, None)
         }
     }
 
     fn validate(&self) -> Result<(), ActivationError> {
         if self.schema != UPDATE_INTENT_SCHEMA
-            || self.runtime_sha256 != LINUX_RUNTIME_SHA256
+            || !valid_digest(&self.runtime_sha256)
             || self.previous_package_version.is_empty()
             || self.previous_package_version.len() > 64
             || self
@@ -63,7 +53,6 @@ impl UpdateIntent {
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ActivationAction {
-    EnableBridge,
     ResumeBridge,
     LeaveBridgeStopped,
     ActivateDriver,
@@ -126,10 +115,8 @@ pub fn decide_post_update(
         return Err(ActivationError::InstalledModuleUnavailable);
     };
     let bridge_was_active = intent.is_some_and(|value| value.bridge_was_active);
-    let fresh_install = intent.is_some_and(|value| value.fresh_install);
     let action = match loaded_module_identity {
         Some(loaded) if loaded != installed => ActivationAction::ActivateDriver,
-        _ if fresh_install => ActivationAction::EnableBridge,
         _ if bridge_was_active => ActivationAction::ResumeBridge,
         _ => ActivationAction::LeaveBridgeStopped,
     };
@@ -214,6 +201,13 @@ fn valid_identity(value: &str) -> bool {
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-' | b'.'))
 }
 
+fn valid_digest(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -260,5 +254,17 @@ mod tests {
         remove_update_intent(&path).expect("remove");
         assert_eq!(load_update_intent(&path).expect("missing"), None);
         fs::remove_dir(directory).expect("cleanup");
+    }
+
+    #[test]
+    fn a_well_formed_previous_runtime_digest_survives_an_update() {
+        let mut intent = UpdateIntent::new(true, Some("ABC123".to_owned()));
+        intent.runtime_sha256 = "a".repeat(64);
+        assert!(intent.validate().is_ok());
+        intent.runtime_sha256 = "not-a-digest".to_owned();
+        assert!(matches!(
+            intent.validate(),
+            Err(ActivationError::InvalidIntent)
+        ));
     }
 }

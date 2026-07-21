@@ -25,6 +25,8 @@ from .generators.kernel_uapi import (
     rust_bindings as kernel_uapi_rust_bindings,
 )
 from .generators.linux_runtime import (
+    activation_service,
+    confirmation_service,
     default_bridge_configuration,
     dkms_configuration,
     kernel_version_header,
@@ -224,6 +226,8 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "driver" / "kernel" / "hyperflux-next-version.h": kernel_version_header(linux_runtime),
         root / "packaging" / "generated" / "dkms.conf": dkms_configuration(linux_runtime),
         root / "packaging" / "generated" / "hyperflux-next-bridge.service": systemd_service(linux_runtime),
+        root / "packaging" / "generated" / "hyperflux-next-activation.service": activation_service(linux_runtime),
+        root / "packaging" / "generated" / "hyperflux-next-confirmation.service": confirmation_service(linux_runtime),
         root / "packaging" / "generated" / "hyperflux-next.sysusers": sysusers(linux_runtime),
         root / "packaging" / "generated" / "hyperflux-next.tmpfiles": tmpfiles(linux_runtime),
         root / "packaging" / "generated" / "99-hyperflux-next.rules": udev_rules(linux_runtime),

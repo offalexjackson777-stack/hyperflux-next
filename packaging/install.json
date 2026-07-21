@@ -97,6 +97,24 @@
       "include": []
     },
     {
+      "id": "activation-service",
+      "kind": "file",
+      "source": "packaging/generated/hyperflux-next-activation.service",
+      "destination": "/usr/lib/systemd/system/hyperflux-next-activation.service",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "confirmation-service",
+      "kind": "file",
+      "source": "packaging/generated/hyperflux-next-confirmation.service",
+      "destination": "/usr/lib/systemd/system/hyperflux-next-confirmation.service",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
       "id": "system-users",
       "kind": "file",
       "source": "packaging/generated/hyperflux-next.sysusers",

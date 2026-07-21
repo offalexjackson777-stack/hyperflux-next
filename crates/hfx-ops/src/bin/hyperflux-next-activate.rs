@@ -12,13 +12,16 @@ use std::thread;
 use std::time::Duration;
 
 fn usage() -> &'static str {
-    "Usage: hyperflux-next-activate <fresh-install|pre-update|post-update|pre-remove>\n"
+    "Usage: hyperflux-next-activate <fresh-install|pre-update|post-update|prepare-start|confirm-start|pre-remove>\n"
 }
 
-fn wait_for_bridge(probe: &RealSystemProbe) -> bool {
+fn wait_for_bridge_and_confirmation(probe: &RealSystemProbe) -> bool {
     for _ in 0..50 {
         let snapshot = probe.snapshot();
-        if snapshot.service_state == ServiceState::Active && snapshot.bridge.is_some() {
+        if snapshot.service_state == ServiceState::Active
+            && snapshot.bridge.is_some()
+            && !Path::new(UPDATE_STATE_PATH).exists()
+        {
             return true;
         }
         thread::sleep(Duration::from_millis(100));
@@ -29,10 +32,11 @@ fn wait_for_bridge(probe: &RealSystemProbe) -> bool {
 fn fresh_install(probe: &RealSystemProbe) -> Result<(), String> {
     migrate_configuration(Path::new(BRIDGE_CONFIGURATION_FILE_PATH))
         .map_err(|error| format!("configuration setup failed: {error}"))?;
-    record_update_intent(Path::new(UPDATE_STATE_PATH), &UpdateIntent::fresh_install())
-        .map_err(|error| format!("fresh-install state failed: {error}"))?;
+    confirm_configuration(Path::new(BRIDGE_CONFIGURATION_FILE_PATH))
+        .map_err(|error| format!("configuration confirmation failed: {error}"))?;
     let _ = probe;
-    println!("HyperFlux Next is queued for conservative read-only activation.");
+    println!("HyperFlux Next installed with conservative read-only defaults.");
+    println!("The bridge remains disabled until the user explicitly enables it.");
     Ok(())
 }
 
@@ -62,9 +66,6 @@ fn post_update(probe: &RealSystemProbe) -> Result<(), String> {
     )
     .map_err(|error| format!("post-update decision failed: {error}"))?;
     match decision.action {
-        ActivationAction::EnableBridge => probe
-            .enable_bridge()
-            .map_err(|error| format!("bridge enable failed: {error}"))?,
         ActivationAction::ResumeBridge => probe
             .restart_bridge()
             .map_err(|error| format!("bridge restart failed: {error}"))?,
@@ -74,24 +75,46 @@ fn post_update(probe: &RealSystemProbe) -> Result<(), String> {
             println!(
                 "Run hyperfluxctl doctor for the reboot or receiver-disconnect activation path."
             );
-            remove_update_intent(Path::new(UPDATE_STATE_PATH))
-                .map_err(|error| format!("post-update cleanup failed: {error}"))?;
             return Ok(());
         }
     }
-    if matches!(
-        decision.action,
-        ActivationAction::EnableBridge | ActivationAction::ResumeBridge
-    ) {
-        if !wait_for_bridge(probe) {
-            return Err("the bridge did not become ready after compatible activation".to_owned());
-        }
-        confirm_configuration(Path::new(BRIDGE_CONFIGURATION_FILE_PATH))
-            .map_err(|error| format!("configuration confirmation failed: {error}"))?;
+    if matches!(decision.action, ActivationAction::ResumeBridge)
+        && !wait_for_bridge_and_confirmation(probe)
+    {
+        return Err("the bridge did not become ready after compatible activation".to_owned());
     }
-    remove_update_intent(Path::new(UPDATE_STATE_PATH))
-        .map_err(|error| format!("post-update cleanup failed: {error}"))?;
     println!("HyperFlux Next post-update activation completed.");
+    Ok(())
+}
+
+fn prepare_start(probe: &RealSystemProbe) -> Result<(), String> {
+    load_update_intent(Path::new(UPDATE_STATE_PATH))
+        .map_err(|error| format!("start preparation state failed: {error}"))?;
+    let snapshot = probe.snapshot();
+    let installed = snapshot
+        .installed_module_identity
+        .ok_or_else(|| "the installed kernel module is unavailable".to_owned())?;
+    if snapshot
+        .loaded_module_identity
+        .as_deref()
+        .is_some_and(|loaded| loaded != installed)
+    {
+        return Err(
+            "a newer installed kernel module must be activated before the bridge starts".to_owned(),
+        );
+    }
+    migrate_configuration(Path::new(BRIDGE_CONFIGURATION_FILE_PATH))
+        .map_err(|error| format!("configuration migration failed: {error}"))?;
+    println!("HyperFlux Next start preparation completed.");
+    Ok(())
+}
+
+fn confirm_start(_probe: &RealSystemProbe) -> Result<(), String> {
+    confirm_configuration(Path::new(BRIDGE_CONFIGURATION_FILE_PATH))
+        .map_err(|error| format!("configuration confirmation failed: {error}"))?;
+    remove_update_intent(Path::new(UPDATE_STATE_PATH))
+        .map_err(|error| format!("update-state confirmation failed: {error}"))?;
+    println!("HyperFlux Next start confirmation completed.");
     Ok(())
 }
 
@@ -117,6 +140,8 @@ fn run() -> Result<(), String> {
         "fresh-install" => fresh_install(&probe),
         "pre-update" => pre_update(&probe),
         "post-update" => post_update(&probe),
+        "prepare-start" => prepare_start(&probe),
+        "confirm-start" => confirm_start(&probe),
         "pre-remove" => pre_remove(&probe),
         _ => Err(usage().to_owned()),
     }

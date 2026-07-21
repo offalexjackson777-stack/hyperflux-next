@@ -69,6 +69,8 @@ KERNEL_KEYS = {
 OPERATIONS_KEYS = {
     "cli_path",
     "activation_path",
+    "activation_service_unit",
+    "confirmation_service_unit",
     "python_module_directory",
     "update_state_file_name",
     "support_bundle_prefix",
@@ -183,6 +185,8 @@ class KernelRuntime:
 class OperationsRuntime:
     cli_path: str
     activation_path: str
+    activation_service_unit: str
+    confirmation_service_unit: str
     python_module_directory: str
     update_state_file_name: str
     support_bundle_prefix: str
@@ -204,7 +208,7 @@ class LinuxRuntime:
     @property
     def update_state_path(self) -> str:
         return str(
-            PurePosixPath(self.bridge.runtime_directory)
+            PurePosixPath(self.bridge.state_directory)
             / self.operations.update_state_file_name
         )
 
@@ -510,6 +514,18 @@ def load_linux_runtime(root: Path) -> LinuxRuntime:
         activation_path=_absolute_path(
             operations_value["activation_path"], "activation utility", ("/", "usr", "lib")
         ),
+        activation_service_unit=_string(
+            operations_value["activation_service_unit"],
+            "activation service unit",
+            re.compile(r"^[a-z][a-z0-9@_.-]{0,95}\.service$"),
+            104,
+        ),
+        confirmation_service_unit=_string(
+            operations_value["confirmation_service_unit"],
+            "confirmation service unit",
+            re.compile(r"^[a-z][a-z0-9@_.-]{0,95}\.service$"),
+            104,
+        ),
         python_module_directory=_absolute_path(
             operations_value["python_module_directory"],
             "private Python module directory",
@@ -552,6 +568,14 @@ def load_linux_runtime(root: Path) -> LinuxRuntime:
         bridge.executable_path
     ).parent:
         raise ModelError("private executables and Python modules must share one product directory")
+    if len(
+        {
+            bridge.service_unit,
+            operations.activation_service_unit,
+            operations.confirmation_service_unit,
+        }
+    ) != 3:
+        raise ModelError("bridge lifecycle service units must be distinct")
 
     return LinuxRuntime(
         source_sha256=sha256_file(path),

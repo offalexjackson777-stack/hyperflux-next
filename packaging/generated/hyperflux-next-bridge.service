@@ -3,7 +3,10 @@
 [Unit]
 Description=HyperFlux Next bridge
 Documentation=man:hyperfluxctl(1)
-After=systemd-udevd.service
+Requires=hyperflux-next-activation.service
+Wants=hyperflux-next-confirmation.service
+After=systemd-udevd.service hyperflux-next-activation.service
+Before=hyperflux-next-confirmation.service
 ConditionPathExists=/etc/hyperflux-next/bridge.json
 
 [Service]

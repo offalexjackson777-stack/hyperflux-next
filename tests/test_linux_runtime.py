@@ -15,6 +15,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.generators.linux_runtime import (
+    activation_service,
+    confirmation_service,
     default_bridge_configuration,
     systemd_service,
     sysusers,
@@ -73,7 +75,8 @@ class LinuxRuntimeTests(unittest.TestCase):
             bridge.configuration_file_path, "/etc/hyperflux-next/bridge.json"
         )
         self.assertEqual(
-            self.runtime.update_state_path, "/run/hyperflux-next/package-update.json"
+            self.runtime.update_state_path,
+            "/var/lib/hyperflux-next/package-update.json",
         )
         self.assertEqual(
             self.runtime.operations.python_module_directory,
@@ -102,6 +105,22 @@ class LinuxRuntimeTests(unittest.TestCase):
         )
         self.assertNotIn("modprobe", service)
         self.assertNotIn("ExecStartPre", service)
+        self.assertIn(
+            f"Requires={self.runtime.operations.activation_service_unit}", service
+        )
+        self.assertIn(
+            f"Wants={self.runtime.operations.confirmation_service_unit}", service
+        )
+
+        prepare = activation_service(self.runtime)
+        confirm = confirmation_service(self.runtime)
+        self.assertIn(" prepare-start", prepare)
+        self.assertIn(" confirm-start", confirm)
+        for unit in (prepare, confirm):
+            self.assertIn("ProtectSystem=strict", unit)
+            self.assertIn(self.runtime.bridge.configuration_directory, unit)
+            self.assertIn(self.runtime.bridge.state_directory, unit)
+            self.assertNotIn("modprobe", unit)
 
         rules = udev_rules(self.runtime)
         self.assertIn('MODE="0660"', rules)
