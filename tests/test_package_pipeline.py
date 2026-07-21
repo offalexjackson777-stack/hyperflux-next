@@ -19,6 +19,7 @@ from hfxdev.linux_runtime import load_linux_runtime
 from hfxdev.model import ModelError, sha256_file
 from hfxdev.package_pipeline import (
     BuiltArtifact,
+    _base_environment,
     _install_wheels,
     _inspect_staged_files,
     _tree_digest,
@@ -117,6 +118,16 @@ class PackagePipelineTests(unittest.TestCase):
             file.write_text(f"source={private_path}\n", encoding="utf-8")
             with self.assertRaisesRegex(ModelError, "private build path"):
                 _inspect_staged_files(root, (os.fsencode(ROOT),))
+
+    def test_build_environment_remaps_source_output_and_dependency_paths(self) -> None:
+        source = Path("/home/builder/source").resolve()
+        output = source / "build/candidate"
+        with patch.dict(os.environ, {"CARGO_HOME": "/home/builder/cargo"}):
+            environment = _base_environment(source, output, 1_700_000_000)
+        for private in (str(source), str(output), "/home/builder/cargo"):
+            self.assertIn(f"--remap-path-prefix={private}=", environment["RUSTFLAGS"])
+            self.assertIn(f"-ffile-prefix-map={private}=", environment["CFLAGS"])
+            self.assertIn(f"-fdebug-prefix-map={private}=", environment["CXXFLAGS"])
 
     def test_wheel_staging_is_repeatable_without_persistent_scratch(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

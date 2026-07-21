@@ -149,16 +149,32 @@ def _new_output_directory(path: Path, label: str) -> Path:
 
 def _base_environment(root: Path, output: Path, epoch: int) -> dict[str, str]:
     environment = os.environ.copy()
+    cargo_home = Path(
+        environment.get("CARGO_HOME", str(Path.home() / ".cargo"))
+    ).expanduser().resolve()
+    remaps = (
+        (output, ".hfx-build"),
+        (root, "."),
+        (cargo_home, ".cargo"),
+    )
+    rust_remap = " ".join(
+        f"--remap-path-prefix={source}={destination}"
+        for source, destination in remaps
+    )
     environment.update(
         {
             "SOURCE_DATE_EPOCH": str(epoch),
             "PYTHONHASHSEED": "0",
             "CARGO_INCREMENTAL": "0",
             "CARGO_TARGET_DIR": str(output / "work" / "cargo-target"),
-            "RUSTFLAGS": f"--remap-path-prefix={root}=.",
+            "RUSTFLAGS": rust_remap,
         }
     )
-    remap = f"-ffile-prefix-map={root}=. -fdebug-prefix-map={root}=."
+    remap = " ".join(
+        f"-ffile-prefix-map={source}={destination} "
+        f"-fdebug-prefix-map={source}={destination}"
+        for source, destination in remaps
+    )
     environment["CFLAGS"] = f"{environment.get('CFLAGS', '')} {remap}".strip()
     environment["CXXFLAGS"] = f"{environment.get('CXXFLAGS', '')} {remap}".strip()
     return environment
@@ -267,6 +283,15 @@ def _build_cmake(
             raise ModelError(f"build {build.id}: required capability {capability} is absent")
         return None
     upstream = _pinned_source(root, capability, source)
+    environment = environment.copy()
+    upstream_remap = (
+        f"-ffile-prefix-map={upstream}=.upstream/{capability} "
+        f"-fdebug-prefix-map={upstream}=.upstream/{capability}"
+    )
+    environment["CFLAGS"] = f"{environment.get('CFLAGS', '')} {upstream_remap}".strip()
+    environment["CXXFLAGS"] = (
+        f"{environment.get('CXXFLAGS', '')} {upstream_remap}"
+    ).strip()
     build_directory = output / "work" / build.id
     configure = [
         "cmake",
