@@ -18,6 +18,7 @@ pub use framing::{
 pub use generated::*;
 pub use generated_versions::{
     CURRENT_PROTOCOL_VERSION, GENERATED_PROTOCOL_VERSIONS, ProtocolVersionDescriptor, v1, v2, v3,
+    v4,
 };
 pub use negotiation::{
     GENERATED_CONTRACT, NegotiationContext, NegotiationError, ProtocolContract, negotiate,

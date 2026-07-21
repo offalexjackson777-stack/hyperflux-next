@@ -129,13 +129,30 @@ fn feature_negotiation_selects_intersection_and_rejects_incompatible_versions() 
     let response = negotiate(&v3, context("protocol-session-3")).expect("v3 overlaps");
     assert_eq!(response.selected_version.get(), 3);
 
-    let incompatible = ClientHello {
+    let v4 = ClientHello {
         minimum_version: number(4),
         maximum_version: number(4),
+        required_features: vec![
+            value("semantic-stable-lighting"),
+            value("snapshot-profile-bindings"),
+        ],
         ..v3
     };
+    let response = negotiate(&v4, context("protocol-session-4")).expect("v4 overlaps");
+    assert_eq!(response.selected_version.get(), 4);
+    assert!(
+        response
+            .enabled_features
+            .contains(&value("snapshot-profile-bindings"))
+    );
+
+    let incompatible = ClientHello {
+        minimum_version: number(5),
+        maximum_version: number(5),
+        ..v4
+    };
     assert_eq!(
-        negotiate(&incompatible, context("protocol-session-4")),
+        negotiate(&incompatible, context("protocol-session-5")),
         Err(NegotiationError::IncompatibleVersion)
     );
 }

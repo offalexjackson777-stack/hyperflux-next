@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/protocol-registry.schema.json",
   "schema": "hyperflux-protocol-registry-v1",
-  "current_version": 3,
+  "current_version": 4,
   "versions": [
     {
       "version": 1,
@@ -20,6 +20,12 @@
       "catalog": "v3/catalog.json",
       "sha256": "77c42349eb2a827ebd777b447d7c44259678d2550f564d9f4eebaef770a01ef9",
       "served_features": ["atomic-transactions", "event-subscriptions", "ownership-leases", "profile-bound-transactions", "semantic-stable-lighting", "structured-diagnostics"]
+    },
+    {
+      "version": 4,
+      "catalog": "v4/catalog.json",
+      "sha256": "05b6c75a1e0aa24936a0d56298671730181adb4212e3e5634ccfde3b767ea20d",
+      "served_features": ["atomic-transactions", "event-subscriptions", "ownership-leases", "profile-bound-transactions", "semantic-stable-lighting", "snapshot-profile-bindings", "structured-diagnostics"]
     }
   ]
 }

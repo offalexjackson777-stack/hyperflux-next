@@ -75,12 +75,15 @@ fn snapshot(battery: BatteryObservation) -> BridgeSnapshot {
         receivers: vec![ReceiverSnapshot {
             receiver_id: text("receiver-1"),
             generation_id: GenerationId::try_from(1_u64).expect("generation is valid"),
+            profile_id: Some(text("receiver.razer.hyperflux-v2.1532-00cf")),
+            profile_digest: Some(text(&"a".repeat(64))),
             lifecycle: ReceiverLifecycleState::Active,
             devices: vec![LogicalDeviceSnapshot {
                 device_id: text("mouse-1"),
                 device_kind: DeviceKind::Mouse,
                 product_id: ProductId::try_from(0x00cd_u16).expect("product id is valid"),
                 profile_id: Some(text("child.razer.basilisk-v3-pro-35k.00cd")),
+                profile_digest: Some(text(&"b".repeat(64))),
                 pairing: PairingState::Paired,
                 presence: PresenceState::Available,
                 support_level: SupportLevel::LightingQualified,
@@ -170,6 +173,34 @@ fn valid_snapshot_response_round_trips_through_bounded_decoder() {
 }
 
 #[test]
+fn v4_preserves_profile_bindings_and_v3_downgrades_them_explicitly() {
+    let response = RpcResponse::SnapshotSuccess(SuccessEnvelope {
+        request_id: text("request-profile-snapshot"),
+        server_instance_id: text("bridge-instance-1"),
+        result: snapshot(battery(TelemetryAvailability::Reported, Some(73))),
+    });
+    let v4 = hfx_protocol::encode_rpc_response_for_version(&response, number(4))
+        .expect("v4 snapshot encodes");
+    assert_eq!(
+        decode_rpc_response_for_version(&v4, number(4)).expect("v4 snapshot decodes"),
+        response
+    );
+
+    let v3 = hfx_protocol::encode_rpc_response_for_version(&response, number(3))
+        .expect("v3 snapshot explicitly omits v4-only bindings");
+    let RpcResponse::SnapshotSuccess(legacy) =
+        decode_rpc_response_for_version(&v3, number(3)).expect("v3 snapshot decodes")
+    else {
+        panic!("snapshot response expected")
+    };
+    let receiver = &legacy.result.receivers[0];
+    assert!(receiver.profile_id.is_none());
+    assert!(receiver.profile_digest.is_none());
+    assert!(receiver.devices[0].profile_id.is_some());
+    assert!(receiver.devices[0].profile_digest.is_none());
+}
+
+#[test]
 fn unknown_rpc_methods_never_reach_dispatch() {
     let encoded = br#"{"method":"raw-hid","request":{}}"#;
     assert_eq!(
@@ -245,7 +276,7 @@ fn frozen_v1_profileless_writes_fail_before_backend_dispatch() {
 }
 
 #[test]
-fn versioned_decoders_reject_adjacent_wire_shapes_instead_of_guessing() {
+fn versioned_decoders_reject_changed_or_unknown_wire_shapes_instead_of_guessing() {
     let v2 = serde_json::to_vec(&framed_transaction_value()).expect("request serializes");
     assert_eq!(
         decode_rpc_request_for_version(&v2, number(3)),
@@ -260,6 +291,10 @@ fn versioned_decoders_reject_adjacent_wire_shapes_instead_of_guessing() {
     );
     assert_eq!(
         decode_rpc_request_for_version(&v3, number(4)),
+        Ok(normalized)
+    );
+    assert_eq!(
+        decode_rpc_request_for_version(&v3, number(5)),
         Err(ProtocolWireError::UnsupportedProtocolVersion)
     );
 }
@@ -314,13 +349,28 @@ fn responses_are_checked_against_the_exact_negotiated_schema() {
             .expect("current response is representable by every retained response schema");
         let encoded = encode_rpc_response_for_version(&response, version)
             .expect("response encodes in the frozen schema");
-        assert_eq!(
-            decode_rpc_response_for_version(&encoded, version),
-            Ok(response.clone())
+        let RpcResponse::SnapshotSuccess(legacy) =
+            decode_rpc_response_for_version(&encoded, version).expect("legacy response decodes")
+        else {
+            panic!("snapshot response expected")
+        };
+        assert!(legacy.result.receivers[0].profile_id.is_none());
+        assert!(legacy.result.receivers[0].profile_digest.is_none());
+        assert!(
+            legacy.result.receivers[0].devices[0]
+                .profile_digest
+                .is_none()
         );
     }
+    let v4 = number(4);
+    validate_rpc_response_for_version(&response, v4).expect("v4 preserves complete bindings");
+    let encoded = encode_rpc_response_for_version(&response, v4).expect("v4 response encodes");
     assert_eq!(
-        validate_rpc_response_for_version(&response, number(4)),
+        decode_rpc_response_for_version(&encoded, v4),
+        Ok(response.clone())
+    );
+    assert_eq!(
+        validate_rpc_response_for_version(&response, number(5)),
         Err(ProtocolWireError::UnsupportedProtocolVersion)
     );
 }

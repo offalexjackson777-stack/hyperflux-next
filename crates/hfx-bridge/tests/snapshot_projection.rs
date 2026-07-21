@@ -216,6 +216,21 @@ fn complete_snapshot_is_canonical_profile_qualified_and_truthful() {
     assert_eq!(snapshot.receivers.len(), 1);
     let receiver = &snapshot.receivers[0];
     assert_eq!(receiver.receiver_id.as_str(), "receiver-1");
+    assert_eq!(
+        receiver
+            .profile_id
+            .as_ref()
+            .map(hfx_domain::ProfileId::as_str),
+        Some("receiver.razer.hyperflux-v2.1532-00cf")
+    );
+    assert_eq!(
+        receiver
+            .profile_digest
+            .as_ref()
+            .map(hfx_domain::ProfileDigest::as_str)
+            .map(str::len),
+        Some(64)
+    );
     assert!(receiver.stable_restore_enabled);
     assert_eq!(receiver.restore_state, RestoreState::Succeeded);
     assert_eq!(receiver.ownership.len(), 2);
@@ -236,6 +251,14 @@ fn complete_snapshot_is_canonical_profile_qualified_and_truthful() {
         Some("child.razer.basilisk-v3-pro-35k.00cd")
     );
     assert_eq!(mouse.support_level, SupportLevel::ProductionQualified);
+    assert_eq!(
+        mouse
+            .profile_digest
+            .as_ref()
+            .map(hfx_domain::ProfileDigest::as_str)
+            .map(str::len),
+        Some(64)
+    );
     assert!(!mouse.capabilities.is_empty());
     assert_eq!(mouse.battery.availability, TelemetryAvailability::Reported);
     assert_eq!(mouse.battery.percentage.map(BatteryPercent::get), Some(0));
@@ -255,6 +278,7 @@ fn complete_snapshot_is_canonical_profile_qualified_and_truthful() {
             .find(|device| device.device_id.as_str() == unqualified_id)
             .expect("unqualified child stays visible");
         assert!(unqualified.profile_id.is_none());
+        assert!(unqualified.profile_digest.is_none());
         assert!(unqualified.capabilities.is_empty());
         assert_eq!(unqualified.support_level, SupportLevel::ReadOnly);
     }

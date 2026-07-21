@@ -21,7 +21,7 @@
         "qualified method translation"
       ],
       "sdk_protocol_versions": [
-        3
+        4
       ],
       "status": "planned",
       "transport_access": "sdk-only",
@@ -55,7 +55,7 @@
         "tested OpenRGB view model"
       ],
       "sdk_protocol_versions": [
-        3
+        4
       ],
       "status": "in-progress",
       "transport_access": "sdk-only",
@@ -88,7 +88,7 @@
         "tested Polychromatic view model"
       ],
       "sdk_protocol_versions": [
-        3
+        4
       ],
       "status": "planned",
       "transport_access": "sdk-only",
@@ -100,7 +100,7 @@
     }
   ],
   "schema": "hyperflux-integration-catalog-v1",
-  "source_sha256": "5ae7588d1e83c978e3d430ee003632ac31521dbce6d742da60f99776b6ea93b3",
+  "source_sha256": "5174b3a4a6cd59dc6e1059b8be44ec924ebdff35712f7bf5ebfa3612c4fae356",
   "upstreams": [
     {
       "api_contract": "org.razer 3.x metadata and D-Bus vocabulary",

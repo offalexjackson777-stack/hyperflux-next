@@ -19,6 +19,8 @@ pub enum SnapshotValidationError {
     OwnershipOutsideReceiverGeneration,
     OwnershipTargetsUnknownDevice,
     BatteryValueContradiction,
+    ReceiverProfileBindingContradiction,
+    DeviceProfileBindingContradiction,
     PresenceContradiction,
 }
 
@@ -42,6 +44,12 @@ impl fmt::Display for SnapshotValidationError {
             Self::BatteryValueContradiction => {
                 "battery availability contradicts the optional percentage"
             }
+            Self::ReceiverProfileBindingContradiction => {
+                "receiver profile identity and digest are incomplete"
+            }
+            Self::DeviceProfileBindingContradiction => {
+                "device profile digest lacks a profile identity"
+            }
             Self::PresenceContradiction => "device presence contradicts endpoint evidence",
         })
     }
@@ -58,6 +66,9 @@ fn validate_battery(battery: &BatteryObservation) -> Result<(), SnapshotValidati
 }
 
 fn validate_device(device: &LogicalDeviceSnapshot) -> Result<(), SnapshotValidationError> {
+    if device.profile_digest.is_some() && device.profile_id.is_none() {
+        return Err(SnapshotValidationError::DeviceProfileBindingContradiction);
+    }
     if device.endpoints.len() > 8 {
         return Err(SnapshotValidationError::TooManyEndpoints);
     }
@@ -101,6 +112,9 @@ fn validate_device(device: &LogicalDeviceSnapshot) -> Result<(), SnapshotValidat
 }
 
 fn validate_receiver(receiver: &ReceiverSnapshot) -> Result<(), SnapshotValidationError> {
+    if receiver.profile_id.is_some() != receiver.profile_digest.is_some() {
+        return Err(SnapshotValidationError::ReceiverProfileBindingContradiction);
+    }
     if receiver.devices.len() > 32 {
         return Err(SnapshotValidationError::TooManyDevices);
     }

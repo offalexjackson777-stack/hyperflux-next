@@ -21,8 +21,8 @@ from hfxdev.protocol import (
 class ProtocolCompilerTests(unittest.TestCase):
     def test_catalog_is_versioned_and_generated_deterministically(self) -> None:
         registry = load_protocol_registry(ROOT)
-        self.assertEqual(registry.current_version, 3)
-        self.assertEqual([item.version for item in registry.versions], [1, 2, 3])
+        self.assertEqual(registry.current_version, 4)
+        self.assertEqual([item.version for item in registry.versions], [1, 2, 3, 4])
         self.assertEqual(
             registry.versions[0].source_sha256,
             "ed3df1f1627ca8a836f509ead3ab7dc7a4cbc6116f6da4accb2cc53e7500859f",
@@ -44,6 +44,11 @@ class ProtocolCompilerTests(unittest.TestCase):
             record
             for record in registry.versions[2].catalog.records
             if record.name == "TransactionRequest"
+        )
+        v4_snapshot = next(
+            record
+            for record in registry.versions[3].catalog.records
+            if record.name == "ReceiverSnapshot"
         )
         self.assertNotIn(
             "device_profiles", [field.name for field in v1_transaction.fields]
@@ -69,6 +74,10 @@ class ProtocolCompilerTests(unittest.TestCase):
         self.assertIn(
             "semantic-stable-lighting", registry.versions[2].served_features
         )
+        self.assertIn(
+            "snapshot-profile-bindings", registry.versions[3].served_features
+        )
+        self.assertIn("profile_digest", [field.name for field in v4_snapshot.fields])
         first = load_protocol_catalog(ROOT)
         second = load_protocol_catalog(ROOT)
         self.assertEqual(first, second)

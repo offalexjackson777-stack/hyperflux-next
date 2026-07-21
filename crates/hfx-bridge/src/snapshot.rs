@@ -115,6 +115,10 @@ impl<'a> SnapshotProjector<'a> {
                 .restoration(machine.receiver_id(), generation.generation_id())
                 .map_err(SnapshotProjectionError::Restoration)?;
             let profile_view = self.profiles.view(receivers);
+            let receiver_profile = self
+                .profiles
+                .binding(machine.receiver_id())
+                .filter(|binding| binding.generation_id == generation.generation_id());
             let devices = generation
                 .devices()
                 .map(|device| {
@@ -131,6 +135,8 @@ impl<'a> SnapshotProjector<'a> {
             projected_receivers.push(ReceiverSnapshot {
                 receiver_id: machine.receiver_id().clone(),
                 generation_id: generation.generation_id(),
+                profile_id: receiver_profile.map(|binding| binding.profile_id.clone()),
+                profile_digest: receiver_profile.map(|binding| binding.profile_digest.clone()),
                 lifecycle: generation.lifecycle().value(),
                 devices,
                 ownership: leases.ownership_snapshot(
@@ -167,6 +173,7 @@ impl<'a> SnapshotProjector<'a> {
             device_kind: device.identity().device_kind(),
             product_id: device.identity().product_id(),
             profile_id: profile.map(|profile| profile.profile_id.clone()),
+            profile_digest: profile.map(|profile| profile.runtime_digest.clone()),
             pairing: device.pairing().value(),
             presence: device.presence(),
             support_level: profile.map_or(

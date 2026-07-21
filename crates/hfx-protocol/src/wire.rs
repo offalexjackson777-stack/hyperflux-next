@@ -4,7 +4,7 @@ use crate::{
     CURRENT_PROTOCOL_VERSION, DiagnosticSnapshot, EventBatch, LeaseResult, MAX_WIRE_MESSAGE_BYTES,
     ProtocolValidationError, RpcRequest, RpcResponse, SnapshotValidationError,
     StableLightingIntent, TransactionResult, TransactionTerminal, TransactionUnavailable, v1, v2,
-    v3, validate_bridge_snapshot, validate_lease_request, validate_transaction,
+    v3, v4, validate_bridge_snapshot, validate_lease_request, validate_transaction,
 };
 use hfx_domain::{
     ProtocolErrorKind, ProtocolVersion, SideEffectCertainty, StableLightingMode, TransactionClass,
@@ -510,6 +510,7 @@ fn encode_rpc_request_version(
             frozen_encoding::<v2::RpcRequest>(value)
         }
         3 => frozen_encoding::<v3::RpcRequest>(value),
+        4 => frozen_encoding::<v4::RpcRequest>(value),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
     }
 }
@@ -535,6 +536,7 @@ fn decode_rpc_request_version(bytes: &[u8], version: u16) -> Result<RpcRequest, 
         1 => normalize_v1_request(decode::<v1::RpcRequest>(bytes)?),
         2 => normalize_v2_request(decode::<v2::RpcRequest>(bytes)?),
         3 => transcode_request(decode::<v3::RpcRequest>(bytes)?),
+        4 => transcode_request(decode::<v4::RpcRequest>(bytes)?),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
     }
 }
@@ -571,6 +573,7 @@ fn decode_rpc_response_version(
         1 => transcode_response(decode::<v1::RpcResponse>(bytes)?),
         2 => transcode_response(decode::<v2::RpcResponse>(bytes)?),
         3 => transcode_response(decode::<v3::RpcResponse>(bytes)?),
+        4 => transcode_response(decode::<v4::RpcResponse>(bytes)?),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
     }
 }
@@ -603,14 +606,60 @@ fn encode_rpc_response_version(
     version: u16,
 ) -> Result<Vec<u8>, ProtocolWireError> {
     validate_rpc_response(response)?;
-    let value =
+    let mut value =
         serde_json::to_value(response).map_err(|_| ProtocolWireError::VersionTranslation)?;
     match version {
-        1 => frozen_encoding::<v1::RpcResponse>(value),
-        2 => frozen_encoding::<v2::RpcResponse>(value),
-        3 => frozen_encoding::<v3::RpcResponse>(value),
+        1 => {
+            remove_snapshot_profile_bindings(response, &mut value)?;
+            frozen_encoding::<v1::RpcResponse>(value)
+        }
+        2 => {
+            remove_snapshot_profile_bindings(response, &mut value)?;
+            frozen_encoding::<v2::RpcResponse>(value)
+        }
+        3 => {
+            remove_snapshot_profile_bindings(response, &mut value)?;
+            frozen_encoding::<v3::RpcResponse>(value)
+        }
+        4 => frozen_encoding::<v4::RpcResponse>(value),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
     }
+}
+
+fn remove_snapshot_profile_bindings(
+    response: &RpcResponse,
+    value: &mut Value,
+) -> Result<(), ProtocolWireError> {
+    if !matches!(response, RpcResponse::SnapshotSuccess(_)) {
+        return Ok(());
+    }
+    let receivers = value
+        .as_object_mut()
+        .and_then(|root| root.get_mut("response"))
+        .and_then(Value::as_object_mut)
+        .and_then(|response| response.get_mut("result"))
+        .and_then(Value::as_object_mut)
+        .and_then(|result| result.get_mut("receivers"))
+        .and_then(Value::as_array_mut)
+        .ok_or(ProtocolWireError::VersionTranslation)?;
+    for receiver in receivers {
+        let receiver = receiver
+            .as_object_mut()
+            .ok_or(ProtocolWireError::VersionTranslation)?;
+        receiver.remove("profile_id");
+        receiver.remove("profile_digest");
+        let devices = receiver
+            .get_mut("devices")
+            .and_then(Value::as_array_mut)
+            .ok_or(ProtocolWireError::VersionTranslation)?;
+        for device in devices {
+            device
+                .as_object_mut()
+                .ok_or(ProtocolWireError::VersionTranslation)?
+                .remove("profile_digest");
+        }
+    }
+    Ok(())
 }
 
 /// Verifies that a current-core response is exactly encodable by one frozen
