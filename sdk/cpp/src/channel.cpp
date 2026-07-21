@@ -13,6 +13,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <pwd.h>
 #include <string>
 #include <string_view>
 #include <sys/socket.h>
@@ -20,6 +21,7 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <vector>
 
 namespace hyperflux::sdk
 {
@@ -50,6 +52,57 @@ Result<void> configure_timeout(int file_descriptor, std::uint32_t timeout_ms)
         });
     }
     return Result<void>::success();
+}
+
+Result<std::optional<std::uint32_t>> resolve_expected_peer(
+    const UnixChannelConfig& config)
+{
+    if(config.expected_peer_uid.has_value() && config.expected_peer_user.has_value())
+    {
+        return Result<std::optional<std::uint32_t>>::failure({
+            ErrorCode::InvalidArgument,
+            "bridge peer authority must use either an account name or a numeric UID",
+            std::nullopt,
+        });
+    }
+    if(config.expected_peer_uid.has_value())
+    {
+        return Result<std::optional<std::uint32_t>>::success(config.expected_peer_uid);
+    }
+    if(!config.expected_peer_user.has_value())
+    {
+        return Result<std::optional<std::uint32_t>>::success(std::nullopt);
+    }
+    if(config.expected_peer_user->empty() || config.expected_peer_user->size() > 64)
+    {
+        return Result<std::optional<std::uint32_t>>::failure({
+            ErrorCode::InvalidArgument,
+            "bridge peer account name is empty or exceeds the local bound",
+            std::nullopt,
+        });
+    }
+
+    passwd record {};
+    passwd* resolved = nullptr;
+    std::vector<char> buffer(16'384);
+    const auto status = ::getpwnam_r(
+        config.expected_peer_user->c_str(),
+        &record,
+        buffer.data(),
+        buffer.size(),
+        &resolved);
+    if(status != 0 || resolved == nullptr
+       || static_cast<std::uintmax_t>(record.pw_uid)
+           > std::numeric_limits<std::uint32_t>::max())
+    {
+        return Result<std::optional<std::uint32_t>>::failure({
+            ErrorCode::SocketConfigure,
+            "configured bridge service account is unavailable",
+            std::nullopt,
+        });
+    }
+    return Result<std::optional<std::uint32_t>>::success(
+        static_cast<std::uint32_t>(record.pw_uid));
 }
 
 Result<void> verify_peer(int file_descriptor, std::optional<std::uint32_t> expected_uid)
@@ -262,6 +315,11 @@ Result<std::unique_ptr<UnixRpcChannel>> UnixRpcChannel::connect(
             std::nullopt,
         });
     }
+    auto expected_peer = resolve_expected_peer(config);
+    if(!expected_peer)
+    {
+        return Result<std::unique_ptr<UnixRpcChannel>>::failure(expected_peer.error());
+    }
     const auto file_descriptor = ::socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
     if(file_descriptor < 0)
     {
@@ -289,7 +347,7 @@ Result<std::unique_ptr<UnixRpcChannel>> UnixRpcChannel::connect(
         static_cast<void>(::close(file_descriptor));
         return Result<std::unique_ptr<UnixRpcChannel>>::failure(timeout.error());
     }
-    auto peer = verify_peer(file_descriptor, config.expected_peer_uid);
+    auto peer = verify_peer(file_descriptor, expected_peer.value());
     if(!peer)
     {
         static_cast<void>(::close(file_descriptor));

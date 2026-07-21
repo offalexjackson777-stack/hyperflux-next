@@ -4,13 +4,19 @@
 #include <hyperflux/sdk/channel.hpp>
 
 #include <arpa/inet.h>
+#include <array>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <limits>
+#include <optional>
+#include <pwd.h>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <thread>
 #include <unistd.h>
 #include <utility>
@@ -206,6 +212,62 @@ hyperflux::sdk::ErrorCode invalid_response(
     return response ? hyperflux::sdk::ErrorCode::UnexpectedResponse : response.error().code;
 }
 
+std::string current_account_name()
+{
+    passwd record {};
+    passwd* resolved = nullptr;
+    std::array<char, 16'384> buffer {};
+    if(::getpwuid_r(::geteuid(), &record, buffer.data(), buffer.size(), &resolved) != 0
+       || resolved == nullptr)
+    {
+        return {};
+    }
+    return record.pw_name;
+}
+
+hyperflux::sdk::ErrorCode connect_to_local_peer(
+    std::optional<std::uint32_t> expected_uid,
+    std::optional<std::string> expected_user,
+    std::string_view suffix)
+{
+    const auto path = "/tmp/hfx-sdk-channel-" + std::to_string(::getpid()) + "-"
+        + std::string(suffix) + ".sock";
+    static_cast<void>(::unlink(path.c_str()));
+    const auto listener = ::socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    if(listener < 0)
+    {
+        return hyperflux::sdk::ErrorCode::SocketCreate;
+    }
+    sockaddr_un address {};
+    address.sun_family = AF_UNIX;
+    std::memcpy(address.sun_path, path.c_str(), path.size() + 1);
+    if(::bind(listener, reinterpret_cast<const sockaddr*>(&address), sizeof(address)) != 0
+       || ::listen(listener, 1) != 0)
+    {
+        static_cast<void>(::close(listener));
+        static_cast<void>(::unlink(path.c_str()));
+        return hyperflux::sdk::ErrorCode::SocketConfigure;
+    }
+
+    std::thread server([listener] {
+        const auto accepted = ::accept4(listener, nullptr, nullptr, SOCK_CLOEXEC);
+        if(accepted >= 0)
+        {
+            static_cast<void>(::close(accepted));
+        }
+        static_cast<void>(::close(listener));
+    });
+    auto connected = hyperflux::sdk::UnixRpcChannel::connect({
+        path,
+        2'000,
+        expected_uid,
+        std::move(expected_user),
+    });
+    server.join();
+    static_cast<void>(::unlink(path.c_str()));
+    return connected ? hyperflux::sdk::ErrorCode::UnexpectedResponse : connected.error().code;
+}
+
 } // namespace
 
 int main()
@@ -230,6 +292,42 @@ int main()
        != hyperflux::sdk::ErrorCode::InvalidJson)
     {
         return 4;
+    }
+    const auto account = current_account_name();
+    if(account.empty()
+       || connect_to_local_peer(std::nullopt, account, "named")
+           != hyperflux::sdk::ErrorCode::UnexpectedResponse)
+    {
+        return 5;
+    }
+    const auto current_uid = static_cast<std::uint32_t>(::geteuid());
+    const auto other_uid = current_uid == std::numeric_limits<std::uint32_t>::max()
+        ? current_uid - 1
+        : current_uid + 1;
+    if(connect_to_local_peer(other_uid, std::nullopt, "mismatch")
+       != hyperflux::sdk::ErrorCode::PeerCredentialMismatch)
+    {
+        return 6;
+    }
+    const auto conflicting = hyperflux::sdk::UnixRpcChannel::connect({
+        "/tmp/hfx-sdk-channel-unused.sock",
+        2'000,
+        current_uid,
+        account,
+    });
+    if(conflicting || conflicting.error().code != hyperflux::sdk::ErrorCode::InvalidArgument)
+    {
+        return 7;
+    }
+    const auto unavailable = hyperflux::sdk::UnixRpcChannel::connect({
+        "/tmp/hfx-sdk-channel-unused.sock",
+        2'000,
+        std::nullopt,
+        "hyperflux-account-must-not-exist-7f6df7d3",
+    });
+    if(unavailable || unavailable.error().code != hyperflux::sdk::ErrorCode::SocketConfigure)
+    {
+        return 8;
     }
     return 0;
 }

@@ -27,6 +27,7 @@ struct UnixChannelConfig
     std::string socket_path;
     std::uint32_t timeout_ms = 5'000;
     std::optional<std::uint32_t> expected_peer_uid;
+    std::optional<std::string> expected_peer_user;
 };
 
 class UnixRpcChannel final : public RpcChannel
