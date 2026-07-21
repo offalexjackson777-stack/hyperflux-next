@@ -43,3 +43,9 @@ engine. Polychromatic owns its native presentation. The isolated OpenRazer
 compatibility service translates only qualified methods. All three consume the
 same inventory, controller, ownership, and capability semantics while the bridge
 remains the sole userspace hardware writer.
+
+Native application integrations are the normal path. In particular,
+Polychromatic should load the native HyperFlux backend beside its existing
+OpenRazer backend. HyperFlux does not replace or hide the official OpenRazer
+daemon. The optional [OpenRazer compatibility boundary](openrazer-compatibility.md)
+exists only for clients that cannot yet consume a native HyperFlux SDK backend.

@@ -61,7 +61,7 @@
       "id": "HFX-MIG-007",
       "component": "OpenRazer metadata and compatibility",
       "disposition": "REIMPLEMENT_WITH_PINNED_IMPORT",
-      "status": "PENDING_REVIEW",
+      "status": "ACCEPTED",
       "sources": ["engineering-laboratory"],
       "destination_owner": "integrations",
       "rationale": "Transform licensed upstream metadata reproducibly; isolate optional D-Bus compatibility from the official daemon and core architecture."
@@ -70,7 +70,7 @@
       "id": "HFX-MIG-008",
       "component": "Polychromatic integration",
       "disposition": "REIMPLEMENT",
-      "status": "PENDING_REVIEW",
+      "status": "ACCEPTED",
       "sources": ["engineering-laboratory"],
       "destination_owner": "integrations",
       "rationale": "Build a native SDK backend after resource ownership exists; do not monkeypatch or suppress unrelated devices."

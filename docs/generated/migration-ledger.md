@@ -12,8 +12,8 @@ Default disposition: `REJECT_UNTIL_REVIEWED`.
 | `HFX-MIG-004` | bridge runtime and policy | `REIMPLEMENT` | `IN_PROGRESS` | `bridge` |
 | `HFX-MIG-005` | hardware and presentation profiles | `REIMPLEMENT_AND_GENERATE` | `IN_PROGRESS` | `profiles` |
 | `HFX-MIG-006` | OpenRGB integration | `REIMPLEMENT` | `IN_PROGRESS` | `integrations` |
-| `HFX-MIG-007` | OpenRazer metadata and compatibility | `REIMPLEMENT_WITH_PINNED_IMPORT` | `PENDING_REVIEW` | `integrations` |
-| `HFX-MIG-008` | Polychromatic integration | `REIMPLEMENT` | `PENDING_REVIEW` | `integrations` |
+| `HFX-MIG-007` | OpenRazer metadata and compatibility | `REIMPLEMENT_WITH_PINNED_IMPORT` | `ACCEPTED` | `integrations` |
+| `HFX-MIG-008` | Polychromatic integration | `REIMPLEMENT` | `ACCEPTED` | `integrations` |
 | `HFX-MIG-009` | verification, proof coordinators, and fixtures | `TEST_REFERENCE` | `IN_PROGRESS` | `verification` |
 | `HFX-MIG-010` | packaging, activation, diagnostics, and support | `REIMPLEMENT` | `PENDING_REVIEW` | `bridge` |
 | `HFX-MIG-011` | documentation and GitHub governance | `REIMPLEMENT_AND_GENERATE` | `PENDING_REVIEW` | `verification` |

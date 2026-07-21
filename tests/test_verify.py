@@ -45,7 +45,7 @@ class VerificationGuardTests(unittest.TestCase):
             source.mkdir()
             (source / "OpenRGBPluginInterface.h").write_text("// fixture\n", encoding="utf-8")
             node = SimpleNamespace(timeout_seconds=300)
-            with patch.dict(os.environ, {"HFX_OPENRGB_SOURCE_DIR": str(source)}):
+            with patch("tools.hfxdev.verify._openrgb_source", return_value=source):
                 with patch("tools.hfxdev.verify._run_command") as command:
                     _run_openrgb_adapter_contracts(root, node)
                     self.assertEqual(command.call_count, 3)

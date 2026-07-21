@@ -42,12 +42,16 @@ from .generators.protocol import (
     rust_registry as protocol_rust_registry,
 )
 from .kernel_uapi import load_kernel_uapi
-from .integrations import compiled_catalog as compiled_integration_catalog
+from .integrations import (
+    compiled_catalog as compiled_integration_catalog,
+    load_openrazer_compatibility_contract,
+)
 from .generators.integrations import (
     compiled_json as integration_compiled_json,
     cpp_catalog as integration_cpp_catalog,
     markdown as integration_markdown,
     python_catalog as integration_python_catalog,
+    python_openrazer_compatibility_contract,
     python_openrazer_metadata,
     rust_catalog as integration_rust_catalog,
 )
@@ -157,6 +161,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
     kernel_uapi = load_kernel_uapi(root)
     integrations = compiled_integration_catalog(root)
     openrazer_metadata = load_imported_metadata(root)
+    openrazer_compatibility = load_openrazer_compatibility_contract(root)
     test_catalog = load_test_catalog(root)
     files = {
         root / "docs" / "generated" / "architecture.md": architecture_markdown(constitution),
@@ -192,6 +197,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "crates" / "hfx-integration-model" / "src" / "generated.rs": integration_rust_catalog(integrations),
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "integration_catalog.py": integration_python_catalog(integrations),
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "openrazer_metadata.py": python_openrazer_metadata(openrazer_metadata),
+        root / "integrations" / "openrazer" / "compatibility" / "hyperflux_openrazer_compat" / "generated_contract.py": python_openrazer_compatibility_contract(openrazer_compatibility),
         root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "integration_catalog.hpp": integration_cpp_catalog(integrations),
     }
     for version in protocol_registry.versions:

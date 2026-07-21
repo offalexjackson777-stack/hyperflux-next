@@ -51,6 +51,7 @@ KNOWN_RUNNERS = {
     "openrgb-adapter-contracts",
     "openrgb-thread-sanitizer",
     "openrazer-metadata-contracts",
+    "openrazer-compatibility-contracts",
     "polychromatic-adapter-contracts",
     "kernel-profile-contracts",
 }

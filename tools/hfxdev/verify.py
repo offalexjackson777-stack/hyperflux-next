@@ -13,7 +13,7 @@ import time
 
 from .model import ModelError, load_foundation, load_json, require_unique, sha256_file
 from .errors import load_error_catalog
-from .integrations import load_integration_catalog
+from .integrations import load_integration_catalog, load_openrazer_compatibility_contract
 from .openrazer import load_imported_metadata, transformed_metadata
 from .render import rendered_files
 from .profiles import load_profile_inputs
@@ -133,6 +133,7 @@ def _check_profile_contract(root: Path) -> None:
 
 def _check_integration_contract(root: Path) -> None:
     load_integration_catalog(root)
+    load_openrazer_compatibility_contract(root)
     load_imported_metadata(root)
 
 
@@ -463,30 +464,27 @@ def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
         )
 
 
-def _openrgb_source() -> Path:
-    configured = os.environ.get("HFX_OPENRGB_SOURCE_DIR")
-    if not configured:
-        raise ModelError(
-            "OpenRGB adapter verification requires HFX_OPENRGB_SOURCE_DIR to name "
-            "the pinned OpenRGB checkout"
-        )
-    source = Path(configured)
-    if not source.is_absolute() or not (source / "OpenRGBPluginInterface.h").is_file():
-        raise ModelError(f"pinned OpenRGB source is unavailable: {source}")
-    return source
-
-
-def _openrazer_source(root: Path) -> Path:
-    value = os.environ.get("HFX_OPENRAZER_SOURCE_DIR")
+def _pinned_upstream_source(
+    root: Path,
+    *,
+    environment_name: str,
+    upstream_id: str,
+    required_paths: tuple[str, ...],
+    label: str,
+) -> Path:
+    value = os.environ.get(environment_name)
     if value is None:
-        raise ModelError("HFX_OPENRAZER_SOURCE_DIR is required for pinned metadata verification")
-    source = Path(value).resolve()
-    if not source.is_dir():
-        raise ModelError("HFX_OPENRAZER_SOURCE_DIR is not a directory")
+        raise ModelError(f"{environment_name} is required for the pinned {label} contract")
+    source = Path(value)
+    if not source.is_absolute():
+        raise ModelError(f"{environment_name} must name an absolute path")
+    source = source.resolve()
+    if not source.is_dir() or not all((source / path).is_file() for path in required_paths):
+        raise ModelError(f"{environment_name} is not a {label} checkout")
     expected = {
         upstream["id"]: upstream["commit"]
         for upstream in load_integration_catalog(root)["upstreams"]
-    }["openrazer"]
+    }[upstream_id]
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -497,10 +495,30 @@ def _openrazer_source(root: Path) -> Path:
             timeout=10,
         )
     except (OSError, subprocess.SubprocessError) as error:
-        raise ModelError(f"cannot inspect pinned OpenRazer source: {error}") from error
+        raise ModelError(f"cannot inspect pinned {label} source: {error}") from error
     if result.stdout.strip() != expected:
-        raise ModelError("OpenRazer source checkout does not match the integration catalog pin")
+        raise ModelError(f"{label} source checkout does not match the integration catalog pin")
     return source
+
+
+def _openrgb_source(root: Path) -> Path:
+    return _pinned_upstream_source(
+        root,
+        environment_name="HFX_OPENRGB_SOURCE_DIR",
+        upstream_id="openrgb",
+        required_paths=("OpenRGBPluginInterface.h",),
+        label="OpenRGB",
+    )
+
+
+def _openrazer_source(root: Path) -> Path:
+    return _pinned_upstream_source(
+        root,
+        environment_name="HFX_OPENRAZER_SOURCE_DIR",
+        upstream_id="openrazer",
+        required_paths=("pylib/openrazer/client/__init__.py",),
+        label="OpenRazer",
+    )
 
 
 def _run_openrazer_metadata_contracts(root: Path, _node: TestNode) -> None:
@@ -511,37 +529,69 @@ def _run_openrazer_metadata_contracts(root: Path, _node: TestNode) -> None:
         raise ModelError("committed OpenRazer metadata is stale; rerun ./hfx import openrazer")
 
 
-def _polychromatic_source(root: Path) -> Path:
-    value = os.environ.get("HFX_POLYCHROMATIC_SOURCE_DIR")
-    if value is None:
-        raise ModelError(
-            "HFX_POLYCHROMATIC_SOURCE_DIR is required for the native Polychromatic contract"
-        )
-    source = Path(value).resolve()
-    required = (
-        source / "polychromatic" / "backends" / "_backend.py",
-        source / "polychromatic" / "middleman.py",
+def _run_openrazer_compatibility_contracts(root: Path, node: TestNode) -> None:
+    source = _openrazer_source(root)
+    build_directory = root / "build" / "openrazer-compatibility"
+    if build_directory.exists():
+        shutil.rmtree(build_directory)
+    package_source = build_directory / "package"
+    shutil.copytree(
+        root / "integrations" / "openrazer" / "compatibility",
+        package_source,
+        ignore=shutil.ignore_patterns("__pycache__", "*.egg-info", "*.pyc"),
     )
-    if not source.is_dir() or not all(path.is_file() for path in required):
-        raise ModelError("HFX_POLYCHROMATIC_SOURCE_DIR is not a Polychromatic checkout")
-    expected = {
-        upstream["id"]: upstream["commit"]
-        for upstream in load_integration_catalog(root)["upstreams"]
-    }["polychromatic"]
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=source,
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=10,
+    wheel_directory = build_directory / "wheel"
+    wheel_directory.mkdir()
+    _run_command(
+        root,
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "wheel",
+            "--no-deps",
+            "--no-build-isolation",
+            "--wheel-dir",
+            str(wheel_directory),
+            str(package_source),
+        ],
+        "OpenRazer compatibility wheel",
+        node.timeout_seconds,
+        environment={"PIP_DISABLE_PIP_VERSION_CHECK": "1", "PIP_NO_INDEX": "1"},
+    )
+    python_path = os.pathsep.join(
+        (
+            str(source / "pylib"),
+            str(root / "sdk" / "python"),
+            str(root / "integrations" / "openrazer" / "compatibility"),
+            os.environ.get("PYTHONPATH", ""),
         )
-    except (OSError, subprocess.SubprocessError) as error:
-        raise ModelError(f"cannot inspect pinned Polychromatic source: {error}") from error
-    if result.stdout.strip() != expected:
-        raise ModelError("Polychromatic source checkout does not match the integration catalog pin")
-    return source
+    )
+    _run_command(
+        root,
+        ["dbus-run-session", "--", sys.executable, "tests/openrazer_compat_contracts.py", "-v"],
+        "OpenRazer compatibility contracts",
+        node.timeout_seconds,
+        environment={
+            "HFX_OPENRAZER_SOURCE_DIR": str(source),
+            "HFX_OPENRAZER_WHEEL_DIR": str(wheel_directory),
+            "PYTHONPATH": python_path,
+            "PYTHONWARNINGS": "error::ResourceWarning",
+        },
+    )
+
+
+def _polychromatic_source(root: Path) -> Path:
+    return _pinned_upstream_source(
+        root,
+        environment_name="HFX_POLYCHROMATIC_SOURCE_DIR",
+        upstream_id="polychromatic",
+        required_paths=(
+            "polychromatic/backends/_backend.py",
+            "polychromatic/middleman.py",
+        ),
+        label="Polychromatic",
+    )
 
 
 def _run_polychromatic_adapter_contracts(root: Path, node: TestNode) -> None:
@@ -623,7 +673,7 @@ def _run_openrgb_cmake_contracts(
     label: str,
     thread_sanitizer: bool,
 ) -> None:
-    source = _openrgb_source()
+    source = _openrgb_source(root)
     build_directory = root / "build" / build_name
     if build_directory.exists():
         shutil.rmtree(build_directory)
@@ -889,6 +939,7 @@ RUNNERS = {
     "openrgb-adapter-contracts": _run_openrgb_adapter_contracts,
     "openrgb-thread-sanitizer": _run_openrgb_thread_sanitizer,
     "openrazer-metadata-contracts": _run_openrazer_metadata_contracts,
+    "openrazer-compatibility-contracts": _run_openrazer_compatibility_contracts,
     "polychromatic-adapter-contracts": _run_polychromatic_adapter_contracts,
     "kernel-profile-contracts": _run_kernel_profile_contracts,
 }

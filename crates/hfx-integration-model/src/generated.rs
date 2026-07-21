@@ -26,7 +26,7 @@ pub struct AdapterRecord {
 }
 
 pub const INTEGRATION_SOURCE_SHA256: &str =
-    "1e8184a555feea29ef4bb918008178d901e22bc19ae28d4401157f1a97f4df65";
+    "3f8980c873cd3cf3287cac586ca7512140b76ea3b8ce004149e847ef2caf80b1";
 
 pub const UPSTREAMS: &[UpstreamRecord] = &[
     UpstreamRecord {
@@ -70,10 +70,10 @@ pub const ADAPTERS: &[AdapterRecord] = &[
         id: "openrazer-compatibility",
         application: "OpenRazer-compatible clients",
         kind: "compatibility-service",
-        status: "planned",
+        status: "software-verified",
         upstream_ids: &["openrazer"],
         sdk_protocol_versions: &[5],
-        feature_families: &["inventory", "lighting", "ownership", "telemetry"],
+        feature_families: &["inventory", "lighting", "ownership"],
         coexistence_policy: "private-explicit-service-only",
     },
     AdapterRecord {

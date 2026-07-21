@@ -326,6 +326,23 @@
       "resume_policy": "rerun"
     },
     {
+      "id": "openrazer-compatibility-contracts",
+      "title": "Private OpenRazer compatibility and isolated legacy-client contracts",
+      "owned_domain": "integrations",
+      "lanes": ["full-software"],
+      "runner": "openrazer-compatibility-contracts",
+      "required_capabilities": ["openrazer-source", "dbus-session"],
+      "hardware_requirement": "none",
+      "writes_hardware": false,
+      "expected_duration_seconds": 2,
+      "timeout_seconds": 60,
+      "dependencies": ["openrazer-metadata-contracts", "python-unit"],
+      "isolation": "exclusive-process",
+      "cache_inputs": ["integrations/openrazer/compatibility.json", "integrations/openrazer/compatibility/**/*.py", "integrations/openrazer/compatibility/pyproject.toml", "integrations/openrazer/compatibility/LICENSE", "schemas/openrazer-compatibility.schema.json", "sdk/python/hyperflux_sdk/generated/openrazer_metadata.py", "tests/openrazer_compat_contracts.py", "tools/hfxdev/verify.py"],
+      "produced_evidence": ["openrazer-compatibility-result"],
+      "resume_policy": "rerun"
+    },
+    {
       "id": "kernel-profile-contracts",
       "title": "Kernel profile, UAPI, protocol, and module contracts",
       "owned_domain": "kernel",

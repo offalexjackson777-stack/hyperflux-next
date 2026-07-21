@@ -26,7 +26,8 @@ Every current node is software-only and has zero hardware-write authority.
 | 17 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
 | 18 | `openrgb-adapter-contracts` | `integrations` | `none` | `false` | 120s | `rerun` |
 | 19 | `polychromatic-adapter-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
-| 20 | `openrgb-thread-sanitizer` | `integrations` | `none` | `false` | 300s | `rerun` |
+| 20 | `openrazer-compatibility-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
+| 21 | `openrgb-thread-sanitizer` | `integrations` | `none` | `false` | 300s | `rerun` |
 
 ## Dependencies
 
@@ -51,6 +52,7 @@ flowchart LR
     simulator_contracts["simulator-contracts"]
     openrgb_adapter_contracts["openrgb-adapter-contracts"]
     polychromatic_adapter_contracts["polychromatic-adapter-contracts"]
+    openrazer_compatibility_contracts["openrazer-compatibility-contracts"]
     openrgb_thread_sanitizer["openrgb-thread-sanitizer"]
     foundation_contracts --> schema_contracts
     foundation_contracts --> privacy_boundary
@@ -83,5 +85,7 @@ flowchart LR
     profile_contracts --> openrgb_adapter_contracts
     openrazer_metadata_contracts --> polychromatic_adapter_contracts
     python_unit --> polychromatic_adapter_contracts
+    openrazer_metadata_contracts --> openrazer_compatibility_contracts
+    python_unit --> openrazer_compatibility_contracts
     openrgb_adapter_contracts --> openrgb_thread_sanitizer
 ```

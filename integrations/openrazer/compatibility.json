@@ -1,0 +1,88 @@
+{
+  "$schema": "../../schemas/openrazer-compatibility.schema.json",
+  "schema": "hyperflux-openrazer-compatibility-v1",
+  "upstream": {
+    "id": "openrazer",
+    "commit": "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+    "api_contract": "org.razer 3.x metadata and D-Bus vocabulary"
+  },
+  "service": {
+    "private_identity": {
+      "bus_name": "dev.hyperflux.OpenRazer1",
+      "root_path": "/dev/hyperflux/OpenRazer1",
+      "requires_isolated_session": false,
+      "activation_file_installed": false
+    },
+    "legacy_identity": {
+      "bus_name": "org.razer",
+      "root_path": "/org/razer",
+      "requires_isolated_session": true,
+      "activation_file_installed": false
+    },
+    "reconcile_interval_ms": {"minimum": 250, "default": 5000, "maximum": 300000},
+    "lifecycle": "on-demand-process"
+  },
+  "interfaces": [
+    {
+      "name": "razer.daemon",
+      "methods": [{"name": "version", "in": "", "out": "s"}],
+      "signals": []
+    },
+    {
+      "name": "razer.device.lighting.brightness",
+      "methods": [
+        {"name": "getBrightness", "in": "", "out": "d"},
+        {"name": "setBrightness", "in": "d", "out": ""}
+      ],
+      "signals": []
+    },
+    {
+      "name": "razer.device.lighting.chroma",
+      "methods": [
+        {"name": "setCustom", "in": "", "out": ""},
+        {"name": "setKeyRow", "in": "ay", "out": ""},
+        {"name": "setNone", "in": "", "out": ""},
+        {"name": "setStatic", "in": "yyy", "out": ""}
+      ],
+      "signals": []
+    },
+    {
+      "name": "razer.device.misc",
+      "methods": [
+        {"name": "getDeviceImage", "in": "", "out": "s"},
+        {"name": "getDeviceName", "in": "", "out": "s"},
+        {"name": "getDeviceType", "in": "", "out": "s"},
+        {"name": "getDriverVersion", "in": "", "out": "s"},
+        {"name": "getFirmware", "in": "", "out": "s"},
+        {"name": "getMatrixDimensions", "in": "", "out": "ai"},
+        {"name": "getSerial", "in": "", "out": "s"},
+        {"name": "getVidPid", "in": "", "out": "ai"},
+        {"name": "hasMatrix", "in": "", "out": "b"}
+      ],
+      "signals": []
+    },
+    {
+      "name": "razer.devices",
+      "methods": [
+        {"name": "getDevices", "in": "", "out": "as"},
+        {"name": "getSyncEffects", "in": "", "out": "b"},
+        {"name": "syncEffects", "in": "b", "out": ""}
+      ],
+      "signals": ["device_added", "device_removed"]
+    }
+  ],
+  "capability_policy": {
+    "required_for_export": ["lighting.brightness", "lighting.direct-frame", "lighting.off", "lighting.software-effect-frames", "lighting.static"],
+    "qualified_translations": ["lighting.brightness", "lighting.complete-black", "lighting.off", "lighting.per-key", "lighting.per-led", "lighting.software-effect-frames", "lighting.static"],
+    "not_advertised": ["battery.partial-openrazer-contract", "charging", "dpi", "firmware-management", "hardware-effects", "idle-timeout", "macros", "pairing", "polling-rate", "scroll-settings"]
+  },
+  "safety": {
+    "transport_access": "sdk-only",
+    "unknown_profile_writes": false,
+    "uncertain_write_replay": false,
+    "official_daemon_replacement": false,
+    "unrelated_device_suppression": false,
+    "hardware_serial_export": false,
+    "global_activation_file": false
+  }
+}

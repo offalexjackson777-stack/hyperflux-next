@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/openrazer-compatibility-v1.json",
+  "title": "HyperFlux private OpenRazer compatibility contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "upstream", "service", "interfaces", "capability_policy", "safety"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-openrazer-compatibility-v1"},
+    "upstream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "commit", "api_contract"],
+      "properties": {
+        "id": {"const": "openrazer"},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "api_contract": {"const": "org.razer 3.x metadata and D-Bus vocabulary"}
+      }
+    },
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["private_identity", "legacy_identity", "reconcile_interval_ms", "lifecycle"],
+      "properties": {
+        "private_identity": {"$ref": "#/$defs/identity"},
+        "legacy_identity": {
+          "allOf": [
+            {"$ref": "#/$defs/identity"},
+            {
+              "type": "object",
+              "properties": {
+                "bus_name": {"const": "org.razer"},
+                "root_path": {"const": "/org/razer"},
+                "requires_isolated_session": {"const": true},
+                "activation_file_installed": {"const": false}
+              }
+            }
+          ]
+        },
+        "reconcile_interval_ms": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["minimum", "default", "maximum"],
+          "properties": {
+            "minimum": {"type": "integer", "minimum": 100, "maximum": 1000},
+            "default": {"type": "integer", "minimum": 250, "maximum": 300000},
+            "maximum": {"type": "integer", "minimum": 1000, "maximum": 300000}
+          }
+        },
+        "lifecycle": {"const": "on-demand-process"}
+      }
+    },
+    "interfaces": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "methods", "signals"],
+        "properties": {
+          "name": {"type": "string", "pattern": "^razer\\.[A-Za-z0-9_.]+$"},
+          "methods": {
+            "type": "array",
+            "maxItems": 32,
+            "uniqueItems": true,
+            "items": {"$ref": "#/$defs/method"}
+          },
+          "signals": {
+            "type": "array",
+            "maxItems": 8,
+            "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$"}
+          }
+        }
+      }
+    },
+    "capability_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required_for_export", "qualified_translations", "not_advertised"],
+      "properties": {
+        "required_for_export": {"$ref": "#/$defs/stringSet"},
+        "qualified_translations": {"$ref": "#/$defs/stringSet"},
+        "not_advertised": {"$ref": "#/$defs/stringSet"}
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["transport_access", "unknown_profile_writes", "uncertain_write_replay", "official_daemon_replacement", "unrelated_device_suppression", "hardware_serial_export", "global_activation_file"],
+      "properties": {
+        "transport_access": {"const": "sdk-only"},
+        "unknown_profile_writes": {"const": false},
+        "uncertain_write_replay": {"const": false},
+        "official_daemon_replacement": {"const": false},
+        "unrelated_device_suppression": {"const": false},
+        "hardware_serial_export": {"const": false},
+        "global_activation_file": {"const": false}
+      }
+    }
+  },
+  "$defs": {
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bus_name", "root_path", "requires_isolated_session", "activation_file_installed"],
+      "properties": {
+        "bus_name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)+$"},
+        "root_path": {"type": "string", "pattern": "^(/[A-Za-z_][A-Za-z0-9_]*)+$"},
+        "requires_isolated_session": {"type": "boolean"},
+        "activation_file_installed": {"type": "boolean"}
+      }
+    },
+    "method": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "in", "out"],
+      "properties": {
+        "name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$"},
+        "in": {"type": "string", "maxLength": 32},
+        "out": {"type": "string", "maxLength": 32}
+      }
+    },
+    "stringSet": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z][a-z0-9.-]{0,95}$"}
+    }
+  }
+}

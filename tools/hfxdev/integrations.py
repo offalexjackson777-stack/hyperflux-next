@@ -49,6 +49,17 @@ COEXISTENCE_POLICIES = {
     "native-backend-beside-existing",
     "private-explicit-service-only",
 }
+DBUS_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+$")
+OBJECT_PATH = re.compile(r"^(/[A-Za-z_][A-Za-z0-9_]*)+$")
+OPENRAZER_CONTRACT_KEYS = {
+    "$schema",
+    "schema",
+    "upstream",
+    "service",
+    "interfaces",
+    "capability_policy",
+    "safety",
+}
 
 
 def _canonical_bytes(value: Any) -> bytes:
@@ -174,3 +185,118 @@ def compiled_catalog(root: Path) -> dict[str, Any]:
 
 def upstream_index(root: Path) -> dict[str, dict[str, Any]]:
     return {value["id"]: value for value in load_integration_catalog(root)["upstreams"]}
+
+
+def load_openrazer_compatibility_contract(root: Path) -> dict[str, Any]:
+    value = load_json(root / "integrations" / "openrazer" / "compatibility.json")
+    _keys(value, OPENRAZER_CONTRACT_KEYS, "OpenRazer compatibility contract")
+    if value["schema"] != "hyperflux-openrazer-compatibility-v1":
+        raise ModelError("unsupported OpenRazer compatibility contract schema")
+    if value["$schema"] != "../../schemas/openrazer-compatibility.schema.json":
+        raise ModelError("OpenRazer compatibility contract has a non-canonical schema reference")
+
+    upstream = value["upstream"]
+    _keys(upstream, {"id", "commit", "api_contract"}, "OpenRazer compatibility upstream")
+    catalog_upstream = upstream_index(root)["openrazer"]
+    if upstream != {
+        "id": catalog_upstream["id"],
+        "commit": catalog_upstream["commit"],
+        "api_contract": catalog_upstream["api_contract"],
+    }:
+        raise ModelError("OpenRazer compatibility contract drifts from its upstream pin")
+
+    service = value["service"]
+    _keys(
+        service,
+        {"private_identity", "legacy_identity", "reconcile_interval_ms", "lifecycle"},
+        "OpenRazer compatibility service",
+    )
+    for key in ("private_identity", "legacy_identity"):
+        identity = service[key]
+        _keys(
+            identity,
+            {"bus_name", "root_path", "requires_isolated_session", "activation_file_installed"},
+            f"OpenRazer {key}",
+        )
+        if DBUS_NAME.fullmatch(identity["bus_name"]) is None:
+            raise ModelError(f"OpenRazer {key} has an invalid D-Bus name")
+        if OBJECT_PATH.fullmatch(identity["root_path"]) is None:
+            raise ModelError(f"OpenRazer {key} has an invalid object path")
+        if identity["activation_file_installed"] is not False:
+            raise ModelError("OpenRazer compatibility must not install D-Bus activation")
+    private = service["private_identity"]
+    legacy = service["legacy_identity"]
+    if private["bus_name"] == "org.razer" or private["root_path"].startswith("/org/razer"):
+        raise ModelError("OpenRazer private identity must be HyperFlux-namespaced")
+    if private["requires_isolated_session"] is not False:
+        raise ModelError("OpenRazer private identity must work on the selected session bus")
+    if legacy["bus_name"] != "org.razer" or legacy["root_path"] != "/org/razer":
+        raise ModelError("OpenRazer legacy identity must reproduce the exact upstream root")
+    if legacy["requires_isolated_session"] is not True:
+        raise ModelError("OpenRazer legacy identity must require an isolated session")
+    intervals = service["reconcile_interval_ms"]
+    _keys(intervals, {"minimum", "default", "maximum"}, "OpenRazer intervals")
+    if not (
+        isinstance(intervals["minimum"], int)
+        and isinstance(intervals["default"], int)
+        and isinstance(intervals["maximum"], int)
+        and 250 <= intervals["minimum"] <= intervals["default"] <= intervals["maximum"] <= 300_000
+    ):
+        raise ModelError("OpenRazer reconciliation intervals are invalid")
+    if service["lifecycle"] != "on-demand-process":
+        raise ModelError("OpenRazer compatibility must remain on-demand")
+
+    interfaces = value["interfaces"]
+    if not isinstance(interfaces, list) or not interfaces:
+        raise ModelError("OpenRazer compatibility has no interfaces")
+    names = [interface.get("name") for interface in interfaces]
+    require_unique(names, "OpenRazer compatibility interface")
+    if names != sorted(names):
+        raise ModelError("OpenRazer compatibility interfaces must be sorted")
+    for interface in interfaces:
+        _keys(interface, {"name", "methods", "signals"}, f"OpenRazer {interface['name']}")
+        methods = interface["methods"]
+        signals = interface["signals"]
+        if not isinstance(methods, list) or not isinstance(signals, list):
+            raise ModelError(f"OpenRazer {interface['name']} members must be arrays")
+        method_names = [method.get("name") for method in methods]
+        require_unique(method_names, f"OpenRazer {interface['name']} method")
+        if method_names != sorted(method_names):
+            raise ModelError(f"OpenRazer {interface['name']} methods must be sorted")
+        for method in methods:
+            _keys(method, {"name", "in", "out"}, f"OpenRazer method {method.get('name')}")
+            if not all(isinstance(method[field], str) for field in ("name", "in", "out")):
+                raise ModelError("OpenRazer method signatures must be strings")
+        if any(not isinstance(signal, str) for signal in signals):
+            raise ModelError("OpenRazer signal names must be strings")
+        require_unique(signals, f"OpenRazer {interface['name']} signal")
+        if signals != sorted(signals):
+            raise ModelError(f"OpenRazer {interface['name']} signals must be sorted")
+
+    policy = value["capability_policy"]
+    _keys(
+        policy,
+        {"required_for_export", "qualified_translations", "not_advertised"},
+        "OpenRazer capability policy",
+    )
+    for key in sorted(policy):
+        _sorted_unique_strings(policy[key], f"OpenRazer capability policy {key}")
+    safety = value["safety"]
+    _keys(
+        safety,
+        {
+            "transport_access",
+            "unknown_profile_writes",
+            "uncertain_write_replay",
+            "official_daemon_replacement",
+            "unrelated_device_suppression",
+            "hardware_serial_export",
+            "global_activation_file",
+        },
+        "OpenRazer safety policy",
+    )
+    if safety["transport_access"] != "sdk-only" or any(
+        safety[key] is not False for key in safety if key != "transport_access"
+    ):
+        raise ModelError("OpenRazer compatibility safety policy is not fail-closed")
+    return value

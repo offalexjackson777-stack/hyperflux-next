@@ -76,6 +76,7 @@ Inspect migration progress without changing files:
 | `architecture/` | Machine-readable ownership, invariants, boundaries, and release interlocks |
 | `schemas/` | Versioned schemas for canonical project data |
 | `integrations/` | Pinned upstream contracts, coexistence rules, and adapter boundaries |
+| `integrations/openrazer/compatibility/` | Optional private OpenRazer-compatible D-Bus provider; never the receiver transport |
 | `crates/hfx-domain/` | Generated Rust strong types and validation |
 | `crates/hfx-integration-model/` | Generated integration registry and shared application-facing projections |
 | `crates/hfx-profiles/` | Generated, queryable Rust hardware profile catalog |
@@ -121,6 +122,9 @@ implementation state separate from future plans. The shared
 protocol snapshots into tested inventory, controller, ownership, and action
 views before any application-specific UI runs; see the
 [integration boundary](docs/architecture/integrations.md).
+The [OpenRazer compatibility boundary](docs/architecture/openrazer-compatibility.md)
+documents the private default identity, isolated legacy mode, qualified method
+subset, and non-replay rules.
 
 Development tool versions are recorded in
 [`toolchains/pins.json`](toolchains/pins.json). Verification selects the exact
