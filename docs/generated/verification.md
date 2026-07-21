@@ -25,7 +25,8 @@ Every current node is software-only and has zero hardware-write authority.
 | 16 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
 | 17 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
 | 18 | `openrgb-adapter-contracts` | `integrations` | `none` | `false` | 120s | `rerun` |
-| 19 | `openrgb-thread-sanitizer` | `integrations` | `none` | `false` | 300s | `rerun` |
+| 19 | `polychromatic-adapter-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
+| 20 | `openrgb-thread-sanitizer` | `integrations` | `none` | `false` | 300s | `rerun` |
 
 ## Dependencies
 
@@ -49,6 +50,7 @@ flowchart LR
     rust_unit["rust-unit"]
     simulator_contracts["simulator-contracts"]
     openrgb_adapter_contracts["openrgb-adapter-contracts"]
+    polychromatic_adapter_contracts["polychromatic-adapter-contracts"]
     openrgb_thread_sanitizer["openrgb-thread-sanitizer"]
     foundation_contracts --> schema_contracts
     foundation_contracts --> privacy_boundary
@@ -79,5 +81,7 @@ flowchart LR
     cpp_sdk_contracts --> openrgb_adapter_contracts
     integration_contracts --> openrgb_adapter_contracts
     profile_contracts --> openrgb_adapter_contracts
+    openrazer_metadata_contracts --> polychromatic_adapter_contracts
+    python_unit --> polychromatic_adapter_contracts
     openrgb_adapter_contracts --> openrgb_thread_sanitizer
 ```

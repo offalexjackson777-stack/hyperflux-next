@@ -51,6 +51,7 @@ KNOWN_RUNNERS = {
     "openrgb-adapter-contracts",
     "openrgb-thread-sanitizer",
     "openrazer-metadata-contracts",
+    "polychromatic-adapter-contracts",
     "kernel-profile-contracts",
 }
 IDENTIFIER = re.compile(r"^[a-z0-9][a-z0-9._-]{0,127}$")

@@ -33,7 +33,7 @@ struct AdapterRecord
     std::string_view coexistence_policy;
 };
 
-inline constexpr std::string_view integration_source_sha256 = "4127f17f7323915366239f50bc058f0e2fb4064f1c5bd79f52bb0e5d25e0e35c";
+inline constexpr std::string_view integration_source_sha256 = "1e8184a555feea29ef4bb918008178d901e22bc19ae28d4401157f1a97f4df65";
 
 inline constexpr std::array<std::string_view, 2> upstream_uses_0 {{"compatibility-contract", "metadata-import"}};
 inline constexpr std::array<std::string_view, 3> upstream_uses_1 {{"effect-engine", "model-layout-registry", "plugin-build-contract"}};
@@ -57,7 +57,7 @@ inline constexpr std::array<UpstreamRecord, 3> upstreams {{
 inline constexpr std::array<AdapterRecord, 3> adapters {{
     {"openrazer-compatibility", "OpenRazer-compatible clients", "compatibility-service", "planned", adapter_upstreams_0, adapter_protocols_0, adapter_features_0, "private-explicit-service-only"},
     {"openrgb-native", "OpenRGB", "native-plugin", "in-progress", adapter_upstreams_1, adapter_protocols_1, adapter_features_1, "application-plugin"},
-    {"polychromatic-native", "Polychromatic", "native-backend", "planned", adapter_upstreams_2, adapter_protocols_2, adapter_features_2, "native-backend-beside-existing"},
+    {"polychromatic-native", "Polychromatic", "native-backend", "software-verified", adapter_upstreams_2, adapter_protocols_2, adapter_features_2, "native-backend-beside-existing"},
 }};
 
 [[nodiscard]] constexpr const UpstreamRecord* upstream_by_id(std::string_view id)

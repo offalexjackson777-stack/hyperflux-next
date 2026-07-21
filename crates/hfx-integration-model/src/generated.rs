@@ -26,7 +26,7 @@ pub struct AdapterRecord {
 }
 
 pub const INTEGRATION_SOURCE_SHA256: &str =
-    "4127f17f7323915366239f50bc058f0e2fb4064f1c5bd79f52bb0e5d25e0e35c";
+    "1e8184a555feea29ef4bb918008178d901e22bc19ae28d4401157f1a97f4df65";
 
 pub const UPSTREAMS: &[UpstreamRecord] = &[
     UpstreamRecord {
@@ -97,7 +97,7 @@ pub const ADAPTERS: &[AdapterRecord] = &[
         id: "polychromatic-native",
         application: "Polychromatic",
         kind: "native-backend",
-        status: "planned",
+        status: "software-verified",
         upstream_ids: &["openrazer", "polychromatic"],
         sdk_protocol_versions: &[5],
         feature_families: &[

@@ -90,7 +90,7 @@
       "sdk_protocol_versions": [
         5
       ],
-      "status": "planned",
+      "status": "software-verified",
       "transport_access": "sdk-only",
       "unrelated_device_policy": "preserve",
       "upstream_ids": [
@@ -100,7 +100,7 @@
     }
   ],
   "schema": "hyperflux-integration-catalog-v1",
-  "source_sha256": "4127f17f7323915366239f50bc058f0e2fb4064f1c5bd79f52bb0e5d25e0e35c",
+  "source_sha256": "1e8184a555feea29ef4bb918008178d901e22bc19ae28d4401157f1a97f4df65",
   "upstreams": [
     {
       "api_contract": "org.razer 3.x metadata and D-Bus vocabulary",

@@ -511,6 +511,109 @@ def _run_openrazer_metadata_contracts(root: Path, _node: TestNode) -> None:
         raise ModelError("committed OpenRazer metadata is stale; rerun ./hfx import openrazer")
 
 
+def _polychromatic_source(root: Path) -> Path:
+    value = os.environ.get("HFX_POLYCHROMATIC_SOURCE_DIR")
+    if value is None:
+        raise ModelError(
+            "HFX_POLYCHROMATIC_SOURCE_DIR is required for the native Polychromatic contract"
+        )
+    source = Path(value).resolve()
+    required = (
+        source / "polychromatic" / "backends" / "_backend.py",
+        source / "polychromatic" / "middleman.py",
+    )
+    if not source.is_dir() or not all(path.is_file() for path in required):
+        raise ModelError("HFX_POLYCHROMATIC_SOURCE_DIR is not a Polychromatic checkout")
+    expected = {
+        upstream["id"]: upstream["commit"]
+        for upstream in load_integration_catalog(root)["upstreams"]
+    }["polychromatic"]
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=source,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise ModelError(f"cannot inspect pinned Polychromatic source: {error}") from error
+    if result.stdout.strip() != expected:
+        raise ModelError("Polychromatic source checkout does not match the integration catalog pin")
+    return source
+
+
+def _run_polychromatic_adapter_contracts(root: Path, node: TestNode) -> None:
+    source = _polychromatic_source(root)
+    build_directory = root / "build" / "polychromatic-adapter"
+    if build_directory.exists():
+        shutil.rmtree(build_directory)
+    contract_source = build_directory / "source"
+    shutil.copytree(
+        source,
+        contract_source,
+        ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
+    )
+    patch_path = root / "integrations" / "polychromatic" / "patches" / "0001-discover-native-backends.patch"
+    patch_directory = contract_source.relative_to(root).as_posix()
+    _run_command(
+        root,
+        ["git", "apply", "--check", f"--directory={patch_directory}", str(patch_path)],
+        "Polychromatic native-backend seam check",
+        node.timeout_seconds,
+    )
+    _run_command(
+        root,
+        ["git", "apply", f"--directory={patch_directory}", str(patch_path)],
+        "Polychromatic native-backend seam apply",
+        node.timeout_seconds,
+    )
+    package_source = build_directory / "package"
+    shutil.copytree(
+        root / "integrations" / "polychromatic",
+        package_source,
+        ignore=shutil.ignore_patterns("__pycache__", "*.egg-info", "*.pyc"),
+    )
+    wheel_directory = build_directory / "wheel"
+    wheel_directory.mkdir()
+    _run_command(
+        root,
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "wheel",
+            "--no-deps",
+            "--no-build-isolation",
+            "--wheel-dir",
+            str(wheel_directory),
+            str(package_source),
+        ],
+        "Polychromatic native adapter wheel",
+        node.timeout_seconds,
+        environment={"PIP_DISABLE_PIP_VERSION_CHECK": "1", "PIP_NO_INDEX": "1"},
+    )
+    python_path = os.pathsep.join(
+        (
+            str(contract_source),
+            str(root / "sdk" / "python"),
+            str(root / "integrations" / "polychromatic"),
+            os.environ.get("PYTHONPATH", ""),
+        )
+    )
+    _run_command(
+        root,
+        [sys.executable, "tests/polychromatic_contracts.py", "-v"],
+        "Polychromatic native adapter contracts",
+        node.timeout_seconds,
+        environment={
+            "HFX_POLYCHROMATIC_WHEEL_DIR": str(wheel_directory),
+            "PYTHONPATH": python_path,
+        },
+    )
+
+
 def _run_openrgb_cmake_contracts(
     root: Path,
     node: TestNode,
@@ -786,6 +889,7 @@ RUNNERS = {
     "openrgb-adapter-contracts": _run_openrgb_adapter_contracts,
     "openrgb-thread-sanitizer": _run_openrgb_thread_sanitizer,
     "openrazer-metadata-contracts": _run_openrazer_metadata_contracts,
+    "polychromatic-adapter-contracts": _run_polychromatic_adapter_contracts,
     "kernel-profile-contracts": _run_kernel_profile_contracts,
 }
 

@@ -69,7 +69,7 @@
       "id": "polychromatic-native",
       "application": "Polychromatic",
       "kind": "native-backend",
-      "status": "planned",
+      "status": "software-verified",
       "upstream_ids": ["openrazer", "polychromatic"],
       "sdk_protocol_versions": [5],
       "feature_families": ["inventory", "lighting", "ownership", "presentation", "telemetry"],

@@ -1,0 +1,53 @@
+diff --git a/polychromatic/middleman.py b/polychromatic/middleman.py
+index f8cd8b7..70ddc7f 100644
+--- a/polychromatic/middleman.py
++++ b/polychromatic/middleman.py
+@@ -9,6 +9,8 @@ Refer to the online documentation for more details:
+ https://docs.polychromatic.app/
+ """
+ 
++from importlib import metadata
++
+ from . import common, procpid
+ from .backends._backend import Backend
+ from .troubleshoot import openrazer as openrazer_troubleshoot
+@@ -72,6 +74,39 @@ class Middleman(object):
+             # Backend does not have a troubleshooter.
+             pass
+ 
++        self._init_external_backends()
++
++    def _init_external_backends(self):
++        """Load explicitly installed backends without replacing built-ins."""
++        discovered = metadata.entry_points()
++        if hasattr(discovered, "select"):
++            discovered = discovered.select(group="polychromatic.backends")
++        else:
++            discovered = discovered.get("polychromatic.backends", [])
++
++        for entry_point in sorted(discovered, key=lambda value: value.name):
++            backend_id = entry_point.name
++            if backend_id == "openrazer" or any(
++                backend.backend_id == backend_id for backend in self.backends
++            ):
++                self.import_errors[backend_id] = "Backend ID conflicts with an initialized backend"
++                continue
++            try:
++                backend_class = entry_point.load()
++                backend = backend_class(self._base)
++                if not isinstance(backend, Backend):
++                    raise TypeError("Backend entry point did not create a Backend")
++                if backend.backend_id != backend_id:
++                    raise ValueError("Backend entry point name does not match backend_id")
++                if backend.init():
++                    self.backends.append(backend)
++                else:
++                    self.bad_init.append(backend)
++            except (ImportError, ModuleNotFoundError):
++                self.not_installed.append(backend_id)
++            except Exception as e:
++                self.import_errors[backend_id] = common.get_exception_as_string(e)
++
+     def get_backend(self, device):
+         """
+         Returns the backend object for the specified device.

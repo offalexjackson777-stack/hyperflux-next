@@ -164,7 +164,7 @@
       "required_capabilities": [],
       "hardware_requirement": "none",
       "writes_hardware": false,
-      "expected_duration_seconds": 2,
+      "expected_duration_seconds": 4,
       "timeout_seconds": 60,
       "dependencies": ["generated-freshness", "privacy-boundary"],
       "isolation": "exclusive-process",
@@ -306,6 +306,23 @@
       "isolation": "exclusive-process",
       "cache_inputs": ["integrations/openrgb/**/*.hpp", "integrations/openrgb/**/*.cpp", "integrations/openrgb/CMakeLists.txt", "tests/cpp/openrgb_*.cpp", "tools/hfxdev/verify.py"],
       "produced_evidence": ["openrgb-thread-sanitizer-result"],
+      "resume_policy": "rerun"
+    },
+    {
+      "id": "polychromatic-adapter-contracts",
+      "title": "Pinned Polychromatic native backend and coexistence contracts",
+      "owned_domain": "integrations",
+      "lanes": ["full-software"],
+      "runner": "polychromatic-adapter-contracts",
+      "required_capabilities": ["polychromatic-source"],
+      "hardware_requirement": "none",
+      "writes_hardware": false,
+      "expected_duration_seconds": 2,
+      "timeout_seconds": 60,
+      "dependencies": ["openrazer-metadata-contracts", "python-unit"],
+      "isolation": "exclusive-process",
+      "cache_inputs": ["integrations/polychromatic/**/*.py", "integrations/polychromatic/**/*.toml", "integrations/polychromatic/**/*.patch", "integrations/polychromatic/LICENSE", "schemas/polychromatic-state.schema.json", "sdk/python/hyperflux_sdk/generated/openrazer_metadata.py", "tests/polychromatic_contracts.py", "tools/hfxdev/verify.py"],
+      "produced_evidence": ["polychromatic-adapter-result"],
       "resume_policy": "rerun"
     },
     {

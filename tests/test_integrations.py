@@ -29,6 +29,7 @@ from hfxdev.openrazer import (
     load_imported_metadata,
     transformed_metadata,
 )
+from hfxdev.generators.integrations import python_openrazer_metadata
 from hfxdev.profiles import load_profile_inputs
 
 
@@ -109,6 +110,13 @@ class IntegrationCatalogTests(unittest.TestCase):
             self.assertTrue(device["presentation"]["image_url"].startswith("https://"))
             self.assertTrue(device["presentation"]["has_matrix"])
             self.assertEqual(device["advertised_methods"], sorted(device["advertised_methods"]))
+
+    def test_openrazer_python_metadata_is_generated_from_the_pinned_import(self) -> None:
+        metadata = load_imported_metadata(ROOT)
+        rendered = python_openrazer_metadata(metadata)
+        self.assertIn("OPENRAZER_DEVICES_BY_PROFILE", rendered)
+        self.assertIn(metadata["upstream"]["commit"], rendered)
+        self.assertIn("SPDX-License-Identifier: GPL-2.0-or-later", rendered)
 
     def test_openrazer_import_matches_exact_pinned_checkout_when_available(self) -> None:
         source_value = os.environ.get("HFX_OPENRAZER_SOURCE_DIR")
