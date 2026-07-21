@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import gzip
 from pathlib import Path
 import sys
+import tarfile
 import tempfile
 import unittest
 
@@ -16,6 +18,7 @@ from hfxdev.distribution_package import (
     CANONICAL_ARCH_BUILD_ROOT,
     CANONICAL_ARCH_PACKAGER,
     _arch_metadata,
+    _canonical_arch_mtree,
     _canonical_arch_buildinfo,
     _arch_hook,
     _arch_install,
@@ -90,6 +93,29 @@ class DistributionPackageTests(unittest.TestCase):
             _arch_metadata(b"missing separator\n", "test metadata")
         with self.assertRaises(ModelError):
             _arch_metadata(b"\xff\n", "test metadata")
+
+    def test_arch_mtree_is_deterministic_and_describes_final_content(self) -> None:
+        directory = tarfile.TarInfo("usr/")
+        directory.type = tarfile.DIRTYPE
+        directory.mode = 0o755
+        file = tarfile.TarInfo("usr/value")
+        file.mode = 0o644
+        content = b"stable\n"
+        file.size = len(content)
+        mtree = tarfile.TarInfo(".MTREE")
+        mtree.mode = 0o644
+        entries = [(file, content), (mtree, b"old"), (directory, None)]
+        first = _canonical_arch_mtree(entries, 1_700_000_000)
+        second = _canonical_arch_mtree(list(reversed(entries)), 1_700_000_000)
+        self.assertEqual(first, second)
+        inventory = gzip.decompress(first).decode("utf-8")
+        self.assertIn("./usr type=dir uid=0 gid=0 mode=755", inventory)
+        self.assertIn(
+            "./usr/value type=file uid=0 gid=0 mode=644 "
+            "time=1700000000.0 size=7 sha256digest=",
+            inventory,
+        )
+        self.assertNotIn("./.MTREE", inventory)
 
     def test_arch_hooks_delegate_lifecycle_without_hardware_logic(self) -> None:
         install = _arch_install(self.runtime)

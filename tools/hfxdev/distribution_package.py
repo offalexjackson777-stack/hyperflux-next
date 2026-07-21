@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
+import gzip
 import hashlib
 import io
 import json
@@ -290,6 +291,54 @@ def _canonical_arch_buildinfo(content: bytes) -> bytes:
     return ("\n".join(result) + "\n").encode("utf-8")
 
 
+def _canonical_arch_mtree(
+    entries: list[tuple[tarfile.TarInfo, bytes | None]], epoch: int
+) -> bytes:
+    lines = ["#mtree"]
+    names: set[str] = set()
+    for member, content in sorted(
+        entries, key=lambda item: PurePosixPath(item[0].name).as_posix()
+    ):
+        name = PurePosixPath(member.name).as_posix()
+        if name == ".MTREE":
+            continue
+        if (
+            name in {"", "."}
+            or name in names
+            or not re.fullmatch(r"[A-Za-z0-9._+@%/=-]+", name)
+        ):
+            raise ModelError("Arch package contains a path that cannot be inventoried")
+        names.add(name)
+        kind = "dir" if member.isdir() else "file"
+        fields = [
+            f"./{name}",
+            f"type={kind}",
+            "uid=0",
+            "gid=0",
+            f"mode={member.mode:o}",
+            f"time={epoch}.0",
+        ]
+        if member.isfile():
+            if content is None:
+                raise ModelError("Arch package inventory file has no content")
+            fields.extend(
+                [
+                    f"size={len(content)}",
+                    f"sha256digest={hashlib.sha256(content).hexdigest()}",
+                ]
+            )
+        elif content is not None:
+            raise ModelError("Arch package inventory directory has content")
+        lines.append(" ".join(fields))
+    uncompressed = ("\n".join(lines) + "\n").encode("utf-8")
+    compressed = io.BytesIO()
+    with gzip.GzipFile(
+        filename="", mode="wb", compresslevel=9, fileobj=compressed, mtime=0
+    ) as stream:
+        stream.write(uncompressed)
+    return compressed.getvalue()
+
+
 def _canonicalize_arch_package(package: Path, epoch: int) -> None:
     tar_descriptor, tar_name = tempfile.mkstemp(
         prefix="hyperflux-arch-canonical-", suffix=".tar", dir=package.parent
@@ -302,28 +351,35 @@ def _canonicalize_arch_package(package: Path, epoch: int) -> None:
     tar_path = Path(tar_name)
     compressed_path = Path(compressed_name)
     try:
+        entries: list[tuple[tarfile.TarInfo, bytes | None]] = []
         names: set[str] = set()
-        with tarfile.open(package, "r:*") as source, tarfile.open(
-            tar_path, "w", format=tarfile.GNU_FORMAT
-        ) as destination:
+        with tarfile.open(package, "r:*") as source:
             members = source.getmembers()
             if not members or len(members) > 10000:
                 raise ModelError("Arch package member count is invalid")
             for original in members:
                 path = PurePosixPath(original.name)
-                if path.is_absolute() or ".." in path.parts or original.name in names:
+                canonical_name = path.as_posix()
+                if (
+                    path.is_absolute()
+                    or ".." in path.parts
+                    or canonical_name in names
+                ):
                     raise ModelError("Arch package contains an unsafe or duplicate member")
-                names.add(original.name)
+                names.add(canonical_name)
                 if not (original.isdir() or original.isfile()):
                     raise ModelError("Arch package contains an unsupported member type")
                 member = copy.copy(original)
+                member.name = canonical_name + ("/" if original.isdir() else "")
                 member.uid = 0
                 member.gid = 0
                 member.uname = "root"
                 member.gname = "root"
                 member.mtime = epoch
+                member.pax_headers = {}
                 if member.isdir():
-                    destination.addfile(member)
+                    member.size = 0
+                    entries.append((member, None))
                     continue
                 stream = source.extractfile(original)
                 if stream is None:
@@ -332,7 +388,27 @@ def _canonicalize_arch_package(package: Path, epoch: int) -> None:
                 if original.name == ".BUILDINFO":
                     content = _canonical_arch_buildinfo(content)
                 member.size = len(content)
-                destination.addfile(member, io.BytesIO(content))
+                entries.append((member, content))
+        canonical_mtree = _canonical_arch_mtree(entries, epoch)
+        mtree_count = 0
+        canonical_entries = []
+        for member, content in entries:
+            if PurePosixPath(member.name).as_posix() == ".MTREE":
+                content = canonical_mtree
+                member.size = len(content)
+                mtree_count += 1
+            canonical_entries.append((member, content))
+        if mtree_count != 1:
+            raise ModelError("Arch package must contain exactly one MTREE inventory")
+        with tarfile.open(tar_path, "w", format=tarfile.GNU_FORMAT) as destination:
+            for member, content in sorted(
+                canonical_entries,
+                key=lambda item: PurePosixPath(item[0].name).as_posix(),
+            ):
+                if content is None:
+                    destination.addfile(member)
+                else:
+                    destination.addfile(member, io.BytesIO(content))
         result = subprocess.run(
             [
                 "zstd",
@@ -399,6 +475,7 @@ def _verify_arch_package(
     payload_file_count: int,
 ) -> None:
     metadata_files: dict[str, bytes] = {}
+    archive_entries: list[tuple[tarfile.TarInfo, bytes | None]] = []
     digest = hashlib.sha256()
     payload_files = 0
     forbidden = tuple(
@@ -412,11 +489,20 @@ def _verify_arch_package(
             names = [member.name for member in members]
             if len(names) != len(set(names)):
                 raise ModelError("Arch package contains duplicate members")
+            if names != sorted(names, key=lambda name: PurePosixPath(name).as_posix()):
+                raise ModelError("Arch package members are not in canonical order")
             for member in members:
                 path = PurePosixPath(member.name)
                 if path.is_absolute() or ".." in path.parts:
                     raise ModelError("Arch package contains an unsafe member path")
                 if member.isdir():
+                    if (
+                        member.uid != 0
+                        or member.gid != 0
+                        or member.mtime != artifacts.source_date_epoch
+                    ):
+                        raise ModelError("Arch package directory metadata is not canonical")
+                    archive_entries.append((copy.copy(member), None))
                     continue
                 if not member.isfile():
                     raise ModelError("Arch package contains an unsupported member type")
@@ -424,6 +510,13 @@ def _verify_arch_package(
                 if stream is None:
                     raise ModelError("Arch package regular file has no content")
                 content = stream.read()
+                if (
+                    member.uid != 0
+                    or member.gid != 0
+                    or member.mtime != artifacts.source_date_epoch
+                ):
+                    raise ModelError("Arch package file metadata is not canonical")
+                archive_entries.append((copy.copy(member), content))
                 if any(value in content for value in forbidden):
                     raise ModelError("Arch package contains a private or temporary build path")
                 if member.name.startswith("."):
@@ -440,6 +533,10 @@ def _verify_arch_package(
     required_metadata = {".BUILDINFO", ".INSTALL", ".MTREE", ".PKGINFO"}
     if set(metadata_files) != required_metadata:
         raise ModelError("Arch package metadata members are incomplete or unexpected")
+    if metadata_files[".MTREE"] != _canonical_arch_mtree(
+        archive_entries, artifacts.source_date_epoch
+    ):
+        raise ModelError("Arch package MTREE does not describe the canonical archive")
     if payload_files != payload_file_count or digest.hexdigest() != payload_sha256:
         raise ModelError("Arch package payload differs from the staged distribution root")
     if metadata_files[".INSTALL"] != _arch_install(runtime).encode("utf-8"):
