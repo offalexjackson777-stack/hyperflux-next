@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import re
-from typing import Any
+from typing import Any, Iterable
 
 from .linux_runtime import LinuxRuntime, load_linux_runtime
 from .model import ModelError, load_json, require_unique, sha256_file
@@ -315,7 +315,15 @@ def _load_payloads(
     return tuple(payloads)
 
 
-def _expand_payload_files(root: Path, payloads: tuple[PayloadSpec, ...]) -> tuple[PayloadFile, ...]:
+def _expand_payload_files(
+    root: Path,
+    payloads: tuple[PayloadSpec, ...],
+    projected_files: Iterable[Path] = (),
+) -> tuple[PayloadFile, ...]:
+    projected: tuple[Path, ...] = tuple(path.resolve() for path in projected_files)
+    for path in projected:
+        if path == root.resolve() or root.resolve() not in path.parents:
+            raise ModelError(f"projected install file escapes the repository: {path}")
     files: list[PayloadFile] = []
     for payload in payloads:
         source = root / payload.source
@@ -345,6 +353,13 @@ def _expand_payload_files(root: Path, payloads: tuple[PayloadSpec, ...]) -> tupl
                         )
                 relative = path.relative_to(source).as_posix()
                 matches[relative] = path
+            for path in projected:
+                try:
+                    relative_path = path.relative_to(source.resolve())
+                except ValueError:
+                    continue
+                if relative_path.match(pattern):
+                    matches[relative_path.as_posix()] = path
         if not matches:
             raise ModelError(f"install payload {payload.id}: include patterns matched no files")
         for relative, path in sorted(matches.items()):
@@ -416,7 +431,11 @@ def _check_cross_contract(
         raise ModelError("DKMS configuration is missing from the kernel source directory")
 
 
-def load_install_manifest(root: Path) -> InstallManifest:
+def load_install_manifest(
+    root: Path,
+    *,
+    projected_files: Iterable[Path] = (),
+) -> InstallManifest:
     path = root / "packaging" / "install.json"
     value = load_json(path)
     _exact(value, ROOT_KEYS, "install manifest")
@@ -444,7 +463,7 @@ def load_install_manifest(root: Path) -> InstallManifest:
         _list(value["payloads"], "install payloads", minimum=1, maximum=128),
         tokens,
     )
-    files = _expand_payload_files(root, payloads)
+    files = _expand_payload_files(root, payloads, projected_files)
     _check_cross_contract(runtime, policy, builds, payloads, files)
     return InstallManifest(
         root=root.resolve(),

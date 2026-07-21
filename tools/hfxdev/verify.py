@@ -13,6 +13,7 @@ import sys
 import time
 
 from .model import ModelError, load_foundation, load_json, require_unique, sha256_file
+from .assurance import load_design_coverage
 from .errors import load_error_catalog
 from .integrations import load_integration_catalog, load_openrazer_compatibility_contract
 from .install import load_install_manifest
@@ -892,6 +893,7 @@ def _run_foundation_contracts(root: Path, _node: TestNode) -> None:
     _check_constitution(constitution)
     _check_sources(root, sources)
     _check_ledger(sources, ledger)
+    load_design_coverage(root)
 
 
 def _run_schema_contracts(root: Path, _node: TestNode) -> None:

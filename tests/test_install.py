@@ -17,6 +17,21 @@ from hfxdev.model import ModelError, load_json
 
 
 class InstallManifestTests(unittest.TestCase):
+    def test_projected_generated_outputs_are_planned_before_they_exist(self) -> None:
+        projected = ROOT / "docs" / "generated" / "future-contract.md"
+        self.assertFalse(projected.exists())
+        manifest = load_install_manifest(ROOT, projected_files=(projected,))
+        matches = [
+            file
+            for file in manifest.files
+            if file.source == projected
+        ]
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(
+            str(matches[0].destination),
+            "/usr/share/doc/hyperflux-next/generated/future-contract.md",
+        )
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.value = load_json(ROOT / "packaging" / "install.json")

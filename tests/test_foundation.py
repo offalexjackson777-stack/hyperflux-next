@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.migration import summary
+from hfxdev.assurance import load_design_coverage
 from hfxdev.model import load_foundation
 from hfxdev.render import rendered_files
 from hfxdev.model import load_json
@@ -19,6 +20,23 @@ from hfxdev.profiles import load_profile_inputs
 
 
 class FoundationTests(unittest.TestCase):
+    def test_design_book_has_one_truthful_coverage_entry_per_section(self) -> None:
+        entries = load_design_coverage(ROOT)
+        self.assertEqual([entry.section for entry in entries], list(range(1, 68)))
+        self.assertEqual(entries[-1].status, "publication-locked")
+        self.assertTrue(entries[-1].release_blocking)
+
+    def test_incomplete_design_sections_name_remaining_work(self) -> None:
+        entries = load_design_coverage(ROOT)
+        for entry in entries:
+            with self.subTest(section=entry.section):
+                if entry.status in {
+                    "partially-implemented",
+                    "blocked-by-physical-evidence",
+                    "publication-locked",
+                }:
+                    self.assertTrue(entry.remaining)
+
     def test_direction_reaches_receiver_without_cycles(self) -> None:
         constitution, _, _ = load_foundation(ROOT)
         direction = constitution["direction"]

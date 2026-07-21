@@ -15,7 +15,7 @@
       "timeout_seconds": 10,
       "dependencies": [],
       "isolation": "shared",
-      "cache_inputs": ["architecture/*.json", "migration/*.json", "migration/inventory/*.json"],
+      "cache_inputs": ["architecture/*.json", "assurance/*.json", "migration/*.json", "migration/inventory/*.json"],
       "produced_evidence": ["foundation-result"],
       "resume_policy": "reuse-verified"
     },

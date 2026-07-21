@@ -5,7 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .assurance import load_design_coverage
 from .errors import load_error_catalog
+from .generators.assurance import design_coverage_markdown
 from .generators.domain import (
     cpp_json as domain_cpp_json,
     cpp_types,
@@ -186,10 +188,13 @@ def rendered_files(root: Path) -> dict[Path, str]:
     openrazer_compatibility = load_openrazer_compatibility_contract(root)
     test_catalog = load_test_catalog(root)
     linux_runtime = load_linux_runtime(root)
-    install_manifest = load_install_manifest(root)
     distribution_catalog = load_distribution_catalog(root)
+    design_coverage = load_design_coverage(root)
     files = {
         root / "docs" / "generated" / "architecture.md": architecture_markdown(constitution),
+        root / "docs" / "generated" / "design-coverage.md": design_coverage_markdown(
+            design_coverage
+        ),
         root / "docs" / "generated" / "migration-ledger.md": migration_markdown(sources, ledger),
         root / "docs" / "generated" / "domain-types.md": domain_markdown(domain_catalog),
         root / "crates" / "hfx-domain" / "src" / "generated.rs": rust_types(domain_catalog),
@@ -237,12 +242,6 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "packaging" / "generated" / "bridge.json": default_bridge_configuration(linux_runtime),
         root / "packaging" / "generated" / "runtime.env": package_environment(linux_runtime),
         root / "docs" / "generated" / "linux-runtime.md": linux_runtime_markdown(linux_runtime),
-        root / "packaging" / "generated" / "install-plan.json": compiled_install_plan(
-            install_manifest, linux_runtime
-        ),
-        root / "docs" / "generated" / "installation.md": install_markdown(
-            install_manifest, linux_runtime
-        ),
         root / "docs" / "generated" / "distributions.md": distribution_markdown(
             distribution_catalog, linux_runtime
         ),
@@ -302,6 +301,14 @@ def rendered_files(root: Path) -> dict[Path, str]:
         files[root / "docs" / "generated" / f"bridge-protocol-{suffix}.md"] = (
             protocol_markdown(version.catalog, title=f"Bridge Protocol {suffix.upper()}")
         )
+    install_plan_path = root / "packaging" / "generated" / "install-plan.json"
+    installation_document_path = root / "docs" / "generated" / "installation.md"
+    install_manifest = load_install_manifest(
+        root,
+        projected_files=(*files, install_plan_path, installation_document_path),
+    )
+    files[install_plan_path] = compiled_install_plan(install_manifest, linux_runtime)
+    files[installation_document_path] = install_markdown(install_manifest, linux_runtime)
     return files
 
 
