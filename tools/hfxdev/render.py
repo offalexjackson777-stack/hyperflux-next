@@ -11,6 +11,23 @@ from .errors import load_error_catalog
 from .formal_model import load_formal_model, run_formal_model
 from .generators.assurance import design_coverage_markdown
 from .generators.formal_model import formal_model_markdown
+from .generators.governance import (
+    bug_report as github_bug_report,
+    codeowners as github_codeowners,
+    codeql_workflow as github_codeql_workflow,
+    dependency_review_workflow as github_dependency_review_workflow,
+    dependabot as github_dependabot,
+    documentation_workflow as github_documentation_workflow,
+    feature_request as github_feature_request,
+    full_verification_workflow as github_full_verification_workflow,
+    hardware_qualification as github_hardware_qualification,
+    issue_config as github_issue_config,
+    labels_plan as github_labels_plan,
+    markdown as github_governance_markdown,
+    protection_plan as github_protection_plan,
+    pull_request_template as github_pull_request_template,
+    verification_workflow as github_verification_workflow,
+)
 from .generators.performance import performance_budgets_markdown
 from .generators.release import release_gates_markdown
 from .generators.supply_chain import spdx_json, supply_chain_markdown
@@ -87,6 +104,7 @@ from .generators.integrations import (
 )
 from .generators.install import compiled_plan as compiled_install_plan
 from .generators.install import markdown as install_markdown
+from .governance import load_github_governance
 from .install import load_install_manifest
 from .distributions import load_distribution_catalog
 from .model import load_foundation, load_json
@@ -210,6 +228,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
     formal_model = load_formal_model(root)
     formal_model_result = run_formal_model(formal_model)
     development_environment = load_development_environment(root)
+    github_governance = load_github_governance(root)
     files = {
         root / ".devcontainer" / "Containerfile": development_containerfile(
             development_environment
@@ -219,6 +238,45 @@ def rendered_files(root: Path) -> dict[Path, str]:
         ),
         root / "docs" / "generated" / "development-environment.md": development_markdown(
             development_environment, integrations["upstreams"]
+        ),
+        root / "docs" / "generated" / "github-governance.md": github_governance_markdown(
+            github_governance
+        ),
+        root / ".github" / "CODEOWNERS": github_codeowners(github_governance),
+        root / ".github" / "pull_request_template.md": github_pull_request_template(),
+        root / ".github" / "ISSUE_TEMPLATE" / "config.yml": github_issue_config(
+            github_governance
+        ),
+        root / ".github" / "ISSUE_TEMPLATE" / "bug_report.yml": github_bug_report(
+            github_governance
+        ),
+        root / ".github" / "ISSUE_TEMPLATE" / "hardware_qualification.yml": github_hardware_qualification(
+            github_governance
+        ),
+        root / ".github" / "ISSUE_TEMPLATE" / "feature_request.yml": github_feature_request(
+            github_governance
+        ),
+        root / ".github" / "dependabot.yml": github_dependabot(github_governance),
+        root / ".github" / "workflows" / "verification.yml": github_verification_workflow(
+            github_governance
+        ),
+        root / ".github" / "workflows" / "full-verification.yml": github_full_verification_workflow(
+            github_governance
+        ),
+        root / ".github" / "workflows" / "documentation.yml": github_documentation_workflow(
+            github_governance
+        ),
+        root / ".github" / "workflows" / "codeql.yml": github_codeql_workflow(
+            github_governance
+        ),
+        root / ".github" / "workflows" / "dependency-review.yml": github_dependency_review_workflow(
+            github_governance
+        ),
+        root / "governance" / "generated" / "github-protection-plan.json": github_protection_plan(
+            github_governance
+        ),
+        root / "governance" / "generated" / "github-labels.json": github_labels_plan(
+            github_governance
         ),
         root / "docs" / "generated" / "architecture.md": architecture_markdown(constitution),
         root / "docs" / "generated" / "design-coverage.md": design_coverage_markdown(

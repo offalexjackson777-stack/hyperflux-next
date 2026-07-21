@@ -17,6 +17,7 @@ from .assurance import load_design_coverage
 from .development import load_development_environment
 from .errors import load_error_catalog
 from .formal_model import load_formal_model, run_formal_model
+from .governance import load_github_governance
 from .integrations import load_integration_catalog, load_openrazer_compatibility_contract
 from .install import load_install_manifest
 from .linux_runtime import load_linux_runtime
@@ -935,6 +936,10 @@ def _run_development_environment_contracts(root: Path, _node: TestNode) -> None:
     load_development_environment(root)
 
 
+def _run_governance_contracts(root: Path, _node: TestNode) -> None:
+    load_github_governance(root)
+
+
 def _run_documentation_portal_contracts(root: Path, _node: TestNode) -> None:
     output = root / "build" / "documentation-portal"
     if output.exists():
@@ -1114,6 +1119,7 @@ RUNNERS = {
     "python-unit": _run_python_tests,
     "toolchain-contract": _run_toolchain_contract,
     "development-environment-contracts": _run_development_environment_contracts,
+    "governance-contracts": _run_governance_contracts,
     "documentation-portal-contracts": _run_documentation_portal_contracts,
     "assurance-contracts": _run_assurance_contracts,
     "formal-model-contracts": _run_formal_model_contracts,

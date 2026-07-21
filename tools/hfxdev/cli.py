@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 import sys
 
+from .ci import container_invocation, run_container
 from .migration import capture_inventory, summary
 from .model import ModelError
 from .distribution_package import build_distribution_package
@@ -91,6 +92,25 @@ def _parser() -> argparse.ArgumentParser:
     docs_build.add_argument("--output", required=True, type=Path)
     docs_verify = docs_commands.add_parser("verify", help="verify a built portal artifact")
     docs_verify.add_argument("--site", required=True, type=Path)
+
+    ci = commands.add_parser("ci", help="run bounded repository jobs in the pinned container")
+    ci_commands = ci.add_subparsers(dest="ci_command", required=True)
+    ci_prepare = ci_commands.add_parser(
+        "prepare", help="prepare exact upstream sources with bounded network access"
+    )
+    ci_prepare.add_argument("--image", required=True)
+    ci_verify = ci_commands.add_parser(
+        "verify", help="run a software verification lane without network or devices"
+    )
+    ci_verify.add_argument("--image", required=True)
+    ci_verify.add_argument("--lane", required=True, choices=["fast", "full"])
+    ci_verify.add_argument("--output", required=True, type=Path)
+    ci_verify.add_argument("--changed-from")
+    ci_docs = ci_commands.add_parser(
+        "docs", help="build and verify the portal without network or devices"
+    )
+    ci_docs.add_argument("--image", required=True)
+    ci_docs.add_argument("--output", required=True, type=Path)
 
     package = commands.add_parser("package", help="build and stage canonical package payloads")
     package_commands = package.add_subparsers(dest="package_command", required=True)
@@ -179,6 +199,32 @@ def main(arguments: list[str] | None = None) -> int:
                 f"{result['pages']} pages, {len(result['files'])} files"
             )
             return 0
+        if args.command == "ci":
+            if args.ci_command == "prepare":
+                invocation = container_invocation(
+                    root, image=args.image, operation="prepare"
+                )
+            elif args.ci_command == "verify":
+                invocation = container_invocation(
+                    root,
+                    image=args.image,
+                    operation="verify",
+                    lane=args.lane,
+                    output=args.output,
+                    changed_from=args.changed_from,
+                )
+            else:
+                invocation = container_invocation(
+                    root,
+                    image=args.image,
+                    operation="docs",
+                    output=args.output,
+                )
+            print(
+                f"HyperFlux CI: {invocation.operation} "
+                f"(container network: {invocation.network})"
+            )
+            return run_container(invocation)
         if args.command == "package":
             if args.package_command == "build":
                 capabilities = {}

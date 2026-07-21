@@ -1,0 +1,48 @@
+{
+  "apply_authorized": false,
+  "labels": [
+    {
+      "color": "1d76db",
+      "description": "Documentation, portal, and user guidance",
+      "name": "area: documentation"
+    },
+    {
+      "color": "5319e7",
+      "description": "Application adapter or SDK integration",
+      "name": "area: integration"
+    },
+    {
+      "color": "b60205",
+      "description": "Kernel transport, UAPI, or lifecycle",
+      "name": "area: kernel"
+    },
+    {
+      "color": "006b75",
+      "description": "Installation, distribution, or package lifecycle",
+      "name": "area: packaging"
+    },
+    {
+      "color": "d93f0b",
+      "description": "Security, privacy, provenance, or governance",
+      "name": "area: security"
+    },
+    {
+      "color": "fbca04",
+      "description": "Requires bounded physical hardware evidence",
+      "name": "evidence: hardware"
+    },
+    {
+      "color": "d73a4a",
+      "description": "Confirmed or suspected incorrect behavior",
+      "name": "kind: bug"
+    },
+    {
+      "color": "a2eeef",
+      "description": "New capability or workflow proposal",
+      "name": "kind: feature"
+    }
+  ],
+  "remote_state": "not-created",
+  "repository": "offalexjackson777-stack/hyperflux-next",
+  "schema": "hyperflux-github-label-plan-v1"
+}

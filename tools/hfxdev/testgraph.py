@@ -41,6 +41,7 @@ KNOWN_RUNNERS = {
     "protocol-contracts",
     "error-contracts",
     "formal-model-contracts",
+    "governance-contracts",
     "generated-freshness",
     "privacy-boundary",
     "python-unit",

@@ -335,6 +335,13 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/github-governance.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/github-governance.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/hardware-profile.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/hardware-profile.schema.json",
       "mode": "0644",
@@ -862,6 +869,13 @@
       "component": "documentation",
       "source": "docs/generated/formal-model.md",
       "destination": "/usr/share/doc/hyperflux-next/generated/formal-model.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/github-governance.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/github-governance.md",
       "mode": "0644",
       "preserve": false
     },

@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/github-governance-v1.json",
+  "title": "HyperFlux GitHub governance",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "repository",
+    "publication_interlock",
+    "ownership",
+    "protection",
+    "labels",
+    "automation"
+  ],
+  "properties": {
+    "$schema": {"const": "../schemas/github-governance.schema.json"},
+    "schema": {"const": "hyperflux-github-governance-v1"},
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "name", "default_branch", "remote_state", "planned_pages_source"],
+      "properties": {
+        "owner": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}$"},
+        "name": {"const": "hyperflux-next"},
+        "default_branch": {"const": "main"},
+        "remote_state": {"const": "not-created"},
+        "planned_pages_source": {"const": "github-actions"}
+      }
+    },
+    "publication_interlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "publication_authorized",
+        "pages_deployment_authorized",
+        "release_workflows_authorized",
+        "hardware_ci_authorized"
+      ],
+      "properties": {
+        "publication_authorized": {"const": false},
+        "pages_deployment_authorized": {"const": false},
+        "release_workflows_authorized": {"const": false},
+        "hardware_ci_authorized": {"const": false}
+      }
+    },
+    "ownership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default", "rules"],
+      "properties": {
+        "default": {"$ref": "#/$defs/owners"},
+        "rules": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["paths", "owners"],
+            "properties": {
+              "paths": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 32,
+                "uniqueItems": true,
+                "items": {"type": "string", "pattern": "^/(?!.*(?:^|/)\\.\\.(?:/|$))[^\\s]{1,255}$"}
+              },
+              "owners": {"$ref": "#/$defs/owners"}
+            }
+          }
+        }
+      }
+    },
+    "protection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "linear_history",
+        "required_approvals",
+        "dismiss_stale_reviews",
+        "require_code_owner_reviews",
+        "require_conversation_resolution",
+        "required_checks"
+      ],
+      "properties": {
+        "linear_history": {"const": true},
+        "required_approvals": {"type": "integer", "minimum": 1, "maximum": 6},
+        "dismiss_stale_reviews": {"const": true},
+        "require_code_owner_reviews": {"const": true},
+        "require_conversation_resolution": {"const": true},
+        "required_checks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 160}
+        }
+      }
+    },
+    "labels": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "color", "description"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1, "maxLength": 50},
+          "color": {"type": "string", "pattern": "^[0-9a-f]{6}$"},
+          "description": {"type": "string", "minLength": 1, "maxLength": 100}
+        }
+      }
+    },
+    "automation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runner",
+        "development_image",
+        "dependency_update_day",
+        "full_verification_cron",
+        "actions"
+      ],
+      "properties": {
+        "runner": {"const": "ubuntu-24.04"},
+        "development_image": {"const": "hyperflux-next-dev:ci"},
+        "dependency_update_day": {"enum": ["monday", "tuesday", "wednesday", "thursday", "friday"]},
+        "full_verification_cron": {"type": "string", "pattern": "^[0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+$"},
+        "actions": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 16,
+          "items": {"$ref": "#/$defs/action"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "owners": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^@[A-Za-z0-9][A-Za-z0-9-]{0,38}$"}
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "repository", "version", "commit", "license_expression"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+        "repository": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
+        "version": {"type": "string", "pattern": "^v[0-9]+(?:\\.[0-9]+){0,2}$"},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "license_expression": {"enum": ["MIT", "Apache-2.0"]}
+      }
+    }
+  }
+}

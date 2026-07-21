@@ -54,6 +54,23 @@
       "resume_policy": "reuse-verified"
     },
     {
+      "id": "governance-contracts",
+      "title": "Schema-owned GitHub governance and bounded CI policy",
+      "owned_domain": "governance",
+      "lanes": ["fast", "full-software"],
+      "runner": "governance-contracts",
+      "required_capabilities": [],
+      "hardware_requirement": "none",
+      "writes_hardware": false,
+      "expected_duration_seconds": 1,
+      "timeout_seconds": 15,
+      "dependencies": ["schema-contracts"],
+      "isolation": "shared",
+      "cache_inputs": [".github/**", "governance/**/*.json", "schemas/github-governance.schema.json", "tests/test_governance.py", "tools/hfxdev/ci.py", "tools/hfxdev/governance.py", "tools/hfxdev/generators/governance.py"],
+      "produced_evidence": ["governance-result", "workflow-pin-result", "publication-interlock-result"],
+      "resume_policy": "reuse-verified"
+    },
+    {
       "id": "assurance-contracts",
       "title": "Dependency, license, release-gate, and performance authorities",
       "owned_domain": "assurance",
@@ -64,7 +81,7 @@
       "writes_hardware": false,
       "expected_duration_seconds": 1,
       "timeout_seconds": 15,
-      "dependencies": ["schema-contracts"],
+      "dependencies": ["schema-contracts", "governance-contracts"],
       "isolation": "shared",
       "cache_inputs": [
         "assurance/*.json",
@@ -184,7 +201,7 @@
       "writes_hardware": false,
       "expected_duration_seconds": 1,
       "timeout_seconds": 15,
-      "dependencies": ["profile-contracts", "protocol-contracts", "error-contracts", "integration-contracts", "assurance-contracts", "formal-model-contracts", "development-environment-contracts"],
+      "dependencies": ["profile-contracts", "protocol-contracts", "error-contracts", "integration-contracts", "assurance-contracts", "formal-model-contracts", "development-environment-contracts", "governance-contracts"],
       "isolation": "shared",
       "cache_inputs": ["schemas/*.json", "profiles/**/*.json", "integrations/**/*.json", "protocol/**/*.json", "uapi/*.json", "errors/catalog.json", "tools/hfxdev/generators/*.py", "tools/hfxdev/render.py", "verification/tests.json"],
       "produced_evidence": ["generation-result"],

@@ -38,8 +38,10 @@ subset lives in the generated [Architecture Constitution](docs/generated/archite
 
 ## Current Phase
 
-The repository has a verified foundation and is building the software-only
-product stack before any real-hardware writer is admitted:
+The repository has an implemented, locally verified software foundation. A
+release is still blocked on hosted-container evidence, native package lifecycle
+evidence, targeted physical qualification, and an explicit publication
+decision:
 
 - source repositories are immutable evidence inputs, not templates;
 - every subsystem receives an explicit migration decision;
@@ -63,6 +65,19 @@ Run the complete current verification entry point:
 ./hfx verify --all
 ```
 
+Build and verify the audience-separated documentation portal locally:
+
+```sh
+./hfx docs build --output build/portal
+./hfx docs verify --site build/portal
+```
+
+The generated [GitHub governance reference](docs/generated/github-governance.md)
+documents immutable workflow dependencies, branch-protection intent, issue
+forms, dependency automation, and every publication interlock. Those files are
+ready for review but no remote, Pages deployment, release workflow, or hardware
+CI is authorized.
+
 Inspect migration progress without changing files:
 
 ```sh
@@ -74,6 +89,9 @@ Inspect migration progress without changing files:
 | Path | Responsibility |
 | --- | --- |
 | `architecture/` | Machine-readable ownership, invariants, boundaries, and release interlocks |
+| `assurance/` | Design coverage, release gates, dependency policy, performance budgets, formal model, and generated SBOM |
+| `governance/` | Canonical GitHub policy and non-applicable remote governance plans |
+| `.github/` | Generated ownership, contribution forms, dependency policy, and software-only workflows |
 | `schemas/` | Versioned schemas for canonical project data |
 | `integrations/` | Pinned upstream contracts, coexistence rules, and adapter boundaries |
 | `integrations/openrazer/compatibility/` | Optional private OpenRazer-compatible D-Bus provider; never the receiver transport |
@@ -97,6 +115,7 @@ Inspect migration progress without changing files:
 | `migration/` | Source identities, generated inventories, and reviewed subsystem decisions |
 | `docs/architecture/` | Human design sources and decisions |
 | `docs/generated/` | Deterministic views generated from canonical data |
+| `docs/portal.json` | Three-audience local documentation portal authority |
 | `tools/hfxdev/` | Bootstrap verification and generation tooling |
 | `tests/` | Independent foundation tests |
 

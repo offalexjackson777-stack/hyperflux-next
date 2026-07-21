@@ -1,0 +1,122 @@
+{
+  "$schema": "../schemas/github-governance.schema.json",
+  "schema": "hyperflux-github-governance-v1",
+  "repository": {
+    "owner": "offalexjackson777-stack",
+    "name": "hyperflux-next",
+    "default_branch": "main",
+    "remote_state": "not-created",
+    "planned_pages_source": "github-actions"
+  },
+  "publication_interlock": {
+    "publication_authorized": false,
+    "pages_deployment_authorized": false,
+    "release_workflows_authorized": false,
+    "hardware_ci_authorized": false
+  },
+  "ownership": {
+    "default": ["@offalexjackson777-stack"],
+    "rules": [
+      {
+        "paths": ["/driver/**", "/uapi/**"],
+        "owners": ["@offalexjackson777-stack"]
+      },
+      {
+        "paths": ["/schemas/**", "/protocol/**", "/profiles/**"],
+        "owners": ["@offalexjackson777-stack"]
+      },
+      {
+        "paths": ["/assurance/**", "/governance/**", "/SECURITY.md"],
+        "owners": ["@offalexjackson777-stack"]
+      },
+      {
+        "paths": ["/integrations/**", "/sdk/**"],
+        "owners": ["@offalexjackson777-stack"]
+      },
+      {
+        "paths": ["/packaging/**", "/docs/**", "/.github/**"],
+        "owners": ["@offalexjackson777-stack"]
+      }
+    ]
+  },
+  "protection": {
+    "linear_history": true,
+    "required_approvals": 1,
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": true,
+    "require_conversation_resolution": true,
+    "required_checks": [
+      "CodeQL / Analyze (c-cpp)",
+      "CodeQL / Analyze (python)",
+      "Dependency review / Dependency review",
+      "Verification / Fast software"
+    ]
+  },
+  "labels": [
+    {"name": "area: documentation", "color": "1d76db", "description": "Documentation, portal, and user guidance"},
+    {"name": "area: integration", "color": "5319e7", "description": "Application adapter or SDK integration"},
+    {"name": "area: kernel", "color": "b60205", "description": "Kernel transport, UAPI, or lifecycle"},
+    {"name": "area: packaging", "color": "006b75", "description": "Installation, distribution, or package lifecycle"},
+    {"name": "area: security", "color": "d93f0b", "description": "Security, privacy, provenance, or governance"},
+    {"name": "evidence: hardware", "color": "fbca04", "description": "Requires bounded physical hardware evidence"},
+    {"name": "kind: bug", "color": "d73a4a", "description": "Confirmed or suspected incorrect behavior"},
+    {"name": "kind: feature", "color": "a2eeef", "description": "New capability or workflow proposal"}
+  ],
+  "automation": {
+    "runner": "ubuntu-24.04",
+    "development_image": "hyperflux-next-dev:ci",
+    "dependency_update_day": "monday",
+    "full_verification_cron": "17 3 * * 1",
+    "actions": [
+      {
+        "id": "build-push",
+        "repository": "docker/build-push-action",
+        "version": "v7.3.0",
+        "commit": "53b7df96c91f9c12dcc8a07bcb9ccacbed38856a",
+        "license_expression": "Apache-2.0"
+      },
+      {
+        "id": "cache",
+        "repository": "actions/cache",
+        "version": "v6.1.0",
+        "commit": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+        "license_expression": "MIT"
+      },
+      {
+        "id": "checkout",
+        "repository": "actions/checkout",
+        "version": "v7.0.0",
+        "commit": "9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+        "license_expression": "MIT"
+      },
+      {
+        "id": "codeql",
+        "repository": "github/codeql-action",
+        "version": "v4.37.1",
+        "commit": "7188fc363630916deb702c7fdcf4e481b751f97a",
+        "license_expression": "MIT"
+      },
+      {
+        "id": "dependency-review",
+        "repository": "actions/dependency-review-action",
+        "version": "v5.0.0",
+        "commit": "a1d282b36b6f3519aa1f3fc636f609c47dddb294",
+        "license_expression": "MIT"
+      },
+      {
+        "id": "setup-buildx",
+        "repository": "docker/setup-buildx-action",
+        "version": "v4.2.0",
+        "commit": "bb05f3f5519dd87d3ba754cc423b652a5edd6d2c",
+        "license_expression": "Apache-2.0"
+      },
+      {
+        "id": "upload-artifact",
+        "repository": "actions/upload-artifact",
+        "version": "v7.0.1",
+        "commit": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+        "license_expression": "MIT"
+      }
+    ]
+  }
+}

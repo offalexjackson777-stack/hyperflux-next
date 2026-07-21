@@ -5,6 +5,7 @@
   "repository_license": "GPL-2.0-only",
   "allowed_license_expressions": [
     "(MIT OR Apache-2.0) AND Unicode-3.0",
+    "Apache-2.0",
     "Apache-2.0 OR MIT",
     "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
     "CC-BY-SA-4.0",

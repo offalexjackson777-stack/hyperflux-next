@@ -8,10 +8,10 @@ Software verification never substitutes for required physical evidence or public
 ## Summary
 
 - `blocked-by-physical-evidence`: 3
-- `partially-implemented`: 12
+- `partially-implemented`: 11
 - `policy-defined`: 2
 - `publication-locked`: 1
-- `software-verified`: 49
+- `software-verified`: 50
 
 | Section | Subject | Status | Owner | Physical proof | Release block |
 | ---: | --- | --- | --- | --- | --- |
@@ -74,7 +74,7 @@ Software verification never substitutes for required physical evidence or public
 | 57 | Performance Budgets | `blocked-by-physical-evidence` | `verification` | required | yes |
 | 58 | Change-Aware CI | `partially-implemented` | `verification` | no | yes |
 | 59 | Dependency Updates | `partially-implemented` | `security` | no | yes |
-| 60 | Documentation Portal | `partially-implemented` | `documentation` | no | yes |
+| 60 | Documentation Portal | `software-verified` | `documentation` | no | no |
 | 61 | GitHub Repository Experience | `partially-implemented` | `governance` | no | yes |
 | 62 | Migration Ledger | `software-verified` | `migration` | no | yes |
 | 63 | Shadow Comparison | `partially-implemented` | `verification` | no | yes |
@@ -411,9 +411,9 @@ Evidence: [`crates/hfx-ops/src/activation.rs`](../../crates/hfx-ops/src/activati
 
 ### 55. Reproducible Development Environment
 
-Evidence: [`toolchains/pins.json`](../../toolchains/pins.json), [`Cargo.lock`](../../Cargo.lock).
+Evidence: [`toolchains/pins.json`](../../toolchains/pins.json), [`toolchains/development-environment.json`](../../toolchains/development-environment.json), [`schemas/development-environment.schema.json`](../../schemas/development-environment.schema.json), [`.devcontainer/Containerfile`](../../.devcontainer/Containerfile), [`tests/test_development_environment.py`](../../tests/test_development_environment.py).
 
-- Provision the pinned compiler and system dependencies through a reviewed development container or Nix environment.
+- Build the digest-pinned OCI image on a hosted runner and bind its successful offline verification evidence to the release candidate.
 
 ### 56. Supply-Chain Security
 
@@ -429,27 +429,27 @@ Evidence: [`assurance/performance-budgets.json`](../../assurance/performance-bud
 
 ### 58. Change-Aware CI
 
-Evidence: [`verification/tests.json`](../../verification/tests.json), [`tools/hfxdev/testgraph.py`](../../tools/hfxdev/testgraph.py), [`tests/test_testgraph.py`](../../tests/test_testgraph.py).
+Evidence: [`verification/tests.json`](../../verification/tests.json), [`tools/hfxdev/testgraph.py`](../../tools/hfxdev/testgraph.py), [`tools/hfxdev/ci.py`](../../tools/hfxdev/ci.py), [`.github/workflows/verification.yml`](../../.github/workflows/verification.yml), [`.github/workflows/full-verification.yml`](../../.github/workflows/full-verification.yml), [`tests/test_testgraph.py`](../../tests/test_testgraph.py), [`tests/test_governance.py`](../../tests/test_governance.py).
 
-- Add hosted SHA-pinned workflows that consume the fail-closed changed-domain selector and structured verification artifacts.
+- Run the generated current-head workflows after remote creation is explicitly authorized and retain their source-bound hosted evidence.
 
 ### 59. Dependency Updates
 
-Evidence: [`integrations/catalog.json`](../../integrations/catalog.json), [`Cargo.lock`](../../Cargo.lock).
+Evidence: [`integrations/catalog.json`](../../integrations/catalog.json), [`Cargo.lock`](../../Cargo.lock), [`governance/github.json`](../../governance/github.json), [`.github/dependabot.yml`](../../.github/dependabot.yml), [`docs/generated/supply-chain.md`](../../docs/generated/supply-chain.md).
 
-- Add grouped dependency automation whose pull requests surface license, API, generated-data, size, and verification impact.
+- Activate grouped dependency updates only after remote creation and verify the first generated pull request against license, API, generated-data, size, and verification policy.
 
 ### 60. Documentation Portal
 
-Evidence: [`docs/architecture/design-book.md`](../../docs/architecture/design-book.md), [`docs/generated/supported-hardware.md`](../../docs/generated/supported-hardware.md).
+Evidence: [`docs/portal.json`](../../docs/portal.json), [`schemas/documentation-portal.schema.json`](../../schemas/documentation-portal.schema.json), [`tools/hfxdev/portal.py`](../../tools/hfxdev/portal.py), [`tests/test_portal.py`](../../tests/test_portal.py), [`.github/workflows/documentation.yml`](../../.github/workflows/documentation.yml).
 
-- Build the audience-separated static portal and verify links, generated truth, and accessibility in CI.
+- No remaining gap in the current software scope.
 
 ### 61. GitHub Repository Experience
 
-Evidence: [`README.md`](../../README.md), [`CONTRIBUTING.md`](../../CONTRIBUTING.md).
+Evidence: [`README.md`](../../README.md), [`CONTRIBUTING.md`](../../CONTRIBUTING.md), [`governance/github.json`](../../governance/github.json), [`schemas/github-governance.schema.json`](../../schemas/github-governance.schema.json), [`.github/CODEOWNERS`](../../.github/CODEOWNERS), [`.github/pull_request_template.md`](../../.github/pull_request_template.md), [`.github/ISSUE_TEMPLATE/config.yml`](../../.github/ISSUE_TEMPLATE/config.yml), [`governance/generated/github-protection-plan.json`](../../governance/generated/github-protection-plan.json).
 
-- Add local governance metadata, issue forms, impact templates, CODEOWNERS, workflows, and reviewed protection plans before any remote is created.
+- After remote creation is explicitly authorized, establish exact hosted check names, review the generated protection plan, enable private vulnerability reporting, and apply the plan without weakening its safeguards.
 
 ### 62. Migration Ledger
 

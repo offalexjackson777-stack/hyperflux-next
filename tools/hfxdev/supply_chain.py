@@ -9,6 +9,7 @@ from pathlib import Path, PurePosixPath
 import tomllib
 from typing import Any
 
+from .governance import ActionPin, load_github_governance
 from .integrations import load_integration_catalog
 from .model import ModelError, load_json, require_unique, sha256_file
 
@@ -105,6 +106,7 @@ class DependencyInventory:
     python_packages: tuple[PythonPackage, ...]
     vendored_packages: tuple[VendoredPackage, ...]
     upstream_packages: tuple[UpstreamPackage, ...]
+    workflow_actions: tuple[ActionPin, ...]
     authority_sha256: str
 
 
@@ -486,6 +488,13 @@ def load_dependency_inventory(root: Path) -> DependencyInventory:
     )
     vendored = _vendored_inventory(root, value["vendored_manifests"], allowed)
     upstreams = _upstream_inventory(root, value["upstream_catalog"], allowed)
+    governance = load_github_governance(root)
+    for action in governance.actions:
+        _license(
+            action.license_expression,
+            allowed,
+            f"GitHub action {action.repository}@{action.version}",
+        )
     vendored_manifest_paths = tuple(
         root / manifest for manifest in value["vendored_manifests"]
     )
@@ -496,6 +505,7 @@ def load_dependency_inventory(root: Path) -> DependencyInventory:
             lock_path,
             root / "Cargo.toml",
             root / "integrations" / "catalog.json",
+            root / "governance" / "github.json",
             *(root / project.path for project in python_projects),
             *vendored_manifest_paths,
         )
@@ -512,5 +522,6 @@ def load_dependency_inventory(root: Path) -> DependencyInventory:
         python_packages=python_packages,
         vendored_packages=vendored,
         upstream_packages=upstreams,
+        workflow_actions=governance.actions,
         authority_sha256=authority_sha256,
     )
