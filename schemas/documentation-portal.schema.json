@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/documentation-portal-v1.json",
+  "title": "HyperFlux documentation portal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "site", "audiences"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-documentation-portal-v1"},
+    "site": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "description", "publication_state"],
+      "properties": {
+        "title": {"const": "HyperFlux Next"},
+        "description": {"type": "string", "minLength": 1, "maxLength": 180},
+        "publication_state": {"const": "local-artifact-only"}
+      }
+    },
+    "audiences": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/audience"}
+    }
+  },
+  "$defs": {
+    "identifier": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "summary", "source"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "title": {"type": "string", "minLength": 1, "maxLength": 80},
+        "summary": {"type": "string", "minLength": 1, "maxLength": 180},
+        "source": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+\\.md$"
+        }
+      }
+    },
+    "audience": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "description", "pages"],
+      "properties": {
+        "id": {"enum": ["users", "developers", "maintainers"]},
+        "title": {"type": "string", "minLength": 1, "maxLength": 48},
+        "description": {"type": "string", "minLength": 1, "maxLength": 180},
+        "pages": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 16,
+          "items": {"$ref": "#/$defs/page"}
+        }
+      }
+    }
+  }
+}

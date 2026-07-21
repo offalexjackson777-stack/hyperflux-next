@@ -208,6 +208,23 @@
       "resume_policy": "rerun"
     },
     {
+      "id": "documentation-portal-contracts",
+      "title": "Audience portal, local links, accessibility, and offline assets",
+      "owned_domain": "documentation",
+      "lanes": ["fast", "full-software"],
+      "runner": "documentation-portal-contracts",
+      "required_capabilities": [],
+      "hardware_requirement": "none",
+      "writes_hardware": false,
+      "expected_duration_seconds": 2,
+      "timeout_seconds": 30,
+      "dependencies": ["generated-freshness"],
+      "isolation": "exclusive-process",
+      "cache_inputs": ["README.md", "CONTRIBUTING.md", "SECURITY.md", "docs/**/*.md", "docs/portal.json", "schemas/documentation-portal.schema.json", "tools/hfxdev/portal.py"],
+      "produced_evidence": ["documentation-portal-manifest", "documentation-link-result", "documentation-accessibility-result"],
+      "resume_policy": "rerun"
+    },
+    {
       "id": "python-unit",
       "title": "Python repository unit tests",
       "owned_domain": "tooling",

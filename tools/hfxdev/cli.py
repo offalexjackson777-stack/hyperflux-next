@@ -11,6 +11,7 @@ from .model import ModelError
 from .distribution_package import build_distribution_package
 from .openrazer import write_imported_metadata
 from .package_pipeline import build_artifacts, stage_rootfs
+from .portal import build_portal, verify_portal
 from .render import write_generated
 from .testgraph import format_plan, load_test_catalog
 from .upstreams import prepare_upstreams
@@ -83,6 +84,13 @@ def _parser() -> argparse.ArgumentParser:
         type=Path,
         help="checkout root; defaults to .hfx/upstreams",
     )
+
+    docs = commands.add_parser("docs", help="build or verify the static documentation portal")
+    docs_commands = docs.add_subparsers(dest="docs_command", required=True)
+    docs_build = docs_commands.add_parser("build", help="build a deterministic local portal")
+    docs_build.add_argument("--output", required=True, type=Path)
+    docs_verify = docs_commands.add_parser("verify", help="verify a built portal artifact")
+    docs_verify.add_argument("--site", required=True, type=Path)
 
     package = commands.add_parser("package", help="build and stage canonical package payloads")
     package_commands = package.add_subparsers(dest="package_command", required=True)
@@ -157,6 +165,19 @@ def main(arguments: list[str] | None = None) -> int:
             for identifier in prepared.reused:
                 print(f"Verified existing {identifier} checkout.")
             print(f"Upstream lock: {prepared.manifest}")
+            return 0
+        if args.command == "docs":
+            if args.docs_command == "build":
+                portal = build_portal(root, args.output)
+                print(f"Documentation portal: {portal.output}")
+                print(f"Pages: {portal.pages} | Files: {portal.files}")
+                print(f"Manifest: {portal.manifest}")
+                return 0
+            result = verify_portal(root, args.site)
+            print(
+                "Documentation portal verified: "
+                f"{result['pages']} pages, {len(result['files'])} files"
+            )
             return 0
         if args.command == "package":
             if args.package_command == "build":

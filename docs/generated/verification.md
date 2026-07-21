@@ -21,17 +21,18 @@ Every current node is software-only and has zero hardware-write authority.
 | 12 | `development-environment-contracts` | `toolchains` | `none` | `false` | 20s | `reuse-verified` |
 | 13 | `openrazer-metadata-contracts` | `integrations` | `none` | `false` | 30s | `rerun` |
 | 14 | `generated-freshness` | `generation` | `none` | `false` | 15s | `reuse-verified` |
-| 15 | `python-unit` | `tooling` | `none` | `false` | 60s | `rerun` |
-| 16 | `rust-clippy` | `rust` | `none` | `false` | 180s | `rerun` |
-| 17 | `cpp-sdk-contracts` | `sdk` | `none` | `false` | 60s | `rerun` |
-| 18 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 180s | `rerun` |
-| 19 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
-| 20 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
-| 21 | `openrgb-adapter-contracts` | `integrations` | `none` | `false` | 120s | `rerun` |
-| 22 | `polychromatic-adapter-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
-| 23 | `openrazer-compatibility-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
-| 24 | `openrgb-thread-sanitizer` | `integrations` | `none` | `false` | 300s | `rerun` |
-| 25 | `package-contracts` | `packaging` | `none` | `false` | 600s | `rerun` |
+| 15 | `documentation-portal-contracts` | `documentation` | `none` | `false` | 30s | `rerun` |
+| 16 | `python-unit` | `tooling` | `none` | `false` | 60s | `rerun` |
+| 17 | `rust-clippy` | `rust` | `none` | `false` | 180s | `rerun` |
+| 18 | `cpp-sdk-contracts` | `sdk` | `none` | `false` | 60s | `rerun` |
+| 19 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 180s | `rerun` |
+| 20 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
+| 21 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
+| 22 | `openrgb-adapter-contracts` | `integrations` | `none` | `false` | 120s | `rerun` |
+| 23 | `polychromatic-adapter-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
+| 24 | `openrazer-compatibility-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
+| 25 | `openrgb-thread-sanitizer` | `integrations` | `none` | `false` | 300s | `rerun` |
+| 26 | `package-contracts` | `packaging` | `none` | `false` | 600s | `rerun` |
 
 ## Dependencies
 
@@ -51,6 +52,7 @@ flowchart LR
     development_environment_contracts["development-environment-contracts"]
     openrazer_metadata_contracts["openrazer-metadata-contracts"]
     generated_freshness["generated-freshness"]
+    documentation_portal_contracts["documentation-portal-contracts"]
     python_unit["python-unit"]
     rust_clippy["rust-clippy"]
     cpp_sdk_contracts["cpp-sdk-contracts"]
@@ -83,6 +85,7 @@ flowchart LR
     assurance_contracts --> generated_freshness
     formal_model_contracts --> generated_freshness
     development_environment_contracts --> generated_freshness
+    generated_freshness --> documentation_portal_contracts
     generated_freshness --> python_unit
     privacy_boundary --> python_unit
     generated_freshness --> rust_clippy

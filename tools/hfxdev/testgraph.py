@@ -46,6 +46,7 @@ KNOWN_RUNNERS = {
     "python-unit",
     "toolchain-contract",
     "development-environment-contracts",
+    "documentation-portal-contracts",
     "rust-format",
     "rust-clippy",
     "rust-unit",

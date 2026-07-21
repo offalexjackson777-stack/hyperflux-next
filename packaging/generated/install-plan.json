@@ -293,6 +293,13 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/documentation-portal.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/documentation-portal.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/domain-catalog.json",
       "destination": "/usr/share/hyperflux-next/schemas/domain-catalog.json",
       "mode": "0644",

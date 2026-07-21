@@ -27,6 +27,7 @@ from .performance import (
     verify_package_performance_budgets,
     verify_static_performance_budgets,
 )
+from .portal import build_portal, verify_portal
 from .render import rendered_files
 from .profiles import load_profile_inputs
 from .protocol import load_protocol_catalog
@@ -934,6 +935,14 @@ def _run_development_environment_contracts(root: Path, _node: TestNode) -> None:
     load_development_environment(root)
 
 
+def _run_documentation_portal_contracts(root: Path, _node: TestNode) -> None:
+    output = root / "build" / "documentation-portal"
+    if output.exists():
+        shutil.rmtree(output)
+    build_portal(root, output)
+    verify_portal(root, output)
+
+
 def _run_assurance_contracts(root: Path, _node: TestNode) -> None:
     load_dependency_inventory(root)
     load_release_gates(root)
@@ -1105,6 +1114,7 @@ RUNNERS = {
     "python-unit": _run_python_tests,
     "toolchain-contract": _run_toolchain_contract,
     "development-environment-contracts": _run_development_environment_contracts,
+    "documentation-portal-contracts": _run_documentation_portal_contracts,
     "assurance-contracts": _run_assurance_contracts,
     "formal-model-contracts": _run_formal_model_contracts,
     "rust-format": _run_rust_format,
