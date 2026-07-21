@@ -6,17 +6,19 @@ use hfx_bridge::{
     PersistenceIoStage, RestorationRuntime, RestorationSnapshotSource,
 };
 use hfx_core::{
-    CURRENT_PERSISTENCE_SCHEMA_VERSION, CompletedTransaction, PersistedRestorePolicy,
-    PersistedStableEntry, PersistenceCasOutcome, PersistenceStore, RestoreInvalidation,
-    RestoreRecord, RestoreRecordChange, RestoreRecordStatus, StableCommitOutcome,
-    StableIntentChange, StableIntentTombstone, StableLighting, canonical_request_digest,
+    CURRENT_PERSISTENCE_SCHEMA_VERSION, CompletedTransaction, MAX_RESTORE_RECORDS_PER_RECEIVER,
+    PersistedRestorePolicy, PersistedStableEntry, PersistenceCasOutcome, PersistenceStore,
+    RestoreCompletion, RestoreInvalidation, RestoreRecord, RestoreRecordChange,
+    RestoreRecordStatus, StableCommitOutcome, StableIntentChange, StableIntentTombstone,
+    StableLighting, canonical_request_digest,
 };
 use hfx_domain::{
     ColorChannel, DeliveredFrameCount, DeviceApplicationState, FrameCount, FrameIndex,
     GenerationId, IntentDigest, IntentRevision, LogicalDeviceId, PersistenceRevision,
-    PersistenceSchemaVersion, ReceiverId, RestoreClaimId, RestoreInvalidationReason, RestoreState,
-    RestoreTriggerId, RestoreTriggerKind, SequenceNumber, SideEffectCertainty, StableLightingMode,
-    TransactionState, WallClockUnixMs,
+    PersistenceSchemaVersion, ProtocolErrorKind, ReceiverId, RequestDigest, RestoreAttemptNumber,
+    RestoreClaimId, RestoreInvalidationReason, RestoreState, RestoreTriggerId, RestoreTriggerKind,
+    SequenceNumber, SideEffectCertainty, StableLightingMode, TransactionId, TransactionState,
+    WallClockUnixMs,
 };
 use hfx_protocol::{StableLightingIntent, TransactionRequest, TransactionTerminal};
 use std::fs::{self, OpenOptions};
@@ -137,6 +139,34 @@ fn restore_record(receiver_id: ReceiverId, claim: &str) -> RestoreRecord {
         last_attempt: None,
         status: RestoreRecordStatus::Planned,
     }
+}
+
+fn invalidated_record(receiver_id: ReceiverId, sequence: usize) -> RestoreRecord {
+    let mut record = restore_record(receiver_id, &format!("claim-{sequence:04}"));
+    record.revision = revision(u64::try_from(sequence + 1).expect("revision fits"));
+    record.status = RestoreRecordStatus::Invalidated(RestoreInvalidation {
+        reason: RestoreInvalidationReason::StaleGeneration,
+    });
+    record
+}
+
+fn uncertain_failed_record(receiver_id: ReceiverId, sequence: usize) -> RestoreRecord {
+    let mut record = restore_record(receiver_id, &format!("failed-{sequence:04}"));
+    record.revision = revision(u64::try_from(sequence + 1).expect("revision fits"));
+    record.last_attempt = Some(RestoreAttemptNumber::try_from(1_u32).expect("attempt"));
+    record.status = RestoreRecordStatus::Failed(RestoreCompletion {
+        attempt_number: RestoreAttemptNumber::try_from(1_u32).expect("attempt"),
+        transaction_id: id::<TransactionId>(&format!("failed-tx-{sequence:04}")),
+        request_digest: id::<RequestDigest>(&"b".repeat(64)),
+        state: TransactionState::Failed,
+        delivered_frames: DeliveredFrameCount::try_from(0_u16).expect("delivered frames"),
+        side_effect_certainty: SideEffectCertainty::Possible,
+        live_write_executed: true,
+        automatic_retry: false,
+        device_application: DeviceApplicationState::Unverified,
+        error_kind: Some(ProtocolErrorKind::TransportFailure),
+    });
+    record
 }
 
 fn write_private(path: &Path, bytes: &[u8]) {
@@ -447,6 +477,112 @@ fn restore_batch_conflict_changes_no_sibling_and_success_is_one_durable_commit()
             .expect("restore records load"),
         vec![retired_first, retired_second]
     );
+}
+
+#[test]
+fn terminal_restore_history_compacts_atomically_and_never_becomes_permanently_full() {
+    let directory = TestDirectory::new();
+    let path = directory.state_path();
+    let config = FilePersistenceConfig::new(&path);
+    let receiver_id = receiver(1);
+    let mut store = FilePersistenceStore::open(config.clone()).expect("store opens");
+    let initial = (0..MAX_RESTORE_RECORDS_PER_RECEIVER)
+        .map(|sequence| {
+            let record = invalidated_record(receiver_id.clone(), sequence);
+            RestoreRecordChange {
+                expected_revision: None,
+                record,
+            }
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        store
+            .compare_and_set_restore_records(&initial)
+            .expect("bounded history initializes"),
+        PersistenceCasOutcome::Applied
+    );
+
+    for sequence in MAX_RESTORE_RECORDS_PER_RECEIVER..(MAX_RESTORE_RECORDS_PER_RECEIVER + 64) {
+        let record = invalidated_record(receiver_id.clone(), sequence);
+        assert_eq!(
+            store
+                .compare_and_set_restore_record(None, &record)
+                .expect("old terminal history compacts"),
+            PersistenceCasOutcome::Applied
+        );
+    }
+
+    let records = store
+        .restore_records(&receiver_id)
+        .expect("compacted records load");
+    assert_eq!(records.len(), MAX_RESTORE_RECORDS_PER_RECEIVER);
+    assert!(
+        records
+            .iter()
+            .all(|record| record.claim_id.as_str() != "claim-0000")
+    );
+    assert!(records.iter().any(|record| {
+        record.claim_id.as_str() == format!("claim-{:04}", MAX_RESTORE_RECORDS_PER_RECEIVER + 63)
+    }));
+    drop(store);
+
+    let reopened = FilePersistenceStore::open(config).expect("compacted state reopens");
+    assert_eq!(
+        reopened
+            .restore_records(&receiver_id)
+            .expect("reopened history loads")
+            .len(),
+        MAX_RESTORE_RECORDS_PER_RECEIVER
+    );
+}
+
+#[test]
+fn compaction_preserves_nonterminal_and_uncertain_failure_records() {
+    let directory = TestDirectory::new();
+    let receiver_id = receiver(1);
+    let mut store = FilePersistenceStore::open(FilePersistenceConfig::new(directory.state_path()))
+        .expect("store opens");
+    let compactable_count = MAX_RESTORE_RECORDS_PER_RECEIVER - 32;
+    let mut initial = (0..compactable_count)
+        .map(|sequence| RestoreRecordChange {
+            expected_revision: None,
+            record: invalidated_record(receiver_id.clone(), sequence),
+        })
+        .collect::<Vec<_>>();
+    initial.extend((0..32).map(|sequence| RestoreRecordChange {
+        expected_revision: None,
+        record: uncertain_failed_record(receiver_id.clone(), sequence),
+    }));
+    assert_eq!(
+        store
+            .compare_and_set_restore_records(&initial)
+            .expect("mixed history initializes"),
+        PersistenceCasOutcome::Applied
+    );
+
+    let pending = restore_record(receiver_id.clone(), "pending-new");
+    assert_eq!(
+        store
+            .compare_and_set_restore_record(None, &pending)
+            .expect("one compactable terminal is retired"),
+        PersistenceCasOutcome::Applied
+    );
+    let records = store.restore_records(&receiver_id).expect("records load");
+    assert_eq!(records.len(), MAX_RESTORE_RECORDS_PER_RECEIVER);
+    assert!(
+        records
+            .iter()
+            .any(|record| record.claim_id == pending.claim_id)
+    );
+    for sequence in 0..32 {
+        let claim = format!("failed-{sequence:04}");
+        assert!(
+            records
+                .iter()
+                .any(|record| record.claim_id.as_str() == claim),
+            "uncertain record {claim} must remain"
+        );
+    }
 }
 
 #[test]

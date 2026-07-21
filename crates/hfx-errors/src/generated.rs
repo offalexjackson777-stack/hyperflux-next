@@ -210,7 +210,7 @@ pub struct ErrorDescriptor {
 }
 
 pub const ERROR_CATALOG_SHA256: &str =
-    "e5047af79969e00a9010d3d23f5c741feb4f406828539444cf91c605a8801aa9";
+    "dc21516800b761970c0e7c14a030424a56235610f3355f70f70259e2e4843e91";
 pub const MAX_ERROR_COUNT: usize = 256;
 pub const MAX_REMEDIATION_COUNT: usize = 128;
 pub const MAX_SAFE_DETAIL_FIELDS: usize = 12;
@@ -785,7 +785,14 @@ const DETAILS_16: &[SafeDetailFieldDescriptor] = &[
     },
 ];
 
-const DETAIL_VALUES_17_0: &[&str] = &["activating", "failed", "inactive", "stopping"];
+const DETAIL_VALUES_17_0: &[&str] = &[
+    "activating",
+    "active-unready",
+    "failed",
+    "inactive",
+    "stopping",
+    "unavailable",
+];
 
 const DETAILS_17: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
     name: "service_state",
@@ -1223,8 +1230,8 @@ pub const ERRORS: &[ErrorDescriptor] = &[
             replacement_code: None,
         },
         owner: ErrorOwner::Packaging,
-        technical_cause: "The compatible bridge service is not ready to accept SDK requests.",
-        user_explanation: "The HyperFlux service is not running yet.",
+        technical_cause: "The compatible bridge service is stopped or is not ready to accept SDK requests.",
+        user_explanation: "The HyperFlux service is not ready yet.",
         privacy: PrivacyClass::Public,
         docs_path: "docs/generated/error-catalog.md#hfx-service-001",
     },

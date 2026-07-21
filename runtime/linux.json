@@ -1,15 +1,72 @@
 {
   "$schema": "../schemas/linux-runtime.schema.json",
   "schema": "hyperflux-linux-runtime-v1",
+  "product": {
+    "display_name": "HyperFlux Next",
+    "version": "0.0.0-dev.1",
+    "package_name": "hyperflux-next-linux",
+    "package_release": 1
+  },
   "bridge": {
     "service_account": "hyperflux-next",
+    "kernel_access_group": "hyperflux-next",
+    "client_group": "hyperflux",
+    "service_unit": "hyperflux-next-bridge.service",
+    "executable_path": "/usr/lib/hyperflux-next/hyperflux-next-bridge",
     "runtime_directory": "/run/hyperflux-next",
     "socket_name": "bridge.sock",
+    "socket_lock_name": "bridge.lock",
     "state_directory": "/var/lib/hyperflux-next",
-    "configuration_directory": "/etc/hyperflux-next"
+    "state_file_name": "bridge-state.json",
+    "identity_secret_file_name": "receiver-identity.key",
+    "configuration_directory": "/etc/hyperflux-next",
+    "configuration_file_name": "bridge.json",
+    "limits": {
+      "max_connections": 32,
+      "command_queue_capacity": 128,
+      "lease_capacity": 128,
+      "lease_history_capacity": 256,
+      "transaction_capacity": 128,
+      "event_capacity": 512,
+      "diagnostic_capacity": 128,
+      "subscription_capacity": 64,
+      "observation_batches_per_tick": 4,
+      "dispatches_per_tick": 1
+    },
+    "timing": {
+      "discovery_interval_ms": 100,
+      "accept_poll_interval_ms": 25,
+      "actor_response_timeout_ms": 30000,
+      "kernel_session_duration_ms": 120000
+    },
+    "restoration": {
+      "max_pending_triggers": 64,
+      "max_pending_claims": 4096,
+      "claims_per_tick": 1,
+      "retry_interval_ms": 1000,
+      "lease_duration_ms": 10000,
+      "authority_window_ms": 30000,
+      "max_persisted_receivers": 16,
+      "max_persistence_bytes": 4194304
+    },
+    "configuration_max_bytes": 65536
   },
   "kernel": {
     "module_name": "hid-hyperflux-next",
-    "device_prefix": "hyperflux-next"
+    "dkms_name": "hid-hyperflux-next",
+    "device_prefix": "hyperflux-next",
+    "source_directory": "/usr/src/hid-hyperflux-next-0.0.0-dev.1",
+    "control_transfer_timeout_ms": 1000
+  },
+  "operations": {
+    "cli_path": "/usr/bin/hyperfluxctl",
+    "activation_path": "/usr/lib/hyperflux-next/hyperflux-next-activate",
+    "update_state_file_name": "package-update.json",
+    "support_bundle_prefix": "hyperflux-next-support",
+    "max_receiver_generations": 16,
+    "max_structured_events": 128,
+    "max_transaction_outcomes": 64,
+    "max_support_bundle_bytes": 1048576,
+    "status_timeout_ms": 1000
   }
 }

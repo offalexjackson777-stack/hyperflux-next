@@ -14,6 +14,7 @@ import time
 from .model import ModelError, load_foundation, load_json, require_unique, sha256_file
 from .errors import load_error_catalog
 from .integrations import load_integration_catalog, load_openrazer_compatibility_contract
+from .linux_runtime import load_linux_runtime
 from .openrazer import load_imported_metadata, transformed_metadata
 from .render import rendered_files
 from .profiles import load_profile_inputs
@@ -42,6 +43,7 @@ IGNORED_PATH_PARTS = {
     "target",
 }
 FUTURE_MTIME_TOLERANCE_SECONDS = 5.0
+INSTALLED_SCHEMA_ROOT = Path("/usr/share/hyperflux-next/schemas")
 
 
 def _check_constitution(constitution: dict) -> None:
@@ -445,6 +447,18 @@ def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
             raise ModelError(f"kernel header directory is unavailable: {build_directory}")
         label = build_directory.resolve().parent.name
         output_directory = root / "build" / "kernel" / label
+        _run_command(
+            root,
+            [
+                "make",
+                "-C",
+                str(build_directory),
+                f"M={root / 'driver' / 'kernel'}",
+                "clean",
+            ],
+            f"legacy kernel source cleanup ({label})",
+            node.timeout_seconds,
+        )
         if output_directory.exists():
             shutil.rmtree(output_directory)
         output_directory.mkdir(parents=True)
@@ -817,7 +831,8 @@ def _check_schema_contracts(root: Path) -> None:
         schema_reference = value.get("$schema")
         if not isinstance(schema_reference, str) or schema_reference.startswith("https://"):
             continue
-        if not (path.parent / schema_reference).resolve().is_file():
+        target = _resolve_schema_reference(root, path, schema_reference)
+        if target is None or not target.is_file():
             raise ModelError(f"{path.relative_to(root)}: missing schema reference {schema_reference}")
 
     scenario_schema = load_json(root / "schemas" / "simulator-scenario.schema.json")
@@ -835,6 +850,20 @@ def _check_schema_contracts(root: Path) -> None:
     if len(replay.get("events", [])) > event_limit:
         raise ModelError("replay fixture exceeds the bounded event limit")
     load_test_catalog(root)
+    load_linux_runtime(root)
+
+
+def _resolve_schema_reference(
+    root: Path,
+    document: Path,
+    schema_reference: str,
+) -> Path | None:
+    reference = Path(schema_reference)
+    if not reference.is_absolute():
+        return (document.parent / reference).resolve()
+    if reference.parent != INSTALLED_SCHEMA_ROOT or reference.name in {"", ".", ".."}:
+        return None
+    return root / "schemas" / reference.name
 
 
 def _check_protocol_contract(root: Path) -> None:

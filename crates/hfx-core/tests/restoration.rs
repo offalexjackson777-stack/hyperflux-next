@@ -1373,6 +1373,30 @@ fn profile_drift_invalidates_before_any_hardware_write() {
 }
 
 #[test]
+fn durable_claim_never_crosses_into_a_distinct_opaque_generation() {
+    let mut store = MemoryPersistenceStore::default();
+    let claims = seed_restore(RestorationCoordinator, &mut store, &["mouse-1"]);
+    let claim_id = claims[0].claim_id.clone();
+    let mut runtime =
+        RestoreRuntime::new(store, devices(&[("mouse-1", DeviceWriteReadiness::Ready)]));
+    runtime.transport.generation_id = generation(7);
+
+    let result = runtime
+        .advance(&claim_id)
+        .expect("old generation claim is terminally invalidated");
+
+    assert!(matches!(
+        result,
+        RestoreAdvanceResult::Terminal(RestoreRecord {
+            status: RestoreRecordStatus::Invalidated(ref detail),
+            ..
+        }) if detail.reason == RestoreInvalidationReason::StaleGeneration
+    ));
+    assert!(runtime.transport.dispatches.is_empty());
+    assert_eq!(runtime.transport.physical_writes, 0);
+}
+
+#[test]
 fn transport_failure_with_possible_side_effects_is_terminal_and_not_retried() {
     let mut store = MemoryPersistenceStore::default();
     let claims = seed_restore(RestorationCoordinator, &mut store, &["mouse-1"]);
@@ -1561,6 +1585,7 @@ fn changed_runtime_authority_creates_new_attempt_only_after_not_observed() {
         panic!("second queued record retains its attempt")
     };
     assert_eq!(second_attempt.attempt_number.get(), 2);
+    assert_eq!(second_attempt.submission.dispatch_nonce.get(), 100);
     assert_eq!(
         second_attempt.request.client_id.as_str(),
         "restore-client-2"

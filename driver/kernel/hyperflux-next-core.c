@@ -3,6 +3,7 @@
 #include <linux/atomic.h>
 #include <linux/hid.h>
 #include <linux/module.h>
+#include <linux/random.h>
 #include <linux/slab.h>
 
 #include "hyperflux-next-internal.h"
@@ -13,6 +14,25 @@
 static LIST_HEAD(hfx_receivers);
 static DEFINE_MUTEX(hfx_registry_lock);
 static atomic64_t hfx_next_generation = ATOMIC64_INIT(0);
+
+/*
+ * Generation values are opaque lifetime epochs, not reconnect counters.  A
+ * randomized module-lifetime seed prevents a durable userspace claim from
+ * matching a different receiver lifetime after module reload or reboot.  The
+ * remaining positive range is intentionally enormous for per-module increments.
+ */
+static s64 hfx_next_receiver_generation(void)
+{
+	s64 seed;
+
+	if (!atomic64_read(&hfx_next_generation)) {
+		seed = (s64)(get_random_u64() & ((1ULL << 62) - 1));
+		if (!seed)
+			seed = 1;
+		atomic64_cmpxchg(&hfx_next_generation, 0, seed);
+	}
+	return atomic64_inc_return(&hfx_next_generation);
+}
 
 static struct usb_device *hfx_usb_device(struct hid_device *hdev,
 					 int *interface_number)
@@ -135,7 +155,7 @@ hfx_receiver_get(struct usb_device *udev, int interface_number,
 		return ret ? ERR_PTR(ret) : receiver;
 	}
 
-	generation = atomic64_inc_return(&hfx_next_generation);
+	generation = hfx_next_receiver_generation();
 	if (generation <= 0) {
 		ret = -EOVERFLOW;
 		goto err_unlock;

@@ -8,7 +8,7 @@ use hfx_domain::{
 };
 use hfx_kernel_transport::{
     AlignedU64, HFX_UAPI_ABI_VERSION, HFX_UAPI_INFO_FLAG_SESSION_ACTIVE,
-    HFX_UAPI_INFO_FLAG_WRITER_OPEN, HFX_UAPI_MAX_OBSERVATIONS,
+    HFX_UAPI_INFO_FLAG_SUSPENDED, HFX_UAPI_INFO_FLAG_WRITER_OPEN, HFX_UAPI_MAX_OBSERVATIONS,
     HFX_UAPI_RESULT_FLAG_AUTOMATIC_RETRY_SAFE, HFX_UAPI_RESULT_FLAG_WRITE_STARTED,
     HFX_UAPI_TRANSPORT_STATUS_FAILED, HFX_UAPI_TRANSPORT_STATUS_NOT_OBSERVED,
     HFX_UAPI_TRANSPORT_STATUS_SUCCEEDED, HFX_UAPI_TRANSPORT_STATUS_UNAVAILABLE,
@@ -46,6 +46,7 @@ struct FakeKernelState {
     generation: u64,
     authorization_epoch: u64,
     session_active: bool,
+    suspended: bool,
     expires_ns: u64,
     maximum_nonce: u64,
     next_sequence: u64,
@@ -66,6 +67,7 @@ impl FakeKernel {
                 generation: GENERATION,
                 authorization_epoch: 1,
                 session_active: false,
+                suspended: false,
                 expires_ns: 0,
                 maximum_nonce: 0,
                 next_sequence: 0,
@@ -106,6 +108,13 @@ impl FakeKernel {
             .observations
             .push(observation);
     }
+
+    fn set_suspended(&self, suspended: bool) {
+        self.state
+            .lock()
+            .expect("fake kernel lock is healthy")
+            .suspended = suspended;
+    }
 }
 
 impl KernelIo for FakeKernel {
@@ -127,6 +136,11 @@ impl KernelIo for FakeKernel {
             flags: HFX_UAPI_INFO_FLAG_WRITER_OPEN
                 | if state.session_active {
                     HFX_UAPI_INFO_FLAG_SESSION_ACTIVE
+                } else {
+                    0
+                }
+                | if state.suspended {
+                    HFX_UAPI_INFO_FLAG_SUSPENDED
                 } else {
                     0
                 },
@@ -492,6 +506,26 @@ fn adapter_renews_the_kernel_session_without_reusing_a_dispatch() {
     assert_eq!(state.begin_calls, 2);
     assert_eq!(state.end_calls, 1);
     assert_eq!(state.submit_calls, 2);
+}
+
+#[test]
+fn suspended_receiver_retains_generation_identity_but_rejects_writes() {
+    let fake = FakeKernel::new();
+    let mut transport = transport(fake.clone());
+    let receiver_id = ReceiverId::try_from("receiver-1").expect("receiver id is valid");
+    let catalog = RuntimeProfileCatalog::load().expect("catalog is valid");
+
+    fake.set_suspended(true);
+
+    assert_eq!(
+        transport.current_generation(&receiver_id),
+        Some(GenerationId::try_from(GENERATION).expect("generation is valid"))
+    );
+    let error = transport
+        .dispatch(&dispatch(&catalog, 1, true, true))
+        .expect_err("suspended receiver cannot admit a write");
+    assert_eq!(error.kind(), KernelTransportErrorKind::OutcomeUnavailable);
+    assert_eq!(fake.snapshot().submit_calls, 0);
 }
 
 #[test]

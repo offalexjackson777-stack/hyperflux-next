@@ -12,6 +12,7 @@ from unittest.mock import patch
 from tools.hfxdev.model import ModelError
 from tools.hfxdev.verify import (
     _check_build_cache_clock,
+    _resolve_schema_reference,
     _run_openrgb_adapter_contracts,
     _run_openrgb_thread_sanitizer,
 )
@@ -37,6 +38,31 @@ class VerificationGuardTests(unittest.TestCase):
             os.utime(artifact, (1_100.0, 1_100.0))
             with self.assertRaisesRegex(ModelError, "run cargo clean"):
                 _check_build_cache_clock(root, now=1_000.0)
+
+    def test_schema_reference_resolution_accepts_only_local_or_canonical_install_paths(
+        self,
+    ) -> None:
+        root = Path("/checkout")
+        document = root / "packaging" / "generated" / "bridge.json"
+        self.assertEqual(
+            _resolve_schema_reference(
+                root,
+                document,
+                "/usr/share/hyperflux-next/schemas/bridge-config.schema.json",
+            ),
+            root / "schemas" / "bridge-config.schema.json",
+        )
+        self.assertEqual(
+            _resolve_schema_reference(root, document, "../../schemas/bridge-config.schema.json"),
+            root / "schemas" / "bridge-config.schema.json",
+        )
+        self.assertIsNone(
+            _resolve_schema_reference(
+                root,
+                document,
+                "/tmp/bridge-config.schema.json",
+            )
+        )
 
     def test_openrgb_release_and_sanitizer_lanes_share_complete_pipeline(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

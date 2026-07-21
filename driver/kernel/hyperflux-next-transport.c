@@ -5,13 +5,14 @@
 #include <linux/uaccess.h>
 
 #include "hyperflux-next-internal.h"
+#include "hyperflux-next-version.h"
 #include "hyperflux-next-wire.h"
 
 #define HFX_CONTROL_REQUEST_TYPE 0x21
 #define HFX_CONTROL_REQUEST 0x09
 #define HFX_CONTROL_VALUE 0x0300
 #define HFX_CONTROL_INDEX 0x0000
-#define HFX_CONTROL_TIMEOUT_MS 1000
+#define HFX_CONTROL_TIMEOUT_MS HYPERFLUX_NEXT_CONTROL_TRANSFER_TIMEOUT_MS
 
 static int hfx_wire_error(enum hfx_wire_validation validation)
 {

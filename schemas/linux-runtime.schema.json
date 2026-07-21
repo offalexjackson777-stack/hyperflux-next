@@ -4,30 +4,181 @@
   "title": "HyperFlux Linux runtime authority",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "schema", "bridge", "kernel"],
+  "required": ["$schema", "schema", "product", "bridge", "kernel", "operations"],
   "properties": {
     "$schema": {"type": "string"},
     "schema": {"const": "hyperflux-linux-runtime-v1"},
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["display_name", "version", "package_name", "package_release"],
+      "properties": {
+        "display_name": {"const": "HyperFlux Next"},
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$",
+          "maxLength": 64
+        },
+        "package_name": {"type": "string", "pattern": "^[a-z][a-z0-9+_.-]{0,63}$"},
+        "package_release": {"type": "integer", "minimum": 1, "maximum": 65535}
+      }
+    },
     "bridge": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["service_account", "runtime_directory", "socket_name", "state_directory", "configuration_directory"],
+      "required": [
+        "service_account",
+        "kernel_access_group",
+        "client_group",
+        "service_unit",
+        "executable_path",
+        "runtime_directory",
+        "socket_name",
+        "socket_lock_name",
+        "state_directory",
+        "state_file_name",
+        "identity_secret_file_name",
+        "configuration_directory",
+        "configuration_file_name",
+        "limits",
+        "timing",
+        "restoration",
+        "configuration_max_bytes"
+      ],
       "properties": {
-        "service_account": {"type": "string", "pattern": "^[a-z_][a-z0-9_-]{0,31}$"},
+        "service_account": {"$ref": "#/$defs/account"},
+        "kernel_access_group": {"$ref": "#/$defs/account"},
+        "client_group": {"$ref": "#/$defs/account"},
+        "service_unit": {"type": "string", "pattern": "^[a-z][a-z0-9@_.-]{0,95}\\.service$"},
+        "executable_path": {"type": "string", "pattern": "^/usr/lib/[a-z0-9][a-z0-9_./-]{0,191}$"},
         "runtime_directory": {"type": "string", "pattern": "^/run/[a-z0-9][a-z0-9_-]{0,63}$"},
-        "socket_name": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}\\.sock$"},
+        "socket_name": {"$ref": "#/$defs/fileName"},
+        "socket_lock_name": {"$ref": "#/$defs/fileName"},
         "state_directory": {"type": "string", "pattern": "^/var/lib/[a-z0-9][a-z0-9_-]{0,63}$"},
-        "configuration_directory": {"type": "string", "pattern": "^/etc/[a-z0-9][a-z0-9_-]{0,63}$"}
+        "state_file_name": {"$ref": "#/$defs/fileName"},
+        "identity_secret_file_name": {"$ref": "#/$defs/fileName"},
+        "configuration_directory": {"type": "string", "pattern": "^/etc/[a-z0-9][a-z0-9_-]{0,63}$"},
+        "configuration_file_name": {"$ref": "#/$defs/fileName"},
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "max_connections",
+            "command_queue_capacity",
+            "lease_capacity",
+            "lease_history_capacity",
+            "transaction_capacity",
+            "event_capacity",
+            "diagnostic_capacity",
+            "subscription_capacity",
+            "observation_batches_per_tick",
+            "dispatches_per_tick"
+          ],
+          "properties": {
+            "max_connections": {"$ref": "#/$defs/queueBound"},
+            "command_queue_capacity": {"$ref": "#/$defs/queueBound"},
+            "lease_capacity": {"$ref": "#/$defs/queueBound"},
+            "lease_history_capacity": {"$ref": "#/$defs/queueBound"},
+            "transaction_capacity": {"$ref": "#/$defs/queueBound"},
+            "event_capacity": {"$ref": "#/$defs/queueBound"},
+            "diagnostic_capacity": {"type": "integer", "minimum": 1, "maximum": 128},
+            "subscription_capacity": {"$ref": "#/$defs/queueBound"},
+            "observation_batches_per_tick": {"type": "integer", "minimum": 1, "maximum": 64},
+            "dispatches_per_tick": {"type": "integer", "minimum": 1, "maximum": 64}
+          }
+        },
+        "timing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "discovery_interval_ms",
+            "accept_poll_interval_ms",
+            "actor_response_timeout_ms",
+            "kernel_session_duration_ms"
+          ],
+          "properties": {
+            "discovery_interval_ms": {"type": "integer", "minimum": 10, "maximum": 10000},
+            "accept_poll_interval_ms": {"type": "integer", "minimum": 1, "maximum": 1000},
+            "actor_response_timeout_ms": {"type": "integer", "minimum": 100, "maximum": 30000},
+            "kernel_session_duration_ms": {"type": "integer", "minimum": 6000, "maximum": 300000}
+          }
+        },
+        "restoration": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "max_pending_triggers",
+            "max_pending_claims",
+            "claims_per_tick",
+            "retry_interval_ms",
+            "lease_duration_ms",
+            "authority_window_ms",
+            "max_persisted_receivers",
+            "max_persistence_bytes"
+          ],
+          "properties": {
+            "max_pending_triggers": {"type": "integer", "minimum": 1, "maximum": 1024},
+            "max_pending_claims": {"type": "integer", "minimum": 1, "maximum": 16384},
+            "claims_per_tick": {"type": "integer", "minimum": 1, "maximum": 64},
+            "retry_interval_ms": {"type": "integer", "minimum": 100, "maximum": 60000},
+            "lease_duration_ms": {"type": "integer", "minimum": 1000, "maximum": 3600000},
+            "authority_window_ms": {"type": "integer", "minimum": 1000, "maximum": 3600000},
+            "max_persisted_receivers": {"type": "integer", "minimum": 1, "maximum": 64},
+            "max_persistence_bytes": {"type": "integer", "minimum": 65536, "maximum": 16777216}
+          }
+        },
+        "configuration_max_bytes": {"type": "integer", "minimum": 1024, "maximum": 1048576}
       }
     },
     "kernel": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["module_name", "device_prefix"],
+      "required": [
+        "module_name",
+        "dkms_name",
+        "device_prefix",
+        "source_directory",
+        "control_transfer_timeout_ms"
+      ],
       "properties": {
-        "module_name": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"},
-        "device_prefix": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"}
+        "module_name": {"$ref": "#/$defs/kernelName"},
+        "dkms_name": {"$ref": "#/$defs/kernelName"},
+        "device_prefix": {"$ref": "#/$defs/kernelName"},
+        "source_directory": {"type": "string", "pattern": "^/usr/src/[a-z0-9][A-Za-z0-9+_.-]{0,127}$"},
+        "control_transfer_timeout_ms": {"type": "integer", "minimum": 1, "maximum": 5000}
+      }
+    },
+    "operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cli_path",
+        "activation_path",
+        "update_state_file_name",
+        "support_bundle_prefix",
+        "max_receiver_generations",
+        "max_structured_events",
+        "max_transaction_outcomes",
+        "max_support_bundle_bytes",
+        "status_timeout_ms"
+      ],
+      "properties": {
+        "cli_path": {"type": "string", "pattern": "^/usr/bin/[a-z0-9][a-z0-9_.-]{0,63}$"},
+        "activation_path": {"type": "string", "pattern": "^/usr/lib/[a-z0-9][a-z0-9_./-]{0,191}$"},
+        "update_state_file_name": {"$ref": "#/$defs/fileName"},
+        "support_bundle_prefix": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+        "max_receiver_generations": {"type": "integer", "minimum": 1, "maximum": 64},
+        "max_structured_events": {"type": "integer", "minimum": 1, "maximum": 4096},
+        "max_transaction_outcomes": {"type": "integer", "minimum": 1, "maximum": 1024},
+        "max_support_bundle_bytes": {"type": "integer", "minimum": 65536, "maximum": 16777216},
+        "status_timeout_ms": {"type": "integer", "minimum": 100, "maximum": 10000}
       }
     }
+  },
+  "$defs": {
+    "account": {"type": "string", "pattern": "^[a-z_][a-z0-9_-]{0,31}$"},
+    "fileName": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"},
+    "kernelName": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"},
+    "queueBound": {"type": "integer", "minimum": 1, "maximum": 4096}
   }
 }

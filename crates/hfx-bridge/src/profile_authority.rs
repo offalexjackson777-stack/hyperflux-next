@@ -42,11 +42,6 @@ pub enum RuntimeProfileAuthorityError {
         receiver_id: ReceiverId,
         generation_id: GenerationId,
     },
-    StaleGeneration {
-        receiver_id: ReceiverId,
-        active_generation: GenerationId,
-        requested_generation: GenerationId,
-    },
 }
 
 impl fmt::Display for RuntimeProfileAuthorityError {
@@ -73,14 +68,6 @@ impl fmt::Display for RuntimeProfileAuthorityError {
             } => write!(
                 formatter,
                 "profile binding conflicts for {receiver_id} generation {generation_id}"
-            ),
-            Self::StaleGeneration {
-                receiver_id,
-                active_generation,
-                requested_generation,
-            } => write!(
-                formatter,
-                "profile binding is stale for {receiver_id}: active {active_generation}, requested {requested_generation}"
             ),
         }
     }
@@ -133,8 +120,9 @@ impl RuntimeProfileAuthority {
 
     /// Binds one observed receiver USB identity to one exact generation.
     ///
-    /// Replaying the same binding is idempotent. A strictly newer generation
-    /// replaces the old binding; an older generation is rejected without mutation.
+    /// Replaying the same opaque generation binding is idempotent. A distinct
+    /// generation replaces the old binding after lifecycle orchestration has
+    /// established that exact generation as current transport truth.
     ///
     /// # Errors
     ///
@@ -161,13 +149,6 @@ impl RuntimeProfileAuthority {
             protocol_family,
         };
         if let Some(current) = self.bindings.get(&receiver_id) {
-            if generation_id < current.generation_id {
-                return Err(RuntimeProfileAuthorityError::StaleGeneration {
-                    receiver_id,
-                    active_generation: current.generation_id,
-                    requested_generation: generation_id,
-                });
-            }
             if generation_id == current.generation_id {
                 if current.profile_id == next.profile_id
                     && current.profile_digest == next.profile_digest

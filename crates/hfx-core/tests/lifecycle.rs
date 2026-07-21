@@ -179,7 +179,28 @@ fn retired_generations_never_reactivate_or_retain_children() {
         ApplyOutcome::RejectedStaleGeneration
     );
     assert_eq!(machine.discover(stamp(3, 67, 67)), ApplyOutcome::Applied);
-    assert_eq!(machine.highest_generation(), Some(generation(3)));
+    assert_eq!(machine.latest_generation(), Some(generation(3)));
+}
+
+#[test]
+fn opaque_generation_replacement_accepts_a_lower_token_and_fresh_sequence() {
+    let mut machine =
+        ReceiverLifecycleMachine::new(text("receiver-opaque"), LifecycleLimits::default())
+            .expect("lifecycle initializes");
+    assert_eq!(machine.discover(stamp(900, 40, 100)), ApplyOutcome::Applied);
+    assert_eq!(
+        machine.replace_generation(stamp(7, 1, 101)),
+        ApplyOutcome::Applied
+    );
+    assert_eq!(machine.latest_generation(), Some(generation(7)));
+    assert_eq!(
+        machine.transition_receiver(ReceiverLifecycleState::Suspended, stamp(900, 41, 102)),
+        ApplyOutcome::RejectedStaleGeneration
+    );
+    assert_eq!(
+        machine.transition_receiver(ReceiverLifecycleState::Suspended, stamp(7, 2, 102)),
+        ApplyOutcome::Applied
+    );
 }
 
 #[test]

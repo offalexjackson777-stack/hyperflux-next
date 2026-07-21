@@ -81,12 +81,17 @@ Inspect migration progress without changing files:
 | `crates/hfx-integration-model/` | Generated integration registry and shared application-facing projections |
 | `crates/hfx-profiles/` | Generated, queryable Rust hardware profile catalog |
 | `crates/hfx-sdk/` | Native application SDK, exact-version channel, and typed client boundary |
+| `crates/hfx-runtime/` | Generated Linux runtime constants and validated service configuration |
+| `crates/hfx-daemon/` | Production bridge composition, bounded actor, discovery, observations, and restoration scheduling |
+| `crates/hfx-ops/` | Doctor, status, configuration migration, package activation, and privacy-safe support tooling |
 | `crates/hfx-kernel-transport/` | Generated kernel ABI and isolated userspace transport boundary |
 | `profiles/` | Canonical capabilities, evidence claims, composable hardware profiles, and candidates |
 | `sdk/` | Generated non-Rust language bindings for integrations |
 | `driver/kernel/generated/` | Receiver-only match tables; no child presentation or application policy |
 | `driver/kernel/uapi/` | Generated fixed-width Linux userspace ABI; no pointers or product policy |
 | `driver/kernel/` | Minimal HID lifecycle, passive observation, writer-session, and validated-envelope transport |
+| `runtime/` | Canonical Linux product, service, kernel, operational, and bounded-runtime policy |
+| `packaging/generated/` | Generated non-activating systemd, udev, sysusers, tmpfiles, environment, and default configuration assets |
 | `uapi/` | Canonical kernel ABI model and bounds |
 | `generated/` | Canonical machine artifacts consumed across components |
 | `migration/` | Source identities, generated inventories, and reviewed subsystem decisions |

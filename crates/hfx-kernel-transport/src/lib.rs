@@ -9,6 +9,8 @@ mod io;
 #[allow(unsafe_code)]
 mod ioctl_sys;
 mod observation;
+mod reader;
+mod router;
 mod transport;
 
 pub use encoder::{EncodedTransaction, ReceiverFrameEncoderRegistry};
@@ -16,6 +18,8 @@ pub use error::{KernelTransportError, KernelTransportErrorKind};
 pub use generated::*;
 pub use io::{KernelIo, KernelIoError, LinuxKernelIo};
 pub use observation::{KernelObservationBatch, RawKernelObservation};
+pub use reader::{KernelEndpointFlags, KernelEndpointInfo, KernelObservationReader};
+pub use router::{KernelRouteError, KernelTransportRouter};
 pub use transport::{KernelReceiverTransport, KernelSessionMaterial};
 
 #[cfg(test)]

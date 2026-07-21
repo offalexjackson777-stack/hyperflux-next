@@ -8,11 +8,15 @@ hid-hyperflux-next-y := \
 	hyperflux-next-transport.o
 
 KDIR ?= /lib/modules/$(shell uname -r)/build
+KERNEL_RELEASE ?= $(shell $(MAKE) --no-print-directory -s -C $(KDIR) kernelrelease)
+MO ?= $(abspath $(CURDIR)/../../build/kernel/$(KERNEL_RELEASE))
 
 .PHONY: all clean
 
 all:
-	$(MAKE) -C $(KDIR) M=$(CURDIR) modules
+	@mkdir -p $(MO)
+	$(MAKE) -C $(KDIR) M=$(CURDIR) MO=$(MO) modules
 
 clean:
 	$(MAKE) -C $(KDIR) M=$(CURDIR) clean
+	$(RM) -r $(MO)

@@ -1,0 +1,29 @@
+[package]
+name = "hfx-ops"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+hfx-domain = { path = "../hfx-domain" }
+hfx-errors = { path = "../hfx-errors" }
+hfx-protocol = { path = "../hfx-protocol" }
+hfx-runtime = { path = "../hfx-runtime" }
+hfx-sdk = { path = "../hfx-sdk" }
+rustix.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "hyperfluxctl"
+path = "src/bin/hyperfluxctl.rs"
+
+[[bin]]
+name = "hyperflux-next-activate"
+path = "src/bin/hyperflux-next-activate.rs"

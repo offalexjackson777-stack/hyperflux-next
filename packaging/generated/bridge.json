@@ -1,0 +1,12 @@
+{
+  "$schema": "/usr/share/hyperflux-next/schemas/bridge-config.schema.json",
+  "schema": "hyperflux-bridge-config-v1",
+  "mode": "read-only",
+  "restoration": {
+    "enabled": false
+  },
+  "socket": {
+    "group": "hyperflux",
+    "mode": "0660"
+  }
+}

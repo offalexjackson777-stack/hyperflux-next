@@ -326,6 +326,65 @@ impl RestorationRuntime for RejectingRestoration {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default)]
+struct RejectingPrepareRestoration;
+
+impl RestorationSnapshotSource for RejectingPrepareRestoration {
+    fn restoration(
+        &self,
+        _receiver_id: &ReceiverId,
+        _generation_id: GenerationId,
+    ) -> Result<ReceiverRestorationSnapshot, RestorationProjectionError> {
+        Ok(ReceiverRestorationSnapshot {
+            stable_restore_enabled: true,
+            restore_state: hfx_domain::RestoreState::Idle,
+        })
+    }
+}
+
+impl RestorationRuntime for RejectingPrepareRestoration {
+    fn prepare_stable_dispatch(
+        &mut self,
+        _request: &TransactionRequest,
+        _prepared_at: WallClockUnixMs,
+    ) -> Result<(), RestorationError> {
+        Err(RestorationError::Persistence(
+            PersistenceOperation::SaveIntent,
+        ))
+    }
+
+    fn capture_completed(
+        &mut self,
+        _completed: &CompletedTransaction,
+        _captured_at: WallClockUnixMs,
+    ) -> Result<StableCommitOutcome, RestorationError> {
+        Ok(StableCommitOutcome::NotApplicable)
+    }
+
+    fn retire_generation<T, E>(
+        &mut self,
+        receiver_id: &ReceiverId,
+        generation_id: GenerationId,
+        _now: MonotonicMs,
+        _transport: &T,
+        _leases: &mut LeaseManager,
+        _transactions: &TransactionCoordinator,
+        _events: &mut hfx_core::BoundedEventLog,
+        _sink: &mut E,
+    ) -> Result<RestoreGenerationRetirement, RestorationError>
+    where
+        T: ReceiverTransport,
+        E: EventSink,
+    {
+        Ok(RestoreGenerationRetirement {
+            receiver_id: receiver_id.clone(),
+            generation_id,
+            updated: Vec::new(),
+            already_terminal: 0,
+        })
+    }
+}
+
 fn new_dispatcher() -> ConnectionDispatcher {
     ConnectionDispatcher::new(BridgeSessionConfig {
         server_instance_id: text::<ServerInstanceId>("server-1"),
@@ -916,4 +975,64 @@ fn persistence_failure_never_rewrites_terminal_truth_or_retries_hardware() {
     assert!(empty.completed.is_none());
     assert_eq!(empty.stable_capture, StableCaptureStatus::NotApplicable);
     assert_eq!(backend.transport().dispatches.len(), 1);
+}
+
+#[test]
+fn stable_persistence_prepare_failure_blocks_hardware_and_preserves_queue() {
+    let mut backend = backend_with_restoration(RejectingPrepareRestoration);
+    let mut sessions = SessionRegistry::new(
+        QueueCapacity::try_from(4_u16).expect("session capacity is canonical"),
+    );
+    let mut dispatcher = new_dispatcher();
+    let mut session_identities = DeterministicIdentities(180);
+    let hello = negotiate(
+        &mut dispatcher,
+        &mut session_identities,
+        &mut sessions,
+        &mut backend,
+    );
+
+    let acquired = dispatcher.dispatch(
+        RpcRequest::AcquireLease(SessionRequestEnvelope {
+            request_id: text("request-prepare-acquire"),
+            protocol_session_id: hello.protocol_session_id.clone(),
+            negotiation_token: hello.negotiation_token.clone(),
+            params: lease_request("request-prepare-acquire", resource("mouse", 1)),
+        }),
+        &mut session_identities,
+        &mut sessions,
+        &mut backend,
+    );
+    let RpcResponse::AcquireLeaseSuccess(acquired) = acquired else {
+        panic!("lease must be granted: {acquired:?}");
+    };
+    let LeaseResult::Granted(grant) = acquired.result else {
+        panic!("lease result must be granted");
+    };
+
+    let transaction = static_transaction(&backend, grant.lease_id);
+    let queued = dispatcher.dispatch(
+        RpcRequest::SubmitTransaction(SessionRequestEnvelope {
+            request_id: transaction.request_id.clone(),
+            protocol_session_id: hello.protocol_session_id,
+            negotiation_token: hello.negotiation_token,
+            params: transaction,
+        }),
+        &mut session_identities,
+        &mut sessions,
+        &mut backend,
+    );
+    assert!(matches!(
+        queued,
+        RpcResponse::SubmitTransactionSuccess(ref envelope)
+            if matches!(envelope.result, TransactionResult::Progress(_))
+    ));
+
+    let failure = backend
+        .dispatch_next(&sessions)
+        .expect_err("durable preparation must fail before transport");
+    assert_eq!(failure.code().as_str(), "HFX-PERSISTENCE-002");
+    assert_eq!(failure.kind(), ProtocolErrorKind::InternalFailure);
+    assert_eq!(backend.transport().dispatches.len(), 0);
+    assert_eq!(backend.queued_transactions(), 1);
 }

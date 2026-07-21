@@ -439,12 +439,12 @@
       "side_effect_certainty_policy": "not-applicable",
       "remediation_id": "start-bridge",
       "safe_detail_fields": [
-        {"name": "service_state", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["activating", "failed", "inactive", "stopping"], "privacy": "public", "description": "Sanitized bridge service state."}
+        {"name": "service_state", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["activating", "active-unready", "failed", "inactive", "stopping", "unavailable"], "privacy": "public", "description": "Sanitized bridge service state."}
       ],
       "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
       "owner": "packaging",
-      "technical_cause": "The compatible bridge service is not ready to accept SDK requests.",
-      "user_explanation": "The HyperFlux service is not running yet.",
+      "technical_cause": "The compatible bridge service is stopped or is not ready to accept SDK requests.",
+      "user_explanation": "The HyperFlux service is not ready yet.",
       "privacy": "public",
       "docs_path": "docs/generated/error-catalog.md#hfx-service-001"
     },

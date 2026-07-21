@@ -26,7 +26,7 @@
       }
     },
     "compatibility": {"type": "object"},
-    "transport": {"type": "object"},
+    "transport": {"$ref": "#/$defs/transport"},
     "presentation": {
       "type": "object",
       "additionalProperties": false,
@@ -61,6 +61,78 @@
     },
     "evidence_claims": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
     "restrictions": {"type": "array", "items": {"type": "string", "minLength": 1}}
+  },
+  "$defs": {
+    "transport": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "backend": {"type": "string", "minLength": 1},
+        "backend_id": {"type": "integer", "minimum": 1, "maximum": 4294967295},
+        "maximum_targets": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "generation_bound": {"type": "boolean"},
+        "application_raw_frames": {"type": "boolean"},
+        "lighting": {"$ref": "#/$defs/lighting"},
+        "passive": {"$ref": "#/$defs/passive"}
+      }
+    },
+    "lighting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["physical_led_count", "application_slot_count", "carrier_count", "rows", "columns", "application_index_to_carrier"],
+      "properties": {
+        "physical_led_count": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "application_slot_count": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "carrier_count": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "rows": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "columns": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "application_index_to_carrier": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "integer", "minimum": 0, "maximum": 65535}
+        }
+      }
+    },
+    "passive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["endpoint_lane", "battery_encoding", "contact", "route", "report_implies_route_available"],
+      "properties": {
+        "endpoint_lane": {"enum": ["pointer", "keyboard"]},
+        "battery_encoding": {"enum": ["linear-255"]},
+        "contact": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/contact-decoder"}
+          ]
+        },
+        "route": {"$ref": "#/$defs/route-decoder"},
+        "report_implies_route_available": {"type": "boolean"}
+      }
+    },
+    "contact-decoder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["off_mat", "on_mat"],
+      "properties": {
+        "off_mat": {"$ref": "#/$defs/raw-values"},
+        "on_mat": {"$ref": "#/$defs/raw-values"}
+      }
+    },
+    "route-decoder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["available", "unavailable"],
+      "properties": {
+        "available": {"$ref": "#/$defs/raw-values"},
+        "unavailable": {"$ref": "#/$defs/raw-values"}
+      }
+    },
+    "raw-values": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "integer", "minimum": 0, "maximum": 4294967295}
+    }
   },
   "allOf": [
     {

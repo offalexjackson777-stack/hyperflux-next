@@ -6,7 +6,7 @@ use hfx_core::{
     CURRENT_PERSISTENCE_SCHEMA_VERSION, MAX_RESTORE_RECORDS_PER_RECEIVER,
     MAX_STABLE_ENTRIES_PER_RECEIVER, PersistedRestorePolicy, PersistedStableEntry,
     PersistenceCasOutcome, PersistenceStore, RestoreRecord, RestoreRecordChange,
-    StableIntentChange,
+    RestoreRecordStatus, StableIntentChange,
 };
 use hfx_domain::{PersistenceRevision, ReceiverId, RestoreClaimId};
 use rustix::fs::{FlockOperation, Mode, OFlags, flock, open};
@@ -22,6 +22,7 @@ use std::path::{Path, PathBuf};
 pub const BRIDGE_PERSISTENCE_SCHEMA: &str = "hyperflux-bridge-persistence-v1";
 pub const DEFAULT_MAX_PERSISTED_RECEIVERS: usize = 16;
 pub const DEFAULT_MAX_PERSISTENCE_BYTES: u64 = 4 * 1024 * 1024;
+const MIN_TERMINAL_REPLAY_RECORDS: usize = 32;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PersistenceIoStage {
@@ -476,10 +477,71 @@ impl<C: PersistenceCommitter> PersistenceStore for FilePersistenceStore<C> {
                 candidate.restore_records.push(change.record.clone());
             }
         }
+        compact_restore_history(&mut candidate, &claims)?;
         canonicalize(&mut candidate);
         self.commit(candidate)?;
         Ok(PersistenceCasOutcome::Applied)
     }
+}
+
+fn compact_restore_history(
+    document: &mut BridgePersistenceDocument,
+    protected_claims: &BTreeSet<RestoreClaimId>,
+) -> Result<(), FilePersistenceError> {
+    let receivers = document
+        .restore_records
+        .iter()
+        .map(|record| record.receiver_id.clone())
+        .collect::<BTreeSet<_>>();
+    let mut remove = BTreeSet::new();
+    for receiver_id in receivers {
+        let records = document
+            .restore_records
+            .iter()
+            .filter(|record| record.receiver_id == receiver_id)
+            .collect::<Vec<_>>();
+        let overflow = records
+            .len()
+            .saturating_sub(MAX_RESTORE_RECORDS_PER_RECEIVER);
+        if overflow == 0 {
+            continue;
+        }
+        let replay_records = records
+            .iter()
+            .filter(|record| compactable_terminal(&record.status))
+            .count();
+        if overflow > replay_records.saturating_sub(MIN_TERMINAL_REPLAY_RECORDS) {
+            return Err(FilePersistenceError::Capacity);
+        }
+        let mut eligible = records
+            .into_iter()
+            .filter(|record| {
+                compactable_terminal(&record.status) && !protected_claims.contains(&record.claim_id)
+            })
+            .map(|record| (record.revision, record.claim_id.clone()))
+            .collect::<Vec<_>>();
+        eligible.sort_unstable();
+        if eligible.len() < overflow {
+            return Err(FilePersistenceError::Capacity);
+        }
+        remove.extend(
+            eligible
+                .into_iter()
+                .take(overflow)
+                .map(|(_, claim_id)| claim_id),
+        );
+    }
+    document
+        .restore_records
+        .retain(|record| !remove.contains(&record.claim_id));
+    Ok(())
+}
+
+const fn compactable_terminal(status: &RestoreRecordStatus) -> bool {
+    matches!(
+        status,
+        RestoreRecordStatus::Succeeded(_) | RestoreRecordStatus::Invalidated(_)
+    )
 }
 
 fn validate_parent(config: &FilePersistenceConfig) -> Result<PathBuf, FilePersistenceError> {

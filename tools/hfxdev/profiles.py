@@ -65,6 +65,20 @@ PRESENTATION_VARIANT_ROUTES = {
     "wired": "direct-usb",
     "bluetooth": "bluetooth",
 }
+PASSIVE_KEYS = {
+    "endpoint_lane",
+    "battery_encoding",
+    "contact",
+    "route",
+    "report_implies_route_available",
+}
+PASSIVE_TELEMETRY_CAPABILITIES = {
+    "presence.passive-evidence",
+    "route.hyperflux-wireless",
+    "telemetry.battery-percent",
+    "telemetry.connection-evidence",
+    "telemetry.mouse-contact",
+}
 UPSTREAM_ID_PATTERN = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
 PRESENTATION_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,127}$")
 GIT_COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
@@ -378,6 +392,87 @@ def _validate_lighting(profile: dict[str, Any]) -> None:
         raise ModelError(f"{profile['profile_id']}: lighting map exceeds carrier count")
 
 
+def _raw_values(value: object, label: str) -> list[int]:
+    if not isinstance(value, list):
+        raise ModelError(f"{label} must be a list")
+    if any(
+        isinstance(item, bool) or not isinstance(item, int) or not 0 <= item <= 0xFFFF_FFFF
+        for item in value
+    ):
+        raise ModelError(f"{label} contains an invalid raw value")
+    if value != sorted(set(value)):
+        raise ModelError(f"{label} must be sorted and unique")
+    return value
+
+
+def _validate_passive(profile: dict[str, Any]) -> None:
+    transport = profile.get("transport", {})
+    if not isinstance(transport, dict):
+        raise ModelError(f"{profile['profile_id']}: transport must be an object")
+    kind = profile["kind"]
+    if kind == "receiver":
+        _expect_keys(
+            transport,
+            {
+                "backend",
+                "backend_id",
+                "maximum_targets",
+                "generation_bound",
+                "application_raw_frames",
+            },
+            f"{profile['profile_id']} receiver transport",
+        )
+        return
+    if kind != "child":
+        if transport:
+            raise ModelError(f"{profile['profile_id']}: surface transport is not allowed")
+        return
+    _expect_keys(transport, {"lighting", "passive"}, f"{profile['profile_id']} child transport")
+    passive = transport.get("passive")
+    capability_ids = {item["id"] for item in profile["capabilities"]}
+    needs_passive = bool(capability_ids & PASSIVE_TELEMETRY_CAPABILITIES)
+    if passive is None:
+        if needs_passive:
+            raise ModelError(f"{profile['profile_id']}: passive telemetry requires a decoder")
+        return
+    if not isinstance(passive, dict):
+        raise ModelError(f"{profile['profile_id']}: passive decoder must be an object")
+    _expect_keys(passive, PASSIVE_KEYS, f"{profile['profile_id']} passive decoder")
+    missing = sorted(PASSIVE_KEYS - set(passive))
+    if missing:
+        raise ModelError(f"{profile['profile_id']}: incomplete passive decoder: {', '.join(missing)}")
+    expected_lane = "pointer" if profile["device_kind"] == "mouse" else "keyboard"
+    if passive["endpoint_lane"] != expected_lane:
+        raise ModelError(f"{profile['profile_id']}: passive lane contradicts the device kind")
+    if passive["battery_encoding"] != "linear-255":
+        raise ModelError(f"{profile['profile_id']}: unsupported battery encoding")
+    if not isinstance(passive["report_implies_route_available"], bool):
+        raise ModelError(f"{profile['profile_id']}: route implication must be boolean")
+
+    contact = passive["contact"]
+    if profile["device_kind"] == "mouse":
+        if not isinstance(contact, dict) or set(contact) != {"off_mat", "on_mat"}:
+            raise ModelError(f"{profile['profile_id']}: mouse contact decoder is incomplete")
+        off_mat = _raw_values(contact["off_mat"], f"{profile['profile_id']} off-mat values")
+        on_mat = _raw_values(contact["on_mat"], f"{profile['profile_id']} on-mat values")
+        if not off_mat or not on_mat or set(off_mat) & set(on_mat):
+            raise ModelError(f"{profile['profile_id']}: contact values must be nonempty and disjoint")
+    elif contact is not None:
+        raise ModelError(f"{profile['profile_id']}: keyboard cannot declare mouse contact")
+
+    route = passive["route"]
+    if not isinstance(route, dict) or set(route) != {"available", "unavailable"}:
+        raise ModelError(f"{profile['profile_id']}: route decoder is incomplete")
+    available = _raw_values(route["available"], f"{profile['profile_id']} available routes")
+    unavailable = _raw_values(route["unavailable"], f"{profile['profile_id']} unavailable routes")
+    if set(available) & set(unavailable):
+        raise ModelError(f"{profile['profile_id']}: route values must be disjoint")
+    if "telemetry.connection-evidence" in capability_ids and not (
+        available or unavailable or passive["report_implies_route_available"]
+    ):
+        raise ModelError(f"{profile['profile_id']}: connection evidence has no route decoder")
+
+
 def _validate_presentation(profile: dict[str, Any]) -> None:
     identifier = profile["profile_id"]
     presentation = profile.get("presentation")
@@ -549,6 +644,7 @@ def _validate_profiles(
         if kind == "surface" and any(capability_index[item["id"]]["access"] == "write" for item in capabilities):
             raise ModelError(f"{identifier}: surface profile exposes an unqualified write")
         _validate_lighting(profile)
+        _validate_passive(profile)
     require_unique(identities, "profile hardware identity")
 
 

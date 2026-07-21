@@ -766,7 +766,7 @@
         "Contact, inactivity, darkness, and power-off remain distinct facts."
       ],
       "revision": 1,
-      "runtime_sha256": "ec1d039a49ced8cdc5f56121fe5a03a0068676894a09e9b69c6290f06d1a6f6a",
+      "runtime_sha256": "f72d38a70e9f4f7fb56848937abafa4773902de64b9d07b22e11c12df6dbfe33",
       "schema": "hyperflux-hardware-profile-v1",
       "source_path": "profiles/children/razer-basilisk-v3-pro-35k-00cd.json",
       "transport": {
@@ -791,6 +791,23 @@
           "columns": 13,
           "physical_led_count": 13,
           "rows": 1
+        },
+        "passive": {
+          "battery_encoding": "linear-255",
+          "contact": {
+            "off_mat": [
+              0
+            ],
+            "on_mat": [
+              1
+            ]
+          },
+          "endpoint_lane": "pointer",
+          "report_implies_route_available": true,
+          "route": {
+            "available": [],
+            "unavailable": []
+          }
         }
       }
     },
@@ -943,7 +960,7 @@
         "External power does not establish a direct USB data route or charging state."
       ],
       "revision": 1,
-      "runtime_sha256": "522f2bdf589226cbe20a2e63098efe771c42b899a1b6a15989413dd29783366d",
+      "runtime_sha256": "fcdd53fe104e649cc7d2c38c939bbd41095dc3eb53488ebb30a8615a76bbfba6",
       "schema": "hyperflux-hardware-profile-v1",
       "source_path": "profiles/children/razer-deathstalker-v2-pro-tkl-0296.json",
       "transport": {
@@ -1057,6 +1074,22 @@
           "columns": 17,
           "physical_led_count": 84,
           "rows": 6
+        },
+        "passive": {
+          "battery_encoding": "linear-255",
+          "contact": null,
+          "endpoint_lane": "keyboard",
+          "report_implies_route_available": false,
+          "route": {
+            "available": [
+              0,
+              3
+            ],
+            "unavailable": [
+              2,
+              257
+            ]
+          }
         }
       }
     },
@@ -1199,5 +1232,5 @@
     }
   ],
   "schema": "hyperflux-compiled-profile-catalog-v1",
-  "source_sha256": "48a47c9da52af48ffa2fb4063e5e31c5b3e6e4c09ba894acfe9c35021f126371"
+  "source_sha256": "caa35d4cefa357dcc2e5d166dd7f6ad7e38702ca0d6a7f79995e39352be947d2"
 }

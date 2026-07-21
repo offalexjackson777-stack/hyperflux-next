@@ -11,11 +11,12 @@ use hfx_domain::{
     MonotonicMs, PairingState, PowerState, PresenceState, ProductId, ReceiverId,
     ReceiverLifecycleState, RouteKind, RouteState, SequenceNumber, SleepState,
 };
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use std::fmt;
 
 pub const DEFAULT_MAX_LIFECYCLE_DEVICES: usize = 32;
 pub const DEFAULT_MAX_DEVICE_ENDPOINTS: usize = 8;
+const MAX_RETIRED_GENERATIONS: usize = 256;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct LifecycleLimits {
@@ -197,8 +198,8 @@ impl ObservationStamp {
             && self.observed_at_ms >= other.observed_at_ms
     }
 
-    fn position_strictly_after(&self, other: &Self) -> bool {
-        self.sequence > other.sequence && self.observed_at_ms >= other.observed_at_ms
+    fn lifetime_at_or_after(&self, other: &Self) -> bool {
+        self.generation_id != other.generation_id && self.observed_at_ms >= other.observed_at_ms
     }
 }
 
@@ -704,11 +705,11 @@ impl ReceiverGenerationLifecycle {
     fn accepts_replacement(&self, stamp: &ObservationStamp) -> bool {
         self.lifecycle
             .stamp()
-            .is_some_and(|current| stamp.position_strictly_after(current))
+            .is_some_and(|current| stamp.lifetime_at_or_after(current))
             && self
                 .devices
                 .values()
-                .all(|device| stamp.position_strictly_after(device.latest_observation()))
+                .all(|device| stamp.lifetime_at_or_after(device.latest_observation()))
     }
 }
 
@@ -720,7 +721,8 @@ impl ReceiverGenerationLifecycle {
 pub struct ReceiverLifecycleMachine {
     receiver_id: ReceiverId,
     limits: LifecycleLimits,
-    highest_generation: Option<GenerationId>,
+    latest_generation: Option<GenerationId>,
+    retired_generations: VecDeque<GenerationId>,
     last_receiver_observation: Option<ObservationStamp>,
     current: Option<ReceiverGenerationLifecycle>,
 }
@@ -739,7 +741,8 @@ impl ReceiverLifecycleMachine {
         Ok(Self {
             receiver_id,
             limits,
-            highest_generation: None,
+            latest_generation: None,
+            retired_generations: VecDeque::new(),
             last_receiver_observation: None,
             current: None,
         })
@@ -751,8 +754,8 @@ impl ReceiverLifecycleMachine {
     }
 
     #[must_use]
-    pub const fn highest_generation(&self) -> Option<GenerationId> {
-        self.highest_generation
+    pub const fn latest_generation(&self) -> Option<GenerationId> {
+        self.latest_generation
     }
 
     #[must_use]
@@ -762,23 +765,22 @@ impl ReceiverLifecycleMachine {
 
     /// Discovers a generation only while the receiver is absent.
     pub fn discover(&mut self, stamp: ObservationStamp) -> ApplyOutcome {
-        if self
-            .highest_generation
-            .is_some_and(|highest| stamp.generation_id() <= highest)
+        if self.latest_generation == Some(stamp.generation_id())
+            || self.retired_generations.contains(&stamp.generation_id())
         {
             return ApplyOutcome::RejectedStaleGeneration;
         }
         if self.current.is_some() {
-            return ApplyOutcome::RejectedInvalidTransition;
+            return ApplyOutcome::RejectedStaleGeneration;
         }
         if self
             .last_receiver_observation
             .as_ref()
-            .is_some_and(|last| !stamp.position_strictly_after(last))
+            .is_some_and(|last| !stamp.lifetime_at_or_after(last))
         {
             return ApplyOutcome::IgnoredOlderObservation;
         }
-        self.highest_generation = Some(stamp.generation_id());
+        self.latest_generation = Some(stamp.generation_id());
         self.last_receiver_observation = Some(stamp.clone());
         self.current = Some(ReceiverGenerationLifecycle::new(stamp));
         ApplyOutcome::Applied
@@ -787,26 +789,23 @@ impl ReceiverLifecycleMachine {
     /// Atomically retires the current generation and starts a newer empty one.
     pub fn replace_generation(&mut self, stamp: ObservationStamp) -> ApplyOutcome {
         let Some(current) = self.current.as_ref() else {
-            return if self
-                .highest_generation
-                .is_some_and(|highest| stamp.generation_id() <= highest)
-            {
+            return if self.latest_generation == Some(stamp.generation_id()) {
                 ApplyOutcome::RejectedStaleGeneration
             } else {
                 ApplyOutcome::RejectedReceiverAbsent
             };
         };
-        if stamp.generation_id() <= current.generation_id
-            || self
-                .highest_generation
-                .is_some_and(|highest| stamp.generation_id() <= highest)
+        if stamp.generation_id() == current.generation_id
+            || self.retired_generations.contains(&stamp.generation_id())
         {
             return ApplyOutcome::RejectedStaleGeneration;
         }
         if !current.accepts_replacement(&stamp) {
             return ApplyOutcome::IgnoredOlderObservation;
         }
-        self.highest_generation = Some(stamp.generation_id());
+        let retired = current.generation_id;
+        self.remember_retired_generation(retired);
+        self.latest_generation = Some(stamp.generation_id());
         self.last_receiver_observation = Some(stamp.clone());
         self.current = Some(ReceiverGenerationLifecycle::new(stamp));
         ApplyOutcome::Applied
@@ -851,8 +850,10 @@ impl ReceiverLifecycleMachine {
         if current.lifecycle.value() != ReceiverLifecycleState::Disconnecting {
             return ApplyOutcome::RejectedInvalidTransition;
         }
+        let retired = current.generation_id;
         self.last_receiver_observation = Some(stamp);
         self.current = None;
+        self.remember_retired_generation(retired);
         ApplyOutcome::Applied
     }
 
@@ -1154,18 +1155,24 @@ impl ReceiverLifecycleMachine {
     fn generation_rejection(&self, generation_id: GenerationId) -> Option<ApplyOutcome> {
         match self.current.as_ref() {
             Some(current) if generation_id == current.generation_id => None,
-            Some(current) if generation_id < current.generation_id => {
-                Some(ApplyOutcome::RejectedStaleGeneration)
-            }
-            Some(_) => Some(ApplyOutcome::RejectedInvalidTransition),
-            None if self
-                .highest_generation
-                .is_some_and(|highest| generation_id <= highest) =>
+            Some(_) => Some(ApplyOutcome::RejectedStaleGeneration),
+            None if self.latest_generation == Some(generation_id)
+                || self.retired_generations.contains(&generation_id) =>
             {
                 Some(ApplyOutcome::RejectedStaleGeneration)
             }
             None => Some(ApplyOutcome::RejectedReceiverAbsent),
         }
+    }
+
+    fn remember_retired_generation(&mut self, generation_id: GenerationId) {
+        if self.retired_generations.contains(&generation_id) {
+            return;
+        }
+        if self.retired_generations.len() == MAX_RETIRED_GENERATIONS {
+            self.retired_generations.pop_front();
+        }
+        self.retired_generations.push_back(generation_id);
     }
 
     fn device_observation_rejection(&self, stamp: &ObservationStamp) -> Option<ApplyOutcome> {

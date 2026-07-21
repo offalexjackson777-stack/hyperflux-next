@@ -160,6 +160,28 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "}",
         "",
         "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub enum PassiveEndpointLane {",
+        "    Pointer,",
+        "    Keyboard,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub enum PassiveBatteryEncoding {",
+        "    Linear255,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct PassiveTelemetryRecord {",
+        "    pub endpoint_lane: PassiveEndpointLane,",
+        "    pub battery_encoding: PassiveBatteryEncoding,",
+        "    pub contact_off_mat: &'static [u32],",
+        "    pub contact_on_mat: &'static [u32],",
+        "    pub route_available: &'static [u32],",
+        "    pub route_unavailable: &'static [u32],",
+        "    pub report_implies_route_available: bool,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
         "pub struct PresentationRecord {",
         "    pub upstream_id: &'static str,",
         "    pub owner: &'static str,",
@@ -189,6 +211,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "    pub exact_child_combinations: bool,",
         "    pub capabilities: &'static [CapabilityRecord],",
         "    pub lighting: Option<LightingTopology>,",
+        "    pub passive: Option<PassiveTelemetryRecord>,",
         "    pub presentation: Option<PresentationRecord>,",
         "}",
         "",
@@ -222,6 +245,18 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                 lines.append(f"const CARRIERS_{index}: &[u16] = &[")
                 lines.extend(_wrapped_numbers(lighting["application_index_to_carrier"]))
                 lines.extend(["];", ""])
+        passive = profile.get("transport", {}).get("passive")
+        if passive:
+            contact = passive["contact"] or {"off_mat": [], "on_mat": []}
+            for suffix, values in (
+                ("CONTACT_OFF_MAT", contact["off_mat"]),
+                ("CONTACT_ON_MAT", contact["on_mat"]),
+                ("ROUTE_AVAILABLE", passive["route"]["available"]),
+                ("ROUTE_UNAVAILABLE", passive["route"]["unavailable"]),
+            ):
+                rendered = ", ".join(str(value) for value in values)
+                lines.append(f"const PASSIVE_{suffix}_{index}: &[u32] = &[{rendered}];")
+            lines.append("")
     lines.extend(["pub const PROFILES: &[ProfileRecord] = &[",])
     for index, profile in enumerate(catalog["profiles"]):
         identity = profile["identity"]
@@ -246,6 +281,24 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
             lighting_value = None
         else:
             lighting_value = "None"
+        passive = profile.get("transport", {}).get("passive")
+        if passive:
+            lane = _variant(passive["endpoint_lane"])
+            battery = _variant(passive["battery_encoding"])
+            route_implied = str(passive["report_implies_route_available"]).lower()
+            passive_lines = [
+                "        passive: Some(PassiveTelemetryRecord {",
+                f"            endpoint_lane: PassiveEndpointLane::{lane},",
+                f"            battery_encoding: PassiveBatteryEncoding::{battery},",
+                f"            contact_off_mat: PASSIVE_CONTACT_OFF_MAT_{index},",
+                f"            contact_on_mat: PASSIVE_CONTACT_ON_MAT_{index},",
+                f"            route_available: PASSIVE_ROUTE_AVAILABLE_{index},",
+                f"            route_unavailable: PASSIVE_ROUTE_UNAVAILABLE_{index},",
+                f"            report_implies_route_available: {route_implied},",
+                "        }),",
+            ]
+        else:
+            passive_lines = ["        passive: None,"]
         presentation = profile.get("presentation")
         if presentation:
             layout_key = (
@@ -299,6 +352,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                     if lighting
                     else [f"        lighting: {lighting_value},"]
                 ),
+                *passive_lines,
                 *presentation_lines,
                 "    },",
             ]

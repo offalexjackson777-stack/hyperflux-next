@@ -72,6 +72,7 @@ pub enum PersistenceOperation {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RestorationError {
+    RuntimeDisabled,
     InvalidSchemaVersion,
     StableEntryCapacity,
     RestoreRecordCapacity,
@@ -81,6 +82,7 @@ pub enum RestorationError {
     StableReplayConflict,
     InvalidTrigger,
     CaptureMismatch,
+    AuthorityDeadlineOverflow,
     IntentDigestMismatch,
     IntentMissing,
     UnknownClaim,
@@ -108,6 +110,7 @@ pub enum RestorationError {
 impl fmt::Display for RestorationError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::RuntimeDisabled => formatter.write_str("durable restoration runtime is disabled"),
             Self::InvalidTransition { from, to } => {
                 write!(
                     formatter,
@@ -139,6 +142,9 @@ impl fmt::Display for RestorationError {
             }
             Self::CaptureMismatch => {
                 formatter.write_str("stable intent capture does not match the transaction")
+            }
+            Self::AuthorityDeadlineOverflow => {
+                formatter.write_str("restoration authority deadline cannot be represented")
             }
             Self::IntentDigestMismatch => {
                 formatter.write_str("persisted stable intent digest is invalid")

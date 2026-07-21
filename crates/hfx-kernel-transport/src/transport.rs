@@ -117,7 +117,7 @@ impl KernelReceiverTransport<LinuxKernelIo> {
         catalog: RuntimeProfileCatalog,
         material: KernelSessionMaterial,
     ) -> Result<Self, KernelTransportError> {
-        let io = LinuxKernelIo::open(path)
+        let io = LinuxKernelIo::open_read_write(path)
             .map_err(|_| KernelTransportError::safe(KernelTransportErrorKind::Io))?;
         Self::new(io, catalog, material)
     }
@@ -165,7 +165,7 @@ impl<I: KernelIo> KernelReceiverTransport<I> {
             session: Mutex::new(KernelSessionState::default()),
             history: Mutex::new(DispatchHistory::default()),
         };
-        transport.validate_info(&transport.io.get_info().map_err(io_error)?)?;
+        transport.validate_writable_info(&transport.io.get_info().map_err(io_error)?)?;
         transport.ensure_session()?;
         Ok(transport)
     }
@@ -211,7 +211,7 @@ impl<I: KernelIo> KernelReceiverTransport<I> {
         self.end_active_session(HFX_UAPI_REVOKE_REASON_EXPLICIT)
     }
 
-    fn validate_info(&self, info: &HfxUapiInfo) -> Result<(), KernelTransportError> {
+    fn validate_binding_info(&self, info: &HfxUapiInfo) -> Result<(), KernelTransportError> {
         if info.version != HFX_UAPI_ABI_VERSION
             || usize::try_from(info.size).ok() != Some(size_of::<HfxUapiInfo>())
         {
@@ -230,6 +230,11 @@ impl<I: KernelIo> KernelReceiverTransport<I> {
                 KernelTransportErrorKind::GenerationMismatch,
             ));
         }
+        Ok(())
+    }
+
+    fn validate_writable_info(&self, info: &HfxUapiInfo) -> Result<(), KernelTransportError> {
+        self.validate_binding_info(info)?;
         if info.flags & (HFX_UAPI_INFO_FLAG_DISCONNECTING | HFX_UAPI_INFO_FLAG_SUSPENDED) != 0
             || info.bound_interfaces == 0
         {
@@ -243,7 +248,7 @@ impl<I: KernelIo> KernelReceiverTransport<I> {
     fn ensure_session(&self) -> Result<u64, KernelTransportError> {
         let now = self.io.boottime_ns().map_err(io_error)?;
         let info = self.io.get_info().map_err(io_error)?;
-        self.validate_info(&info)?;
+        self.validate_writable_info(&info)?;
         let mut state = self.session.lock().map_err(|_| {
             KernelTransportError::uncertain(KernelTransportErrorKind::SessionUnavailable)
         })?;
@@ -508,7 +513,10 @@ impl<I: KernelIo> ReceiverTransport for KernelReceiverTransport<I> {
             return None;
         }
         let info = self.io.get_info().ok()?;
-        self.validate_info(&info).ok()?;
+        self.validate_binding_info(&info).ok()?;
+        if info.flags & HFX_UAPI_INFO_FLAG_DISCONNECTING != 0 || info.bound_interfaces == 0 {
+            return None;
+        }
         Some(self.material.generation_id)
     }
 

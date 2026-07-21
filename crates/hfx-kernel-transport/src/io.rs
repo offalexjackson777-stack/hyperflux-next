@@ -4,9 +4,10 @@ use crate::{
     HfxUapiBeginSession, HfxUapiEndSession, HfxUapiInfo, HfxUapiReadObservations, HfxUapiSubmit,
     HfxUapiTransactionResult, ioctl_sys,
 };
+use rustix::fs::{Mode, OFlags, open};
 use rustix::time::{ClockId, clock_gettime};
 use std::fmt;
-use std::fs::{File, OpenOptions};
+use std::fs::File;
 use std::path::Path;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -29,12 +30,6 @@ impl KernelIoError {
 
     fn from_rustix(error: rustix::io::Errno) -> Self {
         Self::from_raw_os_error(error.raw_os_error())
-    }
-
-    fn from_std(error: &std::io::Error) -> Self {
-        Self {
-            raw_os_error: error.raw_os_error(),
-        }
     }
 
     pub(crate) const fn invariant() -> Self {
@@ -105,18 +100,35 @@ pub struct LinuxKernelIo {
 }
 
 impl LinuxKernelIo {
-    /// Opens one generation-scoped kernel receiver endpoint for read/write use.
+    /// Opens one generation-scoped kernel receiver endpoint for passive reads.
     ///
     /// # Errors
     ///
     /// Returns a bounded error that does not include the private device path.
-    pub fn open(path: &Path) -> Result<Self, KernelIoError> {
-        OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(path)
-            .map(|file| Self { file })
-            .map_err(|error| KernelIoError::from_std(&error))
+    pub fn open_read_only(path: &Path) -> Result<Self, KernelIoError> {
+        open(
+            path,
+            OFlags::RDONLY | OFlags::CLOEXEC | OFlags::NOFOLLOW,
+            Mode::empty(),
+        )
+        .map(|file| Self { file: file.into() })
+        .map_err(KernelIoError::from_rustix)
+    }
+
+    /// Opens one generation-scoped kernel receiver endpoint for an admitted
+    /// writer session.
+    ///
+    /// # Errors
+    ///
+    /// Returns a bounded error that does not include the private device path.
+    pub fn open_read_write(path: &Path) -> Result<Self, KernelIoError> {
+        open(
+            path,
+            OFlags::RDWR | OFlags::CLOEXEC | OFlags::NOFOLLOW,
+            Mode::empty(),
+        )
+        .map(|file| Self { file: file.into() })
+        .map_err(KernelIoError::from_rustix)
     }
 }
 

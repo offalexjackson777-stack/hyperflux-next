@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/hfx-bridge", "crates/hfx-core", "crates/hfx-domain", "crates/hfx-errors", "crates/hfx-integration-model", "crates/hfx-kernel-transport", "crates/hfx-profiles", "crates/hfx-protocol", "crates/hfx-sdk", "crates/hfx-sim"]
+members = ["crates/hfx-bridge", "crates/hfx-core", "crates/hfx-daemon", "crates/hfx-domain", "crates/hfx-errors", "crates/hfx-integration-model", "crates/hfx-kernel-transport", "crates/hfx-ops", "crates/hfx-profiles", "crates/hfx-protocol", "crates/hfx-runtime", "crates/hfx-sdk", "crates/hfx-sim"]
 resolver = "3"
 
 [workspace.package]
@@ -14,6 +14,7 @@ serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.150"
 sha2 = "=0.11.0"
 rustix = { version = "=1.1.4", features = ["fs", "process", "rand", "time"] }
+signal-hook = { version = "=0.4.4", default-features = false }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

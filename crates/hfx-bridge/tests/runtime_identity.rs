@@ -49,6 +49,36 @@ fn runtime_identities_share_one_nonrepeating_process_sequence() {
 }
 
 #[test]
+fn application_and_restoration_dispatches_cannot_reserve_the_same_nonce() {
+    let mut source = DeterministicSource {
+        next: 0x20,
+        fail: false,
+    };
+    let mut issuer = RuntimeIdentityIssuer::new(&mut source).expect("issuer initializes");
+
+    let application_first = issuer.dispatch_nonce().expect("application nonce");
+    let restoration_first = issuer.dispatch_nonce().expect("restoration nonce");
+    let _unrelated_lease = issuer.lease_id().expect("interleaved lease identity");
+    let restoration_retry = issuer.dispatch_nonce().expect("restoration retry nonce");
+    let application_second = issuer.dispatch_nonce().expect("second application nonce");
+
+    assert_eq!(application_first.get(), 1);
+    assert_eq!(restoration_first.get(), 2);
+    assert_eq!(restoration_retry.get(), 4);
+    assert_eq!(application_second.get(), 5);
+    assert!(
+        [
+            application_first.get(),
+            restoration_first.get(),
+            restoration_retry.get(),
+            application_second.get(),
+        ]
+        .windows(2)
+        .all(|pair| pair[0] < pair[1])
+    );
+}
+
+#[test]
 fn entropy_failure_creates_no_partially_initialized_issuer() {
     let mut source = DeterministicSource {
         next: 0,

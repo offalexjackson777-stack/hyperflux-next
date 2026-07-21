@@ -156,7 +156,7 @@ class ErrorDescriptor:
     docs_path: str
 
 
-ERROR_CATALOG_SHA256: Final = "e5047af79969e00a9010d3d23f5c741feb4f406828539444cf91c605a8801aa9"
+ERROR_CATALOG_SHA256: Final = "dc21516800b761970c0e7c14a030424a56235610f3355f70f70259e2e4843e91"
 MAX_ERROR_COUNT: Final = 256
 MAX_REMEDIATION_COUNT: Final = 128
 MAX_SAFE_DETAIL_FIELDS: Final = 12
@@ -702,7 +702,7 @@ DETAILS_17: Final = (
         required=True,
         maximum_length=None,
         maximum_value=None,
-        allowed_values=('activating', 'failed', 'inactive', 'stopping'),
+        allowed_values=('activating', 'active-unready', 'failed', 'inactive', 'stopping', 'unavailable'),
         privacy=PrivacyClass.PUBLIC,
         description="Sanitized bridge service state.",
     ),
@@ -1133,8 +1133,8 @@ ERRORS: Final = (
             replacement_code=None,
         ),
         owner=ErrorOwner.PACKAGING,
-        technical_cause="The compatible bridge service is not ready to accept SDK requests.",
-        user_explanation="The HyperFlux service is not running yet.",
+        technical_cause="The compatible bridge service is stopped or is not ready to accept SDK requests.",
+        user_explanation="The HyperFlux service is not ready yet.",
         privacy=PrivacyClass.PUBLIC,
         docs_path="docs/generated/error-catalog.md#hfx-service-001",
     ),

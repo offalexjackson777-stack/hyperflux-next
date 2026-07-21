@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use crate::{LightingTopology, PROFILES, PresentationRecord, ProfileRecord};
+use crate::{
+    LightingTopology, PROFILES, PassiveTelemetryRecord, PresentationRecord, ProfileRecord,
+};
 use hfx_domain::{
     CapabilityId, CarrierIndex, DeviceKind, DomainValueError, LedCount, ProductId, ProfileDigest,
     ProfileId, ProfileKind, ProfileRevision, RouteKind, SupportLevel, VendorId,
@@ -118,6 +120,7 @@ pub struct RuntimeProfile {
     pub exact_child_combinations: bool,
     pub capabilities: Vec<RuntimeCapability>,
     pub lighting: Option<RuntimeLightingTopology>,
+    pub passive: Option<PassiveTelemetryRecord>,
     pub presentation: Option<RuntimePresentation>,
 }
 
@@ -255,6 +258,7 @@ fn convert_profile(record: &ProfileRecord) -> Result<RuntimeProfile, ProfileCata
             })
             .collect::<Result<Vec<_>, ProfileCatalogError>>()?,
         lighting: record.lighting.map(convert_lighting).transpose()?,
+        passive: record.passive,
         presentation: record.presentation.map(convert_presentation),
     })
 }

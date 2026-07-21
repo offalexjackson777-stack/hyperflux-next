@@ -311,7 +311,7 @@ struct ErrorDescriptor
     std::string_view docs_path;
 };
 
-inline constexpr std::string_view error_catalog_sha256 = "e5047af79969e00a9010d3d23f5c741feb4f406828539444cf91c605a8801aa9";
+inline constexpr std::string_view error_catalog_sha256 = "dc21516800b761970c0e7c14a030424a56235610f3355f70f70259e2e4843e91";
 inline constexpr std::size_t max_error_count = 256;
 inline constexpr std::size_t max_remediation_count = 128;
 inline constexpr std::size_t max_safe_detail_fields = 12;
@@ -440,7 +440,7 @@ inline constexpr std::array<SafeDetailFieldDescriptor, 3> details_16 {{
     {"request_id", SafeDetailKind::Identifier, false, 128ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::PublicSummary, "Request identity when parsing reached it."},
 }};
 
-inline constexpr std::array<std::string_view, 4> detail_values_17_0 {{"activating", "failed", "inactive", "stopping"}};
+inline constexpr std::array<std::string_view, 6> detail_values_17_0 {{"activating", "active-unready", "failed", "inactive", "stopping", "unavailable"}};
 
 inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_17 {{
     {"service_state", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_17_0, PrivacyClass::Public, "Sanitized bridge service state."},
@@ -640,8 +640,8 @@ inline constexpr std::array<ErrorDescriptor, 21> errors {{
         SideEffectCertaintyPolicy::NotApplicable,
         RemediationId::StartBridge, details_17,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
-        ErrorOwner::Packaging, "The compatible bridge service is not ready to accept SDK requests.",
-        "The HyperFlux service is not running yet.", PrivacyClass::Public,
+        ErrorOwner::Packaging, "The compatible bridge service is stopped or is not ready to accept SDK requests.",
+        "The HyperFlux service is not ready yet.", PrivacyClass::Public,
         "docs/generated/error-catalog.md#hfx-service-001"
     },
     {

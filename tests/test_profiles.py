@@ -138,6 +138,33 @@ class ProfileCompilerTests(unittest.TestCase):
         with self.assertRaisesRegex(ModelError, "repeats a receiver carrier"):
             _validate_profiles(profiles, capabilities, claims)
 
+    def test_passive_decoder_is_lane_bound_disjoint_and_profile_local(self) -> None:
+        profiles, capabilities, claims = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        mouse["transport"]["passive"]["endpoint_lane"] = "keyboard"
+        with self.assertRaisesRegex(ModelError, "passive lane contradicts"):
+            _validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
+        keyboard["transport"]["passive"]["route"]["unavailable"].append(3)
+        keyboard["transport"]["passive"]["route"]["unavailable"].sort()
+        with self.assertRaisesRegex(ModelError, "route values must be disjoint"):
+            _validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        del mouse["transport"]["passive"]
+        with self.assertRaisesRegex(ModelError, "passive telemetry requires a decoder"):
+            _validate_profiles(profiles, capabilities, claims)
+
+    def test_passive_semantics_participate_in_runtime_profile_digest(self) -> None:
+        profiles, capabilities, _ = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        before = _runtime_profile_digest(mouse, capabilities)
+        mouse["transport"]["passive"]["contact"]["on_mat"] = [2]
+        self.assertNotEqual(_runtime_profile_digest(mouse, capabilities), before)
+
     def test_candidate_names_never_grant_writes_or_guess_pids(self) -> None:
         self.assertEqual(len(self.inputs.candidates), 11)
         for candidate in self.inputs.candidates:

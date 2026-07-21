@@ -215,6 +215,11 @@ impl TransactionCoordinator {
         if transport.current_generation(&request.receiver_id) != Some(request.generation_id) {
             return Err(TransactionCoordinatorError::StaleGeneration);
         }
+        if !transport.write_available(&request.receiver_id, request.generation_id) {
+            return Err(TransactionCoordinatorError::DeviceNotReady(
+                DeviceWriteReadiness::Unavailable,
+            ));
+        }
         machine.advance(TransactionState::GenerationBound)?;
         if !request
             .resources
@@ -263,6 +268,35 @@ impl TransactionCoordinator {
             return Err(error.into());
         }
         Ok(SubmissionResult::Queued(progress))
+    }
+
+    /// Returns the first live transaction only when every current dispatch
+    /// authority would permit it to reach transport.
+    ///
+    /// This read-only preflight lets a caller durably prepare semantic state
+    /// immediately before [`Self::dispatch_next`] repeats the same gates and
+    /// performs the write on the same actor thread.
+    #[must_use]
+    #[allow(clippy::too_many_arguments)]
+    pub fn next_dispatchable_request<A, D, P, T>(
+        &self,
+        now: MonotonicMs,
+        sessions: &A,
+        leases: &LeaseManager,
+        profiles: &P,
+        devices: &D,
+        transport: &T,
+    ) -> Option<&TransactionRequest>
+    where
+        A: SessionAuthority,
+        D: DeviceStateAuthority,
+        P: ProfileRegistry,
+        T: ReceiverTransport,
+    {
+        let queued = self.queue.first_live(now)?;
+        dispatch_preflight(queued, now, sessions, leases, profiles, devices, transport)
+            .is_none()
+            .then_some(&queued.request)
     }
 
     /// Dispatches at most one queued transaction after rechecking every authority.
@@ -691,6 +725,9 @@ where
         != Some(queued.request.generation_id)
     {
         Some(ProtocolErrorKind::StaleGeneration)
+    } else if !transport.write_available(&queued.request.receiver_id, queued.request.generation_id)
+    {
+        Some(ProtocolErrorKind::TransportFailure)
     } else if !queued
         .request
         .resources

@@ -275,6 +275,12 @@ impl BoundedTransactionQueue {
         }
     }
 
+    pub(crate) fn first_live(&self, now: MonotonicMs) -> Option<&QueuedTransaction> {
+        self.pending
+            .iter()
+            .find(|queued| queued.request.deadline_ms > now)
+    }
+
     /// Removes one exact transaction after expiring elapsed work.
     ///
     /// Other live queue entries retain their relative order.

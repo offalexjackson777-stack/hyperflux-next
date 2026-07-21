@@ -108,6 +108,12 @@ pub trait ReceiverTransport {
 
     fn current_generation(&self, receiver_id: &ReceiverId) -> Option<GenerationId>;
 
+    /// Reports whether one exact current route can accept writer authority.
+    /// Passive transports may retain generation truth while returning false.
+    fn write_available(&self, receiver_id: &ReceiverId, generation_id: GenerationId) -> bool {
+        self.current_generation(receiver_id) == Some(generation_id)
+    }
+
     /// Reconciles one exact dispatch against the adapter's durable outcome log.
     ///
     /// The adapter must bind the lookup to session, authorization epoch,

@@ -103,10 +103,22 @@ pub struct LifecycleObservation {
     pub kind: LifecycleObservationKind,
 }
 
+impl LifecycleObservation {
+    #[must_use]
+    pub fn device_id(&self) -> Option<&LogicalDeviceId> {
+        self.kind.device_id()
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AppliedLifecycleObservation {
     pub receiver_id: ReceiverId,
     pub generation_id: GenerationId,
+    pub receiver_before: ReceiverLifecycleState,
+    pub receiver_after: ReceiverLifecycleState,
+    pub device_id: Option<LogicalDeviceId>,
+    pub device_presence_before: Option<PresenceState>,
+    pub device_presence_after: Option<PresenceState>,
     pub events: Vec<EventKind>,
 }
 
@@ -252,6 +264,13 @@ impl LifecycleObservationOrchestrator {
         let current = machine
             .current()
             .ok_or_else(|| LifecycleObservationError::MissingReceiver(receiver_id.clone()))?;
+        let receiver_after = current.lifecycle().value();
+        let device_id = event_context.device_id.clone();
+        let device_presence_before = event_context.before_presence;
+        let device_presence_after = device_id
+            .as_ref()
+            .and_then(|device_id| current.device(device_id))
+            .map(hfx_core::DeviceLifecycle::presence);
         let event_kinds =
             append_observation_events(event_context, current, &mut next_events, &mut emitted)?;
 
@@ -262,6 +281,11 @@ impl LifecycleObservationOrchestrator {
             AppliedLifecycleObservation {
                 receiver_id,
                 generation_id,
+                receiver_before,
+                receiver_after,
+                device_id,
+                device_presence_before,
+                device_presence_after,
                 events: event_kinds,
             },
         ))

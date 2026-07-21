@@ -2,6 +2,7 @@
 
 #![forbid(unsafe_code)]
 
+mod actor;
 mod backend;
 mod clock;
 mod connection;
@@ -18,11 +19,16 @@ mod snapshot;
 mod staged_events;
 mod subscriptions;
 
+pub use actor::{
+    ActorConnectionServeError, BridgeActor, BridgeActorError, BridgeActorExit, BridgeActorHandle,
+    BridgeActorLimits, BridgeActorStartError, BridgeActorTickFailure, BridgeConnectionId,
+    serve_actor_connection,
+};
 pub use backend::{
     BridgeDispatchResult, CoreBridgeBackend, CoreBridgeBackendError, CoreBridgeConfig,
     StableCaptureStatus,
 };
-pub use clock::LinuxMonotonicClock;
+pub use clock::{LinuxMonotonicClock, LinuxWallClock};
 pub use connection::{ConnectionServeError, ConnectionServeReport, serve_connection};
 pub use generation::{
     GenerationActivation, GenerationActivationOutcome, GenerationOrchestrationError,

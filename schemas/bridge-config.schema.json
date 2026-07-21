@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/bridge-config-v1.json",
+  "title": "HyperFlux bridge configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "mode", "restoration", "socket"],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "restoration": {
+            "properties": {"enabled": {"const": true}},
+            "required": ["enabled"]
+          }
+        },
+        "required": ["restoration"]
+      },
+      "then": {
+        "properties": {"mode": {"const": "qualified-live"}}
+      }
+    }
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-bridge-config-v1"},
+    "mode": {"enum": ["read-only", "qualified-live"]},
+    "restoration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {"type": "boolean"}
+      }
+    },
+    "socket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["group", "mode"],
+      "properties": {
+        "group": {"type": "string", "pattern": "^[a-z_][a-z0-9_-]{0,31}$"},
+        "mode": {"const": "0660"}
+      }
+    }
+  }
+}

@@ -17,8 +17,8 @@ use crate::{
     TransportReceipt, TransportReconciliation, TransportTerminal, canonical_request_digest,
 };
 use hfx_domain::{
-    ColorChannel, DeliveredFrameCount, DeviceApplicationState, DeviceWriteReadiness, DispatchNonce,
-    EventKind, FrameIndex, GenerationId, IntentRevision, LeaseId, LogicalDeviceId, MonotonicMs,
+    ColorChannel, DeliveredFrameCount, DeviceApplicationState, DeviceWriteReadiness, EventKind,
+    FrameIndex, GenerationId, IntentRevision, LeaseId, LogicalDeviceId, MonotonicMs,
     PersistenceRevision, ProtocolErrorKind, ReceiverId, RequestId, ResourceKind,
     RestoreAttemptNumber, RestoreClaimId, RestoreDeferReason, RestoreInvalidationReason,
     SideEffectCertainty, TransactionClass, TransactionId, TransactionState,
@@ -97,6 +97,29 @@ impl RestorationCoordinator {
             planned.push(candidate);
         }
         Ok(RestorePlanResult::Planned(planned))
+    }
+
+    /// Loads every validated nonterminal claim for one receiver.
+    ///
+    /// Production uses this before planning a new lifecycle trigger so a
+    /// process restart reconciles an already prepared or applying attempt
+    /// before it can supersede that durable authority.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for malformed, over-capacity, foreign, duplicate, or
+    /// unavailable persisted restore records.
+    pub fn pending_restore_records<S: PersistenceStore>(
+        &self,
+        receiver_id: &ReceiverId,
+        store: &S,
+    ) -> Result<Vec<RestoreRecord>, RestorationError> {
+        load_records(receiver_id, store).map(|records| {
+            records
+                .into_iter()
+                .filter(|record| !record.status.is_terminal())
+                .collect()
+        })
     }
 
     /// Advances one durable claim to deferred, queued, or terminal state.
@@ -934,7 +957,7 @@ fn build_attempt(
     let submission = SubmissionBinding {
         session_id: authority.submission.session_id.clone(),
         authorization_epoch: authority.submission.authorization_epoch,
-        dispatch_nonce: attempt_nonce(authority.submission.dispatch_nonce, attempt_number)?,
+        dispatch_nonce: authority.submission.dispatch_nonce,
     };
     Ok(RestoreAttempt {
         attempt_number,
@@ -1673,18 +1696,6 @@ fn next_attempt_number(
 
 fn attempt_suffix(claim_id: &RestoreClaimId, attempt: RestoreAttemptNumber) -> String {
     format!("{}-{}", claim_id.as_str(), attempt.get())
-}
-
-fn attempt_nonce(
-    base: DispatchNonce,
-    attempt: RestoreAttemptNumber,
-) -> Result<DispatchNonce, RestorationError> {
-    let offset = u64::from(attempt.get() - 1);
-    let value = base
-        .get()
-        .checked_add(offset)
-        .ok_or(RestorationError::NonceOverflow)?;
-    DispatchNonce::try_from(value).map_err(|_| RestorationError::NonceOverflow)
 }
 
 fn typed_id<T>(prefix: &str, suffix: &str) -> Result<T, RestorationError>

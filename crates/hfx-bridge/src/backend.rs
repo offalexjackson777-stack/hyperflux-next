@@ -13,13 +13,14 @@ use hfx_core::{
     BoundedEventLog, Clock, DiagnosticRegistry, DiagnosticRegistryError, DispatchResult,
     EventDraft, EventLogError, EventSink, LeaseManager, LeaseManagerError, LifecycleLimits,
     OutcomeJournalError, OutcomeLookup, PersistedStableIntent, ProfileRegistry,
-    ReceiverLifecycleRegistry, ReceiverTransport, RestorationError, SessionAuthority,
+    ReceiverLifecycleRegistry, ReceiverTransport, RestorationAuthority, RestorationError,
+    RestoreAdvanceResult, RestorePlanResult, RestoreRecord, RestoreTrigger, SessionAuthority,
     StableCommitOutcome, SubmissionResult, TransactionCoordinator, TransactionCoordinatorError,
     TransactionQueueError, WallClock,
 };
 use hfx_domain::{
-    EventKind, FindingId, ProjectionRevision, ProtocolErrorKind, QueueCapacity, StreamEpoch,
-    StreamId,
+    EventKind, FindingId, LeaseDurationMs, MonotonicMs, ProjectionRevision, ProtocolErrorKind,
+    QueueCapacity, ReceiverId, RestoreClaimId, StreamEpoch, StreamId,
 };
 use hfx_errors::ErrorCode;
 use hfx_integration_model::project_integration_view;
@@ -187,11 +188,28 @@ where
         sessions: &SessionRegistry,
     ) -> Result<BridgeDispatchResult, RpcFailure> {
         self.tick()?;
+        let now = self.clock.now();
         let profiles = self.profiles.view(&self.receivers);
+        let prepared_request = self
+            .transactions
+            .next_dispatchable_request(
+                now,
+                sessions,
+                &self.leases,
+                &profiles,
+                &profiles,
+                &self.transport,
+            )
+            .cloned();
+        if let Some(request) = prepared_request.as_ref() {
+            self.restoration
+                .prepare_stable_dispatch(request, self.wall_clock.now_unix_ms())
+                .map_err(persistence_write_failure)?;
+        }
         let dispatch = self
             .transactions
             .dispatch_next(
-                self.clock.now(),
+                now,
                 sessions,
                 &self.leases,
                 &profiles,
@@ -318,6 +336,124 @@ where
         )
     }
 
+    /// Synchronizes one receiver's durable restoration policy with the
+    /// validated service configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns a durable validation or compare-and-set failure.
+    pub fn set_restoration_enabled(
+        &mut self,
+        receiver_id: &ReceiverId,
+        enabled: bool,
+    ) -> Result<(), RestorationError> {
+        self.restoration.set_enabled(receiver_id, enabled)
+    }
+
+    /// Loads all validated nonterminal restoration claims for one receiver.
+    ///
+    /// # Errors
+    ///
+    /// Returns a persistence or durable-record validation failure.
+    pub fn pending_restoration_records(
+        &self,
+        receiver_id: &ReceiverId,
+    ) -> Result<Vec<RestoreRecord>, RestorationError> {
+        self.restoration.pending_records(receiver_id)
+    }
+
+    /// Plans one exact lifecycle restoration trigger.
+    ///
+    /// # Errors
+    ///
+    /// Returns a trigger, persistence, capacity, or prior-attempt barrier.
+    pub fn plan_restoration(
+        &mut self,
+        trigger: &RestoreTrigger,
+    ) -> Result<RestorePlanResult, RestorationError> {
+        self.restoration.plan_restore(trigger)
+    }
+
+    /// Advances one restoration claim through the same session, ownership,
+    /// profile, generation, transaction, and event authorities as SDK writes.
+    /// This phase never dispatches hardware.
+    ///
+    /// # Errors
+    ///
+    /// Returns a durable restoration or runtime-identity failure.
+    pub fn advance_restoration(
+        &mut self,
+        claim_id: &RestoreClaimId,
+        session: &AuthorizedSession,
+        sessions: &SessionRegistry,
+        lease_duration_ms: LeaseDurationMs,
+        authority_window_ms: u64,
+    ) -> Result<RestoreAdvanceResult, RestorationError> {
+        let now = self.clock.now();
+        let deadline = now
+            .get()
+            .checked_add(authority_window_ms)
+            .ok_or(RestorationError::AuthorityDeadlineOverflow)?;
+        let authority = RestorationAuthority {
+            client_id: session.client_id.clone(),
+            submission: session.submission_binding(
+                self.identities
+                    .dispatch_nonce()
+                    .map_err(|_| RestorationError::Identifier)?,
+            ),
+            lease_duration_ms,
+            deadline_ms: MonotonicMs::try_from(deadline)
+                .map_err(|_| RestorationError::AuthorityDeadlineOverflow)?,
+        };
+        let profiles = self.profiles.view(&self.receivers);
+        self.restoration.advance_claim(
+            claim_id,
+            &authority,
+            now,
+            sessions,
+            &profiles,
+            &profiles,
+            &self.transport,
+            &mut self.leases,
+            &mut self.transactions,
+            &mut self.events,
+            &mut self.event_sink,
+        )
+    }
+
+    /// Revalidates and dispatches one durably queued restoration claim.
+    ///
+    /// # Errors
+    ///
+    /// Returns a generation, authority, profile, transport, transaction,
+    /// persistence, lease, or event failure without authorizing an implicit
+    /// retry after an uncertain side effect.
+    pub fn dispatch_restoration(
+        &mut self,
+        claim_id: &RestoreClaimId,
+        sessions: &SessionRegistry,
+    ) -> Result<RestoreRecord, RestorationError> {
+        let now = self.clock.now();
+        let profiles = self.profiles.view(&self.receivers);
+        self.restoration.dispatch_claim(
+            claim_id,
+            now,
+            sessions,
+            &profiles,
+            &profiles,
+            &mut self.transport,
+            &mut self.leases,
+            &mut self.transactions,
+            &mut self.events,
+            &mut self.event_sink,
+        )
+    }
+
+    #[must_use]
+    pub fn now(&self) -> MonotonicMs {
+        self.clock.now()
+    }
+
     #[must_use]
     pub const fn receivers(&self) -> &ReceiverLifecycleRegistry {
         &self.receivers
@@ -396,6 +532,12 @@ where
                 != Some(resource.generation_id)
             {
                 return Err(generation_failure());
+            }
+            if !self
+                .transport
+                .write_available(&resource.receiver_id, resource.generation_id)
+            {
+                return Err(transport_unavailable_failure());
             }
             if !profiles.supports(resource) {
                 return Err(profile_failure());
@@ -689,6 +831,13 @@ const fn profile_failure() -> RpcFailure {
     )
 }
 
+const fn transport_unavailable_failure() -> RpcFailure {
+    RpcFailure::new(
+        ErrorCode::HfxTransport001,
+        ProtocolErrorKind::TransportFailure,
+    )
+}
+
 const fn queue_failure() -> RpcFailure {
     RpcFailure::new(ErrorCode::HfxQueue001, ProtocolErrorKind::QueueFull)
 }
@@ -720,6 +869,13 @@ fn snapshot_failure(error: &SnapshotProjectionError) -> RpcFailure {
         ),
         SnapshotProjectionError::InvalidSnapshot(_) => RpcFailure::internal(),
     }
+}
+
+fn persistence_write_failure(_error: RestorationError) -> RpcFailure {
+    RpcFailure::new(
+        ErrorCode::HfxPersistence002,
+        ProtocolErrorKind::InternalFailure,
+    )
 }
 
 fn lease_failure(error: &LeaseManagerError) -> RpcFailure {

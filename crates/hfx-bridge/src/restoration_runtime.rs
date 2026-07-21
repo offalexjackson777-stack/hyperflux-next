@@ -7,15 +7,141 @@ use crate::{
     RestorationSnapshotSource,
 };
 use hfx_core::{
-    BoundedEventLog, CURRENT_PERSISTENCE_SCHEMA_VERSION, CompletedTransaction, EventSink,
-    LeaseManager, MAX_RESTORE_RECORDS_PER_RECEIVER, PersistenceStore, ReceiverTransport,
-    RestorationCoordinator, RestorationError, RestoreGenerationRetirement, RestoreRecordStatus,
-    StableCommitOutcome, TransactionCoordinator,
+    BoundedEventLog, CURRENT_PERSISTENCE_SCHEMA_VERSION, CompletedTransaction,
+    DeviceStateAuthority, EventSink, LeaseManager, MAX_RESTORE_RECORDS_PER_RECEIVER,
+    PersistenceOperation, PersistenceStore, ProfileRegistry, ReceiverTransport,
+    RestorationAuthority, RestorationCoordinator, RestorationError, RestoreAdvanceResult,
+    RestoreGenerationRetirement, RestorePlanResult, RestoreRecord, RestoreRecordStatus,
+    RestoreTrigger, SessionAuthority, StableCommitOutcome, TransactionCoordinator,
 };
-use hfx_domain::{GenerationId, MonotonicMs, ReceiverId, RestoreState, WallClockUnixMs};
+use hfx_domain::{
+    GenerationId, MonotonicMs, ReceiverId, RestoreClaimId, RestoreState, TransactionClass,
+    WallClockUnixMs,
+};
+use hfx_protocol::TransactionRequest;
 
 /// Owns durable stable-lighting capture, projection, and generation retirement.
 pub trait RestorationRuntime: RestorationSnapshotSource {
+    /// Synchronizes the persisted policy with the service configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns a durable policy validation or compare-and-set failure.
+    fn set_enabled(
+        &mut self,
+        _receiver_id: &ReceiverId,
+        enabled: bool,
+    ) -> Result<(), RestorationError> {
+        if enabled {
+            Err(RestorationError::RuntimeDisabled)
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Loads all validated nonterminal claims for one receiver.
+    ///
+    /// # Errors
+    ///
+    /// Returns a persistence or record validation failure.
+    fn pending_records(
+        &self,
+        _receiver_id: &ReceiverId,
+    ) -> Result<Vec<RestoreRecord>, RestorationError> {
+        Ok(Vec::new())
+    }
+
+    /// Plans claims for one exact lifecycle trigger.
+    ///
+    /// # Errors
+    ///
+    /// Returns a trigger, persistence, capacity, or prior-attempt barrier.
+    fn plan_restore(
+        &mut self,
+        _trigger: &RestoreTrigger,
+    ) -> Result<RestorePlanResult, RestorationError> {
+        Ok(RestorePlanResult::Disabled)
+    }
+
+    /// Advances one durable claim without performing a hardware write.
+    ///
+    /// # Errors
+    ///
+    /// Returns the production coordinator's authority, persistence, lease, or
+    /// transaction failure.
+    #[allow(clippy::too_many_arguments)]
+    fn advance_claim<A, D, P, T, E>(
+        &mut self,
+        _claim_id: &RestoreClaimId,
+        _authority: &RestorationAuthority,
+        _now: MonotonicMs,
+        _sessions: &A,
+        _devices: &D,
+        _profiles: &P,
+        _transport: &T,
+        _leases: &mut LeaseManager,
+        _transactions: &mut TransactionCoordinator,
+        _events: &mut BoundedEventLog,
+        _sink: &mut E,
+    ) -> Result<RestoreAdvanceResult, RestorationError>
+    where
+        A: SessionAuthority,
+        D: DeviceStateAuthority,
+        P: ProfileRegistry,
+        T: ReceiverTransport,
+        E: EventSink,
+    {
+        Err(RestorationError::RuntimeDisabled)
+    }
+
+    /// Dispatches one claim already durably marked queued.
+    ///
+    /// # Errors
+    ///
+    /// Returns the production coordinator's revalidation, transport,
+    /// persistence, lease, transaction, or event failure.
+    #[allow(clippy::too_many_arguments)]
+    fn dispatch_claim<A, D, P, T, E>(
+        &mut self,
+        _claim_id: &RestoreClaimId,
+        _now: MonotonicMs,
+        _sessions: &A,
+        _devices: &D,
+        _profiles: &P,
+        _transport: &mut T,
+        _leases: &mut LeaseManager,
+        _transactions: &mut TransactionCoordinator,
+        _events: &mut BoundedEventLog,
+        _sink: &mut E,
+    ) -> Result<RestoreRecord, RestorationError>
+    where
+        A: SessionAuthority,
+        D: DeviceStateAuthority,
+        P: ProfileRegistry,
+        T: ReceiverTransport,
+        E: EventSink,
+    {
+        Err(RestorationError::RuntimeDisabled)
+    }
+
+    /// Durably invalidates the prior stable state immediately before a
+    /// dispatchable stable-lighting request reaches transport.
+    ///
+    /// Implementations that do not persist restoration state may keep the
+    /// default no-op. Production durable storage uses this as the first phase
+    /// of a tombstone/write/capture protocol.
+    ///
+    /// # Errors
+    ///
+    /// Returns a persistence or validation failure before any hardware write.
+    fn prepare_stable_dispatch(
+        &mut self,
+        _request: &TransactionRequest,
+        _prepared_at: WallClockUnixMs,
+    ) -> Result<(), RestorationError> {
+        Ok(())
+    }
+
     /// Observes one immutable completion after transport and outcome journaling.
     ///
     /// # Errors
@@ -158,6 +284,142 @@ impl<S: PersistenceStore> RestorationSnapshotSource for DurableRestorationRuntim
 }
 
 impl<S: PersistenceStore> RestorationRuntime for DurableRestorationRuntime<S> {
+    fn set_enabled(
+        &mut self,
+        receiver_id: &ReceiverId,
+        enabled: bool,
+    ) -> Result<(), RestorationError> {
+        let existing = self
+            .store
+            .restore_policy(receiver_id)
+            .map_err(|_| RestorationError::Persistence(PersistenceOperation::LoadPolicy))?;
+        if let Some(policy) = existing {
+            if policy.schema_version.get() != CURRENT_PERSISTENCE_SCHEMA_VERSION {
+                return Err(RestorationError::InvalidSchemaVersion);
+            }
+            if policy.receiver_id != *receiver_id {
+                return Err(RestorationError::ReceiverMismatch);
+            }
+            if policy.enabled == enabled {
+                return Ok(());
+            }
+        }
+        RestorationCoordinator
+            .set_restore_enabled(receiver_id, enabled, &mut self.store)
+            .map(|_| ())
+    }
+
+    fn pending_records(
+        &self,
+        receiver_id: &ReceiverId,
+    ) -> Result<Vec<RestoreRecord>, RestorationError> {
+        RestorationCoordinator.pending_restore_records(receiver_id, &self.store)
+    }
+
+    fn plan_restore(
+        &mut self,
+        trigger: &RestoreTrigger,
+    ) -> Result<RestorePlanResult, RestorationError> {
+        RestorationCoordinator.plan_restore(trigger, &mut self.store)
+    }
+
+    fn advance_claim<A, D, P, T, E>(
+        &mut self,
+        claim_id: &RestoreClaimId,
+        authority: &RestorationAuthority,
+        now: MonotonicMs,
+        sessions: &A,
+        devices: &D,
+        profiles: &P,
+        transport: &T,
+        leases: &mut LeaseManager,
+        transactions: &mut TransactionCoordinator,
+        events: &mut BoundedEventLog,
+        sink: &mut E,
+    ) -> Result<RestoreAdvanceResult, RestorationError>
+    where
+        A: SessionAuthority,
+        D: DeviceStateAuthority,
+        P: ProfileRegistry,
+        T: ReceiverTransport,
+        E: EventSink,
+    {
+        RestorationCoordinator.advance_claim(
+            claim_id,
+            authority,
+            now,
+            sessions,
+            devices,
+            profiles,
+            transport,
+            &mut self.store,
+            leases,
+            transactions,
+            events,
+            sink,
+        )
+    }
+
+    fn dispatch_claim<A, D, P, T, E>(
+        &mut self,
+        claim_id: &RestoreClaimId,
+        now: MonotonicMs,
+        sessions: &A,
+        devices: &D,
+        profiles: &P,
+        transport: &mut T,
+        leases: &mut LeaseManager,
+        transactions: &mut TransactionCoordinator,
+        events: &mut BoundedEventLog,
+        sink: &mut E,
+    ) -> Result<RestoreRecord, RestorationError>
+    where
+        A: SessionAuthority,
+        D: DeviceStateAuthority,
+        P: ProfileRegistry,
+        T: ReceiverTransport,
+        E: EventSink,
+    {
+        RestorationCoordinator.dispatch_claim(
+            claim_id,
+            now,
+            sessions,
+            devices,
+            profiles,
+            transport,
+            &mut self.store,
+            leases,
+            transactions,
+            events,
+            sink,
+        )
+    }
+
+    fn prepare_stable_dispatch(
+        &mut self,
+        request: &TransactionRequest,
+        prepared_at: WallClockUnixMs,
+    ) -> Result<(), RestorationError> {
+        if request.transaction_class != TransactionClass::StaticLighting
+            || request.stable_intents.is_empty()
+        {
+            return Ok(());
+        }
+        let device_ids = request
+            .stable_intents
+            .iter()
+            .map(|intent| intent.device_id.clone())
+            .collect::<Vec<_>>();
+        RestorationCoordinator
+            .clear_stable_intents(
+                &request.receiver_id,
+                &device_ids,
+                prepared_at,
+                &mut self.store,
+            )
+            .map(|_| ())
+    }
+
     fn capture_completed(
         &mut self,
         completed: &CompletedTransaction,

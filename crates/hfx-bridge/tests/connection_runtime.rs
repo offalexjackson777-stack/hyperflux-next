@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_bridge::{
-    AuthorizedSession, BackendRequestContext, BridgeRpcBackend, BridgeSessionConfig,
-    ConnectionServeError, RpcFailure, SessionIdentityError, SessionIdentitySource, SessionRegistry,
-    serve_connection,
+    AuthorizedSession, BackendRequestContext, BridgeActor, BridgeActorLimits, BridgeRpcBackend,
+    BridgeSessionConfig, ConnectionServeError, RpcFailure, SessionIdentityError,
+    SessionIdentitySource, SessionRegistry, serve_actor_connection, serve_connection,
 };
 use hfx_domain::{
     ClientId, ClientName, ComponentVersion, ProjectionRevision, ProtocolVersion, QueueCapacity,
@@ -18,6 +18,7 @@ use hfx_protocol::{
 };
 use std::io::Write;
 use std::os::unix::net::UnixStream;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
@@ -47,6 +48,14 @@ struct FakeBackend {
     snapshot_calls: usize,
     disconnect_calls: usize,
     fail_disconnect: bool,
+    shared_metrics: Option<Arc<Mutex<SharedMetrics>>>,
+}
+
+#[derive(Debug, Default)]
+struct SharedMetrics {
+    snapshot_calls: usize,
+    disconnect_calls: usize,
+    runtime_ticks: usize,
 }
 
 impl BridgeRpcBackend for FakeBackend {
@@ -55,6 +64,12 @@ impl BridgeRpcBackend for FakeBackend {
         _context: BackendRequestContext<'_>,
     ) -> Result<BridgeSnapshot, RpcFailure> {
         self.snapshot_calls += 1;
+        if let Some(metrics) = &self.shared_metrics {
+            metrics
+                .lock()
+                .expect("shared metrics lock is healthy")
+                .snapshot_calls += 1;
+        }
         Ok(empty_snapshot())
     }
 
@@ -126,6 +141,12 @@ impl BridgeRpcBackend for FakeBackend {
 
     fn disconnect(&mut self, _session: &AuthorizedSession) -> Result<(), RpcFailure> {
         self.disconnect_calls += 1;
+        if let Some(metrics) = &self.shared_metrics {
+            metrics
+                .lock()
+                .expect("shared metrics lock is healthy")
+                .disconnect_calls += 1;
+        }
         if self.fail_disconnect {
             return Err(RpcFailure::internal());
         }
@@ -154,10 +175,14 @@ fn registry() -> SessionRegistry {
 }
 
 fn negotiation() -> RpcRequest {
+    negotiation_for("client-connection-test", "request-negotiate")
+}
+
+fn negotiation_for(client_id: &str, request_id: &str) -> RpcRequest {
     RpcRequest::Negotiate(NegotiationRequestEnvelope {
-        request_id: id::<RequestId>("request-negotiate"),
+        request_id: id::<RequestId>(request_id),
         params: ClientHello {
-            client_id: id::<ClientId>("client-connection-test"),
+            client_id: id::<ClientId>(client_id),
             client_name: id::<ClientName>("Connection runtime test"),
             minimum_version: ProtocolVersion::try_from(2).expect("version must be valid"),
             maximum_version: ProtocolVersion::try_from(2).expect("version must be valid"),
@@ -181,7 +206,11 @@ fn empty_snapshot() -> BridgeSnapshot {
 }
 
 fn negotiate(client: &mut UnixStream) -> hfx_protocol::ServerHello {
-    write_rpc_request(client, &negotiation()).expect("negotiation request writes");
+    negotiate_as(client, &negotiation())
+}
+
+fn negotiate_as(client: &mut UnixStream, request: &RpcRequest) -> hfx_protocol::ServerHello {
+    write_rpc_request(client, request).expect("negotiation request writes");
     let response = read_rpc_response(client)
         .expect("negotiation response frame reads")
         .expect("server returns a negotiation response");
@@ -189,6 +218,15 @@ fn negotiate(client: &mut UnixStream) -> hfx_protocol::ServerHello {
         panic!("negotiation must succeed");
     };
     envelope.result
+}
+
+fn snapshot_request(hello: &hfx_protocol::ServerHello, request_id: &str) -> RpcRequest {
+    RpcRequest::Snapshot(SessionRequestEnvelope {
+        request_id: id::<RequestId>(request_id),
+        protocol_session_id: hello.protocol_session_id.clone(),
+        negotiation_token: hello.negotiation_token.clone(),
+        params: EmptyRequest {},
+    })
 }
 
 fn spawn_server(
@@ -288,4 +326,138 @@ fn framing_and_cleanup_failures_are_both_preserved() {
     ));
     assert_eq!(backend.disconnect_calls, 1);
     assert_eq!(remaining_sessions, 0);
+}
+
+#[test]
+fn shared_actor_serves_two_independent_clients_without_backend_lock_ownership() {
+    let metrics = Arc::new(Mutex::new(SharedMetrics::default()));
+    let limits = BridgeActorLimits {
+        command_capacity: QueueCapacity::try_from(16).expect("command capacity is valid"),
+        connection_capacity: QueueCapacity::try_from(4).expect("connection capacity is valid"),
+        response_timeout: Duration::from_secs(2),
+    };
+    let (actor, handle) = BridgeActor::new(
+        config(),
+        DeterministicIdentities::new(),
+        registry(),
+        FakeBackend {
+            shared_metrics: Some(Arc::clone(&metrics)),
+            ..FakeBackend::default()
+        },
+        limits,
+    )
+    .expect("actor configuration is valid");
+    let actor_thread = thread::spawn(move || actor.run());
+
+    let (mut first_client, mut first_server) = UnixStream::pair().expect("first pair creates");
+    let (mut second_client, mut second_server) = UnixStream::pair().expect("second pair creates");
+    first_client
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .expect("first timeout config succeeds");
+    second_client
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .expect("second timeout config succeeds");
+    let first_handle = handle.clone();
+    let second_handle = handle.clone();
+    let first_worker =
+        thread::spawn(move || serve_actor_connection(&mut first_server, &first_handle));
+    let second_worker =
+        thread::spawn(move || serve_actor_connection(&mut second_server, &second_handle));
+
+    let first_hello = negotiate_as(
+        &mut first_client,
+        &negotiation_for("client-actor-first", "request-negotiate-first"),
+    );
+    let second_hello = negotiate_as(
+        &mut second_client,
+        &negotiation_for("client-actor-second", "request-negotiate-second"),
+    );
+    for (client, hello, request_id) in [
+        (&mut first_client, &first_hello, "request-snapshot-first"),
+        (&mut second_client, &second_hello, "request-snapshot-second"),
+    ] {
+        write_rpc_request_for_version(
+            client,
+            &snapshot_request(hello, request_id),
+            hello.selected_version,
+        )
+        .expect("actor snapshot request writes");
+        assert!(matches!(
+            read_rpc_response_for_version(client, hello.selected_version),
+            Ok(Some(RpcResponse::SnapshotSuccess(_)))
+        ));
+        client
+            .shutdown(std::net::Shutdown::Write)
+            .expect("client write side closes");
+    }
+
+    let first_report = first_worker.join().expect("first worker joins");
+    let second_report = second_worker.join().expect("second worker joins");
+    assert!(first_report.is_ok());
+    assert!(second_report.is_ok());
+    let snapshot = metrics.lock().expect("shared metrics lock is healthy");
+    assert_eq!(snapshot.snapshot_calls, 2);
+    assert_eq!(snapshot.disconnect_calls, 2);
+    drop(snapshot);
+
+    assert_eq!(
+        handle.shutdown(),
+        Ok(hfx_bridge::BridgeActorExit::default())
+    );
+    assert_eq!(
+        actor_thread.join().expect("actor thread joins"),
+        hfx_bridge::BridgeActorExit::default()
+    );
+}
+
+#[test]
+fn runtime_tick_runs_after_commands_even_when_idle_timeout_is_long() {
+    let metrics = Arc::new(Mutex::new(SharedMetrics::default()));
+    let limits = BridgeActorLimits {
+        command_capacity: QueueCapacity::try_from(4).expect("command capacity is valid"),
+        connection_capacity: QueueCapacity::try_from(2).expect("connection capacity is valid"),
+        response_timeout: Duration::from_secs(2),
+    };
+    let (actor, handle) = BridgeActor::new(
+        config(),
+        DeterministicIdentities::new(),
+        registry(),
+        FakeBackend {
+            shared_metrics: Some(Arc::clone(&metrics)),
+            ..FakeBackend::default()
+        },
+        limits,
+    )
+    .expect("actor configuration is valid");
+    let actor_thread = thread::spawn(move || {
+        actor.run_with_runtime_tick(Duration::from_mins(1), |backend, _| {
+            if let Some(metrics) = &backend.shared_metrics {
+                metrics
+                    .lock()
+                    .expect("shared metrics lock is healthy")
+                    .runtime_ticks += 1;
+            }
+            Ok::<bool, ()>(true)
+        })
+    });
+
+    let connection_id = handle.open_connection().expect("connection opens");
+    handle
+        .disconnect(connection_id)
+        .expect("connection disconnects");
+    assert_eq!(
+        handle.shutdown(),
+        Ok(hfx_bridge::BridgeActorExit::default())
+    );
+    assert_eq!(
+        actor_thread.join().expect("actor thread joins"),
+        Ok(hfx_bridge::BridgeActorExit::default())
+    );
+    assert_eq!(
+        metrics
+            .lock()
+            .expect("shared metrics lock is healthy")
+            .runtime_ticks,
+        2
+    );
 }

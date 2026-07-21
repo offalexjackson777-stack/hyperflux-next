@@ -264,7 +264,7 @@ fn unknown_mismatched_incompatible_and_nonlighting_resources_get_no_authority() 
 }
 
 #[test]
-fn binding_is_idempotent_bounded_and_strictly_generation_ordered() {
+fn binding_is_idempotent_bounded_and_generation_tokens_are_opaque() {
     let mut authority = RuntimeProfileAuthority::load(1).expect("authority loads");
     let vendor_id = VendorId::try_from(0x1532_u16).expect("vendor id is canonical");
     let product_id = ProductId::try_from(0x00cf_u16).expect("product id is canonical");
@@ -283,21 +283,21 @@ fn binding_is_idempotent_bounded_and_strictly_generation_ordered() {
     assert_eq!(
         authority
             .bind_receiver(text("receiver-a"), generation(2), vendor_id, product_id)
-            .expect("newer generation replaces"),
+            .expect("distinct generation replaces"),
         ProfileBindingOutcome::Replaced {
             previous_generation: generation(1)
         }
     );
     assert_eq!(
-        authority.bind_receiver(text("receiver-a"), generation(1), vendor_id, product_id),
-        Err(RuntimeProfileAuthorityError::StaleGeneration {
-            receiver_id: text("receiver-a"),
-            active_generation: generation(2),
-            requested_generation: generation(1),
-        })
+        authority
+            .bind_receiver(text("receiver-a"), generation(1), vendor_id, product_id)
+            .expect("numerically lower but distinct token replaces"),
+        ProfileBindingOutcome::Replaced {
+            previous_generation: generation(2)
+        }
     );
-    assert!(!authority.retire(&text("receiver-a"), generation(1)));
-    assert!(authority.retire(&text("receiver-a"), generation(2)));
+    assert!(!authority.retire(&text("receiver-a"), generation(2)));
+    assert!(authority.retire(&text("receiver-a"), generation(1)));
 }
 
 #[test]

@@ -353,8 +353,8 @@ impl GenerationOrchestrator {
         let Some(current) = machine.current() else {
             return Ok(ReceiverDisconnectOutcome::Ignored(
                 if machine
-                    .highest_generation()
-                    .is_some_and(|highest| generation_id <= highest)
+                    .latest_generation()
+                    .is_some_and(|latest| generation_id == latest)
                 {
                     ApplyOutcome::RejectedStaleGeneration
                 } else {
@@ -536,7 +536,7 @@ fn stage_activation_lifecycle(
         .is_none_or(|machine| machine.current().is_none());
     let previous_generation = receivers
         .get(receiver_id)
-        .and_then(ReceiverLifecycleMachine::highest_generation);
+        .and_then(ReceiverLifecycleMachine::latest_generation);
     let outcome = if let Some(machine) = receivers.get_mut(receiver_id) {
         if machine.current().is_some() {
             machine.replace_generation(stamp)
