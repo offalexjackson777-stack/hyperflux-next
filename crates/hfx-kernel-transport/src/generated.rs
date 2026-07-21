@@ -3,7 +3,7 @@
 // UAPI source SHA-256: 59b7156060ce299e568aa4abb75d35f4f7902f89ccb2f3263dca0869100cc864
 
 #[repr(C, align(8))]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct AlignedU64(pub u64);
 
 pub const HFX_UAPI_ABI_VERSION: u32 = 1;
@@ -72,7 +72,7 @@ pub const HFX_UAPI_OBSERVATION_CONFIDENCE_EXACT: u32 = 3;
 pub const HFX_UAPI_OBSERVATION_BATCH_FLAG_CURSOR_GAP: u32 = 1;
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct HfxUapiInfo {
     pub version: u32,
     pub size: u32,
@@ -87,7 +87,7 @@ pub struct HfxUapiInfo {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct HfxUapiBeginSession {
     pub version: u32,
     pub size: u32,
@@ -100,7 +100,7 @@ pub struct HfxUapiBeginSession {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct HfxUapiEndSession {
     pub version: u32,
     pub size: u32,
@@ -121,8 +121,21 @@ pub struct HfxUapiFrame {
     pub payload: [u8; HFX_UAPI_MAX_FRAME_BYTES],
 }
 
+impl Default for HfxUapiFrame {
+    fn default() -> Self {
+        Self {
+            backend_id: 0,
+            kind: 0,
+            payload_length: 0,
+            delay_after_us: 0,
+            flags: 0,
+            payload: [0; HFX_UAPI_MAX_FRAME_BYTES],
+        }
+    }
+}
+
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct HfxUapiSubmit {
     pub version: u32,
     pub size: u32,
@@ -137,7 +150,7 @@ pub struct HfxUapiSubmit {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct HfxUapiTransactionResult {
     pub version: u32,
     pub size: u32,
@@ -156,7 +169,7 @@ pub struct HfxUapiTransactionResult {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct HfxUapiObservation {
     pub sequence: AlignedU64,
     pub observed_boottime_ns: AlignedU64,
@@ -169,7 +182,7 @@ pub struct HfxUapiObservation {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct HfxUapiReadObservations {
     pub version: u32,
     pub size: u32,

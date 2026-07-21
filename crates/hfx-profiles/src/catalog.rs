@@ -70,6 +70,7 @@ pub struct RuntimeCapability {
 pub struct RuntimeLightingTopology {
     pub physical_led_count: LedCount,
     pub application_slot_count: LedCount,
+    pub carrier_count: LedCount,
     pub rows: u16,
     pub columns: u16,
     pub application_index_to_carrier: Vec<CarrierIndex>,
@@ -85,6 +86,7 @@ pub struct RuntimeProfile {
     pub vendor_id: Option<VendorId>,
     pub product_id: Option<ProductId>,
     pub model_name: &'static str,
+    pub transport_backend_id: Option<u32>,
     pub protocol_family: Option<&'static str>,
     pub receiver_protocols: &'static [&'static str],
     pub routes: &'static [RouteKind],
@@ -210,6 +212,7 @@ fn convert_profile(record: &ProfileRecord) -> Result<RuntimeProfile, ProfileCata
         vendor_id: record.vendor_id.map(VendorId::try_from).transpose()?,
         product_id: record.product_id.map(ProductId::try_from).transpose()?,
         model_name: record.model_name,
+        transport_backend_id: record.transport_backend_id,
         protocol_family: record.protocol_family,
         receiver_protocols: record.receiver_protocols,
         routes: record.routes,
@@ -237,6 +240,7 @@ fn convert_lighting(
     Ok(RuntimeLightingTopology {
         physical_led_count: LedCount::try_from(lighting.physical_led_count)?,
         application_slot_count: LedCount::try_from(lighting.application_slot_count)?,
+        carrier_count: LedCount::try_from(lighting.carrier_count)?,
         rows: lighting.rows,
         columns: lighting.columns,
         application_index_to_carrier: lighting

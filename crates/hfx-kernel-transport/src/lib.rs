@@ -1,10 +1,22 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)]
 
+mod encoder;
+mod error;
 mod generated;
+mod io;
+#[allow(unsafe_code)]
+mod ioctl_sys;
+mod observation;
+mod transport;
 
+pub use encoder::{EncodedTransaction, ReceiverFrameEncoderRegistry};
+pub use error::{KernelTransportError, KernelTransportErrorKind};
 pub use generated::*;
+pub use io::{KernelIo, KernelIoError, LinuxKernelIo};
+pub use observation::{KernelObservationBatch, RawKernelObservation};
+pub use transport::{KernelReceiverTransport, KernelSessionMaterial};
 
 #[cfg(test)]
 mod tests {

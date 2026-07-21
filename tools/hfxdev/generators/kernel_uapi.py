@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from ..kernel_uapi import KernelUapi, UapiField
+from ..kernel_uapi import KernelUapi, UapiField, UapiStruct
 
 
 def _macro(value: str) -> str:
@@ -51,6 +51,29 @@ def _rust_type(type_name: str) -> str:
         "u64": "AlignedU64",
     }
     return primitive.get(type_name, f"HfxUapi{_pascal(type_name)}")
+
+
+def _rust_default(field: UapiField) -> str:
+    if field.count is not None:
+        value = (
+            "0"
+            if field.type_name in {"u8", "u16", "u32", "i32"}
+            else f"{_rust_type(field.type_name)}::default()"
+        )
+        return f"[{value}; {_count_rust(field)}]"
+    if field.type_name in {"u8", "u16", "u32", "i32"}:
+        return "0"
+    return f"{_rust_type(field.type_name)}::default()"
+
+
+def _rust_can_derive_default(struct: UapiStruct, catalog: KernelUapi) -> bool:
+    for field in struct.fields:
+        if field.count is None:
+            continue
+        count = catalog.limits[field.count] if isinstance(field.count, str) else field.count
+        if count > 32:
+            return False
+    return True
 
 
 def c_header(catalog: KernelUapi) -> str:
@@ -112,7 +135,7 @@ def rust_bindings(catalog: KernelUapi) -> str:
         f"// UAPI source SHA-256: {catalog.source_sha256}",
         "",
         "#[repr(C, align(8))]",
-        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]",
         "pub struct AlignedU64(pub u64);",
         "",
         f"pub const HFX_UAPI_ABI_VERSION: u32 = {catalog.abi_version};",
@@ -131,11 +154,14 @@ def rust_bindings(catalog: KernelUapi) -> str:
                 f"{_rust_number(value.value)};"
             )
     for struct in catalog.structs:
+        derives = "Clone, Copy, Debug, Default, Eq, PartialEq"
+        if not _rust_can_derive_default(struct, catalog):
+            derives = "Clone, Copy, Debug, Eq, PartialEq"
         lines.extend(
             [
                 "",
                 "#[repr(C)]",
-                "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+                f"#[derive({derives})]",
                 f"pub struct HfxUapi{_pascal(struct.name)} {{",
             ]
         )
@@ -145,6 +171,22 @@ def rust_bindings(catalog: KernelUapi) -> str:
                 rust_type = f"[{rust_type}; {_count_rust(field)}]"
             lines.append(f"    pub {field.name}: {rust_type},")
         lines.append("}")
+        if not _rust_can_derive_default(struct, catalog):
+            lines.extend(
+                [
+                    "",
+                    f"impl Default for HfxUapi{_pascal(struct.name)} {{",
+                    "    fn default() -> Self {",
+                    "        Self {",
+                    *[
+                        f"            {field.name}: {_rust_default(field)},"
+                        for field in struct.fields
+                    ],
+                    "        }",
+                    "    }",
+                    "}",
+                ]
+            )
     direction = {"read": "Read", "write": "Write", "read_write": "ReadWrite"}
     lines.extend(
         [

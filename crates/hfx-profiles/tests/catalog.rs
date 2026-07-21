@@ -13,6 +13,7 @@ fn receiver_and_children_resolve_independently() {
     let keyboard = child_profile_by_product_id(0x0296).expect("keyboard is qualified");
 
     assert_eq!(receiver.profile_kind, ProfileKind::Receiver);
+    assert_eq!(receiver.transport_backend_id, Some(1));
     assert_eq!(receiver.protocol_family, Some("razer-hyperflux-v2"));
     assert_eq!(
         receiver.supported_child_kinds,
@@ -20,6 +21,7 @@ fn receiver_and_children_resolve_independently() {
     );
     assert!(!receiver.exact_child_combinations);
     assert_eq!(mouse.device_kind, DeviceKind::Mouse);
+    assert_eq!(mouse.transport_backend_id, None);
     assert_eq!(mouse.receiver_protocols, &["razer-hyperflux-v2"]);
     assert_eq!(mouse.routes, &[RouteKind::HyperfluxWireless]);
     assert!(mouse.required_sibling_kinds.is_empty());
@@ -50,6 +52,15 @@ fn runtime_catalog_is_typed_profile_local_and_canonical() {
             .as_ref()
             .expect("mouse lighting exists")
             .application_slot_count
+            .get(),
+        13
+    );
+    assert_eq!(
+        mouse
+            .lighting
+            .as_ref()
+            .expect("mouse lighting exists")
+            .carrier_count
             .get(),
         13
     );

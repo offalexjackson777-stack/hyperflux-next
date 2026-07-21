@@ -113,6 +113,15 @@ dependencies = [
 [[package]]
 name = "hfx-kernel-transport"
 version = "0.0.0-dev.1"
+dependencies = [
+ "hfx-core",
+ "hfx-domain",
+ "hfx-profiles",
+ "hfx-protocol",
+ "rustix",
+ "serde_json",
+ "sha2",
+]
 
 [[package]]
 name = "hfx-profiles"

@@ -6,6 +6,7 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <string_view>
 
@@ -25,6 +26,7 @@ struct LightingTopology
 {
     std::uint16_t physical_led_count;
     std::uint16_t application_slot_count;
+    std::uint16_t carrier_count;
     std::uint16_t rows;
     std::uint16_t columns;
     std::span<const std::uint16_t> application_index_to_carrier;
@@ -41,6 +43,7 @@ struct ProfileRecord
     std::uint16_t vendor_id;
     std::uint16_t product_id;
     std::string_view model_name;
+    std::optional<std::uint32_t> transport_backend_id;
     std::string_view protocol_family;
     std::span<const std::string_view> receiver_protocols;
     std::span<const RouteKind> routes;
@@ -77,7 +80,7 @@ inline constexpr std::array<CapabilityRecord, 14> capabilities_0 {{
 
 inline constexpr std::array<std::uint16_t, 13> carriers_0 {{1, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}};
 inline constexpr LightingTopology lighting_0 {
-    13, 13, 1, 13, carriers_0
+    13, 13, 13, 1, 13, carriers_0
 };
 
 inline constexpr std::array<std::string_view, 1> receiver_protocols_1 {{"razer-hyperflux-v2"}};
@@ -103,7 +106,7 @@ inline constexpr std::array<CapabilityRecord, 13> capabilities_1 {{
 
 inline constexpr std::array<std::uint16_t, 102> carriers_1 {{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101}};
 inline constexpr LightingTopology lighting_1 {
-    84, 102, 6, 17, carriers_1
+    84, 102, 102, 6, 17, carriers_1
 };
 
 inline constexpr std::array<std::string_view, 0> receiver_protocols_2 {{}};
@@ -131,10 +134,10 @@ inline constexpr std::array<CapabilityRecord, 2> capabilities_3 {{
 }};
 
 inline constexpr std::array<ProfileRecord, 4> catalog {{
-    {"child.razer.basilisk-v3-pro-35k.00cd", "ec1d039a49ced8cdc5f56121fe5a03a0068676894a09e9b69c6290f06d1a6f6a", 1, ProfileKind::Child, DeviceKind::Mouse, true, 5426, 205, "Razer Basilisk V3 Pro 35K", "", receiver_protocols_0, routes_0, supported_child_kinds_0, required_sibling_kinds_0, false, capabilities_0, &lighting_0},
-    {"child.razer.deathstalker-v2-pro-tkl.0296", "522f2bdf589226cbe20a2e63098efe771c42b899a1b6a15989413dd29783366d", 1, ProfileKind::Child, DeviceKind::Keyboard, true, 5426, 662, "Razer DeathStalker V2 Pro Tenkeyless", "", receiver_protocols_1, routes_1, supported_child_kinds_1, required_sibling_kinds_1, false, capabilities_1, &lighting_1},
-    {"receiver.razer.hyperflux-v2.1532-00cf", "473bd889b810ae22bdfeb5258eadd46762aa6b0379bd57bcf6285273557b5b8a", 1, ProfileKind::Receiver, DeviceKind::Receiver, true, 5426, 207, "Razer HyperFlux V2 Receiver", "razer-hyperflux-v2", receiver_protocols_2, routes_2, supported_child_kinds_2, required_sibling_kinds_2, false, capabilities_2, nullptr},
-    {"surface.razer.hyperflux-v2-hard-edition", "0b00ef59eb8c039695c760de855bb7d7d55f1be9a32f6f2d1ed90d039d7796b9", 1, ProfileKind::Surface, DeviceKind::Mat, false, 0, 0, "Razer HyperFlux V2 Hard Edition", "", receiver_protocols_3, routes_3, supported_child_kinds_3, required_sibling_kinds_3, false, capabilities_3, nullptr},
+    {"child.razer.basilisk-v3-pro-35k.00cd", "ec1d039a49ced8cdc5f56121fe5a03a0068676894a09e9b69c6290f06d1a6f6a", 1, ProfileKind::Child, DeviceKind::Mouse, true, 5426, 205, "Razer Basilisk V3 Pro 35K", std::nullopt, "", receiver_protocols_0, routes_0, supported_child_kinds_0, required_sibling_kinds_0, false, capabilities_0, &lighting_0},
+    {"child.razer.deathstalker-v2-pro-tkl.0296", "522f2bdf589226cbe20a2e63098efe771c42b899a1b6a15989413dd29783366d", 1, ProfileKind::Child, DeviceKind::Keyboard, true, 5426, 662, "Razer DeathStalker V2 Pro Tenkeyless", std::nullopt, "", receiver_protocols_1, routes_1, supported_child_kinds_1, required_sibling_kinds_1, false, capabilities_1, &lighting_1},
+    {"receiver.razer.hyperflux-v2.1532-00cf", "473bd889b810ae22bdfeb5258eadd46762aa6b0379bd57bcf6285273557b5b8a", 1, ProfileKind::Receiver, DeviceKind::Receiver, true, 5426, 207, "Razer HyperFlux V2 Receiver", std::uint32_t{1}, "razer-hyperflux-v2", receiver_protocols_2, routes_2, supported_child_kinds_2, required_sibling_kinds_2, false, capabilities_2, nullptr},
+    {"surface.razer.hyperflux-v2-hard-edition", "0b00ef59eb8c039695c760de855bb7d7d55f1be9a32f6f2d1ed90d039d7796b9", 1, ProfileKind::Surface, DeviceKind::Mat, false, 0, 0, "Razer HyperFlux V2 Hard Edition", std::nullopt, "", receiver_protocols_3, routes_3, supported_child_kinds_3, required_sibling_kinds_3, false, capabilities_3, nullptr},
 }};
 
 [[nodiscard]] constexpr const ProfileRecord* profile_by_id(std::string_view id)

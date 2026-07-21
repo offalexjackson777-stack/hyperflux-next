@@ -94,6 +94,22 @@ hfx_result_find(struct hfx_receiver *receiver, u64 generation, u64 epoch,
 	return NULL;
 }
 
+static struct hfx_result_record *
+hfx_result_find_exact(struct hfx_receiver *receiver, u64 generation, u64 nonce,
+		      const u8 *request_digest)
+{
+	struct hfx_result_record *record;
+
+	list_for_each_entry(record, &receiver->result_records, node) {
+		if (record->result.receiver_generation == generation &&
+		    record->result.dispatch_nonce == nonce &&
+		    !memcmp(record->result.request_digest, request_digest,
+			    sizeof(record->result.request_digest)))
+			return record;
+	}
+	return NULL;
+}
+
 static struct hfx_result_tombstone *
 hfx_tombstone_find(struct hfx_receiver *receiver, u64 generation, u64 epoch,
 		   u64 nonce)
@@ -108,6 +124,26 @@ hfx_tombstone_find(struct hfx_receiver *receiver, u64 generation, u64 epoch,
 		    tombstone->receiver_generation == generation &&
 		    tombstone->authorization_epoch == epoch &&
 		    tombstone->dispatch_nonce == nonce)
+			return tombstone;
+	}
+	return NULL;
+}
+
+static struct hfx_result_tombstone *
+hfx_tombstone_find_exact(struct hfx_receiver *receiver, u64 generation,
+			 u64 nonce, const u8 *request_digest)
+{
+	u32 index;
+
+	for (index = 0; index < HFX_TOMBSTONE_CAPACITY; index++) {
+		struct hfx_result_tombstone *tombstone =
+			&receiver->result_tombstones[index];
+
+		if (tombstone->valid &&
+		    tombstone->receiver_generation == generation &&
+		    tombstone->dispatch_nonce == nonce &&
+		    !memcmp(tombstone->request_digest, request_digest,
+			    sizeof(tombstone->request_digest)))
 			return tombstone;
 	}
 	return NULL;
@@ -367,9 +403,10 @@ long hfx_transport_submit(struct hfx_receiver *receiver,
 				submit->authorization_epoch);
 	if (ret)
 		goto out_unlock;
-	record = hfx_result_find(receiver, submit->receiver_generation,
-				 submit->authorization_epoch,
-				 submit->dispatch_nonce);
+	record = hfx_result_find_exact(receiver,
+				       submit->receiver_generation,
+				       submit->dispatch_nonce,
+				       submit->request_digest);
 	if (record) {
 		if (!hfx_record_matches_submit(record, submit)) {
 			hfx_session_revoke(
@@ -381,15 +418,29 @@ long hfx_transport_submit(struct hfx_receiver *receiver,
 		ret = hfx_record_return_code(record);
 		goto out_copy;
 	}
+	tombstone = hfx_tombstone_find_exact(receiver,
+					     submit->receiver_generation,
+					     submit->dispatch_nonce,
+					     submit->request_digest);
+	if (tombstone) {
+		ret = -ENODATA;
+		goto out_unlock;
+	}
+	record = hfx_result_find(receiver, submit->receiver_generation,
+				 submit->authorization_epoch,
+				 submit->dispatch_nonce);
+	if (record) {
+		hfx_session_revoke(receiver,
+				   HFX_UAPI_REVOKE_REASON_SERVICE_LOSS);
+		ret = -EEXIST;
+		goto out_unlock;
+	}
 	tombstone = hfx_tombstone_find(receiver,
 				       submit->receiver_generation,
 				       submit->authorization_epoch,
 				       submit->dispatch_nonce);
 	if (tombstone) {
-		ret = !memcmp(tombstone->request_digest, submit->request_digest,
-			      sizeof(tombstone->request_digest)) ?
-		      -ENODATA :
-		      -EEXIST;
+		ret = -EEXIST;
 		goto out_unlock;
 	}
 
@@ -459,6 +510,29 @@ long hfx_transport_get_result(struct hfx_receiver *receiver,
 		return -EINVAL;
 
 	mutex_lock(&receiver->transport_lock);
+	record = hfx_result_find_exact(receiver, query.receiver_generation,
+				       query.dispatch_nonce,
+				       query.request_digest);
+	if (record) {
+		if (query.kernel_sequence && query.kernel_sequence !=
+					      record->result.kernel_sequence) {
+			hfx_result_synthetic(&query,
+					     HFX_UAPI_TRANSPORT_STATUS_CONFLICT, 0);
+		} else {
+			query = record->result;
+		}
+		goto out_copy;
+	}
+	tombstone = hfx_tombstone_find_exact(receiver,
+					     query.receiver_generation,
+					     query.dispatch_nonce,
+					     query.request_digest);
+	if (tombstone) {
+		query.authorization_epoch = tombstone->authorization_epoch;
+		hfx_result_synthetic(&query, HFX_UAPI_TRANSPORT_STATUS_EVICTED,
+				     0);
+		goto out_copy;
+	}
 	record = hfx_result_find(receiver, query.receiver_generation,
 				 query.authorization_epoch,
 				 query.dispatch_nonce);
@@ -478,13 +552,8 @@ long hfx_transport_get_result(struct hfx_receiver *receiver,
 				       query.authorization_epoch,
 				       query.dispatch_nonce);
 	if (tombstone) {
-		hfx_result_synthetic(
-			&query,
-			memcmp(tombstone->request_digest, query.request_digest,
-			       sizeof(query.request_digest)) ?
-				HFX_UAPI_TRANSPORT_STATUS_CONFLICT :
-				HFX_UAPI_TRANSPORT_STATUS_EVICTED,
-			0);
+		hfx_result_synthetic(&query, HFX_UAPI_TRANSPORT_STATUS_CONFLICT,
+				     0);
 		goto out_copy;
 	}
 

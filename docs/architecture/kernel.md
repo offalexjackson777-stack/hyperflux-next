@@ -24,6 +24,28 @@ The bridge remains responsible for profile selection, capability qualification,
 logical devices, carrier maps, effects, scheduling policy, leases, persistence,
 retry decisions, and user-facing meaning.
 
+## Userspace Adapter
+
+The Rust kernel adapter selects an encoder from the qualified receiver
+profile's transport-backend identifier. It resolves each logical child profile
+independently, applies that profile's application-slot-to-carrier map, and
+emits only the bounded physical frames accepted by the kernel UAPI. A receiver
+may therefore carry a mouse, a keyboard, or both without an exact-pair profile.
+Unknown children receive no encoder or write authority.
+
+The qualified HW001 encoder preserves the observed two-pass receiver sequence,
+inter-frame timing, and mouse carrier correction. It also records which
+physical reports belong to each semantic device frame. Terminal kernel progress
+can therefore be projected conservatively into bridge-level delivery facts
+without confusing a partially delivered keyboard row sequence with a complete
+keyboard update.
+
+Every request digest binds the complete semantic dispatch and every encoded
+frame field. The only unsafe Rust is the private, generated-type ioctl capsule;
+profile resolution, encoding, observation decoding, session renewal, and result
+interpretation remain safe and independently testable through an injected I/O
+port.
+
 ## Lifecycle
 
 All HID interfaces belonging to the same `usb_device` share one receiver
@@ -68,6 +90,15 @@ An exact retained request is never sent twice. A forgotten old request is
 `unavailable`, never guessed to be absent. `not_observed` is returned only for
 a nonce strictly above the live session high-water mark and is the sole result
 that permits an automatic retry without a possible prior hardware side effect.
+Exact generation, nonce, and full-dispatch-digest lookup crosses writer-session
+rotation, so a bridge restart can recover a retained result without inheriting
+the old writer authorization epoch. Reusing a nonce with different content in
+the current kernel session remains a terminal conflict.
+
+On startup, the bridge reconciles durable nonterminal work against this kernel
+journal before admitting new writes. This ordering prevents unrelated traffic
+from aging recoverable outcomes out of the bounded journal during crash
+recovery.
 
 `succeeded` means every frame was delivered through the receiver USB control
 transfer. It does not claim that a paired child applied the frame or that a

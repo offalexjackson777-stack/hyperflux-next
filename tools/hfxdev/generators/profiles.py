@@ -153,6 +153,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "pub struct LightingTopology {",
         "    pub physical_led_count: u16,",
         "    pub application_slot_count: u16,",
+        "    pub carrier_count: u16,",
         "    pub rows: u16,",
         "    pub columns: u16,",
         "    pub application_index_to_carrier: &'static [u16],",
@@ -168,6 +169,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "    pub vendor_id: Option<u16>,",
         "    pub product_id: Option<u16>,",
         "    pub model_name: &'static str,",
+        "    pub transport_backend_id: Option<u32>,",
         "    pub protocol_family: Option<&'static str>,",
         "    pub receiver_protocols: &'static [&'static str],",
         "    pub routes: &'static [RouteKind],",
@@ -216,6 +218,8 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         product = f"Some({identity['product_id']})" if "product_id" in identity else "None"
         protocol_family = compatibility.get("protocol_family")
         protocol_family = f"Some({json.dumps(protocol_family)})" if protocol_family else "None"
+        backend_id = profile.get("transport", {}).get("backend_id")
+        backend_id = f"Some({backend_id})" if backend_id is not None else "None"
         receiver_protocols = _rust_strings(compatibility.get("receiver_protocols", []))
         routes = _rust_variants("RouteKind", compatibility.get("routes", []))
         supported_child_kinds = _rust_variants(
@@ -241,6 +245,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                 f"        vendor_id: {vendor},",
                 f"        product_id: {product},",
                 f'        model_name: "{profile["identity"]["model_name"]}",',
+                f"        transport_backend_id: {backend_id},",
                 f"        protocol_family: {protocol_family},",
                 f"        receiver_protocols: {receiver_protocols},",
                 f"        routes: {routes},",
@@ -253,6 +258,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                         "        lighting: Some(LightingTopology {",
                         f"            physical_led_count: {lighting['physical_led_count']},",
                         f"            application_slot_count: {lighting['application_slot_count']},",
+                        f"            carrier_count: {lighting['carrier_count']},",
                         f"            rows: {lighting['rows']},",
                         f"            columns: {lighting['columns']},",
                         f"            application_index_to_carrier: CARRIERS_{index},",
@@ -308,6 +314,7 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
         "",
         "#include <array>",
         "#include <cstdint>",
+        "#include <optional>",
         "#include <span>",
         "#include <string_view>",
         "",
@@ -327,6 +334,7 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
         "{",
         "    std::uint16_t physical_led_count;",
         "    std::uint16_t application_slot_count;",
+        "    std::uint16_t carrier_count;",
         "    std::uint16_t rows;",
         "    std::uint16_t columns;",
         "    std::span<const std::uint16_t> application_index_to_carrier;",
@@ -343,6 +351,7 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
         "    std::uint16_t vendor_id;",
         "    std::uint16_t product_id;",
         "    std::string_view model_name;",
+        "    std::optional<std::uint32_t> transport_backend_id;",
         "    std::string_view protocol_family;",
         "    std::span<const std::string_view> receiver_protocols;",
         "    std::span<const RouteKind> routes;",
@@ -393,7 +402,7 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
                 [
                     f"inline constexpr std::array<std::uint16_t, {len(lighting['application_index_to_carrier'])}> carriers_{index} {{{{{mapping}}}}};",
                     f"inline constexpr LightingTopology lighting_{index} {{",
-                    f"    {lighting['physical_led_count']}, {lighting['application_slot_count']}, {lighting['rows']}, {lighting['columns']}, carriers_{index}",
+                    f"    {lighting['physical_led_count']}, {lighting['application_slot_count']}, {lighting['carrier_count']}, {lighting['rows']}, {lighting['columns']}, carriers_{index}",
                     "};",
                     "",
                 ]
@@ -406,13 +415,17 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
         vendor = identity.get("vendor_id", 0)
         product = identity.get("product_id", 0)
         protocol_family = json.dumps(compatibility.get("protocol_family", ""))
+        backend_id = profile.get("transport", {}).get("backend_id")
+        backend_id = (
+            f"std::uint32_t{{{backend_id}}}" if backend_id is not None else "std::nullopt"
+        )
         exact_child_combinations = str(compatibility.get("exact_child_combinations", False)).lower()
         lighting = f"&lighting_{index}" if profile.get("transport", {}).get("lighting") else "nullptr"
         lines.append(
             "    {"
             f'"{profile["profile_id"]}", "{profile["runtime_sha256"]}", {profile["revision"]}, ProfileKind::{_variant(profile["kind"])}, '
             f'DeviceKind::{_variant(profile["device_kind"])}, {str(has_usb).lower()}, {vendor}, {product}, '
-            f'"{profile["identity"]["model_name"]}", {protocol_family}, receiver_protocols_{index}, routes_{index}, '
+            f'"{profile["identity"]["model_name"]}", {backend_id}, {protocol_family}, receiver_protocols_{index}, routes_{index}, '
             f'supported_child_kinds_{index}, required_sibling_kinds_{index}, {exact_child_combinations}, capabilities_{index}, {lighting}'
             "},"
         )
