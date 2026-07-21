@@ -116,7 +116,11 @@ Application integration truth begins in
 OpenRGB, OpenRazer, and Polychromatic contracts, requires SDK-only transport,
 and forbids adapters from suppressing unrelated application devices. Its
 generated [integration reference](docs/generated/integrations.md) keeps current
-implementation state separate from future plans.
+implementation state separate from future plans. The shared
+[`hfx-integration-model`](crates/hfx-integration-model) projection turns exact
+protocol snapshots into tested inventory, controller, ownership, and action
+views before any application-specific UI runs; see the
+[integration boundary](docs/architecture/integrations.md).
 
 Development tool versions are recorded in
 [`toolchains/pins.json`](toolchains/pins.json). Verification selects the exact

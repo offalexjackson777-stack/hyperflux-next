@@ -17,6 +17,13 @@ The Rust SDK currently owns:
 
 The SDK does not own hardware profiles, application presentation, effects, ownership policy, queueing, restoration, or receiver transport. Those remain behind the bridge protocol.
 
+Protocol version 4 adds exact receiver and child profile identities and digests
+to snapshots. This lets an integration construct a profile-bound transaction
+from bridge authority instead of assuming a receiver model from its local
+catalog. Versions 1 through 3 remain frozen; their snapshots normalize without
+invented profile digests, so integrations that require writable controllers
+negotiate the `snapshot-profile-bindings` feature.
+
 ```mermaid
 sequenceDiagram
     participant App as Application integration
