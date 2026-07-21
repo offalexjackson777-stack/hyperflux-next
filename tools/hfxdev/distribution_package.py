@@ -18,6 +18,13 @@ import tarfile
 import tempfile
 
 from .distributions import DistributionCatalog, DistributionTarget, load_distribution_catalog
+from .distribution_native import (
+    NativePackageContext,
+    normalize_tree as _normalize,
+    tree_digest as _tree_digest,
+    tree_files as _tree_files,
+    write_payload_tar as _tar_payload,
+)
 from .linux_runtime import LinuxRuntime, load_linux_runtime
 from .model import ModelError, sha256_file
 from .package_pipeline import ArtifactSet, StageResult, load_artifact_set, stage_rootfs
@@ -71,36 +78,6 @@ def _write_overlay(root: Path, destination: str | PurePosixPath, content: str) -
     path.write_text(content, encoding="utf-8")
     path.chmod(0o644)
     return path
-
-
-def _tree_files(root: Path) -> list[Path]:
-    files = []
-    for path in sorted(root.rglob("*")):
-        if path.is_symlink():
-            raise ModelError(f"distribution payload contains a symbolic link: {path}")
-        if path.is_file():
-            files.append(path)
-    return files
-
-
-def _tree_digest(root: Path, files: list[Path]) -> str:
-    digest = hashlib.sha256()
-    for path in sorted(files, key=lambda item: item.relative_to(root).as_posix()):
-        digest.update(path.relative_to(root).as_posix().encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(f"{stat.S_IMODE(path.stat().st_mode):04o}".encode("ascii"))
-        digest.update(b"\0")
-        digest.update(bytes.fromhex(sha256_file(path)))
-    return digest.hexdigest()
-
-
-def _normalize(root: Path, epoch: int) -> None:
-    for path in sorted(root.rglob("*"), reverse=True):
-        if path.is_dir():
-            path.chmod(0o755)
-        os.utime(path, (epoch, epoch), follow_symlinks=False)
-    root.chmod(0o755)
-    os.utime(root, (epoch, epoch), follow_symlinks=False)
 
 
 def _installed_distribution_manifest(
@@ -247,29 +224,6 @@ def _arch_pkgbuild(
             "",
         ]
     )
-
-
-def _tar_payload(root: Path, destination: Path, epoch: int) -> None:
-    with tarfile.open(destination, "w", format=tarfile.GNU_FORMAT) as archive:
-        for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()):
-            relative = path.relative_to(root).as_posix()
-            info = tarfile.TarInfo(relative + ("/" if path.is_dir() else ""))
-            info.uid = 0
-            info.gid = 0
-            info.uname = "root"
-            info.gname = "root"
-            info.mtime = epoch
-            info.mode = 0o755 if path.is_dir() else stat.S_IMODE(path.stat().st_mode)
-            if path.is_dir():
-                info.type = tarfile.DIRTYPE
-                archive.addfile(info)
-            elif path.is_file() and not path.is_symlink():
-                info.size = path.stat().st_size
-                with path.open("rb") as source:
-                    archive.addfile(info, source)
-            else:
-                raise ModelError(f"unsupported distribution payload entry: {relative}")
-    os.utime(destination, (epoch, epoch))
 
 
 def _canonical_arch_buildinfo(content: bytes) -> bytes:
@@ -607,6 +561,80 @@ def _run_makepkg(workspace: Path, packages: Path, epoch: int) -> None:
         raise ModelError(f"Arch package build failed with exit status {result.returncode}")
 
 
+def _build_arch_package(context: NativePackageContext) -> Path:
+    workspace = context.workspace_root / "makepkg"
+    workspace.mkdir()
+    payload = workspace / "payload.tar"
+    _tar_payload(context.package_root, payload, context.artifacts.source_date_epoch)
+    (workspace / "hyperflux-next.install").write_text(
+        _arch_install(context.runtime), encoding="utf-8"
+    )
+    (workspace / "PKGBUILD").write_text(
+        _arch_pkgbuild(
+            context.runtime,
+            context.catalog,
+            context.target,
+            context.architecture,
+            context.artifacts.python,
+            sha256_file(payload),
+        ),
+        encoding="utf-8",
+    )
+    for path in (workspace / "PKGBUILD", workspace / "hyperflux-next.install"):
+        path.chmod(0o644)
+        os.utime(
+            path,
+            (
+                context.artifacts.source_date_epoch,
+                context.artifacts.source_date_epoch,
+            ),
+        )
+    _run_makepkg(workspace, context.packages, context.artifacts.source_date_epoch)
+    built = sorted(context.packages.glob("*.pkg.tar.*"))
+    if len(built) != 1 or not built[0].is_file() or built[0].is_symlink():
+        raise ModelError("Arch package build did not produce exactly one package")
+    package = built[0]
+    _canonicalize_arch_package(package, context.artifacts.source_date_epoch)
+    _verify_arch_package(
+        package,
+        context.repository_root,
+        context.runtime,
+        context.catalog,
+        context.target,
+        context.artifacts,
+        context.architecture,
+        context.payload_sha256,
+        context.payload_file_count,
+    )
+    return package
+
+
+def _backend_overlays(
+    distribution: str, runtime: LinuxRuntime
+) -> tuple[tuple[PurePosixPath, str], ...]:
+    if distribution == "arch":
+        return ((ARCH_POST_TRANSACTION_HOOK, _arch_hook(runtime)),)
+    if distribution in {"debian", "rpm"}:
+        return ()
+    raise ModelError(f"unknown distribution package target {distribution}")
+
+
+def _build_native_package(
+    distribution: str, context: NativePackageContext
+) -> Path:
+    if distribution == "arch":
+        return _build_arch_package(context)
+    if distribution == "debian":
+        from .distribution_debian import build_debian_package
+
+        return build_debian_package(context)
+    if distribution == "rpm":
+        from .distribution_rpm import build_rpm_package
+
+        return build_rpm_package(context)
+    raise ModelError(f"unknown distribution package target {distribution}")
+
+
 def build_distribution_package(
     root: Path,
     build_manifest: Path,
@@ -614,18 +642,20 @@ def build_distribution_package(
     output: Path,
 ) -> DistributionPackageResult:
     root = root.resolve()
-    if distribution != "arch":
-        raise ModelError(f"distribution package target {distribution} is not implemented yet")
     output = _new_output_directory(output)
     runtime = load_linux_runtime(root)
     catalog = load_distribution_catalog(root)
+    if distribution not in catalog.targets:
+        raise ModelError(f"unknown distribution package target {distribution}")
     target = catalog.targets[distribution]
     artifacts = load_artifact_set(root, build_manifest)
     architecture = target.architecture_for(artifacts.target)
     packages = output / "packages"
     packages.mkdir()
 
-    with tempfile.TemporaryDirectory(prefix="hyperflux-arch-package-") as temporary:
+    with tempfile.TemporaryDirectory(
+        prefix=f"hyperflux-{distribution}-package-"
+    ) as temporary:
         workspace_root = Path(temporary)
         common_root = workspace_root / "common-root"
         common = stage_rootfs(root, build_manifest, common_root)
@@ -636,9 +666,12 @@ def build_distribution_package(
                 package_root,
                 target.python_discovery_for(artifacts.python),
                 runtime.operations.python_module_directory + "\n",
-            ),
-            _write_overlay(package_root, ARCH_POST_TRANSACTION_HOOK, _arch_hook(runtime)),
+            )
         ]
+        overlays.extend(
+            _write_overlay(package_root, destination, content)
+            for destination, content in _backend_overlays(distribution, runtime)
+        )
         installed_manifest = _write_overlay(
             package_root,
             INSTALLED_MANIFEST_PATH,
@@ -658,45 +691,22 @@ def build_distribution_package(
         distribution_files = _tree_files(package_root)
         distribution_digest = _tree_digest(package_root, distribution_files)
 
-        workspace = workspace_root / "makepkg"
-        workspace.mkdir()
-        payload = workspace / "payload.tar"
-        _tar_payload(package_root, payload, artifacts.source_date_epoch)
-        (workspace / "hyperflux-next.install").write_text(
-            _arch_install(runtime), encoding="utf-8"
-        )
-        (workspace / "PKGBUILD").write_text(
-            _arch_pkgbuild(
-                runtime,
-                catalog,
-                target,
-                architecture,
-                artifacts.python,
-                sha256_file(payload),
+        package = _build_native_package(
+            distribution,
+            NativePackageContext(
+                repository_root=root,
+                workspace_root=workspace_root,
+                package_root=package_root,
+                packages=packages,
+                runtime=runtime,
+                catalog=catalog,
+                target=target,
+                artifacts=artifacts,
+                architecture=architecture,
+                payload_sha256=distribution_digest,
+                payload_file_count=len(distribution_files),
             ),
-            encoding="utf-8",
         )
-        for path in (workspace / "PKGBUILD", workspace / "hyperflux-next.install"):
-            path.chmod(0o644)
-            os.utime(path, (artifacts.source_date_epoch, artifacts.source_date_epoch))
-        _run_makepkg(workspace, packages, artifacts.source_date_epoch)
-
-    built = sorted(packages.glob("*.pkg.tar.*"))
-    if len(built) != 1 or not built[0].is_file() or built[0].is_symlink():
-        raise ModelError("Arch package build did not produce exactly one package")
-    package = built[0]
-    _canonicalize_arch_package(package, artifacts.source_date_epoch)
-    _verify_arch_package(
-        package,
-        root,
-        runtime,
-        catalog,
-        target,
-        artifacts,
-        architecture,
-        distribution_digest,
-        len(distribution_files),
-    )
     manifest_value = {
         "$schema": "https://hyperflux.dev/schemas/distribution-package-build-v1.json",
         "schema": "hyperflux-distribution-package-build-v1",
