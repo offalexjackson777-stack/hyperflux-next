@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use hfx_domain::ProtocolVersion;
-use hfx_protocol::{
+use crate::{
     MAX_WIRE_MESSAGE_BYTES, ProtocolWireError, RpcRequest, RpcResponse, decode_rpc_request,
-    decode_rpc_request_for_version, validate_rpc_response, validate_rpc_response_for_version,
+    decode_rpc_request_for_version, decode_rpc_response, decode_rpc_response_for_version,
+    encode_rpc_request, encode_rpc_request_for_version, encode_rpc_response,
+    encode_rpc_response_for_version,
 };
+use hfx_domain::ProtocolVersion;
 use std::fmt;
 use std::io::{self, Read, Write};
 
@@ -39,7 +41,6 @@ pub enum FrameError {
     },
     InvalidRequest(ProtocolWireError),
     InvalidResponse(ProtocolWireError),
-    ResponseEncoding,
 }
 
 impl fmt::Display for FrameError {
@@ -62,7 +63,6 @@ impl fmt::Display for FrameError {
             ),
             Self::InvalidRequest(error) => write!(formatter, "invalid RPC request: {error}"),
             Self::InvalidResponse(error) => write!(formatter, "invalid RPC response: {error}"),
-            Self::ResponseEncoding => formatter.write_str("RPC response encoding failed"),
         }
     }
 }
@@ -156,37 +156,31 @@ pub fn read_rpc_request_for_version<R: Read>(
         .transpose()
 }
 
-struct BoundedBuffer {
-    bytes: Vec<u8>,
-    exceeded: bool,
+/// Reads one response using the current protocol schema.
+///
+/// # Errors
+///
+/// Returns a typed framing, I/O, decoding, or protocol-validation error.
+pub fn read_rpc_response<R: Read>(reader: &mut R) -> Result<Option<RpcResponse>, FrameError> {
+    read_rpc_payload(reader)?
+        .map(|payload| decode_rpc_response(&payload).map_err(FrameError::InvalidResponse))
+        .transpose()
 }
 
-impl BoundedBuffer {
-    fn new() -> Self {
-        Self {
-            bytes: Vec::with_capacity(4096),
-            exceeded: false,
-        }
-    }
-}
-
-impl Write for BoundedBuffer {
-    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
-        let Some(next_length) = self.bytes.len().checked_add(bytes.len()) else {
-            self.exceeded = true;
-            return Err(io::Error::other("bounded response buffer overflow"));
-        };
-        if next_length > MAX_WIRE_MESSAGE_BYTES {
-            self.exceeded = true;
-            return Err(io::Error::other("bounded response buffer exceeded"));
-        }
-        self.bytes.extend_from_slice(bytes);
-        Ok(bytes.len())
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
-    }
+/// Reads one response using the exact frozen schema selected by negotiation.
+///
+/// # Errors
+///
+/// Returns a typed framing, I/O, version-decoding, or protocol-validation error.
+pub fn read_rpc_response_for_version<R: Read>(
+    reader: &mut R,
+    version: ProtocolVersion,
+) -> Result<Option<RpcResponse>, FrameError> {
+    read_rpc_payload(reader)?
+        .map(|payload| {
+            decode_rpc_response_for_version(&payload, version).map_err(FrameError::InvalidResponse)
+        })
+        .transpose()
 }
 
 fn write_all_at<W: Write>(
@@ -212,8 +206,8 @@ pub fn write_rpc_response<W: Write>(
     writer: &mut W,
     response: &RpcResponse,
 ) -> Result<(), FrameError> {
-    validate_rpc_response(response).map_err(FrameError::InvalidResponse)?;
-    write_validated_rpc_response(writer, response)
+    let encoded = encode_rpc_response(response).map_err(FrameError::InvalidResponse)?;
+    write_rpc_payload(writer, &encoded)
 }
 
 /// Writes one response only after proving it is representable by the exact
@@ -227,33 +221,45 @@ pub fn write_rpc_response_for_version<W: Write>(
     response: &RpcResponse,
     version: ProtocolVersion,
 ) -> Result<(), FrameError> {
-    validate_rpc_response_for_version(response, version).map_err(FrameError::InvalidResponse)?;
-    write_validated_rpc_response(writer, response)
+    let encoded =
+        encode_rpc_response_for_version(response, version).map_err(FrameError::InvalidResponse)?;
+    write_rpc_payload(writer, &encoded)
 }
 
-fn write_validated_rpc_response<W: Write>(
+/// Validates and writes one bounded length-delimited request.
+///
+/// # Errors
+///
+/// Returns a typed validation, encoding, or I/O error.
+pub fn write_rpc_request<W: Write>(writer: &mut W, request: &RpcRequest) -> Result<(), FrameError> {
+    let encoded = encode_rpc_request(request).map_err(FrameError::InvalidRequest)?;
+    write_rpc_payload(writer, &encoded)
+}
+
+/// Writes one request using the exact frozen schema selected for the
+/// connection.
+///
+/// # Errors
+///
+/// Returns a typed version-validation, semantic-translation, encoding, or I/O
+/// error before emitting bytes when the request is not safely representable.
+pub fn write_rpc_request_for_version<W: Write>(
     writer: &mut W,
-    response: &RpcResponse,
+    request: &RpcRequest,
+    version: ProtocolVersion,
 ) -> Result<(), FrameError> {
-    let mut encoded = BoundedBuffer::new();
-    if serde_json::to_writer(&mut encoded, response).is_err() {
-        if encoded.exceeded {
-            return Err(FrameError::PayloadTooLarge {
-                declared: MAX_WIRE_MESSAGE_BYTES.saturating_add(1),
-                maximum: MAX_WIRE_MESSAGE_BYTES,
-            });
-        }
-        return Err(FrameError::ResponseEncoding);
-    }
-    if encoded.bytes.is_empty() {
-        return Err(FrameError::ResponseEncoding);
-    }
-    let length = u32::try_from(encoded.bytes.len()).map_err(|_| FrameError::PayloadTooLarge {
-        declared: encoded.bytes.len(),
+    let encoded =
+        encode_rpc_request_for_version(request, version).map_err(FrameError::InvalidRequest)?;
+    write_rpc_payload(writer, &encoded)
+}
+
+fn write_rpc_payload<W: Write>(writer: &mut W, encoded: &[u8]) -> Result<(), FrameError> {
+    let length = u32::try_from(encoded.len()).map_err(|_| FrameError::PayloadTooLarge {
+        declared: encoded.len(),
         maximum: MAX_WIRE_MESSAGE_BYTES,
     })?;
     write_all_at(writer, &length.to_be_bytes(), FrameIoStage::WriteLength)?;
-    write_all_at(writer, &encoded.bytes, FrameIoStage::WritePayload)?;
+    write_all_at(writer, encoded, FrameIoStage::WritePayload)?;
     writer.flush().map_err(|error| FrameError::Io {
         stage: FrameIoStage::Flush,
         kind: error.kind(),

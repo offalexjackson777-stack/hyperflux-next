@@ -51,6 +51,15 @@ def _rust_domain_imports(names: list[str]) -> list[str]:
     return lines
 
 
+def _rust_response_match_arm(variants: list[str], result: str) -> list[str]:
+    if len(variants) == 1:
+        return [f"            Self::{variants[0]}(envelope) => {result},"]
+    lines = [f"            Self::{variants[0]}(envelope)"]
+    lines.extend(f"            | Self::{variant}(envelope)" for variant in variants[1:])
+    lines[-1] += f" => {result},"
+    return lines
+
+
 def rust_types(catalog: ProtocolCatalog) -> str:
     record_names = {record.name for record in catalog.records}
     union_names = {union.name for union in catalog.unions}
@@ -248,7 +257,42 @@ def rust_types(catalog: ProtocolCatalog) -> str:
             "                Some((&envelope.protocol_session_id, &envelope.negotiation_token))",
             "            }",
         ])
-    lines.extend(["        }", "    }", "}"])
+    lines.extend([
+        "        }",
+        "    }",
+        "}",
+        "",
+        "impl RpcResponse {",
+        "    /// Returns the request identity carried by the response envelope.",
+        "    #[must_use]",
+        "    pub fn request_id(&self) -> Option<&RequestId> {",
+        "        match self {",
+    ])
+    response_groups: dict[str, list[str]] = {}
+    for method in catalog.methods:
+        response_groups.setdefault(method.response, []).append(
+            f"{_pascal(method.name)}Success"
+        )
+    for variants in response_groups.values():
+        lines.extend(_rust_response_match_arm(variants, "Some(&envelope.request_id)"))
+    lines.extend([
+        "            Self::Error(envelope) => envelope.request_id.as_ref(),",
+        "        }",
+        "    }",
+        "",
+        "    /// Returns the bridge process identity carried by the response envelope.",
+        "    #[must_use]",
+        "    pub fn server_instance_id(&self) -> &ServerInstanceId {",
+        "        match self {",
+    ])
+    for variants in response_groups.values():
+        lines.extend(_rust_response_match_arm(variants, "&envelope.server_instance_id"))
+    lines.extend([
+        "            Self::Error(envelope) => &envelope.server_instance_id,",
+        "        }",
+        "    }",
+        "}",
+    ])
     return "\n".join(lines) + "\n"
 
 

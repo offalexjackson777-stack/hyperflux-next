@@ -798,3 +798,39 @@ impl RpcRequest {
         }
     }
 }
+
+impl RpcResponse {
+    /// Returns the request identity carried by the response envelope.
+    #[must_use]
+    pub fn request_id(&self) -> Option<&RequestId> {
+        match self {
+            Self::NegotiateSuccess(envelope) => Some(&envelope.request_id),
+            Self::SnapshotSuccess(envelope) => Some(&envelope.request_id),
+            Self::AcquireLeaseSuccess(envelope)
+            | Self::RenewLeaseSuccess(envelope)
+            | Self::ReleaseLeaseSuccess(envelope) => Some(&envelope.request_id),
+            Self::SubmitTransactionSuccess(envelope)
+            | Self::TransactionOutcomeSuccess(envelope) => Some(&envelope.request_id),
+            Self::SubscribeSuccess(envelope) => Some(&envelope.request_id),
+            Self::DiagnosticsSuccess(envelope) => Some(&envelope.request_id),
+            Self::Error(envelope) => envelope.request_id.as_ref(),
+        }
+    }
+
+    /// Returns the bridge process identity carried by the response envelope.
+    #[must_use]
+    pub fn server_instance_id(&self) -> &ServerInstanceId {
+        match self {
+            Self::NegotiateSuccess(envelope) => &envelope.server_instance_id,
+            Self::SnapshotSuccess(envelope) => &envelope.server_instance_id,
+            Self::AcquireLeaseSuccess(envelope)
+            | Self::RenewLeaseSuccess(envelope)
+            | Self::ReleaseLeaseSuccess(envelope) => &envelope.server_instance_id,
+            Self::SubmitTransactionSuccess(envelope)
+            | Self::TransactionOutcomeSuccess(envelope) => &envelope.server_instance_id,
+            Self::SubscribeSuccess(envelope) => &envelope.server_instance_id,
+            Self::DiagnosticsSuccess(envelope) => &envelope.server_instance_id,
+            Self::Error(envelope) => &envelope.server_instance_id,
+        }
+    }
+}

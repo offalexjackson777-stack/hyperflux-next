@@ -127,6 +127,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "hfx-sdk"
+version = "0.0.0-dev.1"
+dependencies = [
+ "hfx-bridge",
+ "hfx-domain",
+ "hfx-protocol",
+ "rustix",
+ "serde_json",
+]
+
+[[package]]
 name = "hfx-sim"
 version = "0.0.0-dev.1"
 dependencies = [

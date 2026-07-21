@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_bridge::{
-    FrameError, FrameIoStage, read_rpc_request, read_rpc_request_for_version, write_rpc_response,
-    write_rpc_response_for_version,
+    FrameError, FrameIoStage, read_rpc_request, read_rpc_request_for_version, read_rpc_response,
+    read_rpc_response_for_version, write_rpc_request, write_rpc_request_for_version,
+    write_rpc_response, write_rpc_response_for_version,
 };
 use hfx_domain::{
-    ClientId, ClientName, ComponentVersion, NegotiationToken, ProtocolFeatureId, ProtocolSessionId,
-    ProtocolVersion, QueueCapacity, RequestId, ServerInstanceId,
+    ClientId, ClientName, ColorChannel, ComponentVersion, NegotiationToken, ProtocolFeatureId,
+    ProtocolSessionId, ProtocolVersion, QueueCapacity, RequestId, ServerInstanceId,
+    StableLightingMode,
 };
 use hfx_protocol::{
     ClientHello, NegotiationRequestEnvelope, RpcRequest, RpcResponse, ServerHello, SuccessEnvelope,
@@ -317,5 +319,76 @@ fn unsupported_response_version_emits_no_partial_frame() {
             hfx_protocol::ProtocolWireError::UnsupportedProtocolVersion
         ))
     ));
+    assert!(output.is_empty());
+}
+
+#[test]
+fn shared_framing_round_trips_both_rpc_directions() {
+    let request = negotiation_request();
+    let mut client_output = ChunkedWriter {
+        chunk: 3,
+        ..ChunkedWriter::default()
+    };
+    write_rpc_request(&mut client_output, &request).expect("client request write must pass");
+    assert_eq!(client_output.flushes, 1);
+    assert_eq!(
+        read_rpc_request(&mut Cursor::new(client_output.bytes)),
+        Ok(Some(request))
+    );
+
+    let response = negotiation_response();
+    let version = ProtocolVersion::try_from(2_u16).expect("v2 is canonical");
+    let mut server_output = ChunkedWriter {
+        chunk: 3,
+        ..ChunkedWriter::default()
+    };
+    write_rpc_response_for_version(&mut server_output, &response, version)
+        .expect("server response write must pass");
+    assert_eq!(server_output.flushes, 1);
+    assert_eq!(
+        read_rpc_response_for_version(&mut Cursor::new(server_output.bytes), version),
+        Ok(Some(response))
+    );
+}
+
+#[test]
+fn current_response_reader_accepts_current_framing() {
+    let response = negotiation_response();
+    let mut output = Vec::new();
+    write_rpc_response(&mut output, &response).expect("current response write must pass");
+    assert_eq!(
+        read_rpc_response(&mut Cursor::new(output)),
+        Ok(Some(response))
+    );
+}
+
+#[test]
+fn unsafe_request_downgrade_emits_no_partial_frame() {
+    let payload = serde_json::to_vec(&framed_transaction_value()).expect("v2 request serializes");
+    let mut current = read_rpc_request_for_version(
+        &mut Cursor::new(framed_payload(&payload)),
+        ProtocolVersion::try_from(2_u16).expect("v2 is canonical"),
+    )
+    .expect("v2 frame decodes")
+    .expect("v2 frame contains a request");
+    let RpcRequest::SubmitTransaction(envelope) = &mut current else {
+        panic!("fixture must remain a transaction");
+    };
+    envelope.params.stable_intents[0].mode = StableLightingMode::Off;
+    envelope.params.frames[0].colors[0].red = ColorChannel::try_from(0_u8).expect("black red");
+    envelope.params.frames[0].colors[0].green = ColorChannel::try_from(0_u8).expect("black green");
+    envelope.params.frames[0].colors[0].blue = ColorChannel::try_from(0_u8).expect("black blue");
+
+    let mut output = Vec::new();
+    assert_eq!(
+        write_rpc_request_for_version(
+            &mut output,
+            &current,
+            ProtocolVersion::try_from(2_u16).expect("v2 is canonical"),
+        ),
+        Err(FrameError::InvalidRequest(
+            hfx_protocol::ProtocolWireError::VersionTranslation
+        ))
+    );
     assert!(output.is_empty());
 }

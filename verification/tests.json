@@ -191,7 +191,7 @@
     },
     {
       "id": "rust-unit",
-      "title": "Rust bridge, core, domain, profile, and protocol tests",
+      "title": "Rust bridge, core, domain, profile, protocol, and SDK tests",
       "owned_domain": "rust",
       "lanes": ["fast", "full-software"],
       "runner": "rust-unit",

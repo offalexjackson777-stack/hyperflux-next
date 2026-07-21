@@ -4,7 +4,7 @@
 
 mod backend;
 mod clock;
-mod framing;
+mod connection;
 mod generation;
 mod observation;
 mod persistence;
@@ -23,15 +23,17 @@ pub use backend::{
     StableCaptureStatus,
 };
 pub use clock::LinuxMonotonicClock;
-pub use framing::{
-    FRAME_LENGTH_BYTES, FrameError, FrameIoStage, read_rpc_request, read_rpc_request_for_version,
-    write_rpc_response, write_rpc_response_for_version,
-};
+pub use connection::{ConnectionServeError, ConnectionServeReport, serve_connection};
 pub use generation::{
     GenerationActivation, GenerationActivationOutcome, GenerationOrchestrationError,
     GenerationOrchestrator, GenerationQualification, ReceiverDisconnectBegan,
     ReceiverDisconnectCompleted, ReceiverDisconnectCompletionOutcome,
     ReceiverDisconnectObservation, ReceiverDisconnectOutcome, ReceiverGenerationObservation,
+};
+pub use hfx_protocol::{
+    FRAME_LENGTH_BYTES, FrameError, FrameIoStage, read_rpc_request, read_rpc_request_for_version,
+    read_rpc_response, read_rpc_response_for_version, write_rpc_request,
+    write_rpc_request_for_version, write_rpc_response, write_rpc_response_for_version,
 };
 pub use observation::{
     AppliedLifecycleObservation, LifecycleObservation, LifecycleObservationError,

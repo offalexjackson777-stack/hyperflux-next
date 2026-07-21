@@ -12,7 +12,8 @@ use hfx_protocol::{
     LogicalDeviceSnapshot, MAX_WIRE_MESSAGE_BYTES, NegotiationRequestEnvelope, ProtocolWireError,
     ReceiverSnapshot, RpcRequest, RpcResponse, SnapshotValidationError, SuccessEnvelope,
     decode_rpc_request, decode_rpc_request_for_version, decode_rpc_response,
-    validate_bridge_snapshot, validate_rpc_response_for_version,
+    decode_rpc_response_for_version, encode_rpc_request_for_version,
+    encode_rpc_response_for_version, validate_bridge_snapshot, validate_rpc_response_for_version,
 };
 use serde_json::{Value, json};
 
@@ -264,6 +265,43 @@ fn versioned_decoders_reject_adjacent_wire_shapes_instead_of_guessing() {
 }
 
 #[test]
+fn outbound_requests_downgrade_only_when_semantics_are_exactly_representable() {
+    let v2 = serde_json::to_vec(&framed_transaction_value()).expect("request serializes");
+    let mut current =
+        decode_rpc_request_for_version(&v2, number(2)).expect("v2 request normalizes");
+
+    let encoded_v2 = encode_rpc_request_for_version(&current, number(2))
+        .expect("Static semantics are representable by v2");
+    assert_eq!(
+        decode_rpc_request_for_version(&encoded_v2, number(2)),
+        Ok(current.clone())
+    );
+    assert_eq!(
+        encode_rpc_request_for_version(&current, number(1)),
+        Err(ProtocolWireError::UnsupportedVersionMethod)
+    );
+
+    let RpcRequest::SubmitTransaction(envelope) = &mut current else {
+        panic!("fixture must remain a transaction")
+    };
+    envelope.params.stable_intents[0].mode = StableLightingMode::Off;
+    envelope.params.frames[0].colors[0].red = ColorChannel::try_from(0_u8).expect("black red");
+    envelope.params.frames[0].colors[0].green = ColorChannel::try_from(0_u8).expect("black green");
+    envelope.params.frames[0].colors[0].blue = ColorChannel::try_from(0_u8).expect("black blue");
+    assert_eq!(
+        encode_rpc_request_for_version(&current, number(2)),
+        Err(ProtocolWireError::VersionTranslation)
+    );
+
+    let encoded_v3 =
+        encode_rpc_request_for_version(&current, number(3)).expect("v3 preserves explicit Off");
+    assert_eq!(
+        decode_rpc_request_for_version(&encoded_v3, number(3)),
+        Ok(current)
+    );
+}
+
+#[test]
 fn responses_are_checked_against_the_exact_negotiated_schema() {
     let response = RpcResponse::SnapshotSuccess(SuccessEnvelope {
         request_id: text("request-1"),
@@ -271,8 +309,15 @@ fn responses_are_checked_against_the_exact_negotiated_schema() {
         result: snapshot(battery(TelemetryAvailability::Reported, Some(73))),
     });
     for version in [1_u16, 2, 3] {
-        validate_rpc_response_for_version(&response, number(version))
+        let version = number(version);
+        validate_rpc_response_for_version(&response, version)
             .expect("current response is representable by every retained response schema");
+        let encoded = encode_rpc_response_for_version(&response, version)
+            .expect("response encodes in the frozen schema");
+        assert_eq!(
+            decode_rpc_response_for_version(&encoded, version),
+            Ok(response.clone())
+        );
     }
     assert_eq!(
         validate_rpc_response_for_version(&response, number(4)),

@@ -14,6 +14,7 @@ use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
 use std::collections::BTreeSet;
 use std::fmt;
+use std::io::{self, Write};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ProtocolWireError {
@@ -57,12 +58,78 @@ fn decode<T: DeserializeOwned>(bytes: &[u8]) -> Result<T, ProtocolWireError> {
     serde_json::from_slice(bytes).map_err(|_| ProtocolWireError::MalformedJson)
 }
 
+struct BoundedEncoder {
+    bytes: Vec<u8>,
+    exceeded: bool,
+}
+
+impl BoundedEncoder {
+    fn new() -> Self {
+        Self {
+            bytes: Vec::with_capacity(4096),
+            exceeded: false,
+        }
+    }
+}
+
+impl Write for BoundedEncoder {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        let Some(next_length) = self.bytes.len().checked_add(bytes.len()) else {
+            self.exceeded = true;
+            return Err(io::Error::other("bounded protocol encoding overflow"));
+        };
+        if next_length > MAX_WIRE_MESSAGE_BYTES {
+            self.exceeded = true;
+            return Err(io::Error::other("bounded protocol encoding exceeded"));
+        }
+        self.bytes.extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+fn encode<T: Serialize>(value: &T) -> Result<Vec<u8>, ProtocolWireError> {
+    let mut encoded = BoundedEncoder::new();
+    if serde_json::to_writer(&mut encoded, value).is_err() {
+        return Err(if encoded.exceeded {
+            ProtocolWireError::MessageTooLarge
+        } else {
+            ProtocolWireError::VersionTranslation
+        });
+    }
+    if encoded.bytes.is_empty() {
+        return Err(ProtocolWireError::VersionTranslation);
+    }
+    Ok(encoded.bytes)
+}
+
 fn transcode_request<T: Serialize>(request: T) -> Result<RpcRequest, ProtocolWireError> {
     let value = serde_json::to_value(request).map_err(|_| ProtocolWireError::VersionTranslation)?;
     let request =
         serde_json::from_value(value).map_err(|_| ProtocolWireError::VersionTranslation)?;
     validate_rpc_request(&request)?;
     Ok(request)
+}
+
+fn transcode_response<T: Serialize>(response: T) -> Result<RpcResponse, ProtocolWireError> {
+    let value =
+        serde_json::to_value(response).map_err(|_| ProtocolWireError::VersionTranslation)?;
+    let response =
+        serde_json::from_value(value).map_err(|_| ProtocolWireError::VersionTranslation)?;
+    validate_rpc_response(&response)?;
+    Ok(response)
+}
+
+fn frozen_encoding<T>(value: Value) -> Result<Vec<u8>, ProtocolWireError>
+where
+    T: DeserializeOwned + Serialize,
+{
+    let frozen =
+        serde_json::from_value::<T>(value).map_err(|_| ProtocolWireError::VersionTranslation)?;
+    encode(&frozen)
 }
 
 fn normalize_v1_request(request: v1::RpcRequest) -> Result<RpcRequest, ProtocolWireError> {
@@ -120,6 +187,20 @@ fn insert_stable_intents(
         "stable_intents".to_owned(),
         serde_json::to_value(stable_intents).map_err(|_| ProtocolWireError::VersionTranslation)?,
     );
+    Ok(())
+}
+
+fn remove_stable_intents(value: &mut Value) -> Result<(), ProtocolWireError> {
+    let params = value
+        .as_object_mut()
+        .and_then(|root| root.get_mut("request"))
+        .and_then(Value::as_object_mut)
+        .and_then(|request| request.get_mut("params"))
+        .and_then(Value::as_object_mut)
+        .ok_or(ProtocolWireError::VersionTranslation)?;
+    if params.remove("stable_intents").is_none() {
+        return Err(ProtocolWireError::VersionTranslation);
+    }
     Ok(())
 }
 
@@ -374,6 +455,65 @@ pub fn decode_rpc_request(bytes: &[u8]) -> Result<RpcRequest, ProtocolWireError>
     decode_rpc_request_version(bytes, CURRENT_PROTOCOL_VERSION)
 }
 
+/// Encodes one current request after enforcing current protocol invariants.
+///
+/// # Errors
+///
+/// Returns an error for an invalid request or bounded encoding failure.
+pub fn encode_rpc_request(request: &RpcRequest) -> Result<Vec<u8>, ProtocolWireError> {
+    encode_rpc_request_version(request, CURRENT_PROTOCOL_VERSION)
+}
+
+/// Encodes one current request into the exact frozen schema selected for the
+/// connection.
+///
+/// Version 1 writes are unavailable. Version 3 Off semantics cannot be
+/// represented by version 2 and fail before encoding.
+///
+/// # Errors
+///
+/// Returns an error for an invalid request, unknown version, unsupported
+/// legacy method, unsafe semantic downgrade, or bounded encoding failure.
+pub fn encode_rpc_request_for_version(
+    request: &RpcRequest,
+    version: ProtocolVersion,
+) -> Result<Vec<u8>, ProtocolWireError> {
+    encode_rpc_request_version(request, version.get())
+}
+
+fn encode_rpc_request_version(
+    request: &RpcRequest,
+    version: u16,
+) -> Result<Vec<u8>, ProtocolWireError> {
+    validate_rpc_request(request)?;
+    let mut value =
+        serde_json::to_value(request).map_err(|_| ProtocolWireError::VersionTranslation)?;
+    match version {
+        1 => {
+            if matches!(request, RpcRequest::SubmitTransaction(_)) {
+                return Err(ProtocolWireError::UnsupportedVersionMethod);
+            }
+            frozen_encoding::<v1::RpcRequest>(value)
+        }
+        2 => {
+            if let RpcRequest::SubmitTransaction(envelope) = request {
+                if envelope
+                    .params
+                    .stable_intents
+                    .iter()
+                    .any(|intent| intent.mode == StableLightingMode::Off)
+                {
+                    return Err(ProtocolWireError::VersionTranslation);
+                }
+                remove_stable_intents(&mut value)?;
+            }
+            frozen_encoding::<v2::RpcRequest>(value)
+        }
+        3 => frozen_encoding::<v3::RpcRequest>(value),
+        _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
+    }
+}
+
 /// Decodes a request using the exact frozen schema selected for the connection.
 ///
 /// Version 2 static transactions are conservatively normalized to semantic
@@ -406,9 +546,71 @@ fn decode_rpc_request_version(bytes: &[u8], version: u16) -> Result<RpcRequest, 
 /// Returns an error before parsing oversized input, or after parsing malformed
 /// and semantically invalid input.
 pub fn decode_rpc_response(bytes: &[u8]) -> Result<RpcResponse, ProtocolWireError> {
-    let response = decode(bytes)?;
-    validate_rpc_response(&response)?;
-    Ok(response)
+    decode_rpc_response_version(bytes, CURRENT_PROTOCOL_VERSION)
+}
+
+/// Decodes one response using the exact frozen schema selected for the
+/// connection and normalizes it to the current core representation.
+///
+/// # Errors
+///
+/// Returns an error for an unknown version, malformed response, unsafe
+/// translation, or current response invariant violation.
+pub fn decode_rpc_response_for_version(
+    bytes: &[u8],
+    version: ProtocolVersion,
+) -> Result<RpcResponse, ProtocolWireError> {
+    decode_rpc_response_version(bytes, version.get())
+}
+
+fn decode_rpc_response_version(
+    bytes: &[u8],
+    version: u16,
+) -> Result<RpcResponse, ProtocolWireError> {
+    match version {
+        1 => transcode_response(decode::<v1::RpcResponse>(bytes)?),
+        2 => transcode_response(decode::<v2::RpcResponse>(bytes)?),
+        3 => transcode_response(decode::<v3::RpcResponse>(bytes)?),
+        _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
+    }
+}
+
+/// Encodes one current response after enforcing response invariants.
+///
+/// # Errors
+///
+/// Returns an error for an invalid response or bounded encoding failure.
+pub fn encode_rpc_response(response: &RpcResponse) -> Result<Vec<u8>, ProtocolWireError> {
+    encode_rpc_response_version(response, CURRENT_PROTOCOL_VERSION)
+}
+
+/// Encodes one current response into the exact frozen schema selected for the
+/// connection.
+///
+/// # Errors
+///
+/// Returns an error for an unknown version, unsafe translation, invalid
+/// response, or bounded encoding failure.
+pub fn encode_rpc_response_for_version(
+    response: &RpcResponse,
+    version: ProtocolVersion,
+) -> Result<Vec<u8>, ProtocolWireError> {
+    encode_rpc_response_version(response, version.get())
+}
+
+fn encode_rpc_response_version(
+    response: &RpcResponse,
+    version: u16,
+) -> Result<Vec<u8>, ProtocolWireError> {
+    validate_rpc_response(response)?;
+    let value =
+        serde_json::to_value(response).map_err(|_| ProtocolWireError::VersionTranslation)?;
+    match version {
+        1 => frozen_encoding::<v1::RpcResponse>(value),
+        2 => frozen_encoding::<v2::RpcResponse>(value),
+        3 => frozen_encoding::<v3::RpcResponse>(value),
+        _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
+    }
 }
 
 /// Verifies that a current-core response is exactly encodable by one frozen
@@ -422,23 +624,5 @@ pub fn validate_rpc_response_for_version(
     response: &RpcResponse,
     version: ProtocolVersion,
 ) -> Result<(), ProtocolWireError> {
-    validate_rpc_response(response)?;
-    let encoded =
-        serde_json::to_vec(response).map_err(|_| ProtocolWireError::VersionTranslation)?;
-    if encoded.len() > MAX_WIRE_MESSAGE_BYTES {
-        return Err(ProtocolWireError::MessageTooLarge);
-    }
-    match version.get() {
-        1 => {
-            decode::<v1::RpcResponse>(&encoded)?;
-        }
-        2 => {
-            decode::<v2::RpcResponse>(&encoded)?;
-        }
-        3 => {
-            decode::<v3::RpcResponse>(&encoded)?;
-        }
-        _ => return Err(ProtocolWireError::UnsupportedProtocolVersion),
-    }
-    Ok(())
+    encode_rpc_response_for_version(response, version).map(|_| ())
 }
