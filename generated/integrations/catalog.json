@@ -1,0 +1,149 @@
+{
+  "adapters": [
+    {
+      "application": "OpenRazer-compatible clients",
+      "coexistence_policy": "private-explicit-service-only",
+      "feature_families": [
+        "inventory",
+        "lighting",
+        "ownership",
+        "telemetry"
+      ],
+      "id": "openrazer-compatibility",
+      "kind": "compatibility-service",
+      "must_not_own": [
+        "official org.razer daemon identity",
+        "raw receiver transport",
+        "unrelated OpenRazer devices"
+      ],
+      "owns": [
+        "private compatibility service lifecycle",
+        "qualified method translation"
+      ],
+      "sdk_protocol_versions": [
+        3
+      ],
+      "status": "planned",
+      "transport_access": "sdk-only",
+      "unrelated_device_policy": "preserve",
+      "upstream_ids": [
+        "openrazer"
+      ]
+    },
+    {
+      "application": "OpenRGB",
+      "coexistence_policy": "application-plugin",
+      "feature_families": [
+        "effects",
+        "inventory",
+        "lighting",
+        "ownership",
+        "presentation",
+        "telemetry"
+      ],
+      "id": "openrgb-native",
+      "kind": "native-plugin",
+      "must_not_own": [
+        "effect mathematics",
+        "raw receiver transport",
+        "receiver qualification",
+        "unrelated OpenRGB devices"
+      ],
+      "owns": [
+        "OpenRGB contract adaptation",
+        "OpenRGB controller lifecycle",
+        "tested OpenRGB view model"
+      ],
+      "sdk_protocol_versions": [
+        3
+      ],
+      "status": "in-progress",
+      "transport_access": "sdk-only",
+      "unrelated_device_policy": "preserve",
+      "upstream_ids": [
+        "openrgb"
+      ]
+    },
+    {
+      "application": "Polychromatic",
+      "coexistence_policy": "native-backend-beside-existing",
+      "feature_families": [
+        "inventory",
+        "lighting",
+        "ownership",
+        "presentation",
+        "telemetry"
+      ],
+      "id": "polychromatic-native",
+      "kind": "native-backend",
+      "must_not_own": [
+        "official OpenRazer backend",
+        "raw receiver transport",
+        "receiver qualification",
+        "unrelated Polychromatic devices"
+      ],
+      "owns": [
+        "HyperFlux backend presentation",
+        "Polychromatic contract adaptation",
+        "tested Polychromatic view model"
+      ],
+      "sdk_protocol_versions": [
+        3
+      ],
+      "status": "planned",
+      "transport_access": "sdk-only",
+      "unrelated_device_policy": "preserve",
+      "upstream_ids": [
+        "openrazer",
+        "polychromatic"
+      ]
+    }
+  ],
+  "schema": "hyperflux-integration-catalog-v1",
+  "source_sha256": "5ae7588d1e83c978e3d430ee003632ac31521dbce6d742da60f99776b6ea93b3",
+  "upstreams": [
+    {
+      "api_contract": "org.razer 3.x metadata and D-Bus vocabulary",
+      "build_network_access": false,
+      "commit": "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+      "id": "openrazer",
+      "license_expression": "GPL-2.0-or-later AND CC-BY-SA-4.0",
+      "name": "OpenRazer",
+      "repository": "https://github.com/openrazer/openrazer.git",
+      "uses": [
+        "compatibility-contract",
+        "metadata-import"
+      ],
+      "version": "3.12.1-41-g6820f9d"
+    },
+    {
+      "api_contract": "OpenRGB plugin API 4",
+      "build_network_access": false,
+      "commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0",
+      "id": "openrgb",
+      "license_expression": "GPL-2.0-only",
+      "name": "OpenRGB",
+      "repository": "https://github.com/CalcProgrammer1/OpenRGB.git",
+      "uses": [
+        "effect-engine",
+        "model-layout-registry",
+        "plugin-build-contract"
+      ],
+      "version": "1.0rc3"
+    },
+    {
+      "api_contract": "Polychromatic 0.9 native backend contract",
+      "build_network_access": false,
+      "commit": "716737bf444ab7e962f4d3b7a5188b2f07c0c4a1",
+      "id": "polychromatic",
+      "license_expression": "GPL-3.0-only",
+      "name": "Polychromatic",
+      "repository": "https://github.com/polychromatic/polychromatic.git",
+      "uses": [
+        "backend-contract",
+        "presentation-reference"
+      ],
+      "version": "0.9.7-7-g716737b"
+    }
+  ]
+}

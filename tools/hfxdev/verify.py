@@ -13,6 +13,7 @@ import time
 
 from .model import ModelError, load_foundation, load_json, require_unique, sha256_file
 from .errors import load_error_catalog
+from .integrations import load_integration_catalog
 from .render import rendered_files
 from .profiles import load_profile_inputs
 from .protocol import load_protocol_catalog
@@ -129,6 +130,10 @@ def _check_profile_contract(root: Path) -> None:
     load_profile_inputs(root)
 
 
+def _check_integration_contract(root: Path) -> None:
+    load_integration_catalog(root)
+
+
 def _tool_environment(root: Path) -> dict[str, str]:
     pins = load_json(root / "toolchains" / "pins.json")
     environment = os.environ.copy()
@@ -181,6 +186,30 @@ def _run_cpp_sdk_contracts(root: Path, node: TestNode) -> None:
         node.timeout_seconds,
     )
     _run_command(root, [str(binary)], "C++ SDK smoke test", node.timeout_seconds)
+    integration_binary = root / "build" / "integration-catalog-smoke"
+    _run_command(
+        root,
+        [
+            "clang++",
+            "-std=c++20",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-Isdk/cpp/include",
+            "tests/cpp/integration_catalog_smoke.cpp",
+            "-o",
+            str(integration_binary),
+        ],
+        "C++ integration catalog compile",
+        node.timeout_seconds,
+    )
+    _run_command(
+        root,
+        [str(integration_binary)],
+        "C++ integration catalog smoke test",
+        node.timeout_seconds,
+    )
 
 
 def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
@@ -406,6 +435,10 @@ def _run_profile_contracts(root: Path, _node: TestNode) -> None:
     _check_profile_contract(root)
 
 
+def _run_integration_contracts(root: Path, _node: TestNode) -> None:
+    _check_integration_contract(root)
+
+
 def _run_protocol_contracts(root: Path, _node: TestNode) -> None:
     _check_protocol_contract(root)
 
@@ -466,6 +499,7 @@ RUNNERS = {
     "foundation-contracts": _run_foundation_contracts,
     "schema-contracts": _run_schema_contracts,
     "profile-contracts": _run_profile_contracts,
+    "integration-contracts": _run_integration_contracts,
     "protocol-contracts": _run_protocol_contracts,
     "error-contracts": _run_error_contracts,
     "generated-freshness": _run_generated_freshness,

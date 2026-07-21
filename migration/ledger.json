@@ -52,7 +52,7 @@
       "id": "HFX-MIG-006",
       "component": "OpenRGB integration",
       "disposition": "REIMPLEMENT",
-      "status": "PENDING_REVIEW",
+      "status": "IN_PROGRESS",
       "sources": ["engineering-laboratory"],
       "destination_owner": "integrations",
       "rationale": "Reuse OpenRGB-owned model presentation and effects through a stable SDK while retaining HyperFlux as the only receiver transport."

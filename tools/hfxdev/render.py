@@ -35,6 +35,14 @@ from .generators.protocol import (
     rust_registry as protocol_rust_registry,
 )
 from .kernel_uapi import load_kernel_uapi
+from .integrations import compiled_catalog as compiled_integration_catalog
+from .generators.integrations import (
+    compiled_json as integration_compiled_json,
+    cpp_catalog as integration_cpp_catalog,
+    markdown as integration_markdown,
+    python_catalog as integration_python_catalog,
+    rust_catalog as integration_rust_catalog,
+)
 from .model import load_foundation, load_json
 from .profiles import compiled_catalog, composition_fixtures
 from .protocol import load_protocol_registry
@@ -138,6 +146,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
     protocol = protocol_registry.current
     errors = load_error_catalog(root)
     kernel_uapi = load_kernel_uapi(root)
+    integrations = compiled_integration_catalog(root)
     test_catalog = load_test_catalog(root)
     files = {
         root / "docs" / "generated" / "architecture.md": architecture_markdown(constitution),
@@ -166,6 +175,11 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "driver" / "kernel" / "uapi" / "hyperflux_next.h": kernel_uapi_c_header(kernel_uapi),
         root / "crates" / "hfx-kernel-transport" / "src" / "generated.rs": kernel_uapi_rust_bindings(kernel_uapi),
         root / "docs" / "generated" / "kernel-uapi.md": kernel_uapi_markdown(kernel_uapi),
+        root / "generated" / "integrations" / "catalog.json": integration_compiled_json(integrations),
+        root / "docs" / "generated" / "integrations.md": integration_markdown(integrations),
+        root / "crates" / "hfx-integration-model" / "src" / "generated.rs": integration_rust_catalog(integrations),
+        root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "integration_catalog.py": integration_python_catalog(integrations),
+        root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "integration_catalog.hpp": integration_cpp_catalog(integrations),
     }
     for version in protocol_registry.versions:
         suffix = f"v{version.version}"

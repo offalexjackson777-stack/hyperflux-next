@@ -75,7 +75,9 @@ Inspect migration progress without changing files:
 | --- | --- |
 | `architecture/` | Machine-readable ownership, invariants, boundaries, and release interlocks |
 | `schemas/` | Versioned schemas for canonical project data |
+| `integrations/` | Pinned upstream contracts, coexistence rules, and adapter boundaries |
 | `crates/hfx-domain/` | Generated Rust strong types and validation |
+| `crates/hfx-integration-model/` | Generated integration registry and shared application-facing projections |
 | `crates/hfx-profiles/` | Generated, queryable Rust hardware profile catalog |
 | `crates/hfx-sdk/` | Native application SDK, exact-version channel, and typed client boundary |
 | `crates/hfx-kernel-transport/` | Generated kernel ABI and isolated userspace transport boundary |
@@ -108,6 +110,13 @@ mouse combinations, rejects guessed surface USB identities, and grants unknown
 children zero writes. Its generated
 [supported-hardware reference](docs/generated/supported-hardware.md) keeps
 qualified support separate from official compatibility candidates.
+
+Application integration truth begins in
+[`integrations/catalog.json`](integrations/catalog.json). It pins the reviewed
+OpenRGB, OpenRazer, and Polychromatic contracts, requires SDK-only transport,
+and forbids adapters from suppressing unrelated application devices. Its
+generated [integration reference](docs/generated/integrations.md) keeps current
+implementation state separate from future plans.
 
 Development tool versions are recorded in
 [`toolchains/pins.json`](toolchains/pins.json). Verification selects the exact

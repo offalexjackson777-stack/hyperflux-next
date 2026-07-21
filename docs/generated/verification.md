@@ -11,17 +11,18 @@ Every current node is software-only and has zero hardware-write authority.
 | 2 | `schema-contracts` | `schemas` | `none` | `false` | 10s | `reuse-verified` |
 | 3 | `privacy-boundary` | `security` | `none` | `false` | 15s | `rerun` |
 | 4 | `toolchain-contract` | `toolchains` | `none` | `false` | 20s | `reuse-verified` |
-| 5 | `profile-contracts` | `profiles` | `none` | `false` | 10s | `reuse-verified` |
+| 5 | `integration-contracts` | `integrations` | `none` | `false` | 10s | `reuse-verified` |
 | 6 | `protocol-contracts` | `protocol` | `none` | `false` | 10s | `reuse-verified` |
 | 7 | `error-contracts` | `errors` | `none` | `false` | 10s | `reuse-verified` |
 | 8 | `rust-format` | `rust` | `none` | `false` | 60s | `rerun` |
-| 9 | `generated-freshness` | `generation` | `none` | `false` | 15s | `reuse-verified` |
-| 10 | `python-unit` | `tooling` | `none` | `false` | 60s | `rerun` |
-| 11 | `rust-clippy` | `rust` | `none` | `false` | 180s | `rerun` |
-| 12 | `cpp-sdk-contracts` | `sdk` | `none` | `false` | 60s | `rerun` |
-| 13 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 180s | `rerun` |
-| 14 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
-| 15 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
+| 9 | `profile-contracts` | `profiles` | `none` | `false` | 10s | `reuse-verified` |
+| 10 | `generated-freshness` | `generation` | `none` | `false` | 15s | `reuse-verified` |
+| 11 | `python-unit` | `tooling` | `none` | `false` | 60s | `rerun` |
+| 12 | `rust-clippy` | `rust` | `none` | `false` | 180s | `rerun` |
+| 13 | `cpp-sdk-contracts` | `sdk` | `none` | `false` | 60s | `rerun` |
+| 14 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 180s | `rerun` |
+| 15 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
+| 16 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
 
 ## Dependencies
 
@@ -31,10 +32,11 @@ flowchart LR
     schema_contracts["schema-contracts"]
     privacy_boundary["privacy-boundary"]
     toolchain_contract["toolchain-contract"]
-    profile_contracts["profile-contracts"]
+    integration_contracts["integration-contracts"]
     protocol_contracts["protocol-contracts"]
     error_contracts["error-contracts"]
     rust_format["rust-format"]
+    profile_contracts["profile-contracts"]
     generated_freshness["generated-freshness"]
     python_unit["python-unit"]
     rust_clippy["rust-clippy"]
@@ -45,13 +47,15 @@ flowchart LR
     foundation_contracts --> schema_contracts
     foundation_contracts --> privacy_boundary
     foundation_contracts --> toolchain_contract
-    schema_contracts --> profile_contracts
+    schema_contracts --> integration_contracts
     schema_contracts --> protocol_contracts
     schema_contracts --> error_contracts
     toolchain_contract --> rust_format
+    integration_contracts --> profile_contracts
     profile_contracts --> generated_freshness
     protocol_contracts --> generated_freshness
     error_contracts --> generated_freshness
+    integration_contracts --> generated_freshness
     generated_freshness --> python_unit
     privacy_boundary --> python_unit
     generated_freshness --> rust_clippy

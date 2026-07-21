@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/hfx-bridge", "crates/hfx-core", "crates/hfx-domain", "crates/hfx-errors", "crates/hfx-kernel-transport", "crates/hfx-profiles", "crates/hfx-protocol", "crates/hfx-sdk", "crates/hfx-sim"]
+members = ["crates/hfx-bridge", "crates/hfx-core", "crates/hfx-domain", "crates/hfx-errors", "crates/hfx-integration-model", "crates/hfx-kernel-transport", "crates/hfx-profiles", "crates/hfx-protocol", "crates/hfx-sdk", "crates/hfx-sim"]
 resolver = "3"
 
 [workspace.package]

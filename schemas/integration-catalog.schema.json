@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/integration-catalog-v1.json",
+  "title": "HyperFlux application integration catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "upstreams", "adapters"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-integration-catalog-v1"},
+    "upstreams": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "repository", "version", "commit", "license_expression", "api_contract", "uses", "build_network_access"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+          "name": {"type": "string", "minLength": 1, "maxLength": 64},
+          "repository": {"type": "string", "pattern": "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\\.git$"},
+          "version": {"type": "string", "minLength": 1, "maxLength": 64},
+          "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+          "license_expression": {"type": "string", "minLength": 1, "maxLength": 128},
+          "api_contract": {"type": "string", "minLength": 1, "maxLength": 128},
+          "uses": {"type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"}},
+          "build_network_access": {"const": false}
+        }
+      }
+    },
+    "adapters": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "application", "kind", "status", "upstream_ids", "sdk_protocol_versions", "feature_families", "transport_access", "unrelated_device_policy", "coexistence_policy", "owns", "must_not_own"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+          "application": {"type": "string", "minLength": 1, "maxLength": 96},
+          "kind": {"enum": ["native-plugin", "native-backend", "compatibility-service"]},
+          "status": {"enum": ["planned", "in-progress", "software-verified", "hardware-qualified"]},
+          "upstream_ids": {"type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true, "items": {"type": "string"}},
+          "sdk_protocol_versions": {"type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": {"type": "integer", "minimum": 1, "maximum": 65535}},
+          "feature_families": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"}},
+          "transport_access": {"const": "sdk-only"},
+          "unrelated_device_policy": {"const": "preserve"},
+          "coexistence_policy": {"enum": ["application-plugin", "native-backend-beside-existing", "private-explicit-service-only"]},
+          "owns": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 128}},
+          "must_not_own": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 128}}
+        }
+      }
+    }
+  }
+}

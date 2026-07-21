@@ -10,6 +10,7 @@ from pathlib import Path
 import re
 from typing import Any
 
+from .integrations import upstream_index
 from .model import ModelError, load_json, require_unique
 
 
@@ -426,6 +427,33 @@ def _validate_presentation(profile: dict[str, Any]) -> None:
         )
 
 
+def _validate_presentation_sources(
+    profiles: list[dict[str, Any]], upstreams: dict[str, dict[str, Any]]
+) -> None:
+    for profile in profiles:
+        presentation = profile.get("presentation")
+        if presentation is None:
+            continue
+        upstream = upstreams.get(presentation["upstream_id"])
+        if upstream is None:
+            raise ModelError(
+                f"{profile['profile_id']}: presentation references an unknown upstream"
+            )
+        expected = {
+            "owner": upstream["name"],
+            "project_version": upstream["version"],
+            "source_commit": upstream["commit"],
+        }
+        mismatches = [
+            field for field, value in expected.items() if presentation[field] != value
+        ]
+        if mismatches:
+            raise ModelError(
+                f"{profile['profile_id']}: presentation pin differs from the integration catalog: "
+                + ", ".join(mismatches)
+            )
+
+
 def _validate_profiles(
     profiles: list[dict[str, Any]],
     capability_index: dict[str, dict[str, Any]],
@@ -551,6 +579,7 @@ def load_profile_inputs(root: Path) -> ProfileInputs:
         if claim["qualifies_capabilities"]:
             raise ModelError(f"{catalog['snapshot_id']}: candidate source claim must not qualify capabilities")
     _validate_profiles(profiles, capability_index, claims)
+    _validate_presentation_sources(profiles, upstream_index(root))
     return ProfileInputs(
         capabilities=capabilities,
         evidence=evidence,

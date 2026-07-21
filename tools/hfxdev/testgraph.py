@@ -35,6 +35,7 @@ RESUME_POLICIES = {"rerun", "reuse-verified", "checkpoint"}
 KNOWN_RUNNERS = {
     "foundation-contracts",
     "schema-contracts",
+    "integration-contracts",
     "profile-contracts",
     "protocol-contracts",
     "error-contracts",

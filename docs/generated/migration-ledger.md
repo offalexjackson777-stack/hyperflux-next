@@ -11,7 +11,7 @@ Default disposition: `REJECT_UNTIL_REVIEWED`.
 | `HFX-MIG-003` | Linux HID kernel driver | `REIMPLEMENT` | `IN_PROGRESS` | `kernel` |
 | `HFX-MIG-004` | bridge runtime and policy | `REIMPLEMENT` | `IN_PROGRESS` | `bridge` |
 | `HFX-MIG-005` | hardware and presentation profiles | `REIMPLEMENT_AND_GENERATE` | `IN_PROGRESS` | `profiles` |
-| `HFX-MIG-006` | OpenRGB integration | `REIMPLEMENT` | `PENDING_REVIEW` | `integrations` |
+| `HFX-MIG-006` | OpenRGB integration | `REIMPLEMENT` | `IN_PROGRESS` | `integrations` |
 | `HFX-MIG-007` | OpenRazer metadata and compatibility | `REIMPLEMENT_WITH_PINNED_IMPORT` | `PENDING_REVIEW` | `integrations` |
 | `HFX-MIG-008` | Polychromatic integration | `REIMPLEMENT` | `PENDING_REVIEW` | `integrations` |
 | `HFX-MIG-009` | verification, proof coordinators, and fixtures | `TEST_REFERENCE` | `IN_PROGRESS` | `verification` |
