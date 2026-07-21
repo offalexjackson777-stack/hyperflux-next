@@ -24,6 +24,7 @@ from .package_pipeline import ArtifactSet, StageResult, load_artifact_set, stage
 
 BUILD_MANIFEST_NAME = "distribution-package-build-manifest.json"
 CANONICAL_ARCH_BUILD_ROOT = "/build/hyperflux-next"
+CANONICAL_ARCH_PACKAGER = "HyperFlux Next Build System <build@hyperflux.invalid>"
 INSTALLED_MANIFEST_PATH = PurePosixPath(
     "/usr/share/hyperflux-next/distribution-package.json"
 )
@@ -361,6 +362,129 @@ def _canonicalize_arch_package(package: Path, epoch: int) -> None:
         compressed_path.unlink(missing_ok=True)
 
 
+def _arch_metadata(content: bytes, label: str) -> dict[str, tuple[str, ...]]:
+    try:
+        lines = content.decode("utf-8").splitlines()
+    except UnicodeDecodeError as error:
+        raise ModelError(f"Arch package {label} is not UTF-8") from error
+    values: dict[str, list[str]] = {}
+    for line in lines:
+        if not line or line.startswith("#"):
+            continue
+        key, separator, value = line.partition(" = ")
+        if not separator or not key:
+            raise ModelError(f"Arch package {label} contains a malformed field")
+        values.setdefault(key, []).append(value)
+    return {key: tuple(items) for key, items in values.items()}
+
+
+def _one_arch_value(
+    metadata: dict[str, tuple[str, ...]], key: str, label: str
+) -> str:
+    values = metadata.get(key, ())
+    if len(values) != 1:
+        raise ModelError(f"Arch package {label} must contain exactly one {key}")
+    return values[0]
+
+
+def _verify_arch_package(
+    package: Path,
+    root: Path,
+    runtime: LinuxRuntime,
+    catalog: DistributionCatalog,
+    target: DistributionTarget,
+    artifacts: ArtifactSet,
+    architecture: str,
+    payload_sha256: str,
+    payload_file_count: int,
+) -> None:
+    metadata_files: dict[str, bytes] = {}
+    digest = hashlib.sha256()
+    payload_files = 0
+    forbidden = tuple(
+        item.encode("utf-8")
+        for item in {str(root), str(Path.home()), "/tmp/hyperflux-"}
+        if len(item) > 1
+    )
+    try:
+        with tarfile.open(package, "r:*") as archive:
+            members = archive.getmembers()
+            names = [member.name for member in members]
+            if len(names) != len(set(names)):
+                raise ModelError("Arch package contains duplicate members")
+            for member in members:
+                path = PurePosixPath(member.name)
+                if path.is_absolute() or ".." in path.parts:
+                    raise ModelError("Arch package contains an unsafe member path")
+                if member.isdir():
+                    continue
+                if not member.isfile():
+                    raise ModelError("Arch package contains an unsupported member type")
+                stream = archive.extractfile(member)
+                if stream is None:
+                    raise ModelError("Arch package regular file has no content")
+                content = stream.read()
+                if any(value in content for value in forbidden):
+                    raise ModelError("Arch package contains a private or temporary build path")
+                if member.name.startswith("."):
+                    metadata_files[member.name] = content
+                    continue
+                payload_files += 1
+                digest.update(member.name.encode("utf-8"))
+                digest.update(b"\0")
+                digest.update(f"{member.mode:04o}".encode("ascii"))
+                digest.update(b"\0")
+                digest.update(hashlib.sha256(content).digest())
+    except (OSError, tarfile.TarError) as error:
+        raise ModelError(f"cannot verify Arch package: {error}") from error
+    required_metadata = {".BUILDINFO", ".INSTALL", ".MTREE", ".PKGINFO"}
+    if set(metadata_files) != required_metadata:
+        raise ModelError("Arch package metadata members are incomplete or unexpected")
+    if payload_files != payload_file_count or digest.hexdigest() != payload_sha256:
+        raise ModelError("Arch package payload differs from the staged distribution root")
+    if metadata_files[".INSTALL"] != _arch_install(runtime).encode("utf-8"):
+        raise ModelError("Arch package install script differs from the lifecycle contract")
+
+    package_info = _arch_metadata(metadata_files[".PKGINFO"], "PKGINFO")
+    expected_version = f"{_arch_version(runtime.product.version)}-{runtime.product.package_release}"
+    singles = {
+        "pkgname": runtime.product.package_name,
+        "pkgver": expected_version,
+        "pkgdesc": catalog.description,
+        "arch": architecture,
+        "packager": CANONICAL_ARCH_PACKAGER,
+        "builddate": str(artifacts.source_date_epoch),
+    }
+    for key, expected in singles.items():
+        if _one_arch_value(package_info, key, "PKGINFO") != expected:
+            raise ModelError(f"Arch package PKGINFO {key} does not match its authority")
+    repeated = {
+        "license": catalog.licenses,
+        "depend": target.dependencies_for(artifacts.python),
+        "optdepend": tuple(
+            f"{item.package}: {item.purpose}" for item in target.optional_dependencies
+        ),
+        "conflict": target.conflicts,
+        "backup": ("etc/hyperflux-next/bridge.json",),
+    }
+    for key, expected in repeated.items():
+        if package_info.get(key, ()) != expected:
+            raise ModelError(f"Arch package PKGINFO {key} does not match its authority")
+
+    build_info = _arch_metadata(metadata_files[".BUILDINFO"], "BUILDINFO")
+    for key, expected in {
+        "pkgname": runtime.product.package_name,
+        "pkgver": expected_version,
+        "pkgarch": architecture,
+        "packager": CANONICAL_ARCH_PACKAGER,
+        "builddate": str(artifacts.source_date_epoch),
+        "builddir": CANONICAL_ARCH_BUILD_ROOT,
+        "startdir": CANONICAL_ARCH_BUILD_ROOT,
+    }.items():
+        if _one_arch_value(build_info, key, "BUILDINFO") != expected:
+            raise ModelError(f"Arch package BUILDINFO {key} does not match its authority")
+
+
 def _run_makepkg(workspace: Path, packages: Path, epoch: int) -> None:
     environment = os.environ.copy()
     environment.update(
@@ -369,7 +493,7 @@ def _run_makepkg(workspace: Path, packages: Path, epoch: int) -> None:
             "PKGDEST": str(packages),
             "SRCDEST": str(workspace / "source-cache"),
             "BUILDDIR": str(workspace / "makepkg-build"),
-            "PACKAGER": "HyperFlux Next Build System",
+            "PACKAGER": CANONICAL_ARCH_PACKAGER,
         }
     )
     try:
@@ -465,6 +589,17 @@ def build_distribution_package(
         raise ModelError("Arch package build did not produce exactly one package")
     package = built[0]
     _canonicalize_arch_package(package, artifacts.source_date_epoch)
+    _verify_arch_package(
+        package,
+        root,
+        runtime,
+        catalog,
+        target,
+        artifacts,
+        architecture,
+        distribution_digest,
+        len(distribution_files),
+    )
     manifest_value = {
         "$schema": "https://hyperflux.dev/schemas/distribution-package-build-v1.json",
         "schema": "hyperflux-distribution-package-build-v1",

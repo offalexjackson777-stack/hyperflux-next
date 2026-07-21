@@ -14,6 +14,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.distribution_package import (
     CANONICAL_ARCH_BUILD_ROOT,
+    CANONICAL_ARCH_PACKAGER,
+    _arch_metadata,
     _canonical_arch_buildinfo,
     _arch_hook,
     _arch_install,
@@ -73,6 +75,21 @@ class DistributionPackageTests(unittest.TestCase):
         self.assertNotIn("/tmp/", value)
         with self.assertRaises(ModelError):
             _canonical_arch_buildinfo(b"format = 2\nstartdir = /tmp/random\n")
+        self.assertRegex(CANONICAL_ARCH_PACKAGER, r"^.+ <[^@]+@[^>]+>$")
+
+    def test_arch_metadata_preserves_repeated_fields_and_rejects_malformed_input(
+        self,
+    ) -> None:
+        metadata = _arch_metadata(
+            b"# generated\npkgname = hyperflux-next-linux\nlicense = A\nlicense = B\n",
+            "test metadata",
+        )
+        self.assertEqual(metadata["pkgname"], ("hyperflux-next-linux",))
+        self.assertEqual(metadata["license"], ("A", "B"))
+        with self.assertRaises(ModelError):
+            _arch_metadata(b"missing separator\n", "test metadata")
+        with self.assertRaises(ModelError):
+            _arch_metadata(b"\xff\n", "test metadata")
 
     def test_arch_hooks_delegate_lifecycle_without_hardware_logic(self) -> None:
         install = _arch_install(self.runtime)
