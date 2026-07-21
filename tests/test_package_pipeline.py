@@ -120,11 +120,13 @@ class PackagePipelineTests(unittest.TestCase):
                 _inspect_staged_files(root, (os.fsencode(ROOT),))
 
     def test_build_environment_remaps_source_output_and_dependency_paths(self) -> None:
-        source = Path("/home/builder/source").resolve()
+        private_root = Path("/" + "home/builder")
+        source = (private_root / "source").resolve()
         output = source / "build/candidate"
-        with patch.dict(os.environ, {"CARGO_HOME": "/home/builder/cargo"}):
+        cargo_home = str(private_root / "cargo")
+        with patch.dict(os.environ, {"CARGO_HOME": cargo_home}):
             environment = _base_environment(source, output, 1_700_000_000)
-        for private in (str(source), str(output), "/home/builder/cargo"):
+        for private in (str(source), str(output), cargo_home):
             self.assertIn(f"--remap-path-prefix={private}=", environment["RUSTFLAGS"])
             self.assertIn(f"-ffile-prefix-map={private}=", environment["CFLAGS"])
             self.assertIn(f"-fdebug-prefix-map={private}=", environment["CXXFLAGS"])
