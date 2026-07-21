@@ -27,6 +27,7 @@ from .generators.protocol import (
     markdown as protocol_markdown,
     python_types as protocol_python_types,
     rust_types as protocol_rust_types,
+    rust_registry as protocol_rust_registry,
 )
 from .model import load_foundation, load_json
 from .profiles import compiled_catalog, composition_fixtures
@@ -148,6 +149,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "docs" / "generated" / "verification.md": testgraph_markdown(test_catalog),
         root / "docs" / "generated" / "bridge-protocol.md": protocol_markdown(protocol),
         root / "crates" / "hfx-protocol" / "src" / "generated.rs": protocol_rust_types(protocol),
+        root / "crates" / "hfx-protocol" / "src" / "generated_versions.rs": protocol_rust_registry(protocol_registry),
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "protocol_types.py": protocol_python_types(protocol),
         root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "protocol_types.hpp": protocol_cpp_types(protocol),
         root / "docs" / "generated" / "error-catalog.md": error_markdown(errors),

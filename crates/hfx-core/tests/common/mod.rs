@@ -4,10 +4,11 @@
 
 use hfx_domain::{
     ColorChannel, FrameIndex, GenerationId, LeaseDurationMs, LedCount, MonotonicMs, ProfileDigest,
-    ProfileId, ResourceKind, TransactionClass,
+    ProfileId, ResourceKind, StableLightingMode, TransactionClass,
 };
 use hfx_protocol::{
-    DeviceProfileBinding, LeaseRequest, LightingFrame, ResourceKey, RgbColor, TransactionRequest,
+    DeviceProfileBinding, LeaseRequest, LightingFrame, ResourceKey, RgbColor, StableLightingIntent,
+    TransactionRequest,
 };
 
 pub fn text<T>(value: &str) -> T
@@ -98,6 +99,18 @@ pub fn transaction_request(
         .map(|device| device_profile_binding(device, 1))
         .collect::<Vec<_>>();
     device_profiles.sort_unstable_by(|left, right| left.device_id.cmp(&right.device_id));
+    let mut stable_intents = if class == TransactionClass::StaticLighting {
+        devices
+            .iter()
+            .map(|device| StableLightingIntent {
+                device_id: text(device),
+                mode: StableLightingMode::Static,
+            })
+            .collect::<Vec<_>>()
+    } else {
+        Vec::new()
+    };
+    stable_intents.sort_unstable_by(|left, right| left.device_id.cmp(&right.device_id));
     TransactionRequest {
         request_id: text(&format!("request-{id}")),
         transaction_id: text(&format!("transaction-{id}")),
@@ -109,6 +122,7 @@ pub fn transaction_request(
         receiver_profile_digest: receiver_profile_digest(),
         device_profiles,
         transaction_class: class,
+        stable_intents,
         deadline_ms: time(deadline),
         resources,
         frames,

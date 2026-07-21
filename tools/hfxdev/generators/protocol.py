@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .domain import HEADER_CPP, HEADER_PYTHON, HEADER_RUST
-from ..protocol import FieldSpec, ProtocolCatalog
+from ..protocol import FieldSpec, ProtocolCatalog, ProtocolRegistry
 
 
 def _pascal(identifier: str) -> str:
@@ -249,6 +249,46 @@ def rust_types(catalog: ProtocolCatalog) -> str:
             "            }",
         ])
     lines.extend(["        }", "    }", "}"])
+    return "\n".join(lines) + "\n"
+
+
+def rust_registry(registry: ProtocolRegistry) -> str:
+    lines = [HEADER_RUST.rstrip(), ""]
+    for version in registry.versions:
+        lines.extend(
+            [
+                f'#[path = "generated_v{version.version}.rs"]',
+                f"pub mod v{version.version};",
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+            "pub struct ProtocolVersionDescriptor {",
+            "    pub version: u16,",
+            "    pub catalog_sha256: &'static str,",
+            "    pub catalog_features: &'static [&'static str],",
+            "    pub served_features: &'static [&'static str],",
+            "}",
+            "",
+            f"pub const CURRENT_PROTOCOL_VERSION: u16 = {registry.current_version};",
+            "pub const GENERATED_PROTOCOL_VERSIONS: &[ProtocolVersionDescriptor] = &[",
+        ]
+    )
+    for version in registry.versions:
+        lines.extend(
+            [
+                "    ProtocolVersionDescriptor {",
+                f"        version: {version.version},",
+                f'        catalog_sha256: "{version.source_sha256}",',
+                f"        catalog_features: v{version.version}::SUPPORTED_FEATURES,",
+                "        served_features: &[",
+            ]
+        )
+        lines.extend(f'            "{feature}",' for feature in version.served_features)
+        lines.extend(["        ],", "    },"])
+    lines.extend(["];"])
     return "\n".join(lines) + "\n"
 
 

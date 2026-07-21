@@ -1,17 +1,25 @@
 {
   "$schema": "../schemas/protocol-registry.schema.json",
   "schema": "hyperflux-protocol-registry-v1",
-  "current_version": 2,
+  "current_version": 3,
   "versions": [
     {
       "version": 1,
       "catalog": "v1/catalog.json",
-      "sha256": "ed3df1f1627ca8a836f509ead3ab7dc7a4cbc6116f6da4accb2cc53e7500859f"
+      "sha256": "ed3df1f1627ca8a836f509ead3ab7dc7a4cbc6116f6da4accb2cc53e7500859f",
+      "served_features": ["event-subscriptions", "ownership-leases", "structured-diagnostics"]
     },
     {
       "version": 2,
       "catalog": "v2/catalog.json",
-      "sha256": "642e30aa929be298f5607837e579580e551d9c46d39be49d9bd6b529fee49792"
+      "sha256": "642e30aa929be298f5607837e579580e551d9c46d39be49d9bd6b529fee49792",
+      "served_features": ["atomic-transactions", "event-subscriptions", "ownership-leases", "profile-bound-transactions", "structured-diagnostics"]
+    },
+    {
+      "version": 3,
+      "catalog": "v3/catalog.json",
+      "sha256": "77c42349eb2a827ebd777b447d7c44259678d2550f564d9f4eebaef770a01ef9",
+      "served_features": ["atomic-transactions", "event-subscriptions", "ownership-leases", "profile-bound-transactions", "semantic-stable-lighting", "structured-diagnostics"]
     }
   ]
 }

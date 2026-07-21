@@ -20,6 +20,14 @@ pub trait Clock {
     fn now(&self) -> MonotonicMs;
 }
 
+/// Supplies civil time only for durable audit and persistence timestamps.
+///
+/// It is deliberately separate from [`Clock`]: wall-clock adjustments must
+/// never affect lease, queue, or transport deadline behavior.
+pub trait WallClock {
+    fn now_unix_ms(&self) -> WallClockUnixMs;
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct SubmissionBinding {

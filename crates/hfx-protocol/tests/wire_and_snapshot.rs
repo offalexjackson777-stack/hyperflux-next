@@ -5,14 +5,16 @@ use hfx_domain::{
     ContactState, DeviceKind, EvidenceConfidence, FreshnessState, GenerationId, PairingState,
     PowerState, PresenceState, ProductId, ProjectionRevision, ProtocolFeatureId, ProtocolVersion,
     ReceiverLifecycleState, RestoreState, RouteKind, RouteState, SequenceNumber, SleepState,
-    StreamEpoch, SupportLevel, TelemetryAvailability,
+    StableLightingMode, StreamEpoch, SupportLevel, TelemetryAvailability, TransactionClass,
 };
 use hfx_protocol::{
     BatteryObservation, BridgeSnapshot, ClientHello, EndpointSnapshot, EventCursor,
     LogicalDeviceSnapshot, MAX_WIRE_MESSAGE_BYTES, NegotiationRequestEnvelope, ProtocolWireError,
     ReceiverSnapshot, RpcRequest, RpcResponse, SnapshotValidationError, SuccessEnvelope,
-    decode_rpc_request, decode_rpc_response, validate_bridge_snapshot,
+    decode_rpc_request, decode_rpc_request_for_version, decode_rpc_response,
+    validate_bridge_snapshot, validate_rpc_response_for_version,
 };
+use serde_json::{Value, json};
 
 fn text<T: TryFrom<String>>(raw: &str) -> T
 where
@@ -92,6 +94,22 @@ fn snapshot(battery: BatteryObservation) -> BridgeSnapshot {
     }
 }
 
+fn framed_transaction_value() -> Value {
+    let transaction: Value = serde_json::from_str(include_str!(
+        "../../../protocol/v2/fixtures/transaction-request-canonical.json"
+    ))
+    .expect("frozen v2 fixture is JSON");
+    json!({
+        "method": "submit-transaction",
+        "request": {
+            "request_id": "request-digest",
+            "protocol_session_id": "protocol-session-1",
+            "negotiation_token": "negotiation-1",
+            "params": transaction
+        }
+    })
+}
+
 #[test]
 fn oversized_wire_message_is_rejected_before_json_parsing() {
     let input = vec![b' '; MAX_WIRE_MESSAGE_BYTES + 1];
@@ -162,4 +180,102 @@ fn unknown_rpc_methods_never_reach_dispatch() {
 #[test]
 fn color_channel_type_remains_eight_bit_at_the_wire_boundary() {
     assert!(ColorChannel::try_from(255_u8).is_ok());
+}
+
+#[test]
+fn frozen_v2_static_requests_normalize_to_conservative_static_semantics() {
+    let value = framed_transaction_value();
+    let encoded = serde_json::to_vec(&value).expect("request serializes");
+    let decoded = decode_rpc_request_for_version(&encoded, number(2))
+        .expect("frozen v2 Static request is safely normalized");
+    let RpcRequest::SubmitTransaction(envelope) = decoded else {
+        panic!("fixture must remain a transaction")
+    };
+    assert_eq!(
+        envelope.params.transaction_class,
+        TransactionClass::StaticLighting
+    );
+    assert_eq!(envelope.params.stable_intents.len(), 1);
+    assert_eq!(
+        envelope.params.stable_intents[0].mode,
+        StableLightingMode::Static
+    );
+
+    let mut effect = value;
+    effect["request"]["params"]["transaction_class"] = json!("effect-frame");
+    let effect = serde_json::to_vec(&effect).expect("effect request serializes");
+    let RpcRequest::SubmitTransaction(effect) =
+        decode_rpc_request_for_version(&effect, number(2)).expect("v2 effect is normalized")
+    else {
+        panic!("fixture must remain a transaction")
+    };
+    assert!(effect.params.stable_intents.is_empty());
+}
+
+#[test]
+fn frozen_v1_profileless_writes_fail_before_backend_dispatch() {
+    let mut value = framed_transaction_value();
+    let params = value["request"]["params"]
+        .as_object_mut()
+        .expect("transaction params are an object");
+    params.remove("receiver_profile_id");
+    params.remove("receiver_profile_digest");
+    params.remove("device_profiles");
+    let encoded = serde_json::to_vec(&value).expect("legacy request serializes");
+    assert_eq!(
+        decode_rpc_request_for_version(&encoded, number(1)),
+        Err(ProtocolWireError::UnsupportedVersionMethod)
+    );
+
+    let snapshot = json!({
+        "method": "snapshot",
+        "request": {
+            "request_id": "request-snapshot",
+            "protocol_session_id": "protocol-session-1",
+            "negotiation_token": "negotiation-1",
+            "params": {}
+        }
+    });
+    let snapshot = serde_json::to_vec(&snapshot).expect("snapshot serializes");
+    assert!(matches!(
+        decode_rpc_request_for_version(&snapshot, number(1)),
+        Ok(RpcRequest::Snapshot(_))
+    ));
+}
+
+#[test]
+fn versioned_decoders_reject_adjacent_wire_shapes_instead_of_guessing() {
+    let v2 = serde_json::to_vec(&framed_transaction_value()).expect("request serializes");
+    assert_eq!(
+        decode_rpc_request_for_version(&v2, number(3)),
+        Err(ProtocolWireError::MalformedJson)
+    );
+
+    let normalized = decode_rpc_request_for_version(&v2, number(2)).expect("v2 request normalizes");
+    let v3 = serde_json::to_vec(&normalized).expect("normalized request serializes");
+    assert_eq!(
+        decode_rpc_request_for_version(&v3, number(2)),
+        Err(ProtocolWireError::MalformedJson)
+    );
+    assert_eq!(
+        decode_rpc_request_for_version(&v3, number(4)),
+        Err(ProtocolWireError::UnsupportedProtocolVersion)
+    );
+}
+
+#[test]
+fn responses_are_checked_against_the_exact_negotiated_schema() {
+    let response = RpcResponse::SnapshotSuccess(SuccessEnvelope {
+        request_id: text("request-1"),
+        server_instance_id: text("bridge-instance-1"),
+        result: snapshot(battery(TelemetryAvailability::Reported, Some(73))),
+    });
+    for version in [1_u16, 2, 3] {
+        validate_rpc_response_for_version(&response, number(version))
+            .expect("current response is representable by every retained response schema");
+    }
+    assert_eq!(
+        validate_rpc_response_for_version(&response, number(4)),
+        Err(ProtocolWireError::UnsupportedProtocolVersion)
+    );
 }

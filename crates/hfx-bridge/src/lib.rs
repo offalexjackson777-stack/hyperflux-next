@@ -18,10 +18,14 @@ mod snapshot;
 mod staged_events;
 mod subscriptions;
 
-pub use backend::{CoreBridgeBackend, CoreBridgeBackendError, CoreBridgeConfig};
+pub use backend::{
+    BridgeDispatchResult, CoreBridgeBackend, CoreBridgeBackendError, CoreBridgeConfig,
+    StableCaptureStatus,
+};
 pub use clock::LinuxMonotonicClock;
 pub use framing::{
-    FRAME_LENGTH_BYTES, FrameError, FrameIoStage, read_rpc_request, write_rpc_response,
+    FRAME_LENGTH_BYTES, FrameError, FrameIoStage, read_rpc_request, read_rpc_request_for_version,
+    write_rpc_response, write_rpc_response_for_version,
 };
 pub use generation::{
     GenerationActivation, GenerationActivationOutcome, GenerationOrchestrationError,
@@ -43,7 +47,7 @@ pub use profile_authority::{
     DEFAULT_MAX_PROFILE_BINDINGS, ProfileBindingOutcome, ReceiverProfileBinding,
     RuntimeProfileAuthority, RuntimeProfileAuthorityError, RuntimeProfileView,
 };
-pub use restoration_runtime::{DurableRestorationRuntime, GenerationRestorationRuntime};
+pub use restoration_runtime::{DurableRestorationRuntime, RestorationRuntime};
 pub use rpc::{BackendRequestContext, BridgeRpcBackend, ConnectionDispatcher, RpcFailure};
 pub use runtime_identity::{RuntimeIdentityError, RuntimeIdentityIssuer};
 pub use session::{

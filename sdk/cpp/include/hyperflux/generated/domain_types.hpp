@@ -1947,6 +1947,22 @@ enum class TransactionClass
     return "unknown";
 }
 
+enum class StableLightingMode
+{
+    Static,
+    Off,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(StableLightingMode value)
+{
+    switch(value)
+    {
+        case StableLightingMode::Static: return "static";
+        case StableLightingMode::Off: return "off";
+    }
+    return "unknown";
+}
+
 enum class QueueAdmission
 {
     Enqueued,

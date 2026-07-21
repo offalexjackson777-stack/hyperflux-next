@@ -2,8 +2,8 @@
 
 use super::{
     MAX_STABLE_ENTRIES_PER_RECEIVER, PersistenceOperation, RestorationCoordinator,
-    RestorationError, StableIntentCapture, current_schema_version, next_intent_revision,
-    next_persistence_revision, sha256_hex, validate_schema,
+    RestorationError, StableCommitOutcome, StableIntentCapture, current_schema_version,
+    next_intent_revision, next_persistence_revision, sha256_hex, validate_schema,
 };
 use crate::{
     PersistedRestorePolicy, PersistedStableEntry, PersistedStableIntent, PersistenceCasOutcome,
@@ -12,13 +12,53 @@ use crate::{
 };
 use hfx_domain::{
     DeviceApplicationState, IntentDigest, LogicalDeviceId, ProfileDigest, ProfileId, ReceiverId,
-    SideEffectCertainty, TransactionClass, TransactionState, WallClockUnixMs,
+    SideEffectCertainty, StableLightingMode, TransactionClass, TransactionState, WallClockUnixMs,
 };
-use hfx_protocol::{RgbColor, TransactionRequest, TransactionTerminal};
+use hfx_protocol::{RgbColor, TransactionRequest, TransactionTerminal, validate_transaction};
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 
 impl RestorationCoordinator {
+    /// Captures semantic stable intent declared by one completed protocol-v3
+    /// transaction. Non-stable and non-definitive completions are ignored.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for a malformed stable declaration, conflicting replay,
+    /// or durable storage failure. Hardware outcome truth is never changed.
+    pub fn commit_declared_stable_transaction<S: PersistenceStore>(
+        &self,
+        request: &TransactionRequest,
+        terminal: &TransactionTerminal,
+        captured_at: WallClockUnixMs,
+        store: &mut S,
+    ) -> Result<StableCommitOutcome, RestorationError> {
+        if !is_definitive_stable_terminal(request, terminal) {
+            return Ok(StableCommitOutcome::NotApplicable);
+        }
+        validate_transaction(request).map_err(|_| RestorationError::InvalidStableTransaction)?;
+        let captures = request
+            .stable_intents
+            .iter()
+            .map(|intent| {
+                let frame = request
+                    .frames
+                    .iter()
+                    .find(|frame| frame.device_id == intent.device_id)
+                    .ok_or(RestorationError::CaptureMismatch)?;
+                Ok(StableIntentCapture {
+                    device_id: intent.device_id.clone(),
+                    lighting: match intent.mode {
+                        StableLightingMode::Static => StableLighting::Static(frame.colors.clone()),
+                        StableLightingMode::Off => StableLighting::Off,
+                    },
+                })
+            })
+            .collect::<Result<Vec<_>, RestorationError>>()?;
+        self.commit_stable_transaction(request, terminal, &captures, captured_at, store)
+            .map(StableCommitOutcome::Captured)
+    }
+
     /// Atomically enables or disables stable-lighting restoration.
     ///
     /// # Errors
@@ -73,6 +113,7 @@ impl RestorationCoordinator {
         store: &mut S,
     ) -> Result<Vec<PersistedStableIntent>, RestorationError> {
         validate_stable_terminal(request, terminal)?;
+        validate_transaction(request).map_err(|_| RestorationError::InvalidStableTransaction)?;
         let captures = capture_map(request, captures)?;
         let entries = load_entries(&request.receiver_id, store)?;
         let current = entries
@@ -81,6 +122,7 @@ impl RestorationCoordinator {
             .collect::<BTreeMap<_, _>>();
         let mut intents = Vec::with_capacity(request.frames.len());
         let mut changes = Vec::with_capacity(request.frames.len());
+        let mut replayed = false;
         for frame in &request.frames {
             let lighting = captures
                 .get(&frame.device_id)
@@ -103,6 +145,26 @@ impl RestorationCoordinator {
                 binding.application_slot_count.get(),
                 lighting,
             )?;
+            if let Some(PersistedStableEntry::Present(existing)) = current.get(&frame.device_id)
+                && (existing.source_transaction_id == request.transaction_id
+                    || existing.source_request_digest == terminal.request_digest)
+            {
+                let exact_replay = existing.source_transaction_id == request.transaction_id
+                    && existing.source_request_digest == terminal.request_digest
+                    && existing.receiver_profile_id == request.receiver_profile_id
+                    && existing.receiver_profile_digest == request.receiver_profile_digest
+                    && existing.profile_id == binding.profile_id
+                    && existing.profile_digest == binding.profile_digest
+                    && existing.application_slot_count == binding.application_slot_count
+                    && existing.content_digest == content_digest
+                    && existing.lighting == **lighting;
+                if !exact_replay {
+                    return Err(RestorationError::StableReplayConflict);
+                }
+                replayed = true;
+                intents.push(existing.clone());
+                continue;
+            }
             let intent = PersistedStableIntent {
                 schema_version: current_schema_version()?,
                 receiver_id: request.receiver_id.clone(),
@@ -124,6 +186,12 @@ impl RestorationCoordinator {
                 entry: PersistedStableEntry::Present(intent.clone()),
             });
             intents.push(intent);
+        }
+        if replayed {
+            if !changes.is_empty() {
+                return Err(RestorationError::StableReplayConflict);
+            }
+            return Ok(intents);
         }
         changes.sort_unstable_by(|left, right| left.entry.device_id().cmp(right.entry.device_id()));
         match store
@@ -233,9 +301,25 @@ fn validate_stable_terminal(
         .map_err(|_| RestorationError::InvalidStableTransaction)?;
     let frame_count = u16::try_from(request.frames.len())
         .map_err(|_| RestorationError::InvalidStableTransaction)?;
-    let definitive = request.transaction_class == TransactionClass::StaticLighting
-        && terminal.request_id == request.request_id
+    let definitive = is_definitive_stable_terminal(request, terminal)
         && terminal.request_digest == digest
+        && terminal.declared_frames.get() == frame_count;
+    if definitive {
+        Ok(())
+    } else {
+        Err(RestorationError::InvalidStableTransaction)
+    }
+}
+
+fn is_definitive_stable_terminal(
+    request: &TransactionRequest,
+    terminal: &TransactionTerminal,
+) -> bool {
+    let Ok(frame_count) = u16::try_from(request.frames.len()) else {
+        return false;
+    };
+    request.transaction_class == TransactionClass::StaticLighting
+        && terminal.request_id == request.request_id
         && terminal.transaction_id == request.transaction_id
         && terminal.receiver_id == request.receiver_id
         && terminal.generation_id == request.generation_id
@@ -246,12 +330,7 @@ fn validate_stable_terminal(
         && terminal.live_write_executed
         && !terminal.automatic_retry
         && terminal.device_application != DeviceApplicationState::Rejected
-        && terminal.error_kind.is_none();
-    if definitive {
-        Ok(())
-    } else {
-        Err(RestorationError::InvalidStableTransaction)
-    }
+        && terminal.error_kind.is_none()
 }
 
 fn capture_map<'a>(
@@ -263,6 +342,20 @@ fn capture_map<'a>(
     }
     let mut result = BTreeMap::new();
     for capture in captures {
+        let Some(intent) = request
+            .stable_intents
+            .iter()
+            .find(|intent| intent.device_id == capture.device_id)
+        else {
+            return Err(RestorationError::CaptureMismatch);
+        };
+        if !matches!(
+            (&intent.mode, &capture.lighting),
+            (StableLightingMode::Static, StableLighting::Static(_))
+                | (StableLightingMode::Off, StableLighting::Off)
+        ) {
+            return Err(RestorationError::CaptureMismatch);
+        }
         if result
             .insert(capture.device_id.clone(), &capture.lighting)
             .is_some()

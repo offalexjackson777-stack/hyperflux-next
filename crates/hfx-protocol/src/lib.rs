@@ -3,16 +3,16 @@
 #![forbid(unsafe_code)]
 
 mod generated;
+mod generated_versions;
 mod negotiation;
 mod snapshot;
-#[path = "generated_v1.rs"]
-pub mod v1;
-#[path = "generated_v2.rs"]
-pub mod v2;
 mod validation;
 mod wire;
 
 pub use generated::*;
+pub use generated_versions::{
+    CURRENT_PROTOCOL_VERSION, GENERATED_PROTOCOL_VERSIONS, ProtocolVersionDescriptor, v1, v2, v3,
+};
 pub use negotiation::{
     GENERATED_CONTRACT, NegotiationContext, NegotiationError, ProtocolContract, negotiate,
     negotiate_with_contract,
@@ -20,6 +20,6 @@ pub use negotiation::{
 pub use snapshot::{SnapshotValidationError, validate_bridge_snapshot};
 pub use validation::{ProtocolValidationError, validate_lease_request, validate_transaction};
 pub use wire::{
-    ProtocolWireError, decode_rpc_request, decode_rpc_response, validate_rpc_request,
-    validate_rpc_response,
+    ProtocolWireError, decode_rpc_request, decode_rpc_request_for_version, decode_rpc_response,
+    validate_rpc_request, validate_rpc_response, validate_rpc_response_for_version,
 };

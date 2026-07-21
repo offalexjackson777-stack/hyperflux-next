@@ -2,14 +2,14 @@
 
 use hfx_domain::{
     ColorChannel, FrameIndex, GenerationId, LeaseDurationMs, LedCount, MonotonicMs, ResourceKind,
-    TransactionClass,
+    StableLightingMode, TransactionClass,
 };
 use hfx_protocol::{
     ClientHello, DeviceProfileBinding, LeaseConflict, LeaseRequest, LeaseResult, LightingFrame,
     NegotiationContext, NegotiationError, NegotiationRequestEnvelope, ProtocolContract,
-    ProtocolValidationError, ResourceKey, RgbColor, RpcRequest, RpcResponse, SuccessEnvelope,
-    TransactionRequest, negotiate, negotiate_with_contract, validate_lease_request,
-    validate_transaction,
+    ProtocolValidationError, ProtocolVersionDescriptor, ResourceKey, RgbColor, RpcRequest,
+    RpcResponse, StableLightingIntent, SuccessEnvelope, TransactionRequest, negotiate,
+    negotiate_with_contract, validate_lease_request, validate_transaction,
 };
 
 fn value<T: TryFrom<String>>(raw: &str) -> T
@@ -62,6 +62,7 @@ fn transaction() -> TransactionRequest {
             application_slot_count: LedCount::try_from(1_u16).expect("LED count is valid"),
         }],
         transaction_class: TransactionClass::EffectFrame,
+        stable_intents: Vec::new(),
         deadline_ms: MonotonicMs::try_from(100_u64).expect("deadline is valid"),
         resources: vec![resource("mouse-1")],
         frames: vec![LightingFrame {
@@ -73,6 +74,25 @@ fn transaction() -> TransactionRequest {
                 blue: ColorChannel::try_from(3_u8).expect("color is valid"),
             }],
         }],
+    }
+}
+
+fn stable_transaction(mode: StableLightingMode, color: RgbColor) -> TransactionRequest {
+    let mut request = transaction();
+    request.transaction_class = TransactionClass::StaticLighting;
+    request.frames[0].colors = vec![color];
+    request.stable_intents = vec![StableLightingIntent {
+        device_id: value("mouse-1"),
+        mode,
+    }];
+    request
+}
+
+fn black() -> RgbColor {
+    RgbColor {
+        red: ColorChannel::try_from(0_u8).expect("color is valid"),
+        green: ColorChannel::try_from(0_u8).expect("color is valid"),
+        blue: ColorChannel::try_from(0_u8).expect("color is valid"),
     }
 }
 
@@ -100,13 +120,22 @@ fn feature_negotiation_selects_intersection_and_rejects_incompatible_versions() 
     let response = negotiate(&v2, context("protocol-session-2")).expect("v2 overlaps");
     assert_eq!(response.selected_version.get(), 2);
 
-    let incompatible = ClientHello {
+    let v3 = ClientHello {
         minimum_version: number(3),
         maximum_version: number(3),
+        required_features: vec![value("semantic-stable-lighting")],
         ..v2
     };
+    let response = negotiate(&v3, context("protocol-session-3")).expect("v3 overlaps");
+    assert_eq!(response.selected_version.get(), 3);
+
+    let incompatible = ClientHello {
+        minimum_version: number(4),
+        maximum_version: number(4),
+        ..v3
+    };
     assert_eq!(
-        negotiate(&incompatible, context("protocol-session-3")),
+        negotiate(&incompatible, context("protocol-session-4")),
         Err(NegotiationError::IncompatibleVersion)
     );
 }
@@ -121,10 +150,22 @@ fn newer_bridge_serves_v1_client_and_required_features_fail_closed() {
         required_features: vec![value("ownership-leases")],
         optional_features: Vec::new(),
     };
+    let versions = [
+        ProtocolVersionDescriptor {
+            version: 1,
+            catalog_sha256: "test-v1",
+            catalog_features: &["future-feature", "ownership-leases"],
+            served_features: &["future-feature", "ownership-leases"],
+        },
+        ProtocolVersionDescriptor {
+            version: 2,
+            catalog_sha256: "test-v2",
+            catalog_features: &["future-feature", "ownership-leases"],
+            served_features: &["future-feature", "ownership-leases"],
+        },
+    ];
     let v2_bridge = ProtocolContract {
-        minimum_version: 1,
-        maximum_version: 2,
-        features: &["ownership-leases", "future-feature"],
+        versions: &versions,
     };
     let selected = negotiate_with_contract(&hello, context("protocol-session-1"), v2_bridge)
         .expect("v2 bridge retains the frozen v1 service shape");
@@ -137,6 +178,23 @@ fn newer_bridge_serves_v1_client_and_required_features_fail_closed() {
     assert!(matches!(
         negotiate_with_contract(&unsupported, context("protocol-session-2"), v2_bridge),
         Err(NegotiationError::UnsupportedRequiredFeatures(features)) if features.len() == 1
+    ));
+}
+
+#[test]
+fn frozen_v1_does_not_advertise_unserved_profileless_writes() {
+    let hello = ClientHello {
+        client_id: value("client-1"),
+        client_name: value("legacy-client"),
+        minimum_version: number(1),
+        maximum_version: number(1),
+        required_features: vec![value("atomic-transactions")],
+        optional_features: Vec::new(),
+    };
+    assert!(matches!(
+        negotiate(&hello, context("protocol-session-v1")),
+        Err(NegotiationError::UnsupportedRequiredFeatures(features))
+            if features == vec![value("atomic-transactions")]
     ));
 }
 
@@ -221,6 +279,97 @@ fn transaction_profile_bindings_are_exact_canonical_and_dimensioned() {
     assert_eq!(
         validate_transaction(&extra_resource),
         Err(ProtocolValidationError::ResourceWithoutFrame)
+    );
+}
+
+#[test]
+fn stable_lighting_semantics_are_explicit_even_when_static_is_black() {
+    validate_transaction(&stable_transaction(StableLightingMode::Static, black()))
+        .expect("black Static remains semantically Static");
+    validate_transaction(&stable_transaction(StableLightingMode::Off, black()))
+        .expect("explicit black Off is valid");
+
+    let mut lit_off = stable_transaction(StableLightingMode::Off, black());
+    lit_off.frames[0].colors[0].red = ColorChannel::try_from(1_u8).expect("color is valid");
+    assert_eq!(
+        validate_transaction(&lit_off),
+        Err(ProtocolValidationError::OffIntentHasLitColor)
+    );
+}
+
+#[test]
+fn stable_intent_set_must_exactly_and_canonically_match_frames() {
+    let mut missing = stable_transaction(StableLightingMode::Static, black());
+    missing.stable_intents.clear();
+    assert_eq!(
+        validate_transaction(&missing),
+        Err(ProtocolValidationError::FrameWithoutStableIntent)
+    );
+
+    let mut duplicate = stable_transaction(StableLightingMode::Static, black());
+    duplicate
+        .stable_intents
+        .push(duplicate.stable_intents[0].clone());
+    assert_eq!(
+        validate_transaction(&duplicate),
+        Err(ProtocolValidationError::DuplicateStableIntent)
+    );
+
+    let mut extra = stable_transaction(StableLightingMode::Static, black());
+    extra.stable_intents[0].device_id = value("keyboard-1");
+    assert_eq!(
+        validate_transaction(&extra),
+        Err(ProtocolValidationError::StableIntentWithoutFrame)
+    );
+
+    let mut unordered = stable_transaction(StableLightingMode::Static, black());
+    unordered.resources.push(resource("keyboard-1"));
+    unordered.resources.sort_unstable();
+    unordered.device_profiles.push(DeviceProfileBinding {
+        device_id: value("keyboard-1"),
+        profile_id: value("profile.keyboard-1"),
+        profile_digest: value(&"c".repeat(64)),
+        application_slot_count: LedCount::try_from(1_u16).expect("LED count is valid"),
+    });
+    unordered
+        .device_profiles
+        .sort_unstable_by(|left, right| left.device_id.cmp(&right.device_id));
+    unordered.frames.push(LightingFrame {
+        device_id: value("keyboard-1"),
+        frame_index: FrameIndex::try_from(1_u32).expect("frame index is valid"),
+        colors: vec![black()],
+    });
+    unordered.stable_intents.push(StableLightingIntent {
+        device_id: value("keyboard-1"),
+        mode: StableLightingMode::Static,
+    });
+    unordered
+        .stable_intents
+        .sort_unstable_by(|left, right| left.device_id.cmp(&right.device_id));
+    validate_transaction(&unordered).expect("canonical two-device intent set is valid");
+    unordered.stable_intents.reverse();
+    assert_eq!(
+        validate_transaction(&unordered),
+        Err(ProtocolValidationError::StableIntentsNotCanonical)
+    );
+}
+
+#[test]
+fn effect_and_restore_transactions_cannot_mutate_stable_intent() {
+    let mut effect = transaction();
+    effect.stable_intents.push(StableLightingIntent {
+        device_id: value("mouse-1"),
+        mode: StableLightingMode::Static,
+    });
+    assert_eq!(
+        validate_transaction(&effect),
+        Err(ProtocolValidationError::StableIntentOnNonStableTransaction)
+    );
+
+    effect.transaction_class = TransactionClass::Restore;
+    assert_eq!(
+        validate_transaction(&effect),
+        Err(ProtocolValidationError::StableIntentOnNonStableTransaction)
     );
 }
 

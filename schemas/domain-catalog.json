@@ -91,6 +91,7 @@
     {"name": "LeaseState", "values": ["requested", "granted", "renewed", "released", "expired", "revoked"]},
     {"name": "ResourceKind", "values": ["lighting", "settings", "pairing"]},
     {"name": "TransactionClass", "values": ["effect-frame", "static-lighting", "device-setting", "restore", "pairing"]},
+    {"name": "StableLightingMode", "values": ["static", "off"]},
     {"name": "QueueAdmission", "values": ["enqueued", "coalesced", "rejected-full", "rejected-deadline", "rejected-invalid"]},
     {"name": "RestoreState", "values": ["idle", "planned", "ownership-bound", "generation-bound", "queued", "applying", "succeeded", "failed", "invalidated"]},
     {"name": "RestoreTriggerKind", "values": ["service-start", "receiver-generation", "system-resume", "device-return"]},

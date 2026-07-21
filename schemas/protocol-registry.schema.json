@@ -15,7 +15,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["version", "catalog", "sha256"],
+        "required": ["version", "catalog", "sha256", "served_features"],
         "properties": {
           "version": {"type": "integer", "minimum": 1, "maximum": 65535},
           "catalog": {
@@ -23,7 +23,17 @@
             "pattern": "^v[1-9][0-9]*/catalog\\.json$",
             "maxLength": 128
           },
-          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "served_features": {
+            "type": "array",
+            "maxItems": 64,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9.-]*$",
+              "maxLength": 128
+            }
+          }
         }
       }
     }

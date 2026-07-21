@@ -21,8 +21,8 @@ from hfxdev.protocol import (
 class ProtocolCompilerTests(unittest.TestCase):
     def test_catalog_is_versioned_and_generated_deterministically(self) -> None:
         registry = load_protocol_registry(ROOT)
-        self.assertEqual(registry.current_version, 2)
-        self.assertEqual([item.version for item in registry.versions], [1, 2])
+        self.assertEqual(registry.current_version, 3)
+        self.assertEqual([item.version for item in registry.versions], [1, 2, 3])
         self.assertEqual(
             registry.versions[0].source_sha256,
             "ed3df1f1627ca8a836f509ead3ab7dc7a4cbc6116f6da4accb2cc53e7500859f",
@@ -40,11 +40,34 @@ class ProtocolCompilerTests(unittest.TestCase):
             for record in registry.versions[1].catalog.records
             if record.name == "TransactionRequest"
         )
+        v3_transaction = next(
+            record
+            for record in registry.versions[2].catalog.records
+            if record.name == "TransactionRequest"
+        )
         self.assertNotIn(
             "device_profiles", [field.name for field in v1_transaction.fields]
         )
         self.assertIn(
             "device_profiles", [field.name for field in v2_transaction.fields]
+        )
+        self.assertNotIn(
+            "stable_intents", [field.name for field in v2_transaction.fields]
+        )
+        self.assertIn(
+            "stable_intents", [field.name for field in v3_transaction.fields]
+        )
+        self.assertNotIn(
+            "atomic-transactions", registry.versions[0].served_features
+        )
+        self.assertIn(
+            "profile-bound-transactions", registry.versions[1].served_features
+        )
+        self.assertNotIn(
+            "semantic-stable-lighting", registry.versions[1].served_features
+        )
+        self.assertIn(
+            "semantic-stable-lighting", registry.versions[2].served_features
         )
         first = load_protocol_catalog(ROOT)
         second = load_protocol_catalog(ROOT)

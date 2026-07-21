@@ -16,12 +16,12 @@ use hfx_domain::{
     DeviceWriteReadiness, DispatchNonce, FrameCount, FrameIndex, GenerationId, LeaseDurationMs,
     LeaseId, LedCount, LogicalDeviceId, MonotonicMs, ProfileDigest, ProfileId, ProjectionRevision,
     ReceiverId, RequestId, ResourceKind, RestoreClaimId, RestoreRecordState, RestoreTriggerId,
-    RestoreTriggerKind, SequenceNumber, SessionId, SideEffectCertainty, StreamEpoch, StreamId,
-    TransactionClass, TransactionId, TransactionState, WallClockUnixMs,
+    RestoreTriggerKind, SequenceNumber, SessionId, SideEffectCertainty, StableLightingMode,
+    StreamEpoch, StreamId, TransactionClass, TransactionId, TransactionState, WallClockUnixMs,
 };
 use hfx_protocol::{
-    BridgeEvent, DeviceProfileBinding, LightingFrame, ResourceKey, RgbColor, TransactionRequest,
-    TransactionTerminal,
+    BridgeEvent, DeviceProfileBinding, LightingFrame, ResourceKey, RgbColor, StableLightingIntent,
+    TransactionRequest, TransactionTerminal,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -389,6 +389,10 @@ impl SimRestorationHarness {
             .cloned()
             .ok_or(SimRestorationError::InvalidConfig("unknown capture device"))?;
         let colors = lighting_colors(&lighting, profile.application_slot_count)?;
+        let mode = match &lighting {
+            StableLighting::Off => StableLightingMode::Off,
+            StableLighting::Static(_) => StableLightingMode::Static,
+        };
         let sequence = self.next_sequence()?;
         let request_id = typed_id::<RequestId>("capture-request", sequence)?;
         let transaction_id = typed_id::<TransactionId>("capture-transaction", sequence)?;
@@ -414,6 +418,10 @@ impl SimRestorationHarness {
                 application_slot_count: profile.application_slot_count,
             }],
             transaction_class: TransactionClass::StaticLighting,
+            stable_intents: vec![StableLightingIntent {
+                device_id: device_id.clone(),
+                mode,
+            }],
             deadline_ms: deadline(self.now, self.config.authority_window_ms)?,
             resources: vec![resource],
             frames: vec![LightingFrame {

@@ -101,6 +101,7 @@ These types prevent semantically different values from being passed interchangea
 - `LeaseState`: `requested`, `granted`, `renewed`, `released`, `expired`, `revoked`
 - `ResourceKind`: `lighting`, `settings`, `pairing`
 - `TransactionClass`: `effect-frame`, `static-lighting`, `device-setting`, `restore`, `pairing`
+- `StableLightingMode`: `static`, `off`
 - `QueueAdmission`: `enqueued`, `coalesced`, `rejected-full`, `rejected-deadline`, `rejected-invalid`
 - `RestoreState`: `idle`, `planned`, `ownership-bound`, `generation-bound`, `queued`, `applying`, `succeeded`, `failed`, `invalidated`
 - `RestoreTriggerKind`: `service-start`, `receiver-generation`, `system-resume`, `device-return`

@@ -7,14 +7,27 @@ use crate::{
     RestorationSnapshotSource,
 };
 use hfx_core::{
-    BoundedEventLog, CURRENT_PERSISTENCE_SCHEMA_VERSION, EventSink, LeaseManager,
-    MAX_RESTORE_RECORDS_PER_RECEIVER, PersistenceStore, ReceiverTransport, RestorationCoordinator,
-    RestorationError, RestoreGenerationRetirement, RestoreRecordStatus, TransactionCoordinator,
+    BoundedEventLog, CURRENT_PERSISTENCE_SCHEMA_VERSION, CompletedTransaction, EventSink,
+    LeaseManager, MAX_RESTORE_RECORDS_PER_RECEIVER, PersistenceStore, ReceiverTransport,
+    RestorationCoordinator, RestorationError, RestoreGenerationRetirement, RestoreRecordStatus,
+    StableCommitOutcome, TransactionCoordinator,
 };
-use hfx_domain::{GenerationId, MonotonicMs, ReceiverId, RestoreState};
+use hfx_domain::{GenerationId, MonotonicMs, ReceiverId, RestoreState, WallClockUnixMs};
 
-/// Reconciles durable restoration truth when generation authority is retired.
-pub trait GenerationRestorationRuntime: RestorationSnapshotSource {
+/// Owns durable stable-lighting capture, projection, and generation retirement.
+pub trait RestorationRuntime: RestorationSnapshotSource {
+    /// Observes one immutable completion after transport and outcome journaling.
+    ///
+    /// # Errors
+    ///
+    /// Returns a persistence error without changing the hardware terminal or
+    /// authorizing an automatic transport retry.
+    fn capture_completed(
+        &mut self,
+        completed: &CompletedTransaction,
+        captured_at: WallClockUnixMs,
+    ) -> Result<StableCommitOutcome, RestorationError>;
+
     /// Reconciles or invalidates every nonterminal claim for one retired generation.
     ///
     /// # Errors
@@ -38,7 +51,15 @@ pub trait GenerationRestorationRuntime: RestorationSnapshotSource {
         E: EventSink;
 }
 
-impl GenerationRestorationRuntime for DisabledRestorationSource {
+impl RestorationRuntime for DisabledRestorationSource {
+    fn capture_completed(
+        &mut self,
+        _completed: &CompletedTransaction,
+        _captured_at: WallClockUnixMs,
+    ) -> Result<StableCommitOutcome, RestorationError> {
+        Ok(StableCommitOutcome::NotApplicable)
+    }
+
     fn retire_generation<T, E>(
         &mut self,
         receiver_id: &ReceiverId,
@@ -136,7 +157,20 @@ impl<S: PersistenceStore> RestorationSnapshotSource for DurableRestorationRuntim
     }
 }
 
-impl<S: PersistenceStore> GenerationRestorationRuntime for DurableRestorationRuntime<S> {
+impl<S: PersistenceStore> RestorationRuntime for DurableRestorationRuntime<S> {
+    fn capture_completed(
+        &mut self,
+        completed: &CompletedTransaction,
+        captured_at: WallClockUnixMs,
+    ) -> Result<StableCommitOutcome, RestorationError> {
+        RestorationCoordinator.commit_declared_stable_transaction(
+            &completed.request,
+            &completed.terminal,
+            captured_at,
+            &mut self.store,
+        )
+    }
+
     fn retire_generation<T, E>(
         &mut self,
         receiver_id: &ReceiverId,

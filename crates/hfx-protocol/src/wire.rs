@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::{
-    DiagnosticSnapshot, EventBatch, LeaseResult, MAX_WIRE_MESSAGE_BYTES, ProtocolValidationError,
-    RpcRequest, RpcResponse, SnapshotValidationError, TransactionResult, TransactionTerminal,
-    TransactionUnavailable, validate_bridge_snapshot, validate_lease_request, validate_transaction,
+    CURRENT_PROTOCOL_VERSION, DiagnosticSnapshot, EventBatch, LeaseResult, MAX_WIRE_MESSAGE_BYTES,
+    ProtocolValidationError, RpcRequest, RpcResponse, SnapshotValidationError,
+    StableLightingIntent, TransactionResult, TransactionTerminal, TransactionUnavailable, v1, v2,
+    v3, validate_bridge_snapshot, validate_lease_request, validate_transaction,
 };
-use hfx_domain::{ProtocolErrorKind, SideEffectCertainty, TransactionState};
-use serde::de::DeserializeOwned;
+use hfx_domain::{
+    ProtocolErrorKind, ProtocolVersion, SideEffectCertainty, StableLightingMode, TransactionClass,
+    TransactionState,
+};
+use serde::{Serialize, de::DeserializeOwned};
+use serde_json::Value;
 use std::collections::BTreeSet;
 use std::fmt;
 
@@ -16,6 +21,9 @@ pub enum ProtocolWireError {
     MalformedJson,
     RequestBoundExceeded,
     RequestNotCanonical,
+    UnsupportedProtocolVersion,
+    UnsupportedVersionMethod,
+    VersionTranslation,
     InvalidRequest(ProtocolValidationError),
     InvalidSnapshot(SnapshotValidationError),
     InvalidResponse(&'static str),
@@ -28,6 +36,11 @@ impl fmt::Display for ProtocolWireError {
             Self::MalformedJson => "protocol message is malformed or exceeds the JSON depth bound",
             Self::RequestBoundExceeded => "protocol request exceeds a collection bound",
             Self::RequestNotCanonical => "protocol request contains duplicate or unordered values",
+            Self::UnsupportedProtocolVersion => "protocol version is not registered",
+            Self::UnsupportedVersionMethod => {
+                "method is not safely served by the negotiated protocol version"
+            }
+            Self::VersionTranslation => "versioned protocol value cannot be normalized safely",
             Self::InvalidRequest(_) => "protocol request violates a method invariant",
             Self::InvalidSnapshot(_) => "protocol snapshot violates a projection invariant",
             Self::InvalidResponse(reason) => reason,
@@ -42,6 +55,72 @@ fn decode<T: DeserializeOwned>(bytes: &[u8]) -> Result<T, ProtocolWireError> {
         return Err(ProtocolWireError::MessageTooLarge);
     }
     serde_json::from_slice(bytes).map_err(|_| ProtocolWireError::MalformedJson)
+}
+
+fn transcode_request<T: Serialize>(request: T) -> Result<RpcRequest, ProtocolWireError> {
+    let value = serde_json::to_value(request).map_err(|_| ProtocolWireError::VersionTranslation)?;
+    let request =
+        serde_json::from_value(value).map_err(|_| ProtocolWireError::VersionTranslation)?;
+    validate_rpc_request(&request)?;
+    Ok(request)
+}
+
+fn normalize_v1_request(request: v1::RpcRequest) -> Result<RpcRequest, ProtocolWireError> {
+    if matches!(request, v1::RpcRequest::SubmitTransaction(_)) {
+        return Err(ProtocolWireError::UnsupportedVersionMethod);
+    }
+    transcode_request(request)
+}
+
+fn normalize_v2_request(request: v2::RpcRequest) -> Result<RpcRequest, ProtocolWireError> {
+    let stable_intents = match &request {
+        v2::RpcRequest::SubmitTransaction(envelope) => {
+            let mut intents =
+                if envelope.params.transaction_class == TransactionClass::StaticLighting {
+                    envelope
+                        .params
+                        .frames
+                        .iter()
+                        .map(|frame| StableLightingIntent {
+                            device_id: frame.device_id.clone(),
+                            mode: StableLightingMode::Static,
+                        })
+                        .collect::<Vec<_>>()
+                } else {
+                    Vec::new()
+                };
+            intents.sort_unstable_by(|left, right| left.device_id.cmp(&right.device_id));
+            Some(intents)
+        }
+        _ => None,
+    };
+    let mut value =
+        serde_json::to_value(request).map_err(|_| ProtocolWireError::VersionTranslation)?;
+    if let Some(stable_intents) = stable_intents {
+        insert_stable_intents(&mut value, stable_intents)?;
+    }
+    let request =
+        serde_json::from_value(value).map_err(|_| ProtocolWireError::VersionTranslation)?;
+    validate_rpc_request(&request)?;
+    Ok(request)
+}
+
+fn insert_stable_intents(
+    value: &mut Value,
+    stable_intents: Vec<StableLightingIntent>,
+) -> Result<(), ProtocolWireError> {
+    let params = value
+        .as_object_mut()
+        .and_then(|root| root.get_mut("request"))
+        .and_then(Value::as_object_mut)
+        .and_then(|request| request.get_mut("params"))
+        .and_then(Value::as_object_mut)
+        .ok_or(ProtocolWireError::VersionTranslation)?;
+    params.insert(
+        "stable_intents".to_owned(),
+        serde_json::to_value(stable_intents).map_err(|_| ProtocolWireError::VersionTranslation)?,
+    );
+    Ok(())
 }
 
 fn strictly_ordered<T: Ord>(values: &[T]) -> bool {
@@ -292,9 +371,32 @@ pub fn validate_rpc_response(response: &RpcResponse) -> Result<(), ProtocolWireE
 /// Returns an error before parsing oversized input, or after parsing malformed
 /// and semantically invalid input.
 pub fn decode_rpc_request(bytes: &[u8]) -> Result<RpcRequest, ProtocolWireError> {
-    let request = decode(bytes)?;
-    validate_rpc_request(&request)?;
-    Ok(request)
+    decode_rpc_request_version(bytes, CURRENT_PROTOCOL_VERSION)
+}
+
+/// Decodes a request using the exact frozen schema selected for the connection.
+///
+/// Version 2 static transactions are conservatively normalized to semantic
+/// `Static`; version 1 writes fail closed because they lack profile bindings.
+///
+/// # Errors
+///
+/// Returns an error for an unknown version, an unsupported legacy method, or
+/// any frozen-schema, normalization, or current-core invariant violation.
+pub fn decode_rpc_request_for_version(
+    bytes: &[u8],
+    version: ProtocolVersion,
+) -> Result<RpcRequest, ProtocolWireError> {
+    decode_rpc_request_version(bytes, version.get())
+}
+
+fn decode_rpc_request_version(bytes: &[u8], version: u16) -> Result<RpcRequest, ProtocolWireError> {
+    match version {
+        1 => normalize_v1_request(decode::<v1::RpcRequest>(bytes)?),
+        2 => normalize_v2_request(decode::<v2::RpcRequest>(bytes)?),
+        3 => transcode_request(decode::<v3::RpcRequest>(bytes)?),
+        _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
+    }
 }
 
 /// Decodes one bounded typed response and enforces projection invariants.
@@ -307,4 +409,36 @@ pub fn decode_rpc_response(bytes: &[u8]) -> Result<RpcResponse, ProtocolWireErro
     let response = decode(bytes)?;
     validate_rpc_response(&response)?;
     Ok(response)
+}
+
+/// Verifies that a current-core response is exactly encodable by one frozen
+/// negotiated response schema.
+///
+/// # Errors
+///
+/// Returns an error for an unknown version or any response field that is not
+/// representable by the selected frozen schema.
+pub fn validate_rpc_response_for_version(
+    response: &RpcResponse,
+    version: ProtocolVersion,
+) -> Result<(), ProtocolWireError> {
+    validate_rpc_response(response)?;
+    let encoded =
+        serde_json::to_vec(response).map_err(|_| ProtocolWireError::VersionTranslation)?;
+    if encoded.len() > MAX_WIRE_MESSAGE_BYTES {
+        return Err(ProtocolWireError::MessageTooLarge);
+    }
+    match version.get() {
+        1 => {
+            decode::<v1::RpcResponse>(&encoded)?;
+        }
+        2 => {
+            decode::<v2::RpcResponse>(&encoded)?;
+        }
+        3 => {
+            decode::<v3::RpcResponse>(&encoded)?;
+        }
+        _ => return Err(ProtocolWireError::UnsupportedProtocolVersion),
+    }
+    Ok(())
 }

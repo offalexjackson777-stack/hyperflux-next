@@ -2,20 +2,20 @@
 
 use crate::{
     AuthorizedSession, BackendRequestContext, BridgeRpcBackend, GenerationActivationOutcome,
-    GenerationOrchestrationError, GenerationOrchestrator, GenerationRestorationRuntime,
-    LifecycleObservation, LifecycleObservationError, LifecycleObservationOrchestrator,
-    LifecycleObservationOutcome, ReceiverDisconnectCompletionOutcome,
-    ReceiverDisconnectObservation, ReceiverDisconnectOutcome, ReceiverGenerationObservation,
-    RpcFailure, RuntimeIdentityError, RuntimeIdentityIssuer, RuntimeProfileAuthority,
-    SessionIdentitySource, SessionRegistry, SnapshotProjectionError, SnapshotProjector,
-    SubscriptionRegistry, SubscriptionRegistryError,
+    GenerationOrchestrationError, GenerationOrchestrator, LifecycleObservation,
+    LifecycleObservationError, LifecycleObservationOrchestrator, LifecycleObservationOutcome,
+    ReceiverDisconnectCompletionOutcome, ReceiverDisconnectObservation, ReceiverDisconnectOutcome,
+    ReceiverGenerationObservation, RestorationRuntime, RpcFailure, RuntimeIdentityError,
+    RuntimeIdentityIssuer, RuntimeProfileAuthority, SessionIdentitySource, SessionRegistry,
+    SnapshotProjectionError, SnapshotProjector, SubscriptionRegistry, SubscriptionRegistryError,
 };
 use hfx_core::{
     BoundedEventLog, Clock, DiagnosticRegistry, DiagnosticRegistryError, DispatchResult,
     EventDraft, EventLogError, EventSink, LeaseManager, LeaseManagerError, LifecycleLimits,
-    OutcomeJournalError, OutcomeLookup, ProfileRegistry, ReceiverLifecycleRegistry,
-    ReceiverTransport, SessionAuthority, SubmissionResult, TransactionCoordinator,
-    TransactionCoordinatorError, TransactionQueueError,
+    OutcomeJournalError, OutcomeLookup, PersistedStableIntent, ProfileRegistry,
+    ReceiverLifecycleRegistry, ReceiverTransport, RestorationError, SessionAuthority,
+    StableCommitOutcome, SubmissionResult, TransactionCoordinator, TransactionCoordinatorError,
+    TransactionQueueError, WallClock,
 };
 use hfx_domain::{
     EventKind, FindingId, ProjectionRevision, ProtocolErrorKind, QueueCapacity, StreamEpoch,
@@ -28,6 +28,7 @@ use hfx_protocol::{
     TransactionResult, TransactionUnavailable, validate_lease_request,
 };
 use std::fmt;
+use std::ops::Deref;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CoreBridgeConfig {
@@ -41,6 +42,27 @@ pub struct CoreBridgeConfig {
     pub stream_id: StreamId,
     pub stream_epoch: StreamEpoch,
     pub projection_revision: ProjectionRevision,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum StableCaptureStatus {
+    NotApplicable,
+    Captured(Vec<PersistedStableIntent>),
+    Failed(RestorationError),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BridgeDispatchResult {
+    pub dispatch: DispatchResult,
+    pub stable_capture: StableCaptureStatus,
+}
+
+impl Deref for BridgeDispatchResult {
+    type Target = DispatchResult;
+
+    fn deref(&self) -> &Self::Target {
+        &self.dispatch
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -70,9 +92,10 @@ impl std::error::Error for CoreBridgeBackendError {}
 
 /// Application-neutral composition of the production bridge policy core.
 #[derive(Debug)]
-pub struct CoreBridgeBackend<C, T, R, S> {
+pub struct CoreBridgeBackend<C, W, T, R, S> {
     config: CoreBridgeConfig,
     clock: C,
+    wall_clock: W,
     transport: T,
     restoration: R,
     identities: RuntimeIdentityIssuer,
@@ -86,11 +109,12 @@ pub struct CoreBridgeBackend<C, T, R, S> {
     event_sink: S,
 }
 
-impl<C, T, R, S> CoreBridgeBackend<C, T, R, S>
+impl<C, W, T, R, S> CoreBridgeBackend<C, W, T, R, S>
 where
     C: Clock,
+    W: WallClock,
     T: ReceiverTransport,
-    R: GenerationRestorationRuntime,
+    R: RestorationRuntime,
     S: EventSink,
 {
     /// Composes validated state owners and bounded runtime services.
@@ -103,6 +127,7 @@ where
     pub fn new<I: SessionIdentitySource>(
         config: CoreBridgeConfig,
         clock: C,
+        wall_clock: W,
         transport: T,
         restoration: R,
         identity_source: &mut I,
@@ -135,6 +160,7 @@ where
         Ok(Self {
             config,
             clock,
+            wall_clock,
             transport,
             restoration,
             identities,
@@ -158,10 +184,11 @@ where
     pub fn dispatch_next(
         &mut self,
         sessions: &SessionRegistry,
-    ) -> Result<DispatchResult, RpcFailure> {
+    ) -> Result<BridgeDispatchResult, RpcFailure> {
         self.tick()?;
         let profiles = self.profiles.view(&self.receivers);
-        self.transactions
+        let dispatch = self
+            .transactions
             .dispatch_next(
                 self.clock.now(),
                 sessions,
@@ -172,7 +199,29 @@ where
                 &mut self.events,
                 &mut self.event_sink,
             )
-            .map_err(transaction_failure)
+            .map_err(transaction_failure)?;
+        let stable_capture =
+            dispatch
+                .completed
+                .as_ref()
+                .map_or(StableCaptureStatus::NotApplicable, |completed| {
+                    match self
+                        .restoration
+                        .capture_completed(completed, self.wall_clock.now_unix_ms())
+                    {
+                        Ok(StableCommitOutcome::NotApplicable) => {
+                            StableCaptureStatus::NotApplicable
+                        }
+                        Ok(StableCommitOutcome::Captured(intents)) => {
+                            StableCaptureStatus::Captured(intents)
+                        }
+                        Err(error) => StableCaptureStatus::Failed(error),
+                    }
+                });
+        Ok(BridgeDispatchResult {
+            dispatch,
+            stable_capture,
+        })
     }
 
     /// Advances time-driven bridge policy without requiring an RPC request.
@@ -287,8 +336,21 @@ where
         &mut self.transport
     }
 
+    #[must_use]
+    pub const fn restoration(&self) -> &R {
+        &self.restoration
+    }
+
+    pub const fn restoration_mut(&mut self) -> &mut R {
+        &mut self.restoration
+    }
+
     pub const fn clock_mut(&mut self) -> &mut C {
         &mut self.clock
+    }
+
+    pub const fn wall_clock_mut(&mut self) -> &mut W {
+        &mut self.wall_clock
     }
 
     #[must_use]
@@ -392,11 +454,12 @@ where
     }
 }
 
-impl<C, T, R, S> BridgeRpcBackend for CoreBridgeBackend<C, T, R, S>
+impl<C, W, T, R, S> BridgeRpcBackend for CoreBridgeBackend<C, W, T, R, S>
 where
     C: Clock,
+    W: WallClock,
     T: ReceiverTransport,
-    R: GenerationRestorationRuntime,
+    R: RestorationRuntime,
     S: EventSink,
 {
     fn snapshot(

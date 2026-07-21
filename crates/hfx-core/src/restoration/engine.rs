@@ -440,7 +440,11 @@ impl RestorationCoordinator {
         sink: &mut E,
     ) -> Result<Vec<RestoreRecord>, RestorationError> {
         let mut updated = Vec::new();
-        for terminal in result.expired.iter().chain(result.completed.iter()) {
+        for terminal in result
+            .expired
+            .iter()
+            .chain(result.completed.iter().map(|completed| &completed.terminal))
+        {
             let records = load_records(&terminal.receiver_id, store)?;
             let Some(record) = records.into_iter().find(|record| {
                 active_attempt(&record.status).is_some_and(|attempt| {
@@ -916,6 +920,7 @@ fn build_attempt(
             application_slot_count: intent.application_slot_count,
         }],
         transaction_class: TransactionClass::Restore,
+        stable_intents: Vec::new(),
         deadline_ms: authority.deadline_ms,
         resources: vec![resource],
         frames: vec![LightingFrame {

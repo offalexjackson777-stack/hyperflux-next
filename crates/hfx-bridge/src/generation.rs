@@ -2,7 +2,7 @@
 
 use crate::{
     ReceiverProfileBinding, RuntimeProfileAuthority, RuntimeProfileAuthorityError,
-    restoration_runtime::GenerationRestorationRuntime, staged_events::StagedEvents,
+    restoration_runtime::RestorationRuntime, staged_events::StagedEvents,
 };
 use hfx_core::{
     BoundedEventLog, EventLogError, EventSink, LeaseManager, LifecycleError, LifecycleLimits,
@@ -210,7 +210,7 @@ impl GenerationOrchestrator {
     ) -> Result<GenerationActivationOutcome, GenerationOrchestrationError>
     where
         T: ReceiverTransport,
-        R: GenerationRestorationRuntime,
+        R: RestorationRuntime,
         S: EventSink,
     {
         let ReceiverGenerationObservation {
@@ -332,7 +332,7 @@ impl GenerationOrchestrator {
     ) -> Result<ReceiverDisconnectOutcome, GenerationOrchestrationError>
     where
         T: ReceiverTransport,
-        R: GenerationRestorationRuntime,
+        R: RestorationRuntime,
         S: EventSink,
     {
         let receiver_id = observation.receiver_id;

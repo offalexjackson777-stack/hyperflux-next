@@ -884,6 +884,11 @@ class TransactionClass(str, Enum):
     PAIRING = "pairing"
 
 
+class StableLightingMode(str, Enum):
+    STATIC = "static"
+    OFF = "off"
+
+
 class QueueAdmission(str, Enum):
     ENQUEUED = "enqueued"
     COALESCED = "coalesced"
@@ -1095,6 +1100,7 @@ __all__ = [
     "LeaseState",
     "ResourceKind",
     "TransactionClass",
+    "StableLightingMode",
     "QueueAdmission",
     "RestoreState",
     "RestoreTriggerKind",

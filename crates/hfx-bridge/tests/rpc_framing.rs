@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use hfx_bridge::{FrameError, FrameIoStage, read_rpc_request, write_rpc_response};
+use hfx_bridge::{
+    FrameError, FrameIoStage, read_rpc_request, read_rpc_request_for_version, write_rpc_response,
+    write_rpc_response_for_version,
+};
 use hfx_domain::{
     ClientId, ClientName, ComponentVersion, NegotiationToken, ProtocolFeatureId, ProtocolSessionId,
     ProtocolVersion, QueueCapacity, RequestId, ServerInstanceId,
@@ -8,6 +11,7 @@ use hfx_domain::{
 use hfx_protocol::{
     ClientHello, NegotiationRequestEnvelope, RpcRequest, RpcResponse, ServerHello, SuccessEnvelope,
 };
+use serde_json::{Value, json};
 use std::io::{self, Cursor, Read, Write};
 
 fn id<T>(value: &str) -> T
@@ -50,14 +54,34 @@ fn negotiation_response() -> RpcResponse {
 
 fn framed(request: &RpcRequest) -> Vec<u8> {
     let payload = serde_json::to_vec(request).expect("request must serialize");
+    framed_payload(&payload)
+}
+
+fn framed_payload(payload: &[u8]) -> Vec<u8> {
     let mut frame = Vec::with_capacity(4 + payload.len());
     frame.extend_from_slice(
         &u32::try_from(payload.len())
             .expect("test payload must fit")
             .to_be_bytes(),
     );
-    frame.extend_from_slice(&payload);
+    frame.extend_from_slice(payload);
     frame
+}
+
+fn framed_transaction_value() -> Value {
+    let transaction: Value = serde_json::from_str(include_str!(
+        "../../../protocol/v2/fixtures/transaction-request-canonical.json"
+    ))
+    .expect("frozen v2 fixture is JSON");
+    json!({
+        "method": "submit-transaction",
+        "request": {
+            "request_id": "request-digest",
+            "protocol_session_id": "protocol-session-1",
+            "negotiation_token": "negotiation-1",
+            "params": transaction
+        }
+    })
 }
 
 struct ChunkedReader<R> {
@@ -236,4 +260,62 @@ fn response_validation_precedes_io_and_io_stage_is_preserved() {
             kind: io::ErrorKind::BrokenPipe,
         })
     );
+}
+
+#[test]
+fn versioned_framing_uses_only_the_exact_negotiated_wire_shape() {
+    let v2_payload =
+        serde_json::to_vec(&framed_transaction_value()).expect("v2 request serializes");
+    let v2_frame = framed_payload(&v2_payload);
+    let normalized = read_rpc_request_for_version(
+        &mut Cursor::new(&v2_frame),
+        ProtocolVersion::try_from(2_u16).expect("v2 is canonical"),
+    )
+    .expect("v2 frame decodes")
+    .expect("v2 frame contains a request");
+    assert!(matches!(normalized, RpcRequest::SubmitTransaction(_)));
+    assert!(matches!(
+        read_rpc_request_for_version(
+            &mut Cursor::new(&v2_frame),
+            ProtocolVersion::try_from(3_u16).expect("v3 is canonical"),
+        ),
+        Err(FrameError::InvalidRequest(
+            hfx_protocol::ProtocolWireError::MalformedJson
+        ))
+    ));
+
+    let v3_payload = serde_json::to_vec(&normalized).expect("normalized v3 request serializes");
+    let v3_frame = framed_payload(&v3_payload);
+    assert_eq!(
+        read_rpc_request_for_version(
+            &mut Cursor::new(&v3_frame),
+            ProtocolVersion::try_from(3_u16).expect("v3 is canonical"),
+        ),
+        Ok(Some(normalized))
+    );
+    assert!(matches!(
+        read_rpc_request_for_version(
+            &mut Cursor::new(&v3_frame),
+            ProtocolVersion::try_from(2_u16).expect("v2 is canonical"),
+        ),
+        Err(FrameError::InvalidRequest(
+            hfx_protocol::ProtocolWireError::MalformedJson
+        ))
+    ));
+}
+
+#[test]
+fn unsupported_response_version_emits_no_partial_frame() {
+    let mut output = Vec::new();
+    assert!(matches!(
+        write_rpc_response_for_version(
+            &mut output,
+            &negotiation_response(),
+            ProtocolVersion::try_from(4_u16).expect("version number is canonical"),
+        ),
+        Err(FrameError::InvalidResponse(
+            hfx_protocol::ProtocolWireError::UnsupportedProtocolVersion
+        ))
+    ));
+    assert!(output.is_empty());
 }

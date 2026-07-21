@@ -62,7 +62,7 @@ The Unix transport uses a four-byte unsigned big-endian payload length followed 
 
 The length bound is checked before allocation. Responses are validated and serialized through a bounded writer before any bytes are emitted, then written with complete-write semantics and flushed. Framing errors preserve the I/O stage without including payloads, tokens, or private paths.
 
-Framing is not the SDK contract; generated protocol records are. Protocol v1 and v2 currently share the same request shape, so the first bridge framing implementation normalizes that common shape. The production dispatcher must still select and encode the exact negotiated version before this boundary can claim support for divergent future versions.
+Framing is not the SDK contract; generated protocol records are. The connection selects an exact frozen version before any session request is decoded or response is emitted. Version 1 remains read-compatible but cannot submit profileless writes. Version 2 profile-binds writes and conservatively normalizes every `static-lighting` request to semantic Static, including an all-black frame. Version 3 carries explicit per-device Static or Off intent. A payload from an adjacent version is rejected instead of being guessed from fields.
 
 ## Transaction Meaning
 
@@ -127,6 +127,8 @@ Persistence stores semantic stable intent and exact profile identity. It never s
 Restoration requires a fresh qualified generation, current routes, a matching profile digest, new ownership, and one durable lifecycle claim. A surviving claim, partial checkpoint, or failed target blocks a false complete result. Software effects remain application computations and restart through the application's saved startup profile.
 
 `DurableRestorationRuntime` is the bridge's one persistence owner and snapshot source. Its generation-retirement operation first consumes an exact retained transaction terminal when one exists, otherwise reconciles the persisted dispatch nonce with transport. Confirmed or possible writes retain their outcome facts. Only a transport `NotObserved` result permits stale invalidation. Sibling claims change through one atomic batch compare-and-set, so a mouse claim cannot retire while its keyboard sibling remains accidentally active because a later file operation failed.
+
+After a definitive version 3 Static transaction succeeds, the bridge captures its explicit Static or Off declarations automatically. An exact terminal replay is idempotent: it neither advances the intent revision nor replaces the original capture time. Capture happens after immutable hardware completion is recorded. A persistence failure is therefore reported as a separate capture result and can never rewrite successful transport truth or authorize another hardware dispatch.
 
 The production persistence adapter keeps one strict, schema-versioned document in a private service-owned directory. It holds an advisory writer lock, rejects symlinks and broadly readable files, bounds bytes and receiver-scoped records, and writes through a same-directory temporary file followed by file sync, atomic replacement, and directory sync. A failure before replacement changes neither disk nor the in-process compare-and-set view. A directory-sync failure reports uncertain durability after advancing the in-process view to the already-visible replacement, so a stale retry conflicts instead of silently replaying an old revision.
 

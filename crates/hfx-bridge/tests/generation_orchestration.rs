@@ -2,9 +2,9 @@
 
 use hfx_bridge::{
     DisabledRestorationSource, GenerationActivationOutcome, GenerationOrchestrationError,
-    GenerationOrchestrator, GenerationQualification, GenerationRestorationRuntime,
-    ReceiverDisconnectCompletionOutcome, ReceiverDisconnectObservation, ReceiverDisconnectOutcome,
-    ReceiverGenerationObservation, ReceiverRestorationSnapshot, RestorationProjectionError,
+    GenerationOrchestrator, GenerationQualification, ReceiverDisconnectCompletionOutcome,
+    ReceiverDisconnectObservation, ReceiverDisconnectOutcome, ReceiverGenerationObservation,
+    ReceiverRestorationSnapshot, RestorationProjectionError, RestorationRuntime,
     RestorationSnapshotSource, RuntimeProfileAuthority,
 };
 use hfx_core::{
@@ -21,11 +21,11 @@ use hfx_domain::{
     EvidenceConfidence, FrameIndex, GenerationId, LeaseDurationMs, LogicalDeviceId, MonotonicMs,
     ProductId, ProjectionRevision, QueueAdmission, ReceiverId, ReceiverLifecycleState,
     ResourceKind, RestoreState, RouteKind, RouteState, SequenceNumber, SideEffectCertainty,
-    StreamEpoch, TransactionClass, TransactionId, TransactionState, VendorId,
+    StableLightingMode, StreamEpoch, TransactionClass, TransactionId, TransactionState, VendorId,
 };
 use hfx_protocol::{
     BridgeEvent, DeviceProfileBinding, LeaseRequest, LeaseResult, LightingFrame, ResourceKey,
-    RgbColor, TransactionRequest, TransactionResult,
+    RgbColor, StableLightingIntent, TransactionRequest, TransactionResult,
 };
 
 fn text<T>(value: &str) -> T
@@ -195,7 +195,15 @@ impl RestorationSnapshotSource for FailingRestoration {
     }
 }
 
-impl GenerationRestorationRuntime for FailingRestoration {
+impl RestorationRuntime for FailingRestoration {
+    fn capture_completed(
+        &mut self,
+        _completed: &hfx_core::CompletedTransaction,
+        _captured_at: hfx_domain::WallClockUnixMs,
+    ) -> Result<hfx_core::StableCommitOutcome, RestorationError> {
+        Ok(hfx_core::StableCommitOutcome::NotApplicable)
+    }
+
     fn retire_generation<T, E>(
         &mut self,
         _receiver_id: &ReceiverId,
@@ -261,6 +269,10 @@ fn queue_generation_one_transaction(
                     application_slot_count: mouse_profile.application_slot_count,
                 }],
                 transaction_class: TransactionClass::StaticLighting,
+                stable_intents: vec![StableLightingIntent {
+                    device_id: text("mouse"),
+                    mode: StableLightingMode::Static,
+                }],
                 deadline_ms: time(1_000),
                 resources: vec![resource(1)],
                 frames: vec![LightingFrame {

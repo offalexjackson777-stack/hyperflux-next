@@ -25,6 +25,12 @@ pub struct StableIntentCapture {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub enum StableCommitOutcome {
+    NotApplicable,
+    Captured(Vec<crate::PersistedStableIntent>),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RestorePlanResult {
     Disabled,
     NoStableIntents,
@@ -72,6 +78,7 @@ pub enum RestorationError {
     ReceiverMismatch,
     DuplicateDevice,
     InvalidStableTransaction,
+    StableReplayConflict,
     InvalidTrigger,
     CaptureMismatch,
     IntentDigestMismatch,
@@ -125,6 +132,8 @@ impl fmt::Display for RestorationError {
             Self::InvalidStableTransaction => formatter.write_str(
                 "only a definitive successful stable-lighting transaction can be persisted",
             ),
+            Self::StableReplayConflict => formatter
+                .write_str("stable-lighting replay conflicts with durable transaction identity"),
             Self::InvalidTrigger => {
                 formatter.write_str("restore trigger scope does not match its lifecycle kind")
             }

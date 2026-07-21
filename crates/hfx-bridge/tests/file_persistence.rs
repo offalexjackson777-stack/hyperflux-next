@@ -3,18 +3,22 @@
 use hfx_bridge::{
     BRIDGE_PERSISTENCE_SCHEMA, BridgePersistenceDocument, DurableRestorationRuntime,
     FilePersistenceConfig, FilePersistenceError, FilePersistenceStore, PersistenceCommitter,
-    PersistenceIoStage, RestorationSnapshotSource,
+    PersistenceIoStage, RestorationRuntime, RestorationSnapshotSource,
 };
 use hfx_core::{
-    CURRENT_PERSISTENCE_SCHEMA_VERSION, PersistedRestorePolicy, PersistedStableEntry,
-    PersistenceCasOutcome, PersistenceStore, RestoreInvalidation, RestoreRecord,
-    RestoreRecordChange, RestoreRecordStatus, StableIntentChange, StableIntentTombstone,
+    CURRENT_PERSISTENCE_SCHEMA_VERSION, CompletedTransaction, PersistedRestorePolicy,
+    PersistedStableEntry, PersistenceCasOutcome, PersistenceStore, RestoreInvalidation,
+    RestoreRecord, RestoreRecordChange, RestoreRecordStatus, StableCommitOutcome,
+    StableIntentChange, StableIntentTombstone, StableLighting, canonical_request_digest,
 };
 use hfx_domain::{
+    ColorChannel, DeliveredFrameCount, DeviceApplicationState, FrameCount, FrameIndex,
     GenerationId, IntentDigest, IntentRevision, LogicalDeviceId, PersistenceRevision,
     PersistenceSchemaVersion, ReceiverId, RestoreClaimId, RestoreInvalidationReason, RestoreState,
-    RestoreTriggerId, RestoreTriggerKind, WallClockUnixMs,
+    RestoreTriggerId, RestoreTriggerKind, SequenceNumber, SideEffectCertainty, StableLightingMode,
+    TransactionState, WallClockUnixMs,
 };
+use hfx_protocol::{StableLightingIntent, TransactionRequest, TransactionTerminal};
 use std::fs::{self, OpenOptions};
 use std::io::Write as _;
 use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt, symlink};
@@ -144,6 +148,53 @@ fn write_private(path: &Path, bytes: &[u8]) {
         .expect("private test file");
     file.write_all(bytes).expect("test file write");
     file.sync_all().expect("test file sync");
+}
+
+fn completed_stable_transaction() -> CompletedTransaction {
+    let mut request: TransactionRequest = serde_json::from_str(include_str!(
+        "../../../protocol/v3/fixtures/transaction-request-canonical.json"
+    ))
+    .expect("canonical v3 transaction fixture");
+
+    let mut second_profile = request.device_profiles[0].clone();
+    second_profile.device_id = id("mouse-2");
+    second_profile.profile_id = id("profile.mouse-2");
+    request.device_profiles.push(second_profile);
+    request.stable_intents.push(StableLightingIntent {
+        device_id: id("mouse-2"),
+        mode: StableLightingMode::Off,
+    });
+    let mut second_resource = request.resources[0].clone();
+    second_resource.device_id = id("mouse-2");
+    request.resources.push(second_resource);
+    let mut second_frame = request.frames[0].clone();
+    second_frame.device_id = id("mouse-2");
+    second_frame.frame_index = FrameIndex::try_from(1_u32).expect("second frame index");
+    second_frame.colors[0].red = ColorChannel::try_from(0_u8).expect("black red channel");
+    second_frame.colors[0].green = ColorChannel::try_from(0_u8).expect("black green channel");
+    second_frame.colors[0].blue = ColorChannel::try_from(0_u8).expect("black blue channel");
+    request.frames.push(second_frame);
+
+    let frame_count = u16::try_from(request.frames.len()).expect("test frame count fits");
+    let terminal = TransactionTerminal {
+        request_id: request.request_id.clone(),
+        request_digest: canonical_request_digest(&request).expect("stable request is canonical"),
+        transaction_id: request.transaction_id.clone(),
+        receiver_id: request.receiver_id.clone(),
+        generation_id: request.generation_id,
+        state: TransactionState::Succeeded,
+        declared_frames: FrameCount::try_from(frame_count).expect("declared frame count"),
+        delivered_frames: DeliveredFrameCount::try_from(frame_count)
+            .expect("delivered frame count"),
+        side_effect_certainty: SideEffectCertainty::Committed,
+        live_write_executed: true,
+        automatic_retry: false,
+        device_application: DeviceApplicationState::Confirmed,
+        terminal_sequence: SequenceNumber::try_from(1_u64).expect("terminal sequence"),
+        error_kind: None,
+        superseded_by: None,
+    };
+    CompletedTransaction { request, terminal }
 }
 
 #[test]
@@ -441,6 +492,50 @@ fn durable_runtime_projects_policy_and_generation_bound_restore_truth() {
             stable_restore_enabled: true,
             restore_state: RestoreState::Idle,
         }
+    );
+}
+
+#[test]
+fn durable_runtime_captures_static_and_off_once_across_process_reopen() {
+    let directory = TestDirectory::new();
+    let config = FilePersistenceConfig::new(directory.state_path());
+    let completed = completed_stable_transaction();
+    let first_time = WallClockUnixMs::try_from(10_u64).expect("first wall clock");
+    let replay_time = WallClockUnixMs::try_from(999_u64).expect("replay wall clock");
+
+    let store = FilePersistenceStore::open(config.clone()).expect("store opens");
+    let mut runtime = DurableRestorationRuntime::new(store);
+    let first = runtime
+        .capture_completed(&completed, first_time)
+        .expect("stable completion persists");
+    let StableCommitOutcome::Captured(first) = first else {
+        panic!("stable completion must capture")
+    };
+    assert_eq!(first.len(), 2);
+    assert!(matches!(first[0].lighting, StableLighting::Static(_)));
+    assert_eq!(first[1].lighting, StableLighting::Off);
+    assert!(first.iter().all(|intent| intent.revision.get() == 1));
+    assert!(first.iter().all(|intent| intent.captured_at == first_time));
+    drop(runtime);
+
+    let reopened = FilePersistenceStore::open(config.clone()).expect("durable state reopens");
+    let durable_before_replay = reopened
+        .stable_entries(&completed.request.receiver_id)
+        .expect("stable entries reload");
+    assert_eq!(durable_before_replay.len(), 2);
+    let mut restarted_runtime = DurableRestorationRuntime::new(reopened);
+    let replay = restarted_runtime
+        .capture_completed(&completed, replay_time)
+        .expect("exact replay is idempotent");
+    assert_eq!(replay, StableCommitOutcome::Captured(first));
+    drop(restarted_runtime);
+
+    let final_store = FilePersistenceStore::open(config).expect("final state reopens");
+    assert_eq!(
+        final_store
+            .stable_entries(&completed.request.receiver_id)
+            .expect("stable entries remain durable"),
+        durable_before_replay
     );
 }
 

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
+use hfx_domain::ProtocolVersion;
 use hfx_protocol::{
     MAX_WIRE_MESSAGE_BYTES, ProtocolWireError, RpcRequest, RpcResponse, decode_rpc_request,
-    validate_rpc_response,
+    decode_rpc_request_for_version, validate_rpc_response, validate_rpc_response_for_version,
 };
 use std::fmt;
 use std::io::{self, Read, Write};
@@ -99,7 +100,7 @@ fn read_into<R: Read>(
 /// # Errors
 ///
 /// Returns a typed framing, I/O, decoding, or protocol-validation error.
-pub fn read_rpc_request<R: Read>(reader: &mut R) -> Result<Option<RpcRequest>, FrameError> {
+fn read_rpc_payload<R: Read>(reader: &mut R) -> Result<Option<Vec<u8>>, FrameError> {
     let mut length_bytes = [0_u8; FRAME_LENGTH_BYTES];
     let received = read_into(reader, &mut length_bytes, FrameIoStage::ReadLength)?;
     if received == 0 {
@@ -125,9 +126,34 @@ pub fn read_rpc_request<R: Read>(reader: &mut R) -> Result<Option<RpcRequest>, F
     if received != declared {
         return Err(FrameError::TruncatedPayload { declared, received });
     }
-    decode_rpc_request(&payload)
-        .map(Some)
-        .map_err(FrameError::InvalidRequest)
+    Ok(Some(payload))
+}
+
+/// Reads one request using the current protocol schema.
+///
+/// # Errors
+///
+/// Returns a typed framing, I/O, decoding, or protocol-validation error.
+pub fn read_rpc_request<R: Read>(reader: &mut R) -> Result<Option<RpcRequest>, FrameError> {
+    read_rpc_payload(reader)?
+        .map(|payload| decode_rpc_request(&payload).map_err(FrameError::InvalidRequest))
+        .transpose()
+}
+
+/// Reads one request using the exact frozen schema selected by negotiation.
+///
+/// # Errors
+///
+/// Returns a typed framing, I/O, version-decoding, or protocol-validation error.
+pub fn read_rpc_request_for_version<R: Read>(
+    reader: &mut R,
+    version: ProtocolVersion,
+) -> Result<Option<RpcRequest>, FrameError> {
+    read_rpc_payload(reader)?
+        .map(|payload| {
+            decode_rpc_request_for_version(&payload, version).map_err(FrameError::InvalidRequest)
+        })
+        .transpose()
 }
 
 struct BoundedBuffer {
@@ -187,6 +213,28 @@ pub fn write_rpc_response<W: Write>(
     response: &RpcResponse,
 ) -> Result<(), FrameError> {
     validate_rpc_response(response).map_err(FrameError::InvalidResponse)?;
+    write_validated_rpc_response(writer, response)
+}
+
+/// Writes one response only after proving it is representable by the exact
+/// frozen schema selected for the connection.
+///
+/// # Errors
+///
+/// Returns a typed version-validation, encoding, or I/O error.
+pub fn write_rpc_response_for_version<W: Write>(
+    writer: &mut W,
+    response: &RpcResponse,
+    version: ProtocolVersion,
+) -> Result<(), FrameError> {
+    validate_rpc_response_for_version(response, version).map_err(FrameError::InvalidResponse)?;
+    write_validated_rpc_response(writer, response)
+}
+
+fn write_validated_rpc_response<W: Write>(
+    writer: &mut W,
+    response: &RpcResponse,
+) -> Result<(), FrameError> {
     let mut encoded = BoundedBuffer::new();
     if serde_json::to_writer(&mut encoded, response).is_err() {
         if encoded.exceeded {

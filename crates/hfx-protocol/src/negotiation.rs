@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use crate::{ClientHello, MAXIMUM_PROTOCOL_VERSION, SUPPORTED_FEATURES, ServerHello};
+use crate::{ClientHello, GENERATED_PROTOCOL_VERSIONS, ProtocolVersionDescriptor, ServerHello};
 use hfx_domain::{
     ComponentVersion, NegotiationToken, ProtocolFeatureId, ProtocolSessionId, ProtocolVersion,
     QueueCapacity, ServerInstanceId,
@@ -10,15 +10,11 @@ use std::fmt;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ProtocolContract<'a> {
-    pub minimum_version: u16,
-    pub maximum_version: u16,
-    pub features: &'a [&'a str],
+    pub versions: &'a [ProtocolVersionDescriptor],
 }
 
 pub const GENERATED_CONTRACT: ProtocolContract<'static> = ProtocolContract {
-    minimum_version: crate::v1::MINIMUM_PROTOCOL_VERSION,
-    maximum_version: MAXIMUM_PROTOCOL_VERSION,
-    features: SUPPORTED_FEATURES,
+    versions: GENERATED_PROTOCOL_VERSIONS,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -85,9 +81,7 @@ pub fn negotiate_with_contract(
     if hello.minimum_version > hello.maximum_version {
         return Err(NegotiationError::InvalidClientRange);
     }
-    if contract.minimum_version == 0 || contract.minimum_version > contract.maximum_version {
-        return Err(NegotiationError::InvalidServerRange);
-    }
+    validate_contract(contract)?;
     if hello.required_features.len() > 64 || hello.optional_features.len() > 64 {
         return Err(NegotiationError::TooManyFeatures);
     }
@@ -107,12 +101,46 @@ pub fn negotiate_with_contract(
     {
         return Err(NegotiationError::DuplicateFeature);
     }
-    let lower = hello.minimum_version.get().max(contract.minimum_version);
-    let upper = hello.maximum_version.get().min(contract.maximum_version);
-    if lower > upper {
+    let overlapping = contract
+        .versions
+        .iter()
+        .filter(|version| {
+            version.version >= hello.minimum_version.get()
+                && version.version <= hello.maximum_version.get()
+        })
+        .collect::<Vec<_>>();
+    if overlapping.is_empty() {
         return Err(NegotiationError::IncompatibleVersion);
     }
-    let available = contract.features.iter().copied().collect::<BTreeSet<_>>();
+    let selected = overlapping.iter().rev().copied().find(|version| {
+        required
+            .iter()
+            .all(|feature| version.served_features.contains(feature))
+    });
+    let Some(selected) = selected else {
+        let available = overlapping
+            .iter()
+            .flat_map(|version| version.served_features.iter().copied())
+            .collect::<BTreeSet<_>>();
+        let unsupported = hello
+            .required_features
+            .iter()
+            .filter(|feature| !available.contains(feature.as_str()))
+            .cloned()
+            .collect::<Vec<_>>();
+        return Err(NegotiationError::UnsupportedRequiredFeatures(
+            if unsupported.is_empty() {
+                hello.required_features.clone()
+            } else {
+                unsupported
+            },
+        ));
+    };
+    let available = selected
+        .served_features
+        .iter()
+        .copied()
+        .collect::<BTreeSet<_>>();
     let unsupported = hello
         .required_features
         .iter()
@@ -122,8 +150,8 @@ pub fn negotiate_with_contract(
     if !unsupported.is_empty() {
         return Err(NegotiationError::UnsupportedRequiredFeatures(unsupported));
     }
-    let selected_version =
-        ProtocolVersion::try_from(upper).map_err(|_| NegotiationError::InvalidBridgeContract)?;
+    let selected_version = ProtocolVersion::try_from(selected.version)
+        .map_err(|_| NegotiationError::InvalidBridgeContract)?;
     let mut enabled_features = hello
         .required_features
         .iter()
@@ -141,4 +169,31 @@ pub fn negotiate_with_contract(
         enabled_features,
         event_buffer_capacity: context.event_buffer_capacity,
     })
+}
+
+fn validate_contract(contract: ProtocolContract<'_>) -> Result<(), NegotiationError> {
+    if contract.versions.is_empty()
+        || contract
+            .versions
+            .windows(2)
+            .any(|pair| pair[0].version >= pair[1].version)
+    {
+        return Err(NegotiationError::InvalidServerRange);
+    }
+    for version in contract.versions {
+        if version.version == 0
+            || version.served_features.len() > 64
+            || version
+                .served_features
+                .windows(2)
+                .any(|pair| pair[0] >= pair[1])
+            || version
+                .served_features
+                .iter()
+                .any(|feature| !version.catalog_features.contains(feature))
+        {
+            return Err(NegotiationError::InvalidBridgeContract);
+        }
+    }
+    Ok(())
 }

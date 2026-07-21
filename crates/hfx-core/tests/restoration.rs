@@ -10,9 +10,10 @@ use hfx_core::{
     ReceiverTransport, RestorationAuthority, RestorationCoordinator, RestorationError,
     RestoreAdvanceResult, RestoreGenerationRetirement, RestorePlanResult, RestoreRecord,
     RestoreRecordChange, RestoreRecordStatus, RestoreTrigger, SessionAuthority,
-    StableIntentCapture, StableIntentChange, StableLighting, SubmissionBinding,
-    TransactionCoordinator, TransportDispatch, TransportFailure, TransportFailureFacts,
-    TransportReceipt, TransportReconciliation, TransportTerminal, canonical_request_digest,
+    StableCommitOutcome, StableIntentCapture, StableIntentChange, StableLighting,
+    SubmissionBinding, TransactionCoordinator, TransportDispatch, TransportFailure,
+    TransportFailureFacts, TransportReceipt, TransportReconciliation, TransportTerminal,
+    canonical_request_digest,
 };
 use hfx_domain::{
     AuthorizationEpoch, ColorChannel, DeliveredFrameCount, DeviceApplicationState,
@@ -708,6 +709,7 @@ fn definitive_success_captures_static_and_off_in_one_batch() {
     let coordinator = RestorationCoordinator;
     let mut request = stable_request("mixed", &["keyboard-1", "mouse-1"]);
     request.frames[1].colors.fill(zero_color());
+    request.stable_intents[1].mode = hfx_domain::StableLightingMode::Off;
     let captures = vec![
         StableIntentCapture {
             device_id: text("mouse-1"),
@@ -766,10 +768,93 @@ fn definitive_success_captures_static_and_off_in_one_batch() {
 }
 
 #[test]
+fn declared_capture_is_idempotent_and_never_advances_revision_on_replay() {
+    let coordinator = RestorationCoordinator;
+    let request = stable_request("declared-replay", &["keyboard-1", "mouse-1"]);
+    let terminal = successful_terminal(&request);
+    let mut store = MemoryPersistenceStore::default();
+
+    let first = coordinator
+        .commit_declared_stable_transaction(&request, &terminal, wall_time(10), &mut store)
+        .expect("first declared capture commits");
+    let StableCommitOutcome::Captured(first) = first else {
+        panic!("definitive stable completion must capture")
+    };
+    assert_eq!(store.stable_cas_calls.len(), 1);
+
+    let replay = coordinator
+        .commit_declared_stable_transaction(&request, &terminal, wall_time(999), &mut store)
+        .expect("exact replay is idempotent");
+    let StableCommitOutcome::Captured(replay) = replay else {
+        panic!("exact replay returns retained intents")
+    };
+    assert_eq!(replay, first);
+    assert_eq!(store.stable_cas_calls.len(), 1);
+    assert!(replay.iter().all(|intent| intent.revision.get() == 1));
+    assert!(
+        replay
+            .iter()
+            .all(|intent| intent.captured_at == wall_time(10))
+    );
+}
+
+#[test]
+fn declared_capture_ignores_effect_restore_and_nondefinitive_terminals() {
+    let coordinator = RestorationCoordinator;
+    let stable = stable_request("declared-ignore", &["mouse-1"]);
+    let terminal = successful_terminal(&stable);
+    let mut store = MemoryPersistenceStore::default();
+
+    let mut effect = stable.clone();
+    effect.transaction_class = TransactionClass::EffectFrame;
+    effect.stable_intents.clear();
+    let mut effect_terminal = terminal.clone();
+    effect_terminal.request_digest = canonical_request_digest(&effect).expect("effect digest");
+    assert_eq!(
+        coordinator
+            .commit_declared_stable_transaction(
+                &effect,
+                &effect_terminal,
+                wall_time(1),
+                &mut store,
+            )
+            .expect("effect completion is ignored"),
+        StableCommitOutcome::NotApplicable
+    );
+
+    let mut restore = effect;
+    restore.transaction_class = TransactionClass::Restore;
+    let mut restore_terminal = effect_terminal;
+    restore_terminal.request_digest = canonical_request_digest(&restore).expect("restore digest");
+    assert_eq!(
+        coordinator
+            .commit_declared_stable_transaction(
+                &restore,
+                &restore_terminal,
+                wall_time(2),
+                &mut store,
+            )
+            .expect("restore completion is ignored"),
+        StableCommitOutcome::NotApplicable
+    );
+
+    let mut failed = terminal;
+    failed.state = TransactionState::Failed;
+    assert_eq!(
+        coordinator
+            .commit_declared_stable_transaction(&stable, &failed, wall_time(3), &mut store,)
+            .expect("failed stable completion is ignored"),
+        StableCommitOutcome::NotApplicable
+    );
+    assert!(store.stable_cas_calls.is_empty());
+}
+
+#[test]
 fn effect_frame_is_rejected_without_persistence() {
     let coordinator = RestorationCoordinator;
     let mut request = stable_request("effect", &["mouse-1"]);
     request.transaction_class = TransactionClass::EffectFrame;
+    request.stable_intents.clear();
     let terminal = successful_terminal(&request);
     let mut store = MemoryPersistenceStore::default();
     let durable_before = store.durable_snapshot();

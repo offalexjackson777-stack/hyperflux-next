@@ -17,6 +17,7 @@ use hfx_protocol::{
     TransactionProgress, TransactionRequest, TransactionResult, TransactionTerminal,
 };
 use std::fmt;
+use std::ops::Deref;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SubmissionResult {
@@ -25,9 +26,23 @@ pub enum SubmissionResult {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CompletedTransaction {
+    pub request: TransactionRequest,
+    pub terminal: TransactionTerminal,
+}
+
+impl Deref for CompletedTransaction {
+    type Target = TransactionTerminal;
+
+    fn deref(&self) -> &Self::Target {
+        &self.terminal
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DispatchResult {
     pub expired: Vec<TransactionTerminal>,
-    pub completed: Option<TransactionTerminal>,
+    pub completed: Option<CompletedTransaction>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -367,7 +382,7 @@ impl TransactionCoordinator {
         let preflight_error =
             dispatch_preflight(&queued, now, sessions, leases, profiles, devices, transport);
         if let Some(error_kind) = preflight_error {
-            let completed = self.finish_unsent(
+            let completed = self.finish_unsent_completion(
                 queued,
                 TransactionState::Revoked,
                 Some(error_kind),
@@ -511,6 +526,20 @@ impl TransactionCoordinator {
         events: &mut BoundedEventLog,
         sink: &mut S,
     ) -> Result<TransactionTerminal, TransactionCoordinatorError> {
+        self.finish_unsent_completion(queued, state, error_kind, superseded_by, events, sink)
+            .map(|completed| completed.terminal)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn finish_unsent_completion<S: EventSink>(
+        &mut self,
+        queued: QueuedTransaction,
+        state: TransactionState,
+        error_kind: Option<ProtocolErrorKind>,
+        superseded_by: Option<TransactionId>,
+        events: &mut BoundedEventLog,
+        sink: &mut S,
+    ) -> Result<CompletedTransaction, TransactionCoordinatorError> {
         let mut machine = queued_machine()?;
         machine.advance(state)?;
         self.finish(
@@ -540,25 +569,26 @@ impl TransactionCoordinator {
         facts: TransportFailureFacts,
         events: &mut BoundedEventLog,
         sink: &mut S,
-    ) -> Result<TransactionTerminal, TransactionCoordinatorError> {
+    ) -> Result<CompletedTransaction, TransactionCoordinatorError> {
         let declared_frames = declared_frames(&queued)?;
+        let request = queued.request;
         let event = events.append(EventDraft {
             kind: EventKind::TransactionCompleted,
-            receiver_id: Some(queued.request.receiver_id.clone()),
-            generation_id: Some(queued.request.generation_id),
+            receiver_id: Some(request.receiver_id.clone()),
+            generation_id: Some(request.generation_id),
             device_id: None,
-            lease_id: Some(queued.request.lease_id.clone()),
-            transaction_id: Some(queued.request.transaction_id.clone()),
+            lease_id: Some(request.lease_id.clone()),
+            transaction_id: Some(request.transaction_id.clone()),
             finding_id: None,
         })?;
         let _ = sink.try_emit(&event);
-        let client_id = queued.request.client_id;
+        let client_id = request.client_id.clone();
         let terminal = TransactionTerminal {
-            request_id: queued.request.request_id,
-            request_digest: queued.request_digest,
-            transaction_id: queued.request.transaction_id,
-            receiver_id: queued.request.receiver_id,
-            generation_id: queued.request.generation_id,
+            request_id: request.request_id.clone(),
+            request_digest: queued.request_digest.clone(),
+            transaction_id: request.transaction_id.clone(),
+            receiver_id: request.receiver_id.clone(),
+            generation_id: request.generation_id,
             state,
             declared_frames,
             delivered_frames: facts.delivered_frames,
@@ -572,7 +602,7 @@ impl TransactionCoordinator {
         };
         self.outcomes
             .record(client_id, TransactionResult::Terminal(terminal.clone()))?;
-        Ok(terminal)
+        Ok(CompletedTransaction { request, terminal })
     }
 }
 

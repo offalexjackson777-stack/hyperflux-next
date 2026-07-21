@@ -330,7 +330,7 @@ fn exact_replay_never_queues_or_dispatches_twice() {
     assert!(matches!(
         terminal_replay,
         SubmissionResult::Replay(TransactionResult::Terminal(ref replayed))
-            if replayed == &terminal
+            if replayed == &terminal.terminal
     ));
     assert_eq!(transport.dispatches.len(), 1);
     assert_eq!(sink.attempted.len(), 1);

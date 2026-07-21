@@ -4006,6 +4006,42 @@ impl fmt::Display for TransactionClass {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum StableLightingMode {
+    #[serde(rename = "static")]
+    Static,
+    #[serde(rename = "off")]
+    Off,
+}
+
+impl StableLightingMode {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Static => "static",
+            Self::Off => "off",
+        }
+    }
+}
+
+impl FromStr for StableLightingMode {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "static" => Ok(Self::Static),
+            "off" => Ok(Self::Off),
+            _ => Err(DomainValueError::unknown_wire("StableLightingMode")),
+        }
+    }
+}
+
+impl fmt::Display for StableLightingMode {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum QueueAdmission {
     #[serde(rename = "enqueued")]
     Enqueued,

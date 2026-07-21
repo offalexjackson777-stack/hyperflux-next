@@ -22,7 +22,7 @@ CATALOG_KEYS = {
     "methods",
 }
 REGISTRY_KEYS = {"$schema", "schema", "current_version", "versions"}
-VERSION_KEYS = {"version", "catalog", "sha256"}
+VERSION_KEYS = {"version", "catalog", "sha256", "served_features"}
 RECORD_KEYS = {"name", "description", "fields"}
 FIELD_KEYS = {"name", "type", "required", "many", "max_items", "description"}
 METHOD_KEYS = {"name", "request", "response", "required_feature", "description"}
@@ -164,6 +164,7 @@ class ProtocolVersion:
     version: int
     catalog_path: str
     source_sha256: str
+    served_features: tuple[str, ...]
     catalog: ProtocolCatalog
 
 
@@ -464,11 +465,25 @@ def load_protocol_registry(root: Path) -> ProtocolRegistry:
         catalog = _load_protocol_catalog(root, path)
         if catalog.minimum_version != version or catalog.maximum_version != version:
             raise ModelError(f"{label}: catalog must describe exactly version {version}")
+        raw_served_features = entry["served_features"]
+        if not isinstance(raw_served_features, list) or len(raw_served_features) > 64:
+            raise ModelError(f"{label}: served features must be a bounded array")
+        served_features = tuple(
+            _named(feature, IDENTIFIER, f"{label} served feature")
+            for feature in raw_served_features
+        )
+        require_unique(list(served_features), f"{label} served feature")
+        if tuple(sorted(served_features)) != served_features:
+            raise ModelError(f"{label}: served features must be sorted")
+        unknown_features = set(served_features) - set(catalog.features)
+        if unknown_features:
+            raise ModelError(f"{label}: served features are absent from the catalog")
         versions.append(
             ProtocolVersion(
                 version=version,
                 catalog_path=expected_path,
                 source_sha256=digest,
+                served_features=served_features,
                 catalog=catalog,
             )
         )

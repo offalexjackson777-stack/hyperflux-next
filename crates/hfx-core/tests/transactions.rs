@@ -342,7 +342,7 @@ fn request_digest_is_stable_and_changes_with_semantic_content() {
     let encoded = serde_json::to_string(&first).expect("request is serializable");
     assert_eq!(
         encoded,
-        include_str!("../../../protocol/v2/fixtures/transaction-request-canonical.json").trim_end()
+        include_str!("../../../protocol/v3/fixtures/transaction-request-canonical.json").trim_end()
     );
     let first_digest = canonical_request_digest(&first).expect("request is digestible");
     assert_eq!(
@@ -356,7 +356,7 @@ fn request_digest_is_stable_and_changes_with_semantic_content() {
     assert_eq!(first_digest.as_str().len(), 64);
     assert_eq!(
         first_digest.as_str(),
-        "52a96f88b7d0b686ebafea4914b9947fbbd3ac7195dab3b56fea972560c2a17b"
+        "bdfd4e6bb641d001ba5cc32e1ad0ee1288885deb368002bbb73b58d2efa9b2cf"
     );
     assert!(
         first_digest

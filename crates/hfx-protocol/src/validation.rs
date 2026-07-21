@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::{LeaseRequest, ResourceKey, TransactionRequest};
-use hfx_domain::{LogicalDeviceId, ResourceKind, TransactionClass};
+use hfx_domain::{LogicalDeviceId, ResourceKind, StableLightingMode, TransactionClass};
 use std::collections::BTreeSet;
 use std::fmt;
 
@@ -24,6 +24,13 @@ pub enum ProtocolValidationError {
     FrameWithoutProfileBinding,
     ProfileBindingWithoutFrame,
     FrameColorCountMismatch,
+    TooManyStableIntents,
+    DuplicateStableIntent,
+    StableIntentsNotCanonical,
+    StableIntentWithoutFrame,
+    FrameWithoutStableIntent,
+    StableIntentOnNonStableTransaction,
+    OffIntentHasLitColor,
     EmptyColors,
     TooManyColors,
     TooManyAggregateColors,
@@ -61,6 +68,21 @@ impl fmt::Display for ProtocolValidationError {
             Self::FrameColorCountMismatch => {
                 "frame color count does not match its bound device profile"
             }
+            Self::TooManyStableIntents => "transaction exceeds the stable-intent bound",
+            Self::DuplicateStableIntent => {
+                "transaction contains a duplicate stable-lighting intent"
+            }
+            Self::StableIntentsNotCanonical => {
+                "transaction stable-lighting intents are not in canonical device order"
+            }
+            Self::StableIntentWithoutFrame => "stable-lighting intent has no matching frame target",
+            Self::FrameWithoutStableIntent => {
+                "static-lighting frame lacks an explicit semantic intent"
+            }
+            Self::StableIntentOnNonStableTransaction => {
+                "non-static transaction carries stable-lighting intent"
+            }
+            Self::OffIntentHasLitColor => "Off intent contains a non-black frame color",
             Self::EmptyColors => "frame contains no colors",
             Self::TooManyColors => "frame exceeds the color bound",
             Self::TooManyAggregateColors => "transaction exceeds the aggregate color bound",
@@ -116,6 +138,7 @@ pub fn validate_transaction(request: &TransactionRequest) -> Result<(), Protocol
     let frame_devices = validate_frame_topology(request)?;
     validate_profile_bindings(request, &frame_devices)?;
     validate_frame_payloads(request)?;
+    validate_stable_intents(request, &frame_devices)?;
     validate_resource_coverage(request, &frame_devices)
 }
 
@@ -241,6 +264,67 @@ fn validate_frame_payloads(request: &TransactionRequest) -> Result<(), ProtocolV
         };
         if usize::from(binding.application_slot_count.get()) != frame.colors.len() {
             return Err(ProtocolValidationError::FrameColorCountMismatch);
+        }
+    }
+    Ok(())
+}
+
+fn validate_stable_intents(
+    request: &TransactionRequest,
+    frame_devices: &BTreeSet<&LogicalDeviceId>,
+) -> Result<(), ProtocolValidationError> {
+    if request.transaction_class != TransactionClass::StaticLighting {
+        return if request.stable_intents.is_empty() {
+            Ok(())
+        } else {
+            Err(ProtocolValidationError::StableIntentOnNonStableTransaction)
+        };
+    }
+    if request.stable_intents.len() > 32 {
+        return Err(ProtocolValidationError::TooManyStableIntents);
+    }
+    let intent_devices = request
+        .stable_intents
+        .iter()
+        .map(|intent| &intent.device_id)
+        .collect::<BTreeSet<_>>();
+    if intent_devices.len() != request.stable_intents.len() {
+        return Err(ProtocolValidationError::DuplicateStableIntent);
+    }
+    if request
+        .stable_intents
+        .windows(2)
+        .any(|pair| pair[0].device_id >= pair[1].device_id)
+    {
+        return Err(ProtocolValidationError::StableIntentsNotCanonical);
+    }
+    if intent_devices
+        .iter()
+        .any(|device_id| !frame_devices.contains(device_id))
+    {
+        return Err(ProtocolValidationError::StableIntentWithoutFrame);
+    }
+    if frame_devices
+        .iter()
+        .any(|device_id| !intent_devices.contains(device_id))
+    {
+        return Err(ProtocolValidationError::FrameWithoutStableIntent);
+    }
+    for intent in &request.stable_intents {
+        if intent.mode != StableLightingMode::Off {
+            continue;
+        }
+        let frame = request
+            .frames
+            .iter()
+            .find(|frame| frame.device_id == intent.device_id)
+            .ok_or(ProtocolValidationError::StableIntentWithoutFrame)?;
+        if frame
+            .colors
+            .iter()
+            .any(|color| color.red.get() != 0 || color.green.get() != 0 || color.blue.get() != 0)
+        {
+            return Err(ProtocolValidationError::OffIntentHasLitColor);
         }
     }
     Ok(())
