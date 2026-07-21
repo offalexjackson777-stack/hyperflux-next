@@ -2,6 +2,24 @@ cmake_minimum_required(VERSION 3.25)
 project(hyperflux_openrgb LANGUAGES CXX)
 
 include(CTest)
+find_package(Threads REQUIRED)
+
+option(
+    HFX_OPENRGB_THREAD_SANITIZER
+    "Instrument HyperFlux-owned OpenRGB code with ThreadSanitizer"
+    OFF
+)
+
+function(hfx_openrgb_enable_thread_sanitizer target)
+    if(NOT HFX_OPENRGB_THREAD_SANITIZER)
+        return()
+    endif()
+    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        message(FATAL_ERROR "HFX_OPENRGB_THREAD_SANITIZER requires Clang or GCC")
+    endif()
+    target_compile_options(${target} PRIVATE -fsanitize=thread -fno-omit-frame-pointer -g)
+    target_link_options(${target} PRIVATE -fsanitize=thread)
+endfunction()
 
 if(NOT TARGET hyperflux_sdk)
     add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../sdk/cpp" "${CMAKE_CURRENT_BINARY_DIR}/sdk")
@@ -28,6 +46,7 @@ target_include_directories(
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 target_link_libraries(hyperflux_openrgb_core PUBLIC hyperflux_sdk)
+hfx_openrgb_enable_thread_sanitizer(hyperflux_openrgb_core)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(hyperflux_openrgb_core PRIVATE -Wall -Wextra -Werror -pedantic)
@@ -104,6 +123,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
             "/usr/include/hidapi"
     )
     target_link_libraries(hyperflux_openrgb_razer_registry PUBLIC hyperflux_openrgb_core)
+    hfx_openrgb_enable_thread_sanitizer(hyperflux_openrgb_razer_registry)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         target_compile_options(
             hyperflux_openrgb_razer_registry
@@ -114,6 +134,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
     add_library(
         hyperflux_openrgb_native_controller
         STATIC
+            src/controller_registry.cpp
             src/native_controller.cpp
             "${HFX_OPENRGB_SOURCE_DIR}/RGBController/RGBController.cpp"
     )
@@ -133,6 +154,16 @@ if(HFX_OPENRGB_SOURCE_DIR)
         hyperflux_openrgb_native_controller
         PUBLIC hyperflux_openrgb_razer_registry
     )
+    hfx_openrgb_enable_thread_sanitizer(hyperflux_openrgb_native_controller)
+    if(HFX_OPENRGB_THREAD_SANITIZER)
+        # OpenRGB starts RGBController's worker from its base constructor. Keep
+        # that pinned dependency unit outside our race-ownership boundary while
+        # instrumenting the HyperFlux-derived controller and registry around it.
+        set_source_files_properties(
+            "${HFX_OPENRGB_SOURCE_DIR}/RGBController/RGBController.cpp"
+            PROPERTIES COMPILE_OPTIONS "-fno-sanitize=thread"
+        )
+    endif()
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         target_compile_options(
             hyperflux_openrgb_native_controller
@@ -149,6 +180,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
             openrgb-razer-registry-contract
             PRIVATE hyperflux_openrgb_razer_registry
         )
+        hfx_openrgb_enable_thread_sanitizer(openrgb-razer-registry-contract)
         if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
             target_compile_options(
                 openrgb-razer-registry-contract
@@ -165,6 +197,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
             openrgb-native-controller-contract
             PRIVATE hyperflux_openrgb_native_controller
         )
+        hfx_openrgb_enable_thread_sanitizer(openrgb-native-controller-contract)
         if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
             target_compile_options(
                 openrgb-native-controller-contract
@@ -174,6 +207,26 @@ if(HFX_OPENRGB_SOURCE_DIR)
         add_test(
             NAME openrgb-native-controller-contract
             COMMAND openrgb-native-controller-contract
+        )
+
+        add_executable(
+            openrgb-controller-registry-contract
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_controller_registry_contract.cpp"
+        )
+        target_link_libraries(
+            openrgb-controller-registry-contract
+            PRIVATE hyperflux_openrgb_native_controller Threads::Threads
+        )
+        hfx_openrgb_enable_thread_sanitizer(openrgb-controller-registry-contract)
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            target_compile_options(
+                openrgb-controller-registry-contract
+                PRIVATE -Wall -Wextra -Werror -pedantic
+            )
+        endif()
+        add_test(
+            NAME openrgb-controller-registry-contract
+            COMMAND openrgb-controller-registry-contract
         )
     endif()
 else()
@@ -186,6 +239,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_controller_model_contract.cpp"
     )
     target_link_libraries(openrgb-controller-model-contract PRIVATE hyperflux_openrgb_core)
+    hfx_openrgb_enable_thread_sanitizer(openrgb-controller-model-contract)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         target_compile_options(
             openrgb-controller-model-contract
@@ -199,6 +253,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_dispatch_queue_contract.cpp"
     )
     target_link_libraries(openrgb-dispatch-queue-contract PRIVATE hyperflux_openrgb_core)
+    hfx_openrgb_enable_thread_sanitizer(openrgb-dispatch-queue-contract)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         target_compile_options(
             openrgb-dispatch-queue-contract
@@ -212,6 +267,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_runtime_core_contract.cpp"
     )
     target_link_libraries(openrgb-runtime-core-contract PRIVATE hyperflux_openrgb_core)
+    hfx_openrgb_enable_thread_sanitizer(openrgb-runtime-core-contract)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         target_compile_options(
             openrgb-runtime-core-contract
@@ -225,6 +281,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_runtime_worker_contract.cpp"
     )
     target_link_libraries(openrgb-runtime-worker-contract PRIVATE hyperflux_openrgb_core)
+    hfx_openrgb_enable_thread_sanitizer(openrgb-runtime-worker-contract)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         target_compile_options(
             openrgb-runtime-worker-contract
