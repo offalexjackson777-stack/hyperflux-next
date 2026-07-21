@@ -3,6 +3,7 @@
 #pragma once
 
 #include <hyperflux/openrgb/runtime_core.hpp>
+#include <hyperflux/generated/protocol_v5_json.hpp>
 
 #include <atomic>
 #include <cstdint>
@@ -165,6 +166,13 @@ inline const openrgb::ControllerModel& model(const openrgb::RuntimeCore& runtime
     throw std::runtime_error("missing test controller");
 }
 
+inline v5::IntegrationView copy_integration_view(const v5::IntegrationView& value)
+{
+    // Match the real SDK boundary and avoid sharing nested variant storage
+    // between the mutable fake bridge and the consumer under test.
+    return json_codec::decode<v5::IntegrationView>(json_codec::encode(value));
+}
+
 class FakeBridge final : public openrgb::RuntimeBridge
 {
 public:
@@ -214,7 +222,7 @@ public:
                 "HFX-SERVICE-001",
             });
         }
-        return sdk::Result<v5::IntegrationView>::success(current);
+        return sdk::Result<v5::IntegrationView>::success(copy_integration_view(current));
     }
 
     sdk::Result<v5::LeaseResult> acquire_lease(

@@ -161,17 +161,17 @@ int main(int argc, char** argv)
     using namespace hyperflux::openrgb::native;
 
     auto state = std::make_shared<HostState>();
-    const auto integration_view = hyperflux::test::native_integration_view(1, 1);
     PluginCoordinatorConfig config;
     config.component_version = "0.0.0-dev.1";
     config.worker.poll_interval_ms = 1;
     config.worker.reconnect_initial_ms = 1;
     config.worker.reconnect_max_ms = 4;
     OpenRgbPluginApplication plugin(
-        [integration_view]() -> sdk::Result<std::unique_ptr<RuntimeBridge>>
+        []() -> sdk::Result<std::unique_ptr<RuntimeBridge>>
         {
             return sdk::Result<std::unique_ptr<RuntimeBridge>>::success(
-                std::make_unique<hyperflux::test::FakeBridge>(integration_view));
+                std::make_unique<hyperflux::test::FakeBridge>(
+                    hyperflux::test::native_integration_view(1, 1)));
         },
         config);
 
