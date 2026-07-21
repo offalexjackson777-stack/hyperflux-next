@@ -31,6 +31,13 @@ The following identities solve different problems and must not be merged:
 - event stream identity and epoch detect service restart;
 - event sequence detects a missed bounded event.
 
+Each qualified profile also has a profile-local runtime digest. It covers
+identity authority, compatibility, transport mappings, and capability
+contracts, while excluding presentation prose. Updating one device profile
+therefore invalidates work bound to that profile without needlessly revoking
+unrelated devices; the separate catalog digest still proves whole-catalog
+provenance.
+
 A reconnect creates a newer generation and invalidates generation-scoped observations, leases, queued work, and partial restoration. An event from an older generation cannot reactivate itself.
 
 ## Connection Sessions

@@ -33,6 +33,7 @@ struct LightingTopology
 struct ProfileRecord
 {
     std::string_view id;
+    std::string_view runtime_sha256;
     std::uint32_t revision;
     ProfileKind profile_kind;
     DeviceKind device_kind;
@@ -104,10 +105,10 @@ inline constexpr std::array<CapabilityRecord, 2> capabilities_3 {{
 }};
 
 inline constexpr std::array<ProfileRecord, 4> catalog {{
-    {"child.razer.basilisk-v3-pro-35k.00cd", 1, ProfileKind::Child, DeviceKind::Mouse, true, 5426, 205, "Razer Basilisk V3 Pro 35K", capabilities_0, &lighting_0},
-    {"child.razer.deathstalker-v2-pro-tkl.0296", 1, ProfileKind::Child, DeviceKind::Keyboard, true, 5426, 662, "Razer DeathStalker V2 Pro Tenkeyless", capabilities_1, &lighting_1},
-    {"receiver.razer.hyperflux-v2.1532-00cf", 1, ProfileKind::Receiver, DeviceKind::Receiver, true, 5426, 207, "Razer HyperFlux V2 Receiver", capabilities_2, nullptr},
-    {"surface.razer.hyperflux-v2-hard-edition", 1, ProfileKind::Surface, DeviceKind::Mat, false, 0, 0, "Razer HyperFlux V2 Hard Edition", capabilities_3, nullptr},
+    {"child.razer.basilisk-v3-pro-35k.00cd", "ec1d039a49ced8cdc5f56121fe5a03a0068676894a09e9b69c6290f06d1a6f6a", 1, ProfileKind::Child, DeviceKind::Mouse, true, 5426, 205, "Razer Basilisk V3 Pro 35K", capabilities_0, &lighting_0},
+    {"child.razer.deathstalker-v2-pro-tkl.0296", "522f2bdf589226cbe20a2e63098efe771c42b899a1b6a15989413dd29783366d", 1, ProfileKind::Child, DeviceKind::Keyboard, true, 5426, 662, "Razer DeathStalker V2 Pro Tenkeyless", capabilities_1, &lighting_1},
+    {"receiver.razer.hyperflux-v2.1532-00cf", "473bd889b810ae22bdfeb5258eadd46762aa6b0379bd57bcf6285273557b5b8a", 1, ProfileKind::Receiver, DeviceKind::Receiver, true, 5426, 207, "Razer HyperFlux V2 Receiver", capabilities_2, nullptr},
+    {"surface.razer.hyperflux-v2-hard-edition", "0b00ef59eb8c039695c760de855bb7d7d55f1be9a32f6f2d1ed90d039d7796b9", 1, ProfileKind::Surface, DeviceKind::Mat, false, 0, 0, "Razer HyperFlux V2 Hard Edition", capabilities_3, nullptr},
 }};
 
 [[nodiscard]] constexpr const ProfileRecord* profile_by_id(std::string_view id)

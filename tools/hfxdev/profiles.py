@@ -62,6 +62,36 @@ def _source_digest(documents: list[tuple[str, dict[str, Any]]]) -> str:
     return digest.hexdigest()
 
 
+def _runtime_profile_digest(
+    profile: dict[str, Any], capability_index: dict[str, dict[str, Any]]
+) -> str:
+    identity = profile["identity"]
+    runtime_identity = {
+        key: identity[key]
+        for key in ("authority", "vendor_id", "product_id", "variant_key")
+        if key in identity
+    }
+    runtime_contract = {
+        "schema": "hyperflux-runtime-profile-binding-v1",
+        "profile_id": profile["profile_id"],
+        "revision": profile["revision"],
+        "kind": profile["kind"],
+        "device_kind": profile["device_kind"],
+        "identity": runtime_identity,
+        "compatibility": profile["compatibility"],
+        "transport": profile.get("transport", {}),
+        "capabilities": [
+            {
+                "id": capability["id"],
+                "support_level": capability["support_level"],
+                "access": capability_index[capability["id"]]["access"],
+            }
+            for capability in profile["capabilities"]
+        ],
+    }
+    return hashlib.sha256(_canonical_bytes(runtime_contract)).hexdigest()
+
+
 def _expect_keys(value: dict[str, Any], allowed: set[str], label: str) -> None:
     extras = sorted(set(value) - allowed)
     if extras:
@@ -407,6 +437,7 @@ def compiled_catalog(root: Path) -> dict[str, Any]:
         compiled["source_path"] = compiled.pop("_source_path")
         for capability in compiled["capabilities"]:
             capability["access"] = capability_index[capability["id"]]["access"]
+        compiled["runtime_sha256"] = _runtime_profile_digest(profile, capability_index)
         profiles.append(compiled)
     return {
         "schema": "hyperflux-compiled-profile-catalog-v1",

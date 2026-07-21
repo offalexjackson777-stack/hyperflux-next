@@ -53,8 +53,8 @@ def markdown(catalog: dict[str, Any]) -> str:
         "",
         "## Qualified Profiles",
         "",
-        "| Profile | Kind | Identity | Read capabilities | Write capabilities |",
-        "| --- | --- | --- | ---: | ---: |",
+        "| Profile | Kind | Identity | Runtime binding | Read capabilities | Write capabilities |",
+        "| --- | --- | --- | --- | ---: | ---: |",
     ]
     for profile in catalog["profiles"]:
         identity = profile["identity"]
@@ -66,7 +66,7 @@ def markdown(catalog: dict[str, Any]) -> str:
         writes = sum(capabilities[item["id"]]["access"] == "write" for item in profile["capabilities"])
         lines.append(
             f"| **{identity['model_name']}**<br><code>{profile['profile_id']}</code> | "
-            f"{profile['device_kind']} | {hardware} | {reads} | {writes} |"
+            f"{profile['device_kind']} | {hardware} | `{profile['runtime_sha256'][:12]}` | {reads} | {writes} |"
         )
     lines.extend(
         [
@@ -153,6 +153,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
         "pub struct ProfileRecord {",
         "    pub id: &'static str,",
+        "    pub runtime_sha256: &'static str,",
         "    pub revision: u32,",
         "    pub profile_kind: ProfileKind,",
         "    pub device_kind: DeviceKind,",
@@ -207,6 +208,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
             [
                 "    ProfileRecord {",
                 f'        id: "{profile["profile_id"]}",',
+                f'        runtime_sha256: "{profile["runtime_sha256"]}",',
                 f"        revision: {profile['revision']},",
                 f"        profile_kind: ProfileKind::{_variant(profile['kind'])},",
                 f"        device_kind: DeviceKind::{_variant(profile['device_kind'])},",
@@ -301,6 +303,7 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
         "struct ProfileRecord",
         "{",
         "    std::string_view id;",
+        "    std::string_view runtime_sha256;",
         "    std::uint32_t revision;",
         "    ProfileKind profile_kind;",
         "    DeviceKind device_kind;",
@@ -344,7 +347,7 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
         lighting = f"&lighting_{index}" if profile.get("transport", {}).get("lighting") else "nullptr"
         lines.append(
             "    {"
-            f'"{profile["profile_id"]}", {profile["revision"]}, ProfileKind::{_variant(profile["kind"])}, '
+            f'"{profile["profile_id"]}", "{profile["runtime_sha256"]}", {profile["revision"]}, ProfileKind::{_variant(profile["kind"])}, '
             f'DeviceKind::{_variant(profile["device_kind"])}, {str(has_usb).lower()}, {vendor}, {product}, '
             f'"{profile["identity"]["model_name"]}", capabilities_{index}, {lighting}'
             "},"

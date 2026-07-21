@@ -2,7 +2,8 @@
 
 use hfx_domain::{DeviceKind, ProfileKind};
 use hfx_profiles::{
-    PROFILES, child_profile_by_product_id, profile_by_id, receiver_profile_by_usb_id,
+    PROFILES, RuntimeProfileCatalog, child_profile_by_product_id, profile_by_id,
+    receiver_profile_by_usb_id,
 };
 
 #[test]
@@ -20,6 +21,40 @@ fn receiver_and_children_resolve_independently() {
 #[test]
 fn unknown_child_has_no_implicit_profile() {
     assert!(child_profile_by_product_id(0xffff).is_none());
+}
+
+#[test]
+fn runtime_catalog_is_typed_profile_local_and_canonical() {
+    let catalog = RuntimeProfileCatalog::load().expect("generated catalog is valid");
+    assert_eq!(catalog.iter().len(), PROFILES.len());
+    let mouse = catalog
+        .child(hfx_domain::ProductId::try_from(0x00cd_u16).expect("product id is valid"))
+        .expect("mouse profile resolves");
+    assert_eq!(
+        mouse.profile_id.as_str(),
+        "child.razer.basilisk-v3-pro-35k.00cd"
+    );
+    assert_eq!(mouse.runtime_digest.as_str().len(), 64);
+    assert_eq!(
+        mouse
+            .lighting
+            .as_ref()
+            .expect("mouse lighting exists")
+            .application_slot_count
+            .get(),
+        13
+    );
+    assert!(
+        mouse
+            .capabilities
+            .windows(2)
+            .all(|pair| pair[0].id < pair[1].id)
+    );
+    assert!(
+        catalog
+            .child(hfx_domain::ProductId::try_from(0xffff_u16).expect("product id is valid"))
+            .is_none()
+    );
 }
 
 #[test]

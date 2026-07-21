@@ -23,6 +23,7 @@ pub struct LightingTopology {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ProfileRecord {
     pub id: &'static str,
+    pub runtime_sha256: &'static str,
     pub revision: u32,
     pub profile_kind: ProfileKind,
     pub device_kind: DeviceKind,
@@ -236,6 +237,7 @@ const CAPABILITIES_3: &[CapabilityRecord] = &[
 pub const PROFILES: &[ProfileRecord] = &[
     ProfileRecord {
         id: "child.razer.basilisk-v3-pro-35k.00cd",
+        runtime_sha256: "ec1d039a49ced8cdc5f56121fe5a03a0068676894a09e9b69c6290f06d1a6f6a",
         revision: 1,
         profile_kind: ProfileKind::Child,
         device_kind: DeviceKind::Mouse,
@@ -253,6 +255,7 @@ pub const PROFILES: &[ProfileRecord] = &[
     },
     ProfileRecord {
         id: "child.razer.deathstalker-v2-pro-tkl.0296",
+        runtime_sha256: "522f2bdf589226cbe20a2e63098efe771c42b899a1b6a15989413dd29783366d",
         revision: 1,
         profile_kind: ProfileKind::Child,
         device_kind: DeviceKind::Keyboard,
@@ -270,6 +273,7 @@ pub const PROFILES: &[ProfileRecord] = &[
     },
     ProfileRecord {
         id: "receiver.razer.hyperflux-v2.1532-00cf",
+        runtime_sha256: "473bd889b810ae22bdfeb5258eadd46762aa6b0379bd57bcf6285273557b5b8a",
         revision: 1,
         profile_kind: ProfileKind::Receiver,
         device_kind: DeviceKind::Receiver,
@@ -281,6 +285,7 @@ pub const PROFILES: &[ProfileRecord] = &[
     },
     ProfileRecord {
         id: "surface.razer.hyperflux-v2-hard-edition",
+        runtime_sha256: "0b00ef59eb8c039695c760de855bb7d7d55f1be9a32f6f2d1ed90d039d7796b9",
         revision: 1,
         profile_kind: ProfileKind::Surface,
         device_kind: DeviceKind::Mat,

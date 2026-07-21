@@ -8,12 +8,12 @@ Support is capability-specific. A listed model does not transfer its transport m
 
 ## Qualified Profiles
 
-| Profile | Kind | Identity | Read capabilities | Write capabilities |
-| --- | --- | --- | ---: | ---: |
-| **Razer Basilisk V3 Pro 35K**<br><code>child.razer.basilisk-v3-pro-35k.00cd</code> | mouse | `1532:00cd` | 7 | 7 |
-| **Razer DeathStalker V2 Pro Tenkeyless**<br><code>child.razer.deathstalker-v2-pro-tkl.0296</code> | keyboard | `1532:0296` | 6 | 7 |
-| **Razer HyperFlux V2 Receiver**<br><code>receiver.razer.hyperflux-v2.1532-00cf</code> | receiver | `1532:00cf` | 4 | 2 |
-| **Razer HyperFlux V2 Hard Edition**<br><code>surface.razer.hyperflux-v2-hard-edition</code> | mat | reviewed surface metadata (no USB identity) | 2 | 0 |
+| Profile | Kind | Identity | Runtime binding | Read capabilities | Write capabilities |
+| --- | --- | --- | --- | ---: | ---: |
+| **Razer Basilisk V3 Pro 35K**<br><code>child.razer.basilisk-v3-pro-35k.00cd</code> | mouse | `1532:00cd` | `ec1d039a49ce` | 7 | 7 |
+| **Razer DeathStalker V2 Pro Tenkeyless**<br><code>child.razer.deathstalker-v2-pro-tkl.0296</code> | keyboard | `1532:0296` | `522f2bdf5892` | 6 | 7 |
+| **Razer HyperFlux V2 Receiver**<br><code>receiver.razer.hyperflux-v2.1532-00cf</code> | receiver | `1532:00cf` | `473bd889b810` | 4 | 2 |
+| **Razer HyperFlux V2 Hard Edition**<br><code>surface.razer.hyperflux-v2-hard-edition</code> | mat | reviewed surface metadata (no USB identity) | `0b00ef59eb8c` | 2 | 0 |
 
 ## Composition Contract
 

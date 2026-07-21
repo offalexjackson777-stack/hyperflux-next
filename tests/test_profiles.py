@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.model import ModelError
 from hfxdev.profiles import (
+    _runtime_profile_digest,
     _validate_capabilities,
     _validate_profiles,
     compiled_catalog,
@@ -38,6 +39,23 @@ class ProfileCompilerTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual(len(first["profiles"]), 4)
         self.assertTrue(first["composition_policy"]["unknown_children_are_read_only"])
+        digests = [profile["runtime_sha256"] for profile in first["profiles"]]
+        self.assertEqual(len(digests), len(set(digests)))
+        self.assertTrue(all(len(digest) == 64 for digest in digests))
+
+    def test_runtime_digest_is_profile_local_and_ignores_presentation_only_edits(self) -> None:
+        profiles, capabilities, _ = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
+        mouse_before = _runtime_profile_digest(mouse, capabilities)
+        keyboard_before = _runtime_profile_digest(keyboard, capabilities)
+
+        mouse["presentation"]["model_key"] = "presentation-only-change"
+        self.assertEqual(_runtime_profile_digest(mouse, capabilities), mouse_before)
+
+        mouse["transport"]["lighting"]["application_index_to_carrier"][0] = 0
+        self.assertNotEqual(_runtime_profile_digest(mouse, capabilities), mouse_before)
+        self.assertEqual(_runtime_profile_digest(keyboard, capabilities), keyboard_before)
 
     def test_mouse_and_keyboard_require_no_sibling(self) -> None:
         for profile in self.inputs.profiles:
