@@ -45,6 +45,22 @@ class DistributionTarget:
     def dependencies(self) -> tuple[str, ...]:
         return tuple(dict.fromkeys(self.dependency_roles.values()))
 
+    def dependencies_for(self, python_version: str) -> tuple[str, ...]:
+        dependencies = list(self.dependencies)
+        if "@python_major_minor@" not in self.python_discovery_path:
+            return tuple(dependencies)
+        python_package = self.dependency_roles["python"]
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9+_.-]{0,63}", python_package):
+            raise ModelError(
+                f"distribution {self.id}: minor-bound Python package must be a plain name"
+            )
+        major, minor = self.python_major_minor(python_version)
+        dependencies.remove(python_package)
+        dependencies.extend(
+            (f"{python_package}>={major}.{minor}", f"{python_package}<{major}.{minor + 1}")
+        )
+        return tuple(dependencies)
+
     def architecture_for(self, build_target: str) -> str:
         try:
             return self.architectures[build_target]
@@ -53,12 +69,16 @@ class DistributionTarget:
                 f"distribution {self.id}: unsupported build target {build_target}"
             ) from error
 
-    def python_discovery_for(self, python_version: str) -> str:
+    def python_major_minor(self, python_version: str) -> tuple[int, int]:
         match = re.fullmatch(r"([0-9]+)\.([0-9]+)(?:\.[0-9]+.*)?", python_version)
         if match is None or (int(match.group(1)), int(match.group(2))) < (3, 11):
             raise ModelError(f"distribution {self.id}: unsupported Python version")
+        return int(match.group(1)), int(match.group(2))
+
+    def python_discovery_for(self, python_version: str) -> str:
+        major, minor = self.python_major_minor(python_version)
         return self.python_discovery_path.replace(
-            "@python_major_minor@", f"{match.group(1)}.{match.group(2)}"
+            "@python_major_minor@", f"{major}.{minor}"
         )
 
 

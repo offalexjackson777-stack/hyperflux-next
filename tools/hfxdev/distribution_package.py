@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 import hashlib
+import io
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -21,6 +23,7 @@ from .package_pipeline import ArtifactSet, StageResult, load_artifact_set, stage
 
 
 BUILD_MANIFEST_NAME = "distribution-package-build-manifest.json"
+CANONICAL_ARCH_BUILD_ROOT = "/build/hyperflux-next"
 INSTALLED_MANIFEST_PATH = PurePosixPath(
     "/usr/share/hyperflux-next/distribution-package.json"
 )
@@ -209,6 +212,7 @@ def _arch_pkgbuild(
     catalog: DistributionCatalog,
     target: DistributionTarget,
     architecture: str,
+    python_version: str,
     payload_sha256: str,
 ) -> str:
     optional = [
@@ -225,7 +229,7 @@ def _arch_pkgbuild(
             f"arch={_shell_array([architecture])}",
             "url=''",
             f"license={_shell_array(list(catalog.licenses))}",
-            f"depends={_shell_array(list(target.dependencies))}",
+            f"depends={_shell_array(list(target.dependencies_for(python_version)))}",
             f"optdepends={_shell_array(optional)}",
             f"conflicts={_shell_array(list(target.conflicts))}",
             "backup=('etc/hyperflux-next/bridge.json')",
@@ -266,6 +270,97 @@ def _tar_payload(root: Path, destination: Path, epoch: int) -> None:
     os.utime(destination, (epoch, epoch))
 
 
+def _canonical_arch_buildinfo(content: bytes) -> bytes:
+    try:
+        lines = content.decode("utf-8").splitlines()
+    except UnicodeDecodeError as error:
+        raise ModelError("Arch package BUILDINFO is not UTF-8") from error
+    replacements = {"builddir": 0, "startdir": 0}
+    result = []
+    for line in lines:
+        key, separator, _value = line.partition(" = ")
+        if separator and key in replacements:
+            replacements[key] += 1
+            result.append(f"{key} = {CANONICAL_ARCH_BUILD_ROOT}")
+        else:
+            result.append(line)
+    if replacements != {"builddir": 1, "startdir": 1}:
+        raise ModelError("Arch package BUILDINFO path fields are incomplete")
+    return ("\n".join(result) + "\n").encode("utf-8")
+
+
+def _canonicalize_arch_package(package: Path, epoch: int) -> None:
+    tar_descriptor, tar_name = tempfile.mkstemp(
+        prefix="hyperflux-arch-canonical-", suffix=".tar", dir=package.parent
+    )
+    compressed_descriptor, compressed_name = tempfile.mkstemp(
+        prefix="hyperflux-arch-canonical-", suffix=".pkg.tar.zst", dir=package.parent
+    )
+    os.close(tar_descriptor)
+    os.close(compressed_descriptor)
+    tar_path = Path(tar_name)
+    compressed_path = Path(compressed_name)
+    try:
+        names: set[str] = set()
+        with tarfile.open(package, "r:*") as source, tarfile.open(
+            tar_path, "w", format=tarfile.GNU_FORMAT
+        ) as destination:
+            members = source.getmembers()
+            if not members or len(members) > 10000:
+                raise ModelError("Arch package member count is invalid")
+            for original in members:
+                path = PurePosixPath(original.name)
+                if path.is_absolute() or ".." in path.parts or original.name in names:
+                    raise ModelError("Arch package contains an unsafe or duplicate member")
+                names.add(original.name)
+                if not (original.isdir() or original.isfile()):
+                    raise ModelError("Arch package contains an unsupported member type")
+                member = copy.copy(original)
+                member.uid = 0
+                member.gid = 0
+                member.uname = "root"
+                member.gname = "root"
+                member.mtime = epoch
+                if member.isdir():
+                    destination.addfile(member)
+                    continue
+                stream = source.extractfile(original)
+                if stream is None:
+                    raise ModelError("Arch package regular file has no content")
+                content = stream.read()
+                if original.name == ".BUILDINFO":
+                    content = _canonical_arch_buildinfo(content)
+                member.size = len(content)
+                destination.addfile(member, io.BytesIO(content))
+        result = subprocess.run(
+            [
+                "zstd",
+                "--quiet",
+                "--force",
+                "--threads=1",
+                "-19",
+                "-o",
+                str(compressed_path),
+                str(tar_path),
+            ],
+            check=False,
+            timeout=300,
+        )
+        if result.returncode != 0:
+            raise ModelError(
+                "Arch package canonical compression failed "
+                f"with exit status {result.returncode}"
+            )
+        compressed_path.chmod(0o644)
+        os.utime(compressed_path, (epoch, epoch))
+        os.replace(compressed_path, package)
+    except (OSError, subprocess.TimeoutExpired, tarfile.TarError) as error:
+        raise ModelError(f"Arch package canonicalization failed: {error}") from error
+    finally:
+        tar_path.unlink(missing_ok=True)
+        compressed_path.unlink(missing_ok=True)
+
+
 def _run_makepkg(workspace: Path, packages: Path, epoch: int) -> None:
     environment = os.environ.copy()
     environment.update(
@@ -274,6 +369,7 @@ def _run_makepkg(workspace: Path, packages: Path, epoch: int) -> None:
             "PKGDEST": str(packages),
             "SRCDEST": str(workspace / "source-cache"),
             "BUILDDIR": str(workspace / "makepkg-build"),
+            "PACKAGER": "HyperFlux Next Build System",
         }
     )
     try:
@@ -354,6 +450,7 @@ def build_distribution_package(
                 catalog,
                 target,
                 architecture,
+                artifacts.python,
                 sha256_file(payload),
             ),
             encoding="utf-8",
@@ -367,6 +464,7 @@ def build_distribution_package(
     if len(built) != 1 or not built[0].is_file() or built[0].is_symlink():
         raise ModelError("Arch package build did not produce exactly one package")
     package = built[0]
+    _canonicalize_arch_package(package, artifacts.source_date_epoch)
     manifest_value = {
         "$schema": "https://hyperflux.dev/schemas/distribution-package-build-v1.json",
         "schema": "hyperflux-distribution-package-build-v1",

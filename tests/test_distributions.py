@@ -32,6 +32,11 @@ class DistributionCatalogTests(unittest.TestCase):
             self.assertTrue(path.startswith("/usr/"))
             self.assertTrue(path.endswith("hyperflux-next.pth"))
             self.assertNotIn("@", path)
+            dependencies = target.dependencies_for("3.14.6")
+            if "@python_major_minor@" in target.python_discovery_path:
+                python_package = target.dependency_roles["python"]
+                self.assertIn(f"{python_package}>=3.14", dependencies)
+                self.assertIn(f"{python_package}<3.15", dependencies)
 
     def test_duplicate_optional_packages_and_unknown_targets_fail_closed(self) -> None:
         value = load_json(ROOT / "packaging" / "distributions.json")

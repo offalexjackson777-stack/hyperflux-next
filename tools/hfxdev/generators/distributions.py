@@ -48,6 +48,11 @@ def markdown(catalog: DistributionCatalog, runtime: LinuxRuntime) -> str:
             "",
             f"Pure Python modules live at `{runtime.operations.python_module_directory}`. "
             "Each distribution adds one native `.pth` file so application entry-point discovery works without binding the common payload to a Python minor version.",
+            "Targets whose discovery path contains the Python minor version declare a matching lower bound and exclusive upper bound. A package manager therefore cannot accept an artifact whose `.pth` file its interpreter cannot discover.",
+            "",
+            "## Kernel Headers",
+            "",
+            "DKMS requires headers matching the installed kernel. Header package names are intentionally not guessed in package metadata because they vary by kernel flavor, architecture, and distribution.",
             "",
         ]
     )

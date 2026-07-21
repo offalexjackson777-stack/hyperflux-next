@@ -13,6 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.distribution_package import (
+    CANONICAL_ARCH_BUILD_ROOT,
+    _canonical_arch_buildinfo,
     _arch_hook,
     _arch_install,
     _arch_pkgbuild,
@@ -20,7 +22,7 @@ from hfxdev.distribution_package import (
 )
 from hfxdev.distributions import load_distribution_catalog
 from hfxdev.linux_runtime import load_linux_runtime
-from hfxdev.model import sha256_file
+from hfxdev.model import ModelError, sha256_file
 
 
 class DistributionPackageTests(unittest.TestCase):
@@ -36,6 +38,7 @@ class DistributionPackageTests(unittest.TestCase):
             self.catalog,
             self.arch,
             "x86_64",
+            "3.14.6",
             "a" * 64,
         )
         self.assertIn("source=('payload.tar')", recipe)
@@ -44,7 +47,10 @@ class DistributionPackageTests(unittest.TestCase):
         self.assertIn("options=('!strip' '!debug')", recipe)
         self.assertNotIn("usr/bin/hyperfluxctl usr/", recipe)
         for dependency in self.arch.dependencies:
-            self.assertIn(dependency, recipe)
+            if dependency != "python":
+                self.assertIn(dependency, recipe)
+        self.assertIn("'python>=3.14'", recipe)
+        self.assertIn("'python<3.15'", recipe)
 
     def test_arch_recipe_shell_quotes_human_metadata(self) -> None:
         catalog = replace(self.catalog, description="Receiver's transport")
@@ -53,9 +59,20 @@ class DistributionPackageTests(unittest.TestCase):
             catalog,
             self.arch,
             "x86_64",
+            "3.14.6",
             "a" * 64,
         )
         self.assertIn("pkgdesc='Receiver'\\''s transport'", recipe)
+
+    def test_arch_buildinfo_uses_machine_independent_paths(self) -> None:
+        value = _canonical_arch_buildinfo(
+            b"format = 2\nbuilddir = /tmp/random-a\nstartdir = /tmp/random-b\n"
+        ).decode("utf-8")
+        self.assertIn(f"builddir = {CANONICAL_ARCH_BUILD_ROOT}\n", value)
+        self.assertIn(f"startdir = {CANONICAL_ARCH_BUILD_ROOT}\n", value)
+        self.assertNotIn("/tmp/", value)
+        with self.assertRaises(ModelError):
+            _canonical_arch_buildinfo(b"format = 2\nstartdir = /tmp/random\n")
 
     def test_arch_hooks_delegate_lifecycle_without_hardware_logic(self) -> None:
         install = _arch_install(self.runtime)
