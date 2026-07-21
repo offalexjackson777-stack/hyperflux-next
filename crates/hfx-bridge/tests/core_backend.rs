@@ -16,7 +16,7 @@ use hfx_domain::{
     DeviceApplicationState, DeviceKind, EventBatchLimit, EventKind, EvidenceClaimId,
     EvidenceConfidence, FrameIndex, GenerationId, LeaseDurationMs, LogicalDeviceId, MonotonicMs,
     ProductId, ProjectionRevision, ProtocolErrorKind, ProtocolFeatureId, ProtocolVersion,
-    QueueCapacity, ReceiverId, RequestId, ResourceKind, RouteKind, SequenceNumber,
+    QueueCapacity, ReceiverId, RequestId, ResourceKind, RouteKind, RouteState, SequenceNumber,
     ServerInstanceId, SideEffectCertainty, StreamEpoch, StreamId, TransactionClass, TransactionId,
     TransactionState, VendorId,
 };
@@ -167,6 +167,14 @@ fn runtime_state() -> (ReceiverLifecycleRegistry, RuntimeProfileAuthority) {
             stamp(3),
         )
         .expect("endpoint registers");
+    machine
+        .observe_route(
+            &mouse_id,
+            &text("mouse-hyperflux"),
+            RouteState::Available,
+            stamp(4),
+        )
+        .expect("mouse route becomes available");
     let mut receivers = ReceiverLifecycleRegistry::default();
     receivers.register(machine).expect("receiver registers");
     let mut profiles = RuntimeProfileAuthority::load(4).expect("profiles load");

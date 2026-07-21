@@ -160,6 +160,7 @@ where
                 sessions,
                 &self.leases,
                 &profiles,
+                &profiles,
                 &mut self.transport,
                 &mut self.events,
                 &mut self.event_sink,
@@ -353,6 +354,7 @@ where
                 context.sessions(),
                 &self.leases,
                 &profiles,
+                &profiles,
                 &self.transport,
                 &mut self.events,
                 &mut self.event_sink,
@@ -527,6 +529,10 @@ fn transaction_failure(error: TransactionCoordinatorError) -> RpcFailure {
         TransactionCoordinatorError::ProfileBindingChanged => {
             RpcFailure::new(ErrorCode::HfxProfile002, ProtocolErrorKind::StaleGeneration)
         }
+        TransactionCoordinatorError::DeviceNotReady(_) => RpcFailure::new(
+            ErrorCode::HfxTransport001,
+            ProtocolErrorKind::TransportFailure,
+        ),
         TransactionCoordinatorError::Queue(error) => match error {
             TransactionQueueError::InvalidRequest(_) => request_failure(),
             TransactionQueueError::DeadlineElapsed => deadline_failure(),

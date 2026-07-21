@@ -248,6 +248,7 @@ impl RestorationCoordinator {
             sessions,
             leases,
             profiles,
+            devices,
             transport,
             events,
             sink,
@@ -411,6 +412,7 @@ impl RestorationCoordinator {
             sessions,
             leases,
             profiles,
+            devices,
             transport,
             events,
             sink,
@@ -1052,6 +1054,14 @@ fn handle_submission_error<S: PersistenceStore, E: EventSink>(
             events,
             sink,
         ),
+        TransactionCoordinatorError::DeviceNotReady(readiness) => {
+            let Some(reason) = readiness_defer_reason(readiness) else {
+                return Err(RestorationError::Transaction(
+                    TransactionCoordinatorError::DeviceNotReady(readiness),
+                ));
+            };
+            defer(record, reason, None, store)
+        }
         TransactionCoordinatorError::Queue(crate::TransactionQueueError::DeadlineElapsed) => {
             defer(record, RestoreDeferReason::DeadlineElapsed, None, store)
         }

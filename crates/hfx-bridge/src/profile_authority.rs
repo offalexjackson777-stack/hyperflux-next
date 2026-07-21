@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_core::{
-    DeviceLifecycle, ProfileRegistry, QualifiedDeviceProfile, QualifiedReceiverProfile,
-    ReceiverGenerationLifecycle, ReceiverLifecycleRegistry,
+    DeviceLifecycle, DeviceStateAuthority, ProfileRegistry, QualifiedDeviceProfile,
+    QualifiedReceiverProfile, ReceiverGenerationLifecycle, ReceiverLifecycleRegistry,
 };
 use hfx_domain::{
-    GenerationId, ProductId, ProfileDigest, ProfileId, ProfileKind, ReceiverId, ResourceKind,
-    VendorId,
+    DeviceWriteReadiness, GenerationId, PresenceState, ProductId, ProfileDigest, ProfileId,
+    ProfileKind, ReceiverId, ResourceKind, VendorId,
 };
 use hfx_profiles::{ProfileCatalogError, RuntimeProfile, RuntimeProfileCatalog};
 use hfx_protocol::ResourceKey;
@@ -341,5 +341,27 @@ impl ProfileRegistry for RuntimeProfileView<'_> {
             profile_digest: profile.runtime_digest.clone(),
             application_slot_count: lighting.application_slot_count,
         })
+    }
+}
+
+impl DeviceStateAuthority for RuntimeProfileView<'_> {
+    fn write_readiness(&self, resource: &ResourceKey) -> DeviceWriteReadiness {
+        if resource.kind != ResourceKind::Lighting {
+            return DeviceWriteReadiness::Unknown;
+        }
+        let Some((_, generation, _)) =
+            (*self).active_generation(&resource.receiver_id, resource.generation_id)
+        else {
+            return DeviceWriteReadiness::Unknown;
+        };
+        let Some(device) = generation.device(&resource.device_id) else {
+            return DeviceWriteReadiness::Unknown;
+        };
+        match device.presence() {
+            PresenceState::Available => DeviceWriteReadiness::Ready,
+            PresenceState::Sleeping => DeviceWriteReadiness::Sleeping,
+            PresenceState::Unavailable => DeviceWriteReadiness::Unavailable,
+            PresenceState::Unknown => DeviceWriteReadiness::Unknown,
+        }
     }
 }

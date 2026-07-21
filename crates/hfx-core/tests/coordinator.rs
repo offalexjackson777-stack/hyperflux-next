@@ -7,16 +7,16 @@ use common::{
     receiver_profile_id, text, time, transaction_request,
 };
 use hfx_core::{
-    BoundedEventLog, EventDelivery, EventSink, LeaseManager, OutcomeLookup, ProfileRegistry,
-    QualifiedDeviceProfile, QualifiedReceiverProfile, ReceiverTransport, SessionAuthority,
-    SubmissionBinding, SubmissionResult, TransactionCoordinator, TransactionCoordinatorError,
-    TransactionQueueError, TransportDispatch, TransportFailure, TransportFailureFacts,
-    TransportReceipt, TransportReconciliation, TransportTerminal,
+    BoundedEventLog, DeviceStateAuthority, EventDelivery, EventSink, LeaseManager, OutcomeLookup,
+    ProfileRegistry, QualifiedDeviceProfile, QualifiedReceiverProfile, ReceiverTransport,
+    SessionAuthority, SubmissionBinding, SubmissionResult, TransactionCoordinator,
+    TransactionCoordinatorError, TransactionQueueError, TransportDispatch, TransportFailure,
+    TransportFailureFacts, TransportReceipt, TransportReconciliation, TransportTerminal,
 };
 use hfx_domain::{
-    AuthorizationEpoch, DeliveredFrameCount, DeviceApplicationState, DispatchNonce, LedCount,
-    ProjectionRevision, ProtocolErrorKind, QueueAdmission, ResourceKind, SideEffectCertainty,
-    StreamEpoch, TransactionClass, TransactionState,
+    AuthorizationEpoch, DeliveredFrameCount, DeviceApplicationState, DeviceWriteReadiness,
+    DispatchNonce, LedCount, ProjectionRevision, ProtocolErrorKind, QueueAdmission, ResourceKind,
+    SideEffectCertainty, StreamEpoch, TransactionClass, TransactionState,
 };
 use hfx_protocol::{BridgeEvent, TransactionRequest, TransactionResult};
 
@@ -88,6 +88,7 @@ impl SessionAuthority for FakeSessions {
 struct FakeProfiles {
     supported: bool,
     current: bool,
+    readiness: DeviceWriteReadiness,
 }
 
 impl ProfileRegistry for FakeProfiles {
@@ -131,10 +132,17 @@ impl ProfileRegistry for FakeProfiles {
     }
 }
 
+impl DeviceStateAuthority for FakeProfiles {
+    fn write_readiness(&self, _resource: &hfx_protocol::ResourceKey) -> DeviceWriteReadiness {
+        self.readiness
+    }
+}
+
 fn fake_profiles(supported: bool) -> FakeProfiles {
     FakeProfiles {
         supported,
         current: true,
+        readiness: DeviceWriteReadiness::Ready,
     }
 }
 
@@ -249,6 +257,7 @@ fn exact_replay_never_queues_or_dispatches_twice() {
             &sessions,
             &leases,
             &profiles,
+            &profiles,
             &transport,
             &mut events,
             &mut sink,
@@ -267,6 +276,7 @@ fn exact_replay_never_queues_or_dispatches_twice() {
             &sessions,
             &leases,
             &profiles,
+            &profiles,
             &transport,
             &mut events,
             &mut sink,
@@ -283,6 +293,7 @@ fn exact_replay_never_queues_or_dispatches_twice() {
             time(3),
             &sessions,
             &leases,
+            &profiles,
             &profiles,
             &mut transport,
             &mut events,
@@ -309,6 +320,7 @@ fn exact_replay_never_queues_or_dispatches_twice() {
             time(4),
             &sessions,
             &leases,
+            &profiles,
             &profiles,
             &transport,
             &mut events,
@@ -344,6 +356,7 @@ fn admission_rejects_missing_authority_before_any_transport() {
             &denied_sessions,
             &leases,
             &profiles,
+            &profiles,
             &transport,
             &mut events,
             &mut sink,
@@ -362,6 +375,7 @@ fn admission_rejects_missing_authority_before_any_transport() {
             &live_sessions,
             &leases,
             &profiles,
+            &profiles,
             &transport,
             &mut events,
             &mut sink,
@@ -378,6 +392,7 @@ fn admission_rejects_missing_authority_before_any_transport() {
             &live_sessions,
             &leases,
             &profiles,
+            &profiles,
             &transport,
             &mut events,
             &mut sink,
@@ -393,6 +408,7 @@ fn admission_rejects_missing_authority_before_any_transport() {
             &live_sessions,
             &leases,
             &fake_profiles(false),
+            &fake_profiles(false),
             &transport,
             &mut events,
             &mut sink,
@@ -402,6 +418,83 @@ fn admission_rejects_missing_authority_before_any_transport() {
     assert_eq!(coordinator.queued_len(), 0);
     assert!(transport.dispatches.is_empty());
     assert!(sink.attempted.is_empty());
+}
+
+#[test]
+fn device_readiness_blocks_admission_and_is_rechecked_before_dispatch() {
+    let request = request("readiness", TransactionClass::StaticLighting, 100, 1);
+    let leases = leases(request.resources.clone());
+    let sessions = sessions();
+    let ready = fake_profiles(true);
+    let sleeping = FakeProfiles {
+        readiness: DeviceWriteReadiness::Sleeping,
+        ..ready
+    };
+    let unavailable = FakeProfiles {
+        readiness: DeviceWriteReadiness::Unavailable,
+        ..ready
+    };
+    let mut transport = transport(PlannedDispatch::Receipt(successful_receipt(1)));
+    let mut events = events();
+    let mut sink = sink();
+
+    let mut rejected = TransactionCoordinator::new(4).expect("capacity is valid");
+    assert_eq!(
+        rejected.submit(
+            request.clone(),
+            binding(1),
+            time(1),
+            &sessions,
+            &leases,
+            &ready,
+            &sleeping,
+            &transport,
+            &mut events,
+            &mut sink,
+        ),
+        Err(TransactionCoordinatorError::DeviceNotReady(
+            DeviceWriteReadiness::Sleeping
+        ))
+    );
+    assert_eq!(rejected.queued_len(), 0);
+
+    let mut queued = TransactionCoordinator::new(4).expect("capacity is valid");
+    queued
+        .submit(
+            request,
+            binding(2),
+            time(1),
+            &sessions,
+            &leases,
+            &ready,
+            &ready,
+            &transport,
+            &mut events,
+            &mut sink,
+        )
+        .expect("ready device is queued");
+    let terminal = queued
+        .dispatch_next(
+            time(2),
+            &sessions,
+            &leases,
+            &ready,
+            &unavailable,
+            &mut transport,
+            &mut events,
+            &mut sink,
+        )
+        .expect("readiness loss becomes a terminal outcome")
+        .completed
+        .expect("one queued transaction is completed");
+    assert_eq!(terminal.state, TransactionState::Revoked);
+    assert_eq!(
+        terminal.error_kind,
+        Some(ProtocolErrorKind::TransportFailure)
+    );
+    assert!(!terminal.live_write_executed);
+    assert_eq!(terminal.side_effect_certainty, SideEffectCertainty::None);
+    assert!(transport.dispatches.is_empty());
 }
 
 #[test]
@@ -422,6 +515,7 @@ fn effect_coalescing_is_explicit_but_stable_queue_order_is_strict() {
             &sessions,
             &leases,
             &profiles,
+            &profiles,
             &transport,
             &mut events,
             &mut sink,
@@ -434,6 +528,7 @@ fn effect_coalescing_is_explicit_but_stable_queue_order_is_strict() {
             time(2),
             &sessions,
             &leases,
+            &profiles,
             &profiles,
             &transport,
             &mut events,
@@ -464,6 +559,7 @@ fn effect_coalescing_is_explicit_but_stable_queue_order_is_strict() {
             &sessions,
             &leases,
             &profiles,
+            &profiles,
             &transport,
             &mut events,
             &mut sink,
@@ -476,6 +572,7 @@ fn effect_coalescing_is_explicit_but_stable_queue_order_is_strict() {
             time(2),
             &sessions,
             &leases,
+            &profiles,
             &profiles,
             &transport,
             &mut events,
@@ -505,6 +602,7 @@ fn dispatch_rechecks_session_and_generation_before_hardware() {
             &sessions,
             &leases,
             &profiles,
+            &profiles,
             &transport,
             &mut events,
             &mut sink,
@@ -516,6 +614,7 @@ fn dispatch_rechecks_session_and_generation_before_hardware() {
             time(2),
             &sessions,
             &leases,
+            &profiles,
             &profiles,
             &mut transport,
             &mut events,
@@ -543,6 +642,7 @@ fn dispatch_rechecks_session_and_generation_before_hardware() {
             &sessions,
             &leases,
             &profiles,
+            &profiles,
             &transport,
             &mut events,
             &mut sink,
@@ -554,6 +654,7 @@ fn dispatch_rechecks_session_and_generation_before_hardware() {
             time(2),
             &sessions,
             &leases,
+            &profiles,
             &profiles,
             &mut transport,
             &mut events,
@@ -578,6 +679,7 @@ fn profile_bindings_are_checked_at_admission_and_immediately_before_dispatch() {
     let stale_profiles = FakeProfiles {
         supported: true,
         current: false,
+        readiness: DeviceWriteReadiness::Ready,
     };
     let mut rejected = TransactionCoordinator::new(4).expect("capacity is valid");
     assert_eq!(
@@ -587,6 +689,7 @@ fn profile_bindings_are_checked_at_admission_and_immediately_before_dispatch() {
             time(1),
             &sessions,
             &leases,
+            &stale_profiles,
             &stale_profiles,
             &transport,
             &mut events,
@@ -604,6 +707,7 @@ fn profile_bindings_are_checked_at_admission_and_immediately_before_dispatch() {
             &sessions,
             &leases,
             &fake_profiles(true),
+            &fake_profiles(true),
             &transport,
             &mut events,
             &mut sink,
@@ -615,6 +719,7 @@ fn profile_bindings_are_checked_at_admission_and_immediately_before_dispatch() {
             time(2),
             &sessions,
             &leases,
+            &stale_profiles,
             &stale_profiles,
             &mut transport,
             &mut events,
@@ -650,6 +755,7 @@ fn retained_transport_outcome_reconciles_without_a_second_write() {
             &sessions,
             &leases,
             &profiles,
+            &profiles,
             &transport,
             &mut events,
             &mut sink,
@@ -660,6 +766,7 @@ fn retained_transport_outcome_reconciles_without_a_second_write() {
             time(2),
             &sessions,
             &leases,
+            &profiles,
             &profiles,
             &mut transport,
             &mut events,
@@ -708,6 +815,7 @@ fn ambiguous_transport_history_fails_closed_without_replay() {
                 &sessions,
                 &leases,
                 &profiles,
+                &profiles,
                 &transport,
                 &mut events,
                 &mut sink,
@@ -718,6 +826,7 @@ fn ambiguous_transport_history_fails_closed_without_replay() {
                 time(2),
                 &sessions,
                 &leases,
+                &profiles,
                 &profiles,
                 &mut transport,
                 &mut events,
@@ -767,6 +876,7 @@ fn partial_transport_failure_is_conservative_and_never_auto_retried() {
             &sessions,
             &leases,
             &profiles,
+            &profiles,
             &transport,
             &mut events,
             &mut sink,
@@ -777,6 +887,7 @@ fn partial_transport_failure_is_conservative_and_never_auto_retried() {
             time(2),
             &sessions,
             &leases,
+            &profiles,
             &profiles,
             &mut transport,
             &mut events,
@@ -815,6 +926,7 @@ fn impossible_transport_counts_fail_internally_instead_of_becoming_success() {
             &sessions,
             &leases,
             &profiles,
+            &profiles,
             &transport,
             &mut events,
             &mut sink,
@@ -825,6 +937,7 @@ fn impossible_transport_counts_fail_internally_instead_of_becoming_success() {
             time(2),
             &sessions,
             &leases,
+            &profiles,
             &profiles,
             &mut transport,
             &mut events,
@@ -860,6 +973,7 @@ fn explicit_session_invalidation_terminally_accounts_for_all_removed_work() {
                 time(1),
                 &sessions,
                 &leases,
+                &profiles,
                 &profiles,
                 &transport,
                 &mut events,

@@ -2,12 +2,13 @@
 
 use hfx_bridge::{ProfileBindingOutcome, RuntimeProfileAuthority, RuntimeProfileAuthorityError};
 use hfx_core::{
-    ChildIdentity, EndpointIdentity, LifecycleLimits, ObservationStamp, ProfileRegistry,
-    ReceiverLifecycleMachine, ReceiverLifecycleRegistry,
+    ChildIdentity, DeviceStateAuthority, EndpointIdentity, LifecycleLimits, ObservationStamp,
+    ProfileRegistry, ReceiverLifecycleMachine, ReceiverLifecycleRegistry,
 };
 use hfx_domain::{
-    ConnectionMode, DeviceKind, EvidenceClaimId, EvidenceConfidence, GenerationId, LogicalDeviceId,
-    MonotonicMs, ProductId, ResourceKind, RouteKind, SequenceNumber, VendorId,
+    ConnectionMode, DeviceKind, DeviceWriteReadiness, EvidenceClaimId, EvidenceConfidence,
+    GenerationId, LogicalDeviceId, MonotonicMs, PowerState, ProductId, ResourceKind, RouteKind,
+    RouteState, SequenceNumber, SleepState, VendorId,
 };
 use hfx_protocol::ResourceKey;
 
@@ -111,6 +112,14 @@ fn register_child(
             stamp(1, sequence + 1),
         )
         .expect("endpoint registration succeeds");
+    machine
+        .observe_route(
+            &logical_id,
+            &text(&format!("{device_id}-endpoint")),
+            RouteState::Available,
+            stamp(1, sequence + 2),
+        )
+        .expect("endpoint route becomes available");
 }
 
 fn resource(device_id: &str, kind: ResourceKind, generation_id: u64) -> ResourceKey {
@@ -155,6 +164,56 @@ fn exact_generation_composes_mouse_and_keyboard_independently() {
         .device_profile(&resource("keyboard", ResourceKind::Lighting, 1))
         .expect("keyboard lighting is independently qualified");
     assert_eq!(keyboard.application_slot_count.get(), 102);
+}
+
+#[test]
+fn write_readiness_comes_from_exact_current_lifecycle_state() {
+    let mut receivers = lifecycle(RouteKind::HyperfluxWireless);
+    let mut authority = RuntimeProfileAuthority::load(4).expect("authority loads");
+    bind(&mut authority, "receiver-a", 1);
+    let mouse = resource("mouse", ResourceKind::Lighting, 1);
+
+    assert_eq!(
+        authority.view(&receivers).write_readiness(&mouse),
+        DeviceWriteReadiness::Ready
+    );
+    assert_eq!(
+        authority
+            .view(&receivers)
+            .write_readiness(&resource("mouse", ResourceKind::Lighting, 2)),
+        DeviceWriteReadiness::Unknown
+    );
+
+    let machine = receivers
+        .get_mut(&text("receiver-a"))
+        .expect("receiver is registered");
+    machine
+        .observe_sleep(
+            &text("mouse"),
+            &text("mouse-endpoint"),
+            SleepState::Asleep,
+            stamp(1, 100),
+        )
+        .expect("sleep evidence is accepted");
+    assert_eq!(
+        authority.view(&receivers).write_readiness(&mouse),
+        DeviceWriteReadiness::Sleeping
+    );
+
+    receivers
+        .get_mut(&text("receiver-a"))
+        .expect("receiver is registered")
+        .observe_power(
+            &text("mouse"),
+            &text("mouse-endpoint"),
+            PowerState::Off,
+            stamp(1, 101),
+        )
+        .expect("power evidence is accepted");
+    assert_eq!(
+        authority.view(&receivers).write_readiness(&mouse),
+        DeviceWriteReadiness::Unavailable
+    );
 }
 
 #[test]

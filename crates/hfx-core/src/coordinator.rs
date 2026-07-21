@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::{
-    BoundedEventLog, BoundedOutcomeJournal, BoundedTransactionQueue, EventDraft, EventLogError,
-    EventSink, LeaseManager, OutcomeJournalError, OutcomeLookup, ProfileRegistry,
-    QueuedTransaction, ReceiverTransport, RequestDigestError, RequestReplay, SessionAuthority,
-    SubmissionBinding, TransactionMachine, TransactionQueueError, TransactionTransitionError,
-    TransportDispatch, TransportFailure, TransportFailureFacts, TransportReceipt,
-    TransportReconciliation, TransportTerminal, canonical_request_digest,
+    BoundedEventLog, BoundedOutcomeJournal, BoundedTransactionQueue, DeviceStateAuthority,
+    EventDraft, EventLogError, EventSink, LeaseManager, OutcomeJournalError, OutcomeLookup,
+    ProfileRegistry, QueuedTransaction, ReceiverTransport, RequestDigestError, RequestReplay,
+    SessionAuthority, SubmissionBinding, TransactionMachine, TransactionQueueError,
+    TransactionTransitionError, TransportDispatch, TransportFailure, TransportFailureFacts,
+    TransportReceipt, TransportReconciliation, TransportTerminal, canonical_request_digest,
 };
 use hfx_domain::{
-    DeliveredFrameCount, DeviceApplicationState, EventKind, FrameCount, GenerationId, MonotonicMs,
-    ProtocolErrorKind, QueueAdmission, ReceiverId, ResourceKind, SessionId, SideEffectCertainty,
-    TransactionId, TransactionState,
+    DeliveredFrameCount, DeviceApplicationState, DeviceWriteReadiness, EventKind, FrameCount,
+    GenerationId, MonotonicMs, ProtocolErrorKind, QueueAdmission, ReceiverId, ResourceKind,
+    SessionId, SideEffectCertainty, TransactionId, TransactionState,
 };
 use hfx_protocol::{
     TransactionProgress, TransactionRequest, TransactionResult, TransactionTerminal,
@@ -42,6 +42,7 @@ pub enum TransactionCoordinatorError {
     StaleGeneration,
     UnsupportedResource,
     ProfileBindingChanged,
+    DeviceNotReady(DeviceWriteReadiness),
     Queue(TransactionQueueError),
     Outcome(OutcomeJournalError),
     Event(EventLogError),
@@ -65,6 +66,7 @@ impl fmt::Display for TransactionCoordinatorError {
             Self::ProfileBindingChanged => {
                 "the qualified receiver or device profile binding changed"
             }
+            Self::DeviceNotReady(_) => "one or more requested devices are not ready for writes",
             Self::Queue(_) => "the bounded transaction queue rejected the request",
             Self::Outcome(_) => "the bounded outcome journal rejected the update",
             Self::Event(_) => "the canonical event stream rejected the terminal event",
@@ -136,7 +138,7 @@ impl TransactionCoordinator {
     /// Returns a typed rejection without beginning transport when request identity,
     /// session authority, ownership, generation, capability, deadline, or bounds fail.
     #[allow(clippy::too_many_arguments)]
-    pub fn submit<A, P, T, S>(
+    pub fn submit<A, D, P, T, S>(
         &mut self,
         request: TransactionRequest,
         binding: SubmissionBinding,
@@ -144,12 +146,14 @@ impl TransactionCoordinator {
         sessions: &A,
         leases: &LeaseManager,
         profiles: &P,
+        devices: &D,
         transport: &T,
         events: &mut BoundedEventLog,
         sink: &mut S,
     ) -> Result<SubmissionResult, TransactionCoordinatorError>
     where
         A: SessionAuthority,
+        D: DeviceStateAuthority,
         P: ProfileRegistry,
         T: ReceiverTransport,
         S: EventSink,
@@ -207,6 +211,9 @@ impl TransactionCoordinator {
         if !profiles_match(&request, profiles) {
             return Err(TransactionCoordinatorError::ProfileBindingChanged);
         }
+        if let Some(readiness) = first_unready(&request, devices) {
+            return Err(TransactionCoordinatorError::DeviceNotReady(readiness));
+        }
 
         let client_id = request.client_id.clone();
         let transaction_id = request.transaction_id.clone();
@@ -250,25 +257,27 @@ impl TransactionCoordinator {
     /// Returns an error only for internal bounded-state or event-journal failures;
     /// expected transport failures become immutable terminal transaction outcomes.
     #[allow(clippy::too_many_arguments)]
-    pub fn dispatch_next<A, P, T, S>(
+    pub fn dispatch_next<A, D, P, T, S>(
         &mut self,
         now: MonotonicMs,
         sessions: &A,
         leases: &LeaseManager,
         profiles: &P,
+        devices: &D,
         transport: &mut T,
         events: &mut BoundedEventLog,
         sink: &mut S,
     ) -> Result<DispatchResult, TransactionCoordinatorError>
     where
         A: SessionAuthority,
+        D: DeviceStateAuthority,
         P: ProfileRegistry,
         T: ReceiverTransport,
         S: EventSink,
     {
         let decision = self.queue.take_next(now);
         self.dispatch_decision(
-            decision, now, sessions, leases, profiles, transport, events, sink,
+            decision, now, sessions, leases, profiles, devices, transport, events, sink,
         )
     }
 
@@ -283,19 +292,21 @@ impl TransactionCoordinator {
     /// the elapsed entries completed during this call. Other failures match
     /// [`Self::dispatch_next`].
     #[allow(clippy::too_many_arguments)]
-    pub fn dispatch_transaction<A, P, T, S>(
+    pub fn dispatch_transaction<A, D, P, T, S>(
         &mut self,
         transaction_id: &TransactionId,
         now: MonotonicMs,
         sessions: &A,
         leases: &LeaseManager,
         profiles: &P,
+        devices: &D,
         transport: &mut T,
         events: &mut BoundedEventLog,
         sink: &mut S,
     ) -> Result<DispatchResult, TransactionCoordinatorError>
     where
         A: SessionAuthority,
+        D: DeviceStateAuthority,
         P: ProfileRegistry,
         T: ReceiverTransport,
         S: EventSink,
@@ -311,24 +322,26 @@ impl TransactionCoordinator {
             ));
         }
         self.dispatch_decision(
-            decision, now, sessions, leases, profiles, transport, events, sink,
+            decision, now, sessions, leases, profiles, devices, transport, events, sink,
         )
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn dispatch_decision<A, P, T, S>(
+    fn dispatch_decision<A, D, P, T, S>(
         &mut self,
         decision: crate::DequeueDecision,
         now: MonotonicMs,
         sessions: &A,
         leases: &LeaseManager,
         profiles: &P,
+        devices: &D,
         transport: &mut T,
         events: &mut BoundedEventLog,
         sink: &mut S,
     ) -> Result<DispatchResult, TransactionCoordinatorError>
     where
         A: SessionAuthority,
+        D: DeviceStateAuthority,
         P: ProfileRegistry,
         T: ReceiverTransport,
         S: EventSink,
@@ -352,7 +365,7 @@ impl TransactionCoordinator {
         };
 
         let preflight_error =
-            dispatch_preflight(&queued, now, sessions, leases, profiles, transport);
+            dispatch_preflight(&queued, now, sessions, leases, profiles, devices, transport);
         if let Some(error_kind) = preflight_error {
             let completed = self.finish_unsent(
                 queued,
@@ -620,16 +633,18 @@ fn profiles_match<P: ProfileRegistry>(request: &TransactionRequest, profiles: &P
     })
 }
 
-fn dispatch_preflight<A, P, T>(
+fn dispatch_preflight<A, D, P, T>(
     queued: &QueuedTransaction,
     now: MonotonicMs,
     sessions: &A,
     leases: &LeaseManager,
     profiles: &P,
+    devices: &D,
     transport: &T,
 ) -> Option<ProtocolErrorKind>
 where
     A: SessionAuthority,
+    D: DeviceStateAuthority,
     P: ProfileRegistry,
     T: ReceiverTransport,
 {
@@ -655,9 +670,21 @@ where
         Some(ProtocolErrorKind::UnsupportedFeature)
     } else if !profiles_match(&queued.request, profiles) {
         Some(ProtocolErrorKind::StaleGeneration)
+    } else if first_unready(&queued.request, devices).is_some() {
+        Some(ProtocolErrorKind::TransportFailure)
     } else {
         None
     }
+}
+
+fn first_unready<D: DeviceStateAuthority>(
+    request: &TransactionRequest,
+    devices: &D,
+) -> Option<DeviceWriteReadiness> {
+    request.resources.iter().find_map(|resource| {
+        let readiness = devices.write_readiness(resource);
+        (readiness != DeviceWriteReadiness::Ready).then_some(readiness)
+    })
 }
 
 fn reconcile_or_dispatch<T: ReceiverTransport>(
