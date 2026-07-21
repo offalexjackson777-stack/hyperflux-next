@@ -178,6 +178,11 @@ fn expiration_and_generation_replacement_revoke_authority() {
         std::slice::from_ref(&short),
         time(1_500)
     ));
+    let expired = manager.expire(time(1_500));
+    assert_eq!(expired.len(), 1);
+    assert_eq!(expired[0].lease_id, text("lease-short"));
+    assert_eq!(expired[0].state, LeaseState::Expired);
+    assert!(manager.expire(time(1_500)).is_empty());
     let replacement = manager
         .acquire(
             lease_request("request-replacement", "client-4", vec![short]),

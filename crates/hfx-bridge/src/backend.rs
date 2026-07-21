@@ -153,6 +153,7 @@ where
         &mut self,
         sessions: &SessionRegistry,
     ) -> Result<DispatchResult, RpcFailure> {
+        self.tick()?;
         let profiles = self.profiles.view(&self.receivers);
         self.transactions
             .dispatch_next(
@@ -166,6 +167,16 @@ where
                 &mut self.event_sink,
             )
             .map_err(transaction_failure)
+    }
+
+    /// Advances time-driven bridge policy without requiring an RPC request.
+    ///
+    /// # Errors
+    ///
+    /// Returns a canonical event failure without partially committing an
+    /// ownership transition.
+    pub fn tick(&mut self) -> Result<(), RpcFailure> {
+        self.expire_leases()
     }
 
     #[must_use]
@@ -257,6 +268,39 @@ where
         let _ = self.event_sink.try_emit(&event);
         Ok(())
     }
+
+    fn expire_leases(&mut self) -> Result<(), RpcFailure> {
+        let mut next_leases = self.leases.clone();
+        let expired = next_leases.expire(self.clock.now());
+        if expired.is_empty() {
+            return Ok(());
+        }
+
+        let mut next_events = self.events.clone();
+        let mut emitted = Vec::with_capacity(expired.len());
+        for grant in expired {
+            emitted.push(
+                next_events
+                    .append(EventDraft {
+                        kind: EventKind::OwnershipChanged,
+                        receiver_id: None,
+                        generation_id: None,
+                        device_id: None,
+                        lease_id: Some(grant.lease_id),
+                        transaction_id: None,
+                        finding_id: None,
+                    })
+                    .map_err(|error| event_failure(&error))?,
+            );
+        }
+
+        self.leases = next_leases;
+        self.events = next_events;
+        for event in emitted {
+            let _ = self.event_sink.try_emit(&event);
+        }
+        Ok(())
+    }
 }
 
 impl<C, T, R, S> BridgeRpcBackend for CoreBridgeBackend<C, T, R, S>
@@ -271,6 +315,7 @@ where
         context: BackendRequestContext<'_>,
     ) -> Result<BridgeSnapshot, RpcFailure> {
         Self::authorize(context)?;
+        self.tick()?;
         SnapshotProjector::new(&self.profiles)
             .project(
                 &self.receivers,
@@ -288,6 +333,7 @@ where
         request: LeaseRequest,
     ) -> Result<LeaseResult, RpcFailure> {
         Self::authorize_client(context, &request.client_id)?;
+        self.tick()?;
         self.qualify_resources(&request)?;
         let lease_id = self.identities.lease_id().map_err(identity_failure)?;
         let decision = self
@@ -308,6 +354,7 @@ where
         request: RenewLeaseRequest,
     ) -> Result<LeaseResult, RpcFailure> {
         Self::authorize_client(context, &request.client_id)?;
+        self.tick()?;
         let decision = self
             .leases
             .renew_request_decision(request, self.clock.now())
@@ -326,6 +373,7 @@ where
         request: ReleaseLeaseRequest,
     ) -> Result<LeaseResult, RpcFailure> {
         Self::authorize_client(context, &request.client_id)?;
+        self.tick()?;
         let decision = self
             .leases
             .release_request_decision(request, self.clock.now())
@@ -344,6 +392,7 @@ where
         request: TransactionRequest,
     ) -> Result<TransactionResult, RpcFailure> {
         Self::authorize_client(context, &request.client_id)?;
+        self.tick()?;
         let nonce = self.identities.dispatch_nonce().map_err(identity_failure)?;
         let profiles = self.profiles.view(&self.receivers);
         self.transactions
@@ -372,6 +421,7 @@ where
         request: TransactionLookup,
     ) -> Result<TransactionResult, RpcFailure> {
         Self::authorize_client(context, &request.client_id)?;
+        self.tick()?;
         Ok(
             match self
                 .transactions
@@ -399,6 +449,7 @@ where
         request: SubscriptionRequest,
     ) -> Result<EventBatch, RpcFailure> {
         Self::authorize_client(context, &request.client_id)?;
+        self.tick()?;
         let subscription_id = self
             .subscriptions
             .resolve(context.session(), &request, &mut self.identities)
@@ -413,6 +464,7 @@ where
         context: BackendRequestContext<'_>,
     ) -> Result<DiagnosticSnapshot, RpcFailure> {
         Self::authorize(context)?;
+        self.tick()?;
         Ok(self.diagnostics.snapshot(
             self.events.latest_sequence(),
             self.config.event_capacity,
@@ -421,6 +473,7 @@ where
     }
 
     fn disconnect(&mut self, session: &AuthorizedSession) -> Result<(), RpcFailure> {
+        self.tick()?;
         let _ = self.subscriptions.revoke_session(session);
         let released = self.leases.release_client(&session.client_id);
         let mut first_failure = None;

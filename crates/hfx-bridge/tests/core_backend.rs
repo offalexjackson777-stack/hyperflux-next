@@ -581,3 +581,105 @@ fn production_backend_composes_authority_replay_dispatch_events_and_cleanup() {
             if matches!(envelope.result, LeaseResult::Granted(_))
     ));
 }
+
+#[test]
+fn lease_expiry_is_one_observable_ownership_transition() {
+    let mut backend = backend();
+    let mut sessions = SessionRegistry::new(
+        QueueCapacity::try_from(4_u16).expect("session capacity is canonical"),
+    );
+    let mut dispatcher = new_dispatcher();
+    let mut session_identities = DeterministicIdentities(120);
+    let hello = negotiate(
+        &mut dispatcher,
+        &mut session_identities,
+        &mut sessions,
+        &mut backend,
+    );
+
+    let acquired = dispatcher.dispatch(
+        RpcRequest::AcquireLease(SessionRequestEnvelope {
+            request_id: text("request-expiring-acquire"),
+            protocol_session_id: hello.protocol_session_id.clone(),
+            negotiation_token: hello.negotiation_token.clone(),
+            params: lease_request("request-expiring-acquire", resource("mouse", 1)),
+        }),
+        &mut session_identities,
+        &mut sessions,
+        &mut backend,
+    );
+    let RpcResponse::AcquireLeaseSuccess(acquired) = acquired else {
+        panic!("lease must be granted: {acquired:?}");
+    };
+    let LeaseResult::Granted(grant) = acquired.result else {
+        panic!("lease result must be granted");
+    };
+
+    let initial = dispatcher.dispatch(
+        RpcRequest::Subscribe(SessionRequestEnvelope {
+            request_id: text("request-expiry-subscribe"),
+            protocol_session_id: hello.protocol_session_id.clone(),
+            negotiation_token: hello.negotiation_token.clone(),
+            params: SubscriptionRequest {
+                client_id: text("client-1"),
+                subscription_id: None,
+                expected_cursor: None,
+                max_events: EventBatchLimit::try_from(16_u16).expect("limit is canonical"),
+            },
+        }),
+        &mut session_identities,
+        &mut sessions,
+        &mut backend,
+    );
+    let RpcResponse::SubscribeSuccess(initial) = initial else {
+        panic!("initial subscription must succeed: {initial:?}");
+    };
+    assert_eq!(initial.result.events.len(), 1);
+
+    *backend.clock_mut() = TestClock(time(10_100));
+    backend.tick().expect("expiry tick succeeds");
+    backend.tick().expect("repeated expiry tick is idempotent");
+
+    let expired = dispatcher.dispatch(
+        RpcRequest::Subscribe(SessionRequestEnvelope {
+            request_id: text("request-expiry-continuation"),
+            protocol_session_id: hello.protocol_session_id.clone(),
+            negotiation_token: hello.negotiation_token.clone(),
+            params: SubscriptionRequest {
+                client_id: text("client-1"),
+                subscription_id: Some(initial.result.subscription_id),
+                expected_cursor: Some(initial.result.next_cursor),
+                max_events: EventBatchLimit::try_from(16_u16).expect("limit is canonical"),
+            },
+        }),
+        &mut session_identities,
+        &mut sessions,
+        &mut backend,
+    );
+    let RpcResponse::SubscribeSuccess(expired) = expired else {
+        panic!("expiry continuation must succeed: {expired:?}");
+    };
+    assert_eq!(expired.result.events.len(), 1);
+    assert_eq!(expired.result.events[0].kind, EventKind::OwnershipChanged);
+    assert_eq!(
+        expired.result.events[0].lease_id.as_ref(),
+        Some(&grant.lease_id)
+    );
+
+    let reacquired = dispatcher.dispatch(
+        RpcRequest::AcquireLease(SessionRequestEnvelope {
+            request_id: text("request-after-expiry"),
+            protocol_session_id: hello.protocol_session_id,
+            negotiation_token: hello.negotiation_token,
+            params: lease_request("request-after-expiry", resource("mouse", 1)),
+        }),
+        &mut session_identities,
+        &mut sessions,
+        &mut backend,
+    );
+    assert!(matches!(
+        reacquired,
+        RpcResponse::AcquireLeaseSuccess(ref envelope)
+            if matches!(envelope.result, LeaseResult::Granted(_))
+    ));
+}

@@ -116,7 +116,7 @@ impl LeaseManager {
         lease_id: LeaseId,
         now: MonotonicMs,
     ) -> Result<LeaseDecision, LeaseManagerError> {
-        self.expire(now);
+        drop(self.expire(now));
         let operation = LeaseOperation::Acquire(request);
         let LeaseOperation::Acquire(request) = &operation else {
             unreachable!("operation was constructed as acquire");
@@ -219,7 +219,7 @@ impl LeaseManager {
         request: RenewLeaseRequest,
         now: MonotonicMs,
     ) -> Result<LeaseDecision, LeaseManagerError> {
-        self.expire(now);
+        drop(self.expire(now));
         let operation = LeaseOperation::Renew(request);
         let LeaseOperation::Renew(request) = &operation else {
             unreachable!("operation was constructed as renew");
@@ -299,7 +299,7 @@ impl LeaseManager {
         request: ReleaseLeaseRequest,
         now: MonotonicMs,
     ) -> Result<LeaseDecision, LeaseManagerError> {
-        self.expire(now);
+        drop(self.expire(now));
         let operation = LeaseOperation::Release(request);
         let LeaseOperation::Release(request) = &operation else {
             unreachable!("operation was constructed as release");
@@ -355,7 +355,7 @@ impl LeaseManager {
         duration_ms: LeaseDurationMs,
         now: MonotonicMs,
     ) -> Result<LeaseGrant, LeaseManagerError> {
-        self.expire(now);
+        drop(self.expire(now));
         let grant = self
             .leases
             .get_mut(lease_id)
@@ -384,7 +384,7 @@ impl LeaseManager {
         lease_id: &LeaseId,
         now: MonotonicMs,
     ) -> Result<LeaseGrant, LeaseManagerError> {
-        self.expire(now);
+        drop(self.expire(now));
         let grant = self
             .leases
             .get(lease_id)
@@ -467,7 +467,7 @@ impl LeaseManager {
         generation_id: hfx_domain::GenerationId,
         now: MonotonicMs,
     ) -> Vec<ResourceOwnershipSnapshot> {
-        self.expire(now);
+        drop(self.expire(now));
         self.owners
             .iter()
             .filter(|(resource, _)| {
@@ -485,16 +485,24 @@ impl LeaseManager {
             .collect()
     }
 
-    fn expire(&mut self, now: MonotonicMs) {
+    /// Removes every lease whose deadline has elapsed and returns the exact
+    /// ownership transitions in canonical lease-id order.
+    #[must_use]
+    pub fn expire(&mut self, now: MonotonicMs) -> Vec<LeaseGrant> {
         let expired = self
             .leases
             .iter()
             .filter(|(_, grant)| grant.expires_at_ms <= now)
             .map(|(id, _)| id.clone())
             .collect::<Vec<_>>();
-        for id in expired {
-            let _ = self.remove_lease(&id);
-        }
+        expired
+            .iter()
+            .filter_map(|id| self.remove_lease(id))
+            .map(|mut grant| {
+                grant.state = LeaseState::Expired;
+                grant
+            })
+            .collect()
     }
 
     fn remove_lease(&mut self, lease_id: &LeaseId) -> Option<LeaseGrant> {
