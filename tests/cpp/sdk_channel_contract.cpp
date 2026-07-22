@@ -293,21 +293,26 @@ int main()
     {
         return 4;
     }
-    const auto account = current_account_name();
-    if(account.empty()
-       || connect_to_local_peer(std::nullopt, account, "named")
-           != hyperflux::sdk::ErrorCode::UnexpectedResponse)
+    const auto current_uid = static_cast<std::uint32_t>(::geteuid());
+    if(connect_to_local_peer(current_uid, std::nullopt, "numeric")
+       != hyperflux::sdk::ErrorCode::UnexpectedResponse)
     {
         return 5;
     }
-    const auto current_uid = static_cast<std::uint32_t>(::geteuid());
+    const auto account = current_account_name();
+    if(!account.empty()
+       && connect_to_local_peer(std::nullopt, account, "named")
+           != hyperflux::sdk::ErrorCode::UnexpectedResponse)
+    {
+        return 6;
+    }
     const auto other_uid = current_uid == std::numeric_limits<std::uint32_t>::max()
         ? current_uid - 1
         : current_uid + 1;
     if(connect_to_local_peer(other_uid, std::nullopt, "mismatch")
        != hyperflux::sdk::ErrorCode::PeerCredentialMismatch)
     {
-        return 6;
+        return 7;
     }
     const auto conflicting = hyperflux::sdk::UnixRpcChannel::connect({
         "/tmp/hfx-sdk-channel-unused.sock",
@@ -317,7 +322,7 @@ int main()
     });
     if(conflicting || conflicting.error().code != hyperflux::sdk::ErrorCode::InvalidArgument)
     {
-        return 7;
+        return 8;
     }
     const auto unavailable = hyperflux::sdk::UnixRpcChannel::connect({
         "/tmp/hfx-sdk-channel-unused.sock",
@@ -327,7 +332,7 @@ int main()
     });
     if(unavailable || unavailable.error().code != hyperflux::sdk::ErrorCode::SocketConfigure)
     {
-        return 8;
+        return 9;
     }
     return 0;
 }

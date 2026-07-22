@@ -61,7 +61,7 @@
   },
   "network_policy": {
     "container_build": ["arch-snapshot-packages", "pinned-rust-toolchain"],
-    "post_create": ["pinned-upstream-checkouts"],
+    "post_create": ["pinned-upstream-checkouts", "locked-rust-crates"],
     "verification": "forbidden"
   }
 }

@@ -194,7 +194,7 @@ def _run_command(
     except subprocess.TimeoutExpired as error:
         raise ModelError(f"{label} exceeded its {timeout_seconds}s timeout") from error
     if result.returncode != 0:
-        raise ModelError(f"{label} failed")
+        raise ModelError(f"{label} failed with exit status {result.returncode}")
 
 
 def _run_python_tests(root: Path, node: TestNode) -> None:
@@ -390,6 +390,14 @@ def _run_cpp_sdk_contracts(root: Path, node: TestNode) -> None:
     )
 
 
+def _remove_expected_kernel_source_link(module_directory: Path) -> None:
+    source_link = module_directory / "source"
+    if source_link.is_symlink() and os.readlink(source_link) == ".":
+        source_link.unlink()
+    elif source_link.exists() or source_link.is_symlink():
+        raise ModelError("kernel build left an unexpected source-tree artifact")
+
+
 def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
     kernel_binary = root / "build" / "kernel-profile-table-smoke"
     kernel_binary.parent.mkdir(parents=True, exist_ok=True)
@@ -478,49 +486,48 @@ def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
             )
     if not build_directories:
         raise ModelError("kernel module verification has no configured header directory")
+    source_directory = root / "driver" / "kernel"
+    source_link = source_directory / "source"
+    if source_link.exists() or source_link.is_symlink():
+        raise ModelError("kernel source tree contains an unexpected build artifact")
     for build_directory in build_directories:
         if not build_directory.is_absolute() or not (build_directory / "Makefile").is_file():
             raise ModelError(f"kernel header directory is unavailable: {build_directory}")
         label = build_directory.resolve().parent.name
         output_directory = root / "build" / "kernel" / label
-        _run_command(
-            root,
-            [
-                "make",
-                "-C",
-                str(build_directory),
-                f"M={root / 'driver' / 'kernel'}",
-                "clean",
-            ],
-            f"legacy kernel source cleanup ({label})",
-            node.timeout_seconds,
-        )
-        source_link = root / "driver" / "kernel" / "source"
-        if source_link.is_symlink() and os.readlink(source_link) == ".":
-            source_link.unlink()
-        elif source_link.exists() or source_link.is_symlink():
-            raise ModelError("kernel build left an unexpected source-tree artifact")
         if output_directory.exists():
             shutil.rmtree(output_directory)
-        output_directory.mkdir(parents=True)
+        module_directory = output_directory / "source"
+        shutil.copytree(source_directory, module_directory, symlinks=True)
         _run_command(
             root,
             [
                 "make",
                 "-C",
                 str(build_directory),
-                f"M={root / 'driver' / 'kernel'}",
-                f"MO={output_directory}",
+                f"M={module_directory}",
+                "clean",
+            ],
+            f"kernel verification copy cleanup ({label})",
+            node.timeout_seconds,
+        )
+        _remove_expected_kernel_source_link(module_directory)
+        _run_command(
+            root,
+            [
+                "make",
+                "-C",
+                str(build_directory),
+                f"M={module_directory}",
                 "W=1",
                 "modules",
             ],
             f"kernel module build ({label})",
             node.timeout_seconds,
         )
-        if source_link.is_symlink() and os.readlink(source_link) == ".":
-            source_link.unlink()
-        elif source_link.exists() or source_link.is_symlink():
-            raise ModelError("kernel build left an unexpected source-tree artifact")
+        _remove_expected_kernel_source_link(module_directory)
+        if source_link.exists() or source_link.is_symlink():
+            raise ModelError("kernel verification modified the canonical source tree")
 
 
 def _pinned_upstream_source(

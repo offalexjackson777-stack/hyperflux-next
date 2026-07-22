@@ -140,6 +140,7 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertIn("--changed-from", fast_text)
         self.assertIn("./hfx ci verify", fast_text)
         self.assertIn("./hfx ci summary", fast_text)
+        self.assertIn(".hfx/cargo", fast_text)
         self.assertIn("$GITHUB_STEP_SUMMARY", fast_text)
         self.assertIn("build/ci/fast/result.json", fast_text)
         self.assertIn("--lane full", full_text)
@@ -200,6 +201,15 @@ class GitHubGovernanceTests(unittest.TestCase):
             self.assertIn("no-new-privileges:true", command)
             self.assertNotIn("--privileged", command)
             self.assertNotIn("--device", command)
+            self.assertIn(
+                "CARGO_HOME=/workspaces/hyperflux-next/.hfx/cargo",
+                command,
+            )
+        prepare_command = " ".join(prepare.command)
+        self.assertIn("./hfx upstream prepare --output .hfx/upstreams", prepare_command)
+        self.assertIn("CARGO_NET_OFFLINE=false cargo fetch --locked", prepare_command)
+        self.assertIn("CARGO_NET_OFFLINE=false", prepare_command)
+        self.assertIn("CARGO_NET_OFFLINE=true", " ".join(verify.command))
         self.assertIn("--changed-from " + "a" * 40, " ".join(verify.command))
         self.assertIn("docs build", " ".join(docs.command))
         self.assertIn("docs verify", " ".join(docs.command))

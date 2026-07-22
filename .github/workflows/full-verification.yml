@@ -27,6 +27,7 @@ jobs:
       with:
         path: |
           .hfx/upstreams
+          .hfx/cargo
           target
         key: hfx-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'toolchains/development-environment.json', 'integrations/catalog.json') }}
         restore-keys: |

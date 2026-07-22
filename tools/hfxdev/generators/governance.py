@@ -7,6 +7,7 @@ from typing import Any
 
 import yaml
 
+from ..development import CARGO_CACHE_PATH, UPSTREAM_CACHE_PATH
 from ..governance import GitHubGovernance
 
 
@@ -56,7 +57,7 @@ def _cache(governance: GitHubGovernance) -> dict[str, Any]:
         "name": "Restore verified software caches",
         "uses": governance.actions_by_id["cache"].uses,
         "with": {
-            "path": ".hfx/upstreams\ntarget\n",
+            "path": f"{UPSTREAM_CACHE_PATH}\n{CARGO_CACHE_PATH}\ntarget\n",
             "key": "hfx-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'toolchains/development-environment.json', 'integrations/catalog.json') }}",
             "restore-keys": "hfx-${{ runner.os }}-\n",
         },

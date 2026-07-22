@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path, PurePosixPath
 import re
+import shlex
 from typing import Any
 
 from .model import ModelError, load_json, require_unique
@@ -25,6 +26,16 @@ ENVIRONMENT_KEYS = {
 }
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 PACKAGE_NAME = re.compile(r"^[a-z0-9][a-z0-9+_.-]{0,63}$")
+CARGO_CACHE_PATH = ".hfx/cargo"
+UPSTREAM_CACHE_PATH = ".hfx/upstreams"
+UPSTREAM_PREPARE_COMMAND = (
+    "./hfx",
+    "upstream",
+    "prepare",
+    "--output",
+    UPSTREAM_CACHE_PATH,
+)
+LOCKED_RUST_FETCH_COMMAND = ("cargo", "fetch", "--locked")
 REQUIRED_PACKAGES = {
     "bash",
     "binutils",
@@ -60,6 +71,12 @@ REQUIRED_PACKAGES = {
     "sudo",
     "zstd",
 }
+
+
+def networked_software_prepare_command() -> str:
+    upstream = shlex.join(UPSTREAM_PREPARE_COMMAND)
+    rust = shlex.join(LOCKED_RUST_FETCH_COMMAND)
+    return f"{upstream} && CARGO_NET_OFFLINE=false {rust}"
 
 
 @dataclass(frozen=True)
@@ -242,7 +259,7 @@ def load_development_environment(root: Path) -> DevelopmentEnvironment:
     post_create_uses = _string_list(network["post_create"], "post-create network uses")
     if set(container_uses) != {"arch-snapshot-packages", "pinned-rust-toolchain"}:
         raise ModelError("container build network policy is incomplete")
-    if post_create_uses != ("pinned-upstream-checkouts",):
+    if post_create_uses != ("pinned-upstream-checkouts", "locked-rust-crates"):
         raise ModelError("post-create network policy is incomplete")
     if network["verification"] != "forbidden":
         raise ModelError("verification must remain network-free")

@@ -46,6 +46,10 @@ class DevelopmentEnvironmentTests(unittest.TestCase):
         self.assertTrue(environment.archive_disable_low_speed_timeout)
         self.assertEqual(environment.rust_toolchain, "1.95.0-x86_64-unknown-linux-gnu")
         self.assertEqual(
+            environment.post_create_network_uses,
+            ("pinned-upstream-checkouts", "locked-rust-crates"),
+        )
+        self.assertEqual(
             [package.name for package in environment.packages],
             sorted(package.name for package in environment.packages),
         )
@@ -66,9 +70,20 @@ class DevelopmentEnvironmentTests(unittest.TestCase):
 
     def test_devcontainer_prepares_pins_without_hiding_verification(self) -> None:
         value = json.loads(devcontainer(load_development_environment(ROOT)))
-        self.assertEqual(value["postCreateCommand"], "./hfx upstream prepare")
+        self.assertIn(
+            "./hfx upstream prepare --output .hfx/upstreams",
+            value["postCreateCommand"],
+        )
+        self.assertIn(
+            "CARGO_NET_OFFLINE=false cargo fetch --locked",
+            value["postCreateCommand"],
+        )
         self.assertNotIn("verify", value["postCreateCommand"])
         self.assertNotIn("runArgs", value)
+        self.assertEqual(
+            value["containerEnv"]["CARGO_HOME"],
+            "/workspaces/hyperflux-next/.hfx/cargo",
+        )
         self.assertEqual(value["containerEnv"]["CARGO_NET_OFFLINE"], "true")
 
     def test_environment_rejects_toolchain_package_drift(self) -> None:
