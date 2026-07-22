@@ -157,6 +157,32 @@
       "resume_policy": "rerun"
     },
     {
+      "id": "device-knowledge-contracts",
+      "title": "Provenance-bound device knowledge and exact upstream imports",
+      "owned_domain": "profiles",
+      "lanes": ["fast", "full-software"],
+      "runner": "device-knowledge-contracts",
+      "required_capabilities": ["openrazer-source", "openrgb-source"],
+      "hardware_requirement": "none",
+      "writes_hardware": false,
+      "expected_duration_seconds": 2,
+      "timeout_seconds": 30,
+      "dependencies": ["integration-contracts", "profile-contracts"],
+      "isolation": "exclusive-process",
+      "cache_inputs": [
+        "integrations/catalog.json",
+        "knowledge/**/*.json",
+        "profiles/candidates/*.json",
+        "schemas/*device-knowledge*.json",
+        "schemas/upstream-device-catalog.schema.json",
+        "tools/hfxdev/knowledge*.py",
+        "tools/hfxdev/openrazer.py",
+        "tools/hfxdev/openrgb.py"
+      ],
+      "produced_evidence": ["device-knowledge-result", "upstream-catalog-freshness"],
+      "resume_policy": "rerun"
+    },
+    {
       "id": "protocol-contracts",
       "title": "Versioned bridge protocol and SDK contract",
       "owned_domain": "protocol",
@@ -201,9 +227,9 @@
       "writes_hardware": false,
       "expected_duration_seconds": 1,
       "timeout_seconds": 15,
-      "dependencies": ["profile-contracts", "protocol-contracts", "error-contracts", "integration-contracts", "assurance-contracts", "formal-model-contracts", "development-environment-contracts", "governance-contracts"],
+      "dependencies": ["profile-contracts", "device-knowledge-contracts", "protocol-contracts", "error-contracts", "integration-contracts", "assurance-contracts", "formal-model-contracts", "development-environment-contracts", "governance-contracts"],
       "isolation": "shared",
-      "cache_inputs": ["schemas/*.json", "profiles/**/*.json", "integrations/**/*.json", "protocol/**/*.json", "uapi/*.json", "errors/catalog.json", "tools/hfxdev/generators/*.py", "tools/hfxdev/render.py", "verification/tests.json"],
+      "cache_inputs": ["schemas/*.json", "profiles/**/*.json", "knowledge/**/*.json", "integrations/**/*.json", "protocol/**/*.json", "uapi/*.json", "errors/catalog.json", "tools/hfxdev/generators/*.py", "tools/hfxdev/render.py", "verification/tests.json"],
       "produced_evidence": ["generation-result"],
       "resume_policy": "reuse-verified"
     },

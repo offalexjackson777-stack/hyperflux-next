@@ -38,6 +38,7 @@ KNOWN_RUNNERS = {
     "schema-contracts",
     "integration-contracts",
     "profile-contracts",
+    "device-knowledge-contracts",
     "protocol-contracts",
     "error-contracts",
     "formal-model-contracts",

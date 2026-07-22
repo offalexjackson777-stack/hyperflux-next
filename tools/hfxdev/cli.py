@@ -10,6 +10,7 @@ from .ci import container_invocation, run_container
 from .migration import capture_inventory, run_shadow_comparison, summary
 from .model import ModelError
 from .distribution_package import build_distribution_package
+from .knowledge import import_upstream_catalogs
 from .openrazer import write_imported_metadata
 from .package_pipeline import build_artifacts, stage_rootfs
 from .portal import build_portal, verify_portal
@@ -79,6 +80,18 @@ def _parser() -> argparse.ArgumentParser:
     imports = commands.add_parser("import", help="transform pinned upstream metadata")
     imports.add_argument("upstream", choices=["openrazer"])
     imports.add_argument("--source", required=True, type=Path)
+
+    knowledge = commands.add_parser(
+        "knowledge", help="manage provenance-bound device knowledge"
+    )
+    knowledge_commands = knowledge.add_subparsers(
+        dest="knowledge_command", required=True
+    )
+    knowledge_import = knowledge_commands.add_parser(
+        "import", help="rebuild normalized catalogs from exact upstream checkouts"
+    )
+    knowledge_import.add_argument("--openrazer-source", required=True, type=Path)
+    knowledge_import.add_argument("--openrgb-source", required=True, type=Path)
 
     upstream = commands.add_parser("upstream", help="manage immutable upstream checkouts")
     upstream_commands = upstream.add_subparsers(dest="upstream_command", required=True)
@@ -182,6 +195,15 @@ def main(arguments: list[str] | None = None) -> int:
         if args.command == "import":
             destination = write_imported_metadata(root, args.source.resolve())
             print(f"Imported {args.upstream}: {destination.relative_to(root)}")
+            return 0
+        if args.command == "knowledge":
+            paths = import_upstream_catalogs(
+                root,
+                args.openrazer_source,
+                args.openrgb_source,
+            )
+            for path in paths:
+                print(f"Generated {path.relative_to(root)}")
             return 0
         if args.command == "upstream":
             prepared = prepare_upstreams(root, args.output)

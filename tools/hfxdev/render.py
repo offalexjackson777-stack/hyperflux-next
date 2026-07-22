@@ -55,6 +55,10 @@ from .generators.kernel_uapi import (
     markdown as kernel_uapi_markdown,
     rust_bindings as kernel_uapi_rust_bindings,
 )
+from .generators.knowledge import (
+    compiled_json as knowledge_compiled_json,
+    render_knowledge_markdown,
+)
 from .generators.linux_runtime import (
     activation_service,
     confirmation_service,
@@ -90,6 +94,7 @@ from .generators.protocol import (
     rust_registry as protocol_rust_registry,
 )
 from .kernel_uapi import load_kernel_uapi
+from .knowledge import compiled_knowledge_catalog
 from .integrations import (
     compiled_catalog as compiled_integration_catalog,
     load_openrazer_compatibility_contract,
@@ -212,6 +217,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
     constitution, sources, ledger = load_foundation(root)
     domain_catalog = load_json(root / "schemas" / "domain-catalog.json")
     profiles = compiled_catalog(root)
+    knowledge = compiled_knowledge_catalog(root)
     profile_fixtures = composition_fixtures(root)
     protocol_registry = load_protocol_registry(root)
     protocol = protocol_registry.current
@@ -312,8 +318,14 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "domain_types.hpp": cpp_types(domain_catalog),
         root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "domain_json.hpp": domain_cpp_json(domain_catalog),
         root / "generated" / "profiles" / "catalog.json": profile_compiled_json(profiles),
+        root / "generated" / "knowledge" / "catalog.json": knowledge_compiled_json(
+            knowledge
+        ),
         root / "tests" / "fixtures" / "generated" / "profile-compositions.json": profile_fixtures_json(profile_fixtures),
         root / "docs" / "generated" / "supported-hardware.md": profile_markdown(profiles),
+        root / "docs" / "generated" / "device-knowledge.md": render_knowledge_markdown(
+            knowledge
+        ),
         root / "crates" / "hfx-profiles" / "src" / "generated.rs": profile_rust_catalog(profiles),
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "profile_catalog.py": profile_python_catalog(profiles),
         root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "profile_catalog.hpp": profile_cpp_catalog(profiles),

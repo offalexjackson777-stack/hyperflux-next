@@ -20,9 +20,15 @@ from .formal_model import load_formal_model, run_formal_model
 from .governance import load_github_governance
 from .integrations import load_integration_catalog, load_openrazer_compatibility_contract
 from .install import load_install_manifest
+from .knowledge import compiled_knowledge_catalog, load_knowledge_inputs
 from .linux_runtime import load_linux_runtime
 from .migration import execute_shadow_comparison, load_shadow_fixture
-from .openrazer import load_imported_metadata, transformed_metadata
+from .openrazer import (
+    extract_openrazer_catalog,
+    load_imported_metadata,
+    transformed_metadata,
+)
+from .openrgb import extract_openrgb_catalog
 from .package_pipeline import build_artifacts, load_artifact_set, stage_rootfs
 from .performance import (
     load_performance_budgets,
@@ -589,6 +595,37 @@ def _run_openrazer_metadata_contracts(root: Path, _node: TestNode) -> None:
         raise ModelError("committed OpenRazer metadata is stale; rerun ./hfx import openrazer")
 
 
+def _run_device_knowledge_contracts(root: Path, _node: TestNode) -> None:
+    inputs = load_knowledge_inputs(root)
+    catalog = compiled_knowledge_catalog(root)
+    if len(catalog["candidates"]) != 12:
+        raise ModelError("compiled device knowledge does not cover the selected snapshot")
+    upstreams = {
+        upstream["id"]: upstream
+        for upstream in load_integration_catalog(root)["upstreams"]
+    }
+    expected = {
+        "openrazer": extract_openrazer_catalog(
+            _openrazer_source(root),
+            repository=upstreams["openrazer"]["repository"],
+            commit=upstreams["openrazer"]["commit"],
+            version=upstreams["openrazer"]["version"],
+            license_expression=upstreams["openrazer"]["license_expression"],
+        ),
+        "openrgb": extract_openrgb_catalog(
+            _openrgb_source(root),
+            repository=upstreams["openrgb"]["repository"],
+            commit=upstreams["openrgb"]["commit"],
+            version=upstreams["openrgb"]["version"],
+            license_expression=upstreams["openrgb"]["license_expression"],
+        ),
+    }
+    if inputs.source_catalogs != expected:
+        raise ModelError(
+            "committed device-knowledge imports are stale; rerun ./hfx knowledge import"
+        )
+
+
 def _run_openrazer_compatibility_contracts(root: Path, node: TestNode) -> None:
     source = _openrazer_source(root)
     build_directory = root / "build" / "openrazer-compatibility"
@@ -1126,6 +1163,7 @@ RUNNERS = {
     "schema-contracts": _run_schema_contracts,
     "profile-contracts": _run_profile_contracts,
     "integration-contracts": _run_integration_contracts,
+    "device-knowledge-contracts": _run_device_knowledge_contracts,
     "protocol-contracts": _run_protocol_contracts,
     "error-contracts": _run_error_contracts,
     "generated-freshness": _run_generated_freshness,

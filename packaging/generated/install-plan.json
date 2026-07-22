@@ -258,6 +258,13 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/compiled-device-knowledge.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/compiled-device-knowledge.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/dependency-policy.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/dependency-policy.schema.json",
       "mode": "0644",
@@ -274,6 +281,20 @@
       "component": "schemas",
       "source": "schemas/development-environment.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/development-environment.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/device-capability-map.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/device-capability-map.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/device-knowledge-links.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/device-knowledge-links.schema.json",
       "mode": "0644",
       "preserve": false
     },
@@ -447,6 +468,13 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/reviewed-device-facts.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/reviewed-device-facts.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/shadow-comparison-evidence.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/shadow-comparison-evidence.schema.json",
       "mode": "0644",
@@ -484,6 +512,13 @@
       "component": "schemas",
       "source": "schemas/toolchain-pins.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/toolchain-pins.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/upstream-device-catalog.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/upstream-device-catalog.schema.json",
       "mode": "0644",
       "preserve": false
     },
@@ -762,6 +797,13 @@
     },
     {
       "component": "documentation",
+      "source": "docs/architecture/device-knowledge.md",
+      "destination": "/usr/share/doc/hyperflux-next/architecture/device-knowledge.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
       "source": "docs/architecture/integrations.md",
       "destination": "/usr/share/doc/hyperflux-next/architecture/integrations.md",
       "mode": "0644",
@@ -862,6 +904,13 @@
       "component": "documentation",
       "source": "docs/generated/development-environment.md",
       "destination": "/usr/share/doc/hyperflux-next/generated/development-environment.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/device-knowledge.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/device-knowledge.md",
       "mode": "0644",
       "preserve": false
     },

@@ -98,6 +98,114 @@
       "source_claim": "claim.catalog.razer-hyperflux-v2-20260713",
       "support_level": "candidate",
       "writable_capabilities": []
+    },
+    {
+      "device_kind": "mouse",
+      "id": "razer-basilisk-v3-pro",
+      "official_name": "Razer Basilisk V3 Pro",
+      "snapshot_id": "catalog.razer.hyperflux-v2.2026-07-21",
+      "source_claim": "claim.catalog.razer-hyperflux-v2-20260721",
+      "support_level": "candidate",
+      "writable_capabilities": []
+    },
+    {
+      "device_kind": "mouse",
+      "id": "razer-basilisk-v3-pro-35k",
+      "official_name": "Razer Basilisk V3 Pro 35K",
+      "snapshot_id": "catalog.razer.hyperflux-v2.2026-07-21",
+      "source_claim": "claim.catalog.razer-hyperflux-v2-20260721",
+      "support_level": "candidate",
+      "writable_capabilities": []
+    },
+    {
+      "device_kind": "keyboard",
+      "id": "razer-blackwidow-v3-pro",
+      "official_name": "Razer BlackWidow V3 Pro",
+      "snapshot_id": "catalog.razer.hyperflux-v2.2026-07-21",
+      "source_claim": "claim.catalog.razer-hyperflux-v2-20260721",
+      "support_level": "candidate",
+      "writable_capabilities": []
+    },
+    {
+      "device_kind": "keyboard",
+      "id": "razer-blackwidow-v4-low-profile-hyperspeed",
+      "official_name": "Razer BlackWidow V4 Low-profile HyperSpeed",
+      "snapshot_id": "catalog.razer.hyperflux-v2.2026-07-21",
+      "source_claim": "claim.catalog.razer-hyperflux-v2-20260721",
+      "support_level": "candidate",
+      "writable_capabilities": []
+    },
+    {
+      "device_kind": "keyboard",
+      "id": "razer-blackwidow-v4-low-profile-tenkeyless-hyperspeed",
+      "official_name": "Razer BlackWidow V4 Low-profile Tenkeyless HyperSpeed",
+      "snapshot_id": "catalog.razer.hyperflux-v2.2026-07-21",
+      "source_claim": "claim.catalog.razer-hyperflux-v2-20260721",
+      "support_level": "candidate",
+      "writable_capabilities": []
+    },
+    {
+      "device_kind": "keyboard",
+      "id": "razer-blackwidow-v4-mini-hyperspeed",
+      "official_name": "Razer BlackWidow V4 Mini HyperSpeed",
+      "snapshot_id": "catalog.razer.hyperflux-v2.2026-07-21",
+      "source_claim": "claim.catalog.razer-hyperflux-v2-20260721",
+      "support_level": "candidate",
+      "writable_capabilities": []
+    },
+    {
+      "device_kind": "keyboard",
+      "id": "razer-blackwidow-v4-tenkeyless-hyperspeed",
+      "official_name": "Razer BlackWidow V4 Tenkeyless HyperSpeed",
+      "snapshot_id": "catalog.razer.hyperflux-v2.2026-07-21",
+      "source_claim": "claim.catalog.razer-hyperflux-v2-20260721",
+      "support_level": "candidate",
+      "writable_capabilities": []
+    },
+    {
+      "device_kind": "mouse",
+      "id": "razer-cobra-hyperspeed",
+      "official_name": "Razer Cobra HyperSpeed",
+      "snapshot_id": "catalog.razer.hyperflux-v2.2026-07-21",
+      "source_claim": "claim.catalog.razer-hyperflux-v2-20260721",
+      "support_level": "candidate",
+      "writable_capabilities": []
+    },
+    {
+      "device_kind": "mouse",
+      "id": "razer-cobra-pro",
+      "official_name": "Razer Cobra Pro",
+      "snapshot_id": "catalog.razer.hyperflux-v2.2026-07-21",
+      "source_claim": "claim.catalog.razer-hyperflux-v2-20260721",
+      "support_level": "candidate",
+      "writable_capabilities": []
+    },
+    {
+      "device_kind": "keyboard",
+      "id": "razer-deathstalker-v2-pro",
+      "official_name": "Razer DeathStalker V2 Pro",
+      "snapshot_id": "catalog.razer.hyperflux-v2.2026-07-21",
+      "source_claim": "claim.catalog.razer-hyperflux-v2-20260721",
+      "support_level": "candidate",
+      "writable_capabilities": []
+    },
+    {
+      "device_kind": "keyboard",
+      "id": "razer-deathstalker-v2-pro-tenkeyless",
+      "official_name": "Razer DeathStalker V2 Pro Tenkeyless",
+      "snapshot_id": "catalog.razer.hyperflux-v2.2026-07-21",
+      "source_claim": "claim.catalog.razer-hyperflux-v2-20260721",
+      "support_level": "candidate",
+      "writable_capabilities": []
+    },
+    {
+      "device_kind": "mouse",
+      "id": "razer-naga-v2-pro",
+      "official_name": "Razer Naga V2 Pro",
+      "snapshot_id": "catalog.razer.hyperflux-v2.2026-07-21",
+      "source_claim": "claim.catalog.razer-hyperflux-v2-20260721",
+      "support_level": "candidate",
+      "writable_capabilities": []
     }
   ],
   "capabilities": [
@@ -324,6 +432,28 @@
         }
       ],
       "summary": "A dated Razer compatibility-list snapshot identifies candidate model names but grants no transport or RGB authority."
+    },
+    {
+      "evidence_level": "source-reviewed",
+      "id": "claim.catalog.razer-hyperflux-v2-20260721",
+      "limitations": [
+        "Catalog membership grants no PID, carrier map, command semantics, writable capability, or physical qualification.",
+        "Compatible mice may use charging and receiver connectivity; listed keyboards use multi-device connectivity and are not charged by the mat."
+      ],
+      "privacy": "public",
+      "profile_ids": [
+        "catalog.razer.hyperflux-v2.2026-07-21"
+      ],
+      "qualifies_capabilities": [],
+      "source_refs": [
+        {
+          "paths": [
+            "knowledge/reviewed-facts.json"
+          ],
+          "source_id": "device-knowledge-research"
+        }
+      ],
+      "summary": "Razer's 2026-07-21 HyperFlux V2 product-page review identifies twelve compatibility candidates while preserving the earlier snapshot."
     },
     {
       "evidence_level": "hardware-qualified",
@@ -1232,5 +1362,5 @@
     }
   ],
   "schema": "hyperflux-compiled-profile-catalog-v1",
-  "source_sha256": "caa35d4cefa357dcc2e5d166dd7f6ad7e38702ca0d6a7f79995e39352be947d2"
+  "source_sha256": "ce03f5454202c2b497beaf3a0142adfaf11e0536d7b420736cefeaefe3d7761c"
 }
