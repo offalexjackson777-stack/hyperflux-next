@@ -19,8 +19,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.ci import (
     _linked_worktree_common_dir,
-    _project_group,
-    _project_passwd,
+    _project_group_database,
+    _project_user_database,
     container_invocation,
     run_container,
 )
@@ -308,7 +308,7 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertEqual(invocation.group_id, 121)
 
     def test_ci_identity_projection_preserves_image_accounts_without_host_names(self) -> None:
-        passwd = _project_passwd(
+        user_database = _project_user_database(
             "root:x:0:0:root:/root:/bin/bash\n"
             "dbus:x:81:81:System Message Bus:/:/usr/bin/nologin\n"
             "hyperflux:x:1000:1000::/home/hyperflux:/bin/bash\n",
@@ -316,17 +316,29 @@ class GitHubGovernanceTests(unittest.TestCase):
             user_id=1001,
             group_id=121,
         )
-        group = _project_group(
+        group_database = _project_group_database(
             "root:x:0:\n"
             "dbus:x:81:\n"
             "hyperflux:x:1000:\n",
             username="hyperflux",
             group_id=121,
         )
-        self.assertIn("dbus:x:81:81:System Message Bus", passwd)
-        self.assertIn("hyperflux:x:1001:121::/tmp/hfx-home:/bin/bash", passwd)
-        self.assertIn("hyperflux:x:121:", group)
-        self.assertNotIn("runner", passwd + group)
+        self.assertIn("dbus:x:81:81:System Message Bus", user_database)
+        self.assertIn(
+            "hyperflux:x:1001:121::/tmp/hfx-home:/bin/bash", user_database
+        )
+        self.assertIn("hyperflux:x:121:", group_database)
+        self.assertNotIn("runner", user_database + group_database)
+
+    def test_ci_identity_projection_rejects_inline_credentials(self) -> None:
+        with self.assertRaisesRegex(ModelError, "inline credential material"):
+            _project_user_database(
+                "root:$6$inline-hash:0:0:root:/root:/bin/bash\n"
+                "hyperflux:x:1000:1000::/home/hyperflux:/bin/bash\n",
+                username="hyperflux",
+                user_id=1001,
+                group_id=121,
+            )
 
     @patch("hfxdev.ci.shutil.which", return_value="/usr/bin/docker")
     def test_ci_runtime_mounts_private_projected_identity(self, _which) -> None:
@@ -365,18 +377,20 @@ class GitHubGovernanceTests(unittest.TestCase):
                 for index, value in enumerate(values)
                 if value == "--volume"
             ]
-            passwd_path = Path(
+            user_database_path = Path(
                 next(value for value in mounts if value.endswith(":/etc/passwd:ro"))
                 .removesuffix(":/etc/passwd:ro")
             )
-            group_path = Path(
+            group_database_path = Path(
                 next(value for value in mounts if value.endswith(":/etc/group:ro"))
                 .removesuffix(":/etc/group:ro")
             )
-            self.assertIn("hyperflux:x:1001:121", passwd_path.read_text())
-            self.assertIn("hyperflux:x:121", group_path.read_text())
-            self.assertEqual(passwd_path.stat().st_mode & 0o777, 0o444)
-            self.assertEqual(group_path.stat().st_mode & 0o777, 0o444)
+            self.assertIn(
+                "hyperflux:x:1001:121", user_database_path.read_text()
+            )
+            self.assertIn("hyperflux:x:121", group_database_path.read_text())
+            self.assertEqual(user_database_path.stat().st_mode & 0o777, 0o444)
+            self.assertEqual(group_database_path.stat().st_mode & 0o777, 0o444)
             return subprocess.CompletedProcess(values, 0)
 
         with patch("hfxdev.ci.subprocess.run", side_effect=execute):
@@ -385,7 +399,7 @@ class GitHubGovernanceTests(unittest.TestCase):
 
     def test_ci_identity_projection_rejects_numeric_collisions(self) -> None:
         with self.assertRaises(ModelError):
-            _project_passwd(
+            _project_user_database(
                 "root:x:0:0:root:/root:/bin/bash\n"
                 "other:x:1001:1001::/:/usr/bin/nologin\n"
                 "hyperflux:x:1000:1000::/home/hyperflux:/bin/bash\n",
@@ -394,7 +408,7 @@ class GitHubGovernanceTests(unittest.TestCase):
                 group_id=121,
             )
         with self.assertRaises(ModelError):
-            _project_group(
+            _project_group_database(
                 "root:x:0:\nother:x:121:\nhyperflux:x:1000:\n",
                 username="hyperflux",
                 group_id=121,
