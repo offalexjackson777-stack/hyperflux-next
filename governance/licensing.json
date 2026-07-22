@@ -1,0 +1,23 @@
+{
+  "$schema": "../schemas/licensing-policy.schema.json",
+  "schema": "hyperflux-licensing-policy-v1",
+  "default_expression": "GPL-2.0-only",
+  "rationale": "Project-owned kernel, runtime, tooling, tests, and documentation use GPL-2.0-only. Narrow SDK and application-adapter boundaries use compatible declared licenses without changing kernel or bridge licensing.",
+  "rules": [
+    {"path": "driver/kernel/uapi/**", "expression": "GPL-2.0 WITH Linux-syscall-note", "reason": "Userspace ABI exception."},
+    {"path": "integrations/openrazer/compatibility/**", "expression": "GPL-2.0-or-later", "reason": "OpenRazer-compatible Python boundary."},
+    {"path": "integrations/polychromatic/**", "expression": "GPL-3.0-only", "reason": "Polychromatic-native adapter boundary."},
+    {"path": "sdk/cpp/vendor/**", "expression": "MIT", "reason": "Vendored nlohmann JSON dependency."},
+    {"path": "sdk/python/**", "expression": "GPL-2.0-or-later", "reason": "Cross-application Python SDK boundary."},
+    {"path": "tests/openrazer_compat_contracts.py", "expression": "GPL-2.0-or-later", "reason": "OpenRazer compatibility contract test."},
+    {"path": "tests/polychromatic_contracts.py", "expression": "GPL-3.0-only", "reason": "Polychromatic adapter contract test."},
+    {"path": "**", "expression": "GPL-2.0-only", "reason": "Project default."}
+  ],
+  "license_texts": {
+    "GPL-2.0-only": "LICENSES/GPL-2.0-only.txt",
+    "GPL-2.0-or-later": "LICENSES/GPL-2.0-or-later.txt",
+    "GPL-2.0 WITH Linux-syscall-note": "LICENSES/Linux-syscall-note.txt",
+    "GPL-3.0-only": "LICENSES/GPL-3.0-only.txt",
+    "MIT": "LICENSES/MIT.txt"
+  }
+}

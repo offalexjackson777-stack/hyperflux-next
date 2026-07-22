@@ -15,6 +15,7 @@ This subsystem owns:
 - GitHub governance policy
 - Required-check plan
 - Generated community files
+- Path-to-license policy
 
 It must never own:
 
@@ -50,6 +51,7 @@ Outputs:
 Canonical files:
 
 - [`governance/github.json`](github.json)
+- [`governance/licensing.json`](licensing.json)
 - [`CONTRIBUTING.md`](../CONTRIBUTING.md)
 - [`SUPPORT.md`](../SUPPORT.md)
 - [`SECURITY.md`](../SECURITY.md)
@@ -65,6 +67,7 @@ Generated projections:
 - [`governance/generated/github-labels.json`](generated/github-labels.json)
 - [`governance/generated/github-experience-plan.json`](generated/github-experience-plan.json)
 - [`docs/generated/github-governance.md`](../docs/generated/github-governance.md)
+- [`docs/legal/licensing.md`](../docs/legal/licensing.md)
 - [`.github/CODEOWNERS`](../.github/CODEOWNERS)
 - [`.github/pull_request_template.md`](../.github/pull_request_template.md)
 - [`.github/ISSUE_TEMPLATE/config.yml`](../.github/ISSUE_TEMPLATE/config.yml)
@@ -78,6 +81,7 @@ Generated projections:
 - [`.github/workflows/verification.yml`](../.github/workflows/verification.yml)
 - [`.github/workflows/full-verification.yml`](../.github/workflows/full-verification.yml)
 - [`.github/workflows/documentation.yml`](../.github/workflows/documentation.yml)
+- [`.github/workflows/repository-experience.yml`](../.github/workflows/repository-experience.yml)
 - [`.github/workflows/pages.yml`](../.github/workflows/pages.yml)
 - [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml)
 - [`.github/workflows/dependency-review.yml`](../.github/workflows/dependency-review.yml)
@@ -100,7 +104,7 @@ Used by:
 
 Change impact:
 
-- Regenerate 24 declared projection(s).
+- Regenerate 26 declared projection(s).
 - Run `governance-contracts`.
 - Review direct consumers: Documentation system.
 
@@ -110,9 +114,9 @@ Change impact:
 
 ## Safe Change Workflow
 
-1. Update governance/github.json
-2. Regenerate every GitHub projection
-3. Run governance, generated-freshness, and workflow checks
+1. Update the relevant governance authority
+2. Regenerate every affected GitHub or licensing projection
+3. Run governance, licensing, generated-freshness, and workflow checks
 
 ## Related Documentation
 

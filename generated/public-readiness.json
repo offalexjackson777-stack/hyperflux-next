@@ -1,0 +1,44 @@
+{
+  "$schema": "../schemas/public-readiness.schema.json",
+  "evidence": {
+    "hardware_gates": 3,
+    "known_gaps": 23,
+    "label": "Remaining evidence",
+    "lifecycle_gates": 1,
+    "reviewed_facts": 191,
+    "state": "blocked",
+    "summary": "3 hardware gate and 1 lifecycle gate remain; known gaps stay explicit."
+  },
+  "generated_from": [
+    "architecture/repository-atlas.json",
+    "assurance/release-gates.json",
+    "generated/knowledge/catalog.json"
+  ],
+  "hardware": {
+    "label": "Hardware qualification",
+    "qualified_routes": 2,
+    "research_candidates": 10,
+    "state": "partial",
+    "summary": "2 receiver routes have bounded physical evidence; 10 candidates remain research only."
+  },
+  "portal_hardware_access": "none",
+  "publication": {
+    "label": "Unreleased",
+    "state": "locked",
+    "summary": "Public source is available for review; no supported product release or package channel exists."
+  },
+  "repository": {
+    "atlas_subsystems": 31,
+    "label": "Repository map",
+    "state": "ready",
+    "summary": "The Repository Atlas owns 31 subsystem records and their generated projections."
+  },
+  "schema": "hyperflux-public-readiness-v1",
+  "software": {
+    "gates_ready": 5,
+    "gates_total": 10,
+    "label": "Software verification",
+    "state": "partial",
+    "summary": "5 of 10 release gates are ready in software."
+  }
+}

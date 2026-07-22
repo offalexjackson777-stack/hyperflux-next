@@ -398,8 +398,29 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/licensing-policy.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/licensing-policy.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/linux-runtime.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/linux-runtime.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/local-companion.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/local-companion.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/local-snapshot.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/local-snapshot.schema.json",
       "mode": "0644",
       "preserve": false
     },
@@ -456,6 +477,13 @@
       "component": "schemas",
       "source": "schemas/protocol-registry.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/protocol-registry.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/public-readiness.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/public-readiness.schema.json",
       "mode": "0644",
       "preserve": false
     },
@@ -981,6 +1009,13 @@
       "component": "documentation",
       "source": "docs/generated/linux-runtime.md",
       "destination": "/usr/share/doc/hyperflux-next/generated/linux-runtime.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/local-companion.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/local-companion.md",
       "mode": "0644",
       "preserve": false
     },

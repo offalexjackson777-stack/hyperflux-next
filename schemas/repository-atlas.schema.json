@@ -32,7 +32,7 @@
     },
     "pathList": {
       "type": "array",
-      "maxItems": 24,
+      "maxItems": 32,
       "uniqueItems": true,
       "items": {"$ref": "#/$defs/path"}
     },

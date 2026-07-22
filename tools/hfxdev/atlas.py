@@ -135,7 +135,7 @@ def _paths(
     directory: bool = False,
     must_exist: bool = True,
 ) -> tuple[str, ...]:
-    values = _strings(value, label, minimum=minimum, maximum=24)
+    values = _strings(value, label, minimum=minimum, maximum=32)
     paths = tuple(_path(item, f"{label} entry") for item in values)
     for relative in paths:
         if not must_exist:

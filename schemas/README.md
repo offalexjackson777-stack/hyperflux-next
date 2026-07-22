@@ -47,6 +47,11 @@ Canonical files:
 - [`schemas/domain-catalog.json`](domain-catalog.json)
 - [`schemas/domain-catalog.schema.json`](domain-catalog.schema.json)
 - [`schemas/repository-atlas.schema.json`](repository-atlas.schema.json)
+- [`schemas/documentation-portal.schema.json`](documentation-portal.schema.json)
+- [`schemas/public-readiness.schema.json`](public-readiness.schema.json)
+- [`schemas/local-companion.schema.json`](local-companion.schema.json)
+- [`schemas/local-snapshot.schema.json`](local-snapshot.schema.json)
+- [`schemas/licensing-policy.schema.json`](licensing-policy.schema.json)
 
 Generated projections:
 

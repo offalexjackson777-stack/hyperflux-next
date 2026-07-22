@@ -1,0 +1,26 @@
+{
+  "$schema": "../schemas/local-companion.schema.json",
+  "schema": "hyperflux-local-companion-v1",
+  "base_url": "http://127.0.0.1:47427",
+  "transport": "loopback-http-json",
+  "snapshot": {
+    "method": "GET",
+    "path": "/v1/snapshot",
+    "schema": "hyperflux-local-snapshot-v1",
+    "evidence_states": ["active", "sleeping", "disconnected", "unknown"],
+    "read_only": true
+  },
+  "write_capabilities": {
+    "default_state": "disabled",
+    "grant_path": "/v1/capabilities/lighting",
+    "maximum_ttl_seconds": 300,
+    "requirements": ["explicit-user-confirmation", "bounded-scope", "expiry", "single-local-origin"]
+  },
+  "privacy": {
+    "hardware_serials_exposed": false,
+    "stable_host_identifiers_exposed": false,
+    "silent_network_uploads": false,
+    "direct_usb_access": false,
+    "webhid_access": false
+  }
+}

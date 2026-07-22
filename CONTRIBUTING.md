@@ -6,6 +6,8 @@ device, package, or release is supported.
 
 ## Find The Right Starting Point
 
+- Start from the [structured issue form chooser](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new/choose)
+  when reporting a bug, proposing a feature, or contributing documentation.
 - Read the [Repository Atlas](https://offalexjackson777-stack.github.io/hyperflux-next/atlas/)
   before changing an unfamiliar area. It identifies ownership, canonical
   inputs, generated projections, dependencies, and verification nodes.
@@ -58,8 +60,10 @@ If a generated page is wrong, fix the authority named there.
 
 Changes are reviewed for architectural ownership, upgrade compatibility,
 bounded resource use, privacy, test selection, generated freshness,
-performance budgets, and release-gate impact. Main uses linear history,
-required checks, code-owner review, conversation resolution, deletion
-protection, and force-push protection.
+performance budgets, and release-gate impact. Main uses linear history, strict
+required checks, conversation resolution, deletion protection, and force-push
+protection. The solo-maintainer profile does not require impossible
+self-approval; independent review becomes required when a second trusted
+maintainer is configured.
 
 By participating, you agree to follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).

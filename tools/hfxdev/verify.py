@@ -23,6 +23,8 @@ from .integrations import load_integration_catalog, load_openrazer_compatibility
 from .install import load_install_manifest
 from .knowledge import compiled_knowledge_catalog, load_knowledge_inputs
 from .linux_runtime import load_linux_runtime
+from .licensing import verify_licensing_policy
+from .local_companion import load_local_companion
 from .migration import execute_shadow_comparison, load_shadow_fixture
 from .openrazer import (
     extract_openrazer_catalog,
@@ -680,6 +682,7 @@ def _run_openrazer_compatibility_contracts(root: Path, node: TestNode) -> None:
     python_path = os.pathsep.join(
         (
             str(source / "pylib"),
+            str(source / "daemon"),
             str(root / "sdk" / "python"),
             str(root / "integrations" / "openrazer" / "compatibility"),
             os.environ.get("PYTHONPATH", ""),
@@ -961,6 +964,7 @@ def _run_foundation_contracts(root: Path, _node: TestNode) -> None:
 
 def _run_schema_contracts(root: Path, _node: TestNode) -> None:
     _check_schema_contracts(root)
+    load_local_companion(root)
 
 
 def _run_profile_contracts(root: Path, _node: TestNode) -> None:
@@ -1009,6 +1013,7 @@ def _run_documentation_portal_contracts(root: Path, _node: TestNode) -> None:
 
 def _run_assurance_contracts(root: Path, _node: TestNode) -> None:
     load_dependency_inventory(root)
+    verify_licensing_policy(root)
     load_release_gates(root)
     metrics = load_performance_budgets(root)
     verify_static_performance_budgets(root, metrics)

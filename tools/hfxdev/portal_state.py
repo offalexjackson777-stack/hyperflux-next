@@ -9,6 +9,7 @@ from typing import Any
 
 from .model import ModelError, load_json, require_unique
 from .performance import load_performance_budgets, verify_static_performance_budgets
+from .public_readiness import public_readiness
 from .release import ReleaseGate, load_release_gates
 from .testgraph import TestNode, load_test_catalog
 
@@ -105,13 +106,14 @@ def _verification_row(node: TestNode, maximum: int) -> str:
 
 
 def render_repository_state(root: Path) -> RepositoryStatePage:
+    readiness = public_readiness(root)
     gates = load_release_gates(root)
     migration = _migration_entries(root)
     tests = load_test_catalog(root).ordered()
     performance = load_performance_budgets(root)
     measured = verify_static_performance_budgets(root, performance)
 
-    satisfied = sum(gate.status == "software-satisfied" for gate in gates)
+    satisfied = readiness["software"]["gates_ready"]
     accepted = sum(entry["status"] == "ACCEPTED" for entry in migration)
     software_nodes = sum("full-software" in node.lanes for node in tests)
     expected_total = sum(

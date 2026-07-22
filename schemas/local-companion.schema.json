@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/local-companion-v1.json",
+  "title": "HyperFlux localhost companion contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "base_url", "transport", "snapshot", "write_capabilities", "privacy"],
+  "properties": {
+    "$schema": {"const": "../schemas/local-companion.schema.json"},
+    "schema": {"const": "hyperflux-local-companion-v1"},
+    "base_url": {"const": "http://127.0.0.1:47427"},
+    "transport": {"const": "loopback-http-json"},
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "path", "schema", "evidence_states", "read_only"],
+      "properties": {
+        "method": {"const": "GET"},
+        "path": {"const": "/v1/snapshot"},
+        "schema": {"const": "hyperflux-local-snapshot-v1"},
+        "evidence_states": {"const": ["active", "sleeping", "disconnected", "unknown"]},
+        "read_only": {"const": true}
+      }
+    },
+    "write_capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default_state", "grant_path", "maximum_ttl_seconds", "requirements"],
+      "properties": {
+        "default_state": {"const": "disabled"},
+        "grant_path": {"const": "/v1/capabilities/lighting"},
+        "maximum_ttl_seconds": {"type": "integer", "minimum": 1, "maximum": 300},
+        "requirements": {"const": ["explicit-user-confirmation", "bounded-scope", "expiry", "single-local-origin"]}
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hardware_serials_exposed", "stable_host_identifiers_exposed", "silent_network_uploads", "direct_usb_access", "webhid_access"],
+      "properties": {
+        "hardware_serials_exposed": {"const": false},
+        "stable_host_identifiers_exposed": {"const": false},
+        "silent_network_uploads": {"const": false},
+        "direct_usb_access": {"const": false},
+        "webhid_access": {"const": false}
+      }
+    }
+  }
+}

@@ -127,7 +127,7 @@ class ActionsSummaryTests(unittest.TestCase):
                 expected_revision=REVISION,
             )
         self.assertIn("READY FOR PAGES", summary)
-        self.assertIn("Generated pages | 39", summary)
+        self.assertIn("Generated pages | 41", summary)
         self.assertIn("Product release authority | Locked", summary)
         self.assertIn("does not create a package, tag, release", summary.lower())
 

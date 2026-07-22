@@ -140,7 +140,7 @@ def _ruleset_payload(governance: GitHubGovernance) -> dict[str, Any]:
                 "parameters": {
                     "required_approving_review_count": governance.required_approvals,
                     "dismiss_stale_reviews_on_push": True,
-                    "require_code_owner_review": True,
+                    "require_code_owner_review": governance.require_code_owner_reviews,
                     "require_last_push_approval": False,
                     "required_review_thread_resolution": True,
                     "automatic_copilot_code_review_enabled": False,
@@ -150,7 +150,7 @@ def _ruleset_payload(governance: GitHubGovernance) -> dict[str, Any]:
             {
                 "type": "required_status_checks",
                 "parameters": {
-                    "strict_required_status_checks_policy": True,
+                    "strict_required_status_checks_policy": governance.strict_required_status_checks,
                     "do_not_enforce_on_create": True,
                     "required_status_checks": [
                         {"context": check} for check in governance.required_checks

@@ -72,6 +72,41 @@ def _changed_revision(value: str | None) -> str | None:
     return value
 
 
+def _linked_worktree_common_dir(root: Path) -> Path | None:
+    marker = root / ".git"
+    if marker.is_dir():
+        return None
+    if marker.is_symlink() or not marker.is_file() or marker.stat().st_size > 4096:
+        raise ModelError("linked worktree Git marker is invalid")
+    lines = marker.read_text(encoding="utf-8").splitlines()
+    if len(lines) != 1 or not lines[0].startswith("gitdir: "):
+        raise ModelError("linked worktree Git marker is not canonical")
+    git_dir = Path(lines[0].removeprefix("gitdir: "))
+    if not git_dir.is_absolute():
+        git_dir = marker.parent / git_dir
+    git_dir = Path(os.path.abspath(git_dir))
+    common_marker = git_dir / "commondir"
+    if (
+        not git_dir.is_dir()
+        or common_marker.is_symlink()
+        or not common_marker.is_file()
+        or common_marker.stat().st_size > 4096
+    ):
+        raise ModelError("linked worktree common Git directory is unavailable")
+    common_lines = common_marker.read_text(encoding="utf-8").splitlines()
+    if len(common_lines) != 1 or not common_lines[0]:
+        raise ModelError("linked worktree common Git marker is not canonical")
+    common_dir = Path(common_lines[0])
+    if not common_dir.is_absolute():
+        common_dir = git_dir / common_dir
+    common_dir = Path(os.path.abspath(common_dir))
+    if not common_dir.is_dir() or not git_dir.is_relative_to(common_dir):
+        raise ModelError("linked worktree common Git directory is invalid")
+    if ":" in str(common_dir):
+        raise ModelError("linked worktree common Git path is not mount-safe")
+    return common_dir
+
+
 def container_invocation(
     root: Path,
     *,
@@ -131,38 +166,42 @@ def container_invocation(
     group_id = os.getgid() if gid is None else gid
     if user_id < 0 or group_id < 0:
         raise ModelError("CI container identity is invalid")
-    command = [
-        engine_path,
-        "run",
-        "--rm",
-        "--network",
-        network,
-        "--user",
-        f"{user_id}:{group_id}",
-        "--cap-drop",
-        "ALL",
-        "--security-opt",
-        "no-new-privileges:true",
-        "--pids-limit",
-        "2048",
-        "--tmpfs",
-        "/tmp:rw,nosuid,nodev",
-        "--env",
-        "HOME=/tmp/hfx-home",
-        "--env",
-        f"CARGO_HOME={environment.workspace_path}/{CARGO_CACHE_PATH}",
-        "--env",
-        "RUSTUP_HOME=/opt/rustup",
-        "--env",
-        f"CARGO_NET_OFFLINE={'false' if operation == 'prepare' else 'true'}",
-        "--env",
-        "PIP_NO_INDEX=1",
-        "--volume",
-        f"{root}:{environment.workspace_path}:rw",
-        "--workdir",
-        environment.workspace_path,
-        image,
-    ]
+    linked_git = _linked_worktree_common_dir(root)
+    command = [engine_path, "run"]
+    if Path(engine_path).name == "podman":
+        command.append("--userns=keep-id")
+    command.extend(
+        [
+            "--rm",
+            "--network",
+            network,
+            "--user",
+            f"{user_id}:{group_id}",
+            "--cap-drop",
+            "ALL",
+            "--security-opt",
+            "no-new-privileges:true",
+            "--pids-limit",
+            "2048",
+            "--tmpfs",
+            "/tmp:rw,nosuid,nodev",
+            "--env",
+            "HOME=/tmp/hfx-home",
+            "--env",
+            f"CARGO_HOME={environment.workspace_path}/{CARGO_CACHE_PATH}",
+            "--env",
+            "RUSTUP_HOME=/opt/rustup",
+            "--env",
+            f"CARGO_NET_OFFLINE={'false' if operation == 'prepare' else 'true'}",
+            "--env",
+            "PIP_NO_INDEX=1",
+            "--volume",
+            f"{root}:{environment.workspace_path}:rw",
+        ]
+    )
+    if linked_git is not None:
+        command.extend(("--volume", f"{linked_git}:{linked_git}:ro"))
+    command.extend(("--workdir", environment.workspace_path, image))
     if hfx_command and hfx_command[0] != "/bin/bash":
         command.extend(
             [

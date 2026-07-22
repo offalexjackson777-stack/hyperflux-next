@@ -130,18 +130,24 @@
     ]
   },
   "protection": {
+    "profile": "solo-maintainer",
+    "trusted_maintainers": 1,
     "linear_history": true,
-    "required_approvals": 1,
+    "required_approvals": 0,
     "dismiss_stale_reviews": true,
-    "require_code_owner_reviews": true,
+    "require_code_owner_reviews": false,
     "require_conversation_resolution": true,
     "prevent_deletions": true,
     "prevent_force_pushes": true,
+    "strict_required_status_checks": true,
     "required_checks": [
       "CodeQL / Analyze (c-cpp)",
       "CodeQL / Analyze (python)",
       "Dependency review / Dependency review",
       "Documentation / Portal contracts",
+      "Full verification / Full software",
+      "Repository experience / Link checks",
+      "Repository experience / Pages preview",
       "Verification / Fast software"
     ]
   },

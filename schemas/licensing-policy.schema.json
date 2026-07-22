@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/licensing-policy-v1.json",
+  "title": "HyperFlux path-to-license policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "default_expression", "rationale", "rules", "license_texts"],
+  "properties": {
+    "$schema": {"const": "../schemas/licensing-policy.schema.json"},
+    "schema": {"const": "hyperflux-licensing-policy-v1"},
+    "default_expression": {"const": "GPL-2.0-only"},
+    "rationale": {"type": "string", "minLength": 1, "maxLength": 500},
+    "rules": {"type": "array", "minItems": 2, "maxItems": 32, "items": {"$ref": "#/$defs/rule"}},
+    "license_texts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["GPL-2.0-only", "GPL-2.0-or-later", "GPL-2.0 WITH Linux-syscall-note", "GPL-3.0-only", "MIT"],
+      "properties": {
+        "GPL-2.0-only": {"$ref": "#/$defs/path"},
+        "GPL-2.0-or-later": {"$ref": "#/$defs/path"},
+        "GPL-2.0 WITH Linux-syscall-note": {"$ref": "#/$defs/path"},
+        "GPL-3.0-only": {"$ref": "#/$defs/path"},
+        "MIT": {"$ref": "#/$defs/path"}
+      }
+    }
+  },
+  "$defs": {
+    "path": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "expression", "reason"],
+      "properties": {
+        "path": {"$ref": "#/$defs/path"},
+        "expression": {"enum": ["GPL-2.0-only", "GPL-2.0-or-later", "GPL-2.0 WITH Linux-syscall-note", "GPL-3.0-only", "MIT"]},
+        "reason": {"type": "string", "minLength": 1, "maxLength": 200}
+      }
+    }
+  }
+}

@@ -36,12 +36,15 @@ Outputs:
 - Device Lab
 - Repository Atlas
 - Repository State
+- Public readiness projection
+- Canonical metadata assets
 
 ## Public Contracts
 
 - Offline and telemetry-free
-- Accessible navigation
+- Accessible audience navigation
 - Static data labeled non-live
+- Repository material links to GitHub instead of a drifting raw mirror
 
 ## Source And Generated Files
 
@@ -55,6 +58,7 @@ Generated projections:
 
 - [`docs/README.md`](README.md)
 - [`docs/generated/repository-atlas.md`](generated/repository-atlas.md)
+- [`generated/public-readiness.json`](../generated/public-readiness.json)
 
 ## Relationships
 
@@ -64,6 +68,7 @@ Depends on:
 - [Device knowledge](../knowledge/README.md)
 - [Verification graph](../verification/README.md)
 - [GitHub governance authority](../governance/README.md)
+- [Repository tooling](../tools/README.md)
 
 Used by:
 
@@ -76,7 +81,7 @@ Used by:
 
 Change impact:
 
-- Regenerate 2 declared projection(s).
+- Regenerate 3 declared projection(s).
 - Run `documentation-portal-contracts`, `repository-atlas-contracts`.
 - No direct subsystem consumer is declared; verify repository-facing outputs.
 

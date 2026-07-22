@@ -28,14 +28,16 @@ from hfxdev.portal import (
 
 
 class DocumentationPortalTests(unittest.TestCase):
-    def test_portal_has_three_distinct_audiences_and_unique_sources(self) -> None:
+    def test_portal_has_four_distinct_paths_and_one_route_registry(self) -> None:
         config = load_portal_config(ROOT)
         self.assertEqual(
             [audience.id for audience in config.audiences],
-            ["users", "developers", "maintainers"],
+            ["users", "devices", "developers", "maintainers"],
         )
-        self.assertEqual(len(config.pages), 23)
-        self.assertEqual(len({page.url for page in config.pages}), len(config.pages))
+        self.assertEqual(len(config.pages), 24)
+        self.assertEqual(len(config.routes), 28)
+        self.assertEqual(len({route.url for route in config.routes}), len(config.routes))
+        self.assertEqual(len({route.id for route in config.routes}), len(config.routes))
         self.assertEqual(len({page.source for page in config.pages}), len(config.pages))
         self.assertEqual(
             {page.kind for page in config.pages},
@@ -54,6 +56,12 @@ class DocumentationPortalTests(unittest.TestCase):
             "ledger",
         )
         self.assertEqual(config.publication_state, "public-pages-pre-release")
+        self.assertEqual(
+            config.canonical_url,
+            "https://offalexjackson777-stack.github.io/hyperflux-next/",
+        )
+        self.assertEqual(config.route("home").path, "index.html")
+        self.assertEqual(config.route("device-lab").audience_id, "devices")
 
     def test_portal_build_is_deterministic_offline_and_accessible(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -63,6 +71,8 @@ class DocumentationPortalTests(unittest.TestCase):
             second_result = build_portal(ROOT, second)
             first_manifest = json.loads(first_result.manifest.read_text(encoding="utf-8"))
             second_manifest = json.loads(second_result.manifest.read_text(encoding="utf-8"))
+            config = load_portal_config(ROOT)
+            social_asset = f"assets/{Path(config.social_image).name}"
             self.assertEqual(first_manifest, second_manifest)
             self.assertEqual(
                 first_manifest["source_publication_state"],
@@ -70,7 +80,7 @@ class DocumentationPortalTests(unittest.TestCase):
             )
             self.assertFalse(first_manifest["product_publication_authorized"])
             self.assertFalse(first_manifest["external_runtime_dependencies"])
-            self.assertEqual(first_result.pages, 39)
+            self.assertEqual(first_result.pages, 41)
             self.assertEqual(verify_portal(ROOT, first)["source_tree_sha256"], first_manifest["source_tree_sha256"])
             inventory = first_manifest["files"]
             self.assertLessEqual(sum(item["size"] for item in inventory), MAX_PORTAL_BYTES)
@@ -100,18 +110,46 @@ class DocumentationPortalTests(unittest.TestCase):
             self.assertIn("system-map.svg", index)
             self.assertIn("Explore tested hardware", index)
             self.assertIn("One direction of responsibility", index)
-            self.assertIn("whole-product profiles marked fully qualified", index)
-            self.assertIn("Capability-scoped route evidence", index)
+            self.assertIn("One vocabulary, one projection", index)
+            self.assertIn("release gates ready in software", index)
             self.assertIn("Public source for review; product unreleased", index)
+            self.assertIn('rel="canonical"', index)
+            self.assertIn('property="og:image"', index)
+            self.assertIn('name="twitter:card"', index)
+            self.assertIn('rel="manifest"', index)
+            self.assertIn('rel="icon"', index)
             self.assertNotIn("https://fonts", index)
             self.assertNotIn('id="portal-search-data"', index)
             self.assertEqual(index.count("</html>"), 1)
             self.assertTrue((first / "assets" / "search-index.json").is_file())
-            self.assertTrue((first / "assets" / "social-preview.png").is_file())
+            self.assertTrue((first / social_asset).is_file())
+            self.assertIn(
+                f'{config.canonical_url}{social_asset}',
+                index,
+            )
+            self.assertIn(
+                config.social_image,
+                {material["path"] for material in first_manifest["materials"]},
+            )
+            self.assertIn(
+                "tools/hfxdev/public_readiness.py",
+                {material["path"] for material in first_manifest["materials"]},
+            )
+            self.assertTrue((first / "assets" / "favicon.svg").is_file())
+            self.assertTrue((first / "site.webmanifest").is_file())
+            self.assertTrue((first / "sitemap.xml").is_file())
+            self.assertTrue((first / "robots.txt").is_file())
+            self.assertTrue((first / "404.html").is_file())
+            self.assertFalse((first / "reference").exists())
             search_records = json.loads(
                 (first / "assets" / "search-index.json").read_text(encoding="utf-8")
             )
-            self.assertGreater(len(search_records), 100)
+            self.assertGreaterEqual(len(search_records), 30)
+            self.assertLessEqual(len(search_records), 64)
+            self.assertTrue(all(len(record["search"]) <= 900 for record in search_records))
+            self.assertTrue(
+                all(record["search"] == record["search"].lower() for record in search_records)
+            )
             self.assertTrue(
                 all(
                     set(record) == {"title", "audience", "summary", "url", "search"}
@@ -213,6 +251,22 @@ class DocumentationPortalTests(unittest.TestCase):
             )
             self.assertNotIn("fetch(", state_script)
             self.assertNotIn("XMLHttpRequest", state_script)
+            companion = (first / "developers" / "local-companion.html").read_text(
+                encoding="utf-8"
+            )
+            for state_name in ("Active", "Sleeping", "Disconnected", "Unknown"):
+                self.assertIn(state_name, companion)
+            self.assertIn("127.0.0.1", companion)
+            self.assertIn("read-only", companion)
+            self.assertIn("expiry", companion)
+            self.assertIn("never uses WebHID", companion)
+            contributing = (first / "developers" / "contributing.html").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn(
+                "https://github.com/offalexjackson777-stack/hyperflux-next/issues/new/choose",
+                contributing,
+            )
 
     def test_unsupported_mermaid_fails_closed(self) -> None:
         with self.assertRaisesRegex(ModelError, "unsupported Mermaid diagram type"):
@@ -254,9 +308,9 @@ class DocumentationPortalTests(unittest.TestCase):
             root = Path(temporary)
             shutil.copytree(ROOT / "docs", root / "docs")
             value = json.loads((root / "docs" / "portal.json").read_text(encoding="utf-8"))
-            value["audiences"][0]["pages"][0]["source"] = "../outside.md"
+            value["routes"][1]["source"] = "../outside.md"
             (root / "docs" / "portal.json").write_text(json.dumps(value), encoding="utf-8")
-            with self.assertRaisesRegex(ModelError, "safe repository Markdown path"):
+            with self.assertRaisesRegex(ModelError, "safe repository path"):
                 load_portal_config(root)
 
 

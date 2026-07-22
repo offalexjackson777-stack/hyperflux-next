@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +35,7 @@ from .generators.governance import (
     protection_plan as github_protection_plan,
     pull_request_template as github_pull_request_template,
     release_notes as github_release_notes,
+    repository_experience_workflow as github_repository_experience_workflow,
     verification_workflow as github_verification_workflow,
 )
 from .generators.performance import performance_budgets_markdown
@@ -69,6 +71,8 @@ from .generators.kernel_uapi import (
     markdown as kernel_uapi_markdown,
     rust_bindings as kernel_uapi_rust_bindings,
 )
+from .generators.licensing import markdown as licensing_markdown
+from .generators.local_companion import markdown as local_companion_markdown
 from .generators.knowledge import (
     compiled_json as knowledge_compiled_json,
     render_knowledge_markdown,
@@ -130,11 +134,15 @@ from .distributions import load_distribution_catalog
 from .model import load_foundation, load_json
 from .migration import load_shadow_fixture
 from .linux_runtime import load_linux_runtime
+from .licensing import load_licensing_policy
+from .local_companion import load_local_companion
 from .openrazer import load_imported_metadata
 from .performance import load_performance_budgets
 from .profiles import compiled_catalog, composition_fixtures
 from .protocol import load_protocol_registry
 from .release import load_release_gates
+from .public_readiness import public_readiness
+from .portal_model import load_portal_config
 from .supply_chain import load_dependency_inventory
 from .testgraph import load_test_catalog, markdown as testgraph_markdown
 
@@ -255,10 +263,18 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root, root / "tests/fixtures/shadow/qualified-lifecycle-v1.json"
     )
     repository_atlas = load_repository_atlas(root)
+    readiness = public_readiness(root)
+    portal_config = load_portal_config(root)
+    local_companion = load_local_companion(root)
+    licensing_policy = load_licensing_policy(root)
     files = {
         root / "README.md": readme_markdown(
-            github_governance, release_gates, knowledge, repository_atlas
+            github_governance, readiness, portal_config
         ),
+        root / "generated" / "public-readiness.json": json.dumps(
+            readiness, indent=2, sort_keys=True
+        )
+        + "\n",
         root / "docs" / "assets" / "badge-state.svg": readme_development_badge(),
         root / "docs" / "assets" / "badge-license.svg": readme_license_badge(),
         root / ".devcontainer" / "Containerfile": development_containerfile(
@@ -269,6 +285,12 @@ def rendered_files(root: Path) -> dict[Path, str]:
         ),
         root / "docs" / "generated" / "development-environment.md": development_markdown(
             development_environment, integrations["upstreams"]
+        ),
+        root / "docs" / "generated" / "local-companion.md": local_companion_markdown(
+            local_companion
+        ),
+        root / "docs" / "legal" / "licensing.md": licensing_markdown(
+            licensing_policy
         ),
         root / "docs" / "generated" / "github-governance.md": github_governance_markdown(
             github_governance
@@ -311,6 +333,9 @@ def rendered_files(root: Path) -> dict[Path, str]:
             github_governance
         ),
         root / ".github" / "workflows" / "dependency-review.yml": github_dependency_review_workflow(
+            github_governance
+        ),
+        root / ".github" / "workflows" / "repository-experience.yml": github_repository_experience_workflow(
             github_governance
         ),
         root / "governance" / "generated" / "github-protection-plan.json": github_protection_plan(
