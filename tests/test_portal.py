@@ -53,7 +53,7 @@ class DocumentationPortalTests(unittest.TestCase):
             next(page.kind for page in config.pages if page.id == "coverage"),
             "ledger",
         )
-        self.assertEqual(config.publication_state, "local-artifact-only")
+        self.assertEqual(config.publication_state, "public-pages-pre-release")
 
     def test_portal_build_is_deterministic_offline_and_accessible(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -70,7 +70,7 @@ class DocumentationPortalTests(unittest.TestCase):
             )
             self.assertFalse(first_manifest["product_publication_authorized"])
             self.assertFalse(first_manifest["external_runtime_dependencies"])
-            self.assertEqual(first_result.pages, 37)
+            self.assertEqual(first_result.pages, 39)
             self.assertEqual(verify_portal(ROOT, first)["source_tree_sha256"], first_manifest["source_tree_sha256"])
             inventory = first_manifest["files"]
             self.assertLessEqual(sum(item["size"] for item in inventory), MAX_PORTAL_BYTES)
@@ -102,6 +102,7 @@ class DocumentationPortalTests(unittest.TestCase):
             self.assertIn("One direction of responsibility", index)
             self.assertIn("whole-product profiles marked fully qualified", index)
             self.assertIn("Capability-scoped route evidence", index)
+            self.assertIn("Public source for review; product unreleased", index)
             self.assertNotIn("https://fonts", index)
             self.assertNotIn('id="portal-search-data"', index)
             self.assertEqual(index.count("</html>"), 1)
@@ -126,7 +127,10 @@ class DocumentationPortalTests(unittest.TestCase):
                 encoding="utf-8"
             )
             self.assertIn('class="compiled-diagram"', architecture)
+            self.assertIn("View the source projection", architecture)
             self.assertNotIn('class="language-mermaid"', architecture)
+            support = (first / "users" / "support.html").read_text(encoding="utf-8")
+            self.assertIn("Edit this source on GitHub", support)
             shadow = (first / "maintainers" / "migration-shadow.html").read_text(
                 encoding="utf-8"
             )
@@ -144,6 +148,7 @@ class DocumentationPortalTests(unittest.TestCase):
                 encoding="utf-8"
             )
             self.assertIn("Generated API reference", protocol)
+            self.assertIn("View the source projection", protocol)
             self.assertEqual(protocol.count("data-reference-entry"), 49)
             self.assertEqual(protocol.count('id="reference-detail"'), 1)
             reference_script = (first / "assets" / "reference.js").read_text(

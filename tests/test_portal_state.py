@@ -19,7 +19,7 @@ class RepositoryStateTests(unittest.TestCase):
         self.assertEqual(page.content.count("data-gate"), 10)
         self.assertEqual(page.content.count("data-migration"), 13)
         self.assertEqual(page.content.count("data-verification"), 30)
-        self.assertIn("Publication decision required", page.content)
+        self.assertIn("Product unreleased: decision required", page.content)
         self.assertIn("Timing values are planning budgets", page.content)
         self.assertIn("Ready in software", page.content)
         self.assertIn("Awaiting hardware evidence", page.content)

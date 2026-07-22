@@ -19,7 +19,7 @@ import markdown
 
 from .assurance import load_design_coverage
 from .atlas import load_repository_atlas
-from .governance import load_github_governance
+from .governance import GitHubGovernance, load_github_governance
 from .integrations import compiled_catalog as compiled_integration_catalog
 from .knowledge import compiled_knowledge_catalog
 from .model import ModelError, load_json, require_unique, sha256_file
@@ -538,7 +538,7 @@ def _shell(
       <div id="search-results" class="search-results" hidden></div>
     </div>
     <div class="header-tools">
-      <span class="phase">Local preview</span>
+      <span class="phase">Public pre-release</span>
       <button class="theme-cycle" id="theme-cycle" type="button" title="Change color theme">Theme: System</button>
     </div>
   </header>
@@ -551,7 +551,7 @@ def _shell(
     <div class="page-frame"><main id="main-content" tabindex="-1">{content}</main>{outline}</div>
   </div>
   <footer>
-    <span>Generated from canonical repository data. Publication remains locked.</span>
+    <span>Generated from canonical repository data. Product release remains locked.</span>
     <a href="{escape(_relative_url(current_url, "maintainers/release-gates.html"))}">Release gates</a>
   </footer>
   <script src="{escape(script)}" defer></script>
@@ -579,7 +579,7 @@ def _home_content(
         for candidate in knowledge["candidates"]
     )
     return f"""<article class="home">
-  <section class="home-hero"><div class="home-copy"><p class="page-kicker">Linux receiver foundation</p><h1>HyperFlux Next</h1><p class="home-lede">{escape(config.description)}</p><p class="home-boundary">A local, unreleased reconstruction. Support claims stay bounded to recorded evidence.</p><div class="home-actions"><a class="button button--primary" href="devices/index.html">Explore tested hardware</a><a class="button" href="users/overview.html">Understand the system</a></div></div><div class="home-signal" aria-label="Current project state"><span>Current phase</span><strong>Software foundation built</strong><p>Hardware qualification and publication approval remain separate gates.</p><a href="state/index.html">Inspect readiness</a></div></section>
+  <section class="home-hero"><div class="home-copy"><p class="page-kicker">Linux receiver foundation</p><h1>HyperFlux Next</h1><p class="home-lede">{escape(config.description)}</p><p class="home-boundary">Public source for review; product unreleased. Support claims stay bounded to recorded evidence.</p><div class="home-actions"><a class="button button--primary" href="devices/index.html">Explore tested hardware</a><a class="button" href="users/overview.html">Understand the system</a></div></div><div class="home-signal" aria-label="Current project state"><span>Current phase</span><strong>Software foundation built</strong><p>Hardware qualification and the product release decision remain separate gates.</p><a href="state/index.html">Inspect readiness</a></div></section>
   <section class="flow-section" aria-labelledby="flow-title"><div class="section-intro"><p class="page-kicker">One direction of responsibility</p><h2 id="flow-title">Applications stay separate from hardware transport</h2><p>Integrations express intent through the SDK. One bridge validates policy and reaches the receiver through the minimal kernel driver.</p></div><img class="system-map" src="assets/system-map.svg" alt="Applications flow through the SDK, bridge, kernel, and receiver"></section>
   <section class="path-section" aria-labelledby="path-title"><div class="section-intro"><p class="page-kicker">Choose a path</p><h2 id="path-title">Start with what you need</h2></div><div class="path-grid"><a href="users/overview.html"><span>01</span><strong>Use HyperFlux</strong><p>Installation, applications, supported devices, privacy, and troubleshooting.</p></a><a href="developers/architecture.html"><span>02</span><strong>Build with HyperFlux</strong><p>Architecture, SDK contracts, protocol, development, and verification.</p></a><a href="state/index.html"><span>03</span><strong>Review readiness</strong><p>Release gates, migration decisions, verification, and performance boundaries.</p></a></div></section>
   <section class="truth-section" aria-labelledby="truth-heading"><div class="section-intro"><p class="page-kicker">Generated repository state</p><h2 id="truth-heading">Evidence without inflated promises</h2><p>These values are compiled from canonical ledgers whenever the portal is built.</p></div><div class="status-band"><div><strong>{route_qualified}</strong><span>receiver routes with physical evidence</span></div><div><strong>{verified}/{len(coverage)}</strong><span>design sections software verified</span></div><div><strong>{adapters}</strong><span>application adapters registered</span></div><div><strong>{release_blocking}</strong><span>release-blocking sections</span></div></div><p class="truth-note">There are {qualified_profiles} whole-product profiles marked fully qualified. Capability-scoped route evidence remains visible in the <a href="devices/index.html">Device Lab</a> without becoming a broader support claim.</p></section>
@@ -589,6 +589,44 @@ def _home_content(
 def _reading_minutes(source: str) -> int:
     words = len(_plain_markdown(source).split())
     return max(1, round(words / 220))
+
+
+def _github_source_url(governance: GitHubGovernance, source: str, *, edit: bool) -> str:
+    action = "edit" if edit else "blob"
+    return (
+        f"https://github.com/{governance.owner}/{governance.repository}/"
+        f"{action}/{governance.default_branch}/{source}"
+    )
+
+
+def _source_details(
+    governance: GitHubGovernance,
+    *,
+    source: str,
+    current_url: str,
+    generated: bool | None = None,
+) -> str:
+    is_generated = (
+        source.startswith("docs/generated/") or source.startswith("generated/")
+        if generated is None
+        else generated
+    )
+    source_url = _github_source_url(governance, source, edit=not is_generated)
+    if is_generated:
+        description = (
+            f'<strong>Generated projection.</strong> <a href="{escape(source_url)}">View the source projection</a>. '
+            f'Use the <a href="{escape(_relative_url(current_url, "atlas/index.html"))}">Repository Atlas</a> '
+            "to find its canonical authority and generator."
+        )
+    else:
+        description = (
+            f'<strong>Canonical source.</strong> <a href="{escape(source_url)}">Edit this source on GitHub</a>. '
+            "The deployed HTML is generated and must not be edited directly."
+        )
+    return (
+        '<details class="source-note"><summary>Source and generation details</summary>'
+        f"<p>{description}</p></details>"
+    )
 
 
 def _outline(body: str) -> str:
@@ -611,6 +649,7 @@ def _outline(body: str) -> str:
 def _document_content(
     config: PortalConfig,
     page: PortalPage,
+    governance: GitHubGovernance,
     *,
     body: str,
     source_text: str,
@@ -639,8 +678,7 @@ def _document_content(
         f'<header class="page-hero"><p class="page-kicker">{escape(page.kind.title())}</p><h1>{escape(page.title)}</h1>'
         f'<p class="lede">{escape(page.summary)}</p><div class="page-meta"><span>{escape(origin)}</span>'
         f'<span>{_reading_minutes(source_text)} min read</span></div></header>'
-        f'<div class="document-body">{body}</div><details class="source-note"><summary>Source and generation details</summary>'
-        f'<p>This page is compiled from <code>{escape(page.source)}</code>. Edit the canonical source or its generator rather than this HTML output.</p></details>'
+        f'<div class="document-body">{body}</div>{_source_details(governance, source=page.source, current_url=page.url)}'
         f'<nav class="page-pager" aria-label="Adjacent pages">{"".join(pager)}</nav></article>'
     )
     return content, _outline(body)
@@ -736,6 +774,7 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
     output.mkdir(parents=True, exist_ok=True)
 
     config = load_portal_config(root)
+    governance = load_github_governance(root)
     coverage = load_design_coverage(root)
     knowledge = compiled_knowledge_catalog(root)
     device_lab = render_device_lab(knowledge)
@@ -901,7 +940,7 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
         source_text = source.read_text(encoding="utf-8")
         body = render_markdown(source_text, source=source, current_url=page.url)
         content, outline = _document_content(
-            config, page, body=body, source_text=source_text
+            config, page, governance, body=body, source_text=source_text
         )
         destination = output / page.url
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -927,7 +966,15 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
             current_url=book_page.url,
             title=book_page.title,
             description=book_page.summary,
-            content=render_book_index(book, coverage),
+            content=(
+                render_book_index(book, coverage)
+                + _source_details(
+                    governance,
+                    source=book_page.source,
+                    current_url=book_page.url,
+                    generated=False,
+                )
+            ),
             page_kind="book",
         ),
         encoding="utf-8",
@@ -956,7 +1003,7 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
         content = f"""<article class="document document--book">
   <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../index.html">Home</a><a href="../design-book.html">Design book</a><span>Chapter {escape(chapter.roman)}</span></nav>
   <header class="page-hero page-hero--book"><p class="page-kicker">Chapter {escape(chapter.roman)} | Sections {escape(chapter.section_range)}</p><h1>{escape(chapter.title)}</h1><p class="lede">Part of the canonical HyperFlux Next product and engineering specification.</p><div class="page-meta"><span>{len(chapter.sections)} sections</span><span>{_reading_minutes(chapter_search_text(chapter))} min read</span></div></header>
-  <div class="document-body">{body}</div><nav class="page-pager" aria-label="Adjacent chapters">{''.join(pager)}</nav>
+  <div class="document-body">{body}</div>{_source_details(governance, source=book_page.source, current_url=chapter_url, generated=False)}<nav class="page-pager" aria-label="Adjacent chapters">{''.join(pager)}</nav>
 </article>"""
         destination = output / chapter_url
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -982,6 +1029,11 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
             source=root / protocol_page.source,
             current_url=protocol_page.url,
         ),
+    ) + _source_details(
+        governance,
+        source=protocol_page.source,
+        current_url=protocol_page.url,
+        generated=True,
     )
     protocol_destination = output / protocol_page.url
     protocol_destination.parent.mkdir(parents=True, exist_ok=True)
@@ -1007,7 +1059,15 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
             current_url=coverage_page.url,
             title=coverage_page.title,
             description=coverage_page.summary,
-            content=render_coverage_browser(coverage, book),
+            content=(
+                render_coverage_browser(coverage, book)
+                + _source_details(
+                    governance,
+                    source=coverage_page.source,
+                    current_url=coverage_page.url,
+                    generated=True,
+                )
+            ),
             page_kind="ledger",
             extra_scripts=("assets/coverage.js",),
         ),
@@ -1023,7 +1083,15 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
             current_url=device_url,
             title="Device Lab",
             description="Search, compare, and inspect provenance-bound HyperFlux device knowledge.",
-            content=device_lab.content,
+            content=(
+                device_lab.content
+                + _source_details(
+                    governance,
+                    source="generated/knowledge/catalog.json",
+                    current_url=device_url,
+                    generated=True,
+                )
+            ),
             page_kind="reference",
             extra_scripts=("assets/device-lab.js",),
         ),
@@ -1039,7 +1107,15 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
             current_url=atlas_url,
             title="Repository Atlas",
             description="Search repository ownership, dependencies, generated projections, and safe change impact.",
-            content=atlas_page.content,
+            content=(
+                atlas_page.content
+                + _source_details(
+                    governance,
+                    source="architecture/repository-atlas.json",
+                    current_url=atlas_url,
+                    generated=False,
+                )
+            ),
             page_kind="reference",
             extra_scripts=("assets/atlas.js",),
         ),
@@ -1055,7 +1131,15 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
             current_url=state_url,
             title="Repository State",
             description="Generated release gates, migration decisions, verification budgets, and performance limits.",
-            content=state_page.content,
+            content=(
+                state_page.content
+                + _source_details(
+                    governance,
+                    source="assurance/release-gates.json",
+                    current_url=state_url,
+                    generated=False,
+                )
+            ),
             page_kind="ledger",
             extra_scripts=("assets/repository-state.js",),
         ),

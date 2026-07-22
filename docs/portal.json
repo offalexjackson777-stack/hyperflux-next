@@ -17,6 +17,8 @@
         {"id": "supported-hardware", "title": "Supported hardware", "summary": "Qualified profiles, compatibility candidates, and evidence limits.", "source": "docs/generated/supported-hardware.md", "kind": "reference"},
         {"id": "applications", "title": "Applications", "summary": "How OpenRGB, Polychromatic, and OpenRazer-compatible clients connect.", "source": "docs/generated/integrations.md", "kind": "concept"},
         {"id": "troubleshooting", "title": "Troubleshooting", "summary": "Doctor, status, support previews, and safe next actions.", "source": "docs/user/troubleshooting.md", "kind": "guide"},
+        {"id": "support", "title": "Support", "summary": "Choose the correct public or private support route without leaking sensitive diagnostics.", "source": "SUPPORT.md", "kind": "guide"},
+        {"id": "security", "title": "Security", "summary": "Private vulnerability reporting, disclosure expectations, and enforced security boundaries.", "source": "SECURITY.md", "kind": "guide"},
         {"id": "privacy", "title": "Privacy", "summary": "What support evidence includes, excludes, and never uploads automatically.", "source": "docs/user/privacy.md", "kind": "concept"}
       ]
     },
