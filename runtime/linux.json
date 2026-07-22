@@ -55,7 +55,7 @@
     "module_name": "hid-hyperflux-next",
     "dkms_name": "hid-hyperflux-next",
     "device_prefix": "hyperflux-next",
-    "source_directory": "/usr/src/hid-hyperflux-next-0.0.0-dev.1",
+    "source_directory": "/usr/src/hid-hyperflux-next-0.0.0_dev.1",
     "control_transfer_timeout_ms": 1000
   },
   "operations": {

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 pub const LINUX_RUNTIME_SHA256: &str =
-    "182eef37f8c5ae2045bf346e47e3c9e2be7b7f1314782f8697da817df622b454";
+    "cfd13c3d790c3e79bab7575ac49c26303d5a44d3b1454a9323e8e476b5fee634";
 pub const PRODUCT_DISPLAY_NAME: &str = "HyperFlux Next";
 pub const PRODUCT_VERSION: &str = "0.0.0-dev.1";
 pub const PACKAGE_NAME: &str = "hyperflux-next-linux";
@@ -23,7 +23,7 @@ pub const BRIDGE_CONFIGURATION_FILE_PATH: &str = "/etc/hyperflux-next/bridge.jso
 pub const KERNEL_MODULE_NAME: &str = "hid-hyperflux-next";
 pub const KERNEL_DKMS_NAME: &str = "hid-hyperflux-next";
 pub const KERNEL_DEVICE_PREFIX: &str = "hyperflux-next";
-pub const KERNEL_SOURCE_DIRECTORY: &str = "/usr/src/hid-hyperflux-next-0.0.0-dev.1";
+pub const KERNEL_SOURCE_DIRECTORY: &str = "/usr/src/hid-hyperflux-next-0.0.0_dev.1";
 pub const OPERATIONS_CLI_PATH: &str = "/usr/bin/hyperfluxctl";
 pub const ACTIVATION_UTILITY_PATH: &str = "/usr/lib/hyperflux-next/hyperflux-next-activate";
 pub const ACTIVATION_SERVICE_UNIT: &str = "hyperflux-next-activation.service";

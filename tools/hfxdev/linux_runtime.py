@@ -176,6 +176,7 @@ class BridgeRuntime:
 class KernelRuntime:
     module_name: str
     dkms_name: str
+    dkms_version: str
     device_prefix: str
     source_directory: str
     control_transfer_timeout_ms: int
@@ -471,9 +472,11 @@ def load_linux_runtime(root: Path) -> LinuxRuntime:
 
     kernel_value = _object(value["kernel"], "Linux kernel runtime")
     _exact(kernel_value, KERNEL_KEYS, "Linux kernel runtime")
+    dkms_version = product.version.replace("-", "_")
     kernel = KernelRuntime(
         module_name=_string(kernel_value["module_name"], "kernel module name", KERNEL_NAME, 64),
         dkms_name=_string(kernel_value["dkms_name"], "DKMS name", KERNEL_NAME, 64),
+        dkms_version=dkms_version,
         device_prefix=_string(
             kernel_value["device_prefix"], "kernel device prefix", KERNEL_NAME, 64
         ),
@@ -490,9 +493,11 @@ def load_linux_runtime(root: Path) -> LinuxRuntime:
     for name in (kernel.module_name, kernel.dkms_name, kernel.device_prefix):
         if FORBIDDEN_KERNEL_PRESENTATION.search(name):
             raise ModelError("kernel names must not contain product presentation facts")
-    expected_source = f"/usr/src/{kernel.dkms_name}-{product.version}"
+    expected_source = f"/usr/src/{kernel.dkms_name}-{kernel.dkms_version}"
     if kernel.source_directory != expected_source:
-        raise ModelError("DKMS source directory must derive from the canonical name and version")
+        raise ModelError(
+            "DKMS source directory must derive from the canonical name and normalized version"
+        )
     from .kernel_uapi import load_kernel_uapi
 
     uapi = load_kernel_uapi(root)

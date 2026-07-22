@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.install import load_install_manifest
+from hfxdev.linux_runtime import load_linux_runtime
 from hfxdev.model import ModelError, load_json
 
 
@@ -59,13 +60,9 @@ class InstallManifestTests(unittest.TestCase):
             "/usr/bin/hyperfluxctl",
         )
         destinations = {str(file.destination) for file in self.manifest.files}
-        self.assertIn(
-            "/usr/src/hid-hyperflux-next-0.0.0-dev.1/dkms.conf", destinations
-        )
-        self.assertIn(
-            "/usr/src/hid-hyperflux-next-0.0.0-dev.1/hyperflux-next-core.c",
-            destinations,
-        )
+        source_directory = load_linux_runtime(ROOT).kernel.source_directory
+        self.assertIn(f"{source_directory}/dkms.conf", destinations)
+        self.assertIn(f"{source_directory}/hyperflux-next-core.c", destinations)
 
     def test_python_sdk_license_is_generated_from_repository_authority(self) -> None:
         self.assertEqual(

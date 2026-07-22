@@ -18,6 +18,7 @@ from hfxdev.generators.linux_runtime import (
     activation_service,
     confirmation_service,
     default_bridge_configuration,
+    dkms_configuration,
     systemd_service,
     sysusers,
     tmpfiles,
@@ -59,8 +60,25 @@ class LinuxRuntimeTests(unittest.TestCase):
             self.assertIsNone(re.search(r"razer|mouse|keyboard|hard|cloth", value))
         self.assertEqual(
             kernel.source_directory,
-            f"/usr/src/{kernel.dkms_name}-{self.runtime.product.version}",
+            f"/usr/src/{kernel.dkms_name}-{kernel.dkms_version}",
         )
+        self.assertEqual(kernel.dkms_version, "0.0.0_dev.1")
+
+    def test_dkms_identity_and_output_match_arch_hook_contract(self) -> None:
+        kernel = self.runtime.kernel
+        source_name = PurePosixPath(kernel.source_directory).name
+        hook_name, hook_version = source_name.rsplit("-", 1)
+        self.assertEqual((hook_name, hook_version), (kernel.dkms_name, kernel.dkms_version))
+
+        config = dkms_configuration(self.runtime)
+        self.assertIn(f'PACKAGE_NAME="{hook_name}"', config)
+        self.assertIn(f'PACKAGE_VERSION="{hook_version}"', config)
+        self.assertIn('BUILT_MODULE_LOCATION[0]="module"', config)
+        self.assertIn(
+            "${dkms_tree}/${PACKAGE_NAME}/${PACKAGE_VERSION}/build/module",
+            config,
+        )
+        self.assertNotIn("CLEAN=", config)
 
     def test_derived_runtime_paths_are_bounded_and_unique(self) -> None:
         bridge = self.runtime.bridge
