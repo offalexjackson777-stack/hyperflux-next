@@ -33,6 +33,7 @@ from .generators.governance import (
 )
 from .generators.performance import performance_budgets_markdown
 from .generators.release import release_gates_markdown
+from .generators.social_preview import render_social_preview
 from .generators.supply_chain import spdx_json, supply_chain_markdown
 from .generators.domain import (
     cpp_json as domain_cpp_json,
@@ -445,7 +446,24 @@ def rendered_files(root: Path) -> dict[Path, str]:
     return files
 
 
+def rendered_binary_files(root: Path) -> dict[Path, bytes]:
+    knowledge = compiled_knowledge_catalog(root)
+    atlas = load_repository_atlas(root)
+    test_catalog = load_test_catalog(root)
+    return {
+        root / "docs" / "assets" / "social-preview.png": render_social_preview(
+            candidates=len(knowledge["candidates"]),
+            subsystems=len(atlas.nodes),
+            verification_nodes=len(test_catalog.nodes),
+            hardware_writes=sum(node.writes_hardware for node in test_catalog.nodes),
+        )
+    }
+
+
 def write_generated(root: Path) -> None:
     for path, content in rendered_files(root).items():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
+    for path, content in rendered_binary_files(root).items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)

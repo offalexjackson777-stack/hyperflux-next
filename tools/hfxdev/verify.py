@@ -37,7 +37,7 @@ from .performance import (
     verify_static_performance_budgets,
 )
 from .portal import build_portal, verify_portal
-from .render import rendered_files
+from .render import rendered_binary_files, rendered_files
 from .profiles import load_profile_inputs
 from .protocol import load_protocol_catalog
 from .release import load_release_gates
@@ -135,6 +135,11 @@ def _check_generated(root: Path) -> None:
         if not path.is_file():
             raise ModelError(f"missing generated file: {path.relative_to(root)}")
         if path.read_text(encoding="utf-8") != expected:
+            raise ModelError(f"stale generated file: {path.relative_to(root)}; run ./hfx generate")
+    for path, expected in rendered_binary_files(root).items():
+        if not path.is_file():
+            raise ModelError(f"missing generated file: {path.relative_to(root)}")
+        if path.read_bytes() != expected:
             raise ModelError(f"stale generated file: {path.relative_to(root)}; run ./hfx generate")
 
 

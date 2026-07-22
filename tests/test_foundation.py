@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 from hfxdev.migration import summary
 from hfxdev.assurance import load_design_coverage
 from hfxdev.model import load_foundation
-from hfxdev.render import rendered_files
+from hfxdev.render import rendered_binary_files, rendered_files
 from hfxdev.model import load_json
 from hfxdev.profiles import load_profile_inputs
 
@@ -66,6 +66,13 @@ class FoundationTests(unittest.TestCase):
         first = rendered_files(ROOT)
         second = rendered_files(ROOT)
         self.assertEqual(first, second)
+        first_binary = rendered_binary_files(ROOT)
+        second_binary = rendered_binary_files(ROOT)
+        self.assertEqual(first_binary, second_binary)
+        preview = first_binary[ROOT / "docs" / "assets" / "social-preview.png"]
+        self.assertEqual(preview[:8], b"\x89PNG\r\n\x1a\n")
+        self.assertEqual(int.from_bytes(preview[16:20], "big"), 1280)
+        self.assertEqual(int.from_bytes(preview[20:24], "big"), 640)
 
     def test_summary_reports_progress_without_mutation(self) -> None:
         text = summary(ROOT)

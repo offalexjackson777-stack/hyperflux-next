@@ -30,6 +30,11 @@ from .portal_device_lab import (
 from .portal_atlas import ATLAS_CSS, ATLAS_SCRIPT, render_repository_atlas
 from .portal_assets import PORTAL_JS, SITE_CSS, architecture_svg
 from .profiles import compiled_catalog as compiled_profile_catalog
+from .portal_state import (
+    REPOSITORY_STATE_CSS,
+    REPOSITORY_STATE_SCRIPT,
+    render_repository_state,
+)
 
 
 PORTAL_KEYS = {"$schema", "schema", "site", "audiences"}
@@ -423,6 +428,15 @@ def _navigation(config: PortalConfig, current_url: str) -> str:
         f'<a{atlas_class} href="{escape(_relative_url(current_url, "atlas/index.html"))}">'
         "Repository Atlas</a>"
     )
+    state_class = (
+        ' class="active" aria-current="page"'
+        if current_url == "state/index.html"
+        else ""
+    )
+    sections.append(
+        f'<a{state_class} href="{escape(_relative_url(current_url, "state/index.html"))}">'
+        "Repository State</a>"
+    )
     for audience in config.audiences:
         links = []
         for page in audience.pages:
@@ -477,7 +491,14 @@ def _shell(
       <input id="portal-search" type="search" placeholder="Search documentation" autocomplete="off">
       <div id="search-results" class="search-results" hidden></div>
     </div>
-    <span class="phase">Local reconstruction</span>
+    <div class="header-tools">
+      <span class="phase">Local reconstruction</span>
+      <div class="theme-switch" role="group" aria-label="Color theme">
+        <button type="button" data-theme-choice="system" aria-pressed="true" title="Follow system color theme">System</button>
+        <button type="button" data-theme-choice="light" aria-pressed="false" title="Use light color theme">Light</button>
+        <button type="button" data-theme-choice="dark" aria-pressed="false" title="Use dark color theme">Dark</button>
+      </div>
+    </div>
   </header>
   <div class="site-grid">
     <nav class="side-nav desktop-nav" aria-label="Documentation">{_navigation(config, current_url)}</nav>
@@ -520,23 +541,25 @@ def _home_content(
             f"Open {escape(audience.title.lower())}</a></section>"
         )
     return f"""<section class="home-intro">
-  <p class="breadcrumb">Documentation portal</p>
+  <p class="breadcrumb">Repository workbench</p>
   <h1>HyperFlux Next</h1>
   <p class="lede">{escape(config.description)}</p>
-  <div class="notice"><strong>Publication remains locked.</strong> This portal is a verified local artifact, not a released driver or public support promise.</div>
+  <div class="phase-band"><strong>Local architectural reconstruction</strong><span>Software foundation implemented</span><span>Hardware qualification pending</span><span>Publication locked</span></div>
+  <div class="notice"><strong>Truthful by construction.</strong> This verified local artifact exposes the repository's current evidence and boundaries; it is not a released driver or public support promise.</div>
   <img class="system-map" src="assets/system-map.svg" alt="Applications flow through the SDK, bridge, kernel, and receiver">
 </section>
+<nav class="workbench-links" aria-label="Repository workbenches"><a href="devices/index.html"><strong>Device Lab</strong><span>Compatibility facts, capability matrices, and provenance</span></a><a href="atlas/index.html"><strong>Repository Atlas</strong><span>Ownership, dependencies, lineage, and change impact</span></a><a href="state/index.html"><strong>Repository State</strong><span>Release gates, migration decisions, and verification budgets</span></a></nav>
 <section class="audience-grid" aria-label="Documentation audiences">{"".join(cards)}</section>
 <section aria-labelledby="truth-heading">
   <h2 id="truth-heading">Repository truth</h2>
   <div class="status-band">
     <div><strong>{len(coverage)}</strong><span>design sections tracked</span></div>
     <div><strong>{verified}</strong><span>software-verified sections</span></div>
-    <div><strong>{qualified_profiles}</strong><span>qualified hardware profiles</span></div>
+    <div><strong>{qualified_profiles}</strong><span>fully qualified product profiles</span></div>
     <div><strong>{adapters}</strong><span>application adapters modeled</span></div>
   </div>
   <p>{release_blocking} sections still carry a release-blocking condition. The <a href="maintainers/coverage.html">coverage ledger</a> names each one without converting missing evidence into a green claim.</p>
-  <p><strong>Explore the system.</strong> The <a href="devices/index.html">Device Lab</a> traces device evidence, while the <a href="atlas/index.html">Repository Atlas</a> explains ownership, dependencies, generated projections, and safe change impact.</p>
+  <p>The status above is compiled from canonical ledgers. Capability-scoped route qualification appears separately in the <a href="devices/index.html">Device Lab</a>; missing physical evidence remains visible rather than being converted into a whole-product claim.</p>
 </section>"""
 
 
@@ -634,6 +657,7 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
     device_lab = render_device_lab(knowledge)
     repository_atlas = load_repository_atlas(root)
     atlas_page = render_repository_atlas(repository_atlas)
+    state_page = render_repository_state(root)
     source_urls = {page.source: page.url for page in config.pages}
     search_records: list[dict[str, str]] = []
     for page in config.pages:
@@ -667,16 +691,30 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
         }
     )
     search_records.extend(atlas_page.search_records)
+    search_records.append(
+        {
+            "title": "Repository State",
+            "audience": "Assurance",
+            "summary": "Inspect release gates, migration state, verification budgets, and performance limits.",
+            "url": "state/index.html",
+            "search": "repository state release gates migration verification timings performance budgets publication lock",
+        }
+    )
+    search_records.extend(state_page.search_records)
     search_records.sort(key=lambda record: (record["audience"], record["title"]))
 
     assets = output / "assets"
     assets.mkdir()
     (assets / "site.css").write_text(
-        SITE_CSS + DEVICE_LAB_CSS + ATLAS_CSS, encoding="utf-8"
+        SITE_CSS + DEVICE_LAB_CSS + ATLAS_CSS + REPOSITORY_STATE_CSS,
+        encoding="utf-8",
     )
     (assets / "portal.js").write_text(PORTAL_JS, encoding="utf-8")
     (assets / "device-lab.js").write_text(DEVICE_LAB_SCRIPT, encoding="utf-8")
     (assets / "atlas.js").write_text(ATLAS_SCRIPT, encoding="utf-8")
+    (assets / "repository-state.js").write_text(
+        REPOSITORY_STATE_SCRIPT, encoding="utf-8"
+    )
     (assets / "system-map.svg").write_text(architecture_svg(), encoding="utf-8")
     (assets / "search-index.json").write_text(
         json.dumps(search_records, indent=2, sort_keys=True) + "\n", encoding="utf-8"
@@ -758,6 +796,25 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
         encoding="utf-8",
     )
 
+    state_url = "state/index.html"
+    state_destination = output / state_url
+    state_destination.parent.mkdir(parents=True, exist_ok=True)
+    state_destination.write_text(
+        _shell(
+            config,
+            current_url=state_url,
+            title="Repository State",
+            description="Generated release gates, migration decisions, verification budgets, and performance limits.",
+            content=state_page.content,
+            search_records=[
+                {**record, "url": _relative_url(state_url, record["url"])}
+                for record in search_records
+            ],
+            extra_scripts=("assets/repository-state.js",),
+        ),
+        encoding="utf-8",
+    )
+
     coverage = load_design_coverage(root)
     profiles = compiled_profile_catalog(root)
     integrations = compiled_integration_catalog(root)
@@ -775,6 +832,8 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
 
     material_paths = {
         "assurance/design-coverage.json",
+        "assurance/performance-budgets.json",
+        "assurance/release-gates.json",
         "architecture/repository-atlas.json",
         "docs/portal.json",
         "generated/integrations/catalog.json",
@@ -787,6 +846,9 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
         "tools/hfxdev/atlas.py",
         "tools/hfxdev/generators/atlas.py",
         "schemas/repository-atlas.schema.json",
+        "migration/ledger.json",
+        "verification/tests.json",
+        "tools/hfxdev/portal_state.py",
         *(page.source for page in config.pages),
     }
     materials = [
@@ -802,14 +864,14 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
         "external_runtime_dependencies": False,
         "source_tree_sha256": source_digest,
         "materials": materials,
-        "pages": len(config.pages) + 3,
+        "pages": len(config.pages) + 4,
         "files": files,
     }
     manifest = output / "portal-build-manifest.json"
     manifest.write_text(
         json.dumps(manifest_value, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    return PortalBuild(output=output, manifest=manifest, pages=len(config.pages) + 3, files=len(files))
+    return PortalBuild(output=output, manifest=manifest, pages=len(config.pages) + 4, files=len(files))
 
 
 class _PortalHtmlInspector(HTMLParser):

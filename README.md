@@ -1,179 +1,123 @@
 # HyperFlux Next
 
-HyperFlux Next is a clean, universal Linux foundation for devices connected
-through the Razer HyperFlux V2 system. It separates hardware transport from
-device policy and application presentation so new qualified devices can be
-added without rewriting unrelated kernel, bridge, packaging, and UI code.
+**A schema-first Linux foundation for devices paired through Razer HyperFlux V2.**
+
+HyperFlux Next separates receiver transport, hardware identity, product policy,
+and application presentation. The result is one bounded write path with device
+knowledge that can grow without duplicating the same fact across the kernel,
+bridge, SDK, integrations, documentation, and tests.
+
+![HyperFlux Next architecture overview](docs/assets/social-preview.png)
 
 > [!IMPORTANT]
-> This repository is a local architectural reconstruction. It is not a
-> published driver, package, release candidate, or authorized GitHub product
-> repository. It performs no hardware writes in its current phase.
+> **Local reconstruction, not a published driver.** The software foundation is
+> implemented and locally verified, but physical qualification and publication
+> remain separate locked gates. The documentation portal performs no hardware
+> writes, and this repository does not authorize a package, release, remote, or
+> GitHub Pages deployment.
 
-## Product Direction
+## System Direction
 
 ```mermaid
-flowchart TB
-    Apps["OpenRGB, Polychromatic, OpenRazer clients, CLI"]
-    Integrations["Independent application integrations"]
-    SDK["Versioned HyperFlux SDK"]
-    Bridge["Bridge, policy and transaction authority"]
-    Kernel["Minimal Linux HID driver"]
-    Receiver["HyperFlux receiver and paired devices"]
+flowchart LR
+    Apps["RGB and device applications"]
+    Integrations["Independent integrations"]
+    SDK["Versioned SDK"]
+    Bridge["Bridge and policy authority"]
+    Kernel["Minimal HID transport"]
+    Receiver["Receiver and paired devices"]
     Apps --> Integrations --> SDK --> Bridge --> Kernel --> Receiver
 ```
 
-The architecture is governed by three rules:
+Applications own names, layouts, zones, effects, and user interaction. The SDK
+owns the typed application boundary. The bridge is the sole userspace writer
+and owns qualification, scheduling, restoration, and structured outcomes. The
+kernel preserves ordinary HID input, observes receiver state, owns generations
+and one writer session, and transports validated envelopes.
 
-1. Applications describe intent and presentation; they never encode receiver
-   reports.
-2. The bridge is the sole userspace write authority and owns policy,
-   qualification, ownership, scheduling, and structured outcomes.
-3. The kernel remains small: it preserves HID input, observes receiver state,
-   owns generations and one writer session, and transports bounded envelopes.
+The [Design Book](docs/architecture/design-book.md) explains the complete model;
+the generated [Architecture Constitution](docs/generated/architecture.md) is
+its machine-enforced projection.
 
-The complete governing specification is the
-[HyperFlux Next Design Book](docs/architecture/design-book.md). Its enforceable
-subset lives in the generated [Architecture Constitution](docs/generated/architecture.md).
+## Explore The Repository
 
-## Current Phase
+| Workbench | What it answers | Canonical reference |
+| --- | --- | --- |
+| **Device Lab** | Which device facts are imported, qualified, inferred, or still unknown? | [Device knowledge](docs/generated/device-knowledge.md) |
+| **Repository Atlas** | Which subsystem owns a fact, what depends on it, and what should a change verify? | [Repository atlas](docs/generated/repository-atlas.md) |
+| **Repository State** | Which release gates, migration decisions, test budgets, and performance limits apply? | [Release gates](docs/generated/release-gates.md) and [verification graph](docs/generated/verification.md) |
 
-The repository has an implemented, locally verified software foundation. A
-release is still blocked on hosted-container evidence, native package lifecycle
-evidence, targeted physical qualification, and an explicit publication
-decision:
-
-- source repositories are immutable evidence inputs, not templates;
-- every subsystem receives an explicit migration decision;
-- imported facts retain provenance and evidence links;
-- canonical JSON drives generated documentation, language bindings, profile
-  catalogs, kernel receiver tables, and composition fixtures;
-- the minimal HID module preserves ordinary input, exposes passive observations,
-  and compiles warning-fatal against supported local kernel headers without
-  loading the module or writing hardware;
-- receiver, child, and surface profiles compose independently at runtime;
-- every writable capability requires a public physical evidence claim;
-- official compatibility names remain zero-write candidates until separately
-  qualified;
-- unknown or unreviewed source is excluded by default;
-- publication requires a separate, explicit authorization after all software
-  and targeted hardware gates pass.
-
-Run the complete current verification entry point:
-
-```sh
-./hfx verify --all
-```
-
-Build and verify the audience-separated documentation portal locally:
+Build the full interactive, audience-separated portal locally:
 
 ```sh
 ./hfx docs build --output build/portal
 ./hfx docs verify --site build/portal
 ```
 
-The generated [GitHub governance reference](docs/generated/github-governance.md)
-documents immutable workflow dependencies, branch-protection intent, issue
-forms, dependency automation, and every publication interlock. Those files are
-ready for review but no remote, Pages deployment, release workflow, or hardware
-CI is authorized.
+Open `build/portal/index.html`. The artifact is deterministic, offline, and
+contains the Device Lab, Repository Atlas, Repository State, search, and
+light/dark/system themes. It neither queries devices nor writes hardware.
 
-Inspect migration progress without changing files:
+## Support Boundary
 
-```sh
-./hfx migration summary
-```
-
-Run the canonical read-only semantic comparison against frozen, sanitized
-legacy decisions:
-
-```sh
-./hfx migration compare \
-  --fixture tests/fixtures/shadow/qualified-lifecycle-v1.json \
-  --output build/shadow-comparison
-```
-
-This compares profile selection, presence, capabilities, transaction
-validation, and diagnostic findings. It cannot access hardware or authorize a
-release; see the generated [migration shadow reference](docs/generated/migration-shadow.md).
-
-## Repository Map
-
-| Path | Responsibility |
+| State | Meaning |
 | --- | --- |
-| `architecture/` | Machine-readable ownership, invariants, boundaries, and release interlocks |
-| `assurance/` | Design coverage, release gates, dependency policy, performance budgets, formal model, and generated SBOM |
-| `governance/` | Canonical GitHub policy and non-applicable remote governance plans |
-| `.github/` | Generated ownership, contribution forms, dependency policy, and software-only workflows |
-| `schemas/` | Versioned schemas for canonical project data |
-| `integrations/` | Pinned upstream contracts, coexistence rules, and adapter boundaries |
-| `integrations/openrazer/compatibility/` | Optional private OpenRazer-compatible D-Bus provider; never the receiver transport |
-| `crates/hfx-domain/` | Generated Rust strong types and validation |
-| `crates/hfx-integration-model/` | Generated integration registry and shared application-facing projections |
-| `crates/hfx-profiles/` | Generated, queryable Rust hardware profile catalog |
-| `crates/hfx-sdk/` | Native application SDK, exact-version channel, and typed client boundary |
-| `crates/hfx-runtime/` | Generated Linux runtime constants and validated service configuration |
-| `crates/hfx-daemon/` | Production bridge composition, bounded actor, discovery, observations, and restoration scheduling |
-| `crates/hfx-ops/` | Doctor, status, configuration migration, package activation, and privacy-safe support tooling |
-| `crates/hfx-kernel-transport/` | Generated kernel ABI and isolated userspace transport boundary |
-| `profiles/` | Canonical capabilities, evidence claims, composable hardware profiles, and candidates |
-| `sdk/` | Generated non-Rust language bindings for integrations |
-| `driver/kernel/generated/` | Receiver-only match tables; no child presentation or application policy |
-| `driver/kernel/uapi/` | Generated fixed-width Linux userspace ABI; no pointers or product policy |
-| `driver/kernel/` | Minimal HID lifecycle, passive observation, writer-session, and validated-envelope transport |
-| `runtime/` | Canonical Linux product, service, kernel, operational, and bounded-runtime policy |
-| `packaging/generated/` | Generated non-activating systemd, udev, sysusers, tmpfiles, environment, and default configuration assets |
-| `uapi/` | Canonical kernel ABI model and bounds |
-| `generated/` | Canonical machine artifacts consumed across components |
-| `migration/` | Source identities, generated inventories, reviewed subsystem decisions, and shadow source bindings |
-| `docs/architecture/` | Human design sources and decisions |
-| `docs/generated/` | Deterministic views generated from canonical data |
-| `docs/portal.json` | Three-audience local documentation portal authority |
-| `tools/hfxdev/` | Bootstrap verification and generation tooling |
-| `tests/` | Independent foundation tests |
+| **Implemented** | Canonical models, generators, SDK boundaries, bridge composition, minimal kernel transport, integrations, packaging plans, diagnostics, and software verification exist. |
+| **Physically qualified** | Only exact public evidence claims may enable a writable capability for an exact profile. |
+| **Candidate** | Official upstream compatibility data can identify a review candidate; a name or PID alone never grants hardware writes. |
+| **Unknown** | Unreviewed devices and capabilities fail closed with zero write authority. |
+| **Publication locked** | No remote creation, release, tag, Pages deployment, or hardware CI is authorized by repository state. |
 
-Future product directories are created only when their owning contract and
-tests exist. The engineering and reverse-engineering repositories remain the
-authoritative locations for laboratory code, watched coordinators, captures,
-and historical proof machinery.
+See [Supported Hardware](docs/generated/supported-hardware.md) for exact support
+language and [Device Knowledge](docs/architecture/device-knowledge.md) for the
+provenance model. Imported upstream catalogs remain evidence-bound inputs, not
+copies of application transport code.
 
-Shared identifiers, state enums, ranges, and wire values are defined once in
-[`schemas/domain-catalog.json`](schemas/domain-catalog.json). Rust, C++, Python,
-and the [domain reference](docs/generated/domain-types.md) are generated from
-that source and compile together during verification.
+## Verify A Change
 
-Hardware truth begins in [`profiles/`](profiles/). The compiler validates every
-evidence path against an immutable source inventory, forbids exact keyboard and
-mouse combinations, rejects guessed surface USB identities, and grants unknown
-children zero writes. Its generated
-[supported-hardware reference](docs/generated/supported-hardware.md) keeps
-qualified support separate from official compatibility candidates.
+```sh
+# Regenerate every declared projection.
+./hfx generate
 
-Application integration truth begins in
-[`integrations/catalog.json`](integrations/catalog.json). It pins the reviewed
-OpenRGB, OpenRazer, and Polychromatic contracts, requires SDK-only transport,
-and forbids adapters from suppressing unrelated application devices. Its
-generated [integration reference](docs/generated/integrations.md) keeps current
-implementation state separate from future plans. The shared
-[`hfx-integration-model`](crates/hfx-integration-model) projection turns exact
-protocol snapshots into tested inventory, controller, ownership, and action
-views before any application-specific UI runs; see the
-[integration boundary](docs/architecture/integrations.md).
-The [OpenRazer compatibility boundary](docs/architecture/openrazer-compatibility.md)
-documents the private default identity, isolated legacy mode, qualified method
-subset, and non-replay rules.
+# Run change-aware verification during development.
+./hfx verify --changed-from <commit>
 
-Development tool versions are recorded in
-[`toolchains/pins.json`](toolchains/pins.json). The generated, digest-pinned
-[development container](docs/generated/development-environment.md) provisions
-those exact tools from one dated Arch snapshot. Run `./hfx upstream prepare`
-once to create clean detached checkouts at the application commits in the
-integration catalog; verification then stays offline and uses them by default.
+# Run the complete current software gate.
+./hfx verify --all
+```
+
+One canonical owner drives each generated projection. A second `./hfx generate`
+must produce no diff. The verification graph records dependencies, isolation,
+expected-time budgets, timeouts, evidence outputs, and whether a node could
+write hardware.
+
+## Repository Areas
+
+| Area | Responsibility |
+| --- | --- |
+| `architecture/`, `schemas/`, `protocol/`, `uapi/` | Ownership rules and versioned machine contracts |
+| `knowledge/`, `profiles/`, `migration/` | Provenance, qualification, and reviewed reconstruction decisions |
+| `crates/`, `sdk/`, `driver/` | Bridge, SDK, operations, simulation, and minimal kernel transport |
+| `integrations/` | Application-specific presentation over the shared SDK boundary |
+| `assurance/`, `verification/`, `tests/` | Release gates, budgets, evidence graph, and independent checks |
+| `packaging/`, `runtime/` | Non-activating package and service policy |
+| `docs/`, `governance/`, `.github/` | Human guidance, generated portal, and publication-locked GitHub plans |
+| `tools/hfxdev/` | Deterministic generation, validation, import, and documentation tooling |
+
+Start with the [Repository Atlas](docs/generated/repository-atlas.md) before
+changing an unfamiliar area. It identifies canonical inputs, generated outputs,
+dependencies, verification ownership, and safe change commands.
+
+## Security And Privacy
+
+Hardware serials, stable host identifiers, private paths, raw captures, and
+active information-query responses are excluded from normal support evidence.
+Report security issues through [SECURITY.md](SECURITY.md); use the privacy rules
+in [User Privacy](docs/user/privacy.md) for diagnostics.
 
 ## Licensing
 
-Project-owned kernel and core work is licensed under `GPL-2.0-only`.
-Cross-application SDKs and application-specific adapters declare compatible
-per-file exceptions. Imported material retains its original license and must
-pass a provenance and compatibility review before admission. See
-[License Decision](LICENSE-DECISION.md).
+Project-owned kernel and core work is `GPL-2.0-only`. Cross-application SDKs and
+application integrations declare compatible per-file exceptions. Imported
+material retains its original license and requires provenance and compatibility
+review. See [LICENSE-DECISION.md](LICENSE-DECISION.md).

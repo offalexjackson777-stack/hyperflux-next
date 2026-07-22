@@ -269,7 +269,7 @@
     },
     {
       "id": "documentation-portal-contracts",
-      "title": "Audience portal, Device Lab, local links, accessibility, and offline assets",
+      "title": "Audience portal, Device Lab, Repository Atlas, Repository State, accessibility, and offline assets",
       "owned_domain": "documentation",
       "lanes": ["fast", "full-software"],
       "runner": "documentation-portal-contracts",
@@ -280,8 +280,8 @@
       "timeout_seconds": 30,
       "dependencies": ["generated-freshness"],
       "isolation": "exclusive-process",
-      "cache_inputs": ["README.md", "CONTRIBUTING.md", "SECURITY.md", "docs/**/*.md", "docs/portal.json", "generated/knowledge/catalog.json", "schemas/compiled-device-knowledge.schema.json", "schemas/documentation-portal.schema.json", "tools/hfxdev/portal*.py"],
-      "produced_evidence": ["documentation-portal-manifest", "documentation-link-result", "documentation-accessibility-result", "device-lab-result"],
+      "cache_inputs": ["README.md", "CONTRIBUTING.md", "SECURITY.md", "docs/**/*.md", "docs/assets/social-preview.png", "docs/portal.json", "generated/knowledge/catalog.json", "schemas/compiled-device-knowledge.schema.json", "schemas/documentation-portal.schema.json", "tools/hfxdev/generators/social_preview.py", "tools/hfxdev/portal*.py"],
+      "produced_evidence": ["documentation-portal-manifest", "documentation-link-result", "documentation-accessibility-result", "device-lab-result", "repository-atlas-result", "repository-state-result", "visual-system-result"],
       "resume_policy": "rerun"
     },
     {

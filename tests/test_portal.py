@@ -40,13 +40,18 @@ class DocumentationPortalTests(unittest.TestCase):
             self.assertEqual(first_manifest, second_manifest)
             self.assertFalse(first_manifest["publication_authorized"])
             self.assertFalse(first_manifest["external_runtime_dependencies"])
-            self.assertEqual(first_result.pages, 24)
+            self.assertEqual(first_result.pages, 25)
             self.assertEqual(verify_portal(ROOT, first)["source_tree_sha256"], first_manifest["source_tree_sha256"])
             index = (first / "index.html").read_text(encoding="utf-8")
             self.assertIn('id="main-content"', index)
             self.assertIn('class="skip-link"', index)
             self.assertIn('class="mobile-nav"', index)
+            self.assertIn('data-theme-choice="system"', index)
+            self.assertIn('data-theme-choice="light"', index)
+            self.assertIn('data-theme-choice="dark"', index)
             self.assertIn("system-map.svg", index)
+            self.assertIn("fully qualified product profiles", index)
+            self.assertIn("Capability-scoped route qualification", index)
             self.assertNotIn("https://fonts", index)
             self.assertEqual(index.count("</html>"), 1)
             architecture = (first / "developers" / "architecture.html").read_text(
@@ -82,6 +87,20 @@ class DocumentationPortalTests(unittest.TestCase):
             )
             self.assertNotIn("fetch(", atlas_script)
             self.assertNotIn("XMLHttpRequest", atlas_script)
+            state = (first / "state" / "index.html").read_text(encoding="utf-8")
+            self.assertIn("Release gates", state)
+            self.assertIn("Migration decisions", state)
+            self.assertIn("Verification timing budgets", state)
+            self.assertIn("Performance boundaries", state)
+            self.assertIn("planned test durations are budgets", state)
+            self.assertEqual(state.count("data-gate"), 10)
+            self.assertEqual(state.count("data-migration"), 13)
+            self.assertEqual(state.count("data-verification"), 30)
+            state_script = (first / "assets" / "repository-state.js").read_text(
+                encoding="utf-8"
+            )
+            self.assertNotIn("fetch(", state_script)
+            self.assertNotIn("XMLHttpRequest", state_script)
 
     def test_unsupported_mermaid_fails_closed(self) -> None:
         with self.assertRaisesRegex(ModelError, "unsupported Mermaid diagram type"):
