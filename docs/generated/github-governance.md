@@ -31,14 +31,14 @@ The development image may use the exact snapshot and toolchain network boundary 
 
 ## Required Check Plan
 
-- `CodeQL / Analyze (c-cpp)`
-- `CodeQL / Analyze (python)`
-- `Dependency review / Dependency review`
-- `Documentation / Portal contracts`
-- `Full verification / Full software`
-- `Repository experience / Link checks`
-- `Repository experience / Pages preview`
-- `Verification / Fast software`
+- `Analyze (c-cpp)`
+- `Analyze (python)`
+- `Dependency review`
+- `Fast software`
+- `Full software`
+- `Link checks`
+- `Pages preview`
+- `Portal contracts`
 
 Protection profile: `solo-maintainer` with 1 trusted maintainer. Required human approvals: `0`; CODEOWNER review required: `false`.
 

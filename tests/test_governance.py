@@ -193,19 +193,33 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertTrue(self.governance.strict_required_status_checks)
         self.assertEqual(fast["permissions"], {"contents": "read"})
         self.assertEqual(docs["permissions"], {"contents": "read"})
-        self.assertEqual(
-            set(self.governance.required_checks),
-            {
-                "Verification / Fast software",
-                "CodeQL / Analyze (c-cpp)",
-                "CodeQL / Analyze (python)",
-                "Dependency review / Dependency review",
-                "Documentation / Portal contracts",
-                "Full verification / Full software",
-                "Repository experience / Link checks",
-                "Repository experience / Pages preview",
-            },
+
+    def test_required_checks_are_exact_generated_job_contexts(self) -> None:
+        workflows = (
+            codeql_workflow(self.governance),
+            dependency_review_workflow(self.governance),
+            documentation_workflow(self.governance),
+            full_verification_workflow(self.governance),
+            repository_experience_workflow(self.governance),
+            verification_workflow(self.governance),
         )
+        contexts: set[str] = set()
+        for text in workflows:
+            document = yaml.safe_load(text)
+            for job in document["jobs"].values():
+                name = job["name"]
+                matrix = job.get("strategy", {}).get("matrix", {})
+                languages = matrix.get("language")
+                if languages is None:
+                    contexts.add(name)
+                    continue
+                self.assertEqual(name, "Analyze (${{ matrix.language }})")
+                contexts.update(
+                    name.replace("${{ matrix.language }}", language)
+                    for language in languages
+                )
+
+        self.assertEqual(set(self.governance.required_checks), contexts)
 
     def test_repository_experience_jobs_are_required_and_bounded(self) -> None:
         workflow = yaml.safe_load(repository_experience_workflow(self.governance))
