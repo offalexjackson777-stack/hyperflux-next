@@ -10,7 +10,7 @@ The development container is an immutable, non-privileged software build environ
 - Base image: `docker.io/library/archlinux:base-devel@sha256:412efebb0eeef0ef322ff24ad73f82b1ba2d3b12377db4c5fbe3074c7e7e8678`
 - Arch package snapshot: `2026-07-21`
 - Rust toolchain: `1.95.0-x86_64-unknown-linux-gnu`
-- Workspace: `/workspaces/hyperflux-next`
+- Workspace: repository root (`hyperflux-next`)
 
 ## Start
 
