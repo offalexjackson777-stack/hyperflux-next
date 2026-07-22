@@ -71,6 +71,7 @@ from .generators.linux_runtime import (
     tmpfiles,
     udev_rules,
 )
+from .generators.migration import shadow_comparison_markdown
 from .generators.profiles import (
     compiled_json as profile_compiled_json,
     cpp_catalog as profile_cpp_catalog,
@@ -108,6 +109,7 @@ from .governance import load_github_governance
 from .install import load_install_manifest
 from .distributions import load_distribution_catalog
 from .model import load_foundation, load_json
+from .migration import load_shadow_fixture
 from .linux_runtime import load_linux_runtime
 from .openrazer import load_imported_metadata
 from .performance import load_performance_budgets
@@ -229,6 +231,9 @@ def rendered_files(root: Path) -> dict[Path, str]:
     formal_model_result = run_formal_model(formal_model)
     development_environment = load_development_environment(root)
     github_governance = load_github_governance(root)
+    shadow_fixture = load_shadow_fixture(
+        root, root / "tests/fixtures/shadow/qualified-lifecycle-v1.json"
+    )
     files = {
         root / ".devcontainer" / "Containerfile": development_containerfile(
             development_environment
@@ -298,6 +303,9 @@ def rendered_files(root: Path) -> dict[Path, str]:
             dependency_inventory
         ),
         root / "docs" / "generated" / "migration-ledger.md": migration_markdown(sources, ledger),
+        root / "docs" / "generated" / "migration-shadow.md": shadow_comparison_markdown(
+            shadow_fixture
+        ),
         root / "docs" / "generated" / "domain-types.md": domain_markdown(domain_catalog),
         root / "crates" / "hfx-domain" / "src" / "generated.rs": rust_types(domain_catalog),
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "domain_types.py": python_types(domain_catalog),

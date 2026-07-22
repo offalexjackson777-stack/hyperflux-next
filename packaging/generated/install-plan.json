@@ -447,6 +447,27 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/shadow-comparison-evidence.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/shadow-comparison-evidence.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/shadow-comparison-fixture.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/shadow-comparison-fixture.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/shadow-comparison-result.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/shadow-comparison-result.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/simulator-scenario.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/simulator-scenario.schema.json",
       "mode": "0644",
@@ -911,6 +932,13 @@
       "component": "documentation",
       "source": "docs/generated/migration-ledger.md",
       "destination": "/usr/share/doc/hyperflux-next/generated/migration-ledger.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/migration-shadow.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/migration-shadow.md",
       "mode": "0644",
       "preserve": false
     },

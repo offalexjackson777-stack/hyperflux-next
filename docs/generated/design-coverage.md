@@ -8,10 +8,10 @@ Software verification never substitutes for required physical evidence or public
 ## Summary
 
 - `blocked-by-physical-evidence`: 3
-- `partially-implemented`: 11
+- `partially-implemented`: 10
 - `policy-defined`: 2
 - `publication-locked`: 1
-- `software-verified`: 50
+- `software-verified`: 51
 
 | Section | Subject | Status | Owner | Physical proof | Release block |
 | ---: | --- | --- | --- | --- | --- |
@@ -77,7 +77,7 @@ Software verification never substitutes for required physical evidence or public
 | 60 | Documentation Portal | `software-verified` | `documentation` | no | no |
 | 61 | GitHub Repository Experience | `partially-implemented` | `governance` | no | yes |
 | 62 | Migration Ledger | `software-verified` | `migration` | no | yes |
-| 63 | Shadow Comparison | `partially-implemented` | `verification` | no | yes |
+| 63 | Shadow Comparison | `software-verified` | `verification` | no | no |
 | 64 | Migration Order | `policy-defined` | `migration` | no | no |
 | 65 | Release Channels | `policy-defined` | `release` | required | yes |
 | 66 | Limits And Epistemic Honesty | `software-verified` | `architecture` | no | no |
@@ -459,9 +459,9 @@ Evidence: [`migration/ledger.json`](../../migration/ledger.json), [`docs/generat
 
 ### 63. Shadow Comparison
 
-Evidence: [`crates/hfx-sim/src/replay.rs`](../../crates/hfx-sim/src/replay.rs), [`migration/ledger.json`](../../migration/ledger.json).
+Evidence: [`crates/hfx-sim/src/shadow.rs`](../../crates/hfx-sim/src/shadow.rs), [`tests/fixtures/shadow/qualified-lifecycle-v1.json`](../../tests/fixtures/shadow/qualified-lifecycle-v1.json), [`tools/hfxdev/migration.py`](../../tools/hfxdev/migration.py), [`docs/generated/migration-shadow.md`](../../docs/generated/migration-shadow.md).
 
-- Add a read-only comparator for old recorded decisions versus the new profile, presence, capability, and diagnostic projections.
+- No remaining gap in the current software scope.
 
 ### 64. Migration Order
 

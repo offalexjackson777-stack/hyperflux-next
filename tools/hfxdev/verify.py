@@ -21,6 +21,7 @@ from .governance import load_github_governance
 from .integrations import load_integration_catalog, load_openrazer_compatibility_contract
 from .install import load_install_manifest
 from .linux_runtime import load_linux_runtime
+from .migration import execute_shadow_comparison, load_shadow_fixture
 from .openrazer import load_imported_metadata, transformed_metadata
 from .package_pipeline import build_artifacts, load_artifact_set, stage_rootfs
 from .performance import (
@@ -995,6 +996,19 @@ def _run_simulator_contracts(root: Path, node: TestNode) -> None:
     )
 
 
+def _run_migration_shadow_contracts(root: Path, _node: TestNode) -> None:
+    fixture = root / "tests/fixtures/shadow/qualified-lifecycle-v1.json"
+    load_shadow_fixture(root, fixture)
+    first = execute_shadow_comparison(root, fixture)
+    second = execute_shadow_comparison(root, fixture)
+    if first != second:
+        raise ModelError("migration shadow comparison is not deterministic")
+    if first.get("status") != "matched" or first.get("differences") != []:
+        raise ModelError("migration shadow comparison found semantic drift")
+    if not all(domain.get("matched") is True for domain in first["domains"]):
+        raise ModelError("migration shadow comparison has an unmatched semantic domain")
+
+
 def _staged_tree_snapshot(root: Path) -> tuple[tuple[object, ...], ...]:
     snapshot: list[tuple[object, ...]] = []
     for path in sorted(root.rglob("*")):
@@ -1127,6 +1141,7 @@ RUNNERS = {
     "rust-clippy": _run_rust_clippy,
     "rust-unit": _run_rust_unit,
     "simulator-contracts": _run_simulator_contracts,
+    "migration-shadow-contracts": _run_migration_shadow_contracts,
     "cpp-sdk-contracts": _run_cpp_sdk_contracts,
     "openrgb-adapter-contracts": _run_openrgb_adapter_contracts,
     "openrgb-thread-sanitizer": _run_openrgb_thread_sanitizer,

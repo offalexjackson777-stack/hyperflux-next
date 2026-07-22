@@ -1,0 +1,120 @@
+{
+  "$schema": "../../../schemas/shadow-comparison-fixture.schema.json",
+  "schema": "hyperflux-shadow-comparison-fixture-v1",
+  "comparison_id": "engineering-laboratory-qualified-lifecycle-v1",
+  "provenance": {
+    "source_id": "engineering-laboratory",
+    "source_commit": "5ec780ac79e11346567a2055caec76e25e2ceca4",
+    "source_records": [
+      {"path": "bridge/service/src/api/capability.rs", "object": "d6864d0f094f8a3ea86fa0d6a16829916c7dfc16"},
+      {"path": "bridge/service/src/diagnostics.rs", "object": "bbc88a884a7a371af4e3b5d9ac765a9b35dad162"},
+      {"path": "bridge/service/src/twin/model/result.rs", "object": "9240c29b5906b5ee972f295e362e7c9f7f85cf49"},
+      {"path": "bridge/service/src/twin/replay.rs", "object": "1b69fcf19875c391366faa8d0575df208336de5e"},
+      {"path": "profiles/product/HW-001-v1.yaml", "object": "e58fda091d92fea436266dafedaa6ee650d28d24"}
+    ],
+    "comparison_mode": "recorded-decisions-only",
+    "boundary": {
+      "test_fixture": true,
+      "read_only": true
+    },
+    "authority": {
+      "hardware_claim_authority": false,
+      "publication_authorized": false
+    },
+    "side_effects": {
+      "private_identifiers_exported": false,
+      "hardware_queried": false,
+      "hardware_writes_executed": false
+    },
+    "sanitization": "no-private-identifiers-v1"
+  },
+  "scenario": {
+    "schema": "hyperflux-simulator-scenario-v1",
+    "scenario_id": "shadow-qualified-lifecycle-v1",
+    "provenance": {
+      "source": "sanitized-replay",
+      "test_fixture": true,
+      "hardware_claim_authority": false,
+      "private_identifiers_exported": false,
+      "sanitization": "no-private-identifiers-v1"
+    },
+    "initial": {
+      "receiver_profile_id": "receiver.razer.hyperflux-v2.1532-00cf",
+      "receiver_generation": "1",
+      "surface_profile_id": "surface.razer.hyperflux-v2-hard-edition",
+      "children": [
+        {"logical_device_id": "keyboard-1", "device_kind": "keyboard", "product_id": 662, "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296", "pairing": "paired"},
+        {"logical_device_id": "mouse-1", "device_kind": "mouse", "product_id": 205, "profile_id": "child.razer.basilisk-v3-pro-35k.00cd", "pairing": "paired"}
+      ]
+    },
+    "events": [
+      {"observed_at_ms": 10, "generation_id": "1", "event": {"kind": "route-observed", "device_id": "keyboard-1", "state": "available"}},
+      {"observed_at_ms": 11, "generation_id": "1", "event": {"kind": "route-observed", "device_id": "mouse-1", "state": "available"}},
+      {"observed_at_ms": 12, "generation_id": "1", "event": {"kind": "battery-reported", "device_id": "keyboard-1", "percentage": 70}},
+      {"observed_at_ms": 13, "generation_id": "1", "event": {"kind": "battery-reported", "device_id": "mouse-1", "percentage": 78}},
+      {"observed_at_ms": 20, "generation_id": "1", "event": {"kind": "sleep-observed", "device_id": "mouse-1", "state": "asleep"}},
+      {"observed_at_ms": 21, "generation_id": "1", "event": {"kind": "lighting-frame", "transaction_id": "sleeping-mouse", "frame_index": 0, "targets": ["mouse-1"], "outcome": "delivered"}},
+      {"observed_at_ms": 30, "generation_id": "1", "event": {"kind": "sleep-observed", "device_id": "mouse-1", "state": "awake"}},
+      {"observed_at_ms": 31, "generation_id": "1", "event": {"kind": "activity-observed", "device_id": "mouse-1", "state": "active"}},
+      {"observed_at_ms": 40, "generation_id": "1", "event": {"kind": "lighting-frame", "transaction_id": "frame-1", "frame_index": 1, "targets": ["keyboard-1", "mouse-1"], "outcome": "delivered"}},
+      {"observed_at_ms": 50, "generation_id": "1", "event": {"kind": "receiver-disconnected"}},
+      {"observed_at_ms": 60, "generation_id": "2", "event": {"kind": "receiver-connected"}},
+      {"observed_at_ms": 61, "generation_id": "2", "event": {"kind": "device-pairing", "device_id": "keyboard-1", "state": "paired"}},
+      {"observed_at_ms": 62, "generation_id": "2", "event": {"kind": "route-observed", "device_id": "keyboard-1", "state": "available"}},
+      {"observed_at_ms": 63, "generation_id": "2", "event": {"kind": "device-pairing", "device_id": "mouse-1", "state": "paired"}},
+      {"observed_at_ms": 64, "generation_id": "2", "event": {"kind": "route-observed", "device_id": "mouse-1", "state": "available"}},
+      {"observed_at_ms": 70, "generation_id": "2", "event": {"kind": "restore-started", "restore_id": "restore-2", "targets": ["keyboard-1", "mouse-1"]}},
+      {"observed_at_ms": 71, "generation_id": "2", "event": {"kind": "restore-target", "restore_id": "restore-2", "device_id": "keyboard-1", "outcome": "delivered"}},
+      {"observed_at_ms": 72, "generation_id": "2", "event": {"kind": "restore-target", "restore_id": "restore-2", "device_id": "mouse-1", "outcome": "delivered"}},
+      {"observed_at_ms": 80, "generation_id": "1", "event": {"kind": "route-observed", "device_id": "mouse-1", "state": "available"}}
+    ]
+  },
+  "legacy_decisions": [
+    {
+      "sequence": 1,
+      "selected_profiles": {
+        "keyboard-1": "child.razer.deathstalker-v2-pro-tkl.0296",
+        "mouse-1": "child.razer.basilisk-v3-pro-35k.00cd",
+        "receiver": "receiver.razer.hyperflux-v2.1532-00cf",
+        "surface": "surface.razer.hyperflux-v2-hard-edition"
+      },
+      "presence_states": {"keyboard-1": "available", "mouse-1": "available"},
+      "capabilities": {
+        "keyboard-1": ["identity.model", "identity.paired-product-id", "lighting.brightness", "lighting.complete-black", "lighting.direct-frame", "lighting.off", "lighting.per-key", "lighting.software-effect-frames", "lighting.static", "presence.passive-evidence", "route.hyperflux-wireless", "telemetry.battery-percent", "telemetry.connection-evidence"],
+        "mouse-1": ["identity.model", "identity.paired-product-id", "lighting.brightness", "lighting.complete-black", "lighting.direct-frame", "lighting.off", "lighting.per-led", "lighting.software-effect-frames", "lighting.static", "presence.passive-evidence", "route.hyperflux-wireless", "telemetry.battery-percent", "telemetry.connection-evidence", "telemetry.mouse-contact"],
+        "receiver": ["identity.model", "identity.paired-product-id", "lighting.stable-state-restore", "receiver.exclusive-writer-session", "receiver.generation", "route.hyperflux-wireless"],
+        "surface": ["identity.model", "surface.firmware-status-indicator"]
+      },
+      "diagnostic_findings": []
+    },
+    {
+      "sequence": 4,
+      "presence_states": {"keyboard-1": "available", "mouse-1": "sleeping"},
+      "diagnostic_findings": []
+    },
+    {
+      "sequence": 5,
+      "transaction_validation": "rejected-unavailable-route",
+      "diagnostic_findings": ["shadow.route.unavailable"]
+    },
+    {
+      "sequence": 8,
+      "transaction_validation": "applied",
+      "diagnostic_findings": []
+    },
+    {
+      "sequence": 9,
+      "presence_states": {"keyboard-1": "unknown", "mouse-1": "unknown"},
+      "diagnostic_findings": []
+    },
+    {
+      "sequence": 14,
+      "presence_states": {"keyboard-1": "available", "mouse-1": "available"},
+      "diagnostic_findings": []
+    },
+    {
+      "sequence": 18,
+      "diagnostic_findings": ["shadow.generation.stale"]
+    }
+  ]
+}

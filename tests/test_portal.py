@@ -24,7 +24,7 @@ class DocumentationPortalTests(unittest.TestCase):
             [audience.id for audience in config.audiences],
             ["users", "developers", "maintainers"],
         )
-        self.assertEqual(len(config.pages), 20)
+        self.assertEqual(len(config.pages), 21)
         self.assertEqual(len({page.url for page in config.pages}), len(config.pages))
         self.assertEqual(len({page.source for page in config.pages}), len(config.pages))
         self.assertEqual(config.publication_state, "local-artifact-only")
@@ -40,7 +40,7 @@ class DocumentationPortalTests(unittest.TestCase):
             self.assertEqual(first_manifest, second_manifest)
             self.assertFalse(first_manifest["publication_authorized"])
             self.assertFalse(first_manifest["external_runtime_dependencies"])
-            self.assertEqual(first_result.pages, 21)
+            self.assertEqual(first_result.pages, 22)
             self.assertEqual(verify_portal(ROOT, first)["source_tree_sha256"], first_manifest["source_tree_sha256"])
             index = (first / "index.html").read_text(encoding="utf-8")
             self.assertIn('id="main-content"', index)
@@ -54,6 +54,11 @@ class DocumentationPortalTests(unittest.TestCase):
             )
             self.assertIn('class="compiled-diagram"', architecture)
             self.assertNotIn('class="language-mermaid"', architecture)
+            shadow = (first / "maintainers" / "migration-shadow.html").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("Profile selection", shadow)
+            self.assertIn("Hardware writes: forbidden", shadow)
 
     def test_unsupported_mermaid_fails_closed(self) -> None:
         with self.assertRaisesRegex(ModelError, "unsupported Mermaid diagram type"):

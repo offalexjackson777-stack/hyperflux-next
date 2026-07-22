@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 
 from .ci import container_invocation, run_container
-from .migration import capture_inventory, summary
+from .migration import capture_inventory, run_shadow_comparison, summary
 from .model import ModelError
 from .distribution_package import build_distribution_package
 from .openrazer import write_imported_metadata
@@ -70,6 +70,11 @@ def _parser() -> argparse.ArgumentParser:
     capture = migration_commands.add_parser("capture", help="capture an immutable git source inventory")
     capture.add_argument("--source", required=True)
     capture.add_argument("--path", required=True, type=Path)
+    compare = migration_commands.add_parser(
+        "compare", help="compare frozen legacy decisions with the new simulator"
+    )
+    compare.add_argument("--fixture", required=True, type=Path)
+    compare.add_argument("--output", required=True, type=Path)
 
     imports = commands.add_parser("import", help="transform pinned upstream metadata")
     imports.add_argument("upstream", choices=["openrazer"])
@@ -259,6 +264,12 @@ def main(arguments: list[str] | None = None) -> int:
         if args.migration_command == "summary":
             print(summary(root))
             return 0
+        if args.migration_command == "compare":
+            result = run_shadow_comparison(root, args.fixture, args.output)
+            print(f"HyperFlux Next shadow comparison: {result.status.upper()}")
+            print(f"Comparison: {result.comparison}")
+            print(f"Evidence: {result.evidence}")
+            return 0 if result.status == "matched" else 1
         destination = capture_inventory(root, args.source, args.path.resolve())
         print(f"Captured {args.source}: {destination.relative_to(root)}")
         return 0

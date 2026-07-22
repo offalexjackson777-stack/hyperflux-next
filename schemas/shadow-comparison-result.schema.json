@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/shadow-comparison-result-v1.json",
+  "title": "Typed HyperFlux shadow comparison result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "comparison_id",
+    "scenario_id",
+    "status",
+    "boundary",
+    "authority",
+    "side_effects",
+    "legacy_source",
+    "simulator_content_sha256",
+    "domains",
+    "checkpoints",
+    "differences",
+    "content_sha256"
+  ],
+  "properties": {
+    "schema": {"const": "hyperflux-shadow-comparison-result-v1"},
+    "comparison_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "scenario_id": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+    "status": {"enum": ["matched", "diverged"]},
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["test_fixture", "read_only"],
+      "properties": {"test_fixture": {"const": true}, "read_only": {"const": true}}
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hardware_claim_authority", "publication_authorized"],
+      "properties": {"hardware_claim_authority": {"const": false}, "publication_authorized": {"const": false}}
+    },
+    "side_effects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["private_identifiers_exported", "hardware_queried", "hardware_writes_executed"],
+      "properties": {
+        "private_identifiers_exported": {"const": false},
+        "hardware_queried": {"const": false},
+        "hardware_writes_executed": {"const": false}
+      }
+    },
+    "legacy_source": {"$ref": "https://hyperflux.dev/schemas/shadow-comparison-fixture-v1.json#/$defs/provenance"},
+    "simulator_content_sha256": {"$ref": "#/$defs/sha256"},
+    "domains": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["domain", "compared_checkpoints", "mismatches", "matched"],
+        "properties": {
+          "domain": {"$ref": "#/$defs/domain"},
+          "compared_checkpoints": {"type": "integer", "minimum": 1},
+          "mismatches": {"type": "integer", "minimum": 0},
+          "matched": {"type": "boolean"}
+        }
+      }
+    },
+    "checkpoints": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/checkpoint"}
+    },
+    "differences": {
+      "type": "array",
+      "maxItems": 1280,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sequence", "domain", "description"],
+        "properties": {
+          "sequence": {"type": "integer", "minimum": 0},
+          "domain": {"$ref": "#/$defs/domain"},
+          "description": {"type": "string", "minLength": 1, "maxLength": 256}
+        }
+      }
+    },
+    "content_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "domain": {"enum": ["profile-selection", "presence-state", "capabilities", "transaction-validation", "diagnostic-findings"]},
+    "applyOutcome": {
+      "enum": [
+        "applied",
+        "ignored-older-observation",
+        "rejected-stale-generation",
+        "rejected-receiver-absent",
+        "rejected-unknown-device",
+        "rejected-unavailable-route",
+        "rejected-unqualified-write",
+        "rejected-invalid-transition",
+        "rejected-transport-failure",
+        "recorded-malformed-observation"
+      ]
+    },
+    "profileMap": {"type": "object", "minProperties": 1, "additionalProperties": {"type": ["string", "null"]}},
+    "presenceMap": {"type": "object", "minProperties": 1, "additionalProperties": {"enum": ["available", "sleeping", "unavailable", "unknown"]}},
+    "capabilityMap": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}},
+    "diagnosticList": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{0,127}$"}},
+    "profileComparison": {"$ref": "#/$defs/profileComparisonObject"},
+    "profileComparisonObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["matched", "legacy", "next"],
+      "properties": {"matched": {"type": "boolean"}, "legacy": {"$ref": "#/$defs/profileMap"}, "next": {"$ref": "#/$defs/profileMap"}}
+    },
+    "presenceComparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["matched", "legacy", "next"],
+      "properties": {"matched": {"type": "boolean"}, "legacy": {"$ref": "#/$defs/presenceMap"}, "next": {"$ref": "#/$defs/presenceMap"}}
+    },
+    "capabilityComparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["matched", "legacy", "next"],
+      "properties": {"matched": {"type": "boolean"}, "legacy": {"$ref": "#/$defs/capabilityMap"}, "next": {"$ref": "#/$defs/capabilityMap"}}
+    },
+    "transactionComparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["matched", "legacy", "next"],
+      "properties": {"matched": {"type": "boolean"}, "legacy": {"$ref": "#/$defs/applyOutcome"}, "next": {"$ref": "#/$defs/applyOutcome"}}
+    },
+    "diagnosticComparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["matched", "legacy", "next"],
+      "properties": {"matched": {"type": "boolean"}, "legacy": {"$ref": "#/$defs/diagnosticList"}, "next": {"$ref": "#/$defs/diagnosticList"}}
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "event_kind", "matched"],
+      "properties": {
+        "sequence": {"type": "integer", "minimum": 0, "maximum": 4095},
+        "event_kind": {"type": "string", "minLength": 1, "maxLength": 128},
+        "matched": {"type": "boolean"},
+        "selected_profiles": {"$ref": "#/$defs/profileComparison"},
+        "presence_states": {"$ref": "#/$defs/presenceComparison"},
+        "capabilities": {"$ref": "#/$defs/capabilityComparison"},
+        "transaction_validation": {"$ref": "#/$defs/transactionComparison"},
+        "diagnostic_findings": {"$ref": "#/$defs/diagnosticComparison"}
+      },
+      "anyOf": [
+        {"required": ["selected_profiles"]},
+        {"required": ["presence_states"]},
+        {"required": ["capabilities"]},
+        {"required": ["transaction_validation"]},
+        {"required": ["diagnostic_findings"]}
+      ]
+    }
+  }
+}

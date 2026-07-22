@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/shadow-comparison-fixture-v1.json",
+  "title": "Sanitized read-only legacy decision oracle for HyperFlux shadow comparison",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "comparison_id", "provenance", "scenario", "legacy_decisions"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-shadow-comparison-fixture-v1"},
+    "comparison_id": {"$ref": "#/$defs/identifier"},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "scenario": {"$ref": "https://hyperflux.dev/schemas/simulator-scenario-v1.json"},
+    "legacy_decisions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {"$ref": "#/$defs/decision"}
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "gitObject": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "sourceRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "object"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1, "maxLength": 512},
+        "object": {"$ref": "#/$defs/gitObject"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "source_commit",
+        "source_records",
+        "comparison_mode",
+        "boundary",
+        "authority",
+        "side_effects",
+        "sanitization"
+      ],
+      "properties": {
+        "source_id": {"$ref": "#/$defs/identifier"},
+        "source_commit": {"$ref": "#/$defs/gitObject"},
+        "source_records": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {"$ref": "#/$defs/sourceRecord"}
+        },
+        "comparison_mode": {"const": "recorded-decisions-only"},
+        "boundary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["test_fixture", "read_only"],
+          "properties": {
+            "test_fixture": {"const": true},
+            "read_only": {"const": true}
+          }
+        },
+        "authority": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["hardware_claim_authority", "publication_authorized"],
+          "properties": {
+            "hardware_claim_authority": {"const": false},
+            "publication_authorized": {"const": false}
+          }
+        },
+        "side_effects": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["private_identifiers_exported", "hardware_queried", "hardware_writes_executed"],
+          "properties": {
+            "private_identifiers_exported": {"const": false},
+            "hardware_queried": {"const": false},
+            "hardware_writes_executed": {"const": false}
+          }
+        },
+        "sanitization": {"const": "no-private-identifiers-v1"}
+      }
+    },
+    "profileMap": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": ["string", "null"]}
+    },
+    "presenceMap": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"enum": ["available", "sleeping", "unavailable", "unknown"]}
+    },
+    "capabilityMap": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "array",
+        "uniqueItems": true,
+        "items": {"type": "string", "minLength": 1, "maxLength": 128}
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence"],
+      "properties": {
+        "sequence": {"type": "integer", "minimum": 0, "maximum": 4095},
+        "selected_profiles": {"$ref": "#/$defs/profileMap"},
+        "presence_states": {"$ref": "#/$defs/presenceMap"},
+        "capabilities": {"$ref": "#/$defs/capabilityMap"},
+        "transaction_validation": {
+          "enum": [
+            "applied",
+            "ignored-older-observation",
+            "rejected-stale-generation",
+            "rejected-receiver-absent",
+            "rejected-unknown-device",
+            "rejected-unavailable-route",
+            "rejected-unqualified-write",
+            "rejected-invalid-transition",
+            "rejected-transport-failure",
+            "recorded-malformed-observation"
+          ]
+        },
+        "diagnostic_findings": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{0,127}$"}
+        }
+      },
+      "anyOf": [
+        {"required": ["selected_profiles"]},
+        {"required": ["presence_states"]},
+        {"required": ["capabilities"]},
+        {"required": ["transaction_validation"]},
+        {"required": ["diagnostic_findings"]}
+      ]
+    }
+  }
+}

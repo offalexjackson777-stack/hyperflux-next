@@ -91,20 +91,20 @@ pub fn run_replay(scenario: &Scenario) -> Result<ReplayResult, SimulatorError> {
     })
 }
 
-struct QueuedEvent {
-    sequence: u64,
-    observed_at_ms: u64,
-    applied_at_ms: u64,
-    generation_id: hfx_domain::GenerationId,
-    event: SimulatorEvent,
+pub(crate) struct QueuedEvent {
+    pub(crate) sequence: u64,
+    pub(crate) observed_at_ms: u64,
+    pub(crate) applied_at_ms: u64,
+    pub(crate) generation_id: hfx_domain::GenerationId,
+    pub(crate) event: SimulatorEvent,
 }
 
-struct EventQueue {
+pub(crate) struct EventQueue {
     entries: BTreeMap<(u64, u64), QueuedEvent>,
 }
 
 impl EventQueue {
-    fn new(events: &[ScheduledEvent]) -> Result<Self, SimulatorError> {
+    pub(crate) fn new(events: &[ScheduledEvent]) -> Result<Self, SimulatorError> {
         let mut entries = BTreeMap::new();
         for (index, scheduled) in events.iter().enumerate() {
             let sequence = u64::try_from(index).map_err(|_| {
@@ -130,16 +130,16 @@ impl EventQueue {
         Ok(Self { entries })
     }
 
-    fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.entries.len()
     }
 
-    fn pop(&mut self) -> Option<QueuedEvent> {
+    pub(crate) fn pop(&mut self) -> Option<QueuedEvent> {
         self.entries.pop_first().map(|(_, event)| event)
     }
 }
 
-fn validate_scenario(scenario: &Scenario) -> Result<(), SimulatorError> {
+pub(crate) fn validate_scenario(scenario: &Scenario) -> Result<(), SimulatorError> {
     if scenario.schema != SCENARIO_SCHEMA {
         return Err(SimulatorError::InvalidScenario(
             "unsupported simulator scenario schema".to_owned(),

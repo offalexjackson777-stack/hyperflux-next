@@ -47,6 +47,7 @@ MATERIALS = (
     ("protocol-catalog", "protocol/v5/catalog.json", "file"),
     ("release-gates", "assurance/release-gates.json", "file"),
     ("replay-fixtures", "tests/fixtures/replay", "tree"),
+    ("shadow-fixtures", "tests/fixtures/shadow", "tree"),
     ("schema-tree", "schemas", "tree"),
     ("source-sbom", "assurance/generated/hyperflux-next.spdx.json", "file"),
     ("test-catalog", "verification/tests.json", "file"),
@@ -125,7 +126,8 @@ def git_changed_paths(root: Path, base: str) -> tuple[str, tuple[str, ...]]:
     return revision, tuple(sorted(paths))
 
 
-def _source_identity(root: Path) -> dict[str, object]:
+def source_identity(root: Path) -> dict[str, object]:
+    """Return the exact Git source and working-tree identity for evidence."""
     revision = _git_text(root, ["git", "rev-parse", "HEAD"], "source revision")
     if not re.fullmatch(r"[0-9a-f]{40}", revision):
         raise ModelError("source revision is not a lowercase Git commit")
@@ -455,7 +457,7 @@ def run_verification(
     changed_from: str | None = None,
 ) -> VerificationOutcome:
     root = root.resolve()
-    source = _source_identity(root)
+    source = source_identity(root)
     base_revision: str | None = None
     changed_paths: tuple[str, ...] | None = None
     if changed_from is not None:

@@ -52,6 +52,7 @@ KNOWN_RUNNERS = {
     "rust-clippy",
     "rust-unit",
     "simulator-contracts",
+    "migration-shadow-contracts",
     "cpp-sdk-contracts",
     "openrgb-adapter-contracts",
     "openrgb-thread-sanitizer",

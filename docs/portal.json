@@ -43,6 +43,7 @@
         {"id": "release-gates", "title": "Release gates", "summary": "Machine-readable blockers and the explicit publication interlock.", "source": "docs/generated/release-gates.md"},
         {"id": "supply-chain", "title": "Supply chain", "summary": "Dependency inventory, licenses, build policy, and generated SBOM.", "source": "docs/generated/supply-chain.md"},
         {"id": "migration", "title": "Migration ledger", "summary": "Reviewed disposition and destination for every legacy subsystem.", "source": "docs/generated/migration-ledger.md"},
+        {"id": "migration-shadow", "title": "Migration shadow", "summary": "Read-only semantic parity against exact sanitized legacy decisions.", "source": "docs/generated/migration-shadow.md"},
         {"id": "performance", "title": "Performance budgets", "summary": "Static limits and physical measurements required before release.", "source": "docs/generated/performance-budgets.md"},
         {"id": "formal-model", "title": "Formal model", "summary": "Bounded exploration of generations, leases, transactions, and delivery.", "source": "docs/generated/formal-model.md"},
         {"id": "github-governance", "title": "GitHub governance", "summary": "Immutable workflows, repository ownership, dependency automation, and publication locks.", "source": "docs/generated/github-governance.md"}

@@ -84,6 +84,19 @@ Inspect migration progress without changing files:
 ./hfx migration summary
 ```
 
+Run the canonical read-only semantic comparison against frozen, sanitized
+legacy decisions:
+
+```sh
+./hfx migration compare \
+  --fixture tests/fixtures/shadow/qualified-lifecycle-v1.json \
+  --output build/shadow-comparison
+```
+
+This compares profile selection, presence, capabilities, transaction
+validation, and diagnostic findings. It cannot access hardware or authorize a
+release; see the generated [migration shadow reference](docs/generated/migration-shadow.md).
+
 ## Repository Map
 
 | Path | Responsibility |
@@ -112,7 +125,7 @@ Inspect migration progress without changing files:
 | `packaging/generated/` | Generated non-activating systemd, udev, sysusers, tmpfiles, environment, and default configuration assets |
 | `uapi/` | Canonical kernel ABI model and bounds |
 | `generated/` | Canonical machine artifacts consumed across components |
-| `migration/` | Source identities, generated inventories, and reviewed subsystem decisions |
+| `migration/` | Source identities, generated inventories, reviewed subsystem decisions, and shadow source bindings |
 | `docs/architecture/` | Human design sources and decisions |
 | `docs/generated/` | Deterministic views generated from canonical data |
 | `docs/portal.json` | Three-audience local documentation portal authority |

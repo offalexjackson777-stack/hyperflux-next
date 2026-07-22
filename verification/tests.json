@@ -361,6 +361,38 @@
       "resume_policy": "rerun"
     },
     {
+      "id": "migration-shadow-contracts",
+      "title": "Read-only legacy decision shadow comparison",
+      "owned_domain": "migration",
+      "lanes": ["fast", "full-software"],
+      "runner": "migration-shadow-contracts",
+      "required_capabilities": [],
+      "hardware_requirement": "none",
+      "writes_hardware": false,
+      "expected_duration_seconds": 2,
+      "timeout_seconds": 120,
+      "dependencies": ["simulator-contracts", "python-unit"],
+      "isolation": "exclusive-process",
+      "cache_inputs": [
+        "Cargo.lock",
+        "Cargo.toml",
+        "crates/hfx-sim/**/*.rs",
+        "generated/profiles/catalog.json",
+        "migration/sources.json",
+        "migration/inventory/*.json",
+        "schemas/shadow-comparison-*.schema.json",
+        "tests/fixtures/shadow/*.json",
+        "tests/test_migration_shadow.py",
+        "tools/hfxdev/migration.py"
+      ],
+      "produced_evidence": [
+        "migration-shadow-result",
+        "migration-shadow-source-binding",
+        "migration-shadow-no-hardware"
+      ],
+      "resume_policy": "rerun"
+    },
+    {
       "id": "cpp-sdk-contracts",
       "title": "C++ SDK warning-fatal contract",
       "owned_domain": "sdk",
