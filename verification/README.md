@@ -4,94 +4,42 @@
 
 Defines typed verification nodes, dependencies, lanes, capabilities, side effects, evidence, timing, and change selection.
 
-**Status:** `implemented`  
-**Category:** `assurance`  
-**Atlas ID:** `verification`
+`implemented` | `assurance` | Atlas: `verification`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/generated/verification.md`](../docs/generated/verification.md)
+- [`CONTRIBUTING.md`](../CONTRIBUTING.md)
 
+## Scope
+
+**Owns**
 - Verification node catalog
 - Lane dependency graph
 - Evidence declarations
 
-It must never own:
-
+**Does not own**
 - Production policy
 - Implicit retries
 - Hardware authorization
 
-## Inputs And Outputs
-
-Inputs:
-
-- Subsystem risk boundaries
-- Runner capabilities
-- Changed repository paths
-
-Outputs:
-
-- Ordered test plan
-- Source-bound evidence
-- Release-gate impact
-
-## Public Contracts
-
-- Required nodes cannot be skipped
-- Unknown changes fail closed
-- Hardware writes are explicit
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`verification/tests.json`](tests.json)
 
-Generated projections:
-
-- [`verification/README.md`](README.md)
-- [`docs/generated/verification.md`](../docs/generated/verification.md)
-
-## Relationships
-
-Depends on:
-
-- [Architecture authority](../architecture/README.md)
-- [Assurance and release evidence](../assurance/README.md)
-- [Repository tooling](../tools/README.md)
-- [Contract tests](../tests/README.md)
-
-Used by:
-
-- [Documentation system](../docs/README.md)
-- [GitHub governance authority](../governance/README.md)
-- [Migration provenance](../migration/README.md)
-
 ## Verification
 
-- `repository-atlas-contracts`
-- `python-unit`
+Run `repository-atlas-contracts` `python-unit` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 2 declared projection(s).
 - Run `repository-atlas-contracts`, `python-unit`.
 - Review direct consumers: Documentation system, GitHub governance authority, Migration provenance.
 
-## Limitations
+## Relationships
 
-- A green software lane does not satisfy physical or publication gates
+- **Depends on:** [Architecture authority](../architecture/README.md), [Assurance and release evidence](../assurance/README.md), [Repository tooling](../tools/README.md), [Contract tests](../tests/README.md)
+- **Used by:** [Documentation system](../docs/README.md), [GitHub governance authority](../governance/README.md), [Migration provenance](../migration/README.md)
 
-## Safe Change Workflow
-
-1. Add or update the typed node
-2. Test dependency and changed-path selection
-3. Run the affected lane and preserve exact evidence
-
-## Related Documentation
-
-- [`docs/generated/verification.md`](../docs/generated/verification.md)
-- [`CONTRIBUTING.md`](../CONTRIBUTING.md)
-
-Return to the [Repository Atlas](../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

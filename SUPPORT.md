@@ -8,8 +8,8 @@ discussion are available.
 
 | Need | Next action |
 | --- | --- |
-| Understand the project | Read the [product overview](https://offalexjackson777-stack.github.io/hyperflux-next/users/overview.html) |
-| Check installation availability | Read [installation status](https://offalexjackson777-stack.github.io/hyperflux-next/users/installation.html) |
+| Understand the project | Read the [project overview](docs/user/overview.md) |
+| Check installation availability | Read [installation status](docs/generated/installation.md) |
 | Ask a usage or development question | Open a [Help discussion](https://github.com/offalexjackson777-stack/hyperflux-next/discussions/categories/help) |
 | Explore an early idea | Start an [Ideas discussion](https://github.com/offalexjackson777-stack/hyperflux-next/discussions/categories/ideas) |
 | Report incorrect behavior | Use the [bug form](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=bug_report.yml) |

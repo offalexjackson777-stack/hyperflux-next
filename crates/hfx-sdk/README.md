@@ -4,91 +4,44 @@
 
 Provides the typed Rust client contract used by production integrations and internal consumers.
 
-**Status:** `implemented`  
-**Category:** `runtime`  
-**Atlas ID:** `rust-sdk`
+`implemented` | `runtime` | Atlas: `rust-sdk`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/architecture/sdk.md`](../../docs/architecture/sdk.md)
+- [`docs/generated/bridge-protocol.md`](../../docs/generated/bridge-protocol.md)
 
+## Scope
+
+**Owns**
 - Rust client API
 - Identity and channel adaptation
 - Typed SDK errors
 
-It must never own:
-
+**Does not own**
 - Application presentation
 - Raw receiver reports
 - Bridge policy
 
-## Inputs And Outputs
-
-Inputs:
-
-- Versioned protocol
-- Domain and profile types
-- Local bridge channel
-
-Outputs:
-
-- Typed logical devices and events
-- Lease and lighting requests
-
-## Public Contracts
-
-- Negotiated protocol
-- Logical device identity
-- No raw transport escape hatch
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`crates/hfx-sdk/Cargo.toml`](Cargo.toml)
 - [`crates/hfx-sdk/src/lib.rs`](src/lib.rs)
 - [`crates/hfx-sdk/src/client.rs`](src/client.rs)
 
-Generated projections:
-
-- [`crates/hfx-sdk/README.md`](README.md)
-
-## Relationships
-
-Depends on:
-
-- [Rust workspace](../README.md)
-- [Versioned bridge protocol](../../protocol/README.md)
-- [Composable hardware profiles](../../profiles/README.md)
-
-Used by:
-
-- None.
-
 ## Verification
 
-- `rust-unit`
-- `protocol-contracts`
+Run `rust-unit` `protocol-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 1 declared projection(s).
 - Run `rust-unit`, `protocol-contracts`.
 - No direct subsystem consumer is declared; verify repository-facing outputs.
 
-## Limitations
+## Relationships
 
-- The Rust SDK is local-process infrastructure, not a network API
+- **Depends on:** [Rust workspace](../README.md), [Versioned bridge protocol](../../protocol/README.md), [Composable hardware profiles](../../profiles/README.md)
+- **Used by:** None
 
-## Safe Change Workflow
-
-1. Change the protocol catalog first when wire-visible
-2. Preserve typed compatibility
-3. Run SDK, protocol, bridge, and consumer tests
-
-## Related Documentation
-
-- [`docs/architecture/sdk.md`](../../docs/architecture/sdk.md)
-- [`docs/generated/bridge-protocol.md`](../../docs/generated/bridge-protocol.md)
-
-Return to the [Repository Atlas](../../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

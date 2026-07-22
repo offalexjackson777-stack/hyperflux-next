@@ -4,47 +4,26 @@
 
 Composes receiver, surface, and child identities with evidence-bound capabilities and independent routes.
 
-**Status:** `implemented`  
-**Category:** `architecture`  
-**Atlas ID:** `profiles`
+`implemented` | `architecture` | Atlas: `profiles`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/generated/supported-hardware.md`](../docs/generated/supported-hardware.md)
+- [`docs/architecture/device-knowledge.md`](../docs/architecture/device-knowledge.md)
 
+## Scope
+
+**Owns**
 - Identity predicates
 - Qualified capabilities
 - Evidence references
 
-It must never own:
-
+**Does not own**
 - Live observations
 - Desired lighting state
 - Guessed commands
 
-## Inputs And Outputs
-
-Inputs:
-
-- Reviewed evidence claims
-- Canonical capability vocabulary
-- Integration metadata references
-
-Outputs:
-
-- Compiled profile catalog
-- Kernel-safe receiver table
-- SDK profile bindings
-
-## Public Contracts
-
-- Exact identity plus public evidence gates writes
-- Children compose independently
-- Candidates inherit no authority
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`profiles/capabilities.json`](capabilities.json)
 - [`profiles/evidence/claims.json`](evidence/claims.json)
@@ -55,55 +34,19 @@ Canonical files:
 - [`profiles/candidates/razer-hyperflux-v2-2026-07-13.json`](candidates/razer-hyperflux-v2-2026-07-13.json)
 - [`profiles/candidates/razer-hyperflux-v2-2026-07-21.json`](candidates/razer-hyperflux-v2-2026-07-21.json)
 
-Generated projections:
-
-- [`profiles/README.md`](README.md)
-- [`generated/profiles/catalog.json`](../generated/profiles/catalog.json)
-- [`docs/generated/supported-hardware.md`](../docs/generated/supported-hardware.md)
-
-## Relationships
-
-Depends on:
-
-- [Architecture authority](../architecture/README.md)
-- [Schema contracts](../schemas/README.md)
-- [Application integration catalog](../integrations/README.md)
-
-Used by:
-
-- [Core policy engine](../crates/hfx-core/README.md)
-- [Device knowledge](../knowledge/README.md)
-- [Linux HID kernel module](../driver/kernel/README.md)
-- [OpenRazer compatibility adapter](../integrations/openrazer/README.md)
-- [OpenRGB adapter](../integrations/openrgb/README.md)
-- [Rust SDK](../crates/hfx-sdk/README.md)
-- [C++ SDK](../sdk/cpp/README.md)
-- [Python SDK](../sdk/python/README.md)
-- [Deterministic simulator](../crates/hfx-sim/README.md)
-
 ## Verification
 
-- `profile-contracts`
+Run `profile-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 3 declared projection(s).
 - Run `profile-contracts`.
-- Review direct consumers: Core policy engine, Device knowledge, Linux HID kernel module, OpenRazer compatibility adapter, OpenRGB adapter, Rust SDK, C++ SDK, Python SDK, Deterministic simulator.
+- Review direct consumers: Core policy engine, Device knowledge, Device qualification console, Linux HID kernel module, OpenRazer compatibility adapter, OpenRGB adapter, Rust SDK, C++ SDK, Python SDK, Deterministic simulator.
 
-## Limitations
+## Relationships
 
-- Only two child profiles currently carry physical qualification
+- **Depends on:** [Architecture authority](../architecture/README.md), [Schema contracts](../schemas/README.md), [Application integration catalog](../integrations/README.md)
+- **Used by:** [Core policy engine](../crates/hfx-core/README.md), [Device knowledge](../knowledge/README.md), [Device qualification console](../apps/device-qualification/README.md), [Linux HID kernel module](../driver/kernel/README.md), [OpenRazer compatibility adapter](../integrations/openrazer/README.md), [OpenRGB adapter](../integrations/openrgb/README.md), [Rust SDK](../crates/hfx-sdk/README.md), [C++ SDK](../sdk/cpp/README.md), [Python SDK](../sdk/python/README.md), [Deterministic simulator](../crates/hfx-sim/README.md)
 
-## Safe Change Workflow
-
-1. Add evidence before capability
-2. Regenerate every profile projection
-3. Run profile, integration, kernel, and change-selection contracts
-
-## Related Documentation
-
-- [`docs/generated/supported-hardware.md`](../docs/generated/supported-hardware.md)
-- [`docs/architecture/device-knowledge.md`](../docs/architecture/device-knowledge.md)
-
-Return to the [Repository Atlas](../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

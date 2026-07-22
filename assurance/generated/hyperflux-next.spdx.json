@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "HyperFlux Next source dependency inventory",
-  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/d6369b405db084b6a16cb830ca0e9ba12eb06f2fcd7bfeda59999348f167c74d",
+  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/2874becb4636df0d25308c3cdd27b18585424476379ec3ea74ea87a781344253",
   "creationInfo": {
     "created": "2026-07-20T00:00:00Z",
     "creators": [
@@ -968,32 +968,10 @@
       "comment": "Immutable GitHub Actions pin reviewed as v7.0.0."
     },
     {
-      "SPDXID": "SPDXRef-GitHubAction-actions-configure-pages-45bfe0192ca1faeb007ade9deae92b16b8254a0d",
-      "name": "actions/configure-pages",
-      "versionInfo": "45bfe0192ca1faeb007ade9deae92b16b8254a0d",
-      "downloadLocation": "https://github.com/actions/configure-pages",
-      "filesAnalyzed": false,
-      "licenseConcluded": "NOASSERTION",
-      "licenseDeclared": "MIT",
-      "copyrightText": "NOASSERTION",
-      "comment": "Immutable GitHub Actions pin reviewed as v6.0.0."
-    },
-    {
       "SPDXID": "SPDXRef-GitHubAction-actions-dependency-review-action-a1d282b36b6f3519aa1f3fc636f609c47dddb294",
       "name": "actions/dependency-review-action",
       "versionInfo": "a1d282b36b6f3519aa1f3fc636f609c47dddb294",
       "downloadLocation": "https://github.com/actions/dependency-review-action",
-      "filesAnalyzed": false,
-      "licenseConcluded": "NOASSERTION",
-      "licenseDeclared": "MIT",
-      "copyrightText": "NOASSERTION",
-      "comment": "Immutable GitHub Actions pin reviewed as v5.0.0."
-    },
-    {
-      "SPDXID": "SPDXRef-GitHubAction-actions-deploy-pages-cd2ce8fcbc39b97be8ca5fce6e763baed58fa128",
-      "name": "actions/deploy-pages",
-      "versionInfo": "cd2ce8fcbc39b97be8ca5fce6e763baed58fa128",
-      "downloadLocation": "https://github.com/actions/deploy-pages",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -1010,17 +988,6 @@
       "licenseDeclared": "MIT",
       "copyrightText": "NOASSERTION",
       "comment": "Immutable GitHub Actions pin reviewed as v7.0.1."
-    },
-    {
-      "SPDXID": "SPDXRef-GitHubAction-actions-upload-pages-artifact-fc324d3547104276b827a68afc52ff2a11cc49c9",
-      "name": "actions/upload-pages-artifact",
-      "versionInfo": "fc324d3547104276b827a68afc52ff2a11cc49c9",
-      "downloadLocation": "https://github.com/actions/upload-pages-artifact",
-      "filesAnalyzed": false,
-      "licenseConcluded": "NOASSERTION",
-      "licenseDeclared": "MIT",
-      "copyrightText": "NOASSERTION",
-      "comment": "Immutable GitHub Actions pin reviewed as v5.0.0."
     },
     {
       "SPDXID": "SPDXRef-GitHubAction-docker-build-push-action-53b7df96c91f9c12dcc8a07bcb9ccacbed38856a",
@@ -1473,6 +1440,11 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-ops-0.0.0-dev.1",
       "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-profiles-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-ops-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-hfx-protocol-0.0.0-dev.1"
     },
     {
@@ -1761,27 +1733,12 @@
       "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
     },
     {
-      "spdxElementId": "SPDXRef-GitHubAction-actions-configure-pages-45bfe0192ca1faeb007ade9deae92b16b8254a0d",
-      "relationshipType": "BUILD_DEPENDENCY_OF",
-      "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
-    },
-    {
       "spdxElementId": "SPDXRef-GitHubAction-actions-dependency-review-action-a1d282b36b6f3519aa1f3fc636f609c47dddb294",
       "relationshipType": "BUILD_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
     },
     {
-      "spdxElementId": "SPDXRef-GitHubAction-actions-deploy-pages-cd2ce8fcbc39b97be8ca5fce6e763baed58fa128",
-      "relationshipType": "BUILD_DEPENDENCY_OF",
-      "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
-    },
-    {
       "spdxElementId": "SPDXRef-GitHubAction-actions-upload-artifact-043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
-      "relationshipType": "BUILD_DEPENDENCY_OF",
-      "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
-    },
-    {
-      "spdxElementId": "SPDXRef-GitHubAction-actions-upload-pages-artifact-fc324d3547104276b827a68afc52ff2a11cc49c9",
       "relationshipType": "BUILD_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
     },

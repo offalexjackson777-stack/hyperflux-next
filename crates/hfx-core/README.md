@@ -4,93 +4,44 @@
 
 Owns lifecycle policy, receiver registry, leases, transactions, restoration intent, and typed diagnostics.
 
-**Status:** `implemented`  
-**Category:** `runtime`  
-**Atlas ID:** `core-runtime`
+`implemented` | `runtime` | Atlas: `core-runtime`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/architecture/bridge-core.md`](../../docs/architecture/bridge-core.md)
+- [`docs/architecture/persistence.md`](../../docs/architecture/persistence.md)
 
+## Scope
+
+**Owns**
 - Core state machines
 - Lease and transaction policy
 - Restoration intent
 
-It must never own:
-
+**Does not own**
 - Socket framing
 - Kernel I/O
 - Application presentation
 
-## Inputs And Outputs
-
-Inputs:
-
-- Typed observations
-- Profile decisions
-- Clock and persistence ports
-
-Outputs:
-
-- Deterministic actions
-- Events and diagnostics
-- Restoration decisions
-
-## Public Contracts
-
-- Generation-bound state
-- Terminal transaction outcomes
-- Port-based side effects
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`crates/hfx-core/Cargo.toml`](Cargo.toml)
 - [`crates/hfx-core/src/lib.rs`](src/lib.rs)
 - [`crates/hfx-core/src/coordinator.rs`](src/coordinator.rs)
 
-Generated projections:
-
-- [`crates/hfx-core/README.md`](README.md)
-
-## Relationships
-
-Depends on:
-
-- [Rust workspace](../README.md)
-- [Composable hardware profiles](../../profiles/README.md)
-- [Versioned bridge protocol](../../protocol/README.md)
-
-Used by:
-
-- [Bridge runtime](../hfx-bridge/README.md)
-- [Deterministic simulator](../hfx-sim/README.md)
-
 ## Verification
 
-- `rust-unit`
-- `formal-model-contracts`
+Run `rust-unit` `formal-model-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 1 declared projection(s).
 - Run `rust-unit`, `formal-model-contracts`.
 - Review direct consumers: Bridge runtime, Deterministic simulator.
 
-## Limitations
+## Relationships
 
-- The core never performs transport or filesystem I/O directly
+- **Depends on:** [Rust workspace](../README.md), [Composable hardware profiles](../../profiles/README.md), [Versioned bridge protocol](../../protocol/README.md)
+- **Used by:** [Bridge runtime](../hfx-bridge/README.md), [Deterministic simulator](../hfx-sim/README.md)
 
-## Safe Change Workflow
-
-1. Update one state-machine owner
-2. Add deterministic unit scenarios
-3. Run core, simulator, formal-model, and bridge contracts
-
-## Related Documentation
-
-- [`docs/architecture/bridge-core.md`](../../docs/architecture/bridge-core.md)
-- [`docs/architecture/persistence.md`](../../docs/architecture/persistence.md)
-
-Return to the [Repository Atlas](../../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

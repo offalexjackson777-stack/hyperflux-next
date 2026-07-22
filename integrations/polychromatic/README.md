@@ -4,89 +4,44 @@
 
 Exposes HyperFlux-backed devices to Polychromatic through a native bounded backend and explicit coexistence policy.
 
-**Status:** `implemented`  
-**Category:** `applications`  
-**Atlas ID:** `polychromatic-adapter`
+`implemented` | `applications` | Atlas: `polychromatic-adapter`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/architecture/integrations.md`](../../docs/architecture/integrations.md)
+- [`docs/generated/integrations.md`](../../docs/generated/integrations.md)
 
+## Scope
+
+**Owns**
 - Polychromatic backend projection
 - Client state mapping
 - Backend discovery patch
 
-It must never own:
-
+**Does not own**
 - OpenRazer global policy
 - Raw receiver access
 - Profile qualification
 
-## Inputs And Outputs
-
-Inputs:
-
-- SDK state
-- Generated OpenRazer presentation metadata
-- Polychromatic client contract
-
-Outputs:
-
-- Installable backend
-- Typed Polychromatic state
-
-## Public Contracts
-
-- Native backend discovery
-- No unrelated-device suppression
-- SDK-only writes
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`integrations/polychromatic/pyproject.toml`](pyproject.toml)
 - [`integrations/polychromatic/hyperflux_polychromatic/backend.py`](hyperflux_polychromatic/backend.py)
 - [`integrations/polychromatic/patches/0001-discover-native-backends.patch`](patches/0001-discover-native-backends.patch)
 
-Generated projections:
-
-- [`integrations/polychromatic/README.md`](README.md)
-
-## Relationships
-
-Depends on:
-
-- [OpenRazer compatibility adapter](../openrazer/README.md)
-- [Python SDK](../../sdk/python/README.md)
-
-Used by:
-
-- [Packaging and installation](../../packaging/README.md)
-
 ## Verification
 
-- `polychromatic-adapter-contracts`
+Run `polychromatic-adapter-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 1 declared projection(s).
 - Run `polychromatic-adapter-contracts`.
 - Review direct consumers: Packaging and installation.
 
-## Limitations
+## Relationships
 
-- Presentation depth is bounded by the current client extension points
+- **Depends on:** [OpenRazer compatibility adapter](../openrazer/README.md), [Python SDK](../../sdk/python/README.md)
+- **Used by:** [Packaging and installation](../../packaging/README.md)
 
-## Safe Change Workflow
-
-1. Update the backend contract
-2. Keep upstream discovery changes minimal
-3. Run Polychromatic, OpenRazer, and package contracts
-
-## Related Documentation
-
-- [`docs/architecture/integrations.md`](../../docs/architecture/integrations.md)
-- [`docs/generated/integrations.md`](../../docs/generated/integrations.md)
-
-Return to the [Repository Atlas](../../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

@@ -153,18 +153,6 @@ def container_invocation(
         ]
         if revision is not None:
             hfx_command.extend(["--changed-from", revision])
-    elif operation == "docs":
-        if output is None or lane is not None or revision is not None:
-            raise ModelError("CI docs requires only an output")
-        network = "none"
-        relative = _relative_output(root, output, "CI documentation output")
-        hfx_command = [
-            "/bin/bash",
-            "-lc",
-            'install -d -m 0700 "$HOME" && ./hfx docs build --output "$1" && exec ./hfx docs verify --site "$1"',
-            "hfx-docs",
-            relative,
-        ]
     else:
         raise ModelError(f"unsupported CI operation: {operation}")
 

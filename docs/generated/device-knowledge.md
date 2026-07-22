@@ -23,6 +23,9 @@ Bluetooth, direct USB, a product's own 2.4 GHz receiver, and the HyperFlux V2 re
 
 ## Candidate Detail
 
+<details>
+<summary><strong>Razer Basilisk V3 Pro</strong> · candidate-only · 2 open gaps</summary>
+
 ### Razer Basilisk V3 Pro
 
 HyperFlux route: `candidate-only`. Pinned code status: `cross-referenced`.
@@ -129,6 +132,11 @@ These method names are implementation vocabulary, not a complete product capabil
 Additional reviewed-link notes:
 
 - Source knowledge does not qualify the HyperFlux receiver route.
+
+</details>
+
+<details>
+<summary><strong>Razer Basilisk V3 Pro 35K</strong> · route-qualified · 2 open gaps</summary>
 
 ### Razer Basilisk V3 Pro 35K
 
@@ -240,6 +248,11 @@ Additional reviewed-link notes:
 
 - Only the exact 0x00CD HyperFlux child profile carries receiver-route authority.
 
+</details>
+
+<details>
+<summary><strong>Razer BlackWidow V3 Pro</strong> · candidate-only · 1 open gaps</summary>
+
 ### Razer BlackWidow V3 Pro
 
 HyperFlux route: `candidate-only`. Pinned code status: `cross-referenced`.
@@ -330,6 +343,11 @@ Additional reviewed-link notes:
 
 - Source knowledge does not qualify the HyperFlux receiver route.
 
+</details>
+
+<details>
+<summary><strong>Razer BlackWidow V4 Low-profile HyperSpeed</strong> · candidate-only · 2 open gaps</summary>
+
 ### Razer BlackWidow V4 Low-profile HyperSpeed
 
 HyperFlux route: `candidate-only`. Pinned code status: `missing`.
@@ -386,6 +404,11 @@ No exact record exists in either pinned Linux revision.
 Additional reviewed-link notes:
 
 - Neither pinned upstream revision contains an exact reviewed model record.
+
+</details>
+
+<details>
+<summary><strong>Razer BlackWidow V4 Low-profile Tenkeyless HyperSpeed</strong> · candidate-only · 3 open gaps</summary>
 
 ### Razer BlackWidow V4 Low-profile Tenkeyless HyperSpeed
 
@@ -453,6 +476,11 @@ Reviewed sources:
 Additional reviewed-link notes:
 
 - The pinned OpenRazer revision has no exact low-profile TKL record.
+
+</details>
+
+<details>
+<summary><strong>Razer BlackWidow V4 Mini HyperSpeed</strong> · candidate-only · 4 open gaps</summary>
 
 ### Razer BlackWidow V4 Mini HyperSpeed
 
@@ -550,6 +578,11 @@ Additional reviewed-link notes:
 - Source knowledge does not qualify the HyperFlux receiver route.
 - The pinned OpenRGB revision has no exact V4 Mini record; its V3 Mini entries use different identities and are intentionally not linked.
 
+</details>
+
+<details>
+<summary><strong>Razer BlackWidow V4 Tenkeyless HyperSpeed</strong> · candidate-only · 1 open gaps</summary>
+
 ### Razer BlackWidow V4 Tenkeyless HyperSpeed
 
 HyperFlux route: `candidate-only`. Pinned code status: `cross-referenced`.
@@ -635,6 +668,11 @@ Additional reviewed-link notes:
 
 - OpenRGB shortens the presentation name to TKL; the PID pairs match the reviewed OpenRazer records.
 
+</details>
+
+<details>
+<summary><strong>Razer Cobra HyperSpeed</strong> · candidate-only · 3 open gaps</summary>
+
 ### Razer Cobra HyperSpeed
 
 HyperFlux route: `candidate-only`. Pinned code status: `missing`.
@@ -686,6 +724,11 @@ No exact record exists in either pinned Linux revision.
 Additional reviewed-link notes:
 
 - The plain Razer Cobra record is intentionally not treated as Cobra HyperSpeed.
+
+</details>
+
+<details>
+<summary><strong>Razer Cobra Pro</strong> · candidate-only · 1 open gaps</summary>
 
 ### Razer Cobra Pro
 
@@ -785,6 +828,11 @@ Additional reviewed-link notes:
 
 - Source knowledge does not qualify the HyperFlux receiver route.
 
+</details>
+
+<details>
+<summary><strong>Razer DeathStalker V2 Pro</strong> · candidate-only · 1 open gaps</summary>
+
 ### Razer DeathStalker V2 Pro
 
 HyperFlux route: `candidate-only`. Pinned code status: `cross-referenced`.
@@ -869,6 +917,11 @@ These method names are implementation vocabulary, not a complete product capabil
 Additional reviewed-link notes:
 
 - Source knowledge does not qualify the HyperFlux receiver route.
+
+</details>
+
+<details>
+<summary><strong>Razer DeathStalker V2 Pro Tenkeyless</strong> · route-qualified · 1 open gaps</summary>
 
 ### Razer DeathStalker V2 Pro Tenkeyless
 
@@ -955,6 +1008,11 @@ These method names are implementation vocabulary, not a complete product capabil
 Additional reviewed-link notes:
 
 - Only the exact 0x0296 HyperFlux child profile carries receiver-route authority.
+
+</details>
+
+<details>
+<summary><strong>Razer Naga V2 Pro</strong> · candidate-only · 2 open gaps</summary>
 
 ### Razer Naga V2 Pro
 
@@ -1060,6 +1118,8 @@ Additional reviewed-link notes:
 
 - The Naga V2 Pro and Naga Pro V2 naming difference is explicitly reviewed, not heuristically merged.
 - The pinned sources disagree on lighting slot count; no topology is promoted from that conflict.
+
+</details>
 
 ## Assurance Vocabulary
 

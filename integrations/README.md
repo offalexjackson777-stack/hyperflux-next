@@ -4,94 +4,42 @@
 
 Defines application-neutral adapter identities, upstream pins, coexistence rules, and SDK-only transport boundaries.
 
-**Status:** `implemented`  
-**Category:** `applications`  
-**Atlas ID:** `integrations`
+`implemented` | `applications` | Atlas: `integrations`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/architecture/integrations.md`](../docs/architecture/integrations.md)
+- [`docs/generated/integrations.md`](../docs/generated/integrations.md)
 
+## Scope
+
+**Owns**
 - Integration catalog
 - Exact upstream revisions
 - Adapter capability declarations
 
-It must never own:
-
+**Does not own**
 - Receiver transport
 - Profile qualification
 - Raw HID or USB access
 
-## Inputs And Outputs
-
-Inputs:
-
-- Architecture boundaries
-- Pinned upstream metadata
-- SDK contracts
-
-Outputs:
-
-- Generated integration bindings
-- Adapter build inputs
-
-## Public Contracts
-
-- Adapters use only the SDK
-- Upstream names never grant write authority
-- Coexistence is explicit
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`integrations/catalog.json`](catalog.json)
 
-Generated projections:
-
-- [`integrations/README.md`](README.md)
-- [`generated/integrations/catalog.json`](../generated/integrations/catalog.json)
-- [`docs/generated/integrations.md`](../docs/generated/integrations.md)
-
-## Relationships
-
-Depends on:
-
-- [Architecture authority](../architecture/README.md)
-- [Schema contracts](../schemas/README.md)
-
-Used by:
-
-- [Device knowledge](../knowledge/README.md)
-- [OpenRazer compatibility adapter](openrazer/README.md)
-- [OpenRGB adapter](openrgb/README.md)
-- [Composable hardware profiles](../profiles/README.md)
-- [C++ SDK](../sdk/cpp/README.md)
-- [Python SDK](../sdk/python/README.md)
-
 ## Verification
 
-- `integration-contracts`
+Run `integration-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 3 declared projection(s).
 - Run `integration-contracts`.
 - Review direct consumers: Device knowledge, OpenRazer compatibility adapter, OpenRGB adapter, Composable hardware profiles, C++ SDK, Python SDK.
 
-## Limitations
+## Relationships
 
-- Catalog inclusion describes an adapter contract, not hardware qualification
+- **Depends on:** [Architecture authority](../architecture/README.md), [Schema contracts](../schemas/README.md)
+- **Used by:** [Device knowledge](../knowledge/README.md), [OpenRazer compatibility adapter](openrazer/README.md), [OpenRGB adapter](openrgb/README.md), [Composable hardware profiles](../profiles/README.md), [C++ SDK](../sdk/cpp/README.md), [Python SDK](../sdk/python/README.md)
 
-## Safe Change Workflow
-
-1. Update the canonical integration record
-2. Regenerate all language bindings
-3. Run integration and affected adapter contracts
-
-## Related Documentation
-
-- [`docs/architecture/integrations.md`](../docs/architecture/integrations.md)
-- [`docs/generated/integrations.md`](../docs/generated/integrations.md)
-
-Return to the [Repository Atlas](../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

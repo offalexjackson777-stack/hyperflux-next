@@ -299,6 +299,7 @@ mod tests {
             loaded_module_identity: Some("installed".to_owned()),
             service_state: ServiceState::Active,
             bridge: Some(empty_bridge()),
+            legacy_v2_stack_detected: false,
         }
     }
 

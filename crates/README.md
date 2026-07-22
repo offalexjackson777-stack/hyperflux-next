@@ -4,94 +4,43 @@
 
 Coordinates the Rust dependency graph and compile-time ownership boundaries across production and simulation crates.
 
-**Status:** `implemented`  
-**Category:** `runtime`  
-**Atlas ID:** `rust-workspace`
+`implemented` | `runtime` | Atlas: `rust-workspace`
 
-## Ownership
-
-This subsystem owns:
-
-- Workspace membership
-- Shared dependency versions
-- Rust build graph
-
-It must never own:
-
-- Crate-specific policy
-- Generated domain authority
-- Hardware qualification
-
-## Inputs And Outputs
-
-Inputs:
-
-- Canonical schemas
-- Pinned toolchain
-- Crate manifests
-
-Outputs:
-
-- Reproducible Rust workspace
-- Dependency lock
-
-## Public Contracts
-
-- Warning-fatal builds
-- Formatting and lint gates
-- No undeclared crate ownership
-
-## Source And Generated Files
-
-Canonical files:
-
-- [`Cargo.toml`](../Cargo.toml)
-- [`Cargo.lock`](../Cargo.lock)
-
-Generated projections:
-
-- [`crates/README.md`](README.md)
-
-## Relationships
-
-Depends on:
-
-- [Architecture authority](../architecture/README.md)
-- [Schema contracts](../schemas/README.md)
-- [Pinned development toolchains](../toolchains/README.md)
-
-Used by:
-
-- [Core policy engine](hfx-core/README.md)
-- [Kernel transport adapter](hfx-kernel-transport/README.md)
-- [Rust SDK](hfx-sdk/README.md)
-- [Contract tests](../tests/README.md)
-
-## Verification
-
-- `rust-format`
-- `rust-clippy`
-- `rust-unit`
-
-Change impact:
-
-- Regenerate 1 declared projection(s).
-- Run `rust-format`, `rust-clippy`, `rust-unit`.
-- Review direct consumers: Core policy engine, Kernel transport adapter, Rust SDK, Contract tests.
-
-## Limitations
-
-- Workspace success does not validate kernel or application adapters
-
-## Safe Change Workflow
-
-1. Change the narrow crate manifest
-2. Refresh the lock only when required
-3. Run format, clippy, unit, and affected integration tests
-
-## Related Documentation
+## Start Here
 
 - [`docs/architecture/bridge-core.md`](../docs/architecture/bridge-core.md)
 - [`docs/generated/development-environment.md`](../docs/generated/development-environment.md)
 
-Return to the [Repository Atlas](../docs/generated/repository-atlas.md).
+## Scope
+
+**Owns**
+- Workspace membership
+- Shared dependency versions
+- Rust build graph
+
+**Does not own**
+- Crate-specific policy
+- Generated domain authority
+- Hardware qualification
+
+## Change Here
+
+- [`Cargo.toml`](../Cargo.toml)
+- [`Cargo.lock`](../Cargo.lock)
+
+## Verification
+
+Run `rust-format` `rust-clippy` `rust-unit` after changing this area.
+
+Before opening a pull request:
+
+- Regenerate 1 declared projection(s).
+- Run `rust-format`, `rust-clippy`, `rust-unit`.
+- Review direct consumers: Core policy engine, Device qualification console, Kernel transport adapter, Rust SDK, Contract tests.
+
+## Relationships
+
+- **Depends on:** [Architecture authority](../architecture/README.md), [Schema contracts](../schemas/README.md), [Pinned development toolchains](../toolchains/README.md)
+- **Used by:** [Core policy engine](hfx-core/README.md), [Device qualification console](../apps/device-qualification/README.md), [Kernel transport adapter](hfx-kernel-transport/README.md), [Rust SDK](hfx-sdk/README.md), [Contract tests](../tests/README.md)
+
+See the [Repository Atlas](../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

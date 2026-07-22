@@ -4,51 +4,30 @@
 
 Defines repository ownership, immutable automation, public collaboration, remote synchronization, dependency policy, and product-publication locks from one authority.
 
-**Status:** `policy`  
-**Category:** `governance`  
-**Atlas ID:** `governance`
+`policy` | `governance` | Atlas: `governance`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/generated/github-governance.md`](../docs/generated/github-governance.md)
+- [`CONTRIBUTING.md`](../CONTRIBUTING.md)
+- [`SUPPORT.md`](../SUPPORT.md)
+- [`SECURITY.md`](../SECURITY.md)
+- [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md)
 
+## Scope
+
+**Owns**
 - GitHub governance policy
 - Required-check plan
 - Generated community files
 - Path-to-license policy
 
-It must never own:
-
+**Does not own**
 - Product release approval
 - Hardware-write authorization
 - Unreviewed external-app installation
 
-## Inputs And Outputs
-
-Inputs:
-
-- Architecture publication interlock
-- Verification graph
-- Maintainer policy
-
-Outputs:
-
-- Pinned workflows
-- Issue forms
-- Actions evidence summaries
-- Public repository synchronization
-- Protection, collaboration, security, and service-evaluation plans
-
-## Public Contracts
-
-- Actions are SHA pinned
-- Verification summaries are source-bound
-- Protected linear history is required
-- Public source and Pages do not authorize a product release
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`governance/github.json`](github.json)
 - [`governance/licensing.json`](licensing.json)
@@ -57,73 +36,19 @@ Canonical files:
 - [`SECURITY.md`](../SECURITY.md)
 - [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md)
 
-Generated projections:
-
-- [`README.md`](../README.md)
-- [`docs/assets/badge-state.svg`](../docs/assets/badge-state.svg)
-- [`docs/assets/badge-license.svg`](../docs/assets/badge-license.svg)
-- [`governance/README.md`](README.md)
-- [`governance/generated/github-protection-plan.json`](generated/github-protection-plan.json)
-- [`governance/generated/github-labels.json`](generated/github-labels.json)
-- [`governance/generated/github-experience-plan.json`](generated/github-experience-plan.json)
-- [`docs/generated/github-governance.md`](../docs/generated/github-governance.md)
-- [`docs/legal/licensing.md`](../docs/legal/licensing.md)
-- [`.github/CODEOWNERS`](../.github/CODEOWNERS)
-- [`.github/pull_request_template.md`](../.github/pull_request_template.md)
-- [`.github/ISSUE_TEMPLATE/config.yml`](../.github/ISSUE_TEMPLATE/config.yml)
-- [`.github/ISSUE_TEMPLATE/bug_report.yml`](../.github/ISSUE_TEMPLATE/bug_report.yml)
-- [`.github/ISSUE_TEMPLATE/device_qualification.yml`](../.github/ISSUE_TEMPLATE/device_qualification.yml)
-- [`.github/ISSUE_TEMPLATE/hardware_research.yml`](../.github/ISSUE_TEMPLATE/hardware_research.yml)
-- [`.github/ISSUE_TEMPLATE/documentation.yml`](../.github/ISSUE_TEMPLATE/documentation.yml)
-- [`.github/ISSUE_TEMPLATE/feature_request.yml`](../.github/ISSUE_TEMPLATE/feature_request.yml)
-- [`.github/dependabot.yml`](../.github/dependabot.yml)
-- [`.github/release.yml`](../.github/release.yml)
-- [`.github/workflows/verification.yml`](../.github/workflows/verification.yml)
-- [`.github/workflows/full-verification.yml`](../.github/workflows/full-verification.yml)
-- [`.github/workflows/documentation.yml`](../.github/workflows/documentation.yml)
-- [`.github/workflows/repository-experience.yml`](../.github/workflows/repository-experience.yml)
-- [`.github/workflows/pages.yml`](../.github/workflows/pages.yml)
-- [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml)
-- [`.github/workflows/dependency-review.yml`](../.github/workflows/dependency-review.yml)
-
-## Relationships
-
-Depends on:
-
-- [Architecture authority](../architecture/README.md)
-- [Assurance and release evidence](../assurance/README.md)
-- [Verification graph](../verification/README.md)
-
-Used by:
-
-- [Documentation system](../docs/README.md)
-
 ## Verification
 
-- `governance-contracts`
+Run `governance-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
-- Regenerate 26 declared projection(s).
+- Regenerate 23 declared projection(s).
 - Run `governance-contracts`.
 - Review direct consumers: Documentation system.
 
-## Limitations
+## Relationships
 
-- Remote synchronization applies only reviewed public-source components and cannot grant product publication or hardware authority
+- **Depends on:** [Architecture authority](../architecture/README.md), [Assurance and release evidence](../assurance/README.md), [Verification graph](../verification/README.md)
+- **Used by:** [Documentation system](../docs/README.md)
 
-## Safe Change Workflow
-
-1. Update the relevant governance authority
-2. Regenerate every affected GitHub or licensing projection
-3. Run governance, licensing, generated-freshness, and workflow checks
-
-## Related Documentation
-
-- [`docs/generated/github-governance.md`](../docs/generated/github-governance.md)
-- [`CONTRIBUTING.md`](../CONTRIBUTING.md)
-- [`SUPPORT.md`](../SUPPORT.md)
-- [`SECURITY.md`](../SECURITY.md)
-- [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md)
-
-Return to the [Repository Atlas](../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

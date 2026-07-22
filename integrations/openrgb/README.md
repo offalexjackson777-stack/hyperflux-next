@@ -4,91 +4,44 @@
 
 Projects qualified SDK devices into native OpenRGB controllers while preserving upstream presentation metadata.
 
-**Status:** `implemented`  
-**Category:** `applications`  
-**Atlas ID:** `openrgb-adapter`
+`implemented` | `applications` | Atlas: `openrgb-adapter`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/architecture/integrations.md`](../../docs/architecture/integrations.md)
+- [`docs/generated/integrations.md`](../../docs/generated/integrations.md)
 
+## Scope
+
+**Owns**
 - OpenRGB controller projection
 - UI coordination
 - Bounded dispatch queue
 
-It must never own:
-
+**Does not own**
 - Receiver encoding
 - Qualification policy
 - Direct USB access
 
-## Inputs And Outputs
-
-Inputs:
-
-- SDK snapshots and events
-- Qualified profile metadata
-- Pinned OpenRGB registry
-
-Outputs:
-
-- OpenRGB plugin module
-- Controller and zone presentation
-
-## Public Contracts
-
-- SDK-only transport
-- One controller per qualified child
-- Bounded lifecycle and dispatch
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`integrations/openrgb/CMakeLists.txt`](CMakeLists.txt)
 - [`integrations/openrgb/src/openrgb_plugin.cpp`](src/openrgb_plugin.cpp)
 - [`integrations/openrgb/src/runtime_core.cpp`](src/runtime_core.cpp)
 
-Generated projections:
-
-- [`integrations/openrgb/README.md`](README.md)
-
-## Relationships
-
-Depends on:
-
-- [Application integration catalog](../README.md)
-- [Composable hardware profiles](../../profiles/README.md)
-- [C++ SDK](../../sdk/cpp/README.md)
-
-Used by:
-
-- [Packaging and installation](../../packaging/README.md)
-
 ## Verification
 
-- `openrgb-adapter-contracts`
-- `openrgb-thread-sanitizer`
+Run `openrgb-adapter-contracts` `openrgb-thread-sanitizer` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 1 declared projection(s).
 - Run `openrgb-adapter-contracts`, `openrgb-thread-sanitizer`.
 - Review direct consumers: Packaging and installation.
 
-## Limitations
+## Relationships
 
-- Physical OpenRGB behavior remains qualified only for the current public profiles
+- **Depends on:** [Application integration catalog](../README.md), [Composable hardware profiles](../../profiles/README.md), [C++ SDK](../../sdk/cpp/README.md)
+- **Used by:** [Packaging and installation](../../packaging/README.md)
 
-## Safe Change Workflow
-
-1. Change the narrow controller or runtime owner
-2. Compile against the exact upstream pin
-3. Run adapter, sanitizer, SDK, and package contracts
-
-## Related Documentation
-
-- [`docs/architecture/integrations.md`](../../docs/architecture/integrations.md)
-- [`docs/generated/integrations.md`](../../docs/generated/integrations.md)
-
-Return to the [Repository Atlas](../../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

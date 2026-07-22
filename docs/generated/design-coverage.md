@@ -441,7 +441,7 @@ Evidence: [`integrations/catalog.json`](../../integrations/catalog.json), [`Carg
 
 ### 60. Documentation Portal
 
-Evidence: [`docs/portal.json`](../../docs/portal.json), [`schemas/documentation-portal.schema.json`](../../schemas/documentation-portal.schema.json), [`tools/hfxdev/portal.py`](../../tools/hfxdev/portal.py), [`tests/test_portal.py`](../../tests/test_portal.py), [`.github/workflows/documentation.yml`](../../.github/workflows/documentation.yml).
+Evidence: [`docs/architecture/decisions/github-native-documentation.md`](../../docs/architecture/decisions/github-native-documentation.md), [`README.md`](../../README.md), [`tools/hfxdev/generators/readme.py`](../../tools/hfxdev/generators/readme.py), [`tools/hfxdev/generators/atlas.py`](../../tools/hfxdev/generators/atlas.py), [`tests/test_repository_experience.py`](../../tests/test_repository_experience.py), [`verification/tests.json`](../../verification/tests.json).
 
 - No remaining gap in the current software scope.
 

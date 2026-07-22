@@ -3,21 +3,24 @@
 **Evidence-bound Linux support for devices paired through Razer HyperFlux V2.**
 
 [![Verification](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/verification.yml/badge.svg)](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/verification.yml)
-[![Documentation](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/pages.yml/badge.svg)](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/pages.yml)
+[![CodeQL](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/codeql.yml/badge.svg)](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/codeql.yml)
 ![Development state](docs/assets/badge-state.svg)
 ![License](docs/assets/badge-license.svg)
 
 > [!IMPORTANT]
 > **Unreleased and evidence-bound.** Public source is available for review; no supported product release or package channel exists.
 
-## Start
+## Choose A Path
 
 | I need to... | Go to... |
 | --- | --- |
-| Understand or eventually install HyperFlux | [Documentation](https://offalexjackson777-stack.github.io/hyperflux-next/) and [installation status](https://offalexjackson777-stack.github.io/hyperflux-next/users/installation.html) |
-| Check hardware evidence | [Device Lab](https://offalexjackson777-stack.github.io/hyperflux-next/devices/) |
-| Understand or change the code | [Architecture](https://offalexjackson777-stack.github.io/hyperflux-next/developers/architecture.html), [Repository Atlas](https://offalexjackson777-stack.github.io/hyperflux-next/atlas/), and [Contributing](CONTRIBUTING.md) |
-| Review blockers and evidence | [Repository State](https://offalexjackson777-stack.github.io/hyperflux-next/state/) and [Roadmap](https://github.com/users/offalexjackson777-stack/projects/1) |
+| Understand the project | [Project overview](docs/user/overview.md) |
+| Check installation availability | [Installation status](docs/generated/installation.md) |
+| See hardware evidence | [Supported hardware](docs/generated/supported-hardware.md) and [device knowledge](docs/generated/device-knowledge.md) |
+| Inspect an installed candidate | [Local Device Qualification Console](apps/device-qualification/README.md) |
+| Understand or change the code | [Architecture](docs/architecture/design-book.md), [Repository Atlas](docs/generated/repository-atlas.md), and [Contributing](CONTRIBUTING.md) |
+| Review blockers and evidence | [Release gates](docs/generated/release-gates.md), [verification graph](docs/generated/verification.md), and [Roadmap](https://github.com/users/offalexjackson777-stack/projects/1) |
+| Get help or report a bug | [Support](SUPPORT.md) and [issue forms](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new/choose) |
 | Report a vulnerability | [Security policy](SECURITY.md) and [private reporting](https://github.com/offalexjackson777-stack/hyperflux-next/security/advisories/new) |
 
 ## Architecture
@@ -45,11 +48,24 @@ ordinary HID input and transports bounded generation-bound envelopes.
 | Software | 5 of 10 release gates are ready in software. |
 | Hardware | 2 receiver routes have bounded physical evidence; 10 candidates remain research only. |
 | Remaining evidence | 3 hardware gate and 1 lifecycle gate remain; known gaps stay explicit. |
-| Documentation portal | Static and telemetry-free; no live device query or hardware write |
+| Local qualification | Installed, loopback-only identity and telemetry checks; hardware-changing runners remain explicitly unavailable |
 
-This table and the Pages home consume the same generated projection. [Repository
-State](https://offalexjackson777-stack.github.io/hyperflux-next/state/) shows the detailed ledgers without changing the meaning
-of these terms.
+This compact status is generated from [`generated/public-readiness.json`](generated/public-readiness.json).
+Detailed claims remain in the linked evidence ledgers rather than being repeated here.
+
+## Repository Map
+
+| Area | Primary locations |
+| --- | --- |
+| User and contributor guidance | [`docs/`](docs/), [`CONTRIBUTING.md`](CONTRIBUTING.md), [`SUPPORT.md`](SUPPORT.md) |
+| Installed experiences | [`apps/`](apps/), [`integrations/`](integrations/) |
+| Runtime and kernel | [`crates/`](crates/), [`runtime/`](runtime/), [`driver/`](driver/), [`uapi/`](uapi/) |
+| Public interfaces | [`sdk/`](sdk/), [`protocol/`](protocol/), [`schemas/`](schemas/), [`errors/`](errors/) |
+| Hardware knowledge | [`profiles/`](profiles/), [`knowledge/`](knowledge/) |
+| Evidence and delivery | [`tests/`](tests/), [`verification/`](verification/), [`assurance/`](assurance/), [`packaging/`](packaging/) |
+| Repository authority | [`architecture/`](architecture/), [`governance/`](governance/), [`tools/`](tools/) |
+
+The generated [Repository Atlas](docs/generated/repository-atlas.md) is the canonical ownership and dependency map.
 
 ## Verify A Change
 
@@ -72,7 +88,7 @@ granting hardware or release authority.
   transport authority.
 - Release, package, tag, and hardware-writing workflows are absent until a
   separate authorization changes their canonical interlocks.
-- The [Repository Atlas](https://offalexjackson777-stack.github.io/hyperflux-next/atlas/) is the authoritative directory and
+- The [Repository Atlas](docs/generated/repository-atlas.md) is the authoritative directory and
   ownership map; folder READMEs are generated projections.
 
 </details>

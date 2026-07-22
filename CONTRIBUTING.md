@@ -8,7 +8,7 @@ device, package, or release is supported.
 
 - Start from the [structured issue form chooser](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new/choose)
   when reporting a bug, proposing a feature, or contributing documentation.
-- Read the [Repository Atlas](https://offalexjackson777-stack.github.io/hyperflux-next/atlas/)
+- Read the [Repository Atlas](docs/generated/repository-atlas.md)
   before changing an unfamiliar area. It identifies ownership, canonical
   inputs, generated projections, dependencies, and verification nodes.
 - Use [Hardware research](.github/ISSUE_TEMPLATE/hardware_research.yml) for
@@ -38,7 +38,7 @@ Repository automation is owned by
 [`governance/github.json`](governance/github.json). Shared device and protocol
 facts have their own canonical schemas. Run `./hfx generate` after changing an
 authority; do not hand-edit generated workflows, issue forms, CODEOWNERS,
-folder READMEs, bindings, catalogs, or portal projections.
+folder READMEs, bindings, catalogs, or repository projections.
 
 Generated documentation links back to its source or to the Repository Atlas.
 If a generated page is wrong, fix the authority named there.

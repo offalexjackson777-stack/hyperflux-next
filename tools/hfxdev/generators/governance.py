@@ -123,18 +123,6 @@ def _verification_summary(output: str) -> dict[str, Any]:
     }
 
 
-def _portal_summary(output: str) -> dict[str, Any]:
-    return {
-        "name": "Publish generated portal summary",
-        "if": "${{ always() }}",
-        "env": {"HFX_SOURCE_REVISION": EXACT_SOURCE_REVISION},
-        "run": (
-            f"./hfx ci pages-summary --manifest {output}/portal-build-manifest.json "
-            '--output "$GITHUB_STEP_SUMMARY" --source-revision "$HFX_SOURCE_REVISION"'
-        ),
-    }
-
-
 def verification_workflow(governance: GitHubGovernance) -> str:
     steps = [_checkout(governance), _cache(governance), *_build_environment(governance)]
     steps.extend(
@@ -225,183 +213,6 @@ def full_verification_workflow(governance: GitHubGovernance) -> str:
                 "timeout-minutes": 90,
                 "steps": steps,
             }
-        },
-    }
-    return _yaml(value, governance)
-
-
-def documentation_workflow(governance: GitHubGovernance) -> str:
-    steps = [_checkout(governance), *_build_environment(governance)]
-    steps.extend(
-        [
-            {
-                "name": "Build and verify the offline portal",
-                "run": './hfx ci docs --image "$HFX_CI_IMAGE" --output build/ci/portal',
-            },
-            _portal_summary("build/ci/portal"),
-            _upload(
-                governance,
-                name="hyperflux-documentation-portal",
-                path="build/ci/portal",
-                retention_days=14,
-            ),
-        ]
-    )
-    value = {
-        "name": "Documentation",
-        "on": {
-            "pull_request": {},
-            "workflow_dispatch": {},
-            "push": {
-                "branches": [governance.default_branch],
-                "paths": [
-                    "docs/**",
-                    "schemas/documentation-portal.schema.json",
-                    "tools/hfxdev/portal*.py",
-                    "tools/hfxdev/generators/**",
-                    "governance/github.json",
-                ],
-            },
-        },
-        "permissions": {"contents": "read"},
-        "concurrency": {
-            "group": "documentation-${{ github.ref }}",
-            "cancel-in-progress": True,
-        },
-        "env": {"HFX_CI_IMAGE": governance.development_image},
-        "jobs": {
-            "portal-artifact": {
-                "name": "Portal contracts",
-                "runs-on": governance.runner,
-                "timeout-minutes": 30,
-                "steps": steps,
-            }
-        },
-    }
-    return _yaml(value, governance)
-
-
-def repository_experience_workflow(governance: GitHubGovernance) -> str:
-    def job(name: str, output: str, artifact: str) -> dict[str, Any]:
-        steps = [_checkout(governance), *_build_environment(governance)]
-        steps.extend(
-            [
-                {
-                    "name": f"Build and verify {name.lower()}",
-                    "run": f'./hfx ci docs --image "$HFX_CI_IMAGE" --output {output}',
-                },
-                _portal_summary(output),
-                _upload(
-                    governance,
-                    name=artifact,
-                    path=output,
-                    retention_days=14,
-                ),
-            ]
-        )
-        return {
-            "name": name,
-            "runs-on": governance.runner,
-            "timeout-minutes": 30,
-            "steps": steps,
-        }
-
-    value = {
-        "name": "Repository experience",
-        "on": {"pull_request": {}, "workflow_dispatch": {}},
-        "permissions": {"contents": "read"},
-        "concurrency": {
-            "group": "repository-experience-${{ github.ref }}",
-            "cancel-in-progress": True,
-        },
-        "env": {"HFX_CI_IMAGE": governance.development_image},
-        "jobs": {
-            "link-checks": job(
-                "Link checks", "build/ci/links", "hyperflux-link-evidence"
-            ),
-            "pages-preview": job(
-                "Pages preview", "build/ci/pages-preview", "hyperflux-pages-preview"
-            ),
-        },
-    }
-    return _yaml(value, governance)
-
-
-def pages_workflow(governance: GitHubGovernance) -> str:
-    build_steps = [_checkout(governance), *_build_environment(governance)]
-    build_steps.extend(
-        [
-            {
-                "name": "Build and verify the generated portal",
-                "run": './hfx ci docs --image "$HFX_CI_IMAGE" --output build/ci/portal',
-            },
-            {
-                "name": "Configure GitHub Pages",
-                "uses": governance.actions_by_id["configure-pages"].uses,
-            },
-            _portal_summary("build/ci/portal"),
-            {
-                "name": "Upload the verified Pages artifact",
-                "uses": governance.actions_by_id["upload-pages-artifact"].uses,
-                "with": {"path": "build/ci/portal"},
-            },
-        ]
-    )
-    value = {
-        "name": "Pages",
-        "on": {
-            "push": {"branches": [governance.default_branch]},
-            "workflow_dispatch": {},
-        },
-        "permissions": {"contents": "read"},
-        "concurrency": {
-            "group": "pages",
-            "cancel-in-progress": False,
-        },
-        "env": {"HFX_CI_IMAGE": governance.development_image},
-        "jobs": {
-            "build": {
-                "name": "Build verified portal",
-                "runs-on": governance.runner,
-                "timeout-minutes": 30,
-                "permissions": {"contents": "read", "pages": "write", "id-token": "write"},
-                "steps": build_steps,
-            },
-            "deploy": {
-                "name": "Deploy protected Pages",
-                "needs": "build",
-                "runs-on": governance.runner,
-                "timeout-minutes": 15,
-                "permissions": {"pages": "write", "id-token": "write"},
-                "environment": {
-                    "name": "github-pages",
-                    "url": "${{ steps.deployment.outputs.page_url }}",
-                },
-                "steps": [
-                    {
-                        "name": "Deploy generated documentation",
-                        "id": "deployment",
-                        "uses": governance.actions_by_id["deploy-pages"].uses,
-                    },
-                    {
-                        "name": "Publish deployment status",
-                        "env": {
-                            "HFX_PAGE_URL": "${{ steps.deployment.outputs.page_url }}",
-                            "HFX_SOURCE_REVISION": EXACT_SOURCE_REVISION,
-                        },
-                        "run": (
-                            "printf '# Pages deployment\\n\\n"
-                            "| Field | Result |\\n| --- | --- |\\n"
-                            "| Status | **DEPLOYED** |\\n"
-                            "| Source revision | `%s` |\\n"
-                            "| Environment | `github-pages` |\\n"
-                            "| URL | %s |\\n"
-                            "| Product release authority | Locked |\\n' "
-                            '"$HFX_SOURCE_REVISION" "$HFX_PAGE_URL" >> "$GITHUB_STEP_SUMMARY"'
-                        ),
-                    },
-                ],
-            },
         },
     }
     return _yaml(value, governance)
@@ -577,7 +388,7 @@ def pull_request_template() -> str:
 
 - [ ] Hardware authority is `none`, or a separate bounded authorization and evidence record is linked above.
 - [ ] This change does not create a release, tag, package channel, or supported-product claim.
-- [ ] Any Pages change is generated from canonical repository data; no deployed HTML was hand-edited.
+- [ ] User-facing links resolve inside the repository or to an explicitly reviewed external destination.
 - [ ] User-facing documentation contains no internal engineering mission identifiers.
 """
 
@@ -866,7 +677,7 @@ def documentation_report(governance: GitHubGovernance) -> str:
                 "id": "source-kind",
                 "attributes": {
                     "label": "Content type",
-                    "options": ["Hand-written canonical source", "Generated portal page", "README navigation", "Unknown"],
+                    "options": ["Hand-written source", "Generated technical reference", "README navigation", "Unknown"],
                 },
                 "validations": {"required": True},
             },
@@ -1119,14 +930,14 @@ def markdown(governance: GitHubGovernance) -> str:
         "",
         "> Generated by `./hfx generate`. Do not edit manually.",
         "",
-        "The public repository, generated Pages portal, Discussions, roadmap, and native security controls are authorized by this configuration. Product releases, package publication, tags, and hardware-writing CI remain locked.",
+        "The public repository, Discussions, roadmap, and native security controls are authorized by this configuration. GitHub Pages is disabled; product releases, package publication, tags, and hardware-writing CI remain locked.",
         "",
         "## Current Interlock",
         "",
         f"- Planned repository: `{governance.owner}/{governance.repository}`",
         f"- Remote state: `{governance.remote_state}`",
         "- Public source: `authorized`",
-        "- Pages deployment: `authorized from generated portal only`",
+        "- Pages deployment: `disabled`",
         "- Product publication: `locked`",
         "- Package publication: `locked`",
         "- Tag creation: `locked`",
@@ -1139,8 +950,6 @@ def markdown(governance: GitHubGovernance) -> str:
         "| --- | --- | --- | --- | --- |",
         "| Verification | Pull requests, main, manual | None | None | Source-bound fast evidence |",
         "| Full verification | Pull request, weekly, or manual | None | None | Source-bound full evidence |",
-        "| Documentation | Pull requests, main documentation changes, manual | None | None | Verified portal artifact |",
-        "| Pages | Main or manual | None after image build | None | Protected generated portal deployment |",
         "| CodeQL | Pull requests, main, weekly | GitHub service only | None | C/C++ and Python analysis |",
         "| Dependency review | Pull requests | GitHub service only | None | Dependency policy decision |",
         "",

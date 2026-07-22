@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_ops::{
-    AssessmentState, RealSystemProbe, SystemController, SystemProbe, assess_system,
-    build_support_bundle, preview_support_bundle, render_doctor_text, render_status_text,
-    suggested_support_name, write_support_bundle,
+    AssessmentState, QualificationServerConfig, RealSystemProbe, RunnerCapabilities,
+    SystemController, SystemProbe, assess_system, build_qualification_view, build_support_bundle,
+    preview_support_bundle, qualification_generated_at, render_doctor_text, render_status_text,
+    serve_qualification_console, suggested_support_name, write_support_bundle,
 };
+use hfx_profiles::RuntimeProfileCatalog;
 use std::env;
 use std::path::PathBuf;
 
 fn usage() -> &'static str {
-    "Usage:\n  hyperfluxctl status [--json]\n  hyperfluxctl doctor [--explain] [--json] [--repair]\n  hyperfluxctl support-bundle --preview\n  hyperfluxctl support-bundle --output PATH\n"
+    "Usage:\n  hyperfluxctl status [--json]\n  hyperfluxctl doctor [--explain] [--json] [--repair]\n  hyperfluxctl support-bundle --preview\n  hyperfluxctl support-bundle --output PATH\n  hyperfluxctl qualification view --json\n  hyperfluxctl qualification serve [--assets PATH]\n"
 }
 
 fn json<T: serde::Serialize>(value: &T) -> Result<String, String> {
@@ -90,6 +92,43 @@ fn support_bundle(arguments: &[String]) -> Result<i32, String> {
     }
 }
 
+fn qualification(arguments: &[String]) -> Result<i32, String> {
+    if arguments == ["view", "--json"] {
+        let probe = RealSystemProbe::default();
+        let system = probe.snapshot();
+        let integration = probe.qualification_integration().ok();
+        let catalog = RuntimeProfileCatalog::load()
+            .map_err(|_| "installed profile catalog is invalid".to_owned())?;
+        let view = build_qualification_view(
+            &system,
+            integration.as_ref(),
+            &catalog,
+            RunnerCapabilities::default(),
+            1,
+            qualification_generated_at(),
+        );
+        println!("{}", json(&view)?);
+        return Ok(0);
+    }
+    let config = match arguments {
+        [serve] if serve == "serve" => QualificationServerConfig::default(),
+        [serve, assets, path] if serve == "serve" && assets == "--assets" => {
+            QualificationServerConfig {
+                assets: PathBuf::from(path),
+                ..QualificationServerConfig::default()
+            }
+        }
+        _ => return Err(usage().to_owned()),
+    };
+    println!(
+        "HyperFlux qualification console: http://127.0.0.1:{}",
+        config.port
+    );
+    println!("Local only. No upload is configured.");
+    serve_qualification_console(&config).map_err(|error| error.to_string())?;
+    Ok(0)
+}
+
 fn run() -> Result<i32, String> {
     let arguments: Vec<String> = env::args().skip(1).collect();
     let Some((command, rest)) = arguments.split_first() else {
@@ -99,6 +138,7 @@ fn run() -> Result<i32, String> {
         "doctor" => doctor(rest),
         "status" => status(rest),
         "support-bundle" => support_bundle(rest),
+        "qualification" => qualification(rest),
         "--help" | "-h" | "help" => {
             print!("{}", usage());
             Ok(0)

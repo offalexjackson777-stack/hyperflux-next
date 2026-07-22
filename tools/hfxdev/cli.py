@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 import sys
 
-from .actions_summary import write_actions_summary, write_pages_summary
+from .actions_summary import write_actions_summary
 from .ci import container_invocation, run_container
 from .migration import capture_inventory, run_shadow_comparison, summary
 from .model import ModelError
@@ -106,13 +106,6 @@ def _parser() -> argparse.ArgumentParser:
         help="checkout root; defaults to .hfx/upstreams",
     )
 
-    docs = commands.add_parser("docs", help="build or verify the static documentation portal")
-    docs_commands = docs.add_subparsers(dest="docs_command", required=True)
-    docs_build = docs_commands.add_parser("build", help="build a deterministic local portal")
-    docs_build.add_argument("--output", required=True, type=Path)
-    docs_verify = docs_commands.add_parser("verify", help="verify a built portal artifact")
-    docs_verify.add_argument("--site", required=True, type=Path)
-
     ci = commands.add_parser("ci", help="run bounded repository jobs in the pinned container")
     ci_commands = ci.add_subparsers(dest="ci_command", required=True)
     ci_prepare = ci_commands.add_parser(
@@ -126,23 +119,12 @@ def _parser() -> argparse.ArgumentParser:
     ci_verify.add_argument("--lane", required=True, choices=["fast", "full"])
     ci_verify.add_argument("--output", required=True, type=Path)
     ci_verify.add_argument("--changed-from")
-    ci_docs = ci_commands.add_parser(
-        "docs", help="build and verify the portal without network or devices"
-    )
-    ci_docs.add_argument("--image", required=True)
-    ci_docs.add_argument("--output", required=True, type=Path)
     ci_summary = ci_commands.add_parser(
         "summary", help="write a bounded GitHub Actions summary from structured evidence"
     )
     ci_summary.add_argument("--result", required=True, type=Path)
     ci_summary.add_argument("--output", required=True, type=Path)
     ci_summary.add_argument("--source-revision")
-    ci_pages_summary = ci_commands.add_parser(
-        "pages-summary", help="write a bounded Pages artifact summary"
-    )
-    ci_pages_summary.add_argument("--manifest", required=True, type=Path)
-    ci_pages_summary.add_argument("--output", required=True, type=Path)
-    ci_pages_summary.add_argument("--source-revision")
 
     github = commands.add_parser(
         "github", help="plan, apply, or verify canonical public repository state"
@@ -245,31 +227,7 @@ def main(arguments: list[str] | None = None) -> int:
                 print(f"Verified existing {identifier} checkout.")
             print(f"Upstream lock: {prepared.manifest}")
             return 0
-        if args.command == "docs":
-            from .portal import build_portal, verify_portal
-
-            if args.docs_command == "build":
-                portal = build_portal(root, args.output)
-                print(f"Documentation portal: {portal.output}")
-                print(f"Pages: {portal.pages} | Files: {portal.files}")
-                print(f"Manifest: {portal.manifest}")
-                return 0
-            result = verify_portal(root, args.site)
-            print(
-                "Documentation portal verified: "
-                f"{result['pages']} pages, {len(result['files'])} files"
-            )
-            return 0
         if args.command == "ci":
-            if args.ci_command == "pages-summary":
-                write_pages_summary(
-                    root,
-                    args.manifest,
-                    args.output,
-                    expected_revision=args.source_revision,
-                )
-                print(f"Pages summary: {args.output}")
-                return 0
             if args.ci_command == "summary":
                 write_actions_summary(
                     root,
@@ -291,13 +249,6 @@ def main(arguments: list[str] | None = None) -> int:
                     lane=args.lane,
                     output=args.output,
                     changed_from=args.changed_from,
-                )
-            else:
-                invocation = container_invocation(
-                    root,
-                    image=args.image,
-                    operation="docs",
-                    output=args.output,
                 )
             print(
                 f"HyperFlux CI: {invocation.operation} "

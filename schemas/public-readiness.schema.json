@@ -4,7 +4,7 @@
   "title": "HyperFlux public readiness projection",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "schema", "generated_from", "publication", "software", "hardware", "evidence", "repository", "portal_hardware_access"],
+  "required": ["$schema", "schema", "generated_from", "publication", "software", "hardware", "evidence", "repository", "qualification_console_access"],
   "properties": {
     "$schema": {"const": "../schemas/public-readiness.schema.json"},
     "schema": {"const": "hyperflux-public-readiness-v1"},
@@ -43,7 +43,7 @@
         {"type": "object", "required": ["atlas_subsystems"], "properties": {"atlas_subsystems": {"type": "integer", "minimum": 1}}}
       ]
     },
-    "portal_hardware_access": {"const": "none"}
+    "qualification_console_access": {"const": "loopback-only"}
   },
   "$defs": {
     "status": {

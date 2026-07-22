@@ -4,94 +4,45 @@
 
 Binds the receiver, preserves generic input, records passive observations, and transports bounded generation-scoped envelopes.
 
-**Status:** `implemented`  
-**Category:** `runtime`  
-**Atlas ID:** `kernel-module`
+`implemented` | `runtime` | Atlas: `kernel-module`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/architecture/kernel.md`](../../docs/architecture/kernel.md)
+- [`docs/generated/linux-runtime.md`](../../docs/generated/linux-runtime.md)
 
+## Scope
+
+**Owns**
 - HID binding
 - Passive receiver observations
 - Exclusive session enforcement
 
-It must never own:
-
+**Does not own**
 - Retail names
 - Profiles and effects
 - Package repair
 
-## Inputs And Outputs
-
-Inputs:
-
-- Generated receiver table
-- Generated UAPI
-- Kernel HID reports
-
-Outputs:
-
-- Generic input
-- Generation state
-- Bounded session device
-
-## Public Contracts
-
-- No input regression
-- Passive unknown-device visibility
-- Generation invalidation on reconnect
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`driver/kernel/Makefile`](Makefile)
 - [`driver/kernel/hyperflux-next-core.c`](hyperflux-next-core.c)
 - [`driver/kernel/hyperflux-next-session.c`](hyperflux-next-session.c)
 - [`driver/kernel/hyperflux-next-transport.c`](hyperflux-next-transport.c)
 
-Generated projections:
-
-- [`driver/kernel/README.md`](README.md)
-- [`driver/kernel/generated/hyperflux_receiver_profiles.inc`](generated/hyperflux_receiver_profiles.inc)
-- [`driver/kernel/hyperflux-next-version.h`](hyperflux-next-version.h)
-
-## Relationships
-
-Depends on:
-
-- [Kernel driver contract](../README.md)
-- [Composable hardware profiles](../../profiles/README.md)
-- [Versioned bridge protocol](../../protocol/README.md)
-
-Used by:
-
-- [Packaging and installation](../../packaging/README.md)
-
 ## Verification
 
-- `kernel-profile-contracts`
+Run `kernel-profile-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 3 declared projection(s).
 - Run `kernel-profile-contracts`.
 - Review direct consumers: Packaging and installation.
 
-## Limitations
+## Relationships
 
-- Software compilation is not physical regression proof
+- **Depends on:** [Kernel driver contract](../README.md), [Composable hardware profiles](../../profiles/README.md), [Versioned bridge protocol](../../protocol/README.md)
+- **Used by:** [Packaging and installation](../../packaging/README.md)
 
-## Safe Change Workflow
-
-1. Keep policy in userspace
-2. Add warning-fatal smoke coverage
-3. Run kernel, profile, protocol, and package contracts
-
-## Related Documentation
-
-- [`docs/architecture/kernel.md`](../../docs/architecture/kernel.md)
-- [`docs/generated/linux-runtime.md`](../../docs/generated/linux-runtime.md)
-
-Return to the [Repository Atlas](../../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

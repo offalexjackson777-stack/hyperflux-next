@@ -4,91 +4,44 @@
 
 Adapts the core policy engine to sessions, persistence, subscriptions, snapshots, and bounded RPC dispatch.
 
-**Status:** `implemented`  
-**Category:** `runtime`  
-**Atlas ID:** `bridge-runtime`
+`implemented` | `runtime` | Atlas: `bridge-runtime`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/architecture/bridge-core.md`](../../docs/architecture/bridge-core.md)
+- [`docs/architecture/persistence.md`](../../docs/architecture/persistence.md)
 
+## Scope
+
+**Owns**
 - Bridge actors
 - Session registry
 - Persistence and RPC adaptation
 
-It must never own:
-
+**Does not own**
 - Core policy duplication
 - Kernel report encoding
 - Application-specific effects
 
-## Inputs And Outputs
-
-Inputs:
-
-- Core actions
-- SDK protocol frames
-- Kernel transport observations
-
-Outputs:
-
-- Session responses
-- State snapshots
-- Persisted stable intent
-
-## Public Contracts
-
-- One bridge authority
-- Bounded session registry
-- Atomic persistence projection
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`crates/hfx-bridge/Cargo.toml`](Cargo.toml)
 - [`crates/hfx-bridge/src/lib.rs`](src/lib.rs)
 - [`crates/hfx-bridge/src/rpc.rs`](src/rpc.rs)
 
-Generated projections:
-
-- [`crates/hfx-bridge/README.md`](README.md)
-
-## Relationships
-
-Depends on:
-
-- [Core policy engine](../hfx-core/README.md)
-- [Versioned bridge protocol](../../protocol/README.md)
-
-Used by:
-
-- [Production daemon](../hfx-daemon/README.md)
-
 ## Verification
 
-- `rust-unit`
-- `simulator-contracts`
+Run `rust-unit` `simulator-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 1 declared projection(s).
 - Run `rust-unit`, `simulator-contracts`.
-- Review direct consumers: Production daemon.
+- Review direct consumers: Production daemon, Device qualification console.
 
-## Limitations
+## Relationships
 
-- Production process policy belongs to the daemon crate
+- **Depends on:** [Core policy engine](../hfx-core/README.md), [Versioned bridge protocol](../../protocol/README.md)
+- **Used by:** [Production daemon](../hfx-daemon/README.md), [Device qualification console](../../apps/device-qualification/README.md)
 
-## Safe Change Workflow
-
-1. Change the relevant adapter module
-2. Exercise framing and persistence failure paths
-3. Run bridge, simulator, SDK, and daemon tests
-
-## Related Documentation
-
-- [`docs/architecture/bridge-core.md`](../../docs/architecture/bridge-core.md)
-- [`docs/architecture/persistence.md`](../../docs/architecture/persistence.md)
-
-Return to the [Repository Atlas](../../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

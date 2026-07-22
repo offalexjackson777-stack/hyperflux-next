@@ -236,8 +236,8 @@ def _desired_plan(governance: GitHubGovernance, components: tuple[str, ...]) -> 
     if "pages" in components:
         operations.extend(
             [
-                {"component": "pages", "operation": "enable-workflow-build"},
-                {"component": "pages", "operation": "protect-github-pages-environment"},
+                {"component": "pages", "operation": "disable-pages"},
+                {"component": "pages", "operation": "remove-pages-environment"},
             ]
         )
     if "ruleset" in components:
@@ -326,50 +326,18 @@ def _apply_security(api: GhApi, governance: GitHubGovernance) -> list[dict[str, 
 def _apply_pages(api: GhApi, governance: GitHubGovernance) -> list[dict[str, Any]]:
     repo = f"/repos/{governance.owner}/{governance.repository}"
     current = api.call("GET", f"{repo}/pages", allow_missing=True)
-    api.call("PUT" if current is not MISSING else "POST", f"{repo}/pages", {"build_type": "workflow"})
     environment_endpoint = f"{repo}/environments/github-pages"
-    api.call(
-        "PUT",
-        environment_endpoint,
-        {
-            "wait_timer": 0,
-            "deployment_branch_policy": {
-                "protected_branches": False,
-                "custom_branch_policies": True,
-            },
-        },
-    )
-    policy_endpoint = f"{environment_endpoint}/deployment-branch-policies"
-    policy_inventory = api.call("GET", f"{policy_endpoint}?per_page=100")
-    if not isinstance(policy_inventory, dict) or not isinstance(
-        policy_inventory.get("branch_policies"), list
-    ):
-        raise ModelError("GitHub Pages deployment policy inventory is malformed")
-    policies = policy_inventory["branch_policies"]
-    main_policy = next(
-        (policy for policy in policies if policy.get("name") == governance.default_branch),
-        None,
-    )
-    if main_policy is None:
-        api.call(
-            "POST",
-            policy_endpoint,
-            {"name": governance.default_branch, "type": "branch"},
-        )
-    for policy in policies:
-        if policy.get("name") == governance.default_branch:
-            continue
-        identifier = policy.get("id")
-        if isinstance(identifier, bool) or not isinstance(identifier, int):
-            raise ModelError("GitHub Pages deployment policy has an invalid id")
-        api.call("DELETE", f"{policy_endpoint}/{identifier}")
+    environment = api.call("GET", environment_endpoint, allow_missing=True)
+    if current is not MISSING:
+        api.call("DELETE", f"{repo}/pages")
+    if environment is not MISSING:
+        api.call("DELETE", environment_endpoint)
     return [
-        {"component": "pages", "operation": "workflow-build", "status": "enabled"},
+        {"component": "pages", "operation": "site", "status": "disabled"},
         {
             "component": "pages",
-            "operation": "protected-environment",
-            "status": "enabled",
-            "branch": governance.default_branch,
+            "operation": "deployment-environment",
+            "status": "removed",
         },
     ]
 
@@ -410,8 +378,8 @@ def apply(
         "ruleset": _apply_ruleset,
     }
     for component in selected:
-        if component == "pages" and not governance.pages_deployment_authorized:
-            raise ModelError("Pages deployment is not authorized")
+        if component == "pages" and governance.pages_deployment_authorized:
+            raise ModelError("Pages disablement conflicts with an authorized deployment")
         operations.extend(handlers[component](client, governance))
     return SyncResult(
         mode="apply",
@@ -483,35 +451,13 @@ def verify(
     if "pages" in selected:
         pages = client.call("GET", f"{repo}/pages", allow_missing=True)
         environment = client.call("GET", f"{repo}/environments/github-pages", allow_missing=True)
-        policies = client.call(
-            "GET",
-            f"{repo}/environments/github-pages/deployment-branch-policies?per_page=100",
-            allow_missing=True,
-        )
-        policy_names = (
-            [item.get("name") for item in policies.get("branch_policies", [])]
-            if isinstance(policies, dict)
-            else []
-        )
-        deployment_policy = (
-            environment.get("deployment_branch_policy")
-            if isinstance(environment, dict)
-            else None
-        )
-        current = (
-            isinstance(pages, dict)
-            and pages.get("build_type") == "workflow"
-            and isinstance(deployment_policy, dict)
-            and deployment_policy.get("protected_branches") is False
-            and deployment_policy.get("custom_branch_policies") is True
-            and policy_names == [governance.default_branch]
-        )
+        current = pages is MISSING and environment is MISSING
         operations.append(
             {
                 "component": "pages",
                 "status": "current" if current else "drifted",
-                "url": pages.get("html_url") if isinstance(pages, dict) else None,
-                "deployment_branches": policy_names,
+                "site": "disabled" if pages is MISSING else "enabled",
+                "environment": "absent" if environment is MISSING else "present",
             }
         )
     if "ruleset" in selected:

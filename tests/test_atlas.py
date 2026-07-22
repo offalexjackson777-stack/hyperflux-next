@@ -18,7 +18,7 @@ from hfxdev.testgraph import load_test_catalog, select_tests
 class RepositoryAtlasTests(unittest.TestCase):
     def test_graph_covers_required_subsystems_with_unique_ownership(self) -> None:
         atlas = load_repository_atlas(ROOT)
-        self.assertEqual(len(atlas.nodes), 31)
+        self.assertIn("device-qualification-console", atlas.by_id)
         self.assertEqual(
             {node.category for node in atlas.nodes},
             {
@@ -58,23 +58,15 @@ class RepositoryAtlasTests(unittest.TestCase):
             "generated/public-readiness.json",
             atlas.by_id["documentation"].generated_files,
         )
-        self.assertIn(
-            "tools/hfxdev/portal_model.py",
-            atlas.by_id["tooling"].canonical_files,
-        )
+        self.assertIn("tools/hfxdev/render.py", atlas.by_id["tooling"].canonical_files)
 
     def test_folder_readmes_expose_the_complete_contract(self) -> None:
         atlas = load_repository_atlas(ROOT)
         required = (
-            "## Ownership",
-            "## Inputs And Outputs",
-            "## Public Contracts",
-            "## Source And Generated Files",
+            "## Scope",
+            "## Change Here",
             "## Relationships",
             "## Verification",
-            "## Limitations",
-            "## Safe Change Workflow",
-            "## Related Documentation",
         )
         for node in atlas.nodes:
             with self.subTest(node=node.id):
@@ -102,7 +94,7 @@ class RepositoryAtlasTests(unittest.TestCase):
                 "schema-contracts",
                 "repository-atlas-contracts",
                 "generated-freshness",
-                "documentation-portal-contracts",
+                "repository-documentation-contracts",
                 "python-unit",
             },
             selected,

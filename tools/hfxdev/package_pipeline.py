@@ -18,6 +18,7 @@ from typing import Any
 import zipfile
 
 from .install import BuildSpec, InstallManifest, load_install_manifest
+from .development import load_development_environment
 from .generators.supply_chain import spdx_json
 from .integrations import load_integration_catalog
 from .linux_runtime import LinuxRuntime, load_linux_runtime
@@ -1002,6 +1003,17 @@ def _inspect_staged_files(stage_root: Path, private_prefixes: tuple[bytes, ...])
     return files
 
 
+def _private_stage_prefixes(
+    root: Path,
+    artifacts_root: Path,
+    canonical_workspace: Path,
+) -> tuple[bytes, ...]:
+    prefixes = [str(artifacts_root).encode()]
+    if root != canonical_workspace:
+        prefixes.append(str(root).encode())
+    return tuple(prefixes)
+
+
 def _normalize_tree(stage_root: Path, epoch: int) -> None:
     for path in sorted(stage_root.rglob("*"), reverse=True):
         if path.is_dir():
@@ -1043,8 +1055,9 @@ def stage_rootfs(root: Path, manifest_path: Path, stage_root: Path) -> StageResu
         runtime.operations.python_module_directory,
     )
     _normalize_tree(stage_root, artifacts.source_date_epoch)
-    private = (str(root).encode(), str(artifacts.root).encode())
-    staged_files = _inspect_staged_files(stage_root, private)
+    canonical_workspace = Path(load_development_environment(root).workspace_path)
+    private_prefixes = _private_stage_prefixes(root, artifacts.root, canonical_workspace)
+    staged_files = _inspect_staged_files(stage_root, private_prefixes)
     payload_digest = _tree_digest(staged_files, stage_root)
 
     preserve = {

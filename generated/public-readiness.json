@@ -21,17 +21,17 @@
     "state": "partial",
     "summary": "2 receiver routes have bounded physical evidence; 10 candidates remain research only."
   },
-  "portal_hardware_access": "none",
   "publication": {
     "label": "Unreleased",
     "state": "locked",
     "summary": "Public source is available for review; no supported product release or package channel exists."
   },
+  "qualification_console_access": "loopback-only",
   "repository": {
-    "atlas_subsystems": 31,
+    "atlas_subsystems": 32,
     "label": "Repository map",
     "state": "ready",
-    "summary": "The Repository Atlas owns 31 subsystem records and their generated projections."
+    "summary": "The Repository Atlas owns 32 subsystem records and their generated projections."
   },
   "schema": "hyperflux-public-readiness-v1",
   "software": {

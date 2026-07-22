@@ -38,8 +38,8 @@ body:
   attributes:
     label: Content type
     options:
-    - Hand-written canonical source
-    - Generated portal page
+    - Hand-written source
+    - Generated technical reference
     - README navigation
     - Unknown
   validations:

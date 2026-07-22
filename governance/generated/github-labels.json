@@ -8,7 +8,7 @@
     },
     {
       "color": "1d76db",
-      "description": "Documentation, portal, and user guidance",
+      "description": "Documentation, navigation, and user guidance",
       "name": "area: documentation"
     },
     {
@@ -78,7 +78,7 @@
     },
     {
       "color": "0075ca",
-      "description": "Documentation content, navigation, or generated portal issue",
+      "description": "Documentation content, navigation, or generated-view issue",
       "name": "kind: documentation"
     },
     {

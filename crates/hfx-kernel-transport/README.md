@@ -4,92 +4,44 @@
 
 Adapts the generated kernel UAPI into bounded Rust observation, routing, and envelope I/O.
 
-**Status:** `implemented`  
-**Category:** `runtime`  
-**Atlas ID:** `kernel-transport`
+`implemented` | `runtime` | Atlas: `kernel-transport`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/architecture/kernel.md`](../../docs/architecture/kernel.md)
+- [`docs/generated/kernel-uapi.md`](../../docs/generated/kernel-uapi.md)
 
+## Scope
+
+**Owns**
 - Kernel device I/O
 - UAPI encoding
 - Receiver route adaptation
 
-It must never own:
-
+**Does not own**
 - Qualification policy
 - Application identity
 - Unbounded raw reports
 
-## Inputs And Outputs
-
-Inputs:
-
-- Generated kernel UAPI
-- Kernel session device
-- Qualified bridge actions
-
-Outputs:
-
-- Typed observations
-- Bounded transport outcomes
-
-## Public Contracts
-
-- Exclusive writer session
-- Generation-bound envelope
-- No HID access in integrations
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`crates/hfx-kernel-transport/Cargo.toml`](Cargo.toml)
 - [`crates/hfx-kernel-transport/src/lib.rs`](src/lib.rs)
 - [`crates/hfx-kernel-transport/src/transport.rs`](src/transport.rs)
 
-Generated projections:
-
-- [`crates/hfx-kernel-transport/README.md`](README.md)
-- [`crates/hfx-kernel-transport/src/generated.rs`](src/generated.rs)
-
-## Relationships
-
-Depends on:
-
-- [Rust workspace](../README.md)
-- [Kernel driver contract](../../driver/README.md)
-- [Versioned bridge protocol](../../protocol/README.md)
-
-Used by:
-
-- [Production daemon](../hfx-daemon/README.md)
-
 ## Verification
 
-- `rust-unit`
-- `kernel-profile-contracts`
+Run `rust-unit` `kernel-profile-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 2 declared projection(s).
 - Run `rust-unit`, `kernel-profile-contracts`.
 - Review direct consumers: Production daemon.
 
-## Limitations
+## Relationships
 
-- Requires the matching installed kernel module for live operation
+- **Depends on:** [Rust workspace](../README.md), [Kernel driver contract](../../driver/README.md), [Versioned bridge protocol](../../protocol/README.md)
+- **Used by:** [Production daemon](../hfx-daemon/README.md)
 
-## Safe Change Workflow
-
-1. Change the canonical UAPI first
-2. Regenerate bindings
-3. Run transport, kernel, bridge, and package contracts
-
-## Related Documentation
-
-- [`docs/architecture/kernel.md`](../../docs/architecture/kernel.md)
-- [`docs/generated/kernel-uapi.md`](../../docs/generated/kernel-uapi.md)
-
-Return to the [Repository Atlas](../../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

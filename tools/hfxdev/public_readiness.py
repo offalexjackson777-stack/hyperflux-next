@@ -72,5 +72,5 @@ def public_readiness(root: Path) -> dict[str, Any]:
             "atlas_subsystems": len(atlas.nodes),
             "summary": f"The Repository Atlas owns {len(atlas.nodes)} subsystem records and their generated projections.",
         },
-        "portal_hardware_access": "none",
+        "qualification_console_access": "loopback-only",
     }

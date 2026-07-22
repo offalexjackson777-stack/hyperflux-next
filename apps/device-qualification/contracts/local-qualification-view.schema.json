@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/local-qualification-view-v1.json",
+  "title": "HyperFlux local qualification view",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "api_version", "view_revision", "generated_at", "companion", "system", "receivers", "plans", "actions"],
+  "properties": {
+    "schema": {"const": "hyperflux-local-qualification-v1"},
+    "api_version": {"const": 1},
+    "view_revision": {"type": "integer", "minimum": 0},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "companion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "version", "bridge_protocol", "endpoint", "simulation", "network_upload_executed", "hardware_write_executed"],
+      "properties": {
+        "state": {"enum": ["ready", "driver-pending", "legacy-v2-detected", "bridge-unavailable", "no-receiver"]},
+        "version": {"type": "string", "minLength": 1},
+        "bridge_protocol": {"type": ["integer", "null"], "minimum": 1},
+        "endpoint": {"type": "string", "pattern": "^http://(127\\.0\\.0\\.1|localhost)(:[0-9]+)?$"},
+        "simulation": {"type": "boolean"},
+        "network_upload_executed": {"const": false},
+        "hardware_write_executed": {"type": "boolean"}
+      }
+    },
+    "system": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["driver_version", "bridge_version", "profile_catalog_digest"],
+      "properties": {
+        "driver_version": {"type": ["string", "null"]},
+        "bridge_version": {"type": ["string", "null"]},
+        "profile_catalog_digest": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "receivers": {"type": "array", "maxItems": 8, "items": {"$ref": "#/$defs/receiver"}},
+    "plans": {"type": "array", "maxItems": 32, "items": {"$ref": "#/$defs/plan"}},
+    "actions": {"type": "array", "maxItems": 256, "items": {"$ref": "#/$defs/action"}}
+  },
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "digest"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "battery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["availability", "percentage"],
+      "properties": {
+        "availability": {"enum": ["reported", "stale", "unavailable", "unknown"]},
+        "percentage": {"type": ["integer", "null"], "minimum": 0, "maximum": 100}
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "access", "support_level"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "access": {"enum": ["read", "write"]},
+        "support_level": {"type": "string", "minLength": 1}
+      }
+    },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["device_id", "kind", "model_name", "vendor_id", "product_id", "profile", "presence", "support", "battery", "capabilities"],
+      "properties": {
+        "device_id": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["mouse", "keyboard", "other"]},
+        "model_name": {"type": ["string", "null"]},
+        "vendor_id": {"type": ["integer", "null"], "minimum": 0, "maximum": 65535},
+        "product_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "profile": {"oneOf": [{"$ref": "#/$defs/profile"}, {"type": "null"}]},
+        "presence": {"enum": ["active", "sleeping", "unavailable", "unknown"]},
+        "support": {"enum": ["unknown", "identified", "profile-qualified", "production-qualified"]},
+        "battery": {"$ref": "#/$defs/battery"},
+        "capabilities": {"type": "array", "maxItems": 128, "items": {"$ref": "#/$defs/capability"}}
+      }
+    },
+    "receiver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["receiver_id", "generation_id", "model_name", "vendor_id", "product_id", "profile", "lifecycle", "devices"],
+      "properties": {
+        "receiver_id": {"type": "string", "minLength": 1},
+        "generation_id": {"type": "integer", "minimum": 1},
+        "model_name": {"type": ["string", "null"]},
+        "vendor_id": {"type": ["integer", "null"], "minimum": 0, "maximum": 65535},
+        "product_id": {"type": ["integer", "null"], "minimum": 0, "maximum": 65535},
+        "profile": {"oneOf": [{"$ref": "#/$defs/profile"}, {"type": "null"}]},
+        "lifecycle": {"enum": ["active", "recovering", "unavailable"]},
+        "devices": {"type": "array", "maxItems": 16, "items": {"$ref": "#/$defs/device"}}
+      }
+    },
+    "choice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "outcome"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "label": {"type": "string", "minLength": 1},
+        "outcome": {"enum": ["pass", "fail", "unclear"]}
+      }
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "prompt", "choices"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "prompt": {"type": "string", "minLength": 1},
+        "choices": {"type": "array", "minItems": 2, "maxItems": 8, "items": {"$ref": "#/$defs/choice"}}
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "completed_at", "evidence_refs"],
+      "properties": {
+        "summary": {"type": "string", "minLength": 1},
+        "completed_at": {"type": "string", "format": "date-time"},
+        "evidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage_id", "title", "description", "kind", "risk", "status", "capabilities", "instructions", "observations", "action_id", "result"],
+      "properties": {
+        "stage_id": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1},
+        "description": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["automatic", "watched-observation", "lifecycle"]},
+        "risk": {"enum": ["read-only", "lighting-write", "device-lifecycle", "system-lifecycle"]},
+        "status": {"enum": ["locked", "ready", "running", "awaiting-observation", "passed", "failed", "blocked", "skipped"]},
+        "capabilities": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "instructions": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "observations": {"type": "array", "items": {"$ref": "#/$defs/observation"}},
+        "action_id": {"type": ["string", "null"]},
+        "result": {"oneOf": [{"$ref": "#/$defs/result"}, {"type": "null"}]}
+      }
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["group_id", "title", "description", "stages"],
+      "properties": {
+        "group_id": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1},
+        "description": {"type": "string", "minLength": 1},
+        "stages": {"type": "array", "minItems": 1, "maxItems": 32, "items": {"$ref": "#/$defs/stage"}}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_id", "artifact_state", "completed_claims", "missing_claims", "export_action_id"],
+      "properties": {
+        "run_id": {"type": ["string", "null"]},
+        "artifact_state": {"enum": ["none", "collecting", "ready", "reviewed"]},
+        "completed_claims": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "missing_claims": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "export_action_id": {"type": ["string", "null"]}
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan_id", "device_id", "profile_binding", "verdict", "summary", "groups", "evidence"],
+      "properties": {
+        "plan_id": {"type": "string", "minLength": 1},
+        "device_id": {"type": "string", "minLength": 1},
+        "profile_binding": {"oneOf": [{"$ref": "#/$defs/profile"}, {"type": "null"}]},
+        "verdict": {"enum": ["not-run", "in-progress", "blocked", "failed", "evidence-ready", "accepted"]},
+        "summary": {"type": "string", "minLength": 1},
+        "groups": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"$ref": "#/$defs/group"}},
+        "evidence": {"$ref": "#/$defs/evidence"}
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "method", "href", "enabled", "risk", "confirmation"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "label": {"type": "string", "minLength": 1},
+        "method": {"const": "POST"},
+        "href": {"type": "string", "pattern": "^/v1/qualification/actions/"},
+        "enabled": {"type": "boolean"},
+        "risk": {"enum": ["read-only", "lighting-write", "device-lifecycle", "system-lifecycle"]},
+        "confirmation": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["phrase", "summary"],
+              "properties": {
+                "phrase": {"type": "string", "minLength": 1},
+                "summary": {"type": "string", "minLength": 1}
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

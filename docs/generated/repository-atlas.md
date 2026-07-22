@@ -4,9 +4,9 @@
 
 The Atlas is a projection of one canonical repository graph. Folder READMEs, dependency views, source-to-generated relationships, and change-impact guidance are generated from the same nodes.
 
-**Subsystems:** 31  
-**Categories:** 8  
-**Publication state:** `public-source-pre-release`
+- **Subsystems:** 32
+- **Categories:** 8
+- **Publication state:** `public-source-pre-release`
 
 ## Architecture Map
 
@@ -17,6 +17,7 @@ flowchart LR
         n_openrgb_adapter["OpenRGB adapter"]
         n_openrazer_adapter["OpenRazer compatibility adapter"]
         n_polychromatic_adapter["Polychromatic adapter"]
+        n_device_qualification_console["Device qualification console"]
         n_sdk_cpp["C++ SDK"]
         n_sdk_python["Python SDK"]
     end
@@ -78,6 +79,9 @@ flowchart LR
     n_sdk_python --> n_openrazer_adapter
     n_openrazer_adapter --> n_polychromatic_adapter
     n_sdk_python --> n_polychromatic_adapter
+    n_profiles --> n_device_qualification_console
+    n_bridge_runtime --> n_device_qualification_console
+    n_rust_workspace --> n_device_qualification_console
     n_architecture --> n_rust_workspace
     n_schemas --> n_rust_workspace
     n_toolchains --> n_rust_workspace
@@ -110,6 +114,7 @@ flowchart LR
     n_openrgb_adapter --> n_packaging
     n_openrazer_adapter --> n_packaging
     n_polychromatic_adapter --> n_packaging
+    n_device_qualification_console --> n_packaging
     n_protocol --> n_sdk_cpp
     n_profiles --> n_sdk_cpp
     n_integrations --> n_sdk_cpp
@@ -152,15 +157,16 @@ Arrows run from a dependency to its direct consumer. They describe responsibilit
 | [Schema contracts](#schemas) | `architecture` | `implemented` | 1 | 9 | `schema-contracts`, `repository-atlas-contracts` |
 | [Assurance and release evidence](#assurance) | `assurance` | `policy` | 2 | 2 | `assurance-contracts`, `formal-model-contracts` |
 | [Application integration catalog](#integrations) | `applications` | `implemented` | 2 | 6 | `integration-contracts` |
-| [Composable hardware profiles](#profiles) | `architecture` | `implemented` | 3 | 9 | `profile-contracts` |
+| [Composable hardware profiles](#profiles) | `architecture` | `implemented` | 3 | 10 | `profile-contracts` |
 | [Device knowledge](#device-knowledge) | `assurance` | `research-boundary` | 2 | 1 | `device-knowledge-contracts` |
 | [Versioned bridge protocol](#protocol) | `architecture` | `implemented` | 1 | 7 | `protocol-contracts`, `cpp-sdk-contracts` |
 | [OpenRGB adapter](#openrgb-adapter) | `applications` | `implemented` | 3 | 1 | `openrgb-adapter-contracts`, `openrgb-thread-sanitizer` |
 | [OpenRazer compatibility adapter](#openrazer-adapter) | `applications` | `implemented` | 3 | 2 | `openrazer-metadata-contracts`, `openrazer-compatibility-contracts` |
 | [Polychromatic adapter](#polychromatic-adapter) | `applications` | `implemented` | 2 | 1 | `polychromatic-adapter-contracts` |
-| [Rust workspace](#rust-workspace) | `runtime` | `implemented` | 3 | 4 | `rust-format`, `rust-clippy`, `rust-unit` |
+| [Device qualification console](#device-qualification-console) | `applications` | `implemented` | 3 | 1 | `device-qualification-console-contracts`, `rust-unit`, `package-contracts` |
+| [Rust workspace](#rust-workspace) | `runtime` | `implemented` | 3 | 5 | `rust-format`, `rust-clippy`, `rust-unit` |
 | [Core policy engine](#core-runtime) | `runtime` | `implemented` | 3 | 2 | `rust-unit`, `formal-model-contracts` |
-| [Bridge runtime](#bridge-runtime) | `runtime` | `implemented` | 2 | 1 | `rust-unit`, `simulator-contracts` |
+| [Bridge runtime](#bridge-runtime) | `runtime` | `implemented` | 2 | 2 | `rust-unit`, `simulator-contracts` |
 | [Production daemon](#daemon) | `runtime` | `implemented` | 3 | 1 | `rust-unit`, `package-contracts` |
 | [Rust SDK](#rust-sdk) | `runtime` | `implemented` | 3 | 0 | `rust-unit`, `protocol-contracts` |
 | [Kernel transport adapter](#kernel-transport) | `runtime` | `implemented` | 3 | 1 | `rust-unit`, `kernel-profile-contracts` |
@@ -168,14 +174,14 @@ Arrows run from a dependency to its direct consumer. They describe responsibilit
 | [Kernel driver contract](#driver-contract) | `runtime` | `implemented` | 2 | 2 | `kernel-profile-contracts` |
 | [Linux HID kernel module](#kernel-module) | `runtime` | `implemented` | 3 | 1 | `kernel-profile-contracts` |
 | [Linux runtime authority](#runtime-config) | `delivery` | `implemented` | 2 | 2 | `foundation-contracts`, `package-contracts` |
-| [Packaging and installation](#packaging) | `delivery` | `implemented` | 6 | 0 | `package-contracts` |
+| [Packaging and installation](#packaging) | `delivery` | `implemented` | 7 | 0 | `package-contracts` |
 | [C++ SDK](#sdk-cpp) | `applications` | `implemented` | 3 | 2 | `cpp-sdk-contracts` |
 | [Python SDK](#sdk-python) | `applications` | `implemented` | 3 | 3 | `python-unit`, `protocol-contracts` |
 | [Repository tooling](#tooling) | `tooling` | `implemented` | 3 | 3 | `python-unit`, `generated-freshness` |
 | [Contract tests](#tests) | `assurance` | `implemented` | 4 | 1 | `python-unit`, `cpp-sdk-contracts`, `rust-unit` |
 | [Migration provenance](#migration) | `assurance` | `research-boundary` | 3 | 0 | `foundation-contracts`, `migration-shadow-contracts` |
 | [GitHub governance authority](#governance) | `governance` | `policy` | 3 | 1 | `governance-contracts` |
-| [Documentation system](#documentation) | `documentation` | `generated` | 5 | 0 | `documentation-portal-contracts`, `repository-atlas-contracts` |
+| [Documentation system](#documentation) | `documentation` | `generated` | 5 | 0 | `repository-documentation-contracts`, `repository-atlas-contracts` |
 | [Verification graph](#verification) | `assurance` | `implemented` | 4 | 3 | `repository-atlas-contracts`, `python-unit` |
 | [Error catalog](#errors) | `architecture` | `implemented` | 1 | 0 | `error-contracts` |
 | [Pinned development toolchains](#toolchains) | `tooling` | `policy` | 1 | 2 | `toolchain-contract`, `development-environment-contracts` |
@@ -183,6 +189,9 @@ Arrows run from a dependency to its direct consumer. They describe responsibilit
 ## Subsystems
 
 <a id="architecture"></a>
+<details>
+<summary><strong>Architecture authority</strong> · architecture · policy</summary>
+
 ### Architecture authority
 
 `architecture` · `architecture` · `policy`
@@ -199,11 +208,16 @@ Defines product invariants, subsystem direction, ownership boundaries, and the c
 
 **Canonical sources:** `architecture/constitution.json`, `architecture/repository-atlas.json`.
 
-**Generated projections:** `architecture/README.md`, `docs/generated/architecture.md`, `docs/generated/repository-atlas.md`.
+**Generated projections:** `architecture/README.md`, `docs/generated/architecture.md`, `docs/generated/repository-atlas.md`, `.devcontainer/README.md`, `.github/README.md`, `LICENSES/README.md`, `apps/README.md`, `generated/README.md`, `sdk/README.md`, `uapi/README.md`.
 
-**Change impact:** Regenerate 3 declared projection(s). Run `foundation-contracts`, `repository-atlas-contracts`. Review direct consumers: Assurance and release evidence, Documentation system, Kernel driver contract, GitHub governance authority, Application integration catalog, Migration provenance, Composable hardware profiles, Linux runtime authority, Rust workspace, Schema contracts, Pinned development toolchains, Repository tooling, Verification graph.
+**Change impact:** Regenerate 10 declared projection(s). Run `foundation-contracts`, `repository-atlas-contracts`. Review direct consumers: Assurance and release evidence, Documentation system, Kernel driver contract, GitHub governance authority, Application integration catalog, Migration provenance, Composable hardware profiles, Linux runtime authority, Rust workspace, Schema contracts, Pinned development toolchains, Repository tooling, Verification graph.
+
+</details>
 
 <a id="schemas"></a>
+<details>
+<summary><strong>Schema contracts</strong> · architecture · implemented</summary>
+
 ### Schema contracts
 
 `schemas` · `architecture` · `implemented`
@@ -218,13 +232,18 @@ Defines strict machine-readable shapes for every shared repository fact and gene
 
 **Used by:** [Assurance and release evidence](#assurance), [Kernel driver contract](#driver-contract), [Error catalog](#errors), [Application integration catalog](#integrations), [Composable hardware profiles](#profiles), [Versioned bridge protocol](#protocol), [Linux runtime authority](#runtime-config), [Rust workspace](#rust-workspace), [Repository tooling](#tooling)
 
-**Canonical sources:** `schemas/domain-catalog.json`, `schemas/domain-catalog.schema.json`, `schemas/repository-atlas.schema.json`, `schemas/documentation-portal.schema.json`, `schemas/public-readiness.schema.json`, `schemas/local-companion.schema.json`, `schemas/local-snapshot.schema.json`, `schemas/licensing-policy.schema.json`.
+**Canonical sources:** `schemas/domain-catalog.json`, `schemas/domain-catalog.schema.json`, `schemas/repository-atlas.schema.json`, `schemas/public-readiness.schema.json`, `schemas/local-companion.schema.json`, `schemas/local-snapshot.schema.json`, `schemas/licensing-policy.schema.json`.
 
 **Generated projections:** `schemas/README.md`, `docs/generated/domain-types.md`.
 
 **Change impact:** Regenerate 2 declared projection(s). Run `schema-contracts`, `repository-atlas-contracts`. Review direct consumers: Assurance and release evidence, Kernel driver contract, Error catalog, Application integration catalog, Composable hardware profiles, Versioned bridge protocol, Linux runtime authority, Rust workspace, Repository tooling.
 
+</details>
+
 <a id="assurance"></a>
+<details>
+<summary><strong>Assurance and release evidence</strong> · assurance · policy</summary>
+
 ### Assurance and release evidence
 
 `assurance` · `assurance` · `policy`
@@ -245,7 +264,12 @@ Owns explicit design coverage, bounded formal models, performance budgets, depen
 
 **Change impact:** Regenerate 3 declared projection(s). Run `assurance-contracts`, `formal-model-contracts`. Review direct consumers: GitHub governance authority, Verification graph.
 
+</details>
+
 <a id="integrations"></a>
+<details>
+<summary><strong>Application integration catalog</strong> · applications · implemented</summary>
+
 ### Application integration catalog
 
 `integrations` · `applications` · `implemented`
@@ -266,7 +290,12 @@ Defines application-neutral adapter identities, upstream pins, coexistence rules
 
 **Change impact:** Regenerate 3 declared projection(s). Run `integration-contracts`. Review direct consumers: Device knowledge, OpenRazer compatibility adapter, OpenRGB adapter, Composable hardware profiles, C++ SDK, Python SDK.
 
+</details>
+
 <a id="profiles"></a>
+<details>
+<summary><strong>Composable hardware profiles</strong> · architecture · implemented</summary>
+
 ### Composable hardware profiles
 
 `profiles` · `architecture` · `implemented`
@@ -279,15 +308,20 @@ Composes receiver, surface, and child identities with evidence-bound capabilitie
 
 **Depends on:** [Architecture authority](#architecture), [Schema contracts](#schemas), [Application integration catalog](#integrations)
 
-**Used by:** [Core policy engine](#core-runtime), [Device knowledge](#device-knowledge), [Linux HID kernel module](#kernel-module), [OpenRazer compatibility adapter](#openrazer-adapter), [OpenRGB adapter](#openrgb-adapter), [Rust SDK](#rust-sdk), [C++ SDK](#sdk-cpp), [Python SDK](#sdk-python), [Deterministic simulator](#simulator)
+**Used by:** [Core policy engine](#core-runtime), [Device knowledge](#device-knowledge), [Device qualification console](#device-qualification-console), [Linux HID kernel module](#kernel-module), [OpenRazer compatibility adapter](#openrazer-adapter), [OpenRGB adapter](#openrgb-adapter), [Rust SDK](#rust-sdk), [C++ SDK](#sdk-cpp), [Python SDK](#sdk-python), [Deterministic simulator](#simulator)
 
 **Canonical sources:** `profiles/capabilities.json`, `profiles/evidence/claims.json`, `profiles/receivers/razer-hyperflux-v2-1532-00cf.json`, `profiles/surfaces/razer-hyperflux-v2-hard-edition.json`, `profiles/children/razer-basilisk-v3-pro-35k-00cd.json`, `profiles/children/razer-deathstalker-v2-pro-tkl-0296.json`, `profiles/candidates/razer-hyperflux-v2-2026-07-13.json`, `profiles/candidates/razer-hyperflux-v2-2026-07-21.json`.
 
 **Generated projections:** `profiles/README.md`, `generated/profiles/catalog.json`, `docs/generated/supported-hardware.md`.
 
-**Change impact:** Regenerate 3 declared projection(s). Run `profile-contracts`. Review direct consumers: Core policy engine, Device knowledge, Linux HID kernel module, OpenRazer compatibility adapter, OpenRGB adapter, Rust SDK, C++ SDK, Python SDK, Deterministic simulator.
+**Change impact:** Regenerate 3 declared projection(s). Run `profile-contracts`. Review direct consumers: Core policy engine, Device knowledge, Device qualification console, Linux HID kernel module, OpenRazer compatibility adapter, OpenRGB adapter, Rust SDK, C++ SDK, Python SDK, Deterministic simulator.
+
+</details>
 
 <a id="device-knowledge"></a>
+<details>
+<summary><strong>Device knowledge</strong> · assurance · research-boundary</summary>
+
 ### Device knowledge
 
 `knowledge` · `assurance` · `research-boundary`
@@ -308,7 +342,12 @@ Records provenance-bound candidate facts, semantic capabilities, upstream record
 
 **Change impact:** Regenerate 3 declared projection(s). Run `device-knowledge-contracts`. Review direct consumers: Documentation system.
 
+</details>
+
 <a id="protocol"></a>
+<details>
+<summary><strong>Versioned bridge protocol</strong> · architecture · implemented</summary>
+
 ### Versioned bridge protocol
 
 `protocol` · `architecture` · `implemented`
@@ -329,7 +368,12 @@ Defines bounded request, response, event, negotiation, and compatibility contrac
 
 **Change impact:** Regenerate 3 declared projection(s). Run `protocol-contracts`, `cpp-sdk-contracts`. Review direct consumers: Bridge runtime, Core policy engine, Linux HID kernel module, Kernel transport adapter, Rust SDK, C++ SDK, Python SDK.
 
+</details>
+
 <a id="openrgb-adapter"></a>
+<details>
+<summary><strong>OpenRGB adapter</strong> · applications · implemented</summary>
+
 ### OpenRGB adapter
 
 `integrations/openrgb` · `applications` · `implemented`
@@ -350,7 +394,12 @@ Projects qualified SDK devices into native OpenRGB controllers while preserving 
 
 **Change impact:** Regenerate 1 declared projection(s). Run `openrgb-adapter-contracts`, `openrgb-thread-sanitizer`. Review direct consumers: Packaging and installation.
 
+</details>
+
 <a id="openrazer-adapter"></a>
+<details>
+<summary><strong>OpenRazer compatibility adapter</strong> · applications · implemented</summary>
+
 ### OpenRazer compatibility adapter
 
 `integrations/openrazer` · `applications` · `implemented`
@@ -371,7 +420,12 @@ Provides an isolated compatibility surface for legacy OpenRazer clients without 
 
 **Change impact:** Regenerate 2 declared projection(s). Run `openrazer-metadata-contracts`, `openrazer-compatibility-contracts`. Review direct consumers: Packaging and installation, Polychromatic adapter.
 
+</details>
+
 <a id="polychromatic-adapter"></a>
+<details>
+<summary><strong>Polychromatic adapter</strong> · applications · implemented</summary>
+
 ### Polychromatic adapter
 
 `integrations/polychromatic` · `applications` · `implemented`
@@ -392,7 +446,38 @@ Exposes HyperFlux-backed devices to Polychromatic through a native bounded backe
 
 **Change impact:** Regenerate 1 declared projection(s). Run `polychromatic-adapter-contracts`. Review direct consumers: Packaging and installation.
 
+</details>
+
+<a id="device-qualification-console"></a>
+<details>
+<summary><strong>Device qualification console</strong> · applications · implemented</summary>
+
+### Device qualification console
+
+`apps/device-qualification` · `applications` · `implemented`
+
+Presents exact installed receiver and controller identity and guides profile-bound qualification without remote data or direct browser hardware access.
+
+**Owns:** Local qualification browser workflow; Versioned browser contract validation; Evidence-stage presentation.
+
+**Must never own:** Driver or receiver access; Hardware support decisions; Remote inventory or upload.
+
+**Depends on:** [Composable hardware profiles](#profiles), [Bridge runtime](#bridge-runtime), [Rust workspace](#rust-workspace)
+
+**Used by:** [Packaging and installation](#packaging)
+
+**Canonical sources:** `apps/device-qualification/index.html`, `apps/device-qualification/assets/app.js`, `apps/device-qualification/assets/contract.js`, `apps/device-qualification/contracts/local-qualification-view.schema.json`.
+
+**Generated projections:** `apps/device-qualification/README.md`.
+
+**Change impact:** Regenerate 1 declared projection(s). Run `device-qualification-console-contracts`, `rust-unit`, `package-contracts`. Review direct consumers: Packaging and installation.
+
+</details>
+
 <a id="rust-workspace"></a>
+<details>
+<summary><strong>Rust workspace</strong> · runtime · implemented</summary>
+
 ### Rust workspace
 
 `crates` · `runtime` · `implemented`
@@ -405,15 +490,20 @@ Coordinates the Rust dependency graph and compile-time ownership boundaries acro
 
 **Depends on:** [Architecture authority](#architecture), [Schema contracts](#schemas), [Pinned development toolchains](#toolchains)
 
-**Used by:** [Core policy engine](#core-runtime), [Kernel transport adapter](#kernel-transport), [Rust SDK](#rust-sdk), [Contract tests](#tests)
+**Used by:** [Core policy engine](#core-runtime), [Device qualification console](#device-qualification-console), [Kernel transport adapter](#kernel-transport), [Rust SDK](#rust-sdk), [Contract tests](#tests)
 
 **Canonical sources:** `Cargo.toml`, `Cargo.lock`.
 
 **Generated projections:** `crates/README.md`.
 
-**Change impact:** Regenerate 1 declared projection(s). Run `rust-format`, `rust-clippy`, `rust-unit`. Review direct consumers: Core policy engine, Kernel transport adapter, Rust SDK, Contract tests.
+**Change impact:** Regenerate 1 declared projection(s). Run `rust-format`, `rust-clippy`, `rust-unit`. Review direct consumers: Core policy engine, Device qualification console, Kernel transport adapter, Rust SDK, Contract tests.
+
+</details>
 
 <a id="core-runtime"></a>
+<details>
+<summary><strong>Core policy engine</strong> · runtime · implemented</summary>
+
 ### Core policy engine
 
 `crates/hfx-core` · `runtime` · `implemented`
@@ -434,7 +524,12 @@ Owns lifecycle policy, receiver registry, leases, transactions, restoration inte
 
 **Change impact:** Regenerate 1 declared projection(s). Run `rust-unit`, `formal-model-contracts`. Review direct consumers: Bridge runtime, Deterministic simulator.
 
+</details>
+
 <a id="bridge-runtime"></a>
+<details>
+<summary><strong>Bridge runtime</strong> · runtime · implemented</summary>
+
 ### Bridge runtime
 
 `crates/hfx-bridge` · `runtime` · `implemented`
@@ -447,15 +542,20 @@ Adapts the core policy engine to sessions, persistence, subscriptions, snapshots
 
 **Depends on:** [Core policy engine](#core-runtime), [Versioned bridge protocol](#protocol)
 
-**Used by:** [Production daemon](#daemon)
+**Used by:** [Production daemon](#daemon), [Device qualification console](#device-qualification-console)
 
 **Canonical sources:** `crates/hfx-bridge/Cargo.toml`, `crates/hfx-bridge/src/lib.rs`, `crates/hfx-bridge/src/rpc.rs`.
 
 **Generated projections:** `crates/hfx-bridge/README.md`.
 
-**Change impact:** Regenerate 1 declared projection(s). Run `rust-unit`, `simulator-contracts`. Review direct consumers: Production daemon.
+**Change impact:** Regenerate 1 declared projection(s). Run `rust-unit`, `simulator-contracts`. Review direct consumers: Production daemon, Device qualification console.
+
+</details>
 
 <a id="daemon"></a>
+<details>
+<summary><strong>Production daemon</strong> · runtime · implemented</summary>
+
 ### Production daemon
 
 `crates/hfx-daemon` · `runtime` · `implemented`
@@ -476,7 +576,12 @@ Composes production discovery, configuration, authority, service lifecycle, logg
 
 **Change impact:** Regenerate 1 declared projection(s). Run `rust-unit`, `package-contracts`. Review direct consumers: Packaging and installation.
 
+</details>
+
 <a id="rust-sdk"></a>
+<details>
+<summary><strong>Rust SDK</strong> · runtime · implemented</summary>
+
 ### Rust SDK
 
 `crates/hfx-sdk` · `runtime` · `implemented`
@@ -497,7 +602,12 @@ Provides the typed Rust client contract used by production integrations and inte
 
 **Change impact:** Regenerate 1 declared projection(s). Run `rust-unit`, `protocol-contracts`. No direct subsystem consumer is declared; verify repository-facing outputs.
 
+</details>
+
 <a id="kernel-transport"></a>
+<details>
+<summary><strong>Kernel transport adapter</strong> · runtime · implemented</summary>
+
 ### Kernel transport adapter
 
 `crates/hfx-kernel-transport` · `runtime` · `implemented`
@@ -518,7 +628,12 @@ Adapts the generated kernel UAPI into bounded Rust observation, routing, and env
 
 **Change impact:** Regenerate 2 declared projection(s). Run `rust-unit`, `kernel-profile-contracts`. Review direct consumers: Production daemon.
 
+</details>
+
 <a id="simulator"></a>
+<details>
+<summary><strong>Deterministic simulator</strong> · assurance · implemented</summary>
+
 ### Deterministic simulator
 
 `crates/hfx-sim` · `assurance` · `implemented`
@@ -539,7 +654,12 @@ Exercises generations, failures, persistence, restoration, replay, and migration
 
 **Change impact:** Regenerate 1 declared projection(s). Run `simulator-contracts`, `migration-shadow-contracts`. Review direct consumers: Migration provenance.
 
+</details>
+
 <a id="driver-contract"></a>
+<details>
+<summary><strong>Kernel driver contract</strong> · runtime · implemented</summary>
+
 ### Kernel driver contract
 
 `driver` · `runtime` · `implemented`
@@ -560,7 +680,12 @@ Defines the generated userspace ABI and the strict boundary around the in-kernel
 
 **Change impact:** Regenerate 3 declared projection(s). Run `kernel-profile-contracts`. Review direct consumers: Linux HID kernel module, Kernel transport adapter.
 
+</details>
+
 <a id="kernel-module"></a>
+<details>
+<summary><strong>Linux HID kernel module</strong> · runtime · implemented</summary>
+
 ### Linux HID kernel module
 
 `driver/kernel` · `runtime` · `implemented`
@@ -581,7 +706,12 @@ Binds the receiver, preserves generic input, records passive observations, and t
 
 **Change impact:** Regenerate 3 declared projection(s). Run `kernel-profile-contracts`. Review direct consumers: Packaging and installation.
 
+</details>
+
 <a id="runtime-config"></a>
+<details>
+<summary><strong>Linux runtime authority</strong> · delivery · implemented</summary>
+
 ### Linux runtime authority
 
 `runtime` · `delivery` · `implemented`
@@ -602,7 +732,12 @@ Defines package version, service identities, filesystem paths, permissions, acti
 
 **Change impact:** Regenerate 4 declared projection(s). Run `foundation-contracts`, `package-contracts`. Review direct consumers: Production daemon, Packaging and installation.
 
+</details>
+
 <a id="packaging"></a>
+<details>
+<summary><strong>Packaging and installation</strong> · delivery · implemented</summary>
+
 ### Packaging and installation
 
 `packaging` · `delivery` · `implemented`
@@ -613,7 +748,7 @@ Builds reproducible distribution artifacts and a canonical installed root from e
 
 **Must never own:** Runtime naming duplicates; Hidden post-install writes; Publication authorization.
 
-**Depends on:** [Production daemon](#daemon), [Linux HID kernel module](#kernel-module), [Linux runtime authority](#runtime-config), [OpenRGB adapter](#openrgb-adapter), [OpenRazer compatibility adapter](#openrazer-adapter), [Polychromatic adapter](#polychromatic-adapter)
+**Depends on:** [Production daemon](#daemon), [Linux HID kernel module](#kernel-module), [Linux runtime authority](#runtime-config), [OpenRGB adapter](#openrgb-adapter), [OpenRazer compatibility adapter](#openrazer-adapter), [Polychromatic adapter](#polychromatic-adapter), [Device qualification console](#device-qualification-console)
 
 **Used by:** None
 
@@ -623,7 +758,12 @@ Builds reproducible distribution artifacts and a canonical installed root from e
 
 **Change impact:** Regenerate 3 declared projection(s). Run `package-contracts`. No direct subsystem consumer is declared; verify repository-facing outputs.
 
+</details>
+
 <a id="sdk-cpp"></a>
+<details>
+<summary><strong>C++ SDK</strong> · applications · implemented</summary>
+
 ### C++ SDK
 
 `sdk/cpp` · `applications` · `implemented`
@@ -644,7 +784,12 @@ Provides typed C++ bridge access and generated contracts for native application 
 
 **Change impact:** Regenerate 3 declared projection(s). Run `cpp-sdk-contracts`. Review direct consumers: OpenRGB adapter, Contract tests.
 
+</details>
+
 <a id="sdk-python"></a>
+<details>
+<summary><strong>Python SDK</strong> · applications · implemented</summary>
+
 ### Python SDK
 
 `sdk/python` · `applications` · `implemented`
@@ -665,12 +810,17 @@ Provides typed Python bridge access and generated contracts for scripting and Py
 
 **Change impact:** Regenerate 3 declared projection(s). Run `python-unit`, `protocol-contracts`. Review direct consumers: OpenRazer compatibility adapter, Polychromatic adapter, Contract tests.
 
+</details>
+
 <a id="tooling"></a>
+<details>
+<summary><strong>Repository tooling</strong> · tooling · implemented</summary>
+
 ### Repository tooling
 
 `tools` · `tooling` · `implemented`
 
-Provides the single developer CLI, canonical loaders, deterministic generators, portal builder, and verification orchestration.
+Provides the single developer CLI, canonical loaders, deterministic generators, and verification orchestration.
 
 **Owns:** Developer command surface; Canonical data loaders; Deterministic generation.
 
@@ -680,18 +830,23 @@ Provides the single developer CLI, canonical loaders, deterministic generators, 
 
 **Used by:** [Documentation system](#documentation), [Contract tests](#tests), [Verification graph](#verification)
 
-**Canonical sources:** `hfx`, `tools/hfxdev/cli.py`, `tools/hfxdev/render.py`, `tools/hfxdev/verify.py`, `tools/hfxdev/portal.py`, `tools/hfxdev/portal_model.py`, `tools/hfxdev/portal_routing.py`, `tools/hfxdev/portal_metadata.py`, `tools/hfxdev/portal_layout.py`, `tools/hfxdev/portal_content.py`, `tools/hfxdev/portal_search.py`, `tools/hfxdev/public_readiness.py`, `tools/hfxdev/local_companion.py`, `tools/hfxdev/licensing.py`.
+**Canonical sources:** `hfx`, `tools/hfxdev/cli.py`, `tools/hfxdev/render.py`, `tools/hfxdev/verify.py`, `tools/hfxdev/public_readiness.py`, `tools/hfxdev/local_companion.py`, `tools/hfxdev/licensing.py`.
 
 **Generated projections:** `tools/README.md`.
 
 **Change impact:** Regenerate 1 declared projection(s). Run `python-unit`, `generated-freshness`. Review direct consumers: Documentation system, Contract tests, Verification graph.
 
+</details>
+
 <a id="tests"></a>
+<details>
+<summary><strong>Contract tests</strong> · assurance · implemented</summary>
+
 ### Contract tests
 
 `tests` · `assurance` · `implemented`
 
-Holds language-specific, cross-language, fixture, lifecycle, accessibility, and change-impact tests.
+Holds language-specific, cross-language, fixture, lifecycle, repository-navigation, and change-impact tests.
 
 **Owns:** Focused contract tests; Sanitized fixtures; Cross-language smoke programs.
 
@@ -701,13 +856,18 @@ Holds language-specific, cross-language, fixture, lifecycle, accessibility, and 
 
 **Used by:** [Verification graph](#verification)
 
-**Canonical sources:** `tests/test_foundation.py`, `tests/test_portal.py`, `tests/test_testgraph.py`.
+**Canonical sources:** `tests/test_foundation.py`, `tests/test_repository_experience.py`, `tests/test_testgraph.py`.
 
 **Generated projections:** `tests/README.md`, `tests/fixtures/generated/profile-compositions.json`.
 
 **Change impact:** Regenerate 2 declared projection(s). Run `python-unit`, `cpp-sdk-contracts`, `rust-unit`. Review direct consumers: Verification graph.
 
+</details>
+
 <a id="migration"></a>
+<details>
+<summary><strong>Migration provenance</strong> · assurance · research-boundary</summary>
+
 ### Migration provenance
 
 `migration` · `assurance` · `research-boundary`
@@ -728,7 +888,12 @@ Records exact legacy sources, inventories, dispositions, and read-only semantic 
 
 **Change impact:** Regenerate 3 declared projection(s). Run `foundation-contracts`, `migration-shadow-contracts`. No direct subsystem consumer is declared; verify repository-facing outputs.
 
+</details>
+
 <a id="governance"></a>
+<details>
+<summary><strong>GitHub governance authority</strong> · governance · policy</summary>
+
 ### GitHub governance authority
 
 `governance` · `governance` · `policy`
@@ -745,32 +910,42 @@ Defines repository ownership, immutable automation, public collaboration, remote
 
 **Canonical sources:** `governance/github.json`, `governance/licensing.json`, `CONTRIBUTING.md`, `SUPPORT.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`.
 
-**Generated projections:** `README.md`, `docs/assets/badge-state.svg`, `docs/assets/badge-license.svg`, `governance/README.md`, `governance/generated/github-protection-plan.json`, `governance/generated/github-labels.json`, `governance/generated/github-experience-plan.json`, `docs/generated/github-governance.md`, `docs/legal/licensing.md`, `.github/CODEOWNERS`, `.github/pull_request_template.md`, `.github/ISSUE_TEMPLATE/config.yml`, `.github/ISSUE_TEMPLATE/bug_report.yml`, `.github/ISSUE_TEMPLATE/device_qualification.yml`, `.github/ISSUE_TEMPLATE/hardware_research.yml`, `.github/ISSUE_TEMPLATE/documentation.yml`, `.github/ISSUE_TEMPLATE/feature_request.yml`, `.github/dependabot.yml`, `.github/release.yml`, `.github/workflows/verification.yml`, `.github/workflows/full-verification.yml`, `.github/workflows/documentation.yml`, `.github/workflows/repository-experience.yml`, `.github/workflows/pages.yml`, `.github/workflows/codeql.yml`, `.github/workflows/dependency-review.yml`.
+**Generated projections:** `README.md`, `docs/assets/badge-state.svg`, `docs/assets/badge-license.svg`, `governance/README.md`, `governance/generated/github-protection-plan.json`, `governance/generated/github-labels.json`, `governance/generated/github-experience-plan.json`, `docs/generated/github-governance.md`, `docs/legal/licensing.md`, `.github/CODEOWNERS`, `.github/pull_request_template.md`, `.github/ISSUE_TEMPLATE/config.yml`, `.github/ISSUE_TEMPLATE/bug_report.yml`, `.github/ISSUE_TEMPLATE/device_qualification.yml`, `.github/ISSUE_TEMPLATE/hardware_research.yml`, `.github/ISSUE_TEMPLATE/documentation.yml`, `.github/ISSUE_TEMPLATE/feature_request.yml`, `.github/dependabot.yml`, `.github/release.yml`, `.github/workflows/verification.yml`, `.github/workflows/full-verification.yml`, `.github/workflows/codeql.yml`, `.github/workflows/dependency-review.yml`.
 
-**Change impact:** Regenerate 26 declared projection(s). Run `governance-contracts`. Review direct consumers: Documentation system.
+**Change impact:** Regenerate 23 declared projection(s). Run `governance-contracts`. Review direct consumers: Documentation system.
+
+</details>
 
 <a id="documentation"></a>
+<details>
+<summary><strong>Documentation system</strong> · documentation · generated</summary>
+
 ### Documentation system
 
 `docs` · `documentation` · `generated`
 
-Combines reviewed narrative sources with generated technical truth into a telemetry-free, audience-oriented public portal.
+Organizes concise audience guidance and generated technical references for direct use inside GitHub.
 
-**Owns:** Portal information architecture; Reviewed narrative documentation; Static public presentation.
+**Owns:** Documentation information architecture; Reviewed narrative documentation; Generated technical references.
 
-**Must never own:** Duplicated canonical facts; Live hardware claims in static pages; Publication authorization.
+**Must never own:** Duplicated canonical facts; Live hardware claims; Publication authorization.
 
 **Depends on:** [Architecture authority](#architecture), [Device knowledge](#device-knowledge), [Verification graph](#verification), [GitHub governance authority](#governance), [Repository tooling](#tooling)
 
 **Used by:** None
 
-**Canonical sources:** `docs/portal.json`, `docs/user/overview.md`, `docs/architecture/design-book.md`.
+**Canonical sources:** `docs/user/overview.md`, `docs/architecture/design-book.md`, `docs/architecture/decisions/github-native-documentation.md`.
 
 **Generated projections:** `docs/README.md`, `docs/generated/repository-atlas.md`, `generated/public-readiness.json`.
 
-**Change impact:** Regenerate 3 declared projection(s). Run `documentation-portal-contracts`, `repository-atlas-contracts`. No direct subsystem consumer is declared; verify repository-facing outputs.
+**Change impact:** Regenerate 3 declared projection(s). Run `repository-documentation-contracts`, `repository-atlas-contracts`. No direct subsystem consumer is declared; verify repository-facing outputs.
+
+</details>
 
 <a id="verification"></a>
+<details>
+<summary><strong>Verification graph</strong> · assurance · implemented</summary>
+
 ### Verification graph
 
 `verification` · `assurance` · `implemented`
@@ -791,7 +966,12 @@ Defines typed verification nodes, dependencies, lanes, capabilities, side effect
 
 **Change impact:** Regenerate 2 declared projection(s). Run `repository-atlas-contracts`, `python-unit`. Review direct consumers: Documentation system, GitHub governance authority, Migration provenance.
 
+</details>
+
 <a id="errors"></a>
+<details>
+<summary><strong>Error catalog</strong> · architecture · implemented</summary>
+
 ### Error catalog
 
 `errors` · `architecture` · `implemented`
@@ -812,7 +992,12 @@ Defines stable typed error identities, user-safe messages, remediation, and cros
 
 **Change impact:** Regenerate 3 declared projection(s). Run `error-contracts`. No direct subsystem consumer is declared; verify repository-facing outputs.
 
+</details>
+
 <a id="toolchains"></a>
+<details>
+<summary><strong>Pinned development toolchains</strong> · tooling · policy</summary>
+
 ### Pinned development toolchains
 
 `toolchains` · `tooling` · `policy`
@@ -832,4 +1017,6 @@ Pins compiler, interpreter, upstream checkout, and development-container identit
 **Generated projections:** `toolchains/README.md`, `docs/generated/development-environment.md`, `.devcontainer/Containerfile`.
 
 **Change impact:** Regenerate 3 declared projection(s). Run `toolchain-contract`, `development-environment-contracts`. Review direct consumers: Rust workspace, Repository tooling.
+
+</details>
 

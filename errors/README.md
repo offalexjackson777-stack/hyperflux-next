@@ -4,88 +4,42 @@
 
 Defines stable typed error identities, user-safe messages, remediation, and cross-language mappings.
 
-**Status:** `implemented`  
-**Category:** `architecture`  
-**Atlas ID:** `errors`
+`implemented` | `architecture` | Atlas: `errors`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/generated/error-catalog.md`](../docs/generated/error-catalog.md)
+- [`docs/user/troubleshooting.md`](../docs/user/troubleshooting.md)
 
+## Scope
+
+**Owns**
 - Error identifiers
 - User remediation text
 - Error severity and domain
 
-It must never own:
-
+**Does not own**
 - Ad hoc application-only errors
 - Private diagnostics
 - Transport policy
 
-## Inputs And Outputs
-
-Inputs:
-
-- Subsystem failure contracts
-- Privacy requirements
-- User recovery actions
-
-Outputs:
-
-- Rust, Python, and C++ error bindings
-- Error documentation
-
-## Public Contracts
-
-- Stable machine-readable codes
-- Safe actionable messages
-- No private path leakage
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`errors/catalog.json`](catalog.json)
 
-Generated projections:
-
-- [`errors/README.md`](README.md)
-- [`docs/generated/error-catalog.md`](../docs/generated/error-catalog.md)
-- [`crates/hfx-errors/src/generated.rs`](../crates/hfx-errors/src/generated.rs)
-
-## Relationships
-
-Depends on:
-
-- [Schema contracts](../schemas/README.md)
-
-Used by:
-
-- None.
-
 ## Verification
 
-- `error-contracts`
+Run `error-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 3 declared projection(s).
 - Run `error-contracts`.
 - No direct subsystem consumer is declared; verify repository-facing outputs.
 
-## Limitations
+## Relationships
 
-- The catalog cannot replace structured subsystem diagnostics
+- **Depends on:** [Schema contracts](../schemas/README.md)
+- **Used by:** None
 
-## Safe Change Workflow
-
-1. Add the canonical error once
-2. Regenerate every language binding
-3. Run error, SDK, Doctor, and privacy contracts
-
-## Related Documentation
-
-- [`docs/generated/error-catalog.md`](../docs/generated/error-catalog.md)
-- [`docs/user/troubleshooting.md`](../docs/user/troubleshooting.md)
-
-Return to the [Repository Atlas](../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

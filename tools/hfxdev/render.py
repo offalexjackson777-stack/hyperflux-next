@@ -12,6 +12,7 @@ from .development import load_development_environment
 from .errors import load_error_catalog
 from .formal_model import load_formal_model, run_formal_model
 from .generators.assurance import design_coverage_markdown
+from .generators.atlas import collection_readme as atlas_collection_readme
 from .generators.atlas import folder_readme as atlas_folder_readme
 from .generators.atlas import markdown as atlas_markdown
 from .generators.formal_model import formal_model_markdown
@@ -22,7 +23,6 @@ from .generators.governance import (
     dependency_review_workflow as github_dependency_review_workflow,
     dependabot as github_dependabot,
     documentation_report as github_documentation_report,
-    documentation_workflow as github_documentation_workflow,
     experience_plan as github_experience_plan,
     feature_request as github_feature_request,
     full_verification_workflow as github_full_verification_workflow,
@@ -31,11 +31,9 @@ from .generators.governance import (
     issue_config as github_issue_config,
     labels_plan as github_labels_plan,
     markdown as github_governance_markdown,
-    pages_workflow as github_pages_workflow,
     protection_plan as github_protection_plan,
     pull_request_template as github_pull_request_template,
     release_notes as github_release_notes,
-    repository_experience_workflow as github_repository_experience_workflow,
     verification_workflow as github_verification_workflow,
 )
 from .generators.performance import performance_budgets_markdown
@@ -142,7 +140,6 @@ from .profiles import compiled_catalog, composition_fixtures
 from .protocol import load_protocol_registry
 from .release import load_release_gates
 from .public_readiness import public_readiness
-from .portal_model import load_portal_config
 from .supply_chain import load_dependency_inventory
 from .testgraph import load_test_catalog, markdown as testgraph_markdown
 
@@ -264,13 +261,10 @@ def rendered_files(root: Path) -> dict[Path, str]:
     )
     repository_atlas = load_repository_atlas(root)
     readiness = public_readiness(root)
-    portal_config = load_portal_config(root)
     local_companion = load_local_companion(root)
     licensing_policy = load_licensing_policy(root)
     files = {
-        root / "README.md": readme_markdown(
-            github_governance, readiness, portal_config
-        ),
+        root / "README.md": readme_markdown(github_governance, readiness),
         root / "generated" / "public-readiness.json": json.dumps(
             readiness, indent=2, sort_keys=True
         )
@@ -323,19 +317,10 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / ".github" / "workflows" / "full-verification.yml": github_full_verification_workflow(
             github_governance
         ),
-        root / ".github" / "workflows" / "documentation.yml": github_documentation_workflow(
-            github_governance
-        ),
-        root / ".github" / "workflows" / "pages.yml": github_pages_workflow(
-            github_governance
-        ),
         root / ".github" / "workflows" / "codeql.yml": github_codeql_workflow(
             github_governance
         ),
         root / ".github" / "workflows" / "dependency-review.yml": github_dependency_review_workflow(
-            github_governance
-        ),
-        root / ".github" / "workflows" / "repository-experience.yml": github_repository_experience_workflow(
             github_governance
         ),
         root / "governance" / "generated" / "github-protection-plan.json": github_protection_plan(
@@ -487,6 +472,19 @@ def rendered_files(root: Path) -> dict[Path, str]:
     for node in repository_atlas.nodes:
         files[root / node.path / "README.md"] = atlas_folder_readme(
             repository_atlas, node
+        )
+    node_paths = {node.path for node in repository_atlas.nodes}
+    architecture_node = repository_atlas.by_id["architecture"]
+    collection_readmes = sorted(
+        path
+        for path in architecture_node.generated_files
+        if path.endswith("/README.md")
+        and path.removesuffix("/README.md") not in node_paths
+    )
+    for relative in collection_readmes:
+        collection = relative.removesuffix("/README.md")
+        files[root / relative] = atlas_collection_readme(
+            repository_atlas, collection
         )
     install_plan_path = root / "packaging" / "generated" / "install-plan.json"
     installation_document_path = root / "docs" / "generated" / "installation.md"
