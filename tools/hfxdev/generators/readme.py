@@ -80,7 +80,7 @@ def markdown(
 | [Architecture]({pages_url}/developers/architecture.html) | System boundaries and the one-writer transport model |
 | [Contributing](CONTRIBUTING.md) | Schema-first changes, evidence expectations, and verification |
 | [Security](SECURITY.md) | Private vulnerability reporting and disclosure policy |
-| [Roadmap]({repository_url}/projects) | Typed issues and qualification work organized in the GitHub Project |
+| [Roadmap]({governance.project_url}) | Typed issues and qualification work organized in the GitHub Project |
 
 ## Architecture
 
@@ -121,7 +121,7 @@ State]({pages_url}/state/) for the complete, canonical explanation.
 | A developer | [Architecture]({pages_url}/developers/architecture.html), then the [Repository Atlas]({pages_url}/atlas/) |
 | A prospective contributor | [CONTRIBUTING.md](CONTRIBUTING.md) and the [issue forms]({repository_url}/issues/new/choose) |
 | A hardware tester | [Device Lab]({pages_url}/devices/) and the [device qualification form]({repository_url}/issues/new?template=device_qualification.yml) |
-| A maintainer | [Repository State]({pages_url}/state/), [governance]({pages_url}/maintainers/github-governance.html), and the [roadmap]({repository_url}/projects) |
+| A maintainer | [Repository State]({pages_url}/state/), [governance]({pages_url}/maintainers/github-governance.html), and the [roadmap]({governance.project_url}) |
 | A security reporter | [SECURITY.md](SECURITY.md) and [private vulnerability reporting]({repository_url}/security/advisories/new) |
 
 ## Verify A Change

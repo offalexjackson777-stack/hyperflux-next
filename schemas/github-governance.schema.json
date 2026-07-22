@@ -80,9 +80,10 @@
         "project": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["apply_authorized", "title", "views", "fields"],
+          "required": ["apply_authorized", "number", "title", "views", "fields"],
           "properties": {
             "apply_authorized": {"const": true},
+            "number": {"type": "integer", "minimum": 1},
             "title": {"type": "string", "minLength": 1, "maxLength": 80},
             "views": {
               "type": "array",
