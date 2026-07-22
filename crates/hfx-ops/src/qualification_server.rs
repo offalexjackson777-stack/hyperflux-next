@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::qualification::{StageProgress, apply_stage_results};
+use crate::qualification_runner::{
+    ObservationVerdict, PreparedLightingAction, new_transaction_id, prepare_lighting_checkpoint,
+    prepare_lighting_stage, reconcile_pending_lighting,
+};
+use crate::qualification_state::{
+    QualificationSessionState, QualificationStateError, default_state_path, load_state, save_state,
+};
 use crate::{
     BatteryAvailability, CompanionAction, PresenceView, QualificationStage, QualificationView,
     RealSystemProbe, RiskLevel, RunnerAvailability, RunnerCapabilities, StageResult, StageStatus,
@@ -22,13 +29,7 @@ const MAX_REQUEST_BYTES: usize = 16 * 1_024;
 const MAX_ASSET_BYTES: u64 = 2 * 1_024 * 1_024;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(3);
 
-#[derive(Debug, Default)]
-struct ServerState {
-    revision: u64,
-    identity_fingerprint: Option<[u8; 32]>,
-    run_id: Option<String>,
-    results: BTreeMap<String, StageProgress>,
-}
+type ServerState = QualificationSessionState;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -64,6 +65,7 @@ struct DeviceIdentityFingerprint<'a> {
 pub struct QualificationServerConfig {
     pub assets: PathBuf,
     pub port: u16,
+    pub state_file: Option<PathBuf>,
 }
 
 impl Default for QualificationServerConfig {
@@ -71,6 +73,7 @@ impl Default for QualificationServerConfig {
         Self {
             assets: PathBuf::from("/usr/share/hyperflux-next/qualification-console"),
             port: DEFAULT_PORT,
+            state_file: default_state_path().ok(),
         }
     }
 }
@@ -79,6 +82,7 @@ impl Default for QualificationServerConfig {
 pub enum QualificationServerError {
     AssetRootInvalid,
     CatalogInvalid,
+    StateUnavailable,
     BindFailed(io::Error),
     ConnectionFailed(io::Error),
 }
@@ -90,6 +94,7 @@ impl fmt::Display for QualificationServerError {
                 "qualification console assets are missing or are not a readable directory"
             }
             Self::CatalogInvalid => "the installed profile catalog is invalid",
+            Self::StateUnavailable => "the private qualification checkpoint store is unavailable",
             Self::BindFailed(_) => "the local qualification endpoint could not be opened",
             Self::ConnectionFailed(_) => "the local qualification endpoint stopped unexpectedly",
         })
@@ -100,7 +105,7 @@ impl std::error::Error for QualificationServerError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Self::BindFailed(error) | Self::ConnectionFailed(error) => Some(error),
-            Self::AssetRootInvalid | Self::CatalogInvalid => None,
+            Self::AssetRootInvalid | Self::CatalogInvalid | Self::StateUnavailable => None,
         }
     }
 }
@@ -120,8 +125,17 @@ pub fn serve_qualification_console(
         RuntimeProfileCatalog::load().map_err(|_| QualificationServerError::CatalogInvalid)?;
     let listener = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, config.port))
         .map_err(QualificationServerError::BindFailed)?;
+    let state_file = config
+        .state_file
+        .as_deref()
+        .ok_or(QualificationServerError::StateUnavailable)?;
+    let mut state = match load_state(state_file) {
+        Ok(Some(state)) => state,
+        Ok(None) | Err(QualificationStateError::Stale) => ServerState::default(),
+        Err(_) => return Err(QualificationServerError::StateUnavailable),
+    };
+    save_state(state_file, &state).map_err(|_| QualificationServerError::StateUnavailable)?;
     let probe = RealSystemProbe::default();
-    let mut state = ServerState::default();
     for connection in listener.incoming() {
         let mut stream = connection.map_err(QualificationServerError::ConnectionFailed)?;
         let _ = handle_connection(
@@ -130,6 +144,7 @@ pub fn serve_qualification_console(
             config.port,
             &probe,
             &catalog,
+            state_file,
             &mut state,
         );
     }
@@ -150,6 +165,7 @@ fn handle_connection(
     port: u16,
     probe: &RealSystemProbe,
     catalog: &RuntimeProfileCatalog,
+    state_file: &Path,
     state: &mut ServerState,
 ) -> io::Result<()> {
     stream.set_read_timeout(Some(REQUEST_TIMEOUT))?;
@@ -166,7 +182,7 @@ fn handle_connection(
     let head_only = request.method == "HEAD";
     if request.path == "/v1/qualification/view" && matches!(request.method.as_str(), "GET" | "HEAD")
     {
-        let view = live_view(probe, catalog, state)?;
+        let view = live_view(probe, catalog, state_file, state)?;
         let body = serde_json::to_vec(&view).map_err(io::Error::other)?;
         return write_response(
             stream,
@@ -178,7 +194,7 @@ fn handle_connection(
         );
     }
     if request.path.starts_with("/v1/qualification/actions/") && request.method == "POST" {
-        return invoke_action(stream, &request, probe, catalog, state);
+        return invoke_action(stream, &request, probe, catalog, state_file, state);
     }
     if request.method != "GET" && request.method != "HEAD" {
         return write_error(stream, HttpStatus::MethodNotAllowed);
@@ -206,6 +222,7 @@ fn handle_connection(
 fn live_view(
     probe: &RealSystemProbe,
     catalog: &RuntimeProfileCatalog,
+    state_file: &Path,
     state: &mut ServerState,
 ) -> io::Result<QualificationView> {
     let system = probe.snapshot();
@@ -216,42 +233,93 @@ fn live_view(
         catalog,
         RunnerCapabilities {
             read_only_actions: RunnerAvailability::Available,
+            supervised_lighting: RunnerAvailability::Available,
             ..RunnerCapabilities::default()
         },
         state.revision.max(1),
         qualification_generated_at(),
     );
     let fingerprint = identity_fingerprint(&view)?;
+    let mut changed = refresh_identity_binding(state, fingerprint);
+    if reconcile_pending(probe, &view, state) {
+        changed = true;
+    }
+    view.view_revision = state.revision;
+    apply_stage_results(&mut view, &state.results, state.run_id.as_deref());
+    view.companion.hardware_write_executed = state.hardware_write_executed;
+    if changed {
+        save_state(state_file, state).map_err(io::Error::other)?;
+    }
+    Ok(view)
+}
+
+fn refresh_identity_binding(state: &mut ServerState, fingerprint: [u8; 32]) -> bool {
     match state.identity_fingerprint {
         None => {
             state.revision = 1;
             state.identity_fingerprint = Some(fingerprint);
+            true
         }
         Some(previous) if previous != fingerprint => {
             state.revision = state.revision.saturating_add(1);
             state.identity_fingerprint = Some(fingerprint);
             state.run_id = None;
             state.results.clear();
+            if let Some(pending) = &state.pending_transaction {
+                state.results.insert(
+                    pending.stage_id.clone(),
+                    StageProgress {
+                        status: StageStatus::Running,
+                        result: None,
+                        checkpoint: None,
+                    },
+                );
+            }
+            true
         }
-        Some(_) => {}
+        Some(_) => false,
     }
-    view.view_revision = state.revision;
-    apply_stage_results(&mut view, &state.results, state.run_id.as_deref());
-    Ok(view)
+}
+
+fn reconcile_pending(
+    probe: &RealSystemProbe,
+    view: &QualificationView,
+    session: &mut ServerState,
+) -> bool {
+    let Some(pending) = session.pending_transaction.clone() else {
+        return false;
+    };
+    let Some(stage) = view
+        .plans
+        .iter()
+        .flat_map(|plan| &plan.groups)
+        .flat_map(|group| &group.stages)
+        .find(|stage| stage.stage_id == pending.stage_id)
+    else {
+        session.pending_transaction = None;
+        session.results.clear();
+        session.run_id = None;
+        session.revision = session.revision.saturating_add(1);
+        return true;
+    };
+    let Ok(Some(transition)) = reconcile_pending_lighting(probe, view, stage, &pending) else {
+        return false;
+    };
+    session.hardware_write_executed |= transition.hardware_write_executed;
+    session
+        .results
+        .insert(pending.stage_id, transition.progress);
+    session.pending_transaction = None;
+    session.revision = session.revision.saturating_add(1);
+    true
 }
 
 fn identity_fingerprint(view: &QualificationView) -> io::Result<[u8; 32]> {
-    let receivers = view
+    let mut receivers = view
         .receivers
         .iter()
-        .map(|receiver| ReceiverIdentityFingerprint {
-            receiver_id: &receiver.receiver_id,
-            generation_id: receiver.generation_id,
-            profile: receiver
-                .profile
-                .as_ref()
-                .map(|profile| (profile.id.as_str(), profile.digest.as_str())),
-            devices: receiver
+        .map(|receiver| {
+            let mut devices = receiver
                 .devices
                 .iter()
                 .map(|device| DeviceIdentityFingerprint {
@@ -262,9 +330,20 @@ fn identity_fingerprint(view: &QualificationView) -> io::Result<[u8; 32]> {
                         .as_ref()
                         .map(|profile| (profile.id.as_str(), profile.digest.as_str())),
                 })
-                .collect(),
+                .collect::<Vec<_>>();
+            devices.sort_by_key(|device| (device.device_id, device.product_id));
+            ReceiverIdentityFingerprint {
+                receiver_id: &receiver.receiver_id,
+                generation_id: receiver.generation_id,
+                profile: receiver
+                    .profile
+                    .as_ref()
+                    .map(|profile| (profile.id.as_str(), profile.digest.as_str())),
+                devices,
+            }
         })
-        .collect();
+        .collect::<Vec<_>>();
+    receivers.sort_by_key(|receiver| (receiver.receiver_id, receiver.generation_id));
     let encoded =
         serde_json::to_vec(&IdentityFingerprint { receivers }).map_err(io::Error::other)?;
     Ok(Sha256::digest(encoded).into())
@@ -275,6 +354,7 @@ fn invoke_action(
     request: &HttpRequest,
     probe: &RealSystemProbe,
     catalog: &RuntimeProfileCatalog,
+    state_file: &Path,
     state: &mut ServerState,
 ) -> io::Result<()> {
     let input: ActionInput = match serde_json::from_slice(&request.body) {
@@ -287,7 +367,7 @@ fn invoke_action(
             );
         }
     };
-    let view = live_view(probe, catalog, state)?;
+    let view = live_view(probe, catalog, state_file, state)?;
     if input.view_revision != view.view_revision {
         return write_json_error(
             stream,
@@ -313,13 +393,6 @@ fn invoke_action(
             "This action has no current profile-bound stage.",
         );
     };
-    if action.risk != RiskLevel::ReadOnly || selected_stage.risk != RiskLevel::ReadOnly {
-        return write_json_error(
-            stream,
-            HttpStatus::NotImplemented,
-            "The supervised hardware runner is not installed; no hardware write was attempted.",
-        );
-    }
     if action
         .confirmation
         .as_ref()
@@ -331,28 +404,17 @@ fn invoke_action(
             "The exact authorization phrase was not supplied.",
         );
     }
-    let (status, summary) = read_only_outcome(&view, selected_stage, &input);
-    let completed_at = qualification_generated_at();
-    if state.run_id.is_none() {
-        let timestamp = completed_at
-            .chars()
-            .filter(|character| !matches!(character, ':' | '-'))
-            .collect::<String>();
-        state.run_id = Some(format!("local-{timestamp}"));
+    ensure_run_id(state);
+    if let Err(failure) = apply_action(probe, &view, selected_stage, &input, state_file, state) {
+        if failure.state_changed {
+            state.revision = state.revision.saturating_add(1);
+            save_state(state_file, state).map_err(io::Error::other)?;
+        }
+        return write_json_error(stream, failure.status, &failure.message);
     }
-    state.results.insert(
-        selected_stage.stage_id.clone(),
-        StageProgress {
-            status,
-            result: StageResult {
-                summary: summary.to_owned(),
-                completed_at,
-                evidence_refs: vec![format!("local-read-only:{}", selected_stage.stage_id)],
-            },
-        },
-    );
     state.revision = state.revision.saturating_add(1);
-    let response = live_view(probe, catalog, state)?;
+    commit_completed_state(state_file, state)?;
+    let response = live_view(probe, catalog, state_file, state)?;
     let body = serde_json::to_vec(&response).map_err(io::Error::other)?;
     write_response(
         stream,
@@ -362,6 +424,231 @@ fn invoke_action(
         CachePolicy::NoStore,
         false,
     )
+}
+
+struct ActionFailure {
+    status: HttpStatus,
+    message: String,
+    state_changed: bool,
+}
+
+impl ActionFailure {
+    fn unchanged(status: HttpStatus, message: impl Into<String>) -> Self {
+        Self {
+            status,
+            message: message.into(),
+            state_changed: false,
+        }
+    }
+}
+
+fn apply_action(
+    probe: &RealSystemProbe,
+    view: &QualificationView,
+    stage: &QualificationStage,
+    input: &ActionInput,
+    state_file: &Path,
+    session: &mut ServerState,
+) -> Result<(), ActionFailure> {
+    match stage.risk {
+        RiskLevel::ReadOnly => {
+            record_read_only_result(view, stage, input, session);
+            Ok(())
+        }
+        RiskLevel::LightingWrite => {
+            apply_lighting_action(probe, view, stage, input, state_file, session)
+        }
+        RiskLevel::DeviceLifecycle | RiskLevel::SystemLifecycle => Err(ActionFailure::unchanged(
+            HttpStatus::NotImplemented,
+            "The supervised lifecycle runner is not installed; no hardware action was requested.",
+        )),
+    }
+}
+
+fn record_read_only_result(
+    view: &QualificationView,
+    stage: &QualificationStage,
+    input: &ActionInput,
+    session: &mut ServerState,
+) {
+    let (status, summary) = read_only_outcome(view, stage, input);
+    session.results.insert(
+        stage.stage_id.clone(),
+        StageProgress {
+            status,
+            result: Some(StageResult {
+                summary: summary.to_owned(),
+                completed_at: qualification_generated_at(),
+                evidence_refs: vec![format!("local-read-only:{}", stage.stage_id)],
+            }),
+            checkpoint: None,
+        },
+    );
+}
+
+fn apply_lighting_action(
+    probe: &RealSystemProbe,
+    view: &QualificationView,
+    stage: &QualificationStage,
+    input: &ActionInput,
+    state_file: &Path,
+    session: &mut ServerState,
+) -> Result<(), ActionFailure> {
+    let prepared = if stage.status == StageStatus::Ready {
+        prepare_lighting_stage(probe, view, stage)
+    } else if stage.status == StageStatus::AwaitingObservation {
+        let verdict = observation_verdict(stage, input)
+            .map_err(|message| ActionFailure::unchanged(HttpStatus::BadRequest, message))?;
+        let current = session.results.get(&stage.stage_id).ok_or_else(|| {
+            ActionFailure::unchanged(
+                HttpStatus::Conflict,
+                "The watched checkpoint is no longer available; no request was sent.",
+            )
+        })?;
+        prepare_lighting_checkpoint(probe, view, stage, current, verdict)
+    } else {
+        return Err(ActionFailure::unchanged(
+            HttpStatus::Conflict,
+            "This lighting stage is not at a runnable checkpoint.",
+        ));
+    };
+    let prepared = prepared
+        .map_err(|error| ActionFailure::unchanged(HttpStatus::Conflict, error.to_string()))?;
+    let transition = match prepared {
+        PreparedLightingAction::Record(transition) => transition,
+        PreparedLightingAction::Write(prepared) => {
+            execute_prepared_lighting(&prepared, probe, stage, state_file, session)?
+        }
+    };
+    session.hardware_write_executed |= transition.hardware_write_executed;
+    session
+        .results
+        .insert(stage.stage_id.clone(), transition.progress);
+    Ok(())
+}
+
+fn execute_prepared_lighting(
+    prepared: &crate::qualification_runner::PreparedLightingWrite,
+    probe: &RealSystemProbe,
+    stage: &QualificationStage,
+    state_file: &Path,
+    session: &mut ServerState,
+) -> Result<crate::qualification_runner::RunnerTransition, ActionFailure> {
+    let transaction_id = new_transaction_id()
+        .map_err(|error| ActionFailure::unchanged(HttpStatus::Conflict, error.to_string()))?;
+    let prior = session.results.get(&stage.stage_id).cloned();
+    let pending = prepared.pending(&stage.stage_id, transaction_id.clone());
+    session.pending_transaction = Some(pending.clone());
+    session.results.insert(
+        stage.stage_id.clone(),
+        StageProgress {
+            status: StageStatus::Running,
+            result: None,
+            checkpoint: None,
+        },
+    );
+    if save_state(state_file, session).is_err() {
+        restore_prior_progress(session, &stage.stage_id, prior);
+        return Err(ActionFailure::unchanged(
+            HttpStatus::Conflict,
+            "The private checkpoint could not be committed; no request was sent.",
+        ));
+    }
+    match prepared.execute(probe, &transaction_id) {
+        Ok(transition) => Ok(transition),
+        Err(error) => {
+            let retry_forbidden = error.retry_forbidden();
+            session.hardware_write_executed |= error.hardware_write_executed();
+            if !retry_forbidden {
+                restore_prior_progress(session, &stage.stage_id, prior);
+                if save_state(state_file, session).is_err() {
+                    restore_pending_progress(session, pending);
+                    return Err(ActionFailure::unchanged(
+                        HttpStatus::Conflict,
+                        "The request was not sent, but its private checkpoint could not be restored.",
+                    ));
+                }
+            }
+            Err(ActionFailure {
+                status: HttpStatus::Conflict,
+                message: error.to_string(),
+                state_changed: retry_forbidden,
+            })
+        }
+    }
+}
+
+fn restore_pending_progress(
+    session: &mut ServerState,
+    pending: crate::qualification_runner::PendingLightingTransaction,
+) {
+    session.results.insert(
+        pending.stage_id.clone(),
+        StageProgress {
+            status: StageStatus::Running,
+            result: None,
+            checkpoint: None,
+        },
+    );
+    session.pending_transaction = Some(pending);
+}
+
+fn restore_prior_progress(session: &mut ServerState, stage_id: &str, prior: Option<StageProgress>) {
+    session.pending_transaction = None;
+    if let Some(progress) = prior {
+        session.results.insert(stage_id.to_owned(), progress);
+    } else {
+        session.results.remove(stage_id);
+    }
+}
+
+fn ensure_run_id(state: &mut ServerState) {
+    if state.run_id.is_none() {
+        let timestamp = qualification_generated_at()
+            .chars()
+            .filter(|character| !matches!(character, ':' | '-'))
+            .collect::<String>();
+        state.run_id = Some(format!("local-{timestamp}"));
+    }
+}
+
+fn commit_completed_state(state_file: &Path, state: &mut ServerState) -> io::Result<()> {
+    let completed_pending = state.pending_transaction.take();
+    if let Err(error) = save_state(state_file, state) {
+        state.pending_transaction = completed_pending;
+        return Err(io::Error::other(error));
+    }
+    Ok(())
+}
+
+fn observation_verdict(
+    stage: &QualificationStage,
+    input: &ActionInput,
+) -> Result<ObservationVerdict, &'static str> {
+    if input.observations.len() != stage.observations.len() {
+        return Err("Answer every watched observation exactly once; no request was sent.");
+    }
+    let mut verdict = ObservationVerdict::Pass;
+    for prompt in &stage.observations {
+        let answer = input
+            .observations
+            .get(&prompt.id)
+            .ok_or("Answer every watched observation exactly once; no request was sent.")?;
+        let choice = prompt
+            .choices
+            .iter()
+            .find(|choice| choice.id == *answer)
+            .ok_or("A watched answer is outside the declared choices; no request was sent.")?;
+        match choice.outcome.as_str() {
+            "fail" => verdict = ObservationVerdict::Fail,
+            "unclear" if verdict != ObservationVerdict::Fail => {
+                verdict = ObservationVerdict::Unclear;
+            }
+            "pass" | "unclear" => {}
+            _ => return Err("A watched answer has an invalid outcome; no request was sent."),
+        }
+    }
+    Ok(verdict)
 }
 
 fn stage_for_action<'a>(
@@ -386,12 +673,7 @@ fn read_only_outcome<'a>(
                 .iter()
                 .flat_map(|group| &group.stages)
                 .any(|candidate| candidate.stage_id == stage.stage_id)
-                .then(|| {
-                    view.receivers
-                        .iter()
-                        .flat_map(|receiver| &receiver.devices)
-                        .find(|device| device.device_id == plan.device_id)
-                })
+                .then(|| device_for_plan(view, plan))
                 .flatten()
         });
         let Some(device) = device else {
@@ -458,6 +740,20 @@ fn read_only_outcome<'a>(
             "The watched observation was inconclusive.",
         ),
     }
+}
+
+fn device_for_plan<'a>(
+    view: &'a QualificationView,
+    plan: &crate::QualificationPlan,
+) -> Option<&'a crate::DeviceView> {
+    view.receivers
+        .iter()
+        .find(|receiver| {
+            receiver.receiver_id == plan.receiver_id && receiver.generation_id == plan.generation_id
+        })?
+        .devices
+        .iter()
+        .find(|device| device.device_id == plan.device_id)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -729,6 +1025,16 @@ fn write_response(
 mod tests {
     use super::*;
 
+    fn pending_transaction() -> crate::qualification_runner::PendingLightingTransaction {
+        crate::qualification_runner::PendingLightingTransaction {
+            stage_id: "mouse-test-lighting".to_owned(),
+            transaction_id: hfx_domain::TransactionId::try_from("qualification-test")
+                .expect("transaction id"),
+            step: crate::qualification_runner::LightingStep::LightingBlue,
+            prior_progress: None,
+        }
+    }
+
     #[test]
     fn parser_accepts_only_bounded_http11_shapes() {
         let request =
@@ -770,5 +1076,164 @@ mod tests {
         );
         assert_eq!(resolve_asset(&canonical, "/../secret"), None);
         fs::remove_dir_all(&root).expect("test root removes");
+    }
+
+    #[test]
+    fn failed_final_commit_keeps_the_pending_transaction_for_reconciliation() {
+        let parent = std::env::temp_dir().join(format!(
+            "hyperflux-qualification-invalid-state-parent-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_file(&parent);
+        fs::write(&parent, "not a directory").expect("blocking parent writes");
+        let pending = pending_transaction();
+        let mut state = ServerState {
+            pending_transaction: Some(pending.clone()),
+            ..ServerState::default()
+        };
+        assert!(commit_completed_state(&parent.join("session.json"), &mut state).is_err());
+        assert_eq!(state.pending_transaction, Some(pending));
+        fs::remove_file(parent).expect("blocking parent removes");
+    }
+
+    #[test]
+    fn failed_unsent_restore_keeps_the_pending_gate_in_memory() {
+        let pending = pending_transaction();
+        let mut state = ServerState {
+            pending_transaction: Some(pending.clone()),
+            results: BTreeMap::from([(
+                pending.stage_id.clone(),
+                StageProgress {
+                    status: StageStatus::Running,
+                    result: None,
+                    checkpoint: None,
+                },
+            )]),
+            ..ServerState::default()
+        };
+        restore_prior_progress(&mut state, &pending.stage_id, None);
+        restore_pending_progress(&mut state, pending.clone());
+        assert_eq!(state.pending_transaction, Some(pending.clone()));
+        assert_eq!(
+            state.results[&pending.stage_id].status,
+            StageStatus::Running
+        );
+    }
+
+    #[test]
+    fn identity_change_invalidates_claims_but_preserves_uncertain_side_effects() {
+        let pending = pending_transaction();
+        let mut state = ServerState {
+            identity_fingerprint: Some([1_u8; 32]),
+            run_id: Some("run-old-generation".to_owned()),
+            results: BTreeMap::from([(
+                "mouse-test-profile".to_owned(),
+                StageProgress {
+                    status: StageStatus::Passed,
+                    result: None,
+                    checkpoint: None,
+                },
+            )]),
+            pending_transaction: Some(pending.clone()),
+            hardware_write_executed: true,
+            ..ServerState::default()
+        };
+        assert!(refresh_identity_binding(&mut state, [2_u8; 32]));
+        assert_eq!(state.results.len(), 1);
+        assert_eq!(
+            state.results["mouse-test-lighting"].status,
+            StageStatus::Running
+        );
+        assert!(state.run_id.is_none());
+        assert_eq!(state.pending_transaction, Some(pending));
+        assert!(state.hardware_write_executed);
+    }
+
+    #[test]
+    fn identity_fingerprint_ignores_inventory_order() {
+        let fixture = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../apps/device-qualification/tests/fixtures/rust-qualified-pair.json");
+        let mut view: QualificationView =
+            serde_json::from_slice(&fs::read(fixture).expect("fixture reads"))
+                .expect("fixture parses");
+        let mut second = view.receivers[0].clone();
+        second.receiver_id = "receiver-second".to_owned();
+        second.generation_id = 11;
+        view.receivers.push(second);
+        let expected = identity_fingerprint(&view).expect("fingerprint computes");
+        view.receivers.reverse();
+        for receiver in &mut view.receivers {
+            receiver.devices.reverse();
+        }
+        assert_eq!(
+            identity_fingerprint(&view).expect("reordered fingerprint computes"),
+            expected
+        );
+    }
+
+    #[test]
+    fn watched_answers_are_exact_and_reduce_to_one_verdict() {
+        let stage = QualificationStage {
+            stage_id: "mouse-test-lighting".to_owned(),
+            title: "Lighting".to_owned(),
+            description: "Lighting".to_owned(),
+            kind: crate::StageKind::WatchedObservation,
+            risk: RiskLevel::LightingWrite,
+            status: StageStatus::AwaitingObservation,
+            capabilities: Vec::new(),
+            instructions: Vec::new(),
+            observations: vec![crate::ObservationPrompt {
+                id: "visual".to_owned(),
+                prompt: "Does it match?".to_owned(),
+                choices: vec![
+                    crate::ObservationChoice {
+                        id: "pass".to_owned(),
+                        label: "Matches".to_owned(),
+                        outcome: "pass".to_owned(),
+                    },
+                    crate::ObservationChoice {
+                        id: "fail".to_owned(),
+                        label: "Does not match".to_owned(),
+                        outcome: "fail".to_owned(),
+                    },
+                    crate::ObservationChoice {
+                        id: "unclear".to_owned(),
+                        label: "Unclear".to_owned(),
+                        outcome: "unclear".to_owned(),
+                    },
+                ],
+            }],
+            action_id: Some("run:mouse-test-lighting".to_owned()),
+            result: None,
+        };
+        let input = |answer: &str| ActionInput {
+            view_revision: 1,
+            confirmation: None,
+            observations: BTreeMap::from([("visual".to_owned(), answer.to_owned())]),
+        };
+        assert_eq!(
+            observation_verdict(&stage, &input("pass")),
+            Ok(ObservationVerdict::Pass)
+        );
+        assert_eq!(
+            observation_verdict(&stage, &input("fail")),
+            Ok(ObservationVerdict::Fail)
+        );
+        assert_eq!(
+            observation_verdict(&stage, &input("unclear")),
+            Ok(ObservationVerdict::Unclear)
+        );
+        assert!(observation_verdict(&stage, &input("typo")).is_err());
+        assert!(
+            observation_verdict(
+                &stage,
+                &ActionInput {
+                    view_revision: 1,
+                    confirmation: None,
+                    observations: BTreeMap::new(),
+                }
+            )
+            .is_err()
+        );
     }
 }

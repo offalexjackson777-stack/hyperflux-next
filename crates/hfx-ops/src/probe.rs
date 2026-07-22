@@ -288,7 +288,7 @@ impl<R: CommandRunner> RealSystemProbe<R> {
         output.success && output.stdout == "loaded"
     }
 
-    fn bridge_client(
+    pub(crate) fn bridge_client(
         &self,
         client_id: &str,
         client_name: &str,

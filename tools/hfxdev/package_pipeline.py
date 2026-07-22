@@ -510,6 +510,7 @@ def build_artifacts(
     revision, epoch = _source_identity(root, revision)
     output = _new_output_directory(output, "package build")
     environment = _base_environment(root, output, epoch)
+    environment["HFX_SOURCE_REVISION"] = revision
     capabilities = capabilities or {}
     toolchain = verify_current_toolchain(root)
     inputs = _provenance_inputs(root, install, runtime)

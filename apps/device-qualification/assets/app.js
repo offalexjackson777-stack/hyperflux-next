@@ -9,7 +9,7 @@ const refreshButton = document.querySelector("#refresh-view");
 
 const state = {
   view: null,
-  selectedDeviceId: null,
+  selectedDeviceKey: null,
   selectedStageId: null,
   busyActionId: null,
   loading: true,
@@ -20,9 +20,9 @@ const state = {
 refreshButton.addEventListener("click", () => refreshView(true));
 
 document.addEventListener("click", (event) => {
-  const deviceButton = event.target.closest("[data-device-id]");
+  const deviceButton = event.target.closest("[data-device-key]");
   if (deviceButton) {
-    state.selectedDeviceId = deviceButton.dataset.deviceId;
+    state.selectedDeviceKey = deviceButton.dataset.deviceKey;
     state.selectedStageId = null;
     state.hasDraft = false;
     render();
@@ -149,7 +149,7 @@ async function invokeStage(form) {
 
 async function fetchWithTimeout(path, options) {
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 6_000);
+  const timeout = window.setTimeout(() => controller.abort(), 15_000);
   try {
     return await fetch(path, {
       credentials: "same-origin",
@@ -163,8 +163,8 @@ async function fetchWithTimeout(path, options) {
 
 function reconcileSelection() {
   const contexts = deviceContexts();
-  if (!contexts.some(({ device }) => device.device_id === state.selectedDeviceId)) {
-    state.selectedDeviceId = contexts[0]?.device.device_id ?? null;
+  if (!contexts.some((context) => context.key === state.selectedDeviceKey)) {
+    state.selectedDeviceKey = contexts[0]?.key ?? null;
     state.selectedStageId = null;
     state.hasDraft = false;
   }
@@ -208,10 +208,10 @@ function renderDeviceRail(contexts) {
     <aside class="device-rail" aria-label="Detected controllers">
       <header class="rail-heading"><span>Detected controllers</span><strong>${contexts.length}</strong></header>
       <div class="device-list">
-        ${contexts.map(({ device, plan }) => {
+        ${contexts.map(({ key, device, plan }) => {
           const progress = stageProgress(plan);
           return `
-            <button type="button" class="device-row ${device.device_id === state.selectedDeviceId ? "is-selected" : ""}" data-device-id="${escapeAttribute(device.device_id)}">
+            <button type="button" class="device-row ${key === state.selectedDeviceKey ? "is-selected" : ""}" data-device-key="${escapeAttribute(key)}">
               <span class="device-kind" aria-hidden="true">${device.kind === "mouse" ? "M" : device.kind === "keyboard" ? "K" : "D"}</span>
               <span class="device-copy">
                 <strong>${escapeHtml(device.model_name || "Unrecognized controller")}</strong>
@@ -405,14 +405,21 @@ function emptyInventory() {
 function deviceContexts() {
   if (!state.view) return [];
   return state.view.receivers.flatMap((receiver) => receiver.devices.map((device) => ({
+    key: deviceContextKey(receiver, device),
     receiver,
     device,
-    plan: state.view.plans.find((plan) => plan.device_id === device.device_id) || null,
+    plan: state.view.plans.find((plan) => plan.receiver_id === receiver.receiver_id
+      && plan.generation_id === receiver.generation_id
+      && plan.device_id === device.device_id) || null,
   })));
 }
 
 function selectedContext() {
-  return deviceContexts().find(({ device }) => device.device_id === state.selectedDeviceId) || null;
+  return deviceContexts().find(({ key }) => key === state.selectedDeviceKey) || null;
+}
+
+function deviceContextKey(receiver, device) {
+  return `${encodeURIComponent(receiver.receiver_id)}:${receiver.generation_id}:${encodeURIComponent(device.device_id)}`;
 }
 
 function allStages(plan) {

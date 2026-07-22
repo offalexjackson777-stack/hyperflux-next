@@ -9,6 +9,7 @@ use hfx_profiles::{PROFILE_SOURCE_SHA256, RuntimeProfile, RuntimeProfileCatalog}
 use hfx_protocol::{BatteryObservation, DeviceInventoryView, IntegrationReceiverView};
 use hfx_runtime::PRODUCT_VERSION;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -212,10 +213,21 @@ pub struct StageResult {
     pub evidence_refs: Vec<String>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct StageCheckpoint {
+    pub checkpoint_id: String,
+    pub instructions: Vec<String>,
+    pub observations: Vec<ObservationPrompt>,
+    pub evidence_refs: Vec<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct StageProgress {
     pub status: StageStatus,
-    pub result: StageResult,
+    pub result: Option<StageResult>,
+    pub checkpoint: Option<StageCheckpoint>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -257,6 +269,8 @@ pub struct EvidenceView {
 #[serde(deny_unknown_fields)]
 pub struct QualificationPlan {
     pub plan_id: String,
+    pub receiver_id: String,
+    pub generation_id: u64,
     pub device_id: String,
     pub profile_binding: Option<ProfileBindingView>,
     pub verdict: VerdictState,
@@ -344,18 +358,17 @@ pub fn build_qualification_view(
     let state = companion_state(system, integration);
     let mut receivers = Vec::new();
     let mut plans = Vec::new();
-    let mut actions = Vec::new();
     if let Some(integration) = integration {
         for receiver in &integration.view.receivers {
             receivers.push(receiver_view(receiver, catalog));
             for device in &receiver.inventory {
                 if let Some(plan) = qualification_plan(receiver, device, catalog, runner) {
-                    actions.extend(actions_for_plan(&plan));
                     plans.push(plan);
                 }
             }
         }
     }
+    let actions = actions_for_plans(&plans);
     QualificationView {
         schema: QUALIFICATION_SCHEMA.to_owned(),
         api_version: QUALIFICATION_API_VERSION,
@@ -545,15 +558,7 @@ fn qualification_plan(
 ) -> Option<QualificationPlan> {
     let binding = device.profile.as_ref()?;
     let profile = catalog.profile(&binding.profile_id)?;
-    let slug = format!(
-        "{}-{:04x}",
-        match device.device_kind {
-            DeviceKind::Mouse => "mouse",
-            DeviceKind::Keyboard => "keyboard",
-            _ => "device",
-        },
-        device.product_id.get()
-    );
+    let slug = qualification_slug(receiver, device);
     let mut groups = vec![identity_group(&slug, profile, runner.read_only_actions)];
     if let Some(group) = lighting_group(&slug, device, profile, runner.supervised_lighting) {
         groups.push(group);
@@ -569,6 +574,8 @@ fn qualification_plan(
             "plan:{}:{}:{}",
             receiver.receiver_id, receiver.generation_id, binding.profile_id
         ),
+        receiver_id: receiver.receiver_id.as_str().to_owned(),
+        generation_id: receiver.generation_id.get(),
         device_id: device.device_id.as_str().to_owned(),
         profile_binding: Some(profile_binding(binding)),
         verdict: VerdictState::NotRun,
@@ -582,6 +589,26 @@ fn qualification_plan(
             export_action_id: None,
         },
     })
+}
+
+fn qualification_slug(receiver: &IntegrationReceiverView, device: &DeviceInventoryView) -> String {
+    let kind = match device.device_kind {
+        DeviceKind::Mouse => "mouse",
+        DeviceKind::Keyboard => "keyboard",
+        _ => "device",
+    };
+    let mut digest = Sha256::new();
+    digest.update(receiver.receiver_id.as_str().as_bytes());
+    digest.update([0]);
+    digest.update(receiver.generation_id.get().to_le_bytes());
+    digest.update([0]);
+    digest.update(device.device_id.as_str().as_bytes());
+    let digest = digest.finalize();
+    let mut suffix = String::with_capacity(64);
+    for byte in digest {
+        write!(&mut suffix, "{byte:02x}").expect("writing to a string cannot fail");
+    }
+    format!("{kind}-{:04x}-{suffix}", device.product_id.get())
 }
 
 fn identity_group(
@@ -782,10 +809,18 @@ fn blocked_or_locked_stage(
         } else {
             vec!["The installed build does not include this supervised runner yet; no write was attempted.".to_owned()]
         },
-        observations: vec![outcome_observation()],
+        observations: if runner_enabled {
+            Vec::new()
+        } else {
+            vec![outcome_observation()]
+        },
         action_id: runner_enabled.then(|| action_id(stage_id)),
         result: None,
     }
+}
+
+fn actions_for_plans(plans: &[QualificationPlan]) -> Vec<CompanionAction> {
+    plans.iter().flat_map(actions_for_plan).collect()
 }
 
 fn actions_for_plan(plan: &QualificationPlan) -> Vec<CompanionAction> {
@@ -794,11 +829,14 @@ fn actions_for_plan(plan: &QualificationPlan) -> Vec<CompanionAction> {
         .flat_map(|group| &group.stages)
         .filter_map(|stage| {
             let id = stage.action_id.clone()?;
-            let confirmation = match stage.risk {
+            let confirmation = if stage.status == StageStatus::AwaitingObservation {
+                None
+            } else {
+                match stage.risk {
                 RiskLevel::ReadOnly => None,
                 RiskLevel::LightingWrite => Some(ActionConfirmation {
                     phrase: "authorize profile-bound lighting test".to_owned(),
-                    summary: "This stage may send bounded RGB frames only to the selected profile and generation."
+                    summary: "This stage may send bounded test and cleanup RGB frames only to the selected profile and generation."
                         .to_owned(),
                 }),
                 RiskLevel::DeviceLifecycle => Some(ActionConfirmation {
@@ -811,21 +849,29 @@ fn actions_for_plan(plan: &QualificationPlan) -> Vec<CompanionAction> {
                     summary: "A system suspend requires a later, separate confirmation at its checkpoint."
                         .to_owned(),
                 }),
+                }
             };
             Some(CompanionAction {
                 id: id.clone(),
-                label: match stage.kind {
-                    StageKind::Automatic => "Run read-only check",
-                    StageKind::WatchedObservation if stage.risk == RiskLevel::ReadOnly => {
-                        "Record observation"
-                    }
-                    StageKind::WatchedObservation => "Begin supervised test",
-                    StageKind::Lifecycle => "Begin watched lifecycle",
+                label: match stage.status {
+                    StageStatus::AwaitingObservation => "Record watched result",
+                    StageStatus::Running => "Running bounded step",
+                    _ => match stage.kind {
+                        StageKind::Automatic => "Run read-only check",
+                        StageKind::WatchedObservation if stage.risk == RiskLevel::ReadOnly => {
+                            "Record observation"
+                        }
+                        StageKind::WatchedObservation => "Begin supervised test",
+                        StageKind::Lifecycle => "Begin watched lifecycle",
+                    },
                 }
                 .to_owned(),
                 method: "POST".to_owned(),
                 href: format!("/v1/qualification/actions/{}", percent_encode(&id)),
-                enabled: stage.status == StageStatus::Ready,
+                enabled: matches!(
+                    stage.status,
+                    StageStatus::Ready | StageStatus::AwaitingObservation
+                ),
                 risk: stage.risk,
                 confirmation,
             })
@@ -848,9 +894,15 @@ pub(crate) fn apply_stage_results(
         {
             if let Some(progress) = results.get(&stage.stage_id) {
                 stage.status = progress.status;
-                stage.result = Some(progress.result.clone());
+                stage.result.clone_from(&progress.result);
+                if let Some(checkpoint) = &progress.checkpoint {
+                    stage.instructions.clone_from(&checkpoint.instructions);
+                    stage.observations.clone_from(&checkpoint.observations);
+                }
                 if progress.status == StageStatus::Passed {
                     completed.push(stage.stage_id.clone());
+                } else {
+                    first_pending_seen = true;
                 }
                 continue;
             }
@@ -925,17 +977,7 @@ pub(crate) fn apply_stage_results(
             export_action_id: None,
         };
     }
-    for action in &mut view.actions {
-        action.enabled = view.plans.iter().any(|plan| {
-            plan.groups
-                .iter()
-                .flat_map(|group| &group.stages)
-                .any(|stage| {
-                    stage.action_id.as_deref() == Some(action.id.as_str())
-                        && stage.status == StageStatus::Ready
-                })
-        });
-    }
+    view.actions = actions_for_plans(&view.plans);
 }
 
 fn action_id(stage_id: &str) -> String {
@@ -1180,6 +1222,26 @@ mod tests {
             .join("../../apps/device-qualification/tests/fixtures/rust-qualified-pair.json")
     }
 
+    fn stage_by_suffix<'a>(view: &'a QualificationView, suffix: &str) -> &'a QualificationStage {
+        view.plans[0]
+            .groups
+            .iter()
+            .flat_map(|group| &group.stages)
+            .find(|stage| stage.stage_id.ends_with(suffix))
+            .expect("expected qualification stage exists")
+    }
+
+    fn action_for_stage<'a>(
+        view: &'a QualificationView,
+        stage: &QualificationStage,
+    ) -> &'a CompanionAction {
+        let action_id = stage.action_id.as_deref().expect("stage has an action id");
+        view.actions
+            .iter()
+            .find(|action| action.id == action_id)
+            .expect("expected qualification action exists")
+    }
+
     #[test]
     fn projection_uses_exact_profile_identity_and_no_simulation() {
         let integration = integration();
@@ -1375,7 +1437,8 @@ mod tests {
             stage_ids[0].clone(),
             StageProgress {
                 status: StageStatus::Passed,
-                result: first_result.clone(),
+                result: Some(first_result.clone()),
+                checkpoint: None,
             },
         )]);
         apply_stage_results(&mut view, &results, Some("run-generation-7"));
@@ -1402,7 +1465,8 @@ mod tests {
                 stage_id.clone(),
                 StageProgress {
                     status: StageStatus::Passed,
-                    result: first_result.clone(),
+                    result: Some(first_result.clone()),
+                    checkpoint: None,
                 },
             );
         }
@@ -1416,6 +1480,146 @@ mod tests {
         assert!(view.plans[0].evidence.missing_claims.is_empty());
         assert!(view.actions.iter().all(|action| !action.enabled));
         assert!(!view.companion.hardware_write_executed);
+    }
+
+    #[test]
+    fn lighting_authorization_precedes_checkpoint_observations() {
+        let integration = integration();
+        let mut view = build_qualification_view(
+            &system(),
+            Some(&integration),
+            &catalog(),
+            RunnerCapabilities {
+                read_only_actions: RunnerAvailability::Available,
+                supervised_lighting: RunnerAvailability::Available,
+                ..RunnerCapabilities::default()
+            },
+            1,
+            "2026-07-22T12:00:00Z".to_owned(),
+        );
+        let stages = view.plans[0]
+            .groups
+            .iter()
+            .flat_map(|group| &group.stages)
+            .map(|stage| stage.stage_id.clone())
+            .collect::<Vec<_>>();
+        let completed = StageResult {
+            summary: "Read-only prerequisite passed.".to_owned(),
+            completed_at: "2026-07-22T12:01:00Z".to_owned(),
+            evidence_refs: vec!["local-read-only:test".to_owned()],
+        };
+        let mut results = BTreeMap::from([
+            (
+                stages[0].clone(),
+                StageProgress {
+                    status: StageStatus::Passed,
+                    result: Some(completed.clone()),
+                    checkpoint: None,
+                },
+            ),
+            (
+                stages[1].clone(),
+                StageProgress {
+                    status: StageStatus::Passed,
+                    result: Some(completed),
+                    checkpoint: None,
+                },
+            ),
+        ]);
+        apply_stage_results(&mut view, &results, Some("run-generation-7"));
+        let map = stage_by_suffix(&view, "-map");
+        assert_eq!(map.status, StageStatus::Ready);
+        assert!(map.observations.is_empty());
+        let action = action_for_stage(&view, map);
+        assert!(action.enabled);
+        assert!(
+            action
+                .confirmation
+                .as_ref()
+                .expect("lighting authorization")
+                .summary
+                .contains("cleanup")
+        );
+
+        results.insert(
+            map.stage_id.clone(),
+            StageProgress {
+                status: StageStatus::AwaitingObservation,
+                result: None,
+                checkpoint: Some(StageCheckpoint {
+                    checkpoint_id: "map-pattern".to_owned(),
+                    instructions: vec!["Inspect the pattern.".to_owned()],
+                    observations: vec![outcome_observation()],
+                    evidence_refs: vec!["bridge-transaction:test".to_owned()],
+                }),
+            },
+        );
+        apply_stage_results(&mut view, &results, Some("run-generation-7"));
+        let map = stage_by_suffix(&view, "-map");
+        assert_eq!(map.status, StageStatus::AwaitingObservation);
+        assert_eq!(map.observations.len(), 1);
+        let action = action_for_stage(&view, map);
+        assert_eq!(action.label, "Record watched result");
+        assert!(action.enabled);
+        assert!(action.confirmation.is_none());
+        let lighting = stage_by_suffix(&view, "-lighting");
+        assert_eq!(lighting.status, StageStatus::Locked);
+        let lighting_action = action_for_stage(&view, lighting);
+        assert!(!lighting_action.enabled);
+    }
+
+    #[test]
+    fn identical_models_on_two_receivers_have_distinct_stage_and_action_ids() {
+        let mut integration = integration();
+        let mut second = integration.view.receivers[0].clone();
+        second.receiver_id = ReceiverId::try_from("receiver-second").expect("id is valid");
+        second.generation_id = GenerationId::try_from(11_u64).expect("generation is valid");
+        integration.view.receivers.push(second);
+        let view = build_qualification_view(
+            &system(),
+            Some(&integration),
+            &catalog(),
+            RunnerCapabilities {
+                read_only_actions: RunnerAvailability::Available,
+                supervised_lighting: RunnerAvailability::Available,
+                ..RunnerCapabilities::default()
+            },
+            1,
+            "2026-07-22T12:00:00Z".to_owned(),
+        );
+        assert_eq!(view.plans.len(), 2);
+        let plan_bindings = view
+            .plans
+            .iter()
+            .map(|plan| {
+                (
+                    plan.receiver_id.as_str(),
+                    plan.generation_id,
+                    plan.device_id.as_str(),
+                )
+            })
+            .collect::<std::collections::BTreeSet<_>>();
+        assert_eq!(plan_bindings.len(), 2);
+        let stage_ids = view
+            .plans
+            .iter()
+            .flat_map(|plan| &plan.groups)
+            .flat_map(|group| &group.stages)
+            .map(|stage| stage.stage_id.as_str())
+            .collect::<std::collections::BTreeSet<_>>();
+        let stage_count = view
+            .plans
+            .iter()
+            .flat_map(|plan| &plan.groups)
+            .map(|group| group.stages.len())
+            .sum::<usize>();
+        assert_eq!(stage_ids.len(), stage_count);
+        let action_ids = view
+            .actions
+            .iter()
+            .map(|action| action.id.as_str())
+            .collect::<std::collections::BTreeSet<_>>();
+        assert_eq!(action_ids.len(), view.actions.len());
     }
 
     #[test]

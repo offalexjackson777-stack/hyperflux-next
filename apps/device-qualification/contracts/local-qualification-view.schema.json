@@ -173,9 +173,11 @@
     "plan": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["plan_id", "device_id", "profile_binding", "verdict", "summary", "groups", "evidence"],
+      "required": ["plan_id", "receiver_id", "generation_id", "device_id", "profile_binding", "verdict", "summary", "groups", "evidence"],
       "properties": {
         "plan_id": {"type": "string", "minLength": 1},
+        "receiver_id": {"type": "string", "minLength": 1},
+        "generation_id": {"type": "integer", "minimum": 1},
         "device_id": {"type": "string", "minLength": 1},
         "profile_binding": {"oneOf": [{"$ref": "#/$defs/profile"}, {"type": "null"}]},
         "verdict": {"enum": ["not-run", "in-progress", "blocked", "failed", "evidence-ready", "accepted"]},

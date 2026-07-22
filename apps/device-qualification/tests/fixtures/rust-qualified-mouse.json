@@ -125,6 +125,8 @@
   "plans": [
     {
       "plan_id": "plan:receiver-test:7:child.razer.basilisk-v3-pro-35k.00cd",
+      "receiver_id": "receiver-test",
+      "generation_id": 7,
       "device_id": "mouse-test",
       "profile_binding": {
         "id": "child.razer.basilisk-v3-pro-35k.00cd",
@@ -139,7 +141,7 @@
           "description": "Read-only facts are bound to this receiver generation and exact profile digest.",
           "stages": [
             {
-              "stage_id": "mouse-00cd-identity",
+              "stage_id": "mouse-00cd-53c368795004e959dfcc0ee6eb1d2cf533b4239e869113fdc31ddde330bc0f56-identity",
               "title": "Profile binding",
               "description": "Verify the observed product ID, immutable profile digest, route, and generation.",
               "kind": "automatic",
@@ -152,11 +154,11 @@
               ],
               "instructions": [],
               "observations": [],
-              "action_id": "run:mouse-00cd-identity",
+              "action_id": "run:mouse-00cd-53c368795004e959dfcc0ee6eb1d2cf533b4239e869113fdc31ddde330bc0f56-identity",
               "result": null
             },
             {
-              "stage_id": "mouse-00cd-telemetry",
+              "stage_id": "mouse-00cd-53c368795004e959dfcc0ee6eb1d2cf533b4239e869113fdc31ddde330bc0f56-telemetry",
               "title": "Presence and telemetry",
               "description": "Exercise the device and verify fresh passive observations without changing hardware state.",
               "kind": "watched-observation",
@@ -195,7 +197,7 @@
                   ]
                 }
               ],
-              "action_id": "run:mouse-00cd-telemetry",
+              "action_id": "run:mouse-00cd-53c368795004e959dfcc0ee6eb1d2cf533b4239e869113fdc31ddde330bc0f56-telemetry",
               "result": null
             }
           ]
@@ -206,7 +208,7 @@
           "description": "Only profile-bound writes may exercise the receiver transport.",
           "stages": [
             {
-              "stage_id": "mouse-00cd-map",
+              "stage_id": "mouse-00cd-53c368795004e959dfcc0ee6eb1d2cf533b4239e869113fdc31ddde330bc0f56-map",
               "title": "Complete LED map",
               "description": "Verify every application slot against the same physical light using bounded sentinel frames.",
               "kind": "watched-observation",
@@ -246,7 +248,7 @@
               "result": null
             },
             {
-              "stage_id": "mouse-00cd-lighting",
+              "stage_id": "mouse-00cd-53c368795004e959dfcc0ee6eb1d2cf533b4239e869113fdc31ddde330bc0f56-lighting",
               "title": "Lighting behavior",
               "description": "Verify complete black, Off, Static, brightness endpoints, and streamed application frames claimed by this profile.",
               "kind": "watched-observation",
@@ -296,7 +298,7 @@
           "description": "New generations must invalidate stale authority and restore only verified state.",
           "stages": [
             {
-              "stage_id": "mouse-00cd-lifecycle",
+              "stage_id": "mouse-00cd-53c368795004e959dfcc0ee6eb1d2cf533b4239e869113fdc31ddde330bc0f56-lifecycle",
               "title": "Sleep, return, reconnect, and resume",
               "description": "Verify controller return, sibling isolation, receiver renewal, and system resume where applicable.",
               "kind": "lifecycle",
@@ -342,11 +344,11 @@
         "artifact_state": "none",
         "completed_claims": [],
         "missing_claims": [
-          "mouse-00cd-identity",
-          "mouse-00cd-telemetry",
-          "mouse-00cd-map",
-          "mouse-00cd-lighting",
-          "mouse-00cd-lifecycle"
+          "mouse-00cd-53c368795004e959dfcc0ee6eb1d2cf533b4239e869113fdc31ddde330bc0f56-identity",
+          "mouse-00cd-53c368795004e959dfcc0ee6eb1d2cf533b4239e869113fdc31ddde330bc0f56-telemetry",
+          "mouse-00cd-53c368795004e959dfcc0ee6eb1d2cf533b4239e869113fdc31ddde330bc0f56-map",
+          "mouse-00cd-53c368795004e959dfcc0ee6eb1d2cf533b4239e869113fdc31ddde330bc0f56-lighting",
+          "mouse-00cd-53c368795004e959dfcc0ee6eb1d2cf533b4239e869113fdc31ddde330bc0f56-lifecycle"
         ],
         "export_action_id": null
       }
@@ -354,19 +356,19 @@
   ],
   "actions": [
     {
-      "id": "run:mouse-00cd-identity",
+      "id": "run:mouse-00cd-53c368795004e959dfcc0ee6eb1d2cf533b4239e869113fdc31ddde330bc0f56-identity",
       "label": "Run read-only check",
       "method": "POST",
-      "href": "/v1/qualification/actions/run%3Amouse-00cd-identity",
+      "href": "/v1/qualification/actions/run%3Amouse-00cd-53c368795004e959dfcc0ee6eb1d2cf533b4239e869113fdc31ddde330bc0f56-identity",
       "enabled": true,
       "risk": "read-only",
       "confirmation": null
     },
     {
-      "id": "run:mouse-00cd-telemetry",
+      "id": "run:mouse-00cd-53c368795004e959dfcc0ee6eb1d2cf533b4239e869113fdc31ddde330bc0f56-telemetry",
       "label": "Record observation",
       "method": "POST",
-      "href": "/v1/qualification/actions/run%3Amouse-00cd-telemetry",
+      "href": "/v1/qualification/actions/run%3Amouse-00cd-53c368795004e959dfcc0ee6eb1d2cf533b4239e869113fdc31ddde330bc0f56-telemetry",
       "enabled": false,
       "risk": "read-only",
       "confirmation": null

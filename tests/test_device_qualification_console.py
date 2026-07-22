@@ -88,6 +88,7 @@ class DeviceQualificationConsoleTests(unittest.TestCase):
         self.assertNotRegex(application, r"https?://")
         self.assertIn('fetchWithTimeout("/v1/qualification/view"', application)
         self.assertIn('action.href', application)
+        self.assertIn("15_000", application)
         self.assertIn('network_upload_executed', contract)
 
     def test_contract_and_rust_fixture_share_the_versioned_schema(self) -> None:
@@ -105,6 +106,20 @@ class DeviceQualificationConsoleTests(unittest.TestCase):
         self.assertEqual(schema["properties"]["api_version"]["const"], fixture["api_version"])
         self.assertFalse(fixture["companion"]["network_upload_executed"])
         self.assertFalse(fixture["companion"]["hardware_write_executed"])
+        self.assertTrue(
+            {"receiver_id", "generation_id", "device_id"}
+            <= set(schema["$defs"]["plan"]["required"])
+        )
+        receiver_keys = {
+            (receiver["receiver_id"], receiver["generation_id"])
+            for receiver in fixture["receivers"]
+        }
+        self.assertTrue(
+            all(
+                (plan["receiver_id"], plan["generation_id"]) in receiver_keys
+                for plan in fixture["plans"]
+            )
+        )
         self.assertIn(
             "legacy-v2-detected",
             schema["properties"]["companion"]["properties"]["state"]["enum"],

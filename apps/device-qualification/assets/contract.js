@@ -26,15 +26,19 @@ export function validateQualificationView(value) {
   array(value.actions, "view.actions", 256);
   value.actions.forEach((item, index) => action(item, `view.actions[${index}]`));
 
-  const devices = value.receivers.flatMap((item) => item.devices);
-  unique(devices.map((item) => item.device_id), "device IDs");
+  const receiverKeys = value.receivers.map((item) => receiverKey(item.receiver_id, item.generation_id));
+  unique(receiverKeys, "receiver generation IDs");
+  const receiverByKey = new Map(value.receivers.map((item) => [receiverKey(item.receiver_id, item.generation_id), item]));
+  const deviceKeys = value.receivers.flatMap((receiver) => receiver.devices.map((device) => `${receiverKey(receiver.receiver_id, receiver.generation_id)}\u0000${device.device_id}`));
+  unique(deviceKeys, "receiver-bound device IDs");
   unique(value.plans.map((item) => item.plan_id), "plan IDs");
   unique(value.actions.map((item) => item.id), "action IDs");
-  const deviceById = new Map(devices.map((item) => [item.device_id, item]));
   const actionById = new Map(value.actions.map((item) => [item.id, item]));
   const stageIds = [];
   for (const item of value.plans) {
-    const device = deviceById.get(item.device_id);
+    const receiver = receiverByKey.get(receiverKey(item.receiver_id, item.generation_id));
+    require(receiver, `plan ${item.plan_id} references an unknown receiver generation`);
+    const device = receiver.devices.find((candidate) => candidate.device_id === item.device_id);
     require(device, `plan ${item.plan_id} references an unknown device`);
     if (item.profile_binding || device.profile) {
       require(item.profile_binding && device.profile, `plan ${item.plan_id} profile binding is incomplete`);
@@ -124,8 +128,10 @@ function capability(value, label) {
 
 function plan(value, label) {
   object(value, label);
-  exact(value, ["plan_id", "device_id", "profile_binding", "verdict", "summary", "groups", "evidence"], label);
+  exact(value, ["plan_id", "receiver_id", "generation_id", "device_id", "profile_binding", "verdict", "summary", "groups", "evidence"], label);
   string(value.plan_id, `${label}.plan_id`);
+  string(value.receiver_id, `${label}.receiver_id`);
+  integer(value.generation_id, `${label}.generation_id`, 1);
   string(value.device_id, `${label}.device_id`);
   nullableProfile(value.profile_binding, `${label}.profile_binding`);
   enumeration(value.verdict, VERDICTS, `${label}.verdict`);
@@ -133,6 +139,10 @@ function plan(value, label) {
   array(value.groups, `${label}.groups`, 16, 1);
   value.groups.forEach((item, index) => group(item, `${label}.groups[${index}]`));
   evidence(value.evidence, `${label}.evidence`);
+}
+
+function receiverKey(receiverId, generationId) {
+  return `${receiverId}\u0000${generationId}`;
 }
 
 function group(value, label) {
