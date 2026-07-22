@@ -1,0 +1,232 @@
+{
+  "apply_authorized": false,
+  "discussions": {
+    "apply_authorized": false,
+    "categories": [
+      {
+        "description": "Maintainer updates, verified milestones, and release-boundary changes.",
+        "format": "announcement",
+        "id": "announcements",
+        "name": "Announcements"
+      },
+      {
+        "description": "Public planning around candidate devices and bounded evidence needs.",
+        "format": "discussion",
+        "id": "hardware-qualification",
+        "name": "Hardware qualification"
+      },
+      {
+        "description": "User questions after running Doctor and reviewing privacy-safe diagnostics.",
+        "format": "q-and-a",
+        "id": "help",
+        "name": "Help"
+      },
+      {
+        "description": "Universal workflows and architecture proposals before issue commitment.",
+        "format": "discussion",
+        "id": "ideas",
+        "name": "Ideas"
+      }
+    ]
+  },
+  "external_apps_installed": [],
+  "project": {
+    "apply_authorized": false,
+    "fields": [
+      {
+        "data_type": "single-select",
+        "id": "area",
+        "name": "Area",
+        "options": [
+          "Architecture",
+          "Assurance",
+          "Documentation",
+          "Governance",
+          "Integrations",
+          "Kernel",
+          "Packaging",
+          "Profiles",
+          "Runtime",
+          "SDK",
+          "Tooling"
+        ]
+      },
+      {
+        "data_type": "single-select",
+        "id": "evidence-level",
+        "name": "Evidence level",
+        "options": [
+          "Proposal",
+          "Software",
+          "Lifecycle",
+          "Physical"
+        ]
+      },
+      {
+        "data_type": "single-select",
+        "id": "release-gate",
+        "name": "Release gate",
+        "options": [
+          "None",
+          "Foundation",
+          "Schemas",
+          "Simulation",
+          "Bridge and SDK",
+          "Kernel",
+          "Integrations",
+          "Packaging",
+          "Software",
+          "Hardware",
+          "Publication"
+        ]
+      },
+      {
+        "data_type": "single-select",
+        "id": "priority",
+        "name": "Priority",
+        "options": [
+          "Critical",
+          "High",
+          "Medium",
+          "Low"
+        ]
+      },
+      {
+        "data_type": "single-select",
+        "id": "qualification-state",
+        "name": "Qualification state",
+        "options": [
+          "Unknown",
+          "Candidate",
+          "Route qualified",
+          "Fully qualified",
+          "Blocked"
+        ]
+      },
+      {
+        "data_type": "date",
+        "id": "target-date",
+        "name": "Target date",
+        "options": []
+      }
+    ],
+    "title": "HyperFlux Next Delivery",
+    "views": [
+      {
+        "date_field": "none",
+        "group_by": "none",
+        "id": "all-work",
+        "layout": "table",
+        "name": "All work"
+      },
+      {
+        "date_field": "none",
+        "group_by": "release-gate",
+        "id": "release-board",
+        "layout": "board",
+        "name": "Release gates"
+      },
+      {
+        "date_field": "target-date",
+        "group_by": "qualification-state",
+        "id": "qualification-roadmap",
+        "layout": "roadmap",
+        "name": "Qualification roadmap"
+      }
+    ]
+  },
+  "publication_authorized": false,
+  "remote_state": "not-created",
+  "repository": "offalexjackson777-stack/hyperflux-next",
+  "schema": "hyperflux-github-experience-plan-v1",
+  "security_posture": {
+    "artifact_attestations": {
+      "activation_boundary": "after-release-workflow-authorization",
+      "data_boundary": "Release artifacts and provenance only; no hardware evidence or private diagnostics",
+      "state": "deferred"
+    },
+    "dependency_graph": {
+      "activation_boundary": "after-private-remote-authorization",
+      "data_boundary": "Repository dependency metadata only",
+      "state": "planned"
+    },
+    "private_vulnerability_reporting": {
+      "activation_boundary": "after-private-remote-authorization",
+      "data_boundary": "GitHub private security advisories; never public issue intake",
+      "state": "planned"
+    },
+    "source_sbom": {
+      "activation_boundary": "current-generation",
+      "data_boundary": "Generated SPDX inventory from reviewed manifests and workflow pins",
+      "state": "implemented-local"
+    }
+  },
+  "service_evaluations": [
+    {
+      "benefits": [
+        "Coverage trends and pull-request annotations"
+      ],
+      "decision": "not-selected",
+      "id": "codecov",
+      "maintenance_cost": "medium",
+      "privacy": "Would transmit source-derived coverage metadata to an external service.",
+      "rationale": "Current verification is evidence-oriented rather than line-coverage gated; external upload is not justified before publication.",
+      "required_permissions": [
+        "contents: read",
+        "checks: write",
+        "external coverage upload"
+      ],
+      "service": "Codecov"
+    },
+    {
+      "benefits": [
+        "Native grouped updates for Actions, Cargo, and Python manifests",
+        "No separately hosted bot token"
+      ],
+      "decision": "preferred-native",
+      "id": "dependabot",
+      "maintenance_cost": "low",
+      "privacy": "Uses GitHub-native dependency metadata within the future repository account.",
+      "rationale": "Already modeled with bounded weekly groups and fewer moving parts than an external dependency bot.",
+      "required_permissions": [
+        "contents: read",
+        "pull requests: write"
+      ],
+      "service": "Dependabot"
+    },
+    {
+      "benefits": [
+        "Independent repository security-posture checks",
+        "Machine-readable security findings"
+      ],
+      "decision": "deferred",
+      "id": "openssf-scorecard",
+      "maintenance_cost": "medium",
+      "privacy": "Publishes or uploads repository posture metadata and is most useful after the project has a stable remote history.",
+      "rationale": "Reconsider after remote creation and publication policy are authorized; do not add write permissions during local reconstruction.",
+      "required_permissions": [
+        "contents: read",
+        "security-events: write",
+        "id-token: write"
+      ],
+      "service": "OpenSSF Scorecard"
+    },
+    {
+      "benefits": [
+        "Highly configurable dependency grouping and cross-file updates"
+      ],
+      "decision": "not-selected",
+      "id": "renovate",
+      "maintenance_cost": "high",
+      "privacy": "An external app would receive repository metadata and dependency manifests.",
+      "rationale": "Its flexibility does not currently outweigh an additional app, credential, policy surface, and duplicate update authority.",
+      "required_permissions": [
+        "contents: read",
+        "pull requests: write",
+        "issues: write",
+        "external app or bot credential"
+      ],
+      "service": "Renovate"
+    }
+  ]
+}

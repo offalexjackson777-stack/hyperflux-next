@@ -21,6 +21,7 @@ from hfxdev.generators.governance import (
     codeql_workflow,
     dependency_review_workflow,
     documentation_workflow,
+    experience_plan,
     full_verification_workflow,
     hardware_qualification,
     protection_plan,
@@ -97,7 +98,11 @@ class GitHubGovernanceTests(unittest.TestCase):
         docs_text = documentation_workflow(self.governance)
         self.assertIn("--changed-from", fast_text)
         self.assertIn("./hfx ci verify", fast_text)
+        self.assertIn("./hfx ci summary", fast_text)
+        self.assertIn("$GITHUB_STEP_SUMMARY", fast_text)
+        self.assertIn("build/ci/fast/result.json", fast_text)
         self.assertIn("--lane full", full_text)
+        self.assertIn("build/ci/full/result.json", full_text)
         self.assertIn("./hfx ci docs", docs_text)
         self.assertNotIn("release", fast["on"])
         self.assertNotIn("release", full["on"])
@@ -184,6 +189,40 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertIn("Never attach hardware serials", bug)
         self.assertIn("does not authorize receiver queries", hardware)
         self.assertIn("No serial, stable host identifier", hardware)
+        self.assertIn("support-bundle --preview", hardware)
+        self.assertIn("Doctor reference", hardware)
+
+    def test_collaboration_security_and_service_plans_are_complete_but_unapplied(self) -> None:
+        plan = json.loads(experience_plan(self.governance))
+        self.assertFalse(plan["apply_authorized"])
+        self.assertFalse(plan["publication_authorized"])
+        self.assertEqual(plan["external_apps_installed"], [])
+        self.assertEqual(
+            {category["id"] for category in plan["discussions"]["categories"]},
+            {"announcements", "hardware-qualification", "help", "ideas"},
+        )
+        self.assertEqual(
+            {view["layout"] for view in plan["project"]["views"]},
+            {"table", "board", "roadmap"},
+        )
+        self.assertTrue(
+            {"area", "evidence-level", "release-gate", "priority", "qualification-state"}
+            <= {field["id"] for field in plan["project"]["fields"]}
+        )
+        self.assertEqual(
+            set(plan["security_posture"]),
+            {
+                "private_vulnerability_reporting",
+                "dependency_graph",
+                "source_sbom",
+                "artifact_attestations",
+            },
+        )
+        evaluations = {item["id"]: item for item in plan["service_evaluations"]}
+        self.assertEqual(evaluations["dependabot"]["decision"], "preferred-native")
+        self.assertEqual(evaluations["renovate"]["decision"], "not-selected")
+        self.assertEqual(evaluations["codecov"]["decision"], "not-selected")
+        self.assertEqual(evaluations["openssf-scorecard"]["decision"], "deferred")
 
     def test_workflow_actions_are_part_of_the_source_sbom(self) -> None:
         inventory = load_dependency_inventory(ROOT)

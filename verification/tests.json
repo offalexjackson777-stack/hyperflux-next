@@ -55,7 +55,7 @@
     },
     {
       "id": "governance-contracts",
-      "title": "Schema-owned GitHub governance and bounded CI policy",
+      "title": "Schema-owned GitHub governance, collaboration, security, and bounded CI policy",
       "owned_domain": "governance",
       "lanes": ["fast", "full-software"],
       "runner": "governance-contracts",
@@ -66,8 +66,8 @@
       "timeout_seconds": 15,
       "dependencies": ["schema-contracts"],
       "isolation": "shared",
-      "cache_inputs": [".github/**", "governance/**/*.json", "schemas/github-governance.schema.json", "tests/test_governance.py", "tools/hfxdev/ci.py", "tools/hfxdev/governance.py", "tools/hfxdev/generators/governance.py"],
-      "produced_evidence": ["governance-result", "workflow-pin-result", "publication-interlock-result"],
+      "cache_inputs": [".github/**", "governance/**/*.json", "schemas/github-governance.schema.json", "tests/test_actions_summary.py", "tests/test_governance.py", "tools/hfxdev/actions_summary.py", "tools/hfxdev/ci.py", "tools/hfxdev/cli.py", "tools/hfxdev/governance.py", "tools/hfxdev/generators/governance.py"],
+      "produced_evidence": ["governance-result", "workflow-pin-result", "actions-summary-result", "collaboration-plan-result", "security-plan-result", "publication-interlock-result"],
       "resume_policy": "reuse-verified"
     },
     {

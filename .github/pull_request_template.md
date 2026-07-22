@@ -21,9 +21,15 @@
 - Package or activation behavior:
 - Performance budget impact:
 - Privacy or support-bundle impact:
+- Release-gate impact:
+- Evidence level: proposal / software / lifecycle / physical
+- Qualification state: unknown / candidate / route qualified / fully qualified / blocked
 
 ## Evidence
 
+- Source revision:
+- Selected verification nodes and timings:
+- Generated freshness:
 - Fast verification evidence:
 - Full software evidence, when required:
 - Physical evidence, when separately authorized:

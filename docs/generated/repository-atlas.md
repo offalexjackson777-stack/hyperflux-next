@@ -744,9 +744,9 @@ Defines repository ownership, immutable automation, issue intake, dependency pol
 
 **Canonical sources:** `governance/github.json`.
 
-**Generated projections:** `governance/README.md`, `governance/generated/github-protection-plan.json`, `docs/generated/github-governance.md`.
+**Generated projections:** `governance/README.md`, `governance/generated/github-protection-plan.json`, `governance/generated/github-labels.json`, `governance/generated/github-experience-plan.json`, `docs/generated/github-governance.md`, `.github/CODEOWNERS`, `.github/pull_request_template.md`, `.github/ISSUE_TEMPLATE/config.yml`, `.github/ISSUE_TEMPLATE/bug_report.yml`, `.github/ISSUE_TEMPLATE/hardware_qualification.yml`, `.github/ISSUE_TEMPLATE/feature_request.yml`, `.github/dependabot.yml`, `.github/workflows/verification.yml`, `.github/workflows/full-verification.yml`, `.github/workflows/documentation.yml`, `.github/workflows/codeql.yml`, `.github/workflows/dependency-review.yml`.
 
-**Change impact:** Regenerate 3 declared projection(s). Run `governance-contracts`. Review direct consumers: Documentation system.
+**Change impact:** Regenerate 17 declared projection(s). Run `governance-contracts`. Review direct consumers: Documentation system.
 
 <a id="documentation"></a>
 ### Documentation system

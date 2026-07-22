@@ -1,6 +1,6 @@
 {
   "$schema": "../schemas/github-governance.schema.json",
-  "schema": "hyperflux-github-governance-v1",
+  "schema": "hyperflux-github-governance-v2",
   "repository": {
     "owner": "offalexjackson777-stack",
     "name": "hyperflux-next",
@@ -14,6 +14,82 @@
     "release_workflows_authorized": false,
     "hardware_ci_authorized": false
   },
+  "collaboration": {
+    "discussions": {
+      "apply_authorized": false,
+      "categories": [
+        {"id": "announcements", "name": "Announcements", "format": "announcement", "description": "Maintainer updates, verified milestones, and release-boundary changes."},
+        {"id": "hardware-qualification", "name": "Hardware qualification", "format": "discussion", "description": "Public planning around candidate devices and bounded evidence needs."},
+        {"id": "help", "name": "Help", "format": "q-and-a", "description": "User questions after running Doctor and reviewing privacy-safe diagnostics."},
+        {"id": "ideas", "name": "Ideas", "format": "discussion", "description": "Universal workflows and architecture proposals before issue commitment."}
+      ]
+    },
+    "project": {
+      "apply_authorized": false,
+      "title": "HyperFlux Next Delivery",
+      "views": [
+        {"id": "all-work", "name": "All work", "layout": "table", "group_by": "none", "date_field": "none"},
+        {"id": "release-board", "name": "Release gates", "layout": "board", "group_by": "release-gate", "date_field": "none"},
+        {"id": "qualification-roadmap", "name": "Qualification roadmap", "layout": "roadmap", "group_by": "qualification-state", "date_field": "target-date"}
+      ],
+      "fields": [
+        {"id": "area", "name": "Area", "data_type": "single-select", "options": ["Architecture", "Assurance", "Documentation", "Governance", "Integrations", "Kernel", "Packaging", "Profiles", "Runtime", "SDK", "Tooling"]},
+        {"id": "evidence-level", "name": "Evidence level", "data_type": "single-select", "options": ["Proposal", "Software", "Lifecycle", "Physical"]},
+        {"id": "release-gate", "name": "Release gate", "data_type": "single-select", "options": ["None", "Foundation", "Schemas", "Simulation", "Bridge and SDK", "Kernel", "Integrations", "Packaging", "Software", "Hardware", "Publication"]},
+        {"id": "priority", "name": "Priority", "data_type": "single-select", "options": ["Critical", "High", "Medium", "Low"]},
+        {"id": "qualification-state", "name": "Qualification state", "data_type": "single-select", "options": ["Unknown", "Candidate", "Route qualified", "Fully qualified", "Blocked"]},
+        {"id": "target-date", "name": "Target date", "data_type": "date", "options": []}
+      ]
+    }
+  },
+  "security_posture": {
+    "private_vulnerability_reporting": {"state": "planned", "activation_boundary": "after-private-remote-authorization", "data_boundary": "GitHub private security advisories; never public issue intake"},
+    "dependency_graph": {"state": "planned", "activation_boundary": "after-private-remote-authorization", "data_boundary": "Repository dependency metadata only"},
+    "source_sbom": {"state": "implemented-local", "activation_boundary": "current-generation", "data_boundary": "Generated SPDX inventory from reviewed manifests and workflow pins"},
+    "artifact_attestations": {"state": "deferred", "activation_boundary": "after-release-workflow-authorization", "data_boundary": "Release artifacts and provenance only; no hardware evidence or private diagnostics"}
+  },
+  "service_evaluations": [
+    {
+      "id": "codecov",
+      "service": "Codecov",
+      "decision": "not-selected",
+      "benefits": ["Coverage trends and pull-request annotations"],
+      "required_permissions": ["contents: read", "checks: write", "external coverage upload"],
+      "privacy": "Would transmit source-derived coverage metadata to an external service.",
+      "maintenance_cost": "medium",
+      "rationale": "Current verification is evidence-oriented rather than line-coverage gated; external upload is not justified before publication."
+    },
+    {
+      "id": "dependabot",
+      "service": "Dependabot",
+      "decision": "preferred-native",
+      "benefits": ["Native grouped updates for Actions, Cargo, and Python manifests", "No separately hosted bot token"],
+      "required_permissions": ["contents: read", "pull requests: write"],
+      "privacy": "Uses GitHub-native dependency metadata within the future repository account.",
+      "maintenance_cost": "low",
+      "rationale": "Already modeled with bounded weekly groups and fewer moving parts than an external dependency bot."
+    },
+    {
+      "id": "openssf-scorecard",
+      "service": "OpenSSF Scorecard",
+      "decision": "deferred",
+      "benefits": ["Independent repository security-posture checks", "Machine-readable security findings"],
+      "required_permissions": ["contents: read", "security-events: write", "id-token: write"],
+      "privacy": "Publishes or uploads repository posture metadata and is most useful after the project has a stable remote history.",
+      "maintenance_cost": "medium",
+      "rationale": "Reconsider after remote creation and publication policy are authorized; do not add write permissions during local reconstruction."
+    },
+    {
+      "id": "renovate",
+      "service": "Renovate",
+      "decision": "not-selected",
+      "benefits": ["Highly configurable dependency grouping and cross-file updates"],
+      "required_permissions": ["contents: read", "pull requests: write", "issues: write", "external app or bot credential"],
+      "privacy": "An external app would receive repository metadata and dependency manifests.",
+      "maintenance_cost": "high",
+      "rationale": "Its flexibility does not currently outweigh an additional app, credential, policy surface, and duplicate update authority."
+    }
+  ],
   "ownership": {
     "default": ["@offalexjackson777-stack"],
     "rules": [
@@ -53,20 +129,33 @@
     ]
   },
   "labels": [
+    {"name": "area: assurance", "color": "0e8a16", "description": "Release gates, evidence, formal assurance, or performance budgets"},
     {"name": "area: documentation", "color": "1d76db", "description": "Documentation, portal, and user guidance"},
+    {"name": "area: governance", "color": "0052cc", "description": "Repository policy, collaboration, or automation"},
     {"name": "area: integration", "color": "5319e7", "description": "Application adapter or SDK integration"},
     {"name": "area: kernel", "color": "b60205", "description": "Kernel transport, UAPI, or lifecycle"},
     {"name": "area: packaging", "color": "006b75", "description": "Installation, distribution, or package lifecycle"},
+    {"name": "area: profiles", "color": "7057ff", "description": "Device knowledge, hardware profile, or qualification model"},
+    {"name": "area: runtime", "color": "008672", "description": "Bridge runtime, operations, restoration, or diagnostics"},
+    {"name": "area: sdk", "color": "0366d6", "description": "Versioned SDK or language binding"},
     {"name": "area: security", "color": "d93f0b", "description": "Security, privacy, provenance, or governance"},
+    {"name": "area: tooling", "color": "c5def5", "description": "Generation, verification, development environment, or repository tooling"},
     {"name": "evidence: hardware", "color": "fbca04", "description": "Requires bounded physical hardware evidence"},
+    {"name": "evidence: lifecycle", "color": "f9d0c4", "description": "Requires package, restart, reconnect, suspend, or recovery evidence"},
+    {"name": "evidence: software", "color": "0e8a16", "description": "Can be established entirely by bounded software verification"},
     {"name": "kind: bug", "color": "d73a4a", "description": "Confirmed or suspected incorrect behavior"},
-    {"name": "kind: feature", "color": "a2eeef", "description": "New capability or workflow proposal"}
+    {"name": "kind: feature", "color": "a2eeef", "description": "New capability or workflow proposal"},
+    {"name": "kind: qualification", "color": "ffd33d", "description": "Candidate-device or physical-evidence qualification work"}
   ],
   "automation": {
     "runner": "ubuntu-24.04",
     "development_image": "hyperflux-next-dev:ci",
     "dependency_update_day": "monday",
     "full_verification_cron": "17 3 * * 1",
+    "job_summary": {
+      "enabled": true,
+      "sections": ["source-revision", "selection", "failures", "timings", "generated-freshness", "release-gate-impact"]
+    },
     "actions": [
       {
         "id": "build-push",

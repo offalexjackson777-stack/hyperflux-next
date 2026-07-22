@@ -105,6 +105,18 @@ def _upload(
     }
 
 
+def _verification_summary(output: str) -> dict[str, Any]:
+    return {
+        "name": "Publish bounded verification summary",
+        "if": "${{ always() }}",
+        "env": {"HFX_SOURCE_REVISION": "${{ github.sha }}"},
+        "run": (
+            f'./hfx ci summary --result {output}/result.json '
+            '--output "$GITHUB_STEP_SUMMARY" --source-revision "$HFX_SOURCE_REVISION"'
+        ),
+    }
+
+
 def verification_workflow(governance: GitHubGovernance) -> str:
     steps = [_checkout(governance), _cache(governance), *_build_environment(governance)]
     steps.extend(
@@ -120,6 +132,7 @@ def verification_workflow(governance: GitHubGovernance) -> str:
                 },
                 "run": './hfx ci verify --image "$HFX_CI_IMAGE" --lane fast --output build/ci/fast --changed-from "$HFX_CHANGED_FROM"',
             },
+            _verification_summary("build/ci/fast"),
             _upload(
                 governance,
                 name="hyperflux-fast-evidence",
@@ -165,6 +178,7 @@ def full_verification_workflow(governance: GitHubGovernance) -> str:
                 "name": "Run the complete software graph",
                 "run": './hfx ci verify --image "$HFX_CI_IMAGE" --lane full --output build/ci/full',
             },
+            _verification_summary("build/ci/full"),
             _upload(
                 governance,
                 name="hyperflux-full-evidence",
@@ -222,7 +236,7 @@ def documentation_workflow(governance: GitHubGovernance) -> str:
                 "paths": [
                     "docs/**",
                     "schemas/documentation-portal.schema.json",
-                    "tools/hfxdev/portal.py",
+                    "tools/hfxdev/portal*.py",
                     "tools/hfxdev/generators/**",
                     "governance/github.json",
                 ],
@@ -399,9 +413,15 @@ def pull_request_template() -> str:
 - Package or activation behavior:
 - Performance budget impact:
 - Privacy or support-bundle impact:
+- Release-gate impact:
+- Evidence level: proposal / software / lifecycle / physical
+- Qualification state: unknown / candidate / route qualified / fully qualified / blocked
 
 ## Evidence
 
+- Source revision:
+- Selected verification nodes and timings:
+- Generated freshness:
 - Fast verification evidence:
 - Full software evidence, when required:
 - Physical evidence, when separately authorized:
@@ -550,6 +570,24 @@ def hardware_qualification(governance: GitHubGovernance) -> str:
                 "validations": {"required": True},
             },
             {
+                "type": "input",
+                "id": "doctor-reference",
+                "attributes": {
+                    "label": "Doctor reference, when available",
+                    "description": "The privacy-safe hfx reference printed by hyperfluxctl doctor.",
+                    "placeholder": "hfx-...",
+                },
+            },
+            {
+                "type": "textarea",
+                "id": "support-preview",
+                "attributes": {
+                    "label": "Support preview, when available",
+                    "description": "Paste `hyperfluxctl support-bundle --preview`. This performs no upload or active receiver query.",
+                    "render": "json",
+                },
+            },
+            {
                 "type": "dropdown",
                 "id": "evidence-class",
                 "attributes": {
@@ -584,6 +622,22 @@ def feature_request(governance: GitHubGovernance) -> str:
         labels=["kind: feature"],
         body=[
             {
+                "type": "dropdown",
+                "id": "area",
+                "attributes": {
+                    "label": "Primary area",
+                    "options": [
+                        "Applications and integrations",
+                        "Device knowledge and qualification",
+                        "Kernel, bridge, or SDK",
+                        "Packaging and lifecycle",
+                        "Documentation and diagnostics",
+                        "Governance and tooling",
+                    ],
+                },
+                "validations": {"required": True},
+            },
+            {
                 "type": "textarea",
                 "id": "workflow",
                 "attributes": {
@@ -612,6 +666,14 @@ def feature_request(governance: GitHubGovernance) -> str:
                             "required": True,
                         }
                     ],
+                },
+            },
+            {
+                "type": "textarea",
+                "id": "evidence-boundary",
+                "attributes": {
+                    "label": "Evidence needed",
+                    "description": "Which software, lifecycle, or physical evidence would make this proposal safe to ship?",
                 },
             },
         ],
@@ -676,6 +738,74 @@ def labels_plan(governance: GitHubGovernance) -> str:
     return json.dumps(value, indent=2, sort_keys=True) + "\n"
 
 
+def experience_plan(governance: GitHubGovernance) -> str:
+    value = {
+        "schema": "hyperflux-github-experience-plan-v1",
+        "repository": f"{governance.owner}/{governance.repository}",
+        "remote_state": governance.remote_state,
+        "apply_authorized": False,
+        "discussions": {
+            "apply_authorized": False,
+            "categories": [
+                {
+                    "id": category.id,
+                    "name": category.name,
+                    "format": category.format,
+                    "description": category.description,
+                }
+                for category in governance.discussions
+            ],
+        },
+        "project": {
+            "apply_authorized": False,
+            "title": governance.project_title,
+            "views": [
+                {
+                    "id": view.id,
+                    "name": view.name,
+                    "layout": view.layout,
+                    "group_by": view.group_by,
+                    "date_field": view.date_field,
+                }
+                for view in governance.project_views
+            ],
+            "fields": [
+                {
+                    "id": field.id,
+                    "name": field.name,
+                    "data_type": field.data_type,
+                    "options": list(field.options),
+                }
+                for field in governance.project_fields
+            ],
+        },
+        "security_posture": {
+            identifier: {
+                "state": plan.state,
+                "activation_boundary": plan.activation_boundary,
+                "data_boundary": plan.data_boundary,
+            }
+            for identifier, plan in governance.security_posture
+        },
+        "service_evaluations": [
+            {
+                "id": evaluation.id,
+                "service": evaluation.service,
+                "decision": evaluation.decision,
+                "benefits": list(evaluation.benefits),
+                "required_permissions": list(evaluation.required_permissions),
+                "privacy": evaluation.privacy,
+                "maintenance_cost": evaluation.maintenance_cost,
+                "rationale": evaluation.rationale,
+            }
+            for evaluation in governance.service_evaluations
+        ],
+        "external_apps_installed": [],
+        "publication_authorized": False,
+    }
+    return json.dumps(value, indent=2, sort_keys=True) + "\n"
+
+
 def markdown(governance: GitHubGovernance) -> str:
     lines = [
         "# GitHub Governance",
@@ -735,6 +865,83 @@ def markdown(governance: GitHubGovernance) -> str:
             "- Dependency updates are grouped by GitHub Actions, Cargo, and each Python integration root.",
             "- Labels and branch protection are reviewable generated plans, not hidden remote state.",
             "",
+            "## Actions Job Summaries",
+            "",
+            "Fast and full verification jobs render `result.json` into the native GitHub Actions summary. The renderer reports structured facts and deliberately omits raw error text that could expose runner paths.",
+            "",
         ]
     )
+    lines.extend(f"- `{section}`" for section in governance.job_summary_sections)
+    lines.extend(
+        [
+            "",
+            "A missing result remains visible as unavailable, source-revision mismatches fail closed, and the release-gate section states that CI validates but cannot mutate gate state.",
+            "",
+            "## Discussions Plan",
+            "",
+            "| Category | Format | Purpose |",
+            "| --- | --- | --- |",
+        ]
+    )
+    for category in governance.discussions:
+        lines.append(
+            f"| {category.name} | `{category.format}` | {category.description} |"
+        )
+    lines.extend(
+        [
+            "",
+            "The category plan has `apply_authorized: false`; it does not enable Discussions on a remote.",
+            "",
+            "## Project Plan",
+            "",
+            f"Planned project: **{governance.project_title}**",
+            "",
+            "| View | Layout | Grouping | Date field |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
+    for view in governance.project_views:
+        lines.append(
+            f"| {view.name} | `{view.layout}` | `{view.group_by}` | `{view.date_field}` |"
+        )
+    lines.extend(
+        [
+            "",
+            "| Field | Type | Options |",
+            "| --- | --- | --- |",
+        ]
+    )
+    for field in governance.project_fields:
+        options = ", ".join(field.options) if field.options else "Date value"
+        lines.append(f"| {field.name} | `{field.data_type}` | {options} |")
+    lines.extend(
+        [
+            "",
+            "The project plan has `apply_authorized: false`; no Project or field is created by generation.",
+            "",
+            "## Security Preparation",
+            "",
+            "| Capability | State | Activation boundary | Data boundary |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
+    for identifier, plan in governance.security_posture:
+        lines.append(
+            f"| `{identifier}` | `{plan.state}` | `{plan.activation_boundary}` | {plan.data_boundary} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## External Service Evaluation",
+            "",
+            "| Service | Decision | Permissions or data access | Privacy | Maintenance |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+    )
+    for evaluation in governance.service_evaluations:
+        permissions = ", ".join(f"`{item}`" for item in evaluation.required_permissions)
+        lines.append(
+            f"| {evaluation.service} | `{evaluation.decision}` | {permissions} | {evaluation.privacy} | `{evaluation.maintenance_cost}` |"
+        )
+    lines.extend(["", "No external app or service is installed by this plan.", ""])
     return "\n".join(lines)

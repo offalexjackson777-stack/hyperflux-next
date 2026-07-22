@@ -21,6 +21,7 @@ from .generators.governance import (
     dependency_review_workflow as github_dependency_review_workflow,
     dependabot as github_dependabot,
     documentation_workflow as github_documentation_workflow,
+    experience_plan as github_experience_plan,
     feature_request as github_feature_request,
     full_verification_workflow as github_full_verification_workflow,
     hardware_qualification as github_hardware_qualification,
@@ -292,6 +293,9 @@ def rendered_files(root: Path) -> dict[Path, str]:
             github_governance
         ),
         root / "governance" / "generated" / "github-labels.json": github_labels_plan(
+            github_governance
+        ),
+        root / "governance" / "generated" / "github-experience-plan.json": github_experience_plan(
             github_governance
         ),
         root / "docs" / "generated" / "architecture.md": architecture_markdown(constitution),

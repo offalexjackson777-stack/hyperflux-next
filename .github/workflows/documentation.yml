@@ -8,7 +8,7 @@ name: Documentation
     paths:
     - docs/**
     - schemas/documentation-portal.schema.json
-    - tools/hfxdev/portal.py
+    - tools/hfxdev/portal*.py
     - tools/hfxdev/generators/**
     - governance/github.json
 permissions:

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://hyperflux.dev/schemas/github-governance-v1.json",
-  "title": "HyperFlux GitHub governance",
+  "$id": "https://hyperflux.dev/schemas/github-governance-v2.json",
+  "title": "HyperFlux GitHub governance and collaboration plan",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -9,6 +9,9 @@
     "schema",
     "repository",
     "publication_interlock",
+    "collaboration",
+    "security_posture",
+    "service_evaluations",
     "ownership",
     "protection",
     "labels",
@@ -16,7 +19,7 @@
   ],
   "properties": {
     "$schema": {"const": "../schemas/github-governance.schema.json"},
-    "schema": {"const": "hyperflux-github-governance-v1"},
+    "schema": {"const": "hyperflux-github-governance-v2"},
     "repository": {
       "type": "object",
       "additionalProperties": false,
@@ -32,18 +35,72 @@
     "publication_interlock": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "publication_authorized",
-        "pages_deployment_authorized",
-        "release_workflows_authorized",
-        "hardware_ci_authorized"
-      ],
+      "required": ["publication_authorized", "pages_deployment_authorized", "release_workflows_authorized", "hardware_ci_authorized"],
       "properties": {
         "publication_authorized": {"const": false},
         "pages_deployment_authorized": {"const": false},
         "release_workflows_authorized": {"const": false},
         "hardware_ci_authorized": {"const": false}
       }
+    },
+    "collaboration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["discussions", "project"],
+      "properties": {
+        "discussions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["apply_authorized", "categories"],
+          "properties": {
+            "apply_authorized": {"const": false},
+            "categories": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 12,
+              "items": {"$ref": "#/$defs/discussionCategory"}
+            }
+          }
+        },
+        "project": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["apply_authorized", "title", "views", "fields"],
+          "properties": {
+            "apply_authorized": {"const": false},
+            "title": {"type": "string", "minLength": 1, "maxLength": 80},
+            "views": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 8,
+              "items": {"$ref": "#/$defs/projectView"}
+            },
+            "fields": {
+              "type": "array",
+              "minItems": 5,
+              "maxItems": 16,
+              "items": {"$ref": "#/$defs/projectField"}
+            }
+          }
+        }
+      }
+    },
+    "security_posture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["private_vulnerability_reporting", "dependency_graph", "source_sbom", "artifact_attestations"],
+      "properties": {
+        "private_vulnerability_reporting": {"$ref": "#/$defs/securityPlan"},
+        "dependency_graph": {"$ref": "#/$defs/securityPlan"},
+        "source_sbom": {"$ref": "#/$defs/securityPlan"},
+        "artifact_attestations": {"$ref": "#/$defs/securityPlan"}
+      }
+    },
+    "service_evaluations": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 12,
+      "items": {"$ref": "#/$defs/serviceEvaluation"}
     },
     "ownership": {
       "type": "object",
@@ -76,14 +133,7 @@
     "protection": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "linear_history",
-        "required_approvals",
-        "dismiss_stale_reviews",
-        "require_code_owner_reviews",
-        "require_conversation_resolution",
-        "required_checks"
-      ],
+      "required": ["linear_history", "required_approvals", "dismiss_stale_reviews", "require_code_owner_reviews", "require_conversation_resolution", "required_checks"],
       "properties": {
         "linear_history": {"const": true},
         "required_approvals": {"type": "integer", "minimum": 1, "maximum": 6},
@@ -117,18 +167,27 @@
     "automation": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "runner",
-        "development_image",
-        "dependency_update_day",
-        "full_verification_cron",
-        "actions"
-      ],
+      "required": ["runner", "development_image", "dependency_update_day", "full_verification_cron", "job_summary", "actions"],
       "properties": {
         "runner": {"const": "ubuntu-24.04"},
         "development_image": {"const": "hyperflux-next-dev:ci"},
         "dependency_update_day": {"enum": ["monday", "tuesday", "wednesday", "thursday", "friday"]},
         "full_verification_cron": {"type": "string", "pattern": "^[0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+$"},
+        "job_summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "sections"],
+          "properties": {
+            "enabled": {"const": true},
+            "sections": {
+              "type": "array",
+              "minItems": 6,
+              "maxItems": 12,
+              "uniqueItems": true,
+              "items": {"enum": ["source-revision", "selection", "failures", "timings", "generated-freshness", "release-gate-impact"]}
+            }
+          }
+        },
         "actions": {
           "type": "array",
           "minItems": 7,
@@ -139,6 +198,7 @@
     }
   },
   "$defs": {
+    "identifier": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
     "owners": {
       "type": "array",
       "minItems": 1,
@@ -146,12 +206,76 @@
       "uniqueItems": true,
       "items": {"type": "string", "pattern": "^@[A-Za-z0-9][A-Za-z0-9-]{0,38}$"}
     },
+    "discussionCategory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "format", "description"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "name": {"type": "string", "minLength": 1, "maxLength": 50},
+        "format": {"enum": ["announcement", "discussion", "q-and-a"]},
+        "description": {"type": "string", "minLength": 1, "maxLength": 160}
+      }
+    },
+    "projectView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "layout", "group_by", "date_field"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "name": {"type": "string", "minLength": 1, "maxLength": 50},
+        "layout": {"enum": ["table", "board", "roadmap"]},
+        "group_by": {"type": "string", "pattern": "^(?:none|[a-z][a-z0-9-]{0,63})$"},
+        "date_field": {"type": "string", "pattern": "^(?:none|[a-z][a-z0-9-]{0,63})$"}
+      }
+    },
+    "projectField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "data_type", "options"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "name": {"type": "string", "minLength": 1, "maxLength": 50},
+        "data_type": {"enum": ["single-select", "date"]},
+        "options": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 50}
+        }
+      }
+    },
+    "securityPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "activation_boundary", "data_boundary"],
+      "properties": {
+        "state": {"enum": ["planned", "implemented-local", "deferred"]},
+        "activation_boundary": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,95}$"},
+        "data_boundary": {"type": "string", "minLength": 1, "maxLength": 240}
+      }
+    },
+    "serviceEvaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "service", "decision", "benefits", "required_permissions", "privacy", "maintenance_cost", "rationale"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "service": {"type": "string", "minLength": 1, "maxLength": 80},
+        "decision": {"enum": ["preferred-native", "not-selected", "deferred"]},
+        "benefits": {"type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 180}},
+        "required_permissions": {"type": "array", "minItems": 1, "maxItems": 12, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 100}},
+        "privacy": {"type": "string", "minLength": 1, "maxLength": 300},
+        "maintenance_cost": {"enum": ["low", "medium", "high"]},
+        "rationale": {"type": "string", "minLength": 1, "maxLength": 500}
+      }
+    },
     "action": {
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "repository", "version", "commit", "license_expression"],
       "properties": {
-        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+        "id": {"$ref": "#/$defs/identifier"},
         "repository": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
         "version": {"type": "string", "pattern": "^v[0-9]+(?:\\.[0-9]+){0,2}$"},
         "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},

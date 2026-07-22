@@ -5,6 +5,19 @@ title: '[Feature]: '
 labels:
 - 'kind: feature'
 body:
+- type: dropdown
+  id: area
+  attributes:
+    label: Primary area
+    options:
+    - Applications and integrations
+    - Device knowledge and qualification
+    - Kernel, bridge, or SDK
+    - Packaging and lifecycle
+    - Documentation and diagnostics
+    - Governance and tooling
+  validations:
+    required: true
 - type: textarea
   id: workflow
   attributes:
@@ -26,3 +39,8 @@ body:
     options:
     - label: The proposal is not tied only to one host, serial, receiver generation, or private device state.
       required: true
+- type: textarea
+  id: evidence-boundary
+  attributes:
+    label: Evidence needed
+    description: Which software, lifecycle, or physical evidence would make this proposal safe to ship?

@@ -2,9 +2,19 @@
   "apply_authorized": false,
   "labels": [
     {
+      "color": "0e8a16",
+      "description": "Release gates, evidence, formal assurance, or performance budgets",
+      "name": "area: assurance"
+    },
+    {
       "color": "1d76db",
       "description": "Documentation, portal, and user guidance",
       "name": "area: documentation"
+    },
+    {
+      "color": "0052cc",
+      "description": "Repository policy, collaboration, or automation",
+      "name": "area: governance"
     },
     {
       "color": "5319e7",
@@ -22,14 +32,44 @@
       "name": "area: packaging"
     },
     {
+      "color": "7057ff",
+      "description": "Device knowledge, hardware profile, or qualification model",
+      "name": "area: profiles"
+    },
+    {
+      "color": "008672",
+      "description": "Bridge runtime, operations, restoration, or diagnostics",
+      "name": "area: runtime"
+    },
+    {
+      "color": "0366d6",
+      "description": "Versioned SDK or language binding",
+      "name": "area: sdk"
+    },
+    {
       "color": "d93f0b",
       "description": "Security, privacy, provenance, or governance",
       "name": "area: security"
     },
     {
+      "color": "c5def5",
+      "description": "Generation, verification, development environment, or repository tooling",
+      "name": "area: tooling"
+    },
+    {
       "color": "fbca04",
       "description": "Requires bounded physical hardware evidence",
       "name": "evidence: hardware"
+    },
+    {
+      "color": "f9d0c4",
+      "description": "Requires package, restart, reconnect, suspend, or recovery evidence",
+      "name": "evidence: lifecycle"
+    },
+    {
+      "color": "0e8a16",
+      "description": "Can be established entirely by bounded software verification",
+      "name": "evidence: software"
     },
     {
       "color": "d73a4a",
@@ -40,6 +80,11 @@
       "color": "a2eeef",
       "description": "New capability or workflow proposal",
       "name": "kind: feature"
+    },
+    {
+      "color": "ffd33d",
+      "description": "Candidate-device or physical-evidence qualification work",
+      "name": "kind: qualification"
     }
   ],
   "remote_state": "not-created",

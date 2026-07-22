@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 import sys
 
+from .actions_summary import write_actions_summary
 from .ci import container_invocation, run_container
 from .migration import capture_inventory, run_shadow_comparison, summary
 from .model import ModelError
@@ -129,6 +130,12 @@ def _parser() -> argparse.ArgumentParser:
     )
     ci_docs.add_argument("--image", required=True)
     ci_docs.add_argument("--output", required=True, type=Path)
+    ci_summary = ci_commands.add_parser(
+        "summary", help="write a bounded GitHub Actions summary from structured evidence"
+    )
+    ci_summary.add_argument("--result", required=True, type=Path)
+    ci_summary.add_argument("--output", required=True, type=Path)
+    ci_summary.add_argument("--source-revision")
 
     package = commands.add_parser("package", help="build and stage canonical package payloads")
     package_commands = package.add_subparsers(dest="package_command", required=True)
@@ -227,6 +234,15 @@ def main(arguments: list[str] | None = None) -> int:
             )
             return 0
         if args.command == "ci":
+            if args.ci_command == "summary":
+                write_actions_summary(
+                    root,
+                    args.result,
+                    args.output,
+                    expected_revision=args.source_revision,
+                )
+                print(f"Actions summary: {args.output}")
+                return 0
             if args.ci_command == "prepare":
                 invocation = container_invocation(
                     root, image=args.image, operation="prepare"

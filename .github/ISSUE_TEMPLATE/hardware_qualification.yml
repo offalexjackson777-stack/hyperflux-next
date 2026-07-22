@@ -40,6 +40,18 @@ body:
     description: Identity, lighting zones, battery, connection, controls, lifecycle, or other bounded observations.
   validations:
     required: true
+- type: input
+  id: doctor-reference
+  attributes:
+    label: Doctor reference, when available
+    description: The privacy-safe hfx reference printed by hyperfluxctl doctor.
+    placeholder: hfx-...
+- type: textarea
+  id: support-preview
+  attributes:
+    label: Support preview, when available
+    description: Paste `hyperfluxctl support-bundle --preview`. This performs no upload or active receiver query.
+    render: json
 - type: dropdown
   id: evidence-class
   attributes:

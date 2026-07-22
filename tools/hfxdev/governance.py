@@ -15,6 +15,9 @@ ROOT_KEYS = {
     "schema",
     "repository",
     "publication_interlock",
+    "collaboration",
+    "security_posture",
+    "service_evaluations",
     "ownership",
     "protection",
     "labels",
@@ -42,6 +45,35 @@ COMMIT = re.compile(r"^[0-9a-f]{40}$")
 VERSION = re.compile(r"^v[0-9]+(?:\.[0-9]+){0,2}$")
 OWNER = re.compile(r"^@[A-Za-z0-9][A-Za-z0-9-]{0,38}$")
 LABEL_COLOR = re.compile(r"^[0-9a-f]{6}$")
+IDENTIFIER = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
+DISCUSSION_FORMATS = {
+    "announcements": "announcement",
+    "hardware-qualification": "discussion",
+    "help": "q-and-a",
+    "ideas": "discussion",
+}
+PROJECT_FIELD_IDS = {
+    "area",
+    "evidence-level",
+    "release-gate",
+    "priority",
+    "qualification-state",
+    "target-date",
+}
+SERVICE_DECISIONS = {
+    "codecov": "not-selected",
+    "dependabot": "preferred-native",
+    "openssf-scorecard": "deferred",
+    "renovate": "not-selected",
+}
+JOB_SUMMARY_SECTIONS = (
+    "source-revision",
+    "selection",
+    "failures",
+    "timings",
+    "generated-freshness",
+    "release-gate-impact",
+)
 
 
 @dataclass(frozen=True)
@@ -71,12 +103,62 @@ class GovernanceLabel:
 
 
 @dataclass(frozen=True)
+class DiscussionCategory:
+    id: str
+    name: str
+    format: str
+    description: str
+
+
+@dataclass(frozen=True)
+class ProjectView:
+    id: str
+    name: str
+    layout: str
+    group_by: str
+    date_field: str
+
+
+@dataclass(frozen=True)
+class ProjectField:
+    id: str
+    name: str
+    data_type: str
+    options: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SecurityPlan:
+    state: str
+    activation_boundary: str
+    data_boundary: str
+
+
+@dataclass(frozen=True)
+class ServiceEvaluation:
+    id: str
+    service: str
+    decision: str
+    benefits: tuple[str, ...]
+    required_permissions: tuple[str, ...]
+    privacy: str
+    maintenance_cost: str
+    rationale: str
+
+
+@dataclass(frozen=True)
 class GitHubGovernance:
     owner: str
     repository: str
     default_branch: str
     remote_state: str
     planned_pages_source: str
+    discussions: tuple[DiscussionCategory, ...]
+    project_title: str
+    project_views: tuple[ProjectView, ...]
+    project_fields: tuple[ProjectField, ...]
+    security_posture: tuple[tuple[str, SecurityPlan], ...]
+    service_evaluations: tuple[ServiceEvaluation, ...]
     default_owners: tuple[str, ...]
     ownership_rules: tuple[OwnershipRule, ...]
     required_checks: tuple[str, ...]
@@ -86,6 +168,7 @@ class GitHubGovernance:
     development_image: str
     dependency_update_day: str
     full_verification_cron: str
+    job_summary_sections: tuple[str, ...]
     actions: tuple[ActionPin, ...]
 
     @property
@@ -115,6 +198,18 @@ def _owners(value: Any, label: str) -> tuple[str, ...]:
     return owners
 
 
+def _identifier(value: Any, label: str) -> str:
+    if not isinstance(value, str) or IDENTIFIER.fullmatch(value) is None:
+        raise ModelError(f"{label}: expected a lowercase identifier")
+    return value
+
+
+def _text(value: Any, label: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ModelError(f"{label}: expected non-empty text")
+    return value
+
+
 def _ownership_path(value: str, label: str) -> str:
     path = PurePosixPath(value)
     if not value.startswith("/") or ".." in path.parts or any(character.isspace() for character in value):
@@ -128,7 +223,7 @@ def load_github_governance(root: Path) -> GitHubGovernance:
     )
     if value["$schema"] != "../schemas/github-governance.schema.json":
         raise ModelError("GitHub governance has a non-canonical schema reference")
-    if value["schema"] != "hyperflux-github-governance-v1":
+    if value["schema"] != "hyperflux-github-governance-v2":
         raise ModelError("unsupported GitHub governance schema")
 
     repository = _exact(
@@ -157,6 +252,203 @@ def load_github_governance(root: Path) -> GitHubGovernance:
     )
     if any(interlock.values()):
         raise ModelError("GitHub publication, deployment, release, and hardware CI must remain locked")
+
+    collaboration = _exact(
+        value["collaboration"], {"discussions", "project"}, "GitHub collaboration"
+    )
+    discussions_value = _exact(
+        collaboration["discussions"],
+        {"apply_authorized", "categories"},
+        "GitHub Discussions plan",
+    )
+    if discussions_value["apply_authorized"] is not False:
+        raise ModelError("GitHub Discussions application must remain unauthorized")
+    raw_categories = discussions_value["categories"]
+    if not isinstance(raw_categories, list):
+        raise ModelError("GitHub Discussions categories must be an array")
+    discussions: list[DiscussionCategory] = []
+    for index, raw in enumerate(raw_categories):
+        item = _exact(
+            raw,
+            {"id", "name", "format", "description"},
+            f"GitHub Discussions category {index}",
+        )
+        identifier = _identifier(item["id"], f"GitHub Discussions category {index} id")
+        if DISCUSSION_FORMATS.get(identifier) != item["format"]:
+            raise ModelError(f"GitHub Discussions category {identifier}: unreviewed format")
+        discussions.append(
+            DiscussionCategory(
+                identifier,
+                _text(item["name"], f"GitHub Discussions category {identifier} name"),
+                item["format"],
+                _text(
+                    item["description"],
+                    f"GitHub Discussions category {identifier} description",
+                ),
+            )
+        )
+    require_unique([category.id for category in discussions], "GitHub Discussions category id")
+    if {category.id for category in discussions} != set(DISCUSSION_FORMATS):
+        raise ModelError("GitHub Discussions category plan is incomplete")
+
+    project = _exact(
+        collaboration["project"],
+        {"apply_authorized", "title", "views", "fields"},
+        "GitHub Project plan",
+    )
+    if project["apply_authorized"] is not False:
+        raise ModelError("GitHub Project application must remain unauthorized")
+    project_title = _text(project["title"], "GitHub Project title")
+    raw_fields = project["fields"]
+    if not isinstance(raw_fields, list):
+        raise ModelError("GitHub Project fields must be an array")
+    project_fields: list[ProjectField] = []
+    for index, raw in enumerate(raw_fields):
+        item = _exact(
+            raw,
+            {"id", "name", "data_type", "options"},
+            f"GitHub Project field {index}",
+        )
+        identifier = _identifier(item["id"], f"GitHub Project field {index} id")
+        options_value = item["options"]
+        if not isinstance(options_value, list):
+            raise ModelError(f"GitHub Project field {identifier}: options must be an array")
+        options = tuple(options_value)
+        if any(not isinstance(option, str) or not option.strip() for option in options):
+            raise ModelError(f"GitHub Project field {identifier}: malformed option")
+        require_unique(options, f"GitHub Project field {identifier} option")
+        if item["data_type"] == "single-select" and not options:
+            raise ModelError(f"GitHub Project field {identifier}: select options are empty")
+        if item["data_type"] == "date" and options:
+            raise ModelError(f"GitHub Project field {identifier}: date fields cannot have options")
+        if item["data_type"] not in {"single-select", "date"}:
+            raise ModelError(f"GitHub Project field {identifier}: unsupported data type")
+        project_fields.append(
+            ProjectField(
+                identifier,
+                _text(item["name"], f"GitHub Project field {identifier} name"),
+                item["data_type"],
+                options,
+            )
+        )
+    require_unique([field.id for field in project_fields], "GitHub Project field id")
+    if {field.id for field in project_fields} != PROJECT_FIELD_IDS:
+        raise ModelError("GitHub Project field plan is incomplete")
+    field_types = {field.id: field.data_type for field in project_fields}
+
+    raw_views = project["views"]
+    if not isinstance(raw_views, list):
+        raise ModelError("GitHub Project views must be an array")
+    project_views: list[ProjectView] = []
+    for index, raw in enumerate(raw_views):
+        item = _exact(
+            raw,
+            {"id", "name", "layout", "group_by", "date_field"},
+            f"GitHub Project view {index}",
+        )
+        identifier = _identifier(item["id"], f"GitHub Project view {index} id")
+        if item["layout"] not in {"table", "board", "roadmap"}:
+            raise ModelError(f"GitHub Project view {identifier}: unsupported layout")
+        if item["group_by"] != "none" and item["group_by"] not in field_types:
+            raise ModelError(f"GitHub Project view {identifier}: unknown grouping field")
+        if item["date_field"] != "none" and field_types.get(item["date_field"]) != "date":
+            raise ModelError(f"GitHub Project view {identifier}: unknown date field")
+        project_views.append(
+            ProjectView(
+                identifier,
+                _text(item["name"], f"GitHub Project view {identifier} name"),
+                item["layout"],
+                item["group_by"],
+                item["date_field"],
+            )
+        )
+    require_unique([view.id for view in project_views], "GitHub Project view id")
+    if {view.layout for view in project_views} != {"table", "board", "roadmap"}:
+        raise ModelError("GitHub Project must retain table, board, and roadmap views")
+
+    security_value = _exact(
+        value["security_posture"],
+        {
+            "private_vulnerability_reporting",
+            "dependency_graph",
+            "source_sbom",
+            "artifact_attestations",
+        },
+        "GitHub security posture",
+    )
+    expected_security = {
+        "private_vulnerability_reporting": ("planned", "after-private-remote-authorization"),
+        "dependency_graph": ("planned", "after-private-remote-authorization"),
+        "source_sbom": ("implemented-local", "current-generation"),
+        "artifact_attestations": ("deferred", "after-release-workflow-authorization"),
+    }
+    security_posture: list[tuple[str, SecurityPlan]] = []
+    for identifier, (expected_state, expected_boundary) in expected_security.items():
+        item = _exact(
+            security_value[identifier],
+            {"state", "activation_boundary", "data_boundary"},
+            f"GitHub security plan {identifier}",
+        )
+        if (item["state"], item["activation_boundary"]) != (
+            expected_state,
+            expected_boundary,
+        ):
+            raise ModelError(f"GitHub security plan {identifier}: reviewed boundary drifted")
+        security_posture.append(
+            (
+                identifier,
+                SecurityPlan(
+                    item["state"],
+                    item["activation_boundary"],
+                    _text(item["data_boundary"], f"GitHub security plan {identifier} data boundary"),
+                ),
+            )
+        )
+
+    raw_evaluations = value["service_evaluations"]
+    if not isinstance(raw_evaluations, list):
+        raise ModelError("GitHub service evaluations must be an array")
+    service_evaluations: list[ServiceEvaluation] = []
+    for index, raw in enumerate(raw_evaluations):
+        item = _exact(
+            raw,
+            {
+                "id",
+                "service",
+                "decision",
+                "benefits",
+                "required_permissions",
+                "privacy",
+                "maintenance_cost",
+                "rationale",
+            },
+            f"GitHub service evaluation {index}",
+        )
+        identifier = _identifier(item["id"], f"GitHub service evaluation {index} id")
+        if SERVICE_DECISIONS.get(identifier) != item["decision"]:
+            raise ModelError(f"GitHub service evaluation {identifier}: unreviewed decision")
+        if item["maintenance_cost"] not in {"low", "medium", "high"}:
+            raise ModelError(f"GitHub service evaluation {identifier}: unsupported maintenance cost")
+        benefits = _strings(item["benefits"], f"GitHub service evaluation {identifier} benefits")
+        permissions = _strings(
+            item["required_permissions"],
+            f"GitHub service evaluation {identifier} permissions",
+        )
+        service_evaluations.append(
+            ServiceEvaluation(
+                identifier,
+                _text(item["service"], f"GitHub service evaluation {identifier} service"),
+                item["decision"],
+                benefits,
+                permissions,
+                _text(item["privacy"], f"GitHub service evaluation {identifier} privacy"),
+                item["maintenance_cost"],
+                _text(item["rationale"], f"GitHub service evaluation {identifier} rationale"),
+            )
+        )
+    require_unique([item.id for item in service_evaluations], "GitHub service evaluation id")
+    if [item.id for item in service_evaluations] != sorted(SERVICE_DECISIONS):
+        raise ModelError("GitHub service evaluations must be complete and sorted")
 
     ownership = _exact(value["ownership"], {"default", "rules"}, "GitHub ownership")
     default_owners = _owners(ownership["default"], "default CODEOWNERS")
@@ -226,7 +518,14 @@ def load_github_governance(root: Path) -> GitHubGovernance:
 
     automation = _exact(
         value["automation"],
-        {"runner", "development_image", "dependency_update_day", "full_verification_cron", "actions"},
+        {
+            "runner",
+            "development_image",
+            "dependency_update_day",
+            "full_verification_cron",
+            "job_summary",
+            "actions",
+        },
         "GitHub automation",
     )
     if automation["runner"] != "ubuntu-24.04":
@@ -237,6 +536,11 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         raise ModelError("GitHub dependency update day is unsupported")
     if automation["full_verification_cron"] != "17 3 * * 1":
         raise ModelError("GitHub full-verification cadence drifted")
+    summary = _exact(
+        automation["job_summary"], {"enabled", "sections"}, "GitHub Actions summary"
+    )
+    if summary["enabled"] is not True or tuple(summary["sections"]) != JOB_SUMMARY_SECTIONS:
+        raise ModelError("GitHub Actions summary contract is incomplete or reordered")
     raw_actions = automation["actions"]
     if not isinstance(raw_actions, list):
         raise ModelError("GitHub actions must be an array")
@@ -278,6 +582,12 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         default_branch=repository["default_branch"],
         remote_state=repository["remote_state"],
         planned_pages_source=repository["planned_pages_source"],
+        discussions=tuple(discussions),
+        project_title=project_title,
+        project_views=tuple(project_views),
+        project_fields=tuple(project_fields),
+        security_posture=tuple(security_posture),
+        service_evaluations=tuple(service_evaluations),
         default_owners=default_owners,
         ownership_rules=tuple(rules),
         required_checks=required_checks,
@@ -287,5 +597,6 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         development_image=automation["development_image"],
         dependency_update_day=automation["dependency_update_day"],
         full_verification_cron=automation["full_verification_cron"],
+        job_summary_sections=JOB_SUMMARY_SECTIONS,
         actions=tuple(actions),
     )

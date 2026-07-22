@@ -35,6 +35,7 @@ Outputs:
 - Local documentation portal
 - Device Lab
 - Repository Atlas
+- Repository State
 
 ## Public Contracts
 

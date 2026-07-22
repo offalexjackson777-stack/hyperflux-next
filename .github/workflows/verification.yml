@@ -51,6 +51,11 @@ jobs:
       env:
         HFX_CHANGED_FROM: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
       run: ./hfx ci verify --image "$HFX_CI_IMAGE" --lane fast --output build/ci/fast --changed-from "$HFX_CHANGED_FROM"
+    - name: Publish bounded verification summary
+      if: ${{ always() }}
+      env:
+        HFX_SOURCE_REVISION: ${{ github.sha }}
+      run: ./hfx ci summary --result build/ci/fast/result.json --output "$GITHUB_STEP_SUMMARY" --source-revision "$HFX_SOURCE_REVISION"
     - name: Upload hyperflux-fast-evidence
       if: ${{ always() }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

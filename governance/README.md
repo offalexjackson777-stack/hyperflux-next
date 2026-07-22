@@ -34,11 +34,13 @@ Outputs:
 
 - Pinned workflows
 - Issue forms
-- Protection and label plans
+- Actions evidence summaries
+- Protection, collaboration, security, and service-evaluation plans
 
 ## Public Contracts
 
 - Actions are SHA pinned
+- Verification summaries are source-bound
 - Linear history planned
 - Pages and publication remain disabled
 
@@ -52,7 +54,21 @@ Generated projections:
 
 - [`governance/README.md`](README.md)
 - [`governance/generated/github-protection-plan.json`](generated/github-protection-plan.json)
+- [`governance/generated/github-labels.json`](generated/github-labels.json)
+- [`governance/generated/github-experience-plan.json`](generated/github-experience-plan.json)
 - [`docs/generated/github-governance.md`](../docs/generated/github-governance.md)
+- [`.github/CODEOWNERS`](../.github/CODEOWNERS)
+- [`.github/pull_request_template.md`](../.github/pull_request_template.md)
+- [`.github/ISSUE_TEMPLATE/config.yml`](../.github/ISSUE_TEMPLATE/config.yml)
+- [`.github/ISSUE_TEMPLATE/bug_report.yml`](../.github/ISSUE_TEMPLATE/bug_report.yml)
+- [`.github/ISSUE_TEMPLATE/hardware_qualification.yml`](../.github/ISSUE_TEMPLATE/hardware_qualification.yml)
+- [`.github/ISSUE_TEMPLATE/feature_request.yml`](../.github/ISSUE_TEMPLATE/feature_request.yml)
+- [`.github/dependabot.yml`](../.github/dependabot.yml)
+- [`.github/workflows/verification.yml`](../.github/workflows/verification.yml)
+- [`.github/workflows/full-verification.yml`](../.github/workflows/full-verification.yml)
+- [`.github/workflows/documentation.yml`](../.github/workflows/documentation.yml)
+- [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml)
+- [`.github/workflows/dependency-review.yml`](../.github/workflows/dependency-review.yml)
 
 ## Relationships
 
@@ -72,7 +88,7 @@ Used by:
 
 Change impact:
 
-- Regenerate 3 declared projection(s).
+- Regenerate 17 declared projection(s).
 - Run `governance-contracts`.
 - Review direct consumers: Documentation system.
 

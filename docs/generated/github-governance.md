@@ -53,3 +53,68 @@ The plan is generated with `apply_authorized: false`. It can be reviewed now but
 - Pull requests surface canonical authority, schema, package, performance, privacy, and evidence impact.
 - Dependency updates are grouped by GitHub Actions, Cargo, and each Python integration root.
 - Labels and branch protection are reviewable generated plans, not hidden remote state.
+
+## Actions Job Summaries
+
+Fast and full verification jobs render `result.json` into the native GitHub Actions summary. The renderer reports structured facts and deliberately omits raw error text that could expose runner paths.
+
+- `source-revision`
+- `selection`
+- `failures`
+- `timings`
+- `generated-freshness`
+- `release-gate-impact`
+
+A missing result remains visible as unavailable, source-revision mismatches fail closed, and the release-gate section states that CI validates but cannot mutate gate state.
+
+## Discussions Plan
+
+| Category | Format | Purpose |
+| --- | --- | --- |
+| Announcements | `announcement` | Maintainer updates, verified milestones, and release-boundary changes. |
+| Hardware qualification | `discussion` | Public planning around candidate devices and bounded evidence needs. |
+| Help | `q-and-a` | User questions after running Doctor and reviewing privacy-safe diagnostics. |
+| Ideas | `discussion` | Universal workflows and architecture proposals before issue commitment. |
+
+The category plan has `apply_authorized: false`; it does not enable Discussions on a remote.
+
+## Project Plan
+
+Planned project: **HyperFlux Next Delivery**
+
+| View | Layout | Grouping | Date field |
+| --- | --- | --- | --- |
+| All work | `table` | `none` | `none` |
+| Release gates | `board` | `release-gate` | `none` |
+| Qualification roadmap | `roadmap` | `qualification-state` | `target-date` |
+
+| Field | Type | Options |
+| --- | --- | --- |
+| Area | `single-select` | Architecture, Assurance, Documentation, Governance, Integrations, Kernel, Packaging, Profiles, Runtime, SDK, Tooling |
+| Evidence level | `single-select` | Proposal, Software, Lifecycle, Physical |
+| Release gate | `single-select` | None, Foundation, Schemas, Simulation, Bridge and SDK, Kernel, Integrations, Packaging, Software, Hardware, Publication |
+| Priority | `single-select` | Critical, High, Medium, Low |
+| Qualification state | `single-select` | Unknown, Candidate, Route qualified, Fully qualified, Blocked |
+| Target date | `date` | Date value |
+
+The project plan has `apply_authorized: false`; no Project or field is created by generation.
+
+## Security Preparation
+
+| Capability | State | Activation boundary | Data boundary |
+| --- | --- | --- | --- |
+| `private_vulnerability_reporting` | `planned` | `after-private-remote-authorization` | GitHub private security advisories; never public issue intake |
+| `dependency_graph` | `planned` | `after-private-remote-authorization` | Repository dependency metadata only |
+| `source_sbom` | `implemented-local` | `current-generation` | Generated SPDX inventory from reviewed manifests and workflow pins |
+| `artifact_attestations` | `deferred` | `after-release-workflow-authorization` | Release artifacts and provenance only; no hardware evidence or private diagnostics |
+
+## External Service Evaluation
+
+| Service | Decision | Permissions or data access | Privacy | Maintenance |
+| --- | --- | --- | --- | --- |
+| Codecov | `not-selected` | `contents: read`, `checks: write`, `external coverage upload` | Would transmit source-derived coverage metadata to an external service. | `medium` |
+| Dependabot | `preferred-native` | `contents: read`, `pull requests: write` | Uses GitHub-native dependency metadata within the future repository account. | `low` |
+| OpenSSF Scorecard | `deferred` | `contents: read`, `security-events: write`, `id-token: write` | Publishes or uploads repository posture metadata and is most useful after the project has a stable remote history. | `medium` |
+| Renovate | `not-selected` | `contents: read`, `pull requests: write`, `issues: write`, `external app or bot credential` | An external app would receive repository metadata and dependency manifests. | `high` |
+
+No external app or service is installed by this plan.
