@@ -281,7 +281,6 @@ def _apply_pages(api: GhApi, governance: GitHubGovernance) -> list[dict[str, Any
         environment_endpoint,
         {
             "wait_timer": 0,
-            "prevent_self_review": False,
             "deployment_branch_policy": {
                 "protected_branches": False,
                 "custom_branch_policies": True,

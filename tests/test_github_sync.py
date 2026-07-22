@@ -119,6 +119,7 @@ class GitHubSyncTests(unittest.TestCase):
             environment_payload["deployment_branch_policy"],
             {"protected_branches": False, "custom_branch_policies": True},
         )
+        self.assertNotIn("prevent_self_review", environment_payload)
         ruleset_payload = next(
             payload
             for method, endpoint, payload in api.calls
