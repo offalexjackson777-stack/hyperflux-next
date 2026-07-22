@@ -31,7 +31,7 @@ Every current node is software-only and has zero hardware-write authority.
 | 22 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 180s | `rerun` |
 | 23 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
 | 24 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
-| 25 | `openrgb-adapter-contracts` | `integrations` | `none` | `false` | 120s | `rerun` |
+| 25 | `openrgb-adapter-contracts` | `integrations` | `none` | `false` | 300s | `rerun` |
 | 26 | `polychromatic-adapter-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
 | 27 | `openrazer-compatibility-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
 | 28 | `migration-shadow-contracts` | `migration` | `none` | `false` | 120s | `rerun` |
