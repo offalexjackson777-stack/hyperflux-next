@@ -25,6 +25,7 @@ from hfxdev.distribution_package import (
     _arch_pkgbuild,
     _tar_payload,
 )
+from hfxdev.distribution_native import normalize_tree, package_directory_modes
 from hfxdev.distributions import load_distribution_catalog
 from hfxdev.linux_runtime import load_linux_runtime
 from hfxdev.model import ModelError, sha256_file
@@ -137,6 +138,10 @@ class DistributionPackageTests(unittest.TestCase):
             file.parent.mkdir(parents=True)
             file.write_text("stable\n", encoding="utf-8")
             file.chmod(0o644)
+            configuration = payload / "etc/hyperflux-next"
+            configuration.mkdir(parents=True)
+            configuration.chmod(0o2750)
+            (configuration / "bridge.json").write_text("{}\n", encoding="utf-8")
             first = root / "first.tar"
             second = root / "second.tar"
             _tar_payload(payload, first, 1_700_000_000)
@@ -147,6 +152,30 @@ class DistributionPackageTests(unittest.TestCase):
             with tarfile.open(first) as archive:
                 member = archive.getmember("usr/share/hyperflux-next/value")
                 self.assertEqual((member.uid, member.gid, member.mode), (0, 0, 0o644))
+                self.assertEqual(
+                    archive.getmember("etc/hyperflux-next").mode,
+                    self.runtime.bridge.directory_modes.configuration,
+                )
+
+    def test_distribution_normalization_keeps_package_owned_directory_modes(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            configuration = root / "etc/hyperflux-next"
+            configuration.mkdir(parents=True)
+            sibling = root / "usr/share/hyperflux-next"
+            sibling.mkdir(parents=True)
+            normalize_tree(
+                root,
+                1_700_000_000,
+                package_directory_modes(self.runtime),
+            )
+            self.assertEqual(
+                configuration.stat().st_mode & 0o7777,
+                self.runtime.bridge.directory_modes.configuration,
+            )
+            self.assertEqual(sibling.stat().st_mode & 0o7777, 0o0755)
 
 
 if __name__ == "__main__":

@@ -96,6 +96,10 @@ class RpmPackageTests(unittest.TestCase):
         for item in self.target.optional_dependencies:
             self.assertIn(f"Suggests: {item.package}\n", spec)
         self.assertIn(f"%config(noreplace) %attr(0640,root,root) {RPM_CONFIGURATION}", spec)
+        self.assertIn(
+            "%dir %attr(2750,root,root) /etc/hyperflux-next",
+            spec,
+        )
         self.assertIn(f"%license %attr(0644,root,root) {RPM_LICENSE_PATH}", spec)
         self.assertIn(
             f"%doc %attr(0644,root,root) {RPM_DOCUMENT_ROOT}README.md", spec

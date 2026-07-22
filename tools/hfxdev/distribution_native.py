@@ -13,6 +13,7 @@ from .distributions import DistributionCatalog, DistributionTarget
 from .linux_runtime import LinuxRuntime
 from .model import ModelError, sha256_file
 from .package_pipeline import ArtifactSet
+from .tree_metadata import DirectoryModes, normalize_tree, verify_directory_modes
 
 
 @dataclass(frozen=True)
@@ -51,13 +52,13 @@ def tree_digest(root: Path, files: list[Path]) -> str:
     return digest.hexdigest()
 
 
-def normalize_tree(root: Path, epoch: int) -> None:
-    for path in sorted(root.rglob("*"), reverse=True):
-        if path.is_dir():
-            path.chmod(0o755)
-        os.utime(path, (epoch, epoch), follow_symlinks=False)
-    root.chmod(0o755)
-    os.utime(root, (epoch, epoch), follow_symlinks=False)
+def package_directory_modes(runtime: LinuxRuntime) -> DirectoryModes:
+    return (
+        (
+            runtime.bridge.configuration_directory,
+            runtime.bridge.directory_modes.configuration,
+        ),
+    )
 
 
 def write_payload_tar(root: Path, destination: Path, epoch: int) -> None:
@@ -72,7 +73,7 @@ def write_payload_tar(root: Path, destination: Path, epoch: int) -> None:
             info.uname = "root"
             info.gname = "root"
             info.mtime = epoch
-            info.mode = 0o755 if path.is_dir() else stat.S_IMODE(path.stat().st_mode)
+            info.mode = stat.S_IMODE(path.stat().st_mode)
             if path.is_dir():
                 info.type = tarfile.DIRTYPE
                 archive.addfile(info)

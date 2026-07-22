@@ -11,7 +11,12 @@ import shutil
 import subprocess
 import tarfile
 
-from .distribution_native import NativePackageContext, normalize_tree, tree_files
+from .distribution_native import (
+    NativePackageContext,
+    normalize_tree,
+    package_directory_modes,
+    tree_files,
+)
 from .model import ModelError
 
 
@@ -275,6 +280,7 @@ def _verify_debian_package(
             raise ModelError(f"Debian control member {name} differs from its authority")
 
     payload_entries: list[tuple[str, int, bytes]] = []
+    directory_modes: dict[str, int] = {}
     forbidden = tuple(
         value.encode("utf-8")
         for value in {
@@ -307,6 +313,7 @@ def _verify_debian_package(
                 ):
                     raise ModelError("Debian payload metadata is not canonical")
                 if member.isdir():
+                    directory_modes[name.rstrip("/")] = member.mode
                     continue
                 if not member.isfile():
                     raise ModelError("Debian payload contains an unsupported member type")
@@ -331,13 +338,25 @@ def _verify_debian_package(
         or digest.hexdigest() != context.payload_sha256
     ):
         raise ModelError("Debian package payload differs from the staged distribution root")
+    for destination, expected in package_directory_modes(context.runtime):
+        actual = directory_modes.get(destination.removeprefix("/"))
+        if actual != expected:
+            found = "missing" if actual is None else f"{actual:04o}"
+            raise ModelError(
+                f"Debian package directory mode differs for {destination}: "
+                f"expected {expected:04o}, found {found}"
+            )
 
 
 def build_debian_package(context: NativePackageContext) -> Path:
     root = context.workspace_root / "debian-root"
     shutil.copytree(context.package_root, root, symlinks=False)
     controls = _write_control_files(context, root)
-    normalize_tree(root, context.artifacts.source_date_epoch)
+    normalize_tree(
+        root,
+        context.artifacts.source_date_epoch,
+        package_directory_modes(context.runtime),
+    )
     version = _debian_version(
         context.runtime.product.version, context.runtime.product.package_release
     )

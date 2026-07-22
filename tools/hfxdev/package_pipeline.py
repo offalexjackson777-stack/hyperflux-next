@@ -25,6 +25,7 @@ from .linux_runtime import LinuxRuntime, load_linux_runtime
 from .model import ModelError, load_json, require_unique, sha256_file
 from .supply_chain import load_dependency_inventory
 from .toolchains import load_toolchain_pins, verify_current_toolchain
+from .tree_metadata import normalize_tree as _normalize_tree
 
 
 REVISION = re.compile(r"^[0-9a-f]{40}$")
@@ -1013,24 +1014,6 @@ def _private_stage_prefixes(
     if root != canonical_workspace:
         prefixes.append(str(root).encode())
     return tuple(prefixes)
-
-
-def _normalize_tree(
-    stage_root: Path,
-    epoch: int,
-    directory_modes: tuple[tuple[str, int], ...] = (),
-) -> None:
-    for path in sorted(stage_root.rglob("*"), reverse=True):
-        if path.is_dir():
-            path.chmod(0o755)
-        os.utime(path, (epoch, epoch), follow_symlinks=False)
-    for destination, mode in directory_modes:
-        path = _stage_path(stage_root, destination)
-        if not path.is_dir():
-            raise ModelError(f"staged directory mode target is missing: {destination}")
-        path.chmod(mode)
-    stage_root.chmod(0o755)
-    os.utime(stage_root, (epoch, epoch))
 
 
 def stage_rootfs(root: Path, manifest_path: Path, stage_root: Path) -> StageResult:

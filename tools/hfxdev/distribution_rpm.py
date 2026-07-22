@@ -11,8 +11,10 @@ import subprocess
 
 from .distribution_native import (
     NativePackageContext,
+    package_directory_modes,
     tree_digest,
     tree_files,
+    verify_directory_modes,
     write_payload_tar,
 )
 from .model import ModelError
@@ -129,7 +131,10 @@ def _rpm_scripts(context: NativePackageContext) -> dict[str, str]:
 
 
 def _rpm_files(context: NativePackageContext) -> list[str]:
-    result = []
+    result = [
+        f"%dir %attr({mode:04o},root,root) {destination}"
+        for destination, mode in package_directory_modes(context.runtime)
+    ]
     for path in tree_files(context.package_root):
         destination = "/" + path.relative_to(context.package_root).as_posix()
         if not re.fullmatch(r"/[A-Za-z0-9._+@%/=-]+", destination):
@@ -406,6 +411,14 @@ def _verify_rpm_package(context: NativePackageContext, package: Path) -> None:
         "%{FILEGROUPNAME}\\t%{FILEMTIMES}\\t%{FILEFLAGS}\\n]",
     ).splitlines()
     expected_files = {}
+    for destination, mode in package_directory_modes(context.runtime):
+        expected_files[destination] = (
+            f"{stat.S_IFDIR | mode:o}",
+            "root",
+            "root",
+            str(context.artifacts.source_date_epoch),
+            "0",
+        )
     for path in tree_files(context.package_root):
         destination = "/" + path.relative_to(context.package_root).as_posix()
         flags = "17" if destination == RPM_CONFIGURATION else "0"
@@ -447,6 +460,11 @@ def _verify_rpm_package(context: NativePackageContext, package: Path) -> None:
 
     extracted = context.workspace_root / "rpm-extracted"
     _extract_rpm(package, extracted)
+    verify_directory_modes(
+        extracted,
+        package_directory_modes(context.runtime),
+        "RPM package",
+    )
     extracted_files = tree_files(extracted)
     if (
         len(extracted_files) != context.payload_file_count

@@ -21,6 +21,7 @@ from .distributions import DistributionCatalog, DistributionTarget, load_distrib
 from .distribution_native import (
     NativePackageContext,
     normalize_tree as _normalize,
+    package_directory_modes as _package_directory_modes,
     tree_digest as _tree_digest,
     tree_files as _tree_files,
     write_payload_tar as _tar_payload,
@@ -430,6 +431,7 @@ def _verify_arch_package(
 ) -> None:
     metadata_files: dict[str, bytes] = {}
     archive_entries: list[tuple[tarfile.TarInfo, bytes | None]] = []
+    directory_modes: dict[str, int] = {}
     digest = hashlib.sha256()
     payload_files = 0
     forbidden = tuple(
@@ -457,6 +459,7 @@ def _verify_arch_package(
                     ):
                         raise ModelError("Arch package directory metadata is not canonical")
                     archive_entries.append((copy.copy(member), None))
+                    directory_modes[path.as_posix().rstrip("/")] = member.mode
                     continue
                 if not member.isfile():
                     raise ModelError("Arch package contains an unsupported member type")
@@ -491,6 +494,14 @@ def _verify_arch_package(
         archive_entries, artifacts.source_date_epoch
     ):
         raise ModelError("Arch package MTREE does not describe the canonical archive")
+    for destination, expected in _package_directory_modes(runtime):
+        actual = directory_modes.get(destination.removeprefix("/"))
+        if actual != expected:
+            found = "missing" if actual is None else f"{actual:04o}"
+            raise ModelError(
+                f"Arch package directory mode differs for {destination}: "
+                f"expected {expected:04o}, found {found}"
+            )
     if payload_files != payload_file_count or digest.hexdigest() != payload_sha256:
         raise ModelError("Arch package payload differs from the staged distribution root")
     if metadata_files[".INSTALL"] != _arch_install(runtime).encode("utf-8"):
@@ -687,7 +698,11 @@ def build_distribution_package(
             ),
         )
         overlays.append(installed_manifest)
-        _normalize(package_root, artifacts.source_date_epoch)
+        _normalize(
+            package_root,
+            artifacts.source_date_epoch,
+            _package_directory_modes(runtime),
+        )
         distribution_files = _tree_files(package_root)
         distribution_digest = _tree_digest(package_root, distribution_files)
 
