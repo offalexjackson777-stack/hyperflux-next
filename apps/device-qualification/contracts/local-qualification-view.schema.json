@@ -15,7 +15,7 @@
       "additionalProperties": false,
       "required": ["state", "version", "bridge_protocol", "endpoint", "simulation", "network_upload_executed", "hardware_write_executed"],
       "properties": {
-        "state": {"enum": ["ready", "driver-pending", "legacy-v2-detected", "bridge-unavailable", "no-receiver"]},
+        "state": {"enum": ["ready", "lifecycle-transition", "driver-pending", "legacy-v2-detected", "bridge-unavailable", "no-receiver"]},
         "version": {"type": "string", "minLength": 1},
         "bridge_protocol": {"type": ["integer", "null"], "minimum": 1},
         "endpoint": {"type": "string", "pattern": "^http://(127\\.0\\.0\\.1|localhost)(:[0-9]+)?$"},

@@ -78,6 +78,8 @@ async function refreshView(visible) {
     reconcileSelection();
     if (value.companion.state === "legacy-v2-detected") {
       renderConnection("warning", "HyperFlux V2 detected");
+    } else if (value.companion.state === "lifecycle-transition") {
+      renderConnection("warning", "Lifecycle transition");
     } else {
       renderConnection("ready", value.companion.state === "ready" ? "Connected" : "Needs attention");
     }
@@ -182,7 +184,7 @@ function render() {
     return;
   }
   if (!state.view) return;
-  if (state.view.companion.state !== "ready") {
+  if (!["ready", "lifecycle-transition"].includes(state.view.companion.state)) {
     app.innerHTML = systemGate(state.view.companion.state);
     return;
   }

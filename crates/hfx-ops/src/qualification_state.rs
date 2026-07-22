@@ -2,6 +2,7 @@
 
 use crate::probe::write_private_file;
 use crate::qualification::StageProgress;
+use crate::qualification_lifecycle::LifecycleRunState;
 use crate::qualification_runner::PendingLightingTransaction;
 use hfx_profiles::PROFILE_SOURCE_SHA256;
 use hfx_runtime::{LINUX_RUNTIME_SHA256, PRODUCT_VERSION};
@@ -14,7 +15,7 @@ use std::io;
 use std::os::unix::fs::{MetadataExt as _, PermissionsExt as _};
 use std::path::{Path, PathBuf};
 
-const SESSION_SCHEMA: &str = "hyperflux-qualification-session-v1";
+const SESSION_SCHEMA: &str = "hyperflux-qualification-session-v2";
 const MAX_SESSION_BYTES: u64 = 256 * 1024;
 const MAX_STAGE_RESULTS: usize = 64;
 
@@ -31,6 +32,7 @@ pub(crate) struct QualificationSessionState {
     pub run_id: Option<String>,
     pub results: BTreeMap<String, StageProgress>,
     pub pending_transaction: Option<PendingLightingTransaction>,
+    pub lifecycle_run: Option<LifecycleRunState>,
     pub hardware_write_executed: bool,
 }
 
@@ -47,6 +49,7 @@ impl Default for QualificationSessionState {
             run_id: None,
             results: BTreeMap::new(),
             pending_transaction: None,
+            lifecycle_run: None,
             hardware_write_executed: false,
         }
     }
@@ -97,6 +100,13 @@ impl QualificationSessionState {
                         byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.')
                     })
             })
+        {
+            return Err(QualificationStateError::Invalid);
+        }
+        if self
+            .lifecycle_run
+            .as_ref()
+            .is_some_and(|run| run.validate().is_err())
         {
             return Err(QualificationStateError::Invalid);
         }
@@ -227,6 +237,7 @@ fn temporary_path(path: &Path) -> PathBuf {
 fn coordinator_sha256() -> String {
     let mut digest = Sha256::new();
     digest.update(include_bytes!("qualification.rs"));
+    digest.update(include_bytes!("qualification_lifecycle.rs"));
     digest.update(include_bytes!("qualification_runner.rs"));
     digest.update(include_bytes!("qualification_server.rs"));
     digest.update(include_bytes!("qualification_state.rs"));

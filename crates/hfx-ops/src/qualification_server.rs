@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::qualification::{StageProgress, apply_stage_results};
+use crate::qualification_lifecycle::{
+    PreparedLifecycleAction, capture_lifecycle_run, current_suspend_stamp,
+    identity_transition_matches, observe_lifecycle, overlay_lifecycle_run,
+    prepare_lifecycle_checkpoint, reconcile_system_resume, start_lifecycle_stage,
+};
 use crate::qualification_runner::{
     ObservationVerdict, PreparedLightingAction, new_transaction_id, prepare_lighting_checkpoint,
     prepare_lighting_stage, reconcile_pending_lighting,
@@ -234,15 +239,22 @@ fn live_view(
         RunnerCapabilities {
             read_only_actions: RunnerAvailability::Available,
             supervised_lighting: RunnerAvailability::Available,
-            ..RunnerCapabilities::default()
+            device_lifecycle: RunnerAvailability::Available,
+            system_lifecycle: RunnerAvailability::Available,
         },
         state.revision.max(1),
         qualification_generated_at(),
     );
     let fingerprint = identity_fingerprint(&view)?;
-    let mut changed = refresh_identity_binding(state, fingerprint);
+    let mut changed = refresh_identity_binding(state, fingerprint, &view);
     if reconcile_pending(probe, &view, state) {
         changed = true;
+    }
+    if reconcile_lifecycle_resume_state(integration.as_ref(), state) {
+        changed = true;
+    }
+    if let Some(run) = &state.lifecycle_run {
+        overlay_lifecycle_run(&mut view, run);
     }
     view.view_revision = state.revision;
     apply_stage_results(&mut view, &state.results, state.run_id.as_deref());
@@ -253,7 +265,11 @@ fn live_view(
     Ok(view)
 }
 
-fn refresh_identity_binding(state: &mut ServerState, fingerprint: [u8; 32]) -> bool {
+fn refresh_identity_binding(
+    state: &mut ServerState,
+    fingerprint: [u8; 32],
+    view: &QualificationView,
+) -> bool {
     match state.identity_fingerprint {
         None => {
             state.revision = 1;
@@ -261,10 +277,19 @@ fn refresh_identity_binding(state: &mut ServerState, fingerprint: [u8; 32]) -> b
             true
         }
         Some(previous) if previous != fingerprint => {
+            if state
+                .lifecycle_run
+                .as_ref()
+                .is_some_and(|run| identity_transition_matches(view, run))
+            {
+                state.identity_fingerprint = Some(fingerprint);
+                return true;
+            }
             state.revision = state.revision.saturating_add(1);
             state.identity_fingerprint = Some(fingerprint);
             state.run_id = None;
             state.results.clear();
+            state.lifecycle_run = None;
             if let Some(pending) = &state.pending_transaction {
                 state.results.insert(
                     pending.stage_id.clone(),
@@ -279,6 +304,31 @@ fn refresh_identity_binding(state: &mut ServerState, fingerprint: [u8; 32]) -> b
         }
         Some(_) => false,
     }
+}
+
+fn reconcile_lifecycle_resume_state(
+    integration: Option<&crate::BridgeIntegration>,
+    session: &mut ServerState,
+) -> bool {
+    let Some(run) = session.lifecycle_run.clone() else {
+        return false;
+    };
+    let Some(active) = &run.active else {
+        return false;
+    };
+    let stage_id = active.stage_id.clone();
+    let device_id = active.device_id.clone();
+    let observation = observe_lifecycle(integration, &run, &device_id);
+    let Ok(stamp) = current_suspend_stamp() else {
+        return false;
+    };
+    let Ok(Some((run, transition))) = reconcile_system_resume(run, &observation, &stamp) else {
+        return false;
+    };
+    session.lifecycle_run = Some(run);
+    session.results.insert(stage_id, transition.progress);
+    session.revision = session.revision.saturating_add(1);
+    true
 }
 
 fn reconcile_pending(
@@ -458,11 +508,125 @@ fn apply_action(
         RiskLevel::LightingWrite => {
             apply_lighting_action(probe, view, stage, input, state_file, session)
         }
-        RiskLevel::DeviceLifecycle | RiskLevel::SystemLifecycle => Err(ActionFailure::unchanged(
-            HttpStatus::NotImplemented,
-            "The supervised lifecycle runner is not installed; no hardware action was requested.",
-        )),
+        RiskLevel::DeviceLifecycle | RiskLevel::SystemLifecycle => {
+            apply_lifecycle_action(probe, view, stage, input, state_file, session)
+        }
     }
+}
+
+fn apply_lifecycle_action(
+    probe: &RealSystemProbe,
+    view: &QualificationView,
+    stage: &QualificationStage,
+    input: &ActionInput,
+    state_file: &Path,
+    session: &mut ServerState,
+) -> Result<(), ActionFailure> {
+    let run = match &session.lifecycle_run {
+        Some(run) => run.clone(),
+        None => capture_lifecycle_run(view, stage)
+            .map_err(|error| ActionFailure::unchanged(HttpStatus::Conflict, error.to_string()))?,
+    };
+    let selected_device_id = run
+        .active
+        .as_ref()
+        .map(|active| active.device_id.clone())
+        .or_else(|| device_id_for_stage(view, stage).map(str::to_owned))
+        .ok_or_else(|| {
+            ActionFailure::unchanged(
+                HttpStatus::Conflict,
+                "The lifecycle stage has no exact selected controller.",
+            )
+        })?;
+    let integration = probe.qualification_integration().ok();
+    let observation = observe_lifecycle(integration.as_ref(), &run, &selected_device_id);
+    let prepared = if stage.status == StageStatus::Ready {
+        let (run, transition) = start_lifecycle_stage(run, stage, &observation)
+            .map_err(|error| ActionFailure::unchanged(HttpStatus::Conflict, error.to_string()))?;
+        PreparedLifecycleAction::Record { run, transition }
+    } else if stage.status == StageStatus::AwaitingObservation {
+        let verdict = observation_verdict(stage, input)
+            .map_err(|message| ActionFailure::unchanged(HttpStatus::BadRequest, message))?;
+        let current = session.results.get(&stage.stage_id).ok_or_else(|| {
+            ActionFailure::unchanged(
+                HttpStatus::Conflict,
+                "The watched lifecycle checkpoint is no longer available.",
+            )
+        })?;
+        prepare_lifecycle_checkpoint(run, stage, current, verdict, &observation)
+            .map_err(|error| ActionFailure::unchanged(HttpStatus::Conflict, error.to_string()))?
+    } else {
+        return Err(ActionFailure::unchanged(
+            HttpStatus::Conflict,
+            "This lifecycle stage is not at a runnable checkpoint.",
+        ));
+    };
+    commit_lifecycle_action(prepared, probe, stage, state_file, session)
+}
+
+fn commit_lifecycle_action(
+    prepared: PreparedLifecycleAction,
+    probe: &RealSystemProbe,
+    stage: &QualificationStage,
+    state_file: &Path,
+    session: &mut ServerState,
+) -> Result<(), ActionFailure> {
+    let (run, transition, requests_suspend) = match prepared {
+        PreparedLifecycleAction::Record { run, transition } => (run, transition, false),
+        PreparedLifecycleAction::Suspend { run, transition } => (run, transition, true),
+    };
+    let previous_run = session.lifecycle_run.clone();
+    let previous_progress = session.results.get(&stage.stage_id).cloned();
+    session.lifecycle_run = Some(run);
+    session
+        .results
+        .insert(stage.stage_id.clone(), transition.progress);
+    if !requests_suspend {
+        return Ok(());
+    }
+    if save_state(state_file, session).is_err() {
+        restore_lifecycle_state(session, &stage.stage_id, previous_run, previous_progress);
+        return Err(ActionFailure::unchanged(
+            HttpStatus::Conflict,
+            "The private resume checkpoint could not be committed; suspend was not requested.",
+        ));
+    }
+    if probe.request_system_suspend().is_err() {
+        restore_lifecycle_state(session, &stage.stage_id, previous_run, previous_progress);
+        let _ = save_state(state_file, session);
+        return Err(ActionFailure::unchanged(
+            HttpStatus::Conflict,
+            "The operating system rejected the single suspend request.",
+        ));
+    }
+    Ok(())
+}
+
+fn restore_lifecycle_state(
+    session: &mut ServerState,
+    stage_id: &str,
+    previous_run: Option<crate::qualification_lifecycle::LifecycleRunState>,
+    previous_progress: Option<StageProgress>,
+) {
+    session.lifecycle_run = previous_run;
+    if let Some(progress) = previous_progress {
+        session.results.insert(stage_id.to_owned(), progress);
+    } else {
+        session.results.remove(stage_id);
+    }
+}
+
+fn device_id_for_stage<'a>(
+    view: &'a QualificationView,
+    stage: &QualificationStage,
+) -> Option<&'a str> {
+    view.plans.iter().find_map(|plan| {
+        plan.groups
+            .iter()
+            .flat_map(|group| &group.stages)
+            .any(|candidate| candidate.stage_id == stage.stage_id)
+            .then_some(plan.device_id.as_str())
+    })
 }
 
 fn record_read_only_result(
@@ -955,7 +1119,6 @@ enum HttpStatus {
     Conflict,
     RequestTooLarge,
     UnsupportedMediaType,
-    NotImplemented,
 }
 
 impl HttpStatus {
@@ -969,7 +1132,6 @@ impl HttpStatus {
             Self::Conflict => "409 Conflict",
             Self::RequestTooLarge => "413 Content Too Large",
             Self::UnsupportedMediaType => "415 Unsupported Media Type",
-            Self::NotImplemented => "501 Not Implemented",
         }
     }
 }
@@ -1024,6 +1186,13 @@ fn write_response(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn qualification_fixture(name: &str) -> QualificationView {
+        let fixture = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../apps/device-qualification/tests/fixtures")
+            .join(name);
+        serde_json::from_slice(&fs::read(fixture).expect("fixture reads")).expect("fixture parses")
+    }
 
     fn pending_transaction() -> crate::qualification_runner::PendingLightingTransaction {
         crate::qualification_runner::PendingLightingTransaction {
@@ -1138,7 +1307,11 @@ mod tests {
             hardware_write_executed: true,
             ..ServerState::default()
         };
-        assert!(refresh_identity_binding(&mut state, [2_u8; 32]));
+        assert!(refresh_identity_binding(
+            &mut state,
+            [2_u8; 32],
+            &qualification_fixture("rust-qualified-mouse.json"),
+        ));
         assert_eq!(state.results.len(), 1);
         assert_eq!(
             state.results["mouse-test-lighting"].status,
@@ -1151,11 +1324,7 @@ mod tests {
 
     #[test]
     fn identity_fingerprint_ignores_inventory_order() {
-        let fixture = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../apps/device-qualification/tests/fixtures/rust-qualified-pair.json");
-        let mut view: QualificationView =
-            serde_json::from_slice(&fs::read(fixture).expect("fixture reads"))
-                .expect("fixture parses");
+        let mut view = qualification_fixture("rust-qualified-pair.json");
         let mut second = view.receivers[0].clone();
         second.receiver_id = "receiver-second".to_owned();
         second.generation_id = 11;
@@ -1169,6 +1338,69 @@ mod tests {
             identity_fingerprint(&view).expect("reordered fingerprint computes"),
             expected
         );
+    }
+
+    #[test]
+    fn lifecycle_binding_accepts_only_its_expected_profile_bound_generation() {
+        let mut view = qualification_fixture("rust-qualified-pair.json");
+        for group in view.plans.iter_mut().flat_map(|plan| &mut plan.groups) {
+            for stage in &mut group.stages {
+                stage.status = if group.group_id == "lifecycle" {
+                    StageStatus::Ready
+                } else {
+                    StageStatus::Passed
+                };
+            }
+        }
+        let lifecycle_stage = view.plans[0]
+            .groups
+            .iter()
+            .find(|group| group.group_id == "lifecycle")
+            .expect("lifecycle group")
+            .stages[0]
+            .clone();
+        let mut run = capture_lifecycle_run(&view, &lifecycle_stage).expect("run captures");
+        run.active = Some(crate::qualification_lifecycle::LifecycleStageState {
+            stage_id: lifecycle_stage.stage_id.clone(),
+            device_id: view.plans[0].device_id.clone(),
+            device_kind: "mouse".to_owned(),
+            phase: crate::qualification_lifecycle::LifecyclePhase::ReceiverReturn,
+            baseline_generation_id: 7,
+            evidence_refs: vec!["receiver-generation:7".to_owned()],
+            suspend_stamp: None,
+        });
+        run.validate().expect("run is valid");
+        let mut session = ServerState {
+            identity_fingerprint: Some(identity_fingerprint(&view).expect("fingerprint")),
+            run_id: Some("run-generation-7".to_owned()),
+            results: BTreeMap::from([(
+                lifecycle_stage.stage_id.clone(),
+                StageProgress {
+                    status: StageStatus::AwaitingObservation,
+                    result: None,
+                    checkpoint: None,
+                },
+            )]),
+            lifecycle_run: Some(run),
+            ..ServerState::default()
+        };
+
+        view.receivers[0].generation_id = 8;
+        let renewed = identity_fingerprint(&view).expect("renewed fingerprint");
+        assert!(refresh_identity_binding(&mut session, renewed, &view));
+        assert!(session.lifecycle_run.is_some());
+        assert!(!session.results.is_empty());
+
+        view.receivers[0].devices[0]
+            .profile
+            .as_mut()
+            .expect("profile exists")
+            .digest = "0".repeat(64);
+        let foreign = identity_fingerprint(&view).expect("foreign fingerprint");
+        assert!(refresh_identity_binding(&mut session, foreign, &view));
+        assert!(session.lifecycle_run.is_none());
+        assert!(session.results.is_empty());
+        assert!(session.run_id.is_none());
     }
 
     #[test]

@@ -30,6 +30,13 @@ pub enum ConfigMigrationOutcome {
     Migrated { rollback_path: PathBuf },
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum QualificationConfigurationOutcome {
+    AlreadyEnabled,
+    Enabled { rollback_path: PathBuf },
+    Restored,
+}
+
 #[derive(Debug)]
 pub enum ConfigMigrationError {
     Io(io::Error),
@@ -37,6 +44,7 @@ pub enum ConfigMigrationError {
     Invalid,
     UnsupportedSchema(String),
     RollbackAlreadyExists,
+    QualificationRollbackMissing,
 }
 
 impl fmt::Display for ConfigMigrationError {
@@ -53,6 +61,9 @@ impl fmt::Display for ConfigMigrationError {
             }
             Self::RollbackAlreadyExists => {
                 formatter.write_str("an unconfirmed configuration rollback already exists")
+            }
+            Self::QualificationRollbackMissing => {
+                formatter.write_str("no qualification configuration rollback is available")
             }
         }
     }
@@ -170,6 +181,64 @@ pub fn confirm_configuration(path: &Path) -> Result<(), ConfigMigrationError> {
     }
 }
 
+/// Atomically enables profile-qualified writes and stable restoration while
+/// retaining the exact previous configuration for an explicit rollback.
+///
+/// # Errors
+///
+/// Returns without replacing the live configuration when validation, backup,
+/// or commit fails.
+pub fn enable_qualification_configuration(
+    path: &Path,
+) -> Result<QualificationConfigurationOutcome, ConfigMigrationError> {
+    let (bytes, mode) = read_current(path)?;
+    let mut config = parse_current(&bytes)?;
+    if config.mode == BridgeMode::QualifiedLive && config.restoration.enabled {
+        return Ok(QualificationConfigurationOutcome::AlreadyEnabled);
+    }
+    let rollback_path = qualification_rollback_path(path);
+    if rollback_path.exists() {
+        return Err(ConfigMigrationError::RollbackAlreadyExists);
+    }
+    write_new(&rollback_path, &bytes, mode)?;
+    config.mode = BridgeMode::QualifiedLive;
+    config.restoration.enabled = true;
+    config
+        .validate()
+        .map_err(|_| ConfigMigrationError::Invalid)?;
+    let mut payload =
+        serde_json::to_vec_pretty(&config).map_err(|_| ConfigMigrationError::Invalid)?;
+    payload.push(b'\n');
+    if let Err(error) = commit(path, &payload, mode) {
+        let _ = fs::remove_file(&rollback_path);
+        return Err(error);
+    }
+    Ok(QualificationConfigurationOutcome::Enabled { rollback_path })
+}
+
+/// Restores the exact configuration retained by
+/// [`enable_qualification_configuration`].
+///
+/// # Errors
+///
+/// Returns without replacing the live configuration when the rollback is
+/// missing, invalid, or cannot be committed atomically.
+pub fn restore_qualification_configuration(
+    path: &Path,
+) -> Result<QualificationConfigurationOutcome, ConfigMigrationError> {
+    let rollback_path = qualification_rollback_path(path);
+    if !rollback_path.exists() {
+        return Err(ConfigMigrationError::QualificationRollbackMissing);
+    }
+    let (rollback, mode) = read_current(&rollback_path)?;
+    parse_current(&rollback)?;
+    let _ = read_current(path)?;
+    commit(path, &rollback, mode)?;
+    fs::remove_file(&rollback_path)?;
+    fs::File::open(path.parent().ok_or(ConfigMigrationError::Invalid)?)?.sync_all()?;
+    Ok(QualificationConfigurationOutcome::Restored)
+}
+
 fn migration_plan(bytes: &[u8]) -> Result<ConfigMigrationPlan, ConfigMigrationError> {
     let value: Value = serde_json::from_slice(bytes).map_err(|_| ConfigMigrationError::Invalid)?;
     let schema = value
@@ -204,6 +273,25 @@ fn rollback_path(path: &Path) -> PathBuf {
         .and_then(|value| value.to_str())
         .unwrap_or("bridge.json");
     path.with_file_name(format!("{name}.rollback-v0"))
+}
+
+fn qualification_rollback_path(path: &Path) -> PathBuf {
+    let name = path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("bridge.json");
+    path.with_file_name(format!("{name}.pre-qualification"))
+}
+
+fn read_current(path: &Path) -> Result<(Vec<u8>, u32), ConfigMigrationError> {
+    let metadata = fs::symlink_metadata(path)?;
+    if !metadata.file_type().is_file() {
+        return Err(ConfigMigrationError::Invalid);
+    }
+    if metadata.len() > MAX_CONFIGURATION_BYTES {
+        return Err(ConfigMigrationError::TooLarge);
+    }
+    Ok((fs::read(path)?, metadata.permissions().mode() & 0o777))
 }
 
 fn commit(path: &Path, payload: &[u8], mode: u32) -> Result<(), ConfigMigrationError> {
@@ -303,6 +391,64 @@ mod tests {
             Err(ConfigMigrationError::UnsupportedSchema(_))
         ));
         assert_eq!(fs::read(&path).expect("unchanged"), future);
+        fs::remove_dir_all(directory).expect("cleanup");
+    }
+
+    #[test]
+    fn qualification_configuration_round_trips_the_exact_previous_state() {
+        let directory = temporary_directory();
+        let path = directory.join("bridge.json");
+        migrate_configuration(&path).expect("default creates");
+        let original = fs::read(&path).expect("original reads");
+        let QualificationConfigurationOutcome::Enabled { rollback_path } =
+            enable_qualification_configuration(&path).expect("qualification enables")
+        else {
+            panic!("expected an enabled configuration");
+        };
+        assert!(rollback_path.is_file());
+        let enabled = parse_current(&fs::read(&path).expect("enabled reads")).expect("enabled");
+        assert_eq!(enabled.mode, BridgeMode::QualifiedLive);
+        assert!(enabled.restoration.enabled);
+        assert_eq!(
+            restore_qualification_configuration(&path).expect("qualification restores"),
+            QualificationConfigurationOutcome::Restored
+        );
+        assert_eq!(fs::read(&path).expect("restored reads"), original);
+        assert!(!rollback_path.exists());
+        fs::remove_dir_all(directory).expect("cleanup");
+    }
+
+    #[test]
+    fn already_enabled_configuration_is_not_rewritten_or_backed_up() {
+        let directory = temporary_directory();
+        let path = directory.join("bridge.json");
+        migrate_configuration(&path).expect("default creates");
+        let mut config = parse_current(&fs::read(&path).expect("default reads")).expect("default");
+        config.mode = BridgeMode::QualifiedLive;
+        config.restoration.enabled = true;
+        let bytes = serde_json::to_vec_pretty(&config).expect("config serializes");
+        fs::write(&path, &bytes).expect("enabled writes");
+        assert_eq!(
+            enable_qualification_configuration(&path).expect("enabled is accepted"),
+            QualificationConfigurationOutcome::AlreadyEnabled
+        );
+        assert_eq!(fs::read(&path).expect("unchanged reads"), bytes);
+        assert!(!qualification_rollback_path(&path).exists());
+        fs::remove_dir_all(directory).expect("cleanup");
+    }
+
+    #[test]
+    fn existing_qualification_rollback_fails_closed() {
+        let directory = temporary_directory();
+        let path = directory.join("bridge.json");
+        migrate_configuration(&path).expect("default creates");
+        let original = fs::read(&path).expect("original reads");
+        fs::write(qualification_rollback_path(&path), &original).expect("rollback writes");
+        assert!(matches!(
+            enable_qualification_configuration(&path),
+            Err(ConfigMigrationError::RollbackAlreadyExists)
+        ));
+        assert_eq!(fs::read(&path).expect("unchanged reads"), original);
         fs::remove_dir_all(directory).expect("cleanup");
     }
 }

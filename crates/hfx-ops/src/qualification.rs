@@ -22,6 +22,7 @@ pub const QUALIFICATION_ENDPOINT: &str = "http://127.0.0.1:47821";
 #[serde(rename_all = "kebab-case")]
 pub enum CompanionState {
     Ready,
+    LifecycleTransition,
     DriverPending,
     LegacyV2Detected,
     BridgeUnavailable,
@@ -830,7 +831,15 @@ fn actions_for_plan(plan: &QualificationPlan) -> Vec<CompanionAction> {
         .filter_map(|stage| {
             let id = stage.action_id.clone()?;
             let confirmation = if stage.status == StageStatus::AwaitingObservation {
-                None
+                if stage.risk == RiskLevel::SystemLifecycle && stage.observations.is_empty() {
+                    Some(ActionConfirmation {
+                        phrase: "authorize one supervised system suspend".to_owned(),
+                        summary: "This checkpoint requests exactly one system suspend. It is committed before the request and is never replayed automatically."
+                            .to_owned(),
+                    })
+                } else {
+                    None
+                }
             } else {
                 match stage.risk {
                 RiskLevel::ReadOnly => None,
@@ -977,7 +986,50 @@ pub(crate) fn apply_stage_results(
             export_action_id: None,
         };
     }
+    order_receiver_lifecycle_stages(&mut view.plans);
     view.actions = actions_for_plans(&view.plans);
+}
+
+fn order_receiver_lifecycle_stages(plans: &mut [QualificationPlan]) {
+    let receiver_ids = plans
+        .iter()
+        .map(|plan| plan.receiver_id.clone())
+        .collect::<std::collections::BTreeSet<_>>();
+    for receiver_id in receiver_ids {
+        let prerequisites_complete = plans
+            .iter()
+            .filter(|plan| plan.receiver_id == receiver_id)
+            .flat_map(|plan| &plan.groups)
+            .filter(|group| group.group_id != "lifecycle")
+            .flat_map(|group| &group.stages)
+            .all(|stage| stage.status == StageStatus::Passed);
+        let mut active_seen = false;
+        for stage in plans
+            .iter_mut()
+            .filter(|plan| plan.receiver_id == receiver_id)
+            .flat_map(|plan| &mut plan.groups)
+            .filter(|group| group.group_id == "lifecycle")
+            .flat_map(|group| &mut group.stages)
+        {
+            if matches!(
+                stage.status,
+                StageStatus::Passed | StageStatus::Failed | StageStatus::Blocked
+            ) {
+                continue;
+            }
+            if !prerequisites_complete || active_seen {
+                stage.status = StageStatus::Locked;
+            } else if matches!(
+                stage.status,
+                StageStatus::Running | StageStatus::AwaitingObservation
+            ) {
+                active_seen = true;
+            } else {
+                stage.status = StageStatus::Ready;
+                active_seen = true;
+            }
+        }
+    }
 }
 
 fn action_id(stage_id: &str) -> String {

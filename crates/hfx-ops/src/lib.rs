@@ -7,6 +7,7 @@ mod assessment;
 mod configuration;
 mod probe;
 mod qualification;
+mod qualification_lifecycle;
 mod qualification_runner;
 mod qualification_server;
 mod qualification_state;
@@ -21,8 +22,9 @@ pub use assessment::{
     render_status_text,
 };
 pub use configuration::{
-    ConfigMigrationError, ConfigMigrationOutcome, ConfigMigrationPlan, confirm_configuration,
-    migrate_configuration,
+    ConfigMigrationError, ConfigMigrationOutcome, ConfigMigrationPlan,
+    QualificationConfigurationOutcome, confirm_configuration, enable_qualification_configuration,
+    migrate_configuration, restore_qualification_configuration,
 };
 pub use probe::{
     BridgeHealth, BridgeIntegration, CommandOutput, CommandRunner, ProbeError, RealCommandRunner,

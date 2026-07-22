@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-const COMPANION_STATES = new Set(["ready", "driver-pending", "legacy-v2-detected", "bridge-unavailable", "no-receiver"]);
+const COMPANION_STATES = new Set(["ready", "lifecycle-transition", "driver-pending", "legacy-v2-detected", "bridge-unavailable", "no-receiver"]);
 const PRESENCE_STATES = new Set(["active", "sleeping", "unavailable", "unknown"]);
 const SUPPORT_STATES = new Set(["unknown", "identified", "profile-qualified", "production-qualified"]);
 const VERDICTS = new Set(["not-run", "in-progress", "blocked", "failed", "evidence-ready", "accepted"]);

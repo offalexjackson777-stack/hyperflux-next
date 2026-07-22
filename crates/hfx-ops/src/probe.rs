@@ -394,6 +394,20 @@ impl<R: CommandRunner> RealSystemProbe<R> {
             view,
         })
     }
+
+    /// Requests exactly one asynchronous system suspend without invoking a
+    /// shell. The qualification coordinator persists its resume checkpoint
+    /// before calling this method.
+    pub(crate) fn request_system_suspend(&self) -> Result<(), ProbeError> {
+        let output = self
+            .runner
+            .run("systemctl", &["--no-block", "suspend"], self.timeout)?;
+        if output.success {
+            Ok(())
+        } else {
+            Err(ProbeError::CommandUnavailable)
+        }
+    }
 }
 
 impl<R: CommandRunner> SystemProbe for RealSystemProbe<R> {
@@ -497,23 +511,33 @@ mod tests {
     #[derive(Debug)]
     struct FakeRunner {
         outputs: Mutex<VecDeque<Result<CommandOutput, ProbeError>>>,
+        calls: Mutex<Vec<(String, Vec<String>)>>,
     }
 
     impl FakeRunner {
         fn new(outputs: Vec<Result<CommandOutput, ProbeError>>) -> Self {
             Self {
                 outputs: Mutex::new(outputs.into()),
+                calls: Mutex::new(Vec::new()),
             }
+        }
+
+        fn calls(&self) -> Vec<(String, Vec<String>)> {
+            self.calls.lock().expect("fake call lock").clone()
         }
     }
 
     impl CommandRunner for FakeRunner {
         fn run(
             &self,
-            _program: &str,
-            _arguments: &[&str],
+            program: &str,
+            arguments: &[&str],
             _timeout: Duration,
         ) -> Result<CommandOutput, ProbeError> {
+            self.calls.lock().expect("fake call lock").push((
+                program.to_owned(),
+                arguments.iter().map(|value| (*value).to_owned()).collect(),
+            ));
             self.outputs
                 .lock()
                 .expect("fake command lock")
@@ -570,6 +594,29 @@ mod tests {
             Duration::from_millis(10),
         );
         assert!(!probe.legacy_v2_stack_detected());
+    }
+
+    #[test]
+    fn suspend_request_is_one_bounded_shell_free_systemctl_call() {
+        let probe = RealSystemProbe::with_paths(
+            FakeRunner::new(vec![Ok(CommandOutput {
+                success: true,
+                stdout: String::new(),
+            })]),
+            PathBuf::from("/missing"),
+            PathBuf::from("/missing.sock"),
+            Duration::from_millis(10),
+        );
+        probe
+            .request_system_suspend()
+            .expect("suspend request succeeds");
+        assert_eq!(
+            probe.runner.calls(),
+            vec![(
+                "systemctl".to_owned(),
+                vec!["--no-block".to_owned(), "suspend".to_owned()]
+            )]
+        );
     }
 
     #[test]

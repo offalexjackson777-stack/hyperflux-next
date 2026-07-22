@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_ops::{
-    AssessmentState, QualificationServerConfig, RealSystemProbe, RunnerCapabilities,
-    SystemController, SystemProbe, assess_system, build_qualification_view, build_support_bundle,
+    AssessmentState, DriverState, QualificationConfigurationOutcome, QualificationServerConfig,
+    RealSystemProbe, RunnerCapabilities, SystemController, SystemProbe, assess_system,
+    build_qualification_view, build_support_bundle, enable_qualification_configuration,
     preview_support_bundle, qualification_generated_at, render_doctor_text, render_status_text,
-    serve_qualification_console, suggested_support_name, write_support_bundle,
+    restore_qualification_configuration, serve_qualification_console, suggested_support_name,
+    write_support_bundle,
 };
 use hfx_profiles::RuntimeProfileCatalog;
+use hfx_runtime::BRIDGE_CONFIGURATION_FILE_PATH;
 use std::env;
 use std::path::PathBuf;
 
 fn usage() -> &'static str {
-    "Usage:\n  hyperfluxctl status [--json]\n  hyperfluxctl doctor [--explain] [--json] [--repair]\n  hyperfluxctl support-bundle --preview\n  hyperfluxctl support-bundle --output PATH\n  hyperfluxctl qualification view --json\n  hyperfluxctl qualification serve [--assets PATH]\n"
+    "Usage:\n  hyperfluxctl status [--json]\n  hyperfluxctl doctor [--explain] [--json] [--repair]\n  hyperfluxctl support-bundle --preview\n  hyperfluxctl support-bundle --output PATH\n  hyperfluxctl qualification view --json\n  hyperfluxctl qualification prepare\n  hyperfluxctl qualification restore\n  hyperfluxctl qualification serve [--assets PATH]\n"
 }
 
 fn json<T: serde::Serialize>(value: &T) -> Result<String, String> {
@@ -110,6 +113,12 @@ fn qualification(arguments: &[String]) -> Result<i32, String> {
         println!("{}", json(&view)?);
         return Ok(0);
     }
+    if arguments == ["prepare"] {
+        return prepare_qualification_configuration();
+    }
+    if arguments == ["restore"] {
+        return restore_prequalification_configuration();
+    }
     let config = match arguments {
         [serve] if serve == "serve" => QualificationServerConfig::default(),
         [serve, assets, path] if serve == "serve" && assets == "--assets" => {
@@ -127,6 +136,75 @@ fn qualification(arguments: &[String]) -> Result<i32, String> {
     println!("Local only. No upload is configured.");
     serve_qualification_console(&config).map_err(|error| error.to_string())?;
     Ok(0)
+}
+
+fn prepare_qualification_configuration() -> Result<i32, String> {
+    require_root_for_qualification_configuration()?;
+    let probe = RealSystemProbe::default();
+    let assessment = assess_system(&probe.snapshot());
+    if assessment.driver == DriverState::ActivationPending {
+        return Err(
+            "driver activation is pending; run hyperfluxctl doctor and complete its one action before enabling qualification"
+                .to_owned(),
+        );
+    }
+    let path = std::path::Path::new(BRIDGE_CONFIGURATION_FILE_PATH);
+    let outcome = enable_qualification_configuration(path)
+        .map_err(|error| format!("qualification configuration failed: {error}"))?;
+    if let Err(error) = probe.restart_bridge() {
+        let restored = if matches!(outcome, QualificationConfigurationOutcome::Enabled { .. }) {
+            let _ = restore_qualification_configuration(path);
+            let _ = probe.restart_bridge();
+            true
+        } else {
+            false
+        };
+        let recovery = if restored {
+            "the previous configuration was restored"
+        } else {
+            "the already-enabled configuration was left unchanged"
+        };
+        return Err(format!(
+            "qualification bridge start failed and {recovery}: {error}"
+        ));
+    }
+    match outcome {
+        QualificationConfigurationOutcome::AlreadyEnabled => {
+            println!("Qualification mode was already enabled; the bridge restarted cleanly.");
+        }
+        QualificationConfigurationOutcome::Enabled { rollback_path } => {
+            println!("Qualification mode enabled.");
+            println!("Previous configuration: {}", rollback_path.display());
+        }
+        QualificationConfigurationOutcome::Restored => unreachable!("prepare cannot restore"),
+    }
+    println!("No lighting request or hardware lifecycle action was executed.");
+    println!("Next: hyperfluxctl qualification serve");
+    Ok(0)
+}
+
+fn restore_prequalification_configuration() -> Result<i32, String> {
+    require_root_for_qualification_configuration()?;
+    let outcome =
+        restore_qualification_configuration(std::path::Path::new(BRIDGE_CONFIGURATION_FILE_PATH))
+            .map_err(|error| format!("qualification configuration restore failed: {error}"))?;
+    RealSystemProbe::default()
+        .restart_bridge()
+        .map_err(|error| {
+            format!("previous configuration restored, but bridge restart failed: {error}")
+        })?;
+    debug_assert_eq!(outcome, QualificationConfigurationOutcome::Restored);
+    println!("Previous bridge configuration restored; the bridge restarted cleanly.");
+    println!("No lighting request or hardware lifecycle action was executed.");
+    Ok(0)
+}
+
+fn require_root_for_qualification_configuration() -> Result<(), String> {
+    if rustix::process::geteuid().as_raw() == 0 {
+        Ok(())
+    } else {
+        Err("qualification configuration requires sudo; no configuration was changed".to_owned())
+    }
 }
 
 fn run() -> Result<i32, String> {
