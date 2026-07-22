@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from html import escape
-import json
 from pathlib import Path
 from typing import Any
 
@@ -57,7 +56,14 @@ def _migration_entries(root: Path) -> tuple[dict[str, Any], ...]:
 
 
 def _status_label(value: str) -> str:
-    return value.replace("-", " ").replace("_", " ").title()
+    labels = {
+        "software-satisfied": "Ready in software",
+        "blocked-by-lifecycle-evidence": "Awaiting lifecycle evidence",
+        "blocked-by-physical-evidence": "Awaiting hardware evidence",
+        "publication-locked": "Publication decision required",
+        "enforced-software": "Enforced in software",
+    }
+    return labels.get(value, value.replace("-", " ").replace("_", " ").title())
 
 
 def _gate_detail(gate: ReleaseGate) -> str:
@@ -138,44 +144,16 @@ def render_repository_state(root: Path) -> RepositoryStatePage:
         for metric in performance
     )
 
-    records = {
-        "gates": [
-            {"id": gate.id, "title": gate.title, "status": gate.status}
-            for gate in gates
-        ],
-        "migration": [
-            {
-                "id": entry["id"],
-                "title": entry["component"],
-                "status": entry["status"],
-            }
-            for entry in migration
-        ],
-        "verification": [
-            {
-                "id": node.id,
-                "title": node.title,
-                "lanes": list(node.lanes),
-                "expected": node.expected_duration_seconds,
-                "timeout": node.timeout_seconds,
-            }
-            for node in tests
-        ],
-    }
-    payload = json.dumps(records, ensure_ascii=True, separators=(",", ":")).replace(
-        "<", "\\u003c"
-    )
     content = f"""<article class="repository-state" data-repository-state>
-  <p class="breadcrumb">Assurance / Repository State</p>
-  <header class="state-header"><div><h1>Repository State</h1><p class="lede">Generated release boundaries, migration decisions, verification budgets, and performance limits from the repository's canonical ledgers.</p></div><span class="state-lock">Product unreleased</span></header>
-  <div class="notice"><strong>Read the colors literally.</strong> Software-satisfied gates are not hardware qualification, and planned test durations are budgets rather than observed run times.</div>
-  <section class="state-metrics" aria-label="Repository state summary"><div><strong>{satisfied}/{len(gates)}</strong><span>software-satisfied gates</span></div><div><strong>{accepted}/{len(migration)}</strong><span>accepted migration decisions</span></div><div><strong>{software_nodes}</strong><span>full-software verification nodes</span></div><div><strong>{expected_total}s</strong><span>serial expected-time budget</span></div></section>
+  <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span>Repository State</span></nav>
+  <header class="page-hero page-hero--ledger state-header"><div><p class="page-kicker">Generated readiness dashboard</p><h1>Repository State</h1><p class="lede">Review release boundaries, migration decisions, verification budgets, and performance limits compiled from canonical repository ledgers.</p></div><span class="state-lock">Publication decision required</span></header>
+  <div class="notice"><strong>Software readiness is not hardware evidence.</strong> A software-ready gate has passed its deterministic checks; hardware and lifecycle gates remain visibly separate. Timing values are planning budgets, not historical telemetry.</div>
+  <section class="state-metrics" aria-label="Repository state summary"><div><strong>{satisfied}/{len(gates)}</strong><span>gates ready in software</span></div><div><strong>{accepted}/{len(migration)}</strong><span>migration decisions accepted</span></div><div><strong>{software_nodes}</strong><span>software-only checks</span></div><div><strong>{expected_total}s</strong><span>estimated serial verification time</span></div></section>
   <div class="segmented-control state-tabs" role="tablist" aria-label="Repository state view"><button type="button" role="tab" aria-selected="true" aria-controls="state-release" data-state-tab="release">Release gates</button><button type="button" role="tab" aria-selected="false" aria-controls="state-migration" data-state-tab="migration" tabindex="-1">Migration</button><button type="button" role="tab" aria-selected="false" aria-controls="state-verification" data-state-tab="verification" tabindex="-1">Verification</button><button type="button" role="tab" aria-selected="false" aria-controls="state-performance" data-state-tab="performance" tabindex="-1">Performance</button></div>
-  <section id="state-release" role="tabpanel" data-state-panel="release" aria-labelledby="state-release-heading"><header class="section-heading"><div><h2 id="state-release-heading">Release gates</h2><p>{satisfied} of {len(gates)} gates are software-satisfied. The remaining gates state the exact physical, lifecycle, or publication decision still required.</p></div><label>Show <select id="gate-state"><option value="all">All gate states</option>{gate_options}</select></label></header><progress value="{satisfied}" max="{len(gates)}">{satisfied} of {len(gates)}</progress><div class="state-details">{gate_html}</div><p id="gate-filter-status" class="filter-status" role="status" aria-live="polite">Showing all {len(gates)} gates.</p></section>
+  <section id="state-release" role="tabpanel" data-state-panel="release" aria-labelledby="state-release-heading"><header class="section-heading"><div><h2 id="state-release-heading">Release gates</h2><p>{satisfied} of {len(gates)} gates are ready in software. Every other gate names the hardware evidence, lifecycle proof, or publication decision still required.</p></div><label>Show <select id="gate-state"><option value="all">All gate states</option>{gate_options}</select></label></header><progress value="{satisfied}" max="{len(gates)}">{satisfied} of {len(gates)}</progress><div class="state-details">{gate_html}</div><p id="gate-filter-status" class="filter-status" role="status" aria-live="polite">Showing all {len(gates)} gates.</p></section>
   <section id="state-migration" role="tabpanel" data-state-panel="migration" aria-labelledby="state-migration-heading" hidden><header class="section-heading"><div><h2 id="state-migration-heading">Migration decisions</h2><p>Every legacy subsystem is admitted, reimplemented, linked, or rejected explicitly. Unreviewed material remains excluded by default.</p></div><label>Show <select id="migration-state"><option value="all">All migration states</option>{migration_options}</select></label></header><div class="state-table-wrap"><table><thead><tr><th>Component</th><th>Status</th><th>Disposition</th><th>Owner</th><th>Sources</th><th>Decision</th></tr></thead><tbody>{migration_html}</tbody></table></div><p id="migration-filter-status" class="filter-status" role="status" aria-live="polite">Showing all {len(migration)} decisions.</p></section>
   <section id="state-verification" role="tabpanel" data-state-panel="verification" aria-labelledby="state-verification-heading" hidden><header class="section-heading"><div><h2 id="state-verification-heading">Verification timing budgets</h2><p>These are deterministic planning values from <code>verification/tests.json</code>, not historical run telemetry. No browser code executes tests.</p></div><div class="segmented-control lane-filter" role="group" aria-label="Verification lane"><button type="button" data-lane="all" aria-pressed="true">All</button><button type="button" data-lane="fast" aria-pressed="false">Fast</button><button type="button" data-lane="full-software" aria-pressed="false">Full software</button><button type="button" data-lane="hardware" aria-pressed="false">Hardware</button></div></header><div class="state-table-wrap"><table><thead><tr><th>Node</th><th>Domain</th><th>Timing budget</th><th>Isolation</th><th>Resume</th><th>Depends on</th></tr></thead><tbody>{verification_html}</tbody></table></div><p id="verification-filter-status" class="filter-status" role="status" aria-live="polite">Showing all {len(tests)} nodes.</p></section>
   <section id="state-performance" role="tabpanel" data-state-panel="performance" aria-labelledby="state-performance-heading" hidden><header class="section-heading"><div><h2 id="state-performance-heading">Performance boundaries</h2><p>Software-enforced limits are measured during their owning verification nodes. Physical metrics remain blocked until bounded evidence exists.</p></div></header><div class="state-table-wrap"><table><thead><tr><th>Metric</th><th>Measurement</th><th>Current static value</th><th>Maximum</th><th>Status</th><th>Why it matters</th></tr></thead><tbody>{performance_html}</tbody></table></div></section>
-  <script id="repository-state-data" type="application/json">{payload}</script>
 </article>"""
 
     search_records = tuple(
@@ -226,6 +204,7 @@ REPOSITORY_STATE_SCRIPT = """(() => {
       if (selected && focus) tab.focus();
     });
     panels.forEach((panel) => { panel.hidden = panel.dataset.statePanel !== id; });
+    history.replaceState(null, '', `#state-${id}`);
   };
   tabs.forEach((tab, index) => {
     tab.addEventListener('click', () => selectTab(tab.dataset.stateTab));
@@ -272,6 +251,12 @@ REPOSITORY_STATE_SCRIPT = """(() => {
     });
     laneMessage.textContent = `Showing ${visible} of ${nodes.length} nodes.`;
   }));
+  const selectFromHash = () => {
+    const id = location.hash.startsWith('#state-') ? location.hash.slice(7) : 'release';
+    if (tabs.some((tab) => tab.dataset.stateTab === id)) selectTab(id);
+  };
+  addEventListener('hashchange', selectFromHash);
+  selectFromHash();
 })();
 """
 

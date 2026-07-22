@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 import sys
 import unittest
@@ -20,18 +19,12 @@ class RepositoryStateTests(unittest.TestCase):
         self.assertEqual(page.content.count("data-gate"), 10)
         self.assertEqual(page.content.count("data-migration"), 13)
         self.assertEqual(page.content.count("data-verification"), 30)
-        self.assertIn("Product unreleased", page.content)
-        self.assertIn('data-state="publication-locked"', page.content)
-        self.assertIn("budgets rather than observed run times", page.content)
-
-        marker = '<script id="repository-state-data" type="application/json">'
-        payload = page.content.split(marker, 1)[1].split("</script>", 1)[0]
-        records = json.loads(payload)
-        self.assertEqual(len(records["gates"]), 10)
-        self.assertEqual(len(records["migration"]), 13)
-        self.assertEqual(len(records["verification"]), 30)
-        self.assertTrue(all(item["expected"] > 0 for item in records["verification"]))
-        self.assertTrue(all(item["timeout"] >= item["expected"] for item in records["verification"]))
+        self.assertIn("Publication decision required", page.content)
+        self.assertIn("Timing values are planning budgets", page.content)
+        self.assertIn("Ready in software", page.content)
+        self.assertIn("Awaiting hardware evidence", page.content)
+        self.assertNotIn('id="repository-state-data"', page.content)
+        self.assertEqual(len(page.search_records), 53)
 
     def test_state_interactions_are_local_and_accessible(self) -> None:
         page = render_repository_state(ROOT)
@@ -39,6 +32,7 @@ class RepositoryStateTests(unittest.TestCase):
         self.assertEqual(page.content.count('role="tabpanel"'), 4)
         self.assertIn('aria-live="polite"', page.content)
         self.assertEqual(REPOSITORY_STATE_SCRIPT.count("const panels ="), 1)
+        self.assertIn("selectFromHash", REPOSITORY_STATE_SCRIPT)
         self.assertNotIn("fetch(", REPOSITORY_STATE_SCRIPT)
         self.assertNotIn("XMLHttpRequest", REPOSITORY_STATE_SCRIPT)
         self.assertNotIn("WebSocket", REPOSITORY_STATE_SCRIPT)

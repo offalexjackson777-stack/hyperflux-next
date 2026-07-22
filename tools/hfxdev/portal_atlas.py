@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from html import escape
 import json
+from typing import Any
 
 from .atlas import AtlasNode, RepositoryAtlas
 from .generators.atlas import impact_summary
@@ -16,27 +17,18 @@ class AtlasPage:
     search_records: tuple[dict[str, str], ...]
 
 
-def _tags(values: tuple[str, ...]) -> str:
-    return "".join(f"<span>{escape(value)}</span>" for value in values)
+def _label(value: str) -> str:
+    return value.replace("-", " ").title()
 
 
-def _links(atlas: RepositoryAtlas, values: tuple[str, ...]) -> str:
-    if not values:
-        return '<span class="atlas-none">None</span>'
-    return "".join(
-        f'<a href="#atlas-{escape(value)}">{escape(atlas.by_id[value].title)}</a>'
-        for value in values
-    )
-
-
-def _file_rows(node: AtlasNode) -> str:
-    sources = "".join(
-        f"<li><code>{escape(source)}</code></li>" for source in node.canonical_files
-    )
-    generated = "".join(
-        f"<li><code>{escape(target)}</code></li>" for target in node.generated_files
-    )
-    return f"<tr><td><ul>{sources}</ul></td><td><ul>{generated}</ul></td></tr>"
+def _status(node: AtlasNode) -> str:
+    labels = {
+        "implemented": "Implemented",
+        "generated": "Generated",
+        "policy": "Policy boundary",
+        "research-boundary": "Research boundary",
+    }
+    return labels[node.status]
 
 
 def _search(node: AtlasNode) -> str:
@@ -53,257 +45,296 @@ def _search(node: AtlasNode) -> str:
             *node.inputs,
             *node.outputs,
             *node.public_contracts,
+            *node.canonical_files,
+            *node.generated_files,
+            *node.verification,
         )
-    ).lower()
+    ).casefold()
 
 
-def _detail(atlas: RepositoryAtlas, node: AtlasNode, search: str) -> str:
-    used_by = atlas.used_by[node.id]
-    workflow = "".join(f"<li>{escape(item)}</li>" for item in node.safe_change_workflow)
-    limitations = "".join(f"<li>{escape(item)}</li>" for item in node.limitations)
-    docs = "".join(f"<li><code>{escape(item)}</code></li>" for item in node.related_docs)
-    impact = "".join(f"<li>{escape(item)}</li>" for item in impact_summary(atlas, node))
-    return f"""<details class="atlas-detail" id="atlas-{escape(node.id)}" data-atlas-detail data-category="{escape(node.category)}" data-status="{escape(node.status)}" data-search="{escape(search)}">
-  <summary><span><strong>{escape(node.title)}</strong><small><code>{escape(node.path)}</code></small></span><span class="atlas-status atlas-status--{escape(node.status)}">{escape(node.status)}</span></summary>
-  <div class="atlas-detail-body">
-    <p>{escape(node.purpose)}</p>
-    <div class="atlas-relations"><section><h3>Depends on</h3><div>{_links(atlas, node.depends_on)}</div></section><section><h3>Used by</h3><div>{_links(atlas, used_by)}</div></section></div>
-    <div class="atlas-boundaries"><section><h3>Owns</h3><div class="atlas-tags">{_tags(node.owns)}</div></section><section><h3>Must never own</h3><div class="atlas-tags atlas-tags--forbidden">{_tags(node.must_not_own)}</div></section></div>
-    <div class="atlas-io"><section><h3>Inputs</h3><ul>{''.join(f'<li>{escape(item)}</li>' for item in node.inputs)}</ul></section><section><h3>Outputs</h3><ul>{''.join(f'<li>{escape(item)}</li>' for item in node.outputs)}</ul></section><section><h3>Public contracts</h3><ul>{''.join(f'<li>{escape(item)}</li>' for item in node.public_contracts)}</ul></section></div>
-    <h3>Canonical sources to generated projections</h3>
-    <div class="atlas-table-wrap"><table><thead><tr><th>Canonical authority</th><th>Generated projection</th></tr></thead><tbody>{_file_rows(node)}</tbody></table></div>
-    <div class="atlas-io"><section><h3>Change impact</h3><ul>{impact}</ul></section><section><h3>Verification</h3><div class="atlas-tags">{_tags(node.verification)}</div></section><section><h3>Limitations</h3><ul>{limitations}</ul></section></div>
-    <h3>Safe change workflow</h3><ol>{workflow}</ol>
-    <details class="atlas-related"><summary>Related documentation</summary><ul>{docs}</ul></details>
-  </div>
-</details>"""
+def _record(atlas: RepositoryAtlas, node: AtlasNode) -> dict[str, Any]:
+    return {
+        "id": node.id,
+        "title": node.title,
+        "path": node.path,
+        "category": node.category,
+        "status": node.status,
+        "status_label": _status(node),
+        "purpose": node.purpose,
+        "owns": node.owns,
+        "must_not_own": node.must_not_own,
+        "inputs": node.inputs,
+        "outputs": node.outputs,
+        "public_contracts": node.public_contracts,
+        "canonical_files": node.canonical_files,
+        "generated_files": node.generated_files,
+        "verification": node.verification,
+        "limitations": node.limitations,
+        "safe_change_workflow": node.safe_change_workflow,
+        "related_docs": node.related_docs,
+        "depends_on": node.depends_on,
+        "used_by": atlas.used_by[node.id],
+        "impact": impact_summary(atlas, node),
+        "search": _search(node),
+    }
 
 
-def _category_map(atlas: RepositoryAtlas) -> str:
-    groups = []
-    for category in sorted({node.category for node in atlas.nodes}):
-        links = "".join(
-            f'<a href="#atlas-{escape(node.id)}">{escape(node.title)}</a>'
-            for node in atlas.nodes
-            if node.category == category
-        )
-        groups.append(
-            f'<section><h3>{escape(category.title())}</h3><div>{links}</div></section>'
-        )
-    return "".join(groups)
+def _tags(values: tuple[str, ...], *, forbidden: bool = False) -> str:
+    modifier = " atlas-tags--forbidden" if forbidden else ""
+    return (
+        f'<div class="atlas-tags{modifier}">'
+        + "".join(f"<span>{escape(value)}</span>" for value in values)
+        + "</div>"
+    )
 
 
-def _dependency_rows(atlas: RepositoryAtlas) -> str:
-    rows = []
-    for node in atlas.nodes:
-        for dependency in node.depends_on:
-            rows.append(
-                f"<tr><td><a href=\"#atlas-{escape(dependency)}\">{escape(atlas.by_id[dependency].title)}</a></td>"
-                f"<td aria-label=\"is used by\">&rarr;</td><td><a href=\"#atlas-{escape(node.id)}\">{escape(node.title)}</a></td></tr>"
-            )
-    return "".join(rows)
+def _list(values: tuple[str, ...], *, ordered: bool = False) -> str:
+    tag = "ol" if ordered else "ul"
+    return f"<{tag}>" + "".join(f"<li>{escape(value)}</li>" for value in values) + f"</{tag}>"
+
+
+def _relations(atlas: RepositoryAtlas, values: tuple[str, ...]) -> str:
+    if not values:
+        return '<p class="atlas-none">No direct relationships.</p>'
+    return '<div class="atlas-relation-list">' + "".join(
+        f'<button type="button" data-atlas-select="{escape(identifier)}">'
+        f'<strong>{escape(atlas.by_id[identifier].title)}</strong>'
+        f'<small>{escape(atlas.by_id[identifier].path)}</small></button>'
+        for identifier in values
+    ) + "</div>"
+
+
+def _lineage(node: AtlasNode) -> str:
+    canonical = "".join(f"<li><code>{escape(item)}</code></li>" for item in node.canonical_files)
+    generated = "".join(f"<li><code>{escape(item)}</code></li>" for item in node.generated_files)
+    if not generated:
+        generated = '<li class="atlas-none">No generated projection.</li>'
+    return f"""<div class="atlas-lineage">
+  <section><h3>Canonical authority</h3><ul>{canonical}</ul></section>
+  <span aria-hidden="true">&rarr;</span>
+  <section><h3>Generated projections</h3><ul>{generated}</ul></section>
+</div>"""
+
+
+def _detail_html(atlas: RepositoryAtlas, node: AtlasNode) -> str:
+    return f"""<article class="atlas-selected" id="atlas-{escape(node.id)}" data-atlas-selected-record="{escape(node.id)}">
+  <header class="atlas-detail-header"><div><p class="page-kicker">{escape(_label(node.category))} / {escape(_status(node))}</p><h2>{escape(node.title)}</h2><code>{escape(node.path)}</code></div><span class="atlas-status atlas-status--{escape(node.status)}">{escape(_status(node))}</span></header>
+  <p class="atlas-purpose">{escape(node.purpose)}</p>
+  <dl class="atlas-definitions"><div><dt>Direct dependencies</dt><dd>{len(node.depends_on)}</dd></div><div><dt>Direct consumers</dt><dd>{len(atlas.used_by[node.id])}</dd></div><div><dt>Canonical sources</dt><dd>{len(node.canonical_files)}</dd></div><div><dt>Generated outputs</dt><dd>{len(node.generated_files)}</dd></div></dl>
+  <section class="atlas-section"><div class="atlas-section-heading"><p>01</p><div><h3>Responsibility boundary</h3><p>What belongs here, and what must stay elsewhere.</p></div></div><div class="atlas-two"><section><h4>Owns</h4>{_tags(node.owns)}</section><section><h4>Must never own</h4>{_tags(node.must_not_own, forbidden=True)}</section></div></section>
+  <section class="atlas-section"><div class="atlas-section-heading"><p>02</p><div><h3>Dependency direction</h3><p>Follow incoming and outgoing architecture relationships.</p></div></div><div class="atlas-two"><section><h4>Depends on</h4>{_relations(atlas, node.depends_on)}</section><section><h4>Used by</h4>{_relations(atlas, atlas.used_by[node.id])}</section></div></section>
+  <section class="atlas-section"><div class="atlas-section-heading"><p>03</p><div><h3>Contracts and data flow</h3><p>The boundary this subsystem accepts and exposes.</p></div></div><div class="atlas-three"><section><h4>Inputs</h4>{_list(node.inputs)}</section><section><h4>Outputs</h4>{_list(node.outputs)}</section><section><h4>Public contracts</h4>{_list(node.public_contracts)}</section></div></section>
+  <section class="atlas-section"><div class="atlas-section-heading"><p>04</p><div><h3>Source lineage</h3><p>Change canonical inputs; regenerate projections.</p></div></div>{_lineage(node)}</section>
+  <section class="atlas-section"><div class="atlas-section-heading"><p>05</p><div><h3>Change safely</h3><p>Expected impact, verification, and known limits.</p></div></div><div class="atlas-three"><section><h4>Likely impact</h4>{_list(impact_summary(atlas, node))}</section><section><h4>Verification</h4>{_tags(node.verification)}</section><section><h4>Known limitations</h4>{_list(node.limitations)}</section></div><h4>Recommended workflow</h4>{_list(node.safe_change_workflow, ordered=True)}</section>
+  <details class="atlas-related"><summary>Related documentation</summary>{_list(node.related_docs)}</details>
+</article>"""
+
+
+def _node_row(atlas: RepositoryAtlas, node: AtlasNode) -> str:
+    return f"""<button type="button" class="atlas-node" data-atlas-node data-atlas-select="{escape(node.id)}" data-category="{escape(node.category)}" data-status="{escape(node.status)}" data-search="{escape(_search(node), quote=True)}">
+  <span><strong>{escape(node.title)}</strong><small><code>{escape(node.path)}</code></small></span>
+  <span><small>{escape(_label(node.category))}</small><small>{len(node.depends_on)} in / {len(atlas.used_by[node.id])} out</small></span>
+</button>"""
 
 
 def render_repository_atlas(atlas: RepositoryAtlas) -> AtlasPage:
     categories = sorted({node.category for node in atlas.nodes})
     generated = sum(len(node.generated_files) for node in atlas.nodes)
     verification = len({item for node in atlas.nodes for item in node.verification})
-    records = [
-        {
-            "id": node.id,
-            "title": node.title,
-            "path": node.path,
-            "category": node.category,
-            "status": node.status,
-            "summary": node.purpose,
-            "search": _search(node),
-        }
-        for node in atlas.nodes
-    ]
+    edges = sum(len(node.depends_on) for node in atlas.nodes)
+    records = [_record(atlas, node) for node in atlas.nodes]
     payload = json.dumps(records, ensure_ascii=True, separators=(",", ":")).replace(
         "<", "\\u003c"
     )
-    rows = "".join(
-        f'<tr data-atlas-row data-category="{escape(node.category)}" data-status="{escape(node.status)}" data-search="{escape(records[index]["search"])}"><td><a href="#atlas-{escape(node.id)}"><strong>{escape(node.title)}</strong><small><code>{escape(node.path)}</code></small></a></td><td>{escape(node.category)}</td><td><span class="atlas-status atlas-status--{escape(node.status)}">{escape(node.status)}</span></td><td>{len(node.depends_on)}</td><td>{len(atlas.used_by[node.id])}</td><td>{escape(', '.join(node.verification))}</td></tr>'
-        for index, node in enumerate(atlas.nodes)
-    )
-    details = "".join(
-        _detail(atlas, node, records[index]["search"])
-        for index, node in enumerate(atlas.nodes)
-    )
     options = "".join(
-        f'<option value="{escape(category)}">{escape(category.title())}</option>'
+        f'<option value="{escape(category)}">{escape(_label(category))}</option>'
         for category in categories
     )
+    rows = "".join(_node_row(atlas, node) for node in atlas.nodes)
+    initial = atlas.nodes[0]
     content = f"""<article class="repository-atlas" data-repository-atlas>
-  <p class="breadcrumb">Architecture / Repository Atlas</p>
-  <header class="atlas-header"><div><h1>Repository Atlas</h1><p class="lede">A generated ownership and dependency map for changing HyperFlux Next without creating a second source of truth.</p></div><span class="atlas-lock">Public pre-release</span></header>
-  <div class="notice"><strong>One graph, many views.</strong> This page, folder READMEs, dependency diagrams, source lineage, and change-impact guidance all come from <code>architecture/repository-atlas.json</code>.</div>
-  <section class="atlas-metrics" aria-label="Repository Atlas summary"><div><strong>{len(atlas.nodes)}</strong><span>subsystems</span></div><div><strong>{len(categories)}</strong><span>ownership categories</span></div><div><strong>{generated}</strong><span>generated projections</span></div><div><strong>{verification}</strong><span>verification nodes referenced</span></div></section>
-  <section class="atlas-toolbar" aria-label="Filter repository subsystems">
-    <label><span>Search</span><input id="atlas-filter" type="search" placeholder="Subsystem, path, owner, or contract" autocomplete="off"></label>
-    <label><span>Category</span><select id="atlas-category"><option value="all">All categories</option>{options}</select></label>
-    <label><span>Status</span><select id="atlas-status"><option value="all">All states</option><option value="implemented">Implemented</option><option value="generated">Generated</option><option value="policy">Policy</option><option value="research-boundary">Research boundary</option></select></label>
-    <button type="button" id="atlas-command" title="Open subsystem palette (Ctrl+K)">Jump to subsystem</button>
-  </section>
+  <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span>Repository Atlas</span></nav>
+  <header class="page-hero page-hero--reference"><p class="page-kicker">Generated architecture map</p><h1>Repository Atlas</h1><p class="lede">Find the owner of a change, understand its dependencies, and follow the repository's canonical source-to-projection path.</p></header>
+  <div class="notice"><strong>One architecture record.</strong> This browser and the generated folder guides come from <code>architecture/repository-atlas.json</code>. Change the canonical record, then regenerate its views.</div>
+  <section class="atlas-metrics" aria-label="Repository Atlas summary"><div><strong>{len(atlas.nodes)}</strong><span>subsystems</span></div><div><strong>{len(categories)}</strong><span>responsibility areas</span></div><div><strong>{edges}</strong><span>dependency edges</span></div><div><strong>{verification}</strong><span>verification nodes</span></div><div><strong>{generated}</strong><span>generated projections</span></div></section>
+  <section class="atlas-toolbar" aria-label="Find a repository subsystem"><label><span>Find a subsystem</span><input id="atlas-filter" type="search" placeholder="Name, path, contract, or responsibility" autocomplete="off"></label><label><span>Responsibility area</span><select id="atlas-category"><option value="all">All areas</option>{options}</select></label><label><span>Boundary type</span><select id="atlas-status"><option value="all">All types</option><option value="implemented">Implemented</option><option value="generated">Generated</option><option value="policy">Policy boundary</option><option value="research-boundary">Research boundary</option></select></label><button type="button" id="atlas-clear">Clear</button></section>
   <p id="atlas-filter-status" class="atlas-filter-status" role="status" aria-live="polite">Showing all {len(atlas.nodes)} subsystems.</p>
-  <section aria-labelledby="atlas-index-heading"><h2 id="atlas-index-heading">Subsystem index</h2><div class="atlas-table-wrap"><table><thead><tr><th>Subsystem</th><th>Category</th><th>Status</th><th>Depends on</th><th>Used by</th><th>Verification</th></tr></thead><tbody>{rows}</tbody></table></div><p id="atlas-empty" class="atlas-empty" hidden>No subsystems match the current filters.</p></section>
-  <section aria-labelledby="atlas-map-heading"><h2 id="atlas-map-heading">Architecture and dependency map</h2><p>Subsystems are grouped by authority. The edge ledger below is generated from the same dependency list; arrows run from dependency to direct consumer.</p><div class="atlas-category-map">{_category_map(atlas)}</div><details class="atlas-edge-ledger"><summary>Show all {sum(len(node.depends_on) for node in atlas.nodes)} dependency edges</summary><div class="atlas-table-wrap"><table><thead><tr><th>Dependency</th><th></th><th>Direct consumer</th></tr></thead><tbody>{_dependency_rows(atlas)}</tbody></table></div></details></section>
-  <section class="atlas-details" aria-labelledby="atlas-details-heading"><h2 id="atlas-details-heading">Subsystem contracts</h2>{details}</section>
-  <dialog id="atlas-palette" class="atlas-palette" aria-labelledby="atlas-palette-title"><form method="dialog"><header><h2 id="atlas-palette-title">Jump to subsystem</h2><button value="cancel" aria-label="Close command palette" title="Close">&times;</button></header><label><span class="sr-only">Filter subsystems</span><input id="atlas-palette-filter" type="search" placeholder="Type a subsystem or path" autocomplete="off"></label><div id="atlas-palette-results" class="atlas-palette-results"></div></form></dialog>
+  <div class="atlas-browser"><aside class="atlas-node-list" aria-label="Repository subsystems">{rows}<p id="atlas-empty" class="atlas-empty" hidden>No subsystem matches these filters.</p></aside><section class="atlas-detail" id="atlas-detail" tabindex="-1">{_detail_html(atlas, initial)}</section></div>
+  <details class="atlas-technical"><summary>How to read this map</summary><div class="atlas-three"><section><h3>Dependency</h3><p>A canonical input this subsystem consumes.</p></section><section><h3>Consumer</h3><p>A subsystem directly affected by this subsystem's public output.</p></section><section><h3>Projection</h3><p>Generated output that must not become an independent source of truth.</p></section></div><p>The graph currently contains {edges} directed edges. Select a relationship inside any subsystem to follow it without losing the current filters.</p></details>
   <script id="atlas-data" type="application/json">{payload}</script>
 </article>"""
     search_records = tuple(
         {
             "title": node.title,
             "audience": "Repository Atlas",
-            "summary": f"{node.category} | {node.path} | {node.status}",
+            "summary": f"{_label(node.category)} | {node.path} | {_status(node)}",
             "url": f"atlas/index.html#atlas-{node.id}",
-            "search": records[index]["search"],
+            "search": _search(node),
         }
-        for index, node in enumerate(atlas.nodes)
+        for node in atlas.nodes
     )
     return AtlasPage(content=content, search_records=search_records)
 
 
-ATLAS_SCRIPT = """(() => {
+ATLAS_SCRIPT = r"""(() => {
   const root = document.querySelector('[data-repository-atlas]');
   const source = document.getElementById('atlas-data');
   if (!root || !source) return;
   const records = JSON.parse(source.textContent || '[]');
+  const byId = new Map(records.map((record) => [record.id, record]));
   const query = document.getElementById('atlas-filter');
   const category = document.getElementById('atlas-category');
   const status = document.getElementById('atlas-status');
-  const rows = [...root.querySelectorAll('[data-atlas-row]')];
-  const details = [...root.querySelectorAll('[data-atlas-detail]')];
+  const clear = document.getElementById('atlas-clear');
+  const nodes = [...root.querySelectorAll('[data-atlas-node]')];
   const message = document.getElementById('atlas-filter-status');
   const empty = document.getElementById('atlas-empty');
+  const detail = document.getElementById('atlas-detail');
+  const safe = (value) => String(value).replace(/[&<>"']/g, (character) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character]));
+  const label = (value) => String(value).replaceAll('-', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+  const list = (values, ordered = false) => {
+    const tag = ordered ? 'ol' : 'ul';
+    return `<${tag}>${values.map((value) => `<li>${safe(value)}</li>`).join('')}</${tag}>`;
+  };
+  const tags = (values, forbidden = false) => `<div class="atlas-tags${forbidden ? ' atlas-tags--forbidden' : ''}">${values.map((value) => `<span>${safe(value)}</span>`).join('')}</div>`;
+  const relations = (values) => values.length ? `<div class="atlas-relation-list">${values.map((identifier) => {
+    const related = byId.get(identifier);
+    return `<button type="button" data-atlas-select="${safe(identifier)}"><strong>${safe(related.title)}</strong><small>${safe(related.path)}</small></button>`;
+  }).join('')}</div>` : '<p class="atlas-none">No direct relationships.</p>';
+  const codeList = (values) => `<ul>${values.map((value) => `<li><code>${safe(value)}</code></li>`).join('')}</ul>`;
+  const render = (record, focus = false) => {
+    const statusLabel = record.status_label;
+    detail.innerHTML = `<article class="atlas-selected" id="atlas-${safe(record.id)}" data-atlas-selected-record="${safe(record.id)}">
+      <header class="atlas-detail-header"><div><p class="page-kicker">${safe(label(record.category))} / ${safe(statusLabel)}</p><h2>${safe(record.title)}</h2><code>${safe(record.path)}</code></div><span class="atlas-status atlas-status--${safe(record.status)}">${safe(statusLabel)}</span></header>
+      <p class="atlas-purpose">${safe(record.purpose)}</p>
+      <dl class="atlas-definitions"><div><dt>Direct dependencies</dt><dd>${record.depends_on.length}</dd></div><div><dt>Direct consumers</dt><dd>${record.used_by.length}</dd></div><div><dt>Canonical sources</dt><dd>${record.canonical_files.length}</dd></div><div><dt>Generated outputs</dt><dd>${record.generated_files.length}</dd></div></dl>
+      <section class="atlas-section"><div class="atlas-section-heading"><p>01</p><div><h3>Responsibility boundary</h3><p>What belongs here, and what must stay elsewhere.</p></div></div><div class="atlas-two"><section><h4>Owns</h4>${tags(record.owns)}</section><section><h4>Must never own</h4>${tags(record.must_not_own, true)}</section></div></section>
+      <section class="atlas-section"><div class="atlas-section-heading"><p>02</p><div><h3>Dependency direction</h3><p>Follow incoming and outgoing architecture relationships.</p></div></div><div class="atlas-two"><section><h4>Depends on</h4>${relations(record.depends_on)}</section><section><h4>Used by</h4>${relations(record.used_by)}</section></div></section>
+      <section class="atlas-section"><div class="atlas-section-heading"><p>03</p><div><h3>Contracts and data flow</h3><p>The boundary this subsystem accepts and exposes.</p></div></div><div class="atlas-three"><section><h4>Inputs</h4>${list(record.inputs)}</section><section><h4>Outputs</h4>${list(record.outputs)}</section><section><h4>Public contracts</h4>${list(record.public_contracts)}</section></div></section>
+      <section class="atlas-section"><div class="atlas-section-heading"><p>04</p><div><h3>Source lineage</h3><p>Change canonical inputs; regenerate projections.</p></div></div><div class="atlas-lineage"><section><h3>Canonical authority</h3>${codeList(record.canonical_files)}</section><span aria-hidden="true">&rarr;</span><section><h3>Generated projections</h3>${record.generated_files.length ? codeList(record.generated_files) : '<p class="atlas-none">No generated projection.</p>'}</section></div></section>
+      <section class="atlas-section"><div class="atlas-section-heading"><p>05</p><div><h3>Change safely</h3><p>Expected impact, verification, and known limits.</p></div></div><div class="atlas-three"><section><h4>Likely impact</h4>${list(record.impact)}</section><section><h4>Verification</h4>${tags(record.verification)}</section><section><h4>Known limitations</h4>${list(record.limitations)}</section></div><h4>Recommended workflow</h4>${list(record.safe_change_workflow, true)}</section>
+      <details class="atlas-related"><summary>Related documentation</summary>${codeList(record.related_docs)}</details>
+    </article>`;
+    nodes.forEach((node) => node.setAttribute('aria-current', node.dataset.atlasSelect === record.id ? 'true' : 'false'));
+    history.replaceState(null, '', `#atlas-${record.id}`);
+    if (focus) detail.focus({preventScroll: true});
+  };
+  const select = (identifier, focus = false) => {
+    const record = byId.get(identifier);
+    if (record) render(record, focus);
+  };
   const apply = () => {
     const needle = query.value.trim().toLocaleLowerCase();
-    let visible = 0;
-    [...rows, ...details].forEach((item) => {
-      const match = (!needle || item.dataset.search.includes(needle)) &&
-        (category.value === 'all' || item.dataset.category === category.value) &&
-        (status.value === 'all' || item.dataset.status === status.value);
-      item.hidden = !match;
-      if (match && item.matches('[data-atlas-row]')) visible += 1;
+    const visible = nodes.filter((node) => {
+      const match = (!needle || node.dataset.search.includes(needle)) &&
+        (category.value === 'all' || node.dataset.category === category.value) &&
+        (status.value === 'all' || node.dataset.status === status.value);
+      node.hidden = !match;
+      return match;
     });
-    message.textContent = `Showing ${visible} of ${rows.length} subsystems.`;
-    empty.hidden = visible !== 0;
+    message.textContent = visible.length === nodes.length ? `Showing all ${nodes.length} subsystems.` : `Showing ${visible.length} of ${nodes.length} subsystems.`;
+    empty.hidden = visible.length !== 0;
+    const selected = detail.querySelector('[data-atlas-selected-record]')?.dataset.atlasSelectedRecord;
+    const preferred = HyperFluxPortal.preferredVisible({items: visible, selectedId: selected, needle, id: (node) => node.dataset.atlasSelect, title: (node) => byId.get(node.dataset.atlasSelect).title});
+    if (preferred) select(preferred.dataset.atlasSelect);
+    detail.hidden = visible.length === 0;
   };
-  [query, category, status].forEach((control) => control.addEventListener('input', apply));
-
-  const dialog = document.getElementById('atlas-palette');
-  const open = document.getElementById('atlas-command');
-  const paletteFilter = document.getElementById('atlas-palette-filter');
-  const results = document.getElementById('atlas-palette-results');
-  const renderPalette = () => {
-    const needle = paletteFilter.value.trim().toLocaleLowerCase();
-    const matches = records.filter((record) => !needle || record.search.includes(needle)).slice(0, 10);
-    results.replaceChildren(...matches.map((record) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      const title = document.createElement('strong');
-      title.textContent = record.title;
-      const path = document.createElement('small');
-      path.textContent = `${record.path} · ${record.category}`;
-      button.append(title, path);
-      button.addEventListener('click', () => {
-        dialog.close();
-        const target = document.getElementById(`atlas-${record.id}`);
-        target.hidden = false;
-        target.open = true;
-        target.scrollIntoView({block: 'start'});
-        target.querySelector('summary').focus();
-      });
-      return button;
-    }));
-  };
-  const openPalette = () => { dialog.showModal(); paletteFilter.value = ''; renderPalette(); paletteFilter.focus(); };
-  open.addEventListener('click', openPalette);
-  paletteFilter.addEventListener('input', renderPalette);
-  document.addEventListener('keydown', (event) => {
-    if ((event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase() === 'k') {
-      event.preventDefault();
-      if (!dialog.open) openPalette();
-    }
+  root.addEventListener('click', (event) => {
+    const target = event.target.closest('[data-atlas-select]');
+    if (!target) return;
+    select(target.dataset.atlasSelect, target.closest('.atlas-detail') !== null);
   });
+  [query, category, status].forEach((control) => control.addEventListener('input', apply));
+  clear.addEventListener('click', () => { query.value = ''; category.value = 'all'; status.value = 'all'; apply(); query.focus(); });
+  const fromHash = () => select(location.hash.startsWith('#atlas-') ? location.hash.slice(7) : records[0]?.id);
+  addEventListener('hashchange', fromHash);
+  fromHash();
 })();
 """
 
 
 ATLAS_CSS = """
 .repository-atlas { min-width: 0; }
-.atlas-header { display: flex; align-items: start; justify-content: space-between; gap: 24px; }
-.atlas-header h1 { margin: 0 0 10px; font-size: 34px; line-height: 1.2; }
-.atlas-lock { flex: 0 0 auto; padding: 3px 8px; border: 1px solid var(--yellow); border-radius: 4px; color: var(--yellow); font-size: 12px; font-weight: 700; }
-.atlas-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 24px 0; border: 1px solid var(--line); }
-.atlas-metrics div { min-width: 0; padding: 14px 16px; border-right: 1px solid var(--line); }
+.atlas-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 26px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.atlas-metrics div { min-width: 0; padding: 15px 16px; border-right: 1px solid var(--line); }
 .atlas-metrics div:last-child { border-right: 0; }
 .atlas-metrics strong, .atlas-metrics span { display: block; }
-.atlas-metrics strong { color: var(--lime); font-size: 24px; }
-.atlas-metrics span { color: var(--muted); }
-.atlas-toolbar { display: grid; grid-template-columns: minmax(240px, 2fr) repeat(2, minmax(150px, 1fr)) auto; gap: 10px; align-items: end; padding: 14px; border: 1px solid var(--line); background: var(--surface); }
+.atlas-metrics strong { color: var(--lime); font: 700 25px/1 var(--display-font); }
+.atlas-metrics span { margin-top: 6px; color: var(--muted); font-size: 12px; }
+.atlas-toolbar { display: grid; grid-template-columns: minmax(250px, 2fr) repeat(2, minmax(150px, 1fr)) auto; gap: 10px; align-items: end; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
 .atlas-toolbar label span { display: block; margin-bottom: 4px; color: var(--muted); font-size: 12px; font-weight: 700; }
-.atlas-toolbar input, .atlas-toolbar select, .atlas-toolbar button, .atlas-palette input, .atlas-palette button { min-height: 40px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 4px; color: var(--ink); background: var(--bg); font: inherit; }
-.atlas-toolbar button, .atlas-palette button { cursor: pointer; }
+.atlas-toolbar input, .atlas-toolbar select, .atlas-toolbar button { width: 100%; min-height: 40px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 4px; color: var(--ink); background: var(--surface); font: inherit; }
+.atlas-toolbar button { cursor: pointer; }
 .atlas-filter-status, .atlas-none { color: var(--muted); }
-.atlas-table-wrap { width: 100%; overflow: auto; border: 1px solid var(--line); }
-.atlas-table-wrap table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.atlas-table-wrap th, .atlas-table-wrap td { padding: 8px 10px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
-.atlas-table-wrap tr:last-child > * { border-bottom: 0; }
-.atlas-table-wrap tr > *:last-child { border-right: 0; }
-.atlas-table-wrap thead th { background: var(--surface-strong); }
-.atlas-table-wrap td a strong, .atlas-table-wrap td a small { display: block; }
-.atlas-table-wrap code, .atlas-detail code { color: var(--lime); overflow-wrap: anywhere; }
-.atlas-status { display: inline-flex; padding: 1px 6px; border: 1px solid var(--line); border-radius: 4px; font-size: 12px; white-space: nowrap; }
+.atlas-browser { display: grid; grid-template-columns: minmax(285px, 355px) minmax(0, 1fr); min-height: 760px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.atlas-node-list { min-width: 0; max-height: calc(100vh - 170px); overflow-y: auto; padding-right: 14px; border-right: 1px solid var(--line); scrollbar-width: thin; }
+.atlas-node { display: grid; width: 100%; min-height: 70px; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 8px; border: 0; border-bottom: 1px solid var(--line-soft); border-left: 2px solid transparent; color: var(--ink); background: transparent; text-align: left; cursor: pointer; }
+.atlas-node > span { min-width: 0; }
+.atlas-node > span:last-child { text-align: right; }
+.atlas-node strong, .atlas-node small { display: block; overflow-wrap: anywhere; }
+.atlas-node small { margin-top: 3px; color: var(--muted); font-size: 11px; }
+.atlas-node:hover, .atlas-node[aria-current="true"] { border-left-color: var(--teal); background: var(--surface); }
+.atlas-detail { min-width: 0; padding: 28px 0 55px 34px; }
+.atlas-detail-header { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+.atlas-detail-header h2 { margin: 4px 0 8px; font: 700 28px/1.2 var(--display-font); }
+.atlas-detail-header code { color: var(--lime); overflow-wrap: anywhere; }
+.atlas-status { display: inline-flex; flex: 0 0 auto; padding: 3px 7px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .atlas-status--implemented { border-color: var(--teal); color: var(--teal); }
 .atlas-status--generated { border-color: var(--cyan); color: var(--cyan); }
 .atlas-status--policy { border-color: var(--yellow); color: var(--yellow); }
 .atlas-status--research-boundary { border-color: var(--coral); color: var(--coral); }
-.atlas-empty { padding: 14px; border: 1px dashed var(--line); color: var(--muted); }
-.atlas-category-map { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; border: 1px solid var(--line); background: var(--line); }
-.atlas-category-map section { min-width: 0; padding: 12px; background: var(--surface); }
-.atlas-category-map h3 { margin: 0 0 8px; font-size: 14px; }
-.atlas-category-map section div { display: flex; flex-wrap: wrap; gap: 6px; }
-.atlas-category-map a, .atlas-relations a { padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--ink); text-decoration: none; }
-.atlas-edge-ledger { margin-top: 12px; border: 1px solid var(--line); }
-.atlas-edge-ledger > summary, .atlas-related > summary { min-height: 42px; padding: 8px 11px; cursor: pointer; font-weight: 700; }
-.atlas-details { margin-top: 36px; }
-.atlas-detail { margin-top: 8px; border: 1px solid var(--line); background: var(--surface); }
-.atlas-detail > summary { display: flex; min-height: 52px; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 12px; cursor: pointer; }
-.atlas-detail > summary strong, .atlas-detail > summary small { display: block; }
-.atlas-detail-body { padding: 4px 14px 18px; border-top: 1px solid var(--line); }
-.atlas-relations, .atlas-boundaries, .atlas-io { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
-.atlas-io { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.atlas-relations section, .atlas-boundaries section, .atlas-io section { min-width: 0; padding: 12px; border: 1px solid var(--line); background: var(--bg); }
-.atlas-relations h3, .atlas-boundaries h3, .atlas-io h3 { margin: 0 0 8px; font-size: 15px; }
-.atlas-relations section div, .atlas-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.atlas-purpose { max-width: 850px; color: var(--muted); font-size: 16px; }
+.atlas-definitions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 22px 0 34px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.atlas-definitions div { min-width: 0; padding: 11px 12px; border-right: 1px solid var(--line); }
+.atlas-definitions div:last-child { border-right: 0; }
+.atlas-definitions dt { color: var(--muted); font-size: 10px; text-transform: uppercase; }
+.atlas-definitions dd { margin: 4px 0 0; font: 700 18px/1 var(--display-font); }
+.atlas-section { margin-top: 42px; padding-top: 22px; border-top: 1px solid var(--line); }
+.atlas-section-heading { display: flex; gap: 12px; align-items: start; margin-bottom: 14px; }
+.atlas-section-heading > p { margin: 0; color: var(--cyan); font: 700 12px/1.5 var(--display-font); }
+.atlas-section-heading h3 { margin: 0; font: 700 18px/1.2 var(--display-font); }
+.atlas-section-heading div p { margin: 4px 0 0; color: var(--muted); }
+.atlas-section h4 { margin: 18px 0 8px; font-size: 13px; }
+.atlas-two, .atlas-three { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.atlas-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.atlas-two > section, .atlas-three > section { min-width: 0; padding: 0 14px 14px; border-left: 1px solid var(--line); }
+.atlas-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .atlas-tags span { padding: 2px 6px; border: 1px solid var(--teal); border-radius: 4px; }
 .atlas-tags--forbidden span { border-color: var(--coral); }
-.atlas-detail-body li { margin: 4px 0; }
-.atlas-related { margin-top: 16px; border: 1px solid var(--line); }
-.atlas-palette { width: min(620px, calc(100% - 32px)); padding: 0; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--surface); }
-.atlas-palette::backdrop { background: rgb(0 0 0 / 65%); }
-.atlas-palette form { padding: 14px; }
-.atlas-palette header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.atlas-palette header h2 { margin: 0; font-size: 19px; }
-.atlas-palette header button { width: 40px; padding: 0; font-size: 22px; }
-.atlas-palette input { width: 100%; margin: 12px 0; }
-.atlas-palette-results { display: grid; gap: 4px; max-height: 420px; overflow: auto; }
-.atlas-palette-results button { height: auto; text-align: left; }
-.atlas-palette-results strong, .atlas-palette-results small { display: block; }
-.atlas-palette-results small { color: var(--muted); }
-@media (max-width: 900px) {
-  .atlas-metrics, .atlas-category-map, .atlas-relations, .atlas-boundaries { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .atlas-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .atlas-io { grid-template-columns: 1fr; }
+.atlas-relation-list { display: grid; gap: 5px; }
+.atlas-relation-list button { display: block; width: 100%; padding: 8px; border: 1px solid var(--line); border-left: 2px solid var(--cyan); color: var(--ink); background: transparent; text-align: left; cursor: pointer; }
+.atlas-relation-list strong, .atlas-relation-list small { display: block; }
+.atlas-relation-list small { margin-top: 3px; color: var(--muted); }
+.atlas-lineage { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; gap: 12px; }
+.atlas-lineage > section { min-width: 0; padding: 12px 14px; border: 1px solid var(--line); background: var(--surface); }
+.atlas-lineage > span { align-self: center; color: var(--yellow); font-size: 22px; }
+.atlas-lineage h3 { margin: 0 0 8px; font-size: 13px; }
+.atlas-lineage code { color: var(--lime); overflow-wrap: anywhere; }
+.atlas-selected li { margin: 5px 0; }
+.atlas-related, .atlas-technical { margin-top: 28px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.atlas-related > summary, .atlas-technical > summary { min-height: 44px; padding: 10px 0; cursor: pointer; font-weight: 700; }
+.atlas-technical { margin-top: 26px; padding-bottom: 8px; }
+.atlas-empty { padding: 14px; border: 1px dashed var(--line); color: var(--muted); }
+@media (max-width: 1080px) {
+  .atlas-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .atlas-metrics div:nth-child(3) { border-right: 0; }
+  .atlas-metrics div:nth-child(-n + 3) { border-bottom: 1px solid var(--line); }
+  .atlas-three { grid-template-columns: 1fr; }
 }
-@media (max-width: 560px) {
-  .atlas-header { display: grid; }
-  .atlas-metrics, .atlas-category-map, .atlas-toolbar, .atlas-relations, .atlas-boundaries { grid-template-columns: 1fr; }
-  .atlas-metrics div { border-right: 0; border-bottom: 1px solid var(--line); }
+@media (max-width: 900px) {
+  .atlas-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .atlas-browser { grid-template-columns: 1fr; }
+  .atlas-node-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 390px; padding-right: 0; border-right: 0; border-bottom: 1px solid var(--line); }
+  .atlas-detail { padding-left: 0; }
+}
+@media (max-width: 600px) {
+  .atlas-metrics, .atlas-toolbar, .atlas-node-list, .atlas-definitions, .atlas-two { grid-template-columns: 1fr; }
+  .atlas-metrics div, .atlas-metrics div:nth-child(3) { border-right: 0; border-bottom: 1px solid var(--line); }
   .atlas-metrics div:last-child { border-bottom: 0; }
-  .atlas-detail > summary { align-items: start; flex-direction: column; }
+  .atlas-detail-header { display: grid; }
+  .atlas-definitions div { border-right: 0; border-bottom: 1px solid var(--line); }
+  .atlas-definitions div:last-child { border-bottom: 0; }
+  .atlas-lineage { grid-template-columns: 1fr; }
+  .atlas-lineage > span { justify-self: center; transform: rotate(90deg); }
 }
 """

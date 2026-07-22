@@ -12,14 +12,12 @@
       "title": "Use HyperFlux",
       "description": "Installation, applications, supported hardware, privacy, and useful support steps.",
       "pages": [
-        {"id": "overview", "title": "Product overview", "summary": "What HyperFlux Next is, what it is not, and the current product phase.", "source": "docs/user/overview.md"},
-        {"id": "installation", "title": "Installation", "summary": "Canonical package contents, activation rules, and ordinary-user lifecycle.", "source": "docs/generated/installation.md"},
-        {"id": "supported-hardware", "title": "Supported hardware", "summary": "Qualified profiles, compatibility candidates, and evidence limits.", "source": "docs/generated/supported-hardware.md"},
-        {"id": "applications", "title": "Applications", "summary": "How OpenRGB, Polychromatic, and OpenRazer-compatible clients connect.", "source": "docs/generated/integrations.md"},
-        {"id": "troubleshooting", "title": "Troubleshooting", "summary": "Doctor, status, support previews, and safe next actions.", "source": "docs/user/troubleshooting.md"},
-        {"id": "support", "title": "Support", "summary": "Choose the correct public or private support route without leaking sensitive diagnostics.", "source": "SUPPORT.md"},
-        {"id": "security", "title": "Security", "summary": "Private vulnerability reporting, disclosure expectations, and enforced security boundaries.", "source": "SECURITY.md"},
-        {"id": "privacy", "title": "Privacy", "summary": "What support evidence includes, excludes, and never uploads automatically.", "source": "docs/user/privacy.md"}
+        {"id": "overview", "title": "Product overview", "summary": "What HyperFlux Next is, what it is not, and the current product phase.", "source": "docs/user/overview.md", "kind": "concept"},
+        {"id": "installation", "title": "Installation", "summary": "Canonical package contents, activation rules, and ordinary-user lifecycle.", "source": "docs/generated/installation.md", "kind": "guide"},
+        {"id": "supported-hardware", "title": "Supported hardware", "summary": "Qualified profiles, compatibility candidates, and evidence limits.", "source": "docs/generated/supported-hardware.md", "kind": "reference"},
+        {"id": "applications", "title": "Applications", "summary": "How OpenRGB, Polychromatic, and OpenRazer-compatible clients connect.", "source": "docs/generated/integrations.md", "kind": "concept"},
+        {"id": "troubleshooting", "title": "Troubleshooting", "summary": "Doctor, status, support previews, and safe next actions.", "source": "docs/user/troubleshooting.md", "kind": "guide"},
+        {"id": "privacy", "title": "Privacy", "summary": "What support evidence includes, excludes, and never uploads automatically.", "source": "docs/user/privacy.md", "kind": "concept"}
       ]
     },
     {
@@ -27,13 +25,13 @@
       "title": "Build HyperFlux",
       "description": "Architecture, SDK contracts, protocols, profiles, development, and verification.",
       "pages": [
-        {"id": "architecture", "title": "Architecture", "summary": "Ownership boundaries and the one-way path from applications to hardware.", "source": "docs/generated/architecture.md"},
-        {"id": "design-book", "title": "Design book", "summary": "The complete 67-section product and engineering specification.", "source": "docs/architecture/design-book.md"},
-        {"id": "sdk", "title": "SDK", "summary": "The stable typed contract used by every application integration.", "source": "docs/architecture/sdk.md"},
-        {"id": "protocol", "title": "Bridge protocol", "summary": "Current bounded request, response, event, and compatibility contract.", "source": "docs/generated/bridge-protocol.md"},
-        {"id": "verification", "title": "Verification", "summary": "Typed test graph, software lanes, evidence, and hardware boundaries.", "source": "docs/generated/verification.md"},
-        {"id": "development", "title": "Development environment", "summary": "Digest-pinned container, exact tools, upstream preparation, and offline builds.", "source": "docs/generated/development-environment.md"},
-        {"id": "contributing", "title": "Contributing", "summary": "Schema-first contribution rules and evidence expectations.", "source": "CONTRIBUTING.md"}
+        {"id": "architecture", "title": "Architecture", "summary": "Ownership boundaries and the one-way path from applications to hardware.", "source": "docs/generated/architecture.md", "kind": "concept"},
+        {"id": "design-book", "title": "Design book", "summary": "The complete 67-section product and engineering specification.", "source": "docs/architecture/design-book.md", "kind": "book"},
+        {"id": "sdk", "title": "SDK", "summary": "The stable typed contract used by every application integration.", "source": "docs/architecture/sdk.md", "kind": "reference"},
+        {"id": "protocol", "title": "Bridge protocol", "summary": "Current bounded request, response, event, and compatibility contract.", "source": "docs/generated/bridge-protocol.md", "kind": "reference"},
+        {"id": "verification", "title": "Verification", "summary": "Typed test graph, software lanes, evidence, and hardware boundaries.", "source": "docs/generated/verification.md", "kind": "reference"},
+        {"id": "development", "title": "Development environment", "summary": "Digest-pinned container, exact tools, upstream preparation, and offline builds.", "source": "docs/generated/development-environment.md", "kind": "guide"},
+        {"id": "contributing", "title": "Contributing", "summary": "Schema-first contribution rules and evidence expectations.", "source": "CONTRIBUTING.md", "kind": "guide"}
       ]
     },
     {
@@ -41,14 +39,14 @@
       "title": "Maintain HyperFlux",
       "description": "Coverage, release gates, provenance, migration, performance, and formal assurance.",
       "pages": [
-        {"id": "coverage", "title": "Design coverage", "summary": "Truthful implementation state for every design-book section.", "source": "docs/generated/design-coverage.md"},
-        {"id": "release-gates", "title": "Release gates", "summary": "Machine-readable blockers and the explicit publication interlock.", "source": "docs/generated/release-gates.md"},
-        {"id": "supply-chain", "title": "Supply chain", "summary": "Dependency inventory, licenses, build policy, and generated SBOM.", "source": "docs/generated/supply-chain.md"},
-        {"id": "migration", "title": "Migration ledger", "summary": "Reviewed disposition and destination for every legacy subsystem.", "source": "docs/generated/migration-ledger.md"},
-        {"id": "migration-shadow", "title": "Migration shadow", "summary": "Read-only semantic parity against exact sanitized legacy decisions.", "source": "docs/generated/migration-shadow.md"},
-        {"id": "performance", "title": "Performance budgets", "summary": "Static limits and physical measurements required before release.", "source": "docs/generated/performance-budgets.md"},
-        {"id": "formal-model", "title": "Formal model", "summary": "Bounded exploration of generations, leases, transactions, and delivery.", "source": "docs/generated/formal-model.md"},
-        {"id": "github-governance", "title": "GitHub governance", "summary": "Immutable workflows, repository ownership, dependency automation, and publication locks.", "source": "docs/generated/github-governance.md"}
+        {"id": "coverage", "title": "Design coverage", "summary": "Truthful implementation state for every design-book section.", "source": "docs/generated/design-coverage.md", "kind": "ledger"},
+        {"id": "release-gates", "title": "Release gates", "summary": "Machine-readable blockers and the explicit publication interlock.", "source": "docs/generated/release-gates.md", "kind": "ledger"},
+        {"id": "supply-chain", "title": "Supply chain", "summary": "Dependency inventory, licenses, build policy, and generated SBOM.", "source": "docs/generated/supply-chain.md", "kind": "reference"},
+        {"id": "migration", "title": "Migration ledger", "summary": "Reviewed disposition and destination for every legacy subsystem.", "source": "docs/generated/migration-ledger.md", "kind": "ledger"},
+        {"id": "migration-shadow", "title": "Migration shadow", "summary": "Read-only semantic parity against exact sanitized legacy decisions.", "source": "docs/generated/migration-shadow.md", "kind": "ledger"},
+        {"id": "performance", "title": "Performance budgets", "summary": "Static limits and physical measurements required before release.", "source": "docs/generated/performance-budgets.md", "kind": "ledger"},
+        {"id": "formal-model", "title": "Formal model", "summary": "Bounded exploration of generations, leases, transactions, and delivery.", "source": "docs/generated/formal-model.md", "kind": "reference"},
+        {"id": "github-governance", "title": "GitHub governance", "summary": "Immutable workflows, repository ownership, dependency automation, and publication locks.", "source": "docs/generated/github-governance.md", "kind": "ledger"}
       ]
     }
   ]

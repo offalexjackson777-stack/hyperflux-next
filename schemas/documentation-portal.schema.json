@@ -30,11 +30,14 @@
     "page": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "title", "summary", "source"],
+      "required": ["id", "title", "summary", "source", "kind"],
       "properties": {
         "id": {"$ref": "#/$defs/identifier"},
         "title": {"type": "string", "minLength": 1, "maxLength": 80},
         "summary": {"type": "string", "minLength": 1, "maxLength": 180},
+        "kind": {
+          "enum": ["guide", "concept", "reference", "book", "ledger"]
+        },
         "source": {
           "type": "string",
           "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+\\.md$"

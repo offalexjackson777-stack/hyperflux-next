@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from html import escape
+from html import escape, unescape
 from html.parser import HTMLParser
 import hashlib
 import json
@@ -30,6 +30,19 @@ from .portal_device_lab import (
 )
 from .portal_atlas import ATLAS_CSS, ATLAS_SCRIPT, render_repository_atlas
 from .portal_assets import PORTAL_JS, SITE_CSS, architecture_svg
+from .portal_book import (
+    chapter_markdown,
+    chapter_search_text,
+    parse_design_book,
+    render_book_index,
+)
+from .portal_coverage import COVERAGE_CSS, COVERAGE_SCRIPT, render_coverage_browser
+from .portal_reference import (
+    REFERENCE_CSS,
+    REFERENCE_SCRIPT,
+    parse_reference,
+    render_reference_browser,
+)
 from .profiles import compiled_catalog as compiled_profile_catalog
 from .portal_state import (
     REPOSITORY_STATE_CSS,
@@ -41,7 +54,13 @@ from .portal_state import (
 PORTAL_KEYS = {"$schema", "schema", "site", "audiences"}
 SITE_KEYS = {"title", "description", "publication_state"}
 AUDIENCE_KEYS = {"id", "title", "description", "pages"}
-PAGE_KEYS = {"id", "title", "summary", "source"}
+PAGE_KEYS = {"id", "title", "summary", "source", "kind"}
+PAGE_KINDS = {"guide", "concept", "reference", "book", "ledger"}
+MAX_PORTAL_BYTES = 4 * 1024 * 1024
+MAX_HTML_BYTES = 256 * 1024
+MAX_SEARCH_INDEX_BYTES = 512 * 1024
+MAX_STYLESHEET_BYTES = 96 * 1024
+MAX_JAVASCRIPT_BYTES = 64 * 1024
 AUDIENCE_ORDER = ("users", "developers", "maintainers")
 IDENTIFIER = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
 LINK_ATTRIBUTE = re.compile(r'(?P<attribute>href|src)="(?P<url>[^"]+)"')
@@ -58,6 +77,11 @@ MERMAID_MESSAGE = re.compile(
     r"^(?P<source>[A-Za-z][A-Za-z0-9_]*)(?P<arrow>-{1,2}>>)"
     r"(?P<target>[A-Za-z][A-Za-z0-9_]*):\s*(?P<label>.+)$"
 )
+HTML_HEADING = re.compile(
+    r'<h(?P<level>[23]) id="(?P<id>[^"]+)">(?P<label>.*?)</h(?P=level)>',
+    re.DOTALL,
+)
+HTML_TAG = re.compile(r"<[^>]+>")
 
 
 @dataclass(frozen=True)
@@ -67,6 +91,7 @@ class PortalPage:
     summary: str
     source: str
     audience_id: str
+    kind: str
 
     @property
     def url(self) -> str:
@@ -179,8 +204,11 @@ def load_portal_config(root: Path) -> PortalConfig:
                     ),
                     source=source,
                     audience_id=identifier,
+                    kind=_text(page["kind"], f"portal page {identifier}/{page_id} kind", 16),
                 )
             )
+            if pages[-1].kind not in PAGE_KINDS:
+                raise ModelError(f"portal page {identifier}/{page_id}: invalid kind")
             all_page_ids.append(f"{identifier}/{page_id}")
             all_sources.append(source)
         audiences.append(
@@ -405,51 +433,67 @@ def _compile_mermaid(value: str) -> str:
     return MERMAID_BLOCK.sub(lambda match: _render_mermaid(match.group("source")), value)
 
 
-def _navigation(config: PortalConfig, current_url: str) -> str:
-    sections: list[str] = []
-    home_class = ' class="active" aria-current="page"' if current_url == "index.html" else ""
-    sections.append(
-        f'<a{home_class} href="{escape(_relative_url(current_url, "index.html"))}">Home</a>'
-    )
-    device_class = (
-        ' class="active" aria-current="page"'
-        if current_url == "devices/index.html"
-        else ""
-    )
-    sections.append(
-        f'<a{device_class} href="{escape(_relative_url(current_url, "devices/index.html"))}">'
-        "Device Lab</a>"
-    )
-    atlas_class = (
-        ' class="active" aria-current="page"'
-        if current_url == "atlas/index.html"
-        else ""
-    )
-    sections.append(
-        f'<a{atlas_class} href="{escape(_relative_url(current_url, "atlas/index.html"))}">'
-        "Repository Atlas</a>"
-    )
-    state_class = (
-        ' class="active" aria-current="page"'
-        if current_url == "state/index.html"
-        else ""
-    )
-    sections.append(
-        f'<a{state_class} href="{escape(_relative_url(current_url, "state/index.html"))}">'
-        "Repository State</a>"
-    )
+def _active_audience(config: PortalConfig, current_url: str) -> PortalAudience:
     for audience in config.audiences:
-        links = []
-        for page in audience.pages:
-            active = ' class="active" aria-current="page"' if page.url == current_url else ""
-            links.append(
-                f'<a{active} href="{escape(_relative_url(current_url, page.url))}">'
-                f"{escape(page.title)}</a>"
-            )
-        sections.append(
-            f'<section class="nav-group"><h2>{escape(audience.title)}</h2>{"".join(links)}</section>'
+        if current_url.startswith(f"{audience.id}/"):
+            return audience
+    mapping = {
+        "devices/index.html": "users",
+        "atlas/index.html": "developers",
+        "state/index.html": "maintainers",
+    }
+    identifier = mapping.get(current_url, "users")
+    return next(audience for audience in config.audiences if audience.id == identifier)
+
+
+def _active_link(current_url: str, target: str, label: str) -> str:
+    active = ' class="active" aria-current="page"' if current_url == target else ""
+    return (
+        f'<a{active} href="{escape(_relative_url(current_url, target))}">'
+        f"{escape(label)}</a>"
+    )
+
+
+def _primary_navigation(config: PortalConfig, current_url: str) -> str:
+    targets = (
+        ("users", config.audiences[0].pages[0].url, "Use"),
+        ("devices", "devices/index.html", "Devices"),
+        ("developers", config.audiences[1].pages[0].url, "Develop"),
+        ("maintainers", "state/index.html", "Readiness"),
+    )
+    links = []
+    for identifier, target, label in targets:
+        selected = (
+            current_url == target
+            or (identifier in AUDIENCE_ORDER and current_url.startswith(f"{identifier}/"))
+            or (identifier == "devices" and current_url == "devices/index.html")
+            or (identifier == "maintainers" and current_url == "state/index.html")
         )
-    return "".join(sections)
+        active = ' class="active" aria-current="page"' if selected else ""
+        links.append(
+            f'<a{active} href="{escape(_relative_url(current_url, target))}">{escape(label)}</a>'
+        )
+    return "".join(links)
+
+
+def _navigation(config: PortalConfig, current_url: str) -> str:
+    audience = _active_audience(config, current_url)
+    page_links = "".join(
+        _active_link(current_url, page.url, page.title) for page in audience.pages
+    )
+    workbench = "".join(
+        (
+            _active_link(current_url, "devices/index.html", "Device Lab"),
+            _active_link(current_url, "atlas/index.html", "Repository Atlas"),
+            _active_link(current_url, "state/index.html", "Repository State"),
+        )
+    )
+    return (
+        f'<div class="nav-context"><span class="nav-label">{escape(audience.title)}</span>'
+        f'<p>{escape(audience.description)}</p></div>{page_links}'
+        f'<div class="nav-context nav-context--secondary"><span class="nav-label">Explore</span></div>'
+        f"{workbench}"
+    )
 
 
 def _shell(
@@ -459,14 +503,14 @@ def _shell(
     title: str,
     description: str,
     content: str,
-    search_records: list[dict[str, str]],
+    page_kind: str = "concept",
+    outline: str = "",
     extra_scripts: tuple[str, ...] = (),
 ) -> str:
     css = _relative_url(current_url, "assets/site.css")
     script = _relative_url(current_url, "assets/portal.js")
-    search_json = json.dumps(search_records, ensure_ascii=True, separators=(",", ":")).replace(
-        "<", "\\u003c"
-    )
+    search_index = _relative_url(current_url, "assets/search-index.json")
+    root_url = _relative_url(current_url, "index.html")
     extra_script_tags = "".join(
         f'<script src="{escape(_relative_url(current_url, value))}" defer></script>'
         for value in extra_scripts
@@ -480,25 +524,22 @@ def _shell(
   <title>{escape(title)} | {escape(config.title)}</title>
   <link rel="stylesheet" href="{escape(css)}">
 </head>
-<body>
+<body class="page-kind-{escape(page_kind)}" data-search-index="{escape(search_index)}" data-portal-root="{escape(root_url)}">
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="site-header">
     <a class="brand" href="{escape(_relative_url(current_url, "index.html"))}">
       <span class="brand-mark" aria-hidden="true">HF</span>
       <span><strong>HyperFlux Next</strong><small>Linux receiver foundation</small></span>
     </a>
+    <nav class="primary-nav" aria-label="Primary">{_primary_navigation(config, current_url)}</nav>
     <div class="search-box">
       <label class="sr-only" for="portal-search">Search documentation</label>
-      <input id="portal-search" type="search" placeholder="Search documentation" autocomplete="off">
+      <input id="portal-search" type="search" placeholder="Search HyperFlux" autocomplete="off" aria-keyshortcuts="/">
       <div id="search-results" class="search-results" hidden></div>
     </div>
     <div class="header-tools">
-      <span class="phase">Public pre-release</span>
-      <div class="theme-switch" role="group" aria-label="Color theme">
-        <button type="button" data-theme-choice="system" aria-pressed="true" title="Follow system color theme">System</button>
-        <button type="button" data-theme-choice="light" aria-pressed="false" title="Use light color theme">Light</button>
-        <button type="button" data-theme-choice="dark" aria-pressed="false" title="Use dark color theme">Dark</button>
-      </div>
+      <span class="phase">Local preview</span>
+      <button class="theme-cycle" id="theme-cycle" type="button" title="Change color theme">Theme: System</button>
     </div>
   </header>
   <div class="site-grid">
@@ -507,13 +548,12 @@ def _shell(
       <summary>Browse documentation</summary>
       <nav class="mobile-nav-links" aria-label="Mobile documentation">{_navigation(config, current_url)}</nav>
     </details>
-    <main id="main-content" tabindex="-1">{content}</main>
+    <div class="page-frame"><main id="main-content" tabindex="-1">{content}</main>{outline}</div>
   </div>
   <footer>
-    <span>Public source. Evidence-bound. Product unreleased.</span>
+    <span>Generated from canonical repository data. Publication remains locked.</span>
     <a href="{escape(_relative_url(current_url, "maintainers/release-gates.html"))}">Release gates</a>
   </footer>
-  <script id="search-index" type="application/json">{search_json}</script>
   <script src="{escape(script)}" defer></script>
   {extra_script_tags}
 </body>
@@ -526,6 +566,7 @@ def _home_content(
     coverage: tuple[Any, ...],
     profiles: dict[str, Any],
     integrations: dict[str, Any],
+    knowledge: dict[str, Any],
 ) -> str:
     verified = sum(entry.status == "software-verified" for entry in coverage)
     release_blocking = sum(entry.release_blocking for entry in coverage)
@@ -533,35 +574,76 @@ def _home_content(
         profile.get("support_level") == "qualified" for profile in profiles["profiles"]
     )
     adapters = len(integrations["adapters"])
-    cards = []
-    for audience in config.audiences:
-        first = audience.pages[0]
-        cards.append(
-            f'<section class="audience-card"><h2>{escape(audience.title)}</h2>'
-            f'<p>{escape(audience.description)}</p><a href="{escape(first.url)}">'
-            f"Open {escape(audience.title.lower())}</a></section>"
+    route_qualified = sum(
+        candidate.get("hyperflux_support") == "route-qualified"
+        for candidate in knowledge["candidates"]
+    )
+    return f"""<article class="home">
+  <section class="home-hero"><div class="home-copy"><p class="page-kicker">Linux receiver foundation</p><h1>HyperFlux Next</h1><p class="home-lede">{escape(config.description)}</p><p class="home-boundary">A local, unreleased reconstruction. Support claims stay bounded to recorded evidence.</p><div class="home-actions"><a class="button button--primary" href="devices/index.html">Explore tested hardware</a><a class="button" href="users/overview.html">Understand the system</a></div></div><div class="home-signal" aria-label="Current project state"><span>Current phase</span><strong>Software foundation built</strong><p>Hardware qualification and publication approval remain separate gates.</p><a href="state/index.html">Inspect readiness</a></div></section>
+  <section class="flow-section" aria-labelledby="flow-title"><div class="section-intro"><p class="page-kicker">One direction of responsibility</p><h2 id="flow-title">Applications stay separate from hardware transport</h2><p>Integrations express intent through the SDK. One bridge validates policy and reaches the receiver through the minimal kernel driver.</p></div><img class="system-map" src="assets/system-map.svg" alt="Applications flow through the SDK, bridge, kernel, and receiver"></section>
+  <section class="path-section" aria-labelledby="path-title"><div class="section-intro"><p class="page-kicker">Choose a path</p><h2 id="path-title">Start with what you need</h2></div><div class="path-grid"><a href="users/overview.html"><span>01</span><strong>Use HyperFlux</strong><p>Installation, applications, supported devices, privacy, and troubleshooting.</p></a><a href="developers/architecture.html"><span>02</span><strong>Build with HyperFlux</strong><p>Architecture, SDK contracts, protocol, development, and verification.</p></a><a href="state/index.html"><span>03</span><strong>Review readiness</strong><p>Release gates, migration decisions, verification, and performance boundaries.</p></a></div></section>
+  <section class="truth-section" aria-labelledby="truth-heading"><div class="section-intro"><p class="page-kicker">Generated repository state</p><h2 id="truth-heading">Evidence without inflated promises</h2><p>These values are compiled from canonical ledgers whenever the portal is built.</p></div><div class="status-band"><div><strong>{route_qualified}</strong><span>receiver routes with physical evidence</span></div><div><strong>{verified}/{len(coverage)}</strong><span>design sections software verified</span></div><div><strong>{adapters}</strong><span>application adapters registered</span></div><div><strong>{release_blocking}</strong><span>release-blocking sections</span></div></div><p class="truth-note">There are {qualified_profiles} whole-product profiles marked fully qualified. Capability-scoped route evidence remains visible in the <a href="devices/index.html">Device Lab</a> without becoming a broader support claim.</p></section>
+</article>"""
+
+
+def _reading_minutes(source: str) -> int:
+    words = len(_plain_markdown(source).split())
+    return max(1, round(words / 220))
+
+
+def _outline(body: str) -> str:
+    links = []
+    for match in HTML_HEADING.finditer(body):
+        label = unescape(HTML_TAG.sub("", match.group("label"))).strip()
+        if not label:
+            continue
+        links.append(
+            f'<a class="outline-level-{match.group("level")}" href="#{escape(match.group("id"))}">{escape(label)}</a>'
         )
-    return f"""<section class="home-intro">
-  <p class="breadcrumb">Repository workbench</p>
-  <h1>HyperFlux Next</h1>
-  <p class="lede">{escape(config.description)}</p>
-  <div class="phase-band"><strong>Public source pre-release</strong><span>Software foundation implemented</span><span>Hardware qualification pending</span><span>Product release locked</span></div>
-  <div class="notice"><strong>Truthful by construction.</strong> This generated public portal exposes the repository's current evidence and boundaries; it is not a released driver or supported-product promise.</div>
-  <img class="system-map" src="assets/system-map.svg" alt="Applications flow through the SDK, bridge, kernel, and receiver">
-</section>
-<nav class="workbench-links" aria-label="Repository workbenches"><a href="devices/index.html"><strong>Device Lab</strong><span>Compatibility facts, capability matrices, and provenance</span></a><a href="atlas/index.html"><strong>Repository Atlas</strong><span>Ownership, dependencies, lineage, and change impact</span></a><a href="state/index.html"><strong>Repository State</strong><span>Release gates, migration decisions, and verification budgets</span></a></nav>
-<section class="audience-grid" aria-label="Documentation audiences">{"".join(cards)}</section>
-<section aria-labelledby="truth-heading">
-  <h2 id="truth-heading">Repository truth</h2>
-  <div class="status-band">
-    <div><strong>{len(coverage)}</strong><span>design sections tracked</span></div>
-    <div><strong>{verified}</strong><span>software-verified sections</span></div>
-    <div><strong>{qualified_profiles}</strong><span>fully qualified product profiles</span></div>
-    <div><strong>{adapters}</strong><span>application adapters modeled</span></div>
-  </div>
-  <p>{release_blocking} sections still carry a release-blocking condition. The <a href="maintainers/coverage.html">coverage ledger</a> names each one without converting missing evidence into a green claim.</p>
-  <p>The status above is compiled from canonical ledgers. Capability-scoped route qualification appears separately in the <a href="devices/index.html">Device Lab</a>; missing physical evidence remains visible rather than being converted into a whole-product claim.</p>
-</section>"""
+    if len(links) < 2:
+        return ""
+    return (
+        '<aside class="page-outline" aria-label="On this page"><span>On this page</span>'
+        f'{"".join(links)}<a class="outline-top" href="#main-content">Back to top</a></aside>'
+    )
+
+
+def _document_content(
+    config: PortalConfig,
+    page: PortalPage,
+    *,
+    body: str,
+    source_text: str,
+) -> tuple[str, str]:
+    audience = next(item for item in config.audiences if item.id == page.audience_id)
+    index = audience.pages.index(page)
+    previous = audience.pages[index - 1] if index > 0 else None
+    following = audience.pages[index + 1] if index + 1 < len(audience.pages) else None
+    crumbs = (
+        f'<nav class="breadcrumb" aria-label="Breadcrumb"><a href="{escape(_relative_url(page.url, "index.html"))}">Home</a>'
+        f'<a href="{escape(_relative_url(page.url, audience.pages[0].url))}">{escape(audience.title)}</a>'
+        f'<span>{escape(page.title)}</span></nav>'
+    )
+    origin = "Generated reference" if "/generated/" in page.source else "Canonical documentation"
+    pager = []
+    if previous is not None:
+        pager.append(
+            f'<a rel="prev" href="{escape(_relative_url(page.url, previous.url))}"><span>Previous</span><strong>{escape(previous.title)}</strong></a>'
+        )
+    if following is not None:
+        pager.append(
+            f'<a rel="next" href="{escape(_relative_url(page.url, following.url))}"><span>Next</span><strong>{escape(following.title)}</strong></a>'
+        )
+    content = (
+        f'<article class="document document--{escape(page.kind)}">{crumbs}'
+        f'<header class="page-hero"><p class="page-kicker">{escape(page.kind.title())}</p><h1>{escape(page.title)}</h1>'
+        f'<p class="lede">{escape(page.summary)}</p><div class="page-meta"><span>{escape(origin)}</span>'
+        f'<span>{_reading_minutes(source_text)} min read</span></div></header>'
+        f'<div class="document-body">{body}</div><details class="source-note"><summary>Source and generation details</summary>'
+        f'<p>This page is compiled from <code>{escape(page.source)}</code>. Edit the canonical source or its generator rather than this HTML output.</p></details>'
+        f'<nav class="page-pager" aria-label="Adjacent pages">{"".join(pager)}</nav></article>'
+    )
+    return content, _outline(body)
 
 
 def _rewrite_links(
@@ -654,25 +736,91 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
     output.mkdir(parents=True, exist_ok=True)
 
     config = load_portal_config(root)
-    governance = load_github_governance(root)
+    coverage = load_design_coverage(root)
     knowledge = compiled_knowledge_catalog(root)
     device_lab = render_device_lab(knowledge)
     repository_atlas = load_repository_atlas(root)
     atlas_page = render_repository_atlas(repository_atlas)
     state_page = render_repository_state(root)
+    book_source = (root / "docs" / "architecture" / "design-book.md").read_text(
+        encoding="utf-8"
+    )
+    book = parse_design_book(book_source)
+    protocol_page = next(page for page in config.pages if page.id == "protocol")
+    protocol_source = (root / protocol_page.source).read_text(encoding="utf-8")
+    protocol_reference = parse_reference(protocol_source)
     source_urls = {page.source: page.url for page in config.pages}
+    special_pages = {"design-book", "protocol", "coverage"}
     search_records: list[dict[str, str]] = []
     for page in config.pages:
         source_text = (root / page.source).read_text(encoding="utf-8")
-        search_records.append(
-            {
-                "title": page.title,
-                "audience": page.audience_id.title(),
-                "summary": page.summary,
-                "url": page.url,
-                "search": f"{page.title} {page.summary} {_plain_markdown(source_text)}".lower()[:12_000],
-            }
-        )
+        if page.id not in special_pages:
+            search_records.append(
+                {
+                    "title": page.title,
+                    "audience": page.audience_id.title(),
+                    "summary": page.summary,
+                    "url": page.url,
+                    "search": f"{page.title} {page.summary} {_plain_markdown(source_text)}".lower()[:12_000],
+                }
+            )
+    search_records.append(
+        {
+            "title": "Design book",
+            "audience": "Developers",
+            "summary": "Twelve chapters and sixty-seven product and engineering decisions.",
+            "url": "developers/design-book.html",
+            "search": "design book specification architecture product engineering chapters",
+        }
+    )
+    search_records.extend(
+        {
+            "title": f"Chapter {chapter.roman}: {chapter.title}",
+            "audience": "Design book",
+            "summary": f"Sections {chapter.section_range}",
+            "url": f"developers/design-book/{chapter.slug}.html",
+            "search": chapter_search_text(chapter),
+        }
+        for chapter in book.chapters
+    )
+    search_records.append(
+        {
+            "title": "Bridge protocol",
+            "audience": "Developers",
+            "summary": protocol_page.summary,
+            "url": protocol_page.url,
+            "search": _plain_markdown(protocol_source).lower()[:12_000],
+        }
+    )
+    search_records.extend(
+        {
+            "title": entry.title,
+            "audience": f"Protocol / {entry.group_title}",
+            "summary": entry.group_title,
+            "url": f"{protocol_page.url}#ref-{entry.id}",
+            "search": f"{entry.group_title} {entry.title} {_plain_markdown(entry.markdown)}".lower(),
+        }
+        for entry in protocol_reference.entries
+    )
+    search_records.append(
+        {
+            "title": "Design coverage",
+            "audience": "Maintainers",
+            "summary": "Implementation and release state for every design section.",
+            "url": "maintainers/coverage.html",
+            "search": "design coverage implementation status release blocking physical evidence",
+        }
+    )
+    search_records.extend(
+        {
+            "title": f"{entry.section}. {entry.title}",
+            "audience": "Design coverage",
+            "summary": entry.status.replace("-", " "),
+            "url": f"maintainers/coverage.html#coverage-section-{entry.section}",
+            "search": f"{entry.section} {entry.title} {entry.owner} {entry.status} {' '.join(entry.remaining)}".lower(),
+        }
+        for entry in coverage
+    )
     search_records.append(
         {
             "title": "Device Lab",
@@ -708,7 +856,12 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
     assets = output / "assets"
     assets.mkdir()
     (assets / "site.css").write_text(
-        SITE_CSS + DEVICE_LAB_CSS + ATLAS_CSS + REPOSITORY_STATE_CSS,
+        SITE_CSS
+        + DEVICE_LAB_CSS
+        + ATLAS_CSS
+        + REPOSITORY_STATE_CSS
+        + REFERENCE_CSS
+        + COVERAGE_CSS,
         encoding="utf-8",
     )
     (assets / "portal.js").write_text(PORTAL_JS, encoding="utf-8")
@@ -717,48 +870,38 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
     (assets / "repository-state.js").write_text(
         REPOSITORY_STATE_SCRIPT, encoding="utf-8"
     )
+    (assets / "reference.js").write_text(REFERENCE_SCRIPT, encoding="utf-8")
+    (assets / "coverage.js").write_text(COVERAGE_SCRIPT, encoding="utf-8")
     (assets / "system-map.svg").write_text(architecture_svg(), encoding="utf-8")
+    shutil.copyfile(root / "docs" / "assets" / "social-preview.png", assets / "social-preview.png")
     (assets / "search-index.json").write_text(
         json.dumps(search_records, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
 
     copied_references: set[str] = set()
     renderer = markdown.Markdown(extensions=["fenced_code", "sane_lists", "tables", "toc"])
-    for page in config.pages:
-        source = root / page.source
-        body = renderer.reset().convert(_compile_mermaid(source.read_text(encoding="utf-8")))
+
+    def render_markdown(value: str, *, source: Path, current_url: str) -> str:
+        body = renderer.reset().convert(_compile_mermaid(value))
         body = _rewrite_links(
             body,
             root=root,
             output=output,
             source=source,
-            current_url=page.url,
+            current_url=current_url,
             source_urls=source_urls,
             copied_references=copied_references,
         )
-        body = re.sub(r"<h1(?: [^>]*)?>.*?</h1>", "", body, count=1, flags=re.DOTALL)
-        audience = next(item for item in config.audiences if item.id == page.audience_id)
-        source_url = (
-            f"https://github.com/{governance.owner}/{governance.repository}/"
-            f"{'edit' if not page.source.startswith('docs/generated/') else 'blob'}/"
-            f"{governance.default_branch}/{page.source}"
-        )
-        if page.source.startswith("docs/generated/"):
-            source_note = (
-                f'<p class="source-note"><strong>Generated projection.</strong> '
-                f'<a href="{escape(source_url)}">View generated Markdown</a> or use the '
-                f'<a href="{escape(_relative_url(page.url, "atlas/index.html"))}">Repository Atlas</a> '
-                "to find its canonical authority.</p>"
-            )
-        else:
-            source_note = (
-                f'<p class="source-note"><strong>Canonical source.</strong> '
-                f'<a href="{escape(source_url)}">Edit this page on GitHub</a>.</p>'
-            )
-        content = (
-            f'<p class="breadcrumb">{escape(audience.title)} / {escape(page.title)}</p>'
-            f'<article class="document"><h1>{escape(page.title)}</h1>'
-            f'<p class="lede">{escape(page.summary)}</p>{source_note}{body}</article>'
+        return re.sub(r"<h1(?: [^>]*)?>.*?</h1>", "", body, count=1, flags=re.DOTALL)
+
+    for page in config.pages:
+        if page.id in special_pages:
+            continue
+        source = root / page.source
+        source_text = source.read_text(encoding="utf-8")
+        body = render_markdown(source_text, source=source, current_url=page.url)
+        content, outline = _document_content(
+            config, page, body=body, source_text=source_text
         )
         destination = output / page.url
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -769,13 +912,107 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
                 title=page.title,
                 description=page.summary,
                 content=content,
-                search_records=[
-                    {**record, "url": _relative_url(page.url, record["url"])}
-                    for record in search_records
-                ],
+                page_kind=page.kind,
+                outline=outline,
             ),
             encoding="utf-8",
         )
+
+    book_page = next(page for page in config.pages if page.id == "design-book")
+    book_destination = output / book_page.url
+    book_destination.parent.mkdir(parents=True, exist_ok=True)
+    book_destination.write_text(
+        _shell(
+            config,
+            current_url=book_page.url,
+            title=book_page.title,
+            description=book_page.summary,
+            content=render_book_index(book, coverage),
+            page_kind="book",
+        ),
+        encoding="utf-8",
+    )
+    book_source_path = root / book_page.source
+    for chapter_index, chapter in enumerate(book.chapters):
+        chapter_url = f"developers/design-book/{chapter.slug}.html"
+        body = render_markdown(
+            chapter_markdown(chapter), source=book_source_path, current_url=chapter_url
+        )
+        previous = book.chapters[chapter_index - 1] if chapter_index else None
+        following = (
+            book.chapters[chapter_index + 1]
+            if chapter_index + 1 < len(book.chapters)
+            else None
+        )
+        pager = []
+        if previous is not None:
+            pager.append(
+                f'<a rel="prev" href="{escape(previous.slug)}.html"><span>Previous chapter</span><strong>{escape(previous.title)}</strong></a>'
+            )
+        if following is not None:
+            pager.append(
+                f'<a rel="next" href="{escape(following.slug)}.html"><span>Next chapter</span><strong>{escape(following.title)}</strong></a>'
+            )
+        content = f"""<article class="document document--book">
+  <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../index.html">Home</a><a href="../design-book.html">Design book</a><span>Chapter {escape(chapter.roman)}</span></nav>
+  <header class="page-hero page-hero--book"><p class="page-kicker">Chapter {escape(chapter.roman)} | Sections {escape(chapter.section_range)}</p><h1>{escape(chapter.title)}</h1><p class="lede">Part of the canonical HyperFlux Next product and engineering specification.</p><div class="page-meta"><span>{len(chapter.sections)} sections</span><span>{_reading_minutes(chapter_search_text(chapter))} min read</span></div></header>
+  <div class="document-body">{body}</div><nav class="page-pager" aria-label="Adjacent chapters">{''.join(pager)}</nav>
+</article>"""
+        destination = output / chapter_url
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(
+            _shell(
+                config,
+                current_url=chapter_url,
+                title=f"Chapter {chapter.roman}: {chapter.title}",
+                description=f"Design book sections {chapter.section_range}.",
+                content=content,
+                page_kind="book",
+                outline=_outline(body),
+            ),
+            encoding="utf-8",
+        )
+
+    protocol_content = render_reference_browser(
+        protocol_reference,
+        title=protocol_page.title,
+        summary=protocol_page.summary,
+        render_markdown=lambda value: render_markdown(
+            value,
+            source=root / protocol_page.source,
+            current_url=protocol_page.url,
+        ),
+    )
+    protocol_destination = output / protocol_page.url
+    protocol_destination.parent.mkdir(parents=True, exist_ok=True)
+    protocol_destination.write_text(
+        _shell(
+            config,
+            current_url=protocol_page.url,
+            title=protocol_page.title,
+            description=protocol_page.summary,
+            content=protocol_content,
+            page_kind="reference",
+            extra_scripts=("assets/reference.js",),
+        ),
+        encoding="utf-8",
+    )
+
+    coverage_page = next(page for page in config.pages if page.id == "coverage")
+    coverage_destination = output / coverage_page.url
+    coverage_destination.parent.mkdir(parents=True, exist_ok=True)
+    coverage_destination.write_text(
+        _shell(
+            config,
+            current_url=coverage_page.url,
+            title=coverage_page.title,
+            description=coverage_page.summary,
+            content=render_coverage_browser(coverage, book),
+            page_kind="ledger",
+            extra_scripts=("assets/coverage.js",),
+        ),
+        encoding="utf-8",
+    )
 
     device_url = "devices/index.html"
     device_destination = output / device_url
@@ -787,10 +1024,7 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
             title="Device Lab",
             description="Search, compare, and inspect provenance-bound HyperFlux device knowledge.",
             content=device_lab.content,
-            search_records=[
-                {**record, "url": _relative_url(device_url, record["url"])}
-                for record in search_records
-            ],
+            page_kind="reference",
             extra_scripts=("assets/device-lab.js",),
         ),
         encoding="utf-8",
@@ -806,10 +1040,7 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
             title="Repository Atlas",
             description="Search repository ownership, dependencies, generated projections, and safe change impact.",
             content=atlas_page.content,
-            search_records=[
-                {**record, "url": _relative_url(atlas_url, record["url"])}
-                for record in search_records
-            ],
+            page_kind="reference",
             extra_scripts=("assets/atlas.js",),
         ),
         encoding="utf-8",
@@ -825,16 +1056,12 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
             title="Repository State",
             description="Generated release gates, migration decisions, verification budgets, and performance limits.",
             content=state_page.content,
-            search_records=[
-                {**record, "url": _relative_url(state_url, record["url"])}
-                for record in search_records
-            ],
+            page_kind="ledger",
             extra_scripts=("assets/repository-state.js",),
         ),
         encoding="utf-8",
     )
 
-    coverage = load_design_coverage(root)
     profiles = compiled_profile_catalog(root)
     integrations = compiled_integration_catalog(root)
     (output / "index.html").write_text(
@@ -843,8 +1070,8 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
             current_url="index.html",
             title="Documentation",
             description=config.description,
-            content=_home_content(config, coverage, profiles, integrations),
-            search_records=search_records,
+            content=_home_content(config, coverage, profiles, integrations, knowledge),
+            page_kind="home",
         ),
         encoding="utf-8",
     )
@@ -855,6 +1082,7 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
         "assurance/release-gates.json",
         "architecture/repository-atlas.json",
         "docs/portal.json",
+        "schemas/documentation-portal.schema.json",
         "generated/integrations/catalog.json",
         "generated/knowledge/catalog.json",
         "generated/profiles/catalog.json",
@@ -869,6 +1097,9 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
         "migration/ledger.json",
         "verification/tests.json",
         "tools/hfxdev/portal_state.py",
+        "tools/hfxdev/portal_book.py",
+        "tools/hfxdev/portal_reference.py",
+        "tools/hfxdev/portal_coverage.py",
         *(page.source for page in config.pages),
     }
     materials = [
@@ -885,14 +1116,19 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
         "external_runtime_dependencies": False,
         "source_tree_sha256": source_digest,
         "materials": materials,
-        "pages": len(config.pages) + 4,
+        "pages": len(config.pages) + 4 + len(book.chapters),
         "files": files,
     }
     manifest = output / "portal-build-manifest.json"
     manifest.write_text(
         json.dumps(manifest_value, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    return PortalBuild(output=output, manifest=manifest, pages=len(config.pages) + 4, files=len(files))
+    return PortalBuild(
+        output=output,
+        manifest=manifest,
+        pages=len(config.pages) + 4 + len(book.chapters),
+        files=len(files),
+    )
 
 
 class _PortalHtmlInspector(HTMLParser):
@@ -957,6 +1193,54 @@ def verify_portal(root: Path, site: Path) -> dict[str, Any]:
     expected_files = _file_inventory(site)
     if value["files"] != expected_files:
         raise ModelError("portal file inventory differs from its manifest")
+    total_size = sum(file["size"] for file in expected_files)
+    if total_size > MAX_PORTAL_BYTES:
+        raise ModelError(
+            f"portal exceeds its {MAX_PORTAL_BYTES}-byte uncompressed size budget"
+        )
+    for file in expected_files:
+        path = file["path"]
+        size = file["size"]
+        if path.endswith(".html") and size > MAX_HTML_BYTES:
+            raise ModelError(f"portal HTML exceeds its size budget: {path}")
+        if path.endswith(".js") and size > MAX_JAVASCRIPT_BYTES:
+            raise ModelError(f"portal JavaScript exceeds its size budget: {path}")
+        if path == "assets/site.css" and size > MAX_STYLESHEET_BYTES:
+            raise ModelError("portal stylesheet exceeds its size budget")
+        if path == "assets/search-index.json" and size > MAX_SEARCH_INDEX_BYTES:
+            raise ModelError("portal search index exceeds its size budget")
+
+    search_path = site / "assets" / "search-index.json"
+    try:
+        search_records = json.loads(search_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise ModelError("portal search index is not valid UTF-8 JSON") from error
+    if not isinstance(search_records, list) or not search_records:
+        raise ModelError("portal search index must contain records")
+    search_keys = {"title", "audience", "summary", "url", "search"}
+    for index, record in enumerate(search_records):
+        if not isinstance(record, dict) or set(record) != search_keys:
+            raise ModelError(f"portal search record {index} is malformed")
+        if any(not isinstance(record[key], str) or not record[key] for key in search_keys):
+            raise ModelError(f"portal search record {index} contains empty text")
+        raw_url = record["url"]
+        parsed = urlsplit(raw_url)
+        if (
+            parsed.scheme
+            or raw_url.startswith("//")
+            or parsed.path.startswith("/")
+            or parsed.query
+        ):
+            raise ModelError(f"portal search record {index} has an unsafe URL")
+        target = (site / unquote(parsed.path)).resolve()
+        try:
+            target.relative_to(site)
+        except ValueError as error:
+            raise ModelError(
+                f"portal search record {index} escapes the site"
+            ) from error
+        if not target.is_file():
+            raise ModelError(f"portal search record {index} has a missing target")
     for material in value["materials"]:
         if set(material) != {"path", "sha256"}:
             raise ModelError("portal material entry is malformed")
@@ -1017,8 +1301,14 @@ def verify_portal(root: Path, site: Path) -> dict[str, Any]:
     javascript = (site / "assets" / "portal.js").read_text(encoding="utf-8")
     if "gradient" in css.lower() or re.search(r"letter-spacing\s*:\s*-", css):
         raise ModelError("portal styling violates the visual-system contract")
-    if any(token in javascript for token in ("fetch(", "XMLHttpRequest", "WebSocket")):
-        raise ModelError("portal JavaScript may not depend on network access")
+    external_runtime_javascript = javascript.replace(
+        "fetch(document.body.dataset.searchIndex", "loadLocalSearchIndex("
+    )
+    if any(
+        token in external_runtime_javascript
+        for token in ("fetch(", "XMLHttpRequest", "WebSocket")
+    ):
+        raise ModelError("portal JavaScript may not depend on external network access")
     if value["pages"] != len(html_inspectors):
         raise ModelError("portal page count differs from rendered HTML")
     return value
