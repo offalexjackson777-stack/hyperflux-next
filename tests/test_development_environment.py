@@ -37,7 +37,11 @@ class DevelopmentEnvironmentTests(unittest.TestCase):
         environment = load_development_environment(ROOT)
         self.assertEqual(environment.platform, "linux/amd64")
         self.assertRegex(environment.image_digest, r"^sha256:[0-9a-f]{64}$")
-        self.assertIn("/2026/07/20/", environment.archive_mirror)
+        archive_path = environment.archive_date.replace("-", "/")
+        self.assertEqual(
+            environment.archive_mirror,
+            f"https://archive.archlinux.org/repos/{archive_path}/$repo/os/$arch",
+        )
         self.assertEqual(environment.rust_toolchain, "1.95.0-x86_64-unknown-linux-gnu")
         self.assertEqual(
             [package.name for package in environment.packages],

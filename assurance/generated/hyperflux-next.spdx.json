@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "HyperFlux Next source dependency inventory",
-  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/faaa98e25ef85b7d90905bad78e8bf03f10a9969ef078e1fc05a089ec2a283c8",
+  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/79f5390a6e0880cda4688b1f8234a7f461f2db05970c5713714306a88e8abfb4",
   "creationInfo": {
     "created": "2026-07-20T00:00:00Z",
     "creators": [
@@ -1143,9 +1143,9 @@
       "comment": "Optional distribution-provided runtime dependency."
     },
     {
-      "SPDXID": "SPDXRef-PythonExternal-setuptools--82.0.1",
+      "SPDXID": "SPDXRef-PythonExternal-setuptools--83.0.0",
       "name": "setuptools",
-      "versionInfo": "==82.0.1",
+      "versionInfo": "==83.0.0",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
@@ -2041,7 +2041,7 @@
       "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
     },
     {
-      "spdxElementId": "SPDXRef-PythonExternal-setuptools--82.0.1",
+      "spdxElementId": "SPDXRef-PythonExternal-setuptools--83.0.0",
       "relationshipType": "BUILD_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
     },

@@ -6,9 +6,9 @@
   "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
   "python": "3.14",
   "pip": "26.1.2",
-  "setuptools": "82.0.1",
+  "setuptools": "83.0.0",
   "wheel": "0.47.0",
-  "clang": "clang version 22.1.6",
-  "cmake": "cmake version 4.3.4",
+  "clang": "clang version 22.1.8",
+  "cmake": "cmake version 4.4.0",
   "ninja": "1.13.2"
 }
