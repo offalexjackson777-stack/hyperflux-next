@@ -42,6 +42,8 @@ class DevelopmentEnvironmentTests(unittest.TestCase):
             environment.archive_mirror,
             f"https://archive.archlinux.org/repos/{archive_path}/$repo/os/$arch",
         )
+        self.assertEqual(environment.archive_download_attempts, 3)
+        self.assertTrue(environment.archive_disable_low_speed_timeout)
         self.assertEqual(environment.rust_toolchain, "1.95.0-x86_64-unknown-linux-gnu")
         self.assertEqual(
             [package.name for package in environment.packages],
@@ -54,6 +56,9 @@ class DevelopmentEnvironmentTests(unittest.TestCase):
         self.assertIn(f"FROM --platform=linux/amd64 {environment.image}", rendered)
         self.assertIn("CARGO_NET_OFFLINE=true", rendered)
         self.assertIn("PIP_NO_INDEX=1", rendered)
+        self.assertIn("DisableDownloadTimeout", rendered)
+        self.assertIn("until pacman -Syu", rendered)
+        self.assertIn("test \"$attempt\" -lt 3", rendered)
         self.assertNotIn("--privileged", rendered)
         self.assertNotIn("/dev/hidraw", rendered)
         self.assertNotIn("latest", rendered)
@@ -88,6 +93,34 @@ class DevelopmentEnvironmentTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ModelError, "clang pin differs"):
                 load_development_environment(root)
+
+    def test_environment_rejects_invalid_archive_transfer_policy(self) -> None:
+        cases = (
+            ("download_attempts", 0, "attempts must be between one and five"),
+            ("download_attempts", True, "attempts must be between one and five"),
+            ("disable_low_speed_timeout", "yes", "timeout policy must be boolean"),
+        )
+        for field, value, message in cases:
+            with self.subTest(field=field, value=value), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                (root / "toolchains").mkdir()
+                pins = json.loads(
+                    (ROOT / "toolchains" / "pins.json").read_text(encoding="utf-8")
+                )
+                environment = json.loads(
+                    (ROOT / "toolchains" / "development-environment.json").read_text(
+                        encoding="utf-8"
+                    )
+                )
+                environment["archive"][field] = value
+                (root / "toolchains" / "pins.json").write_text(
+                    json.dumps(pins), encoding="utf-8"
+                )
+                (root / "toolchains" / "development-environment.json").write_text(
+                    json.dumps(environment), encoding="utf-8"
+                )
+                with self.assertRaisesRegex(ModelError, message):
+                    load_development_environment(root)
 
 
 class UpstreamPreparationTests(unittest.TestCase):

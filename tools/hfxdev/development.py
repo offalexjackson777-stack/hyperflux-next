@@ -76,6 +76,8 @@ class DevelopmentEnvironment:
     image_digest: str
     archive_date: str
     archive_mirror: str
+    archive_download_attempts: int
+    archive_disable_low_speed_timeout: bool
     packages: tuple[SystemPackage, ...]
     rust_toolchain: str
     rust_profile: str
@@ -149,7 +151,11 @@ def load_development_environment(root: Path) -> DevelopmentEnvironment:
     archive = value["archive"]
     if not isinstance(archive, dict):
         raise ModelError("development archive must be an object")
-    _exact_keys(archive, {"date", "mirror"}, "development archive")
+    _exact_keys(
+        archive,
+        {"date", "mirror", "download_attempts", "disable_low_speed_timeout"},
+        "development archive",
+    )
     try:
         parsed_date = date.fromisoformat(_nonempty(archive["date"], "archive date"))
     except ValueError as error:
@@ -159,6 +165,12 @@ def load_development_environment(root: Path) -> DevelopmentEnvironment:
     )
     if archive["mirror"] != expected_mirror:
         raise ModelError("development archive mirror does not match its snapshot date")
+    attempts = archive["download_attempts"]
+    if isinstance(attempts, bool) or not isinstance(attempts, int) or not 1 <= attempts <= 5:
+        raise ModelError("development archive download attempts must be between one and five")
+    disable_low_speed_timeout = archive["disable_low_speed_timeout"]
+    if not isinstance(disable_low_speed_timeout, bool):
+        raise ModelError("development archive low-speed timeout policy must be boolean")
 
     raw_packages = value["system_packages"]
     if not isinstance(raw_packages, list) or not raw_packages:
@@ -242,6 +254,8 @@ def load_development_environment(root: Path) -> DevelopmentEnvironment:
         image_digest=image["digest"],
         archive_date=archive["date"],
         archive_mirror=archive["mirror"],
+        archive_download_attempts=attempts,
+        archive_disable_low_speed_timeout=disable_low_speed_timeout,
         packages=tuple(packages),
         rust_toolchain=rust["toolchain"],
         rust_profile=rust["profile"],

@@ -11,7 +11,9 @@ ENV RUSTUP_HOME=/opt/rustup \
     CARGO_NET_OFFLINE=true
 
 RUN printf '%s\n' "Server = ${HFX_ARCHIVE_MIRROR}" > /etc/pacman.d/mirrorlist \
-    && pacman -Syu --noconfirm --needed \
+    && printf '%s\n' 'DisableDownloadTimeout' >> /etc/pacman.conf \
+    && attempt=1 \
+    && until pacman -Syu --noconfirm --needed \
     bash=5.3.15-1 \
     binutils=2.46.1+r3+g046eeeef4721-1 \
     ca-certificates=20240618-1 \
@@ -45,6 +47,11 @@ RUN printf '%s\n' "Server = ${HFX_ARCHIVE_MIRROR}" > /etc/pacman.d/mirrorlist \
     rustup=1.29.0-2 \
     sudo=1.9.17.p2-6 \
     zstd=1.5.7-3 \
+    ; do \
+        test "$attempt" -lt 3 || exit 1; \
+        attempt=$((attempt + 1)); \
+        sleep 5; \
+    done \
     && pacman -Scc --noconfirm
 
 RUN install -d -m 0755 /opt/rustup /opt/cargo \

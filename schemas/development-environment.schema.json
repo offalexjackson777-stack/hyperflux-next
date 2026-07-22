@@ -32,13 +32,15 @@
     "archive": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["date", "mirror"],
+      "required": ["date", "mirror", "download_attempts", "disable_low_speed_timeout"],
       "properties": {
         "date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
         "mirror": {
           "type": "string",
           "pattern": "^https://archive\\.archlinux\\.org/repos/[0-9]{4}/[0-9]{2}/[0-9]{2}/\\$repo/os/\\$arch$"
-        }
+        },
+        "download_attempts": {"type": "integer", "minimum": 1, "maximum": 5},
+        "disable_low_speed_timeout": {"type": "boolean"}
       }
     },
     "system_packages": {
