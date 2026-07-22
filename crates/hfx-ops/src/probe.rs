@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_domain::{ClientId, ClientName, ProtocolFeatureId, ProtocolVersion};
+use hfx_profiles::receiver_profile_by_usb_id;
 use hfx_protocol::{BridgeSnapshot, CURRENT_PROTOCOL_VERSION, DiagnosticSnapshot, IntegrationView};
 use hfx_runtime::{
     BRIDGE_SERVICE_UNIT, BRIDGE_SOCKET_PATH, KERNEL_MODULE_NAME, PRODUCT_VERSION, STATUS_TIMEOUT_MS,
@@ -17,6 +18,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 const MAX_COMMAND_OUTPUT_BYTES: usize = 4_096;
+const MAX_USB_DEVICE_ENTRIES: usize = 256;
+const USB_DEVICES_ROOT: &str = "/sys/bus/usb/devices";
 const LEGACY_V2_BRIDGE_SERVICE_UNIT: &str = "hyperflux-bridge.service";
 const LEGACY_V2_KERNEL_MODULE_NAME: &str = "hid-razer-hyperflux-v2";
 
@@ -158,6 +161,7 @@ pub struct SystemSnapshot {
     pub service_state: ServiceState,
     pub bridge: Option<BridgeHealth>,
     pub legacy_v2_stack_detected: bool,
+    pub supported_receiver_present: bool,
 }
 
 pub trait SystemProbe {
@@ -191,6 +195,7 @@ pub trait SystemController {
 pub struct RealSystemProbe<R = RealCommandRunner> {
     runner: R,
     sys_module_root: PathBuf,
+    usb_devices_root: PathBuf,
     socket_path: PathBuf,
     timeout: Duration,
 }
@@ -200,6 +205,7 @@ impl Default for RealSystemProbe<RealCommandRunner> {
         Self {
             runner: RealCommandRunner,
             sys_module_root: PathBuf::from("/sys/module"),
+            usb_devices_root: PathBuf::from(USB_DEVICES_ROOT),
             socket_path: PathBuf::from(BRIDGE_SOCKET_PATH),
             timeout: Duration::from_millis(STATUS_TIMEOUT_MS),
         }
@@ -214,9 +220,26 @@ impl<R: CommandRunner> RealSystemProbe<R> {
         socket_path: PathBuf,
         timeout: Duration,
     ) -> Self {
+        Self::with_all_paths(
+            runner,
+            sys_module_root,
+            PathBuf::from(USB_DEVICES_ROOT),
+            socket_path,
+            timeout,
+        )
+    }
+
+    fn with_all_paths(
+        runner: R,
+        sys_module_root: PathBuf,
+        usb_devices_root: PathBuf,
+        socket_path: PathBuf,
+        timeout: Duration,
+    ) -> Self {
         Self {
             runner,
             sys_module_root,
+            usb_devices_root,
             socket_path,
             timeout,
         }
@@ -286,6 +309,25 @@ impl<R: CommandRunner> RealSystemProbe<R> {
             return false;
         };
         output.success && output.stdout == "loaded"
+    }
+
+    fn supported_receiver_present(&self) -> bool {
+        let Ok(entries) = fs::read_dir(&self.usb_devices_root) else {
+            return false;
+        };
+        entries
+            .filter_map(Result::ok)
+            .take(MAX_USB_DEVICE_ENTRIES)
+            .any(|entry| {
+                let path = entry.path();
+                let Some(vendor_id) = read_usb_hex_id(&path.join("idVendor")) else {
+                    return false;
+                };
+                let Some(product_id) = read_usb_hex_id(&path.join("idProduct")) else {
+                    return false;
+                };
+                receiver_profile_by_usb_id(vendor_id, product_id).is_some()
+            })
     }
 
     pub(crate) fn bridge_client(
@@ -369,6 +411,7 @@ impl<R: CommandRunner> SystemProbe for RealSystemProbe<R> {
             service_state,
             bridge,
             legacy_v2_stack_detected: self.legacy_v2_stack_detected(),
+            supported_receiver_present: self.supported_receiver_present(),
         }
     }
 }
@@ -423,6 +466,15 @@ fn bounded_identity(value: &str) -> Option<String> {
     }
 }
 
+fn read_usb_hex_id(path: &Path) -> Option<u16> {
+    let value = fs::read_to_string(path).ok()?;
+    let value = value.trim();
+    if value.len() != 4 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return None;
+    }
+    u16::from_str_radix(value, 16).ok()
+}
+
 pub(crate) fn write_private_file(path: &Path, value: &[u8]) -> io::Result<()> {
     use std::fs::OpenOptions;
     use std::io::Write as _;
@@ -440,6 +492,7 @@ mod tests {
     use super::*;
     use std::collections::VecDeque;
     use std::sync::Mutex;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[derive(Debug)]
     struct FakeRunner {
@@ -517,5 +570,51 @@ mod tests {
             Duration::from_millis(10),
         );
         assert!(!probe.legacy_v2_stack_detected());
+    }
+
+    #[test]
+    fn qualified_receiver_is_discovered_from_generated_usb_profiles() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let usb_root = std::env::temp_dir().join(format!("hfx-usb-{unique}"));
+        let receiver = usb_root.join("3-4");
+        fs::create_dir_all(&receiver).expect("create receiver fixture");
+        fs::write(receiver.join("idVendor"), "1532\n").expect("write vendor");
+        fs::write(receiver.join("idProduct"), "00cf\n").expect("write product");
+        let probe = RealSystemProbe::with_all_paths(
+            FakeRunner::new(Vec::new()),
+            PathBuf::from("/missing"),
+            usb_root.clone(),
+            PathBuf::from("/missing.sock"),
+            Duration::from_millis(10),
+        );
+
+        assert!(probe.supported_receiver_present());
+        fs::remove_dir_all(usb_root).expect("remove receiver fixture");
+    }
+
+    #[test]
+    fn unknown_usb_device_is_not_treated_as_a_supported_receiver() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let usb_root = std::env::temp_dir().join(format!("hfx-usb-{unique}"));
+        let device = usb_root.join("1-1");
+        fs::create_dir_all(&device).expect("create USB fixture");
+        fs::write(device.join("idVendor"), "ffff\n").expect("write vendor");
+        fs::write(device.join("idProduct"), "ffff\n").expect("write product");
+        let probe = RealSystemProbe::with_all_paths(
+            FakeRunner::new(Vec::new()),
+            PathBuf::from("/missing"),
+            usb_root.clone(),
+            PathBuf::from("/missing.sock"),
+            Duration::from_millis(10),
+        );
+
+        assert!(!probe.supported_receiver_present());
+        fs::remove_dir_all(usb_root).expect("remove USB fixture");
     }
 }

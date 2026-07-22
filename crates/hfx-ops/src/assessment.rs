@@ -98,23 +98,31 @@ fn bridge_findings(snapshot: &SystemSnapshot) -> Vec<AssessmentFinding> {
         .collect()
 }
 
-#[must_use]
-pub fn assess_system(snapshot: &SystemSnapshot) -> Assessment {
-    let mut working = vec!["package metadata is available".to_owned()];
-    let installed = snapshot.installed_module_identity.as_deref();
-    let loaded = snapshot.loaded_module_identity.as_deref();
-    let driver = match (installed, loaded) {
+fn classify_driver(snapshot: &SystemSnapshot, working: &mut Vec<String>) -> DriverState {
+    match (
+        snapshot.installed_module_identity.as_deref(),
+        snapshot.loaded_module_identity.as_deref(),
+    ) {
         (Some(installed), Some(loaded)) if installed == loaded => {
             working.push("the installed driver is active".to_owned());
             DriverState::Active
         }
         (Some(_), Some(_)) => DriverState::ActivationPending,
+        (Some(_), None) if snapshot.supported_receiver_present => DriverState::ActivationPending,
         (Some(_), None) => {
             working.push("the driver is installed and no receiver is currently bound".to_owned());
             DriverState::InstalledIdle
         }
         (None, _) => DriverState::Unavailable,
-    };
+    }
+}
+
+#[must_use]
+pub fn assess_system(snapshot: &SystemSnapshot) -> Assessment {
+    let mut working = vec!["package metadata is available".to_owned()];
+    let installed = snapshot.installed_module_identity.as_deref();
+    let loaded = snapshot.loaded_module_identity.as_deref();
+    let driver = classify_driver(snapshot, &mut working);
 
     let mut findings = Vec::new();
     if matches!(
@@ -130,7 +138,13 @@ pub fn assess_system(snapshot: &SystemSnapshot) -> Assessment {
                 ),
                 (
                     "loaded_abi".to_owned(),
-                    loaded.unwrap_or("not-loaded").to_owned(),
+                    loaded
+                        .unwrap_or(if snapshot.supported_receiver_present {
+                            "receiver-unbound"
+                        } else {
+                            "not-loaded"
+                        })
+                        .to_owned(),
                 ),
             ]),
         ));
@@ -300,6 +314,7 @@ mod tests {
             service_state: ServiceState::Active,
             bridge: Some(empty_bridge()),
             legacy_v2_stack_detected: false,
+            supported_receiver_present: false,
         }
     }
 
@@ -321,6 +336,25 @@ mod tests {
         assert_eq!(assessment.driver, DriverState::ActivationPending);
         assert_eq!(assessment.findings.len(), 1);
         assert_eq!(assessment.findings[0].code, "HFX-KERNEL-001");
+    }
+
+    #[test]
+    fn attached_supported_receiver_requires_driver_activation_before_service_start() {
+        let mut value = snapshot();
+        value.loaded_module_identity = None;
+        value.supported_receiver_present = true;
+        value.service_state = ServiceState::Inactive;
+        value.bridge = None;
+
+        let assessment = assess_system(&value);
+
+        assert_eq!(assessment.driver, DriverState::ActivationPending);
+        assert_eq!(assessment.findings.len(), 1);
+        assert_eq!(assessment.findings[0].code, "HFX-KERNEL-001");
+        assert_eq!(
+            assessment.findings[0].details["loaded_abi"],
+            "receiver-unbound"
+        );
     }
 
     #[test]
