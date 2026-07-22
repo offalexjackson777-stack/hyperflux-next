@@ -25,7 +25,7 @@
 | [Architecture](https://offalexjackson777-stack.github.io/hyperflux-next/developers/architecture.html) | System boundaries and the one-writer transport model |
 | [Contributing](CONTRIBUTING.md) | Schema-first changes, evidence expectations, and verification |
 | [Security](SECURITY.md) | Private vulnerability reporting and disclosure policy |
-| [Roadmap](https://github.com/offalexjackson777-stack/hyperflux-next/projects) | Typed issues and qualification work organized in the GitHub Project |
+| [Roadmap](https://github.com/users/offalexjackson777-stack/projects/1) | Typed issues and qualification work organized in the GitHub Project |
 
 ## Architecture
 
@@ -66,7 +66,7 @@ State](https://offalexjackson777-stack.github.io/hyperflux-next/state/) for the 
 | A developer | [Architecture](https://offalexjackson777-stack.github.io/hyperflux-next/developers/architecture.html), then the [Repository Atlas](https://offalexjackson777-stack.github.io/hyperflux-next/atlas/) |
 | A prospective contributor | [CONTRIBUTING.md](CONTRIBUTING.md) and the [issue forms](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new/choose) |
 | A hardware tester | [Device Lab](https://offalexjackson777-stack.github.io/hyperflux-next/devices/) and the [device qualification form](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=device_qualification.yml) |
-| A maintainer | [Repository State](https://offalexjackson777-stack.github.io/hyperflux-next/state/), [governance](https://offalexjackson777-stack.github.io/hyperflux-next/maintainers/github-governance.html), and the [roadmap](https://github.com/offalexjackson777-stack/hyperflux-next/projects) |
+| A maintainer | [Repository State](https://offalexjackson777-stack.github.io/hyperflux-next/state/), [governance](https://offalexjackson777-stack.github.io/hyperflux-next/maintainers/github-governance.html), and the [roadmap](https://github.com/users/offalexjackson777-stack/projects/1) |
 | A security reporter | [SECURITY.md](SECURITY.md) and [private vulnerability reporting](https://github.com/offalexjackson777-stack/hyperflux-next/security/advisories/new) |
 
 ## Verify A Change

@@ -265,6 +265,11 @@ class GitHubGovernanceTests(unittest.TestCase):
             {view["layout"] for view in plan["project"]["views"]},
             {"table", "board", "roadmap"},
         )
+        self.assertEqual(plan["project"]["number"], 1)
+        self.assertEqual(
+            plan["project"]["url"],
+            "https://github.com/users/offalexjackson777-stack/projects/1",
+        )
         self.assertTrue(
             {"area", "evidence-level", "release-gate", "priority", "qualification-state"}
             <= {field["id"] for field in plan["project"]["fields"]}

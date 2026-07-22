@@ -216,7 +216,13 @@ def _desired_plan(governance: GitHubGovernance, components: tuple[str, ...]) -> 
                 {"component": "repository", "operation": "replace-topics", "count": len(governance.topics)},
                 {"component": "repository", "operation": "upload-social-preview-via-reviewed-ui", "asset": governance.social_preview_asset},
                 {"component": "repository", "operation": "reconcile-discussion-categories-via-reviewed-ui", "count": len(governance.discussions)},
-                {"component": "repository", "operation": "reconcile-roadmap-via-reviewed-ui", "title": governance.project_title},
+                {
+                    "component": "repository",
+                    "operation": "reconcile-roadmap-via-reviewed-ui",
+                    "number": governance.project_number,
+                    "title": governance.project_title,
+                    "url": governance.project_url,
+                },
             ]
         )
     if "labels" in components:

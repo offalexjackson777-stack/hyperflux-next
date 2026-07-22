@@ -999,7 +999,9 @@ def experience_plan(governance: GitHubGovernance) -> str:
         },
         "project": {
             "apply_authorized": True,
+            "number": governance.project_number,
             "title": governance.project_title,
+            "url": governance.project_url,
             "views": [
                 {
                     "id": view.id,
@@ -1148,7 +1150,7 @@ def markdown(governance: GitHubGovernance) -> str:
             "",
             "## Project Plan",
             "",
-            f"Planned project: **{governance.project_title}**",
+            f"Planned project: [**{governance.project_title}**]({governance.project_url})",
             "",
             "| View | Layout | Grouping | Date field |",
             "| --- | --- | --- | --- |",

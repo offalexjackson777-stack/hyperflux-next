@@ -175,6 +175,7 @@ class GitHubGovernance:
     tag_creation_authorized: bool
     hardware_ci_authorized: bool
     discussions: tuple[DiscussionCategory, ...]
+    project_number: int
     project_title: str
     project_views: tuple[ProjectView, ...]
     project_fields: tuple[ProjectField, ...]
@@ -191,6 +192,10 @@ class GitHubGovernance:
     full_verification_cron: str
     job_summary_sections: tuple[str, ...]
     actions: tuple[ActionPin, ...]
+
+    @property
+    def project_url(self) -> str:
+        return f"https://github.com/users/{self.owner}/projects/{self.project_number}"
 
     @property
     def actions_by_id(self) -> dict[str, ActionPin]:
@@ -368,11 +373,18 @@ def load_github_governance(root: Path) -> GitHubGovernance:
 
     project = _exact(
         collaboration["project"],
-        {"apply_authorized", "title", "views", "fields"},
+        {"apply_authorized", "number", "title", "views", "fields"},
         "GitHub Project plan",
     )
     if project["apply_authorized"] is not True:
         raise ModelError("GitHub Project application must remain authorized")
+    project_number = project["number"]
+    if (
+        isinstance(project_number, bool)
+        or not isinstance(project_number, int)
+        or project_number < 1
+    ):
+        raise ModelError("GitHub Project number must be a positive integer")
     project_title = _text(project["title"], "GitHub Project title")
     raw_fields = project["fields"]
     if not isinstance(raw_fields, list):
@@ -685,6 +697,7 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         tag_creation_authorized=interlock["tag_creation_authorized"],
         hardware_ci_authorized=interlock["hardware_ci_authorized"],
         discussions=tuple(discussions),
+        project_number=project_number,
         project_title=project_title,
         project_views=tuple(project_views),
         project_fields=tuple(project_fields),
