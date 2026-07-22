@@ -69,7 +69,6 @@ MERMAID_BLOCK = re.compile(r"```mermaid\s*\n(?P<source>.*?)\n```", re.DOTALL)
 MERMAID_NODE = re.compile(
     r'^(?P<id>[A-Za-z][A-Za-z0-9_]*)\s*(?:\["(?P<label>[^"]+)"\])?$'
 )
-MERMAID_EDGE = re.compile(r'\s*-->(?:\|"([^"]+)"\|)?\s*')
 MERMAID_PARTICIPANT = re.compile(
     r"^participant\s+(?P<id>[A-Za-z][A-Za-z0-9_]*)\s+as\s+(?P<label>.+)$"
 )
@@ -289,6 +288,59 @@ def _linear_path(
     return path if len(path) == len(labels) else None
 
 
+def _unquoted_arrow(value: str, start: int) -> int | None:
+    quoted = False
+    index = start
+    while index < len(value):
+        if value[index] == '"':
+            quoted = not quoted
+            index += 1
+            continue
+        if not quoted and value.startswith("-->", index):
+            return index
+        index += 1
+    return None
+
+
+def _flowchart_edge_chain(value: str) -> tuple[list[str], list[str | None]] | None:
+    arrow = _unquoted_arrow(value, 0)
+    if arrow is None:
+        return None
+
+    nodes: list[str] = []
+    labels: list[str | None] = []
+    cursor = 0
+    while arrow is not None:
+        node = value[cursor:arrow].strip()
+        if not node:
+            raise ModelError(f"unsupported Mermaid flowchart edge: {value}")
+        nodes.append(node)
+
+        cursor = arrow + 3
+        while cursor < len(value) and value[cursor].isspace():
+            cursor += 1
+
+        label: str | None = None
+        if cursor < len(value) and value[cursor] == "|":
+            if not value.startswith('|"', cursor):
+                raise ModelError(f"unsupported Mermaid flowchart edge: {value}")
+            closing = value.find('"|', cursor + 2)
+            if closing == -1 or closing == cursor + 2:
+                raise ModelError(f"unsupported Mermaid flowchart edge: {value}")
+            label = value[cursor + 2 : closing]
+            cursor = closing + 2
+            while cursor < len(value) and value[cursor].isspace():
+                cursor += 1
+        labels.append(label)
+        arrow = _unquoted_arrow(value, cursor)
+
+    target = value[cursor:].strip()
+    if not target:
+        raise ModelError(f"unsupported Mermaid flowchart edge: {value}")
+    nodes.append(target)
+    return nodes, labels
+
+
 def _render_flowchart(lines: list[str]) -> str:
     header = lines[0].split()
     if len(header) != 2 or header[1] not in {"LR", "TB"}:
@@ -296,14 +348,12 @@ def _render_flowchart(lines: list[str]) -> str:
     labels: dict[str, str] = {}
     edges: list[tuple[str, str, str | None]] = []
     for line in lines[1:]:
-        if "-->" not in line:
+        chain = _flowchart_edge_chain(line)
+        if chain is None:
             _mermaid_node(line, labels)
             continue
-        parts = MERMAID_EDGE.split(line)
-        if len(parts) < 3 or len(parts) % 2 == 0:
-            raise ModelError(f"unsupported Mermaid flowchart edge: {line}")
-        identifiers = [_mermaid_node(parts[index], labels) for index in range(0, len(parts), 2)]
-        edge_labels = [parts[index] or None for index in range(1, len(parts), 2)]
+        node_tokens, edge_labels = chain
+        identifiers = [_mermaid_node(token, labels) for token in node_tokens]
         edges.extend(
             (identifiers[index], identifiers[index + 1], edge_labels[index])
             for index in range(len(edge_labels))
