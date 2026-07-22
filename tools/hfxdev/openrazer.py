@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 from copy import deepcopy
+from dataclasses import dataclass
 import hashlib
 import json
 from pathlib import Path
@@ -42,7 +43,11 @@ PROFILE_ID_PATTERN = re.compile(r"child\.[a-z0-9.-]+\Z")
 CLASS_NAME_PATTERN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
 METHOD_PATTERN = re.compile(r"[a-z][a-z0-9_]{0,127}\Z")
 HEX_SHA256_PATTERN = re.compile(r"[0-9a-f]{64}\Z")
-INHERITED_FIELDS = {
+OPENRAZER_SOURCE_FILES = (
+    ("keyboard", Path("daemon/openrazer_daemon/hardware/keyboards.py")),
+    ("mouse", Path("daemon/openrazer_daemon/hardware/mouse.py")),
+)
+SELECTED_FIELDS = {
     "DEVICE_IMAGE",
     "HAS_MATRIX",
     "MATRIX_DIMS",
@@ -50,6 +55,14 @@ INHERITED_FIELDS = {
     "USB_PID",
     "USB_VID",
 }
+CATALOG_FIELDS = SELECTED_FIELDS | {
+    "DEDICATED_MACRO_KEYS",
+    "DPI_MAX",
+    "POLL_RATES",
+    "WAVE_DIRS",
+}
+MAX_OPENRAZER_SOURCE_BYTES = 8 * 1024 * 1024
+MAX_OPENRAZER_CLASSES = 2_048
 
 
 def _canonical_bytes(value: Any) -> bytes:
@@ -120,18 +133,72 @@ def load_import_selection(root: Path) -> dict[str, Any]:
     return selection
 
 
+@dataclass(frozen=True)
+class _ParsedClass:
+    name: str
+    bases: tuple[str, ...]
+    assignments: dict[str, ast.expr]
+    docstring: str
+    line: int
+    source_file: str
+    device_kind: str
+
+
 class _ClassCatalog:
-    def __init__(self, source_path: Path) -> None:
-        self.source_path = source_path
-        try:
-            source = source_path.read_text(encoding="utf-8")
-            module = ast.parse(source, filename=str(source_path))
-        except (OSError, SyntaxError, UnicodeDecodeError) as error:
-            raise ModelError(f"cannot parse pinned OpenRazer source {source_path}: {error}") from error
-        self.classes = {
-            node.name: node for node in module.body if isinstance(node, ast.ClassDef)
-        }
+    def __init__(self, source_root: Path) -> None:
+        requested = source_root.resolve()
+        if requested.is_file():
+            self.source_root = requested.parent
+            source_files = (("unknown", Path(requested.name)),)
+        else:
+            self.source_root = requested
+            source_files = OPENRAZER_SOURCE_FILES
+        self.classes: dict[str, _ParsedClass] = {}
+        self.source_files: list[dict[str, str]] = []
         self._linearizations: dict[str, tuple[str, ...]] = {}
+        self._field_cache: dict[tuple[str, str], Any] = {}
+        self._active_fields: set[tuple[str, str]] = set()
+        for device_kind, relative in source_files:
+            source_path = self.source_root / relative
+            if source_path.is_symlink() or not source_path.is_file():
+                raise ModelError(f"OpenRazer source is missing or symbolic: {relative.as_posix()}")
+            if source_path.stat().st_size > MAX_OPENRAZER_SOURCE_BYTES:
+                raise ModelError(f"OpenRazer source exceeds its size bound: {relative.as_posix()}")
+            try:
+                source = source_path.read_text(encoding="utf-8")
+                module = ast.parse(source, filename=relative.as_posix())
+            except (OSError, SyntaxError, UnicodeDecodeError) as error:
+                raise ModelError(
+                    f"cannot parse pinned OpenRazer source {relative.as_posix()}: {error}"
+                ) from error
+            self.source_files.append(
+                {"path": relative.as_posix(), "sha256": sha256_file(source_path)}
+            )
+            for node in module.body:
+                if not isinstance(node, ast.ClassDef):
+                    continue
+                if node.name in self.classes:
+                    raise ModelError(f"duplicate OpenRazer hardware class: {node.name}")
+                assignments: dict[str, ast.expr] = {}
+                for statement in node.body:
+                    if not isinstance(statement, ast.Assign) or len(statement.targets) != 1:
+                        continue
+                    target = statement.targets[0]
+                    if isinstance(target, ast.Name) and target.id in CATALOG_FIELDS:
+                        assignments[target.id] = statement.value
+                self.classes[node.name] = _ParsedClass(
+                    name=node.name,
+                    bases=tuple(
+                        base.id for base in node.bases if isinstance(base, ast.Name)
+                    ),
+                    assignments=assignments,
+                    docstring=ast.get_docstring(node, clean=True) or "",
+                    line=node.lineno,
+                    source_file=relative.as_posix(),
+                    device_kind=device_kind,
+                )
+        if not self.classes or len(self.classes) > MAX_OPENRAZER_CLASSES:
+            raise ModelError("OpenRazer class catalog is empty or exceeds its bound")
 
     def _linearization(self, class_name: str, active: tuple[str, ...] = ()) -> tuple[str, ...]:
         cached = self._linearizations.get(class_name)
@@ -140,14 +207,10 @@ class _ClassCatalog:
         if class_name in active:
             chain = " -> ".join((*active, class_name))
             raise ModelError(f"OpenRazer class inheritance cycle: {chain}")
-        node = self.classes.get(class_name)
-        if node is None:
-            raise ModelError(f"OpenRazer class {class_name} is absent from {self.source_path}")
-        local_bases = [
-            base.id
-            for base in node.bases
-            if isinstance(base, ast.Name) and base.id in self.classes
-        ]
+        parsed = self.classes.get(class_name)
+        if parsed is None:
+            raise ModelError(f"OpenRazer class {class_name} is absent from the pinned catalog")
+        local_bases = [base for base in parsed.bases if base in self.classes]
         sequences = [
             list(self._linearization(base, (*active, class_name))) for base in local_bases
         ]
@@ -175,37 +238,63 @@ class _ClassCatalog:
         self._linearizations[class_name] = result
         return result
 
-    def resolve(self, class_name: str) -> tuple[ast.ClassDef, dict[str, Any]]:
-        node = self.classes.get(class_name)
-        if node is None:
-            raise ModelError(f"OpenRazer class {class_name} is absent from {self.source_path}")
+    def _expression(self, value: ast.expr) -> Any:
+        if isinstance(value, ast.Constant) and isinstance(value.value, (bool, int, str)):
+            return value.value
+        if isinstance(value, (ast.List, ast.Tuple)):
+            return [self._expression(item) for item in value.elts]
+        if isinstance(value, ast.Attribute) and isinstance(value.value, ast.Name):
+            return self.field(value.value.id, value.attr)
+        if isinstance(value, ast.BinOp) and isinstance(value.op, ast.Add):
+            left = self._expression(value.left)
+            right = self._expression(value.right)
+            if isinstance(left, list) and isinstance(right, list):
+                return left + right
+        raise ModelError(
+            f"unsupported OpenRazer metadata expression at line {getattr(value, 'lineno', '?')}"
+        )
+
+    def field(self, class_name: str, field: str) -> Any:
+        key = (class_name, field)
+        if key in self._field_cache:
+            return self._field_cache[key]
+        if key in self._active_fields:
+            raise ModelError(f"OpenRazer metadata has a cyclic reference: {class_name}.{field}")
+        self._active_fields.add(key)
+        try:
+            for name in self._linearization(class_name):
+                expression = self.classes[name].assignments.get(field)
+                if expression is not None:
+                    result = self._expression(expression)
+                    self._field_cache[key] = result
+                    return result
+        finally:
+            self._active_fields.remove(key)
+        raise KeyError(key)
+
+    def resolve(
+        self, class_name: str, fields: set[str] | None = None
+    ) -> tuple[_ParsedClass, dict[str, Any]]:
+        parsed = self.classes.get(class_name)
+        if parsed is None:
+            raise ModelError(f"OpenRazer class {class_name} is absent from the pinned catalog")
         values: dict[str, Any] = {}
-        for name in reversed(self._linearization(class_name)):
-            current = self.classes[name]
-            for statement in current.body:
-                if not isinstance(statement, ast.Assign) or len(statement.targets) != 1:
-                    continue
-                target = statement.targets[0]
-                if not isinstance(target, ast.Name) or target.id not in INHERITED_FIELDS:
-                    continue
-                try:
-                    values[target.id] = ast.literal_eval(statement.value)
-                except (ValueError, TypeError) as error:
-                    raise ModelError(
-                        f"OpenRazer {name}.{target.id} is not literal metadata"
-                    ) from error
-        return node, values
+        for field in fields or SELECTED_FIELDS:
+            try:
+                values[field] = self.field(class_name, field)
+            except KeyError:
+                continue
+        return parsed, values
 
 
-def _model_name(node: ast.ClassDef) -> str:
-    doc = ast.get_docstring(node, clean=True)
-    if doc is None:
-        raise ModelError(f"OpenRazer class {node.name} has no model description")
-    line = doc.splitlines()[0].strip().rstrip(".")
+def _model_name(parsed: _ParsedClass, *, strict: bool) -> str:
+    line = parsed.docstring.splitlines()[0].strip().rstrip(".") if parsed.docstring else ""
     prefix = "Class for the "
     if not line.startswith(prefix) or len(line) <= len(prefix):
-        raise ModelError(f"OpenRazer class {node.name} has an unsupported model description")
-    return line[len(prefix) :]
+        if strict:
+            raise ModelError(f"OpenRazer class {parsed.name} has an unsupported model description")
+        return parsed.name
+    return line[len(prefix) :].strip()
 
 
 def _integer(value: Any, label: str) -> int:
@@ -215,16 +304,20 @@ def _integer(value: Any, label: str) -> int:
 
 
 def _record(
+    catalog: _ClassCatalog,
     source_root: Path,
     selected: dict[str, str],
 ) -> dict[str, Any]:
     source_path = source_root / selected["source_path"]
-    catalog = _ClassCatalog(source_path)
-    node, values = catalog.resolve(selected["class_name"])
-    missing = sorted(INHERITED_FIELDS - set(values))
+    parsed, values = catalog.resolve(selected["class_name"], SELECTED_FIELDS)
+    if parsed.source_file != selected["source_path"]:
+        raise ModelError(
+            f"OpenRazer class {parsed.name} source drifts from the import selection"
+        )
+    missing = sorted(SELECTED_FIELDS - set(values))
     if missing:
         raise ModelError(
-            f"OpenRazer class {node.name} lacks required metadata: {', '.join(missing)}"
+            f"OpenRazer class {parsed.name} lacks required metadata: {', '.join(missing)}"
         )
     dimensions = values["MATRIX_DIMS"]
     if (
@@ -233,17 +326,17 @@ def _record(
         or any(isinstance(value, bool) or not isinstance(value, int) for value in dimensions)
         or any(not 0 <= value <= 128 for value in dimensions)
     ):
-        raise ModelError(f"OpenRazer class {node.name} has invalid matrix dimensions")
+        raise ModelError(f"OpenRazer class {parsed.name} has invalid matrix dimensions")
     methods = values["METHODS"]
     if not isinstance(methods, list) or any(not isinstance(value, str) for value in methods):
-        raise ModelError(f"OpenRazer class {node.name} has invalid method metadata")
+        raise ModelError(f"OpenRazer class {parsed.name} has invalid method metadata")
     methods = sorted(set(methods))
     image_url = values["DEVICE_IMAGE"]
     if not isinstance(image_url, str) or not image_url.startswith("https://"):
-        raise ModelError(f"OpenRazer class {node.name} has an unsafe image URL")
+        raise ModelError(f"OpenRazer class {parsed.name} has an unsafe image URL")
     has_matrix = values["HAS_MATRIX"]
     if not isinstance(has_matrix, bool):
-        raise ModelError(f"OpenRazer class {node.name} has invalid matrix metadata")
+        raise ModelError(f"OpenRazer class {parsed.name} has invalid matrix metadata")
     return {
         "profile_id": selected["profile_id"],
         "source": {
@@ -252,9 +345,9 @@ def _record(
             "sha256": sha256_file(source_path),
         },
         "identity": {
-            "vendor_id": _integer(values["USB_VID"], f"OpenRazer {node.name}.USB_VID"),
-            "product_id": _integer(values["USB_PID"], f"OpenRazer {node.name}.USB_PID"),
-            "model_name": _model_name(node),
+            "vendor_id": _integer(values["USB_VID"], f"OpenRazer {parsed.name}.USB_VID"),
+            "product_id": _integer(values["USB_PID"], f"OpenRazer {parsed.name}.USB_PID"),
+            "model_name": _model_name(parsed, strict=True),
             "device_kind": selected["device_kind"],
             "transport_variant": selected["transport_variant"],
         },
@@ -290,7 +383,8 @@ def transformed_metadata(root: Path, source_root: Path) -> dict[str, Any]:
         raise ModelError("OpenRazer checkout does not match the selected immutable commit")
     upstream = upstream_index(root)["openrazer"]
     selected_devices = deepcopy(selection["devices"])
-    records = [_record(source_root, selected) for selected in selected_devices]
+    catalog = _ClassCatalog(source_root)
+    records = [_record(catalog, source_root, selected) for selected in selected_devices]
     _validate_profile_authority(root, records)
     canonical_selection = {key: value for key, value in selection.items() if key != "$schema"}
     return {
@@ -441,3 +535,111 @@ def write_imported_metadata(root: Path, source_root: Path) -> Path:
     value = transformed_metadata(root, source_root)
     destination.write_text(json.dumps(value, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
     return destination
+
+
+def _catalog_route(class_name: str, docstring: str) -> str:
+    text = f"{class_name} {docstring}".lower()
+    if "bluetooth" in text:
+        return "bluetooth"
+    if "wireless" in text or "receiver" in text:
+        return "vendor-wireless-receiver"
+    return "direct-usb"
+
+
+def extract_openrazer_catalog(
+    source_root: Path,
+    *,
+    repository: str,
+    commit: str,
+    version: str,
+    license_expression: str,
+) -> dict[str, Any]:
+    """Parse the complete pinned OpenRazer registry without importing its code."""
+
+    catalog = _ClassCatalog(source_root)
+    records: list[dict[str, Any]] = []
+    for class_name, parsed in sorted(catalog.classes.items()):
+        try:
+            product_id = catalog.field(class_name, "USB_PID")
+        except KeyError:
+            continue
+        product_id = _integer(product_id, f"OpenRazer {class_name}.USB_PID")
+        try:
+            vendor_id = _integer(
+                catalog.field(class_name, "USB_VID"),
+                f"OpenRazer {class_name}.USB_VID",
+            )
+        except KeyError:
+            vendor_id = None
+        try:
+            methods = catalog.field(class_name, "METHODS")
+        except KeyError as error:
+            raise ModelError(f"OpenRazer {class_name}.METHODS is missing") from error
+        if not isinstance(methods, list) or any(not isinstance(item, str) for item in methods):
+            raise ModelError(f"OpenRazer {class_name}.METHODS is not a string list")
+
+        facts: dict[str, Any] = {}
+        for source_name, target_name in (
+            ("DEDICATED_MACRO_KEYS", "dedicated_macro_keys"),
+            ("DPI_MAX", "dpi_max"),
+            ("HAS_MATRIX", "has_matrix"),
+            ("MATRIX_DIMS", "matrix_dimensions"),
+            ("POLL_RATES", "poll_rates_hz"),
+            ("WAVE_DIRS", "wave_directions"),
+        ):
+            try:
+                facts[target_name] = catalog.field(class_name, source_name)
+            except KeyError:
+                continue
+        dimensions = facts.get("matrix_dimensions")
+        if dimensions is not None and (
+            not isinstance(dimensions, list)
+            or len(dimensions) != 2
+            or any(
+                isinstance(value, bool)
+                or not isinstance(value, int)
+                or not 1 <= value <= 256
+                for value in dimensions
+            )
+        ):
+            raise ModelError(f"OpenRazer {class_name}.MATRIX_DIMS is invalid")
+        records.append(
+            {
+                "record_id": f"openrazer:{class_name}",
+                "source_device_key": class_name,
+                "model_name": _model_name(parsed, strict=False),
+                "device_kind": parsed.device_kind,
+                "source_route": _catalog_route(class_name, parsed.docstring),
+                "usb_identity": {
+                    "vendor_id": vendor_id,
+                    "product_id": product_id,
+                },
+                "lighting_topology": (
+                    {"matrix_dimensions": dimensions}
+                    if dimensions is not None
+                    else None
+                ),
+                "settings_methods": sorted(set(methods)),
+                "facts": facts,
+                "source_location": {
+                    "path": parsed.source_file,
+                    "line": parsed.line,
+                },
+            }
+        )
+    if not records or len(records) > MAX_OPENRAZER_CLASSES:
+        raise ModelError("normalized OpenRazer records are empty or exceed their bound")
+    return {
+        "$schema": "../../schemas/upstream-device-catalog.schema.json",
+        "schema": "hyperflux-upstream-device-catalog-v1",
+        "source": {
+            "upstream_id": "openrazer",
+            "repository": repository,
+            "version": version,
+            "commit": commit,
+            "license_expression": license_expression,
+            "extractor": "python-ast-v1",
+            "source_files": sorted(catalog.source_files, key=lambda item: item["path"]),
+        },
+        "records": records,
+    }
