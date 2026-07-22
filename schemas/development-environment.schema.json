@@ -81,7 +81,11 @@
       "properties": {
         "user": {"const": "hyperflux"},
         "uid": {"const": 1000},
-        "path": {"const": "/workspaces/hyperflux-next"}
+        "path": {
+          "type": "string",
+          "maxLength": 76,
+          "pattern": "^/workspaces/[a-z][a-z0-9-]{0,63}$"
+        }
       }
     },
     "network_policy": {
