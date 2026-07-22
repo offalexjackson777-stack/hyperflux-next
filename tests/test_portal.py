@@ -40,7 +40,7 @@ class DocumentationPortalTests(unittest.TestCase):
             self.assertEqual(first_manifest, second_manifest)
             self.assertFalse(first_manifest["publication_authorized"])
             self.assertFalse(first_manifest["external_runtime_dependencies"])
-            self.assertEqual(first_result.pages, 23)
+            self.assertEqual(first_result.pages, 24)
             self.assertEqual(verify_portal(ROOT, first)["source_tree_sha256"], first_manifest["source_tree_sha256"])
             index = (first / "index.html").read_text(encoding="utf-8")
             self.assertIn('id="main-content"', index)
@@ -71,6 +71,17 @@ class DocumentationPortalTests(unittest.TestCase):
             )
             self.assertNotIn("fetch(", device_script)
             self.assertNotIn("XMLHttpRequest", device_script)
+            atlas = (first / "atlas" / "index.html").read_text(encoding="utf-8")
+            self.assertIn("One graph, many views", atlas)
+            self.assertIn("Canonical sources to generated projections", atlas)
+            self.assertIn('id="atlas-command"', atlas)
+            self.assertEqual(atlas.count("data-atlas-row"), 31)
+            self.assertEqual(atlas.count("data-atlas-detail"), 31)
+            atlas_script = (first / "assets" / "atlas.js").read_text(
+                encoding="utf-8"
+            )
+            self.assertNotIn("fetch(", atlas_script)
+            self.assertNotIn("XMLHttpRequest", atlas_script)
 
     def test_unsupported_mermaid_fails_closed(self) -> None:
         with self.assertRaisesRegex(ModelError, "unsupported Mermaid diagram type"):

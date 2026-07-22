@@ -15,27 +15,28 @@ Every current node is software-only and has zero hardware-write authority.
 | 6 | `governance-contracts` | `governance` | `none` | `false` | 15s | `reuse-verified` |
 | 7 | `protocol-contracts` | `protocol` | `none` | `false` | 10s | `reuse-verified` |
 | 8 | `error-contracts` | `errors` | `none` | `false` | 10s | `reuse-verified` |
-| 9 | `rust-format` | `rust` | `none` | `false` | 60s | `rerun` |
-| 10 | `assurance-contracts` | `assurance` | `none` | `false` | 15s | `reuse-verified` |
-| 11 | `profile-contracts` | `profiles` | `none` | `false` | 10s | `reuse-verified` |
-| 12 | `development-environment-contracts` | `toolchains` | `none` | `false` | 20s | `reuse-verified` |
-| 13 | `formal-model-contracts` | `verification` | `none` | `false` | 15s | `rerun` |
-| 14 | `openrazer-metadata-contracts` | `integrations` | `none` | `false` | 30s | `rerun` |
-| 15 | `device-knowledge-contracts` | `profiles` | `none` | `false` | 30s | `rerun` |
-| 16 | `generated-freshness` | `generation` | `none` | `false` | 15s | `reuse-verified` |
-| 17 | `documentation-portal-contracts` | `documentation` | `none` | `false` | 30s | `rerun` |
-| 18 | `python-unit` | `tooling` | `none` | `false` | 60s | `rerun` |
-| 19 | `rust-clippy` | `rust` | `none` | `false` | 180s | `rerun` |
-| 20 | `cpp-sdk-contracts` | `sdk` | `none` | `false` | 60s | `rerun` |
-| 21 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 180s | `rerun` |
-| 22 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
-| 23 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
-| 24 | `openrgb-adapter-contracts` | `integrations` | `none` | `false` | 120s | `rerun` |
-| 25 | `polychromatic-adapter-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
-| 26 | `openrazer-compatibility-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
-| 27 | `migration-shadow-contracts` | `migration` | `none` | `false` | 120s | `rerun` |
-| 28 | `openrgb-thread-sanitizer` | `integrations` | `none` | `false` | 300s | `rerun` |
-| 29 | `package-contracts` | `packaging` | `none` | `false` | 600s | `rerun` |
+| 9 | `repository-atlas-contracts` | `architecture` | `none` | `false` | 15s | `reuse-verified` |
+| 10 | `rust-format` | `rust` | `none` | `false` | 60s | `rerun` |
+| 11 | `assurance-contracts` | `assurance` | `none` | `false` | 15s | `reuse-verified` |
+| 12 | `profile-contracts` | `profiles` | `none` | `false` | 10s | `reuse-verified` |
+| 13 | `development-environment-contracts` | `toolchains` | `none` | `false` | 20s | `reuse-verified` |
+| 14 | `formal-model-contracts` | `verification` | `none` | `false` | 15s | `rerun` |
+| 15 | `openrazer-metadata-contracts` | `integrations` | `none` | `false` | 30s | `rerun` |
+| 16 | `device-knowledge-contracts` | `profiles` | `none` | `false` | 30s | `rerun` |
+| 17 | `generated-freshness` | `generation` | `none` | `false` | 15s | `reuse-verified` |
+| 18 | `documentation-portal-contracts` | `documentation` | `none` | `false` | 30s | `rerun` |
+| 19 | `python-unit` | `tooling` | `none` | `false` | 60s | `rerun` |
+| 20 | `rust-clippy` | `rust` | `none` | `false` | 180s | `rerun` |
+| 21 | `cpp-sdk-contracts` | `sdk` | `none` | `false` | 60s | `rerun` |
+| 22 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 180s | `rerun` |
+| 23 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
+| 24 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
+| 25 | `openrgb-adapter-contracts` | `integrations` | `none` | `false` | 120s | `rerun` |
+| 26 | `polychromatic-adapter-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
+| 27 | `openrazer-compatibility-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
+| 28 | `migration-shadow-contracts` | `migration` | `none` | `false` | 120s | `rerun` |
+| 29 | `openrgb-thread-sanitizer` | `integrations` | `none` | `false` | 300s | `rerun` |
+| 30 | `package-contracts` | `packaging` | `none` | `false` | 600s | `rerun` |
 
 ## Dependencies
 
@@ -49,6 +50,7 @@ flowchart LR
     governance_contracts["governance-contracts"]
     protocol_contracts["protocol-contracts"]
     error_contracts["error-contracts"]
+    repository_atlas_contracts["repository-atlas-contracts"]
     rust_format["rust-format"]
     assurance_contracts["assurance-contracts"]
     profile_contracts["profile-contracts"]
@@ -77,6 +79,7 @@ flowchart LR
     schema_contracts --> governance_contracts
     schema_contracts --> protocol_contracts
     schema_contracts --> error_contracts
+    schema_contracts --> repository_atlas_contracts
     toolchain_contract --> rust_format
     schema_contracts --> assurance_contracts
     governance_contracts --> assurance_contracts
@@ -97,6 +100,7 @@ flowchart LR
     formal_model_contracts --> generated_freshness
     development_environment_contracts --> generated_freshness
     governance_contracts --> generated_freshness
+    repository_atlas_contracts --> generated_freshness
     generated_freshness --> documentation_portal_contracts
     generated_freshness --> python_unit
     privacy_boundary --> python_unit

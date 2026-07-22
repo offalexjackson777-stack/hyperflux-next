@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/repository-atlas-v1.json",
+  "title": "HyperFlux repository atlas",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "publication_state", "nodes"],
+  "properties": {
+    "$schema": {"const": "../schemas/repository-atlas.schema.json"},
+    "schema": {"const": "hyperflux-repository-atlas-v1"},
+    "publication_state": {"const": "local-unpublished"},
+    "nodes": {
+      "type": "array",
+      "minItems": 24,
+      "maxItems": 64,
+      "items": {"$ref": "#/$defs/node"}
+    }
+  },
+  "$defs": {
+    "identifier": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "shortText": {"type": "string", "minLength": 1, "maxLength": 240},
+    "path": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"
+    },
+    "textList": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/shortText"}
+    },
+    "pathList": {
+      "type": "array",
+      "maxItems": 24,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/path"}
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "path",
+        "category",
+        "status",
+        "purpose",
+        "owns",
+        "must_not_own",
+        "inputs",
+        "outputs",
+        "public_contracts",
+        "canonical_files",
+        "generated_files",
+        "verification",
+        "limitations",
+        "safe_change_workflow",
+        "related_docs",
+        "depends_on"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "title": {"type": "string", "minLength": 1, "maxLength": 80},
+        "path": {"$ref": "#/$defs/path"},
+        "category": {
+          "enum": ["architecture", "assurance", "runtime", "applications", "tooling", "delivery", "governance", "documentation"]
+        },
+        "status": {"enum": ["implemented", "generated", "policy", "research-boundary"]},
+        "purpose": {"$ref": "#/$defs/shortText"},
+        "owns": {"$ref": "#/$defs/textList"},
+        "must_not_own": {"$ref": "#/$defs/textList"},
+        "inputs": {"$ref": "#/$defs/textList"},
+        "outputs": {"$ref": "#/$defs/textList"},
+        "public_contracts": {"$ref": "#/$defs/textList"},
+        "canonical_files": {"allOf": [{"$ref": "#/$defs/pathList"}, {"minItems": 1}]},
+        "generated_files": {"$ref": "#/$defs/pathList"},
+        "verification": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        },
+        "limitations": {"$ref": "#/$defs/textList"},
+        "safe_change_workflow": {"allOf": [{"$ref": "#/$defs/textList"}, {"minItems": 3}]},
+        "related_docs": {"allOf": [{"$ref": "#/$defs/pathList"}, {"minItems": 1}]},
+        "depends_on": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        }
+      }
+    }
+  }
+}

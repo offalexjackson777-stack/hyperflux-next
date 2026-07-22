@@ -39,6 +39,7 @@ KNOWN_RUNNERS = {
     "integration-contracts",
     "profile-contracts",
     "device-knowledge-contracts",
+    "repository-atlas-contracts",
     "protocol-contracts",
     "error-contracts",
     "formal-model-contracts",

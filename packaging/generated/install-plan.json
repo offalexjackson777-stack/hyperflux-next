@@ -468,6 +468,13 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/repository-atlas.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/repository-atlas.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/reviewed-device-facts.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/reviewed-device-facts.schema.json",
       "mode": "0644",
@@ -1002,6 +1009,13 @@
       "component": "documentation",
       "source": "docs/generated/release-gates.md",
       "destination": "/usr/share/doc/hyperflux-next/generated/release-gates.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/repository-atlas.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/repository-atlas.md",
       "mode": "0644",
       "preserve": false
     },

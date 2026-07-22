@@ -14,6 +14,7 @@ import time
 
 from .model import ModelError, load_foundation, load_json, require_unique, sha256_file
 from .assurance import load_design_coverage
+from .atlas import load_repository_atlas
 from .development import load_development_environment
 from .errors import load_error_catalog
 from .formal_model import load_formal_model, run_formal_model
@@ -626,6 +627,14 @@ def _run_device_knowledge_contracts(root: Path, _node: TestNode) -> None:
         )
 
 
+def _run_repository_atlas_contracts(root: Path, _node: TestNode) -> None:
+    atlas = load_repository_atlas(root)
+    if len(atlas.nodes) < 24:
+        raise ModelError("repository atlas does not cover enough meaningful subsystems")
+    if set(atlas.used_by) != set(atlas.by_id):
+        raise ModelError("repository atlas inverse relationships are incomplete")
+
+
 def _run_openrazer_compatibility_contracts(root: Path, node: TestNode) -> None:
     source = _openrazer_source(root)
     build_directory = root / "build" / "openrazer-compatibility"
@@ -1164,6 +1173,7 @@ RUNNERS = {
     "profile-contracts": _run_profile_contracts,
     "integration-contracts": _run_integration_contracts,
     "device-knowledge-contracts": _run_device_knowledge_contracts,
+    "repository-atlas-contracts": _run_repository_atlas_contracts,
     "protocol-contracts": _run_protocol_contracts,
     "error-contracts": _run_error_contracts,
     "generated-freshness": _run_generated_freshness,

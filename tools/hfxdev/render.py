@@ -6,10 +6,13 @@ from pathlib import Path
 from typing import Any
 
 from .assurance import load_design_coverage
+from .atlas import load_repository_atlas
 from .development import load_development_environment
 from .errors import load_error_catalog
 from .formal_model import load_formal_model, run_formal_model
 from .generators.assurance import design_coverage_markdown
+from .generators.atlas import folder_readme as atlas_folder_readme
+from .generators.atlas import markdown as atlas_markdown
 from .generators.formal_model import formal_model_markdown
 from .generators.governance import (
     bug_report as github_bug_report,
@@ -240,6 +243,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
     shadow_fixture = load_shadow_fixture(
         root, root / "tests/fixtures/shadow/qualified-lifecycle-v1.json"
     )
+    repository_atlas = load_repository_atlas(root)
     files = {
         root / ".devcontainer" / "Containerfile": development_containerfile(
             development_environment
@@ -290,6 +294,9 @@ def rendered_files(root: Path) -> dict[Path, str]:
             github_governance
         ),
         root / "docs" / "generated" / "architecture.md": architecture_markdown(constitution),
+        root / "docs" / "generated" / "repository-atlas.md": atlas_markdown(
+            repository_atlas
+        ),
         root / "docs" / "generated" / "design-coverage.md": design_coverage_markdown(
             design_coverage
         ),
@@ -422,6 +429,10 @@ def rendered_files(root: Path) -> dict[Path, str]:
         )
         files[root / "docs" / "generated" / f"bridge-protocol-{suffix}.md"] = (
             protocol_markdown(version.catalog, title=f"Bridge Protocol {suffix.upper()}")
+        )
+    for node in repository_atlas.nodes:
+        files[root / node.path / "README.md"] = atlas_folder_readme(
+            repository_atlas, node
         )
     install_plan_path = root / "packaging" / "generated" / "install-plan.json"
     installation_document_path = root / "docs" / "generated" / "installation.md"
