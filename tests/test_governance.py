@@ -17,7 +17,13 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
-from hfxdev.ci import _linked_worktree_common_dir, container_invocation
+from hfxdev.ci import (
+    _linked_worktree_common_dir,
+    _project_group,
+    _project_passwd,
+    container_invocation,
+    run_container,
+)
 from hfxdev.generators.governance import (
     EXACT_SOURCE_REVISION,
     bug_report,
@@ -298,6 +304,101 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertIn("--user 1001:121", command)
         self.assertIn("USER=hyperflux", command)
         self.assertIn("LOGNAME=hyperflux", command)
+        self.assertEqual(invocation.user_id, 1001)
+        self.assertEqual(invocation.group_id, 121)
+
+    def test_ci_identity_projection_preserves_image_accounts_without_host_names(self) -> None:
+        passwd = _project_passwd(
+            "root:x:0:0:root:/root:/bin/bash\n"
+            "dbus:x:81:81:System Message Bus:/:/usr/bin/nologin\n"
+            "hyperflux:x:1000:1000::/home/hyperflux:/bin/bash\n",
+            username="hyperflux",
+            user_id=1001,
+            group_id=121,
+        )
+        group = _project_group(
+            "root:x:0:\n"
+            "dbus:x:81:\n"
+            "hyperflux:x:1000:\n",
+            username="hyperflux",
+            group_id=121,
+        )
+        self.assertIn("dbus:x:81:81:System Message Bus", passwd)
+        self.assertIn("hyperflux:x:1001:121::/tmp/hfx-home:/bin/bash", passwd)
+        self.assertIn("hyperflux:x:121:", group)
+        self.assertNotIn("runner", passwd + group)
+
+    @patch("hfxdev.ci.shutil.which", return_value="/usr/bin/docker")
+    def test_ci_runtime_mounts_private_projected_identity(self, _which) -> None:
+        invocation = container_invocation(
+            ROOT,
+            image=self.governance.development_image,
+            operation="verify",
+            lane="full",
+            output=Path("build/ci/projected-identity"),
+            engine="docker",
+            uid=1001,
+            gid=121,
+        )
+        calls: list[tuple[str, ...]] = []
+
+        def execute(command, **_kwargs):
+            values = tuple(command)
+            calls.append(values)
+            if values[-1] == "/etc/passwd":
+                return subprocess.CompletedProcess(
+                    values,
+                    0,
+                    "root:x:0:0:root:/root:/bin/bash\n"
+                    "hyperflux:x:1000:1000::/home/hyperflux:/bin/bash\n",
+                    "",
+                )
+            if values[-1] == "/etc/group":
+                return subprocess.CompletedProcess(
+                    values,
+                    0,
+                    "root:x:0:\nhyperflux:x:1000:\n",
+                    "",
+                )
+            mounts = [
+                values[index + 1]
+                for index, value in enumerate(values)
+                if value == "--volume"
+            ]
+            passwd_path = Path(
+                next(value for value in mounts if value.endswith(":/etc/passwd:ro"))
+                .removesuffix(":/etc/passwd:ro")
+            )
+            group_path = Path(
+                next(value for value in mounts if value.endswith(":/etc/group:ro"))
+                .removesuffix(":/etc/group:ro")
+            )
+            self.assertIn("hyperflux:x:1001:121", passwd_path.read_text())
+            self.assertIn("hyperflux:x:121", group_path.read_text())
+            self.assertEqual(passwd_path.stat().st_mode & 0o777, 0o444)
+            self.assertEqual(group_path.stat().st_mode & 0o777, 0o444)
+            return subprocess.CompletedProcess(values, 0)
+
+        with patch("hfxdev.ci.subprocess.run", side_effect=execute):
+            self.assertEqual(run_container(invocation), 0)
+        self.assertEqual(len(calls), 3)
+
+    def test_ci_identity_projection_rejects_numeric_collisions(self) -> None:
+        with self.assertRaises(ModelError):
+            _project_passwd(
+                "root:x:0:0:root:/root:/bin/bash\n"
+                "other:x:1001:1001::/:/usr/bin/nologin\n"
+                "hyperflux:x:1000:1000::/home/hyperflux:/bin/bash\n",
+                username="hyperflux",
+                user_id=1001,
+                group_id=121,
+            )
+        with self.assertRaises(ModelError):
+            _project_group(
+                "root:x:0:\nother:x:121:\nhyperflux:x:1000:\n",
+                username="hyperflux",
+                group_id=121,
+            )
 
     def test_ci_discovers_linked_worktree_common_git_directory(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
