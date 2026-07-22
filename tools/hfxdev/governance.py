@@ -183,8 +183,12 @@ class GitHubGovernance:
     service_evaluations: tuple[ServiceEvaluation, ...]
     default_owners: tuple[str, ...]
     ownership_rules: tuple[OwnershipRule, ...]
+    protection_profile: str
+    trusted_maintainers: int
     required_checks: tuple[str, ...]
     required_approvals: int
+    require_code_owner_reviews: bool
+    strict_required_status_checks: bool
     labels: tuple[GovernanceLabel, ...]
     runner: str
     development_image: str
@@ -565,6 +569,8 @@ def load_github_governance(root: Path) -> GitHubGovernance:
     protection = _exact(
         value["protection"],
         {
+            "profile",
+            "trusted_maintainers",
             "linear_history",
             "required_approvals",
             "dismiss_stale_reviews",
@@ -572,6 +578,7 @@ def load_github_governance(root: Path) -> GitHubGovernance:
             "require_conversation_resolution",
             "prevent_deletions",
             "prevent_force_pushes",
+            "strict_required_status_checks",
             "required_checks",
         },
         "GitHub protection",
@@ -581,16 +588,36 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         for key in (
             "linear_history",
             "dismiss_stale_reviews",
-            "require_code_owner_reviews",
             "require_conversation_resolution",
             "prevent_deletions",
             "prevent_force_pushes",
+            "strict_required_status_checks",
         )
     ):
         raise ModelError("GitHub branch protection must retain every reviewed safeguard")
+    profile = protection["profile"]
+    maintainer_count = protection["trusted_maintainers"]
     approvals = protection["required_approvals"]
-    if isinstance(approvals, bool) or not isinstance(approvals, int) or not 1 <= approvals <= 6:
-        raise ModelError("GitHub required approvals must be from 1 through 6")
+    code_owner_reviews = protection["require_code_owner_reviews"]
+    if (
+        profile not in {"solo-maintainer", "multi-maintainer"}
+        or isinstance(maintainer_count, bool)
+        or not isinstance(maintainer_count, int)
+        or not 1 <= maintainer_count <= 32
+        or isinstance(approvals, bool)
+        or not isinstance(approvals, int)
+        or not 0 <= approvals <= 6
+        or not isinstance(code_owner_reviews, bool)
+    ):
+        raise ModelError("GitHub maintainer protection profile is malformed")
+    if profile == "solo-maintainer" and (
+        maintainer_count != 1 or approvals != 0 or code_owner_reviews
+    ):
+        raise ModelError("solo-maintainer protection cannot require self-approval")
+    if profile == "multi-maintainer" and (
+        maintainer_count < 2 or approvals < 1 or not code_owner_reviews
+    ):
+        raise ModelError("multi-maintainer protection requires independent review")
     required_checks = _strings(protection["required_checks"], "required GitHub check")
     if tuple(sorted(required_checks)) != required_checks:
         raise ModelError("required GitHub checks must be sorted")
@@ -705,8 +732,12 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         service_evaluations=tuple(service_evaluations),
         default_owners=default_owners,
         ownership_rules=tuple(rules),
+        protection_profile=profile,
+        trusted_maintainers=maintainer_count,
         required_checks=required_checks,
         required_approvals=approvals,
+        require_code_owner_reviews=code_owner_reviews,
+        strict_required_status_checks=protection["strict_required_status_checks"],
         labels=tuple(labels),
         runner=automation["runner"],
         development_image=automation["development_image"],

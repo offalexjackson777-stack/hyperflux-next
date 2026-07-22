@@ -14,7 +14,7 @@ Release signing and remote attestations remain unavailable until publication is 
 - Vendored source packages: 1
 - Pinned application upstreams: 3
 - Immutable workflow actions: 10
-- Authority SHA-256: `e8aeefbc2d39014666c0737129ebee9072653d2d907a53944f3b9d2f47fd00d2`
+- Authority SHA-256: `d48ea45e403991cdfb420c1bff3e42e569c63e86b28ec6e57e68c85130550e18`
 
 ## License Policy
 

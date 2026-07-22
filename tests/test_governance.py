@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -16,7 +17,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
-from hfxdev.ci import container_invocation
+from hfxdev.ci import _linked_worktree_common_dir, container_invocation
 from hfxdev.generators.governance import (
     bug_report,
     codeql_workflow,
@@ -30,6 +31,7 @@ from hfxdev.generators.governance import (
     hardware_qualification,
     pages_workflow,
     protection_plan,
+    repository_experience_workflow,
     verification_workflow,
 )
 from hfxdev.generators.supply_chain import spdx_json
@@ -92,6 +94,7 @@ class GitHubGovernanceTests(unittest.TestCase):
             "codeql": codeql_workflow(self.governance),
             "dependency-review": dependency_review_workflow(self.governance),
             "pages": pages_workflow(self.governance),
+            "repository-experience": repository_experience_workflow(self.governance),
         }
         allowed = {action.commit for action in self.governance.actions}
         observed: set[str] = set()
@@ -149,6 +152,12 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertNotIn("release", fast["on"])
         self.assertNotIn("release", full["on"])
         self.assertNotIn("release", docs["on"])
+        self.assertIn("pull_request", full["on"])
+        self.assertEqual(self.governance.protection_profile, "solo-maintainer")
+        self.assertEqual(self.governance.trusted_maintainers, 1)
+        self.assertEqual(self.governance.required_approvals, 0)
+        self.assertFalse(self.governance.require_code_owner_reviews)
+        self.assertTrue(self.governance.strict_required_status_checks)
         self.assertEqual(fast["permissions"], {"contents": "read"})
         self.assertEqual(docs["permissions"], {"contents": "read"})
         self.assertEqual(
@@ -159,8 +168,25 @@ class GitHubGovernanceTests(unittest.TestCase):
                 "CodeQL / Analyze (python)",
                 "Dependency review / Dependency review",
                 "Documentation / Portal contracts",
+                "Full verification / Full software",
+                "Repository experience / Link checks",
+                "Repository experience / Pages preview",
             },
         )
+
+    def test_repository_experience_jobs_are_required_and_bounded(self) -> None:
+        workflow = yaml.safe_load(repository_experience_workflow(self.governance))
+        self.assertEqual(
+            {job["name"] for job in workflow["jobs"].values()},
+            {"Link checks", "Pages preview"},
+        )
+        self.assertEqual(workflow["permissions"], {"contents": "read"})
+        self.assertIn("pull_request", workflow["on"])
+        self.assertNotIn("push", workflow["on"])
+        text = repository_experience_workflow(self.governance)
+        self.assertNotIn("deploy-pages", text)
+        self.assertNotIn("upload-pages-artifact", text)
+        self.assertNotIn("--device", text)
 
     @patch("hfxdev.ci.shutil.which", return_value="/usr/bin/docker")
     def test_ci_invocations_separate_fetch_from_networkless_execution(self, _which) -> None:
@@ -213,6 +239,49 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertIn("--changed-from " + "a" * 40, " ".join(verify.command))
         self.assertIn("docs build", " ".join(docs.command))
         self.assertIn("docs verify", " ".join(docs.command))
+
+    @patch("hfxdev.ci.shutil.which", return_value="/usr/bin/podman")
+    def test_ci_invocation_keeps_host_identity_with_rootless_podman(self, _which) -> None:
+        invocation = container_invocation(
+            ROOT,
+            image=self.governance.development_image,
+            operation="prepare",
+            engine="podman",
+            uid=1000,
+            gid=1001,
+        )
+        self.assertIn("--userns=keep-id", invocation.command)
+        self.assertIn("1000:1001", invocation.command)
+
+    def test_ci_discovers_linked_worktree_common_git_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            root = base / "worktree"
+            common = base / "source" / ".git"
+            git_dir = common / "worktrees" / "worktree"
+            root.mkdir()
+            git_dir.mkdir(parents=True)
+            (root / ".git").write_text(f"gitdir: {git_dir}\n", encoding="utf-8")
+            (git_dir / "commondir").write_text("../..\n", encoding="utf-8")
+            self.assertEqual(_linked_worktree_common_dir(root), common)
+
+    @patch("hfxdev.ci.shutil.which", return_value="/usr/bin/podman")
+    def test_linked_worktree_git_metadata_is_mounted_read_only(self, _which) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            common = Path(temporary) / ".git"
+            common.mkdir()
+            with patch(
+                "hfxdev.ci._linked_worktree_common_dir", return_value=common
+            ):
+                invocation = container_invocation(
+                    ROOT,
+                    image=self.governance.development_image,
+                    operation="prepare",
+                    engine="podman",
+                    uid=1000,
+                    gid=1001,
+                )
+            self.assertIn(f"{common}:{common}:ro", invocation.command)
 
     @patch("hfxdev.ci.shutil.which", return_value="/usr/bin/docker")
     def test_ci_output_revision_and_image_inputs_fail_closed(self, _which) -> None:

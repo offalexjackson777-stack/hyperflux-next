@@ -203,6 +203,7 @@ def full_verification_workflow(governance: GitHubGovernance) -> str:
     value = {
         "name": "Full verification",
         "on": {
+            "pull_request": {},
             "workflow_dispatch": {},
             "schedule": [{"cron": governance.full_verification_cron}],
         },
@@ -270,6 +271,52 @@ def documentation_workflow(governance: GitHubGovernance) -> str:
                 "timeout-minutes": 30,
                 "steps": steps,
             }
+        },
+    }
+    return _yaml(value, governance)
+
+
+def repository_experience_workflow(governance: GitHubGovernance) -> str:
+    def job(name: str, output: str, artifact: str) -> dict[str, Any]:
+        steps = [_checkout(governance), *_build_environment(governance)]
+        steps.extend(
+            [
+                {
+                    "name": f"Build and verify {name.lower()}",
+                    "run": f'./hfx ci docs --image "$HFX_CI_IMAGE" --output {output}',
+                },
+                _portal_summary(output),
+                _upload(
+                    governance,
+                    name=artifact,
+                    path=output,
+                    retention_days=14,
+                ),
+            ]
+        )
+        return {
+            "name": name,
+            "runs-on": governance.runner,
+            "timeout-minutes": 30,
+            "steps": steps,
+        }
+
+    value = {
+        "name": "Repository experience",
+        "on": {"pull_request": {}, "workflow_dispatch": {}},
+        "permissions": {"contents": "read"},
+        "concurrency": {
+            "group": "repository-experience-${{ github.ref }}",
+            "cancel-in-progress": True,
+        },
+        "env": {"HFX_CI_IMAGE": governance.development_image},
+        "jobs": {
+            "link-checks": job(
+                "Link checks", "build/ci/links", "hyperflux-link-evidence"
+            ),
+            "pages-preview": job(
+                "Pages preview", "build/ci/pages-preview", "hyperflux-pages-preview"
+            ),
         },
     }
     return _yaml(value, governance)
@@ -940,15 +987,18 @@ def protection_plan(governance: GitHubGovernance) -> str:
         "apply_authorized": True,
         "default_branch": governance.default_branch,
         "ruleset": {
+            "profile": governance.protection_profile,
+            "trusted_maintainers": governance.trusted_maintainers,
             "enforcement": "active",
             "bypass_actors": [],
             "required_approvals": governance.required_approvals,
             "dismiss_stale_reviews": True,
-            "require_code_owner_reviews": True,
+            "require_code_owner_reviews": governance.require_code_owner_reviews,
             "require_conversation_resolution": True,
             "require_linear_history": True,
             "prevent_deletions": True,
             "prevent_force_pushes": True,
+            "strict_required_status_checks": governance.strict_required_status_checks,
             "required_status_checks": list(governance.required_checks),
         },
         "excluded_components": [
@@ -1083,7 +1133,7 @@ def markdown(governance: GitHubGovernance) -> str:
         "| Workflow | Trigger | Network during verification | Hardware access | Output |",
         "| --- | --- | --- | --- | --- |",
         "| Verification | Pull requests, main, manual | None | None | Source-bound fast evidence |",
-        "| Full verification | Weekly or manual | None | None | Source-bound full evidence |",
+        "| Full verification | Pull request, weekly, or manual | None | None | Source-bound full evidence |",
         "| Documentation | Pull requests, main documentation changes, manual | None | None | Verified portal artifact |",
         "| Pages | Main or manual | None after image build | None | Protected generated portal deployment |",
         "| CodeQL | Pull requests, main, weekly | GitHub service only | None | C/C++ and Python analysis |",
@@ -1098,7 +1148,9 @@ def markdown(governance: GitHubGovernance) -> str:
     lines.extend(
         [
             "",
-            "The active plan has no ruleset bypass actors. It may be applied only after hosted runs establish these exact check names; release and hardware gates remain independent canonical interlocks.",
+            f"Protection profile: `{governance.protection_profile}` with {governance.trusted_maintainers} trusted maintainer. Required human approvals: `{governance.required_approvals}`; CODEOWNER review required: `{str(governance.require_code_owner_reviews).lower()}`.",
+            "",
+            "The solo profile avoids impossible self-approval while every required check remains strict on the current branch. Independent review becomes required only after a second trusted maintainer is configured. There are no ruleset bypass actors; release and hardware gates remain independent canonical interlocks.",
             "",
             "## Immutable Workflow Dependencies",
             "",

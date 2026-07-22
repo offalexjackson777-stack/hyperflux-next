@@ -15,6 +15,7 @@ This subsystem owns:
 - Linux runtime names
 - Service and path constants
 - Activation policy
+- Local companion contract
 
 It must never own:
 
@@ -35,23 +36,27 @@ Outputs:
 - Generated service units
 - Runtime bindings
 - Package environment
+- Privacy-safe local companion documentation
 
 ## Public Contracts
 
 - Single runtime naming authority
 - Safe post-update activation
 - Preserved user configuration
+- Loopback snapshots are read-only by default and use explicit evidence states
 
 ## Source And Generated Files
 
 Canonical files:
 
 - [`runtime/linux.json`](linux.json)
+- [`runtime/local-companion.json`](local-companion.json)
 
 Generated projections:
 
 - [`runtime/README.md`](README.md)
 - [`docs/generated/linux-runtime.md`](../docs/generated/linux-runtime.md)
+- [`docs/generated/local-companion.md`](../docs/generated/local-companion.md)
 - [`packaging/generated/runtime.env`](../packaging/generated/runtime.env)
 
 ## Relationships
@@ -73,7 +78,7 @@ Used by:
 
 Change impact:
 
-- Regenerate 3 declared projection(s).
+- Regenerate 4 declared projection(s).
 - Run `foundation-contracts`, `package-contracts`.
 - Review direct consumers: Production daemon, Packaging and installation.
 
@@ -83,8 +88,8 @@ Change impact:
 
 ## Safe Change Workflow
 
-1. Update runtime/linux.json once
-2. Regenerate every service and language constant
+1. Update the relevant runtime authority once
+2. Regenerate every affected service, language constant, and document
 3. Run generation, install, and package contracts
 
 ## Related Documentation

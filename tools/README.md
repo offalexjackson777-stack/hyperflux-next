@@ -50,6 +50,16 @@ Canonical files:
 - [`tools/hfxdev/cli.py`](hfxdev/cli.py)
 - [`tools/hfxdev/render.py`](hfxdev/render.py)
 - [`tools/hfxdev/verify.py`](hfxdev/verify.py)
+- [`tools/hfxdev/portal.py`](hfxdev/portal.py)
+- [`tools/hfxdev/portal_model.py`](hfxdev/portal_model.py)
+- [`tools/hfxdev/portal_routing.py`](hfxdev/portal_routing.py)
+- [`tools/hfxdev/portal_metadata.py`](hfxdev/portal_metadata.py)
+- [`tools/hfxdev/portal_layout.py`](hfxdev/portal_layout.py)
+- [`tools/hfxdev/portal_content.py`](hfxdev/portal_content.py)
+- [`tools/hfxdev/portal_search.py`](hfxdev/portal_search.py)
+- [`tools/hfxdev/public_readiness.py`](hfxdev/public_readiness.py)
+- [`tools/hfxdev/local_companion.py`](hfxdev/local_companion.py)
+- [`tools/hfxdev/licensing.py`](hfxdev/licensing.py)
 
 Generated projections:
 
@@ -65,6 +75,7 @@ Depends on:
 
 Used by:
 
+- [Documentation system](../docs/README.md)
 - [Contract tests](../tests/README.md)
 - [Verification graph](../verification/README.md)
 
@@ -77,7 +88,7 @@ Change impact:
 
 - Regenerate 1 declared projection(s).
 - Run `python-unit`, `generated-freshness`.
-- Review direct consumers: Contract tests, Verification graph.
+- Review direct consumers: Documentation system, Contract tests, Verification graph.
 
 ## Limitations
 

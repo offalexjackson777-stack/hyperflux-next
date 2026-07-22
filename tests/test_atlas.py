@@ -44,6 +44,25 @@ class RepositoryAtlasTests(unittest.TestCase):
                 self.assertIn(node.id, atlas.used_by[dependency])
         self.assertEqual(set(atlas.used_by), set(atlas.by_id))
 
+    def test_foundation_authorities_are_visible_in_the_atlas(self) -> None:
+        atlas = load_repository_atlas(ROOT)
+        self.assertIn(
+            "runtime/local-companion.json",
+            atlas.by_id["runtime-config"].canonical_files,
+        )
+        self.assertIn(
+            "governance/licensing.json",
+            atlas.by_id["governance"].canonical_files,
+        )
+        self.assertIn(
+            "generated/public-readiness.json",
+            atlas.by_id["documentation"].generated_files,
+        )
+        self.assertIn(
+            "tools/hfxdev/portal_model.py",
+            atlas.by_id["tooling"].canonical_files,
+        )
+
     def test_folder_readmes_expose_the_complete_contract(self) -> None:
         atlas = load_repository_atlas(ROOT)
         required = (

@@ -153,15 +153,18 @@
     "protection": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["linear_history", "required_approvals", "dismiss_stale_reviews", "require_code_owner_reviews", "require_conversation_resolution", "prevent_deletions", "prevent_force_pushes", "required_checks"],
+      "required": ["profile", "trusted_maintainers", "linear_history", "required_approvals", "dismiss_stale_reviews", "require_code_owner_reviews", "require_conversation_resolution", "prevent_deletions", "prevent_force_pushes", "strict_required_status_checks", "required_checks"],
       "properties": {
+        "profile": {"enum": ["solo-maintainer", "multi-maintainer"]},
+        "trusted_maintainers": {"type": "integer", "minimum": 1, "maximum": 32},
         "linear_history": {"const": true},
-        "required_approvals": {"type": "integer", "minimum": 1, "maximum": 6},
+        "required_approvals": {"type": "integer", "minimum": 0, "maximum": 6},
         "dismiss_stale_reviews": {"const": true},
-        "require_code_owner_reviews": {"const": true},
+        "require_code_owner_reviews": {"type": "boolean"},
         "require_conversation_resolution": {"const": true},
         "prevent_deletions": {"const": true},
         "prevent_force_pushes": {"const": true},
+        "strict_required_status_checks": {"const": true},
         "required_checks": {
           "type": "array",
           "minItems": 1,
@@ -169,7 +172,17 @@
           "uniqueItems": true,
           "items": {"type": "string", "minLength": 1, "maxLength": 160}
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"profile": {"const": "solo-maintainer"}}},
+          "then": {"properties": {"trusted_maintainers": {"const": 1}, "required_approvals": {"const": 0}, "require_code_owner_reviews": {"const": false}}}
+        },
+        {
+          "if": {"properties": {"profile": {"const": "multi-maintainer"}}},
+          "then": {"properties": {"trusted_maintainers": {"minimum": 2}, "required_approvals": {"minimum": 1}, "require_code_owner_reviews": {"const": true}}}
+        }
+      ]
     },
     "labels": {
       "type": "array",

@@ -21,7 +21,7 @@ The public repository, generated Pages portal, Discussions, roadmap, and native 
 | Workflow | Trigger | Network during verification | Hardware access | Output |
 | --- | --- | --- | --- | --- |
 | Verification | Pull requests, main, manual | None | None | Source-bound fast evidence |
-| Full verification | Weekly or manual | None | None | Source-bound full evidence |
+| Full verification | Pull request, weekly, or manual | None | None | Source-bound full evidence |
 | Documentation | Pull requests, main documentation changes, manual | None | None | Verified portal artifact |
 | Pages | Main or manual | None after image build | None | Protected generated portal deployment |
 | CodeQL | Pull requests, main, weekly | GitHub service only | None | C/C++ and Python analysis |
@@ -35,9 +35,14 @@ The development image may use the exact snapshot and toolchain network boundary 
 - `CodeQL / Analyze (python)`
 - `Dependency review / Dependency review`
 - `Documentation / Portal contracts`
+- `Full verification / Full software`
+- `Repository experience / Link checks`
+- `Repository experience / Pages preview`
 - `Verification / Fast software`
 
-The active plan has no ruleset bypass actors. It may be applied only after hosted runs establish these exact check names; release and hardware gates remain independent canonical interlocks.
+Protection profile: `solo-maintainer` with 1 trusted maintainer. Required human approvals: `0`; CODEOWNER review required: `false`.
+
+The solo profile avoids impossible self-approval while every required check remains strict on the current branch. Independent review becomes required only after a second trusted maintainer is configured. There are no ruleset bypass actors; release and hardware gates remain independent canonical interlocks.
 
 ## Immutable Workflow Dependencies
 

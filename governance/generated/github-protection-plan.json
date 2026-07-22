@@ -15,17 +15,23 @@
     "enforcement": "active",
     "prevent_deletions": true,
     "prevent_force_pushes": true,
-    "require_code_owner_reviews": true,
+    "profile": "solo-maintainer",
+    "require_code_owner_reviews": false,
     "require_conversation_resolution": true,
     "require_linear_history": true,
-    "required_approvals": 1,
+    "required_approvals": 0,
     "required_status_checks": [
       "CodeQL / Analyze (c-cpp)",
       "CodeQL / Analyze (python)",
       "Dependency review / Dependency review",
       "Documentation / Portal contracts",
+      "Full verification / Full software",
+      "Repository experience / Link checks",
+      "Repository experience / Pages preview",
       "Verification / Fast software"
-    ]
+    ],
+    "strict_required_status_checks": true,
+    "trusted_maintainers": 1
   },
   "schema": "hyperflux-github-protection-plan-v1"
 }

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/public-readiness-v1.json",
+  "title": "HyperFlux public readiness projection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "generated_from", "publication", "software", "hardware", "evidence", "repository", "portal_hardware_access"],
+  "properties": {
+    "$schema": {"const": "../schemas/public-readiness.schema.json"},
+    "schema": {"const": "hyperflux-public-readiness-v1"},
+    "generated_from": {
+      "type": "array",
+      "minItems": 3,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"}
+    },
+    "publication": {"$ref": "#/$defs/status", "unevaluatedProperties": false},
+    "software": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        {"$ref": "#/$defs/status"},
+        {"type": "object", "required": ["gates_ready", "gates_total"], "properties": {"gates_ready": {"type": "integer", "minimum": 0}, "gates_total": {"type": "integer", "minimum": 1}}}
+      ]
+    },
+    "hardware": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        {"$ref": "#/$defs/status"},
+        {"type": "object", "required": ["qualified_routes", "research_candidates"], "properties": {"qualified_routes": {"type": "integer", "minimum": 0}, "research_candidates": {"type": "integer", "minimum": 0}}}
+      ]
+    },
+    "evidence": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        {"$ref": "#/$defs/status"},
+        {"type": "object", "required": ["hardware_gates", "lifecycle_gates", "reviewed_facts", "known_gaps"], "properties": {"hardware_gates": {"type": "integer", "minimum": 0}, "lifecycle_gates": {"type": "integer", "minimum": 0}, "reviewed_facts": {"type": "integer", "minimum": 0}, "known_gaps": {"type": "integer", "minimum": 0}}}
+      ]
+    },
+    "repository": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        {"$ref": "#/$defs/status"},
+        {"type": "object", "required": ["atlas_subsystems"], "properties": {"atlas_subsystems": {"type": "integer", "minimum": 1}}}
+      ]
+    },
+    "portal_hardware_access": {"const": "none"}
+  },
+  "$defs": {
+    "status": {
+      "type": "object",
+      "required": ["state", "label", "summary"],
+      "properties": {
+        "state": {"enum": ["ready", "partial", "blocked", "locked", "unknown"]},
+        "label": {"type": "string", "minLength": 1, "maxLength": 80},
+        "summary": {"type": "string", "minLength": 1, "maxLength": 240}
+      }
+    }
+  }
+}

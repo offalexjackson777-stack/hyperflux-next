@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from collections import Counter
 from html import escape
 from typing import Any
 
-from ..atlas import RepositoryAtlas
 from ..governance import GitHubGovernance
-from ..release import ReleaseGate
+from ..portal_metadata import canonical_url
+from ..portal_model import PortalConfig
 
 
 def _badge(label: str, value: str, color: str) -> str:
@@ -37,22 +36,18 @@ def license_badge() -> str:
 
 def markdown(
     governance: GitHubGovernance,
-    gates: tuple[ReleaseGate, ...],
-    knowledge: dict[str, Any],
-    atlas: RepositoryAtlas,
+    readiness: dict[str, Any],
+    portal: PortalConfig,
 ) -> str:
     repository_url = f"https://github.com/{governance.owner}/{governance.repository}"
-    pages_url = governance.homepage.rstrip("/")
-    gate_counts = Counter(gate.status for gate in gates)
-    candidates = knowledge["candidates"]
-    route_qualified = sum(
-        candidate["hyperflux_support"] == "route-qualified" for candidate in candidates
-    )
-    research_only = sum(
-        candidate["hyperflux_support"] == "candidate-only" for candidate in candidates
-    )
-    facts = sum(len(candidate["reviewed_facts"]) for candidate in candidates)
-    gaps = sum(len(candidate["knowledge_gaps"]) for candidate in candidates)
+
+    def route_url(identifier: str) -> str:
+        return canonical_url(portal, portal.route(identifier).path)
+
+    software = readiness["software"]
+    hardware = readiness["hardware"]
+    evidence = readiness["evidence"]
+    publication = readiness["publication"]
     return f"""# HyperFlux Next
 
 **Evidence-bound Linux support for devices paired through Razer HyperFlux V2.**
@@ -63,24 +58,17 @@ def markdown(
 ![License](docs/assets/badge-license.svg)
 
 > [!IMPORTANT]
-> **Unreleased and evidence-bound.** The source and generated documentation are
-> public for review, but there is no supported package channel or product
-> release. Software verification, route qualification, lifecycle evidence, and
-> a release decision remain separate facts; one never silently promotes another.
+> **{publication['label']} and evidence-bound.** {publication['summary']}
 
-## Start Here
+## Start
 
-| Destination | Purpose |
+| I need to... | Go to... |
 | --- | --- |
-| [Documentation]({pages_url}/) | Audience-guided product, development, and maintenance documentation |
-| [Device Lab]({pages_url}/devices/) | Qualified routes, research candidates, provenance, conflicts, and unknowns |
-| [Repository Atlas]({pages_url}/atlas/) | Canonical ownership, dependencies, generated projections, and safe change paths |
-| [Repository State]({pages_url}/state/) | Release gates, evidence levels, verification budgets, and current blockers |
-| [Installation status]({pages_url}/users/installation.html) | What a future package contains and why installation is not yet offered |
-| [Architecture]({pages_url}/developers/architecture.html) | System boundaries and the one-writer transport model |
-| [Contributing](CONTRIBUTING.md) | Schema-first changes, evidence expectations, and verification |
-| [Security](SECURITY.md) | Private vulnerability reporting and disclosure policy |
-| [Roadmap]({governance.project_url}) | Typed issues and qualification work organized in the GitHub Project |
+| Understand or eventually install HyperFlux | [Documentation]({route_url('home')}) and [installation status]({route_url('installation')}) |
+| Check hardware evidence | [Device Lab]({route_url('device-lab')}) |
+| Understand or change the code | [Architecture]({route_url('architecture')}), [Repository Atlas]({route_url('repository-atlas')}), and [Contributing](CONTRIBUTING.md) |
+| Review blockers and evidence | [Repository State]({route_url('repository-state')}) and [Roadmap]({governance.project_url}) |
+| Report a vulnerability | [Security policy](SECURITY.md) and [private reporting]({repository_url}/security/advisories/new) |
 
 ## Architecture
 
@@ -99,30 +87,19 @@ ordinary HID input and transports bounded generation-bound envelopes.
 
 ## Current Readiness
 
-<!-- Generated from assurance/release-gates.json, generated/knowledge/catalog.json, and architecture/repository-atlas.json. -->
+<!-- Generated from generated/public-readiness.json. -->
 
-| Surface | Current evidence |
+| Surface | Plain-language state |
 | --- | --- |
-| Public source and documentation | Authorized pre-release surface; {len(atlas.nodes)} Atlas subsystems; generated Pages only |
-| Software verification | {gate_counts['software-satisfied']} of {len(gates)} release gates software-satisfied |
-| Hardware knowledge | {route_qualified} route-qualified profiles; {research_only} research-only candidates; {facts} reviewed facts; {gaps} explicit gaps |
-| Remaining release evidence | {gate_counts['blocked-by-physical-evidence']} physical gate(s); {gate_counts['blocked-by-lifecycle-evidence']} lifecycle gate(s) |
-| Product publication | Locked; no release, tag, package channel, or supported-product claim |
-| Portal hardware access | Zero hardware writes and zero live device queries |
+| Product | **{publication['label']}**: {publication['summary']} |
+| Software | {software['summary']} |
+| Hardware | {hardware['summary']} |
+| Remaining evidence | {evidence['summary']} |
+| Documentation portal | Static and telemetry-free; no live device query or hardware write |
 
-The compact table is generated by `./hfx generate`. Follow [Repository
-State]({pages_url}/state/) for the complete, canonical explanation.
-
-## Choose Your Next Action
-
-| You are... | Go to... |
-| --- | --- |
-| A first-time visitor | [Product overview]({pages_url}/users/overview.html) and [installation status]({pages_url}/users/installation.html) |
-| A developer | [Architecture]({pages_url}/developers/architecture.html), then the [Repository Atlas]({pages_url}/atlas/) |
-| A prospective contributor | [CONTRIBUTING.md](CONTRIBUTING.md) and the [issue forms]({repository_url}/issues/new/choose) |
-| A hardware tester | [Device Lab]({pages_url}/devices/) and the [device qualification form]({repository_url}/issues/new?template=device_qualification.yml) |
-| A maintainer | [Repository State]({pages_url}/state/), [governance]({pages_url}/maintainers/github-governance.html), and the [roadmap]({governance.project_url}) |
-| A security reporter | [SECURITY.md](SECURITY.md) and [private vulnerability reporting]({repository_url}/security/advisories/new) |
+This table and the Pages home consume the same generated projection. [Repository
+State]({route_url('repository-state')}) shows the detailed ledgers without changing the meaning
+of these terms.
 
 ## Verify A Change
 
@@ -137,7 +114,7 @@ networkless after exact upstream preparation, device-free, and incapable of
 granting hardware or release authority.
 
 <details>
-<summary>Repository boundaries</summary>
+<summary>Engineering and publication boundaries</summary>
 
 - Unknown devices expose safe identity and passive observations but receive no
   writable capability.
@@ -145,11 +122,11 @@ granting hardware or release authority.
   transport authority.
 - Release, package, tag, and hardware-writing workflows are absent until a
   separate authorization changes their canonical interlocks.
-- The [Repository Atlas]({pages_url}/atlas/) is the authoritative directory map;
-  folder READMEs are generated projections of it.
+- The [Repository Atlas]({route_url('repository-atlas')}) is the authoritative directory and
+  ownership map; folder READMEs are generated projections.
 
 </details>
 
 Project-owned kernel and core work is `GPL-2.0-only`. SDKs and integrations use
-declared compatible exceptions. See [LICENSE-DECISION.md](LICENSE-DECISION.md).
+declared compatible licenses. See [licensing policy](docs/legal/licensing.md).
 """

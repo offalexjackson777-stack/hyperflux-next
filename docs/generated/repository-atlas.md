@@ -133,6 +133,7 @@ flowchart LR
     n_device_knowledge --> n_documentation
     n_verification --> n_documentation
     n_governance --> n_documentation
+    n_tooling --> n_documentation
     n_architecture --> n_verification
     n_assurance --> n_verification
     n_tooling --> n_verification
@@ -170,11 +171,11 @@ Arrows run from a dependency to its direct consumer. They describe responsibilit
 | [Packaging and installation](#packaging) | `delivery` | `implemented` | 6 | 0 | `package-contracts` |
 | [C++ SDK](#sdk-cpp) | `applications` | `implemented` | 3 | 2 | `cpp-sdk-contracts` |
 | [Python SDK](#sdk-python) | `applications` | `implemented` | 3 | 3 | `python-unit`, `protocol-contracts` |
-| [Repository tooling](#tooling) | `tooling` | `implemented` | 3 | 2 | `python-unit`, `generated-freshness` |
+| [Repository tooling](#tooling) | `tooling` | `implemented` | 3 | 3 | `python-unit`, `generated-freshness` |
 | [Contract tests](#tests) | `assurance` | `implemented` | 4 | 1 | `python-unit`, `cpp-sdk-contracts`, `rust-unit` |
 | [Migration provenance](#migration) | `assurance` | `research-boundary` | 3 | 0 | `foundation-contracts`, `migration-shadow-contracts` |
 | [GitHub governance authority](#governance) | `governance` | `policy` | 3 | 1 | `governance-contracts` |
-| [Documentation system](#documentation) | `documentation` | `generated` | 4 | 0 | `documentation-portal-contracts`, `repository-atlas-contracts` |
+| [Documentation system](#documentation) | `documentation` | `generated` | 5 | 0 | `documentation-portal-contracts`, `repository-atlas-contracts` |
 | [Verification graph](#verification) | `assurance` | `implemented` | 4 | 3 | `repository-atlas-contracts`, `python-unit` |
 | [Error catalog](#errors) | `architecture` | `implemented` | 1 | 0 | `error-contracts` |
 | [Pinned development toolchains](#toolchains) | `tooling` | `policy` | 1 | 2 | `toolchain-contract`, `development-environment-contracts` |
@@ -217,7 +218,7 @@ Defines strict machine-readable shapes for every shared repository fact and gene
 
 **Used by:** [Assurance and release evidence](#assurance), [Kernel driver contract](#driver-contract), [Error catalog](#errors), [Application integration catalog](#integrations), [Composable hardware profiles](#profiles), [Versioned bridge protocol](#protocol), [Linux runtime authority](#runtime-config), [Rust workspace](#rust-workspace), [Repository tooling](#tooling)
 
-**Canonical sources:** `schemas/domain-catalog.json`, `schemas/domain-catalog.schema.json`, `schemas/repository-atlas.schema.json`.
+**Canonical sources:** `schemas/domain-catalog.json`, `schemas/domain-catalog.schema.json`, `schemas/repository-atlas.schema.json`, `schemas/documentation-portal.schema.json`, `schemas/public-readiness.schema.json`, `schemas/local-companion.schema.json`, `schemas/local-snapshot.schema.json`, `schemas/licensing-policy.schema.json`.
 
 **Generated projections:** `schemas/README.md`, `docs/generated/domain-types.md`.
 
@@ -587,7 +588,7 @@ Binds the receiver, preserves generic input, records passive observations, and t
 
 Defines package version, service identities, filesystem paths, permissions, activation, and runtime defaults once.
 
-**Owns:** Linux runtime names; Service and path constants; Activation policy.
+**Owns:** Linux runtime names; Service and path constants; Activation policy; Local companion contract.
 
 **Must never own:** Package-format commands; Hardware qualification; Application effects.
 
@@ -595,11 +596,11 @@ Defines package version, service identities, filesystem paths, permissions, acti
 
 **Used by:** [Production daemon](#daemon), [Packaging and installation](#packaging)
 
-**Canonical sources:** `runtime/linux.json`.
+**Canonical sources:** `runtime/linux.json`, `runtime/local-companion.json`.
 
-**Generated projections:** `runtime/README.md`, `docs/generated/linux-runtime.md`, `packaging/generated/runtime.env`.
+**Generated projections:** `runtime/README.md`, `docs/generated/linux-runtime.md`, `docs/generated/local-companion.md`, `packaging/generated/runtime.env`.
 
-**Change impact:** Regenerate 3 declared projection(s). Run `foundation-contracts`, `package-contracts`. Review direct consumers: Production daemon, Packaging and installation.
+**Change impact:** Regenerate 4 declared projection(s). Run `foundation-contracts`, `package-contracts`. Review direct consumers: Production daemon, Packaging and installation.
 
 <a id="packaging"></a>
 ### Packaging and installation
@@ -677,13 +678,13 @@ Provides the single developer CLI, canonical loaders, deterministic generators, 
 
 **Depends on:** [Architecture authority](#architecture), [Schema contracts](#schemas), [Pinned development toolchains](#toolchains)
 
-**Used by:** [Contract tests](#tests), [Verification graph](#verification)
+**Used by:** [Documentation system](#documentation), [Contract tests](#tests), [Verification graph](#verification)
 
-**Canonical sources:** `hfx`, `tools/hfxdev/cli.py`, `tools/hfxdev/render.py`, `tools/hfxdev/verify.py`.
+**Canonical sources:** `hfx`, `tools/hfxdev/cli.py`, `tools/hfxdev/render.py`, `tools/hfxdev/verify.py`, `tools/hfxdev/portal.py`, `tools/hfxdev/portal_model.py`, `tools/hfxdev/portal_routing.py`, `tools/hfxdev/portal_metadata.py`, `tools/hfxdev/portal_layout.py`, `tools/hfxdev/portal_content.py`, `tools/hfxdev/portal_search.py`, `tools/hfxdev/public_readiness.py`, `tools/hfxdev/local_companion.py`, `tools/hfxdev/licensing.py`.
 
 **Generated projections:** `tools/README.md`.
 
-**Change impact:** Regenerate 1 declared projection(s). Run `python-unit`, `generated-freshness`. Review direct consumers: Contract tests, Verification graph.
+**Change impact:** Regenerate 1 declared projection(s). Run `python-unit`, `generated-freshness`. Review direct consumers: Documentation system, Contract tests, Verification graph.
 
 <a id="tests"></a>
 ### Contract tests
@@ -734,7 +735,7 @@ Records exact legacy sources, inventories, dispositions, and read-only semantic 
 
 Defines repository ownership, immutable automation, public collaboration, remote synchronization, dependency policy, and product-publication locks from one authority.
 
-**Owns:** GitHub governance policy; Required-check plan; Generated community files.
+**Owns:** GitHub governance policy; Required-check plan; Generated community files; Path-to-license policy.
 
 **Must never own:** Product release approval; Hardware-write authorization; Unreviewed external-app installation.
 
@@ -742,11 +743,11 @@ Defines repository ownership, immutable automation, public collaboration, remote
 
 **Used by:** [Documentation system](#documentation)
 
-**Canonical sources:** `governance/github.json`, `CONTRIBUTING.md`, `SUPPORT.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`.
+**Canonical sources:** `governance/github.json`, `governance/licensing.json`, `CONTRIBUTING.md`, `SUPPORT.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`.
 
-**Generated projections:** `README.md`, `docs/assets/badge-state.svg`, `docs/assets/badge-license.svg`, `governance/README.md`, `governance/generated/github-protection-plan.json`, `governance/generated/github-labels.json`, `governance/generated/github-experience-plan.json`, `docs/generated/github-governance.md`, `.github/CODEOWNERS`, `.github/pull_request_template.md`, `.github/ISSUE_TEMPLATE/config.yml`, `.github/ISSUE_TEMPLATE/bug_report.yml`, `.github/ISSUE_TEMPLATE/device_qualification.yml`, `.github/ISSUE_TEMPLATE/hardware_research.yml`, `.github/ISSUE_TEMPLATE/documentation.yml`, `.github/ISSUE_TEMPLATE/feature_request.yml`, `.github/dependabot.yml`, `.github/release.yml`, `.github/workflows/verification.yml`, `.github/workflows/full-verification.yml`, `.github/workflows/documentation.yml`, `.github/workflows/pages.yml`, `.github/workflows/codeql.yml`, `.github/workflows/dependency-review.yml`.
+**Generated projections:** `README.md`, `docs/assets/badge-state.svg`, `docs/assets/badge-license.svg`, `governance/README.md`, `governance/generated/github-protection-plan.json`, `governance/generated/github-labels.json`, `governance/generated/github-experience-plan.json`, `docs/generated/github-governance.md`, `docs/legal/licensing.md`, `.github/CODEOWNERS`, `.github/pull_request_template.md`, `.github/ISSUE_TEMPLATE/config.yml`, `.github/ISSUE_TEMPLATE/bug_report.yml`, `.github/ISSUE_TEMPLATE/device_qualification.yml`, `.github/ISSUE_TEMPLATE/hardware_research.yml`, `.github/ISSUE_TEMPLATE/documentation.yml`, `.github/ISSUE_TEMPLATE/feature_request.yml`, `.github/dependabot.yml`, `.github/release.yml`, `.github/workflows/verification.yml`, `.github/workflows/full-verification.yml`, `.github/workflows/documentation.yml`, `.github/workflows/repository-experience.yml`, `.github/workflows/pages.yml`, `.github/workflows/codeql.yml`, `.github/workflows/dependency-review.yml`.
 
-**Change impact:** Regenerate 24 declared projection(s). Run `governance-contracts`. Review direct consumers: Documentation system.
+**Change impact:** Regenerate 26 declared projection(s). Run `governance-contracts`. Review direct consumers: Documentation system.
 
 <a id="documentation"></a>
 ### Documentation system
@@ -759,15 +760,15 @@ Combines reviewed narrative sources with generated technical truth into a teleme
 
 **Must never own:** Duplicated canonical facts; Live hardware claims in static pages; Publication authorization.
 
-**Depends on:** [Architecture authority](#architecture), [Device knowledge](#device-knowledge), [Verification graph](#verification), [GitHub governance authority](#governance)
+**Depends on:** [Architecture authority](#architecture), [Device knowledge](#device-knowledge), [Verification graph](#verification), [GitHub governance authority](#governance), [Repository tooling](#tooling)
 
 **Used by:** None
 
 **Canonical sources:** `docs/portal.json`, `docs/user/overview.md`, `docs/architecture/design-book.md`.
 
-**Generated projections:** `docs/README.md`, `docs/generated/repository-atlas.md`.
+**Generated projections:** `docs/README.md`, `docs/generated/repository-atlas.md`, `generated/public-readiness.json`.
 
-**Change impact:** Regenerate 2 declared projection(s). Run `documentation-portal-contracts`, `repository-atlas-contracts`. No direct subsystem consumer is declared; verify repository-facing outputs.
+**Change impact:** Regenerate 3 declared projection(s). Run `documentation-portal-contracts`, `repository-atlas-contracts`. No direct subsystem consumer is declared; verify repository-facing outputs.
 
 <a id="verification"></a>
 ### Verification graph
