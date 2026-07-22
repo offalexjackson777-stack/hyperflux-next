@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/upstream-device-catalog-v1.json",
+  "title": "Pinned normalized upstream device knowledge",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "source", "records"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-upstream-device-catalog-v1"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["upstream_id", "repository", "version", "commit", "license_expression", "extractor", "source_files"],
+      "properties": {
+        "upstream_id": {"enum": ["openrazer", "openrgb"]},
+        "repository": {"type": "string", "pattern": "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\\.git$"},
+        "version": {"type": "string", "minLength": 1, "maxLength": 64},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "license_expression": {"type": "string", "minLength": 1, "maxLength": 128},
+        "extractor": {"enum": ["python-ast-v1", "cpp-initializer-v1"]},
+        "source_files": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "sha256"],
+            "properties": {
+              "path": {"type": "string", "minLength": 1, "maxLength": 256},
+              "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+            }
+          }
+        }
+      }
+    },
+    "records": {
+      "type": "array",
+      "maxItems": 2048,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["record_id", "source_device_key", "model_name", "device_kind", "source_route", "usb_identity", "lighting_topology", "settings_methods", "facts", "source_location"],
+        "properties": {
+          "record_id": {"type": "string", "pattern": "^(openrazer|openrgb):[A-Za-z0-9_]+$"},
+          "source_device_key": {"type": "string", "pattern": "^[A-Za-z0-9_]+$"},
+          "model_name": {"type": "string", "minLength": 1, "maxLength": 128},
+          "device_kind": {"enum": ["keyboard", "mouse"]},
+          "source_route": {"enum": ["direct-usb", "vendor-wireless-receiver", "bluetooth"]},
+          "usb_identity": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["vendor_id", "product_id"],
+            "properties": {
+              "vendor_id": {"type": ["integer", "null"], "minimum": 0, "maximum": 65535},
+              "product_id": {"type": "integer", "minimum": 0, "maximum": 65535}
+            }
+          },
+          "lighting_topology": {
+            "oneOf": [
+              {"type": "null"},
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "matrix_dimensions": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": {"type": "integer", "minimum": 1, "maximum": 256}
+                  },
+                  "matrix_type": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]+$"},
+                  "rows": {"type": "integer", "minimum": 1, "maximum": 256},
+                  "columns": {"type": "integer", "minimum": 1, "maximum": 256},
+                  "application_slot_count": {"type": "integer", "minimum": 1, "maximum": 65536},
+                  "zones": {
+                    "type": "array",
+                    "maxItems": 16,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["name", "type", "rows", "columns"],
+                      "properties": {
+                        "name": {"type": "string", "minLength": 1, "maxLength": 64},
+                        "type": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]+$"},
+                        "rows": {"type": "integer", "minimum": 1, "maximum": 256},
+                        "columns": {"type": "integer", "minimum": 1, "maximum": 256}
+                      }
+                    }
+                  },
+                  "layout_key": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9_]+$"}
+                }
+              }
+            ]
+          },
+          "settings_methods": {
+            "type": "array",
+            "maxItems": 256,
+            "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]+$"}
+          },
+          "facts": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "dedicated_macro_keys": {"type": "boolean"},
+              "detector_registered": {"type": "boolean"},
+              "dpi_max": {"type": "integer", "minimum": 1, "maximum": 1000000},
+              "has_matrix": {"type": "boolean"},
+              "matrix_dimensions": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer", "minimum": 1, "maximum": 256}},
+              "poll_rates_hz": {"type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": {"type": "integer", "minimum": 1, "maximum": 100000}},
+              "transaction_id": {"type": "integer", "minimum": 0, "maximum": 255},
+              "wave_directions": {"type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": {"type": "integer", "minimum": 0, "maximum": 255}}
+            }
+          },
+          "source_location": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "line"],
+            "properties": {
+              "path": {"type": "string", "minLength": 1, "maxLength": 256},
+              "line": {"type": "integer", "minimum": 1}
+            }
+          }
+        }
+      }
+    }
+  }
+}

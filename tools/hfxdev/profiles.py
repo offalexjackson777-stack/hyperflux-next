@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass
+from datetime import date
 import hashlib
 import json
 from pathlib import Path
@@ -284,13 +285,41 @@ def _validate_capabilities(catalog: dict[str, Any]) -> dict[str, dict[str, Any]]
 def _validate_candidates(catalogs: list[dict[str, Any]]) -> tuple[set[str], list[dict[str, Any]]]:
     snapshot_ids: set[str] = set()
     all_candidates: list[dict[str, Any]] = []
+    catalogs_by_id: dict[str, dict[str, Any]] = {}
+    retrieval_dates: dict[str, date] = {}
+    successors: list[str] = []
     for catalog in catalogs:
         if catalog.get("schema") != "hyperflux-candidate-catalog-v1":
             raise ModelError(f"{catalog['_source_path']}: unsupported candidate catalog schema")
+        _expect_keys(
+            catalog,
+            {
+                "$schema",
+                "schema",
+                "snapshot_id",
+                "retrieved_utc",
+                "supersedes_snapshot_id",
+                "source_claim",
+                "candidates",
+                "_source_path",
+            },
+            f"{catalog['_source_path']} candidate catalog",
+        )
         snapshot_id = _expect_nonempty_string(catalog.get("snapshot_id"), "candidate snapshot id")
         if snapshot_id in snapshot_ids:
             raise ModelError(f"duplicate candidate snapshot id: {snapshot_id}")
         snapshot_ids.add(snapshot_id)
+        catalogs_by_id[snapshot_id] = catalog
+        retrieved = _expect_nonempty_string(
+            catalog.get("retrieved_utc"), f"{snapshot_id} retrieval date"
+        )
+        try:
+            retrieval_dates[snapshot_id] = date.fromisoformat(retrieved)
+        except ValueError as error:
+            raise ModelError(f"{snapshot_id}: retrieval date must be an ISO date") from error
+        supersedes = catalog.get("supersedes_snapshot_id")
+        if supersedes is not None:
+            successors.append(_expect_nonempty_string(supersedes, f"{snapshot_id} superseded snapshot"))
         source_claim = _expect_nonempty_string(catalog.get("source_claim"), f"{snapshot_id} source claim")
         candidates = catalog.get("candidates")
         if not isinstance(candidates, list):
@@ -308,6 +337,32 @@ def _validate_candidates(catalogs: list[dict[str, Any]]) -> tuple[set[str], list
             copied["snapshot_id"] = snapshot_id
             copied["source_claim"] = source_claim
             all_candidates.append(copied)
+    require_unique(successors, "superseded candidate snapshot")
+    for snapshot_id, catalog in catalogs_by_id.items():
+        supersedes = catalog.get("supersedes_snapshot_id")
+        if supersedes is None:
+            continue
+        previous = catalogs_by_id.get(supersedes)
+        if previous is None:
+            raise ModelError(f"{snapshot_id}: superseded candidate snapshot is absent: {supersedes}")
+        if retrieval_dates[supersedes] >= retrieval_dates[snapshot_id]:
+            raise ModelError(f"{snapshot_id}: supersession must move to a later retrieval date")
+        previous_candidates = {candidate["id"]: candidate for candidate in previous["candidates"]}
+        current_candidates = {candidate["id"]: candidate for candidate in catalog["candidates"]}
+        missing = sorted(set(previous_candidates) - set(current_candidates))
+        if missing:
+            raise ModelError(
+                f"{snapshot_id}: successor silently removes candidates: {', '.join(missing)}"
+            )
+        changed = sorted(
+            identifier
+            for identifier, candidate in previous_candidates.items()
+            if current_candidates[identifier] != candidate
+        )
+        if changed:
+            raise ModelError(
+                f"{snapshot_id}: successor rewrites historical candidates: {', '.join(changed)}"
+            )
     candidate_keys = [f"{item['snapshot_id']}:{item['id']}" for item in all_candidates]
     require_unique(candidate_keys, "candidate identity")
     return snapshot_ids, all_candidates

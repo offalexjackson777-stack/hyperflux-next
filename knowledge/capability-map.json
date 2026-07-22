@@ -1,0 +1,222 @@
+{
+  "$schema": "../schemas/device-capability-map.schema.json",
+  "schema": "hyperflux-device-capability-map-v1",
+  "rules": [
+    {
+      "id": "battery-percent",
+      "semantic_capability": "telemetry.battery-percent",
+      "family": "telemetry",
+      "access": "read",
+      "presentation": "status",
+      "methods": ["get_battery"],
+      "required_hyperflux_capabilities": ["telemetry.battery-percent"]
+    },
+    {
+      "id": "charging-state",
+      "semantic_capability": "telemetry.charging-state",
+      "family": "telemetry",
+      "access": "read",
+      "presentation": "status",
+      "methods": ["is_charging"],
+      "required_hyperflux_capabilities": ["telemetry.charging-state"]
+    },
+    {
+      "id": "device-kind",
+      "semantic_capability": "identity.device-kind",
+      "family": "identity",
+      "access": "read",
+      "presentation": "status",
+      "methods": ["get_device_type_keyboard", "get_device_type_mouse"],
+      "required_hyperflux_capabilities": ["identity.model"]
+    },
+    {
+      "id": "dpi-maximum",
+      "semantic_capability": "input.dpi-maximum",
+      "family": "performance",
+      "access": "read",
+      "presentation": "status",
+      "methods": ["max_dpi"],
+      "required_hyperflux_capabilities": ["input.dpi-maximum"]
+    },
+    {
+      "id": "dpi-stages",
+      "semantic_capability": "input.dpi-stages",
+      "family": "performance",
+      "access": "read-write",
+      "presentation": "collection",
+      "methods": ["get_dpi_stages", "set_dpi_stages"],
+      "required_hyperflux_capabilities": ["input.dpi-stages"]
+    },
+    {
+      "id": "dpi-xy",
+      "semantic_capability": "input.dpi-xy",
+      "family": "performance",
+      "access": "read-write",
+      "presentation": "scalar",
+      "methods": ["get_dpi_xy", "set_dpi_xy"],
+      "required_hyperflux_capabilities": ["input.dpi-xy"]
+    },
+    {
+      "id": "game-mode",
+      "semantic_capability": "input.game-mode",
+      "family": "input",
+      "access": "read-write",
+      "presentation": "toggle",
+      "methods": ["get_game_mode", "set_game_mode"],
+      "required_hyperflux_capabilities": ["input.game-mode"]
+    },
+    {
+      "id": "idle-timeout",
+      "semantic_capability": "power.idle-timeout",
+      "family": "power",
+      "access": "read-write",
+      "presentation": "scalar",
+      "methods": ["get_idle_time", "set_idle_time"],
+      "required_hyperflux_capabilities": ["power.idle-timeout"]
+    },
+    {
+      "id": "lighting-charge-indicator",
+      "semantic_capability": "lighting.charge-indicator",
+      "family": "lighting",
+      "access": "write",
+      "presentation": "effect",
+      "methods": ["set_charge_colour", "set_charge_effect"],
+      "required_hyperflux_capabilities": ["lighting.charge-indicator"]
+    },
+    {
+      "id": "lighting-direct-frame",
+      "semantic_capability": "lighting.direct-frame",
+      "family": "lighting",
+      "access": "write",
+      "presentation": "lighting-frame",
+      "methods": ["set_custom_effect", "set_key_row"],
+      "required_hyperflux_capabilities": ["lighting.direct-frame"]
+    },
+    {
+      "id": "lighting-global-brightness",
+      "semantic_capability": "lighting.brightness",
+      "family": "lighting",
+      "access": "read-write",
+      "presentation": "scalar",
+      "methods": ["get_brightness", "set_brightness"],
+      "required_hyperflux_capabilities": ["lighting.brightness"]
+    },
+    {
+      "id": "lighting-logo-brightness",
+      "semantic_capability": "lighting.logo-brightness",
+      "family": "lighting",
+      "access": "read-write",
+      "presentation": "scalar",
+      "methods": ["get_logo_brightness", "set_logo_brightness"],
+      "required_hyperflux_capabilities": ["lighting.zone-brightness"]
+    },
+    {
+      "id": "lighting-logo-native-effect",
+      "semantic_capability": "lighting.logo-native-effect",
+      "family": "lighting",
+      "access": "write",
+      "presentation": "effect",
+      "methods": ["set_logo_breath_dual", "set_logo_breath_random", "set_logo_breath_single", "set_logo_none", "set_logo_reactive", "set_logo_spectrum", "set_logo_static", "set_logo_wave"],
+      "required_hyperflux_capabilities": ["lighting.native-effect-mode"]
+    },
+    {
+      "id": "lighting-native-effect",
+      "semantic_capability": "lighting.native-effect",
+      "family": "lighting",
+      "access": "write",
+      "presentation": "effect",
+      "methods": ["set_breath_dual_effect", "set_breath_random_effect", "set_breath_single_effect", "set_none_effect", "set_reactive_effect", "set_ripple_effect", "set_ripple_effect_random_colour", "set_spectrum_effect", "set_starlight_dual_effect", "set_starlight_random_effect", "set_starlight_single_effect", "set_static_effect", "set_wave_effect"],
+      "required_hyperflux_capabilities": ["lighting.native-effect-mode"]
+    },
+    {
+      "id": "lighting-scroll-brightness",
+      "semantic_capability": "lighting.scroll-brightness",
+      "family": "lighting",
+      "access": "read-write",
+      "presentation": "scalar",
+      "methods": ["get_scroll_brightness", "set_scroll_brightness"],
+      "required_hyperflux_capabilities": ["lighting.zone-brightness"]
+    },
+    {
+      "id": "lighting-scroll-native-effect",
+      "semantic_capability": "lighting.scroll-native-effect",
+      "family": "lighting",
+      "access": "write",
+      "presentation": "effect",
+      "methods": ["set_scroll_none", "set_scroll_spectrum", "set_scroll_static", "set_scroll_wave"],
+      "required_hyperflux_capabilities": ["lighting.native-effect-mode"]
+    },
+    {
+      "id": "low-battery-threshold",
+      "semantic_capability": "power.low-battery-threshold",
+      "family": "power",
+      "access": "read-write",
+      "presentation": "scalar",
+      "methods": ["get_low_battery_threshold", "set_low_battery_threshold"],
+      "required_hyperflux_capabilities": ["power.low-battery-threshold"]
+    },
+    {
+      "id": "macro-effect",
+      "semantic_capability": "macros.effect",
+      "family": "macros",
+      "access": "read-write",
+      "presentation": "enum",
+      "methods": ["get_macro_effect", "set_macro_effect"],
+      "required_hyperflux_capabilities": ["macros.effect"]
+    },
+    {
+      "id": "macro-mode",
+      "semantic_capability": "macros.mode",
+      "family": "macros",
+      "access": "read-write",
+      "presentation": "toggle",
+      "methods": ["get_macro_mode", "set_macro_mode"],
+      "required_hyperflux_capabilities": ["macros.mode"]
+    },
+    {
+      "id": "macros",
+      "semantic_capability": "macros.collection",
+      "family": "macros",
+      "access": "read-write",
+      "presentation": "collection",
+      "methods": ["add_macro", "delete_macro", "get_macros"],
+      "required_hyperflux_capabilities": ["macros.collection"]
+    },
+    {
+      "id": "polling-rate",
+      "semantic_capability": "input.polling-rate",
+      "family": "performance",
+      "access": "read-write",
+      "presentation": "enum",
+      "methods": ["get_poll_rate", "get_supported_poll_rates", "set_poll_rate"],
+      "required_hyperflux_capabilities": ["input.polling-rate"]
+    },
+    {
+      "id": "scroll-acceleration",
+      "semantic_capability": "input.scroll-acceleration",
+      "family": "input",
+      "access": "read-write",
+      "presentation": "toggle",
+      "methods": ["get_scroll_acceleration", "set_scroll_acceleration"],
+      "required_hyperflux_capabilities": ["input.scroll-acceleration"]
+    },
+    {
+      "id": "scroll-mode",
+      "semantic_capability": "input.scroll-mode",
+      "family": "input",
+      "access": "read-write",
+      "presentation": "enum",
+      "methods": ["get_scroll_mode", "set_scroll_mode"],
+      "required_hyperflux_capabilities": ["input.scroll-mode"]
+    },
+    {
+      "id": "smart-reel",
+      "semantic_capability": "input.smart-reel",
+      "family": "input",
+      "access": "read-write",
+      "presentation": "toggle",
+      "methods": ["get_scroll_smart_reel", "set_scroll_smart_reel"],
+      "required_hyperflux_capabilities": ["input.smart-reel"]
+    }
+  ]
+}

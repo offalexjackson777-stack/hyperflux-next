@@ -10,6 +10,7 @@
     "schema": {"const": "hyperflux-candidate-catalog-v1"},
     "snapshot_id": {"type": "string"},
     "retrieved_utc": {"type": "string", "format": "date"},
+    "supersedes_snapshot_id": {"type": "string"},
     "source_claim": {"type": "string"},
     "candidates": {
       "type": "array",

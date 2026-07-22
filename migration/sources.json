@@ -10,6 +10,13 @@
       "sha256": "37e177e4983375673ad26945b5c772254151e4de44e43aba3aedfec6ef9d161d"
     },
     {
+      "id": "device-knowledge-research",
+      "kind": "imported-document",
+      "role": "reviewed product capabilities, contradictions, and compatibility boundaries",
+      "imported_path": "knowledge/reviewed-facts.json",
+      "sha256": "9abb50aae93723a32e1e7304f858b394d727bd3a0f43f2064941bc7c69021130"
+    },
+    {
       "id": "reverse-engineering-archive",
       "kind": "git",
       "role": "protocol research, captures, experiments, and historical failures",

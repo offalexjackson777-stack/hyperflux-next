@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
 from pathlib import Path
 import sys
 import unittest
@@ -15,6 +16,7 @@ from hfxdev.model import ModelError
 from hfxdev.profiles import (
     _runtime_profile_digest,
     _validate_capabilities,
+    _validate_candidates,
     _validate_profiles,
     compiled_catalog,
     composition_fixtures,
@@ -166,10 +168,33 @@ class ProfileCompilerTests(unittest.TestCase):
         self.assertNotEqual(_runtime_profile_digest(mouse, capabilities), before)
 
     def test_candidate_names_never_grant_writes_or_guess_pids(self) -> None:
-        self.assertEqual(len(self.inputs.candidates), 11)
+        snapshots: dict[str, list[dict]] = {}
         for candidate in self.inputs.candidates:
+            snapshots.setdefault(candidate["snapshot_id"], []).append(candidate)
             self.assertEqual(candidate["writable_capabilities"], [])
             self.assertNotIn("product_id", candidate)
+        self.assertEqual(
+            {snapshot: len(candidates) for snapshot, candidates in snapshots.items()},
+            {
+                "catalog.razer.hyperflux-v2.2026-07-13": 11,
+                "catalog.razer.hyperflux-v2.2026-07-21": 12,
+            },
+        )
+
+    def test_candidate_successor_preserves_historical_entries(self) -> None:
+        catalogs = []
+        for name in (
+            "razer-hyperflux-v2-2026-07-13.json",
+            "razer-hyperflux-v2-2026-07-21.json",
+        ):
+            path = ROOT / "profiles" / "candidates" / name
+            value = json.loads(path.read_text(encoding="utf-8"))
+            value["_source_path"] = path.relative_to(ROOT).as_posix()
+            catalogs.append(value)
+        _validate_candidates(deepcopy(catalogs))
+        catalogs[1]["candidates"] = catalogs[1]["candidates"][1:]
+        with self.assertRaisesRegex(ModelError, "successor silently removes candidates"):
+            _validate_candidates(catalogs)
 
     def test_generated_compositions_cover_independent_and_unknown_children(self) -> None:
         cases = composition_fixtures(ROOT)["cases"]

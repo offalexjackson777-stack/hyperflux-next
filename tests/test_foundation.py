@@ -89,7 +89,7 @@ class FoundationTests(unittest.TestCase):
     def test_profile_sources_are_bound_to_frozen_evidence_inventories(self) -> None:
         profiles = load_profile_inputs(ROOT)
         self.assertEqual(len(profiles.profiles), 4)
-        self.assertEqual(len(profiles.candidates), 11)
+        self.assertEqual(len(profiles.candidates), 23)
         self.assertEqual(len(profiles.source_sha256), 64)
 
     def test_vendored_cpp_dependencies_match_their_manifest(self) -> None:

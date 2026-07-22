@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/device-knowledge-links-v1.json",
+  "title": "Reviewed links between official candidates and source records",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "candidate_snapshot_id", "links"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-device-knowledge-links-v1"},
+    "candidate_snapshot_id": {"type": "string", "pattern": "^catalog\\.[a-z0-9.-]+$"},
+    "links": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_id", "assurance", "source_records", "hyperflux_profile_ids", "notes"],
+        "properties": {
+          "candidate_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]+$"},
+          "assurance": {"const": "reviewed-link"},
+          "source_records": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["openrazer", "openrgb"],
+            "properties": {
+              "openrazer": {"type": "array", "maxItems": 8, "uniqueItems": true, "items": {"type": "string", "pattern": "^openrazer:[A-Za-z0-9_]+$"}},
+              "openrgb": {"type": "array", "maxItems": 8, "uniqueItems": true, "items": {"type": "string", "pattern": "^openrgb:[A-Za-z0-9_]+$"}}
+            }
+          },
+          "hyperflux_profile_ids": {"type": "array", "maxItems": 8, "uniqueItems": true, "items": {"type": "string", "pattern": "^child\\.[a-z0-9.-]+$"}},
+          "notes": {"type": "array", "maxItems": 8, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 256}}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,2764 @@
+{
+  "$schema": "../schemas/reviewed-device-facts.schema.json",
+  "schema": "hyperflux-reviewed-device-facts-v1",
+  "reviewed_on": "2026-07-21",
+  "sources": [
+    {
+      "id": "github-openrazer-basilisk-bluetooth-2407",
+      "kind": "upstream-issue",
+      "publisher": "OpenRazer",
+      "title": "Basilisk V3 Pro 35K Bluetooth support report",
+      "url": "https://github.com/openrazer/openrazer/issues/2407",
+      "retrieved_on": "2026-07-21",
+      "revision": "Issue 2407, reviewed 2026-07-21",
+      "authority": ["transport-identity", "transport-limitation"]
+    },
+    {
+      "id": "github-openrazer-blackwidow-lowprofile-2546",
+      "kind": "upstream-issue",
+      "publisher": "OpenRazer",
+      "title": "BlackWidow V4 Low-profile HyperSpeed support report",
+      "url": "https://github.com/openrazer/openrazer/issues/2546",
+      "retrieved_on": "2026-07-21",
+      "revision": "Issue 2546, reviewed 2026-07-21",
+      "authority": ["transport-identity"]
+    },
+    {
+      "id": "github-openrazer-blackwidow-lowprofile-tkl-2593",
+      "kind": "upstream-issue",
+      "publisher": "OpenRazer",
+      "title": "BlackWidow V4 Low-profile Tenkeyless HyperSpeed support report",
+      "url": "https://github.com/openrazer/openrazer/issues/2593",
+      "retrieved_on": "2026-07-21",
+      "revision": "Issue 2593, reviewed 2026-07-21",
+      "authority": ["transport-identity"]
+    },
+    {
+      "id": "razer-bluetooth-compatibility",
+      "kind": "official-compatibility",
+      "publisher": "Razer",
+      "title": "Razer Synapse supported devices via Bluetooth connection",
+      "url": "https://mysupport.razer.com/app/answers/detail/a_id/14589/kw/key%20switches",
+      "retrieved_on": "2026-07-21",
+      "revision": "Answer 14589, updated 2026-05-11",
+      "authority": ["product-capability", "transport-limitation"]
+    },
+    {
+      "id": "razer-manual-basilisk-v3-pro",
+      "kind": "official-manual",
+      "publisher": "Razer",
+      "title": "Razer Basilisk V3 Pro master guide",
+      "url": "https://dl.razerzone.com/master-guides/RazerSynapse3/BASILISKV3PRO-00000170-en.pdf",
+      "retrieved_on": "2026-07-21",
+      "revision": "BASILISKV3PRO-00000170-en",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-manual-basilisk-v3-pro-35k",
+      "kind": "official-manual",
+      "publisher": "Razer",
+      "title": "Razer Basilisk V3 Pro 35K master guide",
+      "url": "https://dl.razerzone.com/master-guides/RazerSynapse3/BASILISKV3PRO35K-00000204-en.pdf",
+      "retrieved_on": "2026-07-21",
+      "revision": "BASILISKV3PRO35K-00000204-en",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-manual-blackwidow-v3-pro",
+      "kind": "official-manual",
+      "publisher": "Razer",
+      "title": "Razer BlackWidow V3 Pro master guide",
+      "url": "https://dl.razerzone.com/master-guides/RazerSynapse3/BLACKWIDOWV3PRO-00000602-en.pdf",
+      "retrieved_on": "2026-07-21",
+      "revision": "BLACKWIDOWV3PRO-00000602-en",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-manual-blackwidow-v4-lowprofile",
+      "kind": "official-manual",
+      "publisher": "Razer",
+      "title": "Razer BlackWidow V4 Low-profile HyperSpeed master guide",
+      "url": "https://dl.razerzone.com/master-guides/RazerSynapse4/BLACKWIDOWV4LOWPROFILEHYPERSPEED-00000716-en.pdf",
+      "retrieved_on": "2026-07-21",
+      "revision": "BLACKWIDOWV4LOWPROFILEHYPERSPEED-00000716-en",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-manual-blackwidow-v4-lowprofile-tkl",
+      "kind": "official-manual",
+      "publisher": "Razer",
+      "title": "Razer BlackWidow V4 Low-profile Tenkeyless HyperSpeed master guide",
+      "url": "https://dl.razerzone.com/master-guides/RazerSynapse4/BLACKWIDOWV4LOWPROFILETENKEYLESSHYPERSPEED-00000724-en.pdf",
+      "retrieved_on": "2026-07-21",
+      "revision": "BLACKWIDOWV4LOWPROFILETENKEYLESSHYPERSPEED-00000724-en",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-manual-blackwidow-v4-mini",
+      "kind": "official-manual",
+      "publisher": "Razer",
+      "title": "Razer BlackWidow V4 Mini HyperSpeed master guide",
+      "url": "https://dl.razerzone.com/master-guides/RazerSynapse3/BLACKWIDOWV4MINIHYPERSPEED-00000697-en.pdf",
+      "retrieved_on": "2026-07-21",
+      "revision": "BLACKWIDOWV4MINIHYPERSPEED-00000697-en",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-manual-blackwidow-v4-tkl",
+      "kind": "official-manual",
+      "publisher": "Razer",
+      "title": "Razer BlackWidow V4 Tenkeyless HyperSpeed master guide",
+      "url": "https://dl.razerzone.com/master-guides/RazerSynapse4/BLACKWIDOWV4TENKEYLESSHYPERSPEED-00000727-en.pdf",
+      "retrieved_on": "2026-07-21",
+      "revision": "BLACKWIDOWV4TENKEYLESSHYPERSPEED-00000727-en",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-manual-cobra-hyperspeed",
+      "kind": "official-manual",
+      "publisher": "Razer",
+      "title": "Razer Cobra HyperSpeed master guide",
+      "url": "https://dl.razerzone.com/master-guides/RazerSynapse4/COBRAHYPERSPEED-00000218-en.pdf",
+      "retrieved_on": "2026-07-21",
+      "revision": "COBRAHYPERSPEED-00000218-en",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-manual-cobra-pro",
+      "kind": "official-manual",
+      "publisher": "Razer",
+      "title": "Razer Cobra Pro master guide",
+      "url": "https://dl.razerzone.com/master-guides/RazerSynapse3/COBRAPRO-00000175-en.pdf",
+      "retrieved_on": "2026-07-21",
+      "revision": "COBRAPRO-00000175-en",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-manual-deathstalker-v2-pro",
+      "kind": "official-manual",
+      "publisher": "Razer",
+      "title": "Razer DeathStalker V2 Pro master guide",
+      "url": "https://dl.razerzone.com/master-guides/RazerSynapse3/DEATHSTALKERV2PRO-00000658-en.pdf",
+      "retrieved_on": "2026-07-21",
+      "revision": "DEATHSTALKERV2PRO-00000658-en",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-manual-deathstalker-v2-pro-tkl",
+      "kind": "official-manual",
+      "publisher": "Razer",
+      "title": "Razer DeathStalker V2 Pro Tenkeyless master guide",
+      "url": "https://dl.razerzone.com/master-guides/RazerSynapse3/DEATHSTALKERV2PROTKL-00000662-en.pdf",
+      "retrieved_on": "2026-07-21",
+      "revision": "DEATHSTALKERV2PROTKL-00000662-en",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-manual-naga-v2-pro",
+      "kind": "official-manual",
+      "publisher": "Razer",
+      "title": "Razer Naga V2 Pro master guide",
+      "url": "https://dl.razerzone.com/master-guides/RazerSynapse3/NAGAV2PRO-00000167-en.pdf",
+      "retrieved_on": "2026-07-21",
+      "revision": "NAGAV2PRO-00000167-en",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-product-basilisk-v3-pro-35k",
+      "kind": "official-product",
+      "publisher": "Razer",
+      "title": "Razer Basilisk V3 Pro 35K product page",
+      "url": "https://www.razer.com/gaming-mice/razer-basilisk-v3-pro-35k",
+      "retrieved_on": "2026-07-21",
+      "revision": "Product page, reviewed 2026-07-21",
+      "authority": ["product-capability"]
+    },
+    {
+      "id": "razer-product-blackwidow-v4-lowprofile",
+      "kind": "official-product",
+      "publisher": "Razer",
+      "title": "Razer BlackWidow V4 Low-profile HyperSpeed product page",
+      "url": "https://www.razer.com/gaming-keyboards/razer-blackwidow-v4-low-profile-hyperspeed",
+      "retrieved_on": "2026-07-21",
+      "revision": "Product page, reviewed 2026-07-21",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-product-blackwidow-v4-lowprofile-tkl",
+      "kind": "official-product",
+      "publisher": "Razer",
+      "title": "Razer BlackWidow V4 Low-profile Tenkeyless HyperSpeed product page",
+      "url": "https://www.razer.com/gaming-keyboards/razer-blackwidow-v4-low-profile-tenkeyless-hyperspeed",
+      "retrieved_on": "2026-07-21",
+      "revision": "Product page, reviewed 2026-07-21",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-product-blackwidow-v4-mini",
+      "kind": "official-product",
+      "publisher": "Razer",
+      "title": "Razer BlackWidow V4 Mini HyperSpeed product page",
+      "url": "https://www.razer.com/ca-en/gaming-keyboards/razer-blackwidow-v4-mini-hyperspeed",
+      "retrieved_on": "2026-07-21",
+      "revision": "Canadian product page, reviewed 2026-07-21",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-product-blackwidow-v4-tkl",
+      "kind": "official-product",
+      "publisher": "Razer",
+      "title": "Razer BlackWidow V4 Tenkeyless HyperSpeed product page",
+      "url": "https://www.razer.com/gaming-keyboards/razer-blackwidow-v4-tenkeyless-hyperspeed",
+      "retrieved_on": "2026-07-21",
+      "revision": "Product page, reviewed 2026-07-21",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-product-hyperflux-v2",
+      "kind": "official-compatibility",
+      "publisher": "Razer",
+      "title": "Razer HyperFlux V2 Wireless Charging System product page",
+      "url": "https://www.razer.com/gaming-mouse-mats/razer-hyperflux-v2-wireless-charging-system",
+      "retrieved_on": "2026-07-21",
+      "revision": "Product page compatibility lists, reviewed 2026-07-21",
+      "authority": ["product-capability", "transport-limitation"]
+    },
+    {
+      "id": "razer-product-naga-v2-pro",
+      "kind": "official-product",
+      "publisher": "Razer",
+      "title": "Razer Naga V2 Pro product page",
+      "url": "https://www.razer.com/gaming-mice/razer-naga-v2-pro",
+      "retrieved_on": "2026-07-21",
+      "revision": "Product page, reviewed 2026-07-21",
+      "authority": ["product-capability"]
+    },
+    {
+      "id": "razer-support-basilisk-v3-pro",
+      "kind": "official-support",
+      "publisher": "Razer",
+      "title": "Razer Basilisk V3 Pro support and specifications",
+      "url": "https://mysupport.razer.com/app/answers/detail/a_id/6219/~/razer-basilisk-v3-pro-%7C-rz01-04620-support-%26-faqs",
+      "retrieved_on": "2026-07-21",
+      "revision": "Article 6219, updated 2026-07-11",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-support-basilisk-v3-pro-35k",
+      "kind": "official-support",
+      "publisher": "Razer",
+      "title": "Razer Basilisk V3 Pro 35K support and specifications",
+      "url": "https://mysupport.razer.com/app/answers/detail/a_id/14676/~/razer-basilisk-v3-pro-35k-%7C-rz01-0524-support-%26-faqs",
+      "retrieved_on": "2026-07-21",
+      "revision": "Article 14676, updated 2026-07-11",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-support-blackwidow-v3-pro",
+      "kind": "official-support",
+      "publisher": "Razer",
+      "title": "Razer BlackWidow V3 Pro support and specifications",
+      "url": "https://mysupport.razer.com/app/answers/detail/a_id/3808/~/razer-blackwidow-v3-pro-%7C-rz03-03530-support-%26-faqs",
+      "retrieved_on": "2026-07-21",
+      "revision": "Article 3808, updated 2026-06-24",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-support-blackwidow-v4-lowprofile",
+      "kind": "official-support",
+      "publisher": "Razer",
+      "title": "Razer BlackWidow V4 Low-profile HyperSpeed support and specifications",
+      "url": "https://mysupport.razer.com/app/answers/detail/a_id/15489/~/razer-blackwidow-v4-low-profile-hyperspeed-%7C-rz03-0527-support-%26-faqs",
+      "retrieved_on": "2026-07-21",
+      "revision": "Article 15489, updated 2026-07-16",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-support-blackwidow-v4-lowprofile-tkl",
+      "kind": "official-support",
+      "publisher": "Razer",
+      "title": "Razer BlackWidow V4 Low-profile Tenkeyless HyperSpeed support and specifications",
+      "url": "https://mysupport.razer.com/app/answers/detail/a_id/15492/~/razer-blackwidow-v4-low-profile-tenkeyless-hyperspeed-%7C-rz03-0545-support-%26-faqs",
+      "retrieved_on": "2026-07-21",
+      "revision": "Article 15492, updated 2026-07-08",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-support-blackwidow-v4-mini",
+      "kind": "official-support",
+      "publisher": "Razer",
+      "title": "Razer BlackWidow V4 Mini HyperSpeed support and specifications",
+      "url": "https://mysupport.razer.com/app/answers/detail/a_id/14149",
+      "retrieved_on": "2026-07-21",
+      "revision": "Article 14149, updated 2026-03-12",
+      "authority": ["product-capability", "product-procedure", "transport-limitation"]
+    },
+    {
+      "id": "razer-support-blackwidow-v4-tkl",
+      "kind": "official-support",
+      "publisher": "Razer",
+      "title": "Razer BlackWidow V4 Tenkeyless HyperSpeed support and specifications",
+      "url": "https://mysupport.razer.com/app/answers/detail/a_id/15142/~/razer-blackwidow-v4-tenkeyless-hyperspeed-%7C-rz03-0548-support-%26-faqs",
+      "retrieved_on": "2026-07-21",
+      "revision": "Article 15142, updated 2026-07-08",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-support-cobra-hyperspeed",
+      "kind": "official-support",
+      "publisher": "Razer",
+      "title": "Razer Cobra HyperSpeed support and specifications",
+      "url": "https://mysupport.razer.com/app/answers/detail/a_id/15141/~/razer-cobra-hyperspeed-%7C-rz01-0557-support-%26-faqs",
+      "retrieved_on": "2026-07-21",
+      "revision": "Article 15141, updated 2026-07-11",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-support-cobra-pro",
+      "kind": "official-support",
+      "publisher": "Razer",
+      "title": "Razer Cobra Pro support and specifications",
+      "url": "https://mysupport.razer.com/app/answers/detail/a_id/13182/~/razer-cobra-pro-%7C-rz01-0466-support-%26-faqs",
+      "retrieved_on": "2026-07-21",
+      "revision": "Article 13182, updated 2026-07-11",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-support-deathstalker-v2-pro",
+      "kind": "official-support",
+      "publisher": "Razer",
+      "title": "Razer DeathStalker V2 Pro support and specifications",
+      "url": "https://mysupport.razer.com/app/answers/detail/a_id/6114/~/razer-deathstalker-v2-pro-%7C-rz03-0436x-support-%26-faqs",
+      "retrieved_on": "2026-07-21",
+      "revision": "Article 6114, updated 2026-04-10",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-support-deathstalker-v2-pro-tkl",
+      "kind": "official-support",
+      "publisher": "Razer",
+      "title": "Razer DeathStalker V2 Pro Tenkeyless support and specifications",
+      "url": "https://mysupport.razer.com/app/answers/detail/a_id/6117/~/razer-deathstalker-v2-pro-tenkeyless-%7C-rz03-0437x-support-%26-faqs",
+      "retrieved_on": "2026-07-21",
+      "revision": "Article 6117, updated 2026-04-10",
+      "authority": ["product-capability", "product-procedure"]
+    },
+    {
+      "id": "razer-support-naga-v2-pro",
+      "kind": "official-support",
+      "publisher": "Razer",
+      "title": "Razer Naga V2 Pro support and specifications",
+      "url": "https://mysupport.razer.com/app/answers/detail/a_id/6292/~/razer-naga-v2-pro-%7C-rz01-0440x-support-%26-faqs",
+      "retrieved_on": "2026-07-21",
+      "revision": "Article 6292, updated 2026-07-11",
+      "authority": ["product-capability", "product-procedure"]
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_id": "razer-basilisk-v3-pro",
+      "source_ids": ["razer-bluetooth-compatibility", "razer-manual-basilisk-v3-pro", "razer-product-hyperflux-v2", "razer-support-basilisk-v3-pro"],
+      "facts": [
+        {
+          "id": "battery-life",
+          "semantic_capability": "power.battery-life",
+          "family": "power",
+          "label": "Advertised battery life",
+          "value": "Up to 110 hours at 1000 Hz over 2.4 GHz; up to 150 hours over Bluetooth",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-basilisk-v3-pro", "razer-support-basilisk-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Battery-life figures are manufacturer test claims, not live capacity telemetry."]
+        },
+        {
+          "id": "bluetooth-limitations",
+          "semantic_capability": "connectivity.bluetooth-limitations",
+          "family": "connectivity",
+          "label": "Bluetooth limitations",
+          "value": "Synapse polling is limited to 125 Hz, calibration is disabled, and onboard profiles are stored from the 2.4 GHz route",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-bluetooth-compatibility"],
+          "claim_state": "documented-product",
+          "notes": ["Bluetooth is a direct product route and is not carried by the HyperFlux mat."]
+        },
+        {
+          "id": "connectivity",
+          "semantic_capability": "connectivity.routes",
+          "family": "connectivity",
+          "label": "Connection routes",
+          "value": ["Bluetooth", "HyperSpeed 2.4 GHz", "USB-C cable"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-bluetooth-compatibility", "razer-support-basilisk-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "dpi",
+          "semantic_capability": "input.dpi-maximum",
+          "family": "performance",
+          "label": "Maximum sensitivity",
+          "value": 30000,
+          "unit": "DPI",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-basilisk-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "dpi-stages",
+          "semantic_capability": "input.dpi-stages",
+          "family": "performance",
+          "label": "Default DPI stages",
+          "value": [400, 800, 1600, 3200, 6400],
+          "unit": "DPI",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-basilisk-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Stages are customizable in Razer Synapse."]
+        },
+        {
+          "id": "lighting-power-policy",
+          "semantic_capability": "lighting.idle-policy",
+          "family": "power",
+          "label": "Lighting power policy",
+          "value": "Lighting can switch off with the display or after idle time",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-basilisk-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "lighting-quick-effects",
+          "semantic_capability": "lighting.quick-effects",
+          "family": "lighting",
+          "label": "Synapse Quick Effects",
+          "value": ["Audio Meter", "Breathing", "Fire", "Reactive", "Spectrum Cycling", "Starlight", "Static", "Wave"],
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-basilisk-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": ["These are product/Synapse capabilities, not evidence of firmware-native HyperFlux commands."]
+        },
+        {
+          "id": "lighting-topology",
+          "semantic_capability": "lighting.addressable-zones",
+          "family": "lighting",
+          "label": "Lighting topology",
+          "value": "13 zones across the scroll wheel, logo, and full underglow",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-basilisk-v3-pro", "razer-support-basilisk-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "onboard-profiles",
+          "semantic_capability": "profiles.onboard-count",
+          "family": "profiles",
+          "label": "Profile storage",
+          "value": "4 onboard plus 1 active profile",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-basilisk-v3-pro", "razer-support-basilisk-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "polling-rate",
+          "semantic_capability": "input.polling-rate",
+          "family": "performance",
+          "label": "Polling rate",
+          "value": [1000, 8000],
+          "unit": "Hz",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-support-basilisk-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": ["8000 Hz requires the Mouse Dock Pro and HyperPolling Wireless Dongle."]
+        },
+        {
+          "id": "programmable-controls",
+          "semantic_capability": "input.programmable-controls",
+          "family": "input",
+          "label": "Programmable controls",
+          "value": 11,
+          "unit": "buttons",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-basilisk-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "scroll-behavior",
+          "semantic_capability": "input.scroll-mode",
+          "family": "input",
+          "label": "Scroll behavior",
+          "value": "Four-way tilt wheel with electronically actuated tactile and free-spin modes",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-basilisk-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "sensor-calibration",
+          "semantic_capability": "input.surface-calibration",
+          "family": "performance",
+          "label": "Sensor calibration",
+          "value": "Surface calibration, Smart Tracking, asymmetric cut-off, and lift-off/landing distances",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-basilisk-v3-pro", "razer-support-basilisk-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Razer documents calibration as unavailable through Bluetooth."]
+        },
+        {
+          "id": "sleep-timeout",
+          "semantic_capability": "power.idle-timeout",
+          "family": "power",
+          "label": "Sleep timeout",
+          "value": "Configurable wireless idle timeout",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-basilisk-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        }
+      ],
+      "gaps": [
+        {
+          "id": "bluetooth-linux-control",
+          "title": "Bluetooth control is not established",
+          "detail": "Official Bluetooth product support does not establish an exact Linux control path for this model. Bluetooth is outside the HyperFlux receiver route and remains unclaimed.",
+          "status": "not-implemented",
+          "source_ids": ["razer-bluetooth-compatibility"]
+        },
+        {
+          "id": "hyperflux-route",
+          "title": "HyperFlux transport is not qualified",
+          "detail": "The model is on the manufacturer candidate list, but no exact receiver-backed child profile currently authorizes controls.",
+          "status": "not-mapped",
+          "source_ids": ["razer-product-hyperflux-v2"]
+        }
+      ]
+    },
+    {
+      "candidate_id": "razer-basilisk-v3-pro-35k",
+      "source_ids": ["github-openrazer-basilisk-bluetooth-2407", "razer-bluetooth-compatibility", "razer-manual-basilisk-v3-pro-35k", "razer-product-basilisk-v3-pro-35k", "razer-product-hyperflux-v2", "razer-support-basilisk-v3-pro-35k"],
+      "facts": [
+        {
+          "id": "battery-life",
+          "semantic_capability": "power.battery-life",
+          "family": "power",
+          "label": "Advertised battery life",
+          "value": "Up to 140 hours at 1000 Hz over 2.4 GHz; up to 28 hours at 8000 Hz; up to 210 hours over Bluetooth",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-product-basilisk-v3-pro-35k"],
+          "claim_state": "documented-product",
+          "notes": ["Battery-life figures are manufacturer test claims, not live capacity telemetry; 8000 Hz requires the Mouse Dock Pro or HyperPolling Wireless Dongle."]
+        },
+        {
+          "id": "bluetooth-identity",
+          "semantic_capability": "identity.bluetooth-hid-id",
+          "family": "identity",
+          "label": "Reported Bluetooth HID identity",
+          "value": "068E:00CE",
+          "routes": ["bluetooth"],
+          "source_ids": ["github-openrazer-basilisk-bluetooth-2407"],
+          "claim_state": "reported-upstream",
+          "notes": ["This community-reported Bluetooth identity differs from the Razer USB identities and grants no HyperFlux control authority."]
+        },
+        {
+          "id": "bluetooth-limitations",
+          "semantic_capability": "connectivity.bluetooth-limitations",
+          "family": "connectivity",
+          "label": "Bluetooth limitations",
+          "value": "Synapse polling is limited to 125 Hz, calibration is disabled, and onboard profiles are stored from the 2.4 GHz route",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-bluetooth-compatibility"],
+          "claim_state": "documented-product",
+          "notes": ["Bluetooth bypasses the HyperFlux receiver and mat."]
+        },
+        {
+          "id": "connectivity",
+          "semantic_capability": "connectivity.routes",
+          "family": "connectivity",
+          "label": "Connection routes",
+          "value": ["Bluetooth", "HyperSpeed 2.4 GHz", "USB-C cable"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-bluetooth-compatibility", "razer-support-basilisk-v3-pro-35k"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "dpi",
+          "semantic_capability": "input.dpi-maximum",
+          "family": "performance",
+          "label": "Maximum sensitivity",
+          "value": 35000,
+          "unit": "DPI",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-basilisk-v3-pro-35k", "razer-support-basilisk-v3-pro-35k"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "dpi-stages",
+          "semantic_capability": "input.dpi-stages",
+          "family": "performance",
+          "label": "DPI stages",
+          "value": "Up to five configurable stages with independent X/Y sensitivity",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-basilisk-v3-pro-35k"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "hyperflux-compatibility",
+          "semantic_capability": "connectivity.hyperflux-role",
+          "family": "connectivity",
+          "label": "Official HyperFlux role",
+          "value": "Compatible charging mouse and receiver client",
+          "routes": ["hyperflux-receiver"],
+          "source_ids": ["razer-product-hyperflux-v2"],
+          "claim_state": "documented-product",
+          "notes": ["Manufacturer compatibility does not itself authorize a Linux receiver command; this exact model has separate physical HyperFlux qualification."]
+        },
+        {
+          "id": "lighting-power-policy",
+          "semantic_capability": "lighting.idle-policy",
+          "family": "power",
+          "label": "Lighting power policy",
+          "value": "Lighting can switch off with the display or after idle time",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-basilisk-v3-pro-35k"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "lighting-quick-effects",
+          "semantic_capability": "lighting.quick-effects",
+          "family": "lighting",
+          "label": "Synapse Quick Effects",
+          "value": ["Audio Meter", "Breathing", "Fire", "Reactive", "Spectrum Cycling", "Starlight", "Static", "Wave"],
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-basilisk-v3-pro-35k"],
+          "claim_state": "documented-product",
+          "notes": ["These are product/Synapse capabilities, not evidence of firmware-native HyperFlux commands."]
+        },
+        {
+          "id": "lighting-topology",
+          "semantic_capability": "lighting.addressable-zones",
+          "family": "lighting",
+          "label": "Lighting topology",
+          "value": "13 zones: scroll wheel, logo, and 11-zone multi-zone underglow",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-basilisk-v3-pro-35k", "razer-support-basilisk-v3-pro-35k"],
+          "claim_state": "documented-product",
+          "notes": ["OpenRGB calls the underglow group LED Strip; the product-facing name is multi-zone underglow."]
+        },
+        {
+          "id": "onboard-profiles",
+          "semantic_capability": "profiles.onboard-count",
+          "family": "profiles",
+          "label": "Onboard profiles",
+          "value": 5,
+          "unit": "profiles",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-basilisk-v3-pro-35k", "razer-support-basilisk-v3-pro-35k"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "polling-rate",
+          "semantic_capability": "input.polling-rate",
+          "family": "performance",
+          "label": "Polling rate",
+          "value": [1000, 8000],
+          "unit": "Hz",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-product-basilisk-v3-pro-35k", "razer-support-basilisk-v3-pro-35k"],
+          "claim_state": "documented-product",
+          "notes": ["8000 Hz requires the Mouse Dock Pro or HyperPolling Wireless Dongle."]
+        },
+        {
+          "id": "programmable-controls",
+          "semantic_capability": "input.programmable-controls",
+          "family": "input",
+          "label": "Programmable controls",
+          "value": 11,
+          "unit": "buttons",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-basilisk-v3-pro-35k"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "scroll-behavior",
+          "semantic_capability": "input.scroll-mode",
+          "family": "input",
+          "label": "Scroll behavior",
+          "value": "Tactile, free-spin, Smart-Reel, and configurable scroll acceleration",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-basilisk-v3-pro-35k", "razer-support-basilisk-v3-pro-35k"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "sensor-calibration",
+          "semantic_capability": "input.surface-calibration",
+          "family": "performance",
+          "label": "Sensor calibration",
+          "value": "Surface calibration, Smart Tracking, asymmetric cut-off, and lift-off/landing distances",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-basilisk-v3-pro-35k"],
+          "claim_state": "documented-product",
+          "notes": ["Razer documents calibration as unavailable through Bluetooth."]
+        },
+        {
+          "id": "sleep-timeout",
+          "semantic_capability": "power.idle-timeout",
+          "family": "power",
+          "label": "Sleep timeout",
+          "value": "Configurable wireless idle timeout",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-basilisk-v3-pro-35k"],
+          "claim_state": "documented-product",
+          "notes": []
+        }
+      ],
+      "gaps": [
+        {
+          "id": "bluetooth-linux-control",
+          "title": "Bluetooth Linux control is not established",
+          "detail": "The upstream report records a distinct Bluetooth HID identity and missing OpenRazer recognition. HyperFlux does not carry or authorize this direct Bluetooth route.",
+          "status": "not-implemented",
+          "source_ids": ["github-openrazer-basilisk-bluetooth-2407"]
+        },
+        {
+          "id": "non-lighting-controls",
+          "title": "Advanced mouse controls are not HyperFlux-mapped",
+          "detail": "DPI, scroll behavior, calibration, sleep timeout, and low-battery configuration are documented product capabilities, but the current receiver profile does not authorize those writes.",
+          "status": "not-mapped",
+          "source_ids": ["razer-manual-basilisk-v3-pro-35k", "razer-support-basilisk-v3-pro-35k"]
+        }
+      ]
+    },
+    {
+      "candidate_id": "razer-blackwidow-v3-pro",
+      "source_ids": ["razer-bluetooth-compatibility", "razer-manual-blackwidow-v3-pro", "razer-product-hyperflux-v2", "razer-support-blackwidow-v3-pro"],
+      "facts": [
+        {
+          "id": "battery-life",
+          "semantic_capability": "power.battery-life",
+          "family": "power",
+          "label": "Advertised battery life",
+          "value": "Up to 200 hours with backlighting off; published examples range from about 6 to 25 hours with backlighting on",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-support-blackwidow-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Battery-life figures are manufacturer test claims, not live capacity telemetry; lighting color, effect, and brightness materially change runtime."]
+        },
+        {
+          "id": "bluetooth-effects",
+          "semantic_capability": "lighting.bluetooth-effects",
+          "family": "lighting",
+          "label": "Bluetooth Quick Effects",
+          "value": ["Breathing", "Reactive", "Spectrum Cycling", "Starlight", "Static", "Wave"],
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-support-blackwidow-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Studio, Audio Visualizer, and onboard-memory lighting are unavailable over Bluetooth."]
+        },
+        {
+          "id": "bluetooth-limitations",
+          "semantic_capability": "connectivity.bluetooth-limitations",
+          "family": "connectivity",
+          "label": "Bluetooth limitations",
+          "value": "No Chroma Studio, limited Chroma effects, and no onboard-memory support",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-bluetooth-compatibility", "razer-support-blackwidow-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Bluetooth bypasses the HyperFlux receiver and mat."]
+        },
+        {
+          "id": "connectivity",
+          "semantic_capability": "connectivity.routes",
+          "family": "connectivity",
+          "label": "Connection routes",
+          "value": ["Bluetooth", "HyperSpeed 2.4 GHz", "USB-C cable"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-bluetooth-compatibility", "razer-support-blackwidow-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "game-mode",
+          "semantic_capability": "input.game-mode",
+          "family": "input",
+          "label": "Gaming mode",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-blackwidow-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "lighting-power-policy",
+          "semantic_capability": "lighting.idle-policy",
+          "family": "power",
+          "label": "Lighting power policy",
+          "value": "Lighting can switch off with the display or after idle time",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "lighting-quick-effects",
+          "semantic_capability": "lighting.quick-effects",
+          "family": "lighting",
+          "label": "Synapse Quick Effects",
+          "value": ["Ambient Awareness", "Audio Meter", "Breathing", "Fire", "Reactive", "Ripple", "Spectrum Cycling", "Starlight", "Static", "Wave", "Wheel"],
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-blackwidow-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": ["The separately documented Bluetooth subset remains listed under Bluetooth Quick Effects."]
+        },
+        {
+          "id": "lighting-topology",
+          "semantic_capability": "lighting.per-key",
+          "family": "lighting",
+          "label": "Lighting topology",
+          "value": "Individually backlit per-key RGB",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v3-pro", "razer-support-blackwidow-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "low-battery-threshold",
+          "semantic_capability": "telemetry.low-battery-threshold",
+          "family": "telemetry",
+          "label": "Low-battery notification",
+          "value": 3,
+          "unit": "%",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-blackwidow-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": ["The keyboard repeats its critical-battery lighting sequence below this threshold."]
+        },
+        {
+          "id": "macros",
+          "semantic_capability": "macros.on-the-fly",
+          "family": "macros",
+          "label": "On-the-fly macro recording",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v3-pro", "razer-support-blackwidow-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "media-controls",
+          "semantic_capability": "input.media-controls",
+          "family": "input",
+          "label": "Media controls",
+          "value": "Four dedicated controls plus a multi-function digital dial",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-blackwidow-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "onboard-profiles",
+          "semantic_capability": "profiles.onboard-count",
+          "family": "profiles",
+          "label": "Onboard profiles",
+          "value": 5,
+          "unit": "profiles",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-support-blackwidow-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Razer documents onboard-memory features as unavailable over Bluetooth."]
+        },
+        {
+          "id": "power-policy",
+          "semantic_capability": "power.idle-timeout",
+          "family": "power",
+          "label": "Wireless power policy",
+          "value": "Configurable dim and sleep timeouts",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-blackwidow-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "programmable-keys",
+          "semantic_capability": "input.programmable-keys",
+          "family": "input",
+          "label": "Programmable keys",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-blackwidow-v3-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        }
+      ],
+      "gaps": [
+        {
+          "id": "hyperflux-route",
+          "title": "HyperFlux transport is not qualified",
+          "detail": "The model is a manufacturer-listed candidate, but no exact receiver-backed child profile currently authorizes controls.",
+          "status": "not-mapped",
+          "source_ids": ["razer-product-hyperflux-v2"]
+        }
+      ]
+    },
+    {
+      "candidate_id": "razer-blackwidow-v4-low-profile-hyperspeed",
+      "source_ids": ["github-openrazer-blackwidow-lowprofile-2546", "razer-bluetooth-compatibility", "razer-manual-blackwidow-v4-lowprofile", "razer-product-blackwidow-v4-lowprofile", "razer-product-hyperflux-v2", "razer-support-blackwidow-v4-lowprofile"],
+      "facts": [
+        {
+          "id": "battery-life",
+          "semantic_capability": "power.battery-life",
+          "family": "power",
+          "label": "Advertised battery life",
+          "value": "Up to 980 hours in Power Saving Mode",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-product-blackwidow-v4-lowprofile"],
+          "claim_state": "documented-product",
+          "notes": ["Battery-life figures are manufacturer test claims and depend on reduced polling, disabled lighting, and paused Synapse connectivity."]
+        },
+        {
+          "id": "bluetooth-limitations",
+          "semantic_capability": "connectivity.bluetooth-limitations",
+          "family": "connectivity",
+          "label": "Bluetooth limitations",
+          "value": "No Chroma Studio, limited Chroma effects, and no onboard-memory support",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-bluetooth-compatibility"],
+          "claim_state": "documented-product",
+          "notes": ["Bluetooth bypasses the HyperFlux receiver and mat."]
+        },
+        {
+          "id": "bluetooth-profiles",
+          "semantic_capability": "connectivity.bluetooth-profiles",
+          "family": "connectivity",
+          "label": "Bluetooth pairings",
+          "value": 3,
+          "unit": "profiles",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile", "razer-product-blackwidow-v4-lowprofile"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "connectivity",
+          "semantic_capability": "connectivity.routes",
+          "family": "connectivity",
+          "label": "Connection routes",
+          "value": ["Bluetooth", "HyperSpeed 2.4 GHz", "USB-C cable"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-bluetooth-compatibility", "razer-manual-blackwidow-v4-lowprofile", "razer-support-blackwidow-v4-lowprofile"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "lighting",
+          "semantic_capability": "lighting.chroma",
+          "family": "lighting",
+          "label": "Lighting",
+          "value": "Razer Chroma RGB",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile", "razer-support-blackwidow-v4-lowprofile"],
+          "claim_state": "documented-product",
+          "notes": ["The reviewed product sources do not specify exact application matrix geometry."]
+        },
+        {
+          "id": "lighting-native-shortcuts",
+          "semantic_capability": "lighting.on-device-effects",
+          "family": "lighting",
+          "label": "On-device lighting shortcuts",
+          "value": ["Breathing", "Off", "Reactive", "Ripple", "Spectrum Cycling", "Starlight", "Static", "Tidal", "Wave", "Wheel"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile"],
+          "claim_state": "documented-product",
+          "notes": ["These shortcuts are product behavior, not HyperFlux-created effects."]
+        },
+        {
+          "id": "lighting-power-policy",
+          "semantic_capability": "lighting.idle-policy",
+          "family": "power",
+          "label": "Lighting power policy",
+          "value": "Lighting can switch off with the display or after idle time",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "lighting-quick-effects",
+          "semantic_capability": "lighting.quick-effects",
+          "family": "lighting",
+          "label": "Synapse Quick Effects",
+          "value": ["Ambient Awareness", "Audio Meter", "Breathing", "Fire", "Reactive", "Ripple", "Spectrum Cycling", "Starlight", "Static", "Wave", "Wheel"],
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile"],
+          "claim_state": "documented-product",
+          "notes": ["Advanced Effects are separately composed in Chroma Studio."]
+        },
+        {
+          "id": "low-battery-threshold",
+          "semantic_capability": "telemetry.low-battery-threshold",
+          "family": "telemetry",
+          "label": "Low-battery notification",
+          "value": 10,
+          "unit": "%",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile"],
+          "claim_state": "documented-product",
+          "notes": ["The keyboard flashes a red low-battery notification at this threshold."]
+        },
+        {
+          "id": "macros",
+          "semantic_capability": "macros.on-the-fly",
+          "family": "macros",
+          "label": "On-the-fly macros",
+          "value": "Supported with four dedicated macro keys",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile", "razer-support-blackwidow-v4-lowprofile"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "media-controls",
+          "semantic_capability": "input.media-controls",
+          "family": "input",
+          "label": "Media controls",
+          "value": "Multi-function roller with three dedicated media keys",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile", "razer-support-blackwidow-v4-lowprofile"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "onboard-profiles",
+          "semantic_capability": "profiles.onboard-count",
+          "family": "profiles",
+          "label": "Onboard profiles",
+          "value": 5,
+          "unit": "profiles",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile", "razer-support-blackwidow-v4-lowprofile"],
+          "claim_state": "documented-product",
+          "notes": ["Razer documents onboard-memory features as unavailable over Bluetooth."]
+        },
+        {
+          "id": "polling-rate",
+          "semantic_capability": "input.polling-rate",
+          "family": "performance",
+          "label": "Polling rate",
+          "value": [1000, 4000],
+          "unit": "Hz",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-product-blackwidow-v4-lowprofile", "razer-support-blackwidow-v4-lowprofile"],
+          "claim_state": "documented-product",
+          "notes": ["4000 Hz requires the Razer HyperPolling Wireless Dongle."]
+        },
+        {
+          "id": "power-saving-mode",
+          "semantic_capability": "power.reduced-power-mode",
+          "family": "power",
+          "label": "Power Saving Mode",
+          "value": "Reduces polling, turns keyboard lighting off, and pauses Synapse connectivity",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile", "razer-product-blackwidow-v4-lowprofile"],
+          "claim_state": "documented-product",
+          "notes": ["This mode is distinct from ordinary idle sleep."]
+        },
+        {
+          "id": "programmable-keys",
+          "semantic_capability": "input.programmable-keys",
+          "family": "input",
+          "label": "Programmable keys",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-blackwidow-v4-lowprofile"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "snap-tap",
+          "semantic_capability": "input.snap-tap",
+          "family": "input",
+          "label": "Snap Tap",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-blackwidow-v4-lowprofile"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "usb-identities",
+          "semantic_capability": "identity.usb-product-ids",
+          "family": "identity",
+          "label": "Reported USB product IDs",
+          "value": ["0x02C9 wireless", "0x02CC wired"],
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["github-openrazer-blackwidow-lowprofile-2546"],
+          "claim_state": "reported-upstream",
+          "notes": ["These are reviewed community captures, not a HyperFlux receiver identity."]
+        }
+      ],
+      "gaps": [
+        {
+          "id": "exact-code-record",
+          "title": "No exact pinned Linux code record",
+          "detail": "Neither pinned OpenRazer nor pinned OpenRGB contains an exact model record. Product documentation and a reviewed support report exist, but no setting implementation is promoted from that absence.",
+          "status": "not-implemented",
+          "source_ids": ["github-openrazer-blackwidow-lowprofile-2546", "razer-support-blackwidow-v4-lowprofile"]
+        },
+        {
+          "id": "hyperflux-route",
+          "title": "HyperFlux transport is not qualified",
+          "detail": "The official candidate name does not provide carrier maps, command semantics, or physical proof for this exact model.",
+          "status": "not-mapped",
+          "source_ids": ["razer-product-hyperflux-v2"]
+        }
+      ]
+    },
+    {
+      "candidate_id": "razer-blackwidow-v4-low-profile-tenkeyless-hyperspeed",
+      "source_ids": ["github-openrazer-blackwidow-lowprofile-tkl-2593", "razer-bluetooth-compatibility", "razer-manual-blackwidow-v4-lowprofile-tkl", "razer-product-blackwidow-v4-lowprofile-tkl", "razer-product-hyperflux-v2", "razer-support-blackwidow-v4-lowprofile-tkl"],
+      "facts": [
+        {
+          "id": "battery-life",
+          "semantic_capability": "power.battery-life",
+          "family": "power",
+          "label": "Advertised battery life",
+          "value": "Up to 980 hours in Power Saving Mode",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-product-blackwidow-v4-lowprofile-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["Battery-life figures are manufacturer test claims and depend on reduced polling, disabled lighting, and paused Synapse connectivity."]
+        },
+        {
+          "id": "bluetooth-limitations",
+          "semantic_capability": "connectivity.bluetooth-limitations",
+          "family": "connectivity",
+          "label": "Bluetooth limitations",
+          "value": "No Chroma Studio, limited Chroma effects, and no onboard-memory support",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-bluetooth-compatibility"],
+          "claim_state": "documented-product",
+          "notes": ["Bluetooth bypasses the HyperFlux receiver and mat."]
+        },
+        {
+          "id": "bluetooth-profiles",
+          "semantic_capability": "connectivity.bluetooth-profiles",
+          "family": "connectivity",
+          "label": "Bluetooth pairings",
+          "value": 3,
+          "unit": "profiles",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile-tkl", "razer-product-blackwidow-v4-lowprofile-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "connectivity",
+          "semantic_capability": "connectivity.routes",
+          "family": "connectivity",
+          "label": "Connection routes",
+          "value": ["Bluetooth", "HyperSpeed 2.4 GHz", "USB-C cable"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-bluetooth-compatibility", "razer-manual-blackwidow-v4-lowprofile-tkl", "razer-support-blackwidow-v4-lowprofile-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "keyswitch-optimization",
+          "semantic_capability": "input.keyswitch-optimization",
+          "family": "input",
+          "label": "Keyswitch optimization",
+          "value": ["Gaming", "Typing"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "lighting-native-shortcuts",
+          "semantic_capability": "lighting.on-device-effects",
+          "family": "lighting",
+          "label": "On-device lighting shortcuts",
+          "value": ["Breathing", "Off", "Reactive", "Ripple", "Spectrum Cycling", "Starlight", "Static", "Tidal", "Wave", "Wheel"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["These shortcuts are product behavior, not HyperFlux-created effects."]
+        },
+        {
+          "id": "lighting-power-policy",
+          "semantic_capability": "lighting.idle-policy",
+          "family": "power",
+          "label": "Lighting power policy",
+          "value": "Lighting can switch off with the display or after idle time",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "lighting-quick-effects",
+          "semantic_capability": "lighting.quick-effects",
+          "family": "lighting",
+          "label": "Synapse Quick Effects",
+          "value": ["Ambient Awareness", "Audio Meter", "Breathing", "Fire", "Reactive", "Ripple", "Spectrum Cycling", "Starlight", "Static", "Wave", "Wheel"],
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["Advanced Effects are separately composed in Chroma Studio."]
+        },
+        {
+          "id": "lighting-topology",
+          "semantic_capability": "lighting.chroma",
+          "family": "lighting",
+          "label": "Lighting topology",
+          "value": "Razer Chroma RGB",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile-tkl", "razer-support-blackwidow-v4-lowprofile-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["The exact 6 by 18 OpenRGB application matrix is retained separately in the pinned implementation record; product documentation does not establish that geometry."]
+        },
+        {
+          "id": "low-battery-threshold",
+          "semantic_capability": "telemetry.low-battery-threshold",
+          "family": "telemetry",
+          "label": "Low-battery notification",
+          "value": 10,
+          "unit": "%",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["The keyboard flashes a red low-battery notification at this threshold."]
+        },
+        {
+          "id": "macros",
+          "semantic_capability": "macros.on-the-fly",
+          "family": "macros",
+          "label": "Macro workflow",
+          "value": "Source conflict: the specification table says No, while the same support page and manual describe macro recording workflows",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile-tkl", "razer-support-blackwidow-v4-lowprofile-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["No Boolean capability is promoted until the manufacturer documentation is reconciled."]
+        },
+        {
+          "id": "media-controls",
+          "semantic_capability": "input.media-controls",
+          "family": "input",
+          "label": "Media controls",
+          "value": "Multi-function roller and media button",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile-tkl", "razer-support-blackwidow-v4-lowprofile-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "onboard-profiles",
+          "semantic_capability": "profiles.onboard-count",
+          "family": "profiles",
+          "label": "Onboard profiles",
+          "value": 5,
+          "unit": "profiles",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile-tkl", "razer-support-blackwidow-v4-lowprofile-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["Razer documents onboard-memory features as unavailable over Bluetooth."]
+        },
+        {
+          "id": "polling-rate",
+          "semantic_capability": "input.polling-rate",
+          "family": "performance",
+          "label": "Polling rate",
+          "value": [1000, 4000],
+          "unit": "Hz",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-product-blackwidow-v4-lowprofile-tkl", "razer-support-blackwidow-v4-lowprofile-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["4000 Hz requires the Razer HyperPolling Wireless Dongle."]
+        },
+        {
+          "id": "power-policy",
+          "semantic_capability": "power.idle-timeout",
+          "family": "power",
+          "label": "Power policy",
+          "value": "Configurable dim and sleep timeouts plus a reduced-power mode",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["The manual describes reduced-power behavior separately from ordinary sleep."]
+        },
+        {
+          "id": "power-saving-mode",
+          "semantic_capability": "power.reduced-power-mode",
+          "family": "power",
+          "label": "Power Saving Mode",
+          "value": "Reduces polling, turns keyboard lighting off, and pauses Synapse connectivity",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile-tkl", "razer-product-blackwidow-v4-lowprofile-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["This mode is distinct from ordinary idle sleep."]
+        },
+        {
+          "id": "programmable-keys",
+          "semantic_capability": "input.programmable-keys",
+          "family": "input",
+          "label": "Key assignment",
+          "value": "Source conflict: the specification table says No, while the same support page and manual describe key remapping",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile-tkl", "razer-support-blackwidow-v4-lowprofile-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["No Boolean capability is promoted until the manufacturer documentation is reconciled."]
+        },
+        {
+          "id": "snap-tap",
+          "semantic_capability": "input.snap-tap",
+          "family": "input",
+          "label": "Snap Tap",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile-tkl", "razer-support-blackwidow-v4-lowprofile-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "usb-identities",
+          "semantic_capability": "identity.usb-product-ids",
+          "family": "identity",
+          "label": "Reported USB product IDs",
+          "value": ["0x02D2 wireless", "0x02D4 wired"],
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["github-openrazer-blackwidow-lowprofile-tkl-2593"],
+          "claim_state": "reported-upstream",
+          "notes": ["The pinned OpenRGB records independently use the same pair; this does not create HyperFlux authority."]
+        }
+      ],
+      "gaps": [
+        {
+          "id": "hyperflux-route",
+          "title": "HyperFlux transport is not qualified",
+          "detail": "OpenRGB has exact wired and vendor-receiver presentation records, but no HyperFlux child profile authorizes this model.",
+          "status": "not-mapped",
+          "source_ids": ["github-openrazer-blackwidow-lowprofile-tkl-2593", "razer-product-hyperflux-v2"]
+        },
+        {
+          "id": "macro-documentation-conflict",
+          "title": "Macro support wording conflicts",
+          "detail": "The official specifications say on-the-fly macro recording is absent, while official procedure text and the manual describe macro controls. The catalog preserves the conflict.",
+          "status": "source-conflict",
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile-tkl", "razer-support-blackwidow-v4-lowprofile-tkl"]
+        },
+        {
+          "id": "programmability-documentation-conflict",
+          "title": "Programmability wording conflicts",
+          "detail": "The official specifications say fully programmable keys are absent, while official procedure text and the manual describe remapping. The catalog preserves the conflict.",
+          "status": "source-conflict",
+          "source_ids": ["razer-manual-blackwidow-v4-lowprofile-tkl", "razer-support-blackwidow-v4-lowprofile-tkl"]
+        }
+      ]
+    },
+    {
+      "candidate_id": "razer-blackwidow-v4-mini-hyperspeed",
+      "source_ids": ["razer-bluetooth-compatibility", "razer-manual-blackwidow-v4-mini", "razer-product-blackwidow-v4-mini", "razer-product-hyperflux-v2", "razer-support-blackwidow-v4-mini"],
+      "facts": [
+        {
+          "id": "battery-indicator",
+          "semantic_capability": "telemetry.battery-indicator",
+          "family": "telemetry",
+          "label": "Battery and charging indicator",
+          "value": "Solid red while charging, solid green when full; unplugged status uses green, yellow, or blinking red",
+          "routes": ["bluetooth", "vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-blackwidow-v4-mini", "razer-support-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": ["This describes the keyboard's own power indicator, not HyperFlux telemetry."]
+        },
+        {
+          "id": "battery-life",
+          "semantic_capability": "power.battery-life",
+          "family": "power",
+          "label": "Advertised battery life",
+          "value": "Up to 200 hours with lighting off; official examples range from about 6 to 25 hours with white or Spectrum Cycling lighting",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-product-blackwidow-v4-mini", "razer-support-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": ["Battery-life figures are manufacturer test claims, not live capacity telemetry; effect, color, and brightness materially change runtime."]
+        },
+        {
+          "id": "bluetooth-effects",
+          "semantic_capability": "lighting.bluetooth-effects",
+          "family": "lighting",
+          "label": "Bluetooth Quick Effects",
+          "value": ["Breathing", "Reactive", "Spectrum Cycling", "Starlight", "Static", "Wave"],
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-support-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": ["Studio, Audio Visualizer, and onboard-memory lighting are unavailable over Bluetooth."]
+        },
+        {
+          "id": "bluetooth-limitations",
+          "semantic_capability": "connectivity.bluetooth-limitations",
+          "family": "connectivity",
+          "label": "Bluetooth limitations",
+          "value": "No Chroma Studio, Audio Visualizer, or onboard-memory lighting; only a six-effect Quick Effects subset is available",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-bluetooth-compatibility", "razer-support-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": ["Bluetooth bypasses the HyperFlux receiver and mat."]
+        },
+        {
+          "id": "bluetooth-profiles",
+          "semantic_capability": "connectivity.bluetooth-profiles",
+          "family": "connectivity",
+          "label": "Bluetooth pairings",
+          "value": 3,
+          "unit": "profiles",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-manual-blackwidow-v4-mini", "razer-product-blackwidow-v4-mini", "razer-support-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "connectivity",
+          "semantic_capability": "connectivity.routes",
+          "family": "connectivity",
+          "label": "Connection routes",
+          "value": ["Bluetooth 5.0", "HyperSpeed 2.4 GHz", "USB-C cable"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-bluetooth-compatibility", "razer-manual-blackwidow-v4-mini", "razer-product-blackwidow-v4-mini", "razer-support-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "form-factor",
+          "semantic_capability": "identity.form-factor",
+          "family": "identity",
+          "label": "Form factor",
+          "value": "65% wireless hot-swappable keyboard with retained arrow keys",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-product-blackwidow-v4-mini", "razer-support-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "hyperflux-compatibility",
+          "semantic_capability": "connectivity.hyperflux-role",
+          "family": "connectivity",
+          "label": "Official HyperFlux role",
+          "value": "Compatible HyperSpeed keyboard for multi-device connectivity; the mat does not charge keyboards",
+          "routes": ["hyperflux-receiver"],
+          "source_ids": ["razer-product-hyperflux-v2"],
+          "claim_state": "documented-product",
+          "notes": ["Manufacturer compatibility does not provide Linux carrier maps, command semantics, or physical qualification for this model."]
+        },
+        {
+          "id": "lighting-native-shortcuts",
+          "semantic_capability": "lighting.on-device-effects",
+          "family": "lighting",
+          "label": "On-device lighting shortcuts",
+          "value": ["Breathing", "Off", "Reactive", "Spectrum Cycling", "Starlight", "Static", "Wave"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": ["Static, Breathing, Reactive, and Starlight cycle options when their shortcut is pressed again; Wave changes direction."]
+        },
+        {
+          "id": "lighting-power-policy",
+          "semantic_capability": "lighting.idle-policy",
+          "family": "power",
+          "label": "Lighting power policy",
+          "value": "Brightness is adjustable; lighting can switch off with the display or after idle time",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "lighting-quick-effects",
+          "semantic_capability": "lighting.quick-effects",
+          "family": "lighting",
+          "label": "Synapse Quick Effects",
+          "value": ["Ambient Awareness", "Audio Meter", "Breathing", "Fire", "Reactive", "Ripple", "Spectrum Cycling", "Starlight", "Static", "Wave", "Wheel"],
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": ["Advanced Effects are separately composed in Chroma Studio; this list is product behavior, not HyperFlux-created effects."]
+        },
+        {
+          "id": "lighting-topology",
+          "semantic_capability": "lighting.per-key",
+          "family": "lighting",
+          "label": "Lighting topology",
+          "value": "Customizable per-key Razer Chroma RGB with 16.8 million colors",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-product-blackwidow-v4-mini", "razer-support-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": ["The pinned OpenRazer record models a 5 by 14 matrix; that implementation geometry remains separate from manufacturer documentation."]
+        },
+        {
+          "id": "low-battery-threshold",
+          "semantic_capability": "telemetry.low-battery-threshold",
+          "family": "telemetry",
+          "label": "Critical-battery indication",
+          "value": 3,
+          "unit": "%",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-blackwidow-v4-mini", "razer-support-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": ["Below this level, the keyboard repeats a blinking-red sequence until depleted or charging."]
+        },
+        {
+          "id": "macros",
+          "semantic_capability": "macros.on-the-fly",
+          "family": "macros",
+          "label": "On-the-fly macro recording",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-mini", "razer-support-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": ["Razer states that Synapse must be installed and running for on-the-fly recording."]
+        },
+        {
+          "id": "media-controls",
+          "semantic_capability": "input.media-controls",
+          "family": "input",
+          "label": "Media controls",
+          "value": "Function-layer volume and media keys; no dedicated media controls",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-mini", "razer-support-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "onboard-profiles",
+          "semantic_capability": "profiles.onboard-count",
+          "family": "profiles",
+          "label": "Onboard profiles",
+          "value": 5,
+          "unit": "profiles",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-blackwidow-v4-mini", "razer-support-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": ["Razer documents onboard-memory features as unavailable over Bluetooth."]
+        },
+        {
+          "id": "polling-rate",
+          "semantic_capability": "input.polling-rate",
+          "family": "performance",
+          "label": "Polling rate",
+          "value": 1000,
+          "unit": "Hz",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-support-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": ["The support page also describes a 1 ms wireless response rate."]
+        },
+        {
+          "id": "power-policy",
+          "semantic_capability": "power.idle-timeout",
+          "family": "power",
+          "label": "Wireless power policy",
+          "value": "Configurable battery-powered dim and sleep timeouts",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "programmable-keys",
+          "semantic_capability": "input.programmable-keys",
+          "family": "input",
+          "label": "Programmable keys",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-mini", "razer-support-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "rollover",
+          "semantic_capability": "input.rollover",
+          "family": "input",
+          "label": "Key rollover",
+          "value": "N-key rollover with anti-ghosting",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "snap-tap",
+          "semantic_capability": "input.snap-tap",
+          "family": "input",
+          "label": "Snap Tap",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-product-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": ["The product page documents configuration through Synapse 4."]
+        },
+        {
+          "id": "switch-support",
+          "semantic_capability": "input.hot-swappable-switches",
+          "family": "input",
+          "label": "Hot-swappable switches",
+          "value": "Standard 3-pin and 5-pin mechanical switches",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-product-blackwidow-v4-mini", "razer-support-blackwidow-v4-mini"],
+          "claim_state": "documented-product",
+          "notes": []
+        }
+      ],
+      "gaps": [
+        {
+          "id": "charging-duration-conflict",
+          "title": "Charging-duration claims conflict",
+          "detail": "The official product page says a full charge takes just under five hours, while the linked official master guide says approximately two hours. No single duration is promoted.",
+          "status": "source-conflict",
+          "source_ids": ["razer-manual-blackwidow-v4-mini", "razer-product-blackwidow-v4-mini"]
+        },
+        {
+          "id": "hyperflux-route",
+          "title": "HyperFlux transport is not qualified",
+          "detail": "Razer lists the keyboard for HyperFlux multi-device connectivity and OpenRazer has exact direct-device records, but no receiver-backed HyperFlux child profile authorizes this model.",
+          "status": "not-mapped",
+          "source_ids": ["razer-product-hyperflux-v2"]
+        },
+        {
+          "id": "manual-title-conflict",
+          "title": "The linked guide carries a V3 title",
+          "detail": "The V4 Mini support page links a PDF whose URL names V4 but whose embedded title and cover say BlackWidow V3 Mini HyperSpeed. Capability claims are cross-checked against the V4 support and product pages.",
+          "status": "source-conflict",
+          "source_ids": ["razer-manual-blackwidow-v4-mini", "razer-support-blackwidow-v4-mini"]
+        },
+        {
+          "id": "regional-availability",
+          "title": "Official regional wording differs",
+          "detail": "The support article labels the model China-exclusive, while an official Canadian product page exists and the US HyperFlux page lists it as compatible. The catalog records compatibility without inferring sales-region availability.",
+          "status": "source-conflict",
+          "source_ids": ["razer-product-blackwidow-v4-mini", "razer-product-hyperflux-v2", "razer-support-blackwidow-v4-mini"]
+        }
+      ]
+    },
+    {
+      "candidate_id": "razer-blackwidow-v4-tenkeyless-hyperspeed",
+      "source_ids": ["razer-bluetooth-compatibility", "razer-manual-blackwidow-v4-tkl", "razer-product-blackwidow-v4-tkl", "razer-product-hyperflux-v2", "razer-support-blackwidow-v4-tkl"],
+      "facts": [
+        {
+          "id": "battery-life",
+          "semantic_capability": "power.battery-life",
+          "family": "power",
+          "label": "Advertised battery life",
+          "value": "Up to 980 hours in Power Saving Mode",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-product-blackwidow-v4-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["Battery-life figures are manufacturer test claims and depend on reduced polling, disabled lighting, and paused Synapse connectivity."]
+        },
+        {
+          "id": "bluetooth-limitations",
+          "semantic_capability": "connectivity.bluetooth-limitations",
+          "family": "connectivity",
+          "label": "Bluetooth limitations",
+          "value": "No Chroma Studio, limited Chroma effects, and no onboard-memory support",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-bluetooth-compatibility"],
+          "claim_state": "documented-product",
+          "notes": ["Bluetooth bypasses the HyperFlux receiver and mat."]
+        },
+        {
+          "id": "bluetooth-profiles",
+          "semantic_capability": "connectivity.bluetooth-profiles",
+          "family": "connectivity",
+          "label": "Bluetooth pairings",
+          "value": 3,
+          "unit": "profiles",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-manual-blackwidow-v4-tkl", "razer-product-blackwidow-v4-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "connectivity",
+          "semantic_capability": "connectivity.routes",
+          "family": "connectivity",
+          "label": "Connection routes",
+          "value": ["Bluetooth", "HyperSpeed 2.4 GHz", "USB-C cable"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-bluetooth-compatibility", "razer-manual-blackwidow-v4-tkl", "razer-support-blackwidow-v4-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "lighting",
+          "semantic_capability": "lighting.per-key",
+          "family": "lighting",
+          "label": "Lighting",
+          "value": "Customizable per-key Razer Chroma RGB",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-tkl", "razer-product-blackwidow-v4-tkl", "razer-support-blackwidow-v4-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "lighting-native-shortcuts",
+          "semantic_capability": "lighting.on-device-effects",
+          "family": "lighting",
+          "label": "On-device lighting shortcuts",
+          "value": ["Breathing", "Fire", "Off", "Reactive", "Ripple", "Spectrum Cycling", "Starlight", "Static", "Wave", "Wheel"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["These shortcuts are product behavior, not HyperFlux-created effects."]
+        },
+        {
+          "id": "lighting-power-policy",
+          "semantic_capability": "lighting.idle-policy",
+          "family": "power",
+          "label": "Lighting power policy",
+          "value": "Lighting can switch off with the display or after idle time",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "lighting-quick-effects",
+          "semantic_capability": "lighting.quick-effects",
+          "family": "lighting",
+          "label": "Synapse Quick Effects",
+          "value": ["Ambient Awareness", "Audio Meter", "Breathing", "Fire", "Reactive", "Ripple", "Spectrum Cycling", "Starlight", "Static", "Wave", "Wheel"],
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-blackwidow-v4-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["Advanced Effects are separately composed in Chroma Studio."]
+        },
+        {
+          "id": "low-battery-threshold",
+          "semantic_capability": "telemetry.low-battery-threshold",
+          "family": "telemetry",
+          "label": "Low-battery notification",
+          "value": 10,
+          "unit": "%",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-blackwidow-v4-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["The keyboard flashes a red low-battery notification at this threshold."]
+        },
+        {
+          "id": "macros",
+          "semantic_capability": "macros.on-the-fly",
+          "family": "macros",
+          "label": "On-the-fly macro recording",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-tkl", "razer-support-blackwidow-v4-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "media-controls",
+          "semantic_capability": "input.media-controls",
+          "family": "input",
+          "label": "Media controls",
+          "value": "Multi-function roller with three dedicated media keys",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-blackwidow-v4-tkl", "razer-support-blackwidow-v4-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "onboard-profiles",
+          "semantic_capability": "profiles.onboard-count",
+          "family": "profiles",
+          "label": "Onboard profiles",
+          "value": 5,
+          "unit": "profiles",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-blackwidow-v4-tkl", "razer-support-blackwidow-v4-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["Razer documents onboard-memory features as unavailable over Bluetooth."]
+        },
+        {
+          "id": "polling-rate",
+          "semantic_capability": "input.polling-rate",
+          "family": "performance",
+          "label": "Polling rate",
+          "value": [1000, 4000],
+          "unit": "Hz",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-product-blackwidow-v4-tkl", "razer-support-blackwidow-v4-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["4000 Hz requires the Razer HyperPolling Wireless Dongle."]
+        },
+        {
+          "id": "power-policy",
+          "semantic_capability": "power.idle-timeout",
+          "family": "power",
+          "label": "Power policy",
+          "value": "Configurable dim and sleep timeouts plus a reduced-power mode",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-blackwidow-v4-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["The manual describes reduced-power behavior separately from ordinary sleep."]
+        },
+        {
+          "id": "power-saving-mode",
+          "semantic_capability": "power.reduced-power-mode",
+          "family": "power",
+          "label": "Power Saving Mode",
+          "value": "Reduces polling, turns keyboard lighting off, and pauses Synapse connectivity",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-blackwidow-v4-tkl", "razer-product-blackwidow-v4-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["This mode is distinct from ordinary idle sleep."]
+        },
+        {
+          "id": "programmable-keys",
+          "semantic_capability": "input.programmable-keys",
+          "family": "input",
+          "label": "Programmable keys",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-blackwidow-v4-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "snap-tap",
+          "semantic_capability": "input.snap-tap",
+          "family": "input",
+          "label": "Snap Tap",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-blackwidow-v4-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        }
+      ],
+      "gaps": [
+        {
+          "id": "hyperflux-route",
+          "title": "HyperFlux transport is not qualified",
+          "detail": "Exact OpenRazer and OpenRGB records document direct routes, but no receiver-backed HyperFlux profile authorizes this model.",
+          "status": "not-mapped",
+          "source_ids": ["razer-product-hyperflux-v2"]
+        }
+      ]
+    },
+    {
+      "candidate_id": "razer-cobra-hyperspeed",
+      "source_ids": ["razer-bluetooth-compatibility", "razer-manual-cobra-hyperspeed", "razer-product-hyperflux-v2", "razer-support-cobra-hyperspeed"],
+      "facts": [
+        {
+          "id": "battery-life",
+          "semantic_capability": "power.battery-life",
+          "family": "power",
+          "label": "Advertised battery life",
+          "value": "Up to 110 hours over 2.4 GHz; up to 170 hours over Bluetooth",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-support-cobra-hyperspeed"],
+          "claim_state": "documented-product",
+          "notes": ["Battery-life figures are manufacturer test claims, not live capacity telemetry."]
+        },
+        {
+          "id": "bluetooth-limitations",
+          "semantic_capability": "connectivity.bluetooth-limitations",
+          "family": "connectivity",
+          "label": "Bluetooth limitations",
+          "value": "Synapse polling is limited to 125 Hz, calibration is disabled, and onboard profiles are stored from the 2.4 GHz route",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-bluetooth-compatibility"],
+          "claim_state": "documented-product",
+          "notes": ["Bluetooth bypasses the HyperFlux receiver and mat."]
+        },
+        {
+          "id": "connectivity",
+          "semantic_capability": "connectivity.routes",
+          "family": "connectivity",
+          "label": "Connection routes",
+          "value": ["Bluetooth", "HyperSpeed 2.4 GHz", "USB-C cable"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-bluetooth-compatibility", "razer-manual-cobra-hyperspeed", "razer-support-cobra-hyperspeed"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "dpi",
+          "semantic_capability": "input.dpi-maximum",
+          "family": "performance",
+          "label": "Maximum sensitivity",
+          "value": 26000,
+          "unit": "DPI",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-cobra-hyperspeed"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "dpi-stages",
+          "semantic_capability": "input.dpi-stages",
+          "family": "performance",
+          "label": "Default DPI stages",
+          "value": [400, 800, 1600, 3200, 6400],
+          "unit": "DPI",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-cobra-hyperspeed"],
+          "claim_state": "documented-product",
+          "notes": ["Stages are customizable in Razer Synapse."]
+        },
+        {
+          "id": "lighting-power-policy",
+          "semantic_capability": "lighting.idle-policy",
+          "family": "power",
+          "label": "Lighting power policy",
+          "value": "Lighting can switch off with the display or after idle time",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-cobra-hyperspeed"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "lighting-quick-effects",
+          "semantic_capability": "lighting.quick-effects",
+          "family": "lighting",
+          "label": "Synapse Quick Effects",
+          "value": ["Audio Meter", "Breathing", "Reactive", "Spectrum Cycling", "Starlight", "Static", "Wave"],
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-cobra-hyperspeed"],
+          "claim_state": "documented-product",
+          "notes": ["Advanced Effects are separately composed in Chroma Studio."]
+        },
+        {
+          "id": "lighting-topology",
+          "semantic_capability": "lighting.addressable-zones",
+          "family": "lighting",
+          "label": "Lighting topology",
+          "value": "4 zones: logo plus 3-zone underglow",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-cobra-hyperspeed", "razer-support-cobra-hyperspeed"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "onboard-profiles",
+          "semantic_capability": "profiles.onboard-count",
+          "family": "profiles",
+          "label": "Onboard profiles",
+          "value": 5,
+          "unit": "profiles",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-support-cobra-hyperspeed"],
+          "claim_state": "documented-product",
+          "notes": ["Razer documents onboard-memory profiles as based on the 2.4 GHz route."]
+        },
+        {
+          "id": "polling-rate",
+          "semantic_capability": "input.polling-rate",
+          "family": "performance",
+          "label": "Polling rate",
+          "value": [1000, 8000],
+          "unit": "Hz",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-support-cobra-hyperspeed"],
+          "claim_state": "documented-product",
+          "notes": ["8000 Hz requires the Mouse Dock Pro or HyperPolling Wireless Dongle."]
+        },
+        {
+          "id": "programmable-controls",
+          "semantic_capability": "input.programmable-controls",
+          "family": "input",
+          "label": "Programmable buttons",
+          "value": 7,
+          "unit": "buttons",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-cobra-hyperspeed"],
+          "claim_state": "documented-product",
+          "notes": ["The marketing introduction separately says nine customizable controls; the technical specification gives seven programmable buttons."]
+        },
+        {
+          "id": "sensor-calibration",
+          "semantic_capability": "input.surface-calibration",
+          "family": "performance",
+          "label": "Sensor calibration",
+          "value": "Surface calibration and Smart Tracking lift-off distance",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-cobra-hyperspeed"],
+          "claim_state": "documented-product",
+          "notes": ["Razer documents calibration as unavailable through Bluetooth."]
+        },
+        {
+          "id": "sleep-timeout",
+          "semantic_capability": "power.idle-timeout",
+          "family": "power",
+          "label": "Sleep timeout",
+          "value": "Configurable wireless idle timeout",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-cobra-hyperspeed"],
+          "claim_state": "documented-product",
+          "notes": []
+        }
+      ],
+      "gaps": [
+        {
+          "id": "control-count-conflict",
+          "title": "Control count wording conflicts",
+          "detail": "The official support introduction says nine customizable controls, while its technical specification says seven programmable buttons. The catalog preserves both statements and does not normalize them into one count.",
+          "status": "source-conflict",
+          "source_ids": ["razer-support-cobra-hyperspeed"]
+        },
+        {
+          "id": "exact-code-record",
+          "title": "No exact pinned Linux code record",
+          "detail": "The product is documented by Razer, but neither pinned OpenRazer nor pinned OpenRGB contains an exact record. No settings or packet behavior are inferred from a similar Cobra model.",
+          "status": "not-implemented",
+          "source_ids": ["razer-support-cobra-hyperspeed"]
+        },
+        {
+          "id": "hyperflux-route",
+          "title": "HyperFlux transport is not qualified",
+          "detail": "Official compatibility with the mat does not provide a receiver carrier map or authorize commands for this exact model.",
+          "status": "not-mapped",
+          "source_ids": ["razer-product-hyperflux-v2"]
+        }
+      ]
+    },
+    {
+      "candidate_id": "razer-cobra-pro",
+      "source_ids": ["razer-bluetooth-compatibility", "razer-manual-cobra-pro", "razer-product-hyperflux-v2", "razer-support-cobra-pro"],
+      "facts": [
+        {
+          "id": "battery-life",
+          "semantic_capability": "power.battery-life",
+          "family": "power",
+          "label": "Advertised battery life",
+          "value": "Up to 100 hours over 2.4 GHz; up to 170 hours over Bluetooth",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-support-cobra-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Battery-life figures are manufacturer test claims, not live capacity telemetry."]
+        },
+        {
+          "id": "bluetooth-limitations",
+          "semantic_capability": "connectivity.bluetooth-limitations",
+          "family": "connectivity",
+          "label": "Bluetooth limitations",
+          "value": "Synapse polling is limited to 125 Hz, calibration is disabled, and onboard profiles are stored from the 2.4 GHz route",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-bluetooth-compatibility"],
+          "claim_state": "documented-product",
+          "notes": ["Bluetooth bypasses the HyperFlux receiver and mat."]
+        },
+        {
+          "id": "connectivity",
+          "semantic_capability": "connectivity.routes",
+          "family": "connectivity",
+          "label": "Connection routes",
+          "value": ["Bluetooth", "HyperSpeed 2.4 GHz", "USB-C cable"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-bluetooth-compatibility", "razer-manual-cobra-pro", "razer-support-cobra-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "dpi",
+          "semantic_capability": "input.dpi-maximum",
+          "family": "performance",
+          "label": "Maximum sensitivity",
+          "value": 30000,
+          "unit": "DPI",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-cobra-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "dpi-stages",
+          "semantic_capability": "input.dpi-stages",
+          "family": "performance",
+          "label": "Default DPI stages",
+          "value": [400, 800, 1600, 3200, 6400],
+          "unit": "DPI",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-cobra-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Stages are customizable in Razer Synapse."]
+        },
+        {
+          "id": "lighting-power-policy",
+          "semantic_capability": "lighting.idle-policy",
+          "family": "power",
+          "label": "Lighting power policy",
+          "value": "Display-off and idle switch-off plus wireless Smart Dimming",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-cobra-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Smart Dimming lowers wireless lighting while the mouse is moving and returns to normal brightness after three seconds of inactivity."]
+        },
+        {
+          "id": "lighting-quick-effects",
+          "semantic_capability": "lighting.quick-effects",
+          "family": "lighting",
+          "label": "Synapse Quick Effects",
+          "value": ["Audio Meter", "Breathing", "Fire", "Reactive", "Spectrum Cycling", "Starlight", "Static", "Wave"],
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-cobra-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Advanced Effects are separately composed in Chroma Studio."]
+        },
+        {
+          "id": "lighting-topology",
+          "semantic_capability": "lighting.addressable-zones",
+          "family": "lighting",
+          "label": "Lighting topology",
+          "value": "11 zones: scroll wheel, logo, and 9-zone multi-zone underglow",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-cobra-pro"],
+          "claim_state": "documented-product",
+          "notes": ["The 9-zone underglow count is independently represented by the pinned OpenRGB topology."]
+        },
+        {
+          "id": "low-battery-threshold",
+          "semantic_capability": "telemetry.low-battery-threshold",
+          "family": "telemetry",
+          "label": "Low-battery notification",
+          "value": 5,
+          "unit": "%",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-cobra-pro"],
+          "claim_state": "documented-product",
+          "notes": ["The scroll wheel repeats a red notification below this threshold."]
+        },
+        {
+          "id": "onboard-profiles",
+          "semantic_capability": "profiles.onboard-count",
+          "family": "profiles",
+          "label": "Onboard profiles",
+          "value": 5,
+          "unit": "profiles",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-support-cobra-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "polling-rate",
+          "semantic_capability": "input.polling-rate",
+          "family": "performance",
+          "label": "Polling rate",
+          "value": [1000, 8000],
+          "unit": "Hz",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-support-cobra-pro"],
+          "claim_state": "documented-product",
+          "notes": ["8000 Hz requires the Mouse Dock Pro and HyperPolling Wireless Dongle."]
+        },
+        {
+          "id": "programmable-controls",
+          "semantic_capability": "input.programmable-controls",
+          "family": "input",
+          "label": "Programmable buttons",
+          "value": 8,
+          "unit": "buttons",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-cobra-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "sensor-calibration",
+          "semantic_capability": "input.surface-calibration",
+          "family": "performance",
+          "label": "Sensor calibration",
+          "value": "Surface calibration, Smart Tracking, asymmetric cut-off, and lift-off/landing distances",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-cobra-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Razer documents calibration as unavailable through Bluetooth."]
+        },
+        {
+          "id": "sleep-timeout",
+          "semantic_capability": "power.idle-timeout",
+          "family": "power",
+          "label": "Sleep timeout",
+          "value": "Configurable wireless idle timeout",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-cobra-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        }
+      ],
+      "gaps": [
+        {
+          "id": "hyperflux-route",
+          "title": "HyperFlux transport is not qualified",
+          "detail": "Direct-route Linux records are useful for presentation and planning, but no exact receiver-backed HyperFlux child profile authorizes this model.",
+          "status": "not-mapped",
+          "source_ids": ["razer-product-hyperflux-v2"]
+        }
+      ]
+    },
+    {
+      "candidate_id": "razer-deathstalker-v2-pro",
+      "source_ids": ["razer-bluetooth-compatibility", "razer-manual-deathstalker-v2-pro", "razer-product-hyperflux-v2", "razer-support-deathstalker-v2-pro"],
+      "facts": [
+        {
+          "id": "battery-life",
+          "semantic_capability": "power.battery-life",
+          "family": "power",
+          "label": "Advertised battery life",
+          "value": "Up to 40 hours",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-support-deathstalker-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Battery-life figures are manufacturer test claims, not live capacity telemetry."]
+        },
+        {
+          "id": "bluetooth-limitations",
+          "semantic_capability": "connectivity.bluetooth-limitations",
+          "family": "connectivity",
+          "label": "Bluetooth limitations",
+          "value": "No Chroma Studio, limited Chroma effects, and no onboard-memory support",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-bluetooth-compatibility"],
+          "claim_state": "documented-product",
+          "notes": ["Bluetooth bypasses the HyperFlux receiver and mat."]
+        },
+        {
+          "id": "bluetooth-profiles",
+          "semantic_capability": "connectivity.bluetooth-profiles",
+          "family": "connectivity",
+          "label": "Bluetooth pairings",
+          "value": 3,
+          "unit": "profiles",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-support-deathstalker-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "connectivity",
+          "semantic_capability": "connectivity.routes",
+          "family": "connectivity",
+          "label": "Connection routes",
+          "value": ["Bluetooth", "HyperSpeed 2.4 GHz", "USB-C cable"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-bluetooth-compatibility", "razer-manual-deathstalker-v2-pro", "razer-support-deathstalker-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "game-mode",
+          "semantic_capability": "input.game-mode",
+          "family": "input",
+          "label": "Gaming mode",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-deathstalker-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "lighting-power-policy",
+          "semantic_capability": "lighting.idle-policy",
+          "family": "power",
+          "label": "Lighting power policy",
+          "value": "Lighting can switch off with the display or after idle time",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-deathstalker-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "lighting-quick-effects",
+          "semantic_capability": "lighting.quick-effects",
+          "family": "lighting",
+          "label": "Synapse Quick Effects",
+          "value": ["Ambient Awareness", "Audio Meter", "Breathing", "Fire", "Reactive", "Ripple", "Spectrum Cycling", "Starlight", "Static", "Wave", "Wheel"],
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-deathstalker-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Studio Effects are separately composed in Chroma Studio."]
+        },
+        {
+          "id": "lighting-topology",
+          "semantic_capability": "lighting.per-key",
+          "family": "lighting",
+          "label": "Lighting topology",
+          "value": "Per-key RGB",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-deathstalker-v2-pro", "razer-support-deathstalker-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "macros",
+          "semantic_capability": "macros.on-the-fly",
+          "family": "macros",
+          "label": "On-the-fly macro recording",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-deathstalker-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "media-controls",
+          "semantic_capability": "input.media-controls",
+          "family": "input",
+          "label": "Media controls",
+          "value": "Multi-function media button and media roller",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-deathstalker-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "onboard-profiles",
+          "semantic_capability": "profiles.onboard-count",
+          "family": "profiles",
+          "label": "Onboard profiles",
+          "value": 5,
+          "unit": "profiles",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-deathstalker-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Razer documents onboard-memory features as unavailable over Bluetooth."]
+        },
+        {
+          "id": "polling-rate",
+          "semantic_capability": "input.polling-rate",
+          "family": "performance",
+          "label": "Polling rate",
+          "value": 1000,
+          "unit": "Hz",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-support-deathstalker-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "power-policy",
+          "semantic_capability": "power.idle-timeout",
+          "family": "power",
+          "label": "Wireless power policy",
+          "value": "Configurable dim and sleep timeouts",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-deathstalker-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "programmable-keys",
+          "semantic_capability": "input.programmable-keys",
+          "family": "input",
+          "label": "Programmable keys",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-deathstalker-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        }
+      ],
+      "gaps": [
+        {
+          "id": "hyperflux-route",
+          "title": "HyperFlux transport is not qualified",
+          "detail": "Exact Linux records describe the direct device, but no exact receiver-backed HyperFlux child profile authorizes this full-size model.",
+          "status": "not-mapped",
+          "source_ids": ["razer-product-hyperflux-v2"]
+        }
+      ]
+    },
+    {
+      "candidate_id": "razer-deathstalker-v2-pro-tenkeyless",
+      "source_ids": ["razer-bluetooth-compatibility", "razer-manual-deathstalker-v2-pro-tkl", "razer-product-hyperflux-v2", "razer-support-deathstalker-v2-pro-tkl"],
+      "facts": [
+        {
+          "id": "battery-life",
+          "semantic_capability": "power.battery-life",
+          "family": "power",
+          "label": "Advertised battery life",
+          "value": "Up to 50 hours",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-support-deathstalker-v2-pro-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["Battery-life figures are manufacturer test claims, not live capacity telemetry."]
+        },
+        {
+          "id": "bluetooth-limitations",
+          "semantic_capability": "connectivity.bluetooth-limitations",
+          "family": "connectivity",
+          "label": "Bluetooth limitations",
+          "value": "No Chroma Studio, limited Chroma effects, and no onboard-memory support",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-bluetooth-compatibility"],
+          "claim_state": "documented-product",
+          "notes": ["Bluetooth bypasses the HyperFlux receiver and mat."]
+        },
+        {
+          "id": "bluetooth-profiles",
+          "semantic_capability": "connectivity.bluetooth-profiles",
+          "family": "connectivity",
+          "label": "Bluetooth pairings",
+          "value": 3,
+          "unit": "profiles",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-support-deathstalker-v2-pro-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "connectivity",
+          "semantic_capability": "connectivity.routes",
+          "family": "connectivity",
+          "label": "Connection routes",
+          "value": ["Bluetooth", "HyperSpeed 2.4 GHz", "USB-C cable"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-bluetooth-compatibility", "razer-manual-deathstalker-v2-pro-tkl", "razer-support-deathstalker-v2-pro-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "game-mode",
+          "semantic_capability": "input.game-mode",
+          "family": "input",
+          "label": "Gaming mode",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-deathstalker-v2-pro-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "hyperflux-compatibility",
+          "semantic_capability": "connectivity.hyperflux-role",
+          "family": "connectivity",
+          "label": "Official HyperFlux role",
+          "value": "Compatible HyperSpeed keyboard for multi-device connectivity; the mat does not charge keyboards",
+          "routes": ["hyperflux-receiver"],
+          "source_ids": ["razer-product-hyperflux-v2"],
+          "claim_state": "documented-product",
+          "notes": ["Manufacturer compatibility does not itself authorize a Linux receiver command; this exact model has separate physical HyperFlux qualification."]
+        },
+        {
+          "id": "lighting-power-policy",
+          "semantic_capability": "lighting.idle-policy",
+          "family": "power",
+          "label": "Lighting power policy",
+          "value": "Lighting can switch off with the display or after idle time",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-deathstalker-v2-pro-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "lighting-quick-effects",
+          "semantic_capability": "lighting.quick-effects",
+          "family": "lighting",
+          "label": "Synapse Quick Effects",
+          "value": ["Ambient Awareness", "Audio Meter", "Breathing", "Fire", "Reactive", "Ripple", "Spectrum Cycling", "Starlight", "Static", "Wave", "Wheel"],
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-deathstalker-v2-pro-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["Studio Effects are separately composed in Chroma Studio."]
+        },
+        {
+          "id": "lighting-topology",
+          "semantic_capability": "lighting.per-key",
+          "family": "lighting",
+          "label": "Lighting topology",
+          "value": "Per-key RGB",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-deathstalker-v2-pro-tkl", "razer-support-deathstalker-v2-pro-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["The exact 6 by 17 OpenRGB matrix is retained separately in the pinned implementation record; the matching HyperFlux transport plane is physically qualified only for paired PID 0x0296."]
+        },
+        {
+          "id": "macros",
+          "semantic_capability": "macros.on-the-fly",
+          "family": "macros",
+          "label": "On-the-fly macro recording",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-deathstalker-v2-pro-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "media-controls",
+          "semantic_capability": "input.media-controls",
+          "family": "input",
+          "label": "Media controls",
+          "value": "Multi-function media button and media roller",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-deathstalker-v2-pro-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "onboard-profiles",
+          "semantic_capability": "profiles.onboard-count",
+          "family": "profiles",
+          "label": "Onboard profiles",
+          "value": 5,
+          "unit": "profiles",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-deathstalker-v2-pro-tkl"],
+          "claim_state": "documented-product",
+          "notes": ["Razer documents onboard-memory features as unavailable over Bluetooth."]
+        },
+        {
+          "id": "polling-rate",
+          "semantic_capability": "input.polling-rate",
+          "family": "performance",
+          "label": "Polling rate",
+          "value": 1000,
+          "unit": "Hz",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-support-deathstalker-v2-pro-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "power-policy",
+          "semantic_capability": "power.idle-timeout",
+          "family": "power",
+          "label": "Wireless power policy",
+          "value": "Configurable dim and sleep timeouts",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-deathstalker-v2-pro-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "programmable-keys",
+          "semantic_capability": "input.programmable-keys",
+          "family": "input",
+          "label": "Programmable keys",
+          "value": true,
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-support-deathstalker-v2-pro-tkl"],
+          "claim_state": "documented-product",
+          "notes": []
+        }
+      ],
+      "gaps": [
+        {
+          "id": "non-lighting-controls",
+          "title": "Keyboard settings are not HyperFlux-mapped",
+          "detail": "Per-key lighting and passive battery/identity telemetry are qualified. Polling, game mode, macros, remapping, and Bluetooth configuration remain product documentation rather than receiver controls.",
+          "status": "not-mapped",
+          "source_ids": ["razer-support-deathstalker-v2-pro-tkl"]
+        }
+      ]
+    },
+    {
+      "candidate_id": "razer-naga-v2-pro",
+      "source_ids": ["razer-bluetooth-compatibility", "razer-manual-naga-v2-pro", "razer-product-hyperflux-v2", "razer-product-naga-v2-pro", "razer-support-naga-v2-pro"],
+      "facts": [
+        {
+          "id": "battery-life",
+          "semantic_capability": "power.battery-life",
+          "family": "power",
+          "label": "Advertised battery life",
+          "value": "Up to 150 hours over 2.4 GHz; up to 300 hours over Bluetooth",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-product-naga-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Battery-life figures are manufacturer test claims, not live capacity telemetry."]
+        },
+        {
+          "id": "bluetooth-limitations",
+          "semantic_capability": "connectivity.bluetooth-limitations",
+          "family": "connectivity",
+          "label": "Bluetooth limitations",
+          "value": "Synapse polling is limited to 125 Hz, calibration is disabled, and onboard profiles are stored from the 2.4 GHz route",
+          "routes": ["bluetooth"],
+          "source_ids": ["razer-bluetooth-compatibility"],
+          "claim_state": "documented-product",
+          "notes": ["Bluetooth bypasses the HyperFlux receiver and mat."]
+        },
+        {
+          "id": "connectivity",
+          "semantic_capability": "connectivity.routes",
+          "family": "connectivity",
+          "label": "Connection routes",
+          "value": ["Bluetooth", "HyperSpeed 2.4 GHz", "USB-C cable"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-bluetooth-compatibility", "razer-manual-naga-v2-pro", "razer-support-naga-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "dpi",
+          "semantic_capability": "input.dpi-maximum",
+          "family": "performance",
+          "label": "Maximum sensitivity",
+          "value": 30000,
+          "unit": "DPI",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-naga-v2-pro", "razer-support-naga-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "dpi-stages",
+          "semantic_capability": "input.dpi-stages",
+          "family": "performance",
+          "label": "Default DPI stages",
+          "value": [400, 800, 1600, 3200, 6400],
+          "unit": "DPI",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-naga-v2-pro", "razer-support-naga-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Stages are customizable in Razer Synapse."]
+        },
+        {
+          "id": "lighting-power-policy",
+          "semantic_capability": "lighting.idle-policy",
+          "family": "power",
+          "label": "Lighting power policy",
+          "value": "Lighting can switch off with the display or after idle time",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-naga-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "lighting-quick-effects",
+          "semantic_capability": "lighting.quick-effects",
+          "family": "lighting",
+          "label": "Synapse Quick Effects",
+          "value": ["Audio Meter", "Breathing", "Reactive", "Spectrum Cycling", "Static"],
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-manual-naga-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Advanced Effects are separately composed in Chroma Studio."]
+        },
+        {
+          "id": "lighting-topology",
+          "semantic_capability": "lighting.addressable-zones",
+          "family": "lighting",
+          "label": "Lighting topology",
+          "value": "2 user-facing zones: logo and 12-button side plate",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-naga-v2-pro", "razer-support-naga-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Pinned OpenRGB also presents two slots; pinned OpenRazer declares a three-slot matrix, so the source disagreement remains visible."]
+        },
+        {
+          "id": "low-battery-threshold",
+          "semantic_capability": "telemetry.low-battery-threshold",
+          "family": "telemetry",
+          "label": "Low-battery notification",
+          "value": 5,
+          "unit": "%",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-naga-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": ["The scroll wheel repeats a red notification below this threshold."]
+        },
+        {
+          "id": "onboard-profiles",
+          "semantic_capability": "profiles.onboard-count",
+          "family": "profiles",
+          "label": "Profile storage",
+          "value": "4 onboard plus 1 active profile",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-support-naga-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Razer documents onboard profiles as based on the 2.4 GHz route when Bluetooth is used."]
+        },
+        {
+          "id": "polling-rate",
+          "semantic_capability": "input.polling-rate",
+          "family": "performance",
+          "label": "Polling rate",
+          "value": 1000,
+          "unit": "Hz",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-support-naga-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "programmable-controls",
+          "semantic_capability": "input.programmable-controls",
+          "family": "input",
+          "label": "Programmable controls",
+          "value": "19+1 buttons across three interchangeable side plates",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-naga-v2-pro", "razer-support-naga-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "scroll-behavior",
+          "semantic_capability": "input.scroll-mode",
+          "family": "input",
+          "label": "Scroll behavior",
+          "value": "Four-way HyperScroll Pro wheel with six configurable scroll modes",
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-naga-v2-pro", "razer-support-naga-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "sensor-calibration",
+          "semantic_capability": "input.lift-off-distance",
+          "family": "performance",
+          "label": "Tracking calibration",
+          "value": "Advanced lift-off and landing-distance customization",
+          "routes": ["vendor-wireless-receiver", "wired"],
+          "source_ids": ["razer-support-naga-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": ["Razer documents calibration as unavailable through Bluetooth."]
+        },
+        {
+          "id": "side-plates",
+          "semantic_capability": "input.interchangeable-side-plates",
+          "family": "input",
+          "label": "Interchangeable side plates",
+          "value": ["2-button", "6-button", "12-button"],
+          "routes": ["not-route-specific"],
+          "source_ids": ["razer-manual-naga-v2-pro", "razer-support-naga-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        },
+        {
+          "id": "sleep-timeout",
+          "semantic_capability": "power.idle-timeout",
+          "family": "power",
+          "label": "Sleep timeout",
+          "value": "Configurable wireless idle timeout",
+          "routes": ["bluetooth", "vendor-wireless-receiver"],
+          "source_ids": ["razer-manual-naga-v2-pro"],
+          "claim_state": "documented-product",
+          "notes": []
+        }
+      ],
+      "gaps": [
+        {
+          "id": "hyperflux-route",
+          "title": "HyperFlux transport is not qualified",
+          "detail": "Extensive direct-route control vocabulary exists, but no receiver-backed HyperFlux child profile authorizes this model.",
+          "status": "not-mapped",
+          "source_ids": ["razer-product-hyperflux-v2"]
+        },
+        {
+          "id": "lighting-topology-conflict",
+          "title": "Linux lighting slot count disagrees",
+          "detail": "OpenRGB and Razer product documentation describe two user-facing zones, while OpenRazer declares a three-slot matrix. The third slot is not guessed or promoted.",
+          "status": "source-conflict",
+          "source_ids": ["razer-manual-naga-v2-pro", "razer-support-naga-v2-pro"]
+        }
+      ]
+    }
+  ]
+}
