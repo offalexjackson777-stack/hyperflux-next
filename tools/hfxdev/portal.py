@@ -19,7 +19,13 @@ import markdown
 
 from .assurance import load_design_coverage
 from .integrations import compiled_catalog as compiled_integration_catalog
+from .knowledge import compiled_knowledge_catalog
 from .model import ModelError, load_json, require_unique, sha256_file
+from .portal_device_lab import (
+    DEVICE_LAB_CSS,
+    DEVICE_LAB_SCRIPT,
+    render_device_lab,
+)
 from .profiles import compiled_catalog as compiled_profile_catalog
 
 
@@ -396,6 +402,15 @@ def _navigation(config: PortalConfig, current_url: str) -> str:
     sections.append(
         f'<a{home_class} href="{escape(_relative_url(current_url, "index.html"))}">Home</a>'
     )
+    device_class = (
+        ' class="active" aria-current="page"'
+        if current_url == "devices/index.html"
+        else ""
+    )
+    sections.append(
+        f'<a{device_class} href="{escape(_relative_url(current_url, "devices/index.html"))}">'
+        "Device Lab</a>"
+    )
     for audience in config.audiences:
         links = []
         for page in audience.pages:
@@ -418,11 +433,16 @@ def _shell(
     description: str,
     content: str,
     search_records: list[dict[str, str]],
+    extra_scripts: tuple[str, ...] = (),
 ) -> str:
     css = _relative_url(current_url, "assets/site.css")
     script = _relative_url(current_url, "assets/portal.js")
     search_json = json.dumps(search_records, ensure_ascii=True, separators=(",", ":")).replace(
         "<", "\\u003c"
+    )
+    extra_script_tags = "".join(
+        f'<script src="{escape(_relative_url(current_url, value))}" defer></script>'
+        for value in extra_scripts
     )
     return f"""<!doctype html>
 <html lang="en">
@@ -461,6 +481,7 @@ def _shell(
   </footer>
   <script id="search-index" type="application/json">{search_json}</script>
   <script src="{escape(script)}" defer></script>
+  {extra_script_tags}
 </body>
 </html>
 """
@@ -674,6 +695,7 @@ def _home_content(
     <div><strong>{adapters}</strong><span>application adapters modeled</span></div>
   </div>
   <p>{release_blocking} sections still carry a release-blocking condition. The <a href="maintainers/coverage.html">coverage ledger</a> names each one without converting missing evidence into a green claim.</p>
+  <p><strong>Device research is now explorable.</strong> The <a href="devices/index.html">Device Lab</a> separates the two physically qualified routes from research-only candidates and traces every fact back to its evidence layer.</p>
 </section>"""
 
 
@@ -767,6 +789,8 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
     output.mkdir(parents=True, exist_ok=True)
 
     config = load_portal_config(root)
+    knowledge = compiled_knowledge_catalog(root)
+    device_lab = render_device_lab(knowledge)
     source_urls = {page.source: page.url for page in config.pages}
     search_records: list[dict[str, str]] = []
     for page in config.pages:
@@ -780,12 +804,23 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
                 "search": f"{page.title} {page.summary} {_plain_markdown(source_text)}".lower()[:12_000],
             }
         )
+    search_records.append(
+        {
+            "title": "Device Lab",
+            "audience": "Research",
+            "summary": "Search, compare, and trace provenance-bound device knowledge.",
+            "url": "devices/index.html",
+            "search": "device lab compatibility candidates capability heatmap evidence provenance conflicts unknowns qualification",
+        }
+    )
+    search_records.extend(device_lab.search_records)
     search_records.sort(key=lambda record: (record["audience"], record["title"]))
 
     assets = output / "assets"
     assets.mkdir()
-    (assets / "site.css").write_text(SITE_CSS, encoding="utf-8")
+    (assets / "site.css").write_text(SITE_CSS + DEVICE_LAB_CSS, encoding="utf-8")
     (assets / "portal.js").write_text(PORTAL_JS, encoding="utf-8")
+    (assets / "device-lab.js").write_text(DEVICE_LAB_SCRIPT, encoding="utf-8")
     (assets / "system-map.svg").write_text(_architecture_svg(), encoding="utf-8")
     (assets / "search-index.json").write_text(
         json.dumps(search_records, indent=2, sort_keys=True) + "\n", encoding="utf-8"
@@ -829,6 +864,25 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
             encoding="utf-8",
         )
 
+    device_url = "devices/index.html"
+    device_destination = output / device_url
+    device_destination.parent.mkdir(parents=True, exist_ok=True)
+    device_destination.write_text(
+        _shell(
+            config,
+            current_url=device_url,
+            title="Device Lab",
+            description="Search, compare, and inspect provenance-bound HyperFlux device knowledge.",
+            content=device_lab.content,
+            search_records=[
+                {**record, "url": _relative_url(device_url, record["url"])}
+                for record in search_records
+            ],
+            extra_scripts=("assets/device-lab.js",),
+        ),
+        encoding="utf-8",
+    )
+
     coverage = load_design_coverage(root)
     profiles = compiled_profile_catalog(root)
     integrations = compiled_integration_catalog(root)
@@ -848,8 +902,10 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
         "assurance/design-coverage.json",
         "docs/portal.json",
         "generated/integrations/catalog.json",
+        "generated/knowledge/catalog.json",
         "generated/profiles/catalog.json",
         "tools/hfxdev/portal.py",
+        "tools/hfxdev/portal_device_lab.py",
         *(page.source for page in config.pages),
     }
     materials = [
@@ -865,14 +921,14 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
         "external_runtime_dependencies": False,
         "source_tree_sha256": source_digest,
         "materials": materials,
-        "pages": len(config.pages) + 1,
+        "pages": len(config.pages) + 2,
         "files": files,
     }
     manifest = output / "portal-build-manifest.json"
     manifest.write_text(
         json.dumps(manifest_value, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    return PortalBuild(output=output, manifest=manifest, pages=len(config.pages) + 1, files=len(files))
+    return PortalBuild(output=output, manifest=manifest, pages=len(config.pages) + 2, files=len(files))
 
 
 class _PortalHtmlInspector(HTMLParser):

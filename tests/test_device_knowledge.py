@@ -273,6 +273,8 @@ class DeviceKnowledgeContractTests(unittest.TestCase):
 
     def test_source_catalogs_match_exact_integration_pins(self) -> None:
         sources = {value["upstream_id"]: value for value in self.catalog["upstreams"]}
+        self.assertEqual(sources["openrazer"]["record_count"], 232)
+        self.assertEqual(sources["openrgb"]["record_count"], 112)
         self.assertEqual(
             sources["openrazer"]["commit"],
             "6820f9da169d354bc7e6e93a0aa8683a6bb75792",

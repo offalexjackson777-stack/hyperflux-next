@@ -12632,6 +12632,7 @@
       "commit": "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
       "extractor": "python-ast-v1",
       "license_expression": "GPL-2.0-or-later AND CC-BY-SA-4.0",
+      "record_count": 232,
       "repository": "https://github.com/openrazer/openrazer.git",
       "source_files": [
         {
@@ -12650,6 +12651,7 @@
       "commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0",
       "extractor": "cpp-initializer-v1",
       "license_expression": "GPL-2.0-only",
+      "record_count": 112,
       "repository": "https://github.com/CalcProgrammer1/OpenRGB.git",
       "source_files": [
         {

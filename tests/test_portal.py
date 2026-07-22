@@ -40,7 +40,7 @@ class DocumentationPortalTests(unittest.TestCase):
             self.assertEqual(first_manifest, second_manifest)
             self.assertFalse(first_manifest["publication_authorized"])
             self.assertFalse(first_manifest["external_runtime_dependencies"])
-            self.assertEqual(first_result.pages, 22)
+            self.assertEqual(first_result.pages, 23)
             self.assertEqual(verify_portal(ROOT, first)["source_tree_sha256"], first_manifest["source_tree_sha256"])
             index = (first / "index.html").read_text(encoding="utf-8")
             self.assertIn('id="main-content"', index)
@@ -59,6 +59,18 @@ class DocumentationPortalTests(unittest.TestCase):
             )
             self.assertIn("Profile selection", shadow)
             self.assertIn("Hardware writes: forbidden", shadow)
+            device_lab = (first / "devices" / "index.html").read_text(encoding="utf-8")
+            self.assertIn("Static read-only catalog", device_lab)
+            self.assertIn("Physically qualified receiver routes", device_lab)
+            self.assertIn("Capability heatmap", device_lab)
+            self.assertIn('id="device-filter"', device_lab)
+            self.assertEqual(device_lab.count('data-compare-id="'), 12)
+            self.assertEqual(device_lab.count('data-support="route-qualified"'), 4)
+            device_script = (first / "assets" / "device-lab.js").read_text(
+                encoding="utf-8"
+            )
+            self.assertNotIn("fetch(", device_script)
+            self.assertNotIn("XMLHttpRequest", device_script)
 
     def test_unsupported_mermaid_fails_closed(self) -> None:
         with self.assertRaisesRegex(ModelError, "unsupported Mermaid diagram type"):

@@ -680,7 +680,13 @@ def compiled_knowledge_catalog(root: Path) -> dict[str, Any]:
             "controls_require_qualified_hyperflux_capabilities": True,
             "source_conflicts_are_not_promoted": True,
         },
-        "upstreams": [deepcopy(inputs.source_catalogs[value]["source"]) for value in UPSTREAM_IDS],
+        "upstreams": [
+            {
+                **deepcopy(inputs.source_catalogs[value]["source"]),
+                "record_count": len(inputs.source_catalogs[value]["records"]),
+            }
+            for value in UPSTREAM_IDS
+        ],
         "reviewed_on": inputs.reviewed_on,
         "reviewed_sources": [
             deepcopy(inputs.reviewed_sources[source_id])
