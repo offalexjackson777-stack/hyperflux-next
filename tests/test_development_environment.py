@@ -143,6 +143,29 @@ class DevelopmentEnvironmentTests(unittest.TestCase):
                 with self.assertRaisesRegex(ModelError, message):
                     load_development_environment(root)
 
+    def test_environment_rejects_workspace_outside_the_container_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "toolchains").mkdir()
+            (root / "schemas").mkdir()
+            pins = json.loads(
+                (ROOT / "toolchains" / "pins.json").read_text(encoding="utf-8")
+            )
+            environment = json.loads(
+                (ROOT / "toolchains" / "development-environment.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            environment["workspace"]["path"] = "/home/private/hyperflux-next"
+            (root / "toolchains" / "pins.json").write_text(
+                json.dumps(pins), encoding="utf-8"
+            )
+            (root / "toolchains" / "development-environment.json").write_text(
+                json.dumps(environment), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(ModelError, "workspace identity is unsupported"):
+                load_development_environment(root)
+
 
 class UpstreamPreparationTests(unittest.TestCase):
     def _fixture(self, temporary: str) -> tuple[Path, dict[str, object], str]:

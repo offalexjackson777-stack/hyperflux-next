@@ -26,6 +26,7 @@ ENVIRONMENT_KEYS = {
 }
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 PACKAGE_NAME = re.compile(r"^[a-z0-9][a-z0-9+_.-]{0,63}$")
+WORKSPACE_PATH = re.compile(r"^/workspaces/[a-z][a-z0-9-]{0,63}$")
 CARGO_CACHE_PATH = ".hfx/cargo"
 UPSTREAM_CACHE_PATH = ".hfx/upstreams"
 UPSTREAM_PREPARE_COMMAND = (
@@ -245,13 +246,17 @@ def load_development_environment(root: Path) -> DevelopmentEnvironment:
     if not isinstance(workspace, dict):
         raise ModelError("development workspace must be an object")
     _exact_keys(workspace, {"user", "uid", "path"}, "development workspace")
-    path = PurePosixPath(workspace["path"])
+    workspace_path = workspace["path"]
+    if not isinstance(workspace_path, str):
+        raise ModelError("development workspace identity is unsupported")
+    path = PurePosixPath(workspace_path)
     if (
         workspace["user"] != "hyperflux"
         or workspace["uid"] != 1000
         or not path.is_absolute()
         or ".." in path.parts
-        or path.as_posix() != "/workspaces/hyperflux-next"
+        or path.as_posix() != workspace_path
+        or WORKSPACE_PATH.fullmatch(workspace_path) is None
     ):
         raise ModelError("development workspace identity is unsupported")
 
@@ -283,7 +288,7 @@ def load_development_environment(root: Path) -> DevelopmentEnvironment:
         rust_components=components,
         workspace_user=workspace["user"],
         workspace_uid=workspace["uid"],
-        workspace_path=workspace["path"],
+        workspace_path=workspace_path,
         container_network_uses=container_uses,
         post_create_network_uses=post_create_uses,
     )
