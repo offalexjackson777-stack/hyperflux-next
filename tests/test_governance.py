@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.ci import _linked_worktree_common_dir, container_invocation
 from hfxdev.generators.governance import (
+    EXACT_SOURCE_REVISION,
     bug_report,
     codeql_workflow,
     dependency_review_workflow,
@@ -50,6 +51,21 @@ def _uses(value: object) -> list[str]:
         return result
     if isinstance(value, list):
         return [item for child in value for item in _uses(child)]
+    return []
+
+
+def _values_for_key(value: object, expected_key: str) -> list[object]:
+    if isinstance(value, dict):
+        result = [child for key, child in value.items() if key == expected_key]
+        for child in value.values():
+            result.extend(_values_for_key(child, expected_key))
+        return result
+    if isinstance(value, list):
+        return [
+            item
+            for child in value
+            for item in _values_for_key(child, expected_key)
+        ]
     return []
 
 
@@ -102,6 +118,17 @@ class GitHubGovernanceTests(unittest.TestCase):
             with self.subTest(workflow=name):
                 document = yaml.safe_load(text)
                 self.assertIsInstance(document, dict)
+                checkouts = [
+                    step
+                    for job in document["jobs"].values()
+                    for step in job["steps"]
+                    if step.get("name") == "Check out exact source"
+                ]
+                self.assertTrue(checkouts)
+                for checkout in checkouts:
+                    self.assertEqual(checkout["with"]["ref"], EXACT_SOURCE_REVISION)
+                for revision in _values_for_key(document, "HFX_SOURCE_REVISION"):
+                    self.assertEqual(revision, EXACT_SOURCE_REVISION)
                 for use in _uses(document):
                     match = re.search(r"@([0-9a-f]{40})$", use)
                     self.assertIsNotNone(match, use)
@@ -231,6 +258,8 @@ class GitHubGovernanceTests(unittest.TestCase):
                 "CARGO_HOME=/workspaces/hyperflux-next/.hfx/cargo",
                 command,
             )
+            self.assertIn("USER=hyperflux", command)
+            self.assertIn("LOGNAME=hyperflux", command)
         prepare_command = " ".join(prepare.command)
         self.assertIn("./hfx upstream prepare --output .hfx/upstreams", prepare_command)
         self.assertIn("CARGO_NET_OFFLINE=false cargo fetch --locked", prepare_command)
@@ -252,6 +281,23 @@ class GitHubGovernanceTests(unittest.TestCase):
         )
         self.assertIn("--userns=keep-id", invocation.command)
         self.assertIn("1000:1001", invocation.command)
+
+    @patch("hfxdev.ci.shutil.which", return_value="/usr/bin/docker")
+    def test_ci_invocation_names_an_arbitrary_numeric_identity(self, _which) -> None:
+        invocation = container_invocation(
+            ROOT,
+            image=self.governance.development_image,
+            operation="verify",
+            lane="full",
+            output=Path("build/ci/arbitrary-identity"),
+            engine="docker",
+            uid=1001,
+            gid=121,
+        )
+        command = " ".join(invocation.command)
+        self.assertIn("--user 1001:121", command)
+        self.assertIn("USER=hyperflux", command)
+        self.assertIn("LOGNAME=hyperflux", command)
 
     def test_ci_discovers_linked_worktree_common_git_directory(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

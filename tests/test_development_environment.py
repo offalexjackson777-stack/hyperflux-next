@@ -57,7 +57,8 @@ class DevelopmentEnvironmentTests(unittest.TestCase):
     def test_container_has_no_hardware_or_privileged_escape_hatch(self) -> None:
         environment = load_development_environment(ROOT)
         rendered = containerfile(environment)
-        self.assertIn(f"FROM --platform=linux/amd64 {environment.image}", rendered)
+        self.assertIn("ARG HFX_TARGET_PLATFORM=linux/amd64", rendered)
+        self.assertIn(f"FROM --platform=${{HFX_TARGET_PLATFORM}} {environment.image}", rendered)
         self.assertIn("CARGO_NET_OFFLINE=true", rendered)
         self.assertIn("PIP_NO_INDEX=1", rendered)
         self.assertIn("DisableDownloadTimeout", rendered)
