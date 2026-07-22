@@ -99,7 +99,7 @@
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {"enum": ["pinned-upstream-checkouts"]}
+          "items": {"enum": ["pinned-upstream-checkouts", "locked-rust-crates"]}
         },
         "verification": {"const": "forbidden"}
       }

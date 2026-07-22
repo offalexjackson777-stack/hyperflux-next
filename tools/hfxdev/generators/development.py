@@ -5,7 +5,13 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from ..development import DevelopmentEnvironment
+from ..development import (
+    CARGO_CACHE_PATH,
+    DevelopmentEnvironment,
+    LOCKED_RUST_FETCH_COMMAND,
+    UPSTREAM_PREPARE_COMMAND,
+    networked_software_prepare_command,
+)
 
 
 def containerfile(environment: DevelopmentEnvironment) -> str:
@@ -69,14 +75,14 @@ def devcontainer(environment: DevelopmentEnvironment) -> str:
         "remoteUser": environment.workspace_user,
         "updateRemoteUserUID": True,
         "workspaceFolder": environment.workspace_path,
-        "postCreateCommand": "./hfx upstream prepare",
+        "postCreateCommand": networked_software_prepare_command(),
         "hostRequirements": {
             "cpus": 4,
             "memory": "8gb",
             "storage": "24gb",
         },
         "containerEnv": {
-            "CARGO_HOME": "/opt/cargo",
+            "CARGO_HOME": f"{environment.workspace_path}/{CARGO_CACHE_PATH}",
             "CARGO_NET_OFFLINE": "true",
             "PIP_NO_INDEX": "1",
             "RUSTUP_HOME": "/opt/rustup",
@@ -109,11 +115,13 @@ def markdown(environment: DevelopmentEnvironment, upstreams: list[dict[str, Any]
         "`.devcontainer/Containerfile` with an OCI container tool. The post-create step runs:",
         "",
         "```sh",
-        "./hfx upstream prepare",
+        " ".join(UPSTREAM_PREPARE_COMMAND),
+        "CARGO_NET_OFFLINE=false " + " ".join(LOCKED_RUST_FETCH_COMMAND),
         "```",
         "",
-        "This is the only ordinary setup step that fetches application source. It creates clean, "
-        "detached checkouts under `.hfx/upstreams/` at these reviewed commits:",
+        "This is the only ordinary setup step that uses the network. It creates clean, detached "
+        "upstream checkouts and fetches the exact `Cargo.lock` dependency set into the "
+        f"workspace-local `{CARGO_CACHE_PATH}/` cache. The reviewed upstream commits are:",
         "",
         "| Upstream | Commit | Contract |",
         "| --- | --- | --- |",
@@ -135,9 +143,9 @@ def markdown(environment: DevelopmentEnvironment, upstreams: list[dict[str, Any]
             "## Network Boundary",
             "",
             "Container construction may read the immutable Arch snapshot and install the exact "
-            "Rust toolchain. Upstream preparation may fetch only the cataloged repositories and "
-            "checks out exact commits. Verification never fetches dependencies or upstream state; "
-            "missing, dirty, or mismatched checkouts fail with a remediation command.",
+            "Rust toolchain. Post-create preparation may fetch only cataloged repositories and "
+            "locked Rust crates. Verification reuses those workspace-local inputs without network "
+            "access; missing, dirty, or mismatched inputs fail with a remediation command.",
             "",
             f"Archive package retrieval permits up to {environment.archive_download_attempts} "
             "attempts. Low-speed transfer expiry is "

@@ -17,10 +17,11 @@ The development container is an immutable, non-privileged software build environ
 Open the repository in a Development Containers-compatible editor, or build `.devcontainer/Containerfile` with an OCI container tool. The post-create step runs:
 
 ```sh
-./hfx upstream prepare
+./hfx upstream prepare --output .hfx/upstreams
+CARGO_NET_OFFLINE=false cargo fetch --locked
 ```
 
-This is the only ordinary setup step that fetches application source. It creates clean, detached checkouts under `.hfx/upstreams/` at these reviewed commits:
+This is the only ordinary setup step that uses the network. It creates clean, detached upstream checkouts and fetches the exact `Cargo.lock` dependency set into the workspace-local `.hfx/cargo/` cache. The reviewed upstream commits are:
 
 | Upstream | Commit | Contract |
 | --- | --- | --- |
@@ -37,7 +38,7 @@ Then run either software lane without network access:
 
 ## Network Boundary
 
-Container construction may read the immutable Arch snapshot and install the exact Rust toolchain. Upstream preparation may fetch only the cataloged repositories and checks out exact commits. Verification never fetches dependencies or upstream state; missing, dirty, or mismatched checkouts fail with a remediation command.
+Container construction may read the immutable Arch snapshot and install the exact Rust toolchain. Post-create preparation may fetch only cataloged repositories and locked Rust crates. Verification reuses those workspace-local inputs without network access; missing, dirty, or mismatched inputs fail with a remediation command.
 
 Archive package retrieval permits up to 3 attempts. Low-speed transfer expiry is disabled. Package signatures and exact-version constraints remain mandatory.
 

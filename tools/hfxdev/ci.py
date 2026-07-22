@@ -9,7 +9,11 @@ import re
 import shutil
 import subprocess
 
-from .development import load_development_environment
+from .development import (
+    CARGO_CACHE_PATH,
+    load_development_environment,
+    networked_software_prepare_command,
+)
 from .model import ModelError
 
 
@@ -89,7 +93,12 @@ def container_invocation(
         if output is not None or lane is not None or revision is not None:
             raise ModelError("CI prepare accepts no lane, output, or changed revision")
         network = "bridge"
-        hfx_command = ["./hfx", "upstream", "prepare", "--output", ".hfx/upstreams"]
+        hfx_command = [
+            "/bin/bash",
+            "-lc",
+            'install -d -m 0700 "$HOME" "$CARGO_HOME" && '
+            + networked_software_prepare_command(),
+        ]
     elif operation == "verify":
         if lane not in {"fast", "full"} or output is None:
             raise ModelError("CI verify requires a fast or full lane and an output")
@@ -141,11 +150,11 @@ def container_invocation(
         "--env",
         "HOME=/tmp/hfx-home",
         "--env",
-        "CARGO_HOME=/opt/cargo",
+        f"CARGO_HOME={environment.workspace_path}/{CARGO_CACHE_PATH}",
         "--env",
         "RUSTUP_HOME=/opt/rustup",
         "--env",
-        "CARGO_NET_OFFLINE=true",
+        f"CARGO_NET_OFFLINE={'false' if operation == 'prepare' else 'true'}",
         "--env",
         "PIP_NO_INDEX=1",
         "--volume",

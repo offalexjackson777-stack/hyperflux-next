@@ -4,7 +4,7 @@
     "dockerfile": "Containerfile"
   },
   "containerEnv": {
-    "CARGO_HOME": "/opt/cargo",
+    "CARGO_HOME": "/workspaces/hyperflux-next/.hfx/cargo",
     "CARGO_NET_OFFLINE": "true",
     "PIP_NO_INDEX": "1",
     "RUSTUP_HOME": "/opt/rustup",
@@ -16,7 +16,7 @@
     "storage": "24gb"
   },
   "name": "HyperFlux Next",
-  "postCreateCommand": "./hfx upstream prepare",
+  "postCreateCommand": "./hfx upstream prepare --output .hfx/upstreams && CARGO_NET_OFFLINE=false cargo fetch --locked",
   "remoteUser": "hyperflux",
   "updateRemoteUserUID": true,
   "workspaceFolder": "/workspaces/hyperflux-next"
