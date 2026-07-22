@@ -25,7 +25,7 @@ Every current node is software-only and has zero hardware-write authority.
 | 16 | `device-knowledge-contracts` | `profiles` | `none` | `false` | 30s | `rerun` |
 | 17 | `generated-freshness` | `generation` | `none` | `false` | 15s | `reuse-verified` |
 | 18 | `documentation-portal-contracts` | `documentation` | `none` | `false` | 30s | `rerun` |
-| 19 | `python-unit` | `tooling` | `none` | `false` | 60s | `rerun` |
+| 19 | `python-unit` | `tooling` | `none` | `false` | 120s | `rerun` |
 | 20 | `rust-clippy` | `rust` | `none` | `false` | 180s | `rerun` |
 | 21 | `cpp-sdk-contracts` | `sdk` | `none` | `false` | 60s | `rerun` |
 | 22 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 180s | `rerun` |

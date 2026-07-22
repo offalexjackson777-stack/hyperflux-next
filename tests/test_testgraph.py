@@ -34,6 +34,13 @@ class TestGraphTests(unittest.TestCase):
                 self.assertNotIn("/", node.runner)
                 self.assertNotIn(";", node.runner)
 
+    def test_python_unit_budget_covers_concurrent_full_lane_execution(self) -> None:
+        catalog = load_test_catalog(ROOT)
+        python_unit = next(node for node in catalog.nodes if node.id == "python-unit")
+
+        self.assertEqual(python_unit.expected_duration_seconds, 60)
+        self.assertEqual(python_unit.timeout_seconds, 120)
+
     def test_cycle_is_rejected(self) -> None:
         catalog = load_test_catalog(ROOT)
         first, second, *remaining = catalog.nodes

@@ -8,6 +8,7 @@ from pathlib import Path, PurePosixPath
 import re
 import shutil
 import subprocess
+import tempfile
 
 from .development import (
     CARGO_CACHE_PATH,
@@ -28,6 +29,11 @@ class ContainerInvocation:
     operation: str
     network: str
     command: tuple[str, ...]
+    engine: str
+    image: str
+    user_id: int
+    group_id: int
+    workspace_user: str
 
 
 def _engine(requested: str | None = None) -> str:
@@ -164,8 +170,8 @@ def container_invocation(
 
     user_id = os.getuid() if uid is None else uid
     group_id = os.getgid() if gid is None else gid
-    if user_id < 0 or group_id < 0:
-        raise ModelError("CI container identity is invalid")
+    if user_id <= 0 or group_id <= 0:
+        raise ModelError("CI container identity must be unprivileged")
     linked_git = _linked_worktree_common_dir(root)
     command = [engine_path, "run"]
     if Path(engine_path).name == "podman":
@@ -218,11 +224,161 @@ def container_invocation(
         )
     else:
         command.extend(hfx_command)
-    return ContainerInvocation(operation, network, tuple(command))
+    return ContainerInvocation(
+        operation,
+        network,
+        tuple(command),
+        engine_path,
+        image,
+        user_id,
+        group_id,
+        environment.workspace_user,
+    )
+
+
+def _read_image_identity_file(invocation: ContainerInvocation, path: str) -> str:
+    command = [
+        invocation.engine,
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges:true",
+        "--pids-limit",
+        "32",
+        "--entrypoint",
+        "/bin/cat",
+        invocation.image,
+        path,
+    ]
+    try:
+        result = subprocess.run(
+            command,
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except OSError as error:
+        raise ModelError(f"cannot inspect CI image identity: {error}") from error
+    if result.returncode != 0:
+        raise ModelError(
+            f"cannot read {path} from the pinned CI image "
+            f"(exit status {result.returncode})"
+        )
+    if not result.stdout or len(result.stdout.encode("utf-8")) > 262_144:
+        raise ModelError(f"CI image {path} is empty or unbounded")
+    return result.stdout
+
+
+def _project_passwd(
+    source: str,
+    *,
+    username: str,
+    user_id: int,
+    group_id: int,
+) -> str:
+    records: list[list[str]] = []
+    target: list[str] | None = None
+    for line in source.splitlines():
+        fields = line.split(":")
+        if (
+            len(fields) != 7
+            or not fields[0]
+            or not fields[2].isdigit()
+            or not fields[3].isdigit()
+        ):
+            raise ModelError("CI image passwd database is malformed")
+        if fields[0] == username:
+            if target is not None:
+                raise ModelError("CI image contains duplicate workspace users")
+            target = fields
+        elif fields[2] == str(user_id):
+            raise ModelError("host UID collides with a pinned CI image account")
+        records.append(fields)
+    if target is None:
+        raise ModelError("CI image workspace user is missing from passwd")
+    target[2] = str(user_id)
+    target[3] = str(group_id)
+    target[5] = "/tmp/hfx-home"
+    return "\n".join(":".join(fields) for fields in records) + "\n"
+
+
+def _project_group(
+    source: str,
+    *,
+    username: str,
+    group_id: int,
+) -> str:
+    records: list[list[str]] = []
+    target: list[str] | None = None
+    for line in source.splitlines():
+        fields = line.split(":")
+        if len(fields) != 4 or not fields[0] or not fields[2].isdigit():
+            raise ModelError("CI image group database is malformed")
+        if fields[0] == username:
+            if target is not None:
+                raise ModelError("CI image contains duplicate workspace groups")
+            target = fields
+        elif fields[2] == str(group_id):
+            raise ModelError("host GID collides with a pinned CI image group")
+        records.append(fields)
+    if target is None:
+        raise ModelError("CI image workspace group is missing")
+    target[2] = str(group_id)
+    return "\n".join(":".join(fields) for fields in records) + "\n"
+
+
+def _runtime_command(
+    invocation: ContainerInvocation,
+    *,
+    passwd: Path,
+    group: Path,
+) -> tuple[str, ...]:
+    try:
+        image_index = invocation.command.index(invocation.image)
+    except ValueError as error:
+        raise ModelError("CI invocation lost its pinned image binding") from error
+    identity_mounts = (
+        "--volume",
+        f"{passwd}:/etc/passwd:ro",
+        "--volume",
+        f"{group}:/etc/group:ro",
+    )
+    return (
+        *invocation.command[:image_index],
+        *identity_mounts,
+        *invocation.command[image_index:],
+    )
 
 
 def run_container(invocation: ContainerInvocation) -> int:
-    try:
-        return subprocess.run(invocation.command, check=False).returncode
-    except OSError as error:
-        raise ModelError(f"cannot execute OCI container: {error}") from error
+    passwd_source = _read_image_identity_file(invocation, "/etc/passwd")
+    group_source = _read_image_identity_file(invocation, "/etc/group")
+    passwd_projection = _project_passwd(
+        passwd_source,
+        username=invocation.workspace_user,
+        user_id=invocation.user_id,
+        group_id=invocation.group_id,
+    )
+    group_projection = _project_group(
+        group_source,
+        username=invocation.workspace_user,
+        group_id=invocation.group_id,
+    )
+    with tempfile.TemporaryDirectory(prefix="hyperflux-ci-identity-") as temporary:
+        identity_root = Path(temporary)
+        passwd = identity_root / "passwd"
+        group = identity_root / "group"
+        passwd.write_text(passwd_projection, encoding="utf-8")
+        group.write_text(group_projection, encoding="utf-8")
+        passwd.chmod(0o444)
+        group.chmod(0o444)
+        command = _runtime_command(invocation, passwd=passwd, group=group)
+        try:
+            return subprocess.run(command, check=False).returncode
+        except OSError as error:
+            raise ModelError(f"cannot execute OCI container: {error}") from error
