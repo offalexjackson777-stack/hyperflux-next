@@ -4,92 +4,44 @@
 
 Provides typed C++ bridge access and generated contracts for native application adapters.
 
-**Status:** `implemented`  
-**Category:** `applications`  
-**Atlas ID:** `sdk-cpp`
+`implemented` | `applications` | Atlas: `sdk-cpp`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/architecture/sdk.md`](../../docs/architecture/sdk.md)
+- [`docs/generated/bridge-protocol.md`](../../docs/generated/bridge-protocol.md)
 
+## Scope
+
+**Owns**
 - C++ client API
 - C++ channel and recovery
 - Generated C++ bindings
 
-It must never own:
-
+**Does not own**
 - OpenRGB widgets
 - Raw receiver transport
 - Independent schema truth
 
-## Inputs And Outputs
-
-Inputs:
-
-- Domain, protocol, profile, and error catalogs
-- Local bridge channel
-
-Outputs:
-
-- C++ headers and client library
-- Native adapter contract
-
-## Public Contracts
-
-- Typed logical devices
-- Negotiated local protocol
-- No raw hardware API
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`sdk/cpp/CMakeLists.txt`](CMakeLists.txt)
 - [`sdk/cpp/include/hyperflux/sdk.hpp`](include/hyperflux/sdk.hpp)
 - [`sdk/cpp/src/client.cpp`](src/client.cpp)
 
-Generated projections:
-
-- [`sdk/cpp/README.md`](README.md)
-- [`sdk/cpp/include/hyperflux/generated/domain_types.hpp`](include/hyperflux/generated/domain_types.hpp)
-- [`sdk/cpp/include/hyperflux/generated/profile_catalog.hpp`](include/hyperflux/generated/profile_catalog.hpp)
-
-## Relationships
-
-Depends on:
-
-- [Versioned bridge protocol](../../protocol/README.md)
-- [Composable hardware profiles](../../profiles/README.md)
-- [Application integration catalog](../../integrations/README.md)
-
-Used by:
-
-- [OpenRGB adapter](../../integrations/openrgb/README.md)
-- [Contract tests](../../tests/README.md)
-
 ## Verification
 
-- `cpp-sdk-contracts`
+Run `cpp-sdk-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 3 declared projection(s).
 - Run `cpp-sdk-contracts`.
 - Review direct consumers: OpenRGB adapter, Contract tests.
 
-## Limitations
+## Relationships
 
-- ABI publication remains blocked until release authorization
+- **Depends on:** [Versioned bridge protocol](../../protocol/README.md), [Composable hardware profiles](../../profiles/README.md), [Application integration catalog](../../integrations/README.md)
+- **Used by:** [OpenRGB adapter](../../integrations/openrgb/README.md), [Contract tests](../../tests/README.md)
 
-## Safe Change Workflow
-
-1. Change canonical schemas for shared types
-2. Regenerate headers
-3. Run warning-fatal SDK and native adapter contracts
-
-## Related Documentation
-
-- [`docs/architecture/sdk.md`](../../docs/architecture/sdk.md)
-- [`docs/generated/bridge-protocol.md`](../../docs/generated/bridge-protocol.md)
-
-Return to the [Repository Atlas](../../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

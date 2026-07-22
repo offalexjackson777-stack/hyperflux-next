@@ -30,7 +30,7 @@
     ]
   },
   "external_apps_installed": [],
-  "pages_deployment_authorized": true,
+  "pages_deployment_authorized": false,
   "product_publication_authorized": false,
   "project": {
     "apply_authorized": true,
@@ -143,7 +143,7 @@
   "repository": "offalexjackson777-stack/hyperflux-next",
   "repository_metadata": {
     "description": "Evidence-bound Linux support for devices paired through Razer HyperFlux V2. Unreleased.",
-    "homepage": "https://offalexjackson777-stack.github.io/hyperflux-next/",
+    "homepage": "https://github.com/offalexjackson777-stack/hyperflux-next#readme",
     "social_preview_asset": "docs/assets/social-preview.png",
     "topics": [
       "cpp",

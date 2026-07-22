@@ -51,6 +51,15 @@ def impact_summary(atlas: RepositoryAtlas, node: AtlasNode) -> tuple[str, ...]:
 
 def folder_readme(atlas: RepositoryAtlas, node: AtlasNode) -> str:
     used_by = atlas.used_by[node.id]
+    verification = " ".join(f"`{item}`" for item in node.verification)
+    dependencies = ", ".join(
+        _link(node.path, atlas.by_id[item].path + "/README.md", atlas.by_id[item].title)
+        for item in node.depends_on
+    ) or "None"
+    consumers = ", ".join(
+        _link(node.path, atlas.by_id[item].path + "/README.md", atlas.by_id[item].title)
+        for item in used_by
+    ) or "None"
     lines = [
         f"# {node.title}",
         "",
@@ -58,78 +67,156 @@ def folder_readme(atlas: RepositoryAtlas, node: AtlasNode) -> str:
         "",
         node.purpose,
         "",
-        f"**Status:** `{node.status}`  ",
-        f"**Category:** `{node.category}`  ",
-        f"**Atlas ID:** `{node.id}`",
+        f"`{node.status}` | `{node.category}` | Atlas: `{node.id}`",
         "",
-        "## Ownership",
+    ]
+    if node.id == "documentation":
+        lines.extend(
+            [
+                "## Browse By Need",
+                "",
+                "| Need | Document |",
+                "| --- | --- |",
+                "| Project overview | [What HyperFlux Next is](user/overview.md) |",
+                "| Installation | [Current package status](generated/installation.md) |",
+                "| Troubleshooting | [Safe diagnostic steps](user/troubleshooting.md) |",
+                "| Privacy | [Local data boundaries](user/privacy.md) |",
+                "| Architecture | [System design](generated/architecture.md) |",
+                "| Hardware | [Evidence-backed support](generated/supported-hardware.md) |",
+                "| Applications | [Integration status](generated/integrations.md) |",
+                "| Readiness | [Release gates](generated/release-gates.md) |",
+                "| Repository ownership | [Repository Atlas](generated/repository-atlas.md) |",
+                "",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "## Start Here",
+                "",
+                *_file_bullets(node.path, node.related_docs),
+                "",
+            ]
+        )
+    if node.id == "device-qualification-console":
+        lines.extend(
+            [
+                "## Run The Installed Console",
+                "",
+                "```sh",
+                "hyperfluxctl doctor",
+                "hyperfluxctl qualification serve",
+                "```",
+                "",
+                "Open the loopback URL printed by the second command and leave that terminal running. The console reads the installed Next stack only, never uploads data, and identifies an active HyperFlux V2 installation instead of reporting it as a broken Next bridge.",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+        "## Scope",
         "",
-        "This subsystem owns:",
-        "",
+        "**Owns**",
         *_bullets(node.owns),
         "",
-        "It must never own:",
-        "",
+        "**Does not own**",
         *_bullets(node.must_not_own),
         "",
-        "## Inputs And Outputs",
-        "",
-        "Inputs:",
-        "",
-        *_bullets(node.inputs),
-        "",
-        "Outputs:",
-        "",
-        *_bullets(node.outputs),
-        "",
-        "## Public Contracts",
-        "",
-        *_bullets(node.public_contracts),
-        "",
-        "## Source And Generated Files",
-        "",
-        "Canonical files:",
+        "## Change Here",
         "",
         *_file_bullets(node.path, node.canonical_files),
         "",
-        "Generated projections:",
-        "",
-        *_file_bullets(node.path, node.generated_files),
-        "",
-        "## Relationships",
-        "",
-        "Depends on:",
-        "",
-        *_node_links(atlas, node.path, node.depends_on),
-        "",
-        "Used by:",
-        "",
-        *_node_links(atlas, node.path, used_by),
-        "",
         "## Verification",
         "",
-        *_bullets(tuple(f"`{item}`" for item in node.verification)),
+        f"Run {verification} after changing this area.",
         "",
-        "Change impact:",
+        "Before opening a pull request:",
         "",
         *_bullets(impact_summary(atlas, node)),
         "",
-        "## Limitations",
+        "## Relationships",
         "",
-        *_bullets(node.limitations),
+        f"- **Depends on:** {dependencies}",
+        f"- **Used by:** {consumers}",
         "",
-        "## Safe Change Workflow",
+        f"See the {_link(node.path, 'docs/generated/repository-atlas.md', 'Repository Atlas')} for files, generated projections, contracts, and limitations.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
+COLLECTION_TITLES = {
+    ".devcontainer": "Development Container",
+    ".github": "GitHub Automation",
+    "LICENSES": "License Texts",
+    "apps": "Installed Applications",
+    "generated": "Generated Catalogs",
+    "sdk": "Language SDKs",
+    "uapi": "Userspace ABI",
+}
+
+
+def collection_readme(atlas: RepositoryAtlas, path: str) -> str:
+    children = tuple(node for node in atlas.nodes if node.path.startswith(path + "/"))
+    owners: dict[str, tuple[int, int]] = {}
+    for node in atlas.nodes:
+        canonical = sum(item.startswith(path + "/") for item in node.canonical_files)
+        generated = sum(
+            item.startswith(path + "/") and item != f"{path}/README.md"
+            for item in node.generated_files
+        )
+        if canonical or generated:
+            owners[node.id] = (canonical, generated)
+    if path == "LICENSES" and "governance" not in owners:
+        owners["governance"] = (1, 0)
+
+    lines = [
+        f"# {COLLECTION_TITLES.get(path, path.title())}",
+        "",
+        GENERATED_NOTICE,
+        "",
+        "This is a structural collection, not a second source of truth. Follow the authority links below before changing a file.",
         "",
     ]
-    lines.extend(f"{index}. {item}" for index, item in enumerate(node.safe_change_workflow, 1))
+    if children:
+        lines.extend(
+            [
+                "## Subsystems",
+                "",
+                "| Area | Purpose |",
+                "| --- | --- |",
+            ]
+        )
+        for node in children:
+            lines.append(
+                f"| {_link(path, node.path + '/README.md', node.title)} | {node.purpose} |"
+            )
+        lines.append("")
+    if owners:
+        lines.extend(
+            [
+                "## Authorities",
+                "",
+                "| Owner | Canonical inputs | Generated outputs |",
+                "| --- | ---: | ---: |",
+            ]
+        )
+        for identifier, (canonical, generated) in sorted(owners.items()):
+            node = atlas.by_id[identifier]
+            lines.append(
+                f"| {_link(path, node.path + '/README.md', node.title)} | {canonical} | {generated} |"
+            )
+        lines.append("")
     lines.extend(
         [
+            "## Safe Changes",
             "",
-            "## Related Documentation",
+            "1. Open the owning subsystem above.",
+            "2. Change its declared canonical source, not a generated projection.",
+            "3. Run `./hfx generate` from the repository root.",
+            "4. Run the verification named by that subsystem.",
             "",
-            *_file_bullets(node.path, node.related_docs),
-            "",
-            f"Return to the {_link(node.path, 'docs/generated/repository-atlas.md', 'Repository Atlas')}.",
+            f"See the {_link(path, 'docs/generated/repository-atlas.md', 'Repository Atlas')} for the complete ownership graph.",
         ]
     )
     return "\n".join(lines) + "\n"
@@ -149,9 +236,9 @@ def markdown(atlas: RepositoryAtlas) -> str:
         "",
         "The Atlas is a projection of one canonical repository graph. Folder READMEs, dependency views, source-to-generated relationships, and change-impact guidance are generated from the same nodes.",
         "",
-        f"**Subsystems:** {len(atlas.nodes)}  ",
-        f"**Categories:** {len(categories)}  ",
-        f"**Publication state:** `{atlas.publication_state}`",
+        f"- **Subsystems:** {len(atlas.nodes)}",
+        f"- **Categories:** {len(categories)}",
+        f"- **Publication state:** `{atlas.publication_state}`",
         "",
         "## Architecture Map",
         "",
@@ -191,6 +278,9 @@ def markdown(atlas: RepositoryAtlas) -> str:
         lines.extend(
             [
                 f'<a id="{node.id}"></a>',
+                "<details>",
+                f"<summary><strong>{node.title}</strong> · {node.category} · {node.status}</summary>",
+                "",
                 f"### {node.title}",
                 "",
                 f"`{node.path}` · `{node.category}` · `{node.status}`",
@@ -214,6 +304,8 @@ def markdown(atlas: RepositoryAtlas) -> str:
                 + ".",
                 "",
                 "**Change impact:** " + " ".join(impact_summary(atlas, node)),
+                "",
+                "</details>",
                 "",
             ]
         )

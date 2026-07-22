@@ -1,0 +1,704 @@
+{
+  "schema": "hyperflux-local-qualification-v1",
+  "api_version": 1,
+  "view_revision": 1,
+  "generated_at": "2026-07-22T12:00:00Z",
+  "companion": {
+    "state": "ready",
+    "version": "0.0.0-dev.1",
+    "bridge_protocol": 5,
+    "endpoint": "http://127.0.0.1:47821",
+    "simulation": false,
+    "network_upload_executed": false,
+    "hardware_write_executed": false
+  },
+  "system": {
+    "driver_version": "0.0.0-dev.1",
+    "bridge_version": "0.0.0-dev.1",
+    "profile_catalog_digest": "ce03f5454202c2b497beaf3a0142adfaf11e0536d7b420736cefeaefe3d7761c"
+  },
+  "receivers": [
+    {
+      "receiver_id": "receiver-test",
+      "generation_id": 7,
+      "model_name": "Razer HyperFlux V2 Receiver",
+      "vendor_id": 5426,
+      "product_id": 207,
+      "profile": {
+        "id": "receiver.razer.hyperflux-v2.1532-00cf",
+        "digest": "473bd889b810ae22bdfeb5258eadd46762aa6b0379bd57bcf6285273557b5b8a"
+      },
+      "lifecycle": "active",
+      "devices": [
+        {
+          "device_id": "mouse-test",
+          "kind": "mouse",
+          "model_name": "Razer Basilisk V3 Pro 35K",
+          "vendor_id": 5426,
+          "product_id": 205,
+          "profile": {
+            "id": "child.razer.basilisk-v3-pro-35k.00cd",
+            "digest": "f72d38a70e9f4f7fb56848937abafa4773902de64b9d07b22e11c12df6dbfe33"
+          },
+          "presence": "active",
+          "support": "production-qualified",
+          "battery": {
+            "availability": "reported",
+            "percentage": 80
+          },
+          "capabilities": [
+            {
+              "id": "identity.model",
+              "access": "read",
+              "support_level": "identified"
+            },
+            {
+              "id": "identity.paired-product-id",
+              "access": "read",
+              "support_level": "read-only"
+            },
+            {
+              "id": "lighting.brightness",
+              "access": "write",
+              "support_level": "lighting-qualified"
+            },
+            {
+              "id": "lighting.complete-black",
+              "access": "write",
+              "support_level": "lighting-qualified"
+            },
+            {
+              "id": "lighting.direct-frame",
+              "access": "write",
+              "support_level": "lighting-qualified"
+            },
+            {
+              "id": "lighting.off",
+              "access": "write",
+              "support_level": "lighting-qualified"
+            },
+            {
+              "id": "lighting.per-led",
+              "access": "write",
+              "support_level": "lighting-qualified"
+            },
+            {
+              "id": "lighting.software-effect-frames",
+              "access": "write",
+              "support_level": "production-qualified"
+            },
+            {
+              "id": "lighting.static",
+              "access": "write",
+              "support_level": "lighting-qualified"
+            },
+            {
+              "id": "presence.passive-evidence",
+              "access": "read",
+              "support_level": "telemetry-qualified"
+            },
+            {
+              "id": "route.hyperflux-wireless",
+              "access": "read",
+              "support_level": "read-only"
+            },
+            {
+              "id": "telemetry.battery-percent",
+              "access": "read",
+              "support_level": "telemetry-qualified"
+            },
+            {
+              "id": "telemetry.connection-evidence",
+              "access": "read",
+              "support_level": "telemetry-qualified"
+            },
+            {
+              "id": "telemetry.mouse-contact",
+              "access": "read",
+              "support_level": "telemetry-qualified"
+            }
+          ]
+        },
+        {
+          "device_id": "keyboard-test",
+          "kind": "keyboard",
+          "model_name": "Razer DeathStalker V2 Pro Tenkeyless",
+          "vendor_id": 5426,
+          "product_id": 662,
+          "profile": {
+            "id": "child.razer.deathstalker-v2-pro-tkl.0296",
+            "digest": "fcdd53fe104e649cc7d2c38c939bbd41095dc3eb53488ebb30a8615a76bbfba6"
+          },
+          "presence": "active",
+          "support": "production-qualified",
+          "battery": {
+            "availability": "reported",
+            "percentage": 67
+          },
+          "capabilities": [
+            {
+              "id": "identity.model",
+              "access": "read",
+              "support_level": "identified"
+            },
+            {
+              "id": "identity.paired-product-id",
+              "access": "read",
+              "support_level": "read-only"
+            },
+            {
+              "id": "lighting.brightness",
+              "access": "write",
+              "support_level": "lighting-qualified"
+            },
+            {
+              "id": "lighting.complete-black",
+              "access": "write",
+              "support_level": "lighting-qualified"
+            },
+            {
+              "id": "lighting.direct-frame",
+              "access": "write",
+              "support_level": "lighting-qualified"
+            },
+            {
+              "id": "lighting.off",
+              "access": "write",
+              "support_level": "lighting-qualified"
+            },
+            {
+              "id": "lighting.per-key",
+              "access": "write",
+              "support_level": "lighting-qualified"
+            },
+            {
+              "id": "lighting.software-effect-frames",
+              "access": "write",
+              "support_level": "production-qualified"
+            },
+            {
+              "id": "lighting.static",
+              "access": "write",
+              "support_level": "lighting-qualified"
+            },
+            {
+              "id": "presence.passive-evidence",
+              "access": "read",
+              "support_level": "telemetry-qualified"
+            },
+            {
+              "id": "route.hyperflux-wireless",
+              "access": "read",
+              "support_level": "read-only"
+            },
+            {
+              "id": "telemetry.battery-percent",
+              "access": "read",
+              "support_level": "telemetry-qualified"
+            },
+            {
+              "id": "telemetry.connection-evidence",
+              "access": "read",
+              "support_level": "telemetry-qualified"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "plans": [
+    {
+      "plan_id": "plan:receiver-test:7:child.razer.basilisk-v3-pro-35k.00cd",
+      "device_id": "mouse-test",
+      "profile_binding": {
+        "id": "child.razer.basilisk-v3-pro-35k.00cd",
+        "digest": "f72d38a70e9f4f7fb56848937abafa4773902de64b9d07b22e11c12df6dbfe33"
+      },
+      "verdict": "not-run",
+      "summary": "5 evidence checks for this exact profile and receiver generation.",
+      "groups": [
+        {
+          "group_id": "identity",
+          "title": "Identity and telemetry",
+          "description": "Read-only facts are bound to this receiver generation and exact profile digest.",
+          "stages": [
+            {
+              "stage_id": "mouse-00cd-identity",
+              "title": "Profile binding",
+              "description": "Verify the observed product ID, immutable profile digest, route, and generation.",
+              "kind": "automatic",
+              "risk": "read-only",
+              "status": "ready",
+              "capabilities": [
+                "identity.model",
+                "identity.paired-product-id",
+                "route.hyperflux-wireless"
+              ],
+              "instructions": [],
+              "observations": [],
+              "action_id": "run:mouse-00cd-identity",
+              "result": null
+            },
+            {
+              "stage_id": "mouse-00cd-telemetry",
+              "title": "Presence and telemetry",
+              "description": "Exercise the device and verify fresh passive observations without changing hardware state.",
+              "kind": "watched-observation",
+              "risk": "read-only",
+              "status": "locked",
+              "capabilities": [
+                "presence.passive-evidence",
+                "telemetry.battery-percent",
+                "telemetry.connection-evidence",
+                "telemetry.mouse-contact"
+              ],
+              "instructions": [
+                "Exercise the device and its ordinary controls.",
+                "Confirm that presence or battery evidence updates without a lighting write."
+              ],
+              "observations": [
+                {
+                  "id": "controls",
+                  "prompt": "Do the device's ordinary semantic controls still work correctly?",
+                  "choices": [
+                    {
+                      "id": "pass",
+                      "label": "Controls work",
+                      "outcome": "pass"
+                    },
+                    {
+                      "id": "fail",
+                      "label": "A control changed",
+                      "outcome": "fail"
+                    },
+                    {
+                      "id": "unclear",
+                      "label": "Unclear",
+                      "outcome": "unclear"
+                    }
+                  ]
+                }
+              ],
+              "action_id": "run:mouse-00cd-telemetry",
+              "result": null
+            }
+          ]
+        },
+        {
+          "group_id": "lighting",
+          "title": "Lighting transport",
+          "description": "Only profile-bound writes may exercise the receiver transport.",
+          "stages": [
+            {
+              "stage_id": "mouse-00cd-map",
+              "title": "Complete LED map",
+              "description": "Verify every application slot against the same physical light using bounded sentinel frames.",
+              "kind": "watched-observation",
+              "risk": "lighting-write",
+              "status": "blocked",
+              "capabilities": [
+                "lighting.direct-frame",
+                "lighting.per-led"
+              ],
+              "instructions": [
+                "The installed build does not include this supervised runner yet; no write was attempted."
+              ],
+              "observations": [
+                {
+                  "id": "result",
+                  "prompt": "Did the physical result match every requested checkpoint?",
+                  "choices": [
+                    {
+                      "id": "pass",
+                      "label": "Every checkpoint matched",
+                      "outcome": "pass"
+                    },
+                    {
+                      "id": "fail",
+                      "label": "A checkpoint failed",
+                      "outcome": "fail"
+                    },
+                    {
+                      "id": "unclear",
+                      "label": "Unclear",
+                      "outcome": "unclear"
+                    }
+                  ]
+                }
+              ],
+              "action_id": null,
+              "result": null
+            },
+            {
+              "stage_id": "mouse-00cd-lighting",
+              "title": "Lighting behavior",
+              "description": "Verify complete black, Off, Static, brightness endpoints, and streamed application frames claimed by this profile.",
+              "kind": "watched-observation",
+              "risk": "lighting-write",
+              "status": "blocked",
+              "capabilities": [
+                "lighting.brightness",
+                "lighting.complete-black",
+                "lighting.off",
+                "lighting.software-effect-frames",
+                "lighting.static"
+              ],
+              "instructions": [
+                "The installed build does not include this supervised runner yet; no write was attempted."
+              ],
+              "observations": [
+                {
+                  "id": "result",
+                  "prompt": "Did the physical result match every requested checkpoint?",
+                  "choices": [
+                    {
+                      "id": "pass",
+                      "label": "Every checkpoint matched",
+                      "outcome": "pass"
+                    },
+                    {
+                      "id": "fail",
+                      "label": "A checkpoint failed",
+                      "outcome": "fail"
+                    },
+                    {
+                      "id": "unclear",
+                      "label": "Unclear",
+                      "outcome": "unclear"
+                    }
+                  ]
+                }
+              ],
+              "action_id": null,
+              "result": null
+            }
+          ]
+        },
+        {
+          "group_id": "lifecycle",
+          "title": "Lifecycle continuity",
+          "description": "New generations must invalidate stale authority and restore only verified state.",
+          "stages": [
+            {
+              "stage_id": "mouse-00cd-lifecycle",
+              "title": "Sleep, return, reconnect, and resume",
+              "description": "Verify controller return, sibling isolation, receiver renewal, and system resume where applicable.",
+              "kind": "lifecycle",
+              "risk": "device-lifecycle",
+              "status": "blocked",
+              "capabilities": [
+                "receiver.generation"
+              ],
+              "instructions": [
+                "The installed build does not include this supervised runner yet; no write was attempted."
+              ],
+              "observations": [
+                {
+                  "id": "result",
+                  "prompt": "Did the physical result match every requested checkpoint?",
+                  "choices": [
+                    {
+                      "id": "pass",
+                      "label": "Every checkpoint matched",
+                      "outcome": "pass"
+                    },
+                    {
+                      "id": "fail",
+                      "label": "A checkpoint failed",
+                      "outcome": "fail"
+                    },
+                    {
+                      "id": "unclear",
+                      "label": "Unclear",
+                      "outcome": "unclear"
+                    }
+                  ]
+                }
+              ],
+              "action_id": null,
+              "result": null
+            }
+          ]
+        }
+      ],
+      "evidence": {
+        "run_id": null,
+        "artifact_state": "none",
+        "completed_claims": [],
+        "missing_claims": [
+          "mouse-00cd-identity",
+          "mouse-00cd-telemetry",
+          "mouse-00cd-map",
+          "mouse-00cd-lighting",
+          "mouse-00cd-lifecycle"
+        ],
+        "export_action_id": null
+      }
+    },
+    {
+      "plan_id": "plan:receiver-test:7:child.razer.deathstalker-v2-pro-tkl.0296",
+      "device_id": "keyboard-test",
+      "profile_binding": {
+        "id": "child.razer.deathstalker-v2-pro-tkl.0296",
+        "digest": "fcdd53fe104e649cc7d2c38c939bbd41095dc3eb53488ebb30a8615a76bbfba6"
+      },
+      "verdict": "not-run",
+      "summary": "5 evidence checks for this exact profile and receiver generation.",
+      "groups": [
+        {
+          "group_id": "identity",
+          "title": "Identity and telemetry",
+          "description": "Read-only facts are bound to this receiver generation and exact profile digest.",
+          "stages": [
+            {
+              "stage_id": "keyboard-0296-identity",
+              "title": "Profile binding",
+              "description": "Verify the observed product ID, immutable profile digest, route, and generation.",
+              "kind": "automatic",
+              "risk": "read-only",
+              "status": "ready",
+              "capabilities": [
+                "identity.model",
+                "identity.paired-product-id",
+                "route.hyperflux-wireless"
+              ],
+              "instructions": [],
+              "observations": [],
+              "action_id": "run:keyboard-0296-identity",
+              "result": null
+            },
+            {
+              "stage_id": "keyboard-0296-telemetry",
+              "title": "Presence and telemetry",
+              "description": "Exercise the device and verify fresh passive observations without changing hardware state.",
+              "kind": "watched-observation",
+              "risk": "read-only",
+              "status": "locked",
+              "capabilities": [
+                "presence.passive-evidence",
+                "telemetry.battery-percent",
+                "telemetry.connection-evidence"
+              ],
+              "instructions": [
+                "Exercise the device and its ordinary controls.",
+                "Confirm that presence or battery evidence updates without a lighting write."
+              ],
+              "observations": [
+                {
+                  "id": "controls",
+                  "prompt": "Do the device's ordinary semantic controls still work correctly?",
+                  "choices": [
+                    {
+                      "id": "pass",
+                      "label": "Controls work",
+                      "outcome": "pass"
+                    },
+                    {
+                      "id": "fail",
+                      "label": "A control changed",
+                      "outcome": "fail"
+                    },
+                    {
+                      "id": "unclear",
+                      "label": "Unclear",
+                      "outcome": "unclear"
+                    }
+                  ]
+                }
+              ],
+              "action_id": "run:keyboard-0296-telemetry",
+              "result": null
+            }
+          ]
+        },
+        {
+          "group_id": "lighting",
+          "title": "Lighting transport",
+          "description": "Only profile-bound writes may exercise the receiver transport.",
+          "stages": [
+            {
+              "stage_id": "keyboard-0296-map",
+              "title": "Complete key map",
+              "description": "Verify every application slot against the same physical light using bounded sentinel frames.",
+              "kind": "watched-observation",
+              "risk": "lighting-write",
+              "status": "blocked",
+              "capabilities": [
+                "lighting.direct-frame",
+                "lighting.per-key"
+              ],
+              "instructions": [
+                "The installed build does not include this supervised runner yet; no write was attempted."
+              ],
+              "observations": [
+                {
+                  "id": "result",
+                  "prompt": "Did the physical result match every requested checkpoint?",
+                  "choices": [
+                    {
+                      "id": "pass",
+                      "label": "Every checkpoint matched",
+                      "outcome": "pass"
+                    },
+                    {
+                      "id": "fail",
+                      "label": "A checkpoint failed",
+                      "outcome": "fail"
+                    },
+                    {
+                      "id": "unclear",
+                      "label": "Unclear",
+                      "outcome": "unclear"
+                    }
+                  ]
+                }
+              ],
+              "action_id": null,
+              "result": null
+            },
+            {
+              "stage_id": "keyboard-0296-lighting",
+              "title": "Lighting behavior",
+              "description": "Verify complete black, Off, Static, brightness endpoints, and streamed application frames claimed by this profile.",
+              "kind": "watched-observation",
+              "risk": "lighting-write",
+              "status": "blocked",
+              "capabilities": [
+                "lighting.brightness",
+                "lighting.complete-black",
+                "lighting.off",
+                "lighting.software-effect-frames",
+                "lighting.static"
+              ],
+              "instructions": [
+                "The installed build does not include this supervised runner yet; no write was attempted."
+              ],
+              "observations": [
+                {
+                  "id": "result",
+                  "prompt": "Did the physical result match every requested checkpoint?",
+                  "choices": [
+                    {
+                      "id": "pass",
+                      "label": "Every checkpoint matched",
+                      "outcome": "pass"
+                    },
+                    {
+                      "id": "fail",
+                      "label": "A checkpoint failed",
+                      "outcome": "fail"
+                    },
+                    {
+                      "id": "unclear",
+                      "label": "Unclear",
+                      "outcome": "unclear"
+                    }
+                  ]
+                }
+              ],
+              "action_id": null,
+              "result": null
+            }
+          ]
+        },
+        {
+          "group_id": "lifecycle",
+          "title": "Lifecycle continuity",
+          "description": "New generations must invalidate stale authority and restore only verified state.",
+          "stages": [
+            {
+              "stage_id": "keyboard-0296-lifecycle",
+              "title": "Sleep, return, reconnect, and resume",
+              "description": "Verify controller return, sibling isolation, receiver renewal, and system resume where applicable.",
+              "kind": "lifecycle",
+              "risk": "system-lifecycle",
+              "status": "blocked",
+              "capabilities": [
+                "receiver.generation"
+              ],
+              "instructions": [
+                "The installed build does not include this supervised runner yet; no write was attempted."
+              ],
+              "observations": [
+                {
+                  "id": "result",
+                  "prompt": "Did the physical result match every requested checkpoint?",
+                  "choices": [
+                    {
+                      "id": "pass",
+                      "label": "Every checkpoint matched",
+                      "outcome": "pass"
+                    },
+                    {
+                      "id": "fail",
+                      "label": "A checkpoint failed",
+                      "outcome": "fail"
+                    },
+                    {
+                      "id": "unclear",
+                      "label": "Unclear",
+                      "outcome": "unclear"
+                    }
+                  ]
+                }
+              ],
+              "action_id": null,
+              "result": null
+            }
+          ]
+        }
+      ],
+      "evidence": {
+        "run_id": null,
+        "artifact_state": "none",
+        "completed_claims": [],
+        "missing_claims": [
+          "keyboard-0296-identity",
+          "keyboard-0296-telemetry",
+          "keyboard-0296-map",
+          "keyboard-0296-lighting",
+          "keyboard-0296-lifecycle"
+        ],
+        "export_action_id": null
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "run:mouse-00cd-identity",
+      "label": "Run read-only check",
+      "method": "POST",
+      "href": "/v1/qualification/actions/run%3Amouse-00cd-identity",
+      "enabled": true,
+      "risk": "read-only",
+      "confirmation": null
+    },
+    {
+      "id": "run:mouse-00cd-telemetry",
+      "label": "Record observation",
+      "method": "POST",
+      "href": "/v1/qualification/actions/run%3Amouse-00cd-telemetry",
+      "enabled": false,
+      "risk": "read-only",
+      "confirmation": null
+    },
+    {
+      "id": "run:keyboard-0296-identity",
+      "label": "Run read-only check",
+      "method": "POST",
+      "href": "/v1/qualification/actions/run%3Akeyboard-0296-identity",
+      "enabled": true,
+      "risk": "read-only",
+      "confirmation": null
+    },
+    {
+      "id": "run:keyboard-0296-telemetry",
+      "label": "Record observation",
+      "method": "POST",
+      "href": "/v1/qualification/actions/run%3Akeyboard-0296-telemetry",
+      "enabled": false,
+      "risk": "read-only",
+      "confirmation": null
+    }
+  ]
+}

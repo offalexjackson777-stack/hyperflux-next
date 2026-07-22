@@ -4,93 +4,44 @@
 
 Provides an isolated compatibility surface for legacy OpenRazer clients without impersonating the system daemon globally.
 
-**Status:** `implemented`  
-**Category:** `applications`  
-**Atlas ID:** `openrazer-adapter`
+`implemented` | `applications` | Atlas: `openrazer-adapter`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/architecture/openrazer-compatibility.md`](../../docs/architecture/openrazer-compatibility.md)
+- [`docs/generated/integrations.md`](../../docs/generated/integrations.md)
 
+## Scope
+
+**Owns**
 - Private compatibility session
 - OpenRazer metadata import
 - Legacy client translation
 
-It must never own:
-
+**Does not own**
 - Global D-Bus names
 - Receiver transport
 - OpenRazer support authority
 
-## Inputs And Outputs
-
-Inputs:
-
-- SDK state
-- Pinned OpenRazer metadata
-- Compatibility contract
-
-Outputs:
-
-- Private compatibility service
-- Generated presentation metadata
-
-## Public Contracts
-
-- Opt-in isolation
-- SDK-only access
-- No suppression of unrelated devices
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`integrations/openrazer/import.json`](import.json)
 - [`integrations/openrazer/metadata.json`](metadata.json)
 - [`integrations/openrazer/compatibility.json`](compatibility.json)
 
-Generated projections:
-
-- [`integrations/openrazer/README.md`](README.md)
-- [`sdk/python/hyperflux_sdk/generated/openrazer_metadata.py`](../../sdk/python/hyperflux_sdk/generated/openrazer_metadata.py)
-
-## Relationships
-
-Depends on:
-
-- [Application integration catalog](../README.md)
-- [Composable hardware profiles](../../profiles/README.md)
-- [Python SDK](../../sdk/python/README.md)
-
-Used by:
-
-- [Packaging and installation](../../packaging/README.md)
-- [Polychromatic adapter](../polychromatic/README.md)
-
 ## Verification
 
-- `openrazer-metadata-contracts`
-- `openrazer-compatibility-contracts`
+Run `openrazer-metadata-contracts` `openrazer-compatibility-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 2 declared projection(s).
 - Run `openrazer-metadata-contracts`, `openrazer-compatibility-contracts`.
 - Review direct consumers: Packaging and installation, Polychromatic adapter.
 
-## Limitations
+## Relationships
 
-- Compatibility covers modeled client behavior, not every OpenRazer daemon extension
+- **Depends on:** [Application integration catalog](../README.md), [Composable hardware profiles](../../profiles/README.md), [Python SDK](../../sdk/python/README.md)
+- **Used by:** [Packaging and installation](../../packaging/README.md), [Polychromatic adapter](../polychromatic/README.md)
 
-## Safe Change Workflow
-
-1. Update the pinned metadata or compatibility contract
-2. Regenerate the private adapter
-3. Run metadata, compatibility, and coexistence tests
-
-## Related Documentation
-
-- [`docs/architecture/openrazer-compatibility.md`](../../docs/architecture/openrazer-compatibility.md)
-- [`docs/generated/integrations.md`](../../docs/generated/integrations.md)
-
-Return to the [Repository Atlas](../../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

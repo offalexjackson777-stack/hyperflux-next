@@ -30,15 +30,12 @@ from hfxdev.generators.governance import (
     codeql_workflow,
     dependency_review_workflow,
     documentation_report,
-    documentation_workflow,
     experience_plan,
     feature_request,
     full_verification_workflow,
     hardware_research,
     hardware_qualification,
-    pages_workflow,
     protection_plan,
-    repository_experience_workflow,
     verification_workflow,
 )
 from hfxdev.generators.supply_chain import spdx_json
@@ -85,7 +82,7 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertEqual(self.governance.remote_state, "public-pre-release")
         interlock = source["publication_interlock"]
         self.assertTrue(interlock["source_repository_authorized"])
-        self.assertTrue(interlock["pages_deployment_authorized"])
+        self.assertFalse(interlock["pages_deployment_authorized"])
         self.assertTrue(interlock["collaboration_features_authorized"])
         for key in (
             "product_publication_authorized",
@@ -112,11 +109,8 @@ class GitHubGovernanceTests(unittest.TestCase):
         workflows = {
             "verification": verification_workflow(self.governance),
             "full": full_verification_workflow(self.governance),
-            "documentation": documentation_workflow(self.governance),
             "codeql": codeql_workflow(self.governance),
             "dependency-review": dependency_review_workflow(self.governance),
-            "pages": pages_workflow(self.governance),
-            "repository-experience": repository_experience_workflow(self.governance),
         }
         allowed = {action.commit for action in self.governance.actions}
         observed: set[str] = set()
@@ -144,14 +138,8 @@ class GitHubGovernanceTests(unittest.TestCase):
                 self.assertNotIn("pull_request_target", text)
                 self.assertNotIn("--privileged", text)
                 self.assertNotIn("--device", text)
-                if name == "pages":
-                    self.assertIn("deploy-pages", text)
-                    self.assertIn("upload-pages-artifact", text)
-                    self.assertIn("github-pages", text)
-                    self.assertIn("Product release authority | Locked", text)
-                else:
-                    self.assertNotIn("deploy-pages", text)
-                    self.assertNotIn("upload-pages-artifact", text)
+                self.assertNotIn("deploy-pages", text)
+                self.assertNotIn("upload-pages-artifact", text)
         self.assertEqual(observed, allowed)
 
     def test_host_ci_control_plane_imports_without_site_packages(self) -> None:
@@ -169,10 +157,8 @@ class GitHubGovernanceTests(unittest.TestCase):
     def test_software_workflows_use_bounded_container_runner_and_no_release_trigger(self) -> None:
         fast = yaml.safe_load(verification_workflow(self.governance))
         full = yaml.safe_load(full_verification_workflow(self.governance))
-        docs = yaml.safe_load(documentation_workflow(self.governance))
         fast_text = verification_workflow(self.governance)
         full_text = full_verification_workflow(self.governance)
-        docs_text = documentation_workflow(self.governance)
         self.assertIn("--changed-from", fast_text)
         self.assertIn("./hfx ci verify", fast_text)
         self.assertIn("./hfx ci summary", fast_text)
@@ -181,10 +167,8 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertIn("build/ci/fast/result.json", fast_text)
         self.assertIn("--lane full", full_text)
         self.assertIn("build/ci/full/result.json", full_text)
-        self.assertIn("./hfx ci docs", docs_text)
         self.assertNotIn("release", fast["on"])
         self.assertNotIn("release", full["on"])
-        self.assertNotIn("release", docs["on"])
         self.assertIn("pull_request", full["on"])
         self.assertEqual(self.governance.protection_profile, "solo-maintainer")
         self.assertEqual(self.governance.trusted_maintainers, 1)
@@ -192,15 +176,12 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertFalse(self.governance.require_code_owner_reviews)
         self.assertTrue(self.governance.strict_required_status_checks)
         self.assertEqual(fast["permissions"], {"contents": "read"})
-        self.assertEqual(docs["permissions"], {"contents": "read"})
 
     def test_required_checks_are_exact_generated_job_contexts(self) -> None:
         workflows = (
             codeql_workflow(self.governance),
             dependency_review_workflow(self.governance),
-            documentation_workflow(self.governance),
             full_verification_workflow(self.governance),
-            repository_experience_workflow(self.governance),
             verification_workflow(self.governance),
         )
         contexts: set[str] = set()
@@ -220,20 +201,6 @@ class GitHubGovernanceTests(unittest.TestCase):
                 )
 
         self.assertEqual(set(self.governance.required_checks), contexts)
-
-    def test_repository_experience_jobs_are_required_and_bounded(self) -> None:
-        workflow = yaml.safe_load(repository_experience_workflow(self.governance))
-        self.assertEqual(
-            {job["name"] for job in workflow["jobs"].values()},
-            {"Link checks", "Pages preview"},
-        )
-        self.assertEqual(workflow["permissions"], {"contents": "read"})
-        self.assertIn("pull_request", workflow["on"])
-        self.assertNotIn("push", workflow["on"])
-        text = repository_experience_workflow(self.governance)
-        self.assertNotIn("deploy-pages", text)
-        self.assertNotIn("upload-pages-artifact", text)
-        self.assertNotIn("--device", text)
 
     @patch("hfxdev.ci.shutil.which", return_value="/usr/bin/docker")
     def test_ci_invocations_separate_fetch_from_networkless_execution(self, _which) -> None:
@@ -256,19 +223,9 @@ class GitHubGovernanceTests(unittest.TestCase):
             uid=1000,
             gid=1000,
         )
-        docs = container_invocation(
-            ROOT,
-            image=self.governance.development_image,
-            operation="docs",
-            output=Path("build/ci/test-portal"),
-            engine="docker",
-            uid=1000,
-            gid=1000,
-        )
         self.assertEqual(prepare.network, "bridge")
         self.assertEqual(verify.network, "none")
-        self.assertEqual(docs.network, "none")
-        for invocation in (prepare, verify, docs):
+        for invocation in (prepare, verify):
             command = " ".join(invocation.command)
             self.assertIn("--cap-drop ALL", command)
             self.assertIn("no-new-privileges:true", command)
@@ -286,8 +243,6 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertIn("CARGO_NET_OFFLINE=false", prepare_command)
         self.assertIn("CARGO_NET_OFFLINE=true", " ".join(verify.command))
         self.assertIn("--changed-from " + "a" * 40, " ".join(verify.command))
-        self.assertIn("docs build", " ".join(docs.command))
-        self.assertIn("docs verify", " ".join(docs.command))
 
     @patch("hfxdev.ci.shutil.which", return_value="/usr/bin/podman")
     def test_ci_invocation_keeps_host_identity_with_rootless_podman(self, _which) -> None:
@@ -491,14 +446,14 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertIn("support-bundle --preview", hardware)
         self.assertIn("Doctor reference", hardware)
         self.assertIn("research identifies candidates", research.lower())
-        self.assertIn("canonical source", documentation.lower())
+        self.assertIn("generated technical reference", documentation.lower())
         self.assertIn("universal", feature.lower())
 
     def test_collaboration_security_and_service_plans_are_complete_and_bounded(self) -> None:
         plan = json.loads(experience_plan(self.governance))
         self.assertTrue(plan["apply_authorized"])
         self.assertTrue(plan["source_repository_authorized"])
-        self.assertTrue(plan["pages_deployment_authorized"])
+        self.assertFalse(plan["pages_deployment_authorized"])
         self.assertFalse(plan["product_publication_authorized"])
         self.assertEqual(plan["external_apps_installed"], [])
         self.assertEqual(
@@ -539,7 +494,7 @@ class GitHubGovernanceTests(unittest.TestCase):
 
     def test_workflow_actions_are_part_of_the_source_sbom(self) -> None:
         inventory = load_dependency_inventory(ROOT)
-        self.assertEqual(len(inventory.workflow_actions), 10)
+        self.assertEqual(len(inventory.workflow_actions), 7)
         document = json.loads(spdx_json(inventory))
         names = {package["name"] for package in document["packages"]}
         self.assertTrue(

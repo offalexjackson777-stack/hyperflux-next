@@ -272,11 +272,11 @@
       "resume_policy": "rerun"
     },
     {
-      "id": "documentation-portal-contracts",
-      "title": "Audience portal, Device Lab, Repository Atlas, Repository State, accessibility, and offline assets",
+      "id": "repository-documentation-contracts",
+      "title": "GitHub-native documentation, navigation, links, and local qualification entry point",
       "owned_domain": "documentation",
       "lanes": ["fast", "full-software"],
-      "runner": "documentation-portal-contracts",
+      "runner": "repository-documentation-contracts",
       "required_capabilities": [],
       "hardware_requirement": "none",
       "writes_hardware": false,
@@ -284,8 +284,32 @@
       "timeout_seconds": 30,
       "dependencies": ["generated-freshness"],
       "isolation": "exclusive-process",
-      "cache_inputs": ["README.md", "CONTRIBUTING.md", "SECURITY.md", "docs/**/*.md", "docs/assets/social-preview.png", "docs/portal.json", "generated/knowledge/catalog.json", "generated/public-readiness.json", "schemas/compiled-device-knowledge.schema.json", "schemas/documentation-portal.schema.json", "schemas/public-readiness.schema.json", "tools/hfxdev/generators/social_preview.py", "tools/hfxdev/public_readiness.py", "tools/hfxdev/portal*.py"],
-      "produced_evidence": ["documentation-portal-manifest", "documentation-link-result", "documentation-accessibility-result", "device-lab-result", "repository-atlas-result", "repository-state-result", "visual-system-result"],
+      "cache_inputs": ["README.md", "CONTRIBUTING.md", "SUPPORT.md", "SECURITY.md", "docs/**/*.md", "apps/device-qualification/**/*", "generated/public-readiness.json", "architecture/repository-atlas.json", "tools/hfxdev/generators/readme.py", "tools/hfxdev/generators/atlas.py", "tests/test_repository_experience.py"],
+      "produced_evidence": ["repository-documentation-result", "documentation-link-result", "repository-atlas-result", "qualification-entry-point-result"],
+      "resume_policy": "rerun"
+    },
+    {
+      "id": "device-qualification-console-contracts",
+      "title": "Installed local device qualification console contracts",
+      "owned_domain": "applications",
+      "lanes": ["fast", "full-software"],
+      "runner": "device-qualification-console-contracts",
+      "required_capabilities": [],
+      "hardware_requirement": "none",
+      "writes_hardware": false,
+      "expected_duration_seconds": 1,
+      "timeout_seconds": 20,
+      "dependencies": ["schema-contracts", "profile-contracts"],
+      "isolation": "exclusive-process",
+      "cache_inputs": [
+        "apps/device-qualification/**/*",
+        "tests/qualification_console_fixture_server.py",
+        "tests/test_device_qualification_console.py"
+      ],
+      "produced_evidence": [
+        "device-qualification-console-result",
+        "local-only-browser-boundary"
+      ],
       "resume_policy": "rerun"
     },
     {
@@ -465,7 +489,7 @@
       "required_capabilities": ["openrgb-source"],
       "hardware_requirement": "none",
       "writes_hardware": false,
-      "expected_duration_seconds": 120,
+      "expected_duration_seconds": 150,
       "timeout_seconds": 300,
       "dependencies": ["cpp-sdk-contracts", "integration-contracts", "profile-contracts"],
       "isolation": "exclusive-process",
@@ -557,12 +581,14 @@
         "openrgb-adapter-contracts",
         "polychromatic-adapter-contracts",
         "openrazer-compatibility-contracts",
-        "rust-unit"
+        "rust-unit",
+        "device-qualification-console-contracts"
       ],
       "isolation": "exclusive-process",
       "cache_inputs": [
         "Cargo.lock",
         "Cargo.toml",
+        "apps/device-qualification/**/*",
         "crates/**/*.rs",
         "driver/kernel/**/*",
         "integrations/**/*",

@@ -4,46 +4,26 @@
 
 Defines bounded request, response, event, negotiation, and compatibility contracts across protocol generations.
 
-**Status:** `implemented`  
-**Category:** `architecture`  
-**Atlas ID:** `protocol`
+`implemented` | `architecture` | Atlas: `protocol`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/generated/bridge-protocol.md`](../docs/generated/bridge-protocol.md)
+- [`docs/architecture/sdk.md`](../docs/architecture/sdk.md)
 
+## Scope
+
+**Owns**
 - Protocol registry
 - Versioned wire schemas
 - Compatibility window
 
-It must never own:
-
+**Does not own**
 - Application widgets
 - Kernel HID payloads
 - Unbounded messages
 
-## Inputs And Outputs
-
-Inputs:
-
-- Domain types
-- Architecture bounds
-- SDK compatibility requirements
-
-Outputs:
-
-- Rust, Python, and C++ protocol bindings
-- Protocol documentation
-
-## Public Contracts
-
-- Explicit version negotiation
-- Bounded frame sizes
-- Typed terminal outcomes
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`protocol/registry.json`](registry.json)
 - [`protocol/v1/catalog.json`](v1/catalog.json)
@@ -52,52 +32,19 @@ Canonical files:
 - [`protocol/v4/catalog.json`](v4/catalog.json)
 - [`protocol/v5/catalog.json`](v5/catalog.json)
 
-Generated projections:
-
-- [`protocol/README.md`](README.md)
-- [`docs/generated/bridge-protocol.md`](../docs/generated/bridge-protocol.md)
-- [`crates/hfx-protocol/src/generated_versions.rs`](../crates/hfx-protocol/src/generated_versions.rs)
-
-## Relationships
-
-Depends on:
-
-- [Schema contracts](../schemas/README.md)
-
-Used by:
-
-- [Bridge runtime](../crates/hfx-bridge/README.md)
-- [Core policy engine](../crates/hfx-core/README.md)
-- [Linux HID kernel module](../driver/kernel/README.md)
-- [Kernel transport adapter](../crates/hfx-kernel-transport/README.md)
-- [Rust SDK](../crates/hfx-sdk/README.md)
-- [C++ SDK](../sdk/cpp/README.md)
-- [Python SDK](../sdk/python/README.md)
-
 ## Verification
 
-- `protocol-contracts`
-- `cpp-sdk-contracts`
+Run `protocol-contracts` `cpp-sdk-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 3 declared projection(s).
 - Run `protocol-contracts`, `cpp-sdk-contracts`.
 - Review direct consumers: Bridge runtime, Core policy engine, Linux HID kernel module, Kernel transport adapter, Rust SDK, C++ SDK, Python SDK.
 
-## Limitations
+## Relationships
 
-- Wire compatibility does not authorize a hardware route
+- **Depends on:** [Schema contracts](../schemas/README.md)
+- **Used by:** [Bridge runtime](../crates/hfx-bridge/README.md), [Core policy engine](../crates/hfx-core/README.md), [Linux HID kernel module](../driver/kernel/README.md), [Kernel transport adapter](../crates/hfx-kernel-transport/README.md), [Rust SDK](../crates/hfx-sdk/README.md), [C++ SDK](../sdk/cpp/README.md), [Python SDK](../sdk/python/README.md)
 
-## Safe Change Workflow
-
-1. Add a new version without rewriting history
-2. Regenerate all SDKs
-3. Run protocol, SDK, bridge, and package contracts
-
-## Related Documentation
-
-- [`docs/generated/bridge-protocol.md`](../docs/generated/bridge-protocol.md)
-- [`docs/architecture/sdk.md`](../docs/architecture/sdk.md)
-
-Return to the [Repository Atlas](../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

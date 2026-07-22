@@ -9,6 +9,7 @@ publish.workspace = true
 [dependencies]
 hfx-domain = { path = "../hfx-domain" }
 hfx-errors = { path = "../hfx-errors" }
+hfx-profiles = { path = "../hfx-profiles" }
 hfx-protocol = { path = "../hfx-protocol" }
 hfx-runtime = { path = "../hfx-runtime" }
 hfx-sdk = { path = "../hfx-sdk" }

@@ -187,6 +187,15 @@
       "include": ["integrations/*.json", "profiles/*.json"]
     },
     {
+      "id": "device-qualification-console",
+      "kind": "tree",
+      "source": "apps/device-qualification",
+      "destination": "/usr/share/hyperflux-next/qualification-console",
+      "mode": "0644",
+      "preserve": false,
+      "include": ["index.html", "assets/*.css", "assets/*.js"]
+    },
+    {
       "id": "runtime-authority",
       "kind": "file",
       "source": "runtime/linux.json",

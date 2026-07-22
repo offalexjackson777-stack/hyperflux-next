@@ -38,5 +38,5 @@
 
 - [ ] Hardware authority is `none`, or a separate bounded authorization and evidence record is linked above.
 - [ ] This change does not create a release, tag, package channel, or supported-product claim.
-- [ ] Any Pages change is generated from canonical repository data; no deployed HTML was hand-edited.
+- [ ] User-facing links resolve inside the repository or to an explicitly reviewed external destination.
 - [ ] User-facing documentation contains no internal engineering mission identifiers.

@@ -4,47 +4,26 @@
 
 Owns explicit design coverage, bounded formal models, performance budgets, dependency inventory, and release gates.
 
-**Status:** `policy`  
-**Category:** `assurance`  
-**Atlas ID:** `assurance`
+`policy` | `assurance` | Atlas: `assurance`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/generated/design-coverage.md`](../docs/generated/design-coverage.md)
+- [`docs/generated/release-gates.md`](../docs/generated/release-gates.md)
 
+## Scope
+
+**Owns**
 - Design coverage
 - Release-gate definitions
 - Formal and performance assurance
 
-It must never own:
-
+**Does not own**
 - Publication authorization
 - Unreviewed physical claims
 - Application behavior
 
-## Inputs And Outputs
-
-Inputs:
-
-- Architecture invariants
-- Verification evidence
-- Dependency metadata
-
-Outputs:
-
-- Release readiness assessment
-- SBOM
-- Coverage and model reports
-
-## Public Contracts
-
-- No test result grants publication
-- Missing evidence remains a blocker
-- All models are explicitly bounded
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`assurance/design-coverage.json`](design-coverage.json)
 - [`assurance/dependencies.json`](dependencies.json)
@@ -52,48 +31,19 @@ Canonical files:
 - [`assurance/performance-budgets.json`](performance-budgets.json)
 - [`assurance/release-gates.json`](release-gates.json)
 
-Generated projections:
-
-- [`assurance/README.md`](README.md)
-- [`assurance/generated/hyperflux-next.spdx.json`](generated/hyperflux-next.spdx.json)
-- [`docs/generated/release-gates.md`](../docs/generated/release-gates.md)
-
-## Relationships
-
-Depends on:
-
-- [Architecture authority](../architecture/README.md)
-- [Schema contracts](../schemas/README.md)
-
-Used by:
-
-- [GitHub governance authority](../governance/README.md)
-- [Verification graph](../verification/README.md)
-
 ## Verification
 
-- `assurance-contracts`
-- `formal-model-contracts`
+Run `assurance-contracts` `formal-model-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 3 declared projection(s).
 - Run `assurance-contracts`, `formal-model-contracts`.
 - Review direct consumers: GitHub governance authority, Verification graph.
 
-## Limitations
+## Relationships
 
-- Software evidence cannot replace pending physical qualification
+- **Depends on:** [Architecture authority](../architecture/README.md), [Schema contracts](../schemas/README.md)
+- **Used by:** [GitHub governance authority](../governance/README.md), [Verification graph](../verification/README.md)
 
-## Safe Change Workflow
-
-1. Update the narrow canonical authority
-2. Regenerate evidence views
-3. Run assurance, model, and release-impact checks
-
-## Related Documentation
-
-- [`docs/generated/design-coverage.md`](../docs/generated/design-coverage.md)
-- [`docs/generated/release-gates.md`](../docs/generated/release-gates.md)
-
-Return to the [Repository Atlas](../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

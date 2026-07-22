@@ -239,6 +239,7 @@ mod tests {
             loaded_module_identity: None,
             service_state: ServiceState::Inactive,
             bridge: None,
+            legacy_v2_stack_detected: false,
         }
     }
 

@@ -25,10 +25,7 @@
       "Analyze (python)",
       "Dependency review",
       "Fast software",
-      "Full software",
-      "Link checks",
-      "Pages preview",
-      "Portal contracts"
+      "Full software"
     ],
     "strict_required_status_checks": true,
     "trusted_maintainers": 1

@@ -24,6 +24,7 @@ from hfxdev.package_pipeline import (
     _build_python,
     _install_wheels,
     _inspect_staged_files,
+    _private_stage_prefixes,
     _provenance_inputs,
     _provenance_materials,
     _tree_digest,
@@ -193,6 +194,17 @@ class PackagePipelineTests(unittest.TestCase):
             file.write_text(f"source={private_path}\n", encoding="utf-8")
             with self.assertRaisesRegex(ModelError, "private build path"):
                 _inspect_staged_files(root, (os.fsencode(ROOT),))
+
+    def test_canonical_container_workspace_is_public_but_scratch_is_private(self) -> None:
+        canonical = Path("/workspaces/hyperflux-next")
+        artifacts = canonical / "build/package-contracts/artifacts"
+        prefixes = _private_stage_prefixes(canonical, artifacts, canonical)
+        self.assertEqual(prefixes, (os.fsencode(artifacts),))
+
+        checkout = Path("/srv/build/hyperflux-next")
+        prefixes = _private_stage_prefixes(checkout, checkout / "artifacts", canonical)
+        self.assertIn(os.fsencode(checkout), prefixes)
+        self.assertIn(os.fsencode(checkout / "artifacts"), prefixes)
 
     def test_build_environment_remaps_source_output_and_dependency_paths(self) -> None:
         private_root = Path("/" + "home/builder")

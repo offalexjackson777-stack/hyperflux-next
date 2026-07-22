@@ -4,91 +4,44 @@
 
 Exercises generations, failures, persistence, restoration, replay, and migration shadows without hardware.
 
-**Status:** `implemented`  
-**Category:** `assurance`  
-**Atlas ID:** `simulator`
+`implemented` | `assurance` | Atlas: `simulator`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/assurance/simulator.md`](../../docs/assurance/simulator.md)
+- [`docs/generated/migration-shadow.md`](../../docs/generated/migration-shadow.md)
 
+## Scope
+
+**Owns**
 - Virtual receiver
 - Deterministic replay
 - Failure injection
 
-It must never own:
-
+**Does not own**
 - Production policy forks
 - Hardware claims
 - Unbounded time
 
-## Inputs And Outputs
-
-Inputs:
-
-- Core policy
-- Sanitized fixtures
-- Virtual clock
-
-Outputs:
-
-- Deterministic evidence
-- Replay digests
-- Shadow comparisons
-
-## Public Contracts
-
-- Zero hardware writes
-- Seeded deterministic behavior
-- Bounded failure scenarios
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`crates/hfx-sim/Cargo.toml`](Cargo.toml)
 - [`crates/hfx-sim/src/lib.rs`](src/lib.rs)
 - [`crates/hfx-sim/src/engine.rs`](src/engine.rs)
 
-Generated projections:
-
-- [`crates/hfx-sim/README.md`](README.md)
-
-## Relationships
-
-Depends on:
-
-- [Core policy engine](../hfx-core/README.md)
-- [Composable hardware profiles](../../profiles/README.md)
-
-Used by:
-
-- [Migration provenance](../../migration/README.md)
-
 ## Verification
 
-- `simulator-contracts`
-- `migration-shadow-contracts`
+Run `simulator-contracts` `migration-shadow-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 1 declared projection(s).
 - Run `simulator-contracts`, `migration-shadow-contracts`.
 - Review direct consumers: Migration provenance.
 
-## Limitations
+## Relationships
 
-- Simulation evidence is distinct from physical qualification
+- **Depends on:** [Core policy engine](../hfx-core/README.md), [Composable hardware profiles](../../profiles/README.md)
+- **Used by:** [Migration provenance](../../migration/README.md)
 
-## Safe Change Workflow
-
-1. Reuse production domain policy
-2. Add deterministic fixtures and failure cases
-3. Run simulator, shadow, and formal-model contracts
-
-## Related Documentation
-
-- [`docs/assurance/simulator.md`](../../docs/assurance/simulator.md)
-- [`docs/generated/migration-shadow.md`](../../docs/generated/migration-shadow.md)
-
-Return to the [Repository Atlas](../../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

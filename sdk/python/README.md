@@ -4,94 +4,44 @@
 
 Provides typed Python bridge access and generated contracts for scripting and Python application adapters.
 
-**Status:** `implemented`  
-**Category:** `applications`  
-**Atlas ID:** `sdk-python`
+`implemented` | `applications` | Atlas: `sdk-python`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/architecture/sdk.md`](../../docs/architecture/sdk.md)
+- [`docs/generated/bridge-protocol.md`](../../docs/generated/bridge-protocol.md)
 
+## Scope
+
+**Owns**
 - Python client API
 - Python lighting and recovery
 - Generated Python bindings
 
-It must never own:
-
+**Does not own**
 - Application-specific policy
 - Raw receiver transport
 - Independent schema truth
 
-## Inputs And Outputs
-
-Inputs:
-
-- Domain, protocol, profile, and error catalogs
-- Local bridge channel
-
-Outputs:
-
-- Python package
-- Typed adapter foundation
-
-## Public Contracts
-
-- Typed logical devices
-- Bounded channel
-- No raw hardware API
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`sdk/python/pyproject.toml`](pyproject.toml)
 - [`sdk/python/hyperflux_sdk/client.py`](hyperflux_sdk/client.py)
 - [`sdk/python/hyperflux_sdk/lighting.py`](hyperflux_sdk/lighting.py)
 
-Generated projections:
-
-- [`sdk/python/README.md`](README.md)
-- [`sdk/python/hyperflux_sdk/generated/domain_types.py`](hyperflux_sdk/generated/domain_types.py)
-- [`sdk/python/hyperflux_sdk/generated/profile_catalog.py`](hyperflux_sdk/generated/profile_catalog.py)
-
-## Relationships
-
-Depends on:
-
-- [Versioned bridge protocol](../../protocol/README.md)
-- [Composable hardware profiles](../../profiles/README.md)
-- [Application integration catalog](../../integrations/README.md)
-
-Used by:
-
-- [OpenRazer compatibility adapter](../../integrations/openrazer/README.md)
-- [Polychromatic adapter](../../integrations/polychromatic/README.md)
-- [Contract tests](../../tests/README.md)
-
 ## Verification
 
-- `python-unit`
-- `protocol-contracts`
+Run `python-unit` `protocol-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 3 declared projection(s).
 - Run `python-unit`, `protocol-contracts`.
 - Review direct consumers: OpenRazer compatibility adapter, Polychromatic adapter, Contract tests.
 
-## Limitations
+## Relationships
 
-- Package publication remains disabled
+- **Depends on:** [Versioned bridge protocol](../../protocol/README.md), [Composable hardware profiles](../../profiles/README.md), [Application integration catalog](../../integrations/README.md)
+- **Used by:** [OpenRazer compatibility adapter](../../integrations/openrazer/README.md), [Polychromatic adapter](../../integrations/polychromatic/README.md), [Contract tests](../../tests/README.md)
 
-## Safe Change Workflow
-
-1. Change canonical schemas for shared types
-2. Regenerate modules
-3. Run Python SDK, adapter, and package contracts
-
-## Related Documentation
-
-- [`docs/architecture/sdk.md`](../../docs/architecture/sdk.md)
-- [`docs/generated/bridge-protocol.md`](../../docs/generated/bridge-protocol.md)
-
-Return to the [Repository Atlas](../../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

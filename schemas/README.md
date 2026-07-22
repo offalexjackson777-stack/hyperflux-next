@@ -4,102 +4,48 @@
 
 Defines strict machine-readable shapes for every shared repository fact and generated contract.
 
-**Status:** `implemented`  
-**Category:** `architecture`  
-**Atlas ID:** `schemas`
+`implemented` | `architecture` | Atlas: `schemas`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/architecture/design-book.md`](../docs/architecture/design-book.md)
+- [`docs/generated/domain-types.md`](../docs/generated/domain-types.md)
 
+## Scope
+
+**Owns**
 - JSON Schema contracts
 - Cross-language domain catalog
 - Fail-closed data shapes
 
-It must never own:
-
+**Does not own**
 - Runtime policy
 - Duplicated application presentation
 - Physical qualification claims
 
-## Inputs And Outputs
-
-Inputs:
-
-- Architecture invariants
-- Canonical subsystem requirements
-
-Outputs:
-
-- Validated canonical data
-- Generator input contracts
-
-## Public Contracts
-
-- Additional properties rejected
-- Stable schema identifiers
-- Safe repository-relative paths
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`schemas/domain-catalog.json`](domain-catalog.json)
 - [`schemas/domain-catalog.schema.json`](domain-catalog.schema.json)
 - [`schemas/repository-atlas.schema.json`](repository-atlas.schema.json)
-- [`schemas/documentation-portal.schema.json`](documentation-portal.schema.json)
 - [`schemas/public-readiness.schema.json`](public-readiness.schema.json)
 - [`schemas/local-companion.schema.json`](local-companion.schema.json)
 - [`schemas/local-snapshot.schema.json`](local-snapshot.schema.json)
 - [`schemas/licensing-policy.schema.json`](licensing-policy.schema.json)
 
-Generated projections:
-
-- [`schemas/README.md`](README.md)
-- [`docs/generated/domain-types.md`](../docs/generated/domain-types.md)
-
-## Relationships
-
-Depends on:
-
-- [Architecture authority](../architecture/README.md)
-
-Used by:
-
-- [Assurance and release evidence](../assurance/README.md)
-- [Kernel driver contract](../driver/README.md)
-- [Error catalog](../errors/README.md)
-- [Application integration catalog](../integrations/README.md)
-- [Composable hardware profiles](../profiles/README.md)
-- [Versioned bridge protocol](../protocol/README.md)
-- [Linux runtime authority](../runtime/README.md)
-- [Rust workspace](../crates/README.md)
-- [Repository tooling](../tools/README.md)
-
 ## Verification
 
-- `schema-contracts`
-- `repository-atlas-contracts`
+Run `schema-contracts` `repository-atlas-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 2 declared projection(s).
 - Run `schema-contracts`, `repository-atlas-contracts`.
 - Review direct consumers: Assurance and release evidence, Kernel driver contract, Error catalog, Application integration catalog, Composable hardware profiles, Versioned bridge protocol, Linux runtime authority, Rust workspace, Repository tooling.
 
-## Limitations
+## Relationships
 
-- Schemas validate structure and bounded values, not real hardware behavior
+- **Depends on:** [Architecture authority](../architecture/README.md)
+- **Used by:** [Assurance and release evidence](../assurance/README.md), [Kernel driver contract](../driver/README.md), [Error catalog](../errors/README.md), [Application integration catalog](../integrations/README.md), [Composable hardware profiles](../profiles/README.md), [Versioned bridge protocol](../protocol/README.md), [Linux runtime authority](../runtime/README.md), [Rust workspace](../crates/README.md), [Repository tooling](../tools/README.md)
 
-## Safe Change Workflow
-
-1. Change the schema and canonical sample together
-2. Regenerate every binding
-3. Run schema, generated-freshness, and consumer tests
-
-## Related Documentation
-
-- [`docs/architecture/design-book.md`](../docs/architecture/design-book.md)
-- [`docs/generated/domain-types.md`](../docs/generated/domain-types.md)
-
-Return to the [Repository Atlas](../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_domain::{ClientId, ClientName, ProtocolFeatureId, ProtocolVersion};
-use hfx_protocol::{BridgeSnapshot, CURRENT_PROTOCOL_VERSION, DiagnosticSnapshot};
+use hfx_protocol::{BridgeSnapshot, CURRENT_PROTOCOL_VERSION, DiagnosticSnapshot, IntegrationView};
 use hfx_runtime::{
     BRIDGE_SERVICE_UNIT, BRIDGE_SOCKET_PATH, KERNEL_MODULE_NAME, PRODUCT_VERSION, STATUS_TIMEOUT_MS,
 };
@@ -17,6 +17,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 const MAX_COMMAND_OUTPUT_BYTES: usize = 4_096;
+const LEGACY_V2_BRIDGE_SERVICE_UNIT: &str = "hyperflux-bridge.service";
+const LEGACY_V2_KERNEL_MODULE_NAME: &str = "hid-razer-hyperflux-v2";
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -141,6 +143,13 @@ pub struct BridgeHealth {
     pub diagnostics: DiagnosticSnapshot,
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct BridgeIntegration {
+    pub protocol_version: ProtocolVersion,
+    pub view: IntegrationView,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SystemSnapshot {
     pub package_version: String,
@@ -148,6 +157,7 @@ pub struct SystemSnapshot {
     pub loaded_module_identity: Option<String>,
     pub service_state: ServiceState,
     pub bridge: Option<BridgeHealth>,
+    pub legacy_v2_stack_detected: bool,
 }
 
 pub trait SystemProbe {
@@ -258,7 +268,31 @@ impl<R: CommandRunner> RealSystemProbe<R> {
         }
     }
 
-    fn bridge_health(&self) -> Result<BridgeHealth, ProbeError> {
+    fn legacy_v2_stack_detected(&self) -> bool {
+        let legacy_module = LEGACY_V2_KERNEL_MODULE_NAME.replace('-', "_");
+        if self.sys_module_root.join(legacy_module).is_dir() {
+            return true;
+        }
+        let Ok(output) = self.runner.run(
+            "systemctl",
+            &[
+                "show",
+                "--property=LoadState",
+                "--value",
+                LEGACY_V2_BRIDGE_SERVICE_UNIT,
+            ],
+            self.timeout,
+        ) else {
+            return false;
+        };
+        output.success && output.stdout == "loaded"
+    }
+
+    fn bridge_client(
+        &self,
+        client_id: &str,
+        client_name: &str,
+    ) -> Result<HyperFluxClient<UnixStream, KernelRequestIdentitySource>, ProbeError> {
         let stream =
             UnixStream::connect(&self.socket_path).map_err(|_| ProbeError::BridgeUnavailable)?;
         stream
@@ -270,9 +304,8 @@ impl<R: CommandRunner> RealSystemProbe<R> {
         let version = ProtocolVersion::try_from(CURRENT_PROTOCOL_VERSION)
             .map_err(|_| ProbeError::BridgeUnavailable)?;
         let config = SdkClientConfig {
-            client_id: ClientId::try_from("hyperfluxctl")
-                .map_err(|_| ProbeError::BridgeUnavailable)?,
-            client_name: ClientName::try_from("HyperFlux Doctor")
+            client_id: ClientId::try_from(client_id).map_err(|_| ProbeError::BridgeUnavailable)?,
+            client_name: ClientName::try_from(client_name)
                 .map_err(|_| ProbeError::BridgeUnavailable)?,
             minimum_version: version,
             maximum_version: version,
@@ -282,8 +315,12 @@ impl<R: CommandRunner> RealSystemProbe<R> {
             ],
             optional_features: Vec::new(),
         };
-        let mut client = HyperFluxClient::connect(stream, config, KernelRequestIdentitySource)
-            .map_err(|_| ProbeError::BridgeUnavailable)?;
+        HyperFluxClient::connect(stream, config, KernelRequestIdentitySource)
+            .map_err(|_| ProbeError::BridgeUnavailable)
+    }
+
+    fn bridge_health(&self) -> Result<BridgeHealth, ProbeError> {
+        let mut client = self.bridge_client("hyperfluxctl", "HyperFlux Doctor")?;
         let snapshot = client
             .snapshot()
             .map_err(|_| ProbeError::BridgeUnavailable)?;
@@ -293,6 +330,26 @@ impl<R: CommandRunner> RealSystemProbe<R> {
         Ok(BridgeHealth {
             snapshot,
             diagnostics,
+        })
+    }
+
+    /// Returns the bridge's canonical application projection for the local
+    /// qualification console.
+    ///
+    /// # Errors
+    ///
+    /// Returns a bounded bridge-unavailable error when the local socket cannot
+    /// be reached, negotiated, or queried.
+    pub fn qualification_integration(&self) -> Result<BridgeIntegration, ProbeError> {
+        let mut client =
+            self.bridge_client("hyperflux-qualification", "HyperFlux Qualification Console")?;
+        let protocol_version = client.server_hello().selected_version;
+        let view = client
+            .integration_view()
+            .map_err(|_| ProbeError::BridgeUnavailable)?;
+        Ok(BridgeIntegration {
+            protocol_version,
+            view,
         })
     }
 }
@@ -311,6 +368,7 @@ impl<R: CommandRunner> SystemProbe for RealSystemProbe<R> {
             loaded_module_identity: self.loaded_module_identity(),
             service_state,
             bridge,
+            legacy_v2_stack_detected: self.legacy_v2_stack_detected(),
         }
     }
 }
@@ -431,5 +489,33 @@ mod tests {
         assert_eq!(bounded_identity(""), None);
         assert_eq!(bounded_identity("not an identity"), None);
         assert_eq!(bounded_identity(&"a".repeat(65)), None);
+    }
+
+    #[test]
+    fn legacy_v2_service_is_detected_without_claiming_next_is_ready() {
+        let probe = RealSystemProbe::with_paths(
+            FakeRunner::new(vec![Ok(CommandOutput {
+                success: true,
+                stdout: "loaded".to_owned(),
+            })]),
+            PathBuf::from("/missing"),
+            PathBuf::from("/missing.sock"),
+            Duration::from_millis(10),
+        );
+        assert!(probe.legacy_v2_stack_detected());
+    }
+
+    #[test]
+    fn absent_legacy_v2_service_is_not_detected() {
+        let probe = RealSystemProbe::with_paths(
+            FakeRunner::new(vec![Ok(CommandOutput {
+                success: false,
+                stdout: "not-found".to_owned(),
+            })]),
+            PathBuf::from("/missing"),
+            PathBuf::from("/missing.sock"),
+            Duration::from_millis(10),
+        );
+        assert!(!probe.legacy_v2_stack_detected());
     }
 }

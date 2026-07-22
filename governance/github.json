@@ -8,14 +8,14 @@
     "remote_state": "public-pre-release",
     "visibility": "public",
     "description": "Evidence-bound Linux support for devices paired through Razer HyperFlux V2. Unreleased.",
-    "homepage": "https://offalexjackson777-stack.github.io/hyperflux-next/",
+    "homepage": "https://github.com/offalexjackson777-stack/hyperflux-next#readme",
     "social_preview_asset": "docs/assets/social-preview.png",
     "topics": ["cpp", "device-driver", "evidence-based", "hardware-support", "hid", "hyperflux", "kernel-module", "linux", "openrazer", "openrgb", "polychromatic", "python", "razer", "rgb-lighting", "rust"],
-    "pages_source": "github-actions"
+    "pages_source": "disabled"
   },
   "publication_interlock": {
     "source_repository_authorized": true,
-    "pages_deployment_authorized": true,
+    "pages_deployment_authorized": false,
     "collaboration_features_authorized": true,
     "product_publication_authorized": false,
     "release_workflows_authorized": false,
@@ -145,15 +145,12 @@
       "Analyze (python)",
       "Dependency review",
       "Fast software",
-      "Full software",
-      "Link checks",
-      "Pages preview",
-      "Portal contracts"
+      "Full software"
     ]
   },
   "labels": [
     {"name": "area: assurance", "color": "0e8a16", "description": "Release gates, evidence, formal assurance, or performance budgets"},
-    {"name": "area: documentation", "color": "1d76db", "description": "Documentation, portal, and user guidance"},
+    {"name": "area: documentation", "color": "1d76db", "description": "Documentation, navigation, and user guidance"},
     {"name": "area: governance", "color": "0052cc", "description": "Repository policy, collaboration, or automation"},
     {"name": "area: integration", "color": "5319e7", "description": "Application adapter or SDK integration"},
     {"name": "area: kernel", "color": "b60205", "description": "Kernel transport, UAPI, or lifecycle"},
@@ -167,7 +164,7 @@
     {"name": "evidence: lifecycle", "color": "f9d0c4", "description": "Requires package, restart, reconnect, suspend, or recovery evidence"},
     {"name": "evidence: software", "color": "0e8a16", "description": "Can be established entirely by bounded software verification"},
     {"name": "kind: bug", "color": "d73a4a", "description": "Confirmed or suspected incorrect behavior"},
-    {"name": "kind: documentation", "color": "0075ca", "description": "Documentation content, navigation, or generated portal issue"},
+    {"name": "kind: documentation", "color": "0075ca", "description": "Documentation content, navigation, or generated-view issue"},
     {"name": "kind: feature", "color": "a2eeef", "description": "New capability or workflow proposal"},
     {"name": "kind: hardware-research", "color": "c2e0c6", "description": "Public device research without qualification authority"},
     {"name": "kind: qualification", "color": "ffd33d", "description": "Candidate-device or physical-evidence qualification work"},
@@ -212,24 +209,10 @@
         "license_expression": "MIT"
       },
       {
-        "id": "configure-pages",
-        "repository": "actions/configure-pages",
-        "version": "v6.0.0",
-        "commit": "45bfe0192ca1faeb007ade9deae92b16b8254a0d",
-        "license_expression": "MIT"
-      },
-      {
         "id": "dependency-review",
         "repository": "actions/dependency-review-action",
         "version": "v5.0.0",
         "commit": "a1d282b36b6f3519aa1f3fc636f609c47dddb294",
-        "license_expression": "MIT"
-      },
-      {
-        "id": "deploy-pages",
-        "repository": "actions/deploy-pages",
-        "version": "v5.0.0",
-        "commit": "cd2ce8fcbc39b97be8ca5fce6e763baed58fa128",
         "license_expression": "MIT"
       },
       {
@@ -244,13 +227,6 @@
         "repository": "actions/upload-artifact",
         "version": "v7.0.1",
         "commit": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
-        "license_expression": "MIT"
-      },
-      {
-        "id": "upload-pages-artifact",
-        "repository": "actions/upload-pages-artifact",
-        "version": "v5.0.0",
-        "commit": "fc324d3547104276b827a68afc52ff2a11cc49c9",
         "license_expression": "MIT"
       }
     ]

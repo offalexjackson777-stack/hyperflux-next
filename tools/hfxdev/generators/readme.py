@@ -6,8 +6,6 @@ from html import escape
 from typing import Any
 
 from ..governance import GitHubGovernance
-from ..portal_metadata import canonical_url
-from ..portal_model import PortalConfig
 
 
 def _badge(label: str, value: str, color: str) -> str:
@@ -37,13 +35,8 @@ def license_badge() -> str:
 def markdown(
     governance: GitHubGovernance,
     readiness: dict[str, Any],
-    portal: PortalConfig,
 ) -> str:
     repository_url = f"https://github.com/{governance.owner}/{governance.repository}"
-
-    def route_url(identifier: str) -> str:
-        return canonical_url(portal, portal.route(identifier).path)
-
     software = readiness["software"]
     hardware = readiness["hardware"]
     evidence = readiness["evidence"]
@@ -53,21 +46,24 @@ def markdown(
 **Evidence-bound Linux support for devices paired through Razer HyperFlux V2.**
 
 [![Verification]({repository_url}/actions/workflows/verification.yml/badge.svg)]({repository_url}/actions/workflows/verification.yml)
-[![Documentation]({repository_url}/actions/workflows/pages.yml/badge.svg)]({repository_url}/actions/workflows/pages.yml)
+[![CodeQL]({repository_url}/actions/workflows/codeql.yml/badge.svg)]({repository_url}/actions/workflows/codeql.yml)
 ![Development state](docs/assets/badge-state.svg)
 ![License](docs/assets/badge-license.svg)
 
 > [!IMPORTANT]
 > **{publication['label']} and evidence-bound.** {publication['summary']}
 
-## Start
+## Choose A Path
 
 | I need to... | Go to... |
 | --- | --- |
-| Understand or eventually install HyperFlux | [Documentation]({route_url('home')}) and [installation status]({route_url('installation')}) |
-| Check hardware evidence | [Device Lab]({route_url('device-lab')}) |
-| Understand or change the code | [Architecture]({route_url('architecture')}), [Repository Atlas]({route_url('repository-atlas')}), and [Contributing](CONTRIBUTING.md) |
-| Review blockers and evidence | [Repository State]({route_url('repository-state')}) and [Roadmap]({governance.project_url}) |
+| Understand the project | [Project overview](docs/user/overview.md) |
+| Check installation availability | [Installation status](docs/generated/installation.md) |
+| See hardware evidence | [Supported hardware](docs/generated/supported-hardware.md) and [device knowledge](docs/generated/device-knowledge.md) |
+| Inspect an installed candidate | [Local Device Qualification Console](apps/device-qualification/README.md) |
+| Understand or change the code | [Architecture](docs/architecture/design-book.md), [Repository Atlas](docs/generated/repository-atlas.md), and [Contributing](CONTRIBUTING.md) |
+| Review blockers and evidence | [Release gates](docs/generated/release-gates.md), [verification graph](docs/generated/verification.md), and [Roadmap]({governance.project_url}) |
+| Get help or report a bug | [Support](SUPPORT.md) and [issue forms]({repository_url}/issues/new/choose) |
 | Report a vulnerability | [Security policy](SECURITY.md) and [private reporting]({repository_url}/security/advisories/new) |
 
 ## Architecture
@@ -95,11 +91,24 @@ ordinary HID input and transports bounded generation-bound envelopes.
 | Software | {software['summary']} |
 | Hardware | {hardware['summary']} |
 | Remaining evidence | {evidence['summary']} |
-| Documentation portal | Static and telemetry-free; no live device query or hardware write |
+| Local qualification | Installed, loopback-only identity and telemetry checks; hardware-changing runners remain explicitly unavailable |
 
-This table and the Pages home consume the same generated projection. [Repository
-State]({route_url('repository-state')}) shows the detailed ledgers without changing the meaning
-of these terms.
+This compact status is generated from [`generated/public-readiness.json`](generated/public-readiness.json).
+Detailed claims remain in the linked evidence ledgers rather than being repeated here.
+
+## Repository Map
+
+| Area | Primary locations |
+| --- | --- |
+| User and contributor guidance | [`docs/`](docs/), [`CONTRIBUTING.md`](CONTRIBUTING.md), [`SUPPORT.md`](SUPPORT.md) |
+| Installed experiences | [`apps/`](apps/), [`integrations/`](integrations/) |
+| Runtime and kernel | [`crates/`](crates/), [`runtime/`](runtime/), [`driver/`](driver/), [`uapi/`](uapi/) |
+| Public interfaces | [`sdk/`](sdk/), [`protocol/`](protocol/), [`schemas/`](schemas/), [`errors/`](errors/) |
+| Hardware knowledge | [`profiles/`](profiles/), [`knowledge/`](knowledge/) |
+| Evidence and delivery | [`tests/`](tests/), [`verification/`](verification/), [`assurance/`](assurance/), [`packaging/`](packaging/) |
+| Repository authority | [`architecture/`](architecture/), [`governance/`](governance/), [`tools/`](tools/) |
+
+The generated [Repository Atlas](docs/generated/repository-atlas.md) is the canonical ownership and dependency map.
 
 ## Verify A Change
 
@@ -122,7 +131,7 @@ granting hardware or release authority.
   transport authority.
 - Release, package, tag, and hardware-writing workflows are absent until a
   separate authorization changes their canonical interlocks.
-- The [Repository Atlas]({route_url('repository-atlas')}) is the authoritative directory and
+- The [Repository Atlas](docs/generated/repository-atlas.md) is the authoritative directory and
   ownership map; folder READMEs are generated projections.
 
 </details>

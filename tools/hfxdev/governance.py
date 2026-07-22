@@ -27,25 +27,19 @@ ACTION_IDS = {
     "build-push",
     "cache",
     "checkout",
-    "configure-pages",
     "codeql",
     "dependency-review",
-    "deploy-pages",
     "setup-buildx",
     "upload-artifact",
-    "upload-pages-artifact",
 }
 ACTION_REPOSITORIES = {
     "build-push": "docker/build-push-action",
     "cache": "actions/cache",
     "checkout": "actions/checkout",
-    "configure-pages": "actions/configure-pages",
     "codeql": "github/codeql-action",
     "dependency-review": "actions/dependency-review-action",
-    "deploy-pages": "actions/deploy-pages",
     "setup-buildx": "docker/setup-buildx-action",
     "upload-artifact": "actions/upload-artifact",
-    "upload-pages-artifact": "actions/upload-pages-artifact",
 }
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
 VERSION = re.compile(r"^v[0-9]+(?:\.[0-9]+){0,2}$")
@@ -279,7 +273,7 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         "remote_state": "public-pre-release",
         "visibility": "public",
         "description": "Evidence-bound Linux support for devices paired through Razer HyperFlux V2. Unreleased.",
-        "homepage": "https://offalexjackson777-stack.github.io/hyperflux-next/",
+        "homepage": "https://github.com/offalexjackson777-stack/hyperflux-next#readme",
         "social_preview_asset": "docs/assets/social-preview.png",
         "topics": [
             "cpp",
@@ -298,7 +292,7 @@ def load_github_governance(root: Path) -> GitHubGovernance:
             "rgb-lighting",
             "rust",
         ],
-        "pages_source": "github-actions",
+        "pages_source": "disabled",
     }
     if repository != expected_repository:
         raise ModelError("GitHub repository identity or public pre-release metadata drifted")
@@ -322,7 +316,7 @@ def load_github_governance(root: Path) -> GitHubGovernance:
     )
     if (
         interlock["source_repository_authorized"] is not True
-        or interlock["pages_deployment_authorized"] is not True
+        or interlock["pages_deployment_authorized"] is not False
         or interlock["collaboration_features_authorized"] is not True
         or any(
             interlock[key]

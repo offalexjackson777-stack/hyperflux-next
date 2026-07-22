@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.github_sync import (
+    MISSING,
     _repository_payload,
     _ruleset_payload,
     apply,
@@ -23,10 +24,11 @@ from hfxdev.model import ModelError
 
 
 class FakeGitHubApi:
-    def __init__(self, *, ruleset_drift: bool = False) -> None:
+    def __init__(self, *, ruleset_drift: bool = False, pages_enabled: bool = False) -> None:
         self.governance = load_github_governance(ROOT)
         self.calls: list[tuple[str, str, object]] = []
         self.ruleset_drift = ruleset_drift
+        self.pages_enabled = pages_enabled
 
     def call(
         self,
@@ -68,22 +70,14 @@ class FakeGitHubApi:
             return {
                 "build_type": "workflow",
                 "html_url": self.governance.homepage,
-            }
+            } if self.pages_enabled else MISSING
         if endpoint == f"{repo}/environments/github-pages":
             return {
                 "deployment_branch_policy": {
                     "protected_branches": False,
                     "custom_branch_policies": True,
                 }
-            }
-        if endpoint == (
-            f"{repo}/environments/github-pages/"
-            "deployment-branch-policies?per_page=100"
-        ):
-            return {
-                "total_count": 1,
-                "branch_policies": [{"id": 1, "name": "main"}],
-            }
+            } if self.pages_enabled else MISSING
         if endpoint == f"{repo}/rulesets?includes_parents=false":
             return [{"id": 7, "name": "Protected main", "enforcement": "active"}]
         if endpoint == f"{repo}/rulesets/7":
@@ -116,22 +110,20 @@ class GitHubSyncTests(unittest.TestCase):
                 plan(ROOT, [component])
 
     def test_apply_is_idempotent_and_bounded_to_reviewed_repository_surfaces(self) -> None:
-        api = FakeGitHubApi()
+        api = FakeGitHubApi(pages_enabled=True)
         result = apply(ROOT, api=api)
         self.assertEqual(result.mode, "apply")
         endpoints = "\n".join(endpoint for _, endpoint, _ in api.calls)
         for fragment in ("/releases", "/git/tags", "/packages", "/actions/runners"):
             self.assertNotIn(fragment, endpoints)
-        environment_payload = next(
-            payload
-            for method, endpoint, payload in api.calls
-            if method == "PUT" and endpoint.endswith("/environments/github-pages")
+        deletes = {
+            endpoint for method, endpoint, _ in api.calls if method == "DELETE"
+        }
+        self.assertIn(
+            f"/repos/{api.governance.owner}/{api.governance.repository}/pages",
+            deletes,
         )
-        self.assertEqual(
-            environment_payload["deployment_branch_policy"],
-            {"protected_branches": False, "custom_branch_policies": True},
-        )
-        self.assertNotIn("prevent_self_review", environment_payload)
+        self.assertTrue(any(endpoint.endswith("/environments/github-pages") for endpoint in deletes))
         ruleset_payload = next(
             payload
             for method, endpoint, payload in api.calls

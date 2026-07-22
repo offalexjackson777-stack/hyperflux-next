@@ -6,6 +6,8 @@ mod activation;
 mod assessment;
 mod configuration;
 mod probe;
+mod qualification;
+mod qualification_server;
 mod support;
 
 pub use activation::{
@@ -21,8 +23,21 @@ pub use configuration::{
     migrate_configuration,
 };
 pub use probe::{
-    BridgeHealth, CommandOutput, CommandRunner, ProbeError, RealCommandRunner, RealSystemProbe,
-    ServiceState, SystemController, SystemProbe, SystemSnapshot,
+    BridgeHealth, BridgeIntegration, CommandOutput, CommandRunner, ProbeError, RealCommandRunner,
+    RealSystemProbe, ServiceState, SystemController, SystemProbe, SystemSnapshot,
+};
+pub use qualification::{
+    ActionConfirmation, BatteryAvailability, BatteryView, CapabilityAccess, CapabilityView,
+    CompanionAction, CompanionState, CompanionView, DeviceView, EvidenceArtifactState,
+    EvidenceView, ObservationChoice, ObservationPrompt, PresenceView, ProfileBindingView,
+    QUALIFICATION_API_VERSION, QUALIFICATION_ENDPOINT, QUALIFICATION_SCHEMA, QualificationGroup,
+    QualificationPlan, QualificationStage, QualificationSystemView, QualificationView,
+    ReceiverLifecycleView, ReceiverView, RiskLevel, RunnerAvailability, RunnerCapabilities,
+    StageKind, StageResult, StageStatus, SupportView, VerdictState, build_qualification_view,
+    qualification_generated_at,
+};
+pub use qualification_server::{
+    QualificationServerConfig, QualificationServerError, serve_qualification_console,
 };
 pub use support::{
     SupportBundle, SupportBundleError, SupportBundlePreview, SupportOutputDeclaration,

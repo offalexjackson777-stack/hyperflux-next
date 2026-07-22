@@ -205,7 +205,7 @@ def render_social_preview(
         (str(candidates), "REVIEWED CANDIDATES", PALETTE["cyan"]),
         (str(subsystems), "ATLAS SUBSYSTEMS", PALETTE["lime"]),
         (str(verification_nodes), "VERIFICATION NODES", PALETTE["teal"]),
-        (str(hardware_writes), "PORTAL HARDWARE WRITES", PALETTE["coral"]),
+        (str(hardware_writes), "UNSUPERVISED WRITES", PALETTE["coral"]),
     )
     metric_width = 276
     for index, (value, label, color) in enumerate(metrics):
@@ -216,5 +216,5 @@ def render_social_preview(
             canvas.rectangle(x + metric_width, 456, 1, 104, PALETTE["line"])
 
     canvas.text("PUBLIC PRE-RELEASE", 64, 594, 2, PALETTE["yellow"])
-    canvas.text("DEVICE LAB  ATLAS  RELEASE EVIDENCE", 750, 594, 2, PALETTE["muted"])
+    canvas.text("QUALIFICATION  ATLAS  RELEASE EVIDENCE", 750, 594, 2, PALETTE["muted"])
     return canvas.png()

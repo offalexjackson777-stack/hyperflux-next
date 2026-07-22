@@ -66,8 +66,12 @@ def render_knowledge_markdown(catalog: dict[str, Any]) -> str:
 
     lines.extend(["", "## Candidate Detail", ""])
     for candidate in catalog["candidates"]:
+        coverage = candidate["coverage"]
         lines.extend(
             [
+                "<details>",
+                f"<summary><strong>{candidate['official_name']}</strong> · {candidate['hyperflux_support']} · {coverage['open_gap_count']} open gaps</summary>",
+                "",
                 f"### {candidate['official_name']}",
                 "",
                 f"HyperFlux route: `{candidate['hyperflux_support']}`. Pinned code status: `{candidate['knowledge_status']}`.",
@@ -189,7 +193,7 @@ def render_knowledge_markdown(catalog: dict[str, Any]) -> str:
         if candidate["notes"]:
             lines.extend(["", "Additional reviewed-link notes:", ""])
             lines.extend(f"- {note}" for note in candidate["notes"])
-        lines.append("")
+        lines.extend(["", "</details>", ""])
 
     lines.extend(
         [

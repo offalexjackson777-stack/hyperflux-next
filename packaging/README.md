@@ -4,95 +4,43 @@
 
 Builds reproducible distribution artifacts and a canonical installed root from explicit manifests.
 
-**Status:** `implemented`  
-**Category:** `delivery`  
-**Atlas ID:** `packaging`
+`implemented` | `delivery` | Atlas: `packaging`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/generated/installation.md`](../docs/generated/installation.md)
+- [`docs/generated/distributions.md`](../docs/generated/distributions.md)
 
+## Scope
+
+**Owns**
 - Install manifest
 - Distribution projections
 - Reproducible package inventory
 
-It must never own:
-
+**Does not own**
 - Runtime naming duplicates
 - Hidden post-install writes
 - Publication authorization
 
-## Inputs And Outputs
-
-Inputs:
-
-- Runtime authority
-- Built modules and adapters
-- Distribution catalog
-
-Outputs:
-
-- Install plan
-- Distribution packages
-- Installed-files evidence
-
-## Public Contracts
-
-- Configuration preservation
-- No hardware writes during install
-- Reproducible staged payload
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`packaging/install.json`](install.json)
 - [`packaging/distributions.json`](distributions.json)
 
-Generated projections:
-
-- [`packaging/README.md`](README.md)
-- [`packaging/generated/install-plan.json`](generated/install-plan.json)
-- [`docs/generated/distributions.md`](../docs/generated/distributions.md)
-
-## Relationships
-
-Depends on:
-
-- [Production daemon](../crates/hfx-daemon/README.md)
-- [Linux HID kernel module](../driver/kernel/README.md)
-- [Linux runtime authority](../runtime/README.md)
-- [OpenRGB adapter](../integrations/openrgb/README.md)
-- [OpenRazer compatibility adapter](../integrations/openrazer/README.md)
-- [Polychromatic adapter](../integrations/polychromatic/README.md)
-
-Used by:
-
-- None.
-
 ## Verification
 
-- `package-contracts`
+Run `package-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 3 declared projection(s).
 - Run `package-contracts`.
 - No direct subsystem consumer is declared; verify repository-facing outputs.
 
-## Limitations
+## Relationships
 
-- Release artifacts remain blocked by release and publication gates
+- **Depends on:** [Production daemon](../crates/hfx-daemon/README.md), [Linux HID kernel module](../driver/kernel/README.md), [Linux runtime authority](../runtime/README.md), [OpenRGB adapter](../integrations/openrgb/README.md), [OpenRazer compatibility adapter](../integrations/openrazer/README.md), [Polychromatic adapter](../integrations/polychromatic/README.md), [Device qualification console](../apps/device-qualification/README.md)
+- **Used by:** None
 
-## Safe Change Workflow
-
-1. Update canonical install or distribution data
-2. Regenerate the staged plan
-3. Run install, distribution, package, and release-impact contracts
-
-## Related Documentation
-
-- [`docs/generated/installation.md`](../docs/generated/installation.md)
-- [`docs/generated/distributions.md`](../docs/generated/distributions.md)
-
-Return to the [Repository Atlas](../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

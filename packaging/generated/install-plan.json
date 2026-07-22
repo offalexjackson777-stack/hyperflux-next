@@ -1,6 +1,6 @@
 {
   "schema": "hyperflux-compiled-install-plan-v1",
-  "install_manifest_sha256": "778c6945605eeeda2b2cef1e7572bc046f6beef47f6c38d34244b6d087341af2",
+  "install_manifest_sha256": "184e6f6d925b3a0aac4aa2fbeae741830e75720f3b7779c562c094b37af01554",
   "product": {
     "name": "hyperflux-next-linux",
     "version": "0.0.0-dev.1",
@@ -314,13 +314,6 @@
     },
     {
       "component": "schemas",
-      "source": "schemas/documentation-portal.schema.json",
-      "destination": "/usr/share/hyperflux-next/schemas/documentation-portal.schema.json",
-      "mode": "0644",
-      "preserve": false
-    },
-    {
-      "component": "schemas",
       "source": "schemas/domain-catalog.json",
       "destination": "/usr/share/hyperflux-next/schemas/domain-catalog.json",
       "mode": "0644",
@@ -596,6 +589,34 @@
       "component": "compiled-catalogs",
       "source": "generated/profiles/catalog.json",
       "destination": "/usr/share/hyperflux-next/catalogs/profiles/catalog.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "device-qualification-console",
+      "source": "apps/device-qualification/assets/app.css",
+      "destination": "/usr/share/hyperflux-next/qualification-console/assets/app.css",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "device-qualification-console",
+      "source": "apps/device-qualification/assets/app.js",
+      "destination": "/usr/share/hyperflux-next/qualification-console/assets/app.js",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "device-qualification-console",
+      "source": "apps/device-qualification/assets/contract.js",
+      "destination": "/usr/share/hyperflux-next/qualification-console/assets/contract.js",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "device-qualification-console",
+      "source": "apps/device-qualification/index.html",
+      "destination": "/usr/share/hyperflux-next/qualification-console/index.html",
       "mode": "0644",
       "preserve": false
     },

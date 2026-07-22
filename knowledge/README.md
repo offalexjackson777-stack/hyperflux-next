@@ -4,47 +4,26 @@
 
 Records provenance-bound candidate facts, semantic capabilities, upstream records, disagreements, and explicit unknowns.
 
-**Status:** `research-boundary`  
-**Category:** `assurance`  
-**Atlas ID:** `device-knowledge`
+`research-boundary` | `assurance` | Atlas: `device-knowledge`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/architecture/device-knowledge.md`](../docs/architecture/device-knowledge.md)
+- [`docs/generated/device-knowledge.md`](../docs/generated/device-knowledge.md)
 
+## Scope
+
+**Owns**
 - Reviewed device facts
 - Candidate relationships
 - Normalized upstream catalogs
 
-It must never own:
-
+**Does not own**
 - Receiver write authority
 - Live device values
 - Undated compatibility claims
 
-## Inputs And Outputs
-
-Inputs:
-
-- Pinned OpenRazer source
-- Pinned OpenRGB source
-- Reviewed public and physical evidence
-
-Outputs:
-
-- Application-neutral knowledge catalog
-- Device Lab dataset
-- Research gap inventory
-
-## Public Contracts
-
-- Every fact carries provenance
-- Disagreement remains visible
-- Imported support never promotes a route
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`knowledge/reviewed-facts.json`](reviewed-facts.json)
 - [`knowledge/candidate-links.json`](candidate-links.json)
@@ -52,46 +31,19 @@ Canonical files:
 - [`knowledge/upstreams/openrazer.json`](upstreams/openrazer.json)
 - [`knowledge/upstreams/openrgb.json`](upstreams/openrgb.json)
 
-Generated projections:
-
-- [`knowledge/README.md`](README.md)
-- [`generated/knowledge/catalog.json`](../generated/knowledge/catalog.json)
-- [`docs/generated/device-knowledge.md`](../docs/generated/device-knowledge.md)
-
-## Relationships
-
-Depends on:
-
-- [Composable hardware profiles](../profiles/README.md)
-- [Application integration catalog](../integrations/README.md)
-
-Used by:
-
-- [Documentation system](../docs/README.md)
-
 ## Verification
 
-- `device-knowledge-contracts`
+Run `device-knowledge-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 3 declared projection(s).
 - Run `device-knowledge-contracts`.
 - Review direct consumers: Documentation system.
 
-## Limitations
+## Relationships
 
-- Research candidates remain non-writable until separately qualified
+- **Depends on:** [Composable hardware profiles](../profiles/README.md), [Application integration catalog](../integrations/README.md)
+- **Used by:** [Documentation system](../docs/README.md)
 
-## Safe Change Workflow
-
-1. Review and cite the new fact
-2. Refresh only the exact bounded upstream catalog
-3. Regenerate and run knowledge plus profile contracts
-
-## Related Documentation
-
-- [`docs/architecture/device-knowledge.md`](../docs/architecture/device-knowledge.md)
-- [`docs/generated/device-knowledge.md`](../docs/generated/device-knowledge.md)
-
-Return to the [Repository Atlas](../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

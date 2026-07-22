@@ -14,11 +14,9 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.actions_summary import (
     render_actions_summary,
-    render_pages_summary,
     write_actions_summary,
 )
 from hfxdev.model import ModelError
-from hfxdev.portal import build_portal
 
 
 REVISION = "a" * 40
@@ -62,17 +60,17 @@ def _result() -> dict:
                 "error": None,
             },
             {
-                "id": "documentation-portal-contracts",
-                "title": "Portal contracts",
+                "id": "repository-documentation-contracts",
+                "title": "Repository documentation contracts",
                 "domain": "documentation",
-                "runner": "documentation-portal-contracts",
+                "runner": "repository-documentation-contracts",
                 "dependencies": ["generated-freshness"],
                 "input_sha256": "f" * 64,
                 "status": "failed",
                 "started_at": "2026-07-22T00:00:01Z",
                 "finished_at": "2026-07-22T00:00:02Z",
                 "duration_ms": 1100,
-                "produced_evidence": ["documentation-portal-manifest"],
+                "produced_evidence": ["repository-documentation-result"],
                 "error": "bounded failure",
             },
         ],
@@ -88,7 +86,7 @@ class ActionsSummaryTests(unittest.TestCase):
         self.assertIn("Source revision", summary)
         self.assertIn("changed-paths", summary)
         self.assertIn("Generated freshness | passed", summary)
-        self.assertIn("documentation-portal-contracts", summary)
+        self.assertIn("repository-documentation-contracts", summary)
         self.assertIn("Affected domains | documentation, generation", summary)
         self.assertIn("## Performance budgets", summary)
         self.assertIn("## Failures", summary)
@@ -116,21 +114,6 @@ class ActionsSummaryTests(unittest.TestCase):
             result.write_text(json.dumps(_result()), encoding="utf-8")
             with self.assertRaisesRegex(ModelError, "does not match"):
                 render_actions_summary(ROOT, result, expected_revision="1" * 40)
-
-    def test_pages_summary_accepts_only_the_verified_public_prerelease_manifest(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            site = Path(temporary) / "site"
-            result = build_portal(ROOT, site)
-            summary = render_pages_summary(
-                ROOT,
-                result.manifest,
-                expected_revision=REVISION,
-            )
-        self.assertIn("READY FOR PAGES", summary)
-        self.assertIn("Generated pages | 41", summary)
-        self.assertIn("Product release authority | Locked", summary)
-        self.assertIn("does not create a package, tag, release", summary.lower())
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,97 +4,44 @@
 
 Defines package version, service identities, filesystem paths, permissions, activation, and runtime defaults once.
 
-**Status:** `implemented`  
-**Category:** `delivery`  
-**Atlas ID:** `runtime-config`
+`implemented` | `delivery` | Atlas: `runtime-config`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/generated/linux-runtime.md`](../docs/generated/linux-runtime.md)
+- [`docs/generated/installation.md`](../docs/generated/installation.md)
 
+## Scope
+
+**Owns**
 - Linux runtime names
 - Service and path constants
 - Activation policy
 - Local companion contract
 
-It must never own:
-
+**Does not own**
 - Package-format commands
 - Hardware qualification
 - Application effects
 
-## Inputs And Outputs
-
-Inputs:
-
-- Architecture boundaries
-- Install requirements
-- Supported Linux conventions
-
-Outputs:
-
-- Generated service units
-- Runtime bindings
-- Package environment
-- Privacy-safe local companion documentation
-
-## Public Contracts
-
-- Single runtime naming authority
-- Safe post-update activation
-- Preserved user configuration
-- Loopback snapshots are read-only by default and use explicit evidence states
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`runtime/linux.json`](linux.json)
 - [`runtime/local-companion.json`](local-companion.json)
 
-Generated projections:
-
-- [`runtime/README.md`](README.md)
-- [`docs/generated/linux-runtime.md`](../docs/generated/linux-runtime.md)
-- [`docs/generated/local-companion.md`](../docs/generated/local-companion.md)
-- [`packaging/generated/runtime.env`](../packaging/generated/runtime.env)
-
-## Relationships
-
-Depends on:
-
-- [Architecture authority](../architecture/README.md)
-- [Schema contracts](../schemas/README.md)
-
-Used by:
-
-- [Production daemon](../crates/hfx-daemon/README.md)
-- [Packaging and installation](../packaging/README.md)
-
 ## Verification
 
-- `foundation-contracts`
-- `package-contracts`
+Run `foundation-contracts` `package-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 4 declared projection(s).
 - Run `foundation-contracts`, `package-contracts`.
 - Review direct consumers: Production daemon, Packaging and installation.
 
-## Limitations
+## Relationships
 
-- Distribution-specific packaging remains a separate projection
+- **Depends on:** [Architecture authority](../architecture/README.md), [Schema contracts](../schemas/README.md)
+- **Used by:** [Production daemon](../crates/hfx-daemon/README.md), [Packaging and installation](../packaging/README.md)
 
-## Safe Change Workflow
-
-1. Update the relevant runtime authority once
-2. Regenerate every affected service, language constant, and document
-3. Run generation, install, and package contracts
-
-## Related Documentation
-
-- [`docs/generated/linux-runtime.md`](../docs/generated/linux-runtime.md)
-- [`docs/generated/installation.md`](../docs/generated/installation.md)
-
-Return to the [Repository Atlas](../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

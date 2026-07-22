@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.generators.readme import markdown as readme_markdown
+from hfxdev.atlas import load_repository_atlas
 from hfxdev.governance import load_github_governance
 from hfxdev.licensing import (
     expression_for_path,
@@ -23,39 +24,90 @@ from hfxdev.licensing import (
 )
 from hfxdev.local_companion import load_local_companion
 from hfxdev.model import ModelError, load_json
-from hfxdev.portal_content import home_content
-from hfxdev.portal_metadata import canonical_url
-from hfxdev.portal_model import load_portal_config
 from hfxdev.public_readiness import public_readiness
+from hfxdev.repository_docs import repository_link_issues
 
 
 class RepositoryExperienceContracts(unittest.TestCase):
-    def test_public_readiness_is_one_projection_for_readme_and_pages(self) -> None:
+    def test_readme_is_the_generated_github_front_door(self) -> None:
         readiness = public_readiness(ROOT)
-        portal = load_portal_config(ROOT)
         self.assertEqual(
             load_json(ROOT / "generated" / "public-readiness.json"), readiness
         )
-        readme = readme_markdown(load_github_governance(ROOT), readiness, portal)
-        home = home_content(portal, readiness)
+        readme = readme_markdown(load_github_governance(ROOT), readiness)
+        self.assertEqual((ROOT / "README.md").read_text(encoding="utf-8"), readme)
         for section in ("publication", "evidence"):
             self.assertIn(readiness[section]["summary"], readme)
-            self.assertIn(readiness[section]["summary"], home)
-        software = readiness["software"]
-        self.assertIn(software["summary"], readme)
-        self.assertIn(
-            f"{software['gates_ready']}/{software['gates_total']}", home
+        self.assertIn(readiness["software"]["summary"], readme)
+        self.assertIn("apps/device-qualification/README.md", readme)
+        self.assertIn("Inspect an installed candidate", readme)
+        self.assertIn("hardware-changing runners remain explicitly unavailable", readme)
+        self.assertNotIn("github.io", readme)
+        self.assertNotIn("Documentation portal", readme)
+
+    def test_all_repository_markdown_links_and_anchors_resolve(self) -> None:
+        issues = repository_link_issues(ROOT)
+        self.assertEqual(issues, (), "\n".join(str(issue) for issue in issues))
+
+    def test_repository_link_contract_rejects_missing_files_and_anchors(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "README.md").write_text(
+                "# Home\n\n[Good](guide.md#working)\n"
+                "[Missing file](absent.md)\n[Missing anchor](guide.md#absent)\n",
+                encoding="utf-8",
+            )
+            (root / "guide.md").write_text("# Working\n", encoding="utf-8")
+            issues = repository_link_issues(root)
+        self.assertEqual(
+            {issue.reason for issue in issues},
+            {"local target does not exist", "Markdown anchor does not exist"},
         )
-        self.assertEqual(readiness["portal_hardware_access"], "none")
-        for route_id in (
-            "home",
-            "installation",
-            "device-lab",
-            "architecture",
-            "repository-atlas",
-            "repository-state",
-        ):
-            self.assertIn(canonical_url(portal, portal.route(route_id).path), readme)
+
+    def test_folder_front_doors_are_concise_generated_projections(self) -> None:
+        atlas = load_repository_atlas(ROOT)
+        for node in atlas.nodes:
+            path = ROOT / node.path / "README.md"
+            with self.subTest(node=node.id):
+                text = path.read_text(encoding="utf-8")
+                self.assertLessEqual(len(text.splitlines()), 60)
+                self.assertIn(node.purpose, text)
+                self.assertTrue(
+                    "## Start Here" in text or "## Browse By Need" in text
+                )
+                self.assertIn("## Scope", text)
+                self.assertIn("## Verification", text)
+
+    def test_visible_top_level_collections_have_generated_front_doors(self) -> None:
+        expected = {
+            ".devcontainer",
+            ".github",
+            "LICENSES",
+            "apps",
+            "generated",
+            "sdk",
+            "uapi",
+        }
+        for directory in expected:
+            with self.subTest(directory=directory):
+                readme = ROOT / directory / "README.md"
+                self.assertTrue(readme.is_file())
+                text = readme.read_text(encoding="utf-8")
+                self.assertIn("structural collection", text)
+                self.assertIn("## Safe Changes", text)
+
+    def test_obsolete_pages_portal_is_absent(self) -> None:
+        obsolete = (
+            ".github/workflows/pages.yml",
+            ".github/workflows/documentation.yml",
+            ".github/workflows/repository-experience.yml",
+            "docs/portal.json",
+            "schemas/documentation-portal.schema.json",
+            "tools/hfxdev/portal.py",
+        )
+        for relative in obsolete:
+            with self.subTest(path=relative):
+                self.assertFalse((ROOT / relative).exists())
 
     def test_local_companion_is_loopback_read_only_and_privacy_safe(self) -> None:
         contract = load_local_companion(ROOT)

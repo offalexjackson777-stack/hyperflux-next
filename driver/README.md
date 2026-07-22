@@ -4,90 +4,42 @@
 
 Defines the generated userspace ABI and the strict boundary around the in-kernel receiver transport.
 
-**Status:** `implemented`  
-**Category:** `runtime`  
-**Atlas ID:** `driver-contract`
+`implemented` | `runtime` | Atlas: `driver-contract`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/architecture/kernel.md`](../docs/architecture/kernel.md)
+- [`docs/generated/kernel-uapi.md`](../docs/generated/kernel-uapi.md)
 
+## Scope
+
+**Owns**
 - Kernel UAPI authority
 - Driver source boundary
 - Session-device contract
 
-It must never own:
-
+**Does not own**
 - Retail presentation
 - Effects
 - Application ownership
 
-## Inputs And Outputs
-
-Inputs:
-
-- Architecture transport limits
-- Profile-safe receiver identity
-- Protocol envelope requirements
-
-Outputs:
-
-- Generated UAPI header
-- Kernel module source
-
-## Public Contracts
-
-- Input remains independent
-- One exclusive writer
-- Bounded opaque envelopes
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`uapi/kernel-uapi.json`](../uapi/kernel-uapi.json)
 
-Generated projections:
-
-- [`driver/README.md`](README.md)
-- [`driver/kernel/uapi/hyperflux_next.h`](kernel/uapi/hyperflux_next.h)
-- [`docs/generated/kernel-uapi.md`](../docs/generated/kernel-uapi.md)
-
-## Relationships
-
-Depends on:
-
-- [Architecture authority](../architecture/README.md)
-- [Schema contracts](../schemas/README.md)
-
-Used by:
-
-- [Linux HID kernel module](kernel/README.md)
-- [Kernel transport adapter](../crates/hfx-kernel-transport/README.md)
-
 ## Verification
 
-- `kernel-profile-contracts`
+Run `kernel-profile-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 3 declared projection(s).
 - Run `kernel-profile-contracts`.
 - Review direct consumers: Linux HID kernel module, Kernel transport adapter.
 
-## Limitations
+## Relationships
 
-- Live loading and physical validation are outside this software-only mission
+- **Depends on:** [Architecture authority](../architecture/README.md), [Schema contracts](../schemas/README.md)
+- **Used by:** [Linux HID kernel module](kernel/README.md), [Kernel transport adapter](../crates/hfx-kernel-transport/README.md)
 
-## Safe Change Workflow
-
-1. Change the canonical UAPI
-2. Regenerate kernel and Rust bindings
-3. Run UAPI, kernel, SDK, and package contracts
-
-## Related Documentation
-
-- [`docs/architecture/kernel.md`](../docs/architecture/kernel.md)
-- [`docs/generated/kernel-uapi.md`](../docs/generated/kernel-uapi.md)
-
-Return to the [Repository Atlas](../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

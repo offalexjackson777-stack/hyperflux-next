@@ -40,7 +40,7 @@
           "uniqueItems": true,
           "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,49}$"}
         },
-        "pages_source": {"const": "github-actions"}
+        "pages_source": {"const": "disabled"}
       }
     },
     "publication_interlock": {
@@ -49,7 +49,7 @@
       "required": ["source_repository_authorized", "pages_deployment_authorized", "collaboration_features_authorized", "product_publication_authorized", "release_workflows_authorized", "package_publication_authorized", "tag_creation_authorized", "hardware_ci_authorized"],
       "properties": {
         "source_repository_authorized": {"const": true},
-        "pages_deployment_authorized": {"const": true},
+        "pages_deployment_authorized": {"const": false},
         "collaboration_features_authorized": {"const": true},
         "product_publication_authorized": {"const": false},
         "release_workflows_authorized": {"const": false},
@@ -225,7 +225,7 @@
         },
         "actions": {
           "type": "array",
-          "minItems": 10,
+          "minItems": 7,
           "maxItems": 16,
           "items": {"$ref": "#/$defs/action"}
         }

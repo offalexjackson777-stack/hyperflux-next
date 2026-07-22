@@ -4,91 +4,44 @@
 
 Composes production discovery, configuration, authority, service lifecycle, logging, and restoration around the bridge.
 
-**Status:** `implemented`  
-**Category:** `runtime`  
-**Atlas ID:** `daemon`
+`implemented` | `runtime` | Atlas: `daemon`
 
-## Ownership
+## Start Here
 
-This subsystem owns:
+- [`docs/architecture/bridge-core.md`](../../docs/architecture/bridge-core.md)
+- [`docs/generated/linux-runtime.md`](../../docs/generated/linux-runtime.md)
 
+## Scope
+
+**Owns**
 - Production composition root
 - Service lifecycle
 - Privilege and socket setup
 
-It must never own:
-
+**Does not own**
 - Core state-machine policy
 - Application UI
 - Raw application commands
 
-## Inputs And Outputs
-
-Inputs:
-
-- Runtime configuration
-- Kernel transport
-- Bridge services
-
-Outputs:
-
-- Local bridge daemon
-- Structured service diagnostics
-
-## Public Contracts
-
-- Local-only service
-- Explicit configuration authority
-- Fail-closed production startup
-
-## Source And Generated Files
-
-Canonical files:
+## Change Here
 
 - [`crates/hfx-daemon/Cargo.toml`](Cargo.toml)
 - [`crates/hfx-daemon/src/main.rs`](src/main.rs)
 - [`crates/hfx-daemon/src/production.rs`](src/production.rs)
 
-Generated projections:
-
-- [`crates/hfx-daemon/README.md`](README.md)
-
-## Relationships
-
-Depends on:
-
-- [Bridge runtime](../hfx-bridge/README.md)
-- [Kernel transport adapter](../hfx-kernel-transport/README.md)
-- [Linux runtime authority](../../runtime/README.md)
-
-Used by:
-
-- [Packaging and installation](../../packaging/README.md)
-
 ## Verification
 
-- `rust-unit`
-- `package-contracts`
+Run `rust-unit` `package-contracts` after changing this area.
 
-Change impact:
+Before opening a pull request:
 
 - Regenerate 1 declared projection(s).
 - Run `rust-unit`, `package-contracts`.
 - Review direct consumers: Packaging and installation.
 
-## Limitations
+## Relationships
 
-- No remote control plane or network service is provided
+- **Depends on:** [Bridge runtime](../hfx-bridge/README.md), [Kernel transport adapter](../hfx-kernel-transport/README.md), [Linux runtime authority](../../runtime/README.md)
+- **Used by:** [Packaging and installation](../../packaging/README.md)
 
-## Safe Change Workflow
-
-1. Change composition without moving domain policy
-2. Test startup and shutdown failure modes
-3. Run daemon, package, and lifecycle contracts
-
-## Related Documentation
-
-- [`docs/architecture/bridge-core.md`](../../docs/architecture/bridge-core.md)
-- [`docs/generated/linux-runtime.md`](../../docs/generated/linux-runtime.md)
-
-Return to the [Repository Atlas](../../docs/generated/repository-atlas.md).
+See the [Repository Atlas](../../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

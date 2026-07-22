@@ -38,7 +38,6 @@ from .performance import (
     verify_package_performance_budgets,
     verify_static_performance_budgets,
 )
-from .portal import build_portal, verify_portal
 from .render import rendered_binary_files, rendered_files
 from .profiles import load_profile_inputs
 from .protocol import load_protocol_catalog
@@ -1003,12 +1002,28 @@ def _run_governance_contracts(root: Path, _node: TestNode) -> None:
     load_github_governance(root)
 
 
-def _run_documentation_portal_contracts(root: Path, _node: TestNode) -> None:
-    output = root / "build" / "documentation-portal"
-    if output.exists():
-        shutil.rmtree(output)
-    build_portal(root, output)
-    verify_portal(root, output)
+def _run_repository_documentation_contracts(root: Path, node: TestNode) -> None:
+    _run_command(
+        root,
+        [sys.executable, "-m", "unittest", "tests.test_repository_experience", "-v"],
+        "repository documentation contracts",
+        node.timeout_seconds,
+    )
+
+
+def _run_device_qualification_console_contracts(root: Path, node: TestNode) -> None:
+    _run_command(
+        root,
+        [
+            sys.executable,
+            "-m",
+            "unittest",
+            "tests.test_device_qualification_console",
+            "-v",
+        ],
+        "device qualification console contracts",
+        node.timeout_seconds,
+    )
 
 
 def _run_assurance_contracts(root: Path, _node: TestNode) -> None:
@@ -1199,7 +1214,8 @@ RUNNERS = {
     "toolchain-contract": _run_toolchain_contract,
     "development-environment-contracts": _run_development_environment_contracts,
     "governance-contracts": _run_governance_contracts,
-    "documentation-portal-contracts": _run_documentation_portal_contracts,
+    "repository-documentation-contracts": _run_repository_documentation_contracts,
+    "device-qualification-console-contracts": _run_device_qualification_console_contracts,
     "assurance-contracts": _run_assurance_contracts,
     "formal-model-contracts": _run_formal_model_contracts,
     "rust-format": _run_rust_format,
