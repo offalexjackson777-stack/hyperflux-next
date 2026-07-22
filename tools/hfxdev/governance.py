@@ -27,19 +27,25 @@ ACTION_IDS = {
     "build-push",
     "cache",
     "checkout",
+    "configure-pages",
     "codeql",
     "dependency-review",
+    "deploy-pages",
     "setup-buildx",
     "upload-artifact",
+    "upload-pages-artifact",
 }
 ACTION_REPOSITORIES = {
     "build-push": "docker/build-push-action",
     "cache": "actions/cache",
     "checkout": "actions/checkout",
+    "configure-pages": "actions/configure-pages",
     "codeql": "github/codeql-action",
     "dependency-review": "actions/dependency-review-action",
+    "deploy-pages": "actions/deploy-pages",
     "setup-buildx": "docker/setup-buildx-action",
     "upload-artifact": "actions/upload-artifact",
+    "upload-pages-artifact": "actions/upload-pages-artifact",
 }
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
 VERSION = re.compile(r"^v[0-9]+(?:\.[0-9]+){0,2}$")
@@ -68,10 +74,12 @@ SERVICE_DECISIONS = {
 }
 JOB_SUMMARY_SECTIONS = (
     "source-revision",
+    "affected-domains",
     "selection",
     "failures",
     "timings",
     "generated-freshness",
+    "performance-budgets",
     "release-gate-impact",
 )
 
@@ -152,7 +160,20 @@ class GitHubGovernance:
     repository: str
     default_branch: str
     remote_state: str
-    planned_pages_source: str
+    visibility: str
+    description: str
+    homepage: str
+    social_preview_asset: str
+    topics: tuple[str, ...]
+    pages_source: str
+    source_repository_authorized: bool
+    pages_deployment_authorized: bool
+    collaboration_features_authorized: bool
+    product_publication_authorized: bool
+    release_workflows_authorized: bool
+    package_publication_authorized: bool
+    tag_creation_authorized: bool
+    hardware_ci_authorized: bool
     discussions: tuple[DiscussionCategory, ...]
     project_title: str
     project_views: tuple[ProjectView, ...]
@@ -223,35 +244,89 @@ def load_github_governance(root: Path) -> GitHubGovernance:
     )
     if value["$schema"] != "../schemas/github-governance.schema.json":
         raise ModelError("GitHub governance has a non-canonical schema reference")
-    if value["schema"] != "hyperflux-github-governance-v2":
+    if value["schema"] != "hyperflux-github-governance-v3":
         raise ModelError("unsupported GitHub governance schema")
 
     repository = _exact(
         value["repository"],
-        {"owner", "name", "default_branch", "remote_state", "planned_pages_source"},
+        {
+            "owner",
+            "name",
+            "default_branch",
+            "remote_state",
+            "visibility",
+            "description",
+            "homepage",
+            "social_preview_asset",
+            "topics",
+            "pages_source",
+        },
         "GitHub repository",
     )
-    if repository != {
+    expected_repository = {
         "owner": "offalexjackson777-stack",
         "name": "hyperflux-next",
         "default_branch": "main",
-        "remote_state": "not-created",
-        "planned_pages_source": "github-actions",
-    }:
-        raise ModelError("GitHub repository identity or unpublished state drifted")
+        "remote_state": "public-pre-release",
+        "visibility": "public",
+        "description": "Evidence-bound Linux support for devices paired through Razer HyperFlux V2. Unreleased.",
+        "homepage": "https://offalexjackson777-stack.github.io/hyperflux-next/",
+        "social_preview_asset": "docs/assets/social-preview.png",
+        "topics": [
+            "cpp",
+            "device-driver",
+            "evidence-based",
+            "hardware-support",
+            "hid",
+            "hyperflux",
+            "kernel-module",
+            "linux",
+            "openrazer",
+            "openrgb",
+            "polychromatic",
+            "python",
+            "razer",
+            "rgb-lighting",
+            "rust",
+        ],
+        "pages_source": "github-actions",
+    }
+    if repository != expected_repository:
+        raise ModelError("GitHub repository identity or public pre-release metadata drifted")
+    preview = root / repository["social_preview_asset"]
+    if not preview.is_file() or preview.is_symlink():
+        raise ModelError("GitHub social preview asset is unavailable")
 
     interlock = _exact(
         value["publication_interlock"],
         {
-            "publication_authorized",
+            "source_repository_authorized",
             "pages_deployment_authorized",
+            "collaboration_features_authorized",
+            "product_publication_authorized",
             "release_workflows_authorized",
+            "package_publication_authorized",
+            "tag_creation_authorized",
             "hardware_ci_authorized",
         },
         "GitHub publication interlock",
     )
-    if any(interlock.values()):
-        raise ModelError("GitHub publication, deployment, release, and hardware CI must remain locked")
+    if (
+        interlock["source_repository_authorized"] is not True
+        or interlock["pages_deployment_authorized"] is not True
+        or interlock["collaboration_features_authorized"] is not True
+        or any(
+            interlock[key]
+            for key in (
+                "product_publication_authorized",
+                "release_workflows_authorized",
+                "package_publication_authorized",
+                "tag_creation_authorized",
+                "hardware_ci_authorized",
+            )
+        )
+    ):
+        raise ModelError("GitHub public-source authorization or product-release interlocks drifted")
 
     collaboration = _exact(
         value["collaboration"], {"discussions", "project"}, "GitHub collaboration"
@@ -261,8 +336,8 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         {"apply_authorized", "categories"},
         "GitHub Discussions plan",
     )
-    if discussions_value["apply_authorized"] is not False:
-        raise ModelError("GitHub Discussions application must remain unauthorized")
+    if discussions_value["apply_authorized"] is not True:
+        raise ModelError("GitHub Discussions application must remain authorized")
     raw_categories = discussions_value["categories"]
     if not isinstance(raw_categories, list):
         raise ModelError("GitHub Discussions categories must be an array")
@@ -296,8 +371,8 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         {"apply_authorized", "title", "views", "fields"},
         "GitHub Project plan",
     )
-    if project["apply_authorized"] is not False:
-        raise ModelError("GitHub Project application must remain unauthorized")
+    if project["apply_authorized"] is not True:
+        raise ModelError("GitHub Project application must remain authorized")
     project_title = _text(project["title"], "GitHub Project title")
     raw_fields = project["fields"]
     if not isinstance(raw_fields, list):
@@ -371,15 +446,23 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         {
             "private_vulnerability_reporting",
             "dependency_graph",
+            "dependabot_security_updates",
+            "secret_scanning",
+            "secret_scanning_push_protection",
+            "code_scanning",
             "source_sbom",
             "artifact_attestations",
         },
         "GitHub security posture",
     )
     expected_security = {
-        "private_vulnerability_reporting": ("planned", "after-private-remote-authorization"),
-        "dependency_graph": ("planned", "after-private-remote-authorization"),
-        "source_sbom": ("implemented-local", "current-generation"),
+        "private_vulnerability_reporting": ("required-enabled", "public-source-pre-release"),
+        "dependency_graph": ("required-enabled", "public-source-pre-release"),
+        "dependabot_security_updates": ("required-enabled", "public-source-pre-release"),
+        "secret_scanning": ("required-when-available", "public-source-pre-release"),
+        "secret_scanning_push_protection": ("required-when-available", "public-source-pre-release"),
+        "code_scanning": ("required-enabled", "public-source-pre-release"),
+        "source_sbom": ("implemented", "current-generation"),
         "artifact_attestations": ("deferred", "after-release-workflow-authorization"),
     }
     security_posture: list[tuple[str, SecurityPlan]] = []
@@ -475,6 +558,8 @@ def load_github_governance(root: Path) -> GitHubGovernance:
             "dismiss_stale_reviews",
             "require_code_owner_reviews",
             "require_conversation_resolution",
+            "prevent_deletions",
+            "prevent_force_pushes",
             "required_checks",
         },
         "GitHub protection",
@@ -486,6 +571,8 @@ def load_github_governance(root: Path) -> GitHubGovernance:
             "dismiss_stale_reviews",
             "require_code_owner_reviews",
             "require_conversation_resolution",
+            "prevent_deletions",
+            "prevent_force_pushes",
         )
     ):
         raise ModelError("GitHub branch protection must retain every reviewed safeguard")
@@ -581,7 +668,22 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         repository=repository["name"],
         default_branch=repository["default_branch"],
         remote_state=repository["remote_state"],
-        planned_pages_source=repository["planned_pages_source"],
+        visibility=repository["visibility"],
+        description=repository["description"],
+        homepage=repository["homepage"],
+        social_preview_asset=repository["social_preview_asset"],
+        topics=tuple(repository["topics"]),
+        pages_source=repository["pages_source"],
+        source_repository_authorized=interlock["source_repository_authorized"],
+        pages_deployment_authorized=interlock["pages_deployment_authorized"],
+        collaboration_features_authorized=interlock[
+            "collaboration_features_authorized"
+        ],
+        product_publication_authorized=interlock["product_publication_authorized"],
+        release_workflows_authorized=interlock["release_workflows_authorized"],
+        package_publication_authorized=interlock["package_publication_authorized"],
+        tag_creation_authorized=interlock["tag_creation_authorized"],
+        hardware_ci_authorized=interlock["hardware_ci_authorized"],
         discussions=tuple(discussions),
         project_title=project_title,
         project_views=tuple(project_views),

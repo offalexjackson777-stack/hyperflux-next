@@ -117,6 +117,18 @@ def _verification_summary(output: str) -> dict[str, Any]:
     }
 
 
+def _portal_summary(output: str) -> dict[str, Any]:
+    return {
+        "name": "Publish generated portal summary",
+        "if": "${{ always() }}",
+        "env": {"HFX_SOURCE_REVISION": "${{ github.sha }}"},
+        "run": (
+            f"./hfx ci pages-summary --manifest {output}/portal-build-manifest.json "
+            '--output "$GITHUB_STEP_SUMMARY" --source-revision "$HFX_SOURCE_REVISION"'
+        ),
+    }
+
+
 def verification_workflow(governance: GitHubGovernance) -> str:
     steps = [_checkout(governance), _cache(governance), *_build_environment(governance)]
     steps.extend(
@@ -219,6 +231,7 @@ def documentation_workflow(governance: GitHubGovernance) -> str:
                 "name": "Build and verify the offline portal",
                 "run": './hfx ci docs --image "$HFX_CI_IMAGE" --output build/ci/portal',
             },
+            _portal_summary("build/ci/portal"),
             _upload(
                 governance,
                 name="hyperflux-documentation-portal",
@@ -230,6 +243,7 @@ def documentation_workflow(governance: GitHubGovernance) -> str:
     value = {
         "name": "Documentation",
         "on": {
+            "pull_request": {},
             "workflow_dispatch": {},
             "push": {
                 "branches": [governance.default_branch],
@@ -250,11 +264,91 @@ def documentation_workflow(governance: GitHubGovernance) -> str:
         "env": {"HFX_CI_IMAGE": governance.development_image},
         "jobs": {
             "portal-artifact": {
-                "name": "Offline portal artifact",
+                "name": "Portal contracts",
                 "runs-on": governance.runner,
                 "timeout-minutes": 30,
                 "steps": steps,
             }
+        },
+    }
+    return _yaml(value, governance)
+
+
+def pages_workflow(governance: GitHubGovernance) -> str:
+    build_steps = [_checkout(governance), *_build_environment(governance)]
+    build_steps.extend(
+        [
+            {
+                "name": "Build and verify the generated portal",
+                "run": './hfx ci docs --image "$HFX_CI_IMAGE" --output build/ci/portal',
+            },
+            {
+                "name": "Configure GitHub Pages",
+                "uses": governance.actions_by_id["configure-pages"].uses,
+            },
+            _portal_summary("build/ci/portal"),
+            {
+                "name": "Upload the verified Pages artifact",
+                "uses": governance.actions_by_id["upload-pages-artifact"].uses,
+                "with": {"path": "build/ci/portal"},
+            },
+        ]
+    )
+    value = {
+        "name": "Pages",
+        "on": {
+            "push": {"branches": [governance.default_branch]},
+            "workflow_dispatch": {},
+        },
+        "permissions": {"contents": "read"},
+        "concurrency": {
+            "group": "pages",
+            "cancel-in-progress": False,
+        },
+        "env": {"HFX_CI_IMAGE": governance.development_image},
+        "jobs": {
+            "build": {
+                "name": "Build verified portal",
+                "runs-on": governance.runner,
+                "timeout-minutes": 30,
+                "permissions": {"contents": "read", "pages": "write", "id-token": "write"},
+                "steps": build_steps,
+            },
+            "deploy": {
+                "name": "Deploy protected Pages",
+                "needs": "build",
+                "runs-on": governance.runner,
+                "timeout-minutes": 15,
+                "permissions": {"pages": "write", "id-token": "write"},
+                "environment": {
+                    "name": "github-pages",
+                    "url": "${{ steps.deployment.outputs.page_url }}",
+                },
+                "steps": [
+                    {
+                        "name": "Deploy generated documentation",
+                        "id": "deployment",
+                        "uses": governance.actions_by_id["deploy-pages"].uses,
+                    },
+                    {
+                        "name": "Publish deployment status",
+                        "env": {
+                            "HFX_PAGE_URL": "${{ steps.deployment.outputs.page_url }}",
+                            "HFX_SOURCE_REVISION": "${{ github.sha }}",
+                        },
+                        "run": (
+                            "printf '# Pages deployment\\n\\n"
+                            "| Field | Result |\\n| --- | --- |\\n"
+                            "| Status | **DEPLOYED** |\\n"
+                            "| Source revision | `%s` |\\n"
+                            "| Environment | `github-pages` |\\n"
+                            "| URL | %s |\\n"
+                            "| Product release authority | Locked |\\n' "
+                            '"$HFX_SOURCE_REVISION" "$HFX_PAGE_URL" >> "$GITHUB_STEP_SUMMARY"'
+                        ),
+                    },
+                ],
+            },
         },
     }
     return _yaml(value, governance)
@@ -409,7 +503,7 @@ def pull_request_template() -> str:
 
 - Canonical authority changed:
 - Generated outputs refreshed:
-- Schema or protocol compatibility:
+- Schema, protocol, UAPI, or ABI compatibility:
 - Package or activation behavior:
 - Performance budget impact:
 - Privacy or support-bundle impact:
@@ -420,7 +514,7 @@ def pull_request_template() -> str:
 ## Evidence
 
 - Source revision:
-- Selected verification nodes and timings:
+- Verification commands, selected nodes, and timings:
 - Generated freshness:
 - Fast verification evidence:
 - Full software evidence, when required:
@@ -428,8 +522,9 @@ def pull_request_template() -> str:
 
 ## Interlocks
 
-- [ ] This change performs no hardware writes unless separately authorized and recorded.
-- [ ] This change does not create a release, tag, Pages deployment, or publication authorization.
+- [ ] Hardware authority is `none`, or a separate bounded authorization and evidence record is linked above.
+- [ ] This change does not create a release, tag, package channel, or supported-product claim.
+- [ ] Any Pages change is generated from canonical repository data; no deployed HTML was hand-edited.
 - [ ] User-facing documentation contains no internal engineering mission identifiers.
 """
 
@@ -528,10 +623,10 @@ def bug_report(governance: GitHubGovernance) -> str:
 def hardware_qualification(governance: GitHubGovernance) -> str:
     return _issue_form(
         governance,
-        name="Hardware qualification",
-        description="Propose evidence for a device or receiver path without authorizing writes.",
-        title="[Hardware]: ",
-        labels=["evidence: hardware"],
+        name="Device qualification",
+        description="Propose bounded evidence for one exact device route without authorizing writes.",
+        title="[Qualification]: ",
+        labels=["evidence: hardware", "kind: qualification"],
         body=[
             {
                 "type": "markdown",
@@ -613,6 +708,119 @@ def hardware_qualification(governance: GitHubGovernance) -> str:
     )
 
 
+def hardware_research(governance: GitHubGovernance) -> str:
+    return _issue_form(
+        governance,
+        name="Hardware research",
+        description="Record public device knowledge, conflicts, and unknowns without claiming support.",
+        title="[Research]: ",
+        labels=["area: profiles", "kind: hardware-research"],
+        body=[
+            {
+                "type": "markdown",
+                "attributes": {
+                    "value": "Research identifies candidates; it does not qualify a route or authorize hardware access. Link public sources and describe uncertainty explicitly."
+                },
+            },
+            {
+                "type": "input",
+                "id": "model",
+                "attributes": {"label": "Device or family", "placeholder": "Exact marketed name when known"},
+                "validations": {"required": True},
+            },
+            {
+                "type": "textarea",
+                "id": "sources",
+                "attributes": {
+                    "label": "Public sources",
+                    "description": "Official product/support pages, manuals, and pinned upstream registry locations.",
+                    "placeholder": "One URL or repository path per line",
+                },
+                "validations": {"required": True},
+            },
+            {
+                "type": "textarea",
+                "id": "facts",
+                "attributes": {
+                    "label": "Facts and conflicts",
+                    "description": "Separate directly stated facts, cross-source conflicts, and inferences.",
+                },
+                "validations": {"required": True},
+            },
+            {
+                "type": "textarea",
+                "id": "unknowns",
+                "attributes": {
+                    "label": "What remains unknown?",
+                    "description": "Name the gaps that prevent route qualification or a capability claim.",
+                },
+                "validations": {"required": True},
+            },
+            {
+                "type": "checkboxes",
+                "id": "boundary",
+                "attributes": {
+                    "label": "Evidence boundary",
+                    "options": [
+                        {
+                            "label": "This report contains no private capture, serial, stable host identifier, raw payload, or support claim.",
+                            "required": True,
+                        }
+                    ],
+                },
+            },
+        ],
+    )
+
+
+def documentation_report(governance: GitHubGovernance) -> str:
+    return _issue_form(
+        governance,
+        name="Documentation",
+        description="Report unclear, stale, inaccessible, or misrouted repository guidance.",
+        title="[Docs]: ",
+        labels=["area: documentation", "kind: documentation"],
+        body=[
+            {
+                "type": "dropdown",
+                "id": "audience",
+                "attributes": {
+                    "label": "Audience",
+                    "options": ["First-time user", "Developer", "Contributor", "Hardware tester", "Maintainer", "Security reporter"],
+                },
+                "validations": {"required": True},
+            },
+            {
+                "type": "input",
+                "id": "location",
+                "attributes": {
+                    "label": "Page or link",
+                    "placeholder": "Repository path or public URL",
+                },
+                "validations": {"required": True},
+            },
+            {
+                "type": "textarea",
+                "id": "problem",
+                "attributes": {
+                    "label": "What prevented the next action?",
+                    "description": "Describe what you expected to learn or do and what was missing or confusing.",
+                },
+                "validations": {"required": True},
+            },
+            {
+                "type": "dropdown",
+                "id": "source-kind",
+                "attributes": {
+                    "label": "Content type",
+                    "options": ["Hand-written canonical source", "Generated portal page", "README navigation", "Unknown"],
+                },
+                "validations": {"required": True},
+            },
+        ],
+    )
+
+
 def feature_request(governance: GitHubGovernance) -> str:
     return _issue_form(
         governance,
@@ -685,6 +893,16 @@ def issue_config(governance: GitHubGovernance) -> str:
         "blank_issues_enabled": False,
         "contact_links": [
             {
+                "name": "Ask for help",
+                "url": f"https://github.com/{governance.owner}/{governance.repository}/discussions/categories/help",
+                "about": "Use Discussions after checking the documentation and privacy-safe support steps.",
+            },
+            {
+                "name": "Discuss an idea",
+                "url": f"https://github.com/{governance.owner}/{governance.repository}/discussions/categories/ideas",
+                "about": "Explore a universal workflow before committing it to an issue.",
+            },
+            {
                 "name": "Report a security vulnerability privately",
                 "url": f"https://github.com/{governance.owner}/{governance.repository}/security/advisories/new",
                 "about": "Do not disclose vulnerabilities or sensitive diagnostics in a public issue.",
@@ -694,24 +912,46 @@ def issue_config(governance: GitHubGovernance) -> str:
     return _yaml(value, governance)
 
 
+def release_notes(governance: GitHubGovernance) -> str:
+    value = {
+        "changelog": {
+            "exclude": {"labels": ["skip-changelog"]},
+            "categories": [
+                {"title": "User-facing changes", "labels": ["kind: feature", "kind: bug"]},
+                {"title": "Device knowledge and qualification", "labels": ["kind: hardware-research", "kind: qualification"]},
+                {"title": "Integrations", "labels": ["area: integration"]},
+                {"title": "Kernel and runtime", "labels": ["area: kernel", "area: runtime"]},
+                {"title": "Packaging", "labels": ["area: packaging"]},
+                {"title": "Documentation", "labels": ["area: documentation", "kind: documentation"]},
+                {"title": "Assurance, security, and tooling", "labels": ["area: assurance", "area: governance", "area: security", "area: tooling"]},
+                {"title": "Other changes", "labels": ["*"]},
+            ],
+        }
+    }
+    return _yaml(value, governance)
+
+
 def protection_plan(governance: GitHubGovernance) -> str:
     value = {
         "schema": "hyperflux-github-protection-plan-v1",
         "repository": f"{governance.owner}/{governance.repository}",
         "remote_state": governance.remote_state,
-        "apply_authorized": False,
+        "apply_authorized": True,
         "default_branch": governance.default_branch,
         "ruleset": {
-            "enforcement": "active-after-explicit-remote-authorization",
+            "enforcement": "active",
+            "bypass_actors": [],
             "required_approvals": governance.required_approvals,
             "dismiss_stale_reviews": True,
             "require_code_owner_reviews": True,
             "require_conversation_resolution": True,
             "require_linear_history": True,
+            "prevent_deletions": True,
+            "prevent_force_pushes": True,
             "required_status_checks": list(governance.required_checks),
         },
         "excluded_components": [
-            "pages-deployment",
+            "package-publication",
             "release-tags",
             "release-publication",
             "hardware-ci",
@@ -725,7 +965,7 @@ def labels_plan(governance: GitHubGovernance) -> str:
         "schema": "hyperflux-github-label-plan-v1",
         "repository": f"{governance.owner}/{governance.repository}",
         "remote_state": governance.remote_state,
-        "apply_authorized": False,
+        "apply_authorized": True,
         "labels": [
             {
                 "name": label.name,
@@ -743,9 +983,9 @@ def experience_plan(governance: GitHubGovernance) -> str:
         "schema": "hyperflux-github-experience-plan-v1",
         "repository": f"{governance.owner}/{governance.repository}",
         "remote_state": governance.remote_state,
-        "apply_authorized": False,
+        "apply_authorized": True,
         "discussions": {
-            "apply_authorized": False,
+            "apply_authorized": True,
             "categories": [
                 {
                     "id": category.id,
@@ -757,7 +997,7 @@ def experience_plan(governance: GitHubGovernance) -> str:
             ],
         },
         "project": {
-            "apply_authorized": False,
+            "apply_authorized": True,
             "title": governance.project_title,
             "views": [
                 {
@@ -801,7 +1041,16 @@ def experience_plan(governance: GitHubGovernance) -> str:
             for evaluation in governance.service_evaluations
         ],
         "external_apps_installed": [],
-        "publication_authorized": False,
+        "source_repository_authorized": governance.source_repository_authorized,
+        "pages_deployment_authorized": governance.pages_deployment_authorized,
+        "product_publication_authorized": governance.product_publication_authorized,
+        "repository_metadata": {
+            "description": governance.description,
+            "homepage": governance.homepage,
+            "visibility": governance.visibility,
+            "topics": list(governance.topics),
+            "social_preview_asset": governance.social_preview_asset,
+        },
     }
     return json.dumps(value, indent=2, sort_keys=True) + "\n"
 
@@ -812,14 +1061,17 @@ def markdown(governance: GitHubGovernance) -> str:
         "",
         "> Generated by `./hfx generate`. Do not edit manually.",
         "",
-        "This repository experience is fully modeled locally. No remote repository, Pages deployment, release workflow, tag, or hardware CI is authorized by this configuration.",
+        "The public repository, generated Pages portal, Discussions, roadmap, and native security controls are authorized by this configuration. Product releases, package publication, tags, and hardware-writing CI remain locked.",
         "",
         "## Current Interlock",
         "",
         f"- Planned repository: `{governance.owner}/{governance.repository}`",
         f"- Remote state: `{governance.remote_state}`",
-        "- Publication: `locked`",
-        "- Pages deployment: `locked`",
+        "- Public source: `authorized`",
+        "- Pages deployment: `authorized from generated portal only`",
+        "- Product publication: `locked`",
+        "- Package publication: `locked`",
+        "- Tag creation: `locked`",
         "- Release workflows: `locked`",
         "- Hardware CI: `locked`",
         "",
@@ -829,7 +1081,8 @@ def markdown(governance: GitHubGovernance) -> str:
         "| --- | --- | --- | --- | --- |",
         "| Verification | Pull requests, main, manual | None | None | Source-bound fast evidence |",
         "| Full verification | Weekly or manual | None | None | Source-bound full evidence |",
-        "| Documentation | Main documentation changes or manual | None | None | Offline portal artifact |",
+        "| Documentation | Pull requests, main documentation changes, manual | None | None | Verified portal artifact |",
+        "| Pages | Main or manual | None after image build | None | Protected generated portal deployment |",
         "| CodeQL | Pull requests, main, weekly | GitHub service only | None | C/C++ and Python analysis |",
         "| Dependency review | Pull requests | GitHub service only | None | Dependency policy decision |",
         "",
@@ -842,7 +1095,7 @@ def markdown(governance: GitHubGovernance) -> str:
     lines.extend(
         [
             "",
-            "The plan is generated with `apply_authorized: false`. It can be reviewed now but may be applied only after remote creation is separately authorized and the first hosted runs establish these exact check names.",
+            "The active plan has no ruleset bypass actors. It may be applied only after hosted runs establish these exact check names; release and hardware gates remain independent canonical interlocks.",
             "",
             "## Immutable Workflow Dependencies",
             "",
@@ -863,7 +1116,7 @@ def markdown(governance: GitHubGovernance) -> str:
             "- Issue forms request bounded, privacy-safe evidence and never imply hardware-write approval.",
             "- Pull requests surface canonical authority, schema, package, performance, privacy, and evidence impact.",
             "- Dependency updates are grouped by GitHub Actions, Cargo, and each Python integration root.",
-            "- Labels and branch protection are reviewable generated plans, not hidden remote state.",
+            "- Labels and protected-main policy are reviewable generated plans and are verified against remote state.",
             "",
             "## Actions Job Summaries",
             "",
@@ -890,7 +1143,7 @@ def markdown(governance: GitHubGovernance) -> str:
     lines.extend(
         [
             "",
-            "The category plan has `apply_authorized: false`; it does not enable Discussions on a remote.",
+            "The category plan is authorized only with `SUPPORT.md`, the code of conduct, privacy guidance, and explicit category boundaries present.",
             "",
             "## Project Plan",
             "",
@@ -917,7 +1170,7 @@ def markdown(governance: GitHubGovernance) -> str:
     lines.extend(
         [
             "",
-            "The project plan has `apply_authorized: false`; no Project or field is created by generation.",
+            "The project is authorized as a typed roadmap driven by labeled issues. It does not represent release approval.",
             "",
             "## Security Preparation",
             "",
@@ -943,5 +1196,5 @@ def markdown(governance: GitHubGovernance) -> str:
         lines.append(
             f"| {evaluation.service} | `{evaluation.decision}` | {permissions} | {evaluation.privacy} | `{evaluation.maintenance_cost}` |"
         )
-    lines.extend(["", "No external app or service is installed by this plan.", ""])
+    lines.extend(["", "No external app or tracking service is required by this plan.", ""])
     return "\n".join(lines)

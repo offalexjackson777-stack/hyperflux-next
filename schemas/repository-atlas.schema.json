@@ -8,7 +8,7 @@
   "properties": {
     "$schema": {"const": "../schemas/repository-atlas.schema.json"},
     "schema": {"const": "hyperflux-repository-atlas-v1"},
-    "publication_state": {"const": "local-unpublished"},
+    "publication_state": {"const": "public-source-pre-release"},
     "nodes": {
       "type": "array",
       "minItems": 24,

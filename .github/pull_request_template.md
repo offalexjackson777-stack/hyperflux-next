@@ -17,7 +17,7 @@
 
 - Canonical authority changed:
 - Generated outputs refreshed:
-- Schema or protocol compatibility:
+- Schema, protocol, UAPI, or ABI compatibility:
 - Package or activation behavior:
 - Performance budget impact:
 - Privacy or support-bundle impact:
@@ -28,7 +28,7 @@
 ## Evidence
 
 - Source revision:
-- Selected verification nodes and timings:
+- Verification commands, selected nodes, and timings:
 - Generated freshness:
 - Fast verification evidence:
 - Full software evidence, when required:
@@ -36,6 +36,7 @@
 
 ## Interlocks
 
-- [ ] This change performs no hardware writes unless separately authorized and recorded.
-- [ ] This change does not create a release, tag, Pages deployment, or publication authorization.
+- [ ] Hardware authority is `none`, or a separate bounded authorization and evidence record is linked above.
+- [ ] This change does not create a release, tag, package channel, or supported-product claim.
+- [ ] Any Pages change is generated from canonical repository data; no deployed HTML was hand-edited.
 - [ ] User-facing documentation contains no internal engineering mission identifiers.

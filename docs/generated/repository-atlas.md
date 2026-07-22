@@ -6,7 +6,7 @@ The Atlas is a projection of one canonical repository graph. Folder READMEs, dep
 
 **Subsystems:** 31  
 **Categories:** 8  
-**Publication state:** `local-unpublished`
+**Publication state:** `public-source-pre-release`
 
 ## Architecture Map
 
@@ -732,30 +732,30 @@ Records exact legacy sources, inventories, dispositions, and read-only semantic 
 
 `governance` · `governance` · `policy`
 
-Defines repository ownership, immutable automation, issue intake, dependency policy, and publication locks from one authority.
+Defines repository ownership, immutable automation, public collaboration, remote synchronization, dependency policy, and product-publication locks from one authority.
 
 **Owns:** GitHub governance policy; Required-check plan; Generated community files.
 
-**Must never own:** Remote mutation authorization; Release approval; External-app installation.
+**Must never own:** Product release approval; Hardware-write authorization; Unreviewed external-app installation.
 
 **Depends on:** [Architecture authority](#architecture), [Assurance and release evidence](#assurance), [Verification graph](#verification)
 
 **Used by:** [Documentation system](#documentation)
 
-**Canonical sources:** `governance/github.json`.
+**Canonical sources:** `governance/github.json`, `CONTRIBUTING.md`, `SUPPORT.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`.
 
-**Generated projections:** `governance/README.md`, `governance/generated/github-protection-plan.json`, `governance/generated/github-labels.json`, `governance/generated/github-experience-plan.json`, `docs/generated/github-governance.md`, `.github/CODEOWNERS`, `.github/pull_request_template.md`, `.github/ISSUE_TEMPLATE/config.yml`, `.github/ISSUE_TEMPLATE/bug_report.yml`, `.github/ISSUE_TEMPLATE/hardware_qualification.yml`, `.github/ISSUE_TEMPLATE/feature_request.yml`, `.github/dependabot.yml`, `.github/workflows/verification.yml`, `.github/workflows/full-verification.yml`, `.github/workflows/documentation.yml`, `.github/workflows/codeql.yml`, `.github/workflows/dependency-review.yml`.
+**Generated projections:** `README.md`, `docs/assets/badge-state.svg`, `docs/assets/badge-license.svg`, `governance/README.md`, `governance/generated/github-protection-plan.json`, `governance/generated/github-labels.json`, `governance/generated/github-experience-plan.json`, `docs/generated/github-governance.md`, `.github/CODEOWNERS`, `.github/pull_request_template.md`, `.github/ISSUE_TEMPLATE/config.yml`, `.github/ISSUE_TEMPLATE/bug_report.yml`, `.github/ISSUE_TEMPLATE/device_qualification.yml`, `.github/ISSUE_TEMPLATE/hardware_research.yml`, `.github/ISSUE_TEMPLATE/documentation.yml`, `.github/ISSUE_TEMPLATE/feature_request.yml`, `.github/dependabot.yml`, `.github/release.yml`, `.github/workflows/verification.yml`, `.github/workflows/full-verification.yml`, `.github/workflows/documentation.yml`, `.github/workflows/pages.yml`, `.github/workflows/codeql.yml`, `.github/workflows/dependency-review.yml`.
 
-**Change impact:** Regenerate 17 declared projection(s). Run `governance-contracts`. Review direct consumers: Documentation system.
+**Change impact:** Regenerate 24 declared projection(s). Run `governance-contracts`. Review direct consumers: Documentation system.
 
 <a id="documentation"></a>
 ### Documentation system
 
 `docs` · `documentation` · `generated`
 
-Combines reviewed narrative sources with generated technical truth into an offline, audience-oriented portal.
+Combines reviewed narrative sources with generated technical truth into a telemetry-free, audience-oriented public portal.
 
-**Owns:** Portal information architecture; Reviewed narrative documentation; Offline presentation.
+**Owns:** Portal information architecture; Reviewed narrative documentation; Static public presentation.
 
 **Must never own:** Duplicated canonical facts; Live hardware claims in static pages; Publication authorization.
 

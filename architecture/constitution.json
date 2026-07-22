@@ -2,7 +2,7 @@
   "$schema": "../schemas/architecture-constitution.schema.json",
   "schema": "hyperflux-architecture-constitution-v1",
   "product": "HyperFlux Next",
-  "phase": "local-foundation-reconstruction",
+  "phase": "public-source-pre-release",
   "direction": [
     "applications",
     "integrations",
@@ -100,7 +100,7 @@
   ],
   "publication_interlock": {
     "local_first": true,
-    "remote_repository_created": false,
+    "remote_repository_created": true,
     "publication_authorized": false,
     "required_gate_ids": [
       "HFX-GATE-FOUNDATION",
@@ -116,4 +116,3 @@
     ]
   }
 }
-

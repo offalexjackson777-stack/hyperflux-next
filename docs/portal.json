@@ -4,7 +4,7 @@
   "site": {
     "title": "HyperFlux Next",
     "description": "Evidence-bound Linux support for devices connected through Razer HyperFlux V2.",
-    "publication_state": "local-artifact-only"
+    "publication_state": "public-pages-pre-release"
   },
   "audiences": [
     {
@@ -17,6 +17,8 @@
         {"id": "supported-hardware", "title": "Supported hardware", "summary": "Qualified profiles, compatibility candidates, and evidence limits.", "source": "docs/generated/supported-hardware.md"},
         {"id": "applications", "title": "Applications", "summary": "How OpenRGB, Polychromatic, and OpenRazer-compatible clients connect.", "source": "docs/generated/integrations.md"},
         {"id": "troubleshooting", "title": "Troubleshooting", "summary": "Doctor, status, support previews, and safe next actions.", "source": "docs/user/troubleshooting.md"},
+        {"id": "support", "title": "Support", "summary": "Choose the correct public or private support route without leaking sensitive diagnostics.", "source": "SUPPORT.md"},
+        {"id": "security", "title": "Security", "summary": "Private vulnerability reporting, disclosure expectations, and enforced security boundaries.", "source": "SECURITY.md"},
         {"id": "privacy", "title": "Privacy", "summary": "What support evidence includes, excludes, and never uploads automatically.", "source": "docs/user/privacy.md"}
       ]
     },

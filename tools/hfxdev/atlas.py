@@ -179,8 +179,8 @@ def load_repository_atlas(root: Path) -> RepositoryAtlas:
         raise ModelError("repository atlas has a non-canonical schema reference")
     if value["schema"] != "hyperflux-repository-atlas-v1":
         raise ModelError("unsupported repository atlas schema")
-    if value["publication_state"] != "local-unpublished":
-        raise ModelError("repository atlas publication state must remain locked")
+    if value["publication_state"] != "public-source-pre-release":
+        raise ModelError("repository atlas must identify the public pre-release boundary")
     raw_nodes = value["nodes"]
     if not isinstance(raw_nodes, list) or not 24 <= len(raw_nodes) <= 64:
         raise ModelError("repository atlas requires 24 through 64 subsystem nodes")

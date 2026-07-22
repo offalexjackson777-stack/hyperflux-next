@@ -6,11 +6,15 @@ import argparse
 from pathlib import Path
 import sys
 
-from .actions_summary import write_actions_summary
+from .actions_summary import write_actions_summary, write_pages_summary
 from .ci import container_invocation, run_container
 from .migration import capture_inventory, run_shadow_comparison, summary
 from .model import ModelError
 from .distribution_package import build_distribution_package
+from .github_sync import COMPONENTS as GITHUB_COMPONENTS
+from .github_sync import apply as apply_github
+from .github_sync import plan as plan_github
+from .github_sync import verify as verify_github
 from .knowledge import import_upstream_catalogs
 from .openrazer import write_imported_metadata
 from .package_pipeline import build_artifacts, stage_rootfs
@@ -136,6 +140,26 @@ def _parser() -> argparse.ArgumentParser:
     ci_summary.add_argument("--result", required=True, type=Path)
     ci_summary.add_argument("--output", required=True, type=Path)
     ci_summary.add_argument("--source-revision")
+    ci_pages_summary = ci_commands.add_parser(
+        "pages-summary", help="write a bounded Pages artifact summary"
+    )
+    ci_pages_summary.add_argument("--manifest", required=True, type=Path)
+    ci_pages_summary.add_argument("--output", required=True, type=Path)
+    ci_pages_summary.add_argument("--source-revision")
+
+    github = commands.add_parser(
+        "github", help="plan, apply, or verify canonical public repository state"
+    )
+    github_commands = github.add_subparsers(dest="github_command", required=True)
+    for name in ("plan", "apply", "verify"):
+        command = github_commands.add_parser(name)
+        command.add_argument(
+            "--component",
+            action="append",
+            choices=GITHUB_COMPONENTS,
+            help="limit synchronization to one component; repeat as needed",
+        )
+        command.add_argument("--output", type=Path)
 
     package = commands.add_parser("package", help="build and stage canonical package payloads")
     package_commands = package.add_subparsers(dest="package_command", required=True)
@@ -234,6 +258,15 @@ def main(arguments: list[str] | None = None) -> int:
             )
             return 0
         if args.command == "ci":
+            if args.ci_command == "pages-summary":
+                write_pages_summary(
+                    root,
+                    args.manifest,
+                    args.output,
+                    expected_revision=args.source_revision,
+                )
+                print(f"Pages summary: {args.output}")
+                return 0
             if args.ci_command == "summary":
                 write_actions_summary(
                     root,
@@ -268,6 +301,21 @@ def main(arguments: list[str] | None = None) -> int:
                 f"(container network: {invocation.network})"
             )
             return run_container(invocation)
+        if args.command == "github":
+            operation = {
+                "plan": plan_github,
+                "apply": apply_github,
+                "verify": verify_github,
+            }[args.github_command]
+            result = operation(root, args.component)
+            rendered = result.as_json()
+            if args.output:
+                args.output.parent.mkdir(parents=True, exist_ok=True)
+                args.output.write_text(rendered, encoding="utf-8")
+                print(f"GitHub {args.github_command}: {args.output}")
+            else:
+                print(rendered, end="")
+            return 0
         if args.command == "package":
             if args.package_command == "build":
                 capabilities = {}

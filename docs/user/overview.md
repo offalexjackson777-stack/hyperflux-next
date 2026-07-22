@@ -11,8 +11,9 @@ qualification, application ownership, transactions, restoration, and
 diagnostics. Application adapters use the versioned SDK and do not send raw USB
 or HID reports.
 
-> **Current state:** this repository is still a local reconstruction. It is not
-> an authorized release, package channel, or published support claim.
+> **Current state:** this is a public, evidence-bound pre-release source
+> repository. It is not an authorized release, package channel, or supported
+> product claim.
 
 ## What Users Eventually Gain
 

@@ -137,7 +137,7 @@ def render_repository_atlas(atlas: RepositoryAtlas) -> AtlasPage:
     )
     content = f"""<article class="repository-atlas" data-repository-atlas>
   <p class="breadcrumb">Architecture / Repository Atlas</p>
-  <header class="atlas-header"><div><h1>Repository Atlas</h1><p class="lede">A generated ownership and dependency map for changing HyperFlux Next without creating a second source of truth.</p></div><span class="atlas-lock">Local, unpublished</span></header>
+  <header class="atlas-header"><div><h1>Repository Atlas</h1><p class="lede">A generated ownership and dependency map for changing HyperFlux Next without creating a second source of truth.</p></div><span class="atlas-lock">Public pre-release</span></header>
   <div class="notice"><strong>One graph, many views.</strong> This page, folder READMEs, dependency diagrams, source lineage, and change-impact guidance all come from <code>architecture/repository-atlas.json</code>.</div>
   <section class="atlas-metrics" aria-label="Repository Atlas summary"><div><strong>{len(atlas.nodes)}</strong><span>subsystems</span></div><div><strong>{len(categories)}</strong><span>ownership categories</span></div><div><strong>{generated}</strong><span>generated projections</span></div><div><strong>{verification}</strong><span>verification nodes referenced</span></div></section>
   <section class="atlas-toolbar" aria-label="Filter repository subsystems">

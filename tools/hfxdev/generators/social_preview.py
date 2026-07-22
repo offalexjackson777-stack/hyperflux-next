@@ -159,7 +159,7 @@ def render_social_preview(
     tags = (
         ("SCHEMA FIRST", PALETTE["cyan"]),
         ("EVIDENCE BOUND", PALETTE["lime"]),
-        ("PUBLICATION LOCKED", PALETTE["coral"]),
+        ("PRODUCT UNRELEASED", PALETTE["coral"]),
     )
     tag_x = 780
     for value, color in tags:
@@ -215,6 +215,6 @@ def render_social_preview(
         if index < len(metrics) - 1:
             canvas.rectangle(x + metric_width, 456, 1, 104, PALETTE["line"])
 
-    canvas.text("LOCAL RECONSTRUCTION", 64, 594, 2, PALETTE["yellow"])
+    canvas.text("PUBLIC PRE-RELEASE", 64, 594, 2, PALETTE["yellow"])
     canvas.text("DEVICE LAB  ATLAS  RELEASE EVIDENCE", 750, 594, 2, PALETTE["muted"])
     return canvas.png()

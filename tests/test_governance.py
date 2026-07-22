@@ -20,10 +20,14 @@ from hfxdev.generators.governance import (
     bug_report,
     codeql_workflow,
     dependency_review_workflow,
+    documentation_report,
     documentation_workflow,
     experience_plan,
+    feature_request,
     full_verification_workflow,
+    hardware_research,
     hardware_qualification,
+    pages_workflow,
     protection_plan,
     verification_workflow,
 )
@@ -51,15 +55,32 @@ class GitHubGovernanceTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.governance = load_github_governance(ROOT)
 
-    def test_remote_publication_deployment_release_and_hardware_ci_are_locked(self) -> None:
+    def test_public_source_is_authorized_while_product_publication_remains_locked(self) -> None:
         source = json.loads((ROOT / "governance" / "github.json").read_text(encoding="utf-8"))
-        self.assertEqual(self.governance.remote_state, "not-created")
-        self.assertFalse(any(source["publication_interlock"].values()))
+        self.assertEqual(self.governance.remote_state, "public-pre-release")
+        interlock = source["publication_interlock"]
+        self.assertTrue(interlock["source_repository_authorized"])
+        self.assertTrue(interlock["pages_deployment_authorized"])
+        self.assertTrue(interlock["collaboration_features_authorized"])
+        for key in (
+            "product_publication_authorized",
+            "release_workflows_authorized",
+            "package_publication_authorized",
+            "tag_creation_authorized",
+            "hardware_ci_authorized",
+        ):
+            self.assertFalse(interlock[key])
         plan = json.loads(protection_plan(self.governance))
-        self.assertFalse(plan["apply_authorized"])
+        self.assertTrue(plan["apply_authorized"])
+        self.assertEqual(plan["ruleset"]["bypass_actors"], [])
         self.assertEqual(
             set(plan["excluded_components"]),
-            {"pages-deployment", "release-tags", "release-publication", "hardware-ci"},
+            {
+                "package-publication",
+                "release-tags",
+                "release-publication",
+                "hardware-ci",
+            },
         )
 
     def test_every_workflow_dependency_is_an_exact_reviewed_commit(self) -> None:
@@ -69,6 +90,7 @@ class GitHubGovernanceTests(unittest.TestCase):
             "documentation": documentation_workflow(self.governance),
             "codeql": codeql_workflow(self.governance),
             "dependency-review": dependency_review_workflow(self.governance),
+            "pages": pages_workflow(self.governance),
         }
         allowed = {action.commit for action in self.governance.actions}
         observed: set[str] = set()
@@ -85,8 +107,14 @@ class GitHubGovernanceTests(unittest.TestCase):
                 self.assertNotIn("pull_request_target", text)
                 self.assertNotIn("--privileged", text)
                 self.assertNotIn("--device", text)
-                self.assertNotIn("deploy-pages", text)
-                self.assertNotIn("upload-pages-artifact", text)
+                if name == "pages":
+                    self.assertIn("deploy-pages", text)
+                    self.assertIn("upload-pages-artifact", text)
+                    self.assertIn("github-pages", text)
+                    self.assertIn("Product release authority | Locked", text)
+                else:
+                    self.assertNotIn("deploy-pages", text)
+                    self.assertNotIn("upload-pages-artifact", text)
         self.assertEqual(observed, allowed)
 
     def test_software_workflows_use_bounded_container_runner_and_no_release_trigger(self) -> None:
@@ -116,6 +144,7 @@ class GitHubGovernanceTests(unittest.TestCase):
                 "CodeQL / Analyze (c-cpp)",
                 "CodeQL / Analyze (python)",
                 "Dependency review / Dependency review",
+                "Documentation / Portal contracts",
             },
         )
 
@@ -185,17 +214,25 @@ class GitHubGovernanceTests(unittest.TestCase):
     def test_issue_forms_request_bounded_private_data_free_context(self) -> None:
         bug = bug_report(self.governance)
         hardware = hardware_qualification(self.governance)
+        research = hardware_research(self.governance)
+        documentation = documentation_report(self.governance)
+        feature = feature_request(self.governance)
         self.assertIn("support-bundle --preview", bug)
         self.assertIn("Never attach hardware serials", bug)
         self.assertIn("does not authorize receiver queries", hardware)
         self.assertIn("No serial, stable host identifier", hardware)
         self.assertIn("support-bundle --preview", hardware)
         self.assertIn("Doctor reference", hardware)
+        self.assertIn("research identifies candidates", research.lower())
+        self.assertIn("canonical source", documentation.lower())
+        self.assertIn("universal", feature.lower())
 
-    def test_collaboration_security_and_service_plans_are_complete_but_unapplied(self) -> None:
+    def test_collaboration_security_and_service_plans_are_complete_and_bounded(self) -> None:
         plan = json.loads(experience_plan(self.governance))
-        self.assertFalse(plan["apply_authorized"])
-        self.assertFalse(plan["publication_authorized"])
+        self.assertTrue(plan["apply_authorized"])
+        self.assertTrue(plan["source_repository_authorized"])
+        self.assertTrue(plan["pages_deployment_authorized"])
+        self.assertFalse(plan["product_publication_authorized"])
         self.assertEqual(plan["external_apps_installed"], [])
         self.assertEqual(
             {category["id"] for category in plan["discussions"]["categories"]},
@@ -214,6 +251,10 @@ class GitHubGovernanceTests(unittest.TestCase):
             {
                 "private_vulnerability_reporting",
                 "dependency_graph",
+                "dependabot_security_updates",
+                "secret_scanning",
+                "secret_scanning_push_protection",
+                "code_scanning",
                 "source_sbom",
                 "artifact_attestations",
             },
@@ -226,7 +267,7 @@ class GitHubGovernanceTests(unittest.TestCase):
 
     def test_workflow_actions_are_part_of_the_source_sbom(self) -> None:
         inventory = load_dependency_inventory(ROOT)
-        self.assertEqual(len(inventory.workflow_actions), 7)
+        self.assertEqual(len(inventory.workflow_actions), 10)
         document = json.loads(spdx_json(inventory))
         names = {package["name"] for package in document["packages"]}
         self.assertTrue(

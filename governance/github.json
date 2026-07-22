@@ -1,22 +1,31 @@
 {
   "$schema": "../schemas/github-governance.schema.json",
-  "schema": "hyperflux-github-governance-v2",
+  "schema": "hyperflux-github-governance-v3",
   "repository": {
     "owner": "offalexjackson777-stack",
     "name": "hyperflux-next",
     "default_branch": "main",
-    "remote_state": "not-created",
-    "planned_pages_source": "github-actions"
+    "remote_state": "public-pre-release",
+    "visibility": "public",
+    "description": "Evidence-bound Linux support for devices paired through Razer HyperFlux V2. Unreleased.",
+    "homepage": "https://offalexjackson777-stack.github.io/hyperflux-next/",
+    "social_preview_asset": "docs/assets/social-preview.png",
+    "topics": ["cpp", "device-driver", "evidence-based", "hardware-support", "hid", "hyperflux", "kernel-module", "linux", "openrazer", "openrgb", "polychromatic", "python", "razer", "rgb-lighting", "rust"],
+    "pages_source": "github-actions"
   },
   "publication_interlock": {
-    "publication_authorized": false,
-    "pages_deployment_authorized": false,
+    "source_repository_authorized": true,
+    "pages_deployment_authorized": true,
+    "collaboration_features_authorized": true,
+    "product_publication_authorized": false,
     "release_workflows_authorized": false,
+    "package_publication_authorized": false,
+    "tag_creation_authorized": false,
     "hardware_ci_authorized": false
   },
   "collaboration": {
     "discussions": {
-      "apply_authorized": false,
+      "apply_authorized": true,
       "categories": [
         {"id": "announcements", "name": "Announcements", "format": "announcement", "description": "Maintainer updates, verified milestones, and release-boundary changes."},
         {"id": "hardware-qualification", "name": "Hardware qualification", "format": "discussion", "description": "Public planning around candidate devices and bounded evidence needs."},
@@ -25,7 +34,7 @@
       ]
     },
     "project": {
-      "apply_authorized": false,
+      "apply_authorized": true,
       "title": "HyperFlux Next Delivery",
       "views": [
         {"id": "all-work", "name": "All work", "layout": "table", "group_by": "none", "date_field": "none"},
@@ -43,9 +52,13 @@
     }
   },
   "security_posture": {
-    "private_vulnerability_reporting": {"state": "planned", "activation_boundary": "after-private-remote-authorization", "data_boundary": "GitHub private security advisories; never public issue intake"},
-    "dependency_graph": {"state": "planned", "activation_boundary": "after-private-remote-authorization", "data_boundary": "Repository dependency metadata only"},
-    "source_sbom": {"state": "implemented-local", "activation_boundary": "current-generation", "data_boundary": "Generated SPDX inventory from reviewed manifests and workflow pins"},
+    "private_vulnerability_reporting": {"state": "required-enabled", "activation_boundary": "public-source-pre-release", "data_boundary": "GitHub private security advisories; never public issue intake"},
+    "dependency_graph": {"state": "required-enabled", "activation_boundary": "public-source-pre-release", "data_boundary": "Repository dependency metadata only"},
+    "dependabot_security_updates": {"state": "required-enabled", "activation_boundary": "public-source-pre-release", "data_boundary": "GitHub dependency alerts and update pull requests"},
+    "secret_scanning": {"state": "required-when-available", "activation_boundary": "public-source-pre-release", "data_boundary": "Repository content scanned by GitHub; no hardware diagnostics"},
+    "secret_scanning_push_protection": {"state": "required-when-available", "activation_boundary": "public-source-pre-release", "data_boundary": "Git pushes checked for supported secret patterns"},
+    "code_scanning": {"state": "required-enabled", "activation_boundary": "public-source-pre-release", "data_boundary": "Source analysis uploaded by the pinned CodeQL workflow"},
+    "source_sbom": {"state": "implemented", "activation_boundary": "current-generation", "data_boundary": "Generated SPDX inventory from reviewed manifests and workflow pins"},
     "artifact_attestations": {"state": "deferred", "activation_boundary": "after-release-workflow-authorization", "data_boundary": "Release artifacts and provenance only; no hardware evidence or private diagnostics"}
   },
   "service_evaluations": [
@@ -65,7 +78,7 @@
       "decision": "preferred-native",
       "benefits": ["Native grouped updates for Actions, Cargo, and Python manifests", "No separately hosted bot token"],
       "required_permissions": ["contents: read", "pull requests: write"],
-      "privacy": "Uses GitHub-native dependency metadata within the future repository account.",
+      "privacy": "Uses GitHub-native dependency metadata within the repository account.",
       "maintenance_cost": "low",
       "rationale": "Already modeled with bounded weekly groups and fewer moving parts than an external dependency bot."
     },
@@ -77,7 +90,7 @@
       "required_permissions": ["contents: read", "security-events: write", "id-token: write"],
       "privacy": "Publishes or uploads repository posture metadata and is most useful after the project has a stable remote history.",
       "maintenance_cost": "medium",
-      "rationale": "Reconsider after remote creation and publication policy are authorized; do not add write permissions during local reconstruction."
+      "rationale": "Reconsider after the public repository has stable history; native controls already cover the current security boundary."
     },
     {
       "id": "renovate",
@@ -102,7 +115,7 @@
         "owners": ["@offalexjackson777-stack"]
       },
       {
-        "paths": ["/assurance/**", "/governance/**", "/SECURITY.md"],
+        "paths": ["/assurance/**", "/governance/**", "/SECURITY.md", "/SUPPORT.md", "/CODE_OF_CONDUCT.md"],
         "owners": ["@offalexjackson777-stack"]
       },
       {
@@ -121,10 +134,13 @@
     "dismiss_stale_reviews": true,
     "require_code_owner_reviews": true,
     "require_conversation_resolution": true,
+    "prevent_deletions": true,
+    "prevent_force_pushes": true,
     "required_checks": [
       "CodeQL / Analyze (c-cpp)",
       "CodeQL / Analyze (python)",
       "Dependency review / Dependency review",
+      "Documentation / Portal contracts",
       "Verification / Fast software"
     ]
   },
@@ -144,8 +160,11 @@
     {"name": "evidence: lifecycle", "color": "f9d0c4", "description": "Requires package, restart, reconnect, suspend, or recovery evidence"},
     {"name": "evidence: software", "color": "0e8a16", "description": "Can be established entirely by bounded software verification"},
     {"name": "kind: bug", "color": "d73a4a", "description": "Confirmed or suspected incorrect behavior"},
+    {"name": "kind: documentation", "color": "0075ca", "description": "Documentation content, navigation, or generated portal issue"},
     {"name": "kind: feature", "color": "a2eeef", "description": "New capability or workflow proposal"},
-    {"name": "kind: qualification", "color": "ffd33d", "description": "Candidate-device or physical-evidence qualification work"}
+    {"name": "kind: hardware-research", "color": "c2e0c6", "description": "Public device research without qualification authority"},
+    {"name": "kind: qualification", "color": "ffd33d", "description": "Candidate-device or physical-evidence qualification work"},
+    {"name": "skip-changelog", "color": "ededed", "description": "Exclude this change from generated release notes"}
   ],
   "automation": {
     "runner": "ubuntu-24.04",
@@ -154,7 +173,7 @@
     "full_verification_cron": "17 3 * * 1",
     "job_summary": {
       "enabled": true,
-      "sections": ["source-revision", "selection", "failures", "timings", "generated-freshness", "release-gate-impact"]
+      "sections": ["source-revision", "affected-domains", "selection", "failures", "timings", "generated-freshness", "performance-budgets", "release-gate-impact"]
     },
     "actions": [
       {
@@ -186,10 +205,24 @@
         "license_expression": "MIT"
       },
       {
+        "id": "configure-pages",
+        "repository": "actions/configure-pages",
+        "version": "v6.0.0",
+        "commit": "45bfe0192ca1faeb007ade9deae92b16b8254a0d",
+        "license_expression": "MIT"
+      },
+      {
         "id": "dependency-review",
         "repository": "actions/dependency-review-action",
         "version": "v5.0.0",
         "commit": "a1d282b36b6f3519aa1f3fc636f609c47dddb294",
+        "license_expression": "MIT"
+      },
+      {
+        "id": "deploy-pages",
+        "repository": "actions/deploy-pages",
+        "version": "v5.0.0",
+        "commit": "cd2ce8fcbc39b97be8ca5fce6e763baed58fa128",
         "license_expression": "MIT"
       },
       {
@@ -204,6 +237,13 @@
         "repository": "actions/upload-artifact",
         "version": "v7.0.1",
         "commit": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+        "license_expression": "MIT"
+      },
+      {
+        "id": "upload-pages-artifact",
+        "repository": "actions/upload-pages-artifact",
+        "version": "v5.0.0",
+        "commit": "fc324d3547104276b827a68afc52ff2a11cc49c9",
         "license_expression": "MIT"
       }
     ]

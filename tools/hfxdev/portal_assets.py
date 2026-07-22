@@ -122,6 +122,7 @@ main { width: min(1380px, 100%); min-width: 0; padding: 38px clamp(24px, 4%, 64p
 .status-band strong { display: block; color: var(--teal); font-size: 24px; }
 .status-band span { color: var(--muted); }
 .notice { margin: 24px 0; padding: 14px 16px; border-left: 3px solid var(--yellow); background: var(--surface); }
+.source-note { margin: 18px 0 28px; padding: 10px 12px; border: 1px solid var(--line); border-left: 3px solid var(--teal); background: var(--surface); color: var(--muted); font-size: 14px; }
 .document { overflow-wrap: anywhere; }
 .document h2 { margin-top: 38px; padding-bottom: 8px; border-bottom: 1px solid var(--line); font-size: 23px; }
 .document h3 { margin-top: 28px; font-size: 18px; }

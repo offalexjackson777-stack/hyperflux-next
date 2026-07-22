@@ -19,6 +19,7 @@ import markdown
 
 from .assurance import load_design_coverage
 from .atlas import load_repository_atlas
+from .governance import load_github_governance
 from .integrations import compiled_catalog as compiled_integration_catalog
 from .knowledge import compiled_knowledge_catalog
 from .model import ModelError, load_json, require_unique, sha256_file
@@ -139,8 +140,8 @@ def load_portal_config(root: Path) -> PortalConfig:
     if value["$schema"] != "../schemas/documentation-portal.schema.json":
         raise ModelError("documentation portal has a non-canonical schema reference")
     site = _exact(value["site"], SITE_KEYS, "documentation portal site")
-    if site["title"] != "HyperFlux Next" or site["publication_state"] != "local-artifact-only":
-        raise ModelError("documentation portal must remain a local unpublished HyperFlux artifact")
+    if site["title"] != "HyperFlux Next" or site["publication_state"] != "public-pages-pre-release":
+        raise ModelError("documentation portal must remain the reviewed public pre-release surface")
 
     raw_audiences = value["audiences"]
     if not isinstance(raw_audiences, list) or len(raw_audiences) != 3:
@@ -492,7 +493,7 @@ def _shell(
       <div id="search-results" class="search-results" hidden></div>
     </div>
     <div class="header-tools">
-      <span class="phase">Local reconstruction</span>
+      <span class="phase">Public pre-release</span>
       <div class="theme-switch" role="group" aria-label="Color theme">
         <button type="button" data-theme-choice="system" aria-pressed="true" title="Follow system color theme">System</button>
         <button type="button" data-theme-choice="light" aria-pressed="false" title="Use light color theme">Light</button>
@@ -509,7 +510,7 @@ def _shell(
     <main id="main-content" tabindex="-1">{content}</main>
   </div>
   <footer>
-    <span>Schema-first. Evidence-bound. Publication locked.</span>
+    <span>Public source. Evidence-bound. Product unreleased.</span>
     <a href="{escape(_relative_url(current_url, "maintainers/release-gates.html"))}">Release gates</a>
   </footer>
   <script id="search-index" type="application/json">{search_json}</script>
@@ -544,8 +545,8 @@ def _home_content(
   <p class="breadcrumb">Repository workbench</p>
   <h1>HyperFlux Next</h1>
   <p class="lede">{escape(config.description)}</p>
-  <div class="phase-band"><strong>Local architectural reconstruction</strong><span>Software foundation implemented</span><span>Hardware qualification pending</span><span>Publication locked</span></div>
-  <div class="notice"><strong>Truthful by construction.</strong> This verified local artifact exposes the repository's current evidence and boundaries; it is not a released driver or public support promise.</div>
+  <div class="phase-band"><strong>Public source pre-release</strong><span>Software foundation implemented</span><span>Hardware qualification pending</span><span>Product release locked</span></div>
+  <div class="notice"><strong>Truthful by construction.</strong> This generated public portal exposes the repository's current evidence and boundaries; it is not a released driver or supported-product promise.</div>
   <img class="system-map" src="assets/system-map.svg" alt="Applications flow through the SDK, bridge, kernel, and receiver">
 </section>
 <nav class="workbench-links" aria-label="Repository workbenches"><a href="devices/index.html"><strong>Device Lab</strong><span>Compatibility facts, capability matrices, and provenance</span></a><a href="atlas/index.html"><strong>Repository Atlas</strong><span>Ownership, dependencies, lineage, and change impact</span></a><a href="state/index.html"><strong>Repository State</strong><span>Release gates, migration decisions, and verification budgets</span></a></nav>
@@ -653,6 +654,7 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
     output.mkdir(parents=True, exist_ok=True)
 
     config = load_portal_config(root)
+    governance = load_github_governance(root)
     knowledge = compiled_knowledge_catalog(root)
     device_lab = render_device_lab(knowledge)
     repository_atlas = load_repository_atlas(root)
@@ -736,10 +738,27 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
         )
         body = re.sub(r"<h1(?: [^>]*)?>.*?</h1>", "", body, count=1, flags=re.DOTALL)
         audience = next(item for item in config.audiences if item.id == page.audience_id)
+        source_url = (
+            f"https://github.com/{governance.owner}/{governance.repository}/"
+            f"{'edit' if not page.source.startswith('docs/generated/') else 'blob'}/"
+            f"{governance.default_branch}/{page.source}"
+        )
+        if page.source.startswith("docs/generated/"):
+            source_note = (
+                f'<p class="source-note"><strong>Generated projection.</strong> '
+                f'<a href="{escape(source_url)}">View generated Markdown</a> or use the '
+                f'<a href="{escape(_relative_url(page.url, "atlas/index.html"))}">Repository Atlas</a> '
+                "to find its canonical authority.</p>"
+            )
+        else:
+            source_note = (
+                f'<p class="source-note"><strong>Canonical source.</strong> '
+                f'<a href="{escape(source_url)}">Edit this page on GitHub</a>.</p>'
+            )
         content = (
             f'<p class="breadcrumb">{escape(audience.title)} / {escape(page.title)}</p>'
             f'<article class="document"><h1>{escape(page.title)}</h1>'
-            f'<p class="lede">{escape(page.summary)}</p>{body}</article>'
+            f'<p class="lede">{escape(page.summary)}</p>{source_note}{body}</article>'
         )
         destination = output / page.url
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -839,6 +858,7 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
         "generated/integrations/catalog.json",
         "generated/knowledge/catalog.json",
         "generated/profiles/catalog.json",
+        "governance/github.json",
         "tools/hfxdev/portal.py",
         "tools/hfxdev/portal_assets.py",
         "tools/hfxdev/portal_device_lab.py",
@@ -859,8 +879,9 @@ def build_portal(root: Path, output: Path) -> PortalBuild:
     ).hexdigest()
     files = _file_inventory(output)
     manifest_value = {
-        "schema": "hyperflux-documentation-portal-build-v1",
-        "publication_authorized": False,
+        "schema": "hyperflux-documentation-portal-build-v2",
+        "source_publication_state": config.publication_state,
+        "product_publication_authorized": False,
         "external_runtime_dependencies": False,
         "source_tree_sha256": source_digest,
         "materials": materials,
@@ -917,16 +938,21 @@ def verify_portal(root: Path, site: Path) -> dict[str, Any]:
     value = load_json(manifest_path)
     expected_keys = {
         "schema",
-        "publication_authorized",
+        "source_publication_state",
+        "product_publication_authorized",
         "external_runtime_dependencies",
         "source_tree_sha256",
         "materials",
         "pages",
         "files",
     }
-    if set(value) != expected_keys or value["schema"] != "hyperflux-documentation-portal-build-v1":
+    if set(value) != expected_keys or value["schema"] != "hyperflux-documentation-portal-build-v2":
         raise ModelError("portal build manifest is malformed")
-    if value["publication_authorized"] is not False or value["external_runtime_dependencies"] is not False:
+    if (
+        value["source_publication_state"] != "public-pages-pre-release"
+        or value["product_publication_authorized"] is not False
+        or value["external_runtime_dependencies"] is not False
+    ):
         raise ModelError("portal build violates its publication or runtime boundary")
     expected_files = _file_inventory(site)
     if value["files"] != expected_files:

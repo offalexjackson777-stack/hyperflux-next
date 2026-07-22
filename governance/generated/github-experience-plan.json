@@ -1,7 +1,7 @@
 {
-  "apply_authorized": false,
+  "apply_authorized": true,
   "discussions": {
-    "apply_authorized": false,
+    "apply_authorized": true,
     "categories": [
       {
         "description": "Maintainer updates, verified milestones, and release-boundary changes.",
@@ -30,8 +30,10 @@
     ]
   },
   "external_apps_installed": [],
+  "pages_deployment_authorized": true,
+  "product_publication_authorized": false,
   "project": {
-    "apply_authorized": false,
+    "apply_authorized": true,
     "fields": [
       {
         "data_type": "single-select",
@@ -135,9 +137,31 @@
       }
     ]
   },
-  "publication_authorized": false,
-  "remote_state": "not-created",
+  "remote_state": "public-pre-release",
   "repository": "offalexjackson777-stack/hyperflux-next",
+  "repository_metadata": {
+    "description": "Evidence-bound Linux support for devices paired through Razer HyperFlux V2. Unreleased.",
+    "homepage": "https://offalexjackson777-stack.github.io/hyperflux-next/",
+    "social_preview_asset": "docs/assets/social-preview.png",
+    "topics": [
+      "cpp",
+      "device-driver",
+      "evidence-based",
+      "hardware-support",
+      "hid",
+      "hyperflux",
+      "kernel-module",
+      "linux",
+      "openrazer",
+      "openrgb",
+      "polychromatic",
+      "python",
+      "razer",
+      "rgb-lighting",
+      "rust"
+    ],
+    "visibility": "public"
+  },
   "schema": "hyperflux-github-experience-plan-v1",
   "security_posture": {
     "artifact_attestations": {
@@ -145,20 +169,40 @@
       "data_boundary": "Release artifacts and provenance only; no hardware evidence or private diagnostics",
       "state": "deferred"
     },
+    "code_scanning": {
+      "activation_boundary": "public-source-pre-release",
+      "data_boundary": "Source analysis uploaded by the pinned CodeQL workflow",
+      "state": "required-enabled"
+    },
+    "dependabot_security_updates": {
+      "activation_boundary": "public-source-pre-release",
+      "data_boundary": "GitHub dependency alerts and update pull requests",
+      "state": "required-enabled"
+    },
     "dependency_graph": {
-      "activation_boundary": "after-private-remote-authorization",
+      "activation_boundary": "public-source-pre-release",
       "data_boundary": "Repository dependency metadata only",
-      "state": "planned"
+      "state": "required-enabled"
     },
     "private_vulnerability_reporting": {
-      "activation_boundary": "after-private-remote-authorization",
+      "activation_boundary": "public-source-pre-release",
       "data_boundary": "GitHub private security advisories; never public issue intake",
-      "state": "planned"
+      "state": "required-enabled"
+    },
+    "secret_scanning": {
+      "activation_boundary": "public-source-pre-release",
+      "data_boundary": "Repository content scanned by GitHub; no hardware diagnostics",
+      "state": "required-when-available"
+    },
+    "secret_scanning_push_protection": {
+      "activation_boundary": "public-source-pre-release",
+      "data_boundary": "Git pushes checked for supported secret patterns",
+      "state": "required-when-available"
     },
     "source_sbom": {
       "activation_boundary": "current-generation",
       "data_boundary": "Generated SPDX inventory from reviewed manifests and workflow pins",
-      "state": "implemented-local"
+      "state": "implemented"
     }
   },
   "service_evaluations": [
@@ -186,7 +230,7 @@
       "decision": "preferred-native",
       "id": "dependabot",
       "maintenance_cost": "low",
-      "privacy": "Uses GitHub-native dependency metadata within the future repository account.",
+      "privacy": "Uses GitHub-native dependency metadata within the repository account.",
       "rationale": "Already modeled with bounded weekly groups and fewer moving parts than an external dependency bot.",
       "required_permissions": [
         "contents: read",
@@ -203,7 +247,7 @@
       "id": "openssf-scorecard",
       "maintenance_cost": "medium",
       "privacy": "Publishes or uploads repository posture metadata and is most useful after the project has a stable remote history.",
-      "rationale": "Reconsider after remote creation and publication policy are authorized; do not add write permissions during local reconstruction.",
+      "rationale": "Reconsider after the public repository has stable history; native controls already cover the current security boundary.",
       "required_permissions": [
         "contents: read",
         "security-events: write",
@@ -228,5 +272,6 @@
       ],
       "service": "Renovate"
     }
-  ]
+  ],
+  "source_repository_authorized": true
 }

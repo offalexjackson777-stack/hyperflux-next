@@ -77,8 +77,8 @@ def _check_constitution(constitution: dict) -> None:
     require_unique(invariant_ids, "architecture invariant id")
     component_ids = [entry["id"] for entry in constitution["components"]]
     require_unique(component_ids, "architecture component id")
-    if constitution["publication_interlock"].get("remote_repository_created") is not False:
-        raise ModelError("publication interlock must keep remote repository creation false")
+    if constitution["publication_interlock"].get("remote_repository_created") is not True:
+        raise ModelError("public-source phase requires the remote repository authority")
     if constitution["publication_interlock"].get("publication_authorized") is not False:
         raise ModelError("publication interlock must keep publication authorization false")
 

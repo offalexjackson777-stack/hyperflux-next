@@ -1,5 +1,5 @@
 {
-  "apply_authorized": false,
+  "apply_authorized": true,
   "labels": [
     {
       "color": "0e8a16",
@@ -77,17 +77,32 @@
       "name": "kind: bug"
     },
     {
+      "color": "0075ca",
+      "description": "Documentation content, navigation, or generated portal issue",
+      "name": "kind: documentation"
+    },
+    {
       "color": "a2eeef",
       "description": "New capability or workflow proposal",
       "name": "kind: feature"
     },
     {
+      "color": "c2e0c6",
+      "description": "Public device research without qualification authority",
+      "name": "kind: hardware-research"
+    },
+    {
       "color": "ffd33d",
       "description": "Candidate-device or physical-evidence qualification work",
       "name": "kind: qualification"
+    },
+    {
+      "color": "ededed",
+      "description": "Exclude this change from generated release notes",
+      "name": "skip-changelog"
     }
   ],
-  "remote_state": "not-created",
+  "remote_state": "public-pre-release",
   "repository": "offalexjackson777-stack/hyperflux-next",
   "schema": "hyperflux-github-label-plan-v1"
 }

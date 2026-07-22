@@ -15,7 +15,7 @@
       "properties": {
         "title": {"const": "HyperFlux Next"},
         "description": {"type": "string", "minLength": 1, "maxLength": 180},
-        "publication_state": {"const": "local-artifact-only"}
+        "publication_state": {"const": "public-pages-pre-release"}
       }
     },
     "audiences": {

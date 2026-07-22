@@ -187,4 +187,4 @@ Evidence:
 
 Remaining:
 
-- Publication remains unauthorized. Do not create a release, tag, or public repository claim from software evidence alone.
+- Product publication remains unauthorized. Do not create a release, tag, package channel, or supported-product claim from software evidence alone.

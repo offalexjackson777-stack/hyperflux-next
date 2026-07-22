@@ -47,7 +47,7 @@ class FoundationTests(unittest.TestCase):
     def test_publication_is_explicitly_locked(self) -> None:
         constitution, _, _ = load_foundation(ROOT)
         interlock = constitution["publication_interlock"]
-        self.assertFalse(interlock["remote_repository_created"])
+        self.assertTrue(interlock["remote_repository_created"])
         self.assertFalse(interlock["publication_authorized"])
         self.assertIn("HFX-GATE-PUBLICATION-DECISION", interlock["required_gate_ids"])
 

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="174" height="24" role="img" aria-label="license: GPL-2.0-only">
+  <title>license: GPL-2.0-only</title>
+  <rect width="72" height="24" fill="#252d35"/>
+  <rect x="72" width="102" height="24" fill="#287d6c"/>
+  <g fill="#edf3f2" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="11" text-anchor="middle">
+    <text x="36" y="16">license</text>
+    <text x="123" y="16">GPL-2.0-only</text>
+  </g>
+</svg>

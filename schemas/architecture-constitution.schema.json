@@ -49,7 +49,7 @@
       "required": ["local_first", "remote_repository_created", "publication_authorized", "required_gate_ids"],
       "properties": {
         "local_first": {"const": true},
-        "remote_repository_created": {"const": false},
+        "remote_repository_created": {"const": true},
         "publication_authorized": {"const": false},
         "required_gate_ids": {
           "type": "array",
@@ -61,4 +61,3 @@
     }
   }
 }
-

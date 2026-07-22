@@ -1,17 +1,20 @@
 {
-  "apply_authorized": false,
+  "apply_authorized": true,
   "default_branch": "main",
   "excluded_components": [
-    "pages-deployment",
+    "package-publication",
     "release-tags",
     "release-publication",
     "hardware-ci"
   ],
-  "remote_state": "not-created",
+  "remote_state": "public-pre-release",
   "repository": "offalexjackson777-stack/hyperflux-next",
   "ruleset": {
+    "bypass_actors": [],
     "dismiss_stale_reviews": true,
-    "enforcement": "active-after-explicit-remote-authorization",
+    "enforcement": "active",
+    "prevent_deletions": true,
+    "prevent_force_pushes": true,
     "require_code_owner_reviews": true,
     "require_conversation_resolution": true,
     "require_linear_history": true,
@@ -20,6 +23,7 @@
       "CodeQL / Analyze (c-cpp)",
       "CodeQL / Analyze (python)",
       "Dependency review / Dependency review",
+      "Documentation / Portal contracts",
       "Verification / Fast software"
     ]
   },

@@ -20,7 +20,8 @@ class RepositoryStateTests(unittest.TestCase):
         self.assertEqual(page.content.count("data-gate"), 10)
         self.assertEqual(page.content.count("data-migration"), 13)
         self.assertEqual(page.content.count("data-verification"), 30)
-        self.assertIn("Publication locked", page.content)
+        self.assertIn("Product unreleased", page.content)
+        self.assertIn('data-state="publication-locked"', page.content)
         self.assertIn("budgets rather than observed run times", page.content)
 
         marker = '<script id="repository-state-data" type="application/json">'

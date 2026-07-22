@@ -98,7 +98,7 @@
       "status": "publication-locked",
       "criteria": ["Every preceding release-blocking gate is satisfied.", "A human publication decision explicitly authorizes the chosen channel and artifacts."],
       "evidence": ["architecture/constitution.json", "assurance/release-gates.json"],
-      "remaining": ["Publication remains unauthorized. Do not create a release, tag, or public repository claim from software evidence alone."],
+      "remaining": ["Product publication remains unauthorized. Do not create a release, tag, package channel, or supported-product claim from software evidence alone."],
       "physical_evidence_required": true,
       "publication_authorization_required": true
     }

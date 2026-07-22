@@ -13,8 +13,8 @@ Release signing and remote attestations remain unavailable until publication is 
 - Distribution-provided Python packages: 3
 - Vendored source packages: 1
 - Pinned application upstreams: 3
-- Immutable workflow actions: 7
-- Authority SHA-256: `42f1d29810f7e0c64634199cd1fdf11b3f1edd68c116bc8b163629c40c24d6c6`
+- Immutable workflow actions: 10
+- Authority SHA-256: `faaa98e25ef85b7d90905bad78e8bf03f10a9969ef078e1fc05a089ec2a283c8`
 
 ## License Policy
 
@@ -45,6 +45,9 @@ It describes source and build dependencies; a future authorized release must add
 | `actions/cache` | `v6.1.0` | `55cc8345863c7cc4c66a329aec7e433d2d1c52a9` | `MIT` |
 | `actions/checkout` | `v7.0.0` | `9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0` | `MIT` |
 | `github/codeql-action` | `v4.37.1` | `7188fc363630916deb702c7fdcf4e481b751f97a` | `MIT` |
+| `actions/configure-pages` | `v6.0.0` | `45bfe0192ca1faeb007ade9deae92b16b8254a0d` | `MIT` |
 | `actions/dependency-review-action` | `v5.0.0` | `a1d282b36b6f3519aa1f3fc636f609c47dddb294` | `MIT` |
+| `actions/deploy-pages` | `v5.0.0` | `cd2ce8fcbc39b97be8ca5fce6e763baed58fa128` | `MIT` |
 | `docker/setup-buildx-action` | `v4.2.0` | `bb05f3f5519dd87d3ba754cc423b652a5edd6d2c` | `Apache-2.0` |
 | `actions/upload-artifact` | `v7.0.1` | `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a` | `MIT` |
+| `actions/upload-pages-artifact` | `v5.0.0` | `fc324d3547104276b827a68afc52ff2a11cc49c9` | `MIT` |

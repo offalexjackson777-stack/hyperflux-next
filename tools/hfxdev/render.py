@@ -20,20 +20,29 @@ from .generators.governance import (
     codeql_workflow as github_codeql_workflow,
     dependency_review_workflow as github_dependency_review_workflow,
     dependabot as github_dependabot,
+    documentation_report as github_documentation_report,
     documentation_workflow as github_documentation_workflow,
     experience_plan as github_experience_plan,
     feature_request as github_feature_request,
     full_verification_workflow as github_full_verification_workflow,
+    hardware_research as github_hardware_research,
     hardware_qualification as github_hardware_qualification,
     issue_config as github_issue_config,
     labels_plan as github_labels_plan,
     markdown as github_governance_markdown,
+    pages_workflow as github_pages_workflow,
     protection_plan as github_protection_plan,
     pull_request_template as github_pull_request_template,
+    release_notes as github_release_notes,
     verification_workflow as github_verification_workflow,
 )
 from .generators.performance import performance_budgets_markdown
 from .generators.release import release_gates_markdown
+from .generators.readme import (
+    development_badge as readme_development_badge,
+    license_badge as readme_license_badge,
+    markdown as readme_markdown,
+)
 from .generators.social_preview import render_social_preview
 from .generators.supply_chain import spdx_json, supply_chain_markdown
 from .generators.domain import (
@@ -247,6 +256,11 @@ def rendered_files(root: Path) -> dict[Path, str]:
     )
     repository_atlas = load_repository_atlas(root)
     files = {
+        root / "README.md": readme_markdown(
+            github_governance, release_gates, knowledge, repository_atlas
+        ),
+        root / "docs" / "assets" / "badge-state.svg": readme_development_badge(),
+        root / "docs" / "assets" / "badge-license.svg": readme_license_badge(),
         root / ".devcontainer" / "Containerfile": development_containerfile(
             development_environment
         ),
@@ -267,13 +281,20 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / ".github" / "ISSUE_TEMPLATE" / "bug_report.yml": github_bug_report(
             github_governance
         ),
-        root / ".github" / "ISSUE_TEMPLATE" / "hardware_qualification.yml": github_hardware_qualification(
+        root / ".github" / "ISSUE_TEMPLATE" / "device_qualification.yml": github_hardware_qualification(
+            github_governance
+        ),
+        root / ".github" / "ISSUE_TEMPLATE" / "hardware_research.yml": github_hardware_research(
+            github_governance
+        ),
+        root / ".github" / "ISSUE_TEMPLATE" / "documentation.yml": github_documentation_report(
             github_governance
         ),
         root / ".github" / "ISSUE_TEMPLATE" / "feature_request.yml": github_feature_request(
             github_governance
         ),
         root / ".github" / "dependabot.yml": github_dependabot(github_governance),
+        root / ".github" / "release.yml": github_release_notes(github_governance),
         root / ".github" / "workflows" / "verification.yml": github_verification_workflow(
             github_governance
         ),
@@ -281,6 +302,9 @@ def rendered_files(root: Path) -> dict[Path, str]:
             github_governance
         ),
         root / ".github" / "workflows" / "documentation.yml": github_documentation_workflow(
+            github_governance
+        ),
+        root / ".github" / "workflows" / "pages.yml": github_pages_workflow(
             github_governance
         ),
         root / ".github" / "workflows" / "codeql.yml": github_codeql_workflow(

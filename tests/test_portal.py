@@ -24,10 +24,10 @@ class DocumentationPortalTests(unittest.TestCase):
             [audience.id for audience in config.audiences],
             ["users", "developers", "maintainers"],
         )
-        self.assertEqual(len(config.pages), 21)
+        self.assertEqual(len(config.pages), 23)
         self.assertEqual(len({page.url for page in config.pages}), len(config.pages))
         self.assertEqual(len({page.source for page in config.pages}), len(config.pages))
-        self.assertEqual(config.publication_state, "local-artifact-only")
+        self.assertEqual(config.publication_state, "public-pages-pre-release")
 
     def test_portal_build_is_deterministic_offline_and_accessible(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -38,9 +38,13 @@ class DocumentationPortalTests(unittest.TestCase):
             first_manifest = json.loads(first_result.manifest.read_text(encoding="utf-8"))
             second_manifest = json.loads(second_result.manifest.read_text(encoding="utf-8"))
             self.assertEqual(first_manifest, second_manifest)
-            self.assertFalse(first_manifest["publication_authorized"])
+            self.assertEqual(
+                first_manifest["source_publication_state"],
+                "public-pages-pre-release",
+            )
+            self.assertFalse(first_manifest["product_publication_authorized"])
             self.assertFalse(first_manifest["external_runtime_dependencies"])
-            self.assertEqual(first_result.pages, 25)
+            self.assertEqual(first_result.pages, 27)
             self.assertEqual(verify_portal(ROOT, first)["source_tree_sha256"], first_manifest["source_tree_sha256"])
             index = (first / "index.html").read_text(encoding="utf-8")
             self.assertIn('id="main-content"', index)
