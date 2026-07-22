@@ -90,7 +90,7 @@ The category plan is authorized only with `SUPPORT.md`, the code of conduct, pri
 
 ## Project Plan
 
-Planned project: **HyperFlux Next Delivery**
+Planned project: [**HyperFlux Next Delivery**](https://github.com/users/offalexjackson777-stack/projects/1)
 
 | View | Layout | Grouping | Date field |
 | --- | --- | --- | --- |

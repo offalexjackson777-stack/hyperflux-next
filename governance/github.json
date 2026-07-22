@@ -35,6 +35,7 @@
     },
     "project": {
       "apply_authorized": true,
+      "number": 1,
       "title": "HyperFlux Next Delivery",
       "views": [
         {"id": "all-work", "name": "All work", "layout": "table", "group_by": "none", "date_field": "none"},
