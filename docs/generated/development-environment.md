@@ -39,6 +39,8 @@ Then run either software lane without network access:
 
 Container construction may read the immutable Arch snapshot and install the exact Rust toolchain. Upstream preparation may fetch only the cataloged repositories and checks out exact commits. Verification never fetches dependencies or upstream state; missing, dirty, or mismatched checkouts fail with a remediation command.
 
+Archive package retrieval permits up to 3 attempts. Low-speed transfer expiry is disabled. Package signatures and exact-version constraints remain mandatory.
+
 ## System Package Pins
 
 | Package | Version |

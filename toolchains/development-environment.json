@@ -9,7 +9,9 @@
   },
   "archive": {
     "date": "2026-07-21",
-    "mirror": "https://archive.archlinux.org/repos/2026/07/21/$repo/os/$arch"
+    "mirror": "https://archive.archlinux.org/repos/2026/07/21/$repo/os/$arch",
+    "download_attempts": 3,
+    "disable_low_speed_timeout": true
   },
   "system_packages": [
     {"name": "bash", "version": "5.3.15-1"},
