@@ -218,6 +218,19 @@ class DocumentationPortalTests(unittest.TestCase):
         with self.assertRaisesRegex(ModelError, "unsupported Mermaid diagram type"):
             _render_mermaid("journey\n  title Not supported")
 
+    def test_flowchart_parser_keeps_arrows_inside_quoted_labels(self) -> None:
+        rendered = _render_mermaid(
+            'flowchart LR\n  Source["source --> receiver"] '
+            '-->|"validated --> delivered"| Target["target"]'
+        )
+        self.assertIn("source --&gt; receiver", rendered)
+        self.assertIn("validated --&gt; delivered", rendered)
+        self.assertIn("target", rendered)
+
+    def test_malformed_flowchart_edge_label_fails_closed(self) -> None:
+        with self.assertRaisesRegex(ModelError, "unsupported Mermaid flowchart edge"):
+            _render_mermaid('flowchart LR\n  Source -->|"unfinished Target')
+
     def test_tampered_portal_file_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             site = Path(temporary) / "site"
