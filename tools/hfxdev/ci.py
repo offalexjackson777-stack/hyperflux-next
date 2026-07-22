@@ -274,7 +274,7 @@ def _read_image_identity_file(invocation: ContainerInvocation, path: str) -> str
     return result.stdout
 
 
-def _project_passwd(
+def _project_user_database(
     source: str,
     *,
     username: str,
@@ -291,7 +291,12 @@ def _project_passwd(
             or not fields[2].isdigit()
             or not fields[3].isdigit()
         ):
-            raise ModelError("CI image passwd database is malformed")
+            raise ModelError("CI image user account database is malformed")
+        if fields[1] not in {"x", "*", "!", "!!"}:
+            raise ModelError(
+                "CI image user account database contains inline credential material"
+            )
+        fields[1] = "x"
         if fields[0] == username:
             if target is not None:
                 raise ModelError("CI image contains duplicate workspace users")
@@ -300,14 +305,14 @@ def _project_passwd(
             raise ModelError("host UID collides with a pinned CI image account")
         records.append(fields)
     if target is None:
-        raise ModelError("CI image workspace user is missing from passwd")
+        raise ModelError("CI image workspace user is missing from its account database")
     target[2] = str(user_id)
     target[3] = str(group_id)
     target[5] = "/tmp/hfx-home"
     return "\n".join(":".join(fields) for fields in records) + "\n"
 
 
-def _project_group(
+def _project_group_database(
     source: str,
     *,
     username: str,
@@ -335,8 +340,8 @@ def _project_group(
 def _runtime_command(
     invocation: ContainerInvocation,
     *,
-    passwd: Path,
-    group: Path,
+    user_database: Path,
+    group_database: Path,
 ) -> tuple[str, ...]:
     try:
         image_index = invocation.command.index(invocation.image)
@@ -344,9 +349,9 @@ def _runtime_command(
         raise ModelError("CI invocation lost its pinned image binding") from error
     identity_mounts = (
         "--volume",
-        f"{passwd}:/etc/passwd:ro",
+        f"{user_database}:/etc/passwd:ro",
         "--volume",
-        f"{group}:/etc/group:ro",
+        f"{group_database}:/etc/group:ro",
     )
     return (
         *invocation.command[:image_index],
@@ -356,28 +361,32 @@ def _runtime_command(
 
 
 def run_container(invocation: ContainerInvocation) -> int:
-    passwd_source = _read_image_identity_file(invocation, "/etc/passwd")
-    group_source = _read_image_identity_file(invocation, "/etc/group")
-    passwd_projection = _project_passwd(
-        passwd_source,
+    user_database_source = _read_image_identity_file(invocation, "/etc/passwd")
+    group_database_source = _read_image_identity_file(invocation, "/etc/group")
+    user_database_projection = _project_user_database(
+        user_database_source,
         username=invocation.workspace_user,
         user_id=invocation.user_id,
         group_id=invocation.group_id,
     )
-    group_projection = _project_group(
-        group_source,
+    group_database_projection = _project_group_database(
+        group_database_source,
         username=invocation.workspace_user,
         group_id=invocation.group_id,
     )
     with tempfile.TemporaryDirectory(prefix="hyperflux-ci-identity-") as temporary:
         identity_root = Path(temporary)
-        passwd = identity_root / "passwd"
-        group = identity_root / "group"
-        passwd.write_text(passwd_projection, encoding="utf-8")
-        group.write_text(group_projection, encoding="utf-8")
-        passwd.chmod(0o444)
-        group.chmod(0o444)
-        command = _runtime_command(invocation, passwd=passwd, group=group)
+        user_database = identity_root / "user-database"
+        group_database = identity_root / "group-database"
+        user_database.write_text(user_database_projection, encoding="utf-8")
+        group_database.write_text(group_database_projection, encoding="utf-8")
+        user_database.chmod(0o444)
+        group_database.chmod(0o444)
+        command = _runtime_command(
+            invocation,
+            user_database=user_database,
+            group_database=group_database,
+        )
         try:
             return subprocess.run(command, check=False).returncode
         except OSError as error:
