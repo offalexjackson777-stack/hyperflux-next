@@ -81,7 +81,6 @@ class RepositoryExperienceContracts(unittest.TestCase):
     def test_visible_top_level_collections_have_generated_front_doors(self) -> None:
         expected = {
             ".devcontainer",
-            ".github",
             "LICENSES",
             "apps",
             "generated",
@@ -95,6 +94,10 @@ class RepositoryExperienceContracts(unittest.TestCase):
                 text = readme.read_text(encoding="utf-8")
                 self.assertIn("structural collection", text)
                 self.assertIn("## Safe Changes", text)
+        self.assertFalse(
+            (ROOT / ".github" / "README.md").exists(),
+            ".github/README.md overrides the root README on GitHub's repository landing page",
+        )
 
     def test_obsolete_pages_portal_is_absent(self) -> None:
         obsolete = (

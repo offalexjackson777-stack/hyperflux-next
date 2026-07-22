@@ -12,7 +12,7 @@
       "outputs": ["Machine-readable constitution", "Repository Atlas projections"],
       "public_contracts": ["One-way application-to-receiver responsibility", "Publication interlock", "One canonical owner per shared fact"],
       "canonical_files": ["architecture/constitution.json", "architecture/repository-atlas.json"],
-      "generated_files": ["architecture/README.md", "docs/generated/architecture.md", "docs/generated/repository-atlas.md", ".devcontainer/README.md", ".github/README.md", "LICENSES/README.md", "apps/README.md", "generated/README.md", "sdk/README.md", "uapi/README.md"],
+      "generated_files": ["architecture/README.md", "docs/generated/architecture.md", "docs/generated/repository-atlas.md", ".devcontainer/README.md", "LICENSES/README.md", "apps/README.md", "generated/README.md", "sdk/README.md", "uapi/README.md"],
       "verification": ["foundation-contracts", "repository-atlas-contracts"],
       "limitations": ["Describes authority and boundaries; it does not prove physical behavior"],
       "safe_change_workflow": ["Update canonical architecture data", "Regenerate projections", "Run foundation and Atlas contracts"],

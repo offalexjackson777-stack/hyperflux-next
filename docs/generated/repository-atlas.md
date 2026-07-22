@@ -208,9 +208,9 @@ Defines product invariants, subsystem direction, ownership boundaries, and the c
 
 **Canonical sources:** `architecture/constitution.json`, `architecture/repository-atlas.json`.
 
-**Generated projections:** `architecture/README.md`, `docs/generated/architecture.md`, `docs/generated/repository-atlas.md`, `.devcontainer/README.md`, `.github/README.md`, `LICENSES/README.md`, `apps/README.md`, `generated/README.md`, `sdk/README.md`, `uapi/README.md`.
+**Generated projections:** `architecture/README.md`, `docs/generated/architecture.md`, `docs/generated/repository-atlas.md`, `.devcontainer/README.md`, `LICENSES/README.md`, `apps/README.md`, `generated/README.md`, `sdk/README.md`, `uapi/README.md`.
 
-**Change impact:** Regenerate 10 declared projection(s). Run `foundation-contracts`, `repository-atlas-contracts`. Review direct consumers: Assurance and release evidence, Documentation system, Kernel driver contract, GitHub governance authority, Application integration catalog, Migration provenance, Composable hardware profiles, Linux runtime authority, Rust workspace, Schema contracts, Pinned development toolchains, Repository tooling, Verification graph.
+**Change impact:** Regenerate 9 declared projection(s). Run `foundation-contracts`, `repository-atlas-contracts`. Review direct consumers: Assurance and release evidence, Documentation system, Kernel driver contract, GitHub governance authority, Application integration catalog, Migration provenance, Composable hardware profiles, Linux runtime authority, Rust workspace, Schema contracts, Pinned development toolchains, Repository tooling, Verification graph.
 
 </details>
 
