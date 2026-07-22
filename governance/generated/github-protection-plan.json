@@ -21,14 +21,14 @@
     "require_linear_history": true,
     "required_approvals": 0,
     "required_status_checks": [
-      "CodeQL / Analyze (c-cpp)",
-      "CodeQL / Analyze (python)",
-      "Dependency review / Dependency review",
-      "Documentation / Portal contracts",
-      "Full verification / Full software",
-      "Repository experience / Link checks",
-      "Repository experience / Pages preview",
-      "Verification / Fast software"
+      "Analyze (c-cpp)",
+      "Analyze (python)",
+      "Dependency review",
+      "Fast software",
+      "Full software",
+      "Link checks",
+      "Pages preview",
+      "Portal contracts"
     ],
     "strict_required_status_checks": true,
     "trusted_maintainers": 1
