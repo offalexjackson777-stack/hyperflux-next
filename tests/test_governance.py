@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import re
+import subprocess
 import sys
 import unittest
 from unittest.mock import patch
@@ -116,6 +117,18 @@ class GitHubGovernanceTests(unittest.TestCase):
                     self.assertNotIn("deploy-pages", text)
                     self.assertNotIn("upload-pages-artifact", text)
         self.assertEqual(observed, allowed)
+
+    def test_host_ci_control_plane_imports_without_site_packages(self) -> None:
+        result = subprocess.run(
+            [sys.executable, "-S", str(ROOT / "hfx"), "ci", "prepare", "--help"],
+            cwd=ROOT,
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--image IMAGE", result.stdout)
 
     def test_software_workflows_use_bounded_container_runner_and_no_release_trigger(self) -> None:
         fast = yaml.safe_load(verification_workflow(self.governance))

@@ -18,12 +18,9 @@ from .github_sync import verify as verify_github
 from .knowledge import import_upstream_catalogs
 from .openrazer import write_imported_metadata
 from .package_pipeline import build_artifacts, stage_rootfs
-from .portal import build_portal, verify_portal
-from .render import write_generated
 from .testgraph import format_plan, load_test_catalog
 from .upstreams import prepare_upstreams
 from .verification_run import git_changed_paths, run_verification
-from .verify import RUNNERS
 
 
 def _root() -> Path:
@@ -190,6 +187,8 @@ def main(arguments: list[str] | None = None) -> int:
     root = _root()
     try:
         if args.command == "verify":
+            from .verify import RUNNERS
+
             lane = "fast" if args.fast else "full-software"
             outcome = run_verification(
                 root,
@@ -207,6 +206,8 @@ def main(arguments: list[str] | None = None) -> int:
             print(f"Evidence: {outcome.output / 'evidence.json'}")
             return 0 if outcome.status == "passed" else 1
         if args.command == "generate":
+            from .render import write_generated
+
             write_generated(root)
             print("Generated repository views are current.")
             return 0
@@ -245,6 +246,8 @@ def main(arguments: list[str] | None = None) -> int:
             print(f"Upstream lock: {prepared.manifest}")
             return 0
         if args.command == "docs":
+            from .portal import build_portal, verify_portal
+
             if args.docs_command == "build":
                 portal = build_portal(root, args.output)
                 print(f"Documentation portal: {portal.output}")
