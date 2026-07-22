@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.development import load_development_environment
-from hfxdev.generators.development import containerfile, devcontainer
+from hfxdev.generators.development import containerfile, devcontainer, markdown
 from hfxdev.model import ModelError
 from hfxdev.upstreams import prepare_upstreams
 
@@ -85,6 +85,12 @@ class DevelopmentEnvironmentTests(unittest.TestCase):
             "/workspaces/hyperflux-next/.hfx/cargo",
         )
         self.assertEqual(value["containerEnv"]["CARGO_NET_OFFLINE"], "true")
+
+    def test_public_guide_does_not_embed_the_absolute_build_workspace(self) -> None:
+        environment = load_development_environment(ROOT)
+        rendered = markdown(environment, [])
+        self.assertIn("Workspace: repository root (`hyperflux-next`)", rendered)
+        self.assertNotIn(environment.workspace_path, rendered)
 
     def test_environment_rejects_toolchain_package_drift(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

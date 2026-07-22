@@ -107,7 +107,7 @@ def markdown(environment: DevelopmentEnvironment, upstreams: list[dict[str, Any]
         f"- Base image: `{environment.image}`",
         f"- Arch package snapshot: `{environment.archive_date}`",
         f"- Rust toolchain: `{environment.rust_toolchain}`",
-        f"- Workspace: `{environment.workspace_path}`",
+        "- Workspace: repository root (`hyperflux-next`)",
         "",
         "## Start",
         "",
