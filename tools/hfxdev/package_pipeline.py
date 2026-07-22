@@ -1015,11 +1015,20 @@ def _private_stage_prefixes(
     return tuple(prefixes)
 
 
-def _normalize_tree(stage_root: Path, epoch: int) -> None:
+def _normalize_tree(
+    stage_root: Path,
+    epoch: int,
+    directory_modes: tuple[tuple[str, int], ...] = (),
+) -> None:
     for path in sorted(stage_root.rglob("*"), reverse=True):
         if path.is_dir():
             path.chmod(0o755)
         os.utime(path, (epoch, epoch), follow_symlinks=False)
+    for destination, mode in directory_modes:
+        path = _stage_path(stage_root, destination)
+        if not path.is_dir():
+            raise ModelError(f"staged directory mode target is missing: {destination}")
+        path.chmod(mode)
     stage_root.chmod(0o755)
     os.utime(stage_root, (epoch, epoch))
 
@@ -1055,7 +1064,13 @@ def stage_rootfs(root: Path, manifest_path: Path, stage_root: Path) -> StageResu
         wheels,
         runtime.operations.python_module_directory,
     )
-    _normalize_tree(stage_root, artifacts.source_date_epoch)
+    directory_modes = (
+        (
+            runtime.bridge.configuration_directory,
+            runtime.bridge.directory_modes.configuration,
+        ),
+    )
+    _normalize_tree(stage_root, artifacts.source_date_epoch, directory_modes)
     canonical_workspace = Path(load_development_environment(root).workspace_path)
     private_prefixes = _private_stage_prefixes(root, artifacts.root, canonical_workspace)
     staged_files = _inspect_staged_files(stage_root, private_prefixes)
@@ -1096,7 +1111,7 @@ def stage_rootfs(root: Path, manifest_path: Path, stage_root: Path) -> StageResu
     )
     inventory.chmod(0o644)
     os.utime(inventory, (artifacts.source_date_epoch, artifacts.source_date_epoch))
-    _normalize_tree(stage_root, artifacts.source_date_epoch)
+    _normalize_tree(stage_root, artifacts.source_date_epoch, directory_modes)
     return StageResult(
         root=stage_root,
         inventory=inventory,

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 pub const LINUX_RUNTIME_SHA256: &str =
-    "cfd13c3d790c3e79bab7575ac49c26303d5a44d3b1454a9323e8e476b5fee634";
+    "6f2f7cba6c66679f0f3b6093c15f13a73a449a7f612040304c29cc132b79a723";
 pub const PRODUCT_DISPLAY_NAME: &str = "HyperFlux Next";
 pub const PRODUCT_VERSION: &str = "0.0.0-dev.1";
 pub const PACKAGE_NAME: &str = "hyperflux-next-linux";

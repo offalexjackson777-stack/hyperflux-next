@@ -21,6 +21,11 @@
     "identity_secret_file_name": "receiver-identity.key",
     "configuration_directory": "/etc/hyperflux-next",
     "configuration_file_name": "bridge.json",
+    "directory_modes": {
+      "runtime": "2750",
+      "state": "0700",
+      "configuration": "2750"
+    },
     "limits": {
       "max_connections": 32,
       "command_queue_capacity": 128,

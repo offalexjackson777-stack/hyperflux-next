@@ -102,6 +102,9 @@ class LinuxRuntimeTests(unittest.TestCase):
         )
         self.assertLess(len(bridge.socket_path.encode()), 108)
         self.assertNotEqual(bridge.kernel_access_group, bridge.client_group)
+        self.assertEqual(bridge.directory_modes.runtime, 0o2750)
+        self.assertEqual(bridge.directory_modes.state, 0o0700)
+        self.assertEqual(bridge.directory_modes.configuration, 0o2750)
         self.assertGreater(
             bridge.restoration.max_pending_claims,
             bridge.restoration.max_pending_triggers,
@@ -128,6 +131,19 @@ class LinuxRuntimeTests(unittest.TestCase):
         )
         self.assertIn(
             f"Wants={self.runtime.operations.confirmation_service_unit}", service
+        )
+        self.assertIn(
+            f"RuntimeDirectoryMode={self.runtime.bridge.directory_modes.runtime:04o}",
+            service,
+        )
+        self.assertIn(
+            f"StateDirectoryMode={self.runtime.bridge.directory_modes.state:04o}",
+            service,
+        )
+        self.assertIn(
+            "ConfigurationDirectoryMode="
+            f"{self.runtime.bridge.directory_modes.configuration:04o}",
+            service,
         )
 
         prepare = activation_service(self.runtime)
@@ -197,6 +213,14 @@ class LinuxRuntimeTests(unittest.TestCase):
         expired_restore_authority["bridge"]["restoration"]["authority_window_ms"] = 1_000
         expired_restore_authority["bridge"]["restoration"]["lease_duration_ms"] = 1_000
         cases.append(expired_restore_authority)
+
+        public_state = copy.deepcopy(self.value)
+        public_state["bridge"]["directory_modes"]["state"] = "0755"
+        cases.append(public_state)
+
+        unshared_configuration = copy.deepcopy(self.value)
+        unshared_configuration["bridge"]["directory_modes"]["configuration"] = "0700"
+        cases.append(unshared_configuration)
 
         for index, value in enumerate(cases):
             with self.subTest(index=index), tempfile.TemporaryDirectory() as directory:

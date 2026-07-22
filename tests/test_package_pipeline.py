@@ -24,6 +24,7 @@ from hfxdev.package_pipeline import (
     _build_python,
     _install_wheels,
     _inspect_staged_files,
+    _normalize_tree,
     _private_stage_prefixes,
     _provenance_inputs,
     _provenance_materials,
@@ -184,6 +185,21 @@ class PackagePipelineTests(unittest.TestCase):
             self.assertEqual(digest, _tree_digest([second, first], root))
             second.chmod(0o600)
             self.assertNotEqual(digest, _tree_digest([first, second], root))
+
+    def test_tree_normalization_preserves_authoritative_configuration_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            configuration = root / "etc" / "hyperflux-next"
+            configuration.mkdir(parents=True)
+            sibling = root / "usr" / "share" / "hyperflux-next"
+            sibling.mkdir(parents=True)
+            _normalize_tree(
+                root,
+                1_700_000_000,
+                (("/etc/hyperflux-next", 0o2750),),
+            )
+            self.assertEqual(configuration.stat().st_mode & 0o7777, 0o2750)
+            self.assertEqual(sibling.stat().st_mode & 0o7777, 0o0755)
 
     def test_private_build_path_is_rejected_from_staged_payload(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

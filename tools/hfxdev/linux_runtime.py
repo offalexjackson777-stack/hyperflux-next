@@ -26,6 +26,7 @@ BRIDGE_KEYS = {
     "identity_secret_file_name",
     "configuration_directory",
     "configuration_file_name",
+    "directory_modes",
     "limits",
     "timing",
     "restoration",
@@ -59,6 +60,7 @@ BRIDGE_RESTORATION_KEYS = {
     "max_persisted_receivers",
     "max_persistence_bytes",
 }
+BRIDGE_DIRECTORY_MODE_KEYS = {"runtime", "state", "configuration"}
 KERNEL_KEYS = {
     "module_name",
     "dkms_name",
@@ -120,6 +122,13 @@ class BridgeTiming:
 
 
 @dataclass(frozen=True)
+class BridgeDirectoryModes:
+    runtime: int
+    state: int
+    configuration: int
+
+
+@dataclass(frozen=True)
 class BridgeRestoration:
     max_pending_triggers: int
     max_pending_claims: int
@@ -146,6 +155,7 @@ class BridgeRuntime:
     identity_secret_file_name: str
     configuration_directory: str
     configuration_file_name: str
+    directory_modes: BridgeDirectoryModes
     limits: BridgeLimits
     timing: BridgeTiming
     restoration: BridgeRestoration
@@ -260,6 +270,15 @@ def _bounded_integer(value: Any, label: str, minimum: int, maximum: int) -> int:
     return value
 
 
+def _directory_mode(value: Any, label: str) -> int:
+    if not isinstance(value, str) or re.fullmatch(r"[0-7]{4}", value) is None:
+        raise ModelError(f"{label}: must be a four-digit octal mode")
+    mode = int(value, 8)
+    if mode & 0o700 != 0o700 or mode & 0o007:
+        raise ModelError(f"{label}: owner access is required and world access is forbidden")
+    return mode
+
+
 def load_linux_runtime(root: Path) -> LinuxRuntime:
     path = root / "runtime" / "linux.json"
     value = load_json(path)
@@ -289,6 +308,14 @@ def load_linux_runtime(root: Path) -> LinuxRuntime:
     _exact(limits_value, BRIDGE_LIMIT_KEYS, "Linux bridge limits")
     timing_value = _object(bridge_value["timing"], "Linux bridge timing")
     _exact(timing_value, BRIDGE_TIMING_KEYS, "Linux bridge timing")
+    directory_modes_value = _object(
+        bridge_value["directory_modes"], "Linux bridge directory modes"
+    )
+    _exact(
+        directory_modes_value,
+        BRIDGE_DIRECTORY_MODE_KEYS,
+        "Linux bridge directory modes",
+    )
     restoration_value = _object(
         bridge_value["restoration"], "Linux bridge restoration"
     )
@@ -343,6 +370,18 @@ def load_linux_runtime(root: Path) -> LinuxRuntime:
             "bridge configuration file name",
             FILE_NAME,
             64,
+        ),
+        directory_modes=BridgeDirectoryModes(
+            runtime=_directory_mode(
+                directory_modes_value["runtime"], "bridge runtime directory mode"
+            ),
+            state=_directory_mode(
+                directory_modes_value["state"], "bridge state directory mode"
+            ),
+            configuration=_directory_mode(
+                directory_modes_value["configuration"],
+                "bridge configuration directory mode",
+            ),
         ),
         limits=BridgeLimits(
             max_connections=_bounded_integer(
@@ -455,6 +494,16 @@ def load_linux_runtime(root: Path) -> LinuxRuntime:
     )
     if bridge.client_group == bridge.kernel_access_group:
         raise ModelError("bridge client and kernel access groups must remain separate")
+    if bridge.directory_modes.state & 0o077:
+        raise ModelError("bridge state directory must remain private to its owner")
+    for mode in (
+        bridge.directory_modes.runtime,
+        bridge.directory_modes.configuration,
+    ):
+        if mode & 0o2050 != 0o2050:
+            raise ModelError(
+                "shared bridge directories require setgid and group read/execute access"
+            )
     if bridge.identity_secret_file_name == bridge.state_file_name:
         raise ModelError("bridge identity secret and durable state must use separate files")
     if bridge.socket_lock_name == bridge.socket_name:
