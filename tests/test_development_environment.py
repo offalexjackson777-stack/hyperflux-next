@@ -156,7 +156,7 @@ class DevelopmentEnvironmentTests(unittest.TestCase):
                     encoding="utf-8"
                 )
             )
-            environment["workspace"]["path"] = "/home/private/hyperflux-next"
+            environment["workspace"]["path"] = "/opt/private/hyperflux-next"
             (root / "toolchains" / "pins.json").write_text(
                 json.dumps(pins), encoding="utf-8"
             )
