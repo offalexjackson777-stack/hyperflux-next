@@ -161,6 +161,52 @@ def _ruleset_payload(governance: GitHubGovernance) -> dict[str, Any]:
     }
 
 
+def _ruleset_comparison_view(value: object) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    try:
+        ref_name = value["conditions"]["ref_name"]
+        includes = sorted(ref_name["include"])
+        excludes = sorted(ref_name["exclude"])
+        normalized_rules: list[dict[str, Any]] = []
+        for source_rule in value["rules"]:
+            rule_type = source_rule["type"]
+            rule: dict[str, Any] = {"type": rule_type}
+            if "parameters" in source_rule:
+                parameters = dict(source_rule["parameters"])
+                if rule_type == "pull_request":
+                    parameters.pop("required_reviewers", None)
+                    parameters.setdefault("automatic_copilot_code_review_enabled", False)
+                    parameters["allowed_merge_methods"] = sorted(
+                        parameters["allowed_merge_methods"]
+                    )
+                elif rule_type == "required_status_checks":
+                    contexts = sorted(
+                        check["context"]
+                        for check in parameters["required_status_checks"]
+                    )
+                    parameters["required_status_checks"] = [
+                        {"context": context} for context in contexts
+                    ]
+                rule["parameters"] = parameters
+            normalized_rules.append(rule)
+        normalized_rules.sort(key=lambda rule: rule["type"])
+    except (KeyError, TypeError):
+        return None
+    return {
+        "target": value.get("target"),
+        "enforcement": value.get("enforcement"),
+        "bypass_actors": value.get("bypass_actors"),
+        "conditions": {
+            "ref_name": {
+                "include": includes,
+                "exclude": excludes,
+            }
+        },
+        "rules": normalized_rules,
+    }
+
+
 def _desired_plan(governance: GitHubGovernance, components: tuple[str, ...]) -> SyncResult:
     operations: list[dict[str, Any]] = []
     if "repository" in components:
@@ -471,13 +517,8 @@ def verify(
             else None
         )
         expected = _ruleset_payload(governance)
-        ruleset_current = (
-            isinstance(actual, dict)
-            and actual.get("target") == expected["target"]
-            and actual.get("enforcement") == expected["enforcement"]
-            and actual.get("bypass_actors") == expected["bypass_actors"]
-            and actual.get("conditions") == expected["conditions"]
-            and actual.get("rules") == expected["rules"]
+        ruleset_current = _ruleset_comparison_view(actual) == _ruleset_comparison_view(
+            expected
         )
         operations.append(
             {

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 import sys
 import unittest
@@ -22,9 +23,10 @@ from hfxdev.model import ModelError
 
 
 class FakeGitHubApi:
-    def __init__(self) -> None:
+    def __init__(self, *, ruleset_drift: bool = False) -> None:
         self.governance = load_github_governance(ROOT)
         self.calls: list[tuple[str, str, object]] = []
+        self.ruleset_drift = ruleset_drift
 
     def call(
         self,
@@ -85,7 +87,17 @@ class FakeGitHubApi:
         if endpoint == f"{repo}/rulesets?includes_parents=false":
             return [{"id": 7, "name": "Protected main", "enforcement": "active"}]
         if endpoint == f"{repo}/rulesets/7":
-            return _ruleset_payload(self.governance)
+            value = deepcopy(_ruleset_payload(self.governance))
+            pull_request = next(
+                rule for rule in value["rules"] if rule["type"] == "pull_request"
+            )
+            pull_request["parameters"].pop(
+                "automatic_copilot_code_review_enabled"
+            )
+            pull_request["parameters"]["required_reviewers"] = []
+            if self.ruleset_drift:
+                pull_request["parameters"]["required_approving_review_count"] = 2
+            return value
         raise AssertionError(f"unexpected fake GitHub endpoint: {method} {endpoint}")
 
 
@@ -133,6 +145,12 @@ class GitHubSyncTests(unittest.TestCase):
         self.assertTrue(
             all(operation["status"] == "current" for operation in result.operations)
         )
+
+    def test_verify_rejects_semantic_ruleset_drift_after_normalization(self) -> None:
+        with self.assertRaisesRegex(
+            ModelError, "GitHub remote state differs from canonical governance"
+        ):
+            verify(ROOT, api=FakeGitHubApi(ruleset_drift=True))
 
 
 if __name__ == "__main__":
