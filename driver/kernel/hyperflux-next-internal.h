@@ -111,6 +111,7 @@ void hfx_observation_emit(struct hfx_receiver *receiver, u32 kind,
 void hfx_observe_activity(struct hfx_receiver *receiver, int interface_number);
 void hfx_observe_passive(struct hfx_receiver *receiver, int interface_number,
 			 const u8 *data, int size);
+void hfx_observation_replay_cached_identities(struct hfx_receiver *receiver);
 bool hfx_observation_identity_conflicted(struct hfx_receiver *receiver);
 long hfx_observation_read(struct hfx_receiver *receiver, void __user *user_arg);
 

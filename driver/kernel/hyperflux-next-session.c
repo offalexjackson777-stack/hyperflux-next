@@ -151,8 +151,11 @@ static int hfx_session_open(struct inode *inode, struct file *file)
 
 	file->private_data = context;
 	ret = nonseekable_open(inode, file);
-	if (!ret)
+	if (!ret) {
+		if (context->writer)
+			hfx_observation_replay_cached_identities(receiver);
 		return 0;
+	}
 
 	if (context->writer) {
 		spin_lock_irqsave(&receiver->authorization_lock, flags);

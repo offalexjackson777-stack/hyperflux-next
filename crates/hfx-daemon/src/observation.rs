@@ -369,11 +369,7 @@ impl PassiveObservationTranslator {
             },
         )];
         if passive.report_implies_route_available {
-            observations.push(self.endpoint_observation(
-                binding,
-                stamp,
-                EndpointFact::Route(RouteState::Available),
-            ));
+            observations.extend(self.route_observations(binding, stamp, RouteState::Available));
         }
         Ok(PassiveTranslation::applied(observations))
     }
@@ -398,11 +394,7 @@ impl PassiveObservationTranslator {
         let mut observations =
             vec![self.endpoint_observation(binding, stamp.clone(), EndpointFact::Contact(state))];
         if passive.report_implies_route_available {
-            observations.push(self.endpoint_observation(
-                binding,
-                stamp,
-                EndpointFact::Route(RouteState::Available),
-            ));
+            observations.extend(self.route_observations(binding, stamp, RouteState::Available));
         }
         PassiveTranslation::applied(observations)
     }
@@ -421,11 +413,25 @@ impl PassiveObservationTranslator {
         } else {
             RouteState::Unknown
         };
-        PassiveTranslation::applied(vec![self.endpoint_observation(
-            binding,
-            stamp,
-            EndpointFact::Route(state),
-        )])
+        PassiveTranslation::applied(self.route_observations(binding, stamp, state))
+    }
+
+    fn route_observations(
+        &self,
+        binding: &LaneBinding,
+        stamp: ObservationStamp,
+        state: RouteState,
+    ) -> Vec<LifecycleObservation> {
+        let mut observations =
+            vec![self.endpoint_observation(binding, stamp.clone(), EndpointFact::Route(state))];
+        if matches!(state, RouteState::Available | RouteState::Unavailable) {
+            observations.push(self.endpoint_observation(
+                binding,
+                stamp,
+                EndpointFact::Freshness(FreshnessState::Fresh),
+            ));
+        }
+        observations
     }
 
     fn endpoint_observation(
@@ -591,6 +597,13 @@ mod tests {
                 ..
             }
         ));
+        assert!(matches!(
+            &contact.observations[2].kind,
+            LifecycleObservationKind::Freshness {
+                value: FreshnessState::Fresh,
+                ..
+            }
+        ));
 
         let battery = translator
             .translate(raw(
@@ -631,6 +644,13 @@ mod tests {
             assert!(matches!(
                 &translated.observations[0].kind,
                 LifecycleObservationKind::Route { value, .. } if *value == expected
+            ));
+            assert!(matches!(
+                &translated.observations[1].kind,
+                LifecycleObservationKind::Freshness {
+                    value: FreshnessState::Fresh,
+                    ..
+                }
             ));
         }
     }

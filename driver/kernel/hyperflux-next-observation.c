@@ -109,6 +109,30 @@ bool hfx_observation_identity_conflicted(struct hfx_receiver *receiver)
 	return conflicted;
 }
 
+void hfx_observation_replay_cached_identities(struct hfx_receiver *receiver)
+{
+	unsigned long flags;
+	u64 now_ns = ktime_get_boottime_ns();
+	u32 slot;
+
+	spin_lock_irqsave(&receiver->observation_lock, flags);
+	if (receiver->identity_conflict)
+		goto out;
+	for (slot = HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE;
+	     slot <= HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE; slot++) {
+		if (!receiver->observed_product_id_valid[slot])
+			continue;
+		hfx_observation_append_locked(
+			receiver, now_ns,
+			HFX_UAPI_OBSERVATION_KIND_ENDPOINT_PRODUCT_ID, slot,
+			HFX_UAPI_OBSERVATION_SOURCE_HID_PASSIVE,
+			HFX_UAPI_OBSERVATION_CONFIDENCE_EXACT,
+			receiver->observed_product_id[slot], 0);
+	}
+out:
+	spin_unlock_irqrestore(&receiver->observation_lock, flags);
+}
+
 void hfx_observe_passive(struct hfx_receiver *receiver, int interface_number,
 			 const u8 *data, int size)
 {
