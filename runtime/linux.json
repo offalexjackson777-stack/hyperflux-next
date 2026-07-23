@@ -42,7 +42,8 @@
       "discovery_interval_ms": 100,
       "accept_poll_interval_ms": 25,
       "actor_response_timeout_ms": 30000,
-      "kernel_session_duration_ms": 120000
+      "kernel_session_duration_ms": 120000,
+      "activity_resumption_quiet_ms": 30000
     },
     "restoration": {
       "max_pending_triggers": 64,

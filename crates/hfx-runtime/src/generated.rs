@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 pub const LINUX_RUNTIME_SHA256: &str =
-    "6f2f7cba6c66679f0f3b6093c15f13a73a449a7f612040304c29cc132b79a723";
+    "aac369013b10c3b861f16e2ff76dc58fd4fcbdc75f7ec400c2a8444b101cd3c8";
 pub const PRODUCT_DISPLAY_NAME: &str = "HyperFlux Next";
 pub const PRODUCT_VERSION: &str = "0.0.0-dev.1";
 pub const PACKAGE_NAME: &str = "hyperflux-next-linux";
@@ -52,6 +52,7 @@ pub const DISCOVERY_INTERVAL_MS: u64 = 100;
 pub const ACCEPT_POLL_INTERVAL_MS: u64 = 25;
 pub const ACTOR_RESPONSE_TIMEOUT_MS: u64 = 30_000;
 pub const KERNEL_SESSION_DURATION_MS: u64 = 120_000;
+pub const ACTIVITY_RESUMPTION_QUIET_MS: u64 = 30_000;
 pub const RESTORATION_MAX_PENDING_TRIGGERS: usize = 64;
 pub const RESTORATION_MAX_PENDING_CLAIMS: usize = 4_096;
 pub const RESTORATION_CLAIMS_PER_TICK: usize = 1;

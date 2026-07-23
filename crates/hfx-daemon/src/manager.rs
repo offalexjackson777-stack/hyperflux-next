@@ -2,7 +2,7 @@
 
 use crate::{
     EndpointCandidate, EndpointDiscovery, EndpointDiscoveryError, PassiveDisposition,
-    PassiveObservationTranslator, PassiveTranslationError, ProductionBackend,
+    PassiveObservationTranslator, PassiveTranslation, PassiveTranslationError, ProductionBackend,
     ReceiverIdentityAuthority, ReceiverIdentityError, RestorationScheduleError,
     RestorationScheduler, RestorationTickReport, WriterAuthorityError, derive_capability_digest,
 };
@@ -392,44 +392,13 @@ impl LinuxRuntimeManager {
                             endpoint.cursor = sequence;
                             return Ok(false);
                         }
-                        for observation in translation.observations {
-                            let sequence = observation.stamp.sequence();
-                            let outcome = backend
-                                .observe_lifecycle(observation)
-                                .map_err(RuntimeTickError::Observation)?;
-                            if let LifecycleObservationOutcome::Applied(applied) = outcome {
-                                if matches!(
-                                    applied.receiver_before,
-                                    ReceiverLifecycleState::Suspended
-                                        | ReceiverLifecycleState::PartiallySuspended
-                                ) && applied.receiver_after == ReceiverLifecycleState::Active
-                                {
-                                    self.restoration
-                                        .schedule_system_resume(
-                                            applied.receiver_id.clone(),
-                                            applied.generation_id,
-                                            sequence,
-                                        )
-                                        .map_err(RuntimeTickError::Restoration)?;
-                                }
-                                if matches!(
-                                    applied.device_presence_before,
-                                    Some(PresenceState::Sleeping | PresenceState::Unavailable)
-                                ) && applied.device_presence_after
-                                    == Some(PresenceState::Available)
-                                    && let Some(device_id) = applied.device_id
-                                {
-                                    self.restoration
-                                        .schedule_device_return(
-                                            applied.receiver_id,
-                                            applied.generation_id,
-                                            device_id,
-                                            sequence,
-                                        )
-                                        .map_err(RuntimeTickError::Restoration)?;
-                                }
-                            }
-                        }
+                        self.apply_lifecycle_translation(
+                            &endpoint.receiver_id,
+                            info.generation_id,
+                            sequence,
+                            translation,
+                            backend,
+                        )?;
                     }
                     Err(error) => {
                         if Self::downgrade(endpoint, backend)? {
@@ -452,6 +421,66 @@ impl LinuxRuntimeManager {
             }
         }
         Ok(true)
+    }
+
+    fn apply_lifecycle_translation(
+        &mut self,
+        receiver_id: &ReceiverId,
+        generation_id: hfx_domain::GenerationId,
+        raw_sequence: u64,
+        translation: PassiveTranslation,
+        backend: &mut ProductionBackend,
+    ) -> Result<(), RuntimeTickError> {
+        let mut scheduled_returns = BTreeSet::new();
+        for observation in translation.observations {
+            let sequence = observation.stamp.sequence();
+            let outcome = backend
+                .observe_lifecycle(observation)
+                .map_err(RuntimeTickError::Observation)?;
+            if let LifecycleObservationOutcome::Applied(applied) = outcome {
+                if matches!(
+                    applied.receiver_before,
+                    ReceiverLifecycleState::Suspended | ReceiverLifecycleState::PartiallySuspended
+                ) && applied.receiver_after == ReceiverLifecycleState::Active
+                {
+                    self.restoration
+                        .schedule_system_resume(
+                            applied.receiver_id.clone(),
+                            applied.generation_id,
+                            sequence,
+                        )
+                        .map_err(RuntimeTickError::Restoration)?;
+                }
+                if is_device_return_transition(
+                    applied.device_presence_before,
+                    applied.device_presence_after,
+                ) && let Some(device_id) = applied.device_id
+                {
+                    scheduled_returns.insert(device_id.clone());
+                    self.restoration
+                        .schedule_device_return(
+                            applied.receiver_id,
+                            applied.generation_id,
+                            device_id,
+                            sequence,
+                        )
+                        .map_err(RuntimeTickError::Restoration)?;
+                }
+            }
+        }
+        if let Some(device_id) = translation.activity_resumption
+            && !scheduled_returns.contains(&device_id)
+        {
+            self.restoration
+                .schedule_device_return(
+                    receiver_id.clone(),
+                    generation_id,
+                    device_id,
+                    SequenceNumber::try_from(raw_sequence).map_err(RuntimeTickError::Domain)?,
+                )
+                .map_err(RuntimeTickError::Restoration)?;
+        }
+        Ok(())
     }
 
     fn try_admit_writer(
@@ -621,6 +650,16 @@ fn nonzero_interval(interval: Duration) -> Duration {
     }
 }
 
+const fn is_device_return_transition(
+    before: Option<PresenceState>,
+    after: Option<PresenceState>,
+) -> bool {
+    matches!(
+        before,
+        Some(PresenceState::Sleeping | PresenceState::Unavailable | PresenceState::Unknown)
+    ) && matches!(after, Some(PresenceState::Available))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -647,5 +686,27 @@ mod tests {
         assert_eq!(value.generation_id(), generation);
         assert_eq!(value.sequence().get(), 4);
         assert_eq!(value.observed_at_ms().get(), 5);
+    }
+
+    #[test]
+    fn available_evidence_wakes_sleeping_unavailable_and_unknown_devices() {
+        for before in [
+            PresenceState::Sleeping,
+            PresenceState::Unavailable,
+            PresenceState::Unknown,
+        ] {
+            assert!(is_device_return_transition(
+                Some(before),
+                Some(PresenceState::Available)
+            ));
+        }
+        assert!(!is_device_return_transition(
+            Some(PresenceState::Available),
+            Some(PresenceState::Available)
+        ));
+        assert!(!is_device_return_transition(
+            None,
+            Some(PresenceState::Available)
+        ));
     }
 }

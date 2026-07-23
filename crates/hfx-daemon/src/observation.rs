@@ -22,6 +22,7 @@ use hfx_kernel_transport::{
 use hfx_profiles::{
     PassiveBatteryEncoding, PassiveEndpointLane, PassiveTelemetryRecord, RuntimeProfileCatalog,
 };
+use hfx_runtime::ACTIVITY_RESUMPTION_QUIET_MS;
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -38,6 +39,9 @@ pub enum PassiveDisposition {
 pub struct PassiveTranslation {
     pub disposition: PassiveDisposition,
     pub observations: Vec<LifecycleObservation>,
+    /// One device whose first input report followed a bounded quiet interval.
+    /// This is a restoration hint, not a claim that the device was asleep.
+    pub activity_resumption: Option<LogicalDeviceId>,
 }
 
 impl PassiveTranslation {
@@ -45,6 +49,15 @@ impl PassiveTranslation {
         Self {
             disposition: PassiveDisposition::Applied,
             observations,
+            activity_resumption: None,
+        }
+    }
+
+    fn resumed(observations: Vec<LifecycleObservation>, device_id: LogicalDeviceId) -> Self {
+        Self {
+            disposition: PassiveDisposition::Applied,
+            observations,
+            activity_resumption: Some(device_id),
         }
     }
 
@@ -52,6 +65,7 @@ impl PassiveTranslation {
         Self {
             disposition,
             observations: Vec::new(),
+            activity_resumption: None,
         }
     }
 }
@@ -103,6 +117,7 @@ struct LaneBinding {
     device_id: LogicalDeviceId,
     endpoint_id: EndpointId,
     passive: Option<PassiveTelemetryRecord>,
+    last_activity_ms: Option<MonotonicMs>,
 }
 
 pub struct PassiveObservationTranslator {
@@ -262,11 +277,16 @@ impl PassiveObservationTranslator {
             device_kind.as_str()
         ))?;
         let endpoint_id = EndpointId::try_from(format!("hyperflux-{}", lane_name(lane)))?;
+        let last_activity_ms = self
+            .lanes
+            .get(&slot)
+            .and_then(|binding| binding.last_activity_ms);
         let binding = LaneBinding {
             product_id,
             device_id: device_id.clone(),
             endpoint_id: endpoint_id.clone(),
             passive: profile.and_then(|profile| profile.passive),
+            last_activity_ms,
         };
         let child = ChildIdentity::new(device_id.clone(), device_kind, product_id)?;
         let endpoint = EndpointIdentity::new(
@@ -299,7 +319,7 @@ impl PassiveObservationTranslator {
     }
 
     fn activity(
-        &self,
+        &mut self,
         slot: u32,
         value: u32,
         stamp: ObservationStamp,
@@ -307,34 +327,50 @@ impl PassiveObservationTranslator {
         if value != 1 {
             return Err(PassiveTranslationError::InvalidObservationValue);
         }
-        let Some(binding) = self.lanes.get(&slot) else {
+        let Some(binding) = self.lanes.get_mut(&slot) else {
             return Ok(PassiveTranslation::disposition(
                 PassiveDisposition::IgnoredUnknownLane,
             ));
         };
-        Ok(PassiveTranslation::applied(vec![
+        let observed_at_ms = stamp.observed_at_ms();
+        let resumed = binding.last_activity_ms.is_some_and(|prior| {
+            observed_at_ms.get().saturating_sub(prior.get()) >= ACTIVITY_RESUMPTION_QUIET_MS
+        });
+        if binding
+            .last_activity_ms
+            .is_none_or(|prior| observed_at_ms > prior)
+        {
+            binding.last_activity_ms = Some(observed_at_ms);
+        }
+        let binding = binding.clone();
+        let observations = vec![
             self.endpoint_observation(
-                binding,
+                &binding,
                 stamp.clone(),
                 EndpointFact::Route(RouteState::Available),
             ),
-            self.endpoint_observation(binding, stamp.clone(), EndpointFact::Power(PowerState::On)),
+            self.endpoint_observation(&binding, stamp.clone(), EndpointFact::Power(PowerState::On)),
             self.endpoint_observation(
-                binding,
+                &binding,
                 stamp.clone(),
                 EndpointFact::Sleep(SleepState::Awake),
             ),
             self.endpoint_observation(
-                binding,
+                &binding,
                 stamp.clone(),
                 EndpointFact::Activity(ActivityState::Active),
             ),
             self.endpoint_observation(
-                binding,
+                &binding,
                 stamp,
                 EndpointFact::Freshness(FreshnessState::Fresh),
             ),
-        ]))
+        ];
+        Ok(if resumed {
+            PassiveTranslation::resumed(observations, binding.device_id)
+        } else {
+            PassiveTranslation::applied(observations)
+        })
     }
 
     fn battery(
@@ -527,9 +563,19 @@ mod tests {
     }
 
     fn raw(sequence: u64, kind: u32, slot: u32, value: u32) -> RawKernelObservation {
+        raw_at(sequence, sequence, kind, slot, value)
+    }
+
+    fn raw_at(
+        sequence: u64,
+        observed_at_ms: u64,
+        kind: u32,
+        slot: u32,
+        value: u32,
+    ) -> RawKernelObservation {
         RawKernelObservation {
             sequence,
-            observed_boottime_ns: sequence * 1_000_000,
+            observed_boottime_ns: observed_at_ms * 1_000_000,
             kind,
             endpoint_slot: slot,
             source: HFX_UAPI_OBSERVATION_SOURCE_HID_PASSIVE,
@@ -537,6 +583,19 @@ mod tests {
             value,
             auxiliary: 0,
         }
+    }
+
+    fn activity(sequence: u64, observed_at_ms: u64, slot: u32) -> RawKernelObservation {
+        let mut observation = raw_at(
+            sequence,
+            observed_at_ms,
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ACTIVITY,
+            slot,
+            1,
+        );
+        observation.source = HFX_UAPI_OBSERVATION_SOURCE_HID_INPUT;
+        observation.confidence = HFX_UAPI_OBSERVATION_CONFIDENCE_OBSERVED;
+        observation
     }
 
     fn identify(
@@ -695,6 +754,118 @@ mod tests {
             .translate(activity)
             .expect("activity translates without a model decoder");
         assert_eq!(activity.observations.len(), 5);
+    }
+
+    #[test]
+    fn first_activity_after_quiet_emits_one_device_scoped_resumption() {
+        let mut translator = translator();
+        identify(
+            &mut translator,
+            1,
+            HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            0x00cd,
+        );
+
+        let first = translator
+            .translate(activity(2, 1_000, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE))
+            .expect("first activity translates");
+        assert_eq!(first.activity_resumption, None);
+
+        let resumed = translator
+            .translate(activity(
+                3,
+                1_000 + ACTIVITY_RESUMPTION_QUIET_MS,
+                HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            ))
+            .expect("post-quiet activity translates");
+        assert_eq!(
+            resumed
+                .activity_resumption
+                .as_ref()
+                .map(LogicalDeviceId::as_str),
+            Some("paired-mouse-00cd")
+        );
+
+        let continuous = translator
+            .translate(activity(
+                4,
+                1_001 + ACTIVITY_RESUMPTION_QUIET_MS,
+                HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            ))
+            .expect("continuous activity translates");
+        assert_eq!(continuous.activity_resumption, None);
+    }
+
+    #[test]
+    fn identity_replay_preserves_activity_continuity_and_sibling_isolation() {
+        let mut translator = translator();
+        identify(
+            &mut translator,
+            1,
+            HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            0x00cd,
+        );
+        identify(
+            &mut translator,
+            2,
+            HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+            0x0296,
+        );
+        translator
+            .translate(activity(3, 1_000, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE))
+            .expect("mouse activity translates");
+        translator
+            .translate(activity(4, 1_000, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE))
+            .expect("keyboard activity translates");
+
+        identify(
+            &mut translator,
+            5,
+            HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            0x00cd,
+        );
+        let mouse = translator
+            .translate(activity(
+                6,
+                1_000 + ACTIVITY_RESUMPTION_QUIET_MS,
+                HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            ))
+            .expect("mouse resumes after identity replay");
+        assert_eq!(
+            mouse
+                .activity_resumption
+                .as_ref()
+                .map(LogicalDeviceId::as_str),
+            Some("paired-mouse-00cd")
+        );
+
+        let keyboard = translator
+            .translate(activity(7, 1_001, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE))
+            .expect("keyboard remains continuous");
+        assert_eq!(keyboard.activity_resumption, None);
+    }
+
+    #[test]
+    fn a_new_generation_requires_prior_activity_before_resumption() {
+        let mut next_generation = PassiveObservationTranslator::new(
+            ReceiverId::try_from("receiver-test").expect("receiver id is valid"),
+            GenerationId::try_from(8_u64).expect("generation is valid"),
+            RuntimeProfileCatalog::load().expect("profile catalog is valid"),
+        );
+        identify(
+            &mut next_generation,
+            1,
+            HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            0x00cd,
+        );
+        let first = next_generation
+            .translate(activity(
+                2,
+                ACTIVITY_RESUMPTION_QUIET_MS * 10,
+                HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            ))
+            .expect("first generation-bound activity translates");
+        assert_eq!(first.activity_resumption, None);
     }
 
     #[test]

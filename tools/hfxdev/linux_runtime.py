@@ -49,6 +49,7 @@ BRIDGE_TIMING_KEYS = {
     "accept_poll_interval_ms",
     "actor_response_timeout_ms",
     "kernel_session_duration_ms",
+    "activity_resumption_quiet_ms",
 }
 BRIDGE_RESTORATION_KEYS = {
     "max_pending_triggers",
@@ -119,6 +120,7 @@ class BridgeTiming:
     accept_poll_interval_ms: int
     actor_response_timeout_ms: int
     kernel_session_duration_ms: int
+    activity_resumption_quiet_ms: int
 
 
 @dataclass(frozen=True)
@@ -433,6 +435,12 @@ def load_linux_runtime(root: Path) -> LinuxRuntime:
             ),
             kernel_session_duration_ms=_bounded_integer(
                 timing_value["kernel_session_duration_ms"], "kernel session duration", 6000, 300000
+            ),
+            activity_resumption_quiet_ms=_bounded_integer(
+                timing_value["activity_resumption_quiet_ms"],
+                "activity resumption quiet interval",
+                1000,
+                3_600_000,
             ),
         ),
         restoration=BridgeRestoration(
