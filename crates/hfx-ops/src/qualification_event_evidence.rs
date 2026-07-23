@@ -14,6 +14,12 @@ pub(crate) enum EventEvidenceError {
     RestoreUnavailable,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum DeviceReturnEvidenceMode {
+    ReceiverTransition,
+    WatchedRetainedRoute,
+}
+
 impl fmt::Display for EventEvidenceError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(match self {
@@ -41,6 +47,7 @@ pub(crate) fn device_return_restore(
     receiver_id: &str,
     generation_id: u64,
     device_id: &str,
+    mode: DeviceReturnEvidenceMode,
 ) -> Result<String, EventEvidenceError> {
     let anchor = latest_anchor_sequence(batch, evidence_refs)?;
     let mut departed = false;
@@ -49,6 +56,12 @@ pub(crate) fn device_return_restore(
     for event in events_after(batch, anchor) {
         if !matches_identity(event, receiver_id, generation_id, Some(device_id)) {
             continue;
+        }
+        if mode == DeviceReturnEvidenceMode::WatchedRetainedRoute
+            && event.kind == EventKind::RestoreCompleted
+            && event.transaction_id.as_ref().is_some()
+        {
+            return Ok(restore_evidence(event.sequence.get(), device_id));
         }
         match event.kind {
             EventKind::DeviceSleeping | EventKind::DeviceUnavailable => {
@@ -293,6 +306,7 @@ mod tests {
                 "receiver-test",
                 7,
                 "keyboard",
+                DeviceReturnEvidenceMode::ReceiverTransition,
             ),
             Ok("bridge-restore-event:4:keyboard".to_owned())
         );
@@ -306,7 +320,14 @@ mod tests {
             event(4, EventKind::RestoreCompleted, 7, Some("mouse"), true),
         ]);
         assert_eq!(
-            device_return_restore(&events, &[], "receiver-test", 7, "keyboard"),
+            device_return_restore(
+                &events,
+                &[],
+                "receiver-test",
+                7,
+                "keyboard",
+                DeviceReturnEvidenceMode::ReceiverTransition,
+            ),
             Err(EventEvidenceError::AnchorUnavailable)
         );
         assert_eq!(
@@ -316,6 +337,40 @@ mod tests {
                 "receiver-test",
                 7,
                 "keyboard",
+                DeviceReturnEvidenceMode::ReceiverTransition,
+            ),
+            Err(EventEvidenceError::RestoreUnavailable)
+        );
+    }
+
+    #[test]
+    fn watched_retained_route_requires_a_newer_terminal_restore() {
+        let events = batch(vec![event(
+            2,
+            EventKind::RestoreCompleted,
+            7,
+            Some("mouse"),
+            true,
+        )]);
+        assert_eq!(
+            device_return_restore(
+                &events,
+                &[cursor_evidence(&cursor(1))],
+                "receiver-test",
+                7,
+                "mouse",
+                DeviceReturnEvidenceMode::WatchedRetainedRoute,
+            ),
+            Ok("bridge-restore-event:2:mouse".to_owned())
+        );
+        assert_eq!(
+            device_return_restore(
+                &events,
+                &[cursor_evidence(&cursor(2))],
+                "receiver-test",
+                7,
+                "mouse",
+                DeviceReturnEvidenceMode::WatchedRetainedRoute,
             ),
             Err(EventEvidenceError::RestoreUnavailable)
         );

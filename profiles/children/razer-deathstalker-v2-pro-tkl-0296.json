@@ -17,6 +17,9 @@
       "report_implies_route_available": false
     }
   },
+  "qualification_migrations": [
+    {"from_runtime_sha256": "fcdd53fe104e649cc7d2c38c939bbd41095dc3eb53488ebb30a8615a76bbfba6", "preserve_stage_roles": ["lighting", "map"]}
+  ],
   "presentation": {"upstream_id": "openrgb", "owner": "OpenRGB", "project_version": "1.0rc3", "source_commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0", "model_key": "deathstalker_v2_pro_tkl_wireless_device", "layout_key": "razer_deathstalker_v2_pro_tkl_layout", "transport_variant": "wireless"},
   "capabilities": [
     {"id": "identity.model", "support_level": "identified", "evidence_claims": ["claim.child.0296.passive-identity-telemetry"]},

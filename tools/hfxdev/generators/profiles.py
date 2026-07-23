@@ -24,6 +24,39 @@ def _rust_variants(type_name: str, values: list[str]) -> str:
     return "&[" + ", ".join(f"{type_name}::{_variant(value)}" for value in values) + "]"
 
 
+def _rust_qualification_migrations(index: int, migrations: list[dict[str, Any]]) -> list[str]:
+    declaration = (
+        f"const QUALIFICATION_MIGRATIONS_{index}: &[QualificationMigrationRecord]"
+    )
+    if not migrations:
+        return [f"{declaration} = &[];", ""]
+
+    if len(migrations) == 1:
+        migration = migrations[0]
+        return [
+            f"{declaration} =",
+            "    &[QualificationMigrationRecord {",
+            f'        from_runtime_sha256: "{migration["from_runtime_sha256"]}",',
+            "        preserve_stage_roles: "
+            f"{_rust_strings(migration['preserve_stage_roles'])},",
+            "    }];",
+            "",
+        ]
+
+    lines = [f"{declaration} = &["]
+    for migration in migrations:
+        lines.extend(
+            [
+                "    QualificationMigrationRecord {",
+                f'        from_runtime_sha256: "{migration["from_runtime_sha256"]}",',
+                "        preserve_stage_roles: "
+                f"{_rust_strings(migration['preserve_stage_roles'])},",
+                "    },",
+            ]
+        )
+    return [*lines, "];", ""]
+
+
 def _wrapped_numbers(values: list[int], *, indent: str = "    ", width: int = 100) -> list[str]:
     lines: list[str] = []
     current = indent
@@ -183,6 +216,24 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "}",
         "",
         "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub enum PowerOffDepartureEvidence {",
+        "    ReceiverState,",
+        "    WatchedRetainedRoute,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct LifecyclePolicyRecord {",
+        "    pub power_off_departure_evidence: PowerOffDepartureEvidence,",
+        "    pub device_return_settle_ms: u64,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct QualificationMigrationRecord {",
+        "    pub from_runtime_sha256: &'static str,",
+        "    pub preserve_stage_roles: &'static [&'static str],",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
         "pub struct PresentationRecord {",
         "    pub upstream_id: &'static str,",
         "    pub owner: &'static str,",
@@ -213,6 +264,8 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "    pub capabilities: &'static [CapabilityRecord],",
         "    pub lighting: Option<LightingTopology>,",
         "    pub passive: Option<PassiveTelemetryRecord>,",
+        "    pub lifecycle: Option<LifecyclePolicyRecord>,",
+        "    pub qualification_migrations: &'static [QualificationMigrationRecord],",
         "    pub presentation: Option<PresentationRecord>,",
         "}",
         "",
@@ -259,6 +312,11 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                 rendered = ", ".join(str(value) for value in values)
                 lines.append(f"const PASSIVE_{suffix}_{index}: &[u32] = &[{rendered}];")
             lines.append("")
+        lines.extend(
+            _rust_qualification_migrations(
+                index, profile.get("qualification_migrations", [])
+            )
+        )
     lines.extend(["pub const PROFILES: &[ProfileRecord] = &[",])
     for index, profile in enumerate(catalog["profiles"]):
         identity = profile["identity"]
@@ -302,6 +360,18 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
             ]
         else:
             passive_lines = ["        passive: None,"]
+        lifecycle = profile.get("transport", {}).get("lifecycle")
+        if lifecycle:
+            departure = _variant(lifecycle["power_off_departure_evidence"])
+            lifecycle_lines = [
+                "        lifecycle: Some(LifecyclePolicyRecord {",
+                "            power_off_departure_evidence: "
+                f"PowerOffDepartureEvidence::{departure},",
+                f"            device_return_settle_ms: {lifecycle['device_return_settle_ms']},",
+                "        }),",
+            ]
+        else:
+            lifecycle_lines = ["        lifecycle: None,"]
         presentation = profile.get("presentation")
         if presentation:
             layout_key = (
@@ -356,6 +426,8 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                     else [f"        lighting: {lighting_value},"]
                 ),
                 *passive_lines,
+                *lifecycle_lines,
+                f"        qualification_migrations: QUALIFICATION_MIGRATIONS_{index},",
                 *presentation_lines,
                 "    },",
             ]

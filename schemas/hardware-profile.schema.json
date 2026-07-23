@@ -27,6 +27,11 @@
     },
     "compatibility": {"type": "object"},
     "transport": {"$ref": "#/$defs/transport"},
+    "qualification_migrations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/qualification-migration"}
+    },
     "presentation": {
       "type": "object",
       "additionalProperties": false,
@@ -74,7 +79,8 @@
         "application_raw_frames": {"type": "boolean"},
         "pairing_inventory": {"$ref": "#/$defs/pairing-inventory"},
         "lighting": {"$ref": "#/$defs/lighting"},
-        "passive": {"$ref": "#/$defs/passive"}
+        "passive": {"$ref": "#/$defs/passive"},
+        "lifecycle": {"$ref": "#/$defs/lifecycle-policy"}
       }
     },
     "pairing-inventory": {
@@ -117,6 +123,29 @@
         },
         "route": {"$ref": "#/$defs/route-decoder"},
         "report_implies_route_available": {"type": "boolean"}
+      }
+    },
+    "lifecycle-policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["power_off_departure_evidence", "device_return_settle_ms"],
+      "properties": {
+        "power_off_departure_evidence": {"enum": ["receiver-state", "watched-retained-route"]},
+        "device_return_settle_ms": {"type": "integer", "minimum": 0, "maximum": 30000}
+      }
+    },
+    "qualification-migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from_runtime_sha256", "preserve_stage_roles"],
+      "properties": {
+        "from_runtime_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "preserve_stage_roles": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["telemetry", "map", "lighting"]}
+        }
       }
     },
     "contact-decoder": {

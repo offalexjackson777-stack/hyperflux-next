@@ -2,8 +2,8 @@
 
 use hfx_domain::{DeviceKind, ProfileKind, RouteKind};
 use hfx_profiles::{
-    PROFILES, RuntimeProfileCatalog, child_profile_by_product_id, profile_by_id,
-    receiver_profile_by_usb_id,
+    PROFILES, PowerOffDepartureEvidence, RuntimeProfileCatalog, child_profile_by_product_id,
+    profile_by_id, receiver_profile_by_usb_id,
 };
 
 #[test]
@@ -25,7 +25,26 @@ fn receiver_and_children_resolve_independently() {
     assert_eq!(mouse.receiver_protocols, &["razer-hyperflux-v2"]);
     assert_eq!(mouse.routes, &[RouteKind::HyperfluxWireless]);
     assert!(mouse.required_sibling_kinds.is_empty());
+    let lifecycle = mouse
+        .lifecycle
+        .expect("mouse lifecycle policy is exact-profile bound");
+    assert_eq!(
+        lifecycle.power_off_departure_evidence,
+        PowerOffDepartureEvidence::WatchedRetainedRoute
+    );
+    assert_eq!(lifecycle.device_return_settle_ms, 1_000);
+    assert_eq!(mouse.qualification_migrations.len(), 1);
+    assert_eq!(
+        mouse.qualification_migrations[0].preserve_stage_roles,
+        &["lighting", "map", "telemetry"]
+    );
     assert_eq!(keyboard.device_kind, DeviceKind::Keyboard);
+    assert_eq!(keyboard.lifecycle, None);
+    assert_eq!(keyboard.qualification_migrations.len(), 1);
+    assert_eq!(
+        keyboard.qualification_migrations[0].preserve_stage_roles,
+        &["lighting", "map"]
+    );
     assert_ne!(mouse.id, keyboard.id);
 }
 

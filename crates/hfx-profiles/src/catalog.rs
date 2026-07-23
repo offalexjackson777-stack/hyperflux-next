@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::{
-    LightingTopology, PROFILES, PassiveTelemetryRecord, PresentationRecord, ProfileRecord,
+    LifecyclePolicyRecord, LightingTopology, PROFILES, PassiveTelemetryRecord, PresentationRecord,
+    ProfileRecord, QualificationMigrationRecord,
 };
 use hfx_domain::{
     CapabilityId, CarrierIndex, DeviceKind, DomainValueError, LedCount, ProductId, ProfileDigest,
@@ -102,6 +103,12 @@ pub struct RuntimePresentation {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RuntimeQualificationMigration {
+    pub from_runtime_digest: ProfileDigest,
+    pub preserve_stage_roles: &'static [&'static str],
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RuntimeProfile {
     pub profile_id: ProfileId,
     pub runtime_digest: ProfileDigest,
@@ -121,6 +128,8 @@ pub struct RuntimeProfile {
     pub capabilities: Vec<RuntimeCapability>,
     pub lighting: Option<RuntimeLightingTopology>,
     pub passive: Option<PassiveTelemetryRecord>,
+    pub lifecycle: Option<LifecyclePolicyRecord>,
+    pub qualification_migrations: Vec<RuntimeQualificationMigration>,
     pub presentation: Option<RuntimePresentation>,
 }
 
@@ -259,7 +268,22 @@ fn convert_profile(record: &ProfileRecord) -> Result<RuntimeProfile, ProfileCata
             .collect::<Result<Vec<_>, ProfileCatalogError>>()?,
         lighting: record.lighting.map(convert_lighting).transpose()?,
         passive: record.passive,
+        lifecycle: record.lifecycle,
+        qualification_migrations: record
+            .qualification_migrations
+            .iter()
+            .map(convert_qualification_migration)
+            .collect::<Result<Vec<_>, _>>()?,
         presentation: record.presentation.map(convert_presentation),
+    })
+}
+
+fn convert_qualification_migration(
+    migration: &QualificationMigrationRecord,
+) -> Result<RuntimeQualificationMigration, ProfileCatalogError> {
+    Ok(RuntimeQualificationMigration {
+        from_runtime_digest: ProfileDigest::try_from(migration.from_runtime_sha256)?,
+        preserve_stage_roles: migration.preserve_stage_roles,
     })
 }
 

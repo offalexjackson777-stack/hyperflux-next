@@ -20,7 +20,8 @@ use hfx_kernel_transport::{
     HFX_UAPI_OBSERVATION_SOURCE_POWER_MANAGEMENT, RawKernelObservation,
 };
 use hfx_profiles::{
-    PassiveBatteryEncoding, PassiveEndpointLane, PassiveTelemetryRecord, RuntimeProfileCatalog,
+    LifecyclePolicyRecord, PassiveBatteryEncoding, PassiveEndpointLane, PassiveTelemetryRecord,
+    RuntimeProfileCatalog,
 };
 use hfx_runtime::ACTIVITY_RESUMPTION_QUIET_MS;
 use std::collections::BTreeMap;
@@ -37,13 +38,19 @@ pub enum PassiveDisposition {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DeviceRestoreReadiness {
+    pub device_id: LogicalDeviceId,
+    pub settle_ms: u64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PassiveTranslation {
     pub disposition: PassiveDisposition,
     pub observations: Vec<LifecycleObservation>,
     /// One device whose first generation-bound input, or first input after a
     /// bounded quiet interval, proves that its child route is ready for a
     /// restoration attempt. This is not a claim that the device was asleep.
-    pub restore_ready: Option<LogicalDeviceId>,
+    pub restore_ready: Option<DeviceRestoreReadiness>,
 }
 
 impl PassiveTranslation {
@@ -55,11 +62,18 @@ impl PassiveTranslation {
         }
     }
 
-    fn restore_ready(observations: Vec<LifecycleObservation>, device_id: LogicalDeviceId) -> Self {
+    fn restore_ready(
+        observations: Vec<LifecycleObservation>,
+        device_id: LogicalDeviceId,
+        settle_ms: u64,
+    ) -> Self {
         Self {
             disposition: PassiveDisposition::Applied,
             observations,
-            restore_ready: Some(device_id),
+            restore_ready: Some(DeviceRestoreReadiness {
+                device_id,
+                settle_ms,
+            }),
         }
     }
 
@@ -119,6 +133,7 @@ struct LaneBinding {
     device_id: LogicalDeviceId,
     endpoint_id: EndpointId,
     passive: Option<PassiveTelemetryRecord>,
+    lifecycle: Option<LifecyclePolicyRecord>,
     last_activity_ms: Option<MonotonicMs>,
 }
 
@@ -305,6 +320,7 @@ impl PassiveObservationTranslator {
             device_id: device_id.clone(),
             endpoint_id: endpoint_id.clone(),
             passive: profile.and_then(|profile| profile.passive),
+            lifecycle: profile.and_then(|profile| profile.lifecycle),
             last_activity_ms,
         };
         let child = ChildIdentity::new(device_id.clone(), device_kind, product_id)?;
@@ -386,7 +402,13 @@ impl PassiveObservationTranslator {
             ),
         ];
         Ok(if restore_ready {
-            PassiveTranslation::restore_ready(observations, binding.device_id)
+            PassiveTranslation::restore_ready(
+                observations,
+                binding.device_id,
+                binding
+                    .lifecycle
+                    .map_or(0, |policy| policy.device_return_settle_ms),
+            )
         } else {
             PassiveTranslation::applied(observations)
         })
@@ -856,8 +878,18 @@ mod tests {
             .translate(activity(2, 1_000, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE))
             .expect("first activity translates");
         assert_eq!(
-            first.restore_ready.as_ref().map(LogicalDeviceId::as_str),
+            first
+                .restore_ready
+                .as_ref()
+                .map(|readiness| readiness.device_id.as_str()),
             Some("paired-mouse-00cd")
+        );
+        assert_eq!(
+            first
+                .restore_ready
+                .as_ref()
+                .map(|readiness| readiness.settle_ms),
+            Some(1_000)
         );
 
         let resumed = translator
@@ -868,7 +900,10 @@ mod tests {
             ))
             .expect("post-quiet activity translates");
         assert_eq!(
-            resumed.restore_ready.as_ref().map(LogicalDeviceId::as_str),
+            resumed
+                .restore_ready
+                .as_ref()
+                .map(|readiness| readiness.device_id.as_str()),
             Some("paired-mouse-00cd")
         );
 
@@ -918,7 +953,10 @@ mod tests {
             ))
             .expect("mouse resumes after identity replay");
         assert_eq!(
-            mouse.restore_ready.as_ref().map(LogicalDeviceId::as_str),
+            mouse
+                .restore_ready
+                .as_ref()
+                .map(|readiness| readiness.device_id.as_str()),
             Some("paired-mouse-00cd")
         );
 
@@ -949,7 +987,10 @@ mod tests {
             ))
             .expect("first generation-bound activity translates");
         assert_eq!(
-            first.restore_ready.as_ref().map(LogicalDeviceId::as_str),
+            first
+                .restore_ready
+                .as_ref()
+                .map(|readiness| readiness.device_id.as_str()),
             Some("paired-mouse-00cd")
         );
     }
@@ -1049,15 +1090,28 @@ mod tests {
             .translate(activity(7, 1_004, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE))
             .expect("post-resume mouse activity translates");
         assert_eq!(
-            mouse.restore_ready.as_ref().map(LogicalDeviceId::as_str),
+            mouse
+                .restore_ready
+                .as_ref()
+                .map(|readiness| readiness.device_id.as_str()),
             Some("paired-mouse-00cd")
         );
         let keyboard = translator
             .translate(activity(8, 1_005, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE))
             .expect("post-resume keyboard activity translates");
         assert_eq!(
-            keyboard.restore_ready.as_ref().map(LogicalDeviceId::as_str),
+            keyboard
+                .restore_ready
+                .as_ref()
+                .map(|readiness| readiness.device_id.as_str()),
             Some("paired-keyboard-0296")
+        );
+        assert_eq!(
+            keyboard
+                .restore_ready
+                .as_ref()
+                .map(|readiness| readiness.settle_ms),
+            Some(0)
         );
         let continuous = translator
             .translate(activity(9, 1_006, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE))
@@ -1097,7 +1151,10 @@ mod tests {
                     .translate(activity(4, 1_002, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE))
                     .expect("pre-active input translates");
                 assert_eq!(
-                    early.restore_ready.as_ref().map(LogicalDeviceId::as_str),
+                    early
+                        .restore_ready
+                        .as_ref()
+                        .map(|readiness| readiness.device_id.as_str()),
                     Some("paired-mouse-00cd")
                 );
             }

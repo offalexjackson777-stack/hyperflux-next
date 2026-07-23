@@ -9,6 +9,7 @@ mod probe;
 mod qualification;
 mod qualification_event_evidence;
 mod qualification_lifecycle;
+mod qualification_migration;
 mod qualification_runner;
 mod qualification_server;
 mod qualification_state;

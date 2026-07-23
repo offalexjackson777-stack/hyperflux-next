@@ -2,7 +2,7 @@
 
 use crate::qualification::{SYSTEM_RESUME_RETRY_EVIDENCE, StageCheckpoint, StageProgress};
 use crate::qualification_event_evidence::{
-    cursor_evidence, device_return_restore, renewed_generation_restores,
+    DeviceReturnEvidenceMode, cursor_evidence, device_return_restore, renewed_generation_restores,
     resumed_generation_restores,
 };
 use crate::qualification_runner::{ObservationVerdict, RunnerTransition};
@@ -12,6 +12,7 @@ use crate::{
     RiskLevel, StageResult, StageStatus, qualification_generated_at,
 };
 use hfx_domain::{ControllerAvailability, InventoryAvailability, ReceiverLifecycleState};
+use hfx_profiles::{PowerOffDepartureEvidence, profile_by_id};
 use hfx_protocol::EventBatch;
 use rustix::time::{ClockId, clock_gettime};
 use serde::{Deserialize, Serialize};
@@ -728,13 +729,17 @@ fn record_device_departure(
 ) -> Result<PreparedLifecycleAction, LifecycleRunnerError> {
     validate_same_generation(&run, observation)?;
     let selected = selected_observation(&run, observation)?;
-    if selected.controller_ready
-        || !matches!(
+    let receiver_state_departure = !selected.controller_ready
+        && matches!(
             selected.availability,
             InventoryAvailability::Sleeping
                 | InventoryAvailability::Unavailable
                 | InventoryAvailability::ReceiverUnavailable
-        )
+        );
+    let retained_route_departure = selected.controller_ready
+        && selected.availability == InventoryAvailability::Available
+        && retained_route_departure_allowed(&run)?;
+    if (!receiver_state_departure && !retained_route_departure)
         || !siblings_ready(&run, observation)
     {
         return Err(LifecycleRunnerError::new(
@@ -743,10 +748,14 @@ fn record_device_departure(
     }
     let active = run.active.as_mut().expect("active lifecycle stage exists");
     active.phase = LifecyclePhase::DeviceReturn;
-    active.evidence_refs.push(format!(
-        "device-departure:{}",
-        selected.availability.as_str()
-    ));
+    active.evidence_refs.push(if retained_route_departure {
+        "device-departure:watched-physical-retained-route".to_owned()
+    } else {
+        format!("device-departure:{}", selected.availability.as_str())
+    });
+    if let Some(cursor) = &observation.cursor_ref {
+        active.evidence_refs.push(cursor.clone());
+    }
     let evidence = active.evidence_refs.clone();
     let has_siblings = run.plans.len() > 1;
     Ok(PreparedLifecycleAction::Record {
@@ -766,6 +775,15 @@ fn record_device_return(
         ));
     }
     let active = run.active.as_ref().expect("active lifecycle stage exists");
+    let evidence_mode = if active
+        .evidence_refs
+        .iter()
+        .any(|value| value == "device-departure:watched-physical-retained-route")
+    {
+        DeviceReturnEvidenceMode::WatchedRetainedRoute
+    } else {
+        DeviceReturnEvidenceMode::ReceiverTransition
+    };
     let restore_evidence = device_return_restore(
         observation.events.as_ref().ok_or_else(|| {
             LifecycleRunnerError::new(
@@ -776,6 +794,7 @@ fn record_device_return(
         &observation.receiver_id,
         active.baseline_generation_id,
         &active.device_id,
+        evidence_mode,
     )
     .map_err(|error| LifecycleRunnerError::new(error.to_string()))?;
     let active = run.active.as_mut().expect("active lifecycle stage exists");
@@ -1147,6 +1166,27 @@ fn expected_device<'a>(
         .ok_or_else(|| LifecycleRunnerError::new("The expected controller identity is missing."))
 }
 
+fn retained_route_departure_allowed(run: &LifecycleRunState) -> Result<bool, LifecycleRunnerError> {
+    let active = run.active.as_ref().ok_or_else(|| {
+        LifecycleRunnerError::new("The retained lifecycle campaign has no active stage.")
+    })?;
+    let expected = expected_device(run, &active.device_id)?;
+    let binding = expected.profile.as_ref().ok_or_else(|| {
+        LifecycleRunnerError::new("The lifecycle target has no exact profile binding.")
+    })?;
+    let profile = profile_by_id(&binding.id).ok_or_else(|| {
+        LifecycleRunnerError::new("The lifecycle target profile is absent from this build.")
+    })?;
+    if profile.runtime_sha256 != binding.digest {
+        return Err(LifecycleRunnerError::new(
+            "The lifecycle target profile digest does not match this build.",
+        ));
+    }
+    Ok(profile.lifecycle.is_some_and(|policy| {
+        policy.power_off_departure_evidence == PowerOffDepartureEvidence::WatchedRetainedRoute
+    }))
+}
+
 fn observed_device(
     receiver: &hfx_protocol::IntegrationReceiverView,
     device_id: &str,
@@ -1238,18 +1278,32 @@ fn receiver_has_exact_device(receiver: &ReceiverView, expected: &crate::DeviceVi
 
 fn device_departure_checkpoint(run: &LifecycleRunState) -> StageCheckpoint {
     let has_siblings = run.plans.len() > 1;
+    let retained_route = retained_route_departure_allowed(run).unwrap_or(false);
+    let (instructions, prompt) = if retained_route {
+        (
+            vec![
+                "Switch the selected controller off with its physical power control. Keep every sibling controller awake."
+                    .to_owned(),
+                "Confirm the selected controller is unlit. Its receiver route may remain listed for this exact profile; do not wait for an invented disconnect."
+                    .to_owned(),
+            ],
+            "Is the selected controller physically powered off and unlit?",
+        )
+    } else {
+        (
+            vec![
+                "Power off the selected controller or allow it to enter its normal sleep state. Keep every sibling controller awake."
+                    .to_owned(),
+                "Wait until the selected controller is unlit, then record this checkpoint once."
+                    .to_owned(),
+            ],
+            "Is the selected controller asleep or powered off?",
+        )
+    };
     StageCheckpoint {
         checkpoint_id: "device-departure".to_owned(),
-        instructions: vec![
-            "Power off the selected controller or allow it to enter its normal sleep state. Keep every sibling controller awake."
-                .to_owned(),
-            "Wait until the selected controller is unlit, then record this checkpoint once."
-                .to_owned(),
-        ],
-        observations: lifecycle_observations(
-            "Is the selected controller asleep or powered off?",
-            has_siblings,
-        ),
+        instructions,
+        observations: lifecycle_observations(prompt, has_siblings),
         evidence_refs: run
             .active
             .as_ref()
@@ -1736,6 +1790,106 @@ mod tests {
         let stage = lifecycle_stage(&view, "mouse-test");
         let error = capture_lifecycle_run(&view, &stage).expect_err("prerequisites must gate");
         assert!(error.to_string().contains("identity and lighting"));
+    }
+
+    #[test]
+    fn retained_route_departure_requires_the_exact_profile_policy() {
+        let (mut run, stage, departure) = start_stage("mouse-test");
+        let mouse_profile = profile_by_id("child.razer.basilisk-v3-pro-35k.00cd")
+            .expect("qualified mouse profile exists");
+        let expected = run
+            .receiver
+            .devices
+            .iter_mut()
+            .find(|device| device.device_id == "mouse-test")
+            .expect("mouse exists");
+        expected.profile = Some(ProfileBindingView {
+            id: mouse_profile.id.to_owned(),
+            digest: mouse_profile.runtime_sha256.to_owned(),
+        });
+        let retained_prompt = device_departure_checkpoint(&run);
+        assert!(
+            retained_prompt
+                .instructions
+                .iter()
+                .any(|value| value.contains("receiver route may remain listed"))
+        );
+        assert_eq!(
+            retained_prompt.observations[0].prompt,
+            "Is the selected controller physically powered off and unlit?"
+        );
+        let retained = observation(
+            &run,
+            "mouse-test",
+            run.receiver.generation_id,
+            InventoryAvailability::Available,
+            true,
+        );
+        let (accepted, transition) = unwrap_record(
+            prepare_lifecycle_checkpoint(
+                run,
+                &stage,
+                &departure.progress,
+                ObservationVerdict::Pass,
+                &retained,
+            )
+            .expect("watched retained-route departure records"),
+        );
+        let evidence = &accepted
+            .active
+            .as_ref()
+            .expect("stage remains active")
+            .evidence_refs;
+        assert!(
+            evidence
+                .iter()
+                .any(|value| value == "device-departure:watched-physical-retained-route")
+        );
+        assert!(
+            evidence
+                .last()
+                .is_some_and(|value| value.starts_with("bridge-cursor-sha256:"))
+        );
+        assert_eq!(
+            transition
+                .progress
+                .checkpoint
+                .as_ref()
+                .expect("return checkpoint")
+                .checkpoint_id,
+            "device-return"
+        );
+
+        let (mut run, stage, departure) = start_stage("mouse-test");
+        let keyboard_profile = profile_by_id("child.razer.deathstalker-v2-pro-tkl.0296")
+            .expect("qualified keyboard profile exists");
+        let expected = run
+            .receiver
+            .devices
+            .iter_mut()
+            .find(|device| device.device_id == "mouse-test")
+            .expect("mouse exists");
+        expected.profile = Some(ProfileBindingView {
+            id: keyboard_profile.id.to_owned(),
+            digest: keyboard_profile.runtime_sha256.to_owned(),
+        });
+        let retained = observation(
+            &run,
+            "mouse-test",
+            run.receiver.generation_id,
+            InventoryAvailability::Available,
+            true,
+        );
+        let Err(error) = prepare_lifecycle_checkpoint(
+            run,
+            &stage,
+            &departure.progress,
+            ObservationVerdict::Pass,
+            &retained,
+        ) else {
+            panic!("a profile without retained-route policy stays strict");
+        };
+        assert!(error.to_string().contains("has not departed cleanly"));
     }
 
     #[test]

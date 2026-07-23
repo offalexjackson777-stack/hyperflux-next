@@ -23,6 +23,21 @@ const LEGACY_SOURCE_BOUND_COORDINATOR_SHA256: &str =
     "912f0a7cd4cba79f2293e0fc664ef42e2bba5e36b549cecea596580aea739858";
 const MAX_SESSION_BYTES: u64 = 256 * 1024;
 const MAX_STAGE_RESULTS: usize = 64;
+const MAX_STAGE_AUTHORITIES: usize = 64;
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct QualificationStageAuthority {
+    pub receiver_id: String,
+    pub generation_id: u64,
+    pub receiver_profile_id: String,
+    pub receiver_profile_digest: String,
+    pub device_id: String,
+    pub product_id: u16,
+    pub profile_id: String,
+    pub profile_digest: String,
+    pub stage_contract_sha256: String,
+}
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -36,6 +51,8 @@ pub(crate) struct QualificationSessionState {
     pub identity_fingerprint: Option<[u8; 32]>,
     pub run_id: Option<String>,
     pub results: BTreeMap<String, StageProgress>,
+    #[serde(default)]
+    pub stage_authorities: BTreeMap<String, QualificationStageAuthority>,
     pub pending_transaction: Option<PendingLightingTransaction>,
     pub lifecycle_run: Option<LifecycleRunState>,
     pub hardware_write_executed: bool,
@@ -53,6 +70,7 @@ impl Default for QualificationSessionState {
             identity_fingerprint: None,
             run_id: None,
             results: BTreeMap::new(),
+            stage_authorities: BTreeMap::new(),
             pending_transaction: None,
             lifecycle_run: None,
             hardware_write_executed: false,
@@ -61,22 +79,15 @@ impl Default for QualificationSessionState {
 }
 
 impl QualificationSessionState {
-    fn validate(&self) -> Result<(), QualificationStateError> {
+    fn validate_shape(&self) -> Result<(), QualificationStateError> {
         if !valid_digest(&self.coordinator_sha256)
             || !valid_digest(&self.runtime_sha256)
             || !valid_digest(&self.profile_catalog_sha256)
         {
             return Err(QualificationStateError::Invalid);
         }
-        if self.schema != SESSION_SCHEMA
-            || self.product_version != PRODUCT_VERSION
-            || self.coordinator_sha256 != coordinator_sha256()
-            || self.runtime_sha256 != LINUX_RUNTIME_SHA256
-            || self.profile_catalog_sha256 != PROFILE_SOURCE_SHA256
-        {
-            return Err(QualificationStateError::Stale);
-        }
         if self.results.len() > MAX_STAGE_RESULTS
+            || self.stage_authorities.len() > MAX_STAGE_AUTHORITIES
             || self.run_id.as_deref().is_some_and(|value| {
                 value.is_empty()
                     || value.len() > 96
@@ -105,6 +116,17 @@ impl QualificationSessionState {
                         byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.')
                     })
             })
+            || self.stage_authorities.iter().any(|(stage_id, authority)| {
+                !valid_identifier(stage_id, 128)
+                    || !valid_identifier(&authority.receiver_id, 128)
+                    || authority.generation_id == 0
+                    || !valid_identifier(&authority.receiver_profile_id, 128)
+                    || !valid_digest(&authority.receiver_profile_digest)
+                    || !valid_identifier(&authority.device_id, 128)
+                    || !valid_identifier(&authority.profile_id, 128)
+                    || !valid_digest(&authority.profile_digest)
+                    || !valid_digest(&authority.stage_contract_sha256)
+            })
         {
             return Err(QualificationStateError::Invalid);
         }
@@ -117,6 +139,43 @@ impl QualificationSessionState {
         }
         Ok(())
     }
+
+    fn compatibility(&self) -> Result<QualificationStateCompatibility, QualificationStateError> {
+        if self.schema != SESSION_SCHEMA
+            || self.product_version != PRODUCT_VERSION
+            || self.coordinator_sha256 != coordinator_sha256()
+            || self.runtime_sha256 != LINUX_RUNTIME_SHA256
+        {
+            return Err(QualificationStateError::Stale);
+        }
+        if self.profile_catalog_sha256 == PROFILE_SOURCE_SHA256 {
+            Ok(QualificationStateCompatibility::Current)
+        } else {
+            Ok(QualificationStateCompatibility::ProfileCatalogStale)
+        }
+    }
+
+    fn validate(&self) -> Result<(), QualificationStateError> {
+        self.validate_shape()?;
+        if self.compatibility()? != QualificationStateCompatibility::Current {
+            return Err(QualificationStateError::Stale);
+        }
+        Ok(())
+    }
+}
+
+fn valid_identifier(value: &str, maximum: usize) -> bool {
+    !value.is_empty()
+        && value.len() <= maximum
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':'))
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum QualificationStateCompatibility {
+    Current,
+    ProfileCatalogStale,
 }
 
 #[derive(Debug)]
@@ -175,9 +234,25 @@ pub(crate) fn default_state_path() -> Result<PathBuf, QualificationStateError> {
         .join("qualification-session.json"))
 }
 
+#[cfg(test)]
 pub(crate) fn load_state(
     path: &Path,
 ) -> Result<Option<QualificationSessionState>, QualificationStateError> {
+    let Some((state, compatibility)) = load_state_with_compatibility(path)? else {
+        return Ok(None);
+    };
+    if compatibility != QualificationStateCompatibility::Current {
+        return Err(QualificationStateError::Stale);
+    }
+    Ok(Some(state))
+}
+
+pub(crate) fn load_state_with_compatibility(
+    path: &Path,
+) -> Result<
+    Option<(QualificationSessionState, QualificationStateCompatibility)>,
+    QualificationStateError,
+> {
     let metadata = match fs::symlink_metadata(path) {
         Ok(metadata) => metadata,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
@@ -198,8 +273,9 @@ pub(crate) fn load_state(
     if state.coordinator_sha256 == LEGACY_SOURCE_BOUND_COORDINATOR_SHA256 {
         state.coordinator_sha256 = coordinator_sha256();
     }
-    state.validate()?;
-    Ok(Some(state))
+    state.validate_shape()?;
+    let compatibility = state.compatibility()?;
+    Ok(Some((state, compatibility)))
 }
 
 pub(crate) fn save_state(
@@ -360,6 +436,51 @@ mod tests {
         let second = archive_stale_state(&path).expect("same state reuses archive");
         assert_eq!(first, second);
         assert_eq!(fs::read(first).expect("archive reads"), payload);
+        fs::remove_dir_all(path.parent().expect("parent")).expect("test state removes");
+    }
+
+    #[test]
+    fn only_a_profile_catalog_change_is_exposed_for_guarded_migration() {
+        let path = test_path("profile-catalog-stale");
+        let _ = fs::remove_dir_all(path.parent().expect("parent"));
+        save_state(&path, &QualificationSessionState::default()).expect("state saves");
+        let mut stale: serde_json::Value =
+            serde_json::from_slice(&fs::read(&path).expect("state reads")).expect("state parses");
+        stale
+            .as_object_mut()
+            .expect("state object")
+            .remove("stage_authorities");
+        stale["profile_catalog_sha256"] = serde_json::Value::String("0".repeat(64));
+        fs::write(
+            &path,
+            serde_json::to_vec_pretty(&stale).expect("state serializes"),
+        )
+        .expect("state writes");
+
+        let (candidate, compatibility) = load_state_with_compatibility(&path)
+            .expect("candidate loads")
+            .expect("candidate exists");
+        assert_eq!(
+            compatibility,
+            QualificationStateCompatibility::ProfileCatalogStale
+        );
+        assert_eq!(candidate.profile_catalog_sha256, "0".repeat(64));
+        assert!(candidate.stage_authorities.is_empty());
+        assert!(matches!(
+            load_state(&path),
+            Err(QualificationStateError::Stale)
+        ));
+
+        stale["runtime_sha256"] = serde_json::Value::String("1".repeat(64));
+        fs::write(
+            &path,
+            serde_json::to_vec_pretty(&stale).expect("state serializes"),
+        )
+        .expect("state writes");
+        assert!(matches!(
+            load_state_with_compatibility(&path),
+            Err(QualificationStateError::Stale)
+        ));
         fs::remove_dir_all(path.parent().expect("parent")).expect("test state removes");
     }
 

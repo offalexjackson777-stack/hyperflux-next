@@ -890,16 +890,31 @@
         "upstream_id": "openrgb"
       },
       "profile_id": "child.razer.basilisk-v3-pro-35k.00cd",
+      "qualification_migrations": [
+        {
+          "from_runtime_sha256": "f72d38a70e9f4f7fb56848937abafa4773902de64b9d07b22e11c12df6dbfe33",
+          "preserve_stage_roles": [
+            "lighting",
+            "map",
+            "telemetry"
+          ]
+        }
+      ],
       "restrictions": [
         "Another Basilisk name or PID inherits no map.",
         "OpenRGB owns zone labels and geometry presentation.",
-        "Contact, inactivity, darkness, and power-off remain distinct facts."
+        "Contact, inactivity, darkness, and power-off remain distinct facts.",
+        "A physical mouse power-off can retain the receiver route; watched qualification records that physical boundary without inventing a disconnect."
       ],
-      "revision": 1,
-      "runtime_sha256": "f72d38a70e9f4f7fb56848937abafa4773902de64b9d07b22e11c12df6dbfe33",
+      "revision": 2,
+      "runtime_sha256": "1a9dde39c257beb4d51dcd43e4e56c57ee782d59d9b49834557591eaea04dfcc",
       "schema": "hyperflux-hardware-profile-v1",
       "source_path": "profiles/children/razer-basilisk-v3-pro-35k-00cd.json",
       "transport": {
+        "lifecycle": {
+          "device_return_settle_ms": 1000,
+          "power_off_departure_evidence": "watched-retained-route"
+        },
         "lighting": {
           "application_index_to_carrier": [
             1,
@@ -1084,6 +1099,15 @@
         "upstream_id": "openrgb"
       },
       "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296",
+      "qualification_migrations": [
+        {
+          "from_runtime_sha256": "fcdd53fe104e649cc7d2c38c939bbd41095dc3eb53488ebb30a8615a76bbfba6",
+          "preserve_stage_roles": [
+            "lighting",
+            "map"
+          ]
+        }
+      ],
       "restrictions": [
         "Another DeathStalker name, PID, or physical layout inherits no map.",
         "OpenRGB owns key names, geometry, and ANSI or ISO presentation.",
@@ -1368,5 +1392,5 @@
     }
   ],
   "schema": "hyperflux-compiled-profile-catalog-v1",
-  "source_sha256": "274d8ff1af5c762e4601b3f9538930f870e705d18887208388c2dae6d201ac4e"
+  "source_sha256": "f75f7ebd0caaec5469fdfddb55fb8e1182bc1d0adf53a5f9f28c8d35c6f4f62a"
 }

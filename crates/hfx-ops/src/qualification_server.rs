@@ -7,13 +7,16 @@ use crate::qualification_lifecycle::{
     prepare_lifecycle_checkpoint, reconcile_system_resume, recover_retryable_resume_failure,
     start_lifecycle_stage,
 };
+use crate::qualification_migration::{
+    migrate_profile_catalog_state, qualification_stage_authorities,
+};
 use crate::qualification_runner::{
     ObservationVerdict, PreparedLightingAction, new_transaction_id, prepare_lighting_checkpoint,
     prepare_lighting_stage, reconcile_pending_lighting,
 };
 use crate::qualification_state::{
-    QualificationSessionState, QualificationStateError, archive_stale_state, default_state_path,
-    load_state, save_state,
+    QualificationSessionState, QualificationStateCompatibility, QualificationStateError,
+    archive_stale_state, default_state_path, load_state_with_compatibility, save_state,
 };
 use crate::{
     BatteryAvailability, CompanionAction, PresenceView, QualificationStage, QualificationView,
@@ -132,12 +135,22 @@ pub fn serve_qualification_console(
         RuntimeProfileCatalog::load().map_err(|_| QualificationServerError::CatalogInvalid)?;
     let listener = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, config.port))
         .map_err(QualificationServerError::BindFailed)?;
+    let probe = RealSystemProbe::default();
     let state_file = config
         .state_file
         .as_deref()
         .ok_or(QualificationServerError::StateUnavailable)?;
-    let mut state = match load_state(state_file) {
-        Ok(Some(state)) => state,
+    let mut state = match load_state_with_compatibility(state_file) {
+        Ok(Some((state, QualificationStateCompatibility::Current))) => state,
+        Ok(Some((state, QualificationStateCompatibility::ProfileCatalogStale))) => {
+            archive_stale_state(state_file)
+                .map_err(|_| QualificationServerError::StateUnavailable)?;
+            let current_view = base_live_view(&probe, &catalog, state.revision.saturating_add(1));
+            let fingerprint = identity_fingerprint(&current_view)
+                .map_err(|_| QualificationServerError::StateUnavailable)?;
+            migrate_profile_catalog_state(state, &current_view, &catalog, fingerprint)
+                .unwrap_or_default()
+        }
         Ok(None) => ServerState::default(),
         Err(QualificationStateError::Stale) => {
             archive_stale_state(state_file)
@@ -152,7 +165,6 @@ pub fn serve_qualification_console(
         state.revision = state.revision.saturating_add(1);
     }
     save_state(state_file, &state).map_err(|_| QualificationServerError::StateUnavailable)?;
-    let probe = RealSystemProbe::default();
     for connection in listener.incoming() {
         let mut stream = connection.map_err(QualificationServerError::ConnectionFailed)?;
         let _ = handle_connection(
@@ -271,8 +283,15 @@ fn live_view(
         state.revision.max(1),
         qualification_generated_at(),
     );
+    let stage_authorities = qualification_stage_authorities(&view);
+    let mut changed = state.stage_authorities != stage_authorities;
+    if changed {
+        state.stage_authorities = stage_authorities;
+    }
     let fingerprint = identity_fingerprint(&view)?;
-    let mut changed = refresh_identity_binding(state, fingerprint, &view);
+    if refresh_identity_binding(state, fingerprint, &view) {
+        changed = true;
+    }
     if reconcile_pending(probe, &view, state) {
         changed = true;
     }
@@ -289,6 +308,28 @@ fn live_view(
         save_state(state_file, state).map_err(io::Error::other)?;
     }
     Ok(view)
+}
+
+fn base_live_view(
+    probe: &RealSystemProbe,
+    catalog: &RuntimeProfileCatalog,
+    revision: u64,
+) -> QualificationView {
+    let system = probe.snapshot();
+    let integration = probe.qualification_integration().ok();
+    build_qualification_view(
+        &system,
+        integration.as_ref(),
+        catalog,
+        RunnerCapabilities {
+            read_only_actions: RunnerAvailability::Available,
+            supervised_lighting: RunnerAvailability::Available,
+            device_lifecycle: RunnerAvailability::Available,
+            system_lifecycle: RunnerAvailability::Available,
+        },
+        revision.max(1),
+        qualification_generated_at(),
+    )
 }
 
 fn refresh_identity_binding(

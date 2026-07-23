@@ -183,7 +183,7 @@ pub struct RestorationScheduler {
     max_triggers: usize,
     max_claims: usize,
     configured_receivers: BTreeSet<ReceiverId>,
-    ready_devices: BTreeSet<(ReceiverId, GenerationId, LogicalDeviceId)>,
+    ready_devices: BTreeMap<(ReceiverId, GenerationId, LogicalDeviceId), MonotonicMs>,
     triggers: BTreeMap<RestoreTriggerId, ScheduledTrigger>,
     claims: BTreeMap<RestoreClaimId, ScheduledClaim>,
 }
@@ -247,7 +247,7 @@ impl RestorationScheduler {
             max_triggers,
             max_claims,
             configured_receivers: BTreeSet::new(),
-            ready_devices: BTreeSet::new(),
+            ready_devices: BTreeMap::new(),
             triggers: BTreeMap::new(),
             claims: BTreeMap::new(),
         })
@@ -347,14 +347,45 @@ impl RestorationScheduler {
         device_id: LogicalDeviceId,
         sequence: SequenceNumber,
     ) -> Result<(), RestorationScheduleError> {
+        self.schedule_device_return_at(
+            receiver_id,
+            generation_id,
+            device_id,
+            sequence,
+            immediate_due()?,
+            0,
+        )
+    }
+
+    /// Enqueues one exact return after a profile-owned wake-settle interval.
+    /// The schedule timestamp comes from the same monotonic clock used by the
+    /// actor tick, keeping the deadline valid across suspend boundaries.
+    ///
+    /// # Errors
+    ///
+    /// Returns a time, trigger-capacity, or generated-identity failure.
+    pub fn schedule_device_return_at(
+        &mut self,
+        receiver_id: ReceiverId,
+        generation_id: GenerationId,
+        device_id: LogicalDeviceId,
+        sequence: SequenceNumber,
+        scheduled_at: MonotonicMs,
+        settle_ms: u64,
+    ) -> Result<(), RestorationScheduleError> {
+        let due = due_after(scheduled_at, settle_ms)?;
+        let readiness = (receiver_id.clone(), generation_id, device_id.clone());
         self.ready_devices
-            .insert((receiver_id.clone(), generation_id, device_id.clone()));
-        self.schedule(
+            .entry(readiness)
+            .and_modify(|existing| *existing = (*existing).max(due))
+            .or_insert(due);
+        self.schedule_at(
             RestoreTriggerKind::DeviceReturn,
             receiver_id,
             generation_id,
             Some(device_id),
             Some(sequence),
+            due,
         )
     }
 
@@ -366,7 +397,7 @@ impl RestorationScheduler {
         self.claims.retain(|_, scheduled| {
             scheduled.receiver_id != *receiver_id || scheduled.generation_id != generation_id
         });
-        self.ready_devices.retain(|(candidate, generation, _)| {
+        self.ready_devices.retain(|(candidate, generation, _), _| {
             candidate != receiver_id || *generation != generation_id
         });
     }
@@ -554,6 +585,25 @@ impl RestorationScheduler {
         target_device_id: Option<LogicalDeviceId>,
         sequence: Option<SequenceNumber>,
     ) -> Result<(), RestorationScheduleError> {
+        self.schedule_at(
+            kind,
+            receiver_id,
+            generation_id,
+            target_device_id,
+            sequence,
+            immediate_due()?,
+        )
+    }
+
+    fn schedule_at(
+        &mut self,
+        kind: RestoreTriggerKind,
+        receiver_id: ReceiverId,
+        generation_id: GenerationId,
+        target_device_id: Option<LogicalDeviceId>,
+        sequence: Option<SequenceNumber>,
+        due: MonotonicMs,
+    ) -> Result<(), RestorationScheduleError> {
         if !self.enabled {
             return Ok(());
         }
@@ -562,7 +612,7 @@ impl RestorationScheduler {
                 self.park(&receiver_id, generation_id, None)?;
                 self.wake_ready_devices(&receiver_id, generation_id)
             } else {
-                self.wake(&receiver_id, generation_id, None)
+                self.wake(&receiver_id, generation_id, None, immediate_due()?)
             };
             self.triggers.retain(|_, scheduled| {
                 scheduled.trigger.receiver_id != receiver_id
@@ -573,7 +623,7 @@ impl RestorationScheduler {
                 return Ok(());
             }
         } else if kind == RestoreTriggerKind::DeviceReturn {
-            let woke = self.wake(&receiver_id, generation_id, target_device_id.as_ref());
+            let woke = self.wake(&receiver_id, generation_id, target_device_id.as_ref(), due);
             if woke > 0 || self.has_pending_broad_trigger(&receiver_id, generation_id) {
                 return Ok(());
             }
@@ -615,8 +665,7 @@ impl RestorationScheduler {
                     generation_id,
                     target_device_id,
                 },
-                due: MonotonicMs::try_from(0_u64)
-                    .map_err(|_| RestorationScheduleError::TimeOverflow)?,
+                due,
                 sequence,
             },
         );
@@ -639,13 +688,15 @@ impl RestorationScheduler {
     ) -> Result<(), RestorationScheduleError> {
         let readiness_gated =
             readiness_gated_trigger(trigger_kind) || readiness_gated_trigger(record.trigger_kind);
-        let due = if readiness_gated
-            && !self.ready_devices.contains(&(
-                record.receiver_id.clone(),
-                record.generation_id,
-                record.device_id.clone(),
-            )) {
-            parked_due()?
+        let readiness = (
+            record.receiver_id.clone(),
+            record.generation_id,
+            record.device_id.clone(),
+        );
+        let due = if readiness_gated {
+            self.ready_devices
+                .get(&readiness)
+                .map_or_else(parked_due, |ready_at| Ok(now.max(*ready_at)))?
         } else {
             now
         };
@@ -684,6 +735,7 @@ impl RestorationScheduler {
         receiver_id: &ReceiverId,
         generation_id: GenerationId,
         device_id: Option<&LogicalDeviceId>,
+        due: MonotonicMs,
     ) -> usize {
         let mut woken = 0;
         for claim in self.claims.values_mut().filter(|claim| {
@@ -691,7 +743,7 @@ impl RestorationScheduler {
                 && claim.generation_id == generation_id
                 && device_id.is_none_or(|device_id| claim.device_id == *device_id)
         }) {
-            claim.due = MonotonicMs::try_from(0_u64).expect("zero monotonic time is valid");
+            claim.due = due;
             woken += 1;
         }
         woken
@@ -705,14 +757,14 @@ impl RestorationScheduler {
         let devices = self
             .ready_devices
             .iter()
-            .filter(|(candidate, generation, _)| {
+            .filter(|((candidate, generation, _), _)| {
                 candidate == receiver_id && *generation == generation_id
             })
-            .map(|(_, _, device_id)| device_id.clone())
+            .map(|((_, _, device_id), due)| (device_id.clone(), *due))
             .collect::<Vec<_>>();
         devices
             .iter()
-            .map(|device_id| self.wake(receiver_id, generation_id, Some(device_id)))
+            .map(|(device_id, due)| self.wake(receiver_id, generation_id, Some(device_id), *due))
             .sum()
     }
 
@@ -748,7 +800,7 @@ impl RestorationScheduler {
     }
 
     fn clear_readiness(&mut self, receiver_id: &ReceiverId, generation_id: GenerationId) {
-        self.ready_devices.retain(|(candidate, generation, _)| {
+        self.ready_devices.retain(|(candidate, generation, _), _| {
             candidate != receiver_id || *generation != generation_id
         });
     }
@@ -772,6 +824,10 @@ const fn readiness_gated_trigger(kind: RestoreTriggerKind) -> bool {
 
 fn parked_due() -> Result<MonotonicMs, RestorationScheduleError> {
     MonotonicMs::try_from(u64::MAX).map_err(|_| RestorationScheduleError::TimeOverflow)
+}
+
+fn immediate_due() -> Result<MonotonicMs, RestorationScheduleError> {
+    MonotonicMs::try_from(0_u64).map_err(|_| RestorationScheduleError::TimeOverflow)
 }
 
 fn due_trigger_id(
@@ -1631,7 +1687,7 @@ mod tests {
                 .kind,
             RestoreTriggerKind::SystemResume
         ));
-        assert!(scheduler.ready_devices.contains(&(
+        assert!(scheduler.ready_devices.contains_key(&(
             id("receiver-1"),
             generation(1),
             id("mouse-1")
@@ -1781,7 +1837,7 @@ mod tests {
             .expect("claim schedules");
         scheduler
             .ready_devices
-            .insert((id("receiver-1"), generation(1), id("mouse-1")));
+            .insert((id("receiver-1"), generation(1), id("mouse-1")), time(0));
 
         scheduler
             .schedule_system_suspend(&id("receiver-1"), generation(1))
@@ -1812,7 +1868,7 @@ mod tests {
                 SequenceNumber::try_from(7_u64).expect("sequence"),
             )
             .expect("resume trigger schedules");
-        assert!(scheduler.ready_devices.contains(&(
+        assert!(scheduler.ready_devices.contains_key(&(
             id("receiver-1"),
             generation(1),
             id("mouse-1")
@@ -1851,6 +1907,56 @@ mod tests {
                 .expect("one trigger")
                 .sequence,
             Some(SequenceNumber::try_from(65_u64).expect("sequence"))
+        );
+    }
+
+    #[test]
+    fn profile_owned_return_settle_delays_only_the_exact_device() {
+        let mouse = record_for_device("claim-mouse", "mouse-1", RestoreRecordStatus::Planned);
+        let keyboard =
+            record_for_device("claim-keyboard", "keyboard-1", RestoreRecordStatus::Planned);
+        let mut scheduler = scheduler();
+        scheduler
+            .schedule_record(mouse.clone(), parked_due().expect("parked due"))
+            .expect("mouse claim schedules");
+        scheduler
+            .schedule_record(keyboard.clone(), parked_due().expect("parked due"))
+            .expect("keyboard claim schedules");
+
+        scheduler
+            .schedule_device_return_at(
+                id("receiver-1"),
+                generation(1),
+                id("mouse-1"),
+                SequenceNumber::try_from(10_u64).expect("sequence"),
+                time(1_000),
+                1_000,
+            )
+            .expect("settled mouse return schedules");
+        scheduler
+            .schedule_device_return(
+                id("receiver-1"),
+                generation(1),
+                id("keyboard-1"),
+                SequenceNumber::try_from(11_u64).expect("sequence"),
+            )
+            .expect("default keyboard return schedules");
+
+        assert_eq!(
+            scheduler
+                .claims
+                .get(&mouse.claim_id)
+                .expect("mouse claim")
+                .due,
+            time(2_000)
+        );
+        assert_eq!(
+            scheduler
+                .claims
+                .get(&keyboard.claim_id)
+                .expect("keyboard claim")
+                .due,
+            time(0)
         );
     }
 

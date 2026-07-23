@@ -461,13 +461,15 @@ impl LinuxRuntimeManager {
                 }
             }
         }
-        if let Some(device_id) = translation.restore_ready {
+        if let Some(readiness) = translation.restore_ready {
             self.restoration
-                .schedule_device_return(
+                .schedule_device_return_at(
                     receiver_id.clone(),
                     generation_id,
-                    device_id,
+                    readiness.device_id,
                     SequenceNumber::try_from(raw_sequence).map_err(RuntimeTickError::Domain)?,
+                    backend.now(),
+                    readiness.settle_ms,
                 )
                 .map_err(RuntimeTickError::Restoration)?;
         }

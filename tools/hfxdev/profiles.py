@@ -28,6 +28,7 @@ PROFILE_KEYS = {
     "identity",
     "compatibility",
     "transport",
+    "qualification_migrations",
     "presentation",
     "capabilities",
     "evidence_claims",
@@ -73,6 +74,14 @@ PASSIVE_KEYS = {
     "route",
     "report_implies_route_available",
 }
+LIFECYCLE_KEYS = {
+    "power_off_departure_evidence",
+    "device_return_settle_ms",
+}
+POWER_OFF_DEPARTURE_EVIDENCE = {"receiver-state", "watched-retained-route"}
+MAX_DEVICE_RETURN_SETTLE_MS = 30_000
+QUALIFICATION_MIGRATION_KEYS = {"from_runtime_sha256", "preserve_stage_roles"}
+QUALIFICATION_MIGRATION_STAGE_ROLES = {"lighting", "map", "telemetry"}
 PASSIVE_TELEMETRY_CAPABILITIES = {
     "presence.passive-evidence",
     "route.hyperflux-wireless",
@@ -83,6 +92,7 @@ PASSIVE_TELEMETRY_CAPABILITIES = {
 UPSTREAM_ID_PATTERN = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
 PRESENTATION_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,127}$")
 GIT_COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
+DIGEST_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
 
 @dataclass(frozen=True)
@@ -498,13 +508,18 @@ def _validate_passive(profile: dict[str, Any]) -> None:
         if transport:
             raise ModelError(f"{profile['profile_id']}: surface transport is not allowed")
         return
-    _expect_keys(transport, {"lighting", "passive"}, f"{profile['profile_id']} child transport")
+    _expect_keys(
+        transport,
+        {"lighting", "passive", "lifecycle"},
+        f"{profile['profile_id']} child transport",
+    )
     passive = transport.get("passive")
     capability_ids = {item["id"] for item in profile["capabilities"]}
     needs_passive = bool(capability_ids & PASSIVE_TELEMETRY_CAPABILITIES)
     if passive is None:
         if needs_passive:
             raise ModelError(f"{profile['profile_id']}: passive telemetry requires a decoder")
+        _validate_lifecycle_policy(profile, transport, passive)
         return
     if not isinstance(passive, dict):
         raise ModelError(f"{profile['profile_id']}: passive decoder must be an object")
@@ -555,6 +570,111 @@ def _validate_passive(profile: dict[str, Any]) -> None:
         available or unavailable or passive["report_implies_route_available"]
     ):
         raise ModelError(f"{profile['profile_id']}: connection evidence has no route decoder")
+    _validate_lifecycle_policy(profile, transport, passive)
+
+
+def _validate_lifecycle_policy(
+    profile: dict[str, Any],
+    transport: dict[str, Any],
+    passive: object,
+) -> None:
+    lifecycle = transport.get("lifecycle")
+    if lifecycle is None:
+        return
+    if not isinstance(lifecycle, dict):
+        raise ModelError(f"{profile['profile_id']}: lifecycle policy must be an object")
+    _expect_keys(lifecycle, LIFECYCLE_KEYS, f"{profile['profile_id']} lifecycle policy")
+    missing = sorted(LIFECYCLE_KEYS - set(lifecycle))
+    if missing:
+        raise ModelError(
+            f"{profile['profile_id']}: incomplete lifecycle policy: {', '.join(missing)}"
+        )
+    departure = lifecycle["power_off_departure_evidence"]
+    if departure not in POWER_OFF_DEPARTURE_EVIDENCE:
+        raise ModelError(f"{profile['profile_id']}: unsupported power-off departure evidence")
+    settle_ms = lifecycle["device_return_settle_ms"]
+    if (
+        isinstance(settle_ms, bool)
+        or not isinstance(settle_ms, int)
+        or not 0 <= settle_ms <= MAX_DEVICE_RETURN_SETTLE_MS
+    ):
+        raise ModelError(f"{profile['profile_id']}: device-return settle time is out of bounds")
+    if departure == "watched-retained-route":
+        if (
+            not isinstance(passive, dict)
+            or not passive["report_implies_route_available"]
+            or passive["route"]["unavailable"]
+        ):
+            raise ModelError(
+                f"{profile['profile_id']}: retained-route departure contradicts passive route evidence"
+            )
+        if settle_ms == 0:
+            raise ModelError(
+                f"{profile['profile_id']}: retained-route return requires a positive settle time"
+            )
+
+
+def _validate_qualification_migrations(
+    profile: dict[str, Any], capability_index: dict[str, dict[str, Any]]
+) -> None:
+    migrations = profile.get("qualification_migrations")
+    if migrations is None:
+        return
+    identifier = profile["profile_id"]
+    if profile["kind"] != "child":
+        raise ModelError(f"{identifier}: qualification migrations are child-profile only")
+    if profile["revision"] < 2:
+        raise ModelError(f"{identifier}: qualification migrations require a revised profile")
+    if not isinstance(migrations, list) or not migrations:
+        raise ModelError(f"{identifier}: qualification migrations must be a non-empty list")
+
+    capability_ids = {item["id"] for item in profile["capabilities"]}
+    available_roles: set[str] = set()
+    if capability_ids & PASSIVE_TELEMETRY_CAPABILITIES:
+        available_roles.add("telemetry")
+    if capability_ids & {"lighting.per-key", "lighting.per-led"}:
+        available_roles.add("map")
+    if capability_ids & {
+        "lighting.brightness",
+        "lighting.complete-black",
+        "lighting.off",
+        "lighting.software-effect-frames",
+        "lighting.static",
+    }:
+        available_roles.add("lighting")
+
+    current_digest = _runtime_profile_digest(profile, capability_index)
+    predecessors: list[str] = []
+    for index, migration in enumerate(migrations):
+        label = f"{identifier} qualification migration {index}"
+        if not isinstance(migration, dict):
+            raise ModelError(f"{label}: expected an object")
+        _expect_keys(migration, QUALIFICATION_MIGRATION_KEYS, label)
+        missing = sorted(QUALIFICATION_MIGRATION_KEYS - set(migration))
+        if missing:
+            raise ModelError(f"{label}: incomplete migration: {', '.join(missing)}")
+        predecessor = migration["from_runtime_sha256"]
+        if not isinstance(predecessor, str) or DIGEST_PATTERN.fullmatch(predecessor) is None:
+            raise ModelError(f"{label}: predecessor must be a lowercase SHA-256 digest")
+        if predecessor == current_digest:
+            raise ModelError(f"{label}: predecessor already equals the current runtime profile")
+        roles = _expect_unique_string_list(
+            migration["preserve_stage_roles"],
+            f"{label} preserved stage roles",
+            allow_empty=False,
+        )
+        unknown_roles = sorted(set(roles) - QUALIFICATION_MIGRATION_STAGE_ROLES)
+        if unknown_roles:
+            raise ModelError(f"{label}: unsupported stage roles: {', '.join(unknown_roles)}")
+        unavailable_roles = sorted(set(roles) - available_roles)
+        if unavailable_roles:
+            raise ModelError(
+                f"{label}: profile does not expose stages for: {', '.join(unavailable_roles)}"
+            )
+        predecessors.append(predecessor)
+    require_unique(predecessors, f"{identifier} qualification migration predecessor")
+    if predecessors != sorted(predecessors):
+        raise ModelError(f"{identifier}: qualification migrations must be sorted by predecessor")
 
 
 def _validate_presentation(profile: dict[str, Any]) -> None:
@@ -729,6 +849,7 @@ def _validate_profiles(
             raise ModelError(f"{identifier}: surface profile exposes an unqualified write")
         _validate_lighting(profile)
         _validate_passive(profile)
+        _validate_qualification_migrations(profile, capability_index)
     require_unique(identities, "profile hardware identity")
 
 

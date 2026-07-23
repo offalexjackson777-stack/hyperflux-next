@@ -12,6 +12,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
+from hfxdev.generators.profiles import _rust_qualification_migrations
 from hfxdev.model import ModelError
 from hfxdev.profiles import (
     _runtime_profile_digest,
@@ -173,6 +174,91 @@ class ProfileCompilerTests(unittest.TestCase):
         before = _runtime_profile_digest(mouse, capabilities)
         mouse["transport"]["passive"]["contact"]["on_mat"] = [2]
         self.assertNotEqual(_runtime_profile_digest(mouse, capabilities), before)
+
+    def test_lifecycle_policy_is_bounded_profile_local_and_digest_bound(self) -> None:
+        profiles, capabilities, claims = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        before = _runtime_profile_digest(mouse, capabilities)
+        mouse["transport"]["lifecycle"]["device_return_settle_ms"] = 1_001
+        _validate_profiles(profiles, capabilities, claims)
+        self.assertNotEqual(_runtime_profile_digest(mouse, capabilities), before)
+
+        profiles, capabilities, claims = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        mouse["transport"]["lifecycle"]["device_return_settle_ms"] = 0
+        with self.assertRaisesRegex(ModelError, "requires a positive settle time"):
+            _validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        mouse["transport"]["passive"]["route"]["unavailable"] = [2]
+        with self.assertRaisesRegex(ModelError, "contradicts passive route evidence"):
+            _validate_profiles(profiles, capabilities, claims)
+
+    def test_qualification_migrations_are_exact_and_do_not_change_runtime_identity(self) -> None:
+        profiles, capabilities, claims = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        with_migration = _runtime_profile_digest(mouse, capabilities)
+        del mouse["qualification_migrations"]
+        self.assertEqual(_runtime_profile_digest(mouse, capabilities), with_migration)
+
+        profiles, capabilities, claims = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        mouse["qualification_migrations"][0]["preserve_stage_roles"] = ["identity"]
+        with self.assertRaisesRegex(ModelError, "unsupported stage roles: identity"):
+            _validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        mouse["qualification_migrations"][0]["from_runtime_sha256"] = (
+            _runtime_profile_digest(mouse, capabilities)
+        )
+        with self.assertRaisesRegex(ModelError, "already equals the current runtime profile"):
+            _validate_profiles(profiles, capabilities, claims)
+
+    def test_qualification_migration_rust_is_rustfmt_stable(self) -> None:
+        migration = {
+            "from_runtime_sha256": "a" * 64,
+            "preserve_stage_roles": ["lighting", "map"],
+        }
+        self.assertEqual(
+            _rust_qualification_migrations(0, []),
+            [
+                "const QUALIFICATION_MIGRATIONS_0: &[QualificationMigrationRecord] = &[];",
+                "",
+            ],
+        )
+        self.assertEqual(
+            _rust_qualification_migrations(1, [migration]),
+            [
+                "const QUALIFICATION_MIGRATIONS_1: &[QualificationMigrationRecord] =",
+                "    &[QualificationMigrationRecord {",
+                f'        from_runtime_sha256: "{"a" * 64}",',
+                '        preserve_stage_roles: &["lighting", "map"],',
+                "    }];",
+                "",
+            ],
+        )
+        second = {
+            "from_runtime_sha256": "b" * 64,
+            "preserve_stage_roles": ["telemetry"],
+        }
+        self.assertEqual(
+            _rust_qualification_migrations(2, [migration, second]),
+            [
+                "const QUALIFICATION_MIGRATIONS_2: &[QualificationMigrationRecord] = &[",
+                "    QualificationMigrationRecord {",
+                f'        from_runtime_sha256: "{"a" * 64}",',
+                '        preserve_stage_roles: &["lighting", "map"],',
+                "    },",
+                "    QualificationMigrationRecord {",
+                f'        from_runtime_sha256: "{"b" * 64}",',
+                '        preserve_stage_roles: &["telemetry"],',
+                "    },",
+                "];",
+                "",
+            ],
+        )
 
     def test_candidate_names_never_grant_writes_or_guess_pids(self) -> None:
         snapshots: dict[str, list[dict]] = {}

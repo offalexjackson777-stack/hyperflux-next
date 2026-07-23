@@ -4,7 +4,7 @@
 from types import MappingProxyType
 from typing import Final
 
-PROFILE_SOURCE_SHA256: Final = '274d8ff1af5c762e4601b3f9538930f870e705d18887208388c2dae6d201ac4e'
+PROFILE_SOURCE_SHA256: Final = 'f75f7ebd0caaec5469fdfddb55fb8e1182bc1d0adf53a5f9f28c8d35c6f4f62a'
 PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                  'id': 'razer-basilisk-v3-pro',
                  'official_name': 'Razer Basilisk V3 Pro',
@@ -535,14 +535,20 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                                 'transport_variant': 'wireless',
                                 'upstream_id': 'openrgb'},
                'profile_id': 'child.razer.basilisk-v3-pro-35k.00cd',
+               'qualification_migrations': [{'from_runtime_sha256': 'f72d38a70e9f4f7fb56848937abafa4773902de64b9d07b22e11c12df6dbfe33',
+                                             'preserve_stage_roles': ['lighting', 'map', 'telemetry']}],
                'restrictions': ['Another Basilisk name or PID inherits no map.',
                                 'OpenRGB owns zone labels and geometry presentation.',
-                                'Contact, inactivity, darkness, and power-off remain distinct facts.'],
-               'revision': 1,
-               'runtime_sha256': 'f72d38a70e9f4f7fb56848937abafa4773902de64b9d07b22e11c12df6dbfe33',
+                                'Contact, inactivity, darkness, and power-off remain distinct facts.',
+                                'A physical mouse power-off can retain the receiver route; watched qualification '
+                                'records that physical boundary without inventing a disconnect.'],
+               'revision': 2,
+               'runtime_sha256': '1a9dde39c257beb4d51dcd43e4e56c57ee782d59d9b49834557591eaea04dfcc',
                'schema': 'hyperflux-hardware-profile-v1',
                'source_path': 'profiles/children/razer-basilisk-v3-pro-35k-00cd.json',
-               'transport': {'lighting': {'application_index_to_carrier': [1, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+               'transport': {'lifecycle': {'device_return_settle_ms': 1000,
+                                           'power_off_departure_evidence': 'watched-retained-route'},
+                             'lighting': {'application_index_to_carrier': [1, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
                                           'application_slot_count': 13,
                                           'carrier_count': 13,
                                           'columns': 13,
@@ -629,6 +635,8 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                                 'transport_variant': 'wireless',
                                 'upstream_id': 'openrgb'},
                'profile_id': 'child.razer.deathstalker-v2-pro-tkl.0296',
+               'qualification_migrations': [{'from_runtime_sha256': 'fcdd53fe104e649cc7d2c38c939bbd41095dc3eb53488ebb30a8615a76bbfba6',
+                                             'preserve_stage_roles': ['lighting', 'map']}],
                'restrictions': ['Another DeathStalker name, PID, or physical layout inherits no map.',
                                 'OpenRGB owns key names, geometry, and ANSI or ISO presentation.',
                                 'External power does not establish a direct USB data route or charging state.',
@@ -826,7 +834,7 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                'schema': 'hyperflux-hardware-profile-v1',
                'source_path': 'profiles/surfaces/razer-hyperflux-v2-hard-edition.json'}],
  'schema': 'hyperflux-compiled-profile-catalog-v1',
- 'source_sha256': '274d8ff1af5c762e4601b3f9538930f870e705d18887208388c2dae6d201ac4e'}
+ 'source_sha256': 'f75f7ebd0caaec5469fdfddb55fb8e1182bc1d0adf53a5f9f28c8d35c6f4f62a'}
 PROFILES_BY_ID: Final = MappingProxyType({profile['profile_id']: profile for profile in PROFILE_CATALOG['profiles']})
 
 __all__ = ["PROFILE_CATALOG", "PROFILE_SOURCE_SHA256", "PROFILES_BY_ID"]
