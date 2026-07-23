@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::qualification::{StageCheckpoint, StageProgress};
+use crate::qualification_event_evidence::{
+    cursor_evidence, device_return_restore, renewed_generation_restores,
+    resumed_generation_restores,
+};
 use crate::qualification_runner::{ObservationVerdict, RunnerTransition};
 use crate::{
     BatteryAvailability, BridgeIntegration, CompanionState, PresenceView, ProfileBindingView,
     QualificationPlan, QualificationStage, QualificationView, ReceiverLifecycleView, ReceiverView,
     RiskLevel, StageResult, StageStatus, qualification_generated_at,
 };
-use hfx_domain::{
-    ControllerAvailability, InventoryAvailability, ReceiverLifecycleState, RestoreState,
-};
+use hfx_domain::{ControllerAvailability, InventoryAvailability, ReceiverLifecycleState};
+use hfx_protocol::EventBatch;
 use rustix::time::{ClockId, clock_gettime};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -80,10 +83,10 @@ pub(crate) struct LifecycleObservation {
     receiver_profile: Option<ProfileBindingView>,
     receiver_lifecycle: Option<ReceiverLifecycleState>,
     stable_restore_enabled: bool,
-    restore_state: Option<RestoreState>,
     selected: Option<ObservedDevice>,
     siblings: Vec<ObservedDevice>,
     cursor_ref: Option<String>,
+    events: Option<EventBatch>,
 }
 
 pub(crate) enum PreparedLifecycleAction {
@@ -289,10 +292,10 @@ pub(crate) fn observe_lifecycle(
             .map(profile_binding),
         receiver_lifecycle: receiver.map(|receiver| receiver.lifecycle),
         stable_restore_enabled: receiver.is_some_and(|receiver| receiver.stable_restore_enabled),
-        restore_state: receiver.map(|receiver| receiver.restore_state),
         selected,
         siblings,
-        cursor_ref: integration.map(|value| cursor_evidence(&value.view)),
+        cursor_ref: integration.map(|value| cursor_evidence(&value.view.cursor)),
+        events: integration.map(|value| value.events.clone()),
     }
 }
 
@@ -444,11 +447,44 @@ pub(crate) fn reconcile_system_resume(
     {
         return Ok(None);
     }
+    let device_ids = run
+        .plans
+        .iter()
+        .map(|plan| plan.device_id.clone())
+        .collect::<Vec<_>>();
+    let generation = observation
+        .generation_id
+        .ok_or_else(|| LifecycleRunnerError::new("The resumed receiver has no generation."))?;
+    let restore_evidence = observation
+        .events
+        .as_ref()
+        .ok_or_else(|| {
+            LifecycleRunnerError::new(
+                "The bridge event history is unavailable for this lifecycle checkpoint.",
+            )
+        })
+        .and_then(|events| {
+            resumed_generation_restores(
+                events,
+                &run.active
+                    .as_ref()
+                    .expect("active lifecycle stage exists")
+                    .evidence_refs,
+                &observation.receiver_id,
+                generation,
+                &device_ids,
+            )
+            .map_err(|error| LifecycleRunnerError::new(error.to_string()))
+        });
+    let Ok(restore_evidence) = restore_evidence else {
+        return Ok(None);
+    };
     let active = run.active.as_mut().expect("active lifecycle stage exists");
     active.phase = LifecyclePhase::SystemResumeObservation;
     active
         .evidence_refs
         .push(format!("system-suspend-gap-ms:{suspended_ms}"));
+    active.evidence_refs.extend(restore_evidence);
     if let Some(cursor) = &observation.cursor_ref {
         active.evidence_refs.push(cursor.clone());
     }
@@ -634,13 +670,30 @@ fn record_device_return(
     observation: &LifecycleObservation,
 ) -> Result<PreparedLifecycleAction, LifecycleRunnerError> {
     validate_ready_identity_for_active(&run, observation)?;
-    if observation.restore_state != Some(RestoreState::Succeeded) {
+    if !observation.stable_restore_enabled {
         return Err(LifecycleRunnerError::new(
-            "The controller returned, but one successful stable restore is not visible yet.",
+            "The controller returned, but stable restoration is no longer enabled.",
         ));
     }
+    let active = run.active.as_ref().expect("active lifecycle stage exists");
+    let restore_evidence = device_return_restore(
+        observation.events.as_ref().ok_or_else(|| {
+            LifecycleRunnerError::new(
+                "The bridge event history is unavailable for this lifecycle checkpoint.",
+            )
+        })?,
+        &active.evidence_refs,
+        &observation.receiver_id,
+        active.baseline_generation_id,
+        &active.device_id,
+    )
+    .map_err(|error| LifecycleRunnerError::new(error.to_string()))?;
     let active = run.active.as_mut().expect("active lifecycle stage exists");
     active.evidence_refs.push("device-return:ready".to_owned());
+    active.evidence_refs.push(restore_evidence);
+    if let Some(cursor) = &observation.cursor_ref {
+        active.evidence_refs.push(cursor.clone());
+    }
     let checkpoint = if active.device_kind == "keyboard" {
         active.phase = LifecyclePhase::SuspendAuthorization;
         system_suspend_checkpoint(active.evidence_refs.clone())
@@ -673,6 +726,9 @@ fn record_receiver_departure(
     active
         .evidence_refs
         .push("receiver-departure:observed".to_owned());
+    if let Some(cursor) = &observation.cursor_ref {
+        active.evidence_refs.push(cursor.clone());
+    }
     let evidence = active.evidence_refs.clone();
     let has_siblings = run.plans.len() > 1;
     Ok(PreparedLifecycleAction::Record {
@@ -695,8 +751,26 @@ fn record_receiver_return(
             "Receiver return did not create a newer generation.",
         ));
     }
+    let device_ids = run
+        .plans
+        .iter()
+        .map(|plan| plan.device_id.clone())
+        .collect::<Vec<_>>();
+    let restore_evidence = renewed_generation_restores(
+        observation.events.as_ref().ok_or_else(|| {
+            LifecycleRunnerError::new(
+                "The bridge event history is unavailable for this lifecycle checkpoint.",
+            )
+        })?,
+        &active.evidence_refs,
+        &observation.receiver_id,
+        generation,
+        &device_ids,
+    )
+    .map_err(|error| LifecycleRunnerError::new(error.to_string()))?;
     let mut evidence = active.evidence_refs.clone();
     evidence.push(format!("receiver-generation:{generation}"));
+    evidence.extend(restore_evidence);
     evidence.push("stable-restore:succeeded".to_owned());
     if let Some(cursor) = &observation.cursor_ref {
         evidence.push(cursor.clone());
@@ -731,6 +805,9 @@ fn prepare_system_suspend(
     active
         .evidence_refs
         .push("system-suspend:authorized".to_owned());
+    if let Some(cursor) = &observation.cursor_ref {
+        active.evidence_refs.push(cursor.clone());
+    }
     let checkpoint = StageCheckpoint {
         checkpoint_id: "system-resume-pending".to_owned(),
         instructions: vec![
@@ -830,11 +907,9 @@ fn validate_restored_identity(
             "The active receiver generation does not satisfy this lifecycle checkpoint.",
         ));
     }
-    if !observation.stable_restore_enabled
-        || observation.restore_state != Some(RestoreState::Succeeded)
-    {
+    if !observation.stable_restore_enabled {
         return Err(LifecycleRunnerError::new(
-            "The exact generation is ready, but stable restoration has not terminally succeeded.",
+            "The exact generation is ready, but stable restoration is no longer enabled.",
         ));
     }
     Ok(())
@@ -1249,11 +1324,6 @@ fn finished(status: StageStatus, summary: &str, evidence_refs: Vec<String>) -> R
     }
 }
 
-fn cursor_evidence(view: &hfx_protocol::IntegrationView) -> String {
-    let encoded = serde_json::to_vec(&view.cursor).unwrap_or_default();
-    format!("bridge-cursor-sha256:{}", digest_hex(&encoded))
-}
-
 fn clock_milliseconds(clock: ClockId) -> Result<u64, LifecycleRunnerError> {
     let stamp = clock_gettime(clock);
     let seconds = u64::try_from(stamp.tv_sec).map_err(|_| {
@@ -1285,6 +1355,11 @@ fn valid_digest(value: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hfx_domain::{
+        DroppedEventCount, EventKind, GenerationId, LogicalDeviceId, ProjectionRevision,
+        ReceiverId, SequenceNumber, StreamEpoch, StreamId, SubscriptionId, TransactionId,
+    };
+    use hfx_protocol::{BridgeEvent, EventCursor};
     use std::path::PathBuf;
 
     fn fixture_path(name: &str) -> PathBuf {
@@ -1354,7 +1429,6 @@ mod tests {
             receiver_profile: run.receiver.profile.clone(),
             receiver_lifecycle: Some(ReceiverLifecycleState::Active),
             stable_restore_enabled: true,
-            restore_state: Some(RestoreState::Succeeded),
             selected: Some(observed_device(
                 run,
                 selected_device_id,
@@ -1369,7 +1443,8 @@ mod tests {
                     observed_device(run, &plan.device_id, InventoryAvailability::Available, true)
                 })
                 .collect(),
-            cursor_ref: Some("bridge-cursor-sha256:test".to_owned()),
+            cursor_ref: Some(cursor_evidence(&test_cursor(0))),
+            events: Some(test_events(run, selected_device_id, generation_id)),
         }
     }
 
@@ -1381,10 +1456,108 @@ mod tests {
             receiver_profile: None,
             receiver_lifecycle: None,
             stable_restore_enabled: false,
-            restore_state: None,
             selected: None,
             siblings: Vec::new(),
-            cursor_ref: Some("bridge-cursor-sha256:absent".to_owned()),
+            cursor_ref: Some(cursor_evidence(&test_cursor(0))),
+            events: Some(test_events(
+                run,
+                &run.active
+                    .as_ref()
+                    .expect("active lifecycle stage exists")
+                    .device_id,
+                run.receiver.generation_id,
+            )),
+        }
+    }
+
+    fn test_cursor(sequence: u64) -> EventCursor {
+        EventCursor {
+            stream_id: StreamId::try_from("lifecycle-test-stream").expect("stream id"),
+            stream_epoch: StreamEpoch::try_from(1_u64).expect("stream epoch"),
+            projection_revision: ProjectionRevision::try_from(1_u32).expect("projection revision"),
+            sequence: SequenceNumber::try_from(sequence).expect("sequence"),
+        }
+    }
+
+    fn test_events(
+        run: &LifecycleRunState,
+        selected_device_id: &str,
+        generation_id: u64,
+    ) -> EventBatch {
+        let receiver_id =
+            ReceiverId::try_from(run.receiver.receiver_id.as_str()).expect("receiver");
+        let baseline = GenerationId::try_from(run.receiver.generation_id).expect("generation");
+        let renewed = GenerationId::try_from(generation_id).expect("generation");
+        let mut sequence = 0_u64;
+        let mut events = Vec::new();
+        let mut push = |kind: EventKind,
+                        generation: GenerationId,
+                        device_id: Option<&str>,
+                        transaction: bool| {
+            sequence += 1;
+            events.push(BridgeEvent {
+                sequence: SequenceNumber::try_from(sequence).expect("sequence"),
+                kind,
+                receiver_id: Some(receiver_id.clone()),
+                generation_id: Some(generation),
+                device_id: device_id
+                    .map(|value| LogicalDeviceId::try_from(value).expect("logical device id")),
+                lease_id: None,
+                transaction_id: transaction.then(|| {
+                    TransactionId::try_from(format!("restore-test-{sequence}"))
+                        .expect("transaction id")
+                }),
+                finding_id: None,
+            });
+        };
+        push(
+            EventKind::DeviceSleeping,
+            baseline,
+            Some(selected_device_id),
+            false,
+        );
+        push(
+            EventKind::DeviceAvailable,
+            baseline,
+            Some(selected_device_id),
+            false,
+        );
+        push(
+            EventKind::RestoreCompleted,
+            baseline,
+            Some(selected_device_id),
+            true,
+        );
+        for plan in &run.plans {
+            push(
+                EventKind::RestoreCompleted,
+                baseline,
+                Some(&plan.device_id),
+                true,
+            );
+        }
+        push(EventKind::ReceiverSuspended, baseline, None, false);
+        push(EventKind::GenerationReplaced, renewed, None, false);
+        push(EventKind::ReceiverAvailable, renewed, None, false);
+        for plan in &run.plans {
+            push(
+                EventKind::RestoreCompleted,
+                renewed,
+                Some(&plan.device_id),
+                true,
+            );
+        }
+        let cursor = test_cursor(sequence);
+        EventBatch {
+            subscription_id: SubscriptionId::try_from("lifecycle-test-subscription")
+                .expect("subscription id"),
+            next_cursor: cursor,
+            events,
+            oldest_available: SequenceNumber::try_from(1_u64).expect("sequence"),
+            latest_available: SequenceNumber::try_from(sequence).expect("sequence"),
+            dropped_events: DroppedEventCount::try_from(0_u64).expect("drop count"),
+            cursor_gap: false,
+            has_more: false,
         }
     }
 

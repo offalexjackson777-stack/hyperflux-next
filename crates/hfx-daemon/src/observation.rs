@@ -39,9 +39,10 @@ pub enum PassiveDisposition {
 pub struct PassiveTranslation {
     pub disposition: PassiveDisposition,
     pub observations: Vec<LifecycleObservation>,
-    /// One device whose first input report followed a bounded quiet interval.
-    /// This is a restoration hint, not a claim that the device was asleep.
-    pub activity_resumption: Option<LogicalDeviceId>,
+    /// One device whose first generation-bound input, or first input after a
+    /// bounded quiet interval, proves that its child route is ready for a
+    /// restoration attempt. This is not a claim that the device was asleep.
+    pub restore_ready: Option<LogicalDeviceId>,
 }
 
 impl PassiveTranslation {
@@ -49,15 +50,15 @@ impl PassiveTranslation {
         Self {
             disposition: PassiveDisposition::Applied,
             observations,
-            activity_resumption: None,
+            restore_ready: None,
         }
     }
 
-    fn resumed(observations: Vec<LifecycleObservation>, device_id: LogicalDeviceId) -> Self {
+    fn restore_ready(observations: Vec<LifecycleObservation>, device_id: LogicalDeviceId) -> Self {
         Self {
             disposition: PassiveDisposition::Applied,
             observations,
-            activity_resumption: Some(device_id),
+            restore_ready: Some(device_id),
         }
     }
 
@@ -65,7 +66,7 @@ impl PassiveTranslation {
         Self {
             disposition,
             observations: Vec::new(),
-            activity_resumption: None,
+            restore_ready: None,
         }
     }
 }
@@ -125,6 +126,7 @@ pub struct PassiveObservationTranslator {
     generation_id: GenerationId,
     catalog: RuntimeProfileCatalog,
     lanes: BTreeMap<u32, LaneBinding>,
+    receiver_was_suspended: bool,
 }
 
 impl PassiveObservationTranslator {
@@ -139,6 +141,7 @@ impl PassiveObservationTranslator {
             generation_id,
             catalog,
             lanes: BTreeMap::new(),
+            receiver_was_suspended: false,
         }
     }
 
@@ -215,15 +218,12 @@ impl PassiveObservationTranslator {
     }
 
     fn receiver_available(
-        &self,
+        &mut self,
         value: u32,
         stamp: ObservationStamp,
     ) -> Result<PassiveTranslation, PassiveTranslationError> {
         match value {
-            1 => Ok(PassiveTranslation::applied(vec![self.observation(
-                stamp,
-                LifecycleObservationKind::ReceiverState(ReceiverLifecycleState::Active),
-            )])),
+            1 => Ok(self.receiver_state(ReceiverLifecycleState::Active, stamp)),
             0 => Ok(PassiveTranslation::disposition(
                 PassiveDisposition::ReceiverUnavailable,
             )),
@@ -232,7 +232,7 @@ impl PassiveObservationTranslator {
     }
 
     fn receiver_suspended(
-        &self,
+        &mut self,
         value: u32,
         stamp: ObservationStamp,
     ) -> Result<PassiveTranslation, PassiveTranslationError> {
@@ -241,10 +241,25 @@ impl PassiveObservationTranslator {
             1 => ReceiverLifecycleState::Suspended,
             _ => return Err(PassiveTranslationError::InvalidObservationValue),
         };
-        Ok(PassiveTranslation::applied(vec![self.observation(
-            stamp,
-            LifecycleObservationKind::ReceiverState(state),
-        )]))
+        Ok(self.receiver_state(state, stamp))
+    }
+
+    fn receiver_state(
+        &mut self,
+        state: ReceiverLifecycleState,
+        stamp: ObservationStamp,
+    ) -> PassiveTranslation {
+        if state == ReceiverLifecycleState::Suspended {
+            self.receiver_was_suspended = true;
+        } else if state == ReceiverLifecycleState::Active && self.receiver_was_suspended {
+            for binding in self.lanes.values_mut() {
+                binding.last_activity_ms = None;
+            }
+            self.receiver_was_suspended = false;
+        }
+        PassiveTranslation::applied(vec![
+            self.observation(stamp, LifecycleObservationKind::ReceiverState(state)),
+        ])
     }
 
     fn product_identity(
@@ -334,7 +349,7 @@ impl PassiveObservationTranslator {
             ));
         };
         let observed_at_ms = stamp.observed_at_ms();
-        let resumed = binding.last_activity_ms.is_some_and(|prior| {
+        let restore_ready = binding.last_activity_ms.is_none_or(|prior| {
             observed_at_ms.get().saturating_sub(prior.get()) >= ACTIVITY_RESUMPTION_QUIET_MS
         });
         if binding
@@ -367,8 +382,8 @@ impl PassiveObservationTranslator {
                 EndpointFact::Freshness(FreshnessState::Fresh),
             ),
         ];
-        Ok(if resumed {
-            PassiveTranslation::resumed(observations, binding.device_id)
+        Ok(if restore_ready {
+            PassiveTranslation::restore_ready(observations, binding.device_id)
         } else {
             PassiveTranslation::applied(observations)
         })
@@ -688,6 +703,7 @@ mod tests {
                 ..
             }
         ));
+        assert_eq!(contact.restore_ready, None);
 
         let battery = translator
             .translate(raw(
@@ -702,6 +718,7 @@ mod tests {
             LifecycleObservationKind::BatteryReported { percentage, .. }
                 if percentage.get() == 50
         ));
+        assert_eq!(battery.restore_ready, None);
     }
 
     #[test]
@@ -782,7 +799,7 @@ mod tests {
     }
 
     #[test]
-    fn first_activity_after_quiet_emits_one_device_scoped_resumption() {
+    fn first_generation_activity_and_first_activity_after_quiet_emit_restore_readiness() {
         let mut translator = translator();
         identify(
             &mut translator,
@@ -794,7 +811,10 @@ mod tests {
         let first = translator
             .translate(activity(2, 1_000, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE))
             .expect("first activity translates");
-        assert_eq!(first.activity_resumption, None);
+        assert_eq!(
+            first.restore_ready.as_ref().map(LogicalDeviceId::as_str),
+            Some("paired-mouse-00cd")
+        );
 
         let resumed = translator
             .translate(activity(
@@ -804,10 +824,7 @@ mod tests {
             ))
             .expect("post-quiet activity translates");
         assert_eq!(
-            resumed
-                .activity_resumption
-                .as_ref()
-                .map(LogicalDeviceId::as_str),
+            resumed.restore_ready.as_ref().map(LogicalDeviceId::as_str),
             Some("paired-mouse-00cd")
         );
 
@@ -818,7 +835,7 @@ mod tests {
                 HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
             ))
             .expect("continuous activity translates");
-        assert_eq!(continuous.activity_resumption, None);
+        assert_eq!(continuous.restore_ready, None);
     }
 
     #[test]
@@ -857,21 +874,18 @@ mod tests {
             ))
             .expect("mouse resumes after identity replay");
         assert_eq!(
-            mouse
-                .activity_resumption
-                .as_ref()
-                .map(LogicalDeviceId::as_str),
+            mouse.restore_ready.as_ref().map(LogicalDeviceId::as_str),
             Some("paired-mouse-00cd")
         );
 
         let keyboard = translator
             .translate(activity(7, 1_001, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE))
             .expect("keyboard remains continuous");
-        assert_eq!(keyboard.activity_resumption, None);
+        assert_eq!(keyboard.restore_ready, None);
     }
 
     #[test]
-    fn a_new_generation_requires_prior_activity_before_resumption() {
+    fn a_new_generation_first_activity_is_restore_ready() {
         let mut next_generation = PassiveObservationTranslator::new(
             ReceiverId::try_from("receiver-test").expect("receiver id is valid"),
             GenerationId::try_from(8_u64).expect("generation is valid"),
@@ -890,7 +904,10 @@ mod tests {
                 HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
             ))
             .expect("first generation-bound activity translates");
-        assert_eq!(first.activity_resumption, None);
+        assert_eq!(
+            first.restore_ready.as_ref().map(LogicalDeviceId::as_str),
+            Some("paired-mouse-00cd")
+        );
     }
 
     #[test]
@@ -945,5 +962,62 @@ mod tests {
                 LifecycleObservationKind::ReceiverState(value) if value == expected
             ));
         }
+    }
+
+    #[test]
+    fn short_same_generation_resume_requires_fresh_input_from_each_device() {
+        let mut translator = translator();
+        identify(
+            &mut translator,
+            1,
+            HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            0x00cd,
+        );
+        identify(
+            &mut translator,
+            2,
+            HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+            0x0296,
+        );
+        translator
+            .translate(activity(3, 1_000, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE))
+            .expect("initial mouse activity translates");
+        translator
+            .translate(activity(4, 1_001, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE))
+            .expect("initial keyboard activity translates");
+
+        for (sequence, observed_at_ms, raw_value) in [(5, 1_002, 1), (6, 1_003, 0)] {
+            let mut observation = raw_at(
+                sequence,
+                observed_at_ms,
+                HFX_UAPI_OBSERVATION_KIND_RECEIVER_SUSPENDED,
+                HFX_UAPI_ENDPOINT_SLOT_RECEIVER,
+                raw_value,
+            );
+            observation.source = HFX_UAPI_OBSERVATION_SOURCE_POWER_MANAGEMENT;
+            observation.confidence = HFX_UAPI_OBSERVATION_CONFIDENCE_EXACT;
+            translator
+                .translate(observation)
+                .expect("power observation translates");
+        }
+
+        let mouse = translator
+            .translate(activity(7, 1_004, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE))
+            .expect("post-resume mouse activity translates");
+        assert_eq!(
+            mouse.restore_ready.as_ref().map(LogicalDeviceId::as_str),
+            Some("paired-mouse-00cd")
+        );
+        let keyboard = translator
+            .translate(activity(8, 1_005, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE))
+            .expect("post-resume keyboard activity translates");
+        assert_eq!(
+            keyboard.restore_ready.as_ref().map(LogicalDeviceId::as_str),
+            Some("paired-keyboard-0296")
+        );
+        let continuous = translator
+            .translate(activity(9, 1_006, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE))
+            .expect("continuous mouse activity translates");
+        assert_eq!(continuous.restore_ready, None);
     }
 }

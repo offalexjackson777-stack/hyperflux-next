@@ -13,7 +13,7 @@ use hfx_bridge::{
 };
 use hfx_core::{Clock, LifecycleError, RestorationError};
 use hfx_domain::{
-    DomainValueError, EvidenceClaimId, EvidenceConfidence, MonotonicMs, PresenceState, ReceiverId,
+    DomainValueError, EvidenceClaimId, EvidenceConfidence, MonotonicMs, ReceiverId,
     ReceiverLifecycleState, SequenceNumber,
 };
 use hfx_kernel_transport::{
@@ -431,46 +431,28 @@ impl LinuxRuntimeManager {
         translation: PassiveTranslation,
         backend: &mut ProductionBackend,
     ) -> Result<(), RuntimeTickError> {
-        let mut scheduled_returns = BTreeSet::new();
         for observation in translation.observations {
             let sequence = observation.stamp.sequence();
             let outcome = backend
                 .observe_lifecycle(observation)
                 .map_err(RuntimeTickError::Observation)?;
-            if let LifecycleObservationOutcome::Applied(applied) = outcome {
-                if matches!(
+            if let LifecycleObservationOutcome::Applied(applied) = outcome
+                && matches!(
                     applied.receiver_before,
                     ReceiverLifecycleState::Suspended | ReceiverLifecycleState::PartiallySuspended
-                ) && applied.receiver_after == ReceiverLifecycleState::Active
-                {
-                    self.restoration
-                        .schedule_system_resume(
-                            applied.receiver_id.clone(),
-                            applied.generation_id,
-                            sequence,
-                        )
-                        .map_err(RuntimeTickError::Restoration)?;
-                }
-                if is_device_return_transition(
-                    applied.device_presence_before,
-                    applied.device_presence_after,
-                ) && let Some(device_id) = applied.device_id
-                {
-                    scheduled_returns.insert(device_id.clone());
-                    self.restoration
-                        .schedule_device_return(
-                            applied.receiver_id,
-                            applied.generation_id,
-                            device_id,
-                            sequence,
-                        )
-                        .map_err(RuntimeTickError::Restoration)?;
-                }
+                )
+                && applied.receiver_after == ReceiverLifecycleState::Active
+            {
+                self.restoration
+                    .schedule_system_resume(
+                        applied.receiver_id.clone(),
+                        applied.generation_id,
+                        sequence,
+                    )
+                    .map_err(RuntimeTickError::Restoration)?;
             }
         }
-        if let Some(device_id) = translation.activity_resumption
-            && !scheduled_returns.contains(&device_id)
-        {
+        if let Some(device_id) = translation.restore_ready {
             self.restoration
                 .schedule_device_return(
                     receiver_id.clone(),
@@ -650,16 +632,6 @@ fn nonzero_interval(interval: Duration) -> Duration {
     }
 }
 
-const fn is_device_return_transition(
-    before: Option<PresenceState>,
-    after: Option<PresenceState>,
-) -> bool {
-    matches!(
-        before,
-        Some(PresenceState::Sleeping | PresenceState::Unavailable | PresenceState::Unknown)
-    ) && matches!(after, Some(PresenceState::Available))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -686,27 +658,5 @@ mod tests {
         assert_eq!(value.generation_id(), generation);
         assert_eq!(value.sequence().get(), 4);
         assert_eq!(value.observed_at_ms().get(), 5);
-    }
-
-    #[test]
-    fn available_evidence_wakes_sleeping_unavailable_and_unknown_devices() {
-        for before in [
-            PresenceState::Sleeping,
-            PresenceState::Unavailable,
-            PresenceState::Unknown,
-        ] {
-            assert!(is_device_return_transition(
-                Some(before),
-                Some(PresenceState::Available)
-            ));
-        }
-        assert!(!is_device_return_transition(
-            Some(PresenceState::Available),
-            Some(PresenceState::Available)
-        ));
-        assert!(!is_device_return_transition(
-            None,
-            Some(PresenceState::Available)
-        ));
     }
 }

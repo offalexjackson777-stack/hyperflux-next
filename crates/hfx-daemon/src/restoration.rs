@@ -183,6 +183,7 @@ pub struct RestorationScheduler {
     max_triggers: usize,
     max_claims: usize,
     configured_receivers: BTreeSet<ReceiverId>,
+    ready_devices: BTreeSet<(ReceiverId, GenerationId, LogicalDeviceId)>,
     triggers: BTreeMap<RestoreTriggerId, ScheduledTrigger>,
     claims: BTreeMap<RestoreClaimId, ScheduledClaim>,
 }
@@ -246,6 +247,7 @@ impl RestorationScheduler {
             max_triggers,
             max_claims,
             configured_receivers: BTreeSet::new(),
+            ready_devices: BTreeSet::new(),
             triggers: BTreeMap::new(),
             claims: BTreeMap::new(),
         })
@@ -285,6 +287,7 @@ impl RestorationScheduler {
         receiver_id: ReceiverId,
         generation_id: GenerationId,
     ) -> Result<(), RestorationScheduleError> {
+        self.clear_readiness(&receiver_id, generation_id);
         self.schedule(
             RestoreTriggerKind::ReceiverGeneration,
             receiver_id,
@@ -305,6 +308,7 @@ impl RestorationScheduler {
         generation_id: GenerationId,
         sequence: SequenceNumber,
     ) -> Result<(), RestorationScheduleError> {
+        self.clear_readiness(&receiver_id, generation_id);
         self.schedule(
             RestoreTriggerKind::SystemResume,
             receiver_id,
@@ -326,6 +330,8 @@ impl RestorationScheduler {
         device_id: LogicalDeviceId,
         sequence: SequenceNumber,
     ) -> Result<(), RestorationScheduleError> {
+        self.ready_devices
+            .insert((receiver_id.clone(), generation_id, device_id.clone()));
         self.schedule(
             RestoreTriggerKind::DeviceReturn,
             receiver_id,
@@ -342,6 +348,9 @@ impl RestorationScheduler {
         });
         self.claims.retain(|_, scheduled| {
             scheduled.receiver_id != *receiver_id || scheduled.generation_id != generation_id
+        });
+        self.ready_devices.retain(|(candidate, generation, _)| {
+            candidate != receiver_id || *generation != generation_id
         });
     }
 
@@ -408,7 +417,7 @@ impl RestorationScheduler {
                 match controller.plan_restore(&scheduled.trigger) {
                     Ok(RestorePlanResult::Planned(records)) => {
                         for record in records {
-                            self.schedule_record(record, now)?;
+                            self.schedule_trigger_record(record, scheduled.trigger.kind, now)?;
                         }
                         report.triggers_planned += 1;
                     }
@@ -436,7 +445,7 @@ impl RestorationScheduler {
             } else {
                 report.claims_recovered += pending.len();
                 for record in pending {
-                    self.schedule_record(record, now)?;
+                    self.schedule_trigger_record(record, scheduled.trigger.kind, now)?;
                 }
             }
         }
@@ -532,7 +541,12 @@ impl RestorationScheduler {
             return Ok(());
         }
         if is_broad_trigger(kind) {
-            let woke = self.wake(&receiver_id, generation_id, None);
+            let woke = if readiness_gated_trigger(kind) {
+                self.park(&receiver_id, generation_id, None)?;
+                0
+            } else {
+                self.wake(&receiver_id, generation_id, None)
+            };
             self.triggers.retain(|_, scheduled| {
                 scheduled.trigger.receiver_id != receiver_id
                     || scheduled.trigger.generation_id != generation_id
@@ -600,6 +614,27 @@ impl RestorationScheduler {
         self.schedule_record_with_defer(record, due, 0)
     }
 
+    fn schedule_trigger_record(
+        &mut self,
+        record: RestoreRecord,
+        trigger_kind: RestoreTriggerKind,
+        now: MonotonicMs,
+    ) -> Result<(), RestorationScheduleError> {
+        let readiness_gated =
+            readiness_gated_trigger(trigger_kind) || readiness_gated_trigger(record.trigger_kind);
+        let due = if readiness_gated
+            && !self.ready_devices.contains(&(
+                record.receiver_id.clone(),
+                record.generation_id,
+                record.device_id.clone(),
+            )) {
+            parked_due()?
+        } else {
+            now
+        };
+        self.schedule_record(record, due)
+    }
+
     fn schedule_record_with_defer(
         &mut self,
         record: RestoreRecord,
@@ -645,6 +680,25 @@ impl RestorationScheduler {
         woken
     }
 
+    fn park(
+        &mut self,
+        receiver_id: &ReceiverId,
+        generation_id: GenerationId,
+        device_id: Option<&LogicalDeviceId>,
+    ) -> Result<usize, RestorationScheduleError> {
+        let due = parked_due()?;
+        let mut parked = 0;
+        for claim in self.claims.values_mut().filter(|claim| {
+            claim.receiver_id == *receiver_id
+                && claim.generation_id == generation_id
+                && device_id.is_none_or(|device_id| claim.device_id == *device_id)
+        }) {
+            claim.due = due;
+            parked += 1;
+        }
+        Ok(parked)
+    }
+
     fn has_pending_broad_trigger(
         &self,
         receiver_id: &ReceiverId,
@@ -656,6 +710,12 @@ impl RestorationScheduler {
                 && is_broad_trigger(scheduled.trigger.kind)
         })
     }
+
+    fn clear_readiness(&mut self, receiver_id: &ReceiverId, generation_id: GenerationId) {
+        self.ready_devices.retain(|(candidate, generation, _)| {
+            candidate != receiver_id || *generation != generation_id
+        });
+    }
 }
 
 const fn is_broad_trigger(kind: RestoreTriggerKind) -> bool {
@@ -665,6 +725,17 @@ const fn is_broad_trigger(kind: RestoreTriggerKind) -> bool {
             | RestoreTriggerKind::ReceiverGeneration
             | RestoreTriggerKind::SystemResume
     )
+}
+
+const fn readiness_gated_trigger(kind: RestoreTriggerKind) -> bool {
+    matches!(
+        kind,
+        RestoreTriggerKind::ReceiverGeneration | RestoreTriggerKind::SystemResume
+    )
+}
+
+fn parked_due() -> Result<MonotonicMs, RestorationScheduleError> {
+    MonotonicMs::try_from(u64::MAX).map_err(|_| RestorationScheduleError::TimeOverflow)
 }
 
 fn due_trigger_id(
@@ -710,7 +781,7 @@ fn deferred_due(
             | RestoreDeferReason::DeviceUnavailable
             | RestoreDeferReason::DeviceUnknown
     ) {
-        return MonotonicMs::try_from(u64::MAX).map_err(|_| RestorationScheduleError::TimeOverflow);
+        return parked_due();
     }
     let exponent = u32::from(defer_count.saturating_sub(1).min(6));
     let multiplier = 1_u64
@@ -895,6 +966,14 @@ mod tests {
     }
 
     fn record(claim: &str, status: RestoreRecordStatus) -> RestoreRecord {
+        record_for_device(claim, "mouse-1", status)
+    }
+
+    fn record_for_device(
+        claim: &str,
+        device_id: &str,
+        status: RestoreRecordStatus,
+    ) -> RestoreRecord {
         RestoreRecord {
             schema_version: PersistenceSchemaVersion::try_from(1_u16).expect("schema"),
             claim_id: id(claim),
@@ -902,7 +981,7 @@ mod tests {
             trigger_kind: RestoreTriggerKind::ServiceStart,
             receiver_id: id("receiver-1"),
             generation_id: generation(1),
-            device_id: id("mouse-1"),
+            device_id: id(device_id),
             intent_revision: IntentRevision::try_from(1_u64).expect("intent revision"),
             intent_digest: id(&"11".repeat(32)),
             revision: PersistenceRevision::try_from(1_u64).expect("revision"),
@@ -1413,6 +1492,42 @@ mod tests {
     }
 
     #[test]
+    fn service_restart_preserves_a_pending_generation_claims_readiness_gate() {
+        let mut prior = record("claim-prior", RestoreRecordStatus::Planned);
+        prior.trigger_kind = RestoreTriggerKind::ReceiverGeneration;
+        let mut controller = FakeController {
+            now: time(10),
+            plans: Vec::new(),
+            pending: vec![prior.clone()],
+            advances: Vec::new(),
+            dispatches: Vec::new(),
+            policy_calls: 0,
+            advance_calls: 0,
+            dispatch_calls: 0,
+        };
+        let mut scheduler = scheduler();
+        scheduler
+            .schedule_service_start(id("receiver-1"), generation(1))
+            .expect("service trigger schedules");
+
+        let report = scheduler
+            .tick_with(&mut controller, &sessions())
+            .expect("pending generation claim recovers");
+
+        assert_eq!(report.claims_recovered, 1);
+        assert_eq!(controller.advance_calls, 0);
+        assert_eq!(
+            scheduler
+                .claims
+                .get(&prior.claim_id)
+                .expect("claim remains parked")
+                .due
+                .get(),
+            u64::MAX
+        );
+    }
+
+    #[test]
     fn advance_barrier_reloads_pending_claim_without_stopping_the_scheduler() {
         let planned = record("claim-prior", RestoreRecordStatus::Planned);
         let mut controller = FakeController {
@@ -1480,6 +1595,193 @@ mod tests {
                 .kind,
             RestoreTriggerKind::SystemResume
         ));
+        assert!(scheduler.ready_devices.contains(&(
+            id("receiver-1"),
+            generation(1),
+            id("mouse-1")
+        )));
+    }
+
+    #[test]
+    fn receiver_generation_parks_each_sibling_until_its_exact_activity() {
+        let mouse = record_for_device("claim-mouse", "mouse-1", RestoreRecordStatus::Planned);
+        let keyboard =
+            record_for_device("claim-keyboard", "keyboard-1", RestoreRecordStatus::Planned);
+        let mut controller = FakeController {
+            now: time(10),
+            plans: vec![Ok(RestorePlanResult::Planned(vec![
+                mouse.clone(),
+                keyboard.clone(),
+            ]))],
+            pending: Vec::new(),
+            advances: Vec::new(),
+            dispatches: Vec::new(),
+            policy_calls: 0,
+            advance_calls: 0,
+            dispatch_calls: 0,
+        };
+        let mut scheduler = scheduler();
+        scheduler
+            .schedule_receiver_generation(id("receiver-1"), generation(1))
+            .expect("generation trigger schedules");
+        scheduler
+            .process_due_trigger(
+                &mut controller,
+                time(10),
+                &mut RestorationTickReport::default(),
+            )
+            .expect("generation claims plan");
+
+        assert_eq!(
+            scheduler
+                .claims
+                .get(&mouse.claim_id)
+                .expect("mouse claim")
+                .due
+                .get(),
+            u64::MAX
+        );
+        assert_eq!(
+            scheduler
+                .claims
+                .get(&keyboard.claim_id)
+                .expect("keyboard claim")
+                .due
+                .get(),
+            u64::MAX
+        );
+
+        scheduler
+            .schedule_device_return(
+                id("receiver-1"),
+                generation(1),
+                id("mouse-1"),
+                SequenceNumber::try_from(4_u64).expect("sequence"),
+            )
+            .expect("mouse readiness wakes its claim");
+        assert_eq!(
+            scheduler
+                .claims
+                .get(&mouse.claim_id)
+                .expect("mouse claim")
+                .due
+                .get(),
+            0
+        );
+        assert_eq!(
+            scheduler
+                .claims
+                .get(&keyboard.claim_id)
+                .expect("keyboard claim")
+                .due
+                .get(),
+            u64::MAX
+        );
+    }
+
+    #[test]
+    fn activity_before_generation_planning_is_retained_without_waking_a_sibling() {
+        let mouse = record_for_device("claim-mouse", "mouse-1", RestoreRecordStatus::Planned);
+        let keyboard =
+            record_for_device("claim-keyboard", "keyboard-1", RestoreRecordStatus::Planned);
+        let mut controller = FakeController {
+            now: time(10),
+            plans: vec![Ok(RestorePlanResult::Planned(vec![
+                mouse.clone(),
+                keyboard.clone(),
+            ]))],
+            pending: Vec::new(),
+            advances: Vec::new(),
+            dispatches: Vec::new(),
+            policy_calls: 0,
+            advance_calls: 0,
+            dispatch_calls: 0,
+        };
+        let mut scheduler = scheduler();
+        scheduler
+            .schedule_receiver_generation(id("receiver-1"), generation(1))
+            .expect("generation trigger schedules");
+        scheduler
+            .schedule_device_return(
+                id("receiver-1"),
+                generation(1),
+                id("mouse-1"),
+                SequenceNumber::try_from(4_u64).expect("sequence"),
+            )
+            .expect("early mouse readiness is retained");
+        scheduler
+            .process_due_trigger(
+                &mut controller,
+                time(10),
+                &mut RestorationTickReport::default(),
+            )
+            .expect("generation claims plan");
+
+        assert_eq!(
+            scheduler
+                .claims
+                .get(&mouse.claim_id)
+                .expect("mouse claim")
+                .due,
+            time(10)
+        );
+        assert_eq!(
+            scheduler
+                .claims
+                .get(&keyboard.claim_id)
+                .expect("keyboard claim")
+                .due
+                .get(),
+            u64::MAX
+        );
+    }
+
+    #[test]
+    fn system_resume_clears_old_readiness_and_reparks_existing_claims() {
+        let claim = record("claim-mouse", RestoreRecordStatus::Planned);
+        let mut scheduler = scheduler();
+        scheduler
+            .schedule_record(claim.clone(), time(0))
+            .expect("claim schedules");
+        scheduler
+            .ready_devices
+            .insert((id("receiver-1"), generation(1), id("mouse-1")));
+
+        scheduler
+            .schedule_system_resume(
+                id("receiver-1"),
+                generation(1),
+                SequenceNumber::try_from(5_u64).expect("sequence"),
+            )
+            .expect("resume trigger schedules");
+
+        assert!(scheduler.ready_devices.is_empty());
+        assert_eq!(
+            scheduler
+                .claims
+                .get(&claim.claim_id)
+                .expect("claim remains parked")
+                .due
+                .get(),
+            u64::MAX
+        );
+        scheduler
+            .schedule_device_return(
+                id("receiver-1"),
+                generation(1),
+                id("mouse-1"),
+                SequenceNumber::try_from(6_u64).expect("sequence"),
+            )
+            .expect("fresh activity wakes the claim");
+        assert_eq!(
+            scheduler
+                .claims
+                .get(&claim.claim_id)
+                .expect("claim wakes")
+                .due
+                .get(),
+            0
+        );
     }
 
     #[test]

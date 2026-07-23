@@ -11,7 +11,8 @@ use crate::qualification_runner::{
     prepare_lighting_stage, reconcile_pending_lighting,
 };
 use crate::qualification_state::{
-    QualificationSessionState, QualificationStateError, default_state_path, load_state, save_state,
+    QualificationSessionState, QualificationStateError, archive_stale_state, default_state_path,
+    load_state, save_state,
 };
 use crate::{
     BatteryAvailability, CompanionAction, PresenceView, QualificationStage, QualificationView,
@@ -136,7 +137,12 @@ pub fn serve_qualification_console(
         .ok_or(QualificationServerError::StateUnavailable)?;
     let mut state = match load_state(state_file) {
         Ok(Some(state)) => state,
-        Ok(None) | Err(QualificationStateError::Stale) => ServerState::default(),
+        Ok(None) => ServerState::default(),
+        Err(QualificationStateError::Stale) => {
+            archive_stale_state(state_file)
+                .map_err(|_| QualificationServerError::StateUnavailable)?;
+            ServerState::default()
+        }
         Err(_) => return Err(QualificationServerError::StateUnavailable),
     };
     save_state(state_file, &state).map_err(|_| QualificationServerError::StateUnavailable)?;

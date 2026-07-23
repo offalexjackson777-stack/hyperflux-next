@@ -1160,11 +1160,14 @@ fn unix_seconds_to_rfc3339(seconds: u64) -> String {
 mod tests {
     use super::*;
     use hfx_domain::{
-        BatteryPercent, EvidenceConfidence, FreshnessState, GenerationId, InventoryAvailability,
-        PairingState, PresenceState, ProductId, ProjectionRevision, ProtocolVersion, ReceiverId,
-        RestoreState, SequenceNumber, StreamEpoch, SupportLevel, TelemetryAvailability,
+        BatteryPercent, DroppedEventCount, EvidenceConfidence, FreshnessState, GenerationId,
+        InventoryAvailability, PairingState, PresenceState, ProductId, ProjectionRevision,
+        ProtocolVersion, ReceiverId, RestoreState, SequenceNumber, StreamEpoch, SubscriptionId,
+        SupportLevel, TelemetryAvailability,
     };
-    use hfx_protocol::{BatteryObservation, DeviceInventoryView, EventCursor, IntegrationView};
+    use hfx_protocol::{
+        BatteryObservation, DeviceInventoryView, EventBatch, EventCursor, IntegrationView,
+    };
     use std::path::PathBuf;
 
     fn catalog() -> RuntimeProfileCatalog {
@@ -1180,17 +1183,17 @@ mod tests {
         let child_profile = catalog
             .child(ProductId::try_from(0x00cd_u16).expect("PID is valid"))
             .expect("mouse profile exists");
+        let cursor = EventCursor {
+            stream_id: hfx_domain::StreamId::try_from("qualification-stream")
+                .expect("stream id is valid"),
+            stream_epoch: StreamEpoch::try_from(1_u64).expect("epoch is valid"),
+            projection_revision: ProjectionRevision::try_from(1_u32).expect("projection is valid"),
+            sequence: SequenceNumber::try_from(1_u64).expect("sequence is valid"),
+        };
         BridgeIntegration {
             protocol_version: ProtocolVersion::try_from(5_u16).expect("protocol is valid"),
             view: IntegrationView {
-                cursor: EventCursor {
-                    stream_id: hfx_domain::StreamId::try_from("qualification-stream")
-                        .expect("stream id is valid"),
-                    stream_epoch: StreamEpoch::try_from(1_u64).expect("epoch is valid"),
-                    projection_revision: ProjectionRevision::try_from(1_u32)
-                        .expect("projection is valid"),
-                    sequence: SequenceNumber::try_from(1_u64).expect("sequence is valid"),
-                },
+                cursor: cursor.clone(),
                 receivers: vec![IntegrationReceiverView {
                     receiver_id: ReceiverId::try_from("receiver-test").expect("id is valid"),
                     generation_id: GenerationId::try_from(7_u64).expect("generation is valid"),
@@ -1234,6 +1237,17 @@ mod tests {
                     }],
                     controllers: Vec::new(),
                 }],
+            },
+            events: EventBatch {
+                subscription_id: SubscriptionId::try_from("qualification-subscription")
+                    .expect("subscription is valid"),
+                next_cursor: cursor,
+                events: Vec::new(),
+                oldest_available: SequenceNumber::try_from(1_u64).expect("sequence is valid"),
+                latest_available: SequenceNumber::try_from(1_u64).expect("sequence is valid"),
+                dropped_events: DroppedEventCount::try_from(0_u64).expect("drop count is valid"),
+                cursor_gap: false,
+                has_more: false,
             },
         }
     }

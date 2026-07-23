@@ -1,12 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use hfx_domain::{ClientId, ClientName, ProtocolFeatureId, ProtocolVersion};
-use hfx_profiles::receiver_profile_by_usb_id;
-use hfx_protocol::{BridgeSnapshot, CURRENT_PROTOCOL_VERSION, DiagnosticSnapshot, IntegrationView};
-use hfx_runtime::{
-    BRIDGE_SERVICE_UNIT, BRIDGE_SOCKET_PATH, KERNEL_MODULE_NAME, PRODUCT_VERSION, STATUS_TIMEOUT_MS,
+use hfx_domain::{
+    ClientId, ClientName, EventBatchLimit, ProtocolFeatureId, ProtocolVersion, SequenceNumber,
 };
-use hfx_sdk::{HyperFluxClient, KernelRequestIdentitySource, SdkClientConfig};
+use hfx_profiles::receiver_profile_by_usb_id;
+use hfx_protocol::{
+    BridgeSnapshot, CURRENT_PROTOCOL_VERSION, DiagnosticSnapshot, EventBatch, EventCursor,
+    IntegrationView,
+};
+use hfx_runtime::{
+    BRIDGE_SERVICE_UNIT, BRIDGE_SOCKET_PATH, EVENT_CAPACITY, KERNEL_MODULE_NAME, PRODUCT_VERSION,
+    STATUS_TIMEOUT_MS,
+};
+use hfx_sdk::{EventSubscription, HyperFluxClient, KernelRequestIdentitySource, SdkClientConfig};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fs;
@@ -14,16 +20,19 @@ use std::io;
 use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
 const MAX_COMMAND_OUTPUT_BYTES: usize = 4_096;
 const MAX_USB_DEVICE_ENTRIES: usize = 256;
 const USB_DEVICES_ROOT: &str = "/sys/bus/usb/devices";
+const EVENT_SUBSCRIPTIONS_FEATURE: &str = "event-subscriptions";
 const INTEGRATION_VIEW_FEATURE: &str = "integration-view-projection";
 const STRUCTURED_DIAGNOSTICS_FEATURE: &str = "structured-diagnostics";
 const LEGACY_V2_BRIDGE_SERVICE_UNIT: &str = "hyperflux-bridge.service";
 const LEGACY_V2_KERNEL_MODULE_NAME: &str = "hid-razer-hyperflux-v2";
+static QUALIFICATION_CLIENT_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -153,6 +162,7 @@ pub struct BridgeHealth {
 pub struct BridgeIntegration {
     pub protocol_version: ProtocolVersion,
     pub view: IntegrationView,
+    pub events: EventBatch,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -379,18 +389,21 @@ impl<R: CommandRunner> RealSystemProbe<R> {
     /// Returns a bounded bridge-unavailable error when the local socket cannot
     /// be reached, negotiated, or queried.
     pub fn qualification_integration(&self) -> Result<BridgeIntegration, ProbeError> {
+        let client_id = qualification_client_id();
         let mut client = self.bridge_client(
-            "hyperflux-qualification",
+            &client_id,
             "HyperFlux Qualification Console",
-            &[INTEGRATION_VIEW_FEATURE],
+            &[INTEGRATION_VIEW_FEATURE, EVENT_SUBSCRIPTIONS_FEATURE],
         )?;
         let protocol_version = client.server_hello().selected_version;
         let view = client
             .integration_view()
             .map_err(|_| ProbeError::BridgeUnavailable)?;
+        let events = retained_events(&mut client)?;
         Ok(BridgeIntegration {
             protocol_version,
             view,
+            events,
         })
     }
 
@@ -488,6 +501,75 @@ impl<R: CommandRunner> SystemController for RealSystemProbe<R> {
     }
 }
 
+fn qualification_client_id() -> String {
+    let sequence = QUALIFICATION_CLIENT_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    format!("hyperflux-qualification-{}-{sequence}", std::process::id())
+}
+
+fn retained_events(
+    client: &mut HyperFluxClient<UnixStream, KernelRequestIdentitySource>,
+) -> Result<EventBatch, ProbeError> {
+    let max_events = EventBatchLimit::try_from(EventBatchLimit::MAX)
+        .map_err(|_| ProbeError::BridgeUnavailable)?;
+    let mut batch = client
+        .subscribe(EventSubscription {
+            subscription_id: None,
+            expected_cursor: None,
+            max_events,
+        })
+        .map_err(|_| ProbeError::BridgeUnavailable)?;
+    if batch.cursor_gap {
+        let replay_cursor = EventCursor {
+            stream_id: batch.next_cursor.stream_id.clone(),
+            stream_epoch: batch.next_cursor.stream_epoch,
+            projection_revision: batch.next_cursor.projection_revision,
+            sequence: SequenceNumber::try_from(batch.oldest_available.get().saturating_sub(1))
+                .map_err(|_| ProbeError::BridgeUnavailable)?,
+        };
+        batch = client
+            .subscribe(EventSubscription {
+                subscription_id: Some(batch.subscription_id),
+                expected_cursor: Some(replay_cursor),
+                max_events,
+            })
+            .map_err(|_| ProbeError::BridgeUnavailable)?;
+    }
+    if batch.cursor_gap {
+        return Err(ProbeError::BridgeUnavailable);
+    }
+    let subscription_id = batch.subscription_id.clone();
+    let oldest_available = batch.oldest_available;
+    let dropped_events = batch.dropped_events;
+    let mut events = std::mem::take(&mut batch.events);
+    while batch.has_more {
+        let previous_cursor = batch.next_cursor.clone();
+        batch = client
+            .subscribe(EventSubscription {
+                subscription_id: Some(subscription_id.clone()),
+                expected_cursor: Some(previous_cursor),
+                max_events,
+            })
+            .map_err(|_| ProbeError::BridgeUnavailable)?;
+        if batch.cursor_gap
+            || batch.subscription_id != subscription_id
+            || events.len().saturating_add(batch.events.len()) > usize::from(EVENT_CAPACITY)
+        {
+            return Err(ProbeError::BridgeUnavailable);
+        }
+        events.append(&mut batch.events);
+    }
+    Ok(EventBatch {
+        subscription_id,
+        next_cursor: batch.next_cursor,
+        events,
+        oldest_available,
+        latest_available: batch.latest_available,
+        dropped_events,
+        cursor_gap: false,
+        has_more: false,
+    })
+}
+
 fn bounded_identity(value: &str) -> Option<String> {
     if value.is_empty()
         || value.len() > 64
@@ -581,7 +663,7 @@ mod tests {
             "hyperflux-qualification",
             "HyperFlux Qualification Console",
             version,
-            &[INTEGRATION_VIEW_FEATURE],
+            &[INTEGRATION_VIEW_FEATURE, EVENT_SUBSCRIPTIONS_FEATURE],
         )
         .expect("qualification config");
 
@@ -599,7 +681,7 @@ mod tests {
                 .iter()
                 .map(ProtocolFeatureId::as_str)
                 .collect::<Vec<_>>(),
-            [INTEGRATION_VIEW_FEATURE]
+            [INTEGRATION_VIEW_FEATURE, EVENT_SUBSCRIPTIONS_FEATURE]
         );
     }
 

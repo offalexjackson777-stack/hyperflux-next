@@ -16,6 +16,9 @@ use std::os::unix::fs::{MetadataExt as _, PermissionsExt as _};
 use std::path::{Path, PathBuf};
 
 const SESSION_SCHEMA: &str = "hyperflux-qualification-session-v2";
+// Bump this only when persisted checkpoints cannot be interpreted safely by
+// the current coordinator. Ordinary implementation fixes must remain resumable.
+const COORDINATOR_STATE_CONTRACT: &str = "hyperflux-qualification-coordinator-state-v1";
 const MAX_SESSION_BYTES: u64 = 256 * 1024;
 const MAX_STAGE_RESULTS: usize = 64;
 
@@ -128,7 +131,9 @@ impl fmt::Display for QualificationStateError {
         formatter.write_str(match self {
             Self::Io(_) => "qualification checkpoint state could not be stored safely",
             Self::Invalid => "qualification checkpoint state is invalid",
-            Self::Stale => "qualification checkpoint state belongs to a different build",
+            Self::Stale => {
+                "qualification checkpoint state belongs to an incompatible coordinator contract"
+            }
             Self::TooLarge => "qualification checkpoint state exceeds its size bound",
             Self::Insecure => "qualification checkpoint state is not private",
         })
@@ -228,6 +233,30 @@ pub(crate) fn save_state(
     Ok(())
 }
 
+pub(crate) fn archive_stale_state(path: &Path) -> Result<PathBuf, QualificationStateError> {
+    let payload = fs::read(path)?;
+    if payload.len() as u64 > MAX_SESSION_BYTES {
+        return Err(QualificationStateError::TooLarge);
+    }
+    let parent = path.parent().ok_or(QualificationStateError::Invalid)?;
+    let digest = digest_hex(&Sha256::digest(&payload));
+    let archive = parent.join(format!("qualification-session.incompatible-{digest}.json"));
+    match fs::symlink_metadata(&archive) {
+        Ok(metadata)
+            if metadata.file_type().is_file()
+                && metadata.uid() == rustix::process::geteuid().as_raw()
+                && metadata.mode().trailing_zeros() >= 6
+                && fs::read(&archive)? == payload => {}
+        Ok(_) => return Err(QualificationStateError::Insecure),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            write_private_file(&archive, &payload)?;
+            fs::File::open(parent)?.sync_all()?;
+        }
+        Err(error) => return Err(error.into()),
+    }
+    Ok(archive)
+}
+
 fn temporary_path(path: &Path) -> PathBuf {
     let mut name = path.as_os_str().to_owned();
     name.push(format!(".{}.tmp", std::process::id()));
@@ -236,14 +265,15 @@ fn temporary_path(path: &Path) -> PathBuf {
 
 fn coordinator_sha256() -> String {
     let mut digest = Sha256::new();
-    digest.update(include_bytes!("qualification.rs"));
-    digest.update(include_bytes!("qualification_lifecycle.rs"));
-    digest.update(include_bytes!("qualification_runner.rs"));
-    digest.update(include_bytes!("qualification_server.rs"));
-    digest.update(include_bytes!("qualification_state.rs"));
-    digest.update(option_env!("HFX_SOURCE_REVISION").unwrap_or("development-unbound"));
+    digest.update(SESSION_SCHEMA.as_bytes());
+    digest.update([0]);
+    digest.update(COORDINATOR_STATE_CONTRACT.as_bytes());
+    digest_hex(&digest.finalize())
+}
+
+fn digest_hex(value: &[u8]) -> String {
     let mut encoded = String::with_capacity(64);
-    for byte in digest.finalize() {
+    for byte in value {
         write!(&mut encoded, "{byte:02x}").expect("writing to a string cannot fail");
     }
     encoded
@@ -303,6 +333,28 @@ mod tests {
             load_state(&path),
             Err(QualificationStateError::Stale)
         ));
+        fs::remove_dir_all(path.parent().expect("parent")).expect("test state removes");
+    }
+
+    #[test]
+    fn stale_state_is_archived_once_without_data_loss() {
+        let path = test_path("archive-stale");
+        let _ = fs::remove_dir_all(path.parent().expect("parent"));
+        save_state(&path, &QualificationSessionState::default()).expect("state saves");
+        let mut stale: serde_json::Value =
+            serde_json::from_slice(&fs::read(&path).expect("state reads")).expect("state parses");
+        stale["coordinator_sha256"] = serde_json::Value::String("0".repeat(64));
+        let payload = serde_json::to_vec_pretty(&stale).expect("stale state serializes");
+        fs::write(&path, &payload).expect("stale state writes");
+        assert!(matches!(
+            load_state(&path),
+            Err(QualificationStateError::Stale)
+        ));
+
+        let first = archive_stale_state(&path).expect("stale state archives");
+        let second = archive_stale_state(&path).expect("same state reuses archive");
+        assert_eq!(first, second);
+        assert_eq!(fs::read(first).expect("archive reads"), payload);
         fs::remove_dir_all(path.parent().expect("parent")).expect("test state removes");
     }
 
