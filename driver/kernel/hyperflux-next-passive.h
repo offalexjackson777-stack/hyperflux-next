@@ -4,9 +4,46 @@
 
 #include <linux/types.h>
 
+#include "uapi/hyperflux_next.h"
+
 #define HFX_PASSIVE_REPORT_INTERFACE 1
 #define HFX_POINTER_INPUT_INTERFACE 0
 #define HFX_KEYBOARD_INPUT_INTERFACE 2
+
+#define HFX_COMPOSITE_KEYBOARD_REPORT 0x01
+#define HFX_COMPOSITE_CONSUMER_REPORT 0x02
+#define HFX_COMPOSITE_SYSTEM_REPORT 0x03
+#define HFX_COMPOSITE_POINTER_REPORT 0x0a
+
+static inline int hfx_activity_slot(int interface_number, const __u8 *data,
+				    int size, __u32 *slot)
+{
+	if (!data || size <= 0 || !slot)
+		return 0;
+	if (interface_number == HFX_POINTER_INPUT_INTERFACE) {
+		*slot = HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE;
+		return 1;
+	}
+	if (interface_number == HFX_KEYBOARD_INPUT_INTERFACE) {
+		*slot = HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE;
+		return 1;
+	}
+	if (interface_number != HFX_PASSIVE_REPORT_INTERFACE)
+		return 0;
+
+	switch (data[0]) {
+	case HFX_COMPOSITE_KEYBOARD_REPORT:
+	case HFX_COMPOSITE_CONSUMER_REPORT:
+	case HFX_COMPOSITE_SYSTEM_REPORT:
+		*slot = HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE;
+		return 1;
+	case HFX_COMPOSITE_POINTER_REPORT:
+		*slot = HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE;
+		return 1;
+	default:
+		return 0;
+	}
+}
 
 enum hfx_passive_kind {
 	HFX_PASSIVE_NONE = 0,

@@ -34,8 +34,13 @@ int main(void)
 {
 	struct hfx_uapi_frame frame = mouse_frame();
 	struct hfx_passive_report report;
+	__u32 activity_slot;
 	const __u8 pointer_identity[] = { 0x05, 0x3b, 0x01, 0x00, 0xcd };
 	const __u8 keyboard_status[] = { 0x09, 0x31, 0x32, 0x12, 0x34, 0x56 };
+	const __u8 keyboard_input[] = { HFX_COMPOSITE_KEYBOARD_REPORT, 0x00 };
+	const __u8 consumer_input[] = { HFX_COMPOSITE_CONSUMER_REPORT, 0x00 };
+	const __u8 system_input[] = { HFX_COMPOSITE_SYSTEM_REPORT, 0x00 };
+	const __u8 pointer_input[] = { HFX_COMPOSITE_POINTER_REPORT, 0x00 };
 
 	assert(hfx_wire_validate_frame(&frame, HFX_HW001_BACKEND_ID) ==
 	       HFX_WIRE_VALID);
@@ -66,5 +71,28 @@ int main(void)
 	assert(report.status_raw == 0x56);
 	assert(hfx_passive_parse(4, pointer_identity,
 				 sizeof(pointer_identity), &report) == HFX_PASSIVE_NONE);
+
+	assert(hfx_activity_slot(HFX_PASSIVE_REPORT_INTERFACE, keyboard_input,
+				 sizeof(keyboard_input), &activity_slot));
+	assert(activity_slot == HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE);
+	assert(hfx_activity_slot(HFX_PASSIVE_REPORT_INTERFACE, consumer_input,
+				 sizeof(consumer_input), &activity_slot));
+	assert(activity_slot == HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE);
+	assert(hfx_activity_slot(HFX_PASSIVE_REPORT_INTERFACE, system_input,
+				 sizeof(system_input), &activity_slot));
+	assert(activity_slot == HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE);
+	assert(hfx_activity_slot(HFX_PASSIVE_REPORT_INTERFACE, pointer_input,
+				 sizeof(pointer_input), &activity_slot));
+	assert(activity_slot == HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE);
+	assert(hfx_activity_slot(HFX_POINTER_INPUT_INTERFACE, pointer_input,
+				 sizeof(pointer_input), &activity_slot));
+	assert(activity_slot == HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE);
+	assert(hfx_activity_slot(HFX_KEYBOARD_INPUT_INTERFACE, keyboard_input,
+				 sizeof(keyboard_input), &activity_slot));
+	assert(activity_slot == HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE);
+	assert(!hfx_activity_slot(HFX_PASSIVE_REPORT_INTERFACE, keyboard_status,
+				  sizeof(keyboard_status), &activity_slot));
+	assert(!hfx_activity_slot(4, keyboard_input, sizeof(keyboard_input),
+				  &activity_slot));
 	return 0;
 }

@@ -278,7 +278,8 @@ static int hfx_raw_event(struct hid_device *hdev, struct hid_report *report,
 	(void)report;
 	if (!interface || !interface->receiver || !data || size <= 0)
 		return 0;
-	hfx_observe_activity(interface->receiver, interface->interface_number);
+	hfx_observe_activity(interface->receiver, interface->interface_number,
+			     data, size);
 	hfx_observe_passive(interface->receiver, interface->interface_number,
 			    data, size);
 	return 0;

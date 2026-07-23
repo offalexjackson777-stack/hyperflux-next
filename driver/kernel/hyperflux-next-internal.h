@@ -108,7 +108,8 @@ int hfx_session_device_register(struct hfx_receiver *receiver);
 void hfx_observation_emit(struct hfx_receiver *receiver, u32 kind,
 			  u32 endpoint_slot, u32 source, u32 confidence,
 			  u32 value, u32 auxiliary);
-void hfx_observe_activity(struct hfx_receiver *receiver, int interface_number);
+void hfx_observe_activity(struct hfx_receiver *receiver, int interface_number,
+			  const u8 *data, int size);
 void hfx_observe_passive(struct hfx_receiver *receiver, int interface_number,
 			 const u8 *data, int size);
 void hfx_observation_replay_cached_identities(struct hfx_receiver *receiver);

@@ -46,17 +46,14 @@ void hfx_observation_emit(struct hfx_receiver *receiver, u32 kind,
 	spin_unlock_irqrestore(&receiver->observation_lock, flags);
 }
 
-void hfx_observe_activity(struct hfx_receiver *receiver, int interface_number)
+void hfx_observe_activity(struct hfx_receiver *receiver, int interface_number,
+			  const u8 *data, int size)
 {
 	unsigned long flags;
 	u64 now_ns = ktime_get_boottime_ns();
 	u32 slot;
 
-	if (interface_number == HFX_POINTER_INPUT_INTERFACE)
-		slot = HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE;
-	else if (interface_number == HFX_KEYBOARD_INPUT_INTERFACE)
-		slot = HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE;
-	else
+	if (!hfx_activity_slot(interface_number, data, size, &slot))
 		return;
 
 	spin_lock_irqsave(&receiver->observation_lock, flags);
