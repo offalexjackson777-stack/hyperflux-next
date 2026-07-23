@@ -25,6 +25,7 @@ LockPersonality=yes
 MemoryDenyWriteExecute=yes
 SystemCallArchitectures=native
 SystemCallFilter=@system-service
+SystemCallFilter=~@module
 CapabilityBoundingSet=CAP_DAC_OVERRIDE
 AmbientCapabilities=
 ReadOnlyPaths=/usr/lib/hyperflux-next

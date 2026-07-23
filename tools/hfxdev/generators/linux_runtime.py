@@ -313,10 +313,18 @@ def systemd_service(runtime: LinuxRuntime) -> str:
     )
 
 
-def _activation_sandbox(runtime: LinuxRuntime) -> list[str]:
+def _activation_sandbox(
+    runtime: LinuxRuntime, *, inspect_installed_module: bool
+) -> list[str]:
     bridge = runtime.bridge
     private_directory = PurePosixPath(bridge.executable_path).parent
-    return [
+    read_only_paths = str(private_directory)
+    if inspect_installed_module:
+        # ProtectKernelModules hides /usr/lib/modules, but start preparation
+        # must compare installed and loaded srcversions. Module syscalls and
+        # CAP_SYS_MODULE remain unavailable, so this is metadata-only access.
+        read_only_paths += " /usr/lib/modules"
+    lines = [
         "User=root",
         "Group=root",
         "UMask=0077",
@@ -326,7 +334,7 @@ def _activation_sandbox(runtime: LinuxRuntime) -> list[str]:
         "PrivateTmp=yes",
         "ProtectControlGroups=yes",
         "ProtectKernelTunables=yes",
-        "ProtectKernelModules=yes",
+        f"ProtectKernelModules={'no' if inspect_installed_module else 'yes'}",
         "ProtectKernelLogs=yes",
         "RestrictAddressFamilies=AF_UNIX",
         "RestrictSUIDSGID=yes",
@@ -334,14 +342,16 @@ def _activation_sandbox(runtime: LinuxRuntime) -> list[str]:
         "MemoryDenyWriteExecute=yes",
         "SystemCallArchitectures=native",
         "SystemCallFilter=@system-service",
+        "SystemCallFilter=~@module",
         # The root helper must cross the bridge account's 0700 state directory
         # to consume the root-owned package-update checkpoint. The writable
         # path allowlist keeps this single DAC capability locally bounded.
         "CapabilityBoundingSet=CAP_DAC_OVERRIDE",
         "AmbientCapabilities=",
-        f"ReadOnlyPaths={private_directory}",
+        f"ReadOnlyPaths={read_only_paths}",
         f"ReadWritePaths={bridge.configuration_directory} {bridge.state_directory}",
     ]
+    return lines
 
 
 def activation_service(runtime: LinuxRuntime) -> str:
@@ -357,7 +367,7 @@ def activation_service(runtime: LinuxRuntime) -> str:
         "Type=oneshot",
         f"ExecStart={operations.activation_path} prepare-start",
     ]
-    lines.extend(_activation_sandbox(runtime))
+    lines.extend(_activation_sandbox(runtime, inspect_installed_module=True))
     lines.append("")
     return "\n".join(lines)
 
@@ -376,7 +386,7 @@ def confirmation_service(runtime: LinuxRuntime) -> str:
         "Type=oneshot",
         f"ExecStart={operations.activation_path} confirm-start",
     ]
-    lines.extend(_activation_sandbox(runtime))
+    lines.extend(_activation_sandbox(runtime, inspect_installed_module=False))
     lines.append("")
     return "\n".join(lines)
 
@@ -514,6 +524,8 @@ def markdown(runtime: LinuxRuntime) -> str:
             "The root-owned activation helper retains only `CAP_DAC_OVERRIDE`, bounded by systemd "
             "to the configuration and private state directories, so it can consume package-update "
             "checkpoints without weakening the bridge service sandbox.",
+            "Start preparation may read installed module metadata to compare source versions, but "
+            "module-management syscalls and `CAP_SYS_MODULE` remain unavailable.",
             "",
             "## Kernel Activation",
             "",

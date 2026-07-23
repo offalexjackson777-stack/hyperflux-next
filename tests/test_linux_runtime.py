@@ -156,8 +156,14 @@ class LinuxRuntimeTests(unittest.TestCase):
             self.assertIn(self.runtime.bridge.state_directory, unit)
             self.assertIn("CapabilityBoundingSet=CAP_DAC_OVERRIDE", unit)
             self.assertIn("AmbientCapabilities=\n", unit)
+            self.assertIn("SystemCallFilter=~@module", unit)
+            self.assertNotIn("CAP_SYS_MODULE", unit)
             self.assertNotIn("CAP_SYS_ADMIN", unit)
             self.assertNotIn("modprobe", unit)
+
+        self.assertIn("ProtectKernelModules=no", prepare)
+        self.assertIn("ReadOnlyPaths=/usr/lib/hyperflux-next /usr/lib/modules", prepare)
+        self.assertIn("ProtectKernelModules=yes", confirm)
 
         rules = udev_rules(self.runtime)
         self.assertIn('MODE="0660"', rules)

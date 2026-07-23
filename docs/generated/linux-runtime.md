@@ -34,6 +34,7 @@ Canonical source digest: `6f2f7cba6c66679f0f3b6093c15f13a73a449a7f612040304c29cc
 
 The service owns receiver access. Application integrations use only the SDK socket. The default configuration is read-only and restoration is disabled until a user makes an explicit setup choice.
 The root-owned activation helper retains only `CAP_DAC_OVERRIDE`, bounded by systemd to the configuration and private state directories, so it can consume package-update checkpoints without weakening the bridge service sandbox.
+Start preparation may read installed module metadata to compare source versions, but module-management syscalls and `CAP_SYS_MODULE` remain unavailable.
 
 ## Kernel Activation
 
