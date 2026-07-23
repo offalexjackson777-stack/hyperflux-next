@@ -1043,6 +1043,14 @@ fn order_receiver_lifecycle_stages(plans: &mut [QualificationPlan]) {
             .filter(|group| group.group_id != "lifecycle")
             .flat_map(|group| &group.stages)
             .all(|stage| stage.status == StageStatus::Passed);
+        let resume_retry_id = plans
+            .iter()
+            .filter(|plan| plan.receiver_id == receiver_id)
+            .flat_map(|plan| &plan.groups)
+            .filter(|group| group.group_id == "lifecycle")
+            .flat_map(|group| &group.stages)
+            .find(|stage| resume_retry_ready(stage))
+            .map(|stage| stage.stage_id.clone());
         let mut active_seen = false;
         for stage in plans
             .iter_mut()
@@ -1051,6 +1059,17 @@ fn order_receiver_lifecycle_stages(plans: &mut [QualificationPlan]) {
             .filter(|group| group.group_id == "lifecycle")
             .flat_map(|group| &mut group.stages)
         {
+            if let Some(retry_id) = &resume_retry_id {
+                if stage.stage_id != *retry_id
+                    && (!matches!(
+                        stage.status,
+                        StageStatus::Passed | StageStatus::Failed | StageStatus::Blocked
+                    ) || resume_retry_ready(stage))
+                {
+                    stage.status = StageStatus::Locked;
+                }
+                continue;
+            }
             if matches!(
                 stage.status,
                 StageStatus::Passed | StageStatus::Failed | StageStatus::Blocked
@@ -1723,27 +1742,53 @@ mod tests {
             1,
             "2026-07-22T12:00:00Z".to_owned(),
         );
-        let keyboard = view
+        let completed = StageResult {
+            summary: "Prerequisite passed.".to_owned(),
+            completed_at: "2026-07-23T11:40:00Z".to_owned(),
+            evidence_refs: vec!["local-read-only:test".to_owned()],
+        };
+        let mut results = view
             .plans
-            .iter_mut()
+            .iter()
+            .flat_map(|plan| &plan.groups)
+            .flat_map(|group| &group.stages)
+            .filter(|stage| !stage.stage_id.ends_with("-lifecycle"))
+            .map(|stage| {
+                (
+                    stage.stage_id.clone(),
+                    StageProgress {
+                        status: StageStatus::Passed,
+                        result: Some(completed.clone()),
+                        checkpoint: None,
+                    },
+                )
+            })
+            .collect::<BTreeMap<_, _>>();
+        let lifecycle_id = view
+            .plans
+            .iter()
             .find(|plan| plan.device_id.contains("keyboard"))
-            .expect("keyboard plan exists");
-        let lifecycle = keyboard
+            .expect("keyboard plan exists")
             .groups
-            .iter_mut()
-            .flat_map(|group| &mut group.stages)
+            .iter()
+            .flat_map(|group| &group.stages)
             .find(|stage| stage.stage_id.ends_with("-lifecycle"))
-            .expect("lifecycle stage exists");
-        lifecycle.status = StageStatus::Failed;
-        lifecycle.result = Some(StageResult {
-            summary: "The watched resume result failed.".to_owned(),
-            completed_at: "2026-07-23T11:50:45Z".to_owned(),
-            evidence_refs: vec![SYSTEM_RESUME_RETRY_EVIDENCE.to_owned()],
-        });
-        lifecycle.observations.clear();
-        assert!(resume_retry_ready(lifecycle));
-        let lifecycle_id = lifecycle.stage_id.clone();
-        view.actions = actions_for_plans(&view.plans);
+            .expect("lifecycle stage exists")
+            .stage_id
+            .clone();
+        results.insert(
+            lifecycle_id.clone(),
+            StageProgress {
+                status: StageStatus::Failed,
+                result: Some(StageResult {
+                    summary: "The watched resume result failed.".to_owned(),
+                    completed_at: "2026-07-23T11:50:45Z".to_owned(),
+                    evidence_refs: vec![SYSTEM_RESUME_RETRY_EVIDENCE.to_owned()],
+                }),
+                checkpoint: None,
+            },
+        );
+        apply_stage_results(&mut view, &results, Some("run-generation-7"));
 
         let lifecycle = view
             .plans
@@ -1762,6 +1807,22 @@ mod tests {
                 .expect("retry requires authorization")
                 .phrase,
             "authorize one supervised system suspend"
+        );
+        let mouse_lifecycle = view
+            .plans
+            .iter()
+            .find(|plan| plan.device_id.contains("mouse"))
+            .expect("mouse plan exists")
+            .groups
+            .iter()
+            .flat_map(|group| &group.stages)
+            .find(|stage| stage.stage_id.ends_with("-lifecycle"))
+            .expect("mouse lifecycle exists");
+        assert_eq!(mouse_lifecycle.status, StageStatus::Locked);
+        assert!(!action_for_stage(&view, mouse_lifecycle).enabled);
+        assert_eq!(
+            view.actions.iter().filter(|action| action.enabled).count(),
+            1
         );
     }
 
