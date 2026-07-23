@@ -501,10 +501,7 @@ fn apply_action(
     session: &mut ServerState,
 ) -> Result<(), ActionFailure> {
     match stage.risk {
-        RiskLevel::ReadOnly => {
-            record_read_only_result(view, stage, input, session);
-            Ok(())
-        }
+        RiskLevel::ReadOnly => record_read_only_result(view, stage, input, session),
         RiskLevel::LightingWrite => {
             apply_lighting_action(probe, view, stage, input, state_file, session)
         }
@@ -634,8 +631,8 @@ fn record_read_only_result(
     stage: &QualificationStage,
     input: &ActionInput,
     session: &mut ServerState,
-) {
-    let (status, summary) = read_only_outcome(view, stage, input);
+) -> Result<(), ActionFailure> {
+    let (status, summary) = read_only_outcome(view, stage, input)?;
     session.results.insert(
         stage.stage_id.clone(),
         StageProgress {
@@ -648,6 +645,7 @@ fn record_read_only_result(
             checkpoint: None,
         },
     );
+    Ok(())
 }
 
 fn apply_lighting_action(
@@ -826,11 +824,11 @@ fn stage_for_action<'a>(
         .find(|stage| stage.action_id.as_deref() == Some(action.id.as_str()))
 }
 
-fn read_only_outcome<'a>(
-    view: &'a QualificationView,
+fn read_only_outcome(
+    view: &QualificationView,
     stage: &QualificationStage,
     input: &ActionInput,
-) -> (StageStatus, &'a str) {
+) -> Result<(StageStatus, &'static str), ActionFailure> {
     if stage.stage_id.ends_with("-telemetry") {
         let device = view.plans.iter().find_map(|plan| {
             plan.groups
@@ -841,16 +839,16 @@ fn read_only_outcome<'a>(
                 .flatten()
         });
         let Some(device) = device else {
-            return (
-                StageStatus::Blocked,
-                "The selected device is no longer present.",
-            );
+            return Err(ActionFailure::unchanged(
+                HttpStatus::Conflict,
+                "The selected device is no longer present. Let it return, refresh, and retry.",
+            ));
         };
         if device.presence != PresenceView::Active {
-            return (
-                StageStatus::Blocked,
-                "Fresh active-device evidence was not available after the exercise step.",
-            );
+            return Err(ActionFailure::unchanged(
+                HttpStatus::Conflict,
+                "Fresh active-device evidence is not available yet. Exercise the device, refresh, and retry.",
+            ));
         }
         let battery_claimed = stage
             .capabilities
@@ -858,39 +856,39 @@ fn read_only_outcome<'a>(
             .any(|capability| capability == "telemetry.battery-percent");
         if battery_claimed && !matches!(device.battery.availability, BatteryAvailability::Reported)
         {
-            return (
-                StageStatus::Blocked,
-                "The profile claims battery telemetry, but no fresh value was available.",
-            );
+            return Err(ActionFailure::unchanged(
+                HttpStatus::Conflict,
+                "Fresh battery evidence is not available yet. Exercise or reconnect the device, refresh, and retry.",
+            ));
         }
     }
     let mut outcome = StageStatus::Passed;
     for prompt in &stage.observations {
         let Some(answer) = input.observations.get(&prompt.id) else {
-            return (
-                StageStatus::Blocked,
+            return Err(ActionFailure::unchanged(
+                HttpStatus::BadRequest,
                 "A required watched observation was not answered.",
-            );
+            ));
         };
         let Some(choice) = prompt.choices.iter().find(|choice| choice.id == *answer) else {
-            return (
-                StageStatus::Blocked,
+            return Err(ActionFailure::unchanged(
+                HttpStatus::BadRequest,
                 "A watched observation used an answer outside the declared choices.",
-            );
+            ));
         };
         match choice.outcome.as_str() {
             "fail" => outcome = StageStatus::Failed,
             "unclear" if outcome != StageStatus::Failed => outcome = StageStatus::Blocked,
             "pass" => {}
             _ => {
-                return (
-                    StageStatus::Blocked,
+                return Err(ActionFailure::unchanged(
+                    HttpStatus::BadRequest,
                     "A watched observation outcome is not recognized.",
-                );
+                ));
             }
         }
     }
-    match outcome {
+    Ok(match outcome {
         StageStatus::Passed => (
             outcome,
             "The local companion recorded a complete read-only stage outcome.",
@@ -903,7 +901,7 @@ fn read_only_outcome<'a>(
             StageStatus::Blocked,
             "The watched observation was inconclusive.",
         ),
-    }
+    })
 }
 
 fn device_for_plan<'a>(
@@ -1401,6 +1399,82 @@ mod tests {
         assert!(session.lifecycle_run.is_none());
         assert!(session.results.is_empty());
         assert!(session.run_id.is_none());
+    }
+
+    #[test]
+    fn transient_telemetry_gap_remains_retryable() {
+        let mut view = qualification_fixture("rust-qualified-pair.json");
+        let stage = view
+            .plans
+            .iter()
+            .find(|plan| plan.device_id == "keyboard-test")
+            .expect("keyboard plan exists")
+            .groups
+            .iter()
+            .flat_map(|group| &group.stages)
+            .find(|stage| stage.stage_id.ends_with("-telemetry"))
+            .expect("telemetry stage exists")
+            .clone();
+        let keyboard = view
+            .receivers
+            .iter_mut()
+            .flat_map(|receiver| &mut receiver.devices)
+            .find(|device| device.device_id == "keyboard-test")
+            .expect("keyboard device exists");
+        keyboard.battery.availability = BatteryAvailability::Unknown;
+        keyboard.battery.percentage = None;
+        let input = ActionInput {
+            view_revision: 1,
+            confirmation: None,
+            observations: BTreeMap::from([("controls".to_owned(), "pass".to_owned())]),
+        };
+        let mut session = ServerState::default();
+
+        let failure = record_read_only_result(&view, &stage, &input, &mut session)
+            .expect_err("missing telemetry remains retryable");
+        assert!(matches!(failure.status, HttpStatus::Conflict));
+        assert!(!failure.state_changed);
+        assert!(failure.message.contains("refresh, and retry"));
+        assert!(session.results.is_empty());
+
+        let keyboard = view
+            .receivers
+            .iter_mut()
+            .flat_map(|receiver| &mut receiver.devices)
+            .find(|device| device.device_id == "keyboard-test")
+            .expect("keyboard device exists");
+        keyboard.battery.availability = BatteryAvailability::Reported;
+        keyboard.battery.percentage = Some(20);
+        assert!(record_read_only_result(&view, &stage, &input, &mut session).is_ok());
+        assert_eq!(session.results[&stage.stage_id].status, StageStatus::Passed);
+    }
+
+    #[test]
+    fn malformed_read_only_observation_does_not_poison_the_run() {
+        let view = qualification_fixture("rust-qualified-pair.json");
+        let stage = view
+            .plans
+            .iter()
+            .find(|plan| plan.device_id == "keyboard-test")
+            .expect("keyboard plan exists")
+            .groups
+            .iter()
+            .flat_map(|group| &group.stages)
+            .find(|stage| stage.stage_id.ends_with("-telemetry"))
+            .expect("telemetry stage exists")
+            .clone();
+        let input = ActionInput {
+            view_revision: 1,
+            confirmation: None,
+            observations: BTreeMap::new(),
+        };
+        let mut session = ServerState::default();
+
+        let failure = record_read_only_result(&view, &stage, &input, &mut session)
+            .expect_err("missing answer is rejected");
+        assert!(matches!(failure.status, HttpStatus::BadRequest));
+        assert!(!failure.state_changed);
+        assert!(session.results.is_empty());
     }
 
     #[test]
