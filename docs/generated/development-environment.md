@@ -36,6 +36,8 @@ Then run either software lane without network access:
 ./hfx verify --all
 ```
 
+These commands use the host directly when it exactly matches the repository pins. Otherwise they select the canonical pinned container automatically, so a rolling distribution update cannot create a false verification failure. Use `--host-toolchain` only when diagnosing the host environment itself.
+
 ## Network Boundary
 
 Container construction may read the immutable Arch snapshot and install the exact Rust toolchain. Post-create preparation may fetch only cataloged repositories and locked Rust crates. Verification reuses those workspace-local inputs without network access; missing, dirty, or mismatched inputs fail with a remediation command.

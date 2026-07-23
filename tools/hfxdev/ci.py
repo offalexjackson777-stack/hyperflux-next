@@ -22,6 +22,7 @@ IMAGE = re.compile(
     r"^[a-z0-9][a-z0-9._/-]*(?::[A-Za-z0-9._-]+)?(?:@sha256:[0-9a-f]{64})?$"
 )
 REVISION = re.compile(r"^[0-9a-f]{40}$")
+PINNED_VERIFICATION_ENVIRONMENT = "HFX_PINNED_VERIFICATION_ENVIRONMENT"
 
 
 @dataclass(frozen=True)
@@ -197,6 +198,8 @@ def container_invocation(
             f"{root}:{environment.workspace_path}:rw",
         ]
     )
+    if operation == "verify":
+        command.extend(("--env", f"{PINNED_VERIFICATION_ENVIRONMENT}=1"))
     if linked_git is not None:
         command.extend(("--volume", f"{linked_git}:{linked_git}:ro"))
     command.extend(("--workdir", environment.workspace_path, image))

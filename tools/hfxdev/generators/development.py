@@ -141,6 +141,11 @@ def markdown(environment: DevelopmentEnvironment, upstreams: list[dict[str, Any]
             "./hfx verify --all",
             "```",
             "",
+            "These commands use the host directly when it exactly matches the repository pins. "
+            "Otherwise they select the canonical pinned container automatically, so a rolling "
+            "distribution update cannot create a false verification failure. Use "
+            "`--host-toolchain` only when diagnosing the host environment itself.",
+            "",
             "## Network Boundary",
             "",
             "Container construction may read the immutable Arch snapshot and install the exact "

@@ -242,6 +242,10 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertIn("CARGO_NET_OFFLINE=false cargo fetch --locked", prepare_command)
         self.assertIn("CARGO_NET_OFFLINE=false", prepare_command)
         self.assertIn("CARGO_NET_OFFLINE=true", " ".join(verify.command))
+        self.assertIn(
+            "HFX_PINNED_VERIFICATION_ENVIRONMENT=1",
+            " ".join(verify.command),
+        )
         self.assertIn("--changed-from " + "a" * 40, " ".join(verify.command))
 
     @patch("hfxdev.ci.shutil.which", return_value="/usr/bin/podman")

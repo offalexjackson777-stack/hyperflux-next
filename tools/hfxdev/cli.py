@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 import sys
+import time
 
 from .actions_summary import write_actions_summary
-from .ci import container_invocation, run_container
+from .ci import PINNED_VERIFICATION_ENVIRONMENT, container_invocation, run_container
+from .governance import load_github_governance
 from .migration import capture_inventory, run_shadow_comparison, summary
 from .model import ModelError
 from .distribution_package import build_distribution_package
@@ -46,6 +49,11 @@ def _parser() -> argparse.ArgumentParser:
         help="select tests from changes since a Git revision; unknown paths fail closed",
     )
     verify.add_argument("--output", type=Path, help="empty directory for structured evidence")
+    verify.add_argument(
+        "--host-toolchain",
+        action="store_true",
+        help="require the host toolchain instead of selecting the pinned container",
+    )
 
     generate = commands.add_parser("generate", help="regenerate canonical derived files")
     generate.add_argument("--check", action="store_true", help="reserved for compatibility; verify performs the check")
@@ -170,8 +178,43 @@ def main(arguments: list[str] | None = None) -> int:
     try:
         if args.command == "verify":
             from .verify import RUNNERS
+            from .toolchains import verify_current_toolchain
 
             lane = "fast" if args.fast else "full-software"
+            running_pinned = os.environ.get(PINNED_VERIFICATION_ENVIRONMENT) == "1"
+            if not args.host_toolchain and not running_pinned:
+                try:
+                    verify_current_toolchain(root)
+                except ModelError:
+                    output = args.output
+                    if output is None:
+                        output = Path("build") / "verification" / (
+                            f"pinned-{os.getpid()}-{time.time_ns()}"
+                        )
+                    elif output.is_absolute():
+                        try:
+                            output = output.resolve().relative_to(root.resolve())
+                        except ValueError as error:
+                            raise ModelError(
+                                "container verification output must stay below the repository"
+                            ) from error
+                    changed_from = None
+                    if args.changed_from is not None:
+                        changed_from, _ = git_changed_paths(root, args.changed_from)
+                    invocation = container_invocation(
+                        root,
+                        image=load_github_governance(root).development_image,
+                        operation="verify",
+                        lane="fast" if args.fast else "full",
+                        output=output,
+                        changed_from=changed_from,
+                    )
+                    print(
+                        "HyperFlux Next verification environment: pinned container "
+                        "(host package versions are independent)",
+                        flush=True,
+                    )
+                    return run_container(invocation)
             outcome = run_verification(
                 root,
                 load_test_catalog(root),
