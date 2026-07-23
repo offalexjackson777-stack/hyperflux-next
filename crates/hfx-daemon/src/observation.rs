@@ -250,11 +250,13 @@ impl PassiveObservationTranslator {
         stamp: ObservationStamp,
     ) -> PassiveTranslation {
         if state == ReceiverLifecycleState::Suspended {
-            self.receiver_was_suspended = true;
-        } else if state == ReceiverLifecycleState::Active && self.receiver_was_suspended {
-            for binding in self.lanes.values_mut() {
-                binding.last_activity_ms = None;
+            if !self.receiver_was_suspended {
+                for binding in self.lanes.values_mut() {
+                    binding.last_activity_ms = None;
+                }
             }
+            self.receiver_was_suspended = true;
+        } else if state == ReceiverLifecycleState::Active {
             self.receiver_was_suspended = false;
         }
         PassiveTranslation::applied(vec![
@@ -1018,6 +1020,50 @@ mod tests {
         let continuous = translator
             .translate(activity(9, 1_006, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE))
             .expect("continuous mouse activity translates");
+        assert_eq!(continuous.restore_ready, None);
+    }
+
+    #[test]
+    fn activity_between_suspend_and_active_remains_the_one_readiness_signal() {
+        let mut translator = translator();
+        identify(
+            &mut translator,
+            1,
+            HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            0x00cd,
+        );
+        translator
+            .translate(activity(2, 1_000, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE))
+            .expect("initial activity translates");
+
+        for (sequence, observed_at_ms, raw_value) in [(3, 1_001, 1), (5, 1_003, 0)] {
+            let mut observation = raw_at(
+                sequence,
+                observed_at_ms,
+                HFX_UAPI_OBSERVATION_KIND_RECEIVER_SUSPENDED,
+                HFX_UAPI_ENDPOINT_SLOT_RECEIVER,
+                raw_value,
+            );
+            observation.source = HFX_UAPI_OBSERVATION_SOURCE_POWER_MANAGEMENT;
+            observation.confidence = HFX_UAPI_OBSERVATION_CONFIDENCE_EXACT;
+            translator
+                .translate(observation)
+                .expect("power observation translates");
+
+            if raw_value == 1 {
+                let early = translator
+                    .translate(activity(4, 1_002, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE))
+                    .expect("pre-active input translates");
+                assert_eq!(
+                    early.restore_ready.as_ref().map(LogicalDeviceId::as_str),
+                    Some("paired-mouse-00cd")
+                );
+            }
+        }
+
+        let continuous = translator
+            .translate(activity(6, 1_004, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE))
+            .expect("post-active input remains continuous");
         assert_eq!(continuous.restore_ready, None);
     }
 }

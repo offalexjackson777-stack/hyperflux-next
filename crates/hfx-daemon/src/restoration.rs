@@ -297,7 +297,25 @@ impl RestorationScheduler {
         )
     }
 
-    /// Wakes matching claims and enqueues one exact system-resume trigger.
+    /// Invalidates pre-suspend readiness and parks this generation's claims.
+    /// Fresh device input observed after this boundary remains eligible when
+    /// the matching resume trigger arrives.
+    ///
+    /// # Errors
+    ///
+    /// Returns a generated-time failure.
+    pub fn schedule_system_suspend(
+        &mut self,
+        receiver_id: &ReceiverId,
+        generation_id: GenerationId,
+    ) -> Result<(), RestorationScheduleError> {
+        self.clear_readiness(receiver_id, generation_id);
+        self.park(receiver_id, generation_id, None)?;
+        Ok(())
+    }
+
+    /// Enqueues one exact system-resume trigger while retaining readiness
+    /// observed after the matching suspend boundary.
     ///
     /// # Errors
     ///
@@ -308,7 +326,6 @@ impl RestorationScheduler {
         generation_id: GenerationId,
         sequence: SequenceNumber,
     ) -> Result<(), RestorationScheduleError> {
-        self.clear_readiness(&receiver_id, generation_id);
         self.schedule(
             RestoreTriggerKind::SystemResume,
             receiver_id,
@@ -543,7 +560,7 @@ impl RestorationScheduler {
         if is_broad_trigger(kind) {
             let woke = if readiness_gated_trigger(kind) {
                 self.park(&receiver_id, generation_id, None)?;
-                0
+                self.wake_ready_devices(&receiver_id, generation_id)
             } else {
                 self.wake(&receiver_id, generation_id, None)
             };
@@ -678,6 +695,25 @@ impl RestorationScheduler {
             woken += 1;
         }
         woken
+    }
+
+    fn wake_ready_devices(
+        &mut self,
+        receiver_id: &ReceiverId,
+        generation_id: GenerationId,
+    ) -> usize {
+        let devices = self
+            .ready_devices
+            .iter()
+            .filter(|(candidate, generation, _)| {
+                candidate == receiver_id && *generation == generation_id
+            })
+            .map(|(_, _, device_id)| device_id.clone())
+            .collect::<Vec<_>>();
+        devices
+            .iter()
+            .map(|device_id| self.wake(receiver_id, generation_id, Some(device_id)))
+            .sum()
     }
 
     fn park(
@@ -1737,7 +1773,7 @@ mod tests {
     }
 
     #[test]
-    fn system_resume_clears_old_readiness_and_reparks_existing_claims() {
+    fn suspend_clears_old_readiness_but_resume_keeps_post_suspend_activity() {
         let claim = record("claim-mouse", RestoreRecordStatus::Planned);
         let mut scheduler = scheduler();
         scheduler
@@ -1748,12 +1784,8 @@ mod tests {
             .insert((id("receiver-1"), generation(1), id("mouse-1")));
 
         scheduler
-            .schedule_system_resume(
-                id("receiver-1"),
-                generation(1),
-                SequenceNumber::try_from(5_u64).expect("sequence"),
-            )
-            .expect("resume trigger schedules");
+            .schedule_system_suspend(&id("receiver-1"), generation(1))
+            .expect("suspend boundary records");
 
         assert!(scheduler.ready_devices.is_empty());
         assert_eq!(
@@ -1773,6 +1805,18 @@ mod tests {
                 SequenceNumber::try_from(6_u64).expect("sequence"),
             )
             .expect("fresh activity wakes the claim");
+        scheduler
+            .schedule_system_resume(
+                id("receiver-1"),
+                generation(1),
+                SequenceNumber::try_from(7_u64).expect("sequence"),
+            )
+            .expect("resume trigger schedules");
+        assert!(scheduler.ready_devices.contains(&(
+            id("receiver-1"),
+            generation(1),
+            id("mouse-1")
+        )));
         assert_eq!(
             scheduler
                 .claims

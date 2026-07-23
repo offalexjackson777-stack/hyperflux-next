@@ -19,6 +19,8 @@ const SESSION_SCHEMA: &str = "hyperflux-qualification-session-v2";
 // Bump this only when persisted checkpoints cannot be interpreted safely by
 // the current coordinator. Ordinary implementation fixes must remain resumable.
 const COORDINATOR_STATE_CONTRACT: &str = "hyperflux-qualification-coordinator-state-v1";
+const LEGACY_SOURCE_BOUND_COORDINATOR_SHA256: &str =
+    "912f0a7cd4cba79f2293e0fc664ef42e2bba5e36b549cecea596580aea739858";
 const MAX_SESSION_BYTES: u64 = 256 * 1024;
 const MAX_STAGE_RESULTS: usize = 64;
 
@@ -191,8 +193,11 @@ pub(crate) fn load_state(
         return Err(QualificationStateError::TooLarge);
     }
     let payload = fs::read(path)?;
-    let state: QualificationSessionState =
+    let mut state: QualificationSessionState =
         serde_json::from_slice(&payload).map_err(|_| QualificationStateError::Invalid)?;
+    if state.coordinator_sha256 == LEGACY_SOURCE_BOUND_COORDINATOR_SHA256 {
+        state.coordinator_sha256 = coordinator_sha256();
+    }
     state.validate()?;
     Ok(Some(state))
 }
@@ -355,6 +360,41 @@ mod tests {
         let second = archive_stale_state(&path).expect("same state reuses archive");
         assert_eq!(first, second);
         assert_eq!(fs::read(first).expect("archive reads"), payload);
+        fs::remove_dir_all(path.parent().expect("parent")).expect("test state removes");
+    }
+
+    #[test]
+    fn exact_legacy_source_bound_coordinator_migrates_without_losing_results() {
+        let path = test_path("legacy-coordinator");
+        let _ = fs::remove_dir_all(path.parent().expect("parent"));
+        let mut state = QualificationSessionState {
+            revision: 19,
+            run_id: Some("local-preserved".to_owned()),
+            results: BTreeMap::from([(
+                "keyboard-profile-identity".to_owned(),
+                StageProgress {
+                    status: crate::StageStatus::Passed,
+                    result: None,
+                    checkpoint: None,
+                },
+            )]),
+            ..QualificationSessionState::default()
+        };
+        state.coordinator_sha256 = LEGACY_SOURCE_BOUND_COORDINATOR_SHA256.to_owned();
+        fs::create_dir_all(path.parent().expect("parent")).expect("parent creates");
+        write_private_file(
+            &path,
+            &serde_json::to_vec_pretty(&state).expect("legacy state serializes"),
+        )
+        .expect("legacy state writes");
+
+        let migrated = load_state(&path)
+            .expect("legacy state loads")
+            .expect("legacy state exists");
+        assert_eq!(migrated.coordinator_sha256, coordinator_sha256());
+        assert_eq!(migrated.revision, 19);
+        assert_eq!(migrated.run_id.as_deref(), Some("local-preserved"));
+        assert_eq!(migrated.results, state.results);
         fs::remove_dir_all(path.parent().expect("parent")).expect("test state removes");
     }
 

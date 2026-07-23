@@ -17,6 +17,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub const QUALIFICATION_API_VERSION: u16 = 1;
 pub const QUALIFICATION_SCHEMA: &str = "hyperflux-local-qualification-v1";
 pub const QUALIFICATION_ENDPOINT: &str = "http://127.0.0.1:47821";
+pub(crate) const SYSTEM_RESUME_RETRY_EVIDENCE: &str = "system-resume-retry:ready";
 
 mod generation_id_wire {
     use hfx_domain::GenerationId;
@@ -854,7 +855,8 @@ fn actions_for_plan(plan: &QualificationPlan) -> Vec<CompanionAction> {
         .flat_map(|group| &group.stages)
         .filter_map(|stage| {
             let id = stage.action_id.clone()?;
-            let confirmation = if stage.status == StageStatus::AwaitingObservation {
+            let resume_retry = resume_retry_ready(stage);
+            let confirmation = if stage.status == StageStatus::AwaitingObservation || resume_retry {
                 if stage.risk == RiskLevel::SystemLifecycle && stage.observations.is_empty() {
                     Some(ActionConfirmation {
                         phrase: "authorize one supervised system suspend".to_owned(),
@@ -889,6 +891,9 @@ fn actions_for_plan(plan: &QualificationPlan) -> Vec<CompanionAction> {
                 label: match stage.status {
                     StageStatus::AwaitingObservation => "Record watched result",
                     StageStatus::Running => "Running bounded step",
+                    StageStatus::Failed | StageStatus::Blocked if resume_retry => {
+                        "Retry supervised resume"
+                    }
                     _ => match stage.kind {
                         StageKind::Automatic => "Run read-only check",
                         StageKind::WatchedObservation if stage.risk == RiskLevel::ReadOnly => {
@@ -904,12 +909,23 @@ fn actions_for_plan(plan: &QualificationPlan) -> Vec<CompanionAction> {
                 enabled: matches!(
                     stage.status,
                     StageStatus::Ready | StageStatus::AwaitingObservation
-                ),
+                ) || resume_retry,
                 risk: stage.risk,
                 confirmation,
             })
         })
         .collect()
+}
+
+pub(crate) fn resume_retry_ready(stage: &QualificationStage) -> bool {
+    matches!(stage.status, StageStatus::Failed | StageStatus::Blocked)
+        && stage.risk == RiskLevel::SystemLifecycle
+        && stage.result.as_ref().is_some_and(|result| {
+            result
+                .evidence_refs
+                .iter()
+                .any(|evidence| evidence == SYSTEM_RESUME_RETRY_EVIDENCE)
+        })
 }
 
 pub(crate) fn apply_stage_results(
@@ -1689,6 +1705,64 @@ mod tests {
         assert_eq!(lighting.status, StageStatus::Locked);
         let lighting_action = action_for_stage(&view, lighting);
         assert!(!lighting_action.enabled);
+    }
+
+    #[test]
+    fn measured_resume_failure_exposes_only_the_exact_suspend_retry() {
+        let integration = paired_integration();
+        let mut view = build_qualification_view(
+            &system(),
+            Some(&integration),
+            &catalog(),
+            RunnerCapabilities {
+                read_only_actions: RunnerAvailability::Available,
+                supervised_lighting: RunnerAvailability::Available,
+                device_lifecycle: RunnerAvailability::Available,
+                system_lifecycle: RunnerAvailability::Available,
+            },
+            1,
+            "2026-07-22T12:00:00Z".to_owned(),
+        );
+        let keyboard = view
+            .plans
+            .iter_mut()
+            .find(|plan| plan.device_id.contains("keyboard"))
+            .expect("keyboard plan exists");
+        let lifecycle = keyboard
+            .groups
+            .iter_mut()
+            .flat_map(|group| &mut group.stages)
+            .find(|stage| stage.stage_id.ends_with("-lifecycle"))
+            .expect("lifecycle stage exists");
+        lifecycle.status = StageStatus::Failed;
+        lifecycle.result = Some(StageResult {
+            summary: "The watched resume result failed.".to_owned(),
+            completed_at: "2026-07-23T11:50:45Z".to_owned(),
+            evidence_refs: vec![SYSTEM_RESUME_RETRY_EVIDENCE.to_owned()],
+        });
+        lifecycle.observations.clear();
+        assert!(resume_retry_ready(lifecycle));
+        let lifecycle_id = lifecycle.stage_id.clone();
+        view.actions = actions_for_plans(&view.plans);
+
+        let lifecycle = view
+            .plans
+            .iter()
+            .flat_map(|plan| &plan.groups)
+            .flat_map(|group| &group.stages)
+            .find(|stage| stage.stage_id == lifecycle_id)
+            .expect("keyboard lifecycle remains visible");
+        let action = action_for_stage(&view, lifecycle);
+        assert!(action.enabled);
+        assert_eq!(action.label, "Retry supervised resume");
+        assert_eq!(
+            action
+                .confirmation
+                .as_ref()
+                .expect("retry requires authorization")
+                .phrase,
+            "authorize one supervised system suspend"
+        );
     }
 
     #[test]

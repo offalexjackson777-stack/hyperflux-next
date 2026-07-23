@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use crate::qualification::{StageProgress, apply_stage_results};
+use crate::qualification::{StageProgress, apply_stage_results, resume_retry_ready};
 use crate::qualification_lifecycle::{
     PreparedLifecycleAction, capture_lifecycle_run, current_suspend_stamp,
     identity_transition_matches, observe_lifecycle, overlay_lifecycle_run,
-    prepare_lifecycle_checkpoint, reconcile_system_resume, start_lifecycle_stage,
+    prepare_lifecycle_checkpoint, reconcile_system_resume, recover_retryable_resume_failure,
+    start_lifecycle_stage,
 };
 use crate::qualification_runner::{
     ObservationVerdict, PreparedLightingAction, new_transaction_id, prepare_lighting_checkpoint,
@@ -145,6 +146,11 @@ pub fn serve_qualification_console(
         }
         Err(_) => return Err(QualificationServerError::StateUnavailable),
     };
+    if recover_retryable_resume_state(&mut state)
+        .map_err(|_| QualificationServerError::StateUnavailable)?
+    {
+        state.revision = state.revision.saturating_add(1);
+    }
     save_state(state_file, &state).map_err(|_| QualificationServerError::StateUnavailable)?;
     let probe = RealSystemProbe::default();
     for connection in listener.incoming() {
@@ -160,6 +166,20 @@ pub fn serve_qualification_console(
         );
     }
     Ok(())
+}
+
+fn recover_retryable_resume_state(
+    state: &mut ServerState,
+) -> Result<bool, crate::qualification_lifecycle::LifecycleRunnerError> {
+    let Some(run) = state.lifecycle_run.as_mut() else {
+        return Ok(false);
+    };
+    for (stage_id, progress) in &mut state.results {
+        if recover_retryable_resume_failure(run, stage_id, progress)? {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn canonical_asset_root(path: &Path) -> Result<PathBuf, QualificationServerError> {
@@ -547,7 +567,7 @@ fn apply_lifecycle_action(
         let (run, transition) = start_lifecycle_stage(run, stage, &observation)
             .map_err(|error| ActionFailure::unchanged(HttpStatus::Conflict, error.to_string()))?;
         PreparedLifecycleAction::Record { run, transition }
-    } else if stage.status == StageStatus::AwaitingObservation {
+    } else if stage.status == StageStatus::AwaitingObservation || resume_retry_ready(stage) {
         let verdict = observation_verdict(stage, input)
             .map_err(|message| ActionFailure::unchanged(HttpStatus::BadRequest, message))?;
         let current = session.results.get(&stage.stage_id).ok_or_else(|| {
@@ -1405,6 +1425,65 @@ mod tests {
         assert!(session.lifecycle_run.is_none());
         assert!(session.results.is_empty());
         assert!(session.run_id.is_none());
+    }
+
+    #[test]
+    fn server_upgrades_a_measured_terminal_resume_failure_once() {
+        let mut view = qualification_fixture("rust-qualified-pair.json");
+        for group in view.plans.iter_mut().flat_map(|plan| &mut plan.groups) {
+            for stage in &mut group.stages {
+                stage.status = if group.group_id == "lifecycle" {
+                    StageStatus::Ready
+                } else {
+                    StageStatus::Passed
+                };
+            }
+        }
+        let stage = view
+            .plans
+            .iter()
+            .find(|plan| plan.device_id == "keyboard-test")
+            .expect("keyboard plan exists")
+            .groups
+            .iter()
+            .flat_map(|group| &group.stages)
+            .find(|stage| stage.stage_id.ends_with("-lifecycle"))
+            .expect("keyboard lifecycle exists")
+            .clone();
+        let mut run = capture_lifecycle_run(&view, &stage).expect("run captures");
+        run.active = None;
+        let mut session = ServerState {
+            results: BTreeMap::from([(
+                stage.stage_id.clone(),
+                StageProgress {
+                    status: StageStatus::Failed,
+                    result: Some(StageResult {
+                        summary: "A watched lifecycle result did not match.".to_owned(),
+                        completed_at: "2026-07-23T11:50:45Z".to_owned(),
+                        evidence_refs: vec![
+                            "system-suspend:authorized".to_owned(),
+                            "system-suspend-gap-ms:9496".to_owned(),
+                        ],
+                    }),
+                    checkpoint: None,
+                },
+            )]),
+            lifecycle_run: Some(run),
+            ..ServerState::default()
+        };
+
+        assert!(recover_retryable_resume_state(&mut session).expect("state upgrades"));
+        assert!(!recover_retryable_resume_state(&mut session).expect("upgrade is idempotent"));
+        let progress = &session.results[&stage.stage_id];
+        assert_eq!(progress.status, StageStatus::Failed);
+        assert_eq!(
+            progress
+                .checkpoint
+                .as_ref()
+                .expect("retry checkpoint exists")
+                .checkpoint_id,
+            "system-suspend-authorization"
+        );
     }
 
     #[test]

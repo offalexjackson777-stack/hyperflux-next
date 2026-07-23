@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use crate::qualification::{StageCheckpoint, StageProgress};
+use crate::qualification::{SYSTEM_RESUME_RETRY_EVIDENCE, StageCheckpoint, StageProgress};
 use crate::qualification_event_evidence::{
     cursor_evidence, device_return_restore, renewed_generation_restores,
     resumed_generation_restores,
@@ -382,8 +382,23 @@ pub(crate) fn prepare_lifecycle_checkpoint(
         ));
     }
     if verdict != ObservationVerdict::Pass {
-        let evidence = active.evidence_refs.clone();
-        run.active = None;
+        let retryable_resume = checkpoint.checkpoint_id == "system-resume-observation";
+        let mut evidence = active.evidence_refs.clone();
+        if retryable_resume
+            && !evidence
+                .iter()
+                .any(|value| value == SYSTEM_RESUME_RETRY_EVIDENCE)
+        {
+            evidence.push(SYSTEM_RESUME_RETRY_EVIDENCE.to_owned());
+        }
+        if retryable_resume {
+            let active = run.active.as_mut().expect("active lifecycle stage exists");
+            active.phase = LifecyclePhase::SuspendAuthorization;
+            active.suspend_stamp = None;
+            active.evidence_refs.clone_from(&evidence);
+        } else {
+            run.active = None;
+        }
         let (status, summary) = if verdict == ObservationVerdict::Fail {
             (
                 StageStatus::Failed,
@@ -395,10 +410,12 @@ pub(crate) fn prepare_lifecycle_checkpoint(
                 "The watched lifecycle result was inconclusive; no physical step was repeated.",
             )
         };
-        return Ok(PreparedLifecycleAction::Record {
-            run,
-            transition: finished(status, summary, evidence),
-        });
+        let transition = if retryable_resume {
+            retryable_failure(status, summary, evidence)
+        } else {
+            finished(status, summary, evidence)
+        };
+        return Ok(PreparedLifecycleAction::Record { run, transition });
     }
     match checkpoint.checkpoint_id.as_str() {
         "device-departure" => record_device_departure(run, observation),
@@ -411,6 +428,79 @@ pub(crate) fn prepare_lifecycle_checkpoint(
             "The lifecycle checkpoint is not recognized; no physical step was repeated.",
         )),
     }
+}
+
+pub(crate) fn recover_retryable_resume_failure(
+    run: &mut LifecycleRunState,
+    stage_id: &str,
+    progress: &mut StageProgress,
+) -> Result<bool, LifecycleRunnerError> {
+    if run.active.is_some()
+        || progress.checkpoint.is_some()
+        || !matches!(progress.status, StageStatus::Failed | StageStatus::Blocked)
+    {
+        return Ok(false);
+    }
+    let Some(result) = progress.result.as_mut() else {
+        return Ok(false);
+    };
+    let measured_resume = result
+        .evidence_refs
+        .iter()
+        .any(|value| value == "system-suspend:authorized")
+        && result
+            .evidence_refs
+            .iter()
+            .any(|value| value.starts_with("system-suspend-gap-ms:"));
+    if !measured_resume {
+        return Ok(false);
+    }
+    let plan = run
+        .plans
+        .iter()
+        .find(|plan| {
+            plan.groups
+                .iter()
+                .flat_map(|group| &group.stages)
+                .any(|stage| stage.stage_id == stage_id && stage.risk == RiskLevel::SystemLifecycle)
+        })
+        .ok_or_else(|| {
+            LifecycleRunnerError::new(
+                "The failed resume result is not bound to a retained system lifecycle stage.",
+            )
+        })?;
+    let device = run
+        .receiver
+        .devices
+        .iter()
+        .find(|device| device.device_id == plan.device_id)
+        .ok_or_else(|| {
+            LifecycleRunnerError::new(
+                "The failed resume result has no retained controller identity.",
+            )
+        })?;
+    if !result
+        .evidence_refs
+        .iter()
+        .any(|value| value == SYSTEM_RESUME_RETRY_EVIDENCE)
+    {
+        result
+            .evidence_refs
+            .push(SYSTEM_RESUME_RETRY_EVIDENCE.to_owned());
+    }
+    let evidence_refs = result.evidence_refs.clone();
+    progress.checkpoint = Some(system_suspend_checkpoint(evidence_refs.clone()));
+    run.active = Some(LifecycleStageState {
+        stage_id: stage_id.to_owned(),
+        device_id: plan.device_id.clone(),
+        device_kind: device.kind.clone(),
+        phase: LifecyclePhase::SuspendAuthorization,
+        baseline_generation_id: run.receiver.generation_id,
+        evidence_refs,
+        suspend_stamp: None,
+    });
+    run.validate()?;
+    Ok(true)
 }
 
 pub(crate) fn reconcile_system_resume(
@@ -1324,6 +1414,25 @@ fn finished(status: StageStatus, summary: &str, evidence_refs: Vec<String>) -> R
     }
 }
 
+fn retryable_failure(
+    status: StageStatus,
+    summary: &str,
+    evidence_refs: Vec<String>,
+) -> RunnerTransition {
+    RunnerTransition {
+        progress: StageProgress {
+            status,
+            result: Some(StageResult {
+                summary: summary.to_owned(),
+                completed_at: qualification_generated_at(),
+                evidence_refs: evidence_refs.clone(),
+            }),
+            checkpoint: Some(system_suspend_checkpoint(evidence_refs)),
+        },
+        hardware_write_executed: false,
+    }
+}
+
 fn clock_milliseconds(clock: ClockId) -> Result<u64, LifecycleRunnerError> {
     let stamp = clock_gettime(clock);
     let seconds = u64::try_from(stamp.tv_sec).map_err(|_| {
@@ -1781,6 +1890,139 @@ mod tests {
             assert!(!transition.hardware_write_executed);
             assert!(run.active.is_none());
         }
+    }
+
+    #[test]
+    fn failed_resume_keeps_only_a_fresh_suspend_retry_checkpoint() {
+        let (run, stage, departure) = start_stage("keyboard-test");
+        let (run, device_return) = advance_to_device_return(run, &stage, &departure.progress);
+        let ready = observation(
+            &run,
+            "keyboard-test",
+            7,
+            InventoryAvailability::Available,
+            true,
+        );
+        let (run, authorization) = unwrap_record(
+            prepare_lifecycle_checkpoint(
+                run,
+                &stage,
+                &device_return.progress,
+                ObservationVerdict::Pass,
+                &ready,
+            )
+            .expect("device return reaches suspend authorization"),
+        );
+        let (suspended, _) = unwrap_suspend(
+            prepare_lifecycle_checkpoint(
+                run,
+                &stage,
+                &authorization.progress,
+                ObservationVerdict::Pass,
+                &ready,
+            )
+            .expect("suspend checkpoint prepares"),
+        );
+        let baseline = suspended
+            .active
+            .as_ref()
+            .and_then(|active| active.suspend_stamp.clone())
+            .expect("suspend stamp exists");
+        let resume_stamp = SuspendStamp {
+            boot_id_sha256: baseline.boot_id_sha256,
+            suspend_gap_ms: baseline.suspend_gap_ms + MINIMUM_SUSPEND_GAP_MS,
+        };
+        let (run, resume) = reconcile_system_resume(suspended, &ready, &resume_stamp)
+            .expect("resume reconciles")
+            .expect("resume checkpoint exists");
+        let (run, failed) = unwrap_record(
+            prepare_lifecycle_checkpoint(
+                run,
+                &stage,
+                &resume.progress,
+                ObservationVerdict::Fail,
+                &ready,
+            )
+            .expect("physical failure records"),
+        );
+
+        assert_eq!(failed.progress.status, StageStatus::Failed);
+        assert_eq!(
+            failed
+                .progress
+                .checkpoint
+                .as_ref()
+                .expect("retry checkpoint exists")
+                .checkpoint_id,
+            "system-suspend-authorization"
+        );
+        assert!(
+            failed
+                .progress
+                .result
+                .as_ref()
+                .expect("failure remains recorded")
+                .evidence_refs
+                .iter()
+                .any(|value| value == SYSTEM_RESUME_RETRY_EVIDENCE)
+        );
+        assert_eq!(
+            run.active.as_ref().expect("retry remains active").phase,
+            LifecyclePhase::SuspendAuthorization
+        );
+        assert!(
+            run.active
+                .as_ref()
+                .expect("retry remains active")
+                .suspend_stamp
+                .is_none()
+        );
+
+        let (_, pending) = unwrap_suspend(
+            prepare_lifecycle_checkpoint(
+                run,
+                &stage,
+                &failed.progress,
+                ObservationVerdict::Pass,
+                &ready,
+            )
+            .expect("explicit retry prepares one new suspend"),
+        );
+        assert_eq!(pending.progress.status, StageStatus::Running);
+    }
+
+    #[test]
+    fn legacy_terminal_resume_failure_upgrades_to_the_same_retry_contract() {
+        let (mut run, stage, _) = start_stage("keyboard-test");
+        run.active = None;
+        let mut progress = finished(
+            StageStatus::Failed,
+            "A watched lifecycle result did not match the required physical state.",
+            vec![
+                "system-suspend:authorized".to_owned(),
+                "system-suspend-gap-ms:9496".to_owned(),
+            ],
+        )
+        .progress;
+
+        assert!(
+            recover_retryable_resume_failure(&mut run, &stage.stage_id, &mut progress)
+                .expect("legacy failure upgrades")
+        );
+        assert_eq!(progress.status, StageStatus::Failed);
+        assert_eq!(
+            progress
+                .checkpoint
+                .as_ref()
+                .expect("retry checkpoint exists")
+                .checkpoint_id,
+            "system-suspend-authorization"
+        );
+        assert_eq!(
+            run.active.as_ref().expect("retry is retained").phase,
+            LifecyclePhase::SuspendAuthorization
+        );
+        run.validate().expect("upgraded retry remains valid");
     }
 
     #[test]

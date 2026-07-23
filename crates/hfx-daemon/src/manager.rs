@@ -436,20 +436,29 @@ impl LinuxRuntimeManager {
             let outcome = backend
                 .observe_lifecycle(observation)
                 .map_err(RuntimeTickError::Observation)?;
-            if let LifecycleObservationOutcome::Applied(applied) = outcome
-                && matches!(
+            if let LifecycleObservationOutcome::Applied(applied) = outcome {
+                let was_suspended = matches!(
                     applied.receiver_before,
                     ReceiverLifecycleState::Suspended | ReceiverLifecycleState::PartiallySuspended
-                )
-                && applied.receiver_after == ReceiverLifecycleState::Active
-            {
-                self.restoration
-                    .schedule_system_resume(
-                        applied.receiver_id.clone(),
-                        applied.generation_id,
-                        sequence,
-                    )
-                    .map_err(RuntimeTickError::Restoration)?;
+                );
+                let is_suspended = matches!(
+                    applied.receiver_after,
+                    ReceiverLifecycleState::Suspended | ReceiverLifecycleState::PartiallySuspended
+                );
+                if !was_suspended && is_suspended {
+                    self.restoration
+                        .schedule_system_suspend(&applied.receiver_id, applied.generation_id)
+                        .map_err(RuntimeTickError::Restoration)?;
+                } else if was_suspended && applied.receiver_after == ReceiverLifecycleState::Active
+                {
+                    self.restoration
+                        .schedule_system_resume(
+                            applied.receiver_id.clone(),
+                            applied.generation_id,
+                            sequence,
+                        )
+                        .map_err(RuntimeTickError::Restoration)?;
+                }
             }
         }
         if let Some(device_id) = translation.restore_ready {
