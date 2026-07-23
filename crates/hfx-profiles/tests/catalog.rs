@@ -39,10 +39,21 @@ fn receiver_and_children_resolve_independently() {
         &["lighting", "map", "telemetry"]
     );
     assert_eq!(keyboard.device_kind, DeviceKind::Keyboard);
-    assert_eq!(keyboard.lifecycle, None);
-    assert_eq!(keyboard.qualification_migrations.len(), 1);
+    let lifecycle = keyboard
+        .lifecycle
+        .expect("keyboard lifecycle policy is exact-profile bound");
+    assert_eq!(
+        lifecycle.power_off_departure_evidence,
+        PowerOffDepartureEvidence::ReceiverState
+    );
+    assert_eq!(lifecycle.device_return_settle_ms, 1_000);
+    assert_eq!(keyboard.qualification_migrations.len(), 2);
     assert_eq!(
         keyboard.qualification_migrations[0].preserve_stage_roles,
+        &["lighting", "map", "telemetry"]
+    );
+    assert_eq!(
+        keyboard.qualification_migrations[1].preserve_stage_roles,
         &["lighting", "map"]
     );
     assert_ne!(mouse.id, keyboard.id);

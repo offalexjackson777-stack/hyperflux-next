@@ -1101,6 +1101,14 @@
       "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296",
       "qualification_migrations": [
         {
+          "from_runtime_sha256": "88e5b7d79e5434f141f5767b07dcc707b13a5d0e0c1fbe0ebc894f57638e7e1c",
+          "preserve_stage_roles": [
+            "lighting",
+            "map",
+            "telemetry"
+          ]
+        },
+        {
           "from_runtime_sha256": "fcdd53fe104e649cc7d2c38c939bbd41095dc3eb53488ebb30a8615a76bbfba6",
           "preserve_stage_roles": [
             "lighting",
@@ -1114,11 +1122,15 @@
         "External power does not establish a direct USB data route or charging state.",
         "Receiver route value 0x0101 is indeterminate and cannot override observed keyboard activity."
       ],
-      "revision": 2,
-      "runtime_sha256": "88e5b7d79e5434f141f5767b07dcc707b13a5d0e0c1fbe0ebc894f57638e7e1c",
+      "revision": 3,
+      "runtime_sha256": "8c96caf63c960dbcd3207b4e43321e7d034301cf8bbe87291452d4d2f7d4890d",
       "schema": "hyperflux-hardware-profile-v1",
       "source_path": "profiles/children/razer-deathstalker-v2-pro-tkl-0296.json",
       "transport": {
+        "lifecycle": {
+          "device_return_settle_ms": 1000,
+          "power_off_departure_evidence": "receiver-state"
+        },
         "lighting": {
           "application_index_to_carrier": [
             0,
@@ -1392,5 +1404,5 @@
     }
   ],
   "schema": "hyperflux-compiled-profile-catalog-v1",
-  "source_sha256": "f75f7ebd0caaec5469fdfddb55fb8e1182bc1d0adf53a5f9f28c8d35c6f4f62a"
+  "source_sha256": "2d492c62e9b7dfbe6cd037161ae7cee8737875f36835fe3436d93707e77aba27"
 }

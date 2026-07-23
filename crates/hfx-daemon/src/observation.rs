@@ -959,6 +959,13 @@ mod tests {
                 .map(|readiness| readiness.device_id.as_str()),
             Some("paired-mouse-00cd")
         );
+        assert_eq!(
+            mouse
+                .restore_ready
+                .as_ref()
+                .map(|readiness| readiness.settle_ms),
+            Some(1_000)
+        );
 
         let keyboard = translator
             .translate(activity(7, 1_001, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE))
@@ -1096,6 +1103,13 @@ mod tests {
                 .map(|readiness| readiness.device_id.as_str()),
             Some("paired-mouse-00cd")
         );
+        assert_eq!(
+            mouse
+                .restore_ready
+                .as_ref()
+                .map(|readiness| readiness.settle_ms),
+            Some(1_000)
+        );
         let keyboard = translator
             .translate(activity(8, 1_005, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE))
             .expect("post-resume keyboard activity translates");
@@ -1111,7 +1125,7 @@ mod tests {
                 .restore_ready
                 .as_ref()
                 .map(|readiness| readiness.settle_ms),
-            Some(0)
+            Some(1_000)
         );
         let continuous = translator
             .translate(activity(9, 1_006, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE))

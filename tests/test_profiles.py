@@ -195,6 +195,17 @@ class ProfileCompilerTests(unittest.TestCase):
         with self.assertRaisesRegex(ModelError, "contradicts passive route evidence"):
             _validate_profiles(profiles, capabilities, claims)
 
+        profiles, capabilities, claims = self.validation_copies()
+        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
+        before = _runtime_profile_digest(keyboard, capabilities)
+        keyboard["transport"]["lifecycle"]["device_return_settle_ms"] = 1_001
+        _validate_profiles(profiles, capabilities, claims)
+        self.assertNotEqual(_runtime_profile_digest(keyboard, capabilities), before)
+        self.assertEqual(
+            keyboard["transport"]["lifecycle"]["power_off_departure_evidence"],
+            "receiver-state",
+        )
+
     def test_qualification_migrations_are_exact_and_do_not_change_runtime_identity(self) -> None:
         profiles, capabilities, claims = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
