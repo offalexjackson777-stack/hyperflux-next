@@ -73,12 +73,11 @@ pub(crate) fn migrate_profile_catalog_state(
     let mut preserved = BTreeMap::new();
 
     for (stage_id, current_authority) in &current_authorities {
-        let Some(old_authority) = old_authorities.get(stage_id) else {
+        let Some((old_stage_id, old_authority)) =
+            matching_old_authority(stage_id, current_authority, &old_authorities)
+        else {
             continue;
         };
-        if !same_stage_authority(old_authority, current_authority) {
-            continue;
-        }
         let Some(profile) = catalog
             .iter()
             .find(|profile| profile.profile_id.as_str() == current_authority.profile_id)
@@ -100,7 +99,7 @@ pub(crate) fn migrate_profile_catalog_state(
         {
             continue;
         }
-        let Some(progress) = stale.results.get(stage_id) else {
+        let Some(progress) = stale.results.get(old_stage_id) else {
             continue;
         };
         if progress.status != StageStatus::Passed || progress.result.is_none() {
@@ -212,6 +211,22 @@ fn same_stage_authority(
         && old.stage_contract_sha256 == current.stage_contract_sha256
 }
 
+fn matching_old_authority<'a>(
+    current_stage_id: &str,
+    current: &QualificationStageAuthority,
+    old_authorities: &'a BTreeMap<String, QualificationStageAuthority>,
+) -> Option<(&'a str, &'a QualificationStageAuthority)> {
+    let role = StageRole::from_stage_id(current_stage_id)?;
+    let mut matches = old_authorities.iter().filter(|(stage_id, authority)| {
+        StageRole::from_stage_id(stage_id) == Some(role) && same_stage_authority(authority, current)
+    });
+    let (stage_id, authority) = matches.next()?;
+    if matches.next().is_some() {
+        return None;
+    }
+    Some((stage_id.as_str(), authority))
+}
+
 fn allowed_roles(
     profile: &RuntimeProfile,
     old_digest: &str,
@@ -254,11 +269,15 @@ fn plan_stages(
 }
 
 fn stage_contract_sha256(group: &QualificationGroup, stage: &QualificationStage) -> String {
+    let role = match StageRole::from_stage_id(&stage.stage_id) {
+        Some(role) => role.as_str(),
+        None => stage.stage_id.as_str(),
+    };
     let encoded = serde_json::to_vec(&(
         &group.group_id,
         &group.title,
         &group.description,
-        &stage.stage_id,
+        role,
         &stage.title,
         &stage.description,
         stage.kind,
@@ -266,7 +285,6 @@ fn stage_contract_sha256(group: &QualificationGroup, stage: &QualificationStage)
         &stage.capabilities,
         &stage.instructions,
         &stage.observations,
-        &stage.action_id,
     ))
     .expect("qualification stage contracts contain no fallible values");
     let digest = Sha256::digest(encoded);
@@ -345,6 +363,23 @@ mod tests {
             .digest = digest.to_owned();
     }
 
+    fn replace_stage_ids(run: &mut LifecycleRunState) -> BTreeMap<String, String> {
+        let mut replacements = BTreeMap::new();
+        for plan in &mut run.plans {
+            for stage in plan.groups.iter_mut().flat_map(|group| &mut group.stages) {
+                let role = StageRole::from_stage_id(&stage.stage_id)
+                    .expect("generated stage role")
+                    .as_str();
+                let current_id = stage.stage_id.clone();
+                let predecessor_id = format!("predecessor-{}-{role}", plan.device_id);
+                stage.stage_id.clone_from(&predecessor_id);
+                stage.action_id = Some(format!("run:{predecessor_id}"));
+                replacements.insert(current_id, predecessor_id);
+            }
+        }
+        replacements
+    }
+
     #[test]
     fn migration_preserves_only_allowlisted_identical_passed_stage_contracts() {
         let catalog = RuntimeProfileCatalog::load().expect("catalog loads");
@@ -361,6 +396,7 @@ mod tests {
             "keyboard-test",
             "fcdd53fe104e649cc7d2c38c939bbd41095dc3eb53488ebb30a8615a76bbfba6",
         );
+        let predecessor_stage_ids = replace_stage_ids(&mut old_run);
 
         let all_stages = current
             .plans
@@ -375,7 +411,12 @@ mod tests {
             run_id: Some("local-preserved".to_owned()),
             results: all_stages
                 .iter()
-                .map(|stage_id| (stage_id.clone(), passed(stage_id)))
+                .map(|stage_id| {
+                    let predecessor_id = predecessor_stage_ids
+                        .get(stage_id)
+                        .expect("predecessor stage id");
+                    (predecessor_id.clone(), passed(predecessor_id))
+                })
                 .collect(),
             lifecycle_run: Some(old_run),
             pending_transaction: None,
