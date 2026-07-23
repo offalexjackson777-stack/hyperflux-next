@@ -155,6 +155,13 @@ class ProfileCompilerTests(unittest.TestCase):
             _validate_profiles(profiles, capabilities, claims)
 
         profiles, capabilities, claims = self.validation_copies()
+        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
+        keyboard["transport"]["passive"]["route"]["indeterminate"].append(3)
+        keyboard["transport"]["passive"]["route"]["indeterminate"].sort()
+        with self.assertRaisesRegex(ModelError, "route values must be disjoint"):
+            _validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
         del mouse["transport"]["passive"]
         with self.assertRaisesRegex(ModelError, "passive telemetry requires a decoder"):

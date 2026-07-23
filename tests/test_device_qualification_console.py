@@ -146,6 +146,11 @@ class DeviceQualificationConsoleTests(unittest.TestCase):
         self.assertIn("This computer is running HyperFlux V2", application)
         self.assertIn("working V2 installation as a broken Next bridge", application)
 
+    def test_battery_copy_distinguishes_startup_waiting_from_unavailable(self) -> None:
+        application = (APP / "assets" / "app.js").read_text(encoding="utf-8")
+        self.assertIn('unknown: "Waiting for battery report"', application)
+        self.assertIn('unavailable: "Battery report unavailable"', application)
+
     def test_operational_layout_has_bounded_responsive_and_accessibility_rules(self) -> None:
         html = (APP / "index.html").read_text(encoding="utf-8")
         css = (APP / "assets" / "app.css").read_text(encoding="utf-8")

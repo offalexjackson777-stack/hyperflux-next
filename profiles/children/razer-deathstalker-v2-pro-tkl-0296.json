@@ -2,7 +2,7 @@
   "$schema": "../../schemas/hardware-profile.schema.json",
   "schema": "hyperflux-hardware-profile-v1",
   "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296",
-  "revision": 1,
+  "revision": 2,
   "kind": "child",
   "device_kind": "keyboard",
   "identity": {"manufacturer": "Razer", "model_name": "Razer DeathStalker V2 Pro Tenkeyless", "authority": "paired-product-id", "vendor_id": 5426, "product_id": 662},
@@ -13,7 +13,7 @@
       "endpoint_lane": "keyboard",
       "battery_encoding": "linear-255",
       "contact": null,
-      "route": {"available": [0, 3], "unavailable": [2, 257]},
+      "route": {"available": [0, 3], "unavailable": [2], "indeterminate": [257]},
       "report_implies_route_available": false
     }
   },
@@ -34,5 +34,5 @@
     {"id": "telemetry.connection-evidence", "support_level": "telemetry-qualified", "evidence_claims": ["claim.child.0296.passive-identity-telemetry"]}
   ],
   "evidence_claims": ["claim.child.0296.complete-keyboard-map", "claim.child.0296.passive-identity-telemetry", "claim.children.complete-static-black", "claim.children.software-effect-frame-continuity", "claim.children.static-off-brightness", "claim.presentation.openrgb-1.0rc3-model-layouts"],
-  "restrictions": ["Another DeathStalker name, PID, or physical layout inherits no map.", "OpenRGB owns key names, geometry, and ANSI or ISO presentation.", "External power does not establish a direct USB data route or charging state."]
+  "restrictions": ["Another DeathStalker name, PID, or physical layout inherits no map.", "OpenRGB owns key names, geometry, and ANSI or ISO presentation.", "External power does not establish a direct USB data route or charging state.", "Receiver route value 0x0101 is indeterminate and cannot override observed keyboard activity."]
 }

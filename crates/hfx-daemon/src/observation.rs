@@ -29,6 +29,7 @@ use std::fmt;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PassiveDisposition {
     Applied,
+    IgnoredIndeterminateSemantic,
     IgnoredUnknownLane,
     IgnoredUnqualifiedSemantic,
     ReceiverUnavailable,
@@ -464,8 +465,12 @@ impl PassiveObservationTranslator {
             RouteState::Available
         } else if passive.route_unavailable.contains(&value) {
             RouteState::Unavailable
+        } else if passive.route_indeterminate.contains(&value) {
+            return PassiveTranslation::disposition(
+                PassiveDisposition::IgnoredIndeterminateSemantic,
+            );
         } else {
-            RouteState::Unknown
+            return PassiveTranslation::disposition(PassiveDisposition::IgnoredUnqualifiedSemantic);
         };
         PassiveTranslation::applied(self.route_observations(binding, stamp, state))
     }
@@ -734,7 +739,7 @@ mod tests {
         );
         for (sequence, raw_value, expected) in [
             (2, 3, RouteState::Available),
-            (3, 0x0101, RouteState::Unavailable),
+            (3, 2, RouteState::Unavailable),
         ] {
             let translated = translator
                 .translate(raw(
@@ -756,6 +761,43 @@ mod tests {
                 }
             ));
         }
+    }
+
+    #[test]
+    fn externally_powered_keyboard_route_cannot_override_observed_activity() {
+        let mut translator = translator();
+        identify(
+            &mut translator,
+            1,
+            HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+            0x0296,
+        );
+        let active = translator
+            .translate(activity(2, 1_000, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE))
+            .expect("keyboard activity translates");
+        assert!(matches!(
+            &active.observations[0].kind,
+            LifecycleObservationKind::Route {
+                value: RouteState::Available,
+                ..
+            }
+        ));
+
+        let mut external_power = raw(
+            3,
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ROUTE_RAW,
+            HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+            0x0101,
+        );
+        external_power.auxiliary = 2;
+        let route = translator
+            .translate(external_power)
+            .expect("indeterminate external-power route is bounded");
+        assert_eq!(
+            route.disposition,
+            PassiveDisposition::IgnoredIndeterminateSemantic
+        );
+        assert!(route.observations.is_empty());
     }
 
     #[test]

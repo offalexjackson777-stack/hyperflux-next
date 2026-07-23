@@ -178,6 +178,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "    pub contact_on_mat: &'static [u32],",
         "    pub route_available: &'static [u32],",
         "    pub route_unavailable: &'static [u32],",
+        "    pub route_indeterminate: &'static [u32],",
         "    pub report_implies_route_available: bool,",
         "}",
         "",
@@ -253,6 +254,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                 ("CONTACT_ON_MAT", contact["on_mat"]),
                 ("ROUTE_AVAILABLE", passive["route"]["available"]),
                 ("ROUTE_UNAVAILABLE", passive["route"]["unavailable"]),
+                ("ROUTE_INDETERMINATE", passive["route"].get("indeterminate", [])),
             ):
                 rendered = ", ".join(str(value) for value in values)
                 lines.append(f"const PASSIVE_{suffix}_{index}: &[u32] = &[{rendered}];")
@@ -294,6 +296,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                 f"            contact_on_mat: PASSIVE_CONTACT_ON_MAT_{index},",
                 f"            route_available: PASSIVE_ROUTE_AVAILABLE_{index},",
                 f"            route_unavailable: PASSIVE_ROUTE_UNAVAILABLE_{index},",
+                f"            route_indeterminate: PASSIVE_ROUTE_INDETERMINATE_{index},",
                 f"            report_implies_route_available: {route_implied},",
                 "        }),",
             ]

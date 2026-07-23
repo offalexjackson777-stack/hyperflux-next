@@ -532,11 +532,24 @@ def _validate_passive(profile: dict[str, Any]) -> None:
         raise ModelError(f"{profile['profile_id']}: keyboard cannot declare mouse contact")
 
     route = passive["route"]
-    if not isinstance(route, dict) or set(route) != {"available", "unavailable"}:
+    route_keys = {"available", "unavailable", "indeterminate"}
+    if (
+        not isinstance(route, dict)
+        or not {"available", "unavailable"}.issubset(route)
+        or not set(route).issubset(route_keys)
+    ):
         raise ModelError(f"{profile['profile_id']}: route decoder is incomplete")
     available = _raw_values(route["available"], f"{profile['profile_id']} available routes")
     unavailable = _raw_values(route["unavailable"], f"{profile['profile_id']} unavailable routes")
-    if set(available) & set(unavailable):
+    indeterminate = _raw_values(
+        route.get("indeterminate", []),
+        f"{profile['profile_id']} indeterminate routes",
+    )
+    if (
+        set(available) & set(unavailable)
+        or set(available) & set(indeterminate)
+        or set(unavailable) & set(indeterminate)
+    ):
         raise ModelError(f"{profile['profile_id']}: route values must be disjoint")
     if "telemetry.connection-evidence" in capability_ids and not (
         available or unavailable or passive["report_implies_route_available"]

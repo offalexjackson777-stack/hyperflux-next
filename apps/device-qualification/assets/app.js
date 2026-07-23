@@ -467,9 +467,14 @@ function supportLabel(verdict, support) {
 }
 
 function batteryLabel(battery) {
-  return battery.availability === "reported" && battery.percentage !== null
-    ? `${battery.percentage}% battery`
-    : `Battery ${labelize(battery.availability)}`;
+  if (battery.availability === "reported" && battery.percentage !== null) {
+    return `${battery.percentage}% battery`;
+  }
+  return {
+    unknown: "Waiting for battery report",
+    stale: "Battery report is out of date",
+    unavailable: "Battery report unavailable",
+  }[battery.availability] || "Battery report unavailable";
 }
 
 function riskCode(risk) {

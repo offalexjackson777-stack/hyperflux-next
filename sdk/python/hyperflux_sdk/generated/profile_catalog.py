@@ -4,7 +4,7 @@
 from types import MappingProxyType
 from typing import Final
 
-PROFILE_SOURCE_SHA256: Final = 'd2cfc5380a0a96562ef73ad7d7efae60f48b41bf50d93df0e39b9919facef5cf'
+PROFILE_SOURCE_SHA256: Final = '274d8ff1af5c762e4601b3f9538930f870e705d18887208388c2dae6d201ac4e'
 PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                  'id': 'razer-basilisk-v3-pro',
                  'official_name': 'Razer Basilisk V3 Pro',
@@ -631,9 +631,11 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                'profile_id': 'child.razer.deathstalker-v2-pro-tkl.0296',
                'restrictions': ['Another DeathStalker name, PID, or physical layout inherits no map.',
                                 'OpenRGB owns key names, geometry, and ANSI or ISO presentation.',
-                                'External power does not establish a direct USB data route or charging state.'],
-               'revision': 1,
-               'runtime_sha256': 'fcdd53fe104e649cc7d2c38c939bbd41095dc3eb53488ebb30a8615a76bbfba6',
+                                'External power does not establish a direct USB data route or charging state.',
+                                'Receiver route value 0x0101 is indeterminate and cannot override observed keyboard '
+                                'activity.'],
+               'revision': 2,
+               'runtime_sha256': '88e5b7d79e5434f141f5767b07dcc707b13a5d0e0c1fbe0ebc894f57638e7e1c',
                'schema': 'hyperflux-hardware-profile-v1',
                'source_path': 'profiles/children/razer-deathstalker-v2-pro-tkl-0296.json',
                'transport': {'lighting': {'application_index_to_carrier': [0,
@@ -747,7 +749,7 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                                          'contact': None,
                                          'endpoint_lane': 'keyboard',
                                          'report_implies_route_available': False,
-                                         'route': {'available': [0, 3], 'unavailable': [2, 257]}}}},
+                                         'route': {'available': [0, 3], 'indeterminate': [257], 'unavailable': [2]}}}},
               {'capabilities': [{'access': 'read',
                                  'evidence_claims': ['claim.receiver.1532-00cf.generation-session'],
                                  'id': 'identity.model',
@@ -824,7 +826,7 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                'schema': 'hyperflux-hardware-profile-v1',
                'source_path': 'profiles/surfaces/razer-hyperflux-v2-hard-edition.json'}],
  'schema': 'hyperflux-compiled-profile-catalog-v1',
- 'source_sha256': 'd2cfc5380a0a96562ef73ad7d7efae60f48b41bf50d93df0e39b9919facef5cf'}
+ 'source_sha256': '274d8ff1af5c762e4601b3f9538930f870e705d18887208388c2dae6d201ac4e'}
 PROFILES_BY_ID: Final = MappingProxyType({profile['profile_id']: profile for profile in PROFILE_CATALOG['profiles']})
 
 __all__ = ["PROFILE_CATALOG", "PROFILE_SOURCE_SHA256", "PROFILES_BY_ID"]

@@ -1087,10 +1087,11 @@
       "restrictions": [
         "Another DeathStalker name, PID, or physical layout inherits no map.",
         "OpenRGB owns key names, geometry, and ANSI or ISO presentation.",
-        "External power does not establish a direct USB data route or charging state."
+        "External power does not establish a direct USB data route or charging state.",
+        "Receiver route value 0x0101 is indeterminate and cannot override observed keyboard activity."
       ],
-      "revision": 1,
-      "runtime_sha256": "fcdd53fe104e649cc7d2c38c939bbd41095dc3eb53488ebb30a8615a76bbfba6",
+      "revision": 2,
+      "runtime_sha256": "88e5b7d79e5434f141f5767b07dcc707b13a5d0e0c1fbe0ebc894f57638e7e1c",
       "schema": "hyperflux-hardware-profile-v1",
       "source_path": "profiles/children/razer-deathstalker-v2-pro-tkl-0296.json",
       "transport": {
@@ -1215,9 +1216,11 @@
               0,
               3
             ],
-            "unavailable": [
-              2,
+            "indeterminate": [
               257
+            ],
+            "unavailable": [
+              2
             ]
           }
         }
@@ -1365,5 +1368,5 @@
     }
   ],
   "schema": "hyperflux-compiled-profile-catalog-v1",
-  "source_sha256": "d2cfc5380a0a96562ef73ad7d7efae60f48b41bf50d93df0e39b9919facef5cf"
+  "source_sha256": "274d8ff1af5c762e4601b3f9538930f870e705d18887208388c2dae6d201ac4e"
 }

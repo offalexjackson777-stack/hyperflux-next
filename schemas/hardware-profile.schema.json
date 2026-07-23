@@ -134,7 +134,8 @@
       "required": ["available", "unavailable"],
       "properties": {
         "available": {"$ref": "#/$defs/raw-values"},
-        "unavailable": {"$ref": "#/$defs/raw-values"}
+        "unavailable": {"$ref": "#/$defs/raw-values"},
+        "indeterminate": {"$ref": "#/$defs/raw-values"}
       }
     },
     "raw-values": {

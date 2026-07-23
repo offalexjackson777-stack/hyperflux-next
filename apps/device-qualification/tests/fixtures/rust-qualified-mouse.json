@@ -15,7 +15,7 @@
   "system": {
     "driver_version": "0.0.0-dev.1",
     "bridge_version": "0.0.0-dev.1",
-    "profile_catalog_digest": "d2cfc5380a0a96562ef73ad7d7efae60f48b41bf50d93df0e39b9919facef5cf"
+    "profile_catalog_digest": "274d8ff1af5c762e4601b3f9538930f870e705d18887208388c2dae6d201ac4e"
   },
   "receivers": [
     {
