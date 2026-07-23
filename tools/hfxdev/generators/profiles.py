@@ -606,9 +606,19 @@ def kernel_receiver_table(catalog: dict[str, Any]) -> str:
             continue
         identity = profile["identity"]
         transport = profile["transport"]
+        inventory_decoder = transport.get("pairing_inventory", {}).get("decoder")
+        inventory_kind = {
+            None: "HFX_PAIRING_INVENTORY_NONE",
+            "razer-hyperflux-v2-feature-01-v1": (
+                "HFX_PAIRING_INVENTORY_RAZER_HYPERFLUX_V2_FEATURE_01_V1"
+            ),
+        }.get(inventory_decoder)
+        if inventory_kind is None:
+            raise ValueError(f"unsupported kernel pairing inventory decoder: {inventory_decoder}")
         lines.append(
             f'HFX_RECEIVER_PROFILE(0x{identity["vendor_id"]:04x}, '
-            f'0x{identity["product_id"]:04x}, {transport["backend_id"]})'
+            f'0x{identity["product_id"]:04x}, {transport["backend_id"]}, '
+            f'{inventory_kind})'
         )
     lines.extend(["", "#undef HFX_RECEIVER_PROFILE", ""])
     return "\n".join(lines)

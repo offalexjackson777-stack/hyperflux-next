@@ -109,9 +109,13 @@ void hfx_observation_emit(struct hfx_receiver *receiver, u32 kind,
 			  u32 endpoint_slot, u32 source, u32 confidence,
 			  u32 value, u32 auxiliary);
 void hfx_observe_activity(struct hfx_receiver *receiver, int interface_number,
-			  const u8 *data, int size);
+			  unsigned int report_id, int size);
 void hfx_observe_passive(struct hfx_receiver *receiver, int interface_number,
 			 const u8 *data, int size);
+bool hfx_observation_identity_complete(struct hfx_receiver *receiver);
+bool hfx_observe_pairing_inventory(struct hfx_receiver *receiver,
+				   u16 pointer_product_id,
+				   u16 keyboard_product_id);
 void hfx_observation_replay_cached_identities(struct hfx_receiver *receiver);
 bool hfx_observation_identity_conflicted(struct hfx_receiver *receiver);
 long hfx_observation_read(struct hfx_receiver *receiver, void __user *user_arg);

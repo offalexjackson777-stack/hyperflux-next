@@ -5,6 +5,7 @@
 #include <linux/uaccess.h>
 
 #include "hyperflux-next-internal.h"
+#include "hyperflux-next-pairing-inventory.h"
 #include "hyperflux-next-passive.h"
 
 static void hfx_observation_append_locked(struct hfx_receiver *receiver,
@@ -47,13 +48,13 @@ void hfx_observation_emit(struct hfx_receiver *receiver, u32 kind,
 }
 
 void hfx_observe_activity(struct hfx_receiver *receiver, int interface_number,
-			  const u8 *data, int size)
+			  unsigned int report_id, int size)
 {
 	unsigned long flags;
 	u64 now_ns = ktime_get_boottime_ns();
 	u32 slot;
 
-	if (!hfx_activity_slot(interface_number, data, size, &slot))
+	if (!hfx_activity_slot(interface_number, report_id, size, &slot))
 		return;
 
 	spin_lock_irqsave(&receiver->observation_lock, flags);
@@ -72,7 +73,7 @@ out:
 
 static bool hfx_observe_product_id_locked(struct hfx_receiver *receiver,
 					  u64 now_ns, u32 slot,
-					  u16 product_id)
+					  u16 product_id, u32 source)
 {
 	if (receiver->observed_product_id_valid[slot] &&
 	    receiver->observed_product_id[slot] != product_id) {
@@ -80,7 +81,7 @@ static bool hfx_observe_product_id_locked(struct hfx_receiver *receiver,
 		hfx_observation_append_locked(
 			receiver, now_ns,
 			HFX_UAPI_OBSERVATION_KIND_IDENTITY_CONFLICT, slot,
-			HFX_UAPI_OBSERVATION_SOURCE_HID_PASSIVE,
+			source,
 			HFX_UAPI_OBSERVATION_CONFIDENCE_EXACT,
 			receiver->observed_product_id[slot], product_id);
 		return true;
@@ -90,9 +91,80 @@ static bool hfx_observe_product_id_locked(struct hfx_receiver *receiver,
 	hfx_observation_append_locked(
 		receiver, now_ns,
 		HFX_UAPI_OBSERVATION_KIND_ENDPOINT_PRODUCT_ID, slot,
-		HFX_UAPI_OBSERVATION_SOURCE_HID_PASSIVE,
+		source,
 		HFX_UAPI_OBSERVATION_CONFIDENCE_EXACT, product_id, 0);
 	return false;
+}
+
+bool hfx_observation_identity_complete(struct hfx_receiver *receiver)
+{
+	unsigned long flags;
+	bool complete;
+
+	spin_lock_irqsave(&receiver->observation_lock, flags);
+	complete = !receiver->identity_conflict &&
+		receiver->observed_product_id_valid[
+			HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE] &&
+		receiver->observed_product_id_valid[
+			HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE];
+	spin_unlock_irqrestore(&receiver->observation_lock, flags);
+	return complete;
+}
+
+bool hfx_observe_pairing_inventory(struct hfx_receiver *receiver,
+				   u16 pointer_product_id,
+				   u16 keyboard_product_id)
+{
+	const u32 pointer_slot = HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE;
+	const u32 keyboard_slot = HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE;
+	const struct hfx_pairing_inventory candidate = {
+		.pointer_product_id = pointer_product_id,
+		.keyboard_product_id = keyboard_product_id,
+	};
+	unsigned long flags;
+	u64 now_ns = ktime_get_boottime_ns();
+	bool pointer_conflict;
+	bool keyboard_conflict;
+
+	spin_lock_irqsave(&receiver->observation_lock, flags);
+	pointer_conflict = hfx_pairing_inventory_conflicts(
+		receiver->observed_product_id_valid[pointer_slot],
+		receiver->observed_product_id[pointer_slot], false, 0,
+		&candidate);
+	keyboard_conflict = hfx_pairing_inventory_conflicts(
+		false, 0,
+		receiver->observed_product_id_valid[keyboard_slot],
+		receiver->observed_product_id[keyboard_slot], &candidate);
+	if (pointer_conflict || keyboard_conflict) {
+		receiver->identity_conflict = true;
+		if (pointer_conflict)
+			hfx_observation_append_locked(
+				receiver, now_ns,
+				HFX_UAPI_OBSERVATION_KIND_IDENTITY_CONFLICT,
+				pointer_slot,
+				HFX_UAPI_OBSERVATION_SOURCE_HID_FEATURE,
+				HFX_UAPI_OBSERVATION_CONFIDENCE_EXACT,
+				receiver->observed_product_id[pointer_slot],
+				pointer_product_id);
+		if (keyboard_conflict)
+			hfx_observation_append_locked(
+				receiver, now_ns,
+				HFX_UAPI_OBSERVATION_KIND_IDENTITY_CONFLICT,
+				keyboard_slot,
+				HFX_UAPI_OBSERVATION_SOURCE_HID_FEATURE,
+				HFX_UAPI_OBSERVATION_CONFIDENCE_EXACT,
+				receiver->observed_product_id[keyboard_slot],
+				keyboard_product_id);
+	} else {
+		hfx_observe_product_id_locked(
+			receiver, now_ns, pointer_slot, pointer_product_id,
+			HFX_UAPI_OBSERVATION_SOURCE_HID_FEATURE);
+		hfx_observe_product_id_locked(
+			receiver, now_ns, keyboard_slot, keyboard_product_id,
+			HFX_UAPI_OBSERVATION_SOURCE_HID_FEATURE);
+	}
+	spin_unlock_irqrestore(&receiver->observation_lock, flags);
+	return pointer_conflict || keyboard_conflict;
 }
 
 bool hfx_observation_identity_conflicted(struct hfx_receiver *receiver)
@@ -148,7 +220,8 @@ void hfx_observe_passive(struct hfx_receiver *receiver, int interface_number,
 	case HFX_PASSIVE_POINTER_IDENTITY:
 		slot = HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE;
 		conflict = hfx_observe_product_id_locked(receiver, now_ns, slot,
-							 report.product_id);
+							 report.product_id,
+							 HFX_UAPI_OBSERVATION_SOURCE_HID_PASSIVE);
 		hfx_observation_append_locked(
 			receiver, now_ns,
 			HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CONTACT_RAW, slot,
@@ -177,7 +250,8 @@ void hfx_observe_passive(struct hfx_receiver *receiver, int interface_number,
 	case HFX_PASSIVE_KEYBOARD_IDENTITY:
 		slot = HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE;
 		conflict = hfx_observe_product_id_locked(receiver, now_ns, slot,
-							 report.product_id);
+							 report.product_id,
+							 HFX_UAPI_OBSERVATION_SOURCE_HID_PASSIVE);
 		hfx_observation_append_locked(
 			receiver, now_ns,
 			HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ROUTE_RAW, slot,

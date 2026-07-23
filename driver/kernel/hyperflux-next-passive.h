@@ -15,10 +15,11 @@
 #define HFX_COMPOSITE_SYSTEM_REPORT 0x03
 #define HFX_COMPOSITE_POINTER_REPORT 0x0a
 
-static inline int hfx_activity_slot(int interface_number, const __u8 *data,
-				    int size, __u32 *slot)
+static inline int hfx_activity_slot(int interface_number,
+				    unsigned int report_id, int size,
+				    __u32 *slot)
 {
-	if (!data || size <= 0 || !slot)
+	if (size <= 0 || !slot)
 		return 0;
 	if (interface_number == HFX_POINTER_INPUT_INTERFACE) {
 		*slot = HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE;
@@ -31,7 +32,7 @@ static inline int hfx_activity_slot(int interface_number, const __u8 *data,
 	if (interface_number != HFX_PASSIVE_REPORT_INTERFACE)
 		return 0;
 
-	switch (data[0]) {
+	switch (report_id) {
 	case HFX_COMPOSITE_KEYBOARD_REPORT:
 	case HFX_COMPOSITE_CONSUMER_REPORT:
 	case HFX_COMPOSITE_SYSTEM_REPORT:

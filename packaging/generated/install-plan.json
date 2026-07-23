@@ -111,6 +111,13 @@
     },
     {
       "component": "kernel-source",
+      "source": "driver/kernel/hyperflux-next-pairing-inventory.h",
+      "destination": "/usr/src/hid-hyperflux-next-0.0.0_dev.1/hyperflux-next-pairing-inventory.h",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
       "source": "driver/kernel/hyperflux-next-passive.h",
       "destination": "/usr/src/hid-hyperflux-next-0.0.0_dev.1/hyperflux-next-passive.h",
       "mode": "0644",

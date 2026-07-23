@@ -72,8 +72,17 @@
         "maximum_targets": {"type": "integer", "minimum": 1, "maximum": 65535},
         "generation_bound": {"type": "boolean"},
         "application_raw_frames": {"type": "boolean"},
+        "pairing_inventory": {"$ref": "#/$defs/pairing-inventory"},
         "lighting": {"$ref": "#/$defs/lighting"},
         "passive": {"$ref": "#/$defs/passive"}
+      }
+    },
+    "pairing-inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decoder"],
+      "properties": {
+        "decoder": {"enum": ["razer-hyperflux-v2-feature-01-v1"]}
       }
     },
     "lighting": {

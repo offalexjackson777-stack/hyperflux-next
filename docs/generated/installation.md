@@ -33,11 +33,11 @@ The canonical plan contains `4` required and `3` optional build products.
 
 ## Static Payload
 
-The expanded source payload contains `150` files. Every destination is normalized below `/etc` or `/usr` and checked for collisions.
+The expanded source payload contains `151` files. Every destination is normalized below `/etc` or `/usr` and checked for collisions.
 
 | Component | Files | Preserved destination |
 | --- | ---: | --- |
-| `kernel-source` | 13 | `-` |
+| `kernel-source` | 14 | `-` |
 | `dkms-configuration` | 1 | `-` |
 | `bridge-service` | 1 | `-` |
 | `activation-service` | 1 | `-` |

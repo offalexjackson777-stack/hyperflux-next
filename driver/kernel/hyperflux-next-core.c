@@ -7,6 +7,7 @@
 #include <linux/slab.h>
 
 #include "hyperflux-next-internal.h"
+#include "hyperflux-next-pairing-inventory.h"
 #include "hyperflux-next-passive.h"
 #include "hyperflux-next-version.h"
 
@@ -270,16 +271,75 @@ out:
 	}
 }
 
+static void hfx_pairing_inventory_bootstrap(
+	struct hfx_interface *interface,
+	const struct hfx_receiver_profile *profile)
+{
+	struct hfx_pairing_inventory inventory = { };
+	unsigned char *report;
+	bool conflict;
+	int parse_result;
+	int ret;
+
+	if (!interface || !interface->receiver || !profile ||
+	    profile->pairing_inventory_kind == HFX_PAIRING_INVENTORY_NONE)
+		return;
+	if (profile->pairing_inventory_kind !=
+	    HFX_PAIRING_INVENTORY_RAZER_HYPERFLUX_V2_FEATURE_01_V1)
+		return;
+	if (interface->interface_number != HFX_PAIRING_INVENTORY_INTERFACE ||
+	    hfx_observation_identity_complete(interface->receiver))
+		return;
+
+	report = kzalloc(HFX_PAIRING_INVENTORY_REPORT_BYTES, GFP_KERNEL);
+	if (!report)
+		return;
+	report[0] = HFX_PAIRING_INVENTORY_REPORT_ID;
+	mutex_lock(&interface->receiver->transport_lock);
+	ret = hid_hw_raw_request(interface->hdev,
+				 HFX_PAIRING_INVENTORY_REPORT_ID, report,
+				 HFX_PAIRING_INVENTORY_REPORT_BYTES,
+				 HID_FEATURE_REPORT, HID_REQ_GET_REPORT);
+	mutex_unlock(&interface->receiver->transport_lock);
+	if (ret != HFX_PAIRING_INVENTORY_REPORT_BYTES) {
+		hid_warn(interface->hdev,
+			 "pairing inventory read failed: %d\n", ret);
+		goto out;
+	}
+
+	parse_result = hfx_pairing_inventory_parse(report, ret, &inventory);
+	if (parse_result != HFX_PAIRING_INVENTORY_OK) {
+		hid_warn(interface->hdev,
+			 "pairing inventory report rejected: %d\n",
+			 parse_result);
+		goto out;
+	}
+	conflict = hfx_observe_pairing_inventory(
+		interface->receiver, inventory.pointer_product_id,
+		inventory.keyboard_product_id);
+	if (conflict) {
+		hfx_session_revoke(interface->receiver,
+				   HFX_UAPI_REVOKE_REASON_GENERATION_CHANGE);
+		hid_warn(interface->hdev,
+			 "pairing inventory conflicts with passive identity\n");
+	} else {
+		hid_info(interface->hdev,
+			 "accepted generation-bound pairing inventory\n");
+	}
+out:
+	memzero_explicit(report, HFX_PAIRING_INVENTORY_REPORT_BYTES);
+	kfree(report);
+}
+
 static int hfx_raw_event(struct hid_device *hdev, struct hid_report *report,
 			 u8 *data, int size)
 {
 	struct hfx_interface *interface = hid_get_drvdata(hdev);
 
-	(void)report;
-	if (!interface || !interface->receiver || !data || size <= 0)
+	if (!interface || !interface->receiver || !report || !data || size <= 0)
 		return 0;
 	hfx_observe_activity(interface->receiver, interface->interface_number,
-			     data, size);
+			     report->id, size);
 	hfx_observe_passive(interface->receiver, interface->interface_number,
 			    data, size);
 	return 0;
@@ -325,6 +385,7 @@ static int hfx_probe(struct hid_device *hdev, const struct hid_device_id *id)
 	if (ret)
 		goto err_receiver;
 	interface->started = true;
+	hfx_pairing_inventory_bootstrap(interface, profile);
 	hid_info(hdev, "HyperFlux Next bound interface %d, generation %llu\n",
 		 interface_number, interface->receiver->generation);
 	return 0;
@@ -370,7 +431,7 @@ static int hfx_resume(struct hid_device *hdev)
 }
 
 static const struct hid_device_id hfx_devices[] = {
-#define HFX_RECEIVER_PROFILE(vendor, product, backend) \
+#define HFX_RECEIVER_PROFILE(vendor, product, backend, inventory) \
 	{ HID_USB_DEVICE((vendor), (product)), .driver_data = (backend) },
 #include "generated/hyperflux_receiver_profiles.inc"
 #undef HFX_RECEIVER_PROFILE

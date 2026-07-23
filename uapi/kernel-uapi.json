@@ -91,7 +91,8 @@
       "values": [
         {"name": "hid_passive", "value": 1},
         {"name": "hid_input", "value": 2},
-        {"name": "power_management", "value": 3}
+        {"name": "power_management", "value": 3},
+        {"name": "hid_feature", "value": 4}
       ]
     },
     {

@@ -3,8 +3,37 @@
 #include <assert.h>
 #include <string.h>
 
+#include "hyperflux-next-pairing-inventory.h"
 #include "hyperflux-next-passive.h"
 #include "hyperflux-next-wire.h"
+
+static void pairing_inventory_report(
+	unsigned char report[HFX_PAIRING_INVENTORY_REPORT_BYTES],
+	unsigned short pointer_product_id,
+	unsigned short keyboard_product_id)
+{
+	static const unsigned char prefix[16] = {
+		0x00, 0x00, 0xa5, 0x85, 0x01, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x26, 0x00,
+	};
+	static const unsigned char header[16] = {
+		0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0xdf, 0xa6,
+		0x33, 0x4e, 0x01, 0x00, 0x04, 0xa3, 0x22, 0x00,
+	};
+	const size_t anchor = HFX_PAIRING_INVENTORY_ANCHOR;
+
+	memset(report, 0, HFX_PAIRING_INVENTORY_REPORT_BYTES);
+	report[0] = HFX_PAIRING_INVENTORY_REPORT_ID;
+	memcpy(&report[anchor - sizeof(prefix)], prefix, sizeof(prefix));
+	memset(&report[anchor], 'X', 15);
+	report[anchor + 20] = 0xff;
+	report[anchor + 21] = 0xff;
+	memcpy(&report[anchor + 22], header, sizeof(header));
+	report[anchor + 38] = pointer_product_id >> 8;
+	report[anchor + 39] = pointer_product_id;
+	report[anchor + 40] = keyboard_product_id >> 8;
+	report[anchor + 41] = keyboard_product_id;
+}
 
 static struct hfx_uapi_frame mouse_frame(void)
 {
@@ -33,14 +62,12 @@ static struct hfx_uapi_frame mouse_frame(void)
 int main(void)
 {
 	struct hfx_uapi_frame frame = mouse_frame();
+	struct hfx_pairing_inventory inventory;
 	struct hfx_passive_report report;
+	unsigned char inventory_report[HFX_PAIRING_INVENTORY_REPORT_BYTES];
 	__u32 activity_slot;
 	const __u8 pointer_identity[] = { 0x05, 0x3b, 0x01, 0x00, 0xcd };
 	const __u8 keyboard_status[] = { 0x09, 0x31, 0x32, 0x12, 0x34, 0x56 };
-	const __u8 keyboard_input[] = { HFX_COMPOSITE_KEYBOARD_REPORT, 0x00 };
-	const __u8 consumer_input[] = { HFX_COMPOSITE_CONSUMER_REPORT, 0x00 };
-	const __u8 system_input[] = { HFX_COMPOSITE_SYSTEM_REPORT, 0x00 };
-	const __u8 pointer_input[] = { HFX_COMPOSITE_POINTER_REPORT, 0x00 };
 
 	assert(hfx_wire_validate_frame(&frame, HFX_HW001_BACKEND_ID) ==
 	       HFX_WIRE_VALID);
@@ -72,27 +99,84 @@ int main(void)
 	assert(hfx_passive_parse(4, pointer_identity,
 				 sizeof(pointer_identity), &report) == HFX_PASSIVE_NONE);
 
-	assert(hfx_activity_slot(HFX_PASSIVE_REPORT_INTERFACE, keyboard_input,
-				 sizeof(keyboard_input), &activity_slot));
+	assert(hfx_activity_slot(HFX_PASSIVE_REPORT_INTERFACE,
+				 HFX_COMPOSITE_KEYBOARD_REPORT, 16,
+				 &activity_slot));
 	assert(activity_slot == HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE);
-	assert(hfx_activity_slot(HFX_PASSIVE_REPORT_INTERFACE, consumer_input,
-				 sizeof(consumer_input), &activity_slot));
+	assert(hfx_activity_slot(HFX_PASSIVE_REPORT_INTERFACE,
+				 HFX_COMPOSITE_CONSUMER_REPORT, 16,
+				 &activity_slot));
 	assert(activity_slot == HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE);
-	assert(hfx_activity_slot(HFX_PASSIVE_REPORT_INTERFACE, system_input,
-				 sizeof(system_input), &activity_slot));
+	assert(hfx_activity_slot(HFX_PASSIVE_REPORT_INTERFACE,
+				 HFX_COMPOSITE_SYSTEM_REPORT, 16,
+				 &activity_slot));
 	assert(activity_slot == HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE);
-	assert(hfx_activity_slot(HFX_PASSIVE_REPORT_INTERFACE, pointer_input,
-				 sizeof(pointer_input), &activity_slot));
+	assert(hfx_activity_slot(HFX_PASSIVE_REPORT_INTERFACE,
+				 HFX_COMPOSITE_POINTER_REPORT, 16,
+				 &activity_slot));
 	assert(activity_slot == HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE);
-	assert(hfx_activity_slot(HFX_POINTER_INPUT_INTERFACE, pointer_input,
-				 sizeof(pointer_input), &activity_slot));
+	assert(hfx_activity_slot(HFX_POINTER_INPUT_INTERFACE, 0, 8,
+				 &activity_slot));
 	assert(activity_slot == HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE);
-	assert(hfx_activity_slot(HFX_KEYBOARD_INPUT_INTERFACE, keyboard_input,
-				 sizeof(keyboard_input), &activity_slot));
+	assert(hfx_activity_slot(HFX_KEYBOARD_INPUT_INTERFACE, 0, 8,
+				 &activity_slot));
 	assert(activity_slot == HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE);
-	assert(!hfx_activity_slot(HFX_PASSIVE_REPORT_INTERFACE, keyboard_status,
-				  sizeof(keyboard_status), &activity_slot));
-	assert(!hfx_activity_slot(4, keyboard_input, sizeof(keyboard_input),
+	assert(!hfx_activity_slot(HFX_PASSIVE_REPORT_INTERFACE, 9, 16,
 				  &activity_slot));
+	assert(!hfx_activity_slot(4, HFX_COMPOSITE_KEYBOARD_REPORT, 16,
+				  &activity_slot));
+
+	pairing_inventory_report(inventory_report, 0x1234, 0x5678);
+	assert(hfx_pairing_inventory_parse(inventory_report,
+					   sizeof(inventory_report),
+					   &inventory) ==
+	       HFX_PAIRING_INVENTORY_OK);
+	assert(inventory.pointer_product_id == 0x1234);
+	assert(inventory.keyboard_product_id == 0x5678);
+	assert(!hfx_pairing_inventory_conflicts(1, 0x1234, 1, 0x5678,
+						&inventory));
+	assert(hfx_pairing_inventory_conflicts(1, 0x1235, 1, 0x5678,
+					       &inventory));
+	assert(hfx_pairing_inventory_conflicts(1, 0x1234, 1, 0x5679,
+					       &inventory));
+	assert(hfx_pairing_inventory_conflicts(0, 0, 0, 0, NULL));
+	assert(hfx_pairing_inventory_parse(inventory_report,
+					   sizeof(inventory_report) - 1,
+					   &inventory) ==
+	       HFX_PAIRING_INVENTORY_LENGTH);
+	inventory_report[0] = 0;
+	assert(hfx_pairing_inventory_parse(inventory_report,
+					   sizeof(inventory_report),
+					   &inventory) ==
+	       HFX_PAIRING_INVENTORY_BAD_REPORT_ID);
+	pairing_inventory_report(inventory_report, 0x1234, 0x5678);
+	inventory_report[HFX_PAIRING_INVENTORY_ANCHOR - 1] ^= 1;
+	assert(hfx_pairing_inventory_parse(inventory_report,
+					   sizeof(inventory_report),
+					   &inventory) ==
+	       HFX_PAIRING_INVENTORY_BAD_ANCHOR);
+	pairing_inventory_report(inventory_report, 0x1234, 0x5678);
+	inventory_report[HFX_PAIRING_INVENTORY_ANCHOR + 15] = 1;
+	assert(hfx_pairing_inventory_parse(inventory_report,
+					   sizeof(inventory_report),
+					   &inventory) ==
+	       HFX_PAIRING_INVENTORY_BAD_PADDING);
+	pairing_inventory_report(inventory_report, 0x1234, 0x5678);
+	inventory_report[HFX_PAIRING_INVENTORY_ANCHOR + 20] = 0;
+	assert(hfx_pairing_inventory_parse(inventory_report,
+					   sizeof(inventory_report),
+					   &inventory) ==
+	       HFX_PAIRING_INVENTORY_BAD_MARKER);
+	pairing_inventory_report(inventory_report, 0x1234, 0x5678);
+	inventory_report[HFX_PAIRING_INVENTORY_ANCHOR + 22] ^= 1;
+	assert(hfx_pairing_inventory_parse(inventory_report,
+					   sizeof(inventory_report),
+					   &inventory) ==
+	       HFX_PAIRING_INVENTORY_BAD_HEADER);
+	pairing_inventory_report(inventory_report, 0, 0x5678);
+	assert(hfx_pairing_inventory_parse(inventory_report,
+					   sizeof(inventory_report),
+					   &inventory) ==
+	       HFX_PAIRING_INVENTORY_BAD_PRODUCT_ID);
 	return 0;
 }

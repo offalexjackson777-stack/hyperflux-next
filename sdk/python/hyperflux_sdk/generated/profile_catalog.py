@@ -4,7 +4,7 @@
 from types import MappingProxyType
 from typing import Final
 
-PROFILE_SOURCE_SHA256: Final = 'ce03f5454202c2b497beaf3a0142adfaf11e0536d7b420736cefeaefe3d7761c'
+PROFILE_SOURCE_SHA256: Final = 'd2cfc5380a0a96562ef73ad7d7efae60f48b41bf50d93df0e39b9919facef5cf'
 PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                  'id': 'razer-basilisk-v3-pro',
                  'official_name': 'Razer Basilisk V3 Pro',
@@ -337,8 +337,8 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                       'source_refs': [{'paths': ['docs/qualification/HW-001.md',
                                                  'evidence-index/id9-legacy-readonly-capability-audit-20260711.md'],
                                        'source_id': 'engineering-laboratory'}],
-                      'summary': 'Passive reports provide generation-bound mouse identity, contact, connection '
-                                 'evidence, and bounded battery telemetry.'},
+                      'summary': 'Generation-bound pairing inventory and passive reports provide mouse identity, '
+                                 'contact, connection evidence, and bounded battery telemetry.'},
                      {'evidence_level': 'hardware-qualified',
                       'id': 'claim.child.0296.complete-keyboard-map',
                       'limitations': ['The transport map does not qualify another PID or another physical '
@@ -366,8 +366,8 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                       'source_refs': [{'paths': ['docs/qualification/HW-001.md',
                                                  'evidence-index/id9-legacy-readonly-capability-audit-20260711.md'],
                                        'source_id': 'engineering-laboratory'}],
-                      'summary': 'Passive reports provide generation-bound keyboard identity, connection evidence, and '
-                                 'bounded battery telemetry.'},
+                      'summary': 'Generation-bound pairing inventory and passive reports provide keyboard identity, '
+                                 'connection evidence, and bounded battery telemetry.'},
                      {'evidence_level': 'hardware-qualified',
                       'id': 'claim.children.complete-static-black',
                       'limitations': ['Visible black is an RGB value, not proof of firmware lighting-off or physical '
@@ -788,15 +788,16 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                'restrictions': ['Unknown children receive zero writable capabilities.',
                                 'Receiver inventory does not imply child availability.',
                                 'The receiver and mat do not appear as addressable RGB controllers.'],
-               'revision': 1,
-               'runtime_sha256': '473bd889b810ae22bdfeb5258eadd46762aa6b0379bd57bcf6285273557b5b8a',
+               'revision': 2,
+               'runtime_sha256': 'ff258c7eb0ff16ee7df5aa9964aad7cf9fe0915b4252897aa561421a05ee96c6',
                'schema': 'hyperflux-hardware-profile-v1',
                'source_path': 'profiles/receivers/razer-hyperflux-v2-1532-00cf.json',
                'transport': {'application_raw_frames': False,
                              'backend': 'structured-feature-set-report-v1',
                              'backend_id': 1,
                              'generation_bound': True,
-                             'maximum_targets': 115}},
+                             'maximum_targets': 115,
+                             'pairing_inventory': {'decoder': 'razer-hyperflux-v2-feature-01-v1'}}},
               {'capabilities': [{'access': 'read',
                                  'evidence_claims': ['claim.surface.hard-edition.identity-indicator'],
                                  'id': 'identity.model',
@@ -823,7 +824,7 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                'schema': 'hyperflux-hardware-profile-v1',
                'source_path': 'profiles/surfaces/razer-hyperflux-v2-hard-edition.json'}],
  'schema': 'hyperflux-compiled-profile-catalog-v1',
- 'source_sha256': 'ce03f5454202c2b497beaf3a0142adfaf11e0536d7b420736cefeaefe3d7761c'}
+ 'source_sha256': 'd2cfc5380a0a96562ef73ad7d7efae60f48b41bf50d93df0e39b9919facef5cf'}
 PROFILES_BY_ID: Final = MappingProxyType({profile['profile_id']: profile for profile in PROFILE_CATALOG['profiles']})
 
 __all__ = ["PROFILE_CATALOG", "PROFILE_SOURCE_SHA256", "PROFILES_BY_ID"]

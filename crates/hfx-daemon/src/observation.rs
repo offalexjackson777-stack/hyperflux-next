@@ -15,9 +15,9 @@ use hfx_kernel_transport::{
     HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW, HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CONTACT_RAW,
     HFX_UAPI_OBSERVATION_KIND_ENDPOINT_PRODUCT_ID, HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ROUTE_RAW,
     HFX_UAPI_OBSERVATION_KIND_IDENTITY_CONFLICT, HFX_UAPI_OBSERVATION_KIND_RECEIVER_AVAILABLE,
-    HFX_UAPI_OBSERVATION_KIND_RECEIVER_SUSPENDED, HFX_UAPI_OBSERVATION_SOURCE_HID_INPUT,
-    HFX_UAPI_OBSERVATION_SOURCE_HID_PASSIVE, HFX_UAPI_OBSERVATION_SOURCE_POWER_MANAGEMENT,
-    RawKernelObservation,
+    HFX_UAPI_OBSERVATION_KIND_RECEIVER_SUSPENDED, HFX_UAPI_OBSERVATION_SOURCE_HID_FEATURE,
+    HFX_UAPI_OBSERVATION_SOURCE_HID_INPUT, HFX_UAPI_OBSERVATION_SOURCE_HID_PASSIVE,
+    HFX_UAPI_OBSERVATION_SOURCE_POWER_MANAGEMENT, RawKernelObservation,
 };
 use hfx_profiles::{
     PassiveBatteryEncoding, PassiveEndpointLane, PassiveTelemetryRecord, RuntimeProfileCatalog,
@@ -201,6 +201,7 @@ impl PassiveObservationTranslator {
             HFX_UAPI_OBSERVATION_SOURCE_HID_PASSIVE => "kernel-hid-passive-v1",
             HFX_UAPI_OBSERVATION_SOURCE_HID_INPUT => "kernel-hid-input-v1",
             HFX_UAPI_OBSERVATION_SOURCE_POWER_MANAGEMENT => "kernel-power-management-v1",
+            HFX_UAPI_OBSERVATION_SOURCE_HID_FEATURE => "kernel-hid-feature-v1",
             value => return Err(PassiveTranslationError::UnsupportedSource(value)),
         };
         ObservationStamp::new(
@@ -614,6 +615,30 @@ mod tests {
         translator
             .translate(observation)
             .expect("identity observation translates")
+    }
+
+    #[test]
+    fn bounded_feature_inventory_uses_the_same_generation_identity_gate() {
+        let mut translator = translator();
+        let mut observation = raw(
+            1,
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_PRODUCT_ID,
+            HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            0x00cd,
+        );
+        observation.source = HFX_UAPI_OBSERVATION_SOURCE_HID_FEATURE;
+        observation.confidence = HFX_UAPI_OBSERVATION_CONFIDENCE_EXACT;
+
+        let identity = translator
+            .translate(observation)
+            .expect("feature inventory identity translates");
+        assert_eq!(identity.disposition, PassiveDisposition::Applied);
+        assert!(matches!(
+            &identity.observations[0].kind,
+            LifecycleObservationKind::RegisterDevice(child)
+                if child.device_kind() == DeviceKind::Mouse
+                    && child.product_id().get() == 0x00cd
+        ));
     }
 
     #[test]

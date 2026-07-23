@@ -474,9 +474,25 @@ def _validate_passive(profile: dict[str, Any]) -> None:
                 "maximum_targets",
                 "generation_bound",
                 "application_raw_frames",
+                "pairing_inventory",
             },
             f"{profile['profile_id']} receiver transport",
         )
+        inventory = transport.get("pairing_inventory")
+        if inventory is not None:
+            if not isinstance(inventory, dict):
+                raise ModelError(
+                    f"{profile['profile_id']}: pairing inventory must be an object"
+                )
+            _expect_keys(
+                inventory,
+                {"decoder"},
+                f"{profile['profile_id']} pairing inventory",
+            )
+            if inventory.get("decoder") != "razer-hyperflux-v2-feature-01-v1":
+                raise ModelError(
+                    f"{profile['profile_id']}: unsupported pairing inventory decoder"
+                )
         return
     if kind != "child":
         if transport:
