@@ -20,6 +20,8 @@ use std::time::{Duration, Instant};
 const MAX_COMMAND_OUTPUT_BYTES: usize = 4_096;
 const MAX_USB_DEVICE_ENTRIES: usize = 256;
 const USB_DEVICES_ROOT: &str = "/sys/bus/usb/devices";
+const INTEGRATION_VIEW_FEATURE: &str = "integration-view-projection";
+const STRUCTURED_DIAGNOSTICS_FEATURE: &str = "structured-diagnostics";
 const LEGACY_V2_BRIDGE_SERVICE_UNIT: &str = "hyperflux-bridge.service";
 const LEGACY_V2_KERNEL_MODULE_NAME: &str = "hid-razer-hyperflux-v2";
 
@@ -334,6 +336,7 @@ impl<R: CommandRunner> RealSystemProbe<R> {
         &self,
         client_id: &str,
         client_name: &str,
+        required_features: &[&str],
     ) -> Result<HyperFluxClient<UnixStream, KernelRequestIdentitySource>, ProbeError> {
         let stream =
             UnixStream::connect(&self.socket_path).map_err(|_| ProbeError::BridgeUnavailable)?;
@@ -345,24 +348,17 @@ impl<R: CommandRunner> RealSystemProbe<R> {
             .map_err(|_| ProbeError::BridgeUnavailable)?;
         let version = ProtocolVersion::try_from(CURRENT_PROTOCOL_VERSION)
             .map_err(|_| ProbeError::BridgeUnavailable)?;
-        let config = SdkClientConfig {
-            client_id: ClientId::try_from(client_id).map_err(|_| ProbeError::BridgeUnavailable)?,
-            client_name: ClientName::try_from(client_name)
-                .map_err(|_| ProbeError::BridgeUnavailable)?,
-            minimum_version: version,
-            maximum_version: version,
-            required_features: vec![
-                ProtocolFeatureId::try_from("integration-view-projection")
-                    .map_err(|_| ProbeError::BridgeUnavailable)?,
-            ],
-            optional_features: Vec::new(),
-        };
+        let config = sdk_client_config(client_id, client_name, version, required_features)?;
         HyperFluxClient::connect(stream, config, KernelRequestIdentitySource)
             .map_err(|_| ProbeError::BridgeUnavailable)
     }
 
     fn bridge_health(&self) -> Result<BridgeHealth, ProbeError> {
-        let mut client = self.bridge_client("hyperfluxctl", "HyperFlux Doctor")?;
+        let mut client = self.bridge_client(
+            "hyperfluxctl",
+            "HyperFlux Doctor",
+            &[STRUCTURED_DIAGNOSTICS_FEATURE],
+        )?;
         let snapshot = client
             .snapshot()
             .map_err(|_| ProbeError::BridgeUnavailable)?;
@@ -383,8 +379,11 @@ impl<R: CommandRunner> RealSystemProbe<R> {
     /// Returns a bounded bridge-unavailable error when the local socket cannot
     /// be reached, negotiated, or queried.
     pub fn qualification_integration(&self) -> Result<BridgeIntegration, ProbeError> {
-        let mut client =
-            self.bridge_client("hyperflux-qualification", "HyperFlux Qualification Console")?;
+        let mut client = self.bridge_client(
+            "hyperflux-qualification",
+            "HyperFlux Qualification Console",
+            &[INTEGRATION_VIEW_FEATURE],
+        )?;
         let protocol_version = client.server_hello().selected_version;
         let view = client
             .integration_view()
@@ -408,6 +407,28 @@ impl<R: CommandRunner> RealSystemProbe<R> {
             Err(ProbeError::CommandUnavailable)
         }
     }
+}
+
+fn sdk_client_config(
+    client_id: &str,
+    client_name: &str,
+    version: ProtocolVersion,
+    required_features: &[&str],
+) -> Result<SdkClientConfig, ProbeError> {
+    Ok(SdkClientConfig {
+        client_id: ClientId::try_from(client_id).map_err(|_| ProbeError::BridgeUnavailable)?,
+        client_name: ClientName::try_from(client_name)
+            .map_err(|_| ProbeError::BridgeUnavailable)?,
+        minimum_version: version,
+        maximum_version: version,
+        required_features: required_features
+            .iter()
+            .map(|feature| {
+                ProtocolFeatureId::try_from(*feature).map_err(|_| ProbeError::BridgeUnavailable)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+        optional_features: Vec::new(),
+    })
 }
 
 impl<R: CommandRunner> SystemProbe for RealSystemProbe<R> {
@@ -544,6 +565,42 @@ mod tests {
                 .pop_front()
                 .expect("fake command output")
         }
+    }
+
+    #[test]
+    fn operational_clients_negotiate_the_features_they_call() {
+        let version = ProtocolVersion::try_from(CURRENT_PROTOCOL_VERSION).expect("version");
+        let doctor = sdk_client_config(
+            "hyperfluxctl",
+            "HyperFlux Doctor",
+            version,
+            &[STRUCTURED_DIAGNOSTICS_FEATURE],
+        )
+        .expect("doctor config");
+        let qualification = sdk_client_config(
+            "hyperflux-qualification",
+            "HyperFlux Qualification Console",
+            version,
+            &[INTEGRATION_VIEW_FEATURE],
+        )
+        .expect("qualification config");
+
+        assert_eq!(
+            doctor
+                .required_features
+                .iter()
+                .map(ProtocolFeatureId::as_str)
+                .collect::<Vec<_>>(),
+            [STRUCTURED_DIAGNOSTICS_FEATURE]
+        );
+        assert_eq!(
+            qualification
+                .required_features
+                .iter()
+                .map(ProtocolFeatureId::as_str)
+                .collect::<Vec<_>>(),
+            [INTEGRATION_VIEW_FEATURE]
+        );
     }
 
     #[test]

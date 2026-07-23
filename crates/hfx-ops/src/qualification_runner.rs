@@ -24,6 +24,14 @@ const LEASE_DURATION_MS: u32 = 15_000;
 const TRANSACTION_DEADLINE_MS: u64 = 5_000;
 const TRANSACTION_WAIT: Duration = Duration::from_secs(6);
 const TRANSACTION_POLL: Duration = Duration::from_millis(20);
+const LIVE_LIGHTING_FEATURES: &[&str] = &[
+    "atomic-transactions",
+    "integration-view-projection",
+    "ownership-leases",
+    "profile-bound-transactions",
+    "semantic-stable-lighting",
+];
+const TRANSACTION_RECOVERY_FEATURES: &[&str] = &["atomic-transactions"];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum ObservationVerdict {
@@ -170,6 +178,7 @@ impl LightingTransport for LiveLightingTransport<'_> {
             .bridge_client(
                 "hyperflux-qualification-runner",
                 "HyperFlux Qualification Runner",
+                LIVE_LIGHTING_FEATURES,
             )
             .map_err(|_| {
                 QualificationRunnerError::before_write(
@@ -440,6 +449,7 @@ pub(crate) fn reconcile_pending_lighting(
         .bridge_client(
             "hyperflux-qualification-runner",
             "HyperFlux Qualification Recovery",
+            TRANSACTION_RECOVERY_FEATURES,
         )
         .map_err(|_| {
             QualificationRunnerError::before_write(
