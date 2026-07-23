@@ -334,7 +334,10 @@ def _activation_sandbox(runtime: LinuxRuntime) -> list[str]:
         "MemoryDenyWriteExecute=yes",
         "SystemCallArchitectures=native",
         "SystemCallFilter=@system-service",
-        "CapabilityBoundingSet=",
+        # The root helper must cross the bridge account's 0700 state directory
+        # to consume the root-owned package-update checkpoint. The writable
+        # path allowlist keeps this single DAC capability locally bounded.
+        "CapabilityBoundingSet=CAP_DAC_OVERRIDE",
         "AmbientCapabilities=",
         f"ReadOnlyPaths={private_directory}",
         f"ReadWritePaths={bridge.configuration_directory} {bridge.state_directory}",
@@ -508,6 +511,9 @@ def markdown(runtime: LinuxRuntime) -> str:
             "The service owns receiver access. Application integrations use only the SDK socket. "
             "The default configuration is read-only and restoration is disabled until a user makes "
             "an explicit setup choice.",
+            "The root-owned activation helper retains only `CAP_DAC_OVERRIDE`, bounded by systemd "
+            "to the configuration and private state directories, so it can consume package-update "
+            "checkpoints without weakening the bridge service sandbox.",
             "",
             "## Kernel Activation",
             "",

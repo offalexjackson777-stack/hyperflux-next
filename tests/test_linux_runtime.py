@@ -154,6 +154,9 @@ class LinuxRuntimeTests(unittest.TestCase):
             self.assertIn("ProtectSystem=strict", unit)
             self.assertIn(self.runtime.bridge.configuration_directory, unit)
             self.assertIn(self.runtime.bridge.state_directory, unit)
+            self.assertIn("CapabilityBoundingSet=CAP_DAC_OVERRIDE", unit)
+            self.assertIn("AmbientCapabilities=\n", unit)
+            self.assertNotIn("CAP_SYS_ADMIN", unit)
             self.assertNotIn("modprobe", unit)
 
         rules = udev_rules(self.runtime)
