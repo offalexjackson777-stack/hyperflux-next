@@ -106,6 +106,21 @@ class DeviceQualificationConsoleTests(unittest.TestCase):
         self.assertEqual(schema["properties"]["api_version"]["const"], fixture["api_version"])
         self.assertFalse(fixture["companion"]["network_upload_executed"])
         self.assertFalse(fixture["companion"]["hardware_write_executed"])
+        self.assertEqual(
+            schema["$defs"]["generationId"],
+            {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 20,
+                "pattern": "^[1-9][0-9]*$",
+            },
+        )
+        self.assertTrue(
+            all(isinstance(receiver["generation_id"], str) for receiver in fixture["receivers"])
+        )
+        self.assertTrue(
+            all(isinstance(plan["generation_id"], str) for plan in fixture["plans"])
+        )
         self.assertTrue(
             {"receiver_id", "generation_id", "device_id"}
             <= set(schema["$defs"]["plan"]["required"])

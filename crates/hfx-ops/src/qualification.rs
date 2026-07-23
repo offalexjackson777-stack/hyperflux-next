@@ -18,6 +18,28 @@ pub const QUALIFICATION_API_VERSION: u16 = 1;
 pub const QUALIFICATION_SCHEMA: &str = "hyperflux-local-qualification-v1";
 pub const QUALIFICATION_ENDPOINT: &str = "http://127.0.0.1:47821";
 
+mod generation_id_wire {
+    use hfx_domain::GenerationId;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn serialize<S>(value: &u64, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        GenerationId::try_from(*value)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<u64, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        GenerationId::deserialize(deserializer).map(GenerationId::get)
+    }
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum CompanionState {
@@ -162,6 +184,7 @@ pub struct DeviceView {
 #[serde(deny_unknown_fields)]
 pub struct ReceiverView {
     pub receiver_id: String,
+    #[serde(with = "generation_id_wire")]
     pub generation_id: u64,
     pub model_name: Option<String>,
     pub vendor_id: Option<u16>,
@@ -271,6 +294,7 @@ pub struct EvidenceView {
 pub struct QualificationPlan {
     pub plan_id: String,
     pub receiver_id: String,
+    #[serde(with = "generation_id_wire")]
     pub generation_id: u64,
     pub device_id: String,
     pub profile_binding: Option<ProfileBindingView>,
@@ -1335,6 +1359,38 @@ mod tests {
                 .iter()
                 .all(|action| action.risk == RiskLevel::ReadOnly)
         );
+    }
+
+    #[test]
+    fn generation_ids_use_exact_decimal_strings_across_the_browser_boundary() {
+        let mut integration = integration();
+        integration.view.receivers[0].generation_id =
+            GenerationId::try_from(u64::MAX).expect("maximum generation is valid");
+        let view = build_qualification_view(
+            &system(),
+            Some(&integration),
+            &catalog(),
+            RunnerCapabilities {
+                read_only_actions: RunnerAvailability::Available,
+                ..RunnerCapabilities::default()
+            },
+            1,
+            "2026-07-22T12:00:00Z".to_owned(),
+        );
+
+        let encoded = serde_json::to_value(&view).expect("view serializes");
+        assert_eq!(
+            encoded["receivers"][0]["generation_id"],
+            serde_json::Value::String(u64::MAX.to_string())
+        );
+        assert_eq!(
+            encoded["plans"][0]["generation_id"],
+            serde_json::Value::String(u64::MAX.to_string())
+        );
+        let decoded: QualificationView =
+            serde_json::from_value(encoded).expect("view deserializes");
+        assert_eq!(decoded.receivers[0].generation_id, u64::MAX);
+        assert_eq!(decoded.plans[0].generation_id, u64::MAX);
     }
 
     #[test]

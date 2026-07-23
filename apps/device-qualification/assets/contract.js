@@ -7,6 +7,8 @@ const VERDICTS = new Set(["not-run", "in-progress", "blocked", "failed", "eviden
 const STAGE_STATUSES = new Set(["locked", "ready", "running", "awaiting-observation", "passed", "failed", "blocked", "skipped"]);
 const RISKS = new Set(["read-only", "lighting-write", "device-lifecycle", "system-lifecycle"]);
 const DIGEST = /^[a-f0-9]{64}$/;
+const DECIMAL_GENERATION_ID = /^[1-9][0-9]{0,19}$/;
+const MAX_GENERATION_ID = 18_446_744_073_709_551_615n;
 const LOCAL_ENDPOINT = /^http:\/\/(127\.0\.0\.1|localhost)(:[0-9]+)?$/;
 
 export function validateQualificationView(value) {
@@ -84,7 +86,7 @@ function receiver(value, label) {
   object(value, label);
   exact(value, ["receiver_id", "generation_id", "model_name", "vendor_id", "product_id", "profile", "lifecycle", "devices"], label);
   string(value.receiver_id, `${label}.receiver_id`);
-  integer(value.generation_id, `${label}.generation_id`, 1);
+  generationId(value.generation_id, `${label}.generation_id`);
   nullableString(value.model_name, `${label}.model_name`);
   nullableInteger(value.vendor_id, `${label}.vendor_id`, 0, 65535);
   nullableInteger(value.product_id, `${label}.product_id`, 0, 65535);
@@ -131,7 +133,7 @@ function plan(value, label) {
   exact(value, ["plan_id", "receiver_id", "generation_id", "device_id", "profile_binding", "verdict", "summary", "groups", "evidence"], label);
   string(value.plan_id, `${label}.plan_id`);
   string(value.receiver_id, `${label}.receiver_id`);
-  integer(value.generation_id, `${label}.generation_id`, 1);
+  generationId(value.generation_id, `${label}.generation_id`);
   string(value.device_id, `${label}.device_id`);
   nullableProfile(value.profile_binding, `${label}.profile_binding`);
   enumeration(value.verdict, VERDICTS, `${label}.verdict`);
@@ -265,6 +267,15 @@ function integer(value, label, minimum, maximum = Number.MAX_SAFE_INTEGER) {
 
 function nullableInteger(value, label, minimum, maximum = Number.MAX_SAFE_INTEGER) {
   if (value !== null) integer(value, label, minimum, maximum);
+}
+
+function generationId(value, label) {
+  require(
+    typeof value === "string"
+      && DECIMAL_GENERATION_ID.test(value)
+      && BigInt(value) <= MAX_GENERATION_ID,
+    `${label} must be a canonical decimal u64 string`,
+  );
 }
 
 function boolean(value, label) {

@@ -20,7 +20,7 @@
   "receivers": [
     {
       "receiver_id": "receiver-test",
-      "generation_id": 7,
+      "generation_id": "7",
       "model_name": "Razer HyperFlux V2 Receiver",
       "vendor_id": 5426,
       "product_id": 207,
@@ -126,7 +126,7 @@
     {
       "plan_id": "plan:receiver-test:7:child.razer.basilisk-v3-pro-35k.00cd",
       "receiver_id": "receiver-test",
-      "generation_id": 7,
+      "generation_id": "7",
       "device_id": "mouse-test",
       "profile_binding": {
         "id": "child.razer.basilisk-v3-pro-35k.00cd",

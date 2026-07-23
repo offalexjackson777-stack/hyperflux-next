@@ -39,6 +39,12 @@
     "actions": {"type": "array", "maxItems": 256, "items": {"$ref": "#/$defs/action"}}
   },
   "$defs": {
+    "generationId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20,
+      "pattern": "^[1-9][0-9]*$"
+    },
     "profile": {
       "type": "object",
       "additionalProperties": false,
@@ -90,7 +96,7 @@
       "required": ["receiver_id", "generation_id", "model_name", "vendor_id", "product_id", "profile", "lifecycle", "devices"],
       "properties": {
         "receiver_id": {"type": "string", "minLength": 1},
-        "generation_id": {"type": "integer", "minimum": 1},
+        "generation_id": {"$ref": "#/$defs/generationId"},
         "model_name": {"type": ["string", "null"]},
         "vendor_id": {"type": ["integer", "null"], "minimum": 0, "maximum": 65535},
         "product_id": {"type": ["integer", "null"], "minimum": 0, "maximum": 65535},
@@ -177,7 +183,7 @@
       "properties": {
         "plan_id": {"type": "string", "minLength": 1},
         "receiver_id": {"type": "string", "minLength": 1},
-        "generation_id": {"type": "integer", "minimum": 1},
+        "generation_id": {"$ref": "#/$defs/generationId"},
         "device_id": {"type": "string", "minLength": 1},
         "profile_binding": {"oneOf": [{"$ref": "#/$defs/profile"}, {"type": "null"}]},
         "verdict": {"enum": ["not-run", "in-progress", "blocked", "failed", "evidence-ready", "accepted"]},
