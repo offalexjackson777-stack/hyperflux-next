@@ -234,6 +234,7 @@ class PackagePipelineTests(unittest.TestCase):
             self.assertIn(f"-ffile-prefix-map={private}=", environment["CFLAGS"])
             self.assertIn(f"-fdebug-prefix-map={private}=", environment["CXXFLAGS"])
         self.assertEqual(environment["CARGO_NET_OFFLINE"], "true")
+        self.assertEqual(environment["CARGO_PROFILE_RELEASE_STRIP"], "symbols")
         self.assertEqual(environment["PIP_NO_INDEX"], "1")
         self.assertEqual(environment["CC"], "clang")
         self.assertEqual(environment["CMAKE_GENERATOR"], "Ninja")

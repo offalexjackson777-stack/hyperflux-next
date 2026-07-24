@@ -173,6 +173,7 @@ def _base_environment(root: Path, output: Path, epoch: int) -> dict[str, str]:
             "PYTHONHASHSEED": "0",
             "CARGO_INCREMENTAL": "0",
             "CARGO_NET_OFFLINE": "true",
+            "CARGO_PROFILE_RELEASE_STRIP": "symbols",
             "CARGO_TARGET_DIR": str(output / "work" / "cargo-target"),
             "RUSTFLAGS": rust_remap,
             "PIP_DISABLE_PIP_VERSION_CHECK": "1",
