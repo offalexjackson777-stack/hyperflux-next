@@ -56,23 +56,29 @@ fn receiver_and_children_resolve_independently() {
         DeviceReturnConfirmationEvidence::BatteryReport
     );
     assert_eq!(confirmation.settle_ms, 250);
-    assert_eq!(keyboard.qualification_migrations.len(), 3);
+    assert!(confirmation.reassert_at_fallback);
+    assert_eq!(keyboard.qualification_migrations.len(), 4);
+    let current_migration = keyboard
+        .qualification_migrations
+        .iter()
+        .find(|migration| {
+            migration.from_runtime_sha256
+                == "31f80ff672cb56d6bed5df320c45cda68cf14c0181d7b93428f1f8f7891032eb"
+        })
+        .expect("the immediately preceding keyboard profile remains qualified");
     assert_eq!(
-        keyboard.qualification_migrations[0].preserve_stage_roles,
+        current_migration.preserve_stage_roles,
         &["lighting", "map", "telemetry"]
     );
-    assert_eq!(
-        keyboard.qualification_migrations[1].preserve_stage_roles,
-        &["lighting", "map", "telemetry"]
-    );
-    assert_eq!(
-        keyboard.qualification_migrations[1].from_runtime_sha256,
-        "8c96caf63c960dbcd3207b4e43321e7d034301cf8bbe87291452d4d2f7d4890d"
-    );
-    assert_eq!(
-        keyboard.qualification_migrations[2].preserve_stage_roles,
-        &["lighting", "map"]
-    );
+    let oldest_migration = keyboard
+        .qualification_migrations
+        .iter()
+        .find(|migration| {
+            migration.from_runtime_sha256
+                == "fcdd53fe104e649cc7d2c38c939bbd41095dc3eb53488ebb30a8615a76bbfba6"
+        })
+        .expect("the original map qualification remains available");
+    assert_eq!(oldest_migration.preserve_stage_roles, &["lighting", "map"]);
     assert_ne!(mouse.id, keyboard.id);
 }
 

@@ -67,6 +67,20 @@ struct ScheduledTrigger {
     trigger: RestoreTrigger,
     due: MonotonicMs,
     sequence: Option<SequenceNumber>,
+    purpose: ScheduledTriggerPurpose,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ScheduledTriggerPurpose {
+    Primary,
+    Reassertion,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct DeviceReturnWindow {
+    fallback_due: MonotonicMs,
+    sequence: SequenceNumber,
+    confirmed: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -184,6 +198,7 @@ pub struct RestorationScheduler {
     max_claims: usize,
     configured_receivers: BTreeSet<ReceiverId>,
     ready_devices: BTreeMap<(ReceiverId, GenerationId, LogicalDeviceId), MonotonicMs>,
+    return_windows: BTreeMap<(ReceiverId, GenerationId, LogicalDeviceId), DeviceReturnWindow>,
     triggers: BTreeMap<RestoreTriggerId, ScheduledTrigger>,
     claims: BTreeMap<RestoreClaimId, ScheduledClaim>,
 }
@@ -248,6 +263,7 @@ impl RestorationScheduler {
             max_claims,
             configured_receivers: BTreeSet::new(),
             ready_devices: BTreeMap::new(),
+            return_windows: BTreeMap::new(),
             triggers: BTreeMap::new(),
             claims: BTreeMap::new(),
         })
@@ -373,12 +389,74 @@ impl RestorationScheduler {
         scheduled_at: MonotonicMs,
         settle_ms: u64,
     ) -> Result<(), RestorationScheduleError> {
+        self.schedule_device_return_with_policy_at(
+            receiver_id,
+            generation_id,
+            device_id,
+            sequence,
+            scheduled_at,
+            settle_ms,
+            false,
+        )
+    }
+
+    /// Enqueues one exact return and records whether stronger child evidence
+    /// should preserve one bounded late reassertion at the original fallback.
+    /// The policy is generated from the matching child profile.
+    ///
+    /// # Errors
+    ///
+    /// Returns a time, trigger-capacity, or generated-identity failure.
+    #[allow(clippy::too_many_arguments)]
+    pub fn schedule_device_return_with_policy_at(
+        &mut self,
+        receiver_id: ReceiverId,
+        generation_id: GenerationId,
+        device_id: LogicalDeviceId,
+        sequence: SequenceNumber,
+        scheduled_at: MonotonicMs,
+        settle_ms: u64,
+        reassert_at_fallback: bool,
+    ) -> Result<(), RestorationScheduleError> {
+        if !self.enabled {
+            return Ok(());
+        }
         let due = due_after(scheduled_at, settle_ms)?;
         let readiness = (receiver_id.clone(), generation_id, device_id.clone());
         self.ready_devices
-            .entry(readiness)
+            .entry(readiness.clone())
             .and_modify(|existing| *existing = (*existing).max(due))
             .or_insert(due);
+        if reassert_at_fallback {
+            let replace_window = self
+                .return_windows
+                .get(&readiness)
+                .is_none_or(|window| sequence > window.sequence);
+            if replace_window {
+                self.remove_device_return_triggers(
+                    &receiver_id,
+                    generation_id,
+                    &device_id,
+                    Some(ScheduledTriggerPurpose::Reassertion),
+                );
+                self.return_windows.insert(
+                    readiness,
+                    DeviceReturnWindow {
+                        fallback_due: due,
+                        sequence,
+                        confirmed: false,
+                    },
+                );
+            }
+        } else {
+            self.return_windows.remove(&readiness);
+            self.remove_device_return_triggers(
+                &receiver_id,
+                generation_id,
+                &device_id,
+                Some(ScheduledTriggerPurpose::Reassertion),
+            );
+        }
         self.schedule_at(
             RestoreTriggerKind::DeviceReturn,
             receiver_id,
@@ -405,18 +483,61 @@ impl RestorationScheduler {
         confirmed_at: MonotonicMs,
         settle_ms: u64,
     ) -> Result<(), RestorationScheduleError> {
+        self.confirm_device_return_with_policy_at(
+            receiver_id,
+            generation_id,
+            device_id,
+            sequence,
+            confirmed_at,
+            settle_ms,
+            false,
+        )
+    }
+
+    /// Advances one exact pending fallback and, when the generated child
+    /// policy requests it, preserves one late reassertion at the original
+    /// deadline. Repeated confirmations are idempotent.
+    ///
+    /// # Errors
+    ///
+    /// Returns a time, trigger-capacity, or generated-identity failure.
+    #[allow(clippy::too_many_arguments)]
+    pub fn confirm_device_return_with_policy_at(
+        &mut self,
+        receiver_id: ReceiverId,
+        generation_id: GenerationId,
+        device_id: LogicalDeviceId,
+        sequence: SequenceNumber,
+        confirmed_at: MonotonicMs,
+        settle_ms: u64,
+        reassert_at_fallback: bool,
+    ) -> Result<(), RestorationScheduleError> {
         if !self.enabled {
             return Ok(());
         }
-        let due = due_after(confirmed_at, settle_ms)?;
+        let confirmed_due = due_after(confirmed_at, settle_ms)?;
         let readiness = (receiver_id.clone(), generation_id, device_id.clone());
-        let due = *self
+        let fallback_due = if reassert_at_fallback {
+            let Some(window) = self.return_windows.get(&readiness) else {
+                return Ok(());
+            };
+            if sequence < window.sequence || window.confirmed {
+                return Ok(());
+            }
+            Some(window.fallback_due)
+        } else {
+            None
+        };
+        let due = self
             .ready_devices
-            .entry(readiness)
-            .and_modify(|existing| *existing = (*existing).min(due))
-            .or_insert(due);
-
-        let woke = self.wake_earlier(&receiver_id, generation_id, &device_id, due);
+            .get(&readiness)
+            .map_or(confirmed_due, |existing| (*existing).min(confirmed_due));
+        let has_matching_claim = self.claims.values().any(|claim| {
+            claim.receiver_id == receiver_id
+                && claim.generation_id == generation_id
+                && claim.device_id == device_id
+        });
+        let has_broad_trigger = self.has_pending_broad_trigger(&receiver_id, generation_id);
         let matching_triggers = self
             .triggers
             .iter()
@@ -424,24 +545,72 @@ impl RestorationScheduler {
                 (scheduled.trigger.receiver_id == receiver_id
                     && scheduled.trigger.generation_id == generation_id
                     && scheduled.trigger.kind == RestoreTriggerKind::DeviceReturn
-                    && scheduled.trigger.target_device_id.as_ref() == Some(&device_id))
-                .then_some(trigger_id.clone())
+                    && scheduled.trigger.target_device_id.as_ref() == Some(&device_id)
+                    && scheduled.purpose == ScheduledTriggerPurpose::Primary)
+                    .then_some(trigger_id.clone())
             })
             .collect::<Vec<_>>();
+        let has_reassertion = self.triggers.values().any(|scheduled| {
+            scheduled.trigger.receiver_id == receiver_id
+                && scheduled.trigger.generation_id == generation_id
+                && scheduled.trigger.kind == RestoreTriggerKind::DeviceReturn
+                && scheduled.trigger.target_device_id.as_ref() == Some(&device_id)
+                && scheduled.purpose == ScheduledTriggerPurpose::Reassertion
+        });
+        let needs_primary = !has_matching_claim && !has_broad_trigger;
+        let needs_reassertion = fallback_due.is_some_and(|fallback| fallback > due);
+        let remaining = self.triggers.len().saturating_sub(matching_triggers.len());
+        let additions =
+            usize::from(needs_primary) + usize::from(needs_reassertion && !has_reassertion);
+        if remaining
+            .checked_add(additions)
+            .is_none_or(|total| total > self.max_triggers)
+        {
+            return Err(RestorationScheduleError::TriggerCapacity);
+        }
+
+        if reassert_at_fallback {
+            self.return_windows
+                .get_mut(&readiness)
+                .ok_or(RestorationScheduleError::Identifier)?
+                .confirmed = true;
+        }
+        self.ready_devices.insert(readiness.clone(), due);
+        let woke = self.wake_earlier(&receiver_id, generation_id, &device_id, due);
+        debug_assert_eq!(woke > 0, has_matching_claim);
         for trigger_id in matching_triggers {
             self.triggers.remove(&trigger_id);
         }
-        if woke > 0 || self.has_pending_broad_trigger(&receiver_id, generation_id) {
-            return Ok(());
+        if needs_primary {
+            self.schedule_at(
+                RestoreTriggerKind::DeviceReturn,
+                receiver_id.clone(),
+                generation_id,
+                Some(device_id.clone()),
+                Some(sequence),
+                due,
+            )?;
         }
-        self.schedule_at(
-            RestoreTriggerKind::DeviceReturn,
-            receiver_id,
-            generation_id,
-            Some(device_id),
-            Some(sequence),
-            due,
-        )
+        if let Some(fallback_due) = fallback_due.filter(|fallback| *fallback > due) {
+            self.schedule_at_with_purpose(
+                RestoreTriggerKind::DeviceReturn,
+                receiver_id,
+                generation_id,
+                Some(device_id),
+                Some(sequence),
+                fallback_due,
+                ScheduledTriggerPurpose::Reassertion,
+            )?;
+        } else if reassert_at_fallback {
+            self.return_windows.remove(&readiness);
+            self.remove_device_return_triggers(
+                &receiver_id,
+                generation_id,
+                &device_id,
+                Some(ScheduledTriggerPurpose::Reassertion),
+            );
+        }
+        Ok(())
     }
 
     pub fn retire_generation(&mut self, receiver_id: &ReceiverId, generation_id: GenerationId) {
@@ -453,6 +622,9 @@ impl RestorationScheduler {
             scheduled.receiver_id != *receiver_id || scheduled.generation_id != generation_id
         });
         self.ready_devices.retain(|(candidate, generation, _), _| {
+            candidate != receiver_id || *generation != generation_id
+        });
+        self.return_windows.retain(|(candidate, generation, _), _| {
             candidate != receiver_id || *generation != generation_id
         });
     }
@@ -504,6 +676,20 @@ impl RestorationScheduler {
                 .triggers
                 .remove(&trigger_id)
                 .ok_or(RestorationScheduleError::Identifier)?;
+            if let Some(device_id) = scheduled.trigger.target_device_id.as_ref() {
+                let readiness = (
+                    scheduled.trigger.receiver_id.clone(),
+                    scheduled.trigger.generation_id,
+                    device_id.clone(),
+                );
+                if scheduled.purpose == ScheduledTriggerPurpose::Reassertion
+                    || self.return_windows.get(&readiness).is_some_and(|window| {
+                        !window.confirmed && window.fallback_due <= scheduled.due
+                    })
+                {
+                    self.return_windows.remove(&readiness);
+                }
+            }
             let newly_configured = !self
                 .configured_receivers
                 .contains(&scheduled.trigger.receiver_id);
@@ -540,8 +726,10 @@ impl RestorationScheduler {
                         for record in recovered {
                             self.schedule_record(record, now)?;
                         }
-                        scheduled.due = due_after(now, self.retry_interval_ms)?;
-                        self.triggers.insert(trigger_id, scheduled);
+                        if scheduled.purpose == ScheduledTriggerPurpose::Primary {
+                            scheduled.due = due_after(now, self.retry_interval_ms)?;
+                            self.triggers.insert(trigger_id, scheduled);
+                        }
                     }
                     Err(error) => return Err(error.into()),
                 }
@@ -659,8 +847,35 @@ impl RestorationScheduler {
         sequence: Option<SequenceNumber>,
         due: MonotonicMs,
     ) -> Result<(), RestorationScheduleError> {
+        self.schedule_at_with_purpose(
+            kind,
+            receiver_id,
+            generation_id,
+            target_device_id,
+            sequence,
+            due,
+            ScheduledTriggerPurpose::Primary,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn schedule_at_with_purpose(
+        &mut self,
+        kind: RestoreTriggerKind,
+        receiver_id: ReceiverId,
+        generation_id: GenerationId,
+        target_device_id: Option<LogicalDeviceId>,
+        sequence: Option<SequenceNumber>,
+        due: MonotonicMs,
+        purpose: ScheduledTriggerPurpose,
+    ) -> Result<(), RestorationScheduleError> {
         if !self.enabled {
             return Ok(());
+        }
+        if purpose == ScheduledTriggerPurpose::Reassertion
+            && kind != RestoreTriggerKind::DeviceReturn
+        {
+            return Err(RestorationScheduleError::InvalidConfiguration);
         }
         if is_broad_trigger(kind) {
             let woke = if readiness_gated_trigger(kind) {
@@ -677,7 +892,9 @@ impl RestorationScheduler {
             if woke > 0 || self.has_pending_broad_trigger(&receiver_id, generation_id) {
                 return Ok(());
             }
-        } else if kind == RestoreTriggerKind::DeviceReturn {
+        } else if kind == RestoreTriggerKind::DeviceReturn
+            && purpose == ScheduledTriggerPurpose::Primary
+        {
             let woke = self.wake(&receiver_id, generation_id, target_device_id.as_ref(), due);
             if woke > 0 || self.has_pending_broad_trigger(&receiver_id, generation_id) {
                 return Ok(());
@@ -686,11 +903,27 @@ impl RestorationScheduler {
                 (scheduled.trigger.receiver_id == receiver_id
                     && scheduled.trigger.generation_id == generation_id
                     && scheduled.trigger.kind == RestoreTriggerKind::DeviceReturn
-                    && scheduled.trigger.target_device_id == target_device_id)
+                    && scheduled.trigger.target_device_id == target_device_id
+                    && scheduled.purpose == ScheduledTriggerPurpose::Primary)
                     .then(|| (trigger_id.clone(), scheduled.sequence))
             });
             if let Some((existing_id, existing_sequence)) = same_scope {
                 if !sequence_is_newer(sequence, existing_sequence) {
+                    return Ok(());
+                }
+                self.triggers.remove(&existing_id);
+            }
+        } else if kind == RestoreTriggerKind::DeviceReturn {
+            let same_scope = self.triggers.iter().find_map(|(trigger_id, scheduled)| {
+                (scheduled.trigger.receiver_id == receiver_id
+                    && scheduled.trigger.generation_id == generation_id
+                    && scheduled.trigger.kind == RestoreTriggerKind::DeviceReturn
+                    && scheduled.trigger.target_device_id == target_device_id
+                    && scheduled.purpose == ScheduledTriggerPurpose::Reassertion)
+                    .then(|| (trigger_id.clone(), scheduled.due))
+            });
+            if let Some((existing_id, existing_due)) = same_scope {
+                if existing_due <= due {
                     return Ok(());
                 }
                 self.triggers.remove(&existing_id);
@@ -703,6 +936,7 @@ impl RestorationScheduler {
             target_device_id.as_ref(),
             sequence,
             (kind == RestoreTriggerKind::ServiceStart).then_some(&self.process_nonce),
+            purpose,
         )?;
         if self.triggers.contains_key(&trigger_id) {
             return Ok(());
@@ -722,6 +956,7 @@ impl RestorationScheduler {
                 },
                 due,
                 sequence,
+                purpose,
             },
         );
         Ok(())
@@ -877,6 +1112,30 @@ impl RestorationScheduler {
         self.ready_devices.retain(|(candidate, generation, _), _| {
             candidate != receiver_id || *generation != generation_id
         });
+        self.return_windows.retain(|(candidate, generation, _), _| {
+            candidate != receiver_id || *generation != generation_id
+        });
+        self.triggers.retain(|_, scheduled| {
+            scheduled.trigger.receiver_id != *receiver_id
+                || scheduled.trigger.generation_id != generation_id
+                || scheduled.trigger.kind != RestoreTriggerKind::DeviceReturn
+        });
+    }
+
+    fn remove_device_return_triggers(
+        &mut self,
+        receiver_id: &ReceiverId,
+        generation_id: GenerationId,
+        device_id: &LogicalDeviceId,
+        purpose: Option<ScheduledTriggerPurpose>,
+    ) {
+        self.triggers.retain(|_, scheduled| {
+            scheduled.trigger.receiver_id != *receiver_id
+                || scheduled.trigger.generation_id != generation_id
+                || scheduled.trigger.kind != RestoreTriggerKind::DeviceReturn
+                || scheduled.trigger.target_device_id.as_ref() != Some(device_id)
+                || purpose.is_some_and(|purpose| scheduled.purpose != purpose)
+        });
     }
 }
 
@@ -974,6 +1233,7 @@ fn trigger_id(
     target_device_id: Option<&LogicalDeviceId>,
     sequence: Option<SequenceNumber>,
     process_nonce: Option<&[u8; 32]>,
+    purpose: ScheduledTriggerPurpose,
 ) -> Result<RestoreTriggerId, RestorationScheduleError> {
     let mut digest = Sha256::new();
     digest.update(b"hyperflux-restoration-trigger-v1\0");
@@ -988,6 +1248,9 @@ fn trigger_id(
     digest.update(sequence.map_or(0, SequenceNumber::get).to_be_bytes());
     if let Some(nonce) = process_nonce {
         digest.update(nonce);
+    }
+    if purpose == ScheduledTriggerPurpose::Reassertion {
+        digest_field(&mut digest, b"device-return-reassertion")?;
     }
     let encoded = digest
         .finalize()
@@ -2137,6 +2400,371 @@ mod tests {
             trigger.sequence,
             Some(SequenceNumber::try_from(12_u64).expect("sequence"))
         );
+    }
+
+    #[test]
+    fn confirmed_return_preserves_one_late_reassertion_without_touching_a_sibling() {
+        let mut scheduler = scheduler();
+        scheduler
+            .schedule_device_return_with_policy_at(
+                id("receiver-1"),
+                generation(1),
+                id("keyboard-1"),
+                SequenceNumber::try_from(10_u64).expect("sequence"),
+                time(1_000),
+                5_000,
+                true,
+            )
+            .expect("keyboard fallback schedules");
+        scheduler
+            .schedule_device_return_at(
+                id("receiver-1"),
+                generation(1),
+                id("mouse-1"),
+                SequenceNumber::try_from(11_u64).expect("sequence"),
+                time(1_000),
+                4_000,
+            )
+            .expect("mouse return schedules independently");
+        scheduler
+            .confirm_device_return_with_policy_at(
+                id("receiver-1"),
+                generation(1),
+                id("keyboard-1"),
+                SequenceNumber::try_from(12_u64).expect("sequence"),
+                time(2_900),
+                250,
+                true,
+            )
+            .expect("keyboard confirmation advances one attempt");
+        scheduler
+            .confirm_device_return_with_policy_at(
+                id("receiver-1"),
+                generation(1),
+                id("keyboard-1"),
+                SequenceNumber::try_from(13_u64).expect("sequence"),
+                time(3_000),
+                250,
+                true,
+            )
+            .expect("repeated keyboard confirmation is idempotent");
+
+        let mut keyboard = scheduler
+            .triggers
+            .values()
+            .filter(|scheduled| {
+                scheduled.trigger.target_device_id.as_ref() == Some(&id("keyboard-1"))
+            })
+            .collect::<Vec<_>>();
+        keyboard.sort_by_key(|scheduled| scheduled.due);
+        assert_eq!(keyboard.len(), 2);
+        assert_eq!(keyboard[0].due, time(3_150));
+        assert_eq!(keyboard[0].purpose, ScheduledTriggerPurpose::Primary);
+        assert_eq!(keyboard[1].due, time(6_000));
+        assert_eq!(keyboard[1].purpose, ScheduledTriggerPurpose::Reassertion);
+
+        let mouse = scheduler
+            .triggers
+            .values()
+            .find(|scheduled| scheduled.trigger.target_device_id.as_ref() == Some(&id("mouse-1")))
+            .expect("mouse trigger remains present");
+        assert_eq!(mouse.due, time(5_000));
+        assert_eq!(mouse.purpose, ScheduledTriggerPurpose::Primary);
+        assert_eq!(scheduler.triggers.len(), 3);
+    }
+
+    #[test]
+    fn two_stage_confirmation_fails_atomically_when_trigger_capacity_is_exhausted() {
+        let mut scheduler = RestorationScheduler::new(
+            true,
+            Some(session()),
+            [0x55; 32],
+            LeaseDurationMs::try_from(10_000_u32).expect("lease"),
+            30_000,
+            1_000,
+            4,
+            1,
+            2,
+        )
+        .expect("bounded scheduler");
+        scheduler
+            .schedule_device_return_with_policy_at(
+                id("receiver-1"),
+                generation(1),
+                id("keyboard-1"),
+                SequenceNumber::try_from(10_u64).expect("sequence"),
+                time(1_000),
+                5_000,
+                true,
+            )
+            .expect("one fallback fits");
+
+        assert_eq!(
+            scheduler.confirm_device_return_with_policy_at(
+                id("receiver-1"),
+                generation(1),
+                id("keyboard-1"),
+                SequenceNumber::try_from(11_u64).expect("sequence"),
+                time(2_900),
+                250,
+                true,
+            ),
+            Err(RestorationScheduleError::TriggerCapacity)
+        );
+
+        assert_eq!(scheduler.triggers.len(), 1);
+        let trigger = scheduler
+            .triggers
+            .values()
+            .next()
+            .expect("fallback remains");
+        assert_eq!(trigger.due, time(6_000));
+        assert_eq!(trigger.purpose, ScheduledTriggerPurpose::Primary);
+        let readiness = (id("receiver-1"), generation(1), id("keyboard-1"));
+        assert_eq!(scheduler.ready_devices.get(&readiness), Some(&time(6_000)));
+        assert!(
+            !scheduler
+                .return_windows
+                .get(&readiness)
+                .expect("window remains")
+                .confirmed
+        );
+    }
+
+    #[test]
+    fn unconfirmed_return_keeps_only_its_original_fallback() {
+        let mut scheduler = scheduler();
+        scheduler
+            .schedule_device_return_with_policy_at(
+                id("receiver-1"),
+                generation(1),
+                id("keyboard-1"),
+                SequenceNumber::try_from(10_u64).expect("sequence"),
+                time(1_000),
+                5_000,
+                true,
+            )
+            .expect("keyboard fallback schedules");
+
+        assert_eq!(scheduler.triggers.len(), 1);
+        let trigger = scheduler.triggers.values().next().expect("one fallback");
+        assert_eq!(trigger.due, time(6_000));
+        assert_eq!(trigger.purpose, ScheduledTriggerPurpose::Primary);
+
+        let mut controller = FakeController {
+            now: time(6_000),
+            plans: vec![Ok(RestorePlanResult::NoStableIntents)],
+            pending: Vec::new(),
+            advances: Vec::new(),
+            dispatches: Vec::new(),
+            policy_calls: 0,
+            advance_calls: 0,
+            dispatch_calls: 0,
+        };
+        scheduler
+            .process_due_trigger(
+                &mut controller,
+                time(6_000),
+                &mut RestorationTickReport::default(),
+            )
+            .expect("the original fallback is consumed once");
+        assert!(scheduler.triggers.is_empty());
+        assert!(scheduler.return_windows.is_empty());
+    }
+
+    #[test]
+    fn suspend_and_generation_retirement_clear_both_return_stages() {
+        let mut scheduler = scheduler();
+        scheduler
+            .schedule_device_return_with_policy_at(
+                id("receiver-1"),
+                generation(1),
+                id("keyboard-1"),
+                SequenceNumber::try_from(10_u64).expect("sequence"),
+                time(1_000),
+                5_000,
+                true,
+            )
+            .expect("keyboard fallback schedules");
+        scheduler
+            .confirm_device_return_with_policy_at(
+                id("receiver-1"),
+                generation(1),
+                id("keyboard-1"),
+                SequenceNumber::try_from(11_u64).expect("sequence"),
+                time(2_900),
+                250,
+                true,
+            )
+            .expect("keyboard confirmation schedules both stages");
+        scheduler
+            .schedule_system_suspend(&id("receiver-1"), generation(1))
+            .expect("suspend invalidates the return window");
+        assert!(scheduler.triggers.is_empty());
+        assert!(scheduler.ready_devices.is_empty());
+        assert!(scheduler.return_windows.is_empty());
+
+        scheduler
+            .schedule_device_return_with_policy_at(
+                id("receiver-1"),
+                generation(2),
+                id("keyboard-1"),
+                SequenceNumber::try_from(12_u64).expect("sequence"),
+                time(7_000),
+                5_000,
+                true,
+            )
+            .expect("new-generation fallback schedules");
+        scheduler
+            .confirm_device_return_with_policy_at(
+                id("receiver-1"),
+                generation(2),
+                id("keyboard-1"),
+                SequenceNumber::try_from(13_u64).expect("sequence"),
+                time(8_000),
+                250,
+                true,
+            )
+            .expect("new-generation confirmation schedules");
+        scheduler.retire_generation(&id("receiver-1"), generation(2));
+        assert!(scheduler.triggers.is_empty());
+        assert!(scheduler.ready_devices.is_empty());
+        assert!(scheduler.return_windows.is_empty());
+    }
+
+    #[test]
+    fn terminal_early_restore_allows_exactly_one_late_reassertion() {
+        let early = record_for_device("claim-early", "keyboard-1", RestoreRecordStatus::Planned);
+        let late = record_for_device("claim-late", "keyboard-1", RestoreRecordStatus::Planned);
+        let early_terminal = record_for_device(
+            "claim-early",
+            "keyboard-1",
+            RestoreRecordStatus::Invalidated(hfx_core::RestoreInvalidation {
+                reason: hfx_domain::RestoreInvalidationReason::IntentChanged,
+            }),
+        );
+        let late_terminal = record_for_device(
+            "claim-late",
+            "keyboard-1",
+            RestoreRecordStatus::Invalidated(hfx_core::RestoreInvalidation {
+                reason: hfx_domain::RestoreInvalidationReason::IntentChanged,
+            }),
+        );
+        let mut controller = FakeController {
+            now: time(3_150),
+            plans: vec![
+                Ok(RestorePlanResult::Planned(vec![early.clone()])),
+                Ok(RestorePlanResult::Planned(vec![late.clone()])),
+            ],
+            pending: Vec::new(),
+            advances: vec![
+                Ok(RestoreAdvanceResult::Queued(early)),
+                Ok(RestoreAdvanceResult::Queued(late)),
+            ],
+            dispatches: vec![Ok(early_terminal), Ok(late_terminal)],
+            policy_calls: 0,
+            advance_calls: 0,
+            dispatch_calls: 0,
+        };
+        let mut scheduler = scheduler();
+        scheduler
+            .schedule_device_return_with_policy_at(
+                id("receiver-1"),
+                generation(1),
+                id("keyboard-1"),
+                SequenceNumber::try_from(10_u64).expect("sequence"),
+                time(1_000),
+                5_000,
+                true,
+            )
+            .expect("fallback schedules");
+        scheduler
+            .confirm_device_return_with_policy_at(
+                id("receiver-1"),
+                generation(1),
+                id("keyboard-1"),
+                SequenceNumber::try_from(11_u64).expect("sequence"),
+                time(2_900),
+                250,
+                true,
+            )
+            .expect("confirmation schedules both stages");
+
+        let early_report = scheduler
+            .tick_with(&mut controller, &sessions())
+            .expect("early restore completes");
+        assert_eq!(early_report.triggers_planned, 1);
+        assert_eq!(early_report.claims_terminal, 1);
+        assert_eq!(scheduler.triggers.len(), 1);
+
+        controller.now = time(6_000);
+        let late_report = scheduler
+            .tick_with(&mut controller, &sessions())
+            .expect("late reassertion completes");
+        assert_eq!(late_report.triggers_planned, 1);
+        assert_eq!(late_report.claims_terminal, 1);
+        assert!(scheduler.triggers.is_empty());
+        assert!(scheduler.return_windows.is_empty());
+        assert_eq!(controller.dispatch_calls, 2);
+    }
+
+    #[test]
+    fn late_reassertion_recovers_an_unfinished_early_claim_without_a_third_trigger() {
+        let early = record_for_device("claim-early", "keyboard-1", RestoreRecordStatus::Planned);
+        let mut controller = FakeController {
+            now: time(3_150),
+            plans: vec![
+                Ok(RestorePlanResult::Planned(vec![early.clone()])),
+                Err(RestorationError::PriorClaimUnresolved),
+            ],
+            pending: Vec::new(),
+            advances: Vec::new(),
+            dispatches: Vec::new(),
+            policy_calls: 0,
+            advance_calls: 0,
+            dispatch_calls: 0,
+        };
+        let mut scheduler = scheduler();
+        scheduler
+            .schedule_device_return_with_policy_at(
+                id("receiver-1"),
+                generation(1),
+                id("keyboard-1"),
+                SequenceNumber::try_from(10_u64).expect("sequence"),
+                time(1_000),
+                5_000,
+                true,
+            )
+            .expect("fallback schedules");
+        scheduler
+            .confirm_device_return_with_policy_at(
+                id("receiver-1"),
+                generation(1),
+                id("keyboard-1"),
+                SequenceNumber::try_from(11_u64).expect("sequence"),
+                time(2_900),
+                250,
+                true,
+            )
+            .expect("confirmation schedules both stages");
+
+        scheduler
+            .process_due_trigger(
+                &mut controller,
+                time(3_150),
+                &mut RestorationTickReport::default(),
+            )
+            .expect("early claim plans but remains unfinished");
+        controller.pending = vec![early];
+        let mut report = RestorationTickReport::default();
+        scheduler
+            .process_due_trigger(&mut controller, time(6_000), &mut report)
+            .expect("late reassertion recovers the early claim");
+
+        assert_eq!(report.claims_recovered, 1);
+        assert_eq!(scheduler.claims.len(), 1);
+        assert!(scheduler.triggers.is_empty());
+        assert!(scheduler.return_windows.is_empty());
     }
 
     #[test]

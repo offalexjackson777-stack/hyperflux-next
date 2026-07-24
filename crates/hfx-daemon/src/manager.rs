@@ -465,22 +465,26 @@ impl LinuxRuntimeManager {
             let sequence =
                 SequenceNumber::try_from(raw_sequence).map_err(RuntimeTickError::Domain)?;
             match readiness.phase {
-                DeviceRestoreReadinessPhase::Timed => self.restoration.schedule_device_return_at(
-                    receiver_id.clone(),
-                    generation_id,
-                    readiness.device_id,
-                    sequence,
-                    backend.now(),
-                    readiness.settle_ms,
-                ),
-                DeviceRestoreReadinessPhase::Confirmed => {
-                    self.restoration.confirm_device_return_at(
+                DeviceRestoreReadinessPhase::Timed => {
+                    self.restoration.schedule_device_return_with_policy_at(
                         receiver_id.clone(),
                         generation_id,
                         readiness.device_id,
                         sequence,
                         backend.now(),
                         readiness.settle_ms,
+                        readiness.reassert_at_fallback,
+                    )
+                }
+                DeviceRestoreReadinessPhase::Confirmed => {
+                    self.restoration.confirm_device_return_with_policy_at(
+                        receiver_id.clone(),
+                        generation_id,
+                        readiness.device_id,
+                        sequence,
+                        backend.now(),
+                        readiness.settle_ms,
+                        readiness.reassert_at_fallback,
                     )
                 }
             }

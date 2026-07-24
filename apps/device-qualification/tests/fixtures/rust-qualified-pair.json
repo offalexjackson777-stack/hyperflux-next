@@ -15,7 +15,7 @@
   "system": {
     "driver_version": "0.0.0-dev.1",
     "bridge_version": "0.0.0-dev.1",
-    "profile_catalog_digest": "bbfc43aa4c8fa261f38e4ada94c074451194b17a97ad5bc39822b2507f8512e6"
+    "profile_catalog_digest": "cc98c9d6c123f43e5da5a8b82b0221702d14ec00469a2a2c7dd239e267a2476f"
   },
   "receivers": [
     {
@@ -127,7 +127,7 @@
           "product_id": 662,
           "profile": {
             "id": "child.razer.deathstalker-v2-pro-tkl.0296",
-            "digest": "31f80ff672cb56d6bed5df320c45cda68cf14c0181d7b93428f1f8f7891032eb"
+            "digest": "133bcdf39640187c3a6c6d7e3a6fc39cf85cf55d1883f344acf1d973891d9b1a"
           },
           "presence": "active",
           "support": "production-qualified",
@@ -444,7 +444,7 @@
       "device_id": "keyboard-test",
       "profile_binding": {
         "id": "child.razer.deathstalker-v2-pro-tkl.0296",
-        "digest": "31f80ff672cb56d6bed5df320c45cda68cf14c0181d7b93428f1f8f7891032eb"
+        "digest": "133bcdf39640187c3a6c6d7e3a6fc39cf85cf55d1883f344acf1d973891d9b1a"
       },
       "verdict": "not-run",
       "summary": "5 evidence checks for this exact profile and receiver generation.",

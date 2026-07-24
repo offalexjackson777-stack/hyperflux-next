@@ -42,6 +42,7 @@ pub struct DeviceRestoreReadiness {
     pub device_id: LogicalDeviceId,
     pub settle_ms: u64,
     pub phase: DeviceRestoreReadinessPhase,
+    pub reassert_at_fallback: bool,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -74,6 +75,7 @@ impl PassiveTranslation {
         device_id: LogicalDeviceId,
         settle_ms: u64,
         phase: DeviceRestoreReadinessPhase,
+        reassert_at_fallback: bool,
     ) -> Self {
         Self {
             disposition: PassiveDisposition::Applied,
@@ -82,6 +84,7 @@ impl PassiveTranslation {
                 device_id,
                 settle_ms,
                 phase,
+                reassert_at_fallback,
             }),
         }
     }
@@ -390,14 +393,13 @@ impl PassiveObservationTranslator {
             binding.last_activity_ms = Some(observed_at_ms);
         }
         let readiness = restore_ready.then(|| {
-            let settle_ms = binding
-                .lifecycle
-                .map_or(0, |policy| policy.device_return_settle_ms);
-            if binding
-                .lifecycle
-                .and_then(|policy| policy.device_return_confirmation)
-                .is_some()
-            {
+            let (settle_ms, confirmation) = binding.lifecycle.map_or((0, None), |policy| {
+                (
+                    policy.device_return_settle_ms,
+                    policy.device_return_confirmation,
+                )
+            });
+            if confirmation.is_some() {
                 let deadline = observed_at_ms.get().saturating_add(settle_ms);
                 binding.return_confirmation_deadline_ms = MonotonicMs::try_from(deadline).ok();
             } else {
@@ -407,6 +409,7 @@ impl PassiveObservationTranslator {
                 binding.device_id.clone(),
                 settle_ms,
                 DeviceRestoreReadinessPhase::Timed,
+                confirmation.is_some_and(|policy| policy.reassert_at_fallback),
             )
         });
         let binding = binding.clone();
@@ -433,11 +436,19 @@ impl PassiveObservationTranslator {
                 EndpointFact::Freshness(FreshnessState::Fresh),
             ),
         ];
-        Ok(if let Some((device_id, settle_ms, phase)) = readiness {
-            PassiveTranslation::restore_ready(observations, device_id, settle_ms, phase)
-        } else {
-            PassiveTranslation::applied(observations)
-        })
+        Ok(
+            if let Some((device_id, settle_ms, phase, reassert_at_fallback)) = readiness {
+                PassiveTranslation::restore_ready(
+                    observations,
+                    device_id,
+                    settle_ms,
+                    phase,
+                    reassert_at_fallback,
+                )
+            } else {
+                PassiveTranslation::applied(observations)
+            },
+        )
     }
 
     fn battery(
@@ -464,7 +475,7 @@ impl PassiveObservationTranslator {
                     .map_err(|_| PassiveTranslationError::InvalidObservationValue)?
             }
         };
-        let confirmation_settle_ms = binding
+        let confirmation = binding
             .lifecycle
             .and_then(|policy| policy.device_return_confirmation)
             .filter(|confirmation| {
@@ -474,7 +485,7 @@ impl PassiveObservationTranslator {
                 binding
                     .return_confirmation_deadline_ms
                     .filter(|deadline| stamp.observed_at_ms() <= *deadline)
-                    .map(|_| confirmation.settle_ms)
+                    .map(|_| (confirmation.settle_ms, confirmation.reassert_at_fallback))
             });
         binding.return_confirmation_deadline_ms = None;
         let binding = binding.clone();
@@ -488,16 +499,19 @@ impl PassiveObservationTranslator {
         if passive.report_implies_route_available {
             observations.extend(self.route_observations(&binding, stamp, RouteState::Available));
         }
-        Ok(if let Some(settle_ms) = confirmation_settle_ms {
-            PassiveTranslation::restore_ready(
-                observations,
-                binding.device_id,
-                settle_ms,
-                DeviceRestoreReadinessPhase::Confirmed,
-            )
-        } else {
-            PassiveTranslation::applied(observations)
-        })
+        Ok(
+            if let Some((settle_ms, reassert_at_fallback)) = confirmation {
+                PassiveTranslation::restore_ready(
+                    observations,
+                    binding.device_id,
+                    settle_ms,
+                    DeviceRestoreReadinessPhase::Confirmed,
+                    reassert_at_fallback,
+                )
+            } else {
+                PassiveTranslation::applied(observations)
+            },
+        )
     }
 
     fn contact(&self, slot: u32, value: u32, stamp: ObservationStamp) -> PassiveTranslation {
@@ -947,6 +961,13 @@ mod tests {
                 .map(|readiness| readiness.phase),
             Some(DeviceRestoreReadinessPhase::Timed)
         );
+        assert_eq!(
+            first
+                .restore_ready
+                .as_ref()
+                .map(|readiness| readiness.reassert_at_fallback),
+            Some(false)
+        );
 
         let resumed = translator
             .translate(activity(
@@ -991,6 +1012,7 @@ mod tests {
             .expect("keyboard activity schedules a fallback");
         assert_eq!(readiness.settle_ms, 5_000);
         assert_eq!(readiness.phase, DeviceRestoreReadinessPhase::Timed);
+        assert!(readiness.reassert_at_fallback);
 
         let confirmed = translator
             .translate(raw_at(
@@ -1006,6 +1028,7 @@ mod tests {
             .expect("the first fresh battery report confirms the child route");
         assert_eq!(readiness.settle_ms, 250);
         assert_eq!(readiness.phase, DeviceRestoreReadinessPhase::Confirmed);
+        assert!(readiness.reassert_at_fallback);
 
         let repeated = translator
             .translate(raw_at(

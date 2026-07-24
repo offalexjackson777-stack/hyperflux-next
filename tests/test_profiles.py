@@ -215,6 +215,23 @@ class ProfileCompilerTests(unittest.TestCase):
 
         profiles, capabilities, claims = self.validation_copies()
         keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
+        before = _runtime_profile_digest(keyboard, capabilities)
+        keyboard["transport"]["lifecycle"]["device_return_confirmation"][
+            "reassert_at_fallback"
+        ] = False
+        _validate_profiles(profiles, capabilities, claims)
+        self.assertNotEqual(_runtime_profile_digest(keyboard, capabilities), before)
+
+        profiles, capabilities, claims = self.validation_copies()
+        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
+        keyboard["transport"]["lifecycle"]["device_return_confirmation"][
+            "reassert_at_fallback"
+        ] = 1
+        with self.assertRaisesRegex(ModelError, "fallback reassertion must be boolean"):
+            _validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
         keyboard["transport"]["lifecycle"]["device_return_confirmation"]["evidence"] = "activity"
         with self.assertRaisesRegex(ModelError, "unsupported return confirmation evidence"):
             _validate_profiles(profiles, capabilities, claims)

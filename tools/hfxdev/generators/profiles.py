@@ -230,6 +230,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "pub struct DeviceReturnConfirmationRecord {",
         "    pub evidence: DeviceReturnConfirmationEvidence,",
         "    pub settle_ms: u64,",
+        "    pub reassert_at_fallback: bool,",
         "}",
         "",
         "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
@@ -383,6 +384,8 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                     "                evidence: DeviceReturnConfirmationEvidence::"
                     f"{confirmation_evidence},",
                     f"                settle_ms: {confirmation['settle_ms']},",
+                    "                reassert_at_fallback: "
+                    f"{str(confirmation['reassert_at_fallback']).lower()},",
                     "            }),",
                 ]
             else:

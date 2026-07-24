@@ -84,7 +84,7 @@ LIFECYCLE_REQUIRED_KEYS = {
     "device_return_settle_ms",
 }
 POWER_OFF_DEPARTURE_EVIDENCE = {"receiver-state", "watched-retained-route"}
-DEVICE_RETURN_CONFIRMATION_KEYS = {"evidence", "settle_ms"}
+DEVICE_RETURN_CONFIRMATION_KEYS = {"evidence", "settle_ms", "reassert_at_fallback"}
 DEVICE_RETURN_CONFIRMATION_EVIDENCE = {"battery-report"}
 MAX_DEVICE_RETURN_SETTLE_MS = 30_000
 QUALIFICATION_MIGRATION_KEYS = {"from_runtime_sha256", "preserve_stage_roles"}
@@ -652,6 +652,10 @@ def _validate_lifecycle_policy(
     if settle_ms == 0 or confirmation_settle_ms >= settle_ms:
         raise ModelError(
             f"{profile['profile_id']}: confirmation must precede a positive return fallback"
+        )
+    if not isinstance(confirmation["reassert_at_fallback"], bool):
+        raise ModelError(
+            f"{profile['profile_id']}: return fallback reassertion must be boolean"
         )
     if evidence == "battery-report" and not isinstance(passive, dict):
         raise ModelError(

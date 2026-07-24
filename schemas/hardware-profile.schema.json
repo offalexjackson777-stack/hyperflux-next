@@ -143,10 +143,11 @@
     "device-return-confirmation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["evidence", "settle_ms"],
+      "required": ["evidence", "settle_ms", "reassert_at_fallback"],
       "properties": {
         "evidence": {"enum": ["battery-report"]},
-        "settle_ms": {"type": "integer", "minimum": 0, "maximum": 30000}
+        "settle_ms": {"type": "integer", "minimum": 0, "maximum": 30000},
+        "reassert_at_fallback": {"type": "boolean"}
       }
     },
     "qualification-migration": {
