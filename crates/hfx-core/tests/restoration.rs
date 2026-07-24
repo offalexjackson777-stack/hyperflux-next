@@ -877,6 +877,94 @@ fn explicit_map_and_lighting_compatibility_rebinds_stable_intent_before_claim() 
 }
 
 #[test]
+fn restart_rebind_supersedes_a_stale_deferred_claim_before_new_planning() {
+    let coordinator = RestorationCoordinator;
+    let mut store = MemoryPersistenceStore::default();
+    let old_digest: hfx_domain::ProfileDigest =
+        text("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    let mut request = stable_request("profile-restart-migration", &["keyboard-1"]);
+    request.device_profiles[0].profile_digest = old_digest.clone();
+    commit_static(coordinator, &request, 1, &mut store);
+    coordinator
+        .set_restore_enabled(&request.receiver_id, true, &mut store)
+        .expect("restore policy is enabled");
+
+    let prior_trigger = RestoreTrigger {
+        trigger_id: text("profile-restart-prior-trigger"),
+        kind: RestoreTriggerKind::ServiceStart,
+        receiver_id: request.receiver_id.clone(),
+        generation_id: generation(1),
+        target_device_id: None,
+    };
+    let RestorePlanResult::Planned(prior_records) = coordinator
+        .plan_restore(
+            &prior_trigger,
+            &DigestProfiles::exact(old_digest.clone()),
+            &mut store,
+        )
+        .expect("old profile claim is persisted")
+    else {
+        panic!("old stable intent must create a claim")
+    };
+    let prior = prior_records[0].clone();
+    let deferred = RestoreRecord {
+        status: RestoreRecordStatus::Deferred(hfx_core::RestoreDeferred {
+            reason: RestoreDeferReason::DeviceSleeping,
+            prior_outcome: None,
+        }),
+        revision: PersistenceRevision::try_from(prior.revision.get() + 1)
+            .expect("deferred revision"),
+        ..prior.clone()
+    };
+    assert_eq!(
+        store
+            .compare_and_set_restore_record(Some(prior.revision), &deferred)
+            .expect("deferred claim persists"),
+        PersistenceCasOutcome::Applied
+    );
+
+    let current_profiles = DigestProfiles::migrating(common::device_profile_digest(), old_digest);
+    let current_trigger = RestoreTrigger {
+        trigger_id: text("profile-restart-current-trigger"),
+        kind: RestoreTriggerKind::ServiceStart,
+        receiver_id: request.receiver_id.clone(),
+        generation_id: generation(1),
+        target_device_id: None,
+    };
+    assert_eq!(
+        coordinator
+            .rebind_compatible_stable_intents(&current_trigger, &current_profiles, &mut store,)
+            .expect("compatible stable intent rebinds"),
+        1
+    );
+
+    let RestorePlanResult::Planned(current_records) = coordinator
+        .plan_restore(&current_trigger, &current_profiles, &mut store)
+        .expect("current profile claim is planned")
+    else {
+        panic!("migrated stable intent must create a current claim")
+    };
+    assert_eq!(current_records.len(), 1);
+    assert_ne!(current_records[0].claim_id, prior.claim_id);
+    assert!(matches!(
+        store
+            .durable
+            .restore_records
+            .get(&prior.claim_id)
+            .expect("prior claim remains auditable")
+            .status,
+        RestoreRecordStatus::Invalidated(ref detail)
+            if detail.reason == RestoreInvalidationReason::SupersededTrigger
+    ));
+    assert_eq!(
+        coordinator
+            .pending_restore_records(&request.receiver_id, &store)
+            .expect("only current claims remain pending"),
+        current_records
+    );
+}
+
+#[test]
 fn undeclared_profile_change_keeps_stable_intent_bound_to_original_digest() {
     let coordinator = RestorationCoordinator;
     let mut store = MemoryPersistenceStore::default();

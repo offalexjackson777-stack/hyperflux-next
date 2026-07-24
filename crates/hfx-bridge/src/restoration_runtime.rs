@@ -51,6 +51,20 @@ pub trait RestorationRuntime: RestorationSnapshotSource {
         Ok(Vec::new())
     }
 
+    /// Rebinds stable intents across an explicitly compatible profile
+    /// upgrade before older deferred claims are recovered.
+    ///
+    /// # Errors
+    ///
+    /// Returns a profile, persistence, or unresolved-prior-outcome failure.
+    fn rebind_compatible_stable_intents<P: ProfileRegistry>(
+        &mut self,
+        _trigger: &RestoreTrigger,
+        _profiles: &P,
+    ) -> Result<usize, RestorationError> {
+        Ok(0)
+    }
+
     /// Plans claims for one exact lifecycle trigger.
     ///
     /// # Errors
@@ -315,6 +329,14 @@ impl<S: PersistenceStore> RestorationRuntime for DurableRestorationRuntime<S> {
         receiver_id: &ReceiverId,
     ) -> Result<Vec<RestoreRecord>, RestorationError> {
         RestorationCoordinator.pending_restore_records(receiver_id, &self.store)
+    }
+
+    fn rebind_compatible_stable_intents<P: ProfileRegistry>(
+        &mut self,
+        trigger: &RestoreTrigger,
+        profiles: &P,
+    ) -> Result<usize, RestorationError> {
+        RestorationCoordinator.rebind_compatible_stable_intents(trigger, profiles, &mut self.store)
     }
 
     fn plan_restore<P: ProfileRegistry>(

@@ -362,6 +362,21 @@ where
         self.restoration.pending_records(receiver_id)
     }
 
+    /// Rebinds stable intents whose current profile explicitly preserves both
+    /// lighting semantics and the application map.
+    ///
+    /// # Errors
+    ///
+    /// Returns a persistence, compatibility, or prior-outcome barrier.
+    pub fn rebind_compatible_stable_intents(
+        &mut self,
+        trigger: &RestoreTrigger,
+    ) -> Result<usize, RestorationError> {
+        let profiles = self.profiles.view(&self.receivers);
+        self.restoration
+            .rebind_compatible_stable_intents(trigger, &profiles)
+    }
+
     /// Plans one exact lifecycle restoration trigger.
     ///
     /// # Errors

@@ -754,9 +754,15 @@ fn compatible_profile_upgrade_rebinds_stable_state_durably_across_process_reopen
         generation_id: GenerationId::try_from(1_u64).expect("generation"),
         target_device_id: None,
     };
+    assert_eq!(
+        restarted_runtime
+            .rebind_compatible_stable_intents(&trigger, &profiles)
+            .expect("compatible stable state rebinds after reopen"),
+        2
+    );
     let RestorePlanResult::Planned(records) = restarted_runtime
         .plan_restore(&trigger, &profiles)
-        .expect("compatible stable state migrates and plans")
+        .expect("rebound stable state plans")
     else {
         panic!("migrated stable state must create restore claims")
     };

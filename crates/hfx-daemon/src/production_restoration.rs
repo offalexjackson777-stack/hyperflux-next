@@ -90,6 +90,17 @@ impl RestorationRuntime for ProductionRestoration {
         }
     }
 
+    fn rebind_compatible_stable_intents<P: ProfileRegistry>(
+        &mut self,
+        trigger: &RestoreTrigger,
+        profiles: &P,
+    ) -> Result<usize, RestorationError> {
+        match self {
+            Self::Disabled(runtime) => runtime.rebind_compatible_stable_intents(trigger, profiles),
+            Self::Durable(runtime) => runtime.rebind_compatible_stable_intents(trigger, profiles),
+        }
+    }
+
     fn plan_restore<P: ProfileRegistry>(
         &mut self,
         trigger: &RestoreTrigger,

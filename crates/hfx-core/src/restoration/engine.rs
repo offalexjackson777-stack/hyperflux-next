@@ -31,6 +31,41 @@ use serde::Serialize;
 use std::collections::BTreeSet;
 
 impl RestorationCoordinator {
+    /// Rebinds saved stable-lighting intents across an explicitly compatible
+    /// profile upgrade without creating restore claims.
+    ///
+    /// This is separated from claim planning so a process restart can update
+    /// durable intent authority before recovering older deferred claims.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for invalid triggers, persistence failures, uncertain
+    /// prior outcomes, or compare-and-set conflicts.
+    pub fn rebind_compatible_stable_intents<P: ProfileRegistry, S: PersistenceStore>(
+        &self,
+        trigger: &RestoreTrigger,
+        profiles: &P,
+        store: &mut S,
+    ) -> Result<usize, RestorationError> {
+        validate_trigger(trigger)?;
+        let policy = store
+            .restore_policy(&trigger.receiver_id)
+            .map_err(|_| RestorationError::Persistence(PersistenceOperation::LoadPolicy))?;
+        let Some(policy) = policy else {
+            return Ok(0);
+        };
+        validate_schema(policy.schema_version)?;
+        if policy.receiver_id != trigger.receiver_id {
+            return Err(RestorationError::ReceiverMismatch);
+        }
+        if !policy.enabled {
+            return Ok(0);
+        }
+        let records = load_records(&trigger.receiver_id, store)?;
+        validate_trigger_history(trigger, &records)?;
+        migrate_compatible_stable_intents(trigger, profiles, &records, store)
+    }
+
     /// Creates one durable claim per active stable intent for a lifecycle trigger.
     ///
     /// Repeating the same trigger returns the same records. A newer trigger
@@ -588,11 +623,11 @@ fn migrate_compatible_stable_intents<P: ProfileRegistry, S: PersistenceStore>(
     profiles: &P,
     records: &[RestoreRecord],
     store: &mut S,
-) -> Result<(), RestorationError> {
+) -> Result<usize, RestorationError> {
     let Some(receiver_profile) =
         profiles.receiver_profile(&trigger.receiver_id, trigger.generation_id)
     else {
-        return Ok(());
+        return Ok(0);
     };
     let entries = load_entries(&trigger.receiver_id, store)?;
     let mut changes = Vec::new();
@@ -654,13 +689,14 @@ fn migrate_compatible_stable_intents<P: ProfileRegistry, S: PersistenceStore>(
     }
 
     if changes.is_empty() {
-        return Ok(());
+        return Ok(0);
     }
+    let migrated_count = changes.len();
     match store
         .compare_and_set_stable_entries(&changes)
         .map_err(|_| RestorationError::Persistence(PersistenceOperation::SaveIntent))?
     {
-        PersistenceCasOutcome::Applied => Ok(()),
+        PersistenceCasOutcome::Applied => Ok(migrated_count),
         PersistenceCasOutcome::Conflict => Err(RestorationError::PersistenceConflict(
             PersistenceOperation::SaveIntent,
         )),
