@@ -4,7 +4,7 @@
 from types import MappingProxyType
 from typing import Final
 
-PROFILE_SOURCE_SHA256: Final = '2d492c62e9b7dfbe6cd037161ae7cee8737875f36835fe3436d93707e77aba27'
+PROFILE_SOURCE_SHA256: Final = 'bbfc43aa4c8fa261f38e4ada94c074451194b17a97ad5bc39822b2507f8512e6'
 PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                  'id': 'razer-basilisk-v3-pro',
                  'official_name': 'Razer Basilisk V3 Pro',
@@ -637,6 +637,8 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                'profile_id': 'child.razer.deathstalker-v2-pro-tkl.0296',
                'qualification_migrations': [{'from_runtime_sha256': '88e5b7d79e5434f141f5767b07dcc707b13a5d0e0c1fbe0ebc894f57638e7e1c',
                                              'preserve_stage_roles': ['lighting', 'map', 'telemetry']},
+                                            {'from_runtime_sha256': '8c96caf63c960dbcd3207b4e43321e7d034301cf8bbe87291452d4d2f7d4890d',
+                                             'preserve_stage_roles': ['lighting', 'map', 'telemetry']},
                                             {'from_runtime_sha256': 'fcdd53fe104e649cc7d2c38c939bbd41095dc3eb53488ebb30a8615a76bbfba6',
                                              'preserve_stage_roles': ['lighting', 'map']}],
                'restrictions': ['Another DeathStalker name, PID, or physical layout inherits no map.',
@@ -644,11 +646,13 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                                 'External power does not establish a direct USB data route or charging state.',
                                 'Receiver route value 0x0101 is indeterminate and cannot override observed keyboard '
                                 'activity.'],
-               'revision': 3,
-               'runtime_sha256': '8c96caf63c960dbcd3207b4e43321e7d034301cf8bbe87291452d4d2f7d4890d',
+               'revision': 4,
+               'runtime_sha256': '31f80ff672cb56d6bed5df320c45cda68cf14c0181d7b93428f1f8f7891032eb',
                'schema': 'hyperflux-hardware-profile-v1',
                'source_path': 'profiles/children/razer-deathstalker-v2-pro-tkl-0296.json',
-               'transport': {'lifecycle': {'device_return_settle_ms': 1000,
+               'transport': {'lifecycle': {'device_return_confirmation': {'evidence': 'battery-report',
+                                                                          'settle_ms': 250},
+                                           'device_return_settle_ms': 5000,
                                            'power_off_departure_evidence': 'receiver-state'},
                              'lighting': {'application_index_to_carrier': [0,
                                                                            1,
@@ -838,7 +842,7 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                'schema': 'hyperflux-hardware-profile-v1',
                'source_path': 'profiles/surfaces/razer-hyperflux-v2-hard-edition.json'}],
  'schema': 'hyperflux-compiled-profile-catalog-v1',
- 'source_sha256': '2d492c62e9b7dfbe6cd037161ae7cee8737875f36835fe3436d93707e77aba27'}
+ 'source_sha256': 'bbfc43aa4c8fa261f38e4ada94c074451194b17a97ad5bc39822b2507f8512e6'}
 PROFILES_BY_ID: Final = MappingProxyType({profile['profile_id']: profile for profile in PROFILE_CATALOG['profiles']})
 
 __all__ = ["PROFILE_CATALOG", "PROFILE_SOURCE_SHA256", "PROFILES_BY_ID"]

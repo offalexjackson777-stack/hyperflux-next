@@ -2,8 +2,8 @@
 
 use hfx_domain::{DeviceKind, ProfileKind, RouteKind};
 use hfx_profiles::{
-    PROFILES, PowerOffDepartureEvidence, RuntimeProfileCatalog, child_profile_by_product_id,
-    profile_by_id, receiver_profile_by_usb_id,
+    DeviceReturnConfirmationEvidence, PROFILES, PowerOffDepartureEvidence, RuntimeProfileCatalog,
+    child_profile_by_product_id, profile_by_id, receiver_profile_by_usb_id,
 };
 
 #[test]
@@ -33,6 +33,7 @@ fn receiver_and_children_resolve_independently() {
         PowerOffDepartureEvidence::WatchedRetainedRoute
     );
     assert_eq!(lifecycle.device_return_settle_ms, 1_000);
+    assert_eq!(lifecycle.device_return_confirmation, None);
     assert_eq!(mouse.qualification_migrations.len(), 1);
     assert_eq!(
         mouse.qualification_migrations[0].preserve_stage_roles,
@@ -46,14 +47,30 @@ fn receiver_and_children_resolve_independently() {
         lifecycle.power_off_departure_evidence,
         PowerOffDepartureEvidence::ReceiverState
     );
-    assert_eq!(lifecycle.device_return_settle_ms, 1_000);
-    assert_eq!(keyboard.qualification_migrations.len(), 2);
+    assert_eq!(lifecycle.device_return_settle_ms, 5_000);
+    let confirmation = lifecycle
+        .device_return_confirmation
+        .expect("keyboard return uses child confirmation evidence");
+    assert_eq!(
+        confirmation.evidence,
+        DeviceReturnConfirmationEvidence::BatteryReport
+    );
+    assert_eq!(confirmation.settle_ms, 250);
+    assert_eq!(keyboard.qualification_migrations.len(), 3);
     assert_eq!(
         keyboard.qualification_migrations[0].preserve_stage_roles,
         &["lighting", "map", "telemetry"]
     );
     assert_eq!(
         keyboard.qualification_migrations[1].preserve_stage_roles,
+        &["lighting", "map", "telemetry"]
+    );
+    assert_eq!(
+        keyboard.qualification_migrations[1].from_runtime_sha256,
+        "8c96caf63c960dbcd3207b4e43321e7d034301cf8bbe87291452d4d2f7d4890d"
+    );
+    assert_eq!(
+        keyboard.qualification_migrations[2].preserve_stage_roles,
         &["lighting", "map"]
     );
     assert_ne!(mouse.id, keyboard.id);

@@ -222,9 +222,21 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "}",
         "",
         "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub enum DeviceReturnConfirmationEvidence {",
+        "    BatteryReport,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct DeviceReturnConfirmationRecord {",
+        "    pub evidence: DeviceReturnConfirmationEvidence,",
+        "    pub settle_ms: u64,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
         "pub struct LifecyclePolicyRecord {",
         "    pub power_off_departure_evidence: PowerOffDepartureEvidence,",
         "    pub device_return_settle_ms: u64,",
+        "    pub device_return_confirmation: Option<DeviceReturnConfirmationRecord>,",
         "}",
         "",
         "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
@@ -363,11 +375,24 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         lifecycle = profile.get("transport", {}).get("lifecycle")
         if lifecycle:
             departure = _variant(lifecycle["power_off_departure_evidence"])
+            confirmation = lifecycle.get("device_return_confirmation")
+            if confirmation:
+                confirmation_evidence = _variant(confirmation["evidence"])
+                confirmation_lines = [
+                    "            device_return_confirmation: Some(DeviceReturnConfirmationRecord {",
+                    "                evidence: DeviceReturnConfirmationEvidence::"
+                    f"{confirmation_evidence},",
+                    f"                settle_ms: {confirmation['settle_ms']},",
+                    "            }),",
+                ]
+            else:
+                confirmation_lines = ["            device_return_confirmation: None,"]
             lifecycle_lines = [
                 "        lifecycle: Some(LifecyclePolicyRecord {",
                 "            power_off_departure_evidence: "
                 f"PowerOffDepartureEvidence::{departure},",
                 f"            device_return_settle_ms: {lifecycle['device_return_settle_ms']},",
+                *confirmation_lines,
                 "        }),",
             ]
         else:

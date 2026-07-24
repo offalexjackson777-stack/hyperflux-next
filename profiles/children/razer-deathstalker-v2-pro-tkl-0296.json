@@ -2,7 +2,7 @@
   "$schema": "../../schemas/hardware-profile.schema.json",
   "schema": "hyperflux-hardware-profile-v1",
   "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296",
-  "revision": 3,
+  "revision": 4,
   "kind": "child",
   "device_kind": "keyboard",
   "identity": {"manufacturer": "Razer", "model_name": "Razer DeathStalker V2 Pro Tenkeyless", "authority": "paired-product-id", "vendor_id": 5426, "product_id": 662},
@@ -16,10 +16,11 @@
       "route": {"available": [0, 3], "unavailable": [2], "indeterminate": [257]},
       "report_implies_route_available": false
     },
-    "lifecycle": {"power_off_departure_evidence": "receiver-state", "device_return_settle_ms": 1000}
+    "lifecycle": {"power_off_departure_evidence": "receiver-state", "device_return_settle_ms": 5000, "device_return_confirmation": {"evidence": "battery-report", "settle_ms": 250}}
   },
   "qualification_migrations": [
     {"from_runtime_sha256": "88e5b7d79e5434f141f5767b07dcc707b13a5d0e0c1fbe0ebc894f57638e7e1c", "preserve_stage_roles": ["lighting", "map", "telemetry"]},
+    {"from_runtime_sha256": "8c96caf63c960dbcd3207b4e43321e7d034301cf8bbe87291452d4d2f7d4890d", "preserve_stage_roles": ["lighting", "map", "telemetry"]},
     {"from_runtime_sha256": "fcdd53fe104e649cc7d2c38c939bbd41095dc3eb53488ebb30a8615a76bbfba6", "preserve_stage_roles": ["lighting", "map"]}
   ],
   "presentation": {"upstream_id": "openrgb", "owner": "OpenRGB", "project_version": "1.0rc3", "source_commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0", "model_key": "deathstalker_v2_pro_tkl_wireless_device", "layout_key": "razer_deathstalker_v2_pro_tkl_layout", "transport_variant": "wireless"},

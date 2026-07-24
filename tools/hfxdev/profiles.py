@@ -77,8 +77,15 @@ PASSIVE_KEYS = {
 LIFECYCLE_KEYS = {
     "power_off_departure_evidence",
     "device_return_settle_ms",
+    "device_return_confirmation",
+}
+LIFECYCLE_REQUIRED_KEYS = {
+    "power_off_departure_evidence",
+    "device_return_settle_ms",
 }
 POWER_OFF_DEPARTURE_EVIDENCE = {"receiver-state", "watched-retained-route"}
+DEVICE_RETURN_CONFIRMATION_KEYS = {"evidence", "settle_ms"}
+DEVICE_RETURN_CONFIRMATION_EVIDENCE = {"battery-report"}
 MAX_DEVICE_RETURN_SETTLE_MS = 30_000
 QUALIFICATION_MIGRATION_KEYS = {"from_runtime_sha256", "preserve_stage_roles"}
 QUALIFICATION_MIGRATION_STAGE_ROLES = {"lighting", "map", "telemetry"}
@@ -584,7 +591,7 @@ def _validate_lifecycle_policy(
     if not isinstance(lifecycle, dict):
         raise ModelError(f"{profile['profile_id']}: lifecycle policy must be an object")
     _expect_keys(lifecycle, LIFECYCLE_KEYS, f"{profile['profile_id']} lifecycle policy")
-    missing = sorted(LIFECYCLE_KEYS - set(lifecycle))
+    missing = sorted(LIFECYCLE_REQUIRED_KEYS - set(lifecycle))
     if missing:
         raise ModelError(
             f"{profile['profile_id']}: incomplete lifecycle policy: {', '.join(missing)}"
@@ -612,6 +619,44 @@ def _validate_lifecycle_policy(
             raise ModelError(
                 f"{profile['profile_id']}: retained-route return requires a positive settle time"
             )
+    confirmation = lifecycle.get("device_return_confirmation")
+    if confirmation is None:
+        return
+    if not isinstance(confirmation, dict):
+        raise ModelError(
+            f"{profile['profile_id']}: device-return confirmation must be an object or null"
+        )
+    _expect_keys(
+        confirmation,
+        DEVICE_RETURN_CONFIRMATION_KEYS,
+        f"{profile['profile_id']} device-return confirmation",
+    )
+    missing = sorted(DEVICE_RETURN_CONFIRMATION_KEYS - set(confirmation))
+    if missing:
+        raise ModelError(
+            f"{profile['profile_id']}: incomplete device-return confirmation: "
+            f"{', '.join(missing)}"
+        )
+    evidence = confirmation["evidence"]
+    if evidence not in DEVICE_RETURN_CONFIRMATION_EVIDENCE:
+        raise ModelError(f"{profile['profile_id']}: unsupported return confirmation evidence")
+    confirmation_settle_ms = confirmation["settle_ms"]
+    if (
+        isinstance(confirmation_settle_ms, bool)
+        or not isinstance(confirmation_settle_ms, int)
+        or not 0 <= confirmation_settle_ms <= MAX_DEVICE_RETURN_SETTLE_MS
+    ):
+        raise ModelError(
+            f"{profile['profile_id']}: return confirmation settle time is out of bounds"
+        )
+    if settle_ms == 0 or confirmation_settle_ms >= settle_ms:
+        raise ModelError(
+            f"{profile['profile_id']}: confirmation must precede a positive return fallback"
+        )
+    if evidence == "battery-report" and not isinstance(passive, dict):
+        raise ModelError(
+            f"{profile['profile_id']}: battery confirmation requires a passive decoder"
+        )
 
 
 def _validate_qualification_migrations(

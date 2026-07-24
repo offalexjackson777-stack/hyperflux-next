@@ -389,6 +389,61 @@ impl RestorationScheduler {
         )
     }
 
+    /// Advances one pending device-return fallback after stronger profile-owned
+    /// child evidence arrives. Confirmation can only move the exact device
+    /// earlier; repeated evidence cannot postpone it or affect a sibling.
+    ///
+    /// # Errors
+    ///
+    /// Returns a time, trigger-capacity, or generated-identity failure.
+    pub fn confirm_device_return_at(
+        &mut self,
+        receiver_id: ReceiverId,
+        generation_id: GenerationId,
+        device_id: LogicalDeviceId,
+        sequence: SequenceNumber,
+        confirmed_at: MonotonicMs,
+        settle_ms: u64,
+    ) -> Result<(), RestorationScheduleError> {
+        if !self.enabled {
+            return Ok(());
+        }
+        let due = due_after(confirmed_at, settle_ms)?;
+        let readiness = (receiver_id.clone(), generation_id, device_id.clone());
+        let due = *self
+            .ready_devices
+            .entry(readiness)
+            .and_modify(|existing| *existing = (*existing).min(due))
+            .or_insert(due);
+
+        let woke = self.wake_earlier(&receiver_id, generation_id, &device_id, due);
+        let matching_triggers = self
+            .triggers
+            .iter()
+            .filter_map(|(trigger_id, scheduled)| {
+                (scheduled.trigger.receiver_id == receiver_id
+                    && scheduled.trigger.generation_id == generation_id
+                    && scheduled.trigger.kind == RestoreTriggerKind::DeviceReturn
+                    && scheduled.trigger.target_device_id.as_ref() == Some(&device_id))
+                .then_some(trigger_id.clone())
+            })
+            .collect::<Vec<_>>();
+        for trigger_id in matching_triggers {
+            self.triggers.remove(&trigger_id);
+        }
+        if woke > 0 || self.has_pending_broad_trigger(&receiver_id, generation_id) {
+            return Ok(());
+        }
+        self.schedule_at(
+            RestoreTriggerKind::DeviceReturn,
+            receiver_id,
+            generation_id,
+            Some(device_id),
+            Some(sequence),
+            due,
+        )
+    }
+
     pub fn retire_generation(&mut self, receiver_id: &ReceiverId, generation_id: GenerationId) {
         self.triggers.retain(|_, scheduled| {
             scheduled.trigger.receiver_id != *receiver_id
@@ -744,6 +799,25 @@ impl RestorationScheduler {
                 && device_id.is_none_or(|device_id| claim.device_id == *device_id)
         }) {
             claim.due = due;
+            woken += 1;
+        }
+        woken
+    }
+
+    fn wake_earlier(
+        &mut self,
+        receiver_id: &ReceiverId,
+        generation_id: GenerationId,
+        device_id: &LogicalDeviceId,
+        due: MonotonicMs,
+    ) -> usize {
+        let mut woken = 0;
+        for claim in self.claims.values_mut().filter(|claim| {
+            claim.receiver_id == *receiver_id
+                && claim.generation_id == generation_id
+                && claim.device_id == *device_id
+        }) {
+            claim.due = claim.due.min(due);
             woken += 1;
         }
         woken
@@ -1957,6 +2031,111 @@ mod tests {
                 .expect("keyboard claim")
                 .due,
             time(0)
+        );
+    }
+
+    #[test]
+    fn profile_owned_return_confirmation_advances_only_the_exact_device() {
+        let mouse = record_for_device("claim-mouse", "mouse-1", RestoreRecordStatus::Planned);
+        let keyboard =
+            record_for_device("claim-keyboard", "keyboard-1", RestoreRecordStatus::Planned);
+        let mut scheduler = scheduler();
+        scheduler
+            .schedule_record(mouse.clone(), parked_due().expect("parked due"))
+            .expect("mouse claim schedules");
+        scheduler
+            .schedule_record(keyboard.clone(), parked_due().expect("parked due"))
+            .expect("keyboard claim schedules");
+
+        scheduler
+            .schedule_device_return_at(
+                id("receiver-1"),
+                generation(1),
+                id("mouse-1"),
+                SequenceNumber::try_from(10_u64).expect("sequence"),
+                time(1_000),
+                5_000,
+            )
+            .expect("mouse fallback schedules");
+        scheduler
+            .confirm_device_return_at(
+                id("receiver-1"),
+                generation(1),
+                id("mouse-1"),
+                SequenceNumber::try_from(11_u64).expect("sequence"),
+                time(2_900),
+                250,
+            )
+            .expect("mouse confirmation advances the fallback");
+        scheduler
+            .confirm_device_return_at(
+                id("receiver-1"),
+                generation(1),
+                id("mouse-1"),
+                SequenceNumber::try_from(12_u64).expect("sequence"),
+                time(3_000),
+                250,
+            )
+            .expect("repeated confirmation cannot postpone the claim");
+
+        assert_eq!(
+            scheduler
+                .claims
+                .get(&mouse.claim_id)
+                .expect("mouse claim")
+                .due,
+            time(3_150)
+        );
+        assert_eq!(
+            scheduler
+                .claims
+                .get(&keyboard.claim_id)
+                .expect("keyboard claim")
+                .due,
+            parked_due().expect("parked due")
+        );
+    }
+
+    #[test]
+    fn repeated_return_confirmation_coalesces_without_postponing_a_trigger() {
+        let mut scheduler = scheduler();
+        scheduler
+            .schedule_device_return_at(
+                id("receiver-1"),
+                generation(1),
+                id("mouse-1"),
+                SequenceNumber::try_from(10_u64).expect("sequence"),
+                time(1_000),
+                5_000,
+            )
+            .expect("fallback trigger schedules");
+        scheduler
+            .confirm_device_return_at(
+                id("receiver-1"),
+                generation(1),
+                id("mouse-1"),
+                SequenceNumber::try_from(11_u64).expect("sequence"),
+                time(2_900),
+                250,
+            )
+            .expect("confirmation advances the trigger");
+        scheduler
+            .confirm_device_return_at(
+                id("receiver-1"),
+                generation(1),
+                id("mouse-1"),
+                SequenceNumber::try_from(12_u64).expect("sequence"),
+                time(3_000),
+                250,
+            )
+            .expect("repeated confirmation coalesces");
+
+        assert_eq!(scheduler.triggers.len(), 1);
+        let trigger = scheduler.triggers.values().next().expect("one trigger");
+        assert_eq!(trigger.due, time(3_150));
+        assert_eq!(
+            trigger.sequence,
+            Some(SequenceNumber::try_from(12_u64).expect("sequence"))
         );
     }
 

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::{
-    EndpointCandidate, EndpointDiscovery, EndpointDiscoveryError, PassiveDisposition,
-    PassiveObservationTranslator, PassiveTranslation, PassiveTranslationError, ProductionBackend,
-    ReceiverIdentityAuthority, ReceiverIdentityError, RestorationScheduleError,
+    DeviceRestoreReadinessPhase, EndpointCandidate, EndpointDiscovery, EndpointDiscoveryError,
+    PassiveDisposition, PassiveObservationTranslator, PassiveTranslation, PassiveTranslationError,
+    ProductionBackend, ReceiverIdentityAuthority, ReceiverIdentityError, RestorationScheduleError,
     RestorationScheduler, RestorationTickReport, WriterAuthorityError, derive_capability_digest,
 };
 use hfx_bridge::{
@@ -462,16 +462,29 @@ impl LinuxRuntimeManager {
             }
         }
         if let Some(readiness) = translation.restore_ready {
-            self.restoration
-                .schedule_device_return_at(
+            let sequence =
+                SequenceNumber::try_from(raw_sequence).map_err(RuntimeTickError::Domain)?;
+            match readiness.phase {
+                DeviceRestoreReadinessPhase::Timed => self.restoration.schedule_device_return_at(
                     receiver_id.clone(),
                     generation_id,
                     readiness.device_id,
-                    SequenceNumber::try_from(raw_sequence).map_err(RuntimeTickError::Domain)?,
+                    sequence,
                     backend.now(),
                     readiness.settle_ms,
-                )
-                .map_err(RuntimeTickError::Restoration)?;
+                ),
+                DeviceRestoreReadinessPhase::Confirmed => {
+                    self.restoration.confirm_device_return_at(
+                        receiver_id.clone(),
+                        generation_id,
+                        readiness.device_id,
+                        sequence,
+                        backend.now(),
+                        readiness.settle_ms,
+                    )
+                }
+            }
+            .map_err(RuntimeTickError::Restoration)?;
         }
         Ok(())
     }

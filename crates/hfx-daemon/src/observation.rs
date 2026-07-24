@@ -20,8 +20,8 @@ use hfx_kernel_transport::{
     HFX_UAPI_OBSERVATION_SOURCE_POWER_MANAGEMENT, RawKernelObservation,
 };
 use hfx_profiles::{
-    LifecyclePolicyRecord, PassiveBatteryEncoding, PassiveEndpointLane, PassiveTelemetryRecord,
-    RuntimeProfileCatalog,
+    DeviceReturnConfirmationEvidence, LifecyclePolicyRecord, PassiveBatteryEncoding,
+    PassiveEndpointLane, PassiveTelemetryRecord, RuntimeProfileCatalog,
 };
 use hfx_runtime::ACTIVITY_RESUMPTION_QUIET_MS;
 use std::collections::BTreeMap;
@@ -41,6 +41,13 @@ pub enum PassiveDisposition {
 pub struct DeviceRestoreReadiness {
     pub device_id: LogicalDeviceId,
     pub settle_ms: u64,
+    pub phase: DeviceRestoreReadinessPhase,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum DeviceRestoreReadinessPhase {
+    Timed,
+    Confirmed,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -66,6 +73,7 @@ impl PassiveTranslation {
         observations: Vec<LifecycleObservation>,
         device_id: LogicalDeviceId,
         settle_ms: u64,
+        phase: DeviceRestoreReadinessPhase,
     ) -> Self {
         Self {
             disposition: PassiveDisposition::Applied,
@@ -73,6 +81,7 @@ impl PassiveTranslation {
             restore_ready: Some(DeviceRestoreReadiness {
                 device_id,
                 settle_ms,
+                phase,
             }),
         }
     }
@@ -135,6 +144,7 @@ struct LaneBinding {
     passive: Option<PassiveTelemetryRecord>,
     lifecycle: Option<LifecyclePolicyRecord>,
     last_activity_ms: Option<MonotonicMs>,
+    return_confirmation_deadline_ms: Option<MonotonicMs>,
 }
 
 pub struct PassiveObservationTranslator {
@@ -269,6 +279,7 @@ impl PassiveObservationTranslator {
             if !self.receiver_was_suspended {
                 for binding in self.lanes.values_mut() {
                     binding.last_activity_ms = None;
+                    binding.return_confirmation_deadline_ms = None;
                 }
             }
             self.receiver_was_suspended = true;
@@ -311,10 +322,10 @@ impl PassiveObservationTranslator {
             device_kind.as_str()
         ))?;
         let endpoint_id = EndpointId::try_from(format!("hyperflux-{}", lane_name(lane)))?;
-        let last_activity_ms = self
-            .lanes
-            .get(&slot)
-            .and_then(|binding| binding.last_activity_ms);
+        let prior = self.lanes.get(&slot);
+        let last_activity_ms = prior.and_then(|binding| binding.last_activity_ms);
+        let return_confirmation_deadline_ms =
+            prior.and_then(|binding| binding.return_confirmation_deadline_ms);
         let binding = LaneBinding {
             product_id,
             device_id: device_id.clone(),
@@ -322,6 +333,7 @@ impl PassiveObservationTranslator {
             passive: profile.and_then(|profile| profile.passive),
             lifecycle: profile.and_then(|profile| profile.lifecycle),
             last_activity_ms,
+            return_confirmation_deadline_ms,
         };
         let child = ChildIdentity::new(device_id.clone(), device_kind, product_id)?;
         let endpoint = EndpointIdentity::new(
@@ -377,6 +389,26 @@ impl PassiveObservationTranslator {
         {
             binding.last_activity_ms = Some(observed_at_ms);
         }
+        let readiness = restore_ready.then(|| {
+            let settle_ms = binding
+                .lifecycle
+                .map_or(0, |policy| policy.device_return_settle_ms);
+            if binding
+                .lifecycle
+                .and_then(|policy| policy.device_return_confirmation)
+                .is_some()
+            {
+                let deadline = observed_at_ms.get().saturating_add(settle_ms);
+                binding.return_confirmation_deadline_ms = MonotonicMs::try_from(deadline).ok();
+            } else {
+                binding.return_confirmation_deadline_ms = None;
+            }
+            (
+                binding.device_id.clone(),
+                settle_ms,
+                DeviceRestoreReadinessPhase::Timed,
+            )
+        });
         let binding = binding.clone();
         let observations = vec![
             self.endpoint_observation(
@@ -401,26 +433,20 @@ impl PassiveObservationTranslator {
                 EndpointFact::Freshness(FreshnessState::Fresh),
             ),
         ];
-        Ok(if restore_ready {
-            PassiveTranslation::restore_ready(
-                observations,
-                binding.device_id,
-                binding
-                    .lifecycle
-                    .map_or(0, |policy| policy.device_return_settle_ms),
-            )
+        Ok(if let Some((device_id, settle_ms, phase)) = readiness {
+            PassiveTranslation::restore_ready(observations, device_id, settle_ms, phase)
         } else {
             PassiveTranslation::applied(observations)
         })
     }
 
     fn battery(
-        &self,
+        &mut self,
         slot: u32,
         value: u32,
         stamp: ObservationStamp,
     ) -> Result<PassiveTranslation, PassiveTranslationError> {
-        let Some(binding) = self.lanes.get(&slot) else {
+        let Some(binding) = self.lanes.get_mut(&slot) else {
             return Ok(PassiveTranslation::disposition(
                 PassiveDisposition::IgnoredUnknownLane,
             ));
@@ -438,6 +464,20 @@ impl PassiveObservationTranslator {
                     .map_err(|_| PassiveTranslationError::InvalidObservationValue)?
             }
         };
+        let confirmation_settle_ms = binding
+            .lifecycle
+            .and_then(|policy| policy.device_return_confirmation)
+            .filter(|confirmation| {
+                confirmation.evidence == DeviceReturnConfirmationEvidence::BatteryReport
+            })
+            .and_then(|confirmation| {
+                binding
+                    .return_confirmation_deadline_ms
+                    .filter(|deadline| stamp.observed_at_ms() <= *deadline)
+                    .map(|_| confirmation.settle_ms)
+            });
+        binding.return_confirmation_deadline_ms = None;
+        let binding = binding.clone();
         let mut observations = vec![self.observation(
             stamp.clone(),
             LifecycleObservationKind::BatteryReported {
@@ -446,9 +486,18 @@ impl PassiveObservationTranslator {
             },
         )];
         if passive.report_implies_route_available {
-            observations.extend(self.route_observations(binding, stamp, RouteState::Available));
+            observations.extend(self.route_observations(&binding, stamp, RouteState::Available));
         }
-        Ok(PassiveTranslation::applied(observations))
+        Ok(if let Some(settle_ms) = confirmation_settle_ms {
+            PassiveTranslation::restore_ready(
+                observations,
+                binding.device_id,
+                settle_ms,
+                DeviceRestoreReadinessPhase::Confirmed,
+            )
+        } else {
+            PassiveTranslation::applied(observations)
+        })
     }
 
     fn contact(&self, slot: u32, value: u32, stamp: ObservationStamp) -> PassiveTranslation {
@@ -891,6 +940,13 @@ mod tests {
                 .map(|readiness| readiness.settle_ms),
             Some(1_000)
         );
+        assert_eq!(
+            first
+                .restore_ready
+                .as_ref()
+                .map(|readiness| readiness.phase),
+            Some(DeviceRestoreReadinessPhase::Timed)
+        );
 
         let resumed = translator
             .translate(activity(
@@ -915,6 +971,77 @@ mod tests {
             ))
             .expect("continuous activity translates");
         assert_eq!(continuous.restore_ready, None);
+    }
+
+    #[test]
+    fn keyboard_battery_confirms_one_pending_return_before_the_fallback() {
+        let mut translator = translator();
+        identify(
+            &mut translator,
+            1,
+            HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+            0x0296,
+        );
+
+        let candidate = translator
+            .translate(activity(2, 1_000, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE))
+            .expect("keyboard activity opens a bounded return window");
+        let readiness = candidate
+            .restore_ready
+            .expect("keyboard activity schedules a fallback");
+        assert_eq!(readiness.settle_ms, 5_000);
+        assert_eq!(readiness.phase, DeviceRestoreReadinessPhase::Timed);
+
+        let confirmed = translator
+            .translate(raw_at(
+                3,
+                2_900,
+                HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW,
+                HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+                128,
+            ))
+            .expect("fresh keyboard battery evidence confirms return readiness");
+        let readiness = confirmed
+            .restore_ready
+            .expect("the first fresh battery report confirms the child route");
+        assert_eq!(readiness.settle_ms, 250);
+        assert_eq!(readiness.phase, DeviceRestoreReadinessPhase::Confirmed);
+
+        let repeated = translator
+            .translate(raw_at(
+                4,
+                3_000,
+                HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW,
+                HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+                128,
+            ))
+            .expect("repeated battery evidence remains telemetry only");
+        assert_eq!(repeated.restore_ready, None);
+    }
+
+    #[test]
+    fn late_keyboard_battery_cannot_reopen_an_expired_return_window() {
+        let mut translator = translator();
+        identify(
+            &mut translator,
+            1,
+            HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+            0x0296,
+        );
+        translator
+            .translate(activity(2, 1_000, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE))
+            .expect("keyboard activity opens a bounded return window");
+
+        let late = translator
+            .translate(raw_at(
+                3,
+                6_001,
+                HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW,
+                HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+                128,
+            ))
+            .expect("late battery evidence remains valid telemetry");
+        assert_eq!(late.restore_ready, None);
     }
 
     #[test]
@@ -1125,7 +1252,7 @@ mod tests {
                 .restore_ready
                 .as_ref()
                 .map(|readiness| readiness.settle_ms),
-            Some(1_000)
+            Some(5_000)
         );
         let continuous = translator
             .translate(activity(9, 1_006, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE))

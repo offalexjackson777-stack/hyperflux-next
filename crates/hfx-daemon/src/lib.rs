@@ -28,7 +28,8 @@ pub use logging::{
 };
 pub use manager::{LinuxRuntimeManager, RuntimeTickError, RuntimeTickReport};
 pub use observation::{
-    PassiveDisposition, PassiveObservationTranslator, PassiveTranslation, PassiveTranslationError,
+    DeviceRestoreReadinessPhase, PassiveDisposition, PassiveObservationTranslator,
+    PassiveTranslation, PassiveTranslationError,
 };
 pub use production::{
     ProductionBackend, ProductionBuildError, ProductionComposition, ProductionTransport,

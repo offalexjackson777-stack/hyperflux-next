@@ -206,6 +206,25 @@ class ProfileCompilerTests(unittest.TestCase):
             "receiver-state",
         )
 
+        profiles, capabilities, claims = self.validation_copies()
+        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
+        before = _runtime_profile_digest(keyboard, capabilities)
+        keyboard["transport"]["lifecycle"]["device_return_confirmation"]["settle_ms"] = 251
+        _validate_profiles(profiles, capabilities, claims)
+        self.assertNotEqual(_runtime_profile_digest(keyboard, capabilities), before)
+
+        profiles, capabilities, claims = self.validation_copies()
+        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
+        keyboard["transport"]["lifecycle"]["device_return_confirmation"]["evidence"] = "activity"
+        with self.assertRaisesRegex(ModelError, "unsupported return confirmation evidence"):
+            _validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
+        keyboard["transport"]["lifecycle"]["device_return_confirmation"]["settle_ms"] = 5_000
+        with self.assertRaisesRegex(ModelError, "confirmation must precede"):
+            _validate_profiles(profiles, capabilities, claims)
+
     def test_qualification_migrations_are_exact_and_do_not_change_runtime_identity(self) -> None:
         profiles, capabilities, claims = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")

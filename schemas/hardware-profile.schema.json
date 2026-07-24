@@ -131,7 +131,22 @@
       "required": ["power_off_departure_evidence", "device_return_settle_ms"],
       "properties": {
         "power_off_departure_evidence": {"enum": ["receiver-state", "watched-retained-route"]},
-        "device_return_settle_ms": {"type": "integer", "minimum": 0, "maximum": 30000}
+        "device_return_settle_ms": {"type": "integer", "minimum": 0, "maximum": 30000},
+        "device_return_confirmation": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/device-return-confirmation"}
+          ]
+        }
+      }
+    },
+    "device-return-confirmation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence", "settle_ms"],
+      "properties": {
+        "evidence": {"enum": ["battery-report"]},
+        "settle_ms": {"type": "integer", "minimum": 0, "maximum": 30000}
       }
     },
     "qualification-migration": {
