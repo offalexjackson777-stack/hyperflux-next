@@ -710,11 +710,7 @@ impl RestorationScheduler {
             if newly_configured {
                 controller.set_enabled(&scheduled.trigger.receiver_id, true)?;
             }
-            let migrated = if newly_configured {
-                controller.rebind_compatible_stable_intents(&scheduled.trigger)?
-            } else {
-                0
-            };
+            let migrated = controller.rebind_compatible_stable_intents(&scheduled.trigger)?;
             let pending = newly_configured
                 .then(|| controller.pending_records(&scheduled.trigger.receiver_id))
                 .transpose()?
@@ -915,8 +911,8 @@ impl RestorationScheduler {
         } else if kind == RestoreTriggerKind::DeviceReturn
             && purpose == ScheduledTriggerPurpose::Primary
         {
-            let woke = self.wake(&receiver_id, generation_id, target_device_id.as_ref(), due);
-            if woke > 0 || self.has_pending_broad_trigger(&receiver_id, generation_id) {
+            self.wake(&receiver_id, generation_id, target_device_id.as_ref(), due);
+            if self.has_pending_broad_trigger(&receiver_id, generation_id) {
                 return Ok(());
             }
             let same_scope = self.triggers.iter().find_map(|(trigger_id, scheduled)| {
@@ -1389,8 +1385,7 @@ mod tests {
 
     struct MigratingController {
         inner: FakeController,
-        migrated_intents: usize,
-        migration_fails: bool,
+        migrations: Vec<Result<usize, RestorationError>>,
     }
 
     impl RestorationController for MigratingController {
@@ -1417,12 +1412,7 @@ mod tests {
             &mut self,
             _trigger: &RestoreTrigger,
         ) -> Result<usize, RestorationError> {
-            if self.migration_fails {
-                return Err(RestorationError::Persistence(
-                    hfx_core::PersistenceOperation::SaveIntent,
-                ));
-            }
-            Ok(self.migrated_intents)
+            self.migrations.remove(0)
         }
 
         fn plan_restore(
@@ -2032,8 +2022,7 @@ mod tests {
                 advance_calls: 0,
                 dispatch_calls: 0,
             },
-            migrated_intents: 1,
-            migration_fails: false,
+            migrations: vec![Ok(1)],
         };
         let mut scheduler = scheduler();
         scheduler
@@ -2053,6 +2042,63 @@ mod tests {
     }
 
     #[test]
+    fn child_identity_arriving_after_service_start_retries_compatible_rebind() {
+        let prior = record(
+            "claim-prior",
+            RestoreRecordStatus::Deferred(RestoreDeferred {
+                reason: RestoreDeferReason::DeviceUnknown,
+                prior_outcome: None,
+            }),
+        );
+        let current = record("claim-current", RestoreRecordStatus::Planned);
+        let mut controller = MigratingController {
+            inner: FakeController {
+                now: time(10),
+                plans: vec![Ok(RestorePlanResult::Planned(vec![current.clone()]))],
+                pending: vec![prior.clone()],
+                advances: Vec::new(),
+                dispatches: Vec::new(),
+                policy_calls: 0,
+                advance_calls: 0,
+                dispatch_calls: 0,
+            },
+            migrations: vec![Ok(0), Ok(1)],
+        };
+        let receiver_id: ReceiverId = id("receiver-1");
+        let mut scheduler = scheduler();
+        scheduler
+            .schedule_service_start(receiver_id.clone(), generation(1))
+            .expect("receiver-only service trigger schedules");
+        let mut startup_report = RestorationTickReport::default();
+        scheduler
+            .process_due_trigger(&mut controller, time(10), &mut startup_report)
+            .expect("receiver-only startup safely recovers pending state");
+        assert_eq!(startup_report.claims_recovered, 1);
+        assert!(scheduler.configured_receivers.contains(&receiver_id));
+
+        scheduler
+            .schedule_device_return_at(
+                receiver_id,
+                generation(1),
+                id("mouse-1"),
+                SequenceNumber::try_from(2_u64).expect("sequence"),
+                time(10),
+                0,
+            )
+            .expect("child identity trigger schedules");
+        let mut return_report = RestorationTickReport::default();
+        scheduler
+            .process_due_trigger(&mut controller, time(10), &mut return_report)
+            .expect("late child identity retries compatible migration");
+
+        assert_eq!(return_report.triggers_planned, 1);
+        assert_eq!(return_report.claims_recovered, 0);
+        assert!(controller.migrations.is_empty());
+        assert!(controller.inner.plans.is_empty());
+        assert!(scheduler.claims.contains_key(&current.claim_id));
+    }
+
+    #[test]
     fn failed_compatible_rebind_leaves_receiver_unconfigured_for_retry() {
         let mut controller = MigratingController {
             inner: FakeController {
@@ -2065,8 +2111,9 @@ mod tests {
                 advance_calls: 0,
                 dispatch_calls: 0,
             },
-            migrated_intents: 0,
-            migration_fails: true,
+            migrations: vec![Err(RestorationError::Persistence(
+                hfx_core::PersistenceOperation::SaveIntent,
+            ))],
         };
         let receiver_id: ReceiverId = id("receiver-1");
         let mut scheduler = scheduler();
