@@ -29,6 +29,7 @@ Owns explicit design coverage, bounded formal models, performance budgets, depen
 - [`assurance/dependencies.json`](dependencies.json)
 - [`assurance/formal-model.json`](formal-model.json)
 - [`assurance/performance-budgets.json`](performance-budgets.json)
+- [`assurance/protected-behavior.json`](protected-behavior.json)
 - [`assurance/release-gates.json`](release-gates.json)
 
 ## Verification

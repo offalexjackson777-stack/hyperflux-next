@@ -20,6 +20,7 @@ from hfxdev.performance import (
     verify_package_performance_budgets,
     verify_static_performance_budgets,
 )
+from hfxdev.protected_behavior import load_protected_behavior
 from hfxdev.release import load_release_gates
 from hfxdev.supply_chain import load_dependency_inventory
 
@@ -58,6 +59,33 @@ class AssuranceTests(unittest.TestCase):
         self.assertEqual(gates[-1].id, "HFX-GATE-PUBLICATION-DECISION")
         self.assertEqual(gates[-1].status, "publication-locked")
         self.assertTrue(gates[-1].publication_authorization_required)
+
+    def test_protected_behavior_freezes_claims_and_the_natural_wake_gap(self) -> None:
+        baseline = load_protected_behavior(ROOT)
+        self.assertEqual(
+            baseline.source_revision,
+            "0f5b13e8a22cc19f0bdd5d70b4f97cc679b1728a",
+        )
+        self.assertIn("claim.child.00cd.complete-led-map", baseline.claim_ids)
+        self.assertIn("claim.child.0296.complete-keyboard-map", baseline.claim_ids)
+        self.assertEqual(
+            baseline.known_gap_ids,
+            ("natural-device-wake-restoration",),
+        )
+
+    def test_protected_behavior_separates_integrations_from_core_changes(self) -> None:
+        baseline = load_protected_behavior(ROOT)
+        integration_change = ("integrations/openrgb/src/controller.cpp",)
+        self.assertTrue(baseline.integration_only(integration_change))
+        self.assertEqual(baseline.protected_changes(integration_change), ())
+        mixed_advanced_change = (
+            "knowledge/reviewed-facts.json",
+            "crates/hfx-core/src/restoration.rs",
+        )
+        self.assertFalse(baseline.integration_only(mixed_advanced_change))
+        self.assertTrue(
+            baseline.advanced_change_requires_approval(mixed_advanced_change)
+        )
 
     def test_static_and_package_performance_budgets_fail_closed(self) -> None:
         static = verify_static_performance_budgets(ROOT, self.metrics)

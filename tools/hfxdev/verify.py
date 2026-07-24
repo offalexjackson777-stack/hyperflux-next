@@ -38,6 +38,7 @@ from .performance import (
     verify_package_performance_budgets,
     verify_static_performance_budgets,
 )
+from .protected_behavior import load_protected_behavior
 from .render import rendered_binary_files, rendered_files
 from .profiles import load_profile_inputs
 from .protocol import load_protocol_catalog
@@ -1030,6 +1031,7 @@ def _run_assurance_contracts(root: Path, _node: TestNode) -> None:
     load_dependency_inventory(root)
     verify_licensing_policy(root)
     load_release_gates(root)
+    load_protected_behavior(root)
     metrics = load_performance_budgets(root)
     verify_static_performance_budgets(root, metrics)
 

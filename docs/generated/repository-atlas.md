@@ -258,7 +258,7 @@ Owns explicit design coverage, bounded formal models, performance budgets, depen
 
 **Used by:** [GitHub governance authority](#governance), [Verification graph](#verification)
 
-**Canonical sources:** `assurance/design-coverage.json`, `assurance/dependencies.json`, `assurance/formal-model.json`, `assurance/performance-budgets.json`, `assurance/release-gates.json`.
+**Canonical sources:** `assurance/design-coverage.json`, `assurance/dependencies.json`, `assurance/formal-model.json`, `assurance/performance-budgets.json`, `assurance/protected-behavior.json`, `assurance/release-gates.json`.
 
 **Generated projections:** `assurance/README.md`, `assurance/generated/hyperflux-next.spdx.json`, `docs/generated/release-gates.md`.
 

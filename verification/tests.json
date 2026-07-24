@@ -99,6 +99,7 @@
         "LICENSES/*.txt",
         "tools/hfxdev/licensing.py",
         "tools/hfxdev/performance.py",
+        "tools/hfxdev/protected_behavior.py",
         "tools/hfxdev/release.py",
         "tools/hfxdev/supply_chain.py"
       ],

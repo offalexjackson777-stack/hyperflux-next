@@ -468,6 +468,13 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/protected-behavior.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/protected-behavior.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/protocol-catalog.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/protocol-catalog.schema.json",
       "mode": "0644",
