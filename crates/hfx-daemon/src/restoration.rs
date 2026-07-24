@@ -83,6 +83,12 @@ enum ScheduledTriggerPurpose {
     ReturnAttempt(u8),
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum PendingClaimSchedule {
+    At(MonotonicMs),
+    Trigger(RestoreTriggerKind),
+}
+
 #[derive(Clone, Debug)]
 struct ScheduledClaim {
     receiver_id: ReceiverId,
@@ -650,53 +656,118 @@ impl RestorationScheduler {
                     | DesiredEffectReplayStatus::Invalidated => {}
                 }
             }
-            let migrated = controller.rebind_compatible_stable_intents(&scheduled.trigger)?;
+            let Some(migrated) = self.rebind_or_recover_blocking_claims(
+                controller,
+                &trigger_id,
+                &mut scheduled,
+                now,
+                report,
+            )?
+            else {
+                if newly_configured {
+                    self.configured_receivers.insert(receiver_id);
+                }
+                return Ok(());
+            };
             let pending = newly_configured
                 .then(|| controller.pending_records(&scheduled.trigger.receiver_id))
                 .transpose()?
                 .unwrap_or_default();
-            if pending.is_empty() || migrated > 0 {
-                match controller.plan_restore(&scheduled.trigger) {
-                    Ok(RestorePlanResult::Planned(records)) => {
-                        for record in records {
-                            self.schedule_trigger_record(record, scheduled.trigger.kind, now)?;
-                        }
-                        report.triggers_planned += 1;
-                    }
-                    Ok(RestorePlanResult::NoStableIntents) => {
-                        report.triggers_planned += 1;
-                    }
-                    Ok(RestorePlanResult::Disabled) => {
-                        return Err(RestorationError::RuntimeDisabled.into());
-                    }
-                    Err(
-                        RestorationError::PriorClaimUnresolved
-                        | RestorationError::PriorOutcomeUncertain,
-                    ) => {
-                        let recovered =
-                            controller.pending_records(&scheduled.trigger.receiver_id)?;
-                        report.claims_recovered += recovered.len();
-                        for record in recovered {
-                            self.schedule_record(record, now)?;
-                        }
-                        if scheduled.purpose == ScheduledTriggerPurpose::Primary {
-                            scheduled.due = due_after(now, self.retry_interval_ms)?;
-                            self.triggers.insert(trigger_id, scheduled);
-                        }
-                    }
-                    Err(error) => return Err(error.into()),
-                }
-            } else {
-                report.claims_recovered += pending.len();
-                for record in pending {
-                    self.schedule_trigger_record(record, scheduled.trigger.kind, now)?;
-                }
-            }
+            self.plan_or_recover_trigger(
+                controller,
+                &trigger_id,
+                &mut scheduled,
+                pending.is_empty() || migrated > 0,
+                now,
+                report,
+            )?;
             if newly_configured {
                 self.configured_receivers.insert(receiver_id);
             }
         }
         Ok(())
+    }
+
+    fn plan_or_recover_trigger<C: RestorationController>(
+        &mut self,
+        controller: &mut C,
+        trigger_id: &RestoreTriggerId,
+        scheduled: &mut ScheduledTrigger,
+        should_plan: bool,
+        now: MonotonicMs,
+        report: &mut RestorationTickReport,
+    ) -> Result<(), RestorationScheduleError> {
+        if !should_plan {
+            report.claims_recovered += self.synchronize_pending_claims(
+                controller,
+                &scheduled.trigger.receiver_id,
+                PendingClaimSchedule::Trigger(scheduled.trigger.kind),
+                now,
+            )?;
+            return Ok(());
+        }
+        match controller.plan_restore(&scheduled.trigger) {
+            Ok(RestorePlanResult::Planned(_) | RestorePlanResult::NoStableIntents) => {
+                self.synchronize_pending_claims(
+                    controller,
+                    &scheduled.trigger.receiver_id,
+                    PendingClaimSchedule::Trigger(scheduled.trigger.kind),
+                    now,
+                )?;
+                report.triggers_planned += 1;
+            }
+            Ok(RestorePlanResult::Disabled) => {
+                return Err(RestorationError::RuntimeDisabled.into());
+            }
+            Err(
+                RestorationError::PriorClaimUnresolved | RestorationError::PriorOutcomeUncertain,
+            ) => {
+                report.claims_recovered += self.synchronize_pending_claims(
+                    controller,
+                    &scheduled.trigger.receiver_id,
+                    PendingClaimSchedule::At(now),
+                    now,
+                )?;
+                if scheduled.purpose == ScheduledTriggerPurpose::Primary {
+                    scheduled.due = due_after(now, self.retry_interval_ms)?;
+                    self.triggers.insert(trigger_id.clone(), scheduled.clone());
+                }
+            }
+            Err(error) => return Err(error.into()),
+        }
+        Ok(())
+    }
+
+    fn rebind_or_recover_blocking_claims<C: RestorationController>(
+        &mut self,
+        controller: &mut C,
+        trigger_id: &RestoreTriggerId,
+        scheduled: &mut ScheduledTrigger,
+        now: MonotonicMs,
+        report: &mut RestorationTickReport,
+    ) -> Result<Option<usize>, RestorationScheduleError> {
+        match controller.rebind_compatible_stable_intents(&scheduled.trigger) {
+            Ok(migrated) => Ok(Some(migrated)),
+            Err(
+                RestorationError::PriorClaimUnresolved | RestorationError::PriorOutcomeUncertain,
+            ) => {
+                // Reconcile the blocking claim in this actor tick. The
+                // migration retry remains delayed, so an equal due time cannot
+                // starve the claim behind the trigger forever.
+                report.claims_recovered += self.synchronize_pending_claims(
+                    controller,
+                    &scheduled.trigger.receiver_id,
+                    PendingClaimSchedule::At(now),
+                    now,
+                )?;
+                if scheduled.purpose == ScheduledTriggerPurpose::Primary {
+                    scheduled.due = due_after(now, self.retry_interval_ms)?;
+                    self.triggers.insert(trigger_id.clone(), scheduled.clone());
+                }
+                Ok(None)
+            }
+            Err(error) => Err(error.into()),
+        }
     }
 
     fn process_due_claim<C: RestorationController>(
@@ -726,24 +797,17 @@ impl RestorationScheduler {
         ) {
             Ok(advance) => advance,
             Err(
-                RestorationError::PriorClaimUnresolved | RestorationError::PriorOutcomeUncertain,
+                RestorationError::PriorClaimUnresolved
+                | RestorationError::PriorOutcomeUncertain
+                | RestorationError::UnknownClaim,
             ) => {
-                let recovered = controller.pending_records(&scheduled.receiver_id)?;
-                report.claims_recovered += recovered.len();
-                if recovered.is_empty() {
-                    self.claims.insert(
-                        claim_id,
-                        ScheduledClaim {
-                            due: due_after(now, self.retry_interval_ms)?,
-                            ..scheduled
-                        },
-                    );
-                } else {
-                    let retry_due = due_after(now, self.retry_interval_ms)?;
-                    for record in recovered {
-                        self.schedule_record(record, retry_due)?;
-                    }
-                }
+                let retry_due = due_after(now, self.retry_interval_ms)?;
+                report.claims_recovered += self.synchronize_pending_claims(
+                    controller,
+                    &scheduled.receiver_id,
+                    PendingClaimSchedule::At(retry_due),
+                    now,
+                )?;
                 return Ok(true);
             }
             Err(error) => return Err(error.into()),
@@ -774,6 +838,36 @@ impl RestorationScheduler {
             }
         }
         Ok(true)
+    }
+
+    fn synchronize_pending_claims<C: RestorationController>(
+        &mut self,
+        controller: &C,
+        receiver_id: &ReceiverId,
+        schedule: PendingClaimSchedule,
+        now: MonotonicMs,
+    ) -> Result<usize, RestorationScheduleError> {
+        let pending = controller.pending_records(receiver_id)?;
+        let pending_ids = pending
+            .iter()
+            .map(|record| record.claim_id.clone())
+            .collect::<BTreeSet<_>>();
+        self.claims.retain(|claim_id, claim| {
+            claim.receiver_id != *receiver_id || pending_ids.contains(claim_id)
+        });
+        let count = pending.len();
+        for record in pending {
+            if self.claims.contains_key(&record.claim_id) {
+                continue;
+            }
+            match schedule {
+                PendingClaimSchedule::At(due) => self.schedule_record(record, due)?,
+                PendingClaimSchedule::Trigger(trigger_kind) => {
+                    self.schedule_trigger_record(record, trigger_kind, now)?;
+                }
+            }
+        }
+        Ok(count)
     }
 
     fn schedule(
@@ -1289,7 +1383,22 @@ mod tests {
             &mut self,
             _trigger: &RestoreTrigger,
         ) -> Result<RestorePlanResult, RestorationError> {
-            self.plans.remove(0)
+            let result = self.plans.remove(0);
+            if let Ok(RestorePlanResult::Planned(records)) = &result {
+                for record in records {
+                    self.pending.retain(|pending| {
+                        pending.device_id != record.device_id || pending.claim_id == record.claim_id
+                    });
+                    if !self
+                        .pending
+                        .iter()
+                        .any(|pending| pending.claim_id == record.claim_id)
+                    {
+                        self.pending.push(record.clone());
+                    }
+                }
+            }
+            result
         }
 
         fn advance_claim(
@@ -2137,6 +2246,72 @@ mod tests {
     }
 
     #[test]
+    fn startup_reconciles_a_claim_before_retrying_profile_migration() {
+        let prior = record(
+            "claim-prior",
+            RestoreRecordStatus::Deferred(RestoreDeferred {
+                reason: RestoreDeferReason::DeviceUnknown,
+                prior_outcome: None,
+            }),
+        );
+        let current = record("claim-current", RestoreRecordStatus::Planned);
+        let mut controller = MigratingController {
+            inner: FakeController {
+                now: time(10),
+                plans: vec![Ok(RestorePlanResult::Planned(vec![current.clone()]))],
+                pending: vec![prior.clone()],
+                advances: vec![
+                    Ok(RestoreAdvanceResult::Terminal(delivered_record(
+                        "claim-prior",
+                        "mouse-1",
+                    ))),
+                    Ok(RestoreAdvanceResult::Terminal(delivered_record(
+                        "claim-current",
+                        "mouse-1",
+                    ))),
+                ],
+                dispatches: Vec::new(),
+                policy_calls: 0,
+                advance_calls: 0,
+                dispatch_calls: 0,
+            },
+            migrations: vec![Err(RestorationError::PriorClaimUnresolved), Ok(1)],
+        };
+        let receiver_id: ReceiverId = id("receiver-1");
+        let mut scheduler = scheduler();
+        scheduler
+            .schedule_service_start(receiver_id.clone(), generation(1))
+            .expect("service trigger schedules");
+
+        let first = scheduler
+            .tick_with(&mut controller, &sessions())
+            .expect("blocking claim is reconciled without stopping the runtime");
+
+        assert_eq!(first.claims_recovered, 1);
+        assert_eq!(first.claims_terminal, 1);
+        assert_eq!(controller.inner.advance_calls, 1);
+        assert!(scheduler.configured_receivers.contains(&receiver_id));
+        assert!(
+            scheduler
+                .triggers
+                .values()
+                .any(|scheduled| scheduled.trigger.kind == RestoreTriggerKind::ServiceStart)
+        );
+
+        controller.inner.pending.clear();
+        controller.inner.now = time(1_010);
+        let second = scheduler
+            .tick_with(&mut controller, &sessions())
+            .expect("compatible migration retries after reconciliation");
+
+        assert_eq!(second.triggers_planned, 1);
+        assert_eq!(second.claims_terminal, 1);
+        assert!(controller.migrations.is_empty());
+        assert!(controller.inner.plans.is_empty());
+        assert!(controller.inner.advances.is_empty());
+    }
+
+    #[test]
     fn return_envelope_prefers_live_effect_and_falls_back_only_after_invalidation() {
         let mut controller = EffectController {
             inner: FakeController {
@@ -2290,6 +2465,115 @@ mod tests {
         assert_eq!(report.claims_advanced, 0);
         assert_eq!(scheduler.claims.len(), 1);
         assert_eq!(controller.advance_calls, 1);
+    }
+
+    #[test]
+    fn superseding_plan_resynchronizes_compacted_pending_claims() {
+        let old_keyboard = record_for_device(
+            "claim-keyboard-old",
+            "keyboard-1",
+            RestoreRecordStatus::Planned,
+        );
+        let current_keyboard = record_for_device(
+            "claim-keyboard-current",
+            "keyboard-1",
+            RestoreRecordStatus::Planned,
+        );
+        let mouse = record_for_device("claim-mouse", "mouse-1", RestoreRecordStatus::Planned);
+        let mut controller = FakeController {
+            now: time(10),
+            plans: vec![Ok(RestorePlanResult::Planned(vec![
+                current_keyboard.clone(),
+            ]))],
+            pending: vec![old_keyboard.clone(), mouse.clone()],
+            advances: Vec::new(),
+            dispatches: Vec::new(),
+            policy_calls: 0,
+            advance_calls: 0,
+            dispatch_calls: 0,
+        };
+        let receiver_id: ReceiverId = id("receiver-1");
+        let mut scheduler = scheduler();
+        scheduler.configured_receivers.insert(receiver_id.clone());
+        scheduler
+            .schedule_record(old_keyboard.clone(), time(20))
+            .expect("old keyboard claim schedules");
+        scheduler
+            .schedule_record(mouse.clone(), time(30))
+            .expect("mouse claim schedules");
+        scheduler
+            .schedule_device_return_epoch_at(
+                receiver_id,
+                generation(1),
+                id("keyboard-1"),
+                SequenceNumber::try_from(2_u64).expect("sequence"),
+                time(10),
+                &[0, 1],
+            )
+            .expect("keyboard return schedules");
+        let mut report = RestorationTickReport::default();
+
+        scheduler
+            .process_due_trigger(&mut controller, &sessions(), time(10), &mut report)
+            .expect("superseding plan resynchronizes scheduler claims");
+
+        assert_eq!(report.triggers_planned, 1);
+        assert!(!scheduler.claims.contains_key(&old_keyboard.claim_id));
+        assert!(scheduler.claims.contains_key(&current_keyboard.claim_id));
+        assert_eq!(
+            scheduler
+                .claims
+                .get(&mouse.claim_id)
+                .expect("sibling claim remains scheduled")
+                .due,
+            time(30)
+        );
+    }
+
+    #[test]
+    fn compacted_volatile_claim_recovers_from_durable_authority() {
+        let compacted = record_for_device(
+            "claim-keyboard-compacted",
+            "keyboard-1",
+            RestoreRecordStatus::Planned,
+        );
+        let current = record_for_device(
+            "claim-keyboard-current",
+            "keyboard-1",
+            RestoreRecordStatus::Planned,
+        );
+        let mut controller = FakeController {
+            now: time(10),
+            plans: Vec::new(),
+            pending: vec![current.clone()],
+            advances: vec![Err(RestorationError::UnknownClaim)],
+            dispatches: Vec::new(),
+            policy_calls: 0,
+            advance_calls: 0,
+            dispatch_calls: 0,
+        };
+        let mut scheduler = scheduler();
+        scheduler
+            .schedule_record(compacted.clone(), time(10))
+            .expect("compacted volatile claim schedules");
+        let mut report = RestorationTickReport::default();
+
+        assert!(
+            scheduler
+                .process_due_claim(&mut controller, &sessions(), time(10), &mut report)
+                .expect("unknown volatile claim reloads durable authority")
+        );
+
+        assert_eq!(report.claims_recovered, 1);
+        assert!(!scheduler.claims.contains_key(&compacted.claim_id));
+        assert_eq!(
+            scheduler
+                .claims
+                .get(&current.claim_id)
+                .expect("current durable claim schedules")
+                .due,
+            time(1_010)
+        );
     }
 
     #[test]
