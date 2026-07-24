@@ -41,6 +41,16 @@ pub(crate) fn cursor_evidence(cursor: &EventCursor) -> String {
     format!("{CURSOR_EVIDENCE_PREFIX}{}", digest_hex(&encoded))
 }
 
+pub(crate) fn cursor_anchor_unavailable(batch: &EventBatch, evidence_refs: &[String]) -> bool {
+    evidence_refs
+        .iter()
+        .any(|value| value.starts_with(CURSOR_EVIDENCE_PREFIX))
+        && matches!(
+            latest_anchor_sequence(batch, evidence_refs),
+            Err(EventEvidenceError::AnchorUnavailable)
+        )
+}
+
 pub(crate) fn device_return_restore(
     batch: &EventBatch,
     evidence_refs: &[String],

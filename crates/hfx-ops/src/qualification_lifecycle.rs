@@ -2,8 +2,8 @@
 
 use crate::qualification::{SYSTEM_RESUME_RETRY_EVIDENCE, StageCheckpoint, StageProgress};
 use crate::qualification_event_evidence::{
-    DeviceReturnEvidenceMode, cursor_evidence, device_return_restore, renewed_generation_restores,
-    resumed_generation_restores,
+    DeviceReturnEvidenceMode, cursor_anchor_unavailable, cursor_evidence, device_return_restore,
+    renewed_generation_restores, resumed_generation_restores,
 };
 use crate::qualification_runner::{ObservationVerdict, RunnerTransition};
 use crate::{
@@ -298,6 +298,20 @@ pub(crate) fn observe_lifecycle(
         cursor_ref: integration.map(|value| cursor_evidence(&value.view.cursor)),
         events: integration.map(|value| value.events.clone()),
     }
+}
+
+pub(crate) fn reset_unavailable_event_anchor(
+    run: &mut LifecycleRunState,
+    events: Option<&EventBatch>,
+) -> Option<String> {
+    let active = run.active.as_ref()?;
+    let events = events?;
+    if !cursor_anchor_unavailable(events, &active.evidence_refs) {
+        return None;
+    }
+    let stage_id = active.stage_id.clone();
+    run.active = None;
+    Some(stage_id)
 }
 
 pub(crate) fn start_lifecycle_stage(
@@ -1782,6 +1796,42 @@ mod tests {
             )
             .expect("departure records"),
         )
+    }
+
+    #[test]
+    fn unavailable_event_anchor_restarts_only_the_active_lifecycle_stage() {
+        let (run, _, _) = start_stage("keyboard-test");
+        let device_id = run
+            .active
+            .as_ref()
+            .expect("stage is active")
+            .device_id
+            .clone();
+        let events = test_events(&run, &device_id, run.receiver.generation_id);
+
+        let mut current = run.clone();
+        assert_eq!(
+            reset_unavailable_event_anchor(&mut current, Some(&events)),
+            None
+        );
+        assert!(current.active.is_some());
+
+        let mut replaced_stream = events;
+        replaced_stream.next_cursor.stream_id =
+            StreamId::try_from("replacement-lifecycle-stream").expect("stream id");
+        let stage_id = run
+            .active
+            .as_ref()
+            .expect("stage is active")
+            .stage_id
+            .clone();
+        let mut stale = run;
+        assert_eq!(
+            reset_unavailable_event_anchor(&mut stale, Some(&replaced_stream)),
+            Some(stage_id)
+        );
+        assert!(stale.active.is_none());
+        stale.validate().expect("remaining campaign stays valid");
     }
 
     #[test]

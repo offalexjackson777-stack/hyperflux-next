@@ -5,7 +5,7 @@ use crate::qualification_lifecycle::{
     PreparedLifecycleAction, capture_lifecycle_run, current_suspend_stamp,
     identity_transition_matches, observe_lifecycle, overlay_lifecycle_run,
     prepare_lifecycle_checkpoint, reconcile_system_resume, recover_retryable_resume_failure,
-    start_lifecycle_stage,
+    reset_unavailable_event_anchor, start_lifecycle_stage,
 };
 use crate::qualification_migration::{
     migrate_profile_catalog_state, qualification_stage_authorities,
@@ -298,6 +298,9 @@ fn live_view(
     if reconcile_lifecycle_resume_state(integration.as_ref(), state) {
         changed = true;
     }
+    if reconcile_lifecycle_event_anchor(integration.as_ref(), state) {
+        changed = true;
+    }
     if let Some(run) = &state.lifecycle_run {
         overlay_lifecycle_run(&mut view, run);
     }
@@ -394,6 +397,24 @@ fn reconcile_lifecycle_resume_state(
     };
     session.lifecycle_run = Some(run);
     session.results.insert(stage_id, transition.progress);
+    session.revision = session.revision.saturating_add(1);
+    true
+}
+
+fn reconcile_lifecycle_event_anchor(
+    integration: Option<&crate::BridgeIntegration>,
+    session: &mut ServerState,
+) -> bool {
+    let Some(mut run) = session.lifecycle_run.clone() else {
+        return false;
+    };
+    let Some(stage_id) =
+        reset_unavailable_event_anchor(&mut run, integration.map(|value| &value.events))
+    else {
+        return false;
+    };
+    session.lifecycle_run = Some(run);
+    session.results.remove(&stage_id);
     session.revision = session.revision.saturating_add(1);
     true
 }
