@@ -16,10 +16,7 @@ pub use framing::{
     write_rpc_request_for_version, write_rpc_response, write_rpc_response_for_version,
 };
 pub use generated::*;
-pub use generated_versions::{
-    CURRENT_PROTOCOL_VERSION, GENERATED_PROTOCOL_VERSIONS, ProtocolVersionDescriptor, v1, v2, v3,
-    v4, v5,
-};
+pub use generated_versions::*;
 pub use negotiation::{
     GENERATED_CONTRACT, NegotiationContext, NegotiationError, ProtocolContract, negotiate,
     negotiate_with_contract,

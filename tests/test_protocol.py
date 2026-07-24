@@ -21,8 +21,8 @@ from hfxdev.protocol import (
 class ProtocolCompilerTests(unittest.TestCase):
     def test_catalog_is_versioned_and_generated_deterministically(self) -> None:
         registry = load_protocol_registry(ROOT)
-        self.assertEqual(registry.current_version, 5)
-        self.assertEqual([item.version for item in registry.versions], [1, 2, 3, 4, 5])
+        self.assertEqual(registry.current_version, 6)
+        self.assertEqual([item.version for item in registry.versions], [1, 2, 3, 4, 5, 6])
         self.assertEqual(
             registry.versions[0].source_sha256,
             "ed3df1f1627ca8a836f509ead3ab7dc7a4cbc6116f6da4accb2cc53e7500859f",
@@ -51,6 +51,7 @@ class ProtocolCompilerTests(unittest.TestCase):
             if record.name == "ReceiverSnapshot"
         )
         v5 = registry.versions[4].catalog
+        v6 = registry.versions[5].catalog
         self.assertNotIn(
             "device_profiles", [field.name for field in v1_transaction.fields]
         )
@@ -81,6 +82,14 @@ class ProtocolCompilerTests(unittest.TestCase):
         self.assertIn("profile_digest", [field.name for field in v4_snapshot.fields])
         self.assertIn("integration-view-projection", registry.versions[4].served_features)
         self.assertIn("ControllerOwnership", [union.name for union in v5.unions])
+        self.assertIn(
+            "return-lifecycle-projection", registry.versions[5].served_features
+        )
+        self.assertIn("ReturnEpoch", [record.name for record in v6.records])
+        v6_endpoint = next(
+            record for record in v6.records if record.name == "EndpointSnapshot"
+        )
+        self.assertIn("return_epoch", [field.name for field in v6_endpoint.fields])
         first = load_protocol_catalog(ROOT)
         second = load_protocol_catalog(ROOT)
         self.assertEqual(first, second)

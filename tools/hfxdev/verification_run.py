@@ -45,7 +45,7 @@ MATERIALS = (
     ("integration-catalog", "integrations/catalog.json", "file"),
     ("performance-budgets", "assurance/performance-budgets.json", "file"),
     ("protected-behavior", "assurance/protected-behavior.json", "file"),
-    ("protocol-catalog", "protocol/v5/catalog.json", "file"),
+    ("protocol-catalog", "protocol/v6/catalog.json", "file"),
     ("release-gates", "assurance/release-gates.json", "file"),
     ("replay-fixtures", "tests/fixtures/replay", "tree"),
     ("shadow-fixtures", "tests/fixtures/shadow", "tree"),

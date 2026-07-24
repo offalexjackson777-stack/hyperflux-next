@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use crate::{BatteryObservation, BridgeSnapshot, LogicalDeviceSnapshot, ReceiverSnapshot};
-use hfx_domain::{PresenceState, RouteState, SleepState, TelemetryAvailability};
+use crate::{
+    BatteryObservation, BridgeSnapshot, EndpointSnapshot, LogicalDeviceSnapshot, ReceiverSnapshot,
+};
+use hfx_domain::{
+    GenerationId, LogicalDeviceId, PresenceState, RestoreDeliveryState, ReturnPhase, RouteState,
+    SleepState, TelemetryAvailability,
+};
 use std::fmt;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -22,6 +27,7 @@ pub enum SnapshotValidationError {
     ReceiverProfileBindingContradiction,
     DeviceProfileBindingContradiction,
     PresenceContradiction,
+    ReturnEpochContradiction,
 }
 
 impl fmt::Display for SnapshotValidationError {
@@ -51,6 +57,9 @@ impl fmt::Display for SnapshotValidationError {
                 "device profile digest lacks a profile identity"
             }
             Self::PresenceContradiction => "device presence contradicts endpoint evidence",
+            Self::ReturnEpochContradiction => {
+                "return epoch contradicts its receiver, device, endpoint, phase, or delivery evidence"
+            }
         })
     }
 }
@@ -65,7 +74,37 @@ fn validate_battery(battery: &BatteryObservation) -> Result<(), SnapshotValidati
     Ok(())
 }
 
-fn validate_device(device: &LogicalDeviceSnapshot) -> Result<(), SnapshotValidationError> {
+fn validate_return_epoch(
+    receiver_generation: GenerationId,
+    device_id: &LogicalDeviceId,
+    endpoint: &EndpointSnapshot,
+) -> Result<(), SnapshotValidationError> {
+    let Some(epoch) = &endpoint.return_epoch else {
+        return Ok(());
+    };
+    let synchronized = epoch.phase == ReturnPhase::Synchronized;
+    let child_confirmed = epoch.delivery_state == RestoreDeliveryState::ChildConfirmed;
+    if epoch.generation_id != receiver_generation
+        || &epoch.device_id != device_id
+        || epoch.endpoint_id != endpoint.endpoint_id
+        || matches!(
+            epoch.phase,
+            ReturnPhase::QuiescentCandidate | ReturnPhase::Unavailable
+        )
+        || synchronized != child_confirmed
+        || endpoint
+            .observed_at_ms
+            .is_none_or(|observed| epoch.opened_at_ms > observed)
+    {
+        return Err(SnapshotValidationError::ReturnEpochContradiction);
+    }
+    Ok(())
+}
+
+fn validate_device(
+    receiver_generation: GenerationId,
+    device: &LogicalDeviceSnapshot,
+) -> Result<(), SnapshotValidationError> {
     if device.profile_digest.is_some() && device.profile_id.is_none() {
         return Err(SnapshotValidationError::DeviceProfileBindingContradiction);
     }
@@ -78,6 +117,9 @@ fn validate_device(device: &LogicalDeviceSnapshot) -> Result<(), SnapshotValidat
         .any(|pair| pair[0].endpoint_id >= pair[1].endpoint_id)
     {
         return Err(SnapshotValidationError::EndpointsNotCanonical);
+    }
+    for endpoint in &device.endpoints {
+        validate_return_epoch(receiver_generation, &device.device_id, endpoint)?;
     }
     if device.capabilities.len() > 128 {
         return Err(SnapshotValidationError::TooManyCapabilities);
@@ -126,7 +168,7 @@ fn validate_receiver(receiver: &ReceiverSnapshot) -> Result<(), SnapshotValidati
         return Err(SnapshotValidationError::DevicesNotCanonical);
     }
     for device in &receiver.devices {
-        validate_device(device)?;
+        validate_device(receiver.generation_id, device)?;
     }
 
     if receiver.ownership.len() > 96 {

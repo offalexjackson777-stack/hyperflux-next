@@ -395,7 +395,6 @@ impl LinuxRuntimeManager {
                         self.apply_lifecycle_translation(
                             &endpoint.receiver_id,
                             info.generation_id,
-                            sequence,
                             translation,
                             backend,
                         )?;
@@ -427,7 +426,6 @@ impl LinuxRuntimeManager {
         &mut self,
         receiver_id: &ReceiverId,
         generation_id: hfx_domain::GenerationId,
-        raw_sequence: u64,
         translation: PassiveTranslation,
         backend: &mut ProductionBackend,
     ) -> Result<(), RuntimeTickError> {
@@ -462,29 +460,24 @@ impl LinuxRuntimeManager {
             }
         }
         if let Some(readiness) = translation.restore_ready {
-            let sequence =
-                SequenceNumber::try_from(raw_sequence).map_err(RuntimeTickError::Domain)?;
             match readiness.phase {
-                DeviceRestoreReadinessPhase::Timed => {
-                    self.restoration.schedule_device_return_with_policy_at(
+                DeviceRestoreReadinessPhase::EpochOpened => {
+                    self.restoration.schedule_device_return_epoch_at(
                         receiver_id.clone(),
                         generation_id,
                         readiness.device_id,
-                        sequence,
-                        backend.now(),
-                        readiness.settle_ms,
-                        readiness.reassert_at_fallback,
+                        readiness.epoch_sequence,
+                        readiness.opened_at_ms,
+                        &readiness.retry_offsets_ms,
                     )
                 }
-                DeviceRestoreReadinessPhase::Confirmed => {
-                    self.restoration.confirm_device_return_with_policy_at(
-                        receiver_id.clone(),
+                DeviceRestoreReadinessPhase::EpochAccelerated => {
+                    self.restoration.accelerate_device_return_epoch_at(
+                        receiver_id,
                         generation_id,
-                        readiness.device_id,
-                        sequence,
-                        backend.now(),
-                        readiness.settle_ms,
-                        readiness.reassert_at_fallback,
+                        &readiness.device_id,
+                        readiness.epoch_sequence,
+                        readiness.evidence_at_ms,
                     )
                 }
             }

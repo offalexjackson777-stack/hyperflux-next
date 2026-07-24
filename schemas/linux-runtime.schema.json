@@ -105,15 +105,13 @@
             "discovery_interval_ms",
             "accept_poll_interval_ms",
             "actor_response_timeout_ms",
-            "kernel_session_duration_ms",
-            "activity_resumption_quiet_ms"
+            "kernel_session_duration_ms"
           ],
           "properties": {
             "discovery_interval_ms": {"type": "integer", "minimum": 10, "maximum": 10000},
             "accept_poll_interval_ms": {"type": "integer", "minimum": 1, "maximum": 1000},
             "actor_response_timeout_ms": {"type": "integer", "minimum": 100, "maximum": 30000},
-            "kernel_session_duration_ms": {"type": "integer", "minimum": 6000, "maximum": 300000},
-            "activity_resumption_quiet_ms": {"type": "integer", "minimum": 1000, "maximum": 3600000}
+            "kernel_session_duration_ms": {"type": "integer", "minimum": 6000, "maximum": 300000}
           }
         },
         "restoration": {

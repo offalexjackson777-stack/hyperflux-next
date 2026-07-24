@@ -2173,6 +2173,84 @@ enum class RestoreTriggerKind
     return "unknown";
 }
 
+enum class ReturnEvidence
+{
+    ApplicationOwnershipLoss,
+    BatteryReport,
+    ContactReport,
+    EndpointActivity,
+    EndpointIdentity,
+    EndpointStatus,
+    ReceiverGeneration,
+    RouteDeparture,
+    RouteReturn,
+    SystemResume,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(ReturnEvidence value)
+{
+    switch(value)
+    {
+        case ReturnEvidence::ApplicationOwnershipLoss: return "application-ownership-loss";
+        case ReturnEvidence::BatteryReport: return "battery-report";
+        case ReturnEvidence::ContactReport: return "contact-report";
+        case ReturnEvidence::EndpointActivity: return "endpoint-activity";
+        case ReturnEvidence::EndpointIdentity: return "endpoint-identity";
+        case ReturnEvidence::EndpointStatus: return "endpoint-status";
+        case ReturnEvidence::ReceiverGeneration: return "receiver-generation";
+        case ReturnEvidence::RouteDeparture: return "route-departure";
+        case ReturnEvidence::RouteReturn: return "route-return";
+        case ReturnEvidence::SystemResume: return "system-resume";
+    }
+    return "unknown";
+}
+
+enum class ReturnPhase
+{
+    Stable,
+    QuiescentCandidate,
+    Returning,
+    Synchronized,
+    Unavailable,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(ReturnPhase value)
+{
+    switch(value)
+    {
+        case ReturnPhase::Stable: return "stable";
+        case ReturnPhase::QuiescentCandidate: return "quiescent-candidate";
+        case ReturnPhase::Returning: return "returning";
+        case ReturnPhase::Synchronized: return "synchronized";
+        case ReturnPhase::Unavailable: return "unavailable";
+    }
+    return "unknown";
+}
+
+enum class RestoreDeliveryState
+{
+    NotAttempted,
+    ReceiverRejected,
+    OutcomeUncertain,
+    ReceiverDelivered,
+    ChildRejected,
+    ChildConfirmed,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(RestoreDeliveryState value)
+{
+    switch(value)
+    {
+        case RestoreDeliveryState::NotAttempted: return "not-attempted";
+        case RestoreDeliveryState::ReceiverRejected: return "receiver-rejected";
+        case RestoreDeliveryState::OutcomeUncertain: return "outcome-uncertain";
+        case RestoreDeliveryState::ReceiverDelivered: return "receiver-delivered";
+        case RestoreDeliveryState::ChildRejected: return "child-rejected";
+        case RestoreDeliveryState::ChildConfirmed: return "child-confirmed";
+    }
+    return "unknown";
+}
+
 enum class RestoreRecordState
 {
     Planned,

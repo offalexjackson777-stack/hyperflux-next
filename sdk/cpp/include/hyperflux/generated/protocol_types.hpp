@@ -15,8 +15,8 @@
 namespace hyperflux
 {
 
-inline constexpr std::uint16_t minimum_protocol_version = 5;
-inline constexpr std::uint16_t maximum_protocol_version = 5;
+inline constexpr std::uint16_t minimum_protocol_version = 6;
+inline constexpr std::uint16_t maximum_protocol_version = 6;
 inline constexpr std::size_t max_wire_message_bytes = 1048576;
 inline constexpr std::size_t max_json_depth = 128;
 
@@ -136,6 +136,20 @@ struct EventCursor
     friend bool operator==(const EventCursor&, const EventCursor&) = default;
 };
 
+// Generation-bound endpoint return state without claiming physical lighting application.
+struct ReturnEpoch
+{
+    GenerationId generation_id;
+    LogicalDeviceId device_id;
+    EndpointId endpoint_id;
+    SequenceNumber epoch_sequence;
+    MonotonicMs opened_at_ms;
+    ReturnEvidence opening_evidence;
+    ReturnPhase phase;
+    RestoreDeliveryState delivery_state;
+    friend bool operator==(const ReturnEpoch&, const ReturnEpoch&) = default;
+};
+
 // Independent route, power, sleep, activity, contact, and freshness facts.
 struct EndpointSnapshot
 {
@@ -151,6 +165,7 @@ struct EndpointSnapshot
     EvidenceConfidence confidence;
     std::optional<EvidenceClaimId> evidence_claim_id;
     std::optional<MonotonicMs> observed_at_ms;
+    std::optional<ReturnEpoch> return_epoch;
     friend bool operator==(const EndpointSnapshot&, const EndpointSnapshot&) = default;
 };
 

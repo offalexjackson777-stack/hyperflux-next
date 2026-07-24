@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/lifecycle-policy-catalog-v1.json",
+  "title": "HyperFlux endpoint return lifecycle policies",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "policies"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-lifecycle-policy-catalog-v1"},
+    "policies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/policy"}
+    }
+  },
+  "$defs": {
+    "evidence-source": {
+      "enum": ["battery-report", "contact-report", "endpoint-activity", "route-return"]
+    },
+    "timing-authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "source_id", "summary"],
+      "properties": {
+        "kind": {"enum": ["pinned-upstream-contract", "prequalification-hypothesis", "physical-qualification"]},
+        "source_id": {"type": "string", "minLength": 1},
+        "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "summary": {"type": "string", "minLength": 1}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "strategy",
+        "qualification",
+        "quiescence_candidate_ms",
+        "observation_jitter_ms",
+        "retry_offsets_ms",
+        "allowed_open_evidence",
+        "allowed_accelerator_evidence",
+        "delivery_semantics",
+        "timing_authorities"
+      ],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9.-]{0,95}$"},
+        "strategy": {"const": "activity-assisted-return-epoch"},
+        "qualification": {"enum": ["prequalification-candidate", "qualified"]},
+        "quiescence_candidate_ms": {"type": "integer", "minimum": 1000, "maximum": 900000},
+        "observation_jitter_ms": {"type": "integer", "minimum": 0, "maximum": 5000},
+        "retry_offsets_ms": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {"type": "integer", "minimum": 0, "maximum": 30000}
+        },
+        "allowed_open_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/evidence-source"}
+        },
+        "allowed_accelerator_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/evidence-source"}
+        },
+        "delivery_semantics": {"const": "receiver-delivered-not-child-applied"},
+        "timing_authorities": {
+          "type": "array",
+          "minItems": 2,
+          "items": {"$ref": "#/$defs/timing-authority"}
+        }
+      }
+    }
+  }
+}

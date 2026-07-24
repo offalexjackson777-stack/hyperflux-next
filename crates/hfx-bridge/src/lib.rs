@@ -26,7 +26,7 @@ pub use actor::{
 };
 pub use backend::{
     BridgeDispatchResult, CoreBridgeBackend, CoreBridgeBackendError, CoreBridgeConfig,
-    StableCaptureStatus,
+    DesiredEffectReplayStatus, StableCaptureStatus,
 };
 pub use clock::{LinuxMonotonicClock, LinuxWallClock};
 pub use connection::{ConnectionServeError, ConnectionServeReport, serve_connection};

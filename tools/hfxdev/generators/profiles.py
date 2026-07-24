@@ -24,6 +24,31 @@ def _rust_variants(type_name: str, values: list[str]) -> str:
     return "&[" + ", ".join(f"{type_name}::{_variant(value)}" for value in values) + "]"
 
 
+def _rust_variant_field(
+    field_name: str, type_name: str, values: list[str], *, indent: str
+) -> list[str]:
+    tokens = [f"{type_name}::{_variant(value)}" for value in values]
+    single_line = f"{indent}{field_name}: &[{', '.join(tokens)}],"
+    if len(single_line) <= 100:
+        return [single_line]
+    return [
+        f"{indent}{field_name}: &[",
+        *(f"{indent}    {token}," for token in tokens),
+        f"{indent}],",
+    ]
+
+
+def _rust_number_field(field_name: str, values: list[int], *, indent: str) -> list[str]:
+    single_line = f"{indent}{field_name}: &[{', '.join(str(value) for value in values)}],"
+    if len(values) <= 8 and len(single_line) <= 100:
+        return [single_line]
+    return [
+        f"{indent}{field_name}: &[",
+        *_wrapped_numbers(values, indent=f"{indent}    "),
+        f"{indent}],",
+    ]
+
+
 def _rust_qualification_migrations(index: int, migrations: list[dict[str, Any]]) -> list[str]:
     declaration = (
         f"const QUALIFICATION_MIGRATIONS_{index}: &[QualificationMigrationRecord]"
@@ -222,22 +247,48 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "}",
         "",
         "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
-        "pub enum DeviceReturnConfirmationEvidence {",
+        "pub enum ReturnEvidenceSource {",
         "    BatteryReport,",
+        "    ContactReport,",
+        "    EndpointActivity,",
+        "    RouteReturn,",
         "}",
         "",
         "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
-        "pub struct DeviceReturnConfirmationRecord {",
-        "    pub evidence: DeviceReturnConfirmationEvidence,",
-        "    pub settle_ms: u64,",
-        "    pub reassert_at_fallback: bool,",
+        "pub enum ReturnPolicyStrategy {",
+        "    ActivityAssistedReturnEpoch,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub enum ReturnPolicyQualification {",
+        "    PrequalificationCandidate,",
+        "    Qualified,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub enum ReturnDeliverySemantics {",
+        "    ReceiverDeliveredNotChildApplied,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct ReturnPolicyRecord {",
+        "    pub id: &'static str,",
+        "    pub strategy: ReturnPolicyStrategy,",
+        "    pub qualification: ReturnPolicyQualification,",
+        "    pub quiescence_candidate_ms: u64,",
+        "    pub observation_jitter_ms: u64,",
+        "    pub retry_offsets_ms: &'static [u64],",
+        "    pub allowed_open_evidence: &'static [ReturnEvidenceSource],",
+        "    pub allowed_accelerator_evidence: &'static [ReturnEvidenceSource],",
+        "    pub delivery_semantics: ReturnDeliverySemantics,",
         "}",
         "",
         "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
         "pub struct LifecyclePolicyRecord {",
         "    pub power_off_departure_evidence: PowerOffDepartureEvidence,",
-        "    pub device_return_settle_ms: u64,",
-        "    pub device_return_confirmation: Option<DeviceReturnConfirmationRecord>,",
+        "    pub return_policy_id: &'static str,",
+        "    pub open_evidence: &'static [ReturnEvidenceSource],",
+        "    pub accelerator_evidence: &'static [ReturnEvidenceSource],",
         "}",
         "",
         "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
@@ -286,6 +337,49 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         f'    "{catalog["source_sha256"]}";',
         "",
     ]
+    policies = catalog["lifecycle_policies"]
+    single_policy = len(policies) == 1
+    lines.append(
+        "pub const RETURN_POLICIES: &[ReturnPolicyRecord] = &[ReturnPolicyRecord {"
+        if single_policy
+        else "pub const RETURN_POLICIES: &[ReturnPolicyRecord] = &["
+    )
+    for policy in policies:
+        if not single_policy:
+            lines.append("    ReturnPolicyRecord {")
+        indent = "    " if single_policy else "        "
+        lines.extend(
+            [
+                f'{indent}id: {json.dumps(policy["id"])},',
+                f"{indent}strategy: ReturnPolicyStrategy::"
+                f"{_variant(policy['strategy'])},",
+                f"{indent}qualification: ReturnPolicyQualification::"
+                f"{_variant(policy['qualification'])},",
+                f"{indent}quiescence_candidate_ms: {policy['quiescence_candidate_ms']},",
+                f"{indent}observation_jitter_ms: {policy['observation_jitter_ms']},",
+                *_rust_number_field(
+                    "retry_offsets_ms", policy["retry_offsets_ms"], indent=indent
+                ),
+                *_rust_variant_field(
+                    "allowed_open_evidence",
+                    "ReturnEvidenceSource",
+                    policy["allowed_open_evidence"],
+                    indent=indent,
+                ),
+                *_rust_variant_field(
+                    "allowed_accelerator_evidence",
+                    "ReturnEvidenceSource",
+                    policy["allowed_accelerator_evidence"],
+                    indent=indent,
+                ),
+                f"{indent}delivery_semantics: ReturnDeliverySemantics::"
+                f"{_variant(policy['delivery_semantics'])},",
+            ]
+        )
+        lines.append("}];" if single_policy else "    },")
+    if not single_policy:
+        lines.append("];")
+    lines.append("")
     capability_defs = {item["id"]: item for item in catalog["capabilities"]}
     for index, profile in enumerate(catalog["profiles"]):
         capabilities_name = f"CAPABILITIES_{index}"
@@ -376,28 +470,29 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         lifecycle = profile.get("transport", {}).get("lifecycle")
         if lifecycle:
             departure = _variant(lifecycle["power_off_departure_evidence"])
-            confirmation = lifecycle.get("device_return_confirmation")
-            if confirmation:
-                confirmation_evidence = _variant(confirmation["evidence"])
-                confirmation_lines = [
-                    "            device_return_confirmation: Some(DeviceReturnConfirmationRecord {",
-                    "                evidence: DeviceReturnConfirmationEvidence::"
-                    f"{confirmation_evidence},",
-                    f"                settle_ms: {confirmation['settle_ms']},",
-                    "                reassert_at_fallback: "
-                    f"{str(confirmation['reassert_at_fallback']).lower()},",
-                    "            }),",
-                ]
-            else:
-                confirmation_lines = ["            device_return_confirmation: None,"]
             lifecycle_lines = [
                 "        lifecycle: Some(LifecyclePolicyRecord {",
                 "            power_off_departure_evidence: "
                 f"PowerOffDepartureEvidence::{departure},",
-                f"            device_return_settle_ms: {lifecycle['device_return_settle_ms']},",
-                *confirmation_lines,
-                "        }),",
+                f'            return_policy_id: {json.dumps(lifecycle["return_policy_id"])},',
             ]
+            lifecycle_lines.extend(
+                _rust_variant_field(
+                    "open_evidence",
+                    "ReturnEvidenceSource",
+                    lifecycle["open_evidence"],
+                    indent="            ",
+                )
+            )
+            lifecycle_lines.extend(
+                _rust_variant_field(
+                    "accelerator_evidence",
+                    "ReturnEvidenceSource",
+                    lifecycle["accelerator_evidence"],
+                    indent="            ",
+                )
+            )
+            lifecycle_lines.append("        }),")
         else:
             lifecycle_lines = ["        lifecycle: None,"]
         presentation = profile.get("presentation")
@@ -488,6 +583,11 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
             "    })",
             "}",
             "",
+            "#[must_use]",
+            "pub fn return_policy_by_id(id: &str) -> Option<&'static ReturnPolicyRecord> {",
+            "    RETURN_POLICIES.iter().find(|policy| policy.id == id)",
+            "}",
+            "",
         ]
     )
     return "\n".join(lines)
@@ -530,6 +630,57 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
         "    std::span<const std::uint16_t> application_index_to_carrier;",
         "};",
         "",
+        "enum class PowerOffDepartureEvidence",
+        "{",
+        "    ReceiverState,",
+        "    WatchedRetainedRoute,",
+        "};",
+        "",
+        "enum class ReturnEvidenceSource",
+        "{",
+        "    BatteryReport,",
+        "    ContactReport,",
+        "    EndpointActivity,",
+        "    RouteReturn,",
+        "};",
+        "",
+        "enum class ReturnPolicyStrategy",
+        "{",
+        "    ActivityAssistedReturnEpoch,",
+        "};",
+        "",
+        "enum class ReturnPolicyQualification",
+        "{",
+        "    PrequalificationCandidate,",
+        "    Qualified,",
+        "};",
+        "",
+        "enum class ReturnDeliverySemantics",
+        "{",
+        "    ReceiverDeliveredNotChildApplied,",
+        "};",
+        "",
+        "struct ReturnPolicyRecord",
+        "{",
+        "    std::string_view id;",
+        "    ReturnPolicyStrategy strategy;",
+        "    ReturnPolicyQualification qualification;",
+        "    std::uint64_t quiescence_candidate_ms;",
+        "    std::uint64_t observation_jitter_ms;",
+        "    std::span<const std::uint64_t> retry_offsets_ms;",
+        "    std::span<const ReturnEvidenceSource> allowed_open_evidence;",
+        "    std::span<const ReturnEvidenceSource> allowed_accelerator_evidence;",
+        "    ReturnDeliverySemantics delivery_semantics;",
+        "};",
+        "",
+        "struct LifecyclePolicyRecord",
+        "{",
+        "    PowerOffDepartureEvidence power_off_departure_evidence;",
+        "    std::string_view return_policy_id;",
+        "    std::span<const ReturnEvidenceSource> open_evidence;",
+        "    std::span<const ReturnEvidenceSource> accelerator_evidence;",
+        "};",
+        "",
         "struct PresentationRecord",
         "{",
         "    std::string_view upstream_id;",
@@ -561,12 +712,46 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
         "    bool exact_child_combinations;",
         "    std::span<const CapabilityRecord> capabilities;",
         "    const LightingTopology* lighting;",
+        "    const LifecyclePolicyRecord* lifecycle;",
         "    const PresentationRecord* presentation;",
         "};",
         "",
         f'inline constexpr std::string_view profile_source_sha256 = "{catalog["source_sha256"]}";',
         "",
     ]
+    for index, policy in enumerate(catalog["lifecycle_policies"]):
+        offsets = ", ".join(str(value) for value in policy["retry_offsets_ms"])
+        open_evidence = ", ".join(
+            f"ReturnEvidenceSource::{_variant(value)}" for value in policy["allowed_open_evidence"]
+        )
+        accelerator_evidence = ", ".join(
+            f"ReturnEvidenceSource::{_variant(value)}"
+            for value in policy["allowed_accelerator_evidence"]
+        )
+        lines.extend(
+            [
+                f"inline constexpr std::array<std::uint64_t, {len(policy['retry_offsets_ms'])}> return_retry_offsets_{index} {{{{{offsets}}}}};",
+                f"inline constexpr std::array<ReturnEvidenceSource, {len(policy['allowed_open_evidence'])}> return_open_evidence_{index} {{{{{open_evidence}}}}};",
+                f"inline constexpr std::array<ReturnEvidenceSource, {len(policy['allowed_accelerator_evidence'])}> return_accelerator_evidence_{index} {{{{{accelerator_evidence}}}}};",
+                "",
+            ]
+        )
+    lines.append(
+        f"inline constexpr std::array<ReturnPolicyRecord, {len(catalog['lifecycle_policies'])}> return_policies {{{{"
+    )
+    for index, policy in enumerate(catalog["lifecycle_policies"]):
+        lines.append(
+            "    {"
+            f'{json.dumps(policy["id"])}, '
+            f"ReturnPolicyStrategy::{_variant(policy['strategy'])}, "
+            f"ReturnPolicyQualification::{_variant(policy['qualification'])}, "
+            f"{policy['quiescence_candidate_ms']}, {policy['observation_jitter_ms']}, "
+            f"return_retry_offsets_{index}, "
+            f"return_open_evidence_{index}, return_accelerator_evidence_{index}, "
+            f"ReturnDeliverySemantics::{_variant(policy['delivery_semantics'])}"
+            "},"
+        )
+    lines.extend(["}};", ""])
     for index, profile in enumerate(catalog["profiles"]):
         compatibility = profile.get("compatibility", {})
         receiver_protocols = compatibility.get("receiver_protocols", [])
@@ -609,6 +794,27 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
                     "",
                 ]
             )
+        lifecycle = profile.get("transport", {}).get("lifecycle")
+        if lifecycle:
+            open_evidence = ", ".join(
+                f"ReturnEvidenceSource::{_variant(value)}" for value in lifecycle["open_evidence"]
+            )
+            accelerator_evidence = ", ".join(
+                f"ReturnEvidenceSource::{_variant(value)}"
+                for value in lifecycle["accelerator_evidence"]
+            )
+            lines.extend(
+                [
+                    f"inline constexpr std::array<ReturnEvidenceSource, {len(lifecycle['open_evidence'])}> lifecycle_open_evidence_{index} {{{{{open_evidence}}}}};",
+                    f"inline constexpr std::array<ReturnEvidenceSource, {len(lifecycle['accelerator_evidence'])}> lifecycle_accelerator_evidence_{index} {{{{{accelerator_evidence}}}}};",
+                    f"inline constexpr LifecyclePolicyRecord lifecycle_{index} {{",
+                    f"    PowerOffDepartureEvidence::{_variant(lifecycle['power_off_departure_evidence'])},",
+                    f"    {json.dumps(lifecycle['return_policy_id'])},",
+                    f"    lifecycle_open_evidence_{index}, lifecycle_accelerator_evidence_{index}",
+                    "};",
+                    "",
+                ]
+            )
         presentation = profile.get("presentation")
         if presentation:
             layout_key = (
@@ -641,13 +847,14 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
         )
         exact_child_combinations = str(compatibility.get("exact_child_combinations", False)).lower()
         lighting = f"&lighting_{index}" if profile.get("transport", {}).get("lighting") else "nullptr"
+        lifecycle = f"&lifecycle_{index}" if profile.get("transport", {}).get("lifecycle") else "nullptr"
         presentation = f"&presentation_{index}" if profile.get("presentation") else "nullptr"
         lines.append(
             "    {"
             f'"{profile["profile_id"]}", "{profile["runtime_sha256"]}", {profile["revision"]}, ProfileKind::{_variant(profile["kind"])}, '
             f'DeviceKind::{_variant(profile["device_kind"])}, {str(has_usb).lower()}, {vendor}, {product}, '
             f'"{profile["identity"]["model_name"]}", {backend_id}, {protocol_family}, receiver_protocols_{index}, routes_{index}, '
-            f'supported_child_kinds_{index}, required_sibling_kinds_{index}, {exact_child_combinations}, capabilities_{index}, {lighting}, {presentation}'
+            f'supported_child_kinds_{index}, required_sibling_kinds_{index}, {exact_child_combinations}, capabilities_{index}, {lighting}, {lifecycle}, {presentation}'
             "},"
         )
     lines.extend(
@@ -661,6 +868,18 @@ def cpp_catalog(catalog: dict[str, Any]) -> str:
             "        if(profile.id == id)",
             "        {",
             "            return &profile;",
+            "        }",
+            "    }",
+            "    return nullptr;",
+            "}",
+            "",
+            "[[nodiscard]] constexpr const ReturnPolicyRecord* return_policy_by_id(std::string_view id)",
+            "{",
+            "    for(const auto& policy : return_policies)",
+            "    {",
+            "        if(policy.id == id)",
+            "        {",
+            "            return &policy;",
             "        }",
             "    }",
             "    return nullptr;",

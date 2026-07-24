@@ -8,6 +8,7 @@ mod event;
 mod persistence;
 mod replay;
 mod restoration;
+mod return_lifecycle;
 mod shadow;
 mod state;
 mod transport;
@@ -24,6 +25,7 @@ pub use restoration::{
     CrashCheckpoint, CrashExecution, SimDeviceProfile, SimRestorationConfig, SimRestorationError,
     SimRestorationHarness,
 };
+pub use return_lifecycle::{SimRetryEnvelope, SimReturnLifecycle, SimReturnLifecycleError};
 pub use shadow::{
     SHADOW_FIXTURE_SCHEMA, SHADOW_RESULT_SCHEMA, ShadowAuthority, ShadowCheckpointComparison,
     ShadowComparisonResult, ShadowDifference, ShadowDomain, ShadowDomainSummary, ShadowError,

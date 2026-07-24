@@ -61,7 +61,10 @@ from .domain_types import (
     RequestDigest,
     RequestId,
     ResourceKind,
+    RestoreDeliveryState,
     RestoreState,
+    ReturnEvidence,
+    ReturnPhase,
     RouteKind,
     RouteState,
     SequenceNumber,
@@ -85,8 +88,8 @@ from .domain_types import (
 
 T = TypeVar("T")
 
-MINIMUM_PROTOCOL_VERSION = 5
-MAXIMUM_PROTOCOL_VERSION = 5
+MINIMUM_PROTOCOL_VERSION = 6
+MAXIMUM_PROTOCOL_VERSION = 6
 MAX_WIRE_MESSAGE_BYTES = 1048576
 MAX_JSON_DEPTH = 128
 FIELD_LIMITS = {
@@ -123,6 +126,7 @@ SUPPORTED_FEATURES = (
     "integration-view-projection",
     "event-subscriptions",
     "structured-diagnostics",
+    "return-lifecycle-projection",
 )
 
 @dataclass(frozen=True, slots=True)
@@ -231,6 +235,19 @@ class EventCursor:
 
 
 @dataclass(frozen=True, slots=True)
+class ReturnEpoch:
+    """Generation-bound endpoint return state without claiming physical lighting application."""
+    generation_id: GenerationId
+    device_id: LogicalDeviceId
+    endpoint_id: EndpointId
+    epoch_sequence: SequenceNumber
+    opened_at_ms: MonotonicMs
+    opening_evidence: ReturnEvidence
+    phase: ReturnPhase
+    delivery_state: RestoreDeliveryState
+
+
+@dataclass(frozen=True, slots=True)
 class EndpointSnapshot:
     """Independent route, power, sleep, activity, contact, and freshness facts."""
     endpoint_id: EndpointId
@@ -245,6 +262,7 @@ class EndpointSnapshot:
     confidence: EvidenceConfidence
     evidence_claim_id: EvidenceClaimId | None
     observed_at_ms: MonotonicMs | None
+    return_epoch: ReturnEpoch | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -839,6 +857,7 @@ __all__ = [
     "RenewLeaseRequest",
     "ReleaseLeaseRequest",
     "EventCursor",
+    "ReturnEpoch",
     "EndpointSnapshot",
     "BatteryObservation",
     "ResourceOwnershipSnapshot",

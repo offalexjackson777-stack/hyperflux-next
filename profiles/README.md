@@ -26,6 +26,7 @@ Composes receiver, surface, and child identities with evidence-bound capabilitie
 ## Change Here
 
 - [`profiles/capabilities.json`](capabilities.json)
+- [`profiles/lifecycle-policies.json`](lifecycle-policies.json)
 - [`profiles/evidence/claims.json`](evidence/claims.json)
 - [`profiles/receivers/razer-hyperflux-v2-1532-00cf.json`](receivers/razer-hyperflux-v2-1532-00cf.json)
 - [`profiles/surfaces/razer-hyperflux-v2-hard-edition.json`](surfaces/razer-hyperflux-v2-hard-edition.json)

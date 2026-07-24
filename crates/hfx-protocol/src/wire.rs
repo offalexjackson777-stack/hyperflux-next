@@ -5,8 +5,8 @@ use crate::{
     DiagnosticSnapshot, EndpointSnapshot, EventBatch, IntegrationReceiverView, IntegrationView,
     LeaseResult, MAX_WIRE_MESSAGE_BYTES, ProtocolValidationError, RpcRequest, RpcResponse,
     SnapshotValidationError, StableLightingIntent, TransactionResult, TransactionTerminal,
-    TransactionUnavailable, v1, v2, v3, v4, v5, validate_bridge_snapshot, validate_lease_request,
-    validate_transaction,
+    TransactionUnavailable, v1, v2, v3, v4, v5, v6, validate_bridge_snapshot,
+    validate_lease_request, validate_transaction,
 };
 use hfx_domain::{
     ConnectionMode, ControllerAvailability, FreshnessState, InventoryAvailability, PairingState,
@@ -700,6 +700,7 @@ fn encode_rpc_request_version(
         3 => frozen_encoding::<v3::RpcRequest>(value),
         4 => frozen_encoding::<v4::RpcRequest>(value),
         5 => frozen_encoding::<v5::RpcRequest>(value),
+        6 => frozen_encoding::<v6::RpcRequest>(value),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
     }
 }
@@ -727,6 +728,7 @@ fn decode_rpc_request_version(bytes: &[u8], version: u16) -> Result<RpcRequest, 
         3 => transcode_request(decode::<v3::RpcRequest>(bytes)?),
         4 => transcode_request(decode::<v4::RpcRequest>(bytes)?),
         5 => transcode_request(decode::<v5::RpcRequest>(bytes)?),
+        6 => transcode_request(decode::<v6::RpcRequest>(bytes)?),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
     }
 }
@@ -765,6 +767,7 @@ fn decode_rpc_response_version(
         3 => transcode_response(decode::<v3::RpcResponse>(bytes)?),
         4 => transcode_response(decode::<v4::RpcResponse>(bytes)?),
         5 => transcode_response(decode::<v5::RpcResponse>(bytes)?),
+        6 => transcode_response(decode::<v6::RpcResponse>(bytes)?),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
     }
 }
@@ -802,6 +805,9 @@ fn encode_rpc_response_version(
     }
     let mut value =
         serde_json::to_value(response).map_err(|_| ProtocolWireError::VersionTranslation)?;
+    if version < 6 {
+        remove_return_epochs(response, &mut value)?;
+    }
     match version {
         1 => {
             remove_snapshot_profile_bindings(response, &mut value)?;
@@ -817,8 +823,65 @@ fn encode_rpc_response_version(
         }
         4 => frozen_encoding::<v4::RpcResponse>(value),
         5 => frozen_encoding::<v5::RpcResponse>(value),
+        6 => frozen_encoding::<v6::RpcResponse>(value),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
     }
+}
+
+fn remove_return_epochs(
+    response: &RpcResponse,
+    value: &mut Value,
+) -> Result<(), ProtocolWireError> {
+    let receivers = value
+        .as_object_mut()
+        .and_then(|root| root.get_mut("response"))
+        .and_then(Value::as_object_mut)
+        .and_then(|response| response.get_mut("result"))
+        .and_then(Value::as_object_mut)
+        .and_then(|result| result.get_mut("receivers"))
+        .and_then(Value::as_array_mut);
+
+    let Some(receivers) = receivers else {
+        return if matches!(
+            response,
+            RpcResponse::SnapshotSuccess(_) | RpcResponse::IntegrationViewSuccess(_)
+        ) {
+            Err(ProtocolWireError::VersionTranslation)
+        } else {
+            Ok(())
+        };
+    };
+
+    for receiver in receivers {
+        let receiver = receiver
+            .as_object_mut()
+            .ok_or(ProtocolWireError::VersionTranslation)?;
+        let collections: &mut Vec<Value> = match response {
+            RpcResponse::SnapshotSuccess(_) => receiver
+                .get_mut("devices")
+                .and_then(Value::as_array_mut)
+                .ok_or(ProtocolWireError::VersionTranslation)?,
+            RpcResponse::IntegrationViewSuccess(_) => receiver
+                .get_mut("inventory")
+                .and_then(Value::as_array_mut)
+                .ok_or(ProtocolWireError::VersionTranslation)?,
+            _ => return Ok(()),
+        };
+        for item in collections {
+            let endpoints = item
+                .as_object_mut()
+                .and_then(|item| item.get_mut("endpoints"))
+                .and_then(Value::as_array_mut)
+                .ok_or(ProtocolWireError::VersionTranslation)?;
+            for endpoint in endpoints {
+                endpoint
+                    .as_object_mut()
+                    .ok_or(ProtocolWireError::VersionTranslation)?
+                    .remove("return_epoch");
+            }
+        }
+    }
+    Ok(())
 }
 
 fn remove_snapshot_profile_bindings(

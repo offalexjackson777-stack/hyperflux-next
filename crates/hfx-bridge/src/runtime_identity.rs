@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::{SessionIdentityError, SessionIdentitySource};
-use hfx_domain::{DispatchNonce, LeaseId, SubscriptionId};
+use hfx_domain::{DispatchNonce, LeaseId, RequestId, SubscriptionId, TransactionId};
 use std::fmt;
 
 const PROCESS_PREFIX_BYTES: usize = 16;
@@ -77,6 +77,26 @@ impl RuntimeIdentityIssuer {
     pub fn subscription_id(&mut self) -> Result<SubscriptionId, RuntimeIdentityError> {
         let sequence = self.take_sequence()?;
         self.string_identity("subscription", sequence)
+    }
+
+    /// Issues one process-unique request identity for bridge-owned replay.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error only after the finite process sequence is exhausted.
+    pub fn request_id(&mut self) -> Result<RequestId, RuntimeIdentityError> {
+        let sequence = self.take_sequence()?;
+        self.string_identity("request", sequence)
+    }
+
+    /// Issues one process-unique transaction identity for bridge-owned replay.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error only after the finite process sequence is exhausted.
+    pub fn transaction_id(&mut self) -> Result<TransactionId, RuntimeIdentityError> {
+        let sequence = self.take_sequence()?;
+        self.string_identity("transaction", sequence)
     }
 
     /// Issues one nonzero dispatch nonce that cannot repeat in this process.

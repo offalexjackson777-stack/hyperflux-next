@@ -76,17 +76,41 @@ PASSIVE_KEYS = {
 }
 LIFECYCLE_KEYS = {
     "power_off_departure_evidence",
-    "device_return_settle_ms",
-    "device_return_confirmation",
+    "return_policy_id",
+    "open_evidence",
+    "accelerator_evidence",
 }
-LIFECYCLE_REQUIRED_KEYS = {
-    "power_off_departure_evidence",
-    "device_return_settle_ms",
-}
+LIFECYCLE_REQUIRED_KEYS = LIFECYCLE_KEYS
 POWER_OFF_DEPARTURE_EVIDENCE = {"receiver-state", "watched-retained-route"}
-DEVICE_RETURN_CONFIRMATION_KEYS = {"evidence", "settle_ms", "reassert_at_fallback"}
-DEVICE_RETURN_CONFIRMATION_EVIDENCE = {"battery-report"}
-MAX_DEVICE_RETURN_SETTLE_MS = 30_000
+RETURN_EVIDENCE_SOURCES = {
+    "battery-report",
+    "contact-report",
+    "endpoint-activity",
+    "route-return",
+}
+LIFECYCLE_POLICY_KEYS = {
+    "id",
+    "strategy",
+    "qualification",
+    "quiescence_candidate_ms",
+    "observation_jitter_ms",
+    "retry_offsets_ms",
+    "allowed_open_evidence",
+    "allowed_accelerator_evidence",
+    "delivery_semantics",
+    "timing_authorities",
+}
+LIFECYCLE_TIMING_AUTHORITY_KEYS = {"kind", "source_id", "source_sha256", "summary"}
+LIFECYCLE_POLICY_STRATEGIES = {"activity-assisted-return-epoch"}
+LIFECYCLE_POLICY_QUALIFICATIONS = {"prequalification-candidate", "qualified"}
+LIFECYCLE_TIMING_AUTHORITY_KINDS = {
+    "pinned-upstream-contract",
+    "prequalification-hypothesis",
+    "physical-qualification",
+}
+MAX_RETURN_RETRY_ATTEMPTS = 32
+MAX_RETURN_RETRY_WINDOW_MS = 30_000
+MAX_QUIESCENCE_CANDIDATE_MS = 900_000
 QUALIFICATION_MIGRATION_KEYS = {"from_runtime_sha256", "preserve_stage_roles"}
 QUALIFICATION_MIGRATION_STAGE_ROLES = {"lighting", "map", "telemetry"}
 PASSIVE_TELEMETRY_CAPABILITIES = {
@@ -106,6 +130,7 @@ DIGEST_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 class ProfileInputs:
     capabilities: dict[str, Any]
     evidence: dict[str, Any]
+    lifecycle_policies: dict[str, Any]
     profiles: tuple[dict[str, Any], ...]
     candidates: tuple[dict[str, Any], ...]
     source_sha256: str
@@ -126,7 +151,9 @@ def _source_digest(documents: list[tuple[str, dict[str, Any]]]) -> str:
 
 
 def _runtime_profile_digest(
-    profile: dict[str, Any], capability_index: dict[str, dict[str, Any]]
+    profile: dict[str, Any],
+    capability_index: dict[str, dict[str, Any]],
+    lifecycle_policy_index: dict[str, dict[str, Any]],
 ) -> str:
     identity = profile["identity"]
     runtime_identity = {
@@ -134,6 +161,17 @@ def _runtime_profile_digest(
         for key in ("authority", "vendor_id", "product_id", "variant_key")
         if key in identity
     }
+    transport = deepcopy(profile.get("transport", {}))
+    lifecycle = transport.get("lifecycle")
+    if lifecycle is not None:
+        policy = lifecycle_policy_index[lifecycle["return_policy_id"]]
+        lifecycle["resolved_return_policy"] = {
+            "strategy": policy["strategy"],
+            "quiescence_candidate_ms": policy["quiescence_candidate_ms"],
+            "observation_jitter_ms": policy["observation_jitter_ms"],
+            "retry_offsets_ms": policy["retry_offsets_ms"],
+            "delivery_semantics": policy["delivery_semantics"],
+        }
     runtime_contract = {
         "schema": "hyperflux-runtime-profile-binding-v1",
         "profile_id": profile["profile_id"],
@@ -142,7 +180,7 @@ def _runtime_profile_digest(
         "device_kind": profile["device_kind"],
         "identity": runtime_identity,
         "compatibility": profile["compatibility"],
-        "transport": profile.get("transport", {}),
+        "transport": transport,
         "capabilities": [
             {
                 "id": capability["id"],
@@ -477,7 +515,9 @@ def _raw_values(value: object, label: str) -> list[int]:
     return value
 
 
-def _validate_passive(profile: dict[str, Any]) -> None:
+def _validate_passive(
+    profile: dict[str, Any], lifecycle_policy_index: dict[str, dict[str, Any]]
+) -> None:
     transport = profile.get("transport", {})
     if not isinstance(transport, dict):
         raise ModelError(f"{profile['profile_id']}: transport must be an object")
@@ -526,7 +566,7 @@ def _validate_passive(profile: dict[str, Any]) -> None:
     if passive is None:
         if needs_passive:
             raise ModelError(f"{profile['profile_id']}: passive telemetry requires a decoder")
-        _validate_lifecycle_policy(profile, transport, passive)
+        _validate_lifecycle_policy(profile, transport, passive, lifecycle_policy_index)
         return
     if not isinstance(passive, dict):
         raise ModelError(f"{profile['profile_id']}: passive decoder must be an object")
@@ -577,13 +617,119 @@ def _validate_passive(profile: dict[str, Any]) -> None:
         available or unavailable or passive["report_implies_route_available"]
     ):
         raise ModelError(f"{profile['profile_id']}: connection evidence has no route decoder")
-    _validate_lifecycle_policy(profile, transport, passive)
+    _validate_lifecycle_policy(profile, transport, passive, lifecycle_policy_index)
+
+
+def _validate_lifecycle_policy_catalog(catalog: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    if catalog.get("schema") != "hyperflux-lifecycle-policy-catalog-v1":
+        raise ModelError("unsupported lifecycle policy catalog schema")
+    _expect_keys(catalog, {"$schema", "schema", "policies"}, "lifecycle policy catalog")
+    policies = catalog.get("policies")
+    if not isinstance(policies, list) or not policies:
+        raise ModelError("lifecycle policy catalog is empty")
+    identifiers: list[str] = []
+    for policy in policies:
+        if not isinstance(policy, dict):
+            raise ModelError("lifecycle policy must be an object")
+        _expect_keys(policy, LIFECYCLE_POLICY_KEYS, "lifecycle policy")
+        missing = sorted(LIFECYCLE_POLICY_KEYS - set(policy))
+        if missing:
+            raise ModelError(f"incomplete lifecycle policy: {', '.join(missing)}")
+        identifier = _expect_nonempty_string(policy["id"], "lifecycle policy id")
+        identifiers.append(identifier)
+        if policy["strategy"] not in LIFECYCLE_POLICY_STRATEGIES:
+            raise ModelError(f"{identifier}: unsupported lifecycle strategy")
+        qualification = policy["qualification"]
+        if qualification not in LIFECYCLE_POLICY_QUALIFICATIONS:
+            raise ModelError(f"{identifier}: invalid lifecycle qualification")
+        quiescence_ms = policy["quiescence_candidate_ms"]
+        if (
+            isinstance(quiescence_ms, bool)
+            or not isinstance(quiescence_ms, int)
+            or not 1_000 <= quiescence_ms <= MAX_QUIESCENCE_CANDIDATE_MS
+        ):
+            raise ModelError(f"{identifier}: quiescence candidate is out of bounds")
+        observation_jitter_ms = policy["observation_jitter_ms"]
+        if (
+            isinstance(observation_jitter_ms, bool)
+            or not isinstance(observation_jitter_ms, int)
+            or not 0 <= observation_jitter_ms <= 5_000
+            or observation_jitter_ms >= quiescence_ms
+        ):
+            raise ModelError(f"{identifier}: observation jitter tolerance is out of bounds")
+        offsets = policy["retry_offsets_ms"]
+        if (
+            not isinstance(offsets, list)
+            or not 2 <= len(offsets) <= MAX_RETURN_RETRY_ATTEMPTS
+            or any(isinstance(value, bool) or not isinstance(value, int) for value in offsets)
+            or offsets != sorted(set(offsets))
+            or offsets[0] != 0
+            or offsets[-1] > MAX_RETURN_RETRY_WINDOW_MS
+        ):
+            raise ModelError(
+                f"{identifier}: retry offsets must be unique, increasing, begin at zero, and remain bounded"
+            )
+        open_evidence = _expect_unique_string_list(
+            policy["allowed_open_evidence"],
+            f"{identifier} allowed open evidence",
+            allow_empty=False,
+        )
+        accelerator_evidence = _expect_unique_string_list(
+            policy["allowed_accelerator_evidence"],
+            f"{identifier} allowed accelerator evidence",
+            allow_empty=False,
+        )
+        if set(open_evidence) - RETURN_EVIDENCE_SOURCES or set(accelerator_evidence) - RETURN_EVIDENCE_SOURCES:
+            raise ModelError(f"{identifier}: unsupported return evidence source")
+        if not set(open_evidence) <= set(accelerator_evidence):
+            raise ModelError(f"{identifier}: opening evidence must also accelerate an active epoch")
+        if policy["delivery_semantics"] != "receiver-delivered-not-child-applied":
+            raise ModelError(f"{identifier}: lifecycle delivery semantics overclaim child application")
+        authorities = policy["timing_authorities"]
+        if not isinstance(authorities, list) or len(authorities) < 2:
+            raise ModelError(f"{identifier}: timing values require explicit authorities")
+        authority_kinds: set[str] = set()
+        for authority in authorities:
+            if not isinstance(authority, dict):
+                raise ModelError(f"{identifier}: timing authority must be an object")
+            _expect_keys(authority, LIFECYCLE_TIMING_AUTHORITY_KEYS, f"{identifier} timing authority")
+            missing_authority = {"kind", "source_id", "summary"} - set(authority)
+            if missing_authority:
+                raise ModelError(
+                    f"{identifier}: incomplete timing authority: {', '.join(sorted(missing_authority))}"
+                )
+            kind = authority["kind"]
+            if kind not in LIFECYCLE_TIMING_AUTHORITY_KINDS:
+                raise ModelError(f"{identifier}: unsupported timing authority kind")
+            authority_kinds.add(kind)
+            _expect_nonempty_string(authority["source_id"], f"{identifier} timing source")
+            _expect_nonempty_string(authority["summary"], f"{identifier} timing summary")
+            source_sha256 = authority.get("source_sha256")
+            if source_sha256 is not None and (
+                not isinstance(source_sha256, str)
+                or DIGEST_PATTERN.fullmatch(source_sha256) is None
+            ):
+                raise ModelError(f"{identifier}: timing source digest must be lowercase SHA-256")
+            if kind == "pinned-upstream-contract" and source_sha256 is None:
+                raise ModelError(f"{identifier}: pinned timing authority requires a source digest")
+        if "pinned-upstream-contract" not in authority_kinds:
+            raise ModelError(f"{identifier}: quiescence timing lacks a pinned upstream contract")
+        if qualification == "prequalification-candidate":
+            if "prequalification-hypothesis" not in authority_kinds:
+                raise ModelError(f"{identifier}: candidate retry timing lacks an explicit hypothesis")
+        elif "physical-qualification" not in authority_kinds:
+            raise ModelError(f"{identifier}: qualified retry timing lacks physical evidence")
+    require_unique(identifiers, "lifecycle policy id")
+    if identifiers != sorted(identifiers):
+        raise ModelError("lifecycle policies must be sorted by id")
+    return {policy["id"]: policy for policy in policies}
 
 
 def _validate_lifecycle_policy(
     profile: dict[str, Any],
     transport: dict[str, Any],
     passive: object,
+    lifecycle_policy_index: dict[str, dict[str, Any]],
 ) -> None:
     lifecycle = transport.get("lifecycle")
     if lifecycle is None:
@@ -599,13 +745,30 @@ def _validate_lifecycle_policy(
     departure = lifecycle["power_off_departure_evidence"]
     if departure not in POWER_OFF_DEPARTURE_EVIDENCE:
         raise ModelError(f"{profile['profile_id']}: unsupported power-off departure evidence")
-    settle_ms = lifecycle["device_return_settle_ms"]
-    if (
-        isinstance(settle_ms, bool)
-        or not isinstance(settle_ms, int)
-        or not 0 <= settle_ms <= MAX_DEVICE_RETURN_SETTLE_MS
-    ):
-        raise ModelError(f"{profile['profile_id']}: device-return settle time is out of bounds")
+    policy_id = lifecycle["return_policy_id"]
+    policy = lifecycle_policy_index.get(policy_id)
+    if policy is None:
+        raise ModelError(f"{profile['profile_id']}: unknown return policy: {policy_id}")
+    open_evidence = _expect_unique_string_list(
+        lifecycle["open_evidence"],
+        f"{profile['profile_id']} return opening evidence",
+        allow_empty=False,
+    )
+    accelerator_evidence = _expect_unique_string_list(
+        lifecycle["accelerator_evidence"],
+        f"{profile['profile_id']} return accelerator evidence",
+        allow_empty=False,
+    )
+    if not set(open_evidence) <= set(policy["allowed_open_evidence"]):
+        raise ModelError(f"{profile['profile_id']}: opening evidence is not allowed by its return policy")
+    if not set(accelerator_evidence) <= set(policy["allowed_accelerator_evidence"]):
+        raise ModelError(
+            f"{profile['profile_id']}: accelerator evidence is not allowed by its return policy"
+        )
+    if not set(open_evidence) <= set(accelerator_evidence):
+        raise ModelError(
+            f"{profile['profile_id']}: opening evidence must also accelerate an active epoch"
+        )
     if departure == "watched-retained-route":
         if (
             not isinstance(passive, dict)
@@ -615,56 +778,23 @@ def _validate_lifecycle_policy(
             raise ModelError(
                 f"{profile['profile_id']}: retained-route departure contradicts passive route evidence"
             )
-        if settle_ms == 0:
-            raise ModelError(
-                f"{profile['profile_id']}: retained-route return requires a positive settle time"
-            )
-    confirmation = lifecycle.get("device_return_confirmation")
-    if confirmation is None:
-        return
-    if not isinstance(confirmation, dict):
-        raise ModelError(
-            f"{profile['profile_id']}: device-return confirmation must be an object or null"
-        )
-    _expect_keys(
-        confirmation,
-        DEVICE_RETURN_CONFIRMATION_KEYS,
-        f"{profile['profile_id']} device-return confirmation",
-    )
-    missing = sorted(DEVICE_RETURN_CONFIRMATION_KEYS - set(confirmation))
-    if missing:
-        raise ModelError(
-            f"{profile['profile_id']}: incomplete device-return confirmation: "
-            f"{', '.join(missing)}"
-        )
-    evidence = confirmation["evidence"]
-    if evidence not in DEVICE_RETURN_CONFIRMATION_EVIDENCE:
-        raise ModelError(f"{profile['profile_id']}: unsupported return confirmation evidence")
-    confirmation_settle_ms = confirmation["settle_ms"]
-    if (
-        isinstance(confirmation_settle_ms, bool)
-        or not isinstance(confirmation_settle_ms, int)
-        or not 0 <= confirmation_settle_ms <= MAX_DEVICE_RETURN_SETTLE_MS
+    evidence = set(open_evidence) | set(accelerator_evidence)
+    if evidence & {"battery-report", "contact-report", "endpoint-activity", "route-return"} and not isinstance(passive, dict):
+        raise ModelError(f"{profile['profile_id']}: return evidence requires a passive decoder")
+    if "contact-report" in evidence and (
+        profile["device_kind"] != "mouse"
+        or passive["contact"] is None
+        or not passive["contact"]["on_mat"]
     ):
-        raise ModelError(
-            f"{profile['profile_id']}: return confirmation settle time is out of bounds"
-        )
-    if settle_ms == 0 or confirmation_settle_ms >= settle_ms:
-        raise ModelError(
-            f"{profile['profile_id']}: confirmation must precede a positive return fallback"
-        )
-    if not isinstance(confirmation["reassert_at_fallback"], bool):
-        raise ModelError(
-            f"{profile['profile_id']}: return fallback reassertion must be boolean"
-        )
-    if evidence == "battery-report" and not isinstance(passive, dict):
-        raise ModelError(
-            f"{profile['profile_id']}: battery confirmation requires a passive decoder"
-        )
+        raise ModelError(f"{profile['profile_id']}: contact return evidence lacks a decoder")
+    if "route-return" in evidence and not passive["route"]["unavailable"]:
+        raise ModelError(f"{profile['profile_id']}: route-return evidence lacks departure values")
 
 
 def _validate_qualification_migrations(
-    profile: dict[str, Any], capability_index: dict[str, dict[str, Any]]
+    profile: dict[str, Any],
+    capability_index: dict[str, dict[str, Any]],
+    lifecycle_policy_index: dict[str, dict[str, Any]],
 ) -> None:
     migrations = profile.get("qualification_migrations")
     if migrations is None:
@@ -692,7 +822,9 @@ def _validate_qualification_migrations(
     }:
         available_roles.add("lighting")
 
-    current_digest = _runtime_profile_digest(profile, capability_index)
+    current_digest = _runtime_profile_digest(
+        profile, capability_index, lifecycle_policy_index
+    )
     predecessors: list[str] = []
     for index, migration in enumerate(migrations):
         label = f"{identifier} qualification migration {index}"
@@ -806,6 +938,7 @@ def _validate_profiles(
     profiles: list[dict[str, Any]],
     capability_index: dict[str, dict[str, Any]],
     claim_index: dict[str, dict[str, Any]],
+    lifecycle_policy_index: dict[str, dict[str, Any]],
 ) -> None:
     profile_ids = [profile["profile_id"] for profile in profiles]
     require_unique(profile_ids, "hardware profile id")
@@ -897,22 +1030,27 @@ def _validate_profiles(
         if kind == "surface" and any(capability_index[item["id"]]["access"] == "write" for item in capabilities):
             raise ModelError(f"{identifier}: surface profile exposes an unqualified write")
         _validate_lighting(profile)
-        _validate_passive(profile)
-        _validate_qualification_migrations(profile, capability_index)
+        _validate_passive(profile, lifecycle_policy_index)
+        _validate_qualification_migrations(
+            profile, capability_index, lifecycle_policy_index
+        )
     require_unique(identities, "profile hardware identity")
 
 
 def load_profile_inputs(root: Path) -> ProfileInputs:
     capabilities = load_json(root / "profiles" / "capabilities.json")
     evidence = load_json(root / "profiles" / "evidence" / "claims.json")
+    lifecycle_policies = load_json(root / "profiles" / "lifecycle-policies.json")
     documents, profiles, candidate_catalogs = _load_documents(root)
     documents.extend(
         [
             ("profiles/capabilities.json", capabilities),
             ("profiles/evidence/claims.json", evidence),
+            ("profiles/lifecycle-policies.json", lifecycle_policies),
         ]
     )
     capability_index = _validate_capabilities(capabilities)
+    lifecycle_policy_index = _validate_lifecycle_policy_catalog(lifecycle_policies)
     snapshot_ids, candidates = _validate_candidates(candidate_catalogs)
     profile_ids = {profile.get("profile_id") for profile in profiles if isinstance(profile.get("profile_id"), str)}
     claims = _validate_evidence(
@@ -928,11 +1066,12 @@ def load_profile_inputs(root: Path) -> ProfileInputs:
             raise ModelError(f"{catalog['snapshot_id']}: source claim does not cover candidate snapshot")
         if claim["qualifies_capabilities"]:
             raise ModelError(f"{catalog['snapshot_id']}: candidate source claim must not qualify capabilities")
-    _validate_profiles(profiles, capability_index, claims)
+    _validate_profiles(profiles, capability_index, claims, lifecycle_policy_index)
     _validate_presentation_sources(profiles, upstream_index(root))
     return ProfileInputs(
         capabilities=capabilities,
         evidence=evidence,
+        lifecycle_policies=lifecycle_policies,
         profiles=tuple(sorted(profiles, key=lambda value: value["profile_id"])),
         candidates=tuple(sorted(candidates, key=lambda value: (value["snapshot_id"], value["id"]))),
         source_sha256=_source_digest(documents),
@@ -942,13 +1081,18 @@ def load_profile_inputs(root: Path) -> ProfileInputs:
 def compiled_catalog(root: Path) -> dict[str, Any]:
     inputs = load_profile_inputs(root)
     capability_index = {item["id"]: item for item in inputs.capabilities["capabilities"]}
+    lifecycle_policy_index = {
+        item["id"]: item for item in inputs.lifecycle_policies["policies"]
+    }
     profiles: list[dict[str, Any]] = []
     for profile in inputs.profiles:
         compiled = deepcopy({key: value for key, value in profile.items() if key != "$schema"})
         compiled["source_path"] = compiled.pop("_source_path")
         for capability in compiled["capabilities"]:
             capability["access"] = capability_index[capability["id"]]["access"]
-        compiled["runtime_sha256"] = _runtime_profile_digest(profile, capability_index)
+        compiled["runtime_sha256"] = _runtime_profile_digest(
+            profile, capability_index, lifecycle_policy_index
+        )
         profiles.append(compiled)
     return {
         "schema": "hyperflux-compiled-profile-catalog-v1",
@@ -962,6 +1106,7 @@ def compiled_catalog(root: Path) -> dict[str, Any]:
         },
         "capabilities": deepcopy(inputs.capabilities["capabilities"]),
         "evidence_claims": deepcopy(inputs.evidence["claims"]),
+        "lifecycle_policies": deepcopy(inputs.lifecycle_policies["policies"]),
         "profiles": profiles,
         "candidates": deepcopy(list(inputs.candidates)),
     }

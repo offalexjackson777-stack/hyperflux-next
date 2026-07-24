@@ -161,12 +161,12 @@ fn feature_negotiation_selects_intersection_and_rejects_incompatible_versions() 
     );
 
     let incompatible = ClientHello {
-        minimum_version: number(6),
-        maximum_version: number(6),
+        minimum_version: number(7),
+        maximum_version: number(7),
         ..v5
     };
     assert_eq!(
-        negotiate(&incompatible, context("protocol-session-6")),
+        negotiate(&incompatible, context("protocol-session-7")),
         Err(NegotiationError::IncompatibleVersion)
     );
 }

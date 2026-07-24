@@ -2,8 +2,9 @@
 
 use hfx_domain::{DeviceKind, ProfileKind, RouteKind};
 use hfx_profiles::{
-    DeviceReturnConfirmationEvidence, PROFILES, PowerOffDepartureEvidence, RuntimeProfileCatalog,
-    child_profile_by_product_id, profile_by_id, receiver_profile_by_usb_id,
+    PROFILES, PowerOffDepartureEvidence, ReturnDeliverySemantics, ReturnEvidenceSource,
+    ReturnPolicyQualification, RuntimeProfileCatalog, child_profile_by_product_id, profile_by_id,
+    receiver_profile_by_usb_id, return_policy_by_id,
 };
 
 #[test]
@@ -32,13 +33,22 @@ fn receiver_and_children_resolve_independently() {
         lifecycle.power_off_departure_evidence,
         PowerOffDepartureEvidence::WatchedRetainedRoute
     );
-    assert_eq!(lifecycle.device_return_settle_ms, 1_000);
-    assert_eq!(lifecycle.device_return_confirmation, None);
-    assert_eq!(mouse.qualification_migrations.len(), 1);
     assert_eq!(
-        mouse.qualification_migrations[0].preserve_stage_roles,
-        &["lighting", "map", "telemetry"]
+        lifecycle.return_policy_id,
+        "receiver-child.activity-assisted.v1"
     );
+    assert_eq!(
+        lifecycle.open_evidence,
+        &[ReturnEvidenceSource::EndpointActivity]
+    );
+    assert_eq!(
+        lifecycle.accelerator_evidence,
+        &[
+            ReturnEvidenceSource::ContactReport,
+            ReturnEvidenceSource::EndpointActivity,
+        ]
+    );
+    assert_eq!(mouse.qualification_migrations.len(), 2);
     assert_eq!(keyboard.device_kind, DeviceKind::Keyboard);
     let lifecycle = keyboard
         .lifecycle
@@ -47,17 +57,14 @@ fn receiver_and_children_resolve_independently() {
         lifecycle.power_off_departure_evidence,
         PowerOffDepartureEvidence::ReceiverState
     );
-    assert_eq!(lifecycle.device_return_settle_ms, 5_000);
-    let confirmation = lifecycle
-        .device_return_confirmation
-        .expect("keyboard return uses child confirmation evidence");
     assert_eq!(
-        confirmation.evidence,
-        DeviceReturnConfirmationEvidence::BatteryReport
+        lifecycle.open_evidence,
+        &[
+            ReturnEvidenceSource::EndpointActivity,
+            ReturnEvidenceSource::RouteReturn,
+        ]
     );
-    assert_eq!(confirmation.settle_ms, 250);
-    assert!(confirmation.reassert_at_fallback);
-    assert_eq!(keyboard.qualification_migrations.len(), 4);
+    assert_eq!(keyboard.qualification_migrations.len(), 5);
     let current_migration = keyboard
         .qualification_migrations
         .iter()
@@ -80,6 +87,24 @@ fn receiver_and_children_resolve_independently() {
         .expect("the original map qualification remains available");
     assert_eq!(oldest_migration.preserve_stage_roles, &["lighting", "map"]);
     assert_ne!(mouse.id, keyboard.id);
+}
+
+#[test]
+fn shared_return_policy_is_bounded_and_truthful() {
+    let policy = return_policy_by_id("receiver-child.activity-assisted.v1")
+        .expect("profile-selected return policy exists");
+    assert_eq!(
+        policy.qualification,
+        ReturnPolicyQualification::PrequalificationCandidate
+    );
+    assert_eq!(policy.quiescence_candidate_ms, 60_000);
+    assert_eq!(policy.retry_offsets_ms.first(), Some(&0));
+    assert_eq!(policy.retry_offsets_ms.last(), Some(&6_000));
+    assert_eq!(policy.retry_offsets_ms.len(), 12);
+    assert_eq!(
+        policy.delivery_semantics,
+        ReturnDeliverySemantics::ReceiverDeliveredNotChildApplied
+    );
 }
 
 #[test]

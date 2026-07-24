@@ -738,6 +738,59 @@
       "summary": "The Hard Edition surface identity and its firmware-owned charging/status indicator are reviewed observations, not a USB identity or writable RGB surface."
     }
   ],
+  "lifecycle_policies": [
+    {
+      "allowed_accelerator_evidence": [
+        "battery-report",
+        "contact-report",
+        "endpoint-activity",
+        "route-return"
+      ],
+      "allowed_open_evidence": [
+        "endpoint-activity",
+        "route-return"
+      ],
+      "delivery_semantics": "receiver-delivered-not-child-applied",
+      "id": "receiver-child.activity-assisted.v1",
+      "observation_jitter_ms": 500,
+      "qualification": "prequalification-candidate",
+      "quiescence_candidate_ms": 60000,
+      "retry_offsets_ms": [
+        0,
+        100,
+        200,
+        300,
+        500,
+        750,
+        1000,
+        1500,
+        2250,
+        3250,
+        4500,
+        6000
+      ],
+      "strategy": "activity-assisted-return-epoch",
+      "timing_authorities": [
+        {
+          "kind": "pinned-upstream-contract",
+          "source_id": "openrazer:6820f9da169d354bc7e6e93a0aa8683a6bb75792:driver/razerchromacommon.c:1339",
+          "source_sha256": "3aeaf974d3ecd5b6b3fd405dc22a4383dc1951e1f3c64824f1bdcf4caf852829",
+          "summary": "The pinned upstream idle-time command accepts 60 through 900 seconds; 60 seconds is therefore a conservative quiescent candidate, never a claim that the endpoint slept."
+        },
+        {
+          "kind": "pinned-upstream-contract",
+          "source_id": "driver/kernel/hyperflux-next-internal.h:21",
+          "source_sha256": "3f11ad598422577681f050b6f11535a03e2644120301ec69361a579c535ab06b",
+          "summary": "Endpoint activity is rate-limited to 250 milliseconds. A two-interval tolerance prevents report coalescing from turning the legal minimum idle setting into a brittle exact-second boundary."
+        },
+        {
+          "kind": "prequalification-hypothesis",
+          "source_id": "assurance/protected-behavior.json:natural-device-wake-restoration",
+          "summary": "The bounded retry envelope covers the longest legacy five-second settle fallback plus one second. It remains a candidate until the watched no-Spectrum matrix qualifies or replaces it."
+        }
+      ]
+    }
+  ],
   "profiles": [
     {
       "capabilities": [
@@ -892,6 +945,14 @@
       "profile_id": "child.razer.basilisk-v3-pro-35k.00cd",
       "qualification_migrations": [
         {
+          "from_runtime_sha256": "1a9dde39c257beb4d51dcd43e4e56c57ee782d59d9b49834557591eaea04dfcc",
+          "preserve_stage_roles": [
+            "lighting",
+            "map",
+            "telemetry"
+          ]
+        },
+        {
           "from_runtime_sha256": "f72d38a70e9f4f7fb56848937abafa4773902de64b9d07b22e11c12df6dbfe33",
           "preserve_stage_roles": [
             "lighting",
@@ -906,14 +967,21 @@
         "Contact, inactivity, darkness, and power-off remain distinct facts.",
         "A physical mouse power-off can retain the receiver route; watched qualification records that physical boundary without inventing a disconnect."
       ],
-      "revision": 2,
-      "runtime_sha256": "1a9dde39c257beb4d51dcd43e4e56c57ee782d59d9b49834557591eaea04dfcc",
+      "revision": 3,
+      "runtime_sha256": "62f114182069895ae0c72ebdd7165e1bb774d41eceeeead155eda449df69f8cf",
       "schema": "hyperflux-hardware-profile-v1",
       "source_path": "profiles/children/razer-basilisk-v3-pro-35k-00cd.json",
       "transport": {
         "lifecycle": {
-          "device_return_settle_ms": 1000,
-          "power_off_departure_evidence": "watched-retained-route"
+          "accelerator_evidence": [
+            "contact-report",
+            "endpoint-activity"
+          ],
+          "open_evidence": [
+            "endpoint-activity"
+          ],
+          "power_off_departure_evidence": "watched-retained-route",
+          "return_policy_id": "receiver-child.activity-assisted.v1"
         },
         "lighting": {
           "application_index_to_carrier": [
@@ -1101,6 +1169,14 @@
       "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296",
       "qualification_migrations": [
         {
+          "from_runtime_sha256": "133bcdf39640187c3a6c6d7e3a6fc39cf85cf55d1883f344acf1d973891d9b1a",
+          "preserve_stage_roles": [
+            "lighting",
+            "map",
+            "telemetry"
+          ]
+        },
+        {
           "from_runtime_sha256": "31f80ff672cb56d6bed5df320c45cda68cf14c0181d7b93428f1f8f7891032eb",
           "preserve_stage_roles": [
             "lighting",
@@ -1138,19 +1214,23 @@
         "External power does not establish a direct USB data route or charging state.",
         "Receiver route value 0x0101 is indeterminate and cannot override observed keyboard activity."
       ],
-      "revision": 5,
-      "runtime_sha256": "133bcdf39640187c3a6c6d7e3a6fc39cf85cf55d1883f344acf1d973891d9b1a",
+      "revision": 6,
+      "runtime_sha256": "46703d44d594392e0cb289f6151a7c6b3b200805503a4cf036747d3c347f0d63",
       "schema": "hyperflux-hardware-profile-v1",
       "source_path": "profiles/children/razer-deathstalker-v2-pro-tkl-0296.json",
       "transport": {
         "lifecycle": {
-          "device_return_confirmation": {
-            "evidence": "battery-report",
-            "reassert_at_fallback": true,
-            "settle_ms": 250
-          },
-          "device_return_settle_ms": 5000,
-          "power_off_departure_evidence": "receiver-state"
+          "accelerator_evidence": [
+            "battery-report",
+            "endpoint-activity",
+            "route-return"
+          ],
+          "open_evidence": [
+            "endpoint-activity",
+            "route-return"
+          ],
+          "power_off_departure_evidence": "receiver-state",
+          "return_policy_id": "receiver-child.activity-assisted.v1"
         },
         "lighting": {
           "application_index_to_carrier": [
@@ -1425,5 +1505,5 @@
     }
   ],
   "schema": "hyperflux-compiled-profile-catalog-v1",
-  "source_sha256": "cc98c9d6c123f43e5da5a8b82b0221702d14ec00469a2a2c7dd239e267a2476f"
+  "source_sha256": "6c14575bdb3887301e5f440e6ff7350da718960c91fc4ae516a43f76bf02a1ac"
 }

@@ -87,6 +87,12 @@ template<>
 [[nodiscard]] Json encode<::hyperflux::EventCursor>(const ::hyperflux::EventCursor& value);
 
 template<>
+[[nodiscard]] ::hyperflux::ReturnEpoch decode<::hyperflux::ReturnEpoch>(const Json& value);
+
+template<>
+[[nodiscard]] Json encode<::hyperflux::ReturnEpoch>(const ::hyperflux::ReturnEpoch& value);
+
+template<>
 [[nodiscard]] ::hyperflux::EndpointSnapshot decode<::hyperflux::EndpointSnapshot>(const Json& value);
 
 template<>
@@ -583,9 +589,40 @@ template<>
 }
 
 template<>
+[[nodiscard]] inline ::hyperflux::ReturnEpoch decode<::hyperflux::ReturnEpoch>(const Json& value)
+{
+    require_object(value, {"generation_id", "device_id", "endpoint_id", "epoch_sequence", "opened_at_ms", "opening_evidence", "phase", "delivery_state"});
+    return ::hyperflux::ReturnEpoch {
+        decode<::hyperflux::GenerationId>(required_field(value, "generation_id")),
+        decode<::hyperflux::LogicalDeviceId>(required_field(value, "device_id")),
+        decode<::hyperflux::EndpointId>(required_field(value, "endpoint_id")),
+        decode<::hyperflux::SequenceNumber>(required_field(value, "epoch_sequence")),
+        decode<::hyperflux::MonotonicMs>(required_field(value, "opened_at_ms")),
+        decode<::hyperflux::ReturnEvidence>(required_field(value, "opening_evidence")),
+        decode<::hyperflux::ReturnPhase>(required_field(value, "phase")),
+        decode<::hyperflux::RestoreDeliveryState>(required_field(value, "delivery_state")),
+    };
+}
+
+template<>
+[[nodiscard]] inline Json encode<::hyperflux::ReturnEpoch>(const ::hyperflux::ReturnEpoch& value)
+{
+    Json result = Json::object();
+    result["generation_id"] = encode(value.generation_id);
+    result["device_id"] = encode(value.device_id);
+    result["endpoint_id"] = encode(value.endpoint_id);
+    result["epoch_sequence"] = encode(value.epoch_sequence);
+    result["opened_at_ms"] = encode(value.opened_at_ms);
+    result["opening_evidence"] = encode(value.opening_evidence);
+    result["phase"] = encode(value.phase);
+    result["delivery_state"] = encode(value.delivery_state);
+    return result;
+}
+
+template<>
 [[nodiscard]] inline ::hyperflux::EndpointSnapshot decode<::hyperflux::EndpointSnapshot>(const Json& value)
 {
-    require_object(value, {"endpoint_id", "route_kind", "route_state", "connection_mode", "power_state", "sleep_state", "activity_state", "contact_state", "freshness", "confidence", "evidence_claim_id", "observed_at_ms"});
+    require_object(value, {"endpoint_id", "route_kind", "route_state", "connection_mode", "power_state", "sleep_state", "activity_state", "contact_state", "freshness", "confidence", "evidence_claim_id", "observed_at_ms", "return_epoch"});
     return ::hyperflux::EndpointSnapshot {
         decode<::hyperflux::EndpointId>(required_field(value, "endpoint_id")),
         decode<::hyperflux::RouteKind>(required_field(value, "route_kind")),
@@ -599,6 +636,7 @@ template<>
         decode<::hyperflux::EvidenceConfidence>(required_field(value, "confidence")),
         decode_optional_field<::hyperflux::EvidenceClaimId>(value, "evidence_claim_id"),
         decode_optional_field<::hyperflux::MonotonicMs>(value, "observed_at_ms"),
+        decode_optional_field<::hyperflux::ReturnEpoch>(value, "return_epoch"),
     };
 }
 
@@ -618,6 +656,7 @@ template<>
     result["confidence"] = encode(value.confidence);
     result["evidence_claim_id"] = value.evidence_claim_id.has_value() ? encode(*value.evidence_claim_id) : Json(nullptr);
     result["observed_at_ms"] = value.observed_at_ms.has_value() ? encode(*value.observed_at_ms) : Json(nullptr);
+    result["return_epoch"] = value.return_epoch.has_value() ? encode(*value.return_epoch) : Json(nullptr);
     return result;
 }
 

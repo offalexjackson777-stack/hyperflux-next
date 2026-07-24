@@ -15,7 +15,7 @@
   "system": {
     "driver_version": "0.0.0-dev.1",
     "bridge_version": "0.0.0-dev.1",
-    "profile_catalog_digest": "cc98c9d6c123f43e5da5a8b82b0221702d14ec00469a2a2c7dd239e267a2476f"
+    "profile_catalog_digest": "6c14575bdb3887301e5f440e6ff7350da718960c91fc4ae516a43f76bf02a1ac"
   },
   "receivers": [
     {
@@ -38,7 +38,7 @@
           "product_id": 205,
           "profile": {
             "id": "child.razer.basilisk-v3-pro-35k.00cd",
-            "digest": "1a9dde39c257beb4d51dcd43e4e56c57ee782d59d9b49834557591eaea04dfcc"
+            "digest": "62f114182069895ae0c72ebdd7165e1bb774d41eceeeead155eda449df69f8cf"
           },
           "presence": "active",
           "support": "production-qualified",
@@ -130,7 +130,7 @@
       "device_id": "mouse-test",
       "profile_binding": {
         "id": "child.razer.basilisk-v3-pro-35k.00cd",
-        "digest": "1a9dde39c257beb4d51dcd43e4e56c57ee782d59d9b49834557591eaea04dfcc"
+        "digest": "62f114182069895ae0c72ebdd7165e1bb774d41eceeeead155eda449df69f8cf"
       },
       "verdict": "not-run",
       "summary": "5 evidence checks for this exact profile and receiver generation.",

@@ -405,6 +405,13 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/lifecycle-policy-catalog.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/lifecycle-policy-catalog.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/linux-runtime.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/linux-runtime.schema.json",
       "mode": "0644",
@@ -790,6 +797,20 @@
     },
     {
       "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/protocol_v6_json.hpp",
+      "destination": "/usr/include/hyperflux/generated/protocol_v6_json.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/protocol_v6_types.hpp",
+      "destination": "/usr/include/hyperflux/generated/protocol_v6_types.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
       "source": "sdk/cpp/include/hyperflux/sdk.hpp",
       "destination": "/usr/include/hyperflux/sdk.hpp",
       "mode": "0644",
@@ -953,6 +974,13 @@
       "component": "documentation",
       "source": "docs/generated/bridge-protocol-v5.md",
       "destination": "/usr/share/doc/hyperflux-next/generated/bridge-protocol-v5.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/bridge-protocol-v6.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/bridge-protocol-v6.md",
       "mode": "0644",
       "preserve": false
     },

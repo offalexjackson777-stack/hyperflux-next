@@ -63,6 +63,7 @@ fn endpoint(
         confidence: EvidenceConfidence::Observed,
         evidence_claim_id: Some(text(&format!("claim-{endpoint_id}"))),
         observed_at_ms: Some(time(10)),
+        return_epoch: None,
     }
 }
 

@@ -4486,6 +4486,174 @@ impl fmt::Display for RestoreTriggerKind {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum ReturnEvidence {
+    #[serde(rename = "application-ownership-loss")]
+    ApplicationOwnershipLoss,
+    #[serde(rename = "battery-report")]
+    BatteryReport,
+    #[serde(rename = "contact-report")]
+    ContactReport,
+    #[serde(rename = "endpoint-activity")]
+    EndpointActivity,
+    #[serde(rename = "endpoint-identity")]
+    EndpointIdentity,
+    #[serde(rename = "endpoint-status")]
+    EndpointStatus,
+    #[serde(rename = "receiver-generation")]
+    ReceiverGeneration,
+    #[serde(rename = "route-departure")]
+    RouteDeparture,
+    #[serde(rename = "route-return")]
+    RouteReturn,
+    #[serde(rename = "system-resume")]
+    SystemResume,
+}
+
+impl ReturnEvidence {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::ApplicationOwnershipLoss => "application-ownership-loss",
+            Self::BatteryReport => "battery-report",
+            Self::ContactReport => "contact-report",
+            Self::EndpointActivity => "endpoint-activity",
+            Self::EndpointIdentity => "endpoint-identity",
+            Self::EndpointStatus => "endpoint-status",
+            Self::ReceiverGeneration => "receiver-generation",
+            Self::RouteDeparture => "route-departure",
+            Self::RouteReturn => "route-return",
+            Self::SystemResume => "system-resume",
+        }
+    }
+}
+
+impl FromStr for ReturnEvidence {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "application-ownership-loss" => Ok(Self::ApplicationOwnershipLoss),
+            "battery-report" => Ok(Self::BatteryReport),
+            "contact-report" => Ok(Self::ContactReport),
+            "endpoint-activity" => Ok(Self::EndpointActivity),
+            "endpoint-identity" => Ok(Self::EndpointIdentity),
+            "endpoint-status" => Ok(Self::EndpointStatus),
+            "receiver-generation" => Ok(Self::ReceiverGeneration),
+            "route-departure" => Ok(Self::RouteDeparture),
+            "route-return" => Ok(Self::RouteReturn),
+            "system-resume" => Ok(Self::SystemResume),
+            _ => Err(DomainValueError::unknown_wire("ReturnEvidence")),
+        }
+    }
+}
+
+impl fmt::Display for ReturnEvidence {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum ReturnPhase {
+    #[serde(rename = "stable")]
+    Stable,
+    #[serde(rename = "quiescent-candidate")]
+    QuiescentCandidate,
+    #[serde(rename = "returning")]
+    Returning,
+    #[serde(rename = "synchronized")]
+    Synchronized,
+    #[serde(rename = "unavailable")]
+    Unavailable,
+}
+
+impl ReturnPhase {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Stable => "stable",
+            Self::QuiescentCandidate => "quiescent-candidate",
+            Self::Returning => "returning",
+            Self::Synchronized => "synchronized",
+            Self::Unavailable => "unavailable",
+        }
+    }
+}
+
+impl FromStr for ReturnPhase {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "stable" => Ok(Self::Stable),
+            "quiescent-candidate" => Ok(Self::QuiescentCandidate),
+            "returning" => Ok(Self::Returning),
+            "synchronized" => Ok(Self::Synchronized),
+            "unavailable" => Ok(Self::Unavailable),
+            _ => Err(DomainValueError::unknown_wire("ReturnPhase")),
+        }
+    }
+}
+
+impl fmt::Display for ReturnPhase {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum RestoreDeliveryState {
+    #[serde(rename = "not-attempted")]
+    NotAttempted,
+    #[serde(rename = "receiver-rejected")]
+    ReceiverRejected,
+    #[serde(rename = "outcome-uncertain")]
+    OutcomeUncertain,
+    #[serde(rename = "receiver-delivered")]
+    ReceiverDelivered,
+    #[serde(rename = "child-rejected")]
+    ChildRejected,
+    #[serde(rename = "child-confirmed")]
+    ChildConfirmed,
+}
+
+impl RestoreDeliveryState {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::NotAttempted => "not-attempted",
+            Self::ReceiverRejected => "receiver-rejected",
+            Self::OutcomeUncertain => "outcome-uncertain",
+            Self::ReceiverDelivered => "receiver-delivered",
+            Self::ChildRejected => "child-rejected",
+            Self::ChildConfirmed => "child-confirmed",
+        }
+    }
+}
+
+impl FromStr for RestoreDeliveryState {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "not-attempted" => Ok(Self::NotAttempted),
+            "receiver-rejected" => Ok(Self::ReceiverRejected),
+            "outcome-uncertain" => Ok(Self::OutcomeUncertain),
+            "receiver-delivered" => Ok(Self::ReceiverDelivered),
+            "child-rejected" => Ok(Self::ChildRejected),
+            "child-confirmed" => Ok(Self::ChildConfirmed),
+            _ => Err(DomainValueError::unknown_wire("RestoreDeliveryState")),
+        }
+    }
+}
+
+impl fmt::Display for RestoreDeliveryState {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum RestoreRecordState {
     #[serde(rename = "planned")]
     Planned,

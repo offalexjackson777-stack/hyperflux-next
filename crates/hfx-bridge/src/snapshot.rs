@@ -202,6 +202,7 @@ fn project_endpoint(endpoint: &EndpointLifecycle) -> EndpointSnapshot {
         confidence: latest.confidence(),
         evidence_claim_id: Some(latest.evidence_claim_id().clone()),
         observed_at_ms: Some(latest.observed_at_ms()),
+        return_epoch: None,
     }
 }
 

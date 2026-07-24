@@ -18,6 +18,7 @@ from hfxdev.profiles import (
     _runtime_profile_digest,
     _validate_capabilities,
     _validate_candidates,
+    _validate_lifecycle_policy_catalog,
     _validate_profiles,
     compiled_catalog,
     composition_fixtures,
@@ -36,6 +37,47 @@ class ProfileCompilerTests(unittest.TestCase):
         claim_index = {claim["id"]: claim for claim in deepcopy(self.inputs.evidence["claims"])}
         return profiles, capability_index, claim_index
 
+    def lifecycle_policy_index(self) -> dict[str, dict]:
+        return _validate_lifecycle_policy_catalog(
+            deepcopy(self.inputs.lifecycle_policies)
+        )
+
+    def runtime_profile_digest(
+        self,
+        profile: dict,
+        capability_index: dict[str, dict],
+        lifecycle_policy_index: dict[str, dict] | None = None,
+    ) -> str:
+        policies = (
+            self.lifecycle_policy_index()
+            if lifecycle_policy_index is None
+            else lifecycle_policy_index
+        )
+        return _runtime_profile_digest(
+            profile,
+            capability_index,
+            policies,
+        )
+
+    def validate_profiles(
+        self,
+        profiles: list[dict],
+        capability_index: dict[str, dict],
+        claim_index: dict[str, dict],
+        lifecycle_policy_index: dict[str, dict] | None = None,
+    ) -> None:
+        policies = (
+            self.lifecycle_policy_index()
+            if lifecycle_policy_index is None
+            else lifecycle_policy_index
+        )
+        _validate_profiles(
+            profiles,
+            capability_index,
+            claim_index,
+            policies,
+        )
+
     def test_canonical_profiles_compile_deterministically(self) -> None:
         first = compiled_catalog(ROOT)
         second = compiled_catalog(ROOT)
@@ -50,34 +92,34 @@ class ProfileCompilerTests(unittest.TestCase):
         profiles, capabilities, _ = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
         keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
-        mouse_before = _runtime_profile_digest(mouse, capabilities)
-        keyboard_before = _runtime_profile_digest(keyboard, capabilities)
+        mouse_before = self.runtime_profile_digest(mouse, capabilities)
+        keyboard_before = self.runtime_profile_digest(keyboard, capabilities)
 
         mouse["presentation"]["model_key"] = "presentation-only-change"
-        self.assertEqual(_runtime_profile_digest(mouse, capabilities), mouse_before)
+        self.assertEqual(self.runtime_profile_digest(mouse, capabilities), mouse_before)
 
         mouse["transport"]["lighting"]["application_index_to_carrier"][0] = 0
-        self.assertNotEqual(_runtime_profile_digest(mouse, capabilities), mouse_before)
-        self.assertEqual(_runtime_profile_digest(keyboard, capabilities), keyboard_before)
+        self.assertNotEqual(self.runtime_profile_digest(mouse, capabilities), mouse_before)
+        self.assertEqual(self.runtime_profile_digest(keyboard, capabilities), keyboard_before)
 
     def test_child_presentation_is_exact_typed_and_route_bound(self) -> None:
         profiles, capabilities, claims = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
         mouse["presentation"]["surprise"] = "drift"
         with self.assertRaisesRegex(ModelError, "unsupported keys: surprise"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
         profiles, capabilities, claims = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
         mouse["presentation"]["source_commit"] = "short"
         with self.assertRaisesRegex(ModelError, "40 lowercase hex"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
         profiles, capabilities, claims = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
         mouse["presentation"]["transport_variant"] = "wired"
         with self.assertRaisesRegex(ModelError, "no matching device route"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
     def test_non_child_presentation_is_rejected(self) -> None:
         profiles, capabilities, claims = self.validation_copies()
@@ -86,7 +128,7 @@ class ProfileCompilerTests(unittest.TestCase):
             next(profile for profile in profiles if profile["kind"] == "child")["presentation"]
         )
         with self.assertRaisesRegex(ModelError, "only child profiles"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
     def test_mouse_and_keyboard_require_no_sibling(self) -> None:
         for profile in self.inputs.profiles:
@@ -97,34 +139,34 @@ class ProfileCompilerTests(unittest.TestCase):
         profiles, capabilities, claims = self.validation_copies()
         profiles[0]["required_children"] = ["mouse", "keyboard"]
         with self.assertRaisesRegex(ModelError, "exact-combination keys are forbidden"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
     def test_child_sibling_dependency_is_rejected(self) -> None:
         profiles, capabilities, claims = self.validation_copies()
         child = next(profile for profile in profiles if profile["kind"] == "child")
         child["compatibility"]["required_sibling_kinds"] = ["keyboard"]
         with self.assertRaisesRegex(ModelError, "must not require a sibling"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
     def test_compatibility_is_kind_specific_bounded_and_route_checked(self) -> None:
         profiles, capabilities, claims = self.validation_copies()
         child = next(profile for profile in profiles if profile["kind"] == "child")
         child["compatibility"]["surprise"] = True
         with self.assertRaisesRegex(ModelError, "unsupported keys: surprise"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
         profiles, capabilities, claims = self.validation_copies()
         child = next(profile for profile in profiles if profile["kind"] == "child")
         child["compatibility"]["routes"] = ["imaginary-route"]
         with self.assertRaisesRegex(ModelError, "invalid route kind"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
     def test_writable_capability_without_physical_evidence_is_rejected(self) -> None:
         profiles, capabilities, claims = self.validation_copies()
         claim = claims["claim.child.00cd.complete-led-map"]
         claim["evidence_level"] = "source-reviewed"
         with self.assertRaisesRegex(ModelError, "lacks public physical qualification"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
     def test_surface_usb_identity_is_rejected(self) -> None:
         profiles, capabilities, claims = self.validation_copies()
@@ -132,136 +174,157 @@ class ProfileCompilerTests(unittest.TestCase):
         surface["identity"]["vendor_id"] = 0x1532
         surface["identity"]["product_id"] = 0x00CF
         with self.assertRaisesRegex(ModelError, "must not invent USB identity"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
     def test_incomplete_or_repeated_carrier_map_is_rejected(self) -> None:
         profiles, capabilities, claims = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
         mouse["transport"]["lighting"]["application_index_to_carrier"][1] = 1
         with self.assertRaisesRegex(ModelError, "repeats a receiver carrier"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
     def test_passive_decoder_is_lane_bound_disjoint_and_profile_local(self) -> None:
         profiles, capabilities, claims = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
         mouse["transport"]["passive"]["endpoint_lane"] = "keyboard"
         with self.assertRaisesRegex(ModelError, "passive lane contradicts"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
         profiles, capabilities, claims = self.validation_copies()
         keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
         keyboard["transport"]["passive"]["route"]["unavailable"].append(3)
         keyboard["transport"]["passive"]["route"]["unavailable"].sort()
         with self.assertRaisesRegex(ModelError, "route values must be disjoint"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
         profiles, capabilities, claims = self.validation_copies()
         keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
         keyboard["transport"]["passive"]["route"]["indeterminate"].append(3)
         keyboard["transport"]["passive"]["route"]["indeterminate"].sort()
         with self.assertRaisesRegex(ModelError, "route values must be disjoint"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
         profiles, capabilities, claims = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
         del mouse["transport"]["passive"]
         with self.assertRaisesRegex(ModelError, "passive telemetry requires a decoder"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
     def test_passive_semantics_participate_in_runtime_profile_digest(self) -> None:
         profiles, capabilities, _ = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
-        before = _runtime_profile_digest(mouse, capabilities)
+        before = self.runtime_profile_digest(mouse, capabilities)
         mouse["transport"]["passive"]["contact"]["on_mat"] = [2]
-        self.assertNotEqual(_runtime_profile_digest(mouse, capabilities), before)
+        self.assertNotEqual(self.runtime_profile_digest(mouse, capabilities), before)
 
-    def test_lifecycle_policy_is_bounded_profile_local_and_digest_bound(self) -> None:
+    def test_lifecycle_profile_evidence_is_policy_bounded_and_digest_bound(self) -> None:
         profiles, capabilities, claims = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
-        before = _runtime_profile_digest(mouse, capabilities)
-        mouse["transport"]["lifecycle"]["device_return_settle_ms"] = 1_001
-        _validate_profiles(profiles, capabilities, claims)
-        self.assertNotEqual(_runtime_profile_digest(mouse, capabilities), before)
+        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
+        before = self.runtime_profile_digest(mouse, capabilities)
+        sibling_before = self.runtime_profile_digest(keyboard, capabilities)
+        mouse["transport"]["lifecycle"]["accelerator_evidence"] = [
+            "battery-report",
+            "contact-report",
+            "endpoint-activity",
+        ]
+        self.validate_profiles(profiles, capabilities, claims)
+        self.assertNotEqual(self.runtime_profile_digest(mouse, capabilities), before)
+        self.assertEqual(self.runtime_profile_digest(keyboard, capabilities), sibling_before)
 
         profiles, capabilities, claims = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
-        mouse["transport"]["lifecycle"]["device_return_settle_ms"] = 0
-        with self.assertRaisesRegex(ModelError, "requires a positive settle time"):
-            _validate_profiles(profiles, capabilities, claims)
+        mouse["transport"]["lifecycle"]["return_policy_id"] = "missing.policy"
+        with self.assertRaisesRegex(ModelError, "unknown return policy"):
+            self.validate_profiles(profiles, capabilities, claims)
 
         profiles, capabilities, claims = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
         mouse["transport"]["passive"]["route"]["unavailable"] = [2]
         with self.assertRaisesRegex(ModelError, "contradicts passive route evidence"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
         profiles, capabilities, claims = self.validation_copies()
         keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
-        before = _runtime_profile_digest(keyboard, capabilities)
-        keyboard["transport"]["lifecycle"]["device_return_settle_ms"] = 1_001
-        _validate_profiles(profiles, capabilities, claims)
-        self.assertNotEqual(_runtime_profile_digest(keyboard, capabilities), before)
-        self.assertEqual(
-            keyboard["transport"]["lifecycle"]["power_off_departure_evidence"],
-            "receiver-state",
+        keyboard["transport"]["lifecycle"]["accelerator_evidence"].append("contact-report")
+        keyboard["transport"]["lifecycle"]["accelerator_evidence"].sort()
+        with self.assertRaisesRegex(ModelError, "contact return evidence lacks a decoder"):
+            self.validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        mouse["transport"]["lifecycle"]["open_evidence"] = ["route-return"]
+        mouse["transport"]["lifecycle"]["accelerator_evidence"] = ["route-return"]
+        with self.assertRaisesRegex(ModelError, "route-return evidence lacks departure values"):
+            self.validate_profiles(profiles, capabilities, claims)
+
+    def test_lifecycle_policy_timing_is_central_bounded_and_authority_backed(self) -> None:
+        profiles, capabilities, claims = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
+        before_mouse = self.runtime_profile_digest(mouse, capabilities)
+        before_keyboard = self.runtime_profile_digest(keyboard, capabilities)
+
+        catalog = deepcopy(self.inputs.lifecycle_policies)
+        catalog["policies"][0]["retry_offsets_ms"][-1] = 6_100
+        policies = _validate_lifecycle_policy_catalog(catalog)
+        self.validate_profiles(profiles, capabilities, claims, policies)
+        self.assertNotEqual(
+            self.runtime_profile_digest(mouse, capabilities, policies), before_mouse
+        )
+        self.assertNotEqual(
+            self.runtime_profile_digest(keyboard, capabilities, policies), before_keyboard
         )
 
-        profiles, capabilities, claims = self.validation_copies()
-        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
-        before = _runtime_profile_digest(keyboard, capabilities)
-        keyboard["transport"]["lifecycle"]["device_return_confirmation"]["settle_ms"] = 251
-        _validate_profiles(profiles, capabilities, claims)
-        self.assertNotEqual(_runtime_profile_digest(keyboard, capabilities), before)
+        metadata_only = deepcopy(self.inputs.lifecycle_policies)
+        metadata_only["policies"][0]["timing_authorities"][1]["summary"] += " More detail."
+        metadata_policies = _validate_lifecycle_policy_catalog(metadata_only)
+        self.assertEqual(
+            self.runtime_profile_digest(mouse, capabilities, metadata_policies), before_mouse
+        )
 
-        profiles, capabilities, claims = self.validation_copies()
-        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
-        before = _runtime_profile_digest(keyboard, capabilities)
-        keyboard["transport"]["lifecycle"]["device_return_confirmation"][
-            "reassert_at_fallback"
-        ] = False
-        _validate_profiles(profiles, capabilities, claims)
-        self.assertNotEqual(_runtime_profile_digest(keyboard, capabilities), before)
+        invalid = deepcopy(self.inputs.lifecycle_policies)
+        invalid["policies"][0]["retry_offsets_ms"] = [0, 100, 100]
+        with self.assertRaisesRegex(ModelError, "retry offsets must be unique"):
+            _validate_lifecycle_policy_catalog(invalid)
 
-        profiles, capabilities, claims = self.validation_copies()
-        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
-        keyboard["transport"]["lifecycle"]["device_return_confirmation"][
-            "reassert_at_fallback"
-        ] = 1
-        with self.assertRaisesRegex(ModelError, "fallback reassertion must be boolean"):
-            _validate_profiles(profiles, capabilities, claims)
+        invalid = deepcopy(self.inputs.lifecycle_policies)
+        invalid["policies"][0]["quiescence_candidate_ms"] = 999
+        with self.assertRaisesRegex(ModelError, "quiescence candidate is out of bounds"):
+            _validate_lifecycle_policy_catalog(invalid)
 
-        profiles, capabilities, claims = self.validation_copies()
-        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
-        keyboard["transport"]["lifecycle"]["device_return_confirmation"]["evidence"] = "activity"
-        with self.assertRaisesRegex(ModelError, "unsupported return confirmation evidence"):
-            _validate_profiles(profiles, capabilities, claims)
+        invalid = deepcopy(self.inputs.lifecycle_policies)
+        invalid["policies"][0]["observation_jitter_ms"] = 60_000
+        with self.assertRaisesRegex(ModelError, "observation jitter tolerance is out of bounds"):
+            _validate_lifecycle_policy_catalog(invalid)
 
-        profiles, capabilities, claims = self.validation_copies()
-        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
-        keyboard["transport"]["lifecycle"]["device_return_confirmation"]["settle_ms"] = 5_000
-        with self.assertRaisesRegex(ModelError, "confirmation must precede"):
-            _validate_profiles(profiles, capabilities, claims)
+        invalid = deepcopy(self.inputs.lifecycle_policies)
+        invalid["policies"][0]["timing_authorities"] = [
+            invalid["policies"][0]["timing_authorities"][1]
+        ]
+        with self.assertRaisesRegex(ModelError, "timing values require explicit authorities"):
+            _validate_lifecycle_policy_catalog(invalid)
 
     def test_qualification_migrations_are_exact_and_do_not_change_runtime_identity(self) -> None:
         profiles, capabilities, claims = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
-        with_migration = _runtime_profile_digest(mouse, capabilities)
+        with_migration = self.runtime_profile_digest(mouse, capabilities)
         del mouse["qualification_migrations"]
-        self.assertEqual(_runtime_profile_digest(mouse, capabilities), with_migration)
+        self.assertEqual(self.runtime_profile_digest(mouse, capabilities), with_migration)
 
         profiles, capabilities, claims = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
         mouse["qualification_migrations"][0]["preserve_stage_roles"] = ["identity"]
         with self.assertRaisesRegex(ModelError, "unsupported stage roles: identity"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
         profiles, capabilities, claims = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
         mouse["qualification_migrations"][0]["from_runtime_sha256"] = (
-            _runtime_profile_digest(mouse, capabilities)
+            self.runtime_profile_digest(mouse, capabilities)
         )
         with self.assertRaisesRegex(ModelError, "already equals the current runtime profile"):
-            _validate_profiles(profiles, capabilities, claims)
+            self.validate_profiles(profiles, capabilities, claims)
 
     def test_qualification_migration_rust_is_rustfmt_stable(self) -> None:
         migration = {

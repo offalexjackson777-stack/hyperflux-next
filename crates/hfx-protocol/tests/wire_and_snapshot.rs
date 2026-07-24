@@ -3,18 +3,18 @@
 use hfx_domain::{
     ActivityState, BatteryPercent, ClientId, ClientName, ColorChannel, ConnectionMode,
     ContactState, ControllerAvailability, DeviceKind, EvidenceConfidence, FreshnessState,
-    GenerationId, InventoryAvailability, LedCount, ModelName, PairingState, PowerState,
-    PresenceState, ProductId, ProjectionRevision, ProtocolFeatureId, ProtocolVersion,
-    ReceiverLifecycleState, ResourceKind, RestoreState, RouteKind, RouteState, SequenceNumber,
-    SleepState, StableLightingMode, StreamEpoch, SupportLevel, TelemetryAvailability,
-    TransactionClass,
+    GenerationId, InventoryAvailability, LedCount, ModelName, MonotonicMs, PairingState,
+    PowerState, PresenceState, ProductId, ProjectionRevision, ProtocolFeatureId, ProtocolVersion,
+    ReceiverLifecycleState, ResourceKind, RestoreDeliveryState, RestoreState, ReturnEvidence,
+    ReturnPhase, RouteKind, RouteState, SequenceNumber, SleepState, StableLightingMode,
+    StreamEpoch, SupportLevel, TelemetryAvailability, TransactionClass,
 };
 use hfx_protocol::{
     BatteryObservation, BridgeSnapshot, ClientHello, ControllerActions, ControllerOwnership,
     ControllerView, DeviceInventoryView, EmptyRequest, EndpointSnapshot, EventCursor,
     IntegrationReceiverView, IntegrationView, LightingTopologyView, LogicalDeviceSnapshot,
     MAX_WIRE_MESSAGE_BYTES, NegotiationRequestEnvelope, PresentationView, ProfileBindingView,
-    ProtocolWireError, ReceiverSnapshot, ResourceKey, RpcRequest, RpcResponse,
+    ProtocolWireError, ReceiverSnapshot, ResourceKey, ReturnEpoch, RpcRequest, RpcResponse,
     SessionRequestEnvelope, SnapshotValidationError, SuccessEnvelope, UnownedController,
     decode_rpc_request, decode_rpc_request_for_version, decode_rpc_response,
     decode_rpc_response_for_version, encode_rpc_request_for_version,
@@ -60,6 +60,20 @@ fn endpoint() -> EndpointSnapshot {
         confidence: EvidenceConfidence::Observed,
         evidence_claim_id: Some(text("evidence-1")),
         observed_at_ms: Some(hfx_domain::MonotonicMs::try_from(10_u64).expect("time is valid")),
+        return_epoch: None,
+    }
+}
+
+fn return_epoch() -> ReturnEpoch {
+    ReturnEpoch {
+        generation_id: GenerationId::try_from(1_u64).expect("generation is valid"),
+        device_id: text("mouse-1"),
+        endpoint_id: text("endpoint-hyperflux"),
+        epoch_sequence: SequenceNumber::try_from(7_u64).expect("sequence is valid"),
+        opened_at_ms: MonotonicMs::try_from(5_u64).expect("time is valid"),
+        opening_evidence: ReturnEvidence::EndpointActivity,
+        phase: ReturnPhase::Returning,
+        delivery_state: RestoreDeliveryState::ReceiverDelivered,
     }
 }
 
@@ -440,10 +454,14 @@ fn versioned_decoders_reject_changed_or_unknown_wire_shapes_instead_of_guessing(
     );
     assert_eq!(
         decode_rpc_request_for_version(&v3, number(5)),
-        Ok(normalized)
+        Ok(normalized.clone())
     );
     assert_eq!(
         decode_rpc_request_for_version(&v3, number(6)),
+        Ok(normalized)
+    );
+    assert_eq!(
+        decode_rpc_request_for_version(&v3, number(7)),
         Err(ProtocolWireError::UnsupportedProtocolVersion)
     );
 }
@@ -529,8 +547,65 @@ fn responses_are_checked_against_the_exact_negotiated_schema() {
                 server_instance_id: text("bridge-instance-1"),
                 result: snapshot(battery(TelemetryAvailability::Reported, Some(73))),
             }),
-            number(6)
+            number(7)
         ),
         Err(ProtocolWireError::UnsupportedProtocolVersion)
+    );
+}
+
+#[test]
+fn v6_projects_return_epochs_while_v5_omits_them_safely() {
+    let mut current = snapshot(battery(TelemetryAvailability::Reported, Some(73)));
+    current.receivers[0].devices[0].endpoints[0].return_epoch = Some(return_epoch());
+    let response = RpcResponse::SnapshotSuccess(SuccessEnvelope {
+        request_id: text("request-return-epoch"),
+        server_instance_id: text("bridge-instance-1"),
+        result: current,
+    });
+
+    let v6 = number(6);
+    let encoded = encode_rpc_response_for_version(&response, v6)
+        .expect("v6 preserves the return lifecycle projection");
+    assert_eq!(
+        decode_rpc_response_for_version(&encoded, v6),
+        Ok(response.clone())
+    );
+
+    let v5 = number(5);
+    let encoded = encode_rpc_response_for_version(&response, v5)
+        .expect("v5 safely omits the optional lifecycle projection");
+    let RpcResponse::SnapshotSuccess(legacy) =
+        decode_rpc_response_for_version(&encoded, v5).expect("v5 snapshot decodes")
+    else {
+        panic!("snapshot response expected")
+    };
+    assert!(
+        legacy.result.receivers[0].devices[0].endpoints[0]
+            .return_epoch
+            .is_none()
+    );
+}
+
+#[test]
+fn return_epoch_projection_rejects_cross_record_or_false_synchronization_claims() {
+    let mut wrong_device = snapshot(battery(TelemetryAvailability::Reported, Some(73)));
+    wrong_device.receivers[0].devices[0].endpoints[0].return_epoch = Some(ReturnEpoch {
+        device_id: text("keyboard-1"),
+        ..return_epoch()
+    });
+    assert_eq!(
+        validate_bridge_snapshot(&wrong_device),
+        Err(SnapshotValidationError::ReturnEpochContradiction)
+    );
+
+    let mut false_sync = snapshot(battery(TelemetryAvailability::Reported, Some(73)));
+    false_sync.receivers[0].devices[0].endpoints[0].return_epoch = Some(ReturnEpoch {
+        phase: ReturnPhase::Synchronized,
+        delivery_state: RestoreDeliveryState::ReceiverDelivered,
+        ..return_epoch()
+    });
+    assert_eq!(
+        validate_bridge_snapshot(&false_sync),
+        Err(SnapshotValidationError::ReturnEpochContradiction)
     );
 }

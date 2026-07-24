@@ -2,9 +2,10 @@
 
 use hfx_bridge::{
     BridgeSessionConfig, ConnectionDispatcher, CoreBridgeBackend, CoreBridgeConfig,
-    DisabledRestorationSource, ReceiverRestorationSnapshot, RestorationProjectionError,
-    RestorationRuntime, RestorationSnapshotSource, RuntimeProfileAuthority, SessionIdentityError,
-    SessionIdentitySource, SessionRegistry, StableCaptureStatus,
+    DesiredEffectReplayStatus, DisabledRestorationSource, ReceiverRestorationSnapshot,
+    RestorationProjectionError, RestorationRuntime, RestorationSnapshotSource,
+    RuntimeProfileAuthority, SessionIdentityError, SessionIdentitySource, SessionRegistry,
+    StableCaptureStatus,
 };
 use hfx_core::{
     ChildIdentity, Clock, CompletedTransaction, EndpointIdentity, EventDelivery, EventSink,
@@ -504,6 +505,97 @@ fn assert_error(response: RpcResponse, finding: &str, kind: ProtocolErrorKind) {
     };
     assert_eq!(envelope.error.finding_id.as_str(), finding);
     assert_eq!(envelope.error.kind, kind);
+}
+
+#[test]
+fn effect_return_replay_reuses_live_owner_authority_and_disconnect_invalidates_it() {
+    let mut backend = backend();
+    let mut sessions = SessionRegistry::new(
+        QueueCapacity::try_from(4_u16).expect("session capacity is canonical"),
+    );
+    let mut dispatcher = new_dispatcher();
+    let mut session_identities = DeterministicIdentities(48);
+    let hello = negotiate(
+        &mut dispatcher,
+        &mut session_identities,
+        &mut sessions,
+        &mut backend,
+    );
+    let acquired = dispatcher.dispatch(
+        RpcRequest::AcquireLease(SessionRequestEnvelope {
+            request_id: text("request-effect-acquire"),
+            protocol_session_id: hello.protocol_session_id.clone(),
+            negotiation_token: hello.negotiation_token.clone(),
+            params: lease_request("request-effect-acquire", resource("mouse", 1)),
+        }),
+        &mut session_identities,
+        &mut sessions,
+        &mut backend,
+    );
+    let RpcResponse::AcquireLeaseSuccess(acquired) = acquired else {
+        panic!("lease must be granted: {acquired:?}");
+    };
+    let LeaseResult::Granted(grant) = acquired.result else {
+        panic!("lease result must be granted");
+    };
+
+    let mut effect = static_transaction(&backend, grant.lease_id);
+    effect.transaction_class = TransactionClass::EffectFrame;
+    effect.stable_intents.clear();
+    let queued = dispatcher.dispatch(
+        RpcRequest::SubmitTransaction(SessionRequestEnvelope {
+            request_id: effect.request_id.clone(),
+            protocol_session_id: hello.protocol_session_id,
+            negotiation_token: hello.negotiation_token,
+            params: effect,
+        }),
+        &mut session_identities,
+        &mut sessions,
+        &mut backend,
+    );
+    assert!(matches!(
+        queued,
+        RpcResponse::SubmitTransactionSuccess(ref envelope)
+            if matches!(envelope.result, TransactionResult::Progress(_))
+    ));
+    assert_eq!(backend.desired_effect_frames(), 1);
+    backend
+        .dispatch_next(&sessions)
+        .expect("original effect frame dispatches");
+
+    assert_eq!(
+        backend
+            .queue_desired_effect_replay(
+                &text("receiver-1"),
+                generation(1),
+                &text("mouse"),
+                &sessions,
+                1_000,
+            )
+            .expect("return replay is coordinated"),
+        DesiredEffectReplayStatus::Queued
+    );
+    backend
+        .dispatch_next(&sessions)
+        .expect("return effect frame dispatches through normal authority");
+    assert_eq!(backend.transport().dispatches.len(), 2);
+
+    dispatcher
+        .disconnect(&mut sessions, &mut backend)
+        .expect("disconnect cleanup succeeds");
+    assert_eq!(backend.desired_effect_frames(), 0);
+    assert_eq!(
+        backend
+            .queue_desired_effect_replay(
+                &text("receiver-1"),
+                generation(1),
+                &text("mouse"),
+                &sessions,
+                1_000,
+            )
+            .expect("missing effect is a typed outcome"),
+        DesiredEffectReplayStatus::NotAvailable
+    );
 }
 
 #[test]

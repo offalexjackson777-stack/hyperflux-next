@@ -10,13 +10,13 @@ use crate::{
     SnapshotProjectionError, SnapshotProjector, SubscriptionRegistry, SubscriptionRegistryError,
 };
 use hfx_core::{
-    BoundedEventLog, Clock, DiagnosticRegistry, DiagnosticRegistryError, DispatchResult,
-    EventDraft, EventLogError, EventSink, LeaseManager, LeaseManagerError, LifecycleLimits,
-    OutcomeJournalError, OutcomeLookup, PersistedStableIntent, ProfileRegistry,
+    BoundedEventLog, Clock, DesiredEffectError, DiagnosticRegistry, DiagnosticRegistryError,
+    DispatchResult, EventDraft, EventLogError, EventSink, LeaseManager, LeaseManagerError,
+    LifecycleLimits, OutcomeJournalError, OutcomeLookup, PersistedStableIntent, ProfileRegistry,
     ReceiverLifecycleRegistry, ReceiverTransport, RestorationAuthority, RestorationError,
     RestoreAdvanceResult, RestorePlanResult, RestoreRecord, RestoreTrigger, SessionAuthority,
     StableCommitOutcome, SubmissionResult, TransactionCoordinator, TransactionCoordinatorError,
-    TransactionQueueError, WallClock,
+    TransactionQueueError, VolatileEffectRegistry, WallClock,
 };
 use hfx_domain::{
     EventKind, FindingId, LeaseDurationMs, MonotonicMs, ProjectionRevision, ProtocolErrorKind,
@@ -57,6 +57,14 @@ pub enum StableCaptureStatus {
 pub struct BridgeDispatchResult {
     pub dispatch: DispatchResult,
     pub stable_capture: StableCaptureStatus,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum DesiredEffectReplayStatus {
+    NotAvailable,
+    Queued,
+    Deferred,
+    Invalidated,
 }
 
 impl Deref for BridgeDispatchResult {
@@ -105,6 +113,7 @@ pub struct CoreBridgeBackend<C, W, T, R, S> {
     profiles: RuntimeProfileAuthority,
     leases: LeaseManager,
     transactions: TransactionCoordinator,
+    desired_effects: VolatileEffectRegistry,
     events: BoundedEventLog,
     diagnostics: DiagnosticRegistry,
     subscriptions: SubscriptionRegistry,
@@ -147,6 +156,12 @@ where
         let transactions =
             TransactionCoordinator::new(usize::from(config.transaction_capacity.get()))
                 .map_err(CoreBridgeBackendError::Transaction)?;
+        let desired_effects = VolatileEffectRegistry::new(usize::from(
+            config.transaction_capacity.get(),
+        ))
+        .map_err(|_| {
+            CoreBridgeBackendError::Transaction(TransactionCoordinatorError::InvalidCapacity)
+        })?;
         let events = BoundedEventLog::new(
             config.stream_id.clone(),
             config.stream_epoch,
@@ -170,6 +185,7 @@ where
             profiles,
             leases,
             transactions,
+            desired_effects,
             events,
             diagnostics,
             subscriptions,
@@ -237,6 +253,10 @@ where
                         Err(error) => StableCaptureStatus::Failed(error),
                     }
                 });
+        if let Some(completed) = dispatch.completed.as_ref() {
+            self.desired_effects
+                .observe_completed(&completed.request, &completed.terminal);
+        }
         Ok(BridgeDispatchResult {
             dispatch,
             stable_capture,
@@ -263,7 +283,7 @@ where
         &mut self,
         observation: ReceiverGenerationObservation,
     ) -> Result<GenerationActivationOutcome, GenerationOrchestrationError> {
-        GenerationOrchestrator::activate(
+        let outcome = GenerationOrchestrator::activate(
             observation,
             self.config.lifecycle_limits,
             &self.transport,
@@ -274,7 +294,14 @@ where
             &mut self.transactions,
             &mut self.events,
             &mut self.event_sink,
-        )
+        )?;
+        if let GenerationActivationOutcome::Applied(activation) = &outcome
+            && let Some(previous_generation) = activation.previous_generation
+        {
+            self.desired_effects
+                .remove_generation(&activation.receiver_id, previous_generation);
+        }
+        Ok(outcome)
     }
 
     /// Begins a transport-confirmed receiver disconnect and revokes all live
@@ -287,7 +314,7 @@ where
         &mut self,
         observation: ReceiverDisconnectObservation,
     ) -> Result<ReceiverDisconnectOutcome, GenerationOrchestrationError> {
-        GenerationOrchestrator::begin_disconnect(
+        let outcome = GenerationOrchestrator::begin_disconnect(
             observation,
             &self.transport,
             &mut self.restoration,
@@ -296,7 +323,12 @@ where
             &mut self.transactions,
             &mut self.events,
             &mut self.event_sink,
-        )
+        )?;
+        if let ReceiverDisconnectOutcome::Applied(disconnect) = &outcome {
+            self.desired_effects
+                .remove_generation(&disconnect.receiver_id, disconnect.generation_id);
+        }
+        Ok(outcome)
     }
 
     /// Completes a previously begun receiver disconnect and retires its
@@ -465,6 +497,88 @@ where
         )
     }
 
+    /// Queues the latest owner-bound software-effect frame for one returning
+    /// endpoint through the ordinary transaction authority.
+    ///
+    /// Expected stale ownership and temporary readiness outcomes are returned
+    /// as lifecycle statuses. Structural, identity, event, and outcome failures
+    /// remain typed RPC failures.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed RPC failure when fresh replay identity cannot be issued,
+    /// retained effect state is invalid, or ordinary transaction admission
+    /// encounters a non-recoverable internal failure.
+    #[allow(clippy::too_many_arguments)]
+    pub fn queue_desired_effect_replay(
+        &mut self,
+        receiver_id: &ReceiverId,
+        generation_id: hfx_domain::GenerationId,
+        device_id: &hfx_domain::LogicalDeviceId,
+        sessions: &SessionRegistry,
+        authority_window_ms: u64,
+    ) -> Result<DesiredEffectReplayStatus, RpcFailure> {
+        let deadline = self
+            .clock
+            .now()
+            .get()
+            .checked_add(authority_window_ms)
+            .and_then(|value| hfx_domain::MonotonicMs::try_from(value).ok())
+            .ok_or_else(RpcFailure::internal)?;
+        let request_id = self.identities.request_id().map_err(identity_failure)?;
+        let transaction_id = self.identities.transaction_id().map_err(identity_failure)?;
+        let dispatch_nonce = self.identities.dispatch_nonce().map_err(identity_failure)?;
+        let Some(replay) = self
+            .desired_effects
+            .plan_replay(
+                receiver_id,
+                generation_id,
+                device_id,
+                request_id,
+                transaction_id,
+                dispatch_nonce,
+                deadline,
+            )
+            .map_err(desired_effect_failure)?
+        else {
+            return Ok(DesiredEffectReplayStatus::NotAvailable);
+        };
+        let profiles = self.profiles.view(&self.receivers);
+        match self.transactions.submit(
+            replay.request,
+            replay.submission,
+            self.clock.now(),
+            sessions,
+            &self.leases,
+            &profiles,
+            &profiles,
+            &self.transport,
+            &mut self.events,
+            &mut self.event_sink,
+        ) {
+            Ok(SubmissionResult::Queued(_)) => Ok(DesiredEffectReplayStatus::Queued),
+            Ok(SubmissionResult::Replay(_)) => Err(RpcFailure::internal()),
+            Err(
+                TransactionCoordinatorError::DeviceNotReady(_)
+                | TransactionCoordinatorError::Queue(
+                    TransactionQueueError::Full | TransactionQueueError::DeadlineElapsed,
+                ),
+            ) => Ok(DesiredEffectReplayStatus::Deferred),
+            Err(
+                TransactionCoordinatorError::SessionRevoked
+                | TransactionCoordinatorError::OwnershipDenied
+                | TransactionCoordinatorError::StaleGeneration
+                | TransactionCoordinatorError::UnsupportedResource
+                | TransactionCoordinatorError::ProfileBindingChanged,
+            ) => {
+                self.desired_effects
+                    .remove_target(receiver_id, generation_id, device_id);
+                Ok(DesiredEffectReplayStatus::Invalidated)
+            }
+            Err(error) => Err(transaction_failure(error)),
+        }
+    }
+
     #[must_use]
     pub fn now(&self) -> MonotonicMs {
         self.clock.now()
@@ -509,6 +623,11 @@ where
     #[must_use]
     pub fn queued_transactions(&self) -> usize {
         self.transactions.queued_len()
+    }
+
+    #[must_use]
+    pub fn desired_effect_frames(&self) -> usize {
+        self.desired_effects.len()
     }
 
     #[must_use]
@@ -588,7 +707,7 @@ where
 
         let mut next_events = self.events.clone();
         let mut emitted = Vec::with_capacity(expired.len());
-        for grant in expired {
+        for grant in &expired {
             emitted.push(
                 next_events
                     .append(EventDraft {
@@ -596,7 +715,7 @@ where
                         receiver_id: None,
                         generation_id: None,
                         device_id: None,
-                        lease_id: Some(grant.lease_id),
+                        lease_id: Some(grant.lease_id.clone()),
                         transaction_id: None,
                         finding_id: None,
                     })
@@ -606,6 +725,9 @@ where
 
         self.leases = next_leases;
         self.events = next_events;
+        for grant in expired {
+            self.desired_effects.remove_lease(&grant.lease_id);
+        }
         for event in emitted {
             let _ = self.event_sink.try_emit(&event);
         }
@@ -698,6 +820,7 @@ where
     ) -> Result<LeaseResult, RpcFailure> {
         Self::authorize_client(context, &request.client_id)?;
         self.tick()?;
+        let released_lease_id = request.lease_id.clone();
         let decision = self
             .leases
             .release_request_decision(request, self.clock.now())
@@ -706,6 +829,9 @@ where
             && let LeaseResult::Granted(grant) = &decision.result
         {
             self.record_ownership_change(grant.lease_id.clone())?;
+        }
+        if decision.changed {
+            self.desired_effects.remove_lease(&released_lease_id);
         }
         Ok(decision.result)
     }
@@ -717,12 +843,18 @@ where
     ) -> Result<TransactionResult, RpcFailure> {
         Self::authorize_client(context, &request.client_id)?;
         self.tick()?;
+        self.desired_effects
+            .validate_admission(&request)
+            .map_err(desired_effect_failure)?;
         let nonce = self.identities.dispatch_nonce().map_err(identity_failure)?;
+        let submission = context.session().submission_binding(nonce);
+        let desired_request = request.clone();
         let profiles = self.profiles.view(&self.receivers);
-        self.transactions
+        let result = self
+            .transactions
             .submit(
                 request,
-                context.session().submission_binding(nonce),
+                submission.clone(),
                 self.clock.now(),
                 context.sessions(),
                 &self.leases,
@@ -732,11 +864,16 @@ where
                 &mut self.events,
                 &mut self.event_sink,
             )
-            .map(|result| match result {
-                SubmissionResult::Queued(progress) => TransactionResult::Progress(progress),
-                SubmissionResult::Replay(result) => result,
-            })
-            .map_err(transaction_failure)
+            .map_err(transaction_failure)?;
+        if matches!(result, SubmissionResult::Queued(_)) {
+            self.desired_effects
+                .capture_admitted(&desired_request, &submission)
+                .map_err(desired_effect_failure)?;
+        }
+        Ok(match result {
+            SubmissionResult::Queued(progress) => TransactionResult::Progress(progress),
+            SubmissionResult::Replay(result) => result,
+        })
     }
 
     fn transaction_outcome(
@@ -798,6 +935,7 @@ where
 
     fn disconnect(&mut self, session: &AuthorizedSession) -> Result<(), RpcFailure> {
         self.tick()?;
+        self.desired_effects.remove_session(&session.session_id);
         let _ = self.subscriptions.revoke_session(session);
         let released = self.leases.release_client(&session.client_id);
         let mut first_failure = None;
@@ -820,6 +958,10 @@ where
 fn finding(code: ErrorCode) -> FindingId {
     FindingId::try_from(code.as_str())
         .expect("generated error codes satisfy the finding identity bound")
+}
+
+fn desired_effect_failure(_error: DesiredEffectError) -> RpcFailure {
+    RpcFailure::internal()
 }
 
 const fn request_failure() -> RpcFailure {

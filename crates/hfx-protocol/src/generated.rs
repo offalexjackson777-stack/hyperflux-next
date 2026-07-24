@@ -11,15 +11,16 @@ use hfx_domain::{
     NegotiationToken, PairingState, PowerState, PresenceState, PresentationKey, PrivacyClass,
     ProductId, ProfileDigest, ProfileId, ProjectionRevision, ProtocolErrorKind, ProtocolFeatureId,
     ProtocolSessionId, ProtocolVersion, QueueAdmission, QueueCapacity, ReceiverId,
-    ReceiverLifecycleState, RequestDigest, RequestId, ResourceKind, RestoreState, RouteKind,
-    RouteState, SequenceNumber, ServerInstanceId, SideEffectCertainty, SleepState, SourceRevision,
-    StableLightingMode, StreamEpoch, StreamId, SubscriptionId, SupportLevel, TelemetryAvailability,
-    TransactionClass, TransactionId, TransactionState, TransportVariant, UpstreamId, UpstreamOwner,
+    ReceiverLifecycleState, RequestDigest, RequestId, ResourceKind, RestoreDeliveryState,
+    RestoreState, ReturnEvidence, ReturnPhase, RouteKind, RouteState, SequenceNumber,
+    ServerInstanceId, SideEffectCertainty, SleepState, SourceRevision, StableLightingMode,
+    StreamEpoch, StreamId, SubscriptionId, SupportLevel, TelemetryAvailability, TransactionClass,
+    TransactionId, TransactionState, TransportVariant, UpstreamId, UpstreamOwner,
 };
 use serde::{Deserialize, Serialize};
 
-pub const MINIMUM_PROTOCOL_VERSION: u16 = 5;
-pub const MAXIMUM_PROTOCOL_VERSION: u16 = 5;
+pub const MINIMUM_PROTOCOL_VERSION: u16 = 6;
+pub const MAXIMUM_PROTOCOL_VERSION: u16 = 6;
 pub const MAX_WIRE_MESSAGE_BYTES: usize = 1_048_576;
 pub const MAX_JSON_DEPTH: usize = 128;
 pub const SUPPORTED_FEATURES: &[&str] = &[
@@ -31,6 +32,7 @@ pub const SUPPORTED_FEATURES: &[&str] = &[
     "integration-view-projection",
     "event-subscriptions",
     "structured-diagnostics",
+    "return-lifecycle-projection",
 ];
 
 /// A method request with no method-specific fields.
@@ -192,6 +194,28 @@ pub struct EventCursor {
     pub sequence: SequenceNumber,
 }
 
+/// Generation-bound endpoint return state without claiming physical lighting application.
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReturnEpoch {
+    /// Receiver generation that owns the epoch.
+    pub generation_id: GenerationId,
+    /// Logical child whose endpoint is returning.
+    pub device_id: LogicalDeviceId,
+    /// Exact endpoint whose return is tracked.
+    pub endpoint_id: EndpointId,
+    /// Opening evidence sequence for stale-event rejection.
+    pub epoch_sequence: SequenceNumber,
+    /// Bridge-local monotonic epoch opening time.
+    pub opened_at_ms: MonotonicMs,
+    /// Typed passive evidence that opened the epoch.
+    pub opening_evidence: ReturnEvidence,
+    /// Current endpoint return phase.
+    pub phase: ReturnPhase,
+    /// Strongest known replay-delivery fact.
+    pub delivery_state: RestoreDeliveryState,
+}
+
 /// Independent route, power, sleep, activity, contact, and freshness facts.
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -220,6 +244,8 @@ pub struct EndpointSnapshot {
     pub evidence_claim_id: Option<EvidenceClaimId>,
     /// Bridge-local observation instant.
     pub observed_at_ms: Option<MonotonicMs>,
+    /// Optional versioned return projection; receiver delivery alone never means child application.
+    pub return_epoch: Option<ReturnEpoch>,
 }
 
 /// Battery availability and value without collapsing unknown and unavailable.

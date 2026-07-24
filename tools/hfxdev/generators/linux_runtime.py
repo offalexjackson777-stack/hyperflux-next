@@ -98,8 +98,6 @@ def rust_constants(runtime: LinuxRuntime) -> str:
             f"{bridge.timing.actor_response_timeout_ms:_};",
             "pub const KERNEL_SESSION_DURATION_MS: u64 = "
             f"{bridge.timing.kernel_session_duration_ms:_};",
-            "pub const ACTIVITY_RESUMPTION_QUIET_MS: u64 = "
-            f"{bridge.timing.activity_resumption_quiet_ms:_};",
             "pub const RESTORATION_MAX_PENDING_TRIGGERS: usize = "
             f"{bridge.restoration.max_pending_triggers:_};",
             "pub const RESTORATION_MAX_PENDING_CLAIMS: usize = "
@@ -173,7 +171,6 @@ def python_constants(runtime: LinuxRuntime) -> str:
         ("ACCEPT_POLL_INTERVAL_MS", bridge.timing.accept_poll_interval_ms),
         ("ACTOR_RESPONSE_TIMEOUT_MS", bridge.timing.actor_response_timeout_ms),
         ("KERNEL_SESSION_DURATION_MS", bridge.timing.kernel_session_duration_ms),
-        ("ACTIVITY_RESUMPTION_QUIET_MS", bridge.timing.activity_resumption_quiet_ms),
         ("RESTORATION_MAX_PENDING_TRIGGERS", bridge.restoration.max_pending_triggers),
         ("RESTORATION_MAX_PENDING_CLAIMS", bridge.restoration.max_pending_claims),
         ("RESTORATION_CLAIMS_PER_TICK", bridge.restoration.claims_per_tick),

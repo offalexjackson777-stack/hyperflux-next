@@ -2,7 +2,7 @@
   "$schema": "../../schemas/hardware-profile.schema.json",
   "schema": "hyperflux-hardware-profile-v1",
   "profile_id": "child.razer.basilisk-v3-pro-35k.00cd",
-  "revision": 2,
+  "revision": 3,
   "kind": "child",
   "device_kind": "mouse",
   "identity": {"manufacturer": "Razer", "model_name": "Razer Basilisk V3 Pro 35K", "authority": "paired-product-id", "vendor_id": 5426, "product_id": 205},
@@ -16,9 +16,15 @@
       "route": {"available": [], "unavailable": []},
       "report_implies_route_available": true
     },
-    "lifecycle": {"power_off_departure_evidence": "watched-retained-route", "device_return_settle_ms": 1000}
+    "lifecycle": {
+      "power_off_departure_evidence": "watched-retained-route",
+      "return_policy_id": "receiver-child.activity-assisted.v1",
+      "open_evidence": ["endpoint-activity"],
+      "accelerator_evidence": ["contact-report", "endpoint-activity"]
+    }
   },
   "qualification_migrations": [
+    {"from_runtime_sha256": "1a9dde39c257beb4d51dcd43e4e56c57ee782d59d9b49834557591eaea04dfcc", "preserve_stage_roles": ["lighting", "map", "telemetry"]},
     {"from_runtime_sha256": "f72d38a70e9f4f7fb56848937abafa4773902de64b9d07b22e11c12df6dbfe33", "preserve_stage_roles": ["lighting", "map", "telemetry"]}
   ],
   "presentation": {"upstream_id": "openrgb", "owner": "OpenRGB", "project_version": "1.0rc3", "source_commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0", "model_key": "basilisk_v3_pro_35k_wireless_device", "layout_key": null, "transport_variant": "wireless"},

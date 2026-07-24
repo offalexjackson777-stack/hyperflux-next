@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 mod coordinator;
+mod desired_effects;
 mod diagnostics;
 mod events;
 mod leases;
@@ -16,14 +17,19 @@ pub use coordinator::{
     CompletedTransaction, DispatchResult, SubmissionResult, TransactionCoordinator,
     TransactionCoordinatorError,
 };
+pub use desired_effects::{
+    DesiredEffectError, EffectCapture, EffectFrameKey, EffectReplay, VolatileEffectRegistry,
+};
 pub use diagnostics::{BoundedDiagnosticSink, DiagnosticRegistry, DiagnosticRegistryError};
 pub use events::{BoundedEventLog, EventDraft, EventLogError};
+pub use hfx_domain::{RestoreDeliveryState, ReturnEvidence, ReturnPhase};
 pub use leases::{LeaseDecision, LeaseManager, LeaseManagerError};
 pub use lifecycle::{
     BatteryLifecycle, BatteryValue, ChildIdentity, DEFAULT_MAX_DEVICE_ENDPOINTS,
     DEFAULT_MAX_LIFECYCLE_DEVICES, DeviceLifecycle, EndpointIdentity, EndpointLifecycle,
-    LifecycleError, LifecycleFact, LifecycleLimits, ObservationStamp, ReceiverGenerationLifecycle,
-    ReceiverLifecycleMachine,
+    EndpointReturnLifecycle, EndpointReturnPolicy, LifecycleError, LifecycleFact, LifecycleLimits,
+    MAX_RETURN_RETRY_ATTEMPTS, MAX_RETURN_RETRY_WINDOW_MS, ObservationStamp,
+    ReceiverGenerationLifecycle, ReceiverLifecycleMachine, ReturnEpoch, ReturnTransition,
 };
 pub use ports::{
     Clock, DeviceStateAuthority, EventDelivery, EventSink, PersistedRestorePolicy,

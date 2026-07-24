@@ -232,7 +232,7 @@ Defines strict machine-readable shapes for every shared repository fact and gene
 
 **Used by:** [Assurance and release evidence](#assurance), [Kernel driver contract](#driver-contract), [Error catalog](#errors), [Application integration catalog](#integrations), [Composable hardware profiles](#profiles), [Versioned bridge protocol](#protocol), [Linux runtime authority](#runtime-config), [Rust workspace](#rust-workspace), [Repository tooling](#tooling)
 
-**Canonical sources:** `schemas/domain-catalog.json`, `schemas/domain-catalog.schema.json`, `schemas/repository-atlas.schema.json`, `schemas/public-readiness.schema.json`, `schemas/local-companion.schema.json`, `schemas/local-snapshot.schema.json`, `schemas/licensing-policy.schema.json`.
+**Canonical sources:** `schemas/domain-catalog.json`, `schemas/domain-catalog.schema.json`, `schemas/repository-atlas.schema.json`, `schemas/public-readiness.schema.json`, `schemas/local-companion.schema.json`, `schemas/local-snapshot.schema.json`, `schemas/licensing-policy.schema.json`, `schemas/lifecycle-policy-catalog.schema.json`.
 
 **Generated projections:** `schemas/README.md`, `docs/generated/domain-types.md`.
 
@@ -310,7 +310,7 @@ Composes receiver, surface, and child identities with evidence-bound capabilitie
 
 **Used by:** [Core policy engine](#core-runtime), [Device knowledge](#device-knowledge), [Device qualification console](#device-qualification-console), [Linux HID kernel module](#kernel-module), [OpenRazer compatibility adapter](#openrazer-adapter), [OpenRGB adapter](#openrgb-adapter), [Rust SDK](#rust-sdk), [C++ SDK](#sdk-cpp), [Python SDK](#sdk-python), [Deterministic simulator](#simulator)
 
-**Canonical sources:** `profiles/capabilities.json`, `profiles/evidence/claims.json`, `profiles/receivers/razer-hyperflux-v2-1532-00cf.json`, `profiles/surfaces/razer-hyperflux-v2-hard-edition.json`, `profiles/children/razer-basilisk-v3-pro-35k-00cd.json`, `profiles/children/razer-deathstalker-v2-pro-tkl-0296.json`, `profiles/candidates/razer-hyperflux-v2-2026-07-13.json`, `profiles/candidates/razer-hyperflux-v2-2026-07-21.json`.
+**Canonical sources:** `profiles/capabilities.json`, `profiles/lifecycle-policies.json`, `profiles/evidence/claims.json`, `profiles/receivers/razer-hyperflux-v2-1532-00cf.json`, `profiles/surfaces/razer-hyperflux-v2-hard-edition.json`, `profiles/children/razer-basilisk-v3-pro-35k-00cd.json`, `profiles/children/razer-deathstalker-v2-pro-tkl-0296.json`, `profiles/candidates/razer-hyperflux-v2-2026-07-13.json`, `profiles/candidates/razer-hyperflux-v2-2026-07-21.json`.
 
 **Generated projections:** `profiles/README.md`, `generated/profiles/catalog.json`, `docs/generated/supported-hardware.md`.
 

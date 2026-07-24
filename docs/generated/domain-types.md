@@ -111,6 +111,9 @@ These types prevent semantically different values from being passed interchangea
 - `QueueAdmission`: `enqueued`, `coalesced`, `rejected-full`, `rejected-deadline`, `rejected-invalid`
 - `RestoreState`: `idle`, `planned`, `ownership-bound`, `generation-bound`, `queued`, `applying`, `succeeded`, `failed`, `invalidated`
 - `RestoreTriggerKind`: `service-start`, `receiver-generation`, `system-resume`, `device-return`
+- `ReturnEvidence`: `application-ownership-loss`, `battery-report`, `contact-report`, `endpoint-activity`, `endpoint-identity`, `endpoint-status`, `receiver-generation`, `route-departure`, `route-return`, `system-resume`
+- `ReturnPhase`: `stable`, `quiescent-candidate`, `returning`, `synchronized`, `unavailable`
+- `RestoreDeliveryState`: `not-attempted`, `receiver-rejected`, `outcome-uncertain`, `receiver-delivered`, `child-rejected`, `child-confirmed`
 - `RestoreRecordState`: `planned`, `deferred`, `prepared`, `queued`, `applying`, `succeeded`, `failed`, `invalidated`
 - `RestoreDeferReason`: `device-sleeping`, `device-unavailable`, `device-unknown`, `ownership-conflict`, `session-unavailable`, `deadline-elapsed`, `safe-transaction-failure`
 - `RestoreInvalidationReason`: `superseded-trigger`, `stale-generation`, `intent-changed`, `profile-changed`, `restore-disabled`

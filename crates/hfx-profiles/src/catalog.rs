@@ -2,11 +2,11 @@
 
 use crate::{
     LifecyclePolicyRecord, LightingTopology, PROFILES, PassiveTelemetryRecord, PresentationRecord,
-    ProfileRecord, QualificationMigrationRecord,
+    ProfileRecord, QualificationMigrationRecord, ReturnEvidenceSource,
 };
 use hfx_domain::{
     CapabilityId, CarrierIndex, DeviceKind, DomainValueError, LedCount, ProductId, ProfileDigest,
-    ProfileId, ProfileKind, ProfileRevision, RouteKind, SupportLevel, VendorId,
+    ProfileId, ProfileKind, ProfileRevision, ReturnEvidence, RouteKind, SupportLevel, VendorId,
 };
 use std::collections::BTreeMap;
 use std::fmt;
@@ -141,6 +141,20 @@ impl RuntimeProfile {
             .map(|capability| capability.support_level)
             .max()
             .unwrap_or(SupportLevel::Candidate)
+    }
+}
+
+impl ReturnEvidenceSource {
+    /// Projects generated profile evidence into the application-neutral core
+    /// lifecycle vocabulary.
+    #[must_use]
+    pub const fn domain(self) -> ReturnEvidence {
+        match self {
+            Self::BatteryReport => ReturnEvidence::BatteryReport,
+            Self::ContactReport => ReturnEvidence::ContactReport,
+            Self::EndpointActivity => ReturnEvidence::EndpointActivity,
+            Self::RouteReturn => ReturnEvidence::RouteReturn,
+        }
     }
 }
 

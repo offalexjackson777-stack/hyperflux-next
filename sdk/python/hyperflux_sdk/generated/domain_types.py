@@ -983,6 +983,36 @@ class RestoreTriggerKind(str, Enum):
     DEVICE_RETURN = "device-return"
 
 
+class ReturnEvidence(str, Enum):
+    APPLICATION_OWNERSHIP_LOSS = "application-ownership-loss"
+    BATTERY_REPORT = "battery-report"
+    CONTACT_REPORT = "contact-report"
+    ENDPOINT_ACTIVITY = "endpoint-activity"
+    ENDPOINT_IDENTITY = "endpoint-identity"
+    ENDPOINT_STATUS = "endpoint-status"
+    RECEIVER_GENERATION = "receiver-generation"
+    ROUTE_DEPARTURE = "route-departure"
+    ROUTE_RETURN = "route-return"
+    SYSTEM_RESUME = "system-resume"
+
+
+class ReturnPhase(str, Enum):
+    STABLE = "stable"
+    QUIESCENT_CANDIDATE = "quiescent-candidate"
+    RETURNING = "returning"
+    SYNCHRONIZED = "synchronized"
+    UNAVAILABLE = "unavailable"
+
+
+class RestoreDeliveryState(str, Enum):
+    NOT_ATTEMPTED = "not-attempted"
+    RECEIVER_REJECTED = "receiver-rejected"
+    OUTCOME_UNCERTAIN = "outcome-uncertain"
+    RECEIVER_DELIVERED = "receiver-delivered"
+    CHILD_REJECTED = "child-rejected"
+    CHILD_CONFIRMED = "child-confirmed"
+
+
 class RestoreRecordState(str, Enum):
     PLANNED = "planned"
     DEFERRED = "deferred"
@@ -1192,6 +1222,9 @@ __all__ = [
     "QueueAdmission",
     "RestoreState",
     "RestoreTriggerKind",
+    "ReturnEvidence",
+    "ReturnPhase",
+    "RestoreDeliveryState",
     "RestoreRecordState",
     "RestoreDeferReason",
     "RestoreInvalidationReason",

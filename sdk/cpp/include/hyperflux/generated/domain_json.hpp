@@ -2035,6 +2035,141 @@ template<>
 }
 
 template<>
+[[nodiscard]] inline ReturnEvidence decode<ReturnEvidence>(const Json& value)
+{
+    if(!value.is_string())
+    {
+        throw CodecError("expected ReturnEvidence wire string");
+    }
+    const auto wire = value.get<std::string>();
+    if(wire == "application-ownership-loss")
+    {
+        return ReturnEvidence::ApplicationOwnershipLoss;
+    }
+    if(wire == "battery-report")
+    {
+        return ReturnEvidence::BatteryReport;
+    }
+    if(wire == "contact-report")
+    {
+        return ReturnEvidence::ContactReport;
+    }
+    if(wire == "endpoint-activity")
+    {
+        return ReturnEvidence::EndpointActivity;
+    }
+    if(wire == "endpoint-identity")
+    {
+        return ReturnEvidence::EndpointIdentity;
+    }
+    if(wire == "endpoint-status")
+    {
+        return ReturnEvidence::EndpointStatus;
+    }
+    if(wire == "receiver-generation")
+    {
+        return ReturnEvidence::ReceiverGeneration;
+    }
+    if(wire == "route-departure")
+    {
+        return ReturnEvidence::RouteDeparture;
+    }
+    if(wire == "route-return")
+    {
+        return ReturnEvidence::RouteReturn;
+    }
+    if(wire == "system-resume")
+    {
+        return ReturnEvidence::SystemResume;
+    }
+    throw CodecError("unknown ReturnEvidence wire value");
+}
+
+template<>
+[[nodiscard]] inline Json encode<ReturnEvidence>(const ReturnEvidence& value)
+{
+    return Json(std::string(to_string(value)));
+}
+
+template<>
+[[nodiscard]] inline ReturnPhase decode<ReturnPhase>(const Json& value)
+{
+    if(!value.is_string())
+    {
+        throw CodecError("expected ReturnPhase wire string");
+    }
+    const auto wire = value.get<std::string>();
+    if(wire == "stable")
+    {
+        return ReturnPhase::Stable;
+    }
+    if(wire == "quiescent-candidate")
+    {
+        return ReturnPhase::QuiescentCandidate;
+    }
+    if(wire == "returning")
+    {
+        return ReturnPhase::Returning;
+    }
+    if(wire == "synchronized")
+    {
+        return ReturnPhase::Synchronized;
+    }
+    if(wire == "unavailable")
+    {
+        return ReturnPhase::Unavailable;
+    }
+    throw CodecError("unknown ReturnPhase wire value");
+}
+
+template<>
+[[nodiscard]] inline Json encode<ReturnPhase>(const ReturnPhase& value)
+{
+    return Json(std::string(to_string(value)));
+}
+
+template<>
+[[nodiscard]] inline RestoreDeliveryState decode<RestoreDeliveryState>(const Json& value)
+{
+    if(!value.is_string())
+    {
+        throw CodecError("expected RestoreDeliveryState wire string");
+    }
+    const auto wire = value.get<std::string>();
+    if(wire == "not-attempted")
+    {
+        return RestoreDeliveryState::NotAttempted;
+    }
+    if(wire == "receiver-rejected")
+    {
+        return RestoreDeliveryState::ReceiverRejected;
+    }
+    if(wire == "outcome-uncertain")
+    {
+        return RestoreDeliveryState::OutcomeUncertain;
+    }
+    if(wire == "receiver-delivered")
+    {
+        return RestoreDeliveryState::ReceiverDelivered;
+    }
+    if(wire == "child-rejected")
+    {
+        return RestoreDeliveryState::ChildRejected;
+    }
+    if(wire == "child-confirmed")
+    {
+        return RestoreDeliveryState::ChildConfirmed;
+    }
+    throw CodecError("unknown RestoreDeliveryState wire value");
+}
+
+template<>
+[[nodiscard]] inline Json encode<RestoreDeliveryState>(const RestoreDeliveryState& value)
+{
+    return Json(std::string(to_string(value)));
+}
+
+template<>
 [[nodiscard]] inline RestoreRecordState decode<RestoreRecordState>(const Json& value)
 {
     if(!value.is_string())
