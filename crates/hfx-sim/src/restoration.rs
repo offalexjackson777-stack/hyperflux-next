@@ -532,7 +532,7 @@ impl SimRestorationHarness {
         trigger: &RestoreTrigger,
     ) -> Result<CrashExecution<RestorePlanResult>, SimRestorationError> {
         let result = catch_unwind(AssertUnwindSafe(|| {
-            RestorationCoordinator.plan_restore(trigger, &mut self.store)
+            RestorationCoordinator.plan_restore(trigger, &self.profiles, &mut self.store)
         }));
         self.finish_crashable(result)
     }

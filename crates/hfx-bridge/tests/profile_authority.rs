@@ -167,6 +167,28 @@ fn exact_generation_composes_mouse_and_keyboard_independently() {
 }
 
 #[test]
+fn stable_lighting_migration_requires_explicit_map_and_lighting_equivalence() {
+    let receivers = lifecycle(RouteKind::HyperfluxWireless);
+    let mut authority = RuntimeProfileAuthority::load(4).expect("authority loads");
+    bind(&mut authority, "receiver-a", 1);
+    let view = authority.view(&receivers);
+    let keyboard = resource("keyboard", ResourceKind::Lighting, 1);
+
+    assert!(view.permits_stable_lighting_migration(
+        &keyboard,
+        &text("fcdd53fe104e649cc7d2c38c939bbd41095dc3eb53488ebb30a8615a76bbfba6")
+    ));
+    assert!(!view.permits_stable_lighting_migration(
+        &keyboard,
+        &text("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+    ));
+    assert!(!view.permits_stable_lighting_migration(
+        &resource("keyboard", ResourceKind::Settings, 1),
+        &text("fcdd53fe104e649cc7d2c38c939bbd41095dc3eb53488ebb30a8615a76bbfba6")
+    ));
+}
+
+#[test]
 fn write_readiness_comes_from_exact_current_lifecycle_state() {
     let mut receivers = lifecycle(RouteKind::HyperfluxWireless);
     let mut authority = RuntimeProfileAuthority::load(4).expect("authority loads");

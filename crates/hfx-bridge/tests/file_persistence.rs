@@ -8,19 +8,20 @@ use hfx_bridge::{
 use hfx_core::{
     CURRENT_PERSISTENCE_SCHEMA_VERSION, CompletedTransaction, MAX_RESTORE_RECORDS_PER_RECEIVER,
     PersistedRestorePolicy, PersistedStableEntry, PersistenceCasOutcome, PersistenceStore,
-    RestoreCompletion, RestoreInvalidation, RestoreRecord, RestoreRecordChange,
-    RestoreRecordStatus, StableCommitOutcome, StableIntentChange, StableIntentTombstone,
-    StableLighting, canonical_request_digest,
+    ProfileRegistry, QualifiedDeviceProfile, QualifiedReceiverProfile, RestoreCompletion,
+    RestoreInvalidation, RestorePlanResult, RestoreRecord, RestoreRecordChange,
+    RestoreRecordStatus, RestoreTrigger, StableCommitOutcome, StableIntentChange,
+    StableIntentTombstone, StableLighting, canonical_request_digest,
 };
 use hfx_domain::{
     ColorChannel, DeliveredFrameCount, DeviceApplicationState, FrameCount, FrameIndex,
-    GenerationId, IntentDigest, IntentRevision, LogicalDeviceId, PersistenceRevision,
-    PersistenceSchemaVersion, ProtocolErrorKind, ReceiverId, RequestDigest, RestoreAttemptNumber,
-    RestoreClaimId, RestoreInvalidationReason, RestoreState, RestoreTriggerId, RestoreTriggerKind,
-    SequenceNumber, SideEffectCertainty, StableLightingMode, TransactionId, TransactionState,
-    WallClockUnixMs,
+    GenerationId, IntentDigest, IntentRevision, LedCount, LogicalDeviceId, PersistenceRevision,
+    PersistenceSchemaVersion, ProfileDigest, ProtocolErrorKind, ReceiverId, RequestDigest,
+    ResourceKind, RestoreAttemptNumber, RestoreClaimId, RestoreInvalidationReason, RestoreState,
+    RestoreTriggerId, RestoreTriggerKind, SequenceNumber, SideEffectCertainty, StableLightingMode,
+    TransactionId, TransactionState, WallClockUnixMs,
 };
-use hfx_protocol::{StableLightingIntent, TransactionRequest, TransactionTerminal};
+use hfx_protocol::{ResourceKey, StableLightingIntent, TransactionRequest, TransactionTerminal};
 use std::fs::{self, OpenOptions};
 use std::io::Write as _;
 use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt, symlink};
@@ -225,6 +226,49 @@ fn completed_stable_transaction() -> CompletedTransaction {
         superseded_by: None,
     };
     CompletedTransaction { request, terminal }
+}
+
+#[derive(Clone, Debug)]
+struct CompatibleMigrationProfiles {
+    current_digest: ProfileDigest,
+}
+
+impl ProfileRegistry for CompatibleMigrationProfiles {
+    fn supports(&self, resource: &ResourceKey) -> bool {
+        resource.receiver_id.as_str() == "receiver-1"
+            && resource.generation_id.get() == 1
+            && resource.kind == ResourceKind::Lighting
+            && matches!(resource.device_id.as_str(), "mouse-1" | "mouse-2")
+    }
+
+    fn receiver_profile(
+        &self,
+        receiver_id: &ReceiverId,
+        generation_id: GenerationId,
+    ) -> Option<QualifiedReceiverProfile> {
+        (receiver_id.as_str() == "receiver-1" && generation_id.get() == 1).then(|| {
+            QualifiedReceiverProfile {
+                profile_id: id("profile.receiver"),
+                profile_digest: id(&"a".repeat(64)),
+            }
+        })
+    }
+
+    fn device_profile(&self, resource: &ResourceKey) -> Option<QualifiedDeviceProfile> {
+        self.supports(resource).then(|| QualifiedDeviceProfile {
+            profile_id: id(&format!("profile.{}", resource.device_id.as_str())),
+            profile_digest: self.current_digest.clone(),
+            application_slot_count: LedCount::try_from(1_u16).expect("test LED count"),
+        })
+    }
+
+    fn permits_stable_lighting_migration(
+        &self,
+        resource: &ResourceKey,
+        from_profile_digest: &ProfileDigest,
+    ) -> bool {
+        self.supports(resource) && from_profile_digest.as_str() == "b".repeat(64)
+    }
 }
 
 #[test]
@@ -672,6 +716,100 @@ fn durable_runtime_captures_static_and_off_once_across_process_reopen() {
             .stable_entries(&completed.request.receiver_id)
             .expect("stable entries remain durable"),
         durable_before_replay
+    );
+}
+
+#[test]
+fn compatible_profile_upgrade_rebinds_stable_state_durably_across_process_reopen() {
+    let directory = TestDirectory::new();
+    let config = FilePersistenceConfig::new(directory.state_path());
+    let completed = completed_stable_transaction();
+    let receiver_id = completed.request.receiver_id.clone();
+    let profiles = CompatibleMigrationProfiles {
+        current_digest: id(&"c".repeat(64)),
+    };
+
+    let store = FilePersistenceStore::open(config.clone()).expect("store opens");
+    let mut runtime = DurableRestorationRuntime::new(store);
+    let StableCommitOutcome::Captured(original) = runtime
+        .capture_completed(
+            &completed,
+            WallClockUnixMs::try_from(10_u64).expect("capture time"),
+        )
+        .expect("stable state is captured")
+    else {
+        panic!("stable state must be captured")
+    };
+    runtime
+        .set_enabled(&receiver_id, true)
+        .expect("stable restoration is enabled");
+    drop(runtime);
+
+    let reopened = FilePersistenceStore::open(config.clone()).expect("state reopens");
+    let mut restarted_runtime = DurableRestorationRuntime::new(reopened);
+    let trigger = RestoreTrigger {
+        trigger_id: id("compatible-profile-upgrade"),
+        kind: RestoreTriggerKind::ServiceStart,
+        receiver_id: receiver_id.clone(),
+        generation_id: GenerationId::try_from(1_u64).expect("generation"),
+        target_device_id: None,
+    };
+    let RestorePlanResult::Planned(records) = restarted_runtime
+        .plan_restore(&trigger, &profiles)
+        .expect("compatible stable state migrates and plans")
+    else {
+        panic!("migrated stable state must create restore claims")
+    };
+    assert_eq!(records.len(), 2);
+
+    let migrated = restarted_runtime
+        .store()
+        .stable_entries(&receiver_id)
+        .expect("migrated stable state loads");
+    assert_eq!(migrated.len(), original.len());
+    for previous in &original {
+        let current = migrated
+            .iter()
+            .find_map(|entry| match entry {
+                PersistedStableEntry::Present(intent) if intent.device_id == previous.device_id => {
+                    Some(intent)
+                }
+                PersistedStableEntry::Present(_) | PersistedStableEntry::Deleted(_) => None,
+            })
+            .expect("migrated device state exists");
+        assert_eq!(current.profile_id, previous.profile_id);
+        assert_eq!(current.profile_digest, profiles.current_digest);
+        assert_eq!(
+            current.application_slot_count,
+            previous.application_slot_count
+        );
+        assert_eq!(current.lighting, previous.lighting);
+        assert_eq!(
+            current.source_transaction_id,
+            previous.source_transaction_id
+        );
+        assert_eq!(
+            current.source_request_digest,
+            previous.source_request_digest
+        );
+        assert_eq!(current.captured_at, previous.captured_at);
+        assert_eq!(current.revision.get(), previous.revision.get() + 1);
+        assert_ne!(current.content_digest, previous.content_digest);
+        let claim = records
+            .iter()
+            .find(|record| record.device_id == current.device_id)
+            .expect("migrated claim exists");
+        assert_eq!(claim.intent_revision, current.revision);
+        assert_eq!(claim.intent_digest, current.content_digest);
+    }
+    drop(restarted_runtime);
+
+    let final_store = FilePersistenceStore::open(config).expect("migrated state reopens");
+    assert_eq!(
+        final_store
+            .stable_entries(&receiver_id)
+            .expect("migrated state remains durable"),
+        migrated
     );
 }
 

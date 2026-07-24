@@ -90,13 +90,14 @@ impl RestorationRuntime for ProductionRestoration {
         }
     }
 
-    fn plan_restore(
+    fn plan_restore<P: ProfileRegistry>(
         &mut self,
         trigger: &RestoreTrigger,
+        profiles: &P,
     ) -> Result<RestorePlanResult, RestorationError> {
         match self {
-            Self::Disabled(runtime) => runtime.plan_restore(trigger),
-            Self::Durable(runtime) => runtime.plan_restore(trigger),
+            Self::Disabled(runtime) => runtime.plan_restore(trigger, profiles),
+            Self::Durable(runtime) => runtime.plan_restore(trigger, profiles),
         }
     }
 

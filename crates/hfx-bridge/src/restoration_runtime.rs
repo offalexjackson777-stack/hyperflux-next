@@ -56,9 +56,10 @@ pub trait RestorationRuntime: RestorationSnapshotSource {
     /// # Errors
     ///
     /// Returns a trigger, persistence, capacity, or prior-attempt barrier.
-    fn plan_restore(
+    fn plan_restore<P: ProfileRegistry>(
         &mut self,
         _trigger: &RestoreTrigger,
+        _profiles: &P,
     ) -> Result<RestorePlanResult, RestorationError> {
         Ok(RestorePlanResult::Disabled)
     }
@@ -316,11 +317,12 @@ impl<S: PersistenceStore> RestorationRuntime for DurableRestorationRuntime<S> {
         RestorationCoordinator.pending_restore_records(receiver_id, &self.store)
     }
 
-    fn plan_restore(
+    fn plan_restore<P: ProfileRegistry>(
         &mut self,
         trigger: &RestoreTrigger,
+        profiles: &P,
     ) -> Result<RestorePlanResult, RestorationError> {
-        RestorationCoordinator.plan_restore(trigger, &mut self.store)
+        RestorationCoordinator.plan_restore(trigger, profiles, &mut self.store)
     }
 
     fn advance_claim<A, D, P, T, E>(

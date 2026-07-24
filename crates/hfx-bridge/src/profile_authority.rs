@@ -323,6 +323,38 @@ impl ProfileRegistry for RuntimeProfileView<'_> {
             application_slot_count: lighting.application_slot_count,
         })
     }
+
+    fn permits_stable_lighting_migration(
+        &self,
+        resource: &ResourceKey,
+        from_profile_digest: &hfx_domain::ProfileDigest,
+    ) -> bool {
+        if resource.kind != ResourceKind::Lighting {
+            return false;
+        }
+        let Some((_, generation, _)) =
+            (*self).active_generation(&resource.receiver_id, resource.generation_id)
+        else {
+            return false;
+        };
+        let Some(device) = generation.device(&resource.device_id) else {
+            return false;
+        };
+        let Some(profile) = RuntimeProfileView::profile_for_device(
+            *self,
+            &resource.receiver_id,
+            resource.generation_id,
+            device,
+        ) else {
+            return false;
+        };
+
+        profile.qualification_migrations.iter().any(|migration| {
+            migration.from_runtime_digest == *from_profile_digest
+                && migration.preserve_stage_roles.contains(&"lighting")
+                && migration.preserve_stage_roles.contains(&"map")
+        })
+    }
 }
 
 impl DeviceStateAuthority for RuntimeProfileView<'_> {

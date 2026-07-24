@@ -389,6 +389,7 @@ impl DeviceStateAuthority for FakeDevices {
 #[derive(Clone, Copy, Debug)]
 struct FakeProfiles {
     valid: bool,
+    permits_stable_migration: bool,
 }
 
 impl ProfileRegistry for FakeProfiles {
@@ -418,6 +419,79 @@ impl ProfileRegistry for FakeProfiles {
             profile_digest: common::device_profile_digest(),
             application_slot_count: LedCount::try_from(1_u16).expect("test LED count is valid"),
         })
+    }
+
+    fn permits_stable_lighting_migration(
+        &self,
+        resource: &ResourceKey,
+        from_profile_digest: &hfx_domain::ProfileDigest,
+    ) -> bool {
+        self.supports(resource)
+            && self.permits_stable_migration
+            && from_profile_digest.as_str()
+                == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+}
+
+#[derive(Clone, Debug)]
+struct DigestProfiles {
+    current_digest: hfx_domain::ProfileDigest,
+    migration_from: Option<hfx_domain::ProfileDigest>,
+}
+
+impl DigestProfiles {
+    fn exact(current_digest: hfx_domain::ProfileDigest) -> Self {
+        Self {
+            current_digest,
+            migration_from: None,
+        }
+    }
+
+    fn migrating(
+        current_digest: hfx_domain::ProfileDigest,
+        migration_from: hfx_domain::ProfileDigest,
+    ) -> Self {
+        Self {
+            current_digest,
+            migration_from: Some(migration_from),
+        }
+    }
+}
+
+impl ProfileRegistry for DigestProfiles {
+    fn supports(&self, resource: &ResourceKey) -> bool {
+        resource.receiver_id.as_str() == "receiver-1"
+            && resource.generation_id == generation(1)
+            && resource.kind == ResourceKind::Lighting
+    }
+
+    fn receiver_profile(
+        &self,
+        receiver_id: &ReceiverId,
+        generation_id: hfx_domain::GenerationId,
+    ) -> Option<QualifiedReceiverProfile> {
+        (receiver_id.as_str() == "receiver-1" && generation_id == generation(1)).then(|| {
+            QualifiedReceiverProfile {
+                profile_id: common::receiver_profile_id(),
+                profile_digest: common::receiver_profile_digest(),
+            }
+        })
+    }
+
+    fn device_profile(&self, resource: &ResourceKey) -> Option<QualifiedDeviceProfile> {
+        self.supports(resource).then(|| QualifiedDeviceProfile {
+            profile_id: common::device_profile_id(resource.device_id.as_str()),
+            profile_digest: self.current_digest.clone(),
+            application_slot_count: LedCount::try_from(1_u16).expect("test LED count is valid"),
+        })
+    }
+
+    fn permits_stable_lighting_migration(
+        &self,
+        resource: &ResourceKey,
+        from_profile_digest: &hfx_domain::ProfileDigest,
+    ) -> bool {
+        self.supports(resource) && self.migration_from.as_ref() == Some(from_profile_digest)
     }
 }
 
@@ -519,7 +593,14 @@ fn plan_claims(
         target_device_id: target_device_id.map(text),
     };
     let RestorePlanResult::Planned(records) = coordinator
-        .plan_restore(&trigger, store)
+        .plan_restore(
+            &trigger,
+            &FakeProfiles {
+                valid: true,
+                permits_stable_migration: false,
+            },
+            store,
+        )
         .expect("restore trigger is planned")
     else {
         panic!("stable intents produce restore claims")
@@ -565,7 +646,10 @@ impl RestoreRuntime {
             store,
             sessions: sessions(),
             devices,
-            profiles: FakeProfiles { valid: true },
+            profiles: FakeProfiles {
+                valid: true,
+                permits_stable_migration: false,
+            },
             transport: fake_transport(),
             leases: LeaseManager::new(16, 32).expect("test lease bounds are valid"),
             transactions: TransactionCoordinator::new(16)
@@ -656,7 +740,14 @@ fn missing_policy_defaults_disabled_and_enable_disable_is_cas_versioned() {
     let mut store = MemoryPersistenceStore::default();
 
     assert_eq!(
-        coordinator.plan_restore(&trigger, &mut store),
+        coordinator.plan_restore(
+            &trigger,
+            &FakeProfiles {
+                valid: true,
+                permits_stable_migration: false,
+            },
+            &mut store,
+        ),
         Ok(RestorePlanResult::Disabled)
     );
 
@@ -667,7 +758,14 @@ fn missing_policy_defaults_disabled_and_enable_disable_is_cas_versioned() {
     assert_eq!(enabled.revision.get(), 1);
     assert_eq!(store.policy_cas_calls[0].expected_revision, None);
     assert_eq!(
-        coordinator.plan_restore(&trigger, &mut store),
+        coordinator.plan_restore(
+            &trigger,
+            &FakeProfiles {
+                valid: true,
+                permits_stable_migration: false,
+            },
+            &mut store,
+        ),
         Ok(RestorePlanResult::NoStableIntents)
     );
 
@@ -681,7 +779,14 @@ fn missing_policy_defaults_disabled_and_enable_disable_is_cas_versioned() {
         Some(enabled.revision)
     );
     assert_eq!(
-        coordinator.plan_restore(&trigger, &mut store),
+        coordinator.plan_restore(
+            &trigger,
+            &FakeProfiles {
+                valid: true,
+                permits_stable_migration: false,
+            },
+            &mut store,
+        ),
         Ok(RestorePlanResult::Disabled)
     );
 
@@ -702,6 +807,336 @@ fn missing_policy_defaults_disabled_and_enable_disable_is_cas_versioned() {
             .expected_revision,
         Some(disabled.revision)
     );
+}
+
+#[test]
+fn explicit_map_and_lighting_compatibility_rebinds_stable_intent_before_claim() {
+    let coordinator = RestorationCoordinator;
+    let mut store = MemoryPersistenceStore::default();
+    let mut request = stable_request("profile-migration", &["keyboard-1"]);
+    request.device_profiles[0].profile_digest =
+        text("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    commit_static(coordinator, &request, 1, &mut store);
+    coordinator
+        .set_restore_enabled(&request.receiver_id, true, &mut store)
+        .expect("restore policy is enabled");
+
+    let before = match store
+        .persisted_entry(&request.receiver_id, &text("keyboard-1"))
+        .expect("stable intent exists")
+    {
+        PersistedStableEntry::Present(intent) => intent.clone(),
+        PersistedStableEntry::Deleted(_) => panic!("stable intent is present"),
+    };
+    let trigger = RestoreTrigger {
+        trigger_id: text("profile-migration-trigger"),
+        kind: RestoreTriggerKind::DeviceReturn,
+        receiver_id: request.receiver_id.clone(),
+        generation_id: generation(1),
+        target_device_id: Some(text("keyboard-1")),
+    };
+    let profiles = FakeProfiles {
+        valid: true,
+        permits_stable_migration: true,
+    };
+
+    let RestorePlanResult::Planned(records) = coordinator
+        .plan_restore(&trigger, &profiles, &mut store)
+        .expect("compatible stable intent migrates before planning")
+    else {
+        panic!("migrated stable intent produces one claim")
+    };
+    assert_eq!(records.len(), 1);
+
+    let migrated = match store
+        .persisted_entry(&request.receiver_id, &text("keyboard-1"))
+        .expect("migrated stable intent exists")
+    {
+        PersistedStableEntry::Present(intent) => intent,
+        PersistedStableEntry::Deleted(_) => panic!("migrated stable intent is present"),
+    };
+    assert_eq!(migrated.profile_id, before.profile_id);
+    assert_eq!(migrated.profile_digest, common::device_profile_digest());
+    assert_eq!(
+        migrated.application_slot_count,
+        before.application_slot_count
+    );
+    assert_eq!(migrated.lighting, before.lighting);
+    assert_eq!(migrated.source_transaction_id, before.source_transaction_id);
+    assert_eq!(migrated.source_request_digest, before.source_request_digest);
+    assert_eq!(migrated.captured_at, before.captured_at);
+    assert_eq!(migrated.revision.get(), before.revision.get() + 1);
+    assert_ne!(migrated.content_digest, before.content_digest);
+    assert_eq!(records[0].intent_revision, migrated.revision);
+    assert_eq!(records[0].intent_digest, migrated.content_digest);
+    assert_eq!(store.stable_cas_calls.len(), 2);
+    assert_eq!(
+        store.stable_cas_calls[1][0].expected_revision,
+        Some(before.revision)
+    );
+}
+
+#[test]
+fn undeclared_profile_change_keeps_stable_intent_bound_to_original_digest() {
+    let coordinator = RestorationCoordinator;
+    let mut store = MemoryPersistenceStore::default();
+    let mut request = stable_request("profile-change", &["keyboard-1"]);
+    request.device_profiles[0].profile_digest =
+        text("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    commit_static(coordinator, &request, 1, &mut store);
+    coordinator
+        .set_restore_enabled(&request.receiver_id, true, &mut store)
+        .expect("restore policy is enabled");
+
+    let trigger = RestoreTrigger {
+        trigger_id: text("profile-change-trigger"),
+        kind: RestoreTriggerKind::DeviceReturn,
+        receiver_id: request.receiver_id.clone(),
+        generation_id: generation(1),
+        target_device_id: Some(text("keyboard-1")),
+    };
+    let RestorePlanResult::Planned(records) = coordinator
+        .plan_restore(
+            &trigger,
+            &FakeProfiles {
+                valid: true,
+                permits_stable_migration: false,
+            },
+            &mut store,
+        )
+        .expect("undeclared profile change remains a planned fail-closed claim")
+    else {
+        panic!("stable intent produces one claim")
+    };
+    assert_eq!(records.len(), 1);
+    let original_digest = match store
+        .persisted_entry(&request.receiver_id, &text("keyboard-1"))
+        .expect("stable intent remains present")
+    {
+        PersistedStableEntry::Present(intent) => intent.content_digest.clone(),
+        PersistedStableEntry::Deleted(_) => panic!("stable intent remains present"),
+    };
+    assert_eq!(records[0].intent_digest, original_digest);
+    assert_eq!(store.stable_cas_calls.len(), 1);
+
+    let mut runtime = RestoreRuntime::new(
+        store,
+        FakeDevices {
+            readiness: BTreeMap::from([(text("keyboard-1"), DeviceWriteReadiness::Ready)]),
+        },
+    );
+    let outcome = runtime
+        .advance(&records[0].claim_id)
+        .expect("profile mismatch is terminally fail-closed");
+    assert!(matches!(
+        outcome,
+        RestoreAdvanceResult::Terminal(RestoreRecord {
+            status: RestoreRecordStatus::Invalidated(ref detail),
+            ..
+        }) if detail.reason == RestoreInvalidationReason::ProfileChanged
+    ));
+    assert_eq!(runtime.transport.physical_writes, 0);
+}
+
+#[test]
+fn stable_intent_migration_conflict_is_atomic_and_creates_no_claim() {
+    let coordinator = RestorationCoordinator;
+    let mut store = MemoryPersistenceStore::default();
+    let mut request = stable_request("profile-migration-conflict", &["keyboard-1"]);
+    request.device_profiles[0].profile_digest =
+        text("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    commit_static(coordinator, &request, 1, &mut store);
+    coordinator
+        .set_restore_enabled(&request.receiver_id, true, &mut store)
+        .expect("restore policy is enabled");
+    let before = store.durable_snapshot();
+    store.conflict_next_stable_cas = true;
+    let trigger = RestoreTrigger {
+        trigger_id: text("profile-migration-conflict-trigger"),
+        kind: RestoreTriggerKind::DeviceReturn,
+        receiver_id: request.receiver_id.clone(),
+        generation_id: generation(1),
+        target_device_id: Some(text("keyboard-1")),
+    };
+
+    assert_eq!(
+        coordinator.plan_restore(
+            &trigger,
+            &FakeProfiles {
+                valid: true,
+                permits_stable_migration: true,
+            },
+            &mut store,
+        ),
+        Err(RestorationError::PersistenceConflict(
+            PersistenceOperation::SaveIntent
+        ))
+    );
+    assert_eq!(store.durable_snapshot(), before);
+    assert!(store.durable.restore_records.is_empty());
+}
+
+#[test]
+fn uncertain_prior_outcome_blocks_compatible_intent_migration() {
+    let coordinator = RestorationCoordinator;
+    let mut store = MemoryPersistenceStore::default();
+    let mut request = stable_request("profile-migration-uncertain", &["keyboard-1"]);
+    let old_digest: hfx_domain::ProfileDigest =
+        text("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    request.device_profiles[0].profile_digest = old_digest.clone();
+    commit_static(coordinator, &request, 1, &mut store);
+    coordinator
+        .set_restore_enabled(&request.receiver_id, true, &mut store)
+        .expect("restore policy is enabled");
+
+    let old_profiles = DigestProfiles::exact(old_digest.clone());
+    let trigger = RestoreTrigger {
+        trigger_id: text("profile-migration-uncertain-old"),
+        kind: RestoreTriggerKind::ServiceStart,
+        receiver_id: request.receiver_id.clone(),
+        generation_id: generation(1),
+        target_device_id: None,
+    };
+    let RestorePlanResult::Planned(records) = coordinator
+        .plan_restore(&trigger, &old_profiles, &mut store)
+        .expect("old profile restore is planned")
+    else {
+        panic!("old stable intent must create a claim")
+    };
+    let claim_id = records[0].claim_id.clone();
+
+    let sessions = sessions();
+    let devices = devices(&[("keyboard-1", DeviceWriteReadiness::Ready)]);
+    let mut transport = fake_transport();
+    let mut leases = LeaseManager::new(16, 32).expect("test lease bounds are valid");
+    let mut transactions =
+        TransactionCoordinator::new(16).expect("test transaction bounds are valid");
+    let mut events = event_log();
+    let mut sink = FakeSink::default();
+    assert!(matches!(
+        coordinator.advance_claim(
+            &claim_id,
+            &authority(10),
+            monotonic(10),
+            &sessions,
+            &devices,
+            &old_profiles,
+            &transport,
+            &mut store,
+            &mut leases,
+            &mut transactions,
+            &mut events,
+            &mut sink,
+        ),
+        Ok(RestoreAdvanceResult::Queued(_))
+    ));
+
+    leases = LeaseManager::new(16, 32).expect("restart lease bounds are valid");
+    transactions = TransactionCoordinator::new(16).expect("restart transaction bounds are valid");
+    events = event_log();
+    sink = FakeSink::default();
+    transport.forced_reconciliation = Some(TransportReconciliation::Unavailable);
+    assert!(matches!(
+        coordinator.advance_claim(
+            &claim_id,
+            &authority(10),
+            monotonic(10),
+            &sessions,
+            &devices,
+            &old_profiles,
+            &transport,
+            &mut store,
+            &mut leases,
+            &mut transactions,
+            &mut events,
+            &mut sink,
+        ),
+        Ok(RestoreAdvanceResult::Terminal(RestoreRecord {
+            status: RestoreRecordStatus::Failed(_),
+            ..
+        }))
+    ));
+
+    let stable_before = store
+        .persisted_entry(&request.receiver_id, &text("keyboard-1"))
+        .expect("old stable intent remains")
+        .clone();
+    let current_profiles = DigestProfiles::migrating(common::device_profile_digest(), old_digest);
+    let current_trigger = RestoreTrigger {
+        trigger_id: text("profile-migration-uncertain-current"),
+        kind: RestoreTriggerKind::SystemResume,
+        receiver_id: request.receiver_id.clone(),
+        generation_id: generation(1),
+        target_device_id: None,
+    };
+    assert_eq!(
+        coordinator.plan_restore(&current_trigger, &current_profiles, &mut store),
+        Err(RestorationError::PriorOutcomeUncertain)
+    );
+    assert_eq!(
+        store
+            .persisted_entry(&request.receiver_id, &text("keyboard-1"))
+            .expect("stable intent remains after barrier"),
+        &stable_before
+    );
+}
+
+#[test]
+fn compatible_digest_does_not_override_application_slot_change() {
+    let coordinator = RestorationCoordinator;
+    let mut store = MemoryPersistenceStore::default();
+    let mut request = stable_request("profile-slot-change", &["keyboard-1"]);
+    request.device_profiles[0].profile_digest =
+        text("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    request.device_profiles[0].application_slot_count =
+        LedCount::try_from(2_u16).expect("test slot count is valid");
+    request.frames[0].colors = vec![zero_color(), zero_color()];
+    commit_static(coordinator, &request, 1, &mut store);
+    coordinator
+        .set_restore_enabled(&request.receiver_id, true, &mut store)
+        .expect("restore policy is enabled");
+    let trigger = RestoreTrigger {
+        trigger_id: text("profile-slot-change-trigger"),
+        kind: RestoreTriggerKind::DeviceReturn,
+        receiver_id: request.receiver_id.clone(),
+        generation_id: generation(1),
+        target_device_id: Some(text("keyboard-1")),
+    };
+
+    let RestorePlanResult::Planned(records) = coordinator
+        .plan_restore(
+            &trigger,
+            &FakeProfiles {
+                valid: true,
+                permits_stable_migration: true,
+            },
+            &mut store,
+        )
+        .expect("slot-changing profile remains fail-closed")
+    else {
+        panic!("old stable intent produces a fail-closed claim")
+    };
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].intent_revision.get(), 1);
+    assert_eq!(store.stable_cas_calls.len(), 1);
+
+    let mut runtime = RestoreRuntime::new(
+        store,
+        FakeDevices {
+            readiness: BTreeMap::from([(text("keyboard-1"), DeviceWriteReadiness::Ready)]),
+        },
+    );
+    let outcome = runtime
+        .advance(&records[0].claim_id)
+        .expect("slot mismatch invalidates before transport");
+    assert!(matches!(
+        outcome,
+        RestoreAdvanceResult::Terminal(RestoreRecord {
+            status: RestoreRecordStatus::Invalidated(ref detail),
+            ..
+        }) if detail.reason == RestoreInvalidationReason::ProfileChanged
+    ));
+    assert_eq!(runtime.transport.physical_writes, 0);
 }
 
 #[test]
@@ -1696,7 +2131,14 @@ fn trigger_replay_is_idempotent_and_device_return_is_scoped() {
         target_device_id: None,
     };
     assert_eq!(
-        coordinator.plan_restore(&invalid, &mut store),
+        coordinator.plan_restore(
+            &invalid,
+            &FakeProfiles {
+                valid: true,
+                permits_stable_migration: false,
+            },
+            &mut store,
+        ),
         Err(RestorationError::InvalidTrigger)
     );
 }

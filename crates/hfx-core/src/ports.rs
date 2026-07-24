@@ -163,6 +163,22 @@ pub trait ProfileRegistry {
     ) -> Option<QualifiedReceiverProfile>;
 
     fn device_profile(&self, resource: &ResourceKey) -> Option<QualifiedDeviceProfile>;
+
+    /// Returns whether the current device profile explicitly permits a saved
+    /// stable-lighting intent from `from_profile_digest` to be rebound to the
+    /// current profile digest.
+    ///
+    /// The caller still verifies an unchanged profile id, receiver profile,
+    /// and application slot count. Registries must return `true` only when
+    /// both lighting behavior and the application-to-physical map are known
+    /// to be equivalent. The default remains fail-closed.
+    fn permits_stable_lighting_migration(
+        &self,
+        _resource: &ResourceKey,
+        _from_profile_digest: &ProfileDigest,
+    ) -> bool {
+        false
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

@@ -371,7 +371,8 @@ where
         &mut self,
         trigger: &RestoreTrigger,
     ) -> Result<RestorePlanResult, RestorationError> {
-        self.restoration.plan_restore(trigger)
+        let profiles = self.profiles.view(&self.receivers);
+        self.restoration.plan_restore(trigger, &profiles)
     }
 
     /// Advances one restoration claim through the same session, ownership,

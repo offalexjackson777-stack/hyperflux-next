@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use super::intent::load_entries;
+use super::intent::{intent_digest, load_entries};
 use super::{
     MAX_RESTORE_RECORDS_PER_RECEIVER, PersistenceOperation, RestorationAuthority,
     RestorationCoordinator, RestorationError, RestoreAdvanceResult, RestoreGenerationRetirement,
-    RestorePlanResult, current_schema_version, next_persistence_revision, sha256_hex,
-    transition_record, validate_schema,
+    RestorePlanResult, current_schema_version, next_intent_revision, next_persistence_revision,
+    sha256_hex, transition_record, validate_schema,
 };
 use crate::{
     BoundedEventLog, DeviceStateAuthority, DispatchResult, EventDraft, EventSink, LeaseManager,
     LeaseManagerError, OutcomeLookup, PersistedStableEntry, PersistedStableIntent,
     PersistenceCasOutcome, PersistenceStore, ProfileRegistry, ReceiverTransport, RestoreAttempt,
     RestoreCompletion, RestoreDeferred, RestoreInvalidation, RestoreRecord, RestoreRecordChange,
-    RestoreRecordStatus, RestoreTrigger, SessionAuthority, SubmissionBinding,
+    RestoreRecordStatus, RestoreTrigger, SessionAuthority, StableIntentChange, SubmissionBinding,
     TransactionCoordinator, TransactionCoordinatorError, TransportDispatch, TransportFailureFacts,
     TransportReceipt, TransportReconciliation, TransportTerminal, canonical_request_digest,
 };
@@ -41,9 +41,10 @@ impl RestorationCoordinator {
     ///
     /// Returns an error for invalid persisted records, capacity violations,
     /// storage failures, or compare-and-set conflicts.
-    pub fn plan_restore<S: PersistenceStore>(
+    pub fn plan_restore<P: ProfileRegistry, S: PersistenceStore>(
         &self,
         trigger: &RestoreTrigger,
+        profiles: &P,
         store: &mut S,
     ) -> Result<RestorePlanResult, RestorationError> {
         validate_trigger(trigger)?;
@@ -60,6 +61,9 @@ impl RestorationCoordinator {
         if !policy.enabled {
             return Ok(RestorePlanResult::Disabled);
         }
+        let mut records = load_records(&trigger.receiver_id, store)?;
+        validate_trigger_history(trigger, &records)?;
+        migrate_compatible_stable_intents(trigger, profiles, &records, store)?;
         let entries = load_entries(&trigger.receiver_id, store)?;
         let intents = entries
             .into_iter()
@@ -77,8 +81,6 @@ impl RestorationCoordinator {
         if intents.is_empty() {
             return Ok(RestorePlanResult::NoStableIntents);
         }
-        let mut records = load_records(&trigger.receiver_id, store)?;
-        validate_trigger_history(trigger, &records)?;
         let mut planned = Vec::with_capacity(intents.len());
         for intent in intents {
             let candidate = new_restore_record(trigger, &intent)?;
@@ -578,6 +580,90 @@ impl RestorationCoordinator {
             updated,
             already_terminal,
         })
+    }
+}
+
+fn migrate_compatible_stable_intents<P: ProfileRegistry, S: PersistenceStore>(
+    trigger: &RestoreTrigger,
+    profiles: &P,
+    records: &[RestoreRecord],
+    store: &mut S,
+) -> Result<(), RestorationError> {
+    let Some(receiver_profile) =
+        profiles.receiver_profile(&trigger.receiver_id, trigger.generation_id)
+    else {
+        return Ok(());
+    };
+    let entries = load_entries(&trigger.receiver_id, store)?;
+    let mut changes = Vec::new();
+
+    for entry in entries {
+        let PersistedStableEntry::Present(intent) = entry else {
+            continue;
+        };
+        if trigger
+            .target_device_id
+            .as_ref()
+            .is_some_and(|target| target != &intent.device_id)
+            || intent.receiver_profile_id != receiver_profile.profile_id
+            || intent.receiver_profile_digest != receiver_profile.profile_digest
+        {
+            continue;
+        }
+
+        let resource = lighting_resource(
+            &trigger.receiver_id,
+            trigger.generation_id,
+            &intent.device_id,
+        );
+        let Some(current) = profiles.device_profile(&resource) else {
+            continue;
+        };
+        if intent.profile_digest == current.profile_digest
+            || intent.profile_id != current.profile_id
+            || intent.application_slot_count != current.application_slot_count
+            || !profiles.permits_stable_lighting_migration(&resource, &intent.profile_digest)
+        {
+            continue;
+        }
+        enforce_prior_outcomes(records.iter().filter(|record| {
+            record.receiver_id == intent.receiver_id
+                && record.device_id == intent.device_id
+                && record.intent_revision == intent.revision
+                && record.intent_digest == intent.content_digest
+        }))?;
+
+        let expected_revision = intent.revision;
+        let mut migrated = intent;
+        migrated.profile_digest = current.profile_digest;
+        migrated.revision = next_intent_revision(Some(expected_revision))?;
+        migrated.content_digest = intent_digest(
+            &migrated.receiver_id,
+            &migrated.device_id,
+            &migrated.receiver_profile_id,
+            &migrated.receiver_profile_digest,
+            &migrated.profile_id,
+            &migrated.profile_digest,
+            migrated.application_slot_count.get(),
+            &migrated.lighting,
+        )?;
+        changes.push(StableIntentChange {
+            expected_revision: Some(expected_revision),
+            entry: PersistedStableEntry::Present(migrated),
+        });
+    }
+
+    if changes.is_empty() {
+        return Ok(());
+    }
+    match store
+        .compare_and_set_stable_entries(&changes)
+        .map_err(|_| RestorationError::Persistence(PersistenceOperation::SaveIntent))?
+    {
+        PersistenceCasOutcome::Applied => Ok(()),
+        PersistenceCasOutcome::Conflict => Err(RestorationError::PersistenceConflict(
+            PersistenceOperation::SaveIntent,
+        )),
     }
 }
 
@@ -1564,19 +1650,23 @@ fn enforce_prior_outcome_barrier<S: PersistenceStore>(
     candidate: &RestoreRecord,
     store: &S,
 ) -> Result<(), RestorationError> {
-    for prior in load_records(&candidate.receiver_id, store)?
-        .into_iter()
-        .filter(|prior| {
-            prior.claim_id != candidate.claim_id
-                && prior.device_id == candidate.device_id
-                && prior.intent_revision == candidate.intent_revision
-                && prior.intent_digest == candidate.intent_digest
-        })
-    {
+    let records = load_records(&candidate.receiver_id, store)?;
+    enforce_prior_outcomes(records.iter().filter(|prior| {
+        prior.claim_id != candidate.claim_id
+            && prior.device_id == candidate.device_id
+            && prior.intent_revision == candidate.intent_revision
+            && prior.intent_digest == candidate.intent_digest
+    }))
+}
+
+fn enforce_prior_outcomes<'a>(
+    records: impl IntoIterator<Item = &'a RestoreRecord>,
+) -> Result<(), RestorationError> {
+    for prior in records {
         if active_attempt(&prior.status).is_some() {
             return Err(RestorationError::PriorClaimUnresolved);
         }
-        if let RestoreRecordStatus::Failed(completion) = prior.status
+        if let RestoreRecordStatus::Failed(completion) = &prior.status
             && (completion.live_write_executed
                 || completion.delivered_frames.get() > 0
                 || completion.side_effect_certainty != SideEffectCertainty::None)
