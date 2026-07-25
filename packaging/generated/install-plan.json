@@ -1,6 +1,6 @@
 {
   "schema": "hyperflux-compiled-install-plan-v1",
-  "install_manifest_sha256": "3bc579591d6c7b722cf28bf6dbffe6246f31e86068d4c3b593ab60bfca47edd3",
+  "install_manifest_sha256": "a569e731ee83bb7eb8adba97d0e90868d97977a57a8672710c0ce24176a727ee",
   "product": {
     "name": "hyperflux-next-linux",
     "version": "0.0.0-dev.1",
@@ -29,7 +29,7 @@
       "required": true,
       "package": "hfx-ops",
       "target": "hyperfluxctl",
-      "profile": "release",
+      "profile": "operations",
       "destination": "/usr/bin/hyperfluxctl",
       "mode": "0755"
     },
@@ -39,7 +39,7 @@
       "required": true,
       "package": "hfx-ops",
       "target": "hyperflux-next-activate",
-      "profile": "release",
+      "profile": "operations",
       "destination": "/usr/lib/hyperflux-next/hyperflux-next-activate",
       "mode": "0755"
     },

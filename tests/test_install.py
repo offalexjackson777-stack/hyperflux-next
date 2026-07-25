@@ -65,7 +65,7 @@ class InstallManifestTests(unittest.TestCase):
         self.assertIn(f"{source_directory}/dkms.conf", destinations)
         self.assertIn(f"{source_directory}/hyperflux-next-core.c", destinations)
 
-    def test_only_the_feature_relay_uses_the_thin_process_profile(self) -> None:
+    def test_rust_installables_use_role_specific_release_profiles(self) -> None:
         cargo_profiles = {
             build.id: build.cargo_profile
             for build in self.manifest.builds
@@ -75,22 +75,21 @@ class InstallManifestTests(unittest.TestCase):
             cargo_profiles,
             {
                 "bridge-daemon": "release",
-                "operations-cli": "release",
-                "activation-utility": "release",
+                "operations-cli": "operations",
+                "activation-utility": "operations",
                 "openrazer-native-relay": "relay",
             },
         )
         cargo = tomllib.loads((ROOT / "Cargo.toml").read_text(encoding="utf-8"))
-        self.assertEqual(
-            cargo["profile"]["relay"],
-            {
-                "inherits": "release",
-                "codegen-units": 1,
-                "lto": "thin",
-                "panic": "abort",
-                "strip": "symbols",
-            },
-        )
+        optimized = {
+            "inherits": "release",
+            "codegen-units": 1,
+            "lto": "thin",
+            "panic": "abort",
+            "strip": "symbols",
+        }
+        self.assertEqual(cargo["profile"]["operations"], optimized)
+        self.assertEqual(cargo["profile"]["relay"], optimized)
 
     def test_python_sdk_license_is_generated_from_repository_authority(self) -> None:
         self.assertEqual(

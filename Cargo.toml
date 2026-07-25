@@ -23,6 +23,13 @@ unsafe_code = "deny"
 all = "deny"
 pedantic = "deny"
 
+[profile.operations]
+inherits = "release"
+codegen-units = 1
+lto = "thin"
+panic = "abort"
+strip = "symbols"
+
 [profile.relay]
 inherits = "release"
 codegen-units = 1

@@ -29,7 +29,7 @@ CARGO_KEYS = {
     "mode",
     "required",
 }
-CARGO_PROFILES = {"release", "relay"}
+CARGO_PROFILES = {"operations", "release", "relay"}
 CMAKE_KEYS = {
     "id",
     "kind",

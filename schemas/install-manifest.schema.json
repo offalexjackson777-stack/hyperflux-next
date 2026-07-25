@@ -74,7 +74,7 @@
         "kind": {"const": "cargo-binary"},
         "package": {"$ref": "#/$defs/identifier"},
         "target": {"$ref": "#/$defs/identifier"},
-        "profile": {"enum": ["release", "relay"]},
+        "profile": {"enum": ["release", "operations", "relay"]},
         "destination": {"$ref": "#/$defs/destination"},
         "mode": {"const": "0755"},
         "required": {"const": true}

@@ -23,7 +23,7 @@
       "kind": "cargo-binary",
       "package": "hfx-ops",
       "target": "hyperfluxctl",
-      "profile": "release",
+      "profile": "operations",
       "destination": "@operations_cli_path@",
       "mode": "0755",
       "required": true
@@ -33,7 +33,7 @@
       "kind": "cargo-binary",
       "package": "hfx-ops",
       "target": "hyperflux-next-activate",
-      "profile": "release",
+      "profile": "operations",
       "destination": "@activation_utility_path@",
       "mode": "0755",
       "required": true
