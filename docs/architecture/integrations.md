@@ -1,35 +1,43 @@
 # Integration Boundary
 
-Application adapters consume SDK snapshots through one tested projection. They
-do not decide receiver qualification, infer routes from product names, or turn
-paired inventory into write authority on their own.
+Application adapters consume exact, generation-bound routes through the SDK.
+They do not decide receiver qualification, infer routes from product names, or
+turn paired inventory into write authority on their own.
 
-## Two Views Of Hardware
+## Inventory And Native Routes
 
 The integration model deliberately exposes two related collections:
 
-- **Inventory** preserves paired, sleeping, unavailable, unknown, and
-  unqualified children so diagnostics remain truthful.
-- **Controllers** contains only devices with exact receiver and child profile
-  bindings plus one fresh, usable HyperFlux wireless endpoint.
+- **Inventory** preserves pairing and passive observation facts, including
+  unqualified children, so diagnostics remain truthful. Inventory does not
+  grant a route or claim that a child is asleep or powered off.
+- **Native routes** contain only devices with exact receiver and child profile
+  bindings, a qualified report family, an opaque route token, and one of the
+  protocol-v7 states `available`, `temporarily-unavailable`, or `withdrawn`.
 
-A direct USB route can make a physical device available without making its
-HyperFlux route writable. The device therefore remains in inventory while the
-HyperFlux controller is absent. Native application detectors remain responsible
-for the direct USB controller; HyperFlux never suppresses unrelated devices.
+A direct data route wins only when its nonempty, physically queried serial
+matches the receiver-backed child. HyperFlux then withdraws that one virtual
+route while the upstream application's ordinary detector owns the direct
+controller. A PID, model name, device kind, or wall-power cable is never enough
+to merge routes, and unrelated devices are never suppressed.
 
-Sleeping is different from power-off or route loss. One fresh sleeping receiver
-route retains controller identity so an effect can resume when the device
-returns, but its view disallows immediate submission. Stale, ambiguous, unknown,
-or explicitly unavailable routes grant no controller.
+Availability events report only route authority. They do not assert sleep,
+power-off, child readiness, visible lighting, or application state. Applications
+may retain their own controller and profile state while a route is temporarily
+unavailable, then continue through a newer qualified event.
 
 ## Exact Authority
 
-Every controller carries generation-scoped receiver and child profile bindings,
-the application slot count, semantic capabilities, presentation provenance, and
-one lighting resource key. Ownership is rendered relative to the viewing SDK
-client as unowned, owned by that client, or owned by another client. Available
-actions are derived from those facts; widgets do not recreate the policy.
+Every native route carries generation-scoped receiver and child profile
+bindings, an opaque route token, exact wireless identity, protocol family, and
+one native-control resource. Device semantics do not cross this boundary:
+applications submit an upstream-generated 90-byte Feature report and receive
+the matching response unchanged.
+
+Native control excludes the same child's retained semantic lighting, settings,
+and pairing resources while a native lease is active. Sibling devices and newer
+receiver generations remain independent. This keeps migration fallbacks
+available without letting them compete with an upstream-native session.
 
 Unknown PIDs remain visible with no inherited model, layout, or writable
 capability. Model names and PIDs alone never merge a wired device with a
@@ -38,14 +46,18 @@ exist.
 
 ## Application Responsibilities
 
-OpenRGB owns its model registry, LED labels, geometry, profiles, and effect
-engine. Polychromatic owns its native presentation. The isolated OpenRazer
-compatibility service translates only qualified methods. All three consume the
-same inventory, controller, ownership, and capability semantics while the bridge
-remains the sole userspace hardware writer.
+OpenRGB keeps its pinned Razer registry, controller modes, LED labels, geometry,
+profiles, and effect engine. Its HyperFlux plugin replaces only the Feature
+transport for qualified receiver routes; ordinary hidapi controllers are
+unchanged.
 
-Native application integrations are the normal path. In particular,
-Polychromatic should load the native HyperFlux backend beside its existing
-OpenRazer backend. HyperFlux does not replace or hide the official OpenRazer
-daemon. The optional [OpenRazer compatibility boundary](openrazer-compatibility.md)
-exists only for clients that cannot yet consume a native HyperFlux SDK backend.
+OpenRazer keeps its daemon, D-Bus API, Python classes, methods, images, and
+persistence. A source-pinned driver patch accepts trusted feature-only UHID
+devices and sends their reports through protocol v7. Polychromatic therefore
+uses its ordinary OpenRazer backend rather than learning HyperFlux device
+semantics.
+
+The private OpenRazer service and SDK-native Polychromatic backend are retained
+only as migration fallbacks until physical parity and a separate retirement gate
+pass. The bridge remains the sole userspace receiver writer; applications own
+the commands and user experience.

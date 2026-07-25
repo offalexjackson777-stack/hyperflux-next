@@ -35,11 +35,11 @@ Before opening a pull request:
 
 - Regenerate 3 declared projection(s).
 - Run `integration-contracts`.
-- Review direct consumers: Device knowledge, OpenRazer compatibility adapter, OpenRGB adapter, Composable hardware profiles, C++ SDK, Python SDK.
+- Review direct consumers: Device knowledge, OpenRazer native route, OpenRGB adapter, Composable hardware profiles, C++ SDK, Python SDK.
 
 ## Relationships
 
 - **Depends on:** [Architecture authority](../architecture/README.md), [Schema contracts](../schemas/README.md)
-- **Used by:** [Device knowledge](../knowledge/README.md), [OpenRazer compatibility adapter](openrazer/README.md), [OpenRGB adapter](openrgb/README.md), [Composable hardware profiles](../profiles/README.md), [C++ SDK](../sdk/cpp/README.md), [Python SDK](../sdk/python/README.md)
+- **Used by:** [Device knowledge](../knowledge/README.md), [OpenRazer native route](openrazer/README.md), [OpenRGB adapter](openrgb/README.md), [Composable hardware profiles](../profiles/README.md), [C++ SDK](../sdk/cpp/README.md), [Python SDK](../sdk/python/README.md)
 
 See the [Repository Atlas](../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

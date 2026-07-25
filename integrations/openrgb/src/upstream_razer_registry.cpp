@@ -440,7 +440,7 @@ std::uintptr_t UpstreamRazerControllerRegistry::controller_identity(
 
 bool is_eligible_upstream_razer_route(const v7::NativeRoute& route) noexcept
 {
-    return route.route_state == RouteState::Available
+    return route.route_state == NativeRouteState::Available
         && route.access == NativeRouteAccess::Qualified
         && route.protocol_family.value() == "razer-feature-report-v1"
         && route.report_bytes.value() == razer_native_report_bytes

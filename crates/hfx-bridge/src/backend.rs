@@ -26,8 +26,8 @@ use hfx_core::{
 };
 use hfx_domain::{
     DeviceKind, EventKind, FindingId, LeaseDurationMs, MonotonicMs, NativeReportHex,
-    NativeRouteAccess, NativeRouteToken, ProjectionRevision, ProtocolErrorKind, QueueCapacity,
-    ReceiverId, ResourceKind, RestoreClaimId, RouteState, StreamEpoch, StreamId,
+    NativeRouteAccess, NativeRouteState, NativeRouteToken, ProjectionRevision, ProtocolErrorKind,
+    QueueCapacity, ReceiverId, ResourceKind, RestoreClaimId, StreamEpoch, StreamId,
 };
 use hfx_errors::ErrorCode;
 use hfx_integration_model::project_integration_view;
@@ -775,7 +775,7 @@ where
                         .route_for_resource(resource)
                         .ok_or_else(profile_failure)?;
                     if route.access != NativeRouteAccess::Qualified
-                        || route.route_state != RouteState::Available
+                        || route.route_state != NativeRouteState::Available
                     {
                         return Err(profile_failure());
                     }
@@ -1122,7 +1122,7 @@ where
         if route.access != NativeRouteAccess::Qualified {
             return self.reject_native_before_set(request, ProtocolErrorKind::UnsupportedFeature);
         }
-        if route.route_state != RouteState::Available {
+        if route.route_state != NativeRouteState::Available {
             return self.reject_native_before_set(request, ProtocolErrorKind::TransportFailure);
         }
         let Some(resource) = route.resource.clone() else {
@@ -1390,10 +1390,14 @@ fn native_route_invalidation(
         Some(route) if route.access != NativeRouteAccess::Qualified => {
             NativeExchangeRejection::RouteWithdrawn
         }
-        Some(route) if route.route_state != RouteState::Available => {
+        Some(route) if route.route_state == NativeRouteState::TemporarilyUnavailable => {
             NativeExchangeRejection::RouteUnavailable
         }
-        Some(_) | None => NativeExchangeRejection::RouteUnavailable,
+        Some(route) if route.route_state == NativeRouteState::Withdrawn => {
+            NativeExchangeRejection::RouteWithdrawn
+        }
+        Some(_) => NativeExchangeRejection::RouteUnavailable,
+        None => NativeExchangeRejection::RouteWithdrawn,
     }
 }
 
@@ -1586,7 +1590,11 @@ mod tests {
         T::try_from(value.to_owned()).expect("test value is canonical")
     }
 
-    fn route(generation: u64, access: NativeRouteAccess, route_state: RouteState) -> NativeRoute {
+    fn route(
+        generation: u64,
+        access: NativeRouteAccess,
+        route_state: NativeRouteState,
+    ) -> NativeRoute {
         NativeRoute {
             receiver_id: text::<ReceiverId>("receiver-1"),
             generation_id: GenerationId::try_from(generation).expect("generation is canonical"),
@@ -1634,14 +1642,14 @@ mod tests {
 
     #[test]
     fn route_invalidation_preserves_generation_availability_and_authority_causes() {
-        let previous = route(1, NativeRouteAccess::Qualified, RouteState::Available);
+        let previous = route(1, NativeRouteAccess::Qualified, NativeRouteState::Available);
         assert_eq!(
             native_route_invalidation(
                 &previous,
                 &[route(
                     2,
                     NativeRouteAccess::Qualified,
-                    RouteState::Available,
+                    NativeRouteState::Available,
                 )],
             ),
             NativeExchangeRejection::StaleGeneration
@@ -1652,7 +1660,7 @@ mod tests {
                 &[route(
                     1,
                     NativeRouteAccess::Qualified,
-                    RouteState::Unavailable,
+                    NativeRouteState::TemporarilyUnavailable,
                 )],
             ),
             NativeExchangeRejection::RouteUnavailable
@@ -1663,14 +1671,14 @@ mod tests {
                 &[route(
                     1,
                     NativeRouteAccess::Candidate,
-                    RouteState::Available,
+                    NativeRouteState::Available,
                 )],
             ),
             NativeExchangeRejection::RouteWithdrawn
         );
         assert_eq!(
             native_route_invalidation(&previous, &[]),
-            NativeExchangeRejection::RouteUnavailable
+            NativeExchangeRejection::RouteWithdrawn
         );
     }
 

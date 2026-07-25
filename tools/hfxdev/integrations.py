@@ -42,12 +42,18 @@ ADAPTER_KEYS = {
     "owns",
     "must_not_own",
 }
-ADAPTER_KINDS = {"native-plugin", "native-backend", "compatibility-service"}
+ADAPTER_KINDS = {
+    "compatibility-service",
+    "native-backend",
+    "native-plugin",
+    "transport-adapter",
+}
 ADAPTER_STATUSES = {"planned", "in-progress", "software-verified", "hardware-qualified"}
 COEXISTENCE_POLICIES = {
     "application-plugin",
     "native-backend-beside-existing",
     "private-explicit-service-only",
+    "upstream-transport-extension",
 }
 DBUS_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+$")
 OBJECT_PATH = re.compile(r"^(/[A-Za-z_][A-Za-z0-9_]*)+$")

@@ -603,6 +603,93 @@ def effective_event_regex(source: Path, class_name: str) -> str:
     return result
 
 
+def verify_global_event_file_matcher(source: Path) -> None:
+    """Verify OpenRazer still binds device objects to global input events.
+
+    The HyperFlux UHID object intentionally exposes only the Feature transport.
+    Macro and ripple events therefore continue to come from the existing
+    physical input node selected by OpenRazer's global ``/dev/input/by-id``
+    scan.  Inspect the pinned source structurally so formatting-only upstream
+    changes do not invalidate the contract.
+    """
+
+    try:
+        tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
+    except (OSError, SyntaxError) as error:
+        raise ModelError(f"cannot parse OpenRazer event binding source: {error}") from error
+    device_class = next(
+        (
+            node
+            for node in tree.body
+            if isinstance(node, ast.ClassDef) and node.name == "RazerDevice"
+        ),
+        None,
+    )
+    initializer = next(
+        (
+            node
+            for node in getattr(device_class, "body", ())
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name == "__init__"
+        ),
+        None,
+    )
+    if initializer is None:
+        raise ModelError("OpenRazer global event binding initializer is missing")
+
+    def dotted_name(node: ast.AST) -> str | None:
+        parts: list[str] = []
+        while isinstance(node, ast.Attribute):
+            parts.append(node.attr)
+            node = node.value
+        if isinstance(node, ast.Name):
+            parts.append(node.id)
+            return ".".join(reversed(parts))
+        return None
+
+    constants = {
+        node.value
+        for node in ast.walk(initializer)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+    }
+    calls = [node for node in ast.walk(initializer) if isinstance(node, ast.Call)]
+    has_global_scan = any(
+        dotted_name(call.func) == "os.listdir"
+        and len(call.args) == 1
+        and isinstance(call.args[0], ast.Name)
+        and call.args[0].id == "search_dir"
+        for call in calls
+    )
+    has_upstream_match = any(
+        dotted_name(call.func) == "self.EVENT_FILE_REGEX.match"
+        and len(call.args) == 1
+        and isinstance(call.args[0], ast.Name)
+        and call.args[0].id == "event_file"
+        for call in calls
+    )
+    has_global_append = any(
+        dotted_name(call.func) == "self.event_files.append"
+        and len(call.args) == 1
+        and isinstance(call.args[0], ast.Call)
+        and dotted_name(call.args[0].func) == "os.path.join"
+        and len(call.args[0].args) == 2
+        and isinstance(call.args[0].args[0], ast.Name)
+        and call.args[0].args[0].id == "search_dir"
+        and isinstance(call.args[0].args[1], ast.Name)
+        and call.args[0].args[1].id == "event_file"
+        for call in calls
+    )
+    if (
+        "/dev/input/by-id/" not in constants
+        or not has_global_scan
+        or not has_upstream_match
+        or not has_global_append
+    ):
+        raise ModelError(
+            "OpenRazer no longer binds device objects through its global event-file matcher"
+        )
+
+
 def extract_openrazer_catalog(
     source_root: Path,
     *,

@@ -1190,9 +1190,16 @@ class NativeRouteAccess(str, Enum):
     BACKEND_REQUIRED = "backend-required"
 
 
+class NativeRouteState(str, Enum):
+    AVAILABLE = "available"
+    TEMPORARILY_UNAVAILABLE = "temporarily-unavailable"
+    WITHDRAWN = "withdrawn"
+
+
 class NativeRouteEventKind(str, Enum):
     AVAILABLE = "available"
-    UNAVAILABLE = "unavailable"
+    TEMPORARILY_UNAVAILABLE = "temporarily-unavailable"
+    WITHDRAWN = "withdrawn"
     GENERATION_REPLACED = "generation-replaced"
 
 
@@ -1314,5 +1321,6 @@ __all__ = [
     "LeaseOutcome",
     "ErrorSeverity",
     "NativeRouteAccess",
+    "NativeRouteState",
     "NativeRouteEventKind",
 ]

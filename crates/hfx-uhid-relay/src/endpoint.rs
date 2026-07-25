@@ -70,7 +70,8 @@ impl<B: BridgeExchange> FeatureEndpoint<B> {
 
     /// Performs one relay-owned read-only management exchange only when no
     /// `OpenRazer` response is pending. This keeps direct-route identity probing
-    /// serialized with the same native-control lease as normal Feature traffic.
+    /// serialized with the same ephemeral native-control lease discipline as
+    /// normal Feature traffic.
     pub fn management_exchange(
         &mut self,
         report: [u8; FEATURE_REPORT_BYTES],

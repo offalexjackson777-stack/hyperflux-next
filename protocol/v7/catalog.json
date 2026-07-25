@@ -519,7 +519,7 @@
         {"name": "device_kind", "type": "DeviceKind", "required": true, "many": false, "max_items": null, "description": "Observed child device category."},
         {"name": "vendor_id", "type": "VendorId", "required": true, "many": false, "max_items": null, "description": "Observed child USB vendor identifier."},
         {"name": "product_id", "type": "ProductId", "required": true, "many": false, "max_items": null, "description": "Observed child USB product identifier."},
-        {"name": "route_state", "type": "RouteState", "required": true, "many": false, "max_items": null, "description": "Current receiver route evidence."},
+        {"name": "route_state", "type": "NativeRouteState", "required": true, "many": false, "max_items": null, "description": "Current route authority without a sleep, power, readiness, or application-state claim."},
         {"name": "access", "type": "NativeRouteAccess", "required": true, "many": false, "max_items": null, "description": "Evidence-backed tunnel access level."},
         {"name": "protocol_family", "type": "NativeProtocolFamily", "required": true, "many": false, "max_items": null, "description": "Opaque feature-report protocol family."},
         {"name": "report_bytes", "type": "NativeReportByteCount", "required": true, "many": false, "max_items": null, "description": "Exact native report size."},

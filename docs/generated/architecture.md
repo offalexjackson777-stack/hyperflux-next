@@ -24,14 +24,14 @@ flowchart TB
 ## Invariants
 
 - `HFX-INV-001` Generic mouse and keyboard input remains independent of optional device-control applications.
-- `HFX-INV-002` Applications and integrations never submit raw HID, USB, sysfs, or receiver report payloads.
+- `HFX-INV-002` A qualified native integration may submit exactly one fixed upstream Feature report through an opaque route; no application may submit arbitrary USB setup packets, sysfs operations, or receiver carrier frames.
 - `HFX-INV-003` One bridge is the sole userspace authority for receiver writes and one renewable lease owns each writable resource.
-- `HFX-INV-004` Every write is bound to a live receiver generation, qualified route, capability, owner, deadline, and transaction.
-- `HFX-INV-005` Pairing, route availability, sleep, power state, and connection mode remain separate sourced facts.
+- `HFX-INV-004` Every native exchange is bound to a live receiver generation, qualified opaque route, declarative report profile, NativeControl owner, deadline, and transaction identity.
+- `HFX-INV-005` Native availability is only available, temporarily-unavailable, or withdrawn; pairing, silence, and retail sleep or power labels never grant route authority. Only generation-bound explicit route evidence or endpoint-local traffic qualified by the receiver profile may produce available.
 - `HFX-INV-006` Unknown devices expose safe identity and passive observations but inherit no writable capability.
 - `HFX-INV-007` Receiver, child, and surface profiles compose independently; no exact mouse and keyboard pair is required.
 - `HFX-INV-008` Every queue, journal, event buffer, frame stream, message, and retry policy is explicitly bounded.
-- `HFX-INV-009` A partial, uncertain, stale-generation, or health-incomplete operation cannot be reported as successful.
+- `HFX-INV-009` Only a complete correlated response is matched-response; a possible SET is may-have-been-sent and is never automatically repeated or reported as success.
 - `HFX-INV-010` Canonical schemas own shared facts; generated bindings and documentation may not drift from them.
 - `HFX-INV-011` Research code, raw captures, private identifiers, machine paths, and watched mission coordinators are not product dependencies.
 - `HFX-INV-012` No compile, test, package, tag, repository, or green workflow alone grants publication authorization.
@@ -40,39 +40,39 @@ flowchart TB
 
 ### Applications
 
-Owns: user workflows, presentation, profiles, effects.
+Owns: user workflows, device commands and settings, presentation and layouts, profiles, effects, and persistence.
 
-Must not own: receiver encoding, qualification, kernel access.
+Must not own: receiver carrier encoding, route qualification, kernel access.
 
 ### Integrations
 
-Owns: application contract adaptation, tested view models.
+Owns: thin Feature-transport adaptation, application contract adaptation, tested route view models.
 
-Must not own: raw transport, profile qualification, global retry policy.
+Must not own: device semantic duplication, receiver carrier transport, profile qualification, uncertain-write retry policy.
 
 ### Sdk
 
-Owns: version negotiation, logical devices, routes, capabilities, events, leases, typed errors.
+Owns: version negotiation, qualified native routes, availability events, NativeControl leases, exact fixed-size Feature exchanges, typed errors.
 
-Must not own: application widgets, raw socket framing in callers.
+Must not own: application widgets or device commands, receiver carrier frames, raw socket framing in callers.
 
 ### Bridge
 
-Owns: policy, profile resolution, leases, transactions, scheduling, restoration, diagnostics.
+Owns: route qualification, profile resolution, NativeControl arbitration, bounded native transactions and certainty, availability, diagnostics, retained migration fallback.
 
-Must not own: application presentation, effect mathematics, arbitrary raw reports.
+Must not own: device commands or settings, application presentation, effects, profiles, or persistence, arbitrary USB or receiver reports.
 
 ### Kernel
 
-Owns: HID binding, input preservation, receiver generations, passive observations, exclusive writer session, bounded envelope transport.
+Owns: HID binding, input preservation, receiver generations, passive observations, exclusive writer session, qualified fixed-size native exchange, bounded fallback envelopes.
 
 Must not own: retail names, effects, profiles, application ownership, package repair.
 
 ### Profiles
 
-Owns: identity predicates, qualified capabilities, semantic mappings, evidence references, presentation metadata references.
+Owns: identity predicates, native report shape and response matching, upstream bindings, route qualification, evidence references, retained fallback mappings.
 
-Must not own: live observations, leases, desired state, guessed commands.
+Must not own: live observations, leases, application desired state, model commands, guessed transport.
 
 ### Verification
 

@@ -36,7 +36,7 @@ Every current node is software-only and has zero hardware-write authority.
 | 27 | `openrgb-adapter-contracts` | `integrations` | `none` | `false` | 300s | `rerun` |
 | 28 | `polychromatic-adapter-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
 | 29 | `openrazer-compatibility-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
-| 30 | `openrazer-native-route-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
+| 30 | `openrazer-native-route-contracts` | `integrations` | `none` | `false` | 180s | `rerun` |
 | 31 | `migration-shadow-contracts` | `migration` | `none` | `false` | 120s | `rerun` |
 | 32 | `openrgb-native-route-contracts` | `integrations` | `none` | `false` | 360s | `rerun` |
 | 33 | `openrgb-thread-sanitizer` | `integrations` | `none` | `false` | 300s | `rerun` |

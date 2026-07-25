@@ -33,7 +33,7 @@ struct AdapterRecord
     std::string_view coexistence_policy;
 };
 
-inline constexpr std::string_view integration_source_sha256 = "3f8980c873cd3cf3287cac586ca7512140b76ea3b8ce004149e847ef2caf80b1";
+inline constexpr std::string_view integration_source_sha256 = "fa6daa3a0bc6a8d036d6f41d1105742d70392f7f2e753e90e987a2612135d55f";
 
 inline constexpr std::array<std::string_view, 2> upstream_uses_0 {{"compatibility-contract", "metadata-import"}};
 inline constexpr std::array<std::string_view, 3> upstream_uses_1 {{"effect-engine", "model-layout-registry", "plugin-build-contract"}};
@@ -41,12 +41,15 @@ inline constexpr std::array<std::string_view, 2> upstream_uses_2 {{"backend-cont
 inline constexpr std::array<std::string_view, 1> adapter_upstreams_0 {{"openrazer"}};
 inline constexpr std::array<std::uint16_t, 1> adapter_protocols_0 {{5}};
 inline constexpr std::array<std::string_view, 3> adapter_features_0 {{"inventory", "lighting", "ownership"}};
-inline constexpr std::array<std::string_view, 1> adapter_upstreams_1 {{"openrgb"}};
-inline constexpr std::array<std::uint16_t, 1> adapter_protocols_1 {{5}};
-inline constexpr std::array<std::string_view, 6> adapter_features_1 {{"effects", "inventory", "lighting", "ownership", "presentation", "telemetry"}};
-inline constexpr std::array<std::string_view, 2> adapter_upstreams_2 {{"openrazer", "polychromatic"}};
-inline constexpr std::array<std::uint16_t, 1> adapter_protocols_2 {{5}};
-inline constexpr std::array<std::string_view, 5> adapter_features_2 {{"inventory", "lighting", "ownership", "presentation", "telemetry"}};
+inline constexpr std::array<std::string_view, 2> adapter_upstreams_1 {{"openrazer", "polychromatic"}};
+inline constexpr std::array<std::uint16_t, 1> adapter_protocols_1 {{7}};
+inline constexpr std::array<std::string_view, 4> adapter_features_1 {{"availability", "inventory", "native-control", "presentation"}};
+inline constexpr std::array<std::string_view, 1> adapter_upstreams_2 {{"openrgb"}};
+inline constexpr std::array<std::uint16_t, 1> adapter_protocols_2 {{7}};
+inline constexpr std::array<std::string_view, 4> adapter_features_2 {{"availability", "inventory", "native-control", "presentation"}};
+inline constexpr std::array<std::string_view, 2> adapter_upstreams_3 {{"openrazer", "polychromatic"}};
+inline constexpr std::array<std::uint16_t, 1> adapter_protocols_3 {{5}};
+inline constexpr std::array<std::string_view, 5> adapter_features_3 {{"inventory", "lighting", "ownership", "presentation", "telemetry"}};
 
 inline constexpr std::array<UpstreamRecord, 3> upstreams {{
     {"openrazer", "OpenRazer", "https://github.com/openrazer/openrazer.git", "3.12.1-41-g6820f9d", "6820f9da169d354bc7e6e93a0aa8683a6bb75792", "GPL-2.0-or-later AND CC-BY-SA-4.0", "org.razer 3.x metadata and D-Bus vocabulary", upstream_uses_0},
@@ -54,10 +57,11 @@ inline constexpr std::array<UpstreamRecord, 3> upstreams {{
     {"polychromatic", "Polychromatic", "https://github.com/polychromatic/polychromatic.git", "0.9.7-7-g716737b", "716737bf444ab7e962f4d3b7a5188b2f07c0c4a1", "GPL-3.0-only", "Polychromatic 0.9 native backend contract", upstream_uses_2},
 }};
 
-inline constexpr std::array<AdapterRecord, 3> adapters {{
-    {"openrazer-compatibility", "OpenRazer-compatible clients", "compatibility-service", "software-verified", adapter_upstreams_0, adapter_protocols_0, adapter_features_0, "private-explicit-service-only"},
-    {"openrgb-native", "OpenRGB", "native-plugin", "in-progress", adapter_upstreams_1, adapter_protocols_1, adapter_features_1, "application-plugin"},
-    {"polychromatic-native", "Polychromatic", "native-backend", "software-verified", adapter_upstreams_2, adapter_protocols_2, adapter_features_2, "native-backend-beside-existing"},
+inline constexpr std::array<AdapterRecord, 4> adapters {{
+    {"openrazer-compatibility", "OpenRazer-compatible clients (migration fallback)", "compatibility-service", "software-verified", adapter_upstreams_0, adapter_protocols_0, adapter_features_0, "private-explicit-service-only"},
+    {"openrazer-native-route", "OpenRazer and Polychromatic", "transport-adapter", "software-verified", adapter_upstreams_1, adapter_protocols_1, adapter_features_1, "upstream-transport-extension"},
+    {"openrgb-native", "OpenRGB", "native-plugin", "software-verified", adapter_upstreams_2, adapter_protocols_2, adapter_features_2, "application-plugin"},
+    {"polychromatic-native", "Polychromatic (migration fallback)", "native-backend", "software-verified", adapter_upstreams_3, adapter_protocols_3, adapter_features_3, "native-backend-beside-existing"},
 }};
 
 [[nodiscard]] constexpr const UpstreamRecord* upstream_by_id(std::string_view id)

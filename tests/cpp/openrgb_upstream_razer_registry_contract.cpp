@@ -63,7 +63,7 @@ hyperflux::v7::NativeRoute route(
         kind,
         number<VendorId>(0x1532),
         number<ProductId>(product_id),
-        RouteState::Available,
+        NativeRouteState::Available,
         NativeRouteAccess::Qualified,
         text<NativeProtocolFamily>("razer-feature-report-v1"),
         number<NativeReportByteCount>(90),
@@ -287,7 +287,7 @@ int main()
     auto candidate = keyboard;
     candidate.access = NativeRouteAccess::Candidate;
     auto unavailable = mouse;
-    unavailable.route_state = RouteState::Unavailable;
+    unavailable.route_state = NativeRouteState::TemporarilyUnavailable;
     auto filtered = registry.apply_routes({candidate, unavailable});
     if(!filtered || filtered.value().removed != 2 || registry.size() != 0
        || !host.registered.empty())

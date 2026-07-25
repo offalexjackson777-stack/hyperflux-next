@@ -18,7 +18,7 @@
     },
     {
       "id": "HFX-INV-002",
-      "statement": "Applications and integrations never submit raw HID, USB, sysfs, or receiver report payloads."
+      "statement": "A qualified native integration may submit exactly one fixed upstream Feature report through an opaque route; no application may submit arbitrary USB setup packets, sysfs operations, or receiver carrier frames."
     },
     {
       "id": "HFX-INV-003",
@@ -26,11 +26,11 @@
     },
     {
       "id": "HFX-INV-004",
-      "statement": "Every write is bound to a live receiver generation, qualified route, capability, owner, deadline, and transaction."
+      "statement": "Every native exchange is bound to a live receiver generation, qualified opaque route, declarative report profile, NativeControl owner, deadline, and transaction identity."
     },
     {
       "id": "HFX-INV-005",
-      "statement": "Pairing, route availability, sleep, power state, and connection mode remain separate sourced facts."
+      "statement": "Native availability is only available, temporarily-unavailable, or withdrawn; pairing, silence, and retail sleep or power labels never grant route authority. Only generation-bound explicit route evidence or endpoint-local traffic qualified by the receiver profile may produce available."
     },
     {
       "id": "HFX-INV-006",
@@ -46,7 +46,7 @@
     },
     {
       "id": "HFX-INV-009",
-      "statement": "A partial, uncertain, stale-generation, or health-incomplete operation cannot be reported as successful."
+      "statement": "Only a complete correlated response is matched-response; a possible SET is may-have-been-sent and is never automatically repeated or reported as success."
     },
     {
       "id": "HFX-INV-010",
@@ -64,33 +64,33 @@
   "components": [
     {
       "id": "applications",
-      "owns": ["user workflows", "presentation", "profiles", "effects"],
-      "must_not_own": ["receiver encoding", "qualification", "kernel access"]
+      "owns": ["user workflows", "device commands and settings", "presentation and layouts", "profiles, effects, and persistence"],
+      "must_not_own": ["receiver carrier encoding", "route qualification", "kernel access"]
     },
     {
       "id": "integrations",
-      "owns": ["application contract adaptation", "tested view models"],
-      "must_not_own": ["raw transport", "profile qualification", "global retry policy"]
+      "owns": ["thin Feature-transport adaptation", "application contract adaptation", "tested route view models"],
+      "must_not_own": ["device semantic duplication", "receiver carrier transport", "profile qualification", "uncertain-write retry policy"]
     },
     {
       "id": "sdk",
-      "owns": ["version negotiation", "logical devices", "routes", "capabilities", "events", "leases", "typed errors"],
-      "must_not_own": ["application widgets", "raw socket framing in callers"]
+      "owns": ["version negotiation", "qualified native routes", "availability events", "NativeControl leases", "exact fixed-size Feature exchanges", "typed errors"],
+      "must_not_own": ["application widgets or device commands", "receiver carrier frames", "raw socket framing in callers"]
     },
     {
       "id": "bridge",
-      "owns": ["policy", "profile resolution", "leases", "transactions", "scheduling", "restoration", "diagnostics"],
-      "must_not_own": ["application presentation", "effect mathematics", "arbitrary raw reports"]
+      "owns": ["route qualification", "profile resolution", "NativeControl arbitration", "bounded native transactions and certainty", "availability", "diagnostics", "retained migration fallback"],
+      "must_not_own": ["device commands or settings", "application presentation, effects, profiles, or persistence", "arbitrary USB or receiver reports"]
     },
     {
       "id": "kernel",
-      "owns": ["HID binding", "input preservation", "receiver generations", "passive observations", "exclusive writer session", "bounded envelope transport"],
+      "owns": ["HID binding", "input preservation", "receiver generations", "passive observations", "exclusive writer session", "qualified fixed-size native exchange", "bounded fallback envelopes"],
       "must_not_own": ["retail names", "effects", "profiles", "application ownership", "package repair"]
     },
     {
       "id": "profiles",
-      "owns": ["identity predicates", "qualified capabilities", "semantic mappings", "evidence references", "presentation metadata references"],
-      "must_not_own": ["live observations", "leases", "desired state", "guessed commands"]
+      "owns": ["identity predicates", "native report shape and response matching", "upstream bindings", "route qualification", "evidence references", "retained fallback mappings"],
+      "must_not_own": ["live observations", "leases", "application desired state", "model commands", "guessed transport"]
     },
     {
       "id": "verification",

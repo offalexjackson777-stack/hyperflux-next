@@ -15,6 +15,11 @@ namespace hyperflux::openrgb::native
 inline constexpr std::size_t razer_hid_report_bytes = 91;
 inline constexpr std::size_t razer_native_report_bytes = 90;
 
+static_assert(sizeof(razer_report) == razer_hid_report_bytes);
+static_assert(offsetof(razer_report, report_id) == 0);
+static_assert(offsetof(razer_report, status) == 1);
+static_assert(razer_hid_report_bytes == razer_native_report_bytes + 1);
+
 enum class NativeExchangeCertainty
 {
     NotSent,

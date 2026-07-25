@@ -27,16 +27,19 @@
 
 ```mermaid
 flowchart LR
-    Applications["Applications"] --> SDK["Versioned SDK"]
-    SDK --> Bridge["Bridge and policy authority"]
-    Bridge --> Kernel["Minimal HID transport"]
+    Applications["OpenRazer and OpenRGB"] --> SDK["Versioned native-route SDK"]
+    SDK --> Bridge["Route and exchange authority"]
+    Bridge --> Kernel["Bounded receiver transport"]
     Kernel --> Receiver["HyperFlux receiver and paired devices"]
 ```
 
-Applications own user interaction, layouts, and effects. The SDK owns the typed
-application boundary. The bridge is the sole userspace writer and owns policy,
-qualification, scheduling, restoration, and outcomes. The kernel preserves
-ordinary HID input and transports bounded generation-bound envelopes.
+Applications own model commands, settings, layouts, effects, profiles, and
+persistence. The SDK carries qualified route discovery and exact 90-byte Razer
+Feature exchanges. The bridge is the sole userspace receiver writer and owns
+route qualification, generation safety, NativeControl arbitration, bounded
+dispatch, availability, outcome certainty, and diagnostics. The kernel
+preserves ordinary HID input and transports generation-bound exchanges without
+interpreting device semantics.
 
 ## Current Readiness
 

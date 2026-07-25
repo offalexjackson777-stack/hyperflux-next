@@ -41,6 +41,7 @@ from .openrazer import (
     extract_openrazer_catalog,
     load_imported_metadata,
     transformed_metadata,
+    verify_global_event_file_matcher,
 )
 from .openrazer_native_route import (
     load_native_deployment,
@@ -422,6 +423,37 @@ def _remove_expected_kernel_source_link(module_directory: Path) -> None:
         raise ModelError("kernel build left an unexpected source-tree artifact")
 
 
+def _kernel_build_directories() -> list[Path]:
+    configured = os.environ.get("HFX_KERNEL_BUILD_DIRS")
+    if configured:
+        build_directories = [Path(value) for value in configured.split(os.pathsep) if value]
+    else:
+        running = Path("/lib/modules") / os.uname().release / "build"
+        if (running / "Makefile").is_file():
+            build_directories = [running]
+        else:
+            build_directories = sorted(
+                path
+                for root_path in (Path("/lib/modules"), Path("/usr/lib/modules"))
+                if root_path.is_dir()
+                for path in root_path.glob("*/build")
+                if (path / "Makefile").is_file()
+            )
+    if not build_directories:
+        raise ModelError("kernel module verification has no configured header directory")
+    unique_build_directories: list[Path] = []
+    resolved_directories: set[Path] = set()
+    for build_directory in build_directories:
+        if not build_directory.is_absolute() or not (build_directory / "Makefile").is_file():
+            raise ModelError(f"kernel header directory is unavailable: {build_directory}")
+        resolved = build_directory.resolve()
+        if resolved in resolved_directories:
+            continue
+        resolved_directories.add(resolved)
+        unique_build_directories.append(build_directory)
+    return unique_build_directories
+
+
 def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
     kernel_binary = root / "build" / "kernel-profile-table-smoke"
     kernel_binary.parent.mkdir(parents=True, exist_ok=True)
@@ -493,30 +525,12 @@ def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
         node.timeout_seconds,
     )
 
-    configured = os.environ.get("HFX_KERNEL_BUILD_DIRS")
-    if configured:
-        build_directories = [Path(value) for value in configured.split(os.pathsep) if value]
-    else:
-        running = Path("/lib/modules") / os.uname().release / "build"
-        if (running / "Makefile").is_file():
-            build_directories = [running]
-        else:
-            build_directories = sorted(
-                path
-                for root_path in (Path("/lib/modules"), Path("/usr/lib/modules"))
-                if root_path.is_dir()
-                for path in root_path.glob("*/build")
-                if (path / "Makefile").is_file()
-            )
-    if not build_directories:
-        raise ModelError("kernel module verification has no configured header directory")
+    build_directories = _kernel_build_directories()
     source_directory = root / "driver" / "kernel"
     source_link = source_directory / "source"
     if source_link.exists() or source_link.is_symlink():
         raise ModelError("kernel source tree contains an unexpected build artifact")
     for build_directory in build_directories:
-        if not build_directory.is_absolute() or not (build_directory / "Makefile").is_file():
-            raise ModelError(f"kernel header directory is unavailable: {build_directory}")
         label = build_directory.resolve().parent.name
         output_directory = root / "build" / "kernel" / label
         if output_directory.exists():
@@ -646,7 +660,7 @@ def _run_openrazer_metadata_contracts(root: Path, _node: TestNode) -> None:
         )
 
 
-def _run_openrazer_native_route_contracts(root: Path, _node: TestNode) -> None:
+def _run_openrazer_native_route_contracts(root: Path, node: TestNode) -> None:
     source = _openrazer_source(root)
     deployment = load_native_deployment(root)
     build_directory = root / "build" / "openrazer-native-route-contracts"
@@ -669,6 +683,10 @@ def _run_openrazer_native_route_contracts(root: Path, _node: TestNode) -> None:
         raise ModelError("OpenRazer native source preparation crossed a prohibited boundary")
     if (prepared.root / ".git").exists():
         raise ModelError("OpenRazer native source output copied upstream Git metadata")
+
+    verify_global_event_file_matcher(
+        source / "daemon" / "openrazer_daemon" / "hardware" / "device_base.py"
+    )
 
     route_catalog = load_native_route_catalog(root)
     if route_catalog != transformed_native_route_catalog(root, source):
@@ -743,6 +761,47 @@ def _run_openrazer_native_route_contracts(root: Path, _node: TestNode) -> None:
             raise ModelError(f"OpenRazer native {driver} no longer reuses its exact USB catalog")
         if "razer_hyperflux_error_is_uncertain(err)" not in source_text:
             raise ModelError(f"OpenRazer native {driver} can retry an uncertain transaction")
+
+    prepared_driver = prepared.root / "driver"
+    prepared_source_link = prepared_driver / "source"
+    if prepared_source_link.exists() or prepared_source_link.is_symlink():
+        raise ModelError("prepared OpenRazer source contains an unexpected build artifact")
+    kernel_output_root = root / "build" / "openrazer-native-kernel-contracts"
+    if kernel_output_root.exists():
+        shutil.rmtree(kernel_output_root)
+    for build_directory in _kernel_build_directories():
+        label = build_directory.resolve().parent.name
+        module_directory = kernel_output_root / label / "driver"
+        shutil.copytree(prepared_driver, module_directory, symlinks=True)
+        _run_command(
+            root,
+            [
+                "make",
+                "-C",
+                str(build_directory),
+                f"M={module_directory}",
+                "clean",
+            ],
+            f"OpenRazer native kernel verification copy cleanup ({label})",
+            node.timeout_seconds,
+        )
+        _remove_expected_kernel_source_link(module_directory)
+        _run_command(
+            root,
+            [
+                "make",
+                "-C",
+                str(build_directory),
+                f"M={module_directory}",
+                "W=1",
+                "modules",
+            ],
+            f"OpenRazer native kernel module build ({label})",
+            node.timeout_seconds,
+        )
+        _remove_expected_kernel_source_link(module_directory)
+        if prepared_source_link.exists() or prepared_source_link.is_symlink():
+            raise ModelError("OpenRazer verification modified its prepared source tree")
 
     service = (
         root / "packaging" / "generated" / deployment.relay.service_unit

@@ -9,15 +9,15 @@ use hfx_domain::{
     FrameCount, FrameIndex, FreshnessState, GenerationId, HumanMessage, InventoryAvailability,
     LeaseDurationMs, LeaseId, LeaseState, LedCount, LogicalDeviceId, ModelName, MonotonicMs,
     NativeExchangeTimeoutMs, NativeProtocolFamily, NativeReportByteCount, NativeReportHex,
-    NativeRouteAccess, NativeRouteEventKind, NativeRouteToken, NegotiationToken, PairingState,
-    PowerState, PresenceState, PresentationKey, PrivacyClass, ProductId, ProfileDigest, ProfileId,
-    ProjectionRevision, ProtocolErrorKind, ProtocolFeatureId, ProtocolSessionId, ProtocolVersion,
-    QueueAdmission, QueueCapacity, ReceiverId, ReceiverLifecycleState, RequestDigest, RequestId,
-    ResourceKind, RestoreDeliveryState, RestoreState, ReturnEvidence, ReturnPhase, RouteKind,
-    RouteState, SequenceNumber, ServerInstanceId, SideEffectCertainty, SleepState, SourceRevision,
-    StableLightingMode, StreamEpoch, StreamId, SubscriptionId, SupportLevel, TelemetryAvailability,
-    TransactionClass, TransactionId, TransactionState, TransportVariant, UpstreamId, UpstreamOwner,
-    VendorId,
+    NativeRouteAccess, NativeRouteEventKind, NativeRouteState, NativeRouteToken, NegotiationToken,
+    PairingState, PowerState, PresenceState, PresentationKey, PrivacyClass, ProductId,
+    ProfileDigest, ProfileId, ProjectionRevision, ProtocolErrorKind, ProtocolFeatureId,
+    ProtocolSessionId, ProtocolVersion, QueueAdmission, QueueCapacity, ReceiverId,
+    ReceiverLifecycleState, RequestDigest, RequestId, ResourceKind, RestoreDeliveryState,
+    RestoreState, ReturnEvidence, ReturnPhase, RouteKind, RouteState, SequenceNumber,
+    ServerInstanceId, SideEffectCertainty, SleepState, SourceRevision, StableLightingMode,
+    StreamEpoch, StreamId, SubscriptionId, SupportLevel, TelemetryAvailability, TransactionClass,
+    TransactionId, TransactionState, TransportVariant, UpstreamId, UpstreamOwner, VendorId,
 };
 use serde::{Deserialize, Serialize};
 
@@ -798,8 +798,8 @@ pub struct NativeRoute {
     pub vendor_id: VendorId,
     /// Observed child USB product identifier.
     pub product_id: ProductId,
-    /// Current receiver route evidence.
-    pub route_state: RouteState,
+    /// Current route authority without a sleep, power, readiness, or application-state claim.
+    pub route_state: NativeRouteState,
     /// Evidence-backed tunnel access level.
     pub access: NativeRouteAccess,
     /// Opaque feature-report protocol family.

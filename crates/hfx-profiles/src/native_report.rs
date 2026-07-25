@@ -315,7 +315,20 @@ mod tests {
     }
 
     #[test]
-    fn nonterminal_response_status_is_not_a_match() {
+    fn every_device_status_is_matched_without_interpretation() {
+        let request = report(0, 0);
+        for status in 1..=5 {
+            let response = report(status, 0);
+            assert_eq!(
+                native_response_matches(&profile(0), &request, &response),
+                Ok(true),
+                "device status {status} must remain an upstream semantic"
+            );
+        }
+    }
+
+    #[test]
+    fn request_only_status_zero_is_not_a_response() {
         let request = report(0, 0);
         let response = report(0, 0);
         assert_eq!(

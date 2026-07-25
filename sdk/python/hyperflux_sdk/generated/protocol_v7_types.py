@@ -46,6 +46,7 @@ from .domain_types import (
     NativeReportHex,
     NativeRouteAccess,
     NativeRouteEventKind,
+    NativeRouteState,
     NativeRouteToken,
     NegotiationToken,
     PairingState,
@@ -567,7 +568,7 @@ class NativeRoute:
     device_kind: DeviceKind
     vendor_id: VendorId
     product_id: ProductId
-    route_state: RouteState
+    route_state: NativeRouteState
     access: NativeRouteAccess
     protocol_family: NativeProtocolFamily
     report_bytes: NativeReportByteCount

@@ -36,4 +36,4 @@ The UAPI contains fixed-width values, no pointers, and no application or product
 
 ## Ownership
 
-The kernel owns receiver generations, passive observation sequencing, one writer file, session expiry, revocation, and bounded envelope transport. The bridge owns profile selection, logical-device identities, capabilities, carrier maps, effects, scheduling, and application policy.
+The kernel owns receiver generations, passive observation sequencing, one writer file, session expiry, revocation, bounded legacy envelopes, and qualified fixed-size native exchanges. The bridge owns route qualification, generation-safe NativeControl arbitration, bounded admission, and outcome projection. OpenRazer and OpenRGB own device commands, capabilities, layouts, effects, and persistence.

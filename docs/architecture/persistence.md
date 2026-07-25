@@ -1,5 +1,12 @@
 # Bridge Persistence
 
+> **Migration fallback:** this document describes the retained protocol-v6
+> semantic stable-lighting path. Protocol-v7 native routes do not use bridge
+> lighting persistence. OpenRazer and OpenRGB own device settings, effects,
+> profiles, and restart behavior exactly as they do for direct devices. The
+> fallback remains available only for rollback until its explicit retirement
+> gate passes.
+
 The bridge persists only semantic stable-lighting intent, restoration policy, and durable per-device restoration claims. It does not persist sessions, leases, route observations, battery values, raw reports, effect phase, application widgets, or private hardware identifiers.
 
 Persistence is independent of RPC connection sessions. Protocol credentials, internal authorization epochs, leases, and queued requests become invalid when their owning connection ends and never enter the durable document.

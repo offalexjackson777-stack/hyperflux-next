@@ -7,8 +7,8 @@ use hfx_core::{
 };
 use hfx_domain::{
     ConnectionMode, DeviceKind, EndpointId, EvidenceClaimId, EvidenceConfidence, GenerationId,
-    LogicalDeviceId, MonotonicMs, NativeRouteAccess, ProductId, RouteKind, RouteState,
-    SequenceNumber, SleepState, VendorId,
+    LogicalDeviceId, MonotonicMs, NativeRouteAccess, NativeRouteState, ProductId, RouteKind,
+    RouteState, SequenceNumber, SleepState, VendorId,
 };
 
 fn text<T>(value: &str) -> T
@@ -41,7 +41,7 @@ fn register_child(
     product_id: u16,
     route: RouteKind,
     sequence: u64,
-    available: bool,
+    route_state: Option<RouteState>,
 ) {
     let device_id: LogicalDeviceId = text(id);
     machine
@@ -72,15 +72,10 @@ fn register_child(
             stamp(sequence + 1),
         )
         .expect("endpoint registers");
-    if available {
+    if let Some(route_state) = route_state {
         machine
-            .observe_route(
-                &device_id,
-                &endpoint_id,
-                RouteState::Available,
-                stamp(sequence + 2),
-            )
-            .expect("route becomes available");
+            .observe_route(&device_id, &endpoint_id, route_state, stamp(sequence + 2))
+            .expect("route state is observed");
     } else {
         machine
             .observe_sleep(
@@ -105,7 +100,7 @@ fn receiver_native_backend_projects_known_and_unknown_wireless_children_as_candi
         0x00cd,
         RouteKind::HyperfluxWireless,
         2,
-        true,
+        Some(RouteState::Available),
     );
     register_child(
         &mut machine,
@@ -114,7 +109,16 @@ fn receiver_native_backend_projects_known_and_unknown_wireless_children_as_candi
         0x7777,
         RouteKind::HyperfluxWireless,
         10,
-        false,
+        None,
+    );
+    register_child(
+        &mut machine,
+        "known-unavailable",
+        DeviceKind::Mouse,
+        0x00cd,
+        RouteKind::HyperfluxWireless,
+        16,
+        Some(RouteState::Unavailable),
     );
     register_child(
         &mut machine,
@@ -123,7 +127,7 @@ fn receiver_native_backend_projects_known_and_unknown_wireless_children_as_candi
         0x00cd,
         RouteKind::DirectUsb,
         20,
-        true,
+        Some(RouteState::Available),
     );
     let mut receivers = ReceiverLifecycleRegistry::default();
     receivers.register(machine).expect("receiver fits");
@@ -138,9 +142,9 @@ fn receiver_native_backend_projects_known_and_unknown_wireless_children_as_candi
         .expect("receiver binds");
 
     let routes = project_native_routes(&receivers, &profiles).expect("routes project");
-    assert_eq!(routes.len(), 2);
+    assert_eq!(routes.len(), 3);
     assert_eq!(routes[0].device_id.as_str(), "known-mouse");
-    assert_eq!(routes[0].route_state, RouteState::Available);
+    assert_eq!(routes[0].route_state, NativeRouteState::Available);
     assert_eq!(routes[0].access, NativeRouteAccess::Candidate);
     assert_eq!(routes[0].vendor_id.get(), 0x1532);
     assert_eq!(routes[0].product_id.get(), 0x00cd);
@@ -152,8 +156,18 @@ fn receiver_native_backend_projects_known_and_unknown_wireless_children_as_candi
     assert!(routes[0].route_token.is_none());
     assert!(routes[0].resource.is_none());
 
-    assert_eq!(routes[1].device_id.as_str(), "unknown-keyboard");
-    assert_eq!(routes[1].product_id.get(), 0x7777);
-    assert_eq!(routes[1].route_state, RouteState::Stale);
+    assert_eq!(routes[1].device_id.as_str(), "known-unavailable");
+    assert_eq!(
+        routes[1].route_state,
+        NativeRouteState::TemporarilyUnavailable
+    );
     assert_eq!(routes[1].access, NativeRouteAccess::Candidate);
+
+    assert_eq!(routes[2].device_id.as_str(), "unknown-keyboard");
+    assert_eq!(routes[2].product_id.get(), 0x7777);
+    assert_eq!(
+        routes[2].route_state,
+        NativeRouteState::TemporarilyUnavailable
+    );
+    assert_eq!(routes[2].access, NativeRouteAccess::Candidate);
 }

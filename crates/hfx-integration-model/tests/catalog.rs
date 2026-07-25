@@ -11,12 +11,21 @@ fn generated_catalog_keeps_upstreams_exact_and_network_free() {
 }
 
 #[test]
-fn adapters_require_canonical_protocol_v5_views_and_distinct_coexistence_contracts() {
-    assert!(
-        ADAPTERS
-            .iter()
-            .all(|adapter| adapter.sdk_protocol_versions == [5])
-    );
+fn adapters_bind_exact_protocol_generations_and_distinct_coexistence_contracts() {
+    assert_eq!(ADAPTERS.len(), 4);
+    for (id, versions) in [
+        ("openrazer-compatibility", &[5_u16][..]),
+        ("openrazer-native-route", &[7_u16][..]),
+        ("openrgb-native", &[7_u16][..]),
+        ("polychromatic-native", &[5_u16][..]),
+    ] {
+        assert_eq!(
+            adapter_by_id(id)
+                .unwrap_or_else(|| panic!("{id} adapter exists"))
+                .sdk_protocol_versions,
+            versions
+        );
+    }
     assert_eq!(
         adapter_by_id("openrgb-native")
             .expect("OpenRGB adapter exists")
@@ -29,4 +38,9 @@ fn adapters_require_canonical_protocol_v5_views_and_distinct_coexistence_contrac
             .coexistence_policy,
         "private-explicit-service-only"
     );
+    let native =
+        adapter_by_id("openrazer-native-route").expect("OpenRazer native-route adapter exists");
+    assert_eq!(native.kind, "transport-adapter");
+    assert_eq!(native.coexistence_policy, "upstream-transport-extension");
+    assert!(native.feature_families.contains(&"native-control"));
 }

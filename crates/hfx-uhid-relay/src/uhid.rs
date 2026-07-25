@@ -59,6 +59,7 @@ impl VirtualDeviceSpec {
                 .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
             || descriptor.is_empty()
             || descriptor.len() > HID_MAX_DESCRIPTOR_SIZE
+            || !is_feature_only_descriptor(&descriptor)
         {
             return Err(UhidCodecError::InvalidDeviceSpec);
         }
@@ -287,11 +288,64 @@ fn validate_spec(spec: &VirtualDeviceSpec) -> Result<(), UhidCodecError> {
         || spec.phys.as_bytes().contains(&0)
         || spec.descriptor.is_empty()
         || spec.descriptor.len() > HID_MAX_DESCRIPTOR_SIZE
+        || !is_feature_only_descriptor(&spec.descriptor)
     {
         Err(UhidCodecError::InvalidDeviceSpec)
     } else {
         Ok(())
     }
+}
+
+fn is_feature_only_descriptor(descriptor: &[u8]) -> bool {
+    let mut offset = 0;
+    let mut collection_depth = 0_u16;
+    let mut feature_items = 0_u16;
+
+    while offset < descriptor.len() {
+        let prefix = descriptor[offset];
+        if prefix == 0xfe {
+            return false;
+        }
+        let payload_bytes = match prefix & 0x03 {
+            0 => 0,
+            1 => 1,
+            2 => 2,
+            3 => 4,
+            _ => unreachable!(),
+        };
+        let Some(next) = offset.checked_add(1 + payload_bytes) else {
+            return false;
+        };
+        if next > descriptor.len() {
+            return false;
+        }
+
+        let item_type = (prefix >> 2) & 0x03;
+        let tag = prefix >> 4;
+        if item_type == 0 {
+            match tag {
+                0x0a if payload_bytes > 0 => {
+                    let Some(next_depth) = collection_depth.checked_add(1) else {
+                        return false;
+                    };
+                    collection_depth = next_depth;
+                }
+                0x0b if payload_bytes > 0 && collection_depth > 0 => {
+                    let Some(next_items) = feature_items.checked_add(1) else {
+                        return false;
+                    };
+                    feature_items = next_items;
+                }
+                0x0c if payload_bytes == 0 && collection_depth > 0 => {
+                    collection_depth -= 1;
+                }
+                _ => return false,
+            }
+        }
+        offset = next;
+    }
+
+    collection_depth == 0 && feature_items > 0
 }
 
 fn write_c_string(target: &mut [u8], value: &str) -> Result<(), UhidCodecError> {
@@ -323,4 +377,51 @@ fn write_u16(bytes: &mut [u8], offset: usize, value: u16) {
 
 fn write_u32(bytes: &mut [u8], offset: usize, value: u32) {
     bytes[offset..offset + 4].copy_from_slice(&value.to_ne_bytes());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const FEATURE_ONLY_DESCRIPTOR: &[u8] = &[
+        0x06, 0x00, 0xff, 0x09, 0x01, 0xa1, 0x01, 0x15, 0x00, 0x26, 0xff, 0x00, 0x75, 0x08, 0x95,
+        0x5a, 0xb1, 0x02, 0xc0,
+    ];
+
+    #[test]
+    fn feature_only_descriptor_cannot_create_an_input_node() {
+        assert!(is_feature_only_descriptor(FEATURE_ONLY_DESCRIPTOR));
+        for main_item in [0x81, 0x91] {
+            let mut descriptor = FEATURE_ONLY_DESCRIPTOR.to_vec();
+            descriptor.splice(18..18, [main_item, 0x02]);
+            assert!(!is_feature_only_descriptor(&descriptor));
+            assert_eq!(
+                VirtualDeviceSpec::new(
+                    "Razer test".to_string(),
+                    0x1532,
+                    1,
+                    descriptor,
+                    "test-route",
+                ),
+                Err(UhidCodecError::InvalidDeviceSpec)
+            );
+        }
+    }
+
+    #[test]
+    fn create_encoding_keeps_the_trusted_virtual_feature_identity() {
+        let spec = VirtualDeviceSpec::new(
+            "Razer test".to_string(),
+            0x1532,
+            0x1234,
+            FEATURE_ONLY_DESCRIPTOR.to_vec(),
+            "test-route",
+        )
+        .expect("feature-only descriptor is valid");
+        let encoded = UhidReply::Create(spec).encode().expect("create encodes");
+        assert_eq!(read_u32(&encoded, 0), Some(UHID_CREATE2));
+        assert_eq!(read_u16(&encoded, 262), Some(BUS_VIRTUAL));
+        assert_eq!(read_u32(&encoded, 264), Some(0x1532));
+        assert_eq!(read_u32(&encoded, 268), Some(0x1234));
+    }
 }

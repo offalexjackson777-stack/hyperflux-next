@@ -3,8 +3,8 @@
 use crate::RuntimeProfileAuthority;
 use hfx_core::{EndpointLifecycle, ReceiverLifecycleRegistry};
 use hfx_domain::{
-    ActivityState, NativeProtocolFamily, NativeReportByteCount, NativeRouteAccess, PowerState,
-    RouteKind, RouteState, SleepState, SupportLevel,
+    NativeProtocolFamily, NativeReportByteCount, NativeRouteAccess, NativeRouteState, RouteKind,
+    RouteState, SupportLevel,
 };
 use hfx_protocol::NativeRoute;
 use std::fmt;
@@ -128,19 +128,12 @@ fn native_exchange_is_qualified(profile: &hfx_profiles::RuntimeProfile) -> bool 
     })
 }
 
-fn native_route_state(endpoint: &EndpointLifecycle) -> RouteState {
+fn native_route_state(endpoint: &EndpointLifecycle) -> NativeRouteState {
     match endpoint.route().value() {
-        RouteState::Available => RouteState::Available,
-        RouteState::Unavailable => RouteState::Unavailable,
-        RouteState::Stale => RouteState::Stale,
-        RouteState::Unknown if endpoint.power().value() == PowerState::Off => {
-            RouteState::Unavailable
+        RouteState::Available => NativeRouteState::Available,
+        RouteState::Unavailable | RouteState::Stale | RouteState::Unknown => {
+            NativeRouteState::TemporarilyUnavailable
         }
-        RouteState::Unknown if endpoint.activity().value() == ActivityState::Active => {
-            RouteState::Available
-        }
-        RouteState::Unknown if endpoint.sleep().value() == SleepState::Asleep => RouteState::Stale,
-        RouteState::Unknown => RouteState::Unknown,
     }
 }
 

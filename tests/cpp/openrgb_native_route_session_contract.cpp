@@ -66,7 +66,7 @@ hyperflux::v7::NativeRoute route()
         DeviceKind::Mouse,
         number<VendorId>(0x1532),
         number<ProductId>(0x00cd),
-        RouteState::Available,
+        NativeRouteState::Available,
         NativeRouteAccess::Qualified,
         text<NativeProtocolFamily>("razer-feature-report-v1"),
         number<NativeReportByteCount>(90),

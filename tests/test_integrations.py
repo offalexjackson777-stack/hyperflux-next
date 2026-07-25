@@ -41,6 +41,7 @@ from hfxdev.openrazer import (
     load_import_selection,
     load_imported_metadata,
     transformed_metadata,
+    verify_global_event_file_matcher,
 )
 from hfxdev.openrazer_native_route import (
     load_native_route_catalog,
@@ -75,12 +76,37 @@ class IntegrationCatalogTests(unittest.TestCase):
         )
 
     def test_every_adapter_is_sdk_only_and_preserves_unrelated_devices(self) -> None:
+        expected_protocols = {
+            "openrazer-compatibility": [5],
+            "openrazer-native-route": [7],
+            "openrgb-native": [7],
+            "polychromatic-native": [5],
+        }
         for adapter in self.catalog["adapters"]:
             self.assertEqual(adapter["transport_access"], "sdk-only")
             self.assertEqual(adapter["unrelated_device_policy"], "preserve")
-            self.assertEqual(adapter["sdk_protocol_versions"], [5])
+            self.assertEqual(
+                adapter["sdk_protocol_versions"], expected_protocols[adapter["id"]]
+            )
             self.assertTrue(adapter["owns"])
             self.assertTrue(adapter["must_not_own"])
+
+    def test_native_routes_own_transport_while_upstreams_keep_device_semantics(self) -> None:
+        adapters = {value["id"]: value for value in self.catalog["adapters"]}
+        openrazer = adapters["openrazer-native-route"]
+        self.assertEqual(openrazer["kind"], "transport-adapter")
+        self.assertEqual(openrazer["coexistence_policy"], "upstream-transport-extension")
+        self.assertIn("native-control", openrazer["feature_families"])
+        self.assertTrue(
+            any("device commands" in value for value in openrazer["must_not_own"])
+        )
+
+        openrgb = adapters["openrgb-native"]
+        self.assertEqual(openrgb["status"], "software-verified")
+        self.assertIn("native-control", openrgb["feature_families"])
+        self.assertTrue(
+            any("device models" in value for value in openrgb["must_not_own"])
+        )
 
     def test_child_presentation_matches_one_canonical_upstream_pin(self) -> None:
         upstreams = {value["id"]: value for value in self.catalog["upstreams"]}
@@ -334,6 +360,28 @@ class IntegrationCatalogTests(unittest.TestCase):
                 encoding="utf-8",
             )
             self.assertEqual(effective_event_regex(path, "Child"), "root-event")
+
+    def test_openrazer_global_event_binding_is_structural_and_fail_closed(self) -> None:
+        valid = "\n".join(
+            (
+                "import os",
+                "class RazerDevice:",
+                "    def __init__(self):",
+                "        self.event_files = []",
+                "        search_dir = '/dev/input/by-id/'",
+                "        for event_file in os.listdir(search_dir):",
+                "            if self.EVENT_FILE_REGEX.match(event_file):",
+                "                self.event_files.append(os.path.join(search_dir, event_file))",
+            )
+        )
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "device_base.py"
+            path.write_text(valid, encoding="utf-8")
+            verify_global_event_file_matcher(path)
+
+            path.write_text(valid.replace("/dev/input/by-id/", "input"), encoding="utf-8")
+            with self.assertRaisesRegex(ModelError, "global event-file matcher"):
+                verify_global_event_file_matcher(path)
 
 
 if __name__ == "__main__":

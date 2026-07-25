@@ -314,7 +314,8 @@ impl Drop for RunningEndpoint {
 /// # Errors
 ///
 /// Fails closed on bridge, catalog, supervisor, or UHID errors. Dropping the
-/// session destroys every virtual endpoint and releases every route lease.
+/// session destroys every virtual endpoint. Route leases exist only around an
+/// individual native Feature exchange.
 pub fn run_relay(paths: &RelayPaths, termination: &AtomicBool) -> Result<(), RelayRuntimeError> {
     let catalog = NativeRouteCatalog::load().map_err(|_| RelayRuntimeError::Catalog)?;
     let mut direct_scanner = DirectRouteScanner::new(paths.hid_driver_root.clone());

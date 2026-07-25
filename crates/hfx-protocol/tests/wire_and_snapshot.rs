@@ -5,8 +5,8 @@ use hfx_domain::{
     ContactState, ControllerAvailability, DeviceKind, EvidenceConfidence, FreshnessState,
     GenerationId, InventoryAvailability, LeaseDurationMs, LedCount, ModelName, MonotonicMs,
     NativeExchangeTimeoutMs, NativeProtocolFamily, NativeReportByteCount, NativeReportHex,
-    NativeRouteAccess, NativeRouteEventKind, NativeRouteToken, PairingState, PowerState,
-    PresenceState, ProductId, ProjectionRevision, ProtocolFeatureId, ProtocolVersion,
+    NativeRouteAccess, NativeRouteEventKind, NativeRouteState, NativeRouteToken, PairingState,
+    PowerState, PresenceState, ProductId, ProjectionRevision, ProtocolFeatureId, ProtocolVersion,
     ReceiverLifecycleState, ResourceKind, RestoreDeliveryState, RestoreState, ReturnEvidence,
     ReturnPhase, RouteKind, RouteState, SequenceNumber, SleepState, StableLightingMode,
     StreamEpoch, SupportLevel, TelemetryAvailability, TransactionClass, VendorId,
@@ -51,8 +51,9 @@ fn cursor() -> EventCursor {
     }
 }
 
-fn native_route(access: NativeRouteAccess, route_state: RouteState) -> NativeRoute {
-    let writable = access == NativeRouteAccess::Qualified && route_state == RouteState::Available;
+fn native_route(access: NativeRouteAccess, route_state: NativeRouteState) -> NativeRoute {
+    let writable =
+        access == NativeRouteAccess::Qualified && route_state == NativeRouteState::Available;
     NativeRoute {
         receiver_id: text("receiver-1"),
         generation_id: GenerationId::try_from(1_u64).expect("generation is valid"),
@@ -729,7 +730,7 @@ fn native_inventory_fails_closed_on_authority_or_identity_contradictions() {
             cursor: cursor(),
             routes: vec![native_route(
                 NativeRouteAccess::Qualified,
-                RouteState::Available,
+                NativeRouteState::Available,
             )],
         },
     });
@@ -751,7 +752,7 @@ fn native_inventory_fails_closed_on_authority_or_identity_contradictions() {
     };
     envelope.result.routes.push(native_route(
         NativeRouteAccess::Qualified,
-        RouteState::Unavailable,
+        NativeRouteState::Withdrawn,
     ));
     assert!(matches!(
         encode_rpc_response_for_version(&duplicate_identity, number(7)),
@@ -773,7 +774,7 @@ fn native_route_events_require_consistent_transitions_and_cursors() {
             events: vec![NativeRouteEvent {
                 sequence: SequenceNumber::try_from(1_u64).expect("sequence is valid"),
                 kind: NativeRouteEventKind::Available,
-                route: native_route(NativeRouteAccess::Qualified, RouteState::Available),
+                route: native_route(NativeRouteAccess::Qualified, NativeRouteState::Available),
             }],
             oldest_available: SequenceNumber::try_from(1_u64).expect("sequence is valid"),
             latest_available: SequenceNumber::try_from(1_u64).expect("sequence is valid"),
@@ -785,11 +786,32 @@ fn native_route_events_require_consistent_transitions_and_cursors() {
     });
     encode_rpc_response_for_version(&response, number(7)).expect("native event batch is valid");
 
+    let mut temporarily_unavailable = response.clone();
+    let RpcResponse::NativeWatchSuccess(envelope) = &mut temporarily_unavailable else {
+        panic!("native event response expected")
+    };
+    envelope.result.events[0].kind = NativeRouteEventKind::TemporarilyUnavailable;
+    envelope.result.events[0].route = native_route(
+        NativeRouteAccess::Qualified,
+        NativeRouteState::TemporarilyUnavailable,
+    );
+    encode_rpc_response_for_version(&temporarily_unavailable, number(7))
+        .expect("temporary route loss is canonical");
+
+    let mut withdrawn = response.clone();
+    let RpcResponse::NativeWatchSuccess(envelope) = &mut withdrawn else {
+        panic!("native event response expected")
+    };
+    envelope.result.events[0].kind = NativeRouteEventKind::Withdrawn;
+    envelope.result.events[0].route =
+        native_route(NativeRouteAccess::Qualified, NativeRouteState::Withdrawn);
+    encode_rpc_response_for_version(&withdrawn, number(7)).expect("route withdrawal is canonical");
+
     let mut contradictory = response;
     let RpcResponse::NativeWatchSuccess(envelope) = &mut contradictory else {
         panic!("native event response expected")
     };
-    envelope.result.events[0].kind = NativeRouteEventKind::Unavailable;
+    envelope.result.events[0].kind = NativeRouteEventKind::Withdrawn;
     assert!(matches!(
         encode_rpc_response_for_version(&contradictory, number(7)),
         Err(ProtocolWireError::InvalidResponse(_))

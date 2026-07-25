@@ -1,5 +1,12 @@
 # OpenRazer Compatibility Boundary
 
+> **Migration fallback:** this private D-Bus projection is not the final
+> OpenRazer path. The target integration keeps the official OpenRazer daemon,
+> classes, methods, images, persistence, and Polychromatic backend unchanged and
+> replaces only transport through trusted feature-only UHID routes. This fallback
+> remains installed and noncompeting until native-route physical parity,
+> rollback, and a separate retirement approval pass.
+
 The OpenRazer compatibility provider is an optional application adapter. It
 projects an evidence-qualified subset of HyperFlux controllers into the exact
 D-Bus vocabulary expected by pinned OpenRazer 3.x clients. It is not the
@@ -30,7 +37,7 @@ The package installs no D-Bus activation file. The default provider never owns
 and client in an isolated bus and removes both when the client exits. This keeps
 the official daemon and unrelated direct devices untouched.
 
-## Qualified Surface
+## Retained Qualified Surface
 
 An object is exported only when the bridge supplies an exact receiver profile,
 exact child profile, qualified writable route, and the required lighting

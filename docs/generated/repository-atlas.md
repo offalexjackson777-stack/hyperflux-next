@@ -15,7 +15,7 @@ flowchart LR
     subgraph c_applications["Applications"]
         n_integrations["Application integration catalog"]
         n_openrgb_adapter["OpenRGB adapter"]
-        n_openrazer_adapter["OpenRazer compatibility adapter"]
+        n_openrazer_adapter["OpenRazer native route"]
         n_polychromatic_adapter["Polychromatic adapter"]
         n_device_qualification_console["Device qualification console"]
         n_operations_cli["Operations CLI"]
@@ -164,8 +164,8 @@ Arrows run from a dependency to its direct consumer. They describe responsibilit
 | [Composable hardware profiles](#profiles) | `architecture` | `implemented` | 3 | 11 | `profile-contracts`, `native-onboarding-contracts` |
 | [Device knowledge](#device-knowledge) | `assurance` | `research-boundary` | 2 | 1 | `device-knowledge-contracts`, `native-onboarding-contracts` |
 | [Versioned bridge protocol](#protocol) | `architecture` | `implemented` | 1 | 7 | `protocol-contracts`, `cpp-sdk-contracts` |
-| [OpenRGB adapter](#openrgb-adapter) | `applications` | `implemented` | 3 | 1 | `openrgb-adapter-contracts`, `openrgb-thread-sanitizer` |
-| [OpenRazer compatibility adapter](#openrazer-adapter) | `applications` | `implemented` | 3 | 2 | `openrazer-metadata-contracts`, `openrazer-compatibility-contracts` |
+| [OpenRGB adapter](#openrgb-adapter) | `applications` | `implemented` | 3 | 1 | `openrgb-native-route-contracts`, `openrgb-thread-sanitizer` |
+| [OpenRazer native route](#openrazer-adapter) | `applications` | `implemented` | 3 | 2 | `openrazer-metadata-contracts`, `openrazer-native-route-contracts`, `openrazer-compatibility-contracts` |
 | [Polychromatic adapter](#polychromatic-adapter) | `applications` | `implemented` | 2 | 1 | `polychromatic-adapter-contracts` |
 | [Device qualification console](#device-qualification-console) | `applications` | `implemented` | 3 | 1 | `device-qualification-console-contracts`, `rust-unit`, `package-contracts` |
 | [Rust workspace](#rust-workspace) | `runtime` | `implemented` | 3 | 5 | `rust-format`, `rust-clippy`, `rust-unit` |
@@ -287,13 +287,13 @@ Defines application-neutral adapter identities, upstream pins, coexistence rules
 
 **Depends on:** [Architecture authority](#architecture), [Schema contracts](#schemas)
 
-**Used by:** [Device knowledge](#device-knowledge), [OpenRazer compatibility adapter](#openrazer-adapter), [OpenRGB adapter](#openrgb-adapter), [Composable hardware profiles](#profiles), [C++ SDK](#sdk-cpp), [Python SDK](#sdk-python)
+**Used by:** [Device knowledge](#device-knowledge), [OpenRazer native route](#openrazer-adapter), [OpenRGB adapter](#openrgb-adapter), [Composable hardware profiles](#profiles), [C++ SDK](#sdk-cpp), [Python SDK](#sdk-python)
 
 **Canonical sources:** `integrations/catalog.json`.
 
 **Generated projections:** `integrations/README.md`, `generated/integrations/catalog.json`, `docs/generated/integrations.md`.
 
-**Change impact:** Regenerate 3 declared projection(s). Run `integration-contracts`. Review direct consumers: Device knowledge, OpenRazer compatibility adapter, OpenRGB adapter, Composable hardware profiles, C++ SDK, Python SDK.
+**Change impact:** Regenerate 3 declared projection(s). Run `integration-contracts`. Review direct consumers: Device knowledge, OpenRazer native route, OpenRGB adapter, Composable hardware profiles, C++ SDK, Python SDK.
 
 </details>
 
@@ -313,13 +313,13 @@ Composes receiver, surface, and child identities with evidence-bound capabilitie
 
 **Depends on:** [Architecture authority](#architecture), [Schema contracts](#schemas), [Application integration catalog](#integrations)
 
-**Used by:** [Core policy engine](#core-runtime), [Device knowledge](#device-knowledge), [Device qualification console](#device-qualification-console), [Linux HID kernel module](#kernel-module), [OpenRazer compatibility adapter](#openrazer-adapter), [OpenRGB adapter](#openrgb-adapter), [Operations CLI](#operations-cli), [Rust SDK](#rust-sdk), [C++ SDK](#sdk-cpp), [Python SDK](#sdk-python), [Deterministic simulator](#simulator)
+**Used by:** [Core policy engine](#core-runtime), [Device knowledge](#device-knowledge), [Device qualification console](#device-qualification-console), [Linux HID kernel module](#kernel-module), [OpenRazer native route](#openrazer-adapter), [OpenRGB adapter](#openrgb-adapter), [Operations CLI](#operations-cli), [Rust SDK](#rust-sdk), [C++ SDK](#sdk-cpp), [Python SDK](#sdk-python), [Deterministic simulator](#simulator)
 
 **Canonical sources:** `profiles/capabilities.json`, `profiles/lifecycle-policies.json`, `profiles/evidence/claims.json`, `profiles/receivers/razer-hyperflux-v2-1532-00cf.json`, `profiles/surfaces/razer-hyperflux-v2-hard-edition.json`, `profiles/children/razer-basilisk-v3-pro-35k-00cd.json`, `profiles/children/razer-deathstalker-v2-pro-tkl-0296.json`, `profiles/candidates/razer-hyperflux-v2-2026-07-13.json`, `profiles/candidates/razer-hyperflux-v2-2026-07-21.json`.
 
 **Generated projections:** `profiles/README.md`, `generated/profiles/catalog.json`, `docs/generated/supported-hardware.md`.
 
-**Change impact:** Regenerate 3 declared projection(s). Run `profile-contracts`, `native-onboarding-contracts`. Review direct consumers: Core policy engine, Device knowledge, Device qualification console, Linux HID kernel module, OpenRazer compatibility adapter, OpenRGB adapter, Operations CLI, Rust SDK, C++ SDK, Python SDK, Deterministic simulator.
+**Change impact:** Regenerate 3 declared projection(s). Run `profile-contracts`, `native-onboarding-contracts`. Review direct consumers: Core policy engine, Device knowledge, Device qualification console, Linux HID kernel module, OpenRazer native route, OpenRGB adapter, Operations CLI, Rust SDK, C++ SDK, Python SDK, Deterministic simulator.
 
 </details>
 
@@ -383,47 +383,47 @@ Defines bounded request, response, event, negotiation, and compatibility contrac
 
 `integrations/openrgb` · `applications` · `implemented`
 
-Projects qualified SDK devices into native OpenRGB controllers while preserving upstream presentation metadata.
+Runs pinned upstream Razer controllers over qualified HyperFlux Feature routes while preserving ordinary hidapi devices.
 
-**Owns:** OpenRGB controller projection; UI coordination; Bounded dispatch queue.
+**Owns:** OpenRGB Feature transport adaptation; Native controller lifecycle; Serial-proven direct-route precedence.
 
-**Must never own:** Receiver encoding; Qualification policy; Direct USB access.
+**Must never own:** OpenRGB device semantics; Receiver qualification; Direct hidapi transport.
 
 **Depends on:** [Application integration catalog](#integrations), [Composable hardware profiles](#profiles), [C++ SDK](#sdk-cpp)
 
 **Used by:** [Packaging and installation](#packaging)
 
-**Canonical sources:** `integrations/openrgb/CMakeLists.txt`, `integrations/openrgb/src/openrgb_plugin.cpp`, `integrations/openrgb/src/runtime_core.cpp`.
+**Canonical sources:** `integrations/openrgb/CMakeLists.txt`, `integrations/openrgb/native-route/transform.json`, `integrations/openrgb/src/native_plugin_application.cpp`, `integrations/openrgb/src/native_route_session.cpp`, `integrations/openrgb/src/razer_feature_transport.cpp`, `integrations/openrgb/src/openrgb_plugin.cpp`.
 
 **Generated projections:** `integrations/openrgb/README.md`.
 
-**Change impact:** Regenerate 1 declared projection(s). Run `openrgb-adapter-contracts`, `openrgb-thread-sanitizer`. Review direct consumers: Packaging and installation.
+**Change impact:** Regenerate 1 declared projection(s). Run `openrgb-native-route-contracts`, `openrgb-thread-sanitizer`. Review direct consumers: Packaging and installation.
 
 </details>
 
 <a id="openrazer-adapter"></a>
 <details>
-<summary><strong>OpenRazer compatibility adapter</strong> · applications · implemented</summary>
+<summary><strong>OpenRazer native route</strong> · applications · implemented</summary>
 
-### OpenRazer compatibility adapter
+### OpenRazer native route
 
 `integrations/openrazer` · `applications` · `implemented`
 
-Provides an isolated compatibility surface for legacy OpenRazer clients without impersonating the system daemon globally.
+Extends pinned OpenRazer with trusted feature-only HyperFlux routes while preserving ordinary USB devices and the official daemon API.
 
-**Owns:** Private compatibility session; OpenRazer metadata import; Legacy client translation.
+**Owns:** Feature-only UHID route contract; Pinned OpenRazer source transform; Serial-proven direct-route precedence metadata.
 
-**Must never own:** Global D-Bus names; Receiver transport; OpenRazer support authority.
+**Must never own:** OpenRazer device semantics; Official daemon identity; Direct USB transport.
 
 **Depends on:** [Application integration catalog](#integrations), [Composable hardware profiles](#profiles), [Python SDK](#sdk-python)
 
 **Used by:** [Packaging and installation](#packaging), [Polychromatic adapter](#polychromatic-adapter)
 
-**Canonical sources:** `integrations/openrazer/import.json`, `integrations/openrazer/metadata.json`, `integrations/openrazer/compatibility.json`, `integrations/openrazer/native-control-policy.json`, `integrations/openrazer/native-method-inventory.json`.
+**Canonical sources:** `integrations/openrazer/import.json`, `integrations/openrazer/metadata.json`, `integrations/openrazer/native-control-policy.json`, `integrations/openrazer/native-method-inventory.json`, `integrations/openrazer/native-probe-catalog.json`, `integrations/openrazer/native-route/catalog.json`, `integrations/openrazer/native-route/transform.json`.
 
 **Generated projections:** `integrations/openrazer/README.md`, `sdk/python/hyperflux_sdk/generated/openrazer_metadata.py`.
 
-**Change impact:** Regenerate 2 declared projection(s). Run `openrazer-metadata-contracts`, `openrazer-compatibility-contracts`. Review direct consumers: Packaging and installation, Polychromatic adapter.
+**Change impact:** Regenerate 2 declared projection(s). Run `openrazer-metadata-contracts`, `openrazer-native-route-contracts`, `openrazer-compatibility-contracts`. Review direct consumers: Packaging and installation, Polychromatic adapter.
 
 </details>
 
@@ -435,13 +435,13 @@ Provides an isolated compatibility surface for legacy OpenRazer clients without 
 
 `integrations/polychromatic` · `applications` · `implemented`
 
-Exposes HyperFlux-backed devices to Polychromatic through a native bounded backend and explicit coexistence policy.
+Retains the SDK-native backend as a migration fallback while Polychromatic uses its ordinary OpenRazer backend for native routes.
 
-**Owns:** Polychromatic backend projection; Client state mapping; Backend discovery patch.
+**Owns:** Migration backend projection; Client state mapping; Backend discovery patch.
 
-**Must never own:** OpenRazer global policy; Raw receiver access; Profile qualification.
+**Must never own:** OpenRazer device semantics; Raw receiver access; Native-route qualification.
 
-**Depends on:** [OpenRazer compatibility adapter](#openrazer-adapter), [Python SDK](#sdk-python)
+**Depends on:** [OpenRazer native route](#openrazer-adapter), [Python SDK](#sdk-python)
 
 **Used by:** [Packaging and installation](#packaging)
 
@@ -513,9 +513,9 @@ Coordinates the Rust dependency graph and compile-time ownership boundaries acro
 
 `crates/hfx-core` · `runtime` · `implemented`
 
-Owns lifecycle policy, receiver registry, leases, transactions, restoration intent, and typed diagnostics.
+Owns receiver generations, qualified native routes, child-local arbitration, bounded transactions, retained fallback restoration, and typed diagnostics.
 
-**Owns:** Core state machines; Lease and transaction policy; Restoration intent.
+**Owns:** Core state machines; NativeControl and transaction policy; Retained restoration intent.
 
 **Must never own:** Socket framing; Kernel I/O; Application presentation.
 
@@ -539,9 +539,9 @@ Owns lifecycle policy, receiver registry, leases, transactions, restoration inte
 
 `crates/hfx-bridge` · `runtime` · `implemented`
 
-Adapts the core policy engine to sessions, persistence, subscriptions, snapshots, and bounded RPC dispatch.
+Adapts the core to protocol-v7 native routes and exchanges plus retained protocol-v6 sessions, persistence, subscriptions, snapshots, and bounded RPC dispatch.
 
-**Owns:** Bridge actors; Session registry; Persistence and RPC adaptation.
+**Owns:** Bridge actors; Session registry; Native-route scheduling; Persistence and RPC adaptation.
 
 **Must never own:** Core policy duplication; Kernel report encoding; Application-specific effects.
 
@@ -565,7 +565,7 @@ Adapts the core policy engine to sessions, persistence, subscriptions, snapshots
 
 `crates/hfx-daemon` · `runtime` · `implemented`
 
-Composes production discovery, configuration, authority, service lifecycle, logging, and restoration around the bridge.
+Composes production discovery, configuration, native-route authority, service lifecycle, logging, and the retained restoration fallback around the bridge.
 
 **Owns:** Production composition root; Service lifecycle; Privilege and socket setup.
 
@@ -591,11 +591,11 @@ Composes production discovery, configuration, authority, service lifecycle, logg
 
 `crates/hfx-sdk` · `runtime` · `implemented`
 
-Provides the typed Rust client contract used by production integrations and internal consumers.
+Provides the typed Rust client contract for qualified route discovery, bounded native exchanges, and retained semantic consumers.
 
-**Owns:** Rust client API; Identity and channel adaptation; Typed SDK errors.
+**Owns:** Rust client API; Native route and channel adaptation; Typed SDK errors.
 
-**Must never own:** Application presentation; Raw receiver reports; Bridge policy.
+**Must never own:** Application presentation; Device command semantics; Receiver carrier frames; Bridge policy.
 
 **Depends on:** [Rust workspace](#rust-workspace), [Versioned bridge protocol](#protocol), [Composable hardware profiles](#profiles)
 
@@ -721,9 +721,9 @@ Defines additive generated userspace ABIs and the strict boundary around the in-
 
 `driver/kernel` · `runtime` · `implemented`
 
-Binds the receiver, preserves generic input, records passive observations, and transports bounded generation-scoped envelopes.
+Binds the receiver, preserves generic input, records passive observations, performs qualified fixed-size native exchanges, and retains bounded migration envelopes.
 
-**Owns:** HID binding; Passive receiver observations; Exclusive session enforcement.
+**Owns:** HID binding; Passive receiver observations; Exclusive session enforcement; UAPI-v2 native exchange execution.
 
 **Must never own:** Retail names; Profiles and effects; Package repair.
 
@@ -779,7 +779,7 @@ Builds reproducible distribution artifacts and a canonical installed root from e
 
 **Must never own:** Runtime naming duplicates; Hidden post-install writes; Publication authorization.
 
-**Depends on:** [Production daemon](#daemon), [Linux HID kernel module](#kernel-module), [Linux runtime authority](#runtime-config), [OpenRGB adapter](#openrgb-adapter), [OpenRazer compatibility adapter](#openrazer-adapter), [Polychromatic adapter](#polychromatic-adapter), [Device qualification console](#device-qualification-console)
+**Depends on:** [Production daemon](#daemon), [Linux HID kernel module](#kernel-module), [Linux runtime authority](#runtime-config), [OpenRGB adapter](#openrgb-adapter), [OpenRazer native route](#openrazer-adapter), [Polychromatic adapter](#polychromatic-adapter), [Device qualification console](#device-qualification-console)
 
 **Used by:** None
 
@@ -799,11 +799,11 @@ Builds reproducible distribution artifacts and a canonical installed root from e
 
 `sdk/cpp` · `applications` · `implemented`
 
-Provides typed C++ bridge access and generated contracts for native application adapters.
+Provides typed C++ bridge access for qualified native routes, exact Feature exchanges, and generated adapter contracts.
 
-**Owns:** C++ client API; C++ channel and recovery; Generated C++ bindings.
+**Owns:** C++ client API; C++ native-route channel and recovery; Generated C++ bindings.
 
-**Must never own:** OpenRGB widgets; Raw receiver transport; Independent schema truth.
+**Must never own:** OpenRGB widgets or device commands; Receiver carrier transport; Independent schema truth.
 
 **Depends on:** [Versioned bridge protocol](#protocol), [Composable hardware profiles](#profiles), [Application integration catalog](#integrations)
 
@@ -833,13 +833,13 @@ Provides typed Python bridge access and generated contracts for scripting and Py
 
 **Depends on:** [Versioned bridge protocol](#protocol), [Composable hardware profiles](#profiles), [Application integration catalog](#integrations)
 
-**Used by:** [OpenRazer compatibility adapter](#openrazer-adapter), [Polychromatic adapter](#polychromatic-adapter), [Contract tests](#tests)
+**Used by:** [OpenRazer native route](#openrazer-adapter), [Polychromatic adapter](#polychromatic-adapter), [Contract tests](#tests)
 
 **Canonical sources:** `sdk/python/pyproject.toml`, `sdk/python/hyperflux_sdk/client.py`, `sdk/python/hyperflux_sdk/lighting.py`.
 
 **Generated projections:** `sdk/python/README.md`, `sdk/python/hyperflux_sdk/generated/domain_types.py`, `sdk/python/hyperflux_sdk/generated/profile_catalog.py`.
 
-**Change impact:** Regenerate 3 declared projection(s). Run `python-unit`, `protocol-contracts`. Review direct consumers: OpenRazer compatibility adapter, Polychromatic adapter, Contract tests.
+**Change impact:** Regenerate 3 declared projection(s). Run `python-unit`, `protocol-contracts`. Review direct consumers: OpenRazer native route, Polychromatic adapter, Contract tests.
 
 </details>
 

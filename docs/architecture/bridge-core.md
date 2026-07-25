@@ -1,12 +1,12 @@
 # Bridge Core Boundaries
 
-The HyperFlux bridge is the sole userspace policy and write authority between application SDKs and a generation-bound receiver transport. It does not own application presentation, effects, hardware report layouts, or physical qualification claims.
+The HyperFlux bridge is the sole userspace route, arbitration, and receiver-write authority between application SDKs and a generation-bound transport. Its primary protocol-v7 path carries qualified upstream Feature reports without owning device commands, settings, presentation, layouts, effects, persistence, or physical qualification claims.
 
 ## Dependency Direction
 
 ```mermaid
 flowchart LR
-    Apps["Applications"] --> Integrations["Application integrations"]
+    Apps["OpenRazer and OpenRGB"] --> Integrations["Thin transport adapters"]
     Integrations --> SDK["Generated SDK"]
     SDK --> Protocol["Versioned protocol"]
     Bridge["Bridge service"] --> Protocol
@@ -18,6 +18,27 @@ flowchart LR
 ```
 
 The protocol, core state machines, and profile registry point inward. Application integrations never become bridge dependencies. Linux ioctl details and raw receiver reports remain behind the concrete kernel adapter.
+
+## Native Tunnel Path
+
+Protocol v7 exposes three narrow operations: enumerate qualified routes, watch
+bounded availability transitions, and exchange one exact 90-byte Feature report
+through a generation-bound opaque route. The bridge validates route authority,
+profile qualification, NativeControl ownership, report shape, deadlines, queue
+admission, and response correlation. It treats the report's device command and
+status as upstream-owned opaque data.
+
+OpenRGB may hold NativeControl for an explicit controller session. The
+feature-only OpenRazer UHID relay acquires the same child-local resource for one
+Feature exchange and releases it afterward, so an idle virtual endpoint cannot
+exclude another application. NativeControl conflicts with the retained semantic
+lighting, settings, and pairing resources for that child only. Siblings, other
+receivers, and newer generations remain independent.
+
+Protocol v6, UAPI v1, semantic carrier encoding, stable-state persistence, and
+restoration remain installed as a noncompeting migration fallback. They are not
+the target architecture and cannot be removed before physical parity, rollback,
+and a separate retirement approval.
 
 ## Distinct Safety Bindings
 
@@ -62,11 +83,28 @@ The Unix transport uses a four-byte unsigned big-endian payload length followed 
 
 The length bound is checked before allocation. Requests and responses are validated and serialized through a bounded writer before any bytes are emitted, then written with complete-write semantics and flushed. Framing errors preserve the I/O stage without including payloads, tokens, or private paths. The framing implementation belongs to the protocol crate and is shared by the bridge and every native SDK; neither side maintains a private interpretation of the byte stream.
 
-Framing is not the SDK contract; generated protocol records are. The initial `negotiate` exchange is the deliberately stable base handshake and has one invariant shape across every retained version. A successful response selects one exact frozen version; every later request and response is encoded and decoded only through that version. Version 1 remains read-compatible but cannot submit profileless writes. Version 2 profile-binds writes and conservatively normalizes every `static-lighting` request to semantic Static, including an all-black frame. Version 3 carries explicit per-device Static or Off intent. An explicit Off request therefore fails before emitting bytes on a version 2 connection. A payload from an adjacent version is rejected instead of being guessed from fields.
+Framing is not the SDK contract; generated protocol records are. The initial `negotiate` exchange is the deliberately stable base handshake and has one invariant shape across every retained version. A successful response selects one exact frozen version; every later request and response is encoded and decoded only through that version. Versions 1 through 6 preserve the additive semantic migration contract. Version 7 preserves those records and independently adds qualified native-route enumeration, availability events, NativeControl ownership, and fixed-size Feature exchanges. A payload or method from an adjacent version is rejected instead of being guessed from fields.
 
 One connection runtime owns the dispatcher lifetime. Clean EOF and every terminal framing or write failure converge on the same disconnect path, which revokes session authority before backend cleanup. If transport and cleanup both fail, the typed result preserves both failures rather than hiding one.
 
-## Transaction Meaning
+## Native Exchange Meaning
+
+A native request is admitted only after its route, generation, profile, owner,
+fixed report shape, and deadline agree. The bridge and kernel produce exactly
+one of three terminal certainty classes:
+
+- `not-sent` means SET did not begin;
+- `may-have-been-sent` means SET may have begun and no layer may repeat it
+  automatically;
+- `matched-response` returns the complete correlated 90-byte response without
+  interpreting its device status.
+
+Route-local FIFO ordering, fair sibling dispatch, a capacity of 128 admitted
+native transactions, and one active exchange per receiver keep the path bounded.
+A generation replacement cancels queued work and prevents results from crossing
+routes or generations.
+
+## Semantic Transaction Meaning (Migration Fallback)
 
 A transaction moves through declared states:
 
@@ -90,17 +128,27 @@ stateDiagram-v2
 
 Partial or uncertain transport is never retried automatically. A client resolves an ambiguous response through transaction outcome lookup, not by submitting the write again. A later visible result does not rewrite a terminal timeout history.
 
-## Lifecycle Ingress
+## Passive Inventory And Migration Projection
 
-The bridge accepts passive lifecycle evidence through one typed, generation-checked ingress. Receiver identity, child identity, endpoint registration, pairing, route, power, sleep, activity, mat contact, freshness, and battery values are distinct observations. Unsupported children remain visible but receive no write authority. A malformed, stale, conflicting, or wrong-generation observation changes neither canonical state nor the event stream.
+The bridge accepts passive lifecycle evidence through one typed, generation-checked ingress. Receiver identity, child identity, endpoint registration, pairing, raw route fields, activity, mat contact, freshness, and battery values remain distinct observations. Unsupported children remain visible but receive no write authority. A malformed, stale, conflicting, or wrong-generation observation changes neither canonical state nor the event stream.
 
-Receiver events and child events describe different facts. Receiver suspend emits `receiver-suspended` without rewriting retained child endpoint evidence. Child `available`, `sleeping`, `unavailable`, and `unknown` events are emitted only when child evidence changes the corresponding projected presence. Applications combine the receiver lifecycle and child endpoint facts rather than forcing either one to impersonate the other.
+Native route availability is a deliberately smaller protocol-v7 projection:
+`available`, `temporarily-unavailable`, or `withdrawn`. It is generation-bound
+and does not claim sleep, power-off, child readiness, or visible application
+state. Older semantic snapshots retain their version-6 presence vocabulary for
+compatibility. The native projection consumes only explicit route evidence or
+endpoint-local traffic qualified as route evidence; it never converts pairing,
+silence, sleep, power, or aggregate retail presence into authority.
 
 Generation activation stages lifecycle, profile qualification, old lease revocation, queued transaction revocation, durable restoration reconciliation, and canonical events before committing any volatile owner. Initial discovery emits `receiver-available`. A replacement emits `generation-replaced`; reconnect after a completed removal additionally emits `receiver-available`. Physical disconnect is two-stage: the first transport-confirmed absence moves the generation to `disconnecting`, revokes live authority, terminally reconciles every durable claim for that generation, and emits `receiver-unavailable`; a later observation retires the generation and its profile binding. Ordinary lifecycle observations cannot enter `disconnecting`, so no adapter can bypass revocation.
 
 ## Ownership And Atomicity
 
-Resources are keyed by logical device and generic domain: lighting, settings, or pairing. This supports arbitrary receivers and multiple children without fixed mouse/keyboard slots.
+Resources are keyed by receiver, generation, logical child, and generic domain:
+NativeControl, lighting, settings, or pairing. NativeControl conflicts with all
+three semantic write domains for the same child. This supports arbitrary
+receivers and multiple children without fixed mouse/keyboard slots while
+leaving siblings independent.
 
 Lease acquisition is atomic. If any requested resource is owned by another client, none are granted. Forced takeover is not part of protocol version 1. Read-only snapshots, telemetry, and diagnostics remain shared.
 
@@ -114,6 +162,9 @@ Atomicity describes admission, ownership, ordering, and complete transaction acc
 
 Backpressure is policy-specific:
 
+- native exchanges preserve route-local FIFO ordering, fair sibling service,
+  and immutable deadlines; rejection before SET is `not-sent`, while any
+  uncertainty after SET forbids automatic retry;
 - current unsent effect frames may be coalesced per resource because an older frame is obsolete;
 - static lighting, settings, pairing, and restoration preserve strict order and return busy when their bounded queue cannot accept work;
 - one logical device's outage must not stall its sibling;
@@ -122,7 +173,12 @@ Backpressure is policy-specific:
 
 Every deadline uses an injected monotonic clock. Kernel session expiration may use Linux boottime inside the concrete kernel boundary so suspend remains meaningful. Durable capture timestamps use a separate wall-clock boundary.
 
-## Restoration
+## Semantic Restoration (Migration Fallback)
+
+Native adapters do not use this subsystem. OpenRazer and OpenRGB own settings,
+effects, profiles, and persistence, and resume them as they do for direct
+devices. HyperFlux reports route availability and transports the first upstream
+request without a wake-color timer or child-application claim.
 
 Persistence stores semantic stable intent and exact profile identity. It never stores a live lease, session authorization, route observation, raw frame, or software-effect phase.
 

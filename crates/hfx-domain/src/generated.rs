@@ -5582,11 +5582,53 @@ impl fmt::Display for NativeRouteAccess {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum NativeRouteState {
+    #[serde(rename = "available")]
+    Available,
+    #[serde(rename = "temporarily-unavailable")]
+    TemporarilyUnavailable,
+    #[serde(rename = "withdrawn")]
+    Withdrawn,
+}
+
+impl NativeRouteState {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Available => "available",
+            Self::TemporarilyUnavailable => "temporarily-unavailable",
+            Self::Withdrawn => "withdrawn",
+        }
+    }
+}
+
+impl FromStr for NativeRouteState {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "available" => Ok(Self::Available),
+            "temporarily-unavailable" => Ok(Self::TemporarilyUnavailable),
+            "withdrawn" => Ok(Self::Withdrawn),
+            _ => Err(DomainValueError::unknown_wire("NativeRouteState")),
+        }
+    }
+}
+
+impl fmt::Display for NativeRouteState {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum NativeRouteEventKind {
     #[serde(rename = "available")]
     Available,
-    #[serde(rename = "unavailable")]
-    Unavailable,
+    #[serde(rename = "temporarily-unavailable")]
+    TemporarilyUnavailable,
+    #[serde(rename = "withdrawn")]
+    Withdrawn,
     #[serde(rename = "generation-replaced")]
     GenerationReplaced,
 }
@@ -5596,7 +5638,8 @@ impl NativeRouteEventKind {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Available => "available",
-            Self::Unavailable => "unavailable",
+            Self::TemporarilyUnavailable => "temporarily-unavailable",
+            Self::Withdrawn => "withdrawn",
             Self::GenerationReplaced => "generation-replaced",
         }
     }
@@ -5608,7 +5651,8 @@ impl FromStr for NativeRouteEventKind {
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
             "available" => Ok(Self::Available),
-            "unavailable" => Ok(Self::Unavailable),
+            "temporarily-unavailable" => Ok(Self::TemporarilyUnavailable),
+            "withdrawn" => Ok(Self::Withdrawn),
             "generation-replaced" => Ok(Self::GenerationReplaced),
             _ => Err(DomainValueError::unknown_wire("NativeRouteEventKind")),
         }

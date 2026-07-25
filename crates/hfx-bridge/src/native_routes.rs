@@ -2,8 +2,9 @@
 
 use crate::{RuntimeIdentityError, RuntimeIdentityIssuer};
 use hfx_domain::{
-    DroppedEventCount, NativeRouteAccess, NativeRouteEventKind, ProjectionRevision, ReceiverId,
-    ResourceKind, SequenceNumber, StreamEpoch, StreamId, SubscriptionId,
+    DroppedEventCount, NativeRouteAccess, NativeRouteEventKind, NativeRouteState,
+    ProjectionRevision, ReceiverId, ResourceKind, SequenceNumber, StreamEpoch, StreamId,
+    SubscriptionId,
 };
 use hfx_protocol::{
     EventCursor, NativeRoute, NativeRouteEvent, NativeRouteEventBatch, NativeRouteInventory,
@@ -163,11 +164,11 @@ impl NativeRouteJournal {
         }
         for (key, old) in previous {
             if !incoming.contains_key(&key) {
-                let mut unavailable = old;
-                unavailable.route_state = hfx_domain::RouteState::Unavailable;
-                unavailable.route_token = None;
-                unavailable.resource = None;
-                self.append(NativeRouteEventKind::Unavailable, unavailable)?;
+                let mut withdrawn = old;
+                withdrawn.route_state = NativeRouteState::Withdrawn;
+                withdrawn.route_token = None;
+                withdrawn.resource = None;
+                self.append(NativeRouteEventKind::Withdrawn, withdrawn)?;
             }
         }
         self.current = incoming;
@@ -181,7 +182,7 @@ impl NativeRouteJournal {
         identities: &mut RuntimeIdentityIssuer,
     ) -> Result<(), NativeRouteJournalError> {
         let writable = route.access == NativeRouteAccess::Qualified
-            && route.route_state == hfx_domain::RouteState::Available;
+            && route.route_state == NativeRouteState::Available;
         if !writable {
             route.route_token = None;
             route.resource = None;
@@ -190,7 +191,7 @@ impl NativeRouteJournal {
         if let Some(previous) = self.current.get(key)
             && previous.generation_id == route.generation_id
             && previous.access == NativeRouteAccess::Qualified
-            && previous.route_state == hfx_domain::RouteState::Available
+            && previous.route_state == NativeRouteState::Available
             && let Some(token) = &previous.route_token
         {
             route.route_token = Some(token.clone());
@@ -340,10 +341,10 @@ impl NativeRouteJournal {
 }
 
 fn route_event_kind(route: &NativeRoute) -> NativeRouteEventKind {
-    if route.route_state == hfx_domain::RouteState::Available {
-        NativeRouteEventKind::Available
-    } else {
-        NativeRouteEventKind::Unavailable
+    match route.route_state {
+        NativeRouteState::Available => NativeRouteEventKind::Available,
+        NativeRouteState::TemporarilyUnavailable => NativeRouteEventKind::TemporarilyUnavailable,
+        NativeRouteState::Withdrawn => NativeRouteEventKind::Withdrawn,
     }
 }
 
@@ -362,7 +363,7 @@ mod tests {
     use crate::{SessionIdentityError, SessionIdentitySource};
     use hfx_domain::{
         DeviceKind, EventBatchLimit, GenerationId, NativeProtocolFamily, NativeReportByteCount,
-        ProductId, RouteState, VendorId,
+        ProductId, VendorId,
     };
 
     #[derive(Debug)]
@@ -399,7 +400,7 @@ mod tests {
         (journal, identities)
     }
 
-    fn route(generation: u64, access: NativeRouteAccess, state: RouteState) -> NativeRoute {
+    fn route(generation: u64, access: NativeRouteAccess, state: NativeRouteState) -> NativeRoute {
         NativeRoute {
             receiver_id: text("receiver-1"),
             generation_id: GenerationId::try_from(generation).expect("generation is valid"),
@@ -425,7 +426,7 @@ mod tests {
                 vec![route(
                     1,
                     NativeRouteAccess::Candidate,
-                    RouteState::Available,
+                    NativeRouteState::Available,
                 )],
                 &mut identities,
             )
@@ -440,7 +441,7 @@ mod tests {
     #[test]
     fn exact_generation_reuses_token_and_replacement_rotates_it() {
         let (mut journal, mut identities) = journal(8);
-        let qualified = route(1, NativeRouteAccess::Qualified, RouteState::Available);
+        let qualified = route(1, NativeRouteAccess::Qualified, NativeRouteState::Available);
         journal
             .synchronize(vec![qualified.clone()], &mut identities)
             .expect("first route synchronizes");
@@ -463,7 +464,7 @@ mod tests {
                 vec![route(
                     2,
                     NativeRouteAccess::Qualified,
-                    RouteState::Available,
+                    NativeRouteState::Available,
                 )],
                 &mut identities,
             )
@@ -485,7 +486,7 @@ mod tests {
                 vec![route(
                     1,
                     NativeRouteAccess::Candidate,
-                    RouteState::Available,
+                    NativeRouteState::Available,
                 )],
                 &mut identities,
             )
@@ -493,7 +494,11 @@ mod tests {
         let old_cursor = journal.cursor();
         journal
             .synchronize(
-                vec![route(1, NativeRouteAccess::Candidate, RouteState::Stale)],
+                vec![route(
+                    1,
+                    NativeRouteAccess::Candidate,
+                    NativeRouteState::TemporarilyUnavailable,
+                )],
                 &mut identities,
             )
             .expect("stale route synchronizes");
@@ -512,7 +517,11 @@ mod tests {
             .expect("bounded events are readable");
         assert!(!batch.cursor_gap);
         assert_eq!(batch.events.len(), 2);
-        assert_eq!(batch.events[1].kind, NativeRouteEventKind::Unavailable);
+        assert_eq!(
+            batch.events[0].kind,
+            NativeRouteEventKind::TemporarilyUnavailable
+        );
+        assert_eq!(batch.events[1].kind, NativeRouteEventKind::Withdrawn);
         assert!(journal.inventory().routes.is_empty());
 
         let beginning = EventCursor {

@@ -123,6 +123,7 @@
     {"name": "LeaseOutcome", "values": ["granted", "conflict", "rejected"]},
     {"name": "ErrorSeverity", "values": ["info", "warning", "error", "critical"]},
     {"name": "NativeRouteAccess", "values": ["qualified", "candidate", "backend-required"]},
-    {"name": "NativeRouteEventKind", "values": ["available", "unavailable", "generation-replaced"]}
+    {"name": "NativeRouteState", "values": ["available", "temporarily-unavailable", "withdrawn"]},
+    {"name": "NativeRouteEventKind", "values": ["available", "temporarily-unavailable", "withdrawn", "generation-replaced"]}
   ]
 }

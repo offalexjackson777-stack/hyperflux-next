@@ -200,7 +200,11 @@ def validate_route_observation(value: dict[str, Any]) -> None:
         raise ModelError("native route observation device kind is unsupported")
     if value["route_kind"] != "hyperflux-wireless":
         raise ModelError("native route observation is not receiver-backed")
-    if value["route_state"] not in {"available", "stale", "unavailable", "unknown"}:
+    if value["route_state"] not in {
+        "available",
+        "temporarily-unavailable",
+        "withdrawn",
+    }:
         raise ModelError("native route observation state is invalid")
     if value["access"] not in {"candidate", "qualified", "backend-required"}:
         raise ModelError("native route observation access is invalid")

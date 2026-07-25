@@ -600,7 +600,7 @@ One generation-bound receiver child route without a host device path.
 | `device_kind` | `DeviceKind` | `true` | scalar |
 | `vendor_id` | `VendorId` | `true` | scalar |
 | `product_id` | `ProductId` | `true` | scalar |
-| `route_state` | `RouteState` | `true` | scalar |
+| `route_state` | `NativeRouteState` | `true` | scalar |
 | `access` | `NativeRouteAccess` | `true` | scalar |
 | `protocol_family` | `NativeProtocolFamily` | `true` | scalar |
 | `report_bytes` | `NativeReportByteCount` | `true` | scalar |

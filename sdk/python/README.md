@@ -37,11 +37,11 @@ Before opening a pull request:
 
 - Regenerate 3 declared projection(s).
 - Run `python-unit`, `protocol-contracts`.
-- Review direct consumers: OpenRazer compatibility adapter, Polychromatic adapter, Contract tests.
+- Review direct consumers: OpenRazer native route, Polychromatic adapter, Contract tests.
 
 ## Relationships
 
 - **Depends on:** [Versioned bridge protocol](../../protocol/README.md), [Composable hardware profiles](../../profiles/README.md), [Application integration catalog](../../integrations/README.md)
-- **Used by:** [OpenRazer compatibility adapter](../../integrations/openrazer/README.md), [Polychromatic adapter](../../integrations/polychromatic/README.md), [Contract tests](../../tests/README.md)
+- **Used by:** [OpenRazer native route](../../integrations/openrazer/README.md), [Polychromatic adapter](../../integrations/polychromatic/README.md), [Contract tests](../../tests/README.md)
 
 See the [Repository Atlas](../../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

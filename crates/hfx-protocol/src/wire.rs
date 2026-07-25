@@ -11,9 +11,9 @@ use crate::{
 };
 use hfx_domain::{
     ConnectionMode, ControllerAvailability, FreshnessState, InventoryAvailability,
-    NativeRouteAccess, NativeRouteEventKind, PairingState, PowerState, PresenceState,
-    ProtocolErrorKind, ProtocolVersion, ReceiverLifecycleState, ResourceKind, RouteKind,
-    RouteState, SideEffectCertainty, SleepState, StableLightingMode, TransactionClass,
+    NativeRouteAccess, NativeRouteEventKind, NativeRouteState, PairingState, PowerState,
+    PresenceState, ProtocolErrorKind, ProtocolVersion, ReceiverLifecycleState, ResourceKind,
+    RouteKind, RouteState, SideEffectCertainty, SleepState, StableLightingMode, TransactionClass,
     TransactionState,
 };
 use serde::{Serialize, de::DeserializeOwned};
@@ -235,8 +235,8 @@ fn native_route_identity_precedes(left: &NativeRoute, right: &NativeRoute) -> bo
 }
 
 fn validate_native_route(route: &NativeRoute) -> Result<(), ProtocolWireError> {
-    let writable =
-        route.access == NativeRouteAccess::Qualified && route.route_state == RouteState::Available;
+    let writable = route.access == NativeRouteAccess::Qualified
+        && route.route_state == NativeRouteState::Available;
     if writable != route.route_token.is_some() || writable != route.resource.is_some() {
         return Err(ProtocolWireError::InvalidResponse(
             "native route authority contradicts access or availability",
@@ -322,8 +322,7 @@ fn validate_native_route_event_batch(
         || batch.events.iter().any(|event| {
             event.sequence < batch.oldest_available
                 || event.sequence > batch.latest_available
-                || matches!(event.kind, NativeRouteEventKind::Available)
-                    != (event.route.route_state == RouteState::Available)
+                || !native_event_matches_route(event.kind, event.route.route_state)
         })
         || batch
             .events
@@ -340,6 +339,17 @@ fn validate_native_route_event_batch(
         validate_native_route(&event.route)?;
     }
     Ok(())
+}
+
+fn native_event_matches_route(kind: NativeRouteEventKind, state: NativeRouteState) -> bool {
+    match kind {
+        NativeRouteEventKind::Available => state == NativeRouteState::Available,
+        NativeRouteEventKind::TemporarilyUnavailable => {
+            state == NativeRouteState::TemporarilyUnavailable
+        }
+        NativeRouteEventKind::Withdrawn => state == NativeRouteState::Withdrawn,
+        NativeRouteEventKind::GenerationReplaced => true,
+    }
 }
 
 fn request_requires_v7(request: &RpcRequest) -> bool {

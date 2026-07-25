@@ -26,7 +26,7 @@ pub struct AdapterRecord {
 }
 
 pub const INTEGRATION_SOURCE_SHA256: &str =
-    "3f8980c873cd3cf3287cac586ca7512140b76ea3b8ce004149e847ef2caf80b1";
+    "fa6daa3a0bc6a8d036d6f41d1105742d70392f7f2e753e90e987a2612135d55f";
 
 pub const UPSTREAMS: &[UpstreamRecord] = &[
     UpstreamRecord {
@@ -68,7 +68,7 @@ pub const UPSTREAMS: &[UpstreamRecord] = &[
 pub const ADAPTERS: &[AdapterRecord] = &[
     AdapterRecord {
         id: "openrazer-compatibility",
-        application: "OpenRazer-compatible clients",
+        application: "OpenRazer-compatible clients (migration fallback)",
         kind: "compatibility-service",
         status: "software-verified",
         upstream_ids: &["openrazer"],
@@ -77,25 +77,38 @@ pub const ADAPTERS: &[AdapterRecord] = &[
         coexistence_policy: "private-explicit-service-only",
     },
     AdapterRecord {
+        id: "openrazer-native-route",
+        application: "OpenRazer and Polychromatic",
+        kind: "transport-adapter",
+        status: "software-verified",
+        upstream_ids: &["openrazer", "polychromatic"],
+        sdk_protocol_versions: &[7],
+        feature_families: &[
+            "availability",
+            "inventory",
+            "native-control",
+            "presentation",
+        ],
+        coexistence_policy: "upstream-transport-extension",
+    },
+    AdapterRecord {
         id: "openrgb-native",
         application: "OpenRGB",
         kind: "native-plugin",
-        status: "in-progress",
+        status: "software-verified",
         upstream_ids: &["openrgb"],
-        sdk_protocol_versions: &[5],
+        sdk_protocol_versions: &[7],
         feature_families: &[
-            "effects",
+            "availability",
             "inventory",
-            "lighting",
-            "ownership",
+            "native-control",
             "presentation",
-            "telemetry",
         ],
         coexistence_policy: "application-plugin",
     },
     AdapterRecord {
         id: "polychromatic-native",
-        application: "Polychromatic",
+        application: "Polychromatic (migration fallback)",
         kind: "native-backend",
         status: "software-verified",
         upstream_ids: &["openrazer", "polychromatic"],

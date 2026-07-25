@@ -1523,7 +1523,7 @@ template<>
         decode<::hyperflux::DeviceKind>(required_field(value, "device_kind")),
         decode<::hyperflux::VendorId>(required_field(value, "vendor_id")),
         decode<::hyperflux::ProductId>(required_field(value, "product_id")),
-        decode<::hyperflux::RouteState>(required_field(value, "route_state")),
+        decode<::hyperflux::NativeRouteState>(required_field(value, "route_state")),
         decode<::hyperflux::NativeRouteAccess>(required_field(value, "access")),
         decode<::hyperflux::NativeProtocolFamily>(required_field(value, "protocol_family")),
         decode<::hyperflux::NativeReportByteCount>(required_field(value, "report_bytes")),

@@ -2694,10 +2694,29 @@ enum class NativeRouteAccess
     return "unknown";
 }
 
+enum class NativeRouteState
+{
+    Available,
+    TemporarilyUnavailable,
+    Withdrawn,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(NativeRouteState value)
+{
+    switch(value)
+    {
+        case NativeRouteState::Available: return "available";
+        case NativeRouteState::TemporarilyUnavailable: return "temporarily-unavailable";
+        case NativeRouteState::Withdrawn: return "withdrawn";
+    }
+    return "unknown";
+}
+
 enum class NativeRouteEventKind
 {
     Available,
-    Unavailable,
+    TemporarilyUnavailable,
+    Withdrawn,
     GenerationReplaced,
 };
 
@@ -2706,7 +2725,8 @@ enum class NativeRouteEventKind
     switch(value)
     {
         case NativeRouteEventKind::Available: return "available";
-        case NativeRouteEventKind::Unavailable: return "unavailable";
+        case NativeRouteEventKind::TemporarilyUnavailable: return "temporarily-unavailable";
+        case NativeRouteEventKind::Withdrawn: return "withdrawn";
         case NativeRouteEventKind::GenerationReplaced: return "generation-replaced";
     }
     return "unknown";

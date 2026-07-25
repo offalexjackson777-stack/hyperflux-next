@@ -15,7 +15,7 @@
     "product_id": {"type": "integer", "minimum": 0, "maximum": 65535},
     "device_kind": {"enum": ["mouse", "keyboard"]},
     "route_kind": {"const": "hyperflux-wireless"},
-    "route_state": {"enum": ["available", "stale", "unavailable", "unknown"]},
+    "route_state": {"enum": ["available", "temporarily-unavailable", "withdrawn"]},
     "access": {"enum": ["candidate", "qualified", "backend-required"]},
     "protocol_family": {"type": "string", "minLength": 1, "maxLength": 64},
     "report_bytes": {"type": "integer", "minimum": 1, "maximum": 4096},

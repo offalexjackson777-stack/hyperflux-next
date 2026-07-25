@@ -4,8 +4,20 @@ mod common;
 
 use common::{lease_request, resource, text, time};
 use hfx_core::{LeaseManager, LeaseManagerError};
-use hfx_domain::{LeaseDurationMs, LeaseState};
-use hfx_protocol::{LeaseResult, ReleaseLeaseRequest, RenewLeaseRequest};
+use hfx_domain::{LeaseDurationMs, LeaseState, ResourceKind};
+use hfx_protocol::{LeaseResult, ReleaseLeaseRequest, RenewLeaseRequest, ResourceKey};
+
+fn resource_kind(
+    receiver: &str,
+    generation_id: u64,
+    device: &str,
+    kind: ResourceKind,
+) -> ResourceKey {
+    ResourceKey {
+        kind,
+        ..resource(receiver, generation_id, device)
+    }
+}
 
 #[test]
 fn conflict_grants_none_of_an_atomic_resource_set() {
@@ -71,6 +83,90 @@ fn conflict_is_reported_even_when_the_lease_table_is_full() {
         panic!("full tables must preserve the typed ownership conflict");
     };
     assert_eq!(detail.conflicting_resource, mouse);
+}
+
+#[test]
+fn native_control_excludes_semantic_resources_only_for_the_same_child_epoch() {
+    for semantic_kind in [
+        ResourceKind::Lighting,
+        ResourceKind::Settings,
+        ResourceKind::Pairing,
+    ] {
+        for (owned_kind, requested_kind) in [
+            (ResourceKind::NativeControl, semantic_kind),
+            (semantic_kind, ResourceKind::NativeControl),
+        ] {
+            let mut manager = LeaseManager::new(4, 8).expect("manager bounds are valid");
+            let owned = resource_kind("receiver-1", 1, "mouse-1", owned_kind);
+            let requested = resource_kind("receiver-1", 1, "mouse-1", requested_kind);
+            manager
+                .acquire(
+                    lease_request("request-owned", "client-owned", vec![owned]),
+                    text("lease-owned"),
+                    time(100),
+                )
+                .expect("first resource is granted");
+
+            let result = manager
+                .acquire(
+                    lease_request(
+                        "request-contender",
+                        "client-contender",
+                        vec![requested.clone()],
+                    ),
+                    text("lease-contender"),
+                    time(101),
+                )
+                .expect("cross-kind ownership conflict is a normal result");
+            let LeaseResult::Conflict(detail) = result else {
+                panic!("native control must exclude same-device semantic writes");
+            };
+            assert_eq!(detail.conflicting_resource, requested);
+        }
+    }
+
+    let mut manager = LeaseManager::new(4, 8).expect("manager bounds are valid");
+    manager
+        .acquire(
+            lease_request(
+                "request-native",
+                "client-native",
+                vec![resource_kind(
+                    "receiver-1",
+                    1,
+                    "mouse-1",
+                    ResourceKind::NativeControl,
+                )],
+            ),
+            text("lease-native"),
+            time(100),
+        )
+        .expect("native resource is granted");
+    for (request_id, resource) in [
+        (
+            "request-sibling",
+            resource_kind("receiver-1", 1, "keyboard-1", ResourceKind::Lighting),
+        ),
+        (
+            "request-generation",
+            resource_kind("receiver-1", 2, "mouse-1", ResourceKind::Lighting),
+        ),
+        (
+            "request-receiver",
+            resource_kind("receiver-2", 1, "mouse-1", ResourceKind::Lighting),
+        ),
+    ] {
+        assert!(matches!(
+            manager
+                .acquire(
+                    lease_request(request_id, request_id, vec![resource]),
+                    text(&format!("lease-{request_id}")),
+                    time(101),
+                )
+                .expect("independent route scope is grantable"),
+            LeaseResult::Granted(_)
+        ));
+    }
 }
 
 #[test]

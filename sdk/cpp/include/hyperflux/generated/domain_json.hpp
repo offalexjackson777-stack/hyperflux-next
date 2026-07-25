@@ -2780,6 +2780,35 @@ template<>
 }
 
 template<>
+[[nodiscard]] inline NativeRouteState decode<NativeRouteState>(const Json& value)
+{
+    if(!value.is_string())
+    {
+        throw CodecError("expected NativeRouteState wire string");
+    }
+    const auto wire = value.get<std::string>();
+    if(wire == "available")
+    {
+        return NativeRouteState::Available;
+    }
+    if(wire == "temporarily-unavailable")
+    {
+        return NativeRouteState::TemporarilyUnavailable;
+    }
+    if(wire == "withdrawn")
+    {
+        return NativeRouteState::Withdrawn;
+    }
+    throw CodecError("unknown NativeRouteState wire value");
+}
+
+template<>
+[[nodiscard]] inline Json encode<NativeRouteState>(const NativeRouteState& value)
+{
+    return Json(std::string(to_string(value)));
+}
+
+template<>
 [[nodiscard]] inline NativeRouteEventKind decode<NativeRouteEventKind>(const Json& value)
 {
     if(!value.is_string())
@@ -2791,9 +2820,13 @@ template<>
     {
         return NativeRouteEventKind::Available;
     }
-    if(wire == "unavailable")
+    if(wire == "temporarily-unavailable")
     {
-        return NativeRouteEventKind::Unavailable;
+        return NativeRouteEventKind::TemporarilyUnavailable;
+    }
+    if(wire == "withdrawn")
+    {
+        return NativeRouteEventKind::Withdrawn;
     }
     if(wire == "generation-replaced")
     {

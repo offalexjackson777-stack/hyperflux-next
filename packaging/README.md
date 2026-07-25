@@ -40,7 +40,7 @@ Before opening a pull request:
 
 ## Relationships
 
-- **Depends on:** [Production daemon](../crates/hfx-daemon/README.md), [Linux HID kernel module](../driver/kernel/README.md), [Linux runtime authority](../runtime/README.md), [OpenRGB adapter](../integrations/openrgb/README.md), [OpenRazer compatibility adapter](../integrations/openrazer/README.md), [Polychromatic adapter](../integrations/polychromatic/README.md), [Device qualification console](../apps/device-qualification/README.md)
+- **Depends on:** [Production daemon](../crates/hfx-daemon/README.md), [Linux HID kernel module](../driver/kernel/README.md), [Linux runtime authority](../runtime/README.md), [OpenRGB adapter](../integrations/openrgb/README.md), [OpenRazer native route](../integrations/openrazer/README.md), [Polychromatic adapter](../integrations/polychromatic/README.md), [Device qualification console](../apps/device-qualification/README.md)
 - **Used by:** None
 
 See the [Repository Atlas](../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

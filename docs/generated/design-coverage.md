@@ -23,7 +23,7 @@ Software verification never substitutes for required physical evidence or public
 | 6 | Kernel Responsibility | `software-verified` | `kernel` | no | no |
 | 7 | Bridge Responsibility | `software-verified` | `bridge` | no | no |
 | 8 | Strong Domain Types | `software-verified` | `schemas` | no | no |
-| 9 | Logical Devices And Routes | `software-verified` | `bridge` | no | no |
+| 9 | Inventory And Routes | `software-verified` | `bridge` | no | no |
 | 10 | Presence State Model | `software-verified` | `bridge` | no | no |
 | 11 | Wired And Wireless Duplicate Handling | `software-verified` | `integrations` | required | no |
 | 12 | Composable Hardware Profiles | `software-verified` | `profiles` | no | no |
@@ -31,17 +31,17 @@ Software verification never substitutes for required physical evidence or public
 | 14 | Mat And Receiver Presentation | `software-verified` | `profiles` | required | no |
 | 15 | Support Levels | `software-verified` | `profiles` | no | no |
 | 16 | Unknown Device Behavior | `software-verified` | `bridge` | no | no |
-| 17 | Capability-Based Programming | `software-verified` | `sdk` | no | no |
+| 17 | Declarative Transport Profiles | `software-verified` | `profiles` | no | no |
 | 18 | OpenRGB Integration | `software-verified` | `integrations` | required | yes |
 | 19 | OpenRGB Effects | `software-verified` | `integrations` | required | yes |
-| 20 | Static Restoration And Effect Persistence | `software-verified` | `bridge` | required | yes |
-| 21 | OpenRazer Metadata Reuse | `software-verified` | `integrations` | no | no |
-| 22 | Optional org.razer Compatibility Provider | `software-verified` | `integrations` | no | no |
-| 23 | Native Polychromatic Backend | `software-verified` | `integrations` | no | no |
-| 24 | Full Device Settings | `blocked-by-physical-evidence` | `profiles` | required | no |
-| 25 | Ownership Leases | `software-verified` | `bridge` | no | no |
+| 20 | Application-Owned Persistence | `software-verified` | `integrations` | required | yes |
+| 21 | OpenRazer Native Route | `software-verified` | `integrations` | required | yes |
+| 22 | Migration org.razer Compatibility Provider | `software-verified` | `integrations` | no | no |
+| 23 | Polychromatic Through OpenRazer | `software-verified` | `integrations` | required | yes |
+| 24 | Upstream Device Settings | `blocked-by-physical-evidence` | `integrations` | required | yes |
+| 25 | Native Control Ownership | `software-verified` | `bridge` | no | no |
 | 26 | Ownership User Experience | `software-verified` | `integrations` | no | no |
-| 27 | Atomic Multi-Device Requests | `software-verified` | `bridge` | no | no |
+| 27 | Atomic Native Exchanges | `software-verified` | `bridge` | no | no |
 | 28 | Schema-First Development | `software-verified` | `schemas` | no | no |
 | 29 | Generated Code | `software-verified` | `generation` | no | no |
 | 30 | Stable HyperFlux SDK | `software-verified` | `sdk` | no | no |
@@ -133,23 +133,23 @@ Evidence: [`schemas/domain-catalog.json`](../../schemas/domain-catalog.json), [`
 
 - No remaining gap in the current software scope.
 
-### 9. Logical Devices And Routes
+### 9. Inventory And Routes
 
-Evidence: [`crates/hfx-integration-model/src/view.rs`](../../crates/hfx-integration-model/src/view.rs), [`crates/hfx-integration-model/tests/view_model.rs`](../../crates/hfx-integration-model/tests/view_model.rs).
+Evidence: [`crates/hfx-bridge/src/native_routes.rs`](../../crates/hfx-bridge/src/native_routes.rs), [`crates/hfx-bridge/src/native_projection.rs`](../../crates/hfx-bridge/src/native_projection.rs), [`crates/hfx-bridge/tests/native_projection.rs`](../../crates/hfx-bridge/tests/native_projection.rs).
 
 - No remaining gap in the current software scope.
 
 ### 10. Presence State Model
 
-Evidence: [`crates/hfx-core/src/lifecycle.rs`](../../crates/hfx-core/src/lifecycle.rs), [`crates/hfx-core/tests/lifecycle.rs`](../../crates/hfx-core/tests/lifecycle.rs).
+Evidence: [`crates/hfx-bridge/src/native_invalidation.rs`](../../crates/hfx-bridge/src/native_invalidation.rs), [`crates/hfx-bridge/tests/native_projection.rs`](../../crates/hfx-bridge/tests/native_projection.rs), [`crates/hfx-protocol/tests/wire_and_snapshot.rs`](../../crates/hfx-protocol/tests/wire_and_snapshot.rs).
 
 - No remaining gap in the current software scope.
 
 ### 11. Wired And Wireless Duplicate Handling
 
-Evidence: [`crates/hfx-integration-model/tests/view_model.rs`](../../crates/hfx-integration-model/tests/view_model.rs), [`integrations/openrgb/src/inventory_model.cpp`](../../integrations/openrgb/src/inventory_model.cpp).
+Evidence: [`crates/hfx-uhid-relay/src/direct.rs`](../../crates/hfx-uhid-relay/src/direct.rs), [`crates/hfx-uhid-relay/src/serial.rs`](../../crates/hfx-uhid-relay/src/serial.rs), [`integrations/openrgb/src/upstream_razer_registry.cpp`](../../integrations/openrgb/src/upstream_razer_registry.cpp), [`tests/cpp/openrgb_upstream_razer_registry_contract.cpp`](../../tests/cpp/openrgb_upstream_razer_registry_contract.cpp).
 
-- Stable cross-route physical identity remains unavailable for models that expose no safe correlator.
+- Stable cross-route physical identity remains unavailable for models that expose no safe nonempty serial; those routes must remain separate.
 
 ### 12. Composable Hardware Profiles
 
@@ -165,73 +165,73 @@ Evidence: [`profiles/surfaces/razer-hyperflux-v2-hard-edition.json`](../../profi
 
 ### 14. Mat And Receiver Presentation
 
-Evidence: [`docs/generated/supported-hardware.md`](../../docs/generated/supported-hardware.md), [`crates/hfx-integration-model/tests/view_model.rs`](../../crates/hfx-integration-model/tests/view_model.rs).
+Evidence: [`docs/generated/supported-hardware.md`](../../docs/generated/supported-hardware.md), [`integrations/openrgb/src/upstream_razer_registry.cpp`](../../integrations/openrgb/src/upstream_razer_registry.cpp).
 
-- Status-indicator control remains absent until its semantics are independently qualified.
+- No mat or status-light native route exists until a source-bound upstream controller and physical transport evidence justify one.
 
 ### 15. Support Levels
 
-Evidence: [`profiles/capabilities.json`](../../profiles/capabilities.json), [`docs/generated/supported-hardware.md`](../../docs/generated/supported-hardware.md).
+Evidence: [`profiles/receivers/razer-hyperflux-v2-1532-00cf.json`](../../profiles/receivers/razer-hyperflux-v2-1532-00cf.json), [`docs/architecture/native-device-onboarding.md`](../../docs/architecture/native-device-onboarding.md), [`tests/test_native_onboarding.py`](../../tests/test_native_onboarding.py).
 
 - No remaining gap in the current software scope.
 
 ### 16. Unknown Device Behavior
 
-Evidence: [`crates/hfx-integration-model/tests/view_model.rs`](../../crates/hfx-integration-model/tests/view_model.rs), [`crates/hfx-sim/tests/state_and_qualification.rs`](../../crates/hfx-sim/tests/state_and_qualification.rs).
+Evidence: [`crates/hfx-ops/src/native_onboarding.rs`](../../crates/hfx-ops/src/native_onboarding.rs), [`tools/hfxdev/native_onboarding.py`](../../tools/hfxdev/native_onboarding.py), [`tests/test_native_onboarding.py`](../../tests/test_native_onboarding.py).
 
 - No remaining gap in the current software scope.
 
-### 17. Capability-Based Programming
+### 17. Declarative Transport Profiles
 
-Evidence: [`profiles/capabilities.json`](../../profiles/capabilities.json), [`protocol/v5/catalog.json`](../../protocol/v5/catalog.json).
+Evidence: [`profiles/children/razer-basilisk-v3-pro-35k-00cd.json`](../../profiles/children/razer-basilisk-v3-pro-35k-00cd.json), [`profiles/children/razer-deathstalker-v2-pro-tkl-0296.json`](../../profiles/children/razer-deathstalker-v2-pro-tkl-0296.json), [`tests/test_native_onboarding.py`](../../tests/test_native_onboarding.py).
 
 - No remaining gap in the current software scope.
 
 ### 18. OpenRGB Integration
 
-Evidence: [`integrations/openrgb/src/plugin_coordinator.cpp`](../../integrations/openrgb/src/plugin_coordinator.cpp), [`tests/cpp/openrgb_plugin_coordinator_contract.cpp`](../../tests/cpp/openrgb_plugin_coordinator_contract.cpp).
+Evidence: [`integrations/openrgb/native-route/transform.json`](../../integrations/openrgb/native-route/transform.json), [`integrations/openrgb/src/razer_feature_transport.cpp`](../../integrations/openrgb/src/razer_feature_transport.cpp), [`tests/cpp/openrgb_razer_feature_transport_contract.cpp`](../../tests/cpp/openrgb_razer_feature_transport_contract.cpp).
 
-- The rewritten integration still requires targeted installed physical qualification before release-candidate promotion.
+- The upstream-native controllers require targeted installed physical qualification before release-candidate promotion.
 
 ### 19. OpenRGB Effects
 
-Evidence: [`integrations/openrgb/src/runtime_dispatch.cpp`](../../integrations/openrgb/src/runtime_dispatch.cpp), [`tests/cpp/openrgb_runtime_worker_contract.cpp`](../../tests/cpp/openrgb_runtime_worker_contract.cpp).
+Evidence: [`integrations/openrgb/src/native_route_session.cpp`](../../integrations/openrgb/src/native_route_session.cpp), [`tests/cpp/openrgb_native_route_session_contract.cpp`](../../tests/cpp/openrgb_native_route_session_contract.cpp).
 
-- Visible latency and continuity on real hardware remain physical release evidence.
+- Visible latency and continuity through the upstream Effects plugin remain physical release evidence.
 
-### 20. Static Restoration And Effect Persistence
+### 20. Application-Owned Persistence
 
-Evidence: [`docs/architecture/persistence.md`](../../docs/architecture/persistence.md), [`crates/hfx-core/tests/restoration.rs`](../../crates/hfx-core/tests/restoration.rs).
+Evidence: [`docs/architecture/integrations.md`](../../docs/architecture/integrations.md), [`integrations/openrgb/src/native_plugin_application.cpp`](../../integrations/openrgb/src/native_plugin_application.cpp).
 
-- OpenRGB startup-profile behavior is application-owned and must be qualified with the installed application candidate.
+- OpenRGB startup-profile and route-return behavior must be qualified with the installed upstream candidate.
 
-### 21. OpenRazer Metadata Reuse
+### 21. OpenRazer Native Route
 
-Evidence: [`integrations/openrazer/import.json`](../../integrations/openrazer/import.json), [`integrations/openrazer/metadata.json`](../../integrations/openrazer/metadata.json).
+Evidence: [`integrations/openrazer/native-route/catalog.json`](../../integrations/openrazer/native-route/catalog.json), [`integrations/openrazer/native-route/transform.json`](../../integrations/openrazer/native-route/transform.json), [`crates/hfx-uhid-relay/src/lib.rs`](../../crates/hfx-uhid-relay/src/lib.rs).
 
-- No remaining gap in the current software scope.
+- The source-pinned driver and UHID route require targeted installed physical method parity.
 
-### 22. Optional org.razer Compatibility Provider
+### 22. Migration org.razer Compatibility Provider
 
 Evidence: [`docs/architecture/openrazer-compatibility.md`](../../docs/architecture/openrazer-compatibility.md), [`tests/openrazer_compat_contracts.py`](../../tests/openrazer_compat_contracts.py).
 
-- The private provider is opt-in and intentionally does not claim the official org.razer identity.
+- Removal waits for native-route parity and a separate retirement approval.
 
-### 23. Native Polychromatic Backend
+### 23. Polychromatic Through OpenRazer
 
-Evidence: [`integrations/polychromatic/hyperflux_polychromatic/backend.py`](../../integrations/polychromatic/hyperflux_polychromatic/backend.py), [`tests/polychromatic_contracts.py`](../../tests/polychromatic_contracts.py).
+Evidence: [`integrations/openrazer/native-route/transform.json`](../../integrations/openrazer/native-route/transform.json), [`integrations/polychromatic/hyperflux_polychromatic/backend.py`](../../integrations/polychromatic/hyperflux_polychromatic/backend.py), [`tests/polychromatic_contracts.py`](../../tests/polychromatic_contracts.py).
 
-- Upstream acceptance of the native backend discovery seam is outside this repository.
+- The custom backend remains a migration fallback until ordinary OpenRazer-path physical parity passes.
 
-### 24. Full Device Settings
+### 24. Upstream Device Settings
 
-Evidence: [`profiles/capabilities.json`](../../profiles/capabilities.json), [`profiles/evidence/claims.json`](../../profiles/evidence/claims.json).
+Evidence: [`integrations/openrazer/native-method-inventory.json`](../../integrations/openrazer/native-method-inventory.json), [`integrations/openrazer/native-probe-catalog.json`](../../integrations/openrazer/native-probe-catalog.json).
 
-- DPI, polling, scroll, idle, battery-threshold, macro, gaming-mode, and pairing writes remain unavailable until receiver-side semantics are physically qualified.
+- Read-only and reversible upstream methods require native-route physical parity; HyperFlux does not reimplement their semantics.
 
-### 25. Ownership Leases
+### 25. Native Control Ownership
 
-Evidence: [`crates/hfx-core/src/leases.rs`](../../crates/hfx-core/src/leases.rs), [`crates/hfx-core/tests/leases.rs`](../../crates/hfx-core/tests/leases.rs).
+Evidence: [`crates/hfx-core/src/leases.rs`](../../crates/hfx-core/src/leases.rs), [`crates/hfx-core/tests/leases.rs`](../../crates/hfx-core/tests/leases.rs), [`crates/hfx-uhid-relay/src/bridge.rs`](../../crates/hfx-uhid-relay/src/bridge.rs).
 
 - No remaining gap in the current software scope.
 
@@ -241,9 +241,9 @@ Evidence: [`crates/hfx-integration-model/src/view.rs`](../../crates/hfx-integrat
 
 - No remaining gap in the current software scope.
 
-### 27. Atomic Multi-Device Requests
+### 27. Atomic Native Exchanges
 
-Evidence: [`crates/hfx-core/tests/leases.rs`](../../crates/hfx-core/tests/leases.rs), [`crates/hfx-core/tests/coordinator.rs`](../../crates/hfx-core/tests/coordinator.rs).
+Evidence: [`crates/hfx-bridge/src/native_exchange.rs`](../../crates/hfx-bridge/src/native_exchange.rs), [`crates/hfx-kernel-transport/tests/adapter.rs`](../../crates/hfx-kernel-transport/tests/adapter.rs), [`crates/hfx-protocol/tests/wire_and_snapshot.rs`](../../crates/hfx-protocol/tests/wire_and_snapshot.rs).
 
 - No remaining gap in the current software scope.
 
@@ -291,7 +291,7 @@ Evidence: [`crates/hfx-bridge/src/subscriptions.rs`](../../crates/hfx-bridge/src
 
 ### 35. Bounded Concurrency And Backpressure
 
-Evidence: [`runtime/linux.json`](../../runtime/linux.json), [`crates/hfx-core/tests/events_and_diagnostics.rs`](../../crates/hfx-core/tests/events_and_diagnostics.rs).
+Evidence: [`crates/hfx-bridge/src/native_scheduler.rs`](../../crates/hfx-bridge/src/native_scheduler.rs), [`crates/hfx-bridge/src/native_exchange.rs`](../../crates/hfx-bridge/src/native_exchange.rs), [`crates/hfx-bridge/tests/native_projection.rs`](../../crates/hfx-bridge/tests/native_projection.rs).
 
 - No remaining gap in the current software scope.
 

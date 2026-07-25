@@ -133,4 +133,5 @@ These types prevent semantically different values from being passed interchangea
 - `LeaseOutcome`: `granted`, `conflict`, `rejected`
 - `ErrorSeverity`: `info`, `warning`, `error`, `critical`
 - `NativeRouteAccess`: `qualified`, `candidate`, `backend-required`
-- `NativeRouteEventKind`: `available`, `unavailable`, `generation-replaced`
+- `NativeRouteState`: `available`, `temporarily-unavailable`, `withdrawn`
+- `NativeRouteEventKind`: `available`, `temporarily-unavailable`, `withdrawn`, `generation-replaced`

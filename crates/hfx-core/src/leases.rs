@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use hfx_domain::{ClientId, LeaseDurationMs, LeaseId, LeaseState, MonotonicMs, RequestId};
+use hfx_domain::{
+    ClientId, LeaseDurationMs, LeaseId, LeaseState, MonotonicMs, RequestId, ResourceKind,
+};
 use hfx_protocol::{
     LeaseConflict, LeaseGrant, LeaseRequest, LeaseResult, ProtocolValidationError,
     ReleaseLeaseRequest, RenewLeaseRequest, ResourceKey, ResourceOwnershipSnapshot,
@@ -22,6 +24,15 @@ enum LeaseOperation {
     Acquire(LeaseRequest),
     Renew(RenewLeaseRequest),
     Release(ReleaseLeaseRequest),
+}
+
+fn resources_conflict(requested: &ResourceKey, owned: &ResourceKey) -> bool {
+    requested.receiver_id == owned.receiver_id
+        && requested.generation_id == owned.generation_id
+        && requested.device_id == owned.device_id
+        && (requested.kind == owned.kind
+            || requested.kind == ResourceKind::NativeControl
+            || owned.kind == ResourceKind::NativeControl)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -134,7 +145,9 @@ impl LeaseManager {
             return Err(LeaseManagerError::RequestIdReused);
         }
         if let Some((resource, owner)) = request.resources.iter().find_map(|resource| {
-            let lease_id = self.owners.get(resource)?;
+            let lease_id = self.owners.iter().find_map(|(owned, lease_id)| {
+                resources_conflict(resource, owned).then_some(lease_id)
+            })?;
             let grant = self.leases.get(lease_id)?;
             Some((resource.clone(), grant.client_id.clone()))
         }) {

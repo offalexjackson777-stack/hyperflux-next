@@ -3,8 +3,8 @@
 use crate::catalog::{NativeRouteCatalog, NativeRouteRecord};
 use crate::uhid::VirtualDeviceSpec;
 use hfx_domain::{
-    EndpointId, GenerationId, LogicalDeviceId, NativeRouteAccess, NativeRouteEventKind, ReceiverId,
-    ResourceKind, RouteState, SequenceNumber,
+    EndpointId, GenerationId, LogicalDeviceId, NativeRouteAccess, NativeRouteEventKind,
+    NativeRouteState, ReceiverId, ResourceKind, SequenceNumber,
 };
 use hfx_protocol::{NativeRoute, NativeRouteEvent, NativeRouteInventory};
 use sha2::{Digest, Sha256};
@@ -153,7 +153,7 @@ impl RouteSupervisor {
         let identity = RouteIdentity::from(&event.route);
         let mut actions = Vec::new();
         match event.kind {
-            NativeRouteEventKind::Unavailable => {
+            NativeRouteEventKind::TemporarilyUnavailable | NativeRouteEventKind::Withdrawn => {
                 stop_route_family(&mut self.active, &event.route, &mut actions);
             }
             NativeRouteEventKind::GenerationReplaced => {
@@ -196,7 +196,9 @@ fn eligible_route<'a>(
     let Some(record) = catalog.route(route.vendor_id, route.product_id, route.device_kind) else {
         return Ok(None);
     };
-    if route.access != NativeRouteAccess::Qualified || route.route_state != RouteState::Available {
+    if route.access != NativeRouteAccess::Qualified
+        || route.route_state != NativeRouteState::Available
+    {
         return Ok(None);
     }
     let Some(token) = &route.route_token else {
@@ -314,12 +316,13 @@ mod tests {
         product: u16,
         kind: DeviceKind,
         access: NativeRouteAccess,
-        state: RouteState,
+        state: NativeRouteState,
     ) -> NativeRoute {
         let receiver_id = text::<ReceiverId>(receiver);
         let generation_id = GenerationId::try_from(generation).expect("generation is valid");
         let device_id = text::<LogicalDeviceId>(device);
-        let writable = access == NativeRouteAccess::Qualified && state == RouteState::Available;
+        let writable =
+            access == NativeRouteAccess::Qualified && state == NativeRouteState::Available;
         NativeRoute {
             receiver_id: receiver_id.clone(),
             generation_id,
@@ -366,7 +369,7 @@ mod tests {
                             0x00cd,
                             DeviceKind::Mouse,
                             NativeRouteAccess::Candidate,
-                            RouteState::Available,
+                            NativeRouteState::Available,
                         ),
                         route(
                             "receiver-1",
@@ -375,7 +378,7 @@ mod tests {
                             0xffff,
                             DeviceKind::Mouse,
                             NativeRouteAccess::Qualified,
-                            RouteState::Available,
+                            NativeRouteState::Available,
                         ),
                     ],
                 ),
@@ -402,7 +405,7 @@ mod tests {
                             0x00cd,
                             DeviceKind::Mouse,
                             NativeRouteAccess::Qualified,
-                            RouteState::Available,
+                            NativeRouteState::Available,
                         ),
                         route(
                             "receiver-2",
@@ -411,7 +414,7 @@ mod tests {
                             0x00cd,
                             DeviceKind::Mouse,
                             NativeRouteAccess::Qualified,
-                            RouteState::Available,
+                            NativeRouteState::Available,
                         ),
                     ],
                 ),
@@ -437,7 +440,7 @@ mod tests {
                         0x0296,
                         DeviceKind::Keyboard,
                         NativeRouteAccess::Qualified,
-                        RouteState::Available,
+                        NativeRouteState::Available,
                     )],
                 ),
                 &catalog,
@@ -450,7 +453,7 @@ mod tests {
             0x0296,
             DeviceKind::Keyboard,
             NativeRouteAccess::Qualified,
-            RouteState::Available,
+            NativeRouteState::Available,
         );
         let actions = supervisor
             .apply_event(
@@ -468,6 +471,89 @@ mod tests {
     }
 
     #[test]
+    fn temporary_loss_and_withdrawal_stop_until_a_fresh_available_event() {
+        let catalog = NativeRouteCatalog::load().expect("catalog loads");
+        let mut supervisor = RouteSupervisor::default();
+        let available = route(
+            "receiver-1",
+            "mouse-1",
+            1,
+            0x00cd,
+            DeviceKind::Mouse,
+            NativeRouteAccess::Qualified,
+            NativeRouteState::Available,
+        );
+        supervisor
+            .reconcile(&inventory(10, vec![available.clone()]), &catalog)
+            .expect("initial inventory reconciles");
+
+        let temporarily_unavailable = route(
+            "receiver-1",
+            "mouse-1",
+            1,
+            0x00cd,
+            DeviceKind::Mouse,
+            NativeRouteAccess::Qualified,
+            NativeRouteState::TemporarilyUnavailable,
+        );
+        let temporary_actions = supervisor
+            .apply_event(
+                &NativeRouteEvent {
+                    sequence: SequenceNumber::try_from(11_u64).expect("sequence is valid"),
+                    kind: NativeRouteEventKind::TemporarilyUnavailable,
+                    route: temporarily_unavailable,
+                },
+                &catalog,
+            )
+            .expect("temporary route loss applies");
+        assert!(matches!(
+            temporary_actions.as_slice(),
+            [RouteAction::Stop { .. }]
+        ));
+        assert!(supervisor.active_identities().is_empty());
+
+        let return_actions = supervisor
+            .apply_event(
+                &NativeRouteEvent {
+                    sequence: SequenceNumber::try_from(12_u64).expect("sequence is valid"),
+                    kind: NativeRouteEventKind::Available,
+                    route: available,
+                },
+                &catalog,
+            )
+            .expect("available return applies");
+        assert!(matches!(
+            return_actions.as_slice(),
+            [RouteAction::Start { .. }]
+        ));
+
+        let withdrawn = route(
+            "receiver-1",
+            "mouse-1",
+            1,
+            0x00cd,
+            DeviceKind::Mouse,
+            NativeRouteAccess::Qualified,
+            NativeRouteState::Withdrawn,
+        );
+        let withdrawal_actions = supervisor
+            .apply_event(
+                &NativeRouteEvent {
+                    sequence: SequenceNumber::try_from(13_u64).expect("sequence is valid"),
+                    kind: NativeRouteEventKind::Withdrawn,
+                    route: withdrawn,
+                },
+                &catalog,
+            )
+            .expect("route withdrawal applies");
+        assert!(matches!(
+            withdrawal_actions.as_slice(),
+            [RouteAction::Stop { .. }]
+        ));
+        assert!(supervisor.active_identities().is_empty());
+    }
+
+    #[test]
     fn malformed_authority_and_noncontiguous_events_fail_closed() {
         let catalog = NativeRouteCatalog::load().expect("catalog loads");
         let mut supervisor = RouteSupervisor::default();
@@ -478,7 +564,7 @@ mod tests {
             0x00cd,
             DeviceKind::Mouse,
             NativeRouteAccess::Qualified,
-            RouteState::Available,
+            NativeRouteState::Available,
         );
         malformed.route_token = None;
         assert_eq!(
@@ -499,7 +585,7 @@ mod tests {
                 0x00cd,
                 DeviceKind::Mouse,
                 NativeRouteAccess::Qualified,
-                RouteState::Available,
+                NativeRouteState::Available,
             ),
         };
         assert_eq!(

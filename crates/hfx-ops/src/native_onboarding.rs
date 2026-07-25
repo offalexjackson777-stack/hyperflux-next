@@ -232,8 +232,8 @@ mod tests {
     use super::*;
     use hfx_domain::{
         DeviceKind, EndpointId, GenerationId, LogicalDeviceId, NativeProtocolFamily,
-        NativeReportByteCount, NativeRouteAccess, ProductId, ProjectionRevision, ReceiverId,
-        RouteState, SequenceNumber, StreamEpoch, StreamId, VendorId,
+        NativeReportByteCount, NativeRouteAccess, NativeRouteState, ProductId, ProjectionRevision,
+        ReceiverId, SequenceNumber, StreamEpoch, StreamId, VendorId,
     };
     use hfx_protocol::{EventCursor, NativeRoute};
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -263,7 +263,7 @@ mod tests {
                 device_kind: DeviceKind::Mouse,
                 vendor_id: VendorId::try_from(0x1532_u16).expect("vendor is valid"),
                 product_id: ProductId::try_from(0x007b_u16).expect("product is valid"),
-                route_state: RouteState::Available,
+                route_state: NativeRouteState::Available,
                 access: NativeRouteAccess::Candidate,
                 protocol_family: NativeProtocolFamily::try_from(
                     "razer-feature-report-v1".to_owned(),

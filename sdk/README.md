@@ -8,14 +8,14 @@ This is a structural collection, not a second source of truth. Follow the author
 
 | Area | Purpose |
 | --- | --- |
-| [C++ SDK](cpp/README.md) | Provides typed C++ bridge access and generated contracts for native application adapters. |
+| [C++ SDK](cpp/README.md) | Provides typed C++ bridge access for qualified native routes, exact Feature exchanges, and generated adapter contracts. |
 | [Python SDK](python/README.md) | Provides typed Python bridge access and generated contracts for scripting and Python application adapters. |
 
 ## Authorities
 
 | Owner | Canonical inputs | Generated outputs |
 | --- | ---: | ---: |
-| [OpenRazer compatibility adapter](../integrations/openrazer/README.md) | 0 | 1 |
+| [OpenRazer native route](../integrations/openrazer/README.md) | 0 | 1 |
 | [C++ SDK](cpp/README.md) | 3 | 3 |
 | [Python SDK](python/README.md) | 3 | 3 |
 

@@ -485,7 +485,7 @@ struct NativeRoute
     DeviceKind device_kind;
     VendorId vendor_id;
     ProductId product_id;
-    RouteState route_state;
+    NativeRouteState route_state;
     NativeRouteAccess access;
     NativeProtocolFamily protocol_family;
     NativeReportByteCount report_bytes;

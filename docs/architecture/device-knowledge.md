@@ -42,21 +42,32 @@ A normalized source record may document:
 - public methods for battery, idle timeout, low-battery threshold, scroll behavior, macros, lighting, and other settings;
 - the exact source file, line, revision, digest, and license expression from which each record came.
 
-This is **source-reviewed knowledge**. It is useful for planning, model presentation, semantic SDK design, simulator scenarios, and capability-gap analysis. It is not proof that the same command or packet works through the HyperFlux mat.
+This is **source-reviewed knowledge**. It is useful for planning, upstream presentation bindings, native-route qualification, simulator scenarios, and capability-gap analysis. It is not proof that the same command or packet works through the HyperFlux mat.
 
-## What Enables A Control
+## What Qualifies A Native Route
 
 `knowledge/capability-map.json` maps upstream method vocabulary to application-neutral semantic capabilities. For example, `get_dpi_xy` and `set_dpi_xy` describe `input.dpi-xy`; they do not prescribe an OpenRazer D-Bus method or an OpenRGB widget.
 
-A setting becomes enabled only when all of these are true:
+That map records planning knowledge and upstream disagreement. It does not make
+the bridge expose one semantic setting at a time. OpenRazer and OpenRGB decide
+which methods and controls their exact upstream device classes provide.
+
+A native route becomes writable only when all of these are true:
 
 1. The device is linked explicitly in `knowledge/candidate-links.json`.
-2. Runtime identity selects an exact HyperFlux child profile, not merely a similar product name.
-3. The child profile lists every capability required by the semantic setting.
-4. The normal profile compiler has accepted public, device-scoped physical evidence for every write capability.
-5. The bridge exposes the capability through the SDK; application adapters render only that SDK contract.
+2. Receiver observations select an exact wireless VID/PID and one exact child
+   profile, not merely a similar product name.
+3. Pinned OpenRazer or OpenRGB records bind that identity to a fixed upstream
+   protocol family and report shape.
+4. Public, device-scoped physical evidence proves that an unchanged upstream
+   report crosses the receiver and returns a matching standard response.
+5. The profile declares response correlation and native qualification, after
+   which protocol v7 exposes only the opaque route and bounded exchange.
 
-If any condition is absent, the compiled knowledge can still explain the documented setting, but its `control_state` is `blocked` and names the missing HyperFlux capability.
+If any condition is absent, compiled knowledge can still explain upstream
+features and missing evidence, but production native exchange remains blocked.
+A same-protocol promotion changes profile data, bindings, evidence, and generated
+projections; it does not add model branches to the transport engines.
 
 ## Naga V2 Pro Example
 
@@ -64,7 +75,7 @@ The pinned OpenRazer source documents wired `0x00A7` and wireless `0x00A8` varia
 
 The pinned OpenRGB source independently documents the same PID pair and a two-slot Logo/Numpad presentation. OpenRazer describes a three-slot matrix. The compiler reports that topology disagreement rather than choosing whichever source is convenient.
 
-Today the official mat snapshot can therefore say a Naga V2 Pro is a reviewed candidate with extensive public device knowledge. It cannot expose Naga controls through HyperFlux until an exact receiver-backed identity is observed, its transport families are implemented, and those operations receive physical evidence. Once qualified, every adapter can consume the same semantic SDK capabilities without copying Naga-specific packet logic into OpenRGB, OpenRazer compatibility, or Polychromatic code.
+Today the official mat snapshot can therefore say a Naga V2 Pro is a reviewed candidate with extensive public device knowledge. It cannot expose a writable native route until an exact receiver-backed identity is observed, its standard report family is bound declaratively, and that transport receives physical evidence. Once qualified, OpenRGB and OpenRazer continue to generate the model-specific commands they already own; HyperFlux carries the unchanged reports without copying Naga packet logic into its kernel, bridge, SDK, relay, or application adapters.
 
 ## Update Workflow
 

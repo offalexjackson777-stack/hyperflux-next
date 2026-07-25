@@ -7,7 +7,7 @@ policy, support-list guesses, or active information queries.
 
 ## Responsibilities
 
-The module owns five things that require kernel proximity:
+The module owns six things that require kernel proximity:
 
 1. preserve ordinary HID input with `HID_CONNECT_DEFAULT` and never consume or
    rewrite input reports;
@@ -17,34 +17,47 @@ The module owns five things that require kernel proximity:
    retail-device state;
 4. admit many read-only observers but exactly one `O_RDWR` writer file and one
    expiring generation-bound authorization session;
-5. validate and deliver a bounded set of receiver frames while retaining an
-   exact terminal result journal.
+5. execute one qualified fixed-size native Feature exchange at a time, with one
+   SET attempt, bounded response acquisition, declarative matching, and exact
+   certainty;
+6. retain the version-1 bounded receiver-frame transport and terminal journal
+   as an isolated migration fallback.
 
-The bridge remains responsible for profile selection, capability qualification,
-logical devices, carrier maps, effects, scheduling policy, leases, persistence,
-retry decisions, and user-facing meaning.
+For the native path, the bridge remains responsible for exact route identity,
+profile qualification, generation safety, NativeControl leases, bounded fair
+admission, deadlines, and user-facing diagnostics. OpenRazer and OpenRGB remain
+responsible for device commands, settings, layouts, effects, and persistence.
+The kernel treats command content as opaque except for the declarative report
+validation and response-correlation fields needed to transport it safely.
 
 ## Userspace Adapter
 
-The Rust kernel adapter selects an encoder from the qualified receiver
-profile's transport-backend identifier. It resolves each logical child profile
-independently, applies that profile's application-slot-to-carrier map, and
-emits only the bounded physical frames accepted by the kernel UAPI. A receiver
-may therefore carry a mouse, a keyboard, or both without an exact-pair profile.
-Unknown children receive no encoder or write authority.
+The active native path resolves an exact qualified route, fixed report family,
+endpoint slot, route-token digest, generation, and deadline before entering the
+kernel adapter. The adapter submits one 90-byte upstream Feature report through
+UAPI v2 and projects only the kernel's `not-sent`, `may-have-been-sent`, or
+`matched-response` result. It neither constructs device commands nor translates
+LED slots.
 
-The qualified HW001 encoder preserves the observed two-pass receiver sequence,
+The retained UAPI-v1 migration path still selects a receiver encoder, resolves
+each child independently, applies its qualified application-slot-to-carrier map,
+and emits bounded physical frames. That behavior remains available for rollback
+but is prevented from competing with a child-local NativeControl lease. Unknown
+children receive neither a native route nor semantic write authority.
+
+In the migration fallback, the qualified HW001 encoder preserves the observed two-pass receiver sequence,
 inter-frame timing, and mouse carrier correction. It also records which
 physical reports belong to each semantic device frame. Terminal kernel progress
 can therefore be projected conservatively into bridge-level delivery facts
 without confusing a partially delivered keyboard row sequence with a complete
 keyboard update.
 
-Every request digest binds the complete semantic dispatch and every encoded
-frame field. The only unsafe Rust is the private, generated-type ioctl capsule;
-profile resolution, encoding, observation decoding, session renewal, and result
-interpretation remain safe and independently testable through an injected I/O
-port.
+Native request digests bind the route, generation, endpoint, report, deadline,
+and dispatch identity. Legacy request digests continue to bind the complete
+semantic dispatch and every encoded frame field. The only unsafe Rust is the
+private, generated-type ioctl capsule; route and profile resolution, encoding,
+observation decoding, session renewal, and result interpretation remain safe
+and independently testable through an injected I/O port.
 
 ## Lifecycle
 
@@ -78,7 +91,37 @@ battery data.
 
 ## Transport And Outcomes
 
-Userspace supplies only frames produced by a qualified backend encoder. The
+### Native Exchange V2
+
+Userspace supplies exactly one 90-byte report produced by a qualified upstream
+Razer implementation, plus generation, authorization epoch, dispatch nonce,
+deadline, endpoint slot, route-token digest, and request digest. The kernel
+validates the additive UAPI-v2 structure and the receiver profile's fixed report
+shape before reserving a sequence. A per-receiver transport lock permits one
+active exchange and prevents a native operation from interleaving with the
+legacy carrier path.
+
+The SET begins at most once. After it begins, only bounded GET acquisition may
+repeat according to declarative profile timing and response-matching fields.
+The SET is never replayed. A complete matching 90-byte response is returned
+unchanged, including the device's own status; HyperFlux does not reinterpret
+Busy, Failure, or Not Supported as transport success.
+
+The native journal retains 128 complete results and 128 digest-bearing
+tombstones. Exact replay resolves the retained outcome without another SET.
+Generation, route, endpoint, nonce, or digest conflicts fail closed. The three
+certainty classes mean:
+
+- `not-sent`: transport did not begin and an exact retry may be considered by
+  userspace;
+- `may-have-been-sent`: SET may have begun, so no layer may repeat it
+  automatically;
+- `matched-response`: one full response passed declarative correlation and is
+  returned unchanged.
+
+### Semantic Envelope V1 Migration Fallback
+
+Userspace supplies only frames produced by a qualified fallback encoder. The
 kernel validates backend, report kind, exact payload length, reserved bytes,
 geometry, unused bytes, checksum, per-frame delay, aggregate delay, and a zero
 delay after the final frame. One transaction contains at most 16 frames and at
@@ -95,10 +138,10 @@ rotation, so a bridge restart can recover a retained result without inheriting
 the old writer authorization epoch. Reusing a nonce with different content in
 the current kernel session remains a terminal conflict.
 
-On startup, the bridge reconciles durable nonterminal work against this kernel
-journal before admitting new writes. This ordering prevents unrelated traffic
-from aging recoverable outcomes out of the bounded journal during crash
-recovery.
+On startup, the migration runtime reconciles durable nonterminal semantic work
+against this version-1 journal before admitting fallback writes. This ordering
+prevents unrelated traffic from aging recoverable outcomes out of the bounded
+journal during crash recovery.
 
 `succeeded` means every frame was delivered through the receiver USB control
 transfer. It does not claim that a paired child applied the frame or that a

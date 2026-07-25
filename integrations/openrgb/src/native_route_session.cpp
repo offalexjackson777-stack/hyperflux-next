@@ -43,7 +43,7 @@ sdk::Result<T> checked_domain(Value value, std::string_view label)
 
 bool route_is_usable(const v7::NativeRoute& route)
 {
-    return route.route_state == RouteState::Available
+    return route.route_state == NativeRouteState::Available
         && route.access == NativeRouteAccess::Qualified
         && route.protocol_family.value() == "razer-feature-report-v1"
         && route.report_bytes.value() == razer_native_report_bytes

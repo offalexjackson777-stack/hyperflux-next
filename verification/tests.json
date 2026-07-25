@@ -170,8 +170,8 @@
       "required_capabilities": ["openrazer-source"],
       "hardware_requirement": "none",
       "writes_hardware": false,
-      "expected_duration_seconds": 2,
-      "timeout_seconds": 60,
+      "expected_duration_seconds": 30,
+      "timeout_seconds": 180,
       "dependencies": ["openrazer-metadata-contracts", "rust-unit"],
       "isolation": "exclusive-process",
       "cache_inputs": [

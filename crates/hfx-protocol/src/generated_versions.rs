@@ -108,7 +108,7 @@ pub const GENERATED_PROTOCOL_VERSIONS: &[ProtocolVersionDescriptor] = &[
     },
     ProtocolVersionDescriptor {
         version: 7,
-        catalog_sha256: "39443b1babed1e7f94824dcb3379f9572563263592841fda21378c14aff3bd34",
+        catalog_sha256: "3f5f6145b5abf844321aee3aff8d8eeb4f1f3561aee6deb431209eb42cea4b73",
         catalog_features: v7::SUPPORTED_FEATURES,
         served_features: &[
             "atomic-transactions",

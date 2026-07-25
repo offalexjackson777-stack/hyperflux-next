@@ -39,7 +39,7 @@
   "adapters": [
     {
       "id": "openrazer-compatibility",
-      "application": "OpenRazer-compatible clients",
+      "application": "OpenRazer-compatible clients (migration fallback)",
       "kind": "compatibility-service",
       "status": "software-verified",
       "upstream_ids": ["openrazer"],
@@ -52,22 +52,36 @@
       "must_not_own": ["official org.razer daemon identity", "raw receiver transport", "unrelated OpenRazer devices"]
     },
     {
+      "id": "openrazer-native-route",
+      "application": "OpenRazer and Polychromatic",
+      "kind": "transport-adapter",
+      "status": "software-verified",
+      "upstream_ids": ["openrazer", "polychromatic"],
+      "sdk_protocol_versions": [7],
+      "feature_families": ["availability", "inventory", "native-control", "presentation"],
+      "transport_access": "sdk-only",
+      "unrelated_device_policy": "preserve",
+      "coexistence_policy": "upstream-transport-extension",
+      "owns": ["feature-only UHID endpoint lifecycle", "serial-proven direct-route precedence", "trusted OpenRazer transport adaptation"],
+      "must_not_own": ["device commands, capabilities, images, or persistence", "official OpenRazer daemon or D-Bus API", "ordinary direct-USB devices"]
+    },
+    {
       "id": "openrgb-native",
       "application": "OpenRGB",
       "kind": "native-plugin",
-      "status": "in-progress",
+      "status": "software-verified",
       "upstream_ids": ["openrgb"],
-      "sdk_protocol_versions": [5],
-      "feature_families": ["effects", "inventory", "lighting", "ownership", "presentation", "telemetry"],
+      "sdk_protocol_versions": [7],
+      "feature_families": ["availability", "inventory", "native-control", "presentation"],
       "transport_access": "sdk-only",
       "unrelated_device_policy": "preserve",
       "coexistence_policy": "application-plugin",
-      "owns": ["OpenRGB contract adaptation", "OpenRGB controller lifecycle", "tested OpenRGB view model"],
-      "must_not_own": ["effect mathematics", "raw receiver transport", "receiver qualification", "unrelated OpenRGB devices"]
+      "owns": ["feature transport adaptation for qualified receiver routes", "native controller registration lifecycle", "serial-proven direct-route precedence"],
+      "must_not_own": ["device models, layouts, zones, modes, effects, or persistence", "direct USB hidapi transport", "unrelated OpenRGB controllers"]
     },
     {
       "id": "polychromatic-native",
-      "application": "Polychromatic",
+      "application": "Polychromatic (migration fallback)",
       "kind": "native-backend",
       "status": "software-verified",
       "upstream_ids": ["openrazer", "polychromatic"],

@@ -69,7 +69,7 @@ hyperflux::v7::NativeRoute route(std::string_view device_id, std::uint16_t produ
         kind,
         number<VendorId>(0x1532),
         number<ProductId>(product_id),
-        RouteState::Available,
+        NativeRouteState::Available,
         NativeRouteAccess::Qualified,
         text<NativeProtocolFamily>("razer-feature-report-v1"),
         number<NativeReportByteCount>(90),

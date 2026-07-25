@@ -12,6 +12,7 @@ from unittest.mock import patch
 from tools.hfxdev.model import ModelError
 from tools.hfxdev.verify import (
     _check_build_cache_clock,
+    _kernel_build_directories,
     _python_sdk_license_files,
     _resolve_schema_reference,
     _run_openrgb_adapter_contracts,
@@ -21,6 +22,21 @@ from tools.hfxdev.verify import (
 
 
 class VerificationGuardTests(unittest.TestCase):
+    def test_kernel_build_directories_deduplicate_resolved_aliases(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            canonical = root / "kernel-headers"
+            canonical.mkdir()
+            (canonical / "Makefile").write_text("# fixture\n", encoding="utf-8")
+            alias = root / "kernel-headers-alias"
+            alias.symlink_to(canonical, target_is_directory=True)
+
+            with patch.dict(
+                os.environ,
+                {"HFX_KERNEL_BUILD_DIRS": os.pathsep.join((str(canonical), str(alias)))},
+            ):
+                self.assertEqual(_kernel_build_directories(), [canonical])
+
     def test_python_sdk_license_uses_the_canonical_version_neutral_root(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
