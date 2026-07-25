@@ -27,6 +27,7 @@ from hfxdev.package_pipeline import (
     _install_wheels,
     _inspect_staged_files,
     _normalize_tree,
+    _openrazer_dkms_projection_files,
     _private_stage_prefixes,
     _provenance_inputs,
     _provenance_materials,
@@ -37,6 +38,43 @@ from hfxdev.toolchains import load_toolchain_pins
 
 
 class PackagePipelineTests(unittest.TestCase):
+    def test_openrazer_dkms_projection_accepts_reuse_licenses(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            prepared = root / "prepared"
+            projection = root / "projection"
+            for path in (
+                prepared / "Makefile",
+                prepared / "install_files" / "dkms" / "dkms.conf",
+                prepared / "driver" / "Makefile",
+                prepared / "driver" / "driver.c",
+                prepared / "driver" / "driver.h",
+                prepared / "LICENSES" / "GPL-2.0-or-later.txt",
+            ):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(f"fixture:{path.name}\n", encoding="utf-8")
+
+            selected = _openrazer_dkms_projection_files(prepared, projection)
+            destinations = {
+                destination.relative_to(projection).as_posix()
+                for _, destination in selected
+            }
+
+            self.assertIn("LICENSES/GPL-2.0-or-later.txt", destinations)
+            self.assertNotIn("LICENSE", destinations)
+            self.assertIn("driver/driver.c", destinations)
+            self.assertIn("driver/driver.h", destinations)
+
+    def test_openrazer_dkms_projection_requires_a_regular_license(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            prepared = root / "prepared"
+            projection = root / "projection"
+            prepared.mkdir()
+
+            with self.assertRaisesRegex(ModelError, "no regular license text"):
+                _openrazer_dkms_projection_files(prepared, projection)
+
     def test_openrgb_build_uses_the_source_bound_native_transform(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary)

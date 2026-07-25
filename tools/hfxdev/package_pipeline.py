@@ -465,20 +465,7 @@ def _openrazer_dkms_projection(
 
     projection = output / "work" / build.id / "projection"
     projection.mkdir(parents=True)
-    selected = [
-        (prepared.root / "Makefile", projection / "Makefile"),
-        (
-            prepared.root / "install_files" / "dkms" / "dkms.conf",
-            projection / "dkms.conf",
-        ),
-        (prepared.root / "LICENSE", projection / "LICENSE"),
-        (prepared.root / "driver" / "Makefile", projection / "driver" / "Makefile"),
-    ]
-    selected.extend(
-        (path, projection / "driver" / path.name)
-        for pattern in ("*.c", "*.h")
-        for path in sorted((prepared.root / "driver").glob(pattern))
-    )
+    selected = list(_openrazer_dkms_projection_files(prepared.root, projection))
     for source_path, destination in selected:
         if not source_path.is_file() or source_path.is_symlink():
             raise ModelError(f"build {build.id}: OpenRazer DKMS source projection is incomplete")
@@ -501,6 +488,39 @@ def _openrazer_dkms_projection(
         destination=build.destination,
         mode=build.mode or 0o644,
     )
+
+
+def _openrazer_dkms_projection_files(
+    prepared: Path, projection: Path
+) -> tuple[tuple[Path, Path], ...]:
+    selected = [
+        (prepared / "Makefile", projection / "Makefile"),
+        (
+            prepared / "install_files" / "dkms" / "dkms.conf",
+            projection / "dkms.conf",
+        ),
+        (prepared / "driver" / "Makefile", projection / "driver" / "Makefile"),
+    ]
+    selected.extend(
+        (path, projection / "driver" / path.name)
+        for pattern in ("*.c", "*.h")
+        for path in sorted((prepared / "driver").glob(pattern))
+    )
+    license_files = []
+    legacy_license = prepared / "LICENSE"
+    if legacy_license.is_file() and not legacy_license.is_symlink():
+        license_files.append((legacy_license, projection / "LICENSE"))
+    reuse_licenses = prepared / "LICENSES"
+    if reuse_licenses.is_dir() and not reuse_licenses.is_symlink():
+        license_files.extend(
+            (path, projection / "LICENSES" / path.name)
+            for path in sorted(reuse_licenses.glob("*.txt"))
+            if path.is_file() and not path.is_symlink()
+        )
+    if not license_files:
+        raise ModelError("OpenRazer DKMS source projection has no regular license text")
+    selected.extend(license_files)
+    return tuple(selected)
 
 
 def _verify_openrazer_dkms_contract(prepared: Path, deployment: Any) -> None:
