@@ -23,11 +23,17 @@ from hfxdev.integrations import (
 from hfxdev.model import ModelError
 from hfxdev.model import load_json as model_load_json
 import hfxdev.native_control as native_control
+import hfxdev.native_probe as native_probe
 import hfxdev.openrazer as openrazer
 from hfxdev.native_control import (
     load_native_control_policy,
     load_native_method_inventory,
     transformed_native_inventory,
+)
+from hfxdev.native_probe import (
+    load_native_probe_catalog,
+    load_native_probe_policy,
+    transformed_native_probe_catalog,
 )
 from hfxdev.openrazer import (
     _ClassCatalog,
@@ -150,6 +156,77 @@ class IntegrationCatalogTests(unittest.TestCase):
         with patch.object(native_control, "load_imported_metadata", return_value=metadata):
             with self.assertRaisesRegex(ModelError, "unclassified: new_unreviewed_method"):
                 load_native_control_policy(ROOT)
+
+    def test_openrazer_native_probe_catalog_is_source_bound_and_privacy_safe(self) -> None:
+        policy = load_native_probe_policy(ROOT)
+        catalog = load_native_probe_catalog(ROOT)
+        self.assertEqual(catalog["report_size"], 90)
+        self.assertEqual(catalog["upstream"]["commit"], policy["source_commit"])
+        self.assertEqual(catalog["busy_retry"], {"status": 1, "maximum_attempts": 5})
+        comparisons = {value["method"]: value["comparison"] for value in policy["bindings"]}
+        self.assertEqual(comparisons["get_battery"], "domain-valid")
+        self.assertEqual(comparisons["is_charging"], "domain-valid")
+        self.assertEqual(comparisons["get_serial"], "redacted-equality")
+        self.assertEqual(comparisons["get_firmware"], "exact-semantic")
+
+        devices = {value["profile_id"]: value for value in catalog["devices"]}
+        mouse = devices["child.razer.basilisk-v3-pro-35k.00cd"]
+        keyboard = devices["child.razer.deathstalker-v2-pro-tkl.0296"]
+        self.assertEqual(mouse["wireless_identity"]["product_id"], 0x00CD)
+        self.assertEqual(mouse["direct_usb_reference"]["product_id"], 0x00CC)
+        self.assertEqual(keyboard["wireless_identity"]["product_id"], 0x0296)
+        self.assertEqual(keyboard["direct_usb_reference"]["product_id"], 0x0298)
+
+        for device in devices.values():
+            signatures = set()
+            for probe in device["probes"]:
+                request = probe["request"]
+                signature = (
+                    request["command_class"],
+                    request["command_id"],
+                    request["data_size"],
+                    tuple(request["arguments"]),
+                )
+                self.assertNotIn(signature, signatures)
+                signatures.add(signature)
+                self.assertTrue(request["transaction_id_from_upstream"])
+                self.assertTrue(request["crc_recomputed_by_upstream"])
+                self.assertEqual(probe["comparison"], comparisons[probe["method"]])
+                if probe["method"] == "get_serial":
+                    self.assertEqual(probe["privacy"], "redacted-equality-only")
+                    self.assertEqual(
+                        probe["response_summary"], "redacted-serial-equality"
+                    )
+
+        serialized = str(catalog)
+        for forbidden in (
+            "serial_value",
+            "raw_report",
+            "request_bytes",
+            "response_bytes",
+            "/home/",
+        ):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_openrazer_native_probe_catalog_matches_exact_checkout_when_available(self) -> None:
+        source_value = os.environ.get("HFX_OPENRAZER_SOURCE_DIR")
+        if source_value is None:
+            self.skipTest("HFX_OPENRAZER_SOURCE_DIR is not configured")
+        self.assertEqual(
+            transformed_native_probe_catalog(ROOT, Path(source_value)),
+            load_native_probe_catalog(ROOT),
+        )
+
+    def test_openrazer_native_probe_policy_rejects_unbound_qualification_probe(self) -> None:
+        inventory = deepcopy(load_native_method_inventory(ROOT))
+        inventory["devices"][0]["qualification_probes"].append("unbound_probe")
+        with patch.object(
+            native_probe,
+            "load_native_method_inventory",
+            return_value=inventory,
+        ):
+            with self.assertRaisesRegex(ModelError, "coverage drift"):
+                load_native_probe_policy(ROOT)
 
     def test_openrazer_python_metadata_is_generated_from_the_pinned_import(self) -> None:
         metadata = load_imported_metadata(ROOT)

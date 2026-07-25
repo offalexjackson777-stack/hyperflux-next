@@ -14,6 +14,8 @@ from .governance import load_github_governance
 from .migration import capture_inventory, run_shadow_comparison, summary
 from .model import ModelError
 from .native_control import write_native_method_inventory
+from .native_parity import build_offline_parity_evidence, write_parity_evidence
+from .native_probe import write_native_probe_catalog
 from .distribution_package import build_distribution_package
 from .github_sync import COMPONENTS as GITHUB_COMPONENTS
 from .github_sync import apply as apply_github
@@ -103,6 +105,18 @@ def _parser() -> argparse.ArgumentParser:
     )
     knowledge_import.add_argument("--openrazer-source", required=True, type=Path)
     knowledge_import.add_argument("--openrgb-source", required=True, type=Path)
+
+    native = commands.add_parser(
+        "native", help="inspect source-bound native receiver qualification evidence"
+    )
+    native_commands = native.add_subparsers(dest="native_command", required=True)
+    parity = native_commands.add_parser(
+        "parity", help="sanitize existing direct and receiver usbmon captures"
+    )
+    parity.add_argument("--profile", required=True)
+    parity.add_argument("--direct-capture", required=True, type=Path)
+    parity.add_argument("--receiver-capture", type=Path)
+    parity.add_argument("--receiver-result", type=Path)
 
     upstream = commands.add_parser("upstream", help="manage immutable upstream checkouts")
     upstream_commands = upstream.add_subparsers(dest="upstream_command", required=True)
@@ -260,6 +274,13 @@ def main(arguments: list[str] | None = None) -> int:
                 "Imported OpenRazer native control: "
                 f"{native_destination.relative_to(root)}"
             )
+            probe_destination = write_native_probe_catalog(
+                root, args.source.resolve()
+            )
+            print(
+                "Imported OpenRazer native probes: "
+                f"{probe_destination.relative_to(root)}"
+            )
             return 0
         if args.command == "knowledge":
             paths = import_upstream_catalogs(
@@ -270,6 +291,26 @@ def main(arguments: list[str] | None = None) -> int:
             for path in paths:
                 print(f"Generated {path.relative_to(root)}")
             return 0
+        if args.command == "native":
+            if args.native_command == "parity":
+                evidence = build_offline_parity_evidence(
+                    root,
+                    profile_id=args.profile,
+                    direct_capture=args.direct_capture,
+                    receiver_capture=args.receiver_capture,
+                    receiver_result=args.receiver_result,
+                )
+                destination = write_parity_evidence(evidence)
+                coverage = evidence["coverage"]
+                print(f"Native transport parity: {evidence['conclusion']}")
+                print(
+                    "Coverage: "
+                    f"{len(coverage['passed'])} passed, "
+                    f"{len(coverage['missing'])} incomplete, "
+                    f"{len(coverage['failed'])} failed"
+                )
+                print(f"Privacy-safe evidence: {destination}")
+                return 0
         if args.command == "upstream":
             prepared = prepare_upstreams(root, args.output)
             for identifier in prepared.fetched:

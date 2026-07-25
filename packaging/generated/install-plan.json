@@ -475,6 +475,13 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/native-transport-parity-evidence.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/native-transport-parity-evidence.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/openrazer-compatibility.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/openrazer-compatibility.schema.json",
       "mode": "0644",
@@ -491,6 +498,20 @@
       "component": "schemas",
       "source": "schemas/openrazer-native-method-inventory.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/openrazer-native-method-inventory.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/openrazer-native-probe-catalog.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/openrazer-native-probe-catalog.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/openrazer-native-probe-policy.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/openrazer-native-probe-policy.schema.json",
       "mode": "0644",
       "preserve": false
     },
@@ -729,6 +750,20 @@
       "component": "integration-authority",
       "source": "integrations/openrazer/native-method-inventory.json",
       "destination": "/usr/share/hyperflux-next/integrations/openrazer/native-method-inventory.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "integration-authority",
+      "source": "integrations/openrazer/native-probe-catalog.json",
+      "destination": "/usr/share/hyperflux-next/integrations/openrazer/native-probe-catalog.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "integration-authority",
+      "source": "integrations/openrazer/native-probe-policy.json",
+      "destination": "/usr/share/hyperflux-next/integrations/openrazer/native-probe-policy.json",
       "mode": "0644",
       "preserve": false
     },

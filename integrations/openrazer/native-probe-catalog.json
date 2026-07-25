@@ -1,0 +1,811 @@
+{
+  "$schema": "../../schemas/openrazer-native-probe-catalog.schema.json",
+  "schema": "hyperflux-openrazer-native-probe-catalog-v1",
+  "upstream": {
+    "id": "openrazer",
+    "repository": "https://github.com/openrazer/openrazer.git",
+    "version": "3.12.1-41-g6820f9d",
+    "commit": "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+    "license_expression": "GPL-2.0-or-later AND CC-BY-SA-4.0"
+  },
+  "policy_sha256": "802c5a515e01e1fc71f6b43243b0ec6dbb009f64a9c83f2049bba098e17de448",
+  "inventory_sha256": "bf02e41424652869aeefdab9d63288bc4dcf2d4ca56c0bf253988b1af04cb8bf",
+  "report_size": 90,
+  "busy_retry": {
+    "status": 1,
+    "maximum_attempts": 5
+  },
+  "source_files": [
+    {
+      "path": "driver/razerchromacommon.c",
+      "sha256": "3aeaf974d3ecd5b6b3fd405dc22a4383dc1951e1f3c64824f1bdcf4caf852829"
+    },
+    {
+      "path": "driver/razercommon.h",
+      "sha256": "8145e8670a5230fac3a54392b63b901b2ea4c38cf8b82ee016e415d9e3d6de65"
+    },
+    {
+      "path": "driver/razerkbd_driver.c",
+      "sha256": "27d8d4558b0026a1df2a7568e3c52bcb4eac337fe0b1acbc0e2a95f0c47593df"
+    },
+    {
+      "path": "driver/razermouse_driver.c",
+      "sha256": "73ccf9e31d04db2d6a4b300376d3545d14c10ff7ae417bf4d11fa18e60ebb0ff"
+    }
+  ],
+  "devices": [
+    {
+      "profile_id": "child.razer.basilisk-v3-pro-35k.00cd",
+      "wireless_identity": {
+        "vendor_id": 5426,
+        "product_id": 205,
+        "model_name": "Razer Basilisk V3 Pro 35K (Wireless)",
+        "device_kind": "mouse",
+        "transport_variant": "wireless"
+      },
+      "direct_usb_reference": {
+        "vendor_id": 5426,
+        "product_id": 204,
+        "model_name": "Razer Basilisk V3 Pro 35K (Wired)",
+        "device_kind": "mouse",
+        "transport_variant": "wired"
+      },
+      "probes": [
+        {
+          "method": "get_firmware",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "firmware_version",
+            "source_path": "driver/razermouse_driver.c",
+            "reader": "razer_attr_read_firmware_version",
+            "request_owner": "razer_attr_read_firmware_version",
+            "source_line": 765,
+            "source_sha256": "80cb0bdcdd2a9d7c33b91322d2594c5e4c05723f01e29e64af033fc487d38662"
+          },
+          "request": {
+            "command_class": 0,
+            "command_id": 129,
+            "data_size": 2,
+            "arguments": [
+              0,
+              0
+            ],
+            "normalized_sha256": "6f515dc63df6f31f2cf56fc146d06f18ba75259c74100eee343106f7c66b33a5",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "firmware-version",
+          "comparison": "exact-semantic"
+        },
+        {
+          "method": "get_serial",
+          "privacy": "redacted-equality-only",
+          "driver": {
+            "attribute": "device_serial",
+            "source_path": "driver/razermouse_driver.c",
+            "reader": "razer_attr_read_device_serial",
+            "request_owner": "razer_attr_read_device_serial",
+            "source_line": 1373,
+            "source_sha256": "47b6441ef48de520297d8743b555cc2873b4fb6f7223e0352ad0708cc539e113"
+          },
+          "request": {
+            "command_class": 0,
+            "command_id": 130,
+            "data_size": 22,
+            "arguments": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "normalized_sha256": "1ee6772a2962f0e212d4db1ce62dfc328155bb7e508a50940059c1a89e1afcaf",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "redacted-serial-equality",
+          "comparison": "redacted-equality"
+        },
+        {
+          "method": "get_device_mode",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "device_mode",
+            "source_path": "driver/razermouse_driver.c",
+            "reader": "razer_attr_read_device_mode",
+            "request_owner": "razer_attr_read_device_mode",
+            "source_line": 4007,
+            "source_sha256": "898fbf1a8338f6edf4c36f26d6d2e5eadcef52b57180686606ca39d4464253a7"
+          },
+          "request": {
+            "command_class": 0,
+            "command_id": 132,
+            "data_size": 2,
+            "arguments": [
+              0,
+              0
+            ],
+            "normalized_sha256": "0e29a171dc97a2793a7b5d70dd7ffda9b5c27765be31101eb94f15c93aacb515",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "device-mode",
+          "comparison": "exact-semantic"
+        },
+        {
+          "method": "get_battery",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "charge_level",
+            "source_path": "driver/razermouse_driver.c",
+            "reader": "razer_attr_read_charge_level",
+            "request_owner": "razer_attr_read_charge_level",
+            "source_line": 1532,
+            "source_sha256": "4ac4766ac285a9c670be2941a89804e00c482efc0b9903a41bfb06535b727ec3"
+          },
+          "request": {
+            "command_class": 7,
+            "command_id": 128,
+            "data_size": 2,
+            "arguments": [
+              0,
+              0
+            ],
+            "normalized_sha256": "619cccfff3ef4e128bf0d7a7f3f494ab0f7b3cf0a71d0919d9c57e99fad5e259",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "battery-u8",
+          "comparison": "domain-valid"
+        },
+        {
+          "method": "is_charging",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "charge_status",
+            "source_path": "driver/razermouse_driver.c",
+            "reader": "razer_attr_read_charge_status",
+            "request_owner": "razer_attr_read_charge_status",
+            "source_line": 1633,
+            "source_sha256": "247ab66d8083c5484592890dd98fe4453679e0e9a2a9cca630420d875e8f346a"
+          },
+          "request": {
+            "command_class": 7,
+            "command_id": 132,
+            "data_size": 2,
+            "arguments": [
+              0,
+              0
+            ],
+            "normalized_sha256": "71b61f8c9ed82779e8b2be6edcd63f610f82d1fefb4a516242d56bcef616a2c1",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "boolean-u8",
+          "comparison": "domain-valid"
+        },
+        {
+          "method": "get_dpi_xy",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "dpi",
+            "source_path": "driver/razermouse_driver.c",
+            "reader": "razer_attr_read_dpi",
+            "request_owner": "razer_attr_read_dpi",
+            "source_line": 2620,
+            "source_sha256": "f2d5fece316d18b1c104c388945b6703a969cea65f0f3b92224c024525956d7f"
+          },
+          "request": {
+            "command_class": 4,
+            "command_id": 133,
+            "data_size": 7,
+            "arguments": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "normalized_sha256": "7d7beaef2d24499a4e0df524829255f8b9789a3cba830c898952110ddf92a129",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "dpi-xy",
+          "comparison": "exact-semantic"
+        },
+        {
+          "method": "get_dpi_stages",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "dpi_stages",
+            "source_path": "driver/razermouse_driver.c",
+            "reader": "razer_attr_read_dpi_stages",
+            "request_owner": "razer_attr_read_dpi_stages",
+            "source_line": 3176,
+            "source_sha256": "9e027c4e30109c5d4503ec664cdaacf7b524772800aae2296d4a306a91e4c6db"
+          },
+          "request": {
+            "command_class": 4,
+            "command_id": 134,
+            "data_size": 38,
+            "arguments": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "normalized_sha256": "37d678de6396383525ac9ea8148e3483a1533483b06a1db4ab527b9f97790d98",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "dpi-stages",
+          "comparison": "exact-semantic"
+        },
+        {
+          "method": "get_poll_rate",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "poll_rate",
+            "source_path": "driver/razermouse_driver.c",
+            "reader": "razer_attr_read_poll_rate",
+            "request_owner": "razer_attr_read_poll_rate",
+            "source_line": 1838,
+            "source_sha256": "af007d5b3f2e2f7c7120754e39b2cef6ef11f2e8190705cb61c8484ba95429e4"
+          },
+          "request": {
+            "command_class": 0,
+            "command_id": 133,
+            "data_size": 1,
+            "arguments": [
+              0
+            ],
+            "normalized_sha256": "59cde20e90b1a6c9c7610300fafc13721de5b125ce086033f83da0b7d2672b09",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "polling-rate-code",
+          "comparison": "exact-semantic"
+        },
+        {
+          "method": "get_idle_time",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "device_idle_time",
+            "source_path": "driver/razermouse_driver.c",
+            "reader": "razer_attr_read_device_idle_time",
+            "request_owner": "razer_attr_read_device_idle_time",
+            "source_line": 3312,
+            "source_sha256": "68914aaaffdc83c6c0a67a2db5e1f2b332e36876e52d6f3cfb7fa4e8e524af99"
+          },
+          "request": {
+            "command_class": 7,
+            "command_id": 131,
+            "data_size": 2,
+            "arguments": [
+              0,
+              0
+            ],
+            "normalized_sha256": "3d611bb978844bbd12c701d07967e23c6269147dd7ae61abcd4e26f4727b4019",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "be16-seconds",
+          "comparison": "exact-semantic"
+        },
+        {
+          "method": "get_low_battery_threshold",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "charge_low_threshold",
+            "source_path": "driver/razermouse_driver.c",
+            "reader": "razer_attr_read_charge_low_threshold",
+            "request_owner": "razer_attr_read_charge_low_threshold",
+            "source_line": 3513,
+            "source_sha256": "2f3dfbbd401de6bb010940f434697f07ec7033051e9027ca138725ce52b60b89"
+          },
+          "request": {
+            "command_class": 7,
+            "command_id": 129,
+            "data_size": 1,
+            "arguments": [
+              0
+            ],
+            "normalized_sha256": "e1d5df8eb568ddf6438a0eec03a9983cbd90613704b939b627fe065a11eee358",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "u8-value",
+          "comparison": "exact-semantic"
+        },
+        {
+          "method": "get_scroll_mode",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "scroll_mode",
+            "source_path": "driver/razermouse_driver.c",
+            "reader": "razer_attr_read_scroll_mode",
+            "request_owner": "razer_attr_read_scroll_mode",
+            "source_line": 2842,
+            "source_sha256": "f596cabd69ba25e23fba94494e54632e2e9f4009901238b377028fec69cd015b"
+          },
+          "request": {
+            "command_class": 2,
+            "command_id": 148,
+            "data_size": 2,
+            "arguments": [
+              1,
+              0
+            ],
+            "normalized_sha256": "6712f9337b164c49eb2513b28cde56ef3088f71300b46bac8a8ca9d377c3210b",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "u8-value",
+          "comparison": "exact-semantic"
+        },
+        {
+          "method": "get_scroll_acceleration",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "scroll_acceleration",
+            "source_path": "driver/razermouse_driver.c",
+            "reader": "razer_attr_read_scroll_acceleration",
+            "request_owner": "razer_attr_read_scroll_acceleration",
+            "source_line": 2890,
+            "source_sha256": "5bca30d5a567cd70c1abaaadd029db82ae0c231d49295c673edabee4e09399ff"
+          },
+          "request": {
+            "command_class": 2,
+            "command_id": 150,
+            "data_size": 2,
+            "arguments": [
+              1,
+              0
+            ],
+            "normalized_sha256": "ad61e408ab890d336a639f74c1cbb2f2ac2c429462b88437bdc0a7bf76924429",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "boolean-u8",
+          "comparison": "exact-semantic"
+        },
+        {
+          "method": "get_scroll_smart_reel",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "scroll_smart_reel",
+            "source_path": "driver/razermouse_driver.c",
+            "reader": "razer_attr_read_scroll_smart_reel",
+            "request_owner": "razer_attr_read_scroll_smart_reel",
+            "source_line": 2938,
+            "source_sha256": "33e327d93701aa382ad97207719e851b379dd4c0a6c6488dc48caef610be0639"
+          },
+          "request": {
+            "command_class": 2,
+            "command_id": 151,
+            "data_size": 2,
+            "arguments": [
+              1,
+              0
+            ],
+            "normalized_sha256": "6a93f7ed1f907cef96385f251d761a8375a4670e54c12c6765197e6f75e34e2d",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "boolean-u8",
+          "comparison": "exact-semantic"
+        },
+        {
+          "method": "get_brightness",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "matrix_brightness",
+            "source_path": "driver/razermouse_driver.c",
+            "reader": "razer_attr_read_matrix_brightness",
+            "request_owner": "razer_attr_read_matrix_brightness",
+            "source_line": 2309,
+            "source_sha256": "8936de697b1078c0d897f83f786ecd7526c80455305d5c2ffddd534c8e0248e8"
+          },
+          "request": {
+            "command_class": 15,
+            "command_id": 132,
+            "data_size": 3,
+            "arguments": [
+              1,
+              0,
+              0
+            ],
+            "normalized_sha256": "6dc893b23766f23cb0d6f3a47282286f56687bdc00bbfed6f54ea8501b91ab27",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "u8-value",
+          "comparison": "exact-semantic"
+        },
+        {
+          "method": "get_logo_brightness",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "logo_led_brightness",
+            "source_path": "driver/razermouse_driver.c",
+            "reader": "razer_attr_read_logo_led_brightness",
+            "request_owner": "razer_attr_read_led_brightness",
+            "source_line": 4160,
+            "source_sha256": "a7afde4ad8e28df647866a7f7dec5e515381104edd10ffa9796df313187bcf86"
+          },
+          "request": {
+            "command_class": 15,
+            "command_id": 132,
+            "data_size": 3,
+            "arguments": [
+              1,
+              4,
+              0
+            ],
+            "normalized_sha256": "7081fc31b97e1873d8b7e8fbdc524b461140ef7527c35de708f238c92540d019",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "u8-value",
+          "comparison": "exact-semantic"
+        },
+        {
+          "method": "get_scroll_brightness",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "scroll_led_brightness",
+            "source_path": "driver/razermouse_driver.c",
+            "reader": "razer_attr_read_scroll_led_brightness",
+            "request_owner": "razer_attr_read_led_brightness",
+            "source_line": 4160,
+            "source_sha256": "a7afde4ad8e28df647866a7f7dec5e515381104edd10ffa9796df313187bcf86"
+          },
+          "request": {
+            "command_class": 15,
+            "command_id": 132,
+            "data_size": 3,
+            "arguments": [
+              1,
+              1,
+              0
+            ],
+            "normalized_sha256": "8c042e4a4346cb9b0e576999326c0ce27f1d3b4ef3f598fd64d10876d7207311",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "u8-value",
+          "comparison": "exact-semantic"
+        }
+      ]
+    },
+    {
+      "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296",
+      "wireless_identity": {
+        "vendor_id": 5426,
+        "product_id": 662,
+        "model_name": "Razer DeathStalker V2 Pro TKL (Wireless)",
+        "device_kind": "keyboard",
+        "transport_variant": "wireless"
+      },
+      "direct_usb_reference": {
+        "vendor_id": 5426,
+        "product_id": 664,
+        "model_name": "Razer DeathStalker V2 Pro TKL (Wired)",
+        "device_kind": "keyboard",
+        "transport_variant": "wired"
+      },
+      "probes": [
+        {
+          "method": "get_firmware",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "firmware_version",
+            "source_path": "driver/razerkbd_driver.c",
+            "reader": "razer_attr_read_firmware_version",
+            "request_owner": "razer_attr_read_firmware_version",
+            "source_line": 2176,
+            "source_sha256": "6d7c1e47cc33578e73a6c4d871ce389283db1b5db97f0f1b75c5883418e211f9"
+          },
+          "request": {
+            "command_class": 0,
+            "command_id": 129,
+            "data_size": 2,
+            "arguments": [
+              0,
+              0
+            ],
+            "normalized_sha256": "6f515dc63df6f31f2cf56fc146d06f18ba75259c74100eee343106f7c66b33a5",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "firmware-version",
+          "comparison": "exact-semantic"
+        },
+        {
+          "method": "get_serial",
+          "privacy": "redacted-equality-only",
+          "driver": {
+            "attribute": "device_serial",
+            "source_path": "driver/razerkbd_driver.c",
+            "reader": "razer_attr_read_device_serial",
+            "request_owner": "razer_attr_read_device_serial",
+            "source_line": 2143,
+            "source_sha256": "619b348495fb5ac76d20c7fcdda3de4f6426f67a8bbcc79987eb46be81cc40fd"
+          },
+          "request": {
+            "command_class": 0,
+            "command_id": 130,
+            "data_size": 22,
+            "arguments": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "normalized_sha256": "1ee6772a2962f0e212d4db1ce62dfc328155bb7e508a50940059c1a89e1afcaf",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "redacted-serial-equality",
+          "comparison": "redacted-equality"
+        },
+        {
+          "method": "get_device_mode",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "device_mode",
+            "source_path": "driver/razerkbd_driver.c",
+            "reader": "razer_attr_read_device_mode",
+            "request_owner": "razer_attr_read_device_mode",
+            "source_line": 4322,
+            "source_sha256": "1722c7ef941ca73e29afd916ba1812de88ee658608afa0e825a4ec847d59f290"
+          },
+          "request": {
+            "command_class": 0,
+            "command_id": 132,
+            "data_size": 2,
+            "arguments": [
+              0,
+              0
+            ],
+            "normalized_sha256": "0e29a171dc97a2793a7b5d70dd7ffda9b5c27765be31101eb94f15c93aacb515",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "device-mode",
+          "comparison": "exact-semantic"
+        },
+        {
+          "method": "get_keyboard_layout",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "kbd_layout",
+            "source_path": "driver/razerkbd_driver.c",
+            "reader": "razer_attr_read_kbd_layout",
+            "request_owner": "razer_attr_read_kbd_layout",
+            "source_line": 487,
+            "source_sha256": "ef8bd45645c5498c7d70591af816ba31f2ac1a7675893724dd377e9ad477906d"
+          },
+          "request": {
+            "command_class": 0,
+            "command_id": 134,
+            "data_size": 2,
+            "arguments": [
+              0,
+              0
+            ],
+            "normalized_sha256": "62f026f9ed773e9addd1949eec2fedafc274bdc9fe4e817e420e92430bafb502",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "keyboard-layout",
+          "comparison": "exact-semantic"
+        },
+        {
+          "method": "get_battery",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "charge_level",
+            "source_path": "driver/razerkbd_driver.c",
+            "reader": "razer_attr_read_charge_level",
+            "request_owner": "razer_attr_read_charge_level",
+            "source_line": 663,
+            "source_sha256": "d6faf79e5398bf13c7549b23002d7aef6657d7e1c60a69dc830e8494b925f392"
+          },
+          "request": {
+            "command_class": 7,
+            "command_id": 128,
+            "data_size": 2,
+            "arguments": [
+              0,
+              0
+            ],
+            "normalized_sha256": "619cccfff3ef4e128bf0d7a7f3f494ab0f7b3cf0a71d0919d9c57e99fad5e259",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "battery-u8",
+          "comparison": "domain-valid"
+        },
+        {
+          "method": "is_charging",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "charge_status",
+            "source_path": "driver/razerkbd_driver.c",
+            "reader": "razer_attr_read_charge_status",
+            "request_owner": "razer_attr_read_charge_status",
+            "source_line": 711,
+            "source_sha256": "d50dcc9e97058f280bd6548b709fc4d08eed6555cbb9019c6aa9db4a61e4eb33"
+          },
+          "request": {
+            "command_class": 7,
+            "command_id": 132,
+            "data_size": 2,
+            "arguments": [
+              0,
+              0
+            ],
+            "normalized_sha256": "71b61f8c9ed82779e8b2be6edcd63f610f82d1fefb4a516242d56bcef616a2c1",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "boolean-u8",
+          "comparison": "domain-valid"
+        },
+        {
+          "method": "get_game_mode",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "game_led_state",
+            "source_path": "driver/razerkbd_driver.c",
+            "reader": "razer_attr_read_game_led_state",
+            "request_owner": "razer_attr_read_game_led_state",
+            "source_line": 974,
+            "source_sha256": "42bcb7bc45638187f7891736c7eee0df61b8bb4254b6bd346386d1956535acd2"
+          },
+          "request": {
+            "command_class": 3,
+            "command_id": 128,
+            "data_size": 3,
+            "arguments": [
+              1,
+              8,
+              0
+            ],
+            "normalized_sha256": "b08684ef58cbfa7b1f24343eebb92ed3959195557302fee5e10fd92de53688eb",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "led-state",
+          "comparison": "exact-semantic"
+        },
+        {
+          "method": "get_macro_mode",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "macro_led_state",
+            "source_path": "driver/razerkbd_driver.c",
+            "reader": "razer_attr_read_macro_led_state",
+            "request_owner": "razer_attr_read_macro_led_state",
+            "source_line": 1175,
+            "source_sha256": "8945f0a18041478e1983470b2af29a387028d24c368b0451c8da34b6df8a7222"
+          },
+          "request": {
+            "command_class": 3,
+            "command_id": 128,
+            "data_size": 3,
+            "arguments": [
+              1,
+              7,
+              0
+            ],
+            "normalized_sha256": "9d10013cfdf451680ab360d4ff5971202c5055c779d639cd43297c57b46bc868",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "led-state",
+          "comparison": "exact-semantic"
+        },
+        {
+          "method": "get_macro_effect",
+          "privacy": "summary-only",
+          "driver": {
+            "attribute": "macro_led_effect",
+            "source_path": "driver/razerkbd_driver.c",
+            "reader": "razer_attr_read_macro_led_effect",
+            "request_owner": "razer_attr_read_macro_led_effect",
+            "source_line": 1812,
+            "source_sha256": "52c249a6453a4205fae261da1b1217a2ea8319cd1e6b707707c0e2efca48a24a"
+          },
+          "request": {
+            "command_class": 3,
+            "command_id": 130,
+            "data_size": 3,
+            "arguments": [
+              1,
+              7,
+              0
+            ],
+            "normalized_sha256": "b669336d199af906aded8ebb675ffca556eb3da873daa33489bc53e2588562a8",
+            "transaction_id_from_upstream": true,
+            "crc_recomputed_by_upstream": true
+          },
+          "response_summary": "led-effect",
+          "comparison": "exact-semantic"
+        }
+      ]
+    }
+  ]
+}

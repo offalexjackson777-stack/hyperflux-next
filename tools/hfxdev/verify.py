@@ -31,6 +31,11 @@ from .native_control import (
     load_native_method_inventory,
     transformed_native_inventory,
 )
+from .native_probe import (
+    load_native_probe_catalog,
+    load_native_probe_policy,
+    transformed_native_probe_catalog,
+)
 from .openrazer import (
     extract_openrazer_catalog,
     load_imported_metadata,
@@ -175,6 +180,8 @@ def _check_integration_contract(root: Path) -> None:
     load_imported_metadata(root)
     load_native_control_policy(root)
     load_native_method_inventory(root)
+    load_native_probe_policy(root)
+    load_native_probe_catalog(root)
 
 
 def _tool_environment(root: Path) -> dict[str, str]:
@@ -620,6 +627,13 @@ def _run_openrazer_metadata_contracts(root: Path, _node: TestNode) -> None:
     if actual_native != expected_native:
         raise ModelError(
             "committed OpenRazer native method inventory is stale; "
+            "rerun ./hfx import openrazer"
+        )
+    expected_probes = transformed_native_probe_catalog(root, source)
+    actual_probes = load_native_probe_catalog(root)
+    if actual_probes != expected_probes:
+        raise ModelError(
+            "committed OpenRazer native probe catalog is stale; "
             "rerun ./hfx import openrazer"
         )
 
