@@ -461,6 +461,20 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/openrazer-native-control-policy.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/openrazer-native-control-policy.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/openrazer-native-method-inventory.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/openrazer-native-method-inventory.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/package-build-manifest.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/package-build-manifest.schema.json",
       "mode": "0644",
@@ -680,6 +694,20 @@
       "component": "integration-authority",
       "source": "integrations/openrazer/metadata.json",
       "destination": "/usr/share/hyperflux-next/integrations/openrazer/metadata.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "integration-authority",
+      "source": "integrations/openrazer/native-control-policy.json",
+      "destination": "/usr/share/hyperflux-next/integrations/openrazer/native-control-policy.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "integration-authority",
+      "source": "integrations/openrazer/native-method-inventory.json",
+      "destination": "/usr/share/hyperflux-next/integrations/openrazer/native-method-inventory.json",
       "mode": "0644",
       "preserve": false
     },

@@ -286,6 +286,11 @@ class _ClassCatalog:
                 continue
         return parsed, values
 
+    def linearization(self, class_name: str) -> tuple[str, ...]:
+        """Return the source-bound local class precedence order."""
+
+        return self._linearization(class_name)
+
 
 def _model_name(parsed: _ParsedClass, *, strict: bool) -> str:
     line = parsed.docstring.splitlines()[0].strip().rstrip(".") if parsed.docstring else ""

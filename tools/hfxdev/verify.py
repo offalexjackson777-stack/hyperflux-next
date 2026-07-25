@@ -26,6 +26,11 @@ from .linux_runtime import load_linux_runtime
 from .licensing import verify_licensing_policy
 from .local_companion import load_local_companion
 from .migration import execute_shadow_comparison, load_shadow_fixture
+from .native_control import (
+    load_native_control_policy,
+    load_native_method_inventory,
+    transformed_native_inventory,
+)
 from .openrazer import (
     extract_openrazer_catalog,
     load_imported_metadata,
@@ -168,6 +173,8 @@ def _check_integration_contract(root: Path) -> None:
     load_integration_catalog(root)
     load_openrazer_compatibility_contract(root)
     load_imported_metadata(root)
+    load_native_control_policy(root)
+    load_native_method_inventory(root)
 
 
 def _tool_environment(root: Path) -> dict[str, str]:
@@ -608,6 +615,13 @@ def _run_openrazer_metadata_contracts(root: Path, _node: TestNode) -> None:
     actual = load_imported_metadata(root)
     if actual != expected:
         raise ModelError("committed OpenRazer metadata is stale; rerun ./hfx import openrazer")
+    expected_native = transformed_native_inventory(root, source)
+    actual_native = load_native_method_inventory(root)
+    if actual_native != expected_native:
+        raise ModelError(
+            "committed OpenRazer native method inventory is stale; "
+            "rerun ./hfx import openrazer"
+        )
 
 
 def _run_device_knowledge_contracts(root: Path, _node: TestNode) -> None:

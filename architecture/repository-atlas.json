@@ -139,7 +139,7 @@
       "inputs": ["SDK state", "Pinned OpenRazer metadata", "Compatibility contract"],
       "outputs": ["Private compatibility service", "Generated presentation metadata"],
       "public_contracts": ["Opt-in isolation", "SDK-only access", "No suppression of unrelated devices"],
-      "canonical_files": ["integrations/openrazer/import.json", "integrations/openrazer/metadata.json", "integrations/openrazer/compatibility.json"],
+      "canonical_files": ["integrations/openrazer/import.json", "integrations/openrazer/metadata.json", "integrations/openrazer/compatibility.json", "integrations/openrazer/native-control-policy.json", "integrations/openrazer/native-method-inventory.json"],
       "generated_files": ["integrations/openrazer/README.md", "sdk/python/hyperflux_sdk/generated/openrazer_metadata.py"],
       "verification": ["openrazer-metadata-contracts", "openrazer-compatibility-contracts"],
       "limitations": ["Compatibility covers modeled client behavior, not every OpenRazer daemon extension"],

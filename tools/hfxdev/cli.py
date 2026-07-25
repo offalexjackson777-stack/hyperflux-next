@@ -13,6 +13,7 @@ from .ci import PINNED_VERIFICATION_ENVIRONMENT, container_invocation, run_conta
 from .governance import load_github_governance
 from .migration import capture_inventory, run_shadow_comparison, summary
 from .model import ModelError
+from .native_control import write_native_method_inventory
 from .distribution_package import build_distribution_package
 from .github_sync import COMPONENTS as GITHUB_COMPONENTS
 from .github_sync import apply as apply_github
@@ -252,6 +253,13 @@ def main(arguments: list[str] | None = None) -> int:
         if args.command == "import":
             destination = write_imported_metadata(root, args.source.resolve())
             print(f"Imported {args.upstream}: {destination.relative_to(root)}")
+            native_destination = write_native_method_inventory(
+                root, args.source.resolve()
+            )
+            print(
+                "Imported OpenRazer native control: "
+                f"{native_destination.relative_to(root)}"
+            )
             return 0
         if args.command == "knowledge":
             paths = import_upstream_catalogs(

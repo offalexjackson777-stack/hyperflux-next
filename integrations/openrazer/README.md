@@ -28,6 +28,8 @@ Provides an isolated compatibility surface for legacy OpenRazer clients without 
 - [`integrations/openrazer/import.json`](import.json)
 - [`integrations/openrazer/metadata.json`](metadata.json)
 - [`integrations/openrazer/compatibility.json`](compatibility.json)
+- [`integrations/openrazer/native-control-policy.json`](native-control-policy.json)
+- [`integrations/openrazer/native-method-inventory.json`](native-method-inventory.json)
 
 ## Verification
 

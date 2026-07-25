@@ -49,7 +49,7 @@
       "timeout_seconds": 10,
       "dependencies": ["schema-contracts"],
       "isolation": "shared",
-      "cache_inputs": ["integrations/**/*.json", "schemas/integration-catalog.schema.json", "tools/hfxdev/integrations.py", "tools/hfxdev/openrazer.py"],
+      "cache_inputs": ["integrations/**/*.json", "schemas/integration-catalog.schema.json", "schemas/openrazer-native-*.schema.json", "tools/hfxdev/integrations.py", "tools/hfxdev/native_control.py", "tools/hfxdev/openrazer.py"],
       "produced_evidence": ["integration-contract-result"],
       "resume_policy": "reuse-verified"
     },
@@ -157,7 +157,7 @@
       "timeout_seconds": 30,
       "dependencies": ["integration-contracts", "profile-contracts"],
       "isolation": "exclusive-process",
-      "cache_inputs": ["integrations/openrazer/*.json", "profiles/children/*.json", "schemas/imported-device-metadata.schema.json", "schemas/upstream-metadata-import.schema.json", "tools/hfxdev/openrazer.py"],
+      "cache_inputs": ["integrations/openrazer/*.json", "profiles/children/*.json", "schemas/imported-device-metadata.schema.json", "schemas/openrazer-native-*.schema.json", "schemas/upstream-metadata-import.schema.json", "tools/hfxdev/native_control.py", "tools/hfxdev/openrazer.py"],
       "produced_evidence": ["openrazer-metadata-result"],
       "resume_policy": "rerun"
     },

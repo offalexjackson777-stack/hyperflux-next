@@ -1,0 +1,140 @@
+{
+  "$schema": "../../schemas/openrazer-native-control-policy.schema.json",
+  "schema": "hyperflux-openrazer-native-control-policy-v1",
+  "upstream_id": "openrazer",
+  "source_commit": "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+  "scope": "transport-facing-exact-wireless-classes",
+  "report_size": 90,
+  "common_methods": [
+    "get_device_mode",
+    "get_device_name",
+    "get_firmware",
+    "get_matrix_dims",
+    "get_serial",
+    "has_matrix",
+    "set_device_mode"
+  ],
+  "kind_methods": {
+    "keyboard": [
+      "get_keyboard_layout"
+    ],
+    "mouse": []
+  },
+  "classifications": {
+    "read_only": [
+      "get_battery",
+      "get_brightness",
+      "get_device_mode",
+      "get_dpi_stages",
+      "get_dpi_xy",
+      "get_firmware",
+      "get_game_mode",
+      "get_idle_time",
+      "get_keyboard_layout",
+      "get_logo_brightness",
+      "get_low_battery_threshold",
+      "get_macro_effect",
+      "get_macro_mode",
+      "get_poll_rate",
+      "get_scroll_acceleration",
+      "get_scroll_brightness",
+      "get_scroll_mode",
+      "get_scroll_smart_reel",
+      "get_serial",
+      "is_charging"
+    ],
+    "reversible_with_readback": [
+      {"method": "set_brightness", "readback": "get_brightness"},
+      {"method": "set_device_mode", "readback": "get_device_mode"},
+      {"method": "set_dpi_stages", "readback": "get_dpi_stages"},
+      {"method": "set_dpi_xy", "readback": "get_dpi_xy"},
+      {"method": "set_game_mode", "readback": "get_game_mode"},
+      {"method": "set_idle_time", "readback": "get_idle_time"},
+      {"method": "set_logo_brightness", "readback": "get_logo_brightness"},
+      {"method": "set_low_battery_threshold", "readback": "get_low_battery_threshold"},
+      {"method": "set_macro_effect", "readback": "get_macro_effect"},
+      {"method": "set_macro_mode", "readback": "get_macro_mode"},
+      {"method": "set_poll_rate", "readback": "get_poll_rate"},
+      {"method": "set_scroll_acceleration", "readback": "get_scroll_acceleration"},
+      {"method": "set_scroll_brightness", "readback": "get_scroll_brightness"},
+      {"method": "set_scroll_mode", "readback": "get_scroll_mode"},
+      {"method": "set_scroll_smart_reel", "readback": "get_scroll_smart_reel"}
+    ],
+    "software_only": [
+      "add_macro",
+      "delete_macro",
+      "get_device_name",
+      "get_device_type_keyboard",
+      "get_device_type_mouse",
+      "get_macros",
+      "get_matrix_dims",
+      "has_matrix",
+      "max_dpi"
+    ],
+    "unsafe": [
+      "set_breath_dual_effect",
+      "set_breath_random_effect",
+      "set_breath_single_effect",
+      "set_custom_effect",
+      "set_key_row",
+      "set_logo_none",
+      "set_logo_spectrum",
+      "set_logo_static",
+      "set_logo_wave",
+      "set_none_effect",
+      "set_reactive_effect",
+      "set_ripple_effect",
+      "set_ripple_effect_random_colour",
+      "set_scroll_none",
+      "set_scroll_spectrum",
+      "set_scroll_static",
+      "set_scroll_wave",
+      "set_spectrum_effect",
+      "set_starlight_dual_effect",
+      "set_starlight_random_effect",
+      "set_starlight_single_effect",
+      "set_static_effect",
+      "set_wave_effect"
+    ]
+  },
+  "qualification_probes": [
+    {
+      "profile_id": "child.razer.basilisk-v3-pro-35k.00cd",
+      "methods": [
+        "get_firmware",
+        "get_serial",
+        "get_device_mode",
+        "get_battery",
+        "is_charging",
+        "get_dpi_xy",
+        "get_dpi_stages",
+        "get_poll_rate",
+        "get_idle_time",
+        "get_low_battery_threshold",
+        "get_scroll_mode",
+        "get_scroll_acceleration",
+        "get_scroll_smart_reel",
+        "get_brightness",
+        "get_logo_brightness",
+        "get_scroll_brightness"
+      ]
+    },
+    {
+      "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296",
+      "methods": [
+        "get_firmware",
+        "get_serial",
+        "get_device_mode",
+        "get_keyboard_layout",
+        "get_battery",
+        "is_charging",
+        "get_game_mode",
+        "get_macro_mode",
+        "get_macro_effect"
+      ]
+    }
+  ],
+  "privacy_overrides": {
+    "get_serial": "redacted-equality-only"
+  }
+}

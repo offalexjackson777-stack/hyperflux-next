@@ -1,0 +1,801 @@
+{
+  "$schema": "../../schemas/openrazer-native-method-inventory.schema.json",
+  "schema": "hyperflux-openrazer-native-method-inventory-v1",
+  "upstream": {
+    "id": "openrazer",
+    "repository": "https://github.com/openrazer/openrazer.git",
+    "version": "3.12.1-41-g6820f9d",
+    "commit": "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+    "license_expression": "GPL-2.0-or-later AND CC-BY-SA-4.0"
+  },
+  "policy_sha256": "0d2b4e21cc66e8bb85519eeaf9e47ef42b1885cf0b9c4ea3145782080e376d14",
+  "metadata_selection_sha256": "0bd97b07f4c8f9d2c99ac3a3622477704661d5069bd984a0ef8d4a72bf32998f",
+  "report_size": 90,
+  "source_files": [
+    {
+      "path": "daemon/openrazer_daemon/hardware/device_base.py",
+      "sha256": "7dcece1e1d9afb84d672f3995acd0cb5f24e8e908f212dba2601a50f4fab362d"
+    },
+    {
+      "path": "daemon/openrazer_daemon/hardware/keyboards.py",
+      "sha256": "a4d6b54f4e6da3a7ff65a727ccc5b047efb345d3170d0a2f8256b5f0a7c1d5e9"
+    },
+    {
+      "path": "daemon/openrazer_daemon/hardware/mouse.py",
+      "sha256": "c36180167f3f07f2299eb2653dd171ce6086a5cb0c30a898d9ee2be3dc3c4c03"
+    },
+    {
+      "path": "driver/razerchromacommon.c",
+      "sha256": "3aeaf974d3ecd5b6b3fd405dc22a4383dc1951e1f3c64824f1bdcf4caf852829"
+    },
+    {
+      "path": "driver/razerchromacommon.h",
+      "sha256": "b271c8aff5de897266f73a7fff054a57454f47055120daf697877db4740ac68b"
+    },
+    {
+      "path": "driver/razercommon.c",
+      "sha256": "984c3f95cba20710e84f3eed8a26b1e2eddf0f8b6e5fe8bca51a32166744509e"
+    },
+    {
+      "path": "driver/razercommon.h",
+      "sha256": "8145e8670a5230fac3a54392b63b901b2ea4c38cf8b82ee016e415d9e3d6de65"
+    },
+    {
+      "path": "driver/razerkbd_driver.c",
+      "sha256": "27d8d4558b0026a1df2a7568e3c52bcb4eac337fe0b1acbc0e2a95f0c47593df"
+    },
+    {
+      "path": "driver/razerkbd_driver.h",
+      "sha256": "068af601b5f1adc79eaebdcbcd728a5062cf258607229990e1ad9b999ebb1a80"
+    },
+    {
+      "path": "driver/razermouse_driver.c",
+      "sha256": "73ccf9e31d04db2d6a4b300376d3545d14c10ff7ae417bf4d11fa18e60ebb0ff"
+    },
+    {
+      "path": "driver/razermouse_driver.h",
+      "sha256": "7a34037673253eb5e75889333a3e63dd59924cc7a9b5c14b294a2ee40947b336"
+    }
+  ],
+  "devices": [
+    {
+      "profile_id": "child.razer.basilisk-v3-pro-35k.00cd",
+      "wireless_identity": {
+        "vendor_id": 5426,
+        "product_id": 205,
+        "model_name": "Razer Basilisk V3 Pro 35K (Wireless)",
+        "device_kind": "mouse",
+        "transport_variant": "wireless"
+      },
+      "direct_usb_reference": {
+        "vendor_id": 5426,
+        "product_id": 204,
+        "model_name": "Razer Basilisk V3 Pro 35K (Wired)",
+        "device_kind": "mouse",
+        "transport_variant": "wired",
+        "class_name": "RazerBasiliskV3Pro35KWired",
+        "source_path": "daemon/openrazer_daemon/hardware/mouse.py",
+        "source_line": 1703
+      },
+      "source": {
+        "path": "daemon/openrazer_daemon/hardware/mouse.py",
+        "class_name": "RazerBasiliskV3Pro35KWireless",
+        "sha256": "c36180167f3f07f2299eb2653dd171ce6086a5cb0c30a898d9ee2be3dc3c4c03"
+      },
+      "methods": [
+        {
+          "id": "get_battery",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_brightness",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_device_mode",
+          "origin": "common-daemon-api",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_device_name",
+          "origin": "common-daemon-api",
+          "classification": "software-only",
+          "transport": "software-only",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_device_type_mouse",
+          "origin": "advertised",
+          "classification": "software-only",
+          "transport": "software-only",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_dpi_stages",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_dpi_xy",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_firmware",
+          "origin": "common-daemon-api",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_idle_time",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_logo_brightness",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_low_battery_threshold",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_matrix_dims",
+          "origin": "common-daemon-api",
+          "classification": "software-only",
+          "transport": "software-only",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_poll_rate",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_scroll_acceleration",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_scroll_brightness",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_scroll_mode",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_scroll_smart_reel",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_serial",
+          "origin": "common-daemon-api",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "redacted-equality-only"
+        },
+        {
+          "id": "has_matrix",
+          "origin": "common-daemon-api",
+          "classification": "software-only",
+          "transport": "software-only",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "is_charging",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "max_dpi",
+          "origin": "advertised",
+          "classification": "software-only",
+          "transport": "software-only",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_brightness",
+          "origin": "advertised",
+          "classification": "reversible-with-readback",
+          "transport": "feature-report",
+          "readback": "get_brightness",
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_custom_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_device_mode",
+          "origin": "common-daemon-api",
+          "classification": "reversible-with-readback",
+          "transport": "feature-report",
+          "readback": "get_device_mode",
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_dpi_stages",
+          "origin": "advertised",
+          "classification": "reversible-with-readback",
+          "transport": "feature-report",
+          "readback": "get_dpi_stages",
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_dpi_xy",
+          "origin": "advertised",
+          "classification": "reversible-with-readback",
+          "transport": "feature-report",
+          "readback": "get_dpi_xy",
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_idle_time",
+          "origin": "advertised",
+          "classification": "reversible-with-readback",
+          "transport": "feature-report",
+          "readback": "get_idle_time",
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_key_row",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_logo_brightness",
+          "origin": "advertised",
+          "classification": "reversible-with-readback",
+          "transport": "feature-report",
+          "readback": "get_logo_brightness",
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_logo_none",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_logo_spectrum",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_logo_static",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_logo_wave",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_low_battery_threshold",
+          "origin": "advertised",
+          "classification": "reversible-with-readback",
+          "transport": "feature-report",
+          "readback": "get_low_battery_threshold",
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_none_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_poll_rate",
+          "origin": "advertised",
+          "classification": "reversible-with-readback",
+          "transport": "feature-report",
+          "readback": "get_poll_rate",
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_scroll_acceleration",
+          "origin": "advertised",
+          "classification": "reversible-with-readback",
+          "transport": "feature-report",
+          "readback": "get_scroll_acceleration",
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_scroll_brightness",
+          "origin": "advertised",
+          "classification": "reversible-with-readback",
+          "transport": "feature-report",
+          "readback": "get_scroll_brightness",
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_scroll_mode",
+          "origin": "advertised",
+          "classification": "reversible-with-readback",
+          "transport": "feature-report",
+          "readback": "get_scroll_mode",
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_scroll_none",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_scroll_smart_reel",
+          "origin": "advertised",
+          "classification": "reversible-with-readback",
+          "transport": "feature-report",
+          "readback": "get_scroll_smart_reel",
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_scroll_spectrum",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_scroll_static",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_scroll_wave",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_spectrum_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_static_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_wave_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        }
+      ],
+      "qualification_probes": [
+        "get_firmware",
+        "get_serial",
+        "get_device_mode",
+        "get_battery",
+        "is_charging",
+        "get_dpi_xy",
+        "get_dpi_stages",
+        "get_poll_rate",
+        "get_idle_time",
+        "get_low_battery_threshold",
+        "get_scroll_mode",
+        "get_scroll_acceleration",
+        "get_scroll_smart_reel",
+        "get_brightness",
+        "get_logo_brightness",
+        "get_scroll_brightness"
+      ]
+    },
+    {
+      "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296",
+      "wireless_identity": {
+        "vendor_id": 5426,
+        "product_id": 662,
+        "model_name": "Razer DeathStalker V2 Pro TKL (Wireless)",
+        "device_kind": "keyboard",
+        "transport_variant": "wireless"
+      },
+      "direct_usb_reference": {
+        "vendor_id": 5426,
+        "product_id": 664,
+        "model_name": "Razer DeathStalker V2 Pro TKL (Wired)",
+        "device_kind": "keyboard",
+        "transport_variant": "wired",
+        "class_name": "RazerDeathStalkerV2ProTKLWired",
+        "source_path": "daemon/openrazer_daemon/hardware/keyboards.py",
+        "source_line": 1451
+      },
+      "source": {
+        "path": "daemon/openrazer_daemon/hardware/keyboards.py",
+        "class_name": "RazerDeathStalkerV2ProTKLWireless",
+        "sha256": "a4d6b54f4e6da3a7ff65a727ccc5b047efb345d3170d0a2f8256b5f0a7c1d5e9"
+      },
+      "methods": [
+        {
+          "id": "add_macro",
+          "origin": "advertised",
+          "classification": "software-only",
+          "transport": "software-only",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "delete_macro",
+          "origin": "advertised",
+          "classification": "software-only",
+          "transport": "software-only",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_battery",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_device_mode",
+          "origin": "common-daemon-api",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_device_name",
+          "origin": "common-daemon-api",
+          "classification": "software-only",
+          "transport": "software-only",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_device_type_keyboard",
+          "origin": "advertised",
+          "classification": "software-only",
+          "transport": "software-only",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_firmware",
+          "origin": "common-daemon-api",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_game_mode",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_keyboard_layout",
+          "origin": "device-kind-mixin",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_macro_effect",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_macro_mode",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_macros",
+          "origin": "advertised",
+          "classification": "software-only",
+          "transport": "software-only",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_matrix_dims",
+          "origin": "common-daemon-api",
+          "classification": "software-only",
+          "transport": "software-only",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "get_serial",
+          "origin": "common-daemon-api",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "redacted-equality-only"
+        },
+        {
+          "id": "has_matrix",
+          "origin": "common-daemon-api",
+          "classification": "software-only",
+          "transport": "software-only",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "is_charging",
+          "origin": "advertised",
+          "classification": "read-only",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_breath_dual_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_breath_random_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_breath_single_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_custom_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_device_mode",
+          "origin": "common-daemon-api",
+          "classification": "reversible-with-readback",
+          "transport": "feature-report",
+          "readback": "get_device_mode",
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_game_mode",
+          "origin": "advertised",
+          "classification": "reversible-with-readback",
+          "transport": "feature-report",
+          "readback": "get_game_mode",
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_key_row",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_macro_effect",
+          "origin": "advertised",
+          "classification": "reversible-with-readback",
+          "transport": "feature-report",
+          "readback": "get_macro_effect",
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_macro_mode",
+          "origin": "advertised",
+          "classification": "reversible-with-readback",
+          "transport": "feature-report",
+          "readback": "get_macro_mode",
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_none_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_reactive_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_ripple_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_ripple_effect_random_colour",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_spectrum_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_starlight_dual_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_starlight_random_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_starlight_single_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_static_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        },
+        {
+          "id": "set_wave_effect",
+          "origin": "advertised",
+          "classification": "unsafe",
+          "transport": "feature-report",
+          "readback": null,
+          "privacy": "summary-only"
+        }
+      ],
+      "qualification_probes": [
+        "get_firmware",
+        "get_serial",
+        "get_device_mode",
+        "get_keyboard_layout",
+        "get_battery",
+        "is_charging",
+        "get_game_mode",
+        "get_macro_mode",
+        "get_macro_effect"
+      ]
+    }
+  ]
+}

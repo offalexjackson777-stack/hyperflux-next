@@ -414,7 +414,7 @@ Provides an isolated compatibility surface for legacy OpenRazer clients without 
 
 **Used by:** [Packaging and installation](#packaging), [Polychromatic adapter](#polychromatic-adapter)
 
-**Canonical sources:** `integrations/openrazer/import.json`, `integrations/openrazer/metadata.json`, `integrations/openrazer/compatibility.json`.
+**Canonical sources:** `integrations/openrazer/import.json`, `integrations/openrazer/metadata.json`, `integrations/openrazer/compatibility.json`, `integrations/openrazer/native-control-policy.json`, `integrations/openrazer/native-method-inventory.json`.
 
 **Generated projections:** `integrations/openrazer/README.md`, `sdk/python/hyperflux_sdk/generated/openrazer_metadata.py`.
 

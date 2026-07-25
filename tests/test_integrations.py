@@ -22,7 +22,13 @@ from hfxdev.integrations import (
 )
 from hfxdev.model import ModelError
 from hfxdev.model import load_json as model_load_json
+import hfxdev.native_control as native_control
 import hfxdev.openrazer as openrazer
+from hfxdev.native_control import (
+    load_native_control_policy,
+    load_native_method_inventory,
+    transformed_native_inventory,
+)
 from hfxdev.openrazer import (
     _ClassCatalog,
     load_import_selection,
@@ -111,6 +117,40 @@ class IntegrationCatalogTests(unittest.TestCase):
             self.assertTrue(device["presentation"]["has_matrix"])
             self.assertEqual(device["advertised_methods"], sorted(device["advertised_methods"]))
 
+    def test_openrazer_native_method_inventory_is_exact_and_fail_closed(self) -> None:
+        policy = load_native_control_policy(ROOT)
+        inventory = load_native_method_inventory(ROOT)
+        self.assertEqual(policy["report_size"], 90)
+        self.assertEqual(inventory["report_size"], 90)
+        self.assertEqual(inventory["upstream"]["commit"], policy["source_commit"])
+
+        devices = {value["profile_id"]: value for value in inventory["devices"]}
+        mouse = devices["child.razer.basilisk-v3-pro-35k.00cd"]
+        keyboard = devices["child.razer.deathstalker-v2-pro-tkl.0296"]
+        self.assertEqual(mouse["wireless_identity"]["product_id"], 0x00CD)
+        self.assertEqual(mouse["direct_usb_reference"]["product_id"], 0x00CC)
+        self.assertEqual(keyboard["wireless_identity"]["product_id"], 0x0296)
+        self.assertEqual(keyboard["direct_usb_reference"]["product_id"], 0x0298)
+
+        for device in devices.values():
+            methods = {value["id"]: value for value in device["methods"]}
+            self.assertEqual(methods["get_serial"]["classification"], "read-only")
+            self.assertEqual(methods["get_serial"]["privacy"], "redacted-equality-only")
+            for probe in device["qualification_probes"]:
+                self.assertEqual(methods[probe]["classification"], "read-only")
+            for method in methods.values():
+                if method["classification"] == "reversible-with-readback":
+                    self.assertIn(method["readback"], methods)
+
+    def test_openrazer_native_policy_rejects_an_unclassified_upstream_method(self) -> None:
+        metadata = deepcopy(load_imported_metadata(ROOT))
+        metadata["devices"][0]["advertised_methods"].append("new_unreviewed_method")
+        metadata["devices"][0]["advertised_methods"].sort()
+
+        with patch.object(native_control, "load_imported_metadata", return_value=metadata):
+            with self.assertRaisesRegex(ModelError, "unclassified: new_unreviewed_method"):
+                load_native_control_policy(ROOT)
+
     def test_openrazer_python_metadata_is_generated_from_the_pinned_import(self) -> None:
         metadata = load_imported_metadata(ROOT)
         rendered = python_openrazer_metadata(metadata)
@@ -124,6 +164,16 @@ class IntegrationCatalogTests(unittest.TestCase):
             self.skipTest("HFX_OPENRAZER_SOURCE_DIR is not configured")
         source = Path(source_value)
         self.assertEqual(transformed_metadata(ROOT, source), load_imported_metadata(ROOT))
+
+    def test_openrazer_native_inventory_matches_exact_checkout_when_available(self) -> None:
+        source_value = os.environ.get("HFX_OPENRAZER_SOURCE_DIR")
+        if source_value is None:
+            self.skipTest("HFX_OPENRAZER_SOURCE_DIR is not configured")
+        source = Path(source_value)
+        self.assertEqual(
+            transformed_native_inventory(ROOT, source),
+            load_native_method_inventory(ROOT),
+        )
 
     def test_openrazer_import_rejects_nested_metadata_drift(self) -> None:
         metadata = deepcopy(load_imported_metadata(ROOT))
