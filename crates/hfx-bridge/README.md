@@ -37,11 +37,11 @@ Before opening a pull request:
 
 - Regenerate 1 declared projection(s).
 - Run `rust-unit`, `simulator-contracts`.
-- Review direct consumers: Production daemon, Device qualification console.
+- Review direct consumers: Production daemon, Device qualification console, Operations CLI.
 
 ## Relationships
 
 - **Depends on:** [Core policy engine](../hfx-core/README.md), [Versioned bridge protocol](../../protocol/README.md)
-- **Used by:** [Production daemon](../hfx-daemon/README.md), [Device qualification console](../../apps/device-qualification/README.md)
+- **Used by:** [Production daemon](../hfx-daemon/README.md), [Device qualification console](../../apps/device-qualification/README.md), [Operations CLI](../hfx-ops/README.md)
 
 See the [Repository Atlas](../../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

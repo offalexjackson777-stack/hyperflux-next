@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/native-route-observation-v1.json",
+  "title": "Privacy-safe receiver native-route observation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "observed_at", "source", "receiver_generation", "vendor_id", "product_id", "device_kind", "route_kind", "route_state", "access", "protocol_family", "report_bytes", "privacy"],
+  "properties": {
+    "$schema": {"const": "https://hyperflux.dev/schemas/native-route-observation-v1.json"},
+    "schema": {"const": "hyperflux-native-route-observation-v1"},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "source": {"const": "bridge-native-route-v7"},
+    "receiver_generation": {"type": "integer", "minimum": 1},
+    "vendor_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+    "product_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+    "device_kind": {"enum": ["mouse", "keyboard"]},
+    "route_kind": {"const": "hyperflux-wireless"},
+    "route_state": {"enum": ["available", "stale", "unavailable", "unknown"]},
+    "access": {"enum": ["candidate", "qualified", "backend-required"]},
+    "protocol_family": {"type": "string", "minLength": 1, "maxLength": 64},
+    "report_bytes": {"type": "integer", "minimum": 1, "maximum": 4096},
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["serials_included", "route_tokens_included", "host_paths_included", "raw_reports_included"],
+      "properties": {
+        "serials_included": {"const": false},
+        "route_tokens_included": {"const": false},
+        "host_paths_included": {"const": false},
+        "raw_reports_included": {"const": false}
+      }
+    }
+  }
+}

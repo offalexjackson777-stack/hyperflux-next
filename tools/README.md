@@ -32,15 +32,18 @@ Provides the single developer CLI, canonical loaders, deterministic generators, 
 - [`tools/hfxdev/public_readiness.py`](hfxdev/public_readiness.py)
 - [`tools/hfxdev/local_companion.py`](hfxdev/local_companion.py)
 - [`tools/hfxdev/licensing.py`](hfxdev/licensing.py)
+- [`tools/hfxdev/native_onboarding.py`](hfxdev/native_onboarding.py)
+- [`tools/hfxdev/private_artifact.py`](hfxdev/private_artifact.py)
+- [`tools/hfxdev/openrazer_native_route.py`](hfxdev/openrazer_native_route.py)
 
 ## Verification
 
-Run `python-unit` `generated-freshness` after changing this area.
+Run `python-unit` `native-onboarding-contracts` `generated-freshness` after changing this area.
 
 Before opening a pull request:
 
 - Regenerate 1 declared projection(s).
-- Run `python-unit`, `generated-freshness`.
+- Run `python-unit`, `native-onboarding-contracts`, `generated-freshness`.
 - Review direct consumers: Documentation system, Contract tests, Verification graph.
 
 ## Relationships

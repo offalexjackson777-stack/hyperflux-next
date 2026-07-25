@@ -28,15 +28,17 @@ Holds language-specific, cross-language, fixture, lifecycle, repository-navigati
 - [`tests/test_foundation.py`](test_foundation.py)
 - [`tests/test_repository_experience.py`](test_repository_experience.py)
 - [`tests/test_testgraph.py`](test_testgraph.py)
+- [`tests/test_native_onboarding.py`](test_native_onboarding.py)
+- [`tests/fixtures/native-onboarding/viper-ultimate-007b-observation.json`](fixtures/native-onboarding/viper-ultimate-007b-observation.json)
 
 ## Verification
 
-Run `python-unit` `cpp-sdk-contracts` `rust-unit` after changing this area.
+Run `python-unit` `native-onboarding-contracts` `cpp-sdk-contracts` `rust-unit` after changing this area.
 
 Before opening a pull request:
 
 - Regenerate 2 declared projection(s).
-- Run `python-unit`, `cpp-sdk-contracts`, `rust-unit`.
+- Run `python-unit`, `native-onboarding-contracts`, `cpp-sdk-contracts`, `rust-unit`.
 - Review direct consumers: Verification graph.
 
 ## Relationships

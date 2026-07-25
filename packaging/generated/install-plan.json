@@ -504,6 +504,27 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/native-device-onboarding-draft.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/native-device-onboarding-draft.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/native-device-promotion-assessment.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/native-device-promotion-assessment.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/native-route-observation.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/native-route-observation.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/native-transport-parity-evidence.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/native-transport-parity-evidence.schema.json",
       "mode": "0644",
@@ -1108,6 +1129,13 @@
       "component": "documentation",
       "source": "docs/architecture/kernel.md",
       "destination": "/usr/share/doc/hyperflux-next/architecture/kernel.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/architecture/native-device-onboarding.md",
+      "destination": "/usr/share/doc/hyperflux-next/architecture/native-device-onboarding.md",
       "mode": "0644",
       "preserve": false
     },

@@ -37,9 +37,14 @@ from hfxdev.native_probe import (
 )
 from hfxdev.openrazer import (
     _ClassCatalog,
+    effective_event_regex,
     load_import_selection,
     load_imported_metadata,
     transformed_metadata,
+)
+from hfxdev.openrazer_native_route import (
+    load_native_route_catalog,
+    transformed_native_route_catalog,
 )
 from hfxdev.generators.integrations import python_openrazer_metadata
 from hfxdev.profiles import load_profile_inputs
@@ -217,6 +222,30 @@ class IntegrationCatalogTests(unittest.TestCase):
             load_native_probe_catalog(ROOT),
         )
 
+    def test_openrazer_native_route_catalog_is_fully_authority_bound(self) -> None:
+        routes = load_native_route_catalog(ROOT)
+        metadata = load_imported_metadata(ROOT)
+        probes = load_native_probe_catalog(ROOT)
+        self.assertEqual(
+            [route["profile_id"] for route in routes["routes"]],
+            [device["profile_id"] for device in metadata["devices"]],
+        )
+        probes_by_profile = {
+            device["profile_id"]: device for device in probes["devices"]
+        }
+        for route in routes["routes"]:
+            direct = probes_by_profile[route["profile_id"]]["direct_usb_reference"]
+            self.assertEqual(route["direct_data_product_ids"], [direct["product_id"]])
+
+    def test_openrazer_native_route_catalog_matches_exact_checkout_when_available(self) -> None:
+        source_value = os.environ.get("HFX_OPENRAZER_SOURCE_DIR")
+        if source_value is None:
+            self.skipTest("HFX_OPENRAZER_SOURCE_DIR is not configured")
+        self.assertEqual(
+            transformed_native_route_catalog(ROOT, Path(source_value)),
+            load_native_route_catalog(ROOT),
+        )
+
     def test_openrazer_native_probe_policy_rejects_unbound_qualification_probe(self) -> None:
         inventory = deepcopy(load_native_method_inventory(ROOT))
         inventory["devices"][0]["qualification_probes"].append("unbound_probe")
@@ -288,6 +317,23 @@ class IntegrationCatalogTests(unittest.TestCase):
             values,
             {"METHODS": ["child"], "USB_PID": 2, "USB_VID": 1},
         )
+
+    def test_openrazer_event_matcher_resolves_inheritance_without_execution(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "devices.py"
+            path.write_text(
+                "\n".join(
+                    (
+                        "import re",
+                        "class Root:",
+                        "    EVENT_FILE_REGEX = re.compile(r\"root-event\")",
+                        "class Child(Root):",
+                        "    pass",
+                    )
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(effective_event_regex(path, "Child"), "root-event")
 
 
 if __name__ == "__main__":

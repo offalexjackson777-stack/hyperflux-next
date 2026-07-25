@@ -143,3 +143,31 @@ fn native_route_state(endpoint: &EndpointLifecycle) -> RouteState {
         RouteState::Unknown => RouteState::Unknown,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hfx_domain::{CapabilityId, ProductId};
+    use hfx_profiles::{RuntimeCapability, RuntimeProfileCatalog};
+
+    #[test]
+    fn native_access_is_capability_driven_not_pid_driven() {
+        let catalog = RuntimeProfileCatalog::load().expect("generated profiles are valid");
+        let mut profile = catalog
+            .child(ProductId::try_from(0x00cd_u16).expect("fixture PID is valid"))
+            .expect("the current mouse profile exists")
+            .clone();
+        assert!(!native_exchange_is_qualified(&profile));
+
+        profile.product_id = Some(ProductId::try_from(0x007b_u16).expect("fixture PID is valid"));
+        profile.capabilities.push(RuntimeCapability {
+            id: CapabilityId::try_from(NATIVE_EXCHANGE_CAPABILITY_ID)
+                .expect("native capability ID is valid"),
+            support_level: SupportLevel::ProductionQualified,
+            writable: true,
+        });
+
+        assert!(native_exchange_is_qualified(&profile));
+        assert_eq!(profile.product_id.map(ProductId::get), Some(0x007b));
+    }
+}

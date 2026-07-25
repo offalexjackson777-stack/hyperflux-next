@@ -28,10 +28,10 @@
   },
   "qualification_console_access": "loopback-only",
   "repository": {
-    "atlas_subsystems": 32,
+    "atlas_subsystems": 33,
     "label": "Repository map",
     "state": "ready",
-    "summary": "The Repository Atlas owns 32 subsystem records and their generated projections."
+    "summary": "The Repository Atlas owns 33 subsystem records and their generated projections."
   },
   "schema": "hyperflux-public-readiness-v1",
   "software": {

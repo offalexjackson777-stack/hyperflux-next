@@ -551,6 +551,58 @@ def _catalog_route(class_name: str, docstring: str) -> str:
     return "direct-usb"
 
 
+def effective_event_regex(source: Path, class_name: str) -> str:
+    """Resolve one OpenRazer class's inherited event matcher without execution."""
+
+    try:
+        tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
+    except (OSError, SyntaxError) as error:
+        raise ModelError(f"cannot parse OpenRazer event matcher source: {error}") from error
+    classes = {
+        node.name: node
+        for node in tree.body
+        if isinstance(node, ast.ClassDef)
+    }
+
+    def resolve(name: str, visited: set[str]) -> str | None:
+        if name in visited:
+            raise ModelError("OpenRazer event matcher inheritance contains a cycle")
+        node = classes.get(name)
+        if node is None:
+            return None
+        visited = {*visited, name}
+        for statement in node.body:
+            if not isinstance(statement, ast.Assign) or not any(
+                isinstance(target, ast.Name) and target.id == "EVENT_FILE_REGEX"
+                for target in statement.targets
+            ):
+                continue
+            value = statement.value
+            if (
+                isinstance(value, ast.Call)
+                and isinstance(value.func, ast.Attribute)
+                and isinstance(value.func.value, ast.Name)
+                and value.func.value.id == "re"
+                and value.func.attr == "compile"
+                and len(value.args) == 1
+                and isinstance(value.args[0], ast.Constant)
+                and isinstance(value.args[0].value, str)
+            ):
+                return value.args[0].value
+            raise ModelError(f"OpenRazer class {name} has an unsupported event matcher")
+        for base in node.bases:
+            if isinstance(base, ast.Name):
+                inherited = resolve(base.id, visited)
+                if inherited is not None:
+                    return inherited
+        return None
+
+    result = resolve(class_name, set())
+    if result is None:
+        raise ModelError(f"OpenRazer class {class_name} has no effective event matcher")
+    return result
+
+
 def extract_openrazer_catalog(
     source_root: Path,
     *,

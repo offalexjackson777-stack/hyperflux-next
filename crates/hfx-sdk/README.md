@@ -37,11 +37,11 @@ Before opening a pull request:
 
 - Regenerate 1 declared projection(s).
 - Run `rust-unit`, `protocol-contracts`.
-- No direct subsystem consumer is declared; verify repository-facing outputs.
+- Review direct consumers: Operations CLI.
 
 ## Relationships
 
 - **Depends on:** [Rust workspace](../README.md), [Versioned bridge protocol](../../protocol/README.md), [Composable hardware profiles](../../profiles/README.md)
-- **Used by:** None
+- **Used by:** [Operations CLI](../hfx-ops/README.md)
 
 See the [Repository Atlas](../../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

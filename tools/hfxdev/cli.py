@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import UTC, datetime
 import os
 from pathlib import Path
 import sys
@@ -14,6 +15,12 @@ from .governance import load_github_governance
 from .migration import capture_inventory, run_shadow_comparison, summary
 from .model import ModelError
 from .native_control import write_native_method_inventory
+from .native_onboarding import (
+    build_draft_from_file,
+    build_promotion_from_files,
+    write_onboarding_draft,
+    write_promotion_assessment,
+)
 from .native_parity import build_offline_parity_evidence, write_parity_evidence
 from .native_probe import write_native_probe_catalog
 from .distribution_package import build_distribution_package
@@ -23,7 +30,10 @@ from .github_sync import plan as plan_github
 from .github_sync import verify as verify_github
 from .knowledge import import_upstream_catalogs
 from .openrazer import write_imported_metadata
-from .openrazer_native_route import prepare_openrazer_native_source
+from .openrazer_native_route import (
+    prepare_openrazer_native_source,
+    write_native_route_catalog,
+)
 from .openrgb_native_route import prepare_openrgb_native_source
 from .package_pipeline import build_artifacts, stage_rootfs
 from .testgraph import format_plan, load_test_catalog
@@ -131,6 +141,19 @@ def _parser() -> argparse.ArgumentParser:
     )
     native_openrgb.add_argument("--source", required=True, type=Path)
     native_openrgb.add_argument("--output", required=True, type=Path)
+    native_draft = native_commands.add_parser(
+        "draft-profile",
+        help="create a non-writable profile draft from a privacy-safe route observation",
+    )
+    native_draft.add_argument("--observation", required=True, type=Path)
+    native_draft.add_argument("--output-dir", type=Path)
+    native_promote = native_commands.add_parser(
+        "assess-promotion",
+        help="assess whether exact parity evidence permits a profile-only promotion",
+    )
+    native_promote.add_argument("--draft", required=True, type=Path)
+    native_promote.add_argument("--parity", required=True, type=Path)
+    native_promote.add_argument("--output-dir", type=Path)
 
     upstream = commands.add_parser("upstream", help="manage immutable upstream checkouts")
     upstream_commands = upstream.add_subparsers(dest="upstream_command", required=True)
@@ -296,6 +319,13 @@ def main(arguments: list[str] | None = None) -> int:
                 "Imported OpenRazer native probes: "
                 f"{probe_destination.relative_to(root)}"
             )
+            route_destination = write_native_route_catalog(
+                root, args.source.resolve()
+            )
+            print(
+                "Imported OpenRazer native routes: "
+                f"{route_destination.relative_to(root)}"
+            )
             return 0
         if args.command == "knowledge":
             paths = import_upstream_catalogs(
@@ -339,6 +369,42 @@ def main(arguments: list[str] | None = None) -> int:
                 )
                 print(f"Prepared OpenRGB source: {prepared.root}")
                 print(f"Source binding: {prepared.result}")
+                return 0
+            timestamp = (
+                datetime.now(UTC)
+                .replace(microsecond=0)
+                .isoformat()
+                .replace("+00:00", "Z")
+            )
+            if args.native_command == "draft-profile":
+                draft = build_draft_from_file(
+                    root,
+                    args.observation,
+                    created_at=timestamp,
+                )
+                destination = write_onboarding_draft(
+                    draft,
+                    cache_root=args.output_dir,
+                )
+                print(f"Native onboarding: {draft['assessment']['state']}")
+                print(f"Candidate profile: {draft['candidate_profile']['profile_id']}")
+                print("Write authority: not granted")
+                print(f"Privacy-safe draft: {destination}")
+                return 0
+            if args.native_command == "assess-promotion":
+                assessment = build_promotion_from_files(
+                    root,
+                    args.draft,
+                    args.parity,
+                    created_at=timestamp,
+                )
+                destination = write_promotion_assessment(
+                    assessment,
+                    cache_root=args.output_dir,
+                )
+                print(f"Native promotion: {assessment['state']}")
+                print("Write authority: not granted automatically")
+                print(f"Privacy-safe assessment: {destination}")
                 return 0
         if args.command == "upstream":
             prepared = prepare_upstreams(root, args.output)

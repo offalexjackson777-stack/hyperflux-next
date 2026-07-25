@@ -13,6 +13,7 @@
     {"id": "lighting.software-effect-frames", "summary": "Carry streamed Direct-mode frames produced by an application effect engine.", "access": "write", "owner": "bridge", "resource": "lighting", "profile_kinds": ["child"]},
     {"id": "lighting.stable-state-restore", "summary": "Restore a retained stable Static or Off state after a trusted lifecycle event.", "access": "write", "owner": "bridge", "resource": "lighting", "profile_kinds": ["receiver"]},
     {"id": "lighting.static", "summary": "Retain and deliver one qualified static RGB state.", "access": "write", "owner": "bridge", "resource": "lighting", "profile_kinds": ["child"]},
+    {"id": "native.feature-report-exchange", "summary": "Carry one opaque upstream-owned feature report over a qualified receiver child route.", "access": "write", "owner": "bridge", "resource": "native-control", "profile_kinds": ["child"]},
     {"id": "presence.passive-evidence", "summary": "Derive availability dimensions from passive generation-bound evidence.", "access": "read", "owner": "bridge", "resource": null, "profile_kinds": ["child"]},
     {"id": "receiver.exclusive-writer-session", "summary": "Permit one generation-bound structured writer session.", "access": "write", "owner": "kernel", "resource": null, "profile_kinds": ["receiver"]},
     {"id": "receiver.generation", "summary": "Create a new identity and session generation after receiver discovery.", "access": "read", "owner": "kernel", "resource": null, "profile_kinds": ["receiver"]},

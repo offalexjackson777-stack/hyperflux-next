@@ -3,10 +3,11 @@
 use hfx_ops::{
     AssessmentState, DriverState, QualificationConfigurationOutcome, QualificationServerConfig,
     RealSystemProbe, RunnerCapabilities, SystemController, SystemProbe, assess_system,
-    build_qualification_view, build_support_bundle, enable_qualification_configuration,
+    build_native_route_observations, build_qualification_view, build_support_bundle,
+    default_native_observation_directory, enable_qualification_configuration,
     preview_support_bundle, qualification_generated_at, render_doctor_text, render_status_text,
     restore_qualification_configuration, serve_qualification_console, suggested_support_name,
-    write_support_bundle,
+    write_native_route_observations, write_support_bundle,
 };
 use hfx_profiles::RuntimeProfileCatalog;
 use hfx_runtime::BRIDGE_CONFIGURATION_FILE_PATH;
@@ -14,7 +15,7 @@ use std::env;
 use std::path::PathBuf;
 
 fn usage() -> &'static str {
-    "Usage:\n  hyperfluxctl status [--json]\n  hyperfluxctl doctor [--explain] [--json] [--repair]\n  hyperfluxctl support-bundle --preview\n  hyperfluxctl support-bundle --output PATH\n  hyperfluxctl qualification view --json\n  hyperfluxctl qualification prepare\n  hyperfluxctl qualification restore\n  hyperfluxctl qualification serve [--assets PATH]\n"
+    "Usage:\n  hyperfluxctl status [--json]\n  hyperfluxctl doctor [--explain] [--json] [--repair]\n  hyperfluxctl support-bundle --preview\n  hyperfluxctl support-bundle --output PATH\n  hyperfluxctl qualification view --json\n  hyperfluxctl qualification prepare\n  hyperfluxctl qualification restore\n  hyperfluxctl qualification serve [--assets PATH]\n  hyperfluxctl native observe [--output-dir PATH]\n"
 }
 
 fn json<T: serde::Serialize>(value: &T) -> Result<String, String> {
@@ -138,6 +139,31 @@ fn qualification(arguments: &[String]) -> Result<i32, String> {
     Ok(0)
 }
 
+fn native(arguments: &[String]) -> Result<i32, String> {
+    let output = match arguments {
+        [observe] if observe == "observe" => default_native_observation_directory()
+            .map_err(|error| format!("native route observation failed: {error}"))?,
+        [observe, option, path] if observe == "observe" && option == "--output-dir" => {
+            PathBuf::from(path)
+        }
+        _ => return Err(usage().to_owned()),
+    };
+    let probe = RealSystemProbe::default();
+    let inventory = probe
+        .native_route_inventory()
+        .map_err(|error| format!("native route observation failed: {error}"))?;
+    let observations = build_native_route_observations(&inventory, &qualification_generated_at())
+        .map_err(|error| format!("native route observation failed: {error}"))?;
+    let paths = write_native_route_observations(&output, &observations)
+        .map_err(|error| format!("native route observation failed: {error}"))?;
+    println!("Native receiver routes observed: {}", paths.len());
+    println!("No device command or hardware write was executed.");
+    for path in paths {
+        println!("Privacy-safe observation: {}", path.display());
+    }
+    Ok(0)
+}
+
 fn prepare_qualification_configuration() -> Result<i32, String> {
     require_root_for_qualification_configuration()?;
     let probe = RealSystemProbe::default();
@@ -217,6 +243,7 @@ fn run() -> Result<i32, String> {
         "status" => status(rest),
         "support-bundle" => support_bundle(rest),
         "qualification" => qualification(rest),
+        "native" => native(rest),
         "--help" | "-h" | "help" => {
             print!("{}", usage());
             Ok(0)

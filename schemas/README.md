@@ -35,6 +35,9 @@ Defines strict machine-readable shapes for every shared repository fact and gene
 - [`schemas/lifecycle-policy-catalog.schema.json`](lifecycle-policy-catalog.schema.json)
 - [`schemas/kernel-uapi-registry.schema.json`](kernel-uapi-registry.schema.json)
 - [`schemas/kernel-uapi-native-exchange.schema.json`](kernel-uapi-native-exchange.schema.json)
+- [`schemas/native-route-observation.schema.json`](native-route-observation.schema.json)
+- [`schemas/native-device-onboarding-draft.schema.json`](native-device-onboarding-draft.schema.json)
+- [`schemas/native-device-promotion-assessment.schema.json`](native-device-promotion-assessment.schema.json)
 
 ## Verification
 

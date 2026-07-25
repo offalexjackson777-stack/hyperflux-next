@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -13,11 +14,21 @@ import uuid
 from typing import Any
 
 from .integrations import upstream_index
+from .native_probe import (
+    load_native_probe_catalog,
+    transformed_native_probe_catalog,
+)
 from .model import ModelError, load_json, require_unique, sha256_file
+from .openrazer import (
+    effective_event_regex,
+    load_imported_metadata,
+    transformed_metadata,
+)
 
 
 TRANSFORM_SCHEMA = "hyperflux-openrazer-native-transform-v1"
 DEPLOYMENT_SCHEMA = "hyperflux-openrazer-native-deployment-v1"
+CATALOG_SCHEMA = "hyperflux-openrazer-native-route-catalog-v1"
 TRANSFORM_KEYS = {"$schema", "schema", "upstream", "patch", "files"}
 DEPLOYMENT_KEYS = {"$schema", "schema", "relay", "driver"}
 RELAY_KEYS = {"executable_path", "service_unit", "uhid_device", "restart_seconds"}
@@ -25,6 +36,37 @@ DRIVER_KEYS = {"dkms_name", "dkms_version", "source_directory", "modules"}
 UPSTREAM_KEYS = {"id", "repository", "commit"}
 PATCH_KEYS = {"path", "sha256"}
 FILE_KEYS = {"path", "source_sha256", "transformed_sha256"}
+CATALOG_KEYS = {
+    "$schema",
+    "schema",
+    "upstream_commit",
+    "metadata_sha256",
+    "transport",
+    "routes",
+}
+CATALOG_TRANSPORT_KEYS = {
+    "protocol_family",
+    "report_bytes",
+    "phys_prefix",
+    "descriptor_hex",
+    "descriptor_sha256",
+}
+CATALOG_ROUTE_KEYS = {
+    "profile_id",
+    "vendor_id",
+    "wireless_product_id",
+    "model_name",
+    "device_kind",
+    "driver_family",
+    "source",
+    "direct_data_product_ids",
+    "event_file_regex",
+}
+CATALOG_SOURCE_KEYS = {"path", "class_name", "sha256"}
+NATIVE_DESCRIPTOR_HEX = "0600ff0901a101150026ff007508955ab102c0"
+NATIVE_PROTOCOL_FAMILY = "razer-feature-report-v1"
+NATIVE_REPORT_BYTES = 90
+NATIVE_PHYS_PREFIX = "hyperflux-next/native/v1/"
 
 
 @dataclass(frozen=True)
@@ -56,6 +98,180 @@ class OpenRazerNativeDeployment:
     source_sha256: str
     relay: OpenRazerRelayDeployment
     driver: OpenRazerDriverDeployment
+
+
+def _json_payload(value: dict[str, Any]) -> bytes:
+    return (json.dumps(value, indent=2, ensure_ascii=True) + "\n").encode()
+
+
+def _native_transport() -> dict[str, Any]:
+    descriptor = bytes.fromhex(NATIVE_DESCRIPTOR_HEX)
+    return {
+        "protocol_family": NATIVE_PROTOCOL_FAMILY,
+        "report_bytes": NATIVE_REPORT_BYTES,
+        "phys_prefix": NATIVE_PHYS_PREFIX,
+        "descriptor_hex": NATIVE_DESCRIPTOR_HEX,
+        "descriptor_sha256": hashlib.sha256(descriptor).hexdigest(),
+    }
+
+
+def _route_catalog_from_authorities(
+    metadata: dict[str, Any],
+    probes: dict[str, Any],
+    source_root: Path,
+) -> dict[str, Any]:
+    if metadata["upstream"]["commit"] != probes["upstream"]["commit"]:
+        raise ModelError("OpenRazer native route authorities use different commits")
+    if probes["report_size"] != NATIVE_REPORT_BYTES:
+        raise ModelError("OpenRazer native route report size differs from the transport")
+    probes_by_profile = {
+        device["profile_id"]: device for device in probes["devices"]
+    }
+    routes: list[dict[str, Any]] = []
+    for device in metadata["devices"]:
+        profile_id = device["profile_id"]
+        probe = probes_by_profile.get(profile_id)
+        if probe is None:
+            raise ModelError(f"OpenRazer native route {profile_id} has no probe authority")
+        identity = device["identity"]
+        direct = probe["direct_usb_reference"]
+        if (
+            probe["wireless_identity"] != identity
+            or direct["vendor_id"] != identity["vendor_id"]
+            or direct["device_kind"] != identity["device_kind"]
+            or direct["transport_variant"] != "wired"
+            or direct["product_id"] == identity["product_id"]
+        ):
+            raise ModelError(f"OpenRazer native route {profile_id} has invalid direct precedence")
+        source = device["source"]
+        matcher = effective_event_regex(
+            source_root / source["path"], source["class_name"]
+        )
+        try:
+            re.compile(matcher)
+        except re.error as error:
+            raise ModelError(
+                f"OpenRazer native route {profile_id} has an invalid event matcher: {error}"
+            ) from error
+        routes.append(
+            {
+                "profile_id": profile_id,
+                "vendor_id": identity["vendor_id"],
+                "wireless_product_id": identity["product_id"],
+                "model_name": identity["model_name"],
+                "device_kind": identity["device_kind"],
+                "driver_family": (
+                    "razermouse" if identity["device_kind"] == "mouse" else "razerkbd"
+                ),
+                "source": source,
+                "direct_data_product_ids": [direct["product_id"]],
+                "event_file_regex": matcher,
+            }
+        )
+    routes.sort(key=lambda route: route["profile_id"])
+    if set(probes_by_profile) != {route["profile_id"] for route in routes}:
+        raise ModelError("OpenRazer native route and probe profile sets differ")
+    return {
+        "$schema": "../../../schemas/openrazer-native-route-catalog.schema.json",
+        "schema": CATALOG_SCHEMA,
+        "upstream_commit": metadata["upstream"]["commit"],
+        "metadata_sha256": hashlib.sha256(_json_payload(metadata)).hexdigest(),
+        "transport": _native_transport(),
+        "routes": routes,
+    }
+
+
+def transformed_native_route_catalog(root: Path, source_root: Path) -> dict[str, Any]:
+    """Build the relay catalog from one exact upstream checkout and repository data."""
+
+    source_root = source_root.resolve()
+    return _route_catalog_from_authorities(
+        transformed_metadata(root, source_root),
+        transformed_native_probe_catalog(root, source_root),
+        source_root,
+    )
+
+
+def load_native_route_catalog(root: Path) -> dict[str, Any]:
+    """Load and cross-check the committed source-bound relay catalog."""
+
+    path = root / "integrations" / "openrazer" / "native-route" / "catalog.json"
+    value = load_json(path)
+    _exact_keys(value, CATALOG_KEYS, "OpenRazer native route catalog")
+    if value["$schema"] != "../../../schemas/openrazer-native-route-catalog.schema.json":
+        raise ModelError("OpenRazer native route catalog schema reference is not canonical")
+    if value["schema"] != CATALOG_SCHEMA:
+        raise ModelError("unsupported OpenRazer native route catalog schema")
+    metadata = load_imported_metadata(root)
+    probes = load_native_probe_catalog(root)
+    if value["upstream_commit"] != metadata["upstream"]["commit"]:
+        raise ModelError("OpenRazer native route catalog upstream binding drifted")
+    if value["metadata_sha256"] != sha256_file(
+        root / "integrations" / "openrazer" / "metadata.json"
+    ):
+        raise ModelError("OpenRazer native route catalog metadata binding drifted")
+    transport = value["transport"]
+    if not isinstance(transport, dict):
+        raise ModelError("OpenRazer native route catalog transport must be an object")
+    _exact_keys(transport, CATALOG_TRANSPORT_KEYS, "OpenRazer native route transport")
+    if transport != _native_transport():
+        raise ModelError("OpenRazer native route transport differs from its canonical profile")
+    routes = value["routes"]
+    if not isinstance(routes, list) or not 1 <= len(routes) <= 1024:
+        raise ModelError("OpenRazer native route catalog is empty or oversized")
+    metadata_by_profile = {
+        device["profile_id"]: device for device in metadata["devices"]
+    }
+    probes_by_profile = {
+        device["profile_id"]: device for device in probes["devices"]
+    }
+    profile_ids: list[str] = []
+    for index, route in enumerate(routes):
+        label = f"OpenRazer native route {index}"
+        if not isinstance(route, dict):
+            raise ModelError(f"{label}: expected an object")
+        _exact_keys(route, CATALOG_ROUTE_KEYS, label)
+        profile_id = route["profile_id"]
+        if not isinstance(profile_id, str) or not profile_id:
+            raise ModelError(f"{label}: invalid profile id")
+        profile_ids.append(profile_id)
+        device = metadata_by_profile.get(profile_id)
+        probe = probes_by_profile.get(profile_id)
+        if device is None or probe is None:
+            raise ModelError(f"{label}: missing metadata or probe authority")
+        identity = device["identity"]
+        if route["source"] != device["source"] or any(
+            route[field] != identity[field]
+            for field in ("vendor_id", "model_name", "device_kind")
+        ) or route["wireless_product_id"] != identity["product_id"]:
+            raise ModelError(f"{label}: source or identity binding drifted")
+        if not isinstance(route["source"], dict):
+            raise ModelError(f"{label}: source must be an object")
+        _exact_keys(route["source"], CATALOG_SOURCE_KEYS, f"{label} source")
+        expected_family = "razermouse" if identity["device_kind"] == "mouse" else "razerkbd"
+        if route["driver_family"] != expected_family:
+            raise ModelError(f"{label}: driver family drifted")
+        direct_product = probe["direct_usb_reference"]["product_id"]
+        if route["direct_data_product_ids"] != [direct_product]:
+            raise ModelError(f"{label}: direct precedence binding drifted")
+        matcher = route["event_file_regex"]
+        if not isinstance(matcher, str) or not matcher or len(matcher) > 256:
+            raise ModelError(f"{label}: event matcher is invalid")
+        try:
+            re.compile(matcher)
+        except re.error as error:
+            raise ModelError(f"{label}: event matcher is invalid: {error}") from error
+    require_unique(profile_ids, "OpenRazer native route profile id")
+    if profile_ids != sorted(profile_ids) or set(profile_ids) != set(metadata_by_profile):
+        raise ModelError("OpenRazer native route catalog profile coverage drifted")
+    return value
+
+
+def write_native_route_catalog(root: Path, source_root: Path) -> Path:
+    destination = root / "integrations" / "openrazer" / "native-route" / "catalog.json"
+    value = transformed_native_route_catalog(root, source_root)
+    destination.write_bytes(_json_payload(value))
+    return destination
 
 
 def _exact_keys(value: dict[str, Any], expected: set[str], label: str) -> None:

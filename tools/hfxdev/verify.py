@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ast
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -38,13 +37,16 @@ from .native_probe import (
     transformed_native_probe_catalog,
 )
 from .openrazer import (
+    effective_event_regex,
     extract_openrazer_catalog,
     load_imported_metadata,
     transformed_metadata,
 )
 from .openrazer_native_route import (
     load_native_deployment,
+    load_native_route_catalog,
     prepare_openrazer_native_source,
+    transformed_native_route_catalog,
 )
 from .openrgb import extract_openrgb_catalog
 from .openrgb_native_route import prepare_openrgb_native_source
@@ -668,9 +670,12 @@ def _run_openrazer_native_route_contracts(root: Path, _node: TestNode) -> None:
     if (prepared.root / ".git").exists():
         raise ModelError("OpenRazer native source output copied upstream Git metadata")
 
-    route_catalog = load_json(
-        root / "integrations" / "openrazer" / "native-route" / "catalog.json"
-    )
+    route_catalog = load_native_route_catalog(root)
+    if route_catalog != transformed_native_route_catalog(root, source):
+        raise ModelError(
+            "committed OpenRazer native route catalog is stale; "
+            "rerun ./hfx import openrazer"
+        )
     metadata = load_imported_metadata(root)
     probes = load_native_probe_catalog(root)
     metadata_by_profile = {device["profile_id"]: device for device in metadata["devices"]}
@@ -708,7 +713,7 @@ def _run_openrazer_native_route_contracts(root: Path, _node: TestNode) -> None:
         ):
             raise ModelError(f"OpenRazer native route {profile_id} serial proof drifted")
         source_path = source / route["source"]["path"]
-        effective_regex = _openrazer_effective_event_regex(
+        effective_regex = effective_event_regex(
             source_path, route["source"]["class_name"]
         )
         if effective_regex != route["event_file_regex"]:
@@ -789,56 +794,6 @@ def _run_openrazer_native_route_contracts(root: Path, _node: TestNode) -> None:
         raise ModelError("OpenRazer native deployment drifted from package staging")
 
 
-def _openrazer_effective_event_regex(source: Path, class_name: str) -> str:
-    try:
-        tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
-    except (OSError, SyntaxError) as error:
-        raise ModelError(f"cannot parse OpenRazer event matcher source: {error}") from error
-    classes = {
-        node.name: node
-        for node in tree.body
-        if isinstance(node, ast.ClassDef)
-    }
-
-    def resolve(name: str, visited: set[str]) -> str | None:
-        if name in visited:
-            raise ModelError("OpenRazer event matcher inheritance contains a cycle")
-        node = classes.get(name)
-        if node is None:
-            return None
-        visited = {*visited, name}
-        for statement in node.body:
-            if not isinstance(statement, ast.Assign) or not any(
-                isinstance(target, ast.Name) and target.id == "EVENT_FILE_REGEX"
-                for target in statement.targets
-            ):
-                continue
-            value = statement.value
-            if (
-                isinstance(value, ast.Call)
-                and isinstance(value.func, ast.Attribute)
-                and isinstance(value.func.value, ast.Name)
-                and value.func.value.id == "re"
-                and value.func.attr == "compile"
-                and len(value.args) == 1
-                and isinstance(value.args[0], ast.Constant)
-                and isinstance(value.args[0].value, str)
-            ):
-                return value.args[0].value
-            raise ModelError(f"OpenRazer class {name} has an unsupported event matcher")
-        for base in node.bases:
-            if isinstance(base, ast.Name):
-                inherited = resolve(base.id, visited)
-                if inherited is not None:
-                    return inherited
-        return None
-
-    result = resolve(class_name, set())
-    if result is None:
-        raise ModelError(f"OpenRazer class {class_name} has no effective event matcher")
-    return result
-
-
 def _run_device_knowledge_contracts(root: Path, _node: TestNode) -> None:
     inputs = load_knowledge_inputs(root)
     catalog = compiled_knowledge_catalog(root)
@@ -868,6 +823,19 @@ def _run_device_knowledge_contracts(root: Path, _node: TestNode) -> None:
         raise ModelError(
             "committed device-knowledge imports are stale; rerun ./hfx knowledge import"
         )
+
+
+def _run_native_onboarding_contracts(root: Path, node: TestNode) -> None:
+    _run_command(
+        root,
+        [sys.executable, "-m", "unittest", "tests.test_native_onboarding", "-v"],
+        "native device onboarding contracts",
+        node.timeout_seconds,
+        environment={
+            "HFX_OPENRAZER_SOURCE_DIR": str(_openrazer_source(root)),
+            "HFX_OPENRGB_SOURCE_DIR": str(_openrgb_source(root)),
+        },
+    )
 
 
 def _run_repository_atlas_contracts(root: Path, _node: TestNode) -> None:
@@ -1479,6 +1447,7 @@ RUNNERS = {
     "profile-contracts": _run_profile_contracts,
     "integration-contracts": _run_integration_contracts,
     "device-knowledge-contracts": _run_device_knowledge_contracts,
+    "native-onboarding-contracts": _run_native_onboarding_contracts,
     "repository-atlas-contracts": _run_repository_atlas_contracts,
     "protocol-contracts": _run_protocol_contracts,
     "error-contracts": _run_error_contracts,

@@ -37,17 +37,17 @@ Composes receiver, surface, and child identities with evidence-bound capabilitie
 
 ## Verification
 
-Run `profile-contracts` after changing this area.
+Run `profile-contracts` `native-onboarding-contracts` after changing this area.
 
 Before opening a pull request:
 
 - Regenerate 3 declared projection(s).
-- Run `profile-contracts`.
-- Review direct consumers: Core policy engine, Device knowledge, Device qualification console, Linux HID kernel module, OpenRazer compatibility adapter, OpenRGB adapter, Rust SDK, C++ SDK, Python SDK, Deterministic simulator.
+- Run `profile-contracts`, `native-onboarding-contracts`.
+- Review direct consumers: Core policy engine, Device knowledge, Device qualification console, Linux HID kernel module, OpenRazer compatibility adapter, OpenRGB adapter, Operations CLI, Rust SDK, C++ SDK, Python SDK, Deterministic simulator.
 
 ## Relationships
 
 - **Depends on:** [Architecture authority](../architecture/README.md), [Schema contracts](../schemas/README.md), [Application integration catalog](../integrations/README.md)
-- **Used by:** [Core policy engine](../crates/hfx-core/README.md), [Device knowledge](../knowledge/README.md), [Device qualification console](../apps/device-qualification/README.md), [Linux HID kernel module](../driver/kernel/README.md), [OpenRazer compatibility adapter](../integrations/openrazer/README.md), [OpenRGB adapter](../integrations/openrgb/README.md), [Rust SDK](../crates/hfx-sdk/README.md), [C++ SDK](../sdk/cpp/README.md), [Python SDK](../sdk/python/README.md), [Deterministic simulator](../crates/hfx-sim/README.md)
+- **Used by:** [Core policy engine](../crates/hfx-core/README.md), [Device knowledge](../knowledge/README.md), [Device qualification console](../apps/device-qualification/README.md), [Linux HID kernel module](../driver/kernel/README.md), [OpenRazer compatibility adapter](../integrations/openrazer/README.md), [OpenRGB adapter](../integrations/openrgb/README.md), [Operations CLI](../crates/hfx-ops/README.md), [Rust SDK](../crates/hfx-sdk/README.md), [C++ SDK](../sdk/cpp/README.md), [Python SDK](../sdk/python/README.md), [Deterministic simulator](../crates/hfx-sim/README.md)
 
 See the [Repository Atlas](../docs/generated/repository-atlas.md) for files, generated projections, contracts, and limitations.

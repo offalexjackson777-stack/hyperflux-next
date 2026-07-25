@@ -359,3 +359,65 @@ fn validate_kind(profile: &RuntimeProfile) -> Result<(), ProfileCatalogError> {
         _ => Ok(()),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{CapabilityRecord, PresentationRecord};
+
+    const SYNTHETIC_CAPABILITIES: &[CapabilityRecord] = &[CapabilityRecord {
+        id: "native.feature-report-exchange",
+        support_level: SupportLevel::ProductionQualified,
+        writable: true,
+    }];
+
+    #[test]
+    fn a_second_same_protocol_device_is_profile_data_only() {
+        let mut records = PROFILES.to_vec();
+        records.push(ProfileRecord {
+            id: "child.razer.viper-ultimate.007b",
+            runtime_sha256: "1111111111111111111111111111111111111111111111111111111111111111",
+            revision: 1,
+            profile_kind: ProfileKind::Child,
+            device_kind: DeviceKind::Mouse,
+            vendor_id: Some(0x1532),
+            product_id: Some(0x007b),
+            model_name: "Razer Viper Ultimate",
+            transport_backend_id: None,
+            protocol_family: None,
+            receiver_protocols: &["razer-hyperflux-v2"],
+            routes: &[RouteKind::HyperfluxWireless],
+            supported_child_kinds: &[],
+            required_sibling_kinds: &[],
+            exact_child_combinations: false,
+            capabilities: SYNTHETIC_CAPABILITIES,
+            native_exchange: None,
+            lighting: None,
+            passive: None,
+            lifecycle: None,
+            qualification_migrations: &[],
+            presentation: Some(PresentationRecord {
+                upstream_id: "openrgb",
+                owner: "OpenRGB",
+                project_version: "fixture",
+                source_commit: "1111111111111111111111111111111111111111",
+                model_key: "razer_viper_ultimate",
+                layout_key: None,
+                transport_variant: "wireless",
+            }),
+        });
+
+        let catalog = RuntimeProfileCatalog::from_records(&records)
+            .expect("the synthetic profile uses the existing profile contract");
+        let profile = catalog
+            .child(ProductId::try_from(0x007b_u16).expect("fixture PID is valid"))
+            .expect("the synthetic profile is addressable by exact PID");
+        assert_eq!(profile.model_name, "Razer Viper Ultimate");
+        assert_eq!(profile.routes, &[RouteKind::HyperfluxWireless]);
+        assert!(profile.capabilities.iter().any(|capability| {
+            capability.id.as_str() == "native.feature-report-exchange"
+                && capability.writable
+                && capability.support_level == SupportLevel::ProductionQualified
+        }));
+    }
+}

@@ -39,6 +39,7 @@ KNOWN_RUNNERS = {
     "integration-contracts",
     "profile-contracts",
     "device-knowledge-contracts",
+    "native-onboarding-contracts",
     "repository-atlas-contracts",
     "protocol-contracts",
     "error-contracts",

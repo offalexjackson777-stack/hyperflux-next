@@ -35,7 +35,7 @@ The canonical plan contains `6` required and `3` optional build products.
 
 ## Static Payload
 
-The expanded source payload contains `184` files. Every destination is normalized below `/etc` or `/usr` and checked for collisions.
+The expanded source payload contains `188` files. Every destination is normalized below `/etc` or `/usr` and checked for collisions.
 
 | Component | Files | Preserved destination |
 | --- | ---: | --- |
@@ -50,14 +50,14 @@ The expanded source payload contains `184` files. Every destination is normalize
 | `device-permissions` | 1 | `-` |
 | `default-configuration` | 1 | `/etc/hyperflux-next/bridge.json` |
 | `runtime-environment` | 1 | `-` |
-| `schemas` | 63 | `-` |
+| `schemas` | 66 | `-` |
 | `assurance-artifacts` | 1 | `-` |
 | `compiled-catalogs` | 2 | `-` |
 | `device-qualification-console` | 4 | `-` |
 | `runtime-authority` | 1 | `-` |
 | `integration-authority` | 12 | `-` |
 | `cpp-sdk-headers` | 32 | `-` |
-| `documentation` | 40 | `-` |
+| `documentation` | 41 | `-` |
 | `readme` | 1 | `-` |
 | `security-policy` | 1 | `-` |
 | `license` | 1 | `-` |

@@ -7,7 +7,7 @@ use hfx_integration_model::OPENRAZER_NATIVE_DRIVER_MODULES;
 use hfx_profiles::receiver_profile_by_usb_id;
 use hfx_protocol::{
     BridgeSnapshot, CURRENT_PROTOCOL_VERSION, DiagnosticSnapshot, EventBatch, EventCursor,
-    IntegrationView,
+    IntegrationView, NativeRouteInventory,
 };
 use hfx_runtime::{
     BRIDGE_SERVICE_UNIT, BRIDGE_SOCKET_PATH, EVENT_CAPACITY, KERNEL_MODULE_NAME, PRODUCT_VERSION,
@@ -31,6 +31,7 @@ const USB_DEVICES_ROOT: &str = "/sys/bus/usb/devices";
 const EVENT_SUBSCRIPTIONS_FEATURE: &str = "event-subscriptions";
 const INTEGRATION_VIEW_FEATURE: &str = "integration-view-projection";
 const STRUCTURED_DIAGNOSTICS_FEATURE: &str = "structured-diagnostics";
+const NATIVE_RECEIVER_TUNNEL_FEATURE: &str = "native-receiver-tunnel";
 const LEGACY_V2_BRIDGE_SERVICE_UNIT: &str = "hyperflux-bridge.service";
 const LEGACY_V2_KERNEL_MODULE_NAME: &str = "hid-razer-hyperflux-v2";
 static QUALIFICATION_CLIENT_SEQUENCE: AtomicU64 = AtomicU64::new(1);
@@ -482,6 +483,24 @@ impl<R: CommandRunner> RealSystemProbe<R> {
             view,
             events,
         })
+    }
+
+    /// Reads the privacy-neutral native route inventory exposed by protocol v7.
+    ///
+    /// # Errors
+    ///
+    /// Returns a bounded bridge-unavailable error when the local socket cannot
+    /// negotiate or return the complete inventory.
+    pub fn native_route_inventory(&self) -> Result<NativeRouteInventory, ProbeError> {
+        let client_id = qualification_client_id();
+        let mut client = self.bridge_client(
+            &client_id,
+            "HyperFlux Native Onboarding",
+            &[NATIVE_RECEIVER_TUNNEL_FEATURE],
+        )?;
+        client
+            .native_enumerate()
+            .map_err(|_| ProbeError::BridgeUnavailable)
     }
 
     /// Requests exactly one asynchronous system suspend without invoking a

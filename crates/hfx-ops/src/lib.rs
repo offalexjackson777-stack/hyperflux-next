@@ -5,6 +5,7 @@
 mod activation;
 mod assessment;
 mod configuration;
+mod native_onboarding;
 mod probe;
 mod qualification;
 mod qualification_event_evidence;
@@ -27,6 +28,11 @@ pub use configuration::{
     ConfigMigrationError, ConfigMigrationOutcome, ConfigMigrationPlan,
     QualificationConfigurationOutcome, confirm_configuration, enable_qualification_configuration,
     migrate_configuration, restore_qualification_configuration,
+};
+pub use native_onboarding::{
+    NativeObservationError, NativeObservationPrivacy, NativeRouteObservation,
+    build_native_route_observations, default_native_observation_directory,
+    write_native_route_observations,
 };
 pub use probe::{
     BridgeHealth, BridgeIntegration, CommandOutput, CommandRunner, KernelModuleIdentitySnapshot,

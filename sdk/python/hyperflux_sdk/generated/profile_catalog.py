@@ -4,7 +4,7 @@
 from types import MappingProxyType
 from typing import Final
 
-PROFILE_SOURCE_SHA256: Final = '5d896228d3392cee30dde3dd43b92d2807329d979863bfb9ccbb353fce5640ca'
+PROFILE_SOURCE_SHA256: Final = '68c408358f92361f2dfbe461c180cd16eec08924d7c5b22e91753bc299d269ad'
 PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                  'id': 'razer-basilisk-v3-pro',
                  'official_name': 'Razer Basilisk V3 Pro',
@@ -232,6 +232,12 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                    'profile_kinds': ['child'],
                    'resource': 'lighting',
                    'summary': 'Retain and deliver one qualified static RGB state.'},
+                  {'access': 'write',
+                   'id': 'native.feature-report-exchange',
+                   'owner': 'bridge',
+                   'profile_kinds': ['child'],
+                   'resource': 'native-control',
+                   'summary': 'Carry one opaque upstream-owned feature report over a qualified receiver child route.'},
                   {'access': 'read',
                    'id': 'presence.passive-evidence',
                    'owner': 'bridge',
@@ -893,7 +899,7 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                'schema': 'hyperflux-hardware-profile-v1',
                'source_path': 'profiles/surfaces/razer-hyperflux-v2-hard-edition.json'}],
  'schema': 'hyperflux-compiled-profile-catalog-v1',
- 'source_sha256': '5d896228d3392cee30dde3dd43b92d2807329d979863bfb9ccbb353fce5640ca'}
+ 'source_sha256': '68c408358f92361f2dfbe461c180cd16eec08924d7c5b22e91753bc299d269ad'}
 PROFILES_BY_ID: Final = MappingProxyType({profile['profile_id']: profile for profile in PROFILE_CATALOG['profiles']})
 
 __all__ = ["PROFILE_CATALOG", "PROFILE_SOURCE_SHA256", "PROFILES_BY_ID"]

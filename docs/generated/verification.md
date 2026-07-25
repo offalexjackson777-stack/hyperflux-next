@@ -24,22 +24,23 @@ Every current node is software-only and has zero hardware-write authority.
 | 15 | `openrazer-metadata-contracts` | `integrations` | `none` | `false` | 30s | `rerun` |
 | 16 | `device-knowledge-contracts` | `profiles` | `none` | `false` | 30s | `rerun` |
 | 17 | `device-qualification-console-contracts` | `applications` | `none` | `false` | 20s | `rerun` |
-| 18 | `generated-freshness` | `generation` | `none` | `false` | 15s | `reuse-verified` |
-| 19 | `repository-documentation-contracts` | `documentation` | `none` | `false` | 30s | `rerun` |
-| 20 | `python-unit` | `tooling` | `none` | `false` | 120s | `rerun` |
-| 21 | `rust-clippy` | `rust` | `none` | `false` | 180s | `rerun` |
-| 22 | `cpp-sdk-contracts` | `sdk` | `none` | `false` | 60s | `rerun` |
-| 23 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 180s | `rerun` |
-| 24 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
-| 25 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
-| 26 | `openrgb-adapter-contracts` | `integrations` | `none` | `false` | 300s | `rerun` |
-| 27 | `polychromatic-adapter-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
-| 28 | `openrazer-compatibility-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
-| 29 | `openrazer-native-route-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
-| 30 | `migration-shadow-contracts` | `migration` | `none` | `false` | 120s | `rerun` |
-| 31 | `openrgb-native-route-contracts` | `integrations` | `none` | `false` | 360s | `rerun` |
-| 32 | `openrgb-thread-sanitizer` | `integrations` | `none` | `false` | 300s | `rerun` |
-| 33 | `package-contracts` | `packaging` | `none` | `false` | 600s | `rerun` |
+| 18 | `native-onboarding-contracts` | `profiles` | `none` | `false` | 60s | `rerun` |
+| 19 | `generated-freshness` | `generation` | `none` | `false` | 15s | `reuse-verified` |
+| 20 | `repository-documentation-contracts` | `documentation` | `none` | `false` | 30s | `rerun` |
+| 21 | `python-unit` | `tooling` | `none` | `false` | 120s | `rerun` |
+| 22 | `rust-clippy` | `rust` | `none` | `false` | 180s | `rerun` |
+| 23 | `cpp-sdk-contracts` | `sdk` | `none` | `false` | 60s | `rerun` |
+| 24 | `kernel-profile-contracts` | `kernel` | `none` | `false` | 180s | `rerun` |
+| 25 | `rust-unit` | `rust` | `none` | `false` | 180s | `rerun` |
+| 26 | `simulator-contracts` | `simulation` | `none` | `false` | 180s | `rerun` |
+| 27 | `openrgb-adapter-contracts` | `integrations` | `none` | `false` | 300s | `rerun` |
+| 28 | `polychromatic-adapter-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
+| 29 | `openrazer-compatibility-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
+| 30 | `openrazer-native-route-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
+| 31 | `migration-shadow-contracts` | `migration` | `none` | `false` | 120s | `rerun` |
+| 32 | `openrgb-native-route-contracts` | `integrations` | `none` | `false` | 360s | `rerun` |
+| 33 | `openrgb-thread-sanitizer` | `integrations` | `none` | `false` | 300s | `rerun` |
+| 34 | `package-contracts` | `packaging` | `none` | `false` | 600s | `rerun` |
 
 ## Dependencies
 
@@ -62,6 +63,7 @@ flowchart LR
     openrazer_metadata_contracts["openrazer-metadata-contracts"]
     device_knowledge_contracts["device-knowledge-contracts"]
     device_qualification_console_contracts["device-qualification-console-contracts"]
+    native_onboarding_contracts["native-onboarding-contracts"]
     generated_freshness["generated-freshness"]
     repository_documentation_contracts["repository-documentation-contracts"]
     python_unit["python-unit"]
@@ -99,6 +101,8 @@ flowchart LR
     profile_contracts --> device_knowledge_contracts
     schema_contracts --> device_qualification_console_contracts
     profile_contracts --> device_qualification_console_contracts
+    schema_contracts --> native_onboarding_contracts
+    device_knowledge_contracts --> native_onboarding_contracts
     profile_contracts --> generated_freshness
     device_knowledge_contracts --> generated_freshness
     protocol_contracts --> generated_freshness

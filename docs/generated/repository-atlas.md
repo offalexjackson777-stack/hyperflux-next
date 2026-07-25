@@ -4,7 +4,7 @@
 
 The Atlas is a projection of one canonical repository graph. Folder READMEs, dependency views, source-to-generated relationships, and change-impact guidance are generated from the same nodes.
 
-- **Subsystems:** 32
+- **Subsystems:** 33
 - **Categories:** 8
 - **Publication state:** `public-source-pre-release`
 
@@ -18,6 +18,7 @@ flowchart LR
         n_openrazer_adapter["OpenRazer compatibility adapter"]
         n_polychromatic_adapter["Polychromatic adapter"]
         n_device_qualification_console["Device qualification console"]
+        n_operations_cli["Operations CLI"]
         n_sdk_cpp["C++ SDK"]
         n_sdk_python["Python SDK"]
     end
@@ -96,6 +97,9 @@ flowchart LR
     n_rust_workspace --> n_rust_sdk
     n_protocol --> n_rust_sdk
     n_profiles --> n_rust_sdk
+    n_rust_sdk --> n_operations_cli
+    n_profiles --> n_operations_cli
+    n_bridge_runtime --> n_operations_cli
     n_rust_workspace --> n_kernel_transport
     n_driver_contract --> n_kernel_transport
     n_protocol --> n_kernel_transport
@@ -157,8 +161,8 @@ Arrows run from a dependency to its direct consumer. They describe responsibilit
 | [Schema contracts](#schemas) | `architecture` | `implemented` | 1 | 9 | `schema-contracts`, `repository-atlas-contracts` |
 | [Assurance and release evidence](#assurance) | `assurance` | `policy` | 2 | 2 | `assurance-contracts`, `formal-model-contracts` |
 | [Application integration catalog](#integrations) | `applications` | `implemented` | 2 | 6 | `integration-contracts` |
-| [Composable hardware profiles](#profiles) | `architecture` | `implemented` | 3 | 10 | `profile-contracts` |
-| [Device knowledge](#device-knowledge) | `assurance` | `research-boundary` | 2 | 1 | `device-knowledge-contracts` |
+| [Composable hardware profiles](#profiles) | `architecture` | `implemented` | 3 | 11 | `profile-contracts`, `native-onboarding-contracts` |
+| [Device knowledge](#device-knowledge) | `assurance` | `research-boundary` | 2 | 1 | `device-knowledge-contracts`, `native-onboarding-contracts` |
 | [Versioned bridge protocol](#protocol) | `architecture` | `implemented` | 1 | 7 | `protocol-contracts`, `cpp-sdk-contracts` |
 | [OpenRGB adapter](#openrgb-adapter) | `applications` | `implemented` | 3 | 1 | `openrgb-adapter-contracts`, `openrgb-thread-sanitizer` |
 | [OpenRazer compatibility adapter](#openrazer-adapter) | `applications` | `implemented` | 3 | 2 | `openrazer-metadata-contracts`, `openrazer-compatibility-contracts` |
@@ -166,9 +170,10 @@ Arrows run from a dependency to its direct consumer. They describe responsibilit
 | [Device qualification console](#device-qualification-console) | `applications` | `implemented` | 3 | 1 | `device-qualification-console-contracts`, `rust-unit`, `package-contracts` |
 | [Rust workspace](#rust-workspace) | `runtime` | `implemented` | 3 | 5 | `rust-format`, `rust-clippy`, `rust-unit` |
 | [Core policy engine](#core-runtime) | `runtime` | `implemented` | 3 | 2 | `rust-unit`, `formal-model-contracts` |
-| [Bridge runtime](#bridge-runtime) | `runtime` | `implemented` | 2 | 2 | `rust-unit`, `simulator-contracts` |
+| [Bridge runtime](#bridge-runtime) | `runtime` | `implemented` | 2 | 3 | `rust-unit`, `simulator-contracts` |
 | [Production daemon](#daemon) | `runtime` | `implemented` | 3 | 1 | `rust-unit`, `package-contracts` |
-| [Rust SDK](#rust-sdk) | `runtime` | `implemented` | 3 | 0 | `rust-unit`, `protocol-contracts` |
+| [Rust SDK](#rust-sdk) | `runtime` | `implemented` | 3 | 1 | `rust-unit`, `protocol-contracts` |
+| [Operations CLI](#operations-cli) | `applications` | `implemented` | 3 | 0 | `rust-unit`, `native-onboarding-contracts`, `package-contracts` |
 | [Kernel transport adapter](#kernel-transport) | `runtime` | `implemented` | 3 | 1 | `rust-unit`, `kernel-profile-contracts` |
 | [Deterministic simulator](#simulator) | `assurance` | `implemented` | 2 | 1 | `simulator-contracts`, `migration-shadow-contracts` |
 | [Kernel driver contract](#driver-contract) | `runtime` | `implemented` | 2 | 2 | `kernel-profile-contracts` |
@@ -177,8 +182,8 @@ Arrows run from a dependency to its direct consumer. They describe responsibilit
 | [Packaging and installation](#packaging) | `delivery` | `implemented` | 7 | 0 | `package-contracts` |
 | [C++ SDK](#sdk-cpp) | `applications` | `implemented` | 3 | 2 | `cpp-sdk-contracts` |
 | [Python SDK](#sdk-python) | `applications` | `implemented` | 3 | 3 | `python-unit`, `protocol-contracts` |
-| [Repository tooling](#tooling) | `tooling` | `implemented` | 3 | 3 | `python-unit`, `generated-freshness` |
-| [Contract tests](#tests) | `assurance` | `implemented` | 4 | 1 | `python-unit`, `cpp-sdk-contracts`, `rust-unit` |
+| [Repository tooling](#tooling) | `tooling` | `implemented` | 3 | 3 | `python-unit`, `native-onboarding-contracts`, `generated-freshness` |
+| [Contract tests](#tests) | `assurance` | `implemented` | 4 | 1 | `python-unit`, `native-onboarding-contracts`, `cpp-sdk-contracts`, `rust-unit` |
 | [Migration provenance](#migration) | `assurance` | `research-boundary` | 3 | 0 | `foundation-contracts`, `migration-shadow-contracts` |
 | [GitHub governance authority](#governance) | `governance` | `policy` | 3 | 1 | `governance-contracts` |
 | [Documentation system](#documentation) | `documentation` | `generated` | 5 | 0 | `repository-documentation-contracts`, `repository-atlas-contracts` |
@@ -232,7 +237,7 @@ Defines strict machine-readable shapes for every shared repository fact and gene
 
 **Used by:** [Assurance and release evidence](#assurance), [Kernel driver contract](#driver-contract), [Error catalog](#errors), [Application integration catalog](#integrations), [Composable hardware profiles](#profiles), [Versioned bridge protocol](#protocol), [Linux runtime authority](#runtime-config), [Rust workspace](#rust-workspace), [Repository tooling](#tooling)
 
-**Canonical sources:** `schemas/domain-catalog.json`, `schemas/domain-catalog.schema.json`, `schemas/repository-atlas.schema.json`, `schemas/public-readiness.schema.json`, `schemas/local-companion.schema.json`, `schemas/local-snapshot.schema.json`, `schemas/licensing-policy.schema.json`, `schemas/lifecycle-policy-catalog.schema.json`, `schemas/kernel-uapi-registry.schema.json`, `schemas/kernel-uapi-native-exchange.schema.json`.
+**Canonical sources:** `schemas/domain-catalog.json`, `schemas/domain-catalog.schema.json`, `schemas/repository-atlas.schema.json`, `schemas/public-readiness.schema.json`, `schemas/local-companion.schema.json`, `schemas/local-snapshot.schema.json`, `schemas/licensing-policy.schema.json`, `schemas/lifecycle-policy-catalog.schema.json`, `schemas/kernel-uapi-registry.schema.json`, `schemas/kernel-uapi-native-exchange.schema.json`, `schemas/native-route-observation.schema.json`, `schemas/native-device-onboarding-draft.schema.json`, `schemas/native-device-promotion-assessment.schema.json`.
 
 **Generated projections:** `schemas/README.md`, `docs/generated/domain-types.md`.
 
@@ -308,13 +313,13 @@ Composes receiver, surface, and child identities with evidence-bound capabilitie
 
 **Depends on:** [Architecture authority](#architecture), [Schema contracts](#schemas), [Application integration catalog](#integrations)
 
-**Used by:** [Core policy engine](#core-runtime), [Device knowledge](#device-knowledge), [Device qualification console](#device-qualification-console), [Linux HID kernel module](#kernel-module), [OpenRazer compatibility adapter](#openrazer-adapter), [OpenRGB adapter](#openrgb-adapter), [Rust SDK](#rust-sdk), [C++ SDK](#sdk-cpp), [Python SDK](#sdk-python), [Deterministic simulator](#simulator)
+**Used by:** [Core policy engine](#core-runtime), [Device knowledge](#device-knowledge), [Device qualification console](#device-qualification-console), [Linux HID kernel module](#kernel-module), [OpenRazer compatibility adapter](#openrazer-adapter), [OpenRGB adapter](#openrgb-adapter), [Operations CLI](#operations-cli), [Rust SDK](#rust-sdk), [C++ SDK](#sdk-cpp), [Python SDK](#sdk-python), [Deterministic simulator](#simulator)
 
 **Canonical sources:** `profiles/capabilities.json`, `profiles/lifecycle-policies.json`, `profiles/evidence/claims.json`, `profiles/receivers/razer-hyperflux-v2-1532-00cf.json`, `profiles/surfaces/razer-hyperflux-v2-hard-edition.json`, `profiles/children/razer-basilisk-v3-pro-35k-00cd.json`, `profiles/children/razer-deathstalker-v2-pro-tkl-0296.json`, `profiles/candidates/razer-hyperflux-v2-2026-07-13.json`, `profiles/candidates/razer-hyperflux-v2-2026-07-21.json`.
 
 **Generated projections:** `profiles/README.md`, `generated/profiles/catalog.json`, `docs/generated/supported-hardware.md`.
 
-**Change impact:** Regenerate 3 declared projection(s). Run `profile-contracts`. Review direct consumers: Core policy engine, Device knowledge, Device qualification console, Linux HID kernel module, OpenRazer compatibility adapter, OpenRGB adapter, Rust SDK, C++ SDK, Python SDK, Deterministic simulator.
+**Change impact:** Regenerate 3 declared projection(s). Run `profile-contracts`, `native-onboarding-contracts`. Review direct consumers: Core policy engine, Device knowledge, Device qualification console, Linux HID kernel module, OpenRazer compatibility adapter, OpenRGB adapter, Operations CLI, Rust SDK, C++ SDK, Python SDK, Deterministic simulator.
 
 </details>
 
@@ -340,7 +345,7 @@ Records provenance-bound candidate facts, semantic capabilities, upstream record
 
 **Generated projections:** `knowledge/README.md`, `generated/knowledge/catalog.json`, `docs/generated/device-knowledge.md`.
 
-**Change impact:** Regenerate 3 declared projection(s). Run `device-knowledge-contracts`. Review direct consumers: Documentation system.
+**Change impact:** Regenerate 3 declared projection(s). Run `device-knowledge-contracts`, `native-onboarding-contracts`. Review direct consumers: Documentation system.
 
 </details>
 
@@ -542,13 +547,13 @@ Adapts the core policy engine to sessions, persistence, subscriptions, snapshots
 
 **Depends on:** [Core policy engine](#core-runtime), [Versioned bridge protocol](#protocol)
 
-**Used by:** [Production daemon](#daemon), [Device qualification console](#device-qualification-console)
+**Used by:** [Production daemon](#daemon), [Device qualification console](#device-qualification-console), [Operations CLI](#operations-cli)
 
 **Canonical sources:** `crates/hfx-bridge/Cargo.toml`, `crates/hfx-bridge/src/lib.rs`, `crates/hfx-bridge/src/rpc.rs`.
 
 **Generated projections:** `crates/hfx-bridge/README.md`.
 
-**Change impact:** Regenerate 1 declared projection(s). Run `rust-unit`, `simulator-contracts`. Review direct consumers: Production daemon, Device qualification console.
+**Change impact:** Regenerate 1 declared projection(s). Run `rust-unit`, `simulator-contracts`. Review direct consumers: Production daemon, Device qualification console, Operations CLI.
 
 </details>
 
@@ -594,13 +599,39 @@ Provides the typed Rust client contract used by production integrations and inte
 
 **Depends on:** [Rust workspace](#rust-workspace), [Versioned bridge protocol](#protocol), [Composable hardware profiles](#profiles)
 
-**Used by:** None
+**Used by:** [Operations CLI](#operations-cli)
 
 **Canonical sources:** `crates/hfx-sdk/Cargo.toml`, `crates/hfx-sdk/src/lib.rs`, `crates/hfx-sdk/src/client.rs`.
 
 **Generated projections:** `crates/hfx-sdk/README.md`.
 
-**Change impact:** Regenerate 1 declared projection(s). Run `rust-unit`, `protocol-contracts`. No direct subsystem consumer is declared; verify repository-facing outputs.
+**Change impact:** Regenerate 1 declared projection(s). Run `rust-unit`, `protocol-contracts`. Review direct consumers: Operations CLI.
+
+</details>
+
+<a id="operations-cli"></a>
+<details>
+<summary><strong>Operations CLI</strong> · applications · implemented</summary>
+
+### Operations CLI
+
+`crates/hfx-ops` · `applications` · `implemented`
+
+Provides bounded local status, diagnostics, qualification, and privacy-safe native route observation for ordinary users and maintainers.
+
+**Owns:** Installed command-line workflows; Privacy-safe observation projection; Local qualification companion.
+
+**Must never own:** Profile promotion authority; Raw receiver reports; Application presentation.
+
+**Depends on:** [Rust SDK](#rust-sdk), [Composable hardware profiles](#profiles), [Bridge runtime](#bridge-runtime)
+
+**Used by:** None
+
+**Canonical sources:** `crates/hfx-ops/Cargo.toml`, `crates/hfx-ops/src/bin/hyperfluxctl.rs`, `crates/hfx-ops/src/native_onboarding.rs`, `crates/hfx-ops/src/probe.rs`.
+
+**Generated projections:** `crates/hfx-ops/README.md`.
+
+**Change impact:** Regenerate 1 declared projection(s). Run `rust-unit`, `native-onboarding-contracts`, `package-contracts`. No direct subsystem consumer is declared; verify repository-facing outputs.
 
 </details>
 
@@ -830,11 +861,11 @@ Provides the single developer CLI, canonical loaders, deterministic generators, 
 
 **Used by:** [Documentation system](#documentation), [Contract tests](#tests), [Verification graph](#verification)
 
-**Canonical sources:** `hfx`, `tools/hfxdev/cli.py`, `tools/hfxdev/render.py`, `tools/hfxdev/verify.py`, `tools/hfxdev/public_readiness.py`, `tools/hfxdev/local_companion.py`, `tools/hfxdev/licensing.py`.
+**Canonical sources:** `hfx`, `tools/hfxdev/cli.py`, `tools/hfxdev/render.py`, `tools/hfxdev/verify.py`, `tools/hfxdev/public_readiness.py`, `tools/hfxdev/local_companion.py`, `tools/hfxdev/licensing.py`, `tools/hfxdev/native_onboarding.py`, `tools/hfxdev/private_artifact.py`, `tools/hfxdev/openrazer_native_route.py`.
 
 **Generated projections:** `tools/README.md`.
 
-**Change impact:** Regenerate 1 declared projection(s). Run `python-unit`, `generated-freshness`. Review direct consumers: Documentation system, Contract tests, Verification graph.
+**Change impact:** Regenerate 1 declared projection(s). Run `python-unit`, `native-onboarding-contracts`, `generated-freshness`. Review direct consumers: Documentation system, Contract tests, Verification graph.
 
 </details>
 
@@ -856,11 +887,11 @@ Holds language-specific, cross-language, fixture, lifecycle, repository-navigati
 
 **Used by:** [Verification graph](#verification)
 
-**Canonical sources:** `tests/test_foundation.py`, `tests/test_repository_experience.py`, `tests/test_testgraph.py`.
+**Canonical sources:** `tests/test_foundation.py`, `tests/test_repository_experience.py`, `tests/test_testgraph.py`, `tests/test_native_onboarding.py`, `tests/fixtures/native-onboarding/viper-ultimate-007b-observation.json`.
 
 **Generated projections:** `tests/README.md`, `tests/fixtures/generated/profile-compositions.json`.
 
-**Change impact:** Regenerate 2 declared projection(s). Run `python-unit`, `cpp-sdk-contracts`, `rust-unit`. Review direct consumers: Verification graph.
+**Change impact:** Regenerate 2 declared projection(s). Run `python-unit`, `native-onboarding-contracts`, `cpp-sdk-contracts`, `rust-unit`. Review direct consumers: Verification graph.
 
 </details>
 
@@ -934,7 +965,7 @@ Organizes concise audience guidance and generated technical references for direc
 
 **Used by:** None
 
-**Canonical sources:** `docs/user/overview.md`, `docs/architecture/design-book.md`, `docs/architecture/decisions/github-native-documentation.md`.
+**Canonical sources:** `docs/user/overview.md`, `docs/architecture/design-book.md`, `docs/architecture/native-device-onboarding.md`, `docs/architecture/decisions/github-native-documentation.md`.
 
 **Generated projections:** `docs/README.md`, `docs/generated/repository-atlas.md`, `generated/public-readiness.json`.
 

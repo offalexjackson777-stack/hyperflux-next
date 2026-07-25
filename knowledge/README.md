@@ -33,12 +33,12 @@ Records provenance-bound candidate facts, semantic capabilities, upstream record
 
 ## Verification
 
-Run `device-knowledge-contracts` after changing this area.
+Run `device-knowledge-contracts` `native-onboarding-contracts` after changing this area.
 
 Before opening a pull request:
 
 - Regenerate 3 declared projection(s).
-- Run `device-knowledge-contracts`.
+- Run `device-knowledge-contracts`, `native-onboarding-contracts`.
 - Review direct consumers: Documentation system.
 
 ## Relationships

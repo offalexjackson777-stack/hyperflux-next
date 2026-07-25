@@ -16,6 +16,7 @@ from typing import Any
 
 from .model import ModelError, sha256_file
 from .native_probe import REPORT_SIZE, load_native_probe_catalog
+from .private_artifact import write_new_private_json
 
 
 EVIDENCE_SCHEMA = "hyperflux-native-transport-parity-evidence-v1"
@@ -881,44 +882,10 @@ def write_parity_evidence(
     cache_root: Path | None = None,
 ) -> Path:
     validate_parity_evidence(value)
-    base_value = cache_root if cache_root is not None else _default_cache_root()
-    if base_value.exists() and base_value.is_symlink():
-        raise ModelError("native parity cache root may not be a symbolic link")
-    base = base_value.expanduser().resolve()
-    base.mkdir(parents=True, mode=0o700, exist_ok=True)
-    try:
-        base.chmod(0o700)
-    except OSError as error:
-        raise ModelError(f"cannot secure native parity cache root: {error}") from error
     stamp = re.sub(r"[^0-9TZ]", "", value["created_at"])
     profile = re.sub(r"[^a-z0-9.-]", "-", value["profile_id"])
-    destination = base / f"{stamp}-{profile}.json"
-    if destination.exists() or destination.is_symlink():
-        raise ModelError("native parity evidence destination already exists")
-    temporary = base / f".{destination.name}.{secrets.token_hex(8)}.tmp"
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-    if hasattr(os, "O_NOFOLLOW"):
-        flags |= os.O_NOFOLLOW
-    payload = (json.dumps(value, indent=2, ensure_ascii=True) + "\n").encode()
-    descriptor = -1
-    try:
-        descriptor = os.open(temporary, flags, 0o600)
-        with os.fdopen(descriptor, "wb", closefd=True) as output:
-            descriptor = -1
-            output.write(payload)
-            output.flush()
-            os.fsync(output.fileno())
-        os.replace(temporary, destination)
-        destination.chmod(0o600)
-        directory = os.open(base, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(directory)
-        finally:
-            os.close(directory)
-    except OSError as error:
-        raise ModelError(f"cannot write native parity evidence: {error}") from error
-    finally:
-        if descriptor >= 0:
-            os.close(descriptor)
-        temporary.unlink(missing_ok=True)
-    return destination
+    return write_new_private_json(
+        cache_root if cache_root is not None else _default_cache_root(),
+        f"{stamp}-{profile}.json",
+        value,
+    )

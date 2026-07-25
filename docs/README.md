@@ -36,6 +36,7 @@ Organizes concise audience guidance and generated technical references for direc
 
 - [`docs/user/overview.md`](user/overview.md)
 - [`docs/architecture/design-book.md`](architecture/design-book.md)
+- [`docs/architecture/native-device-onboarding.md`](architecture/native-device-onboarding.md)
 - [`docs/architecture/decisions/github-native-documentation.md`](architecture/decisions/github-native-documentation.md)
 
 ## Verification
