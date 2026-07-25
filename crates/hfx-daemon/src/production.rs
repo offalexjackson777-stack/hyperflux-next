@@ -159,6 +159,7 @@ pub fn compose_production(
         actor_limits: BridgeActorLimits {
             command_capacity,
             connection_capacity,
+            native_transaction_capacity: transaction_capacity,
             response_timeout: Duration::from_millis(ACTOR_RESPONSE_TIMEOUT_MS),
         },
         session_identities: KernelSessionIdentitySource,

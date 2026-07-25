@@ -334,6 +334,7 @@ fn shared_actor_serves_two_independent_clients_without_backend_lock_ownership() 
     let limits = BridgeActorLimits {
         command_capacity: QueueCapacity::try_from(16).expect("command capacity is valid"),
         connection_capacity: QueueCapacity::try_from(4).expect("connection capacity is valid"),
+        native_transaction_capacity: QueueCapacity::try_from(16).expect("native capacity is valid"),
         response_timeout: Duration::from_secs(2),
     };
     let (actor, handle) = BridgeActor::new(
@@ -416,6 +417,7 @@ fn runtime_tick_runs_after_commands_even_when_idle_timeout_is_long() {
     let limits = BridgeActorLimits {
         command_capacity: QueueCapacity::try_from(4).expect("command capacity is valid"),
         connection_capacity: QueueCapacity::try_from(2).expect("connection capacity is valid"),
+        native_transaction_capacity: QueueCapacity::try_from(4).expect("native capacity is valid"),
         response_timeout: Duration::from_secs(2),
     };
     let (actor, handle) = BridgeActor::new(

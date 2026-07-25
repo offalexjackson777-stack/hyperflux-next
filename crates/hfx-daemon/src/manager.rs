@@ -8,7 +8,7 @@ use crate::{
 };
 use hfx_bridge::{
     GenerationOrchestrationError, LifecycleObservationError, LifecycleObservationOutcome,
-    ReceiverDisconnectObservation, ReceiverGenerationObservation, SessionRegistry,
+    ReceiverDisconnectObservation, ReceiverGenerationObservation, RpcFailure, SessionRegistry,
     StableCaptureStatus,
 };
 use hfx_core::{Clock, LifecycleError, RestorationError};
@@ -59,6 +59,7 @@ pub enum RuntimeTickError {
     Route(KernelRouteError),
     Generation(GenerationOrchestrationError),
     Observation(LifecycleObservationError),
+    NativeRoutes(RpcFailure),
     Translation(PassiveTranslationError),
     Lifecycle(LifecycleError),
     Domain(DomainValueError),
@@ -80,6 +81,7 @@ impl fmt::Display for RuntimeTickError {
             Self::Route(_) => "kernel receiver routing failed",
             Self::Generation(_) => "receiver generation orchestration failed",
             Self::Observation(_) => "receiver lifecycle observation failed",
+            Self::NativeRoutes(_) => "native receiver route reconciliation failed",
             Self::Translation(_) => "passive receiver observation is contradictory",
             Self::Lifecycle(_) => "receiver lifecycle stamp is invalid",
             Self::Domain(_) => "receiver runtime identity value is invalid",
@@ -156,6 +158,7 @@ impl LinuxRuntimeManager {
             self.next_discovery = Some(now + nonzero_interval(self.discovery_interval));
         }
         self.process_observations(backend, &mut report)?;
+        backend.tick().map_err(RuntimeTickError::NativeRoutes)?;
         let application_waiting = backend.queued_transactions() > 0;
         if !application_waiting || self.prefer_restoration {
             report.restoration = self

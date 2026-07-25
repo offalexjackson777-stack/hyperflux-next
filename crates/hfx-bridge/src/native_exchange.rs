@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use hfx_domain::{ClientId, RequestId};
-use hfx_protocol::{NativeExchangeOutcome, NativeExchangeRequest};
+use hfx_domain::{ClientId, FindingId, NativeRouteToken, ProtocolErrorKind, RequestId};
+use hfx_protocol::{
+    NativeExchangeNotSent, NativeExchangeOutcome, NativeExchangeRequest, NativeExchangeResult,
+};
 use std::collections::{BTreeMap, VecDeque};
 use std::fmt;
 
@@ -118,6 +120,32 @@ impl NativeExchangeJournal {
         Ok(())
     }
 
+    /// Removes cached response bytes for one invalidated route while keeping
+    /// request-identity conflict protection.
+    ///
+    /// Exact retries receive a generation-bound `not-sent` tombstone. A
+    /// contradictory reuse of the same client/request identity remains an
+    /// error, so invalidation cannot reopen transport admission.
+    pub fn invalidate_route(
+        &mut self,
+        route_token: &NativeRouteToken,
+        error_kind: ProtocolErrorKind,
+        finding_id: &FindingId,
+    ) -> usize {
+        let mut invalidated = 0;
+        for record in self.records.values_mut() {
+            if &record.request.route_token != route_token {
+                continue;
+            }
+            record.outcome.result = NativeExchangeResult::NotSent(NativeExchangeNotSent {
+                error_kind,
+                finding_id: finding_id.clone(),
+            });
+            invalidated += 1;
+        }
+        invalidated
+    }
+
     #[must_use]
     pub fn len(&self) -> usize {
         self.records.len()
@@ -136,7 +164,9 @@ mod tests {
         FindingId, LeaseId, NativeExchangeTimeoutMs, NativeReportHex, NativeRouteToken,
         ProtocolErrorKind,
     };
-    use hfx_protocol::{NativeExchangeNotSent, NativeExchangeResult};
+    use hfx_protocol::{
+        NativeExchangeMatchedResponse, NativeExchangeNotSent, NativeExchangeResult,
+    };
 
     fn text<T>(value: &str) -> T
     where
@@ -205,5 +235,45 @@ mod tests {
                 .is_some()
         );
         assert!(journal.retained(&third).expect("lookup succeeds").is_some());
+    }
+
+    #[test]
+    fn route_invalidation_removes_response_bytes_without_reopening_request_identity() {
+        let mut journal = NativeExchangeJournal::new(2).expect("capacity is valid");
+        let original = request("client-1", "request-1", '0');
+        let matched = NativeExchangeOutcome {
+            request_id: original.request_id.clone(),
+            route_token: original.route_token.clone(),
+            result: NativeExchangeResult::MatchedResponse(NativeExchangeMatchedResponse {
+                response: original.report.clone(),
+            }),
+        };
+        journal
+            .remember(original.clone(), matched)
+            .expect("matched response is retained");
+
+        let finding = text::<FindingId>("HFX-GENERATION-001");
+        assert_eq!(
+            journal.invalidate_route(
+                &original.route_token,
+                ProtocolErrorKind::StaleGeneration,
+                &finding,
+            ),
+            1
+        );
+        assert!(matches!(
+            journal.retained(&original),
+            Ok(Some(NativeExchangeOutcome {
+                result: NativeExchangeResult::NotSent(NativeExchangeNotSent {
+                    error_kind: ProtocolErrorKind::StaleGeneration,
+                    ..
+                }),
+                ..
+            }))
+        ));
+        assert_eq!(
+            journal.retained(&request("client-1", "request-1", '1')),
+            Err(NativeExchangeJournalError::RequestIdentityReused)
+        );
     }
 }

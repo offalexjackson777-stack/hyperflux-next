@@ -5,7 +5,9 @@ use crate::{
     SessionRegistry, SessionRegistryError,
 };
 use hfx_core::SessionAuthority;
-use hfx_domain::{FindingId, HumanMessage, ProtocolErrorKind, RequestId, ServerInstanceId};
+use hfx_domain::{
+    FindingId, HumanMessage, NativeRouteToken, ProtocolErrorKind, RequestId, ServerInstanceId,
+};
 use hfx_errors::{ErrorCode, error_by_code};
 use hfx_protocol::{
     BridgeSnapshot, DiagnosticSnapshot, ErrorEnvelope, EventBatch, IntegrationView, LeaseRequest,
@@ -145,6 +147,48 @@ impl fmt::Display for RpcFailure {
 
 impl std::error::Error for RpcFailure {}
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum NativeExchangeRejection {
+    /// The bounded actor queue had no admission capacity.
+    QueueFull,
+    /// The complete exchange deadline expired before SET began.
+    DeadlineExceeded,
+    /// The owning protocol session ended while the request was queued.
+    SessionEnded,
+    /// The route token belongs to a replaced receiver generation.
+    StaleGeneration,
+    /// The route still exists but cannot currently carry native control.
+    RouteUnavailable,
+    /// The route no longer has qualified native-control authority.
+    RouteWithdrawn,
+}
+
+impl NativeExchangeRejection {
+    #[must_use]
+    pub const fn error_kind(self) -> ProtocolErrorKind {
+        match self {
+            Self::QueueFull => ProtocolErrorKind::QueueFull,
+            Self::DeadlineExceeded => ProtocolErrorKind::DeadlineExceeded,
+            Self::SessionEnded => ProtocolErrorKind::OwnershipConflict,
+            Self::StaleGeneration => ProtocolErrorKind::StaleGeneration,
+            Self::RouteUnavailable => ProtocolErrorKind::TransportFailure,
+            Self::RouteWithdrawn => ProtocolErrorKind::UnsupportedFeature,
+        }
+    }
+
+    #[must_use]
+    pub const fn error_code(self) -> ErrorCode {
+        match self {
+            Self::QueueFull => ErrorCode::HfxQueue001,
+            Self::DeadlineExceeded => ErrorCode::HfxDeadline001,
+            Self::SessionEnded => ErrorCode::HfxOwnership002,
+            Self::StaleGeneration => ErrorCode::HfxGeneration001,
+            Self::RouteUnavailable => ErrorCode::HfxTransport001,
+            Self::RouteWithdrawn => ErrorCode::HfxProfile001,
+        }
+    }
+}
+
 /// Application-neutral method backend used by the connection dispatcher.
 ///
 /// Implementations own core state and transport policy. The dispatcher owns
@@ -260,6 +304,37 @@ pub trait BridgeRpcBackend {
         ))
     }
 
+    /// Retains one retry-safe native result for work rejected before SET.
+    ///
+    /// Actor admission, absolute deadline, and disconnect cancellation use
+    /// this path so a repeated request identity cannot later reach hardware.
+    ///
+    /// # Errors
+    ///
+    /// The default rejects the additive method as unsupported.
+    fn reject_native_exchange(
+        &mut self,
+        _context: BackendRequestContext<'_>,
+        _request: NativeExchangeRequest,
+        _rejection: NativeExchangeRejection,
+    ) -> Result<NativeExchangeOutcome, RpcFailure> {
+        Err(RpcFailure::new(
+            ErrorCode::HfxProtocol002,
+            ProtocolErrorKind::UnsupportedFeature,
+        ))
+    }
+
+    /// Drains bounded route-token invalidations for the actor scheduler.
+    ///
+    /// Backends without a native route authority have no invalidations. The
+    /// production backend keeps rejection tombstones after this notification
+    /// is consumed, so draining it cannot restore old authority.
+    fn take_native_route_invalidations(
+        &mut self,
+    ) -> Vec<(NativeRouteToken, NativeExchangeRejection)> {
+        Vec::new()
+    }
+
     /// Reads bounded native-route lifecycle changes after one cursor.
     ///
     /// # Errors
@@ -322,22 +397,9 @@ impl ConnectionDispatcher {
             return self.dispatch_negotiation(&request, request_id, identities, sessions);
         }
 
-        let authorization = match self.session.authorize_request(&request) {
-            Ok(authorization)
-                if sessions
-                    .authorizes(&authorization.session_id, authorization.authorization_epoch) =>
-            {
-                authorization
-            }
-            Ok(_) => {
-                return self.error_response(
-                    Some(request_id),
-                    RpcFailure::from_session(&SessionError::SessionRevoked),
-                );
-            }
-            Err(error) => {
-                return self.error_response(Some(request_id), RpcFailure::from_session(&error));
-            }
+        let authorization = match self.authorize(&request, sessions) {
+            Ok(authorization) => authorization,
+            Err(failure) => return self.error_response(Some(request_id), failure),
         };
 
         let error_request_id = request_id.clone();
@@ -386,6 +448,71 @@ impl ConnectionDispatcher {
             RpcRequest::Negotiate(_) => unreachable!("negotiation returned before method routing"),
         };
         response.unwrap_or_else(|failure| self.error_response(Some(error_request_id), failure))
+    }
+
+    pub(crate) fn deferred_native_authorized(
+        &self,
+        request: &RpcRequest,
+        sessions: &SessionRegistry,
+    ) -> Result<(), RpcFailure> {
+        if !matches!(request, RpcRequest::NativeTransact(_)) {
+            return Err(RpcFailure::new(
+                ErrorCode::HfxRequest001,
+                ProtocolErrorKind::InvalidRequest,
+            ));
+        }
+        self.authorize(request, sessions).map(|_| ())
+    }
+
+    pub(crate) fn failure_response(
+        &self,
+        request_id: RequestId,
+        failure: RpcFailure,
+    ) -> RpcResponse {
+        self.error_response(Some(request_id), failure)
+    }
+
+    pub(crate) fn dispatch_native_rejection<B>(
+        &mut self,
+        request: RpcRequest,
+        sessions: &SessionRegistry,
+        backend: &mut B,
+        rejection: NativeExchangeRejection,
+    ) -> RpcResponse
+    where
+        B: BridgeRpcBackend,
+    {
+        let request_id = request.request_id().clone();
+        let authorization = match self.authorize(&request, sessions) {
+            Ok(authorization) => authorization,
+            Err(failure) => return self.error_response(Some(request_id), failure),
+        };
+        let RpcRequest::NativeTransact(envelope) = request else {
+            return self.error_response(
+                Some(request_id),
+                RpcFailure::new(ErrorCode::HfxRequest001, ProtocolErrorKind::InvalidRequest),
+            );
+        };
+        let context = BackendRequestContext::new(&authorization, sessions);
+        match backend.reject_native_exchange(context, envelope.params, rejection) {
+            Ok(result) => RpcResponse::NativeTransactSuccess(self.success(request_id, result)),
+            Err(failure) => self.error_response(Some(request_id), failure),
+        }
+    }
+
+    fn authorize(
+        &self,
+        request: &RpcRequest,
+        sessions: &SessionRegistry,
+    ) -> Result<AuthorizedSession, RpcFailure> {
+        let authorization = self
+            .session
+            .authorize_request(request)
+            .map_err(|error| RpcFailure::from_session(&error))?;
+        if !sessions.authorizes(&authorization.session_id, authorization.authorization_epoch) {
+            return Err(RpcFailure::from_session(&SessionError::SessionRevoked));
+        }
+        Ok(authorization)
     }
 
     fn dispatch_negotiation<S: SessionIdentitySource>(

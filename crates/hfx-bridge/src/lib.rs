@@ -8,8 +8,10 @@ mod clock;
 mod connection;
 mod generation;
 mod native_exchange;
+mod native_invalidation;
 mod native_projection;
 mod native_routes;
+mod native_scheduler;
 mod observation;
 mod persistence;
 mod profile_authority;
@@ -45,6 +47,7 @@ pub use hfx_protocol::{
     write_rpc_request_for_version, write_rpc_response, write_rpc_response_for_version,
 };
 pub use native_exchange::{NativeExchangeJournal, NativeExchangeJournalError};
+pub use native_invalidation::NativeInvalidationJournalError;
 pub use native_projection::{
     NATIVE_EXCHANGE_CAPABILITY_ID, NativeRouteProjectionError, project_native_routes,
 };
@@ -63,7 +66,10 @@ pub use profile_authority::{
     RuntimeProfileAuthority, RuntimeProfileAuthorityError, RuntimeProfileView,
 };
 pub use restoration_runtime::{DurableRestorationRuntime, RestorationRuntime};
-pub use rpc::{BackendRequestContext, BridgeRpcBackend, ConnectionDispatcher, RpcFailure};
+pub use rpc::{
+    BackendRequestContext, BridgeRpcBackend, ConnectionDispatcher, NativeExchangeRejection,
+    RpcFailure,
+};
 pub use runtime_identity::{RuntimeIdentityError, RuntimeIdentityIssuer};
 pub use session::{
     AuthorizedSession, BridgeSession, BridgeSessionConfig, KernelSessionIdentitySource,

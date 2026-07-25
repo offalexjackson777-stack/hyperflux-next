@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
+use crate::native_invalidation::NativeInvalidationJournal;
 use crate::{
     AuthorizedSession, BackendRequestContext, BridgeRpcBackend, GenerationActivationOutcome,
     GenerationOrchestrationError, GenerationOrchestrator, LifecycleObservation,
     LifecycleObservationError, LifecycleObservationOrchestrator, LifecycleObservationOutcome,
-    NativeExchangeJournal, NativeExchangeJournalError, NativeRouteJournal, NativeRouteJournalError,
+    NativeExchangeJournal, NativeExchangeJournalError, NativeExchangeRejection,
+    NativeInvalidationJournalError, NativeRouteJournal, NativeRouteJournalError,
     NativeRouteProjectionError, ReceiverDisconnectCompletionOutcome, ReceiverDisconnectObservation,
     ReceiverDisconnectOutcome, ReceiverGenerationObservation, RestorationRuntime, RpcFailure,
     RuntimeIdentityError, RuntimeIdentityIssuer, RuntimeProfileAuthority, SessionIdentitySource,
@@ -23,18 +25,18 @@ use hfx_core::{
 };
 use hfx_domain::{
     DeviceKind, EventKind, FindingId, LeaseDurationMs, MonotonicMs, NativeReportHex,
-    NativeRouteAccess, ProjectionRevision, ProtocolErrorKind, QueueCapacity, ReceiverId,
-    ResourceKind, RestoreClaimId, RouteState, StreamEpoch, StreamId,
+    NativeRouteAccess, NativeRouteToken, ProjectionRevision, ProtocolErrorKind, QueueCapacity,
+    ReceiverId, ResourceKind, RestoreClaimId, RouteState, StreamEpoch, StreamId,
 };
 use hfx_errors::ErrorCode;
 use hfx_integration_model::project_integration_view;
 use hfx_protocol::{
     BridgeSnapshot, DiagnosticSnapshot, EventBatch, IntegrationView, LeaseRequest, LeaseResult,
     NativeExchangeMatchedResponse, NativeExchangeNotSent, NativeExchangeOutcome,
-    NativeExchangeRequest, NativeExchangeResult, NativeExchangeUncertain, NativeRouteEventBatch,
-    NativeRouteInventory, ReleaseLeaseRequest, RenewLeaseRequest, SubscriptionRequest,
-    TransactionLookup, TransactionRequest, TransactionResult, TransactionUnavailable,
-    validate_lease_request,
+    NativeExchangeRequest, NativeExchangeResult, NativeExchangeUncertain, NativeRoute,
+    NativeRouteEventBatch, NativeRouteInventory, ReleaseLeaseRequest, RenewLeaseRequest,
+    SubscriptionRequest, TransactionLookup, TransactionRequest, TransactionResult,
+    TransactionUnavailable, validate_lease_request,
 };
 use sha2::{Digest, Sha256};
 use std::fmt;
@@ -93,6 +95,7 @@ pub enum CoreBridgeBackendError {
     Subscription(SubscriptionRegistryError),
     NativeRoute(NativeRouteJournalError),
     NativeExchange(NativeExchangeJournalError),
+    NativeInvalidation(NativeInvalidationJournalError),
 }
 
 impl fmt::Display for CoreBridgeBackendError {
@@ -106,6 +109,7 @@ impl fmt::Display for CoreBridgeBackendError {
             Self::Subscription(_) => "subscription registry initialization failed",
             Self::NativeRoute(_) => "native route journal initialization failed",
             Self::NativeExchange(_) => "native exchange journal initialization failed",
+            Self::NativeInvalidation(_) => "native invalidation journal initialization failed",
         })
     }
 }
@@ -131,6 +135,7 @@ pub struct CoreBridgeBackend<C, W, T, R, S> {
     subscriptions: SubscriptionRegistry,
     native_routes: NativeRouteJournal,
     native_exchanges: NativeExchangeJournal,
+    native_invalidations: NativeInvalidationJournal,
     native_subscriptions: SubscriptionRegistry,
     event_sink: S,
 }
@@ -199,6 +204,9 @@ where
         let native_exchanges =
             NativeExchangeJournal::new(usize::from(config.transaction_capacity.get()))
                 .map_err(CoreBridgeBackendError::NativeExchange)?;
+        let native_invalidations =
+            NativeInvalidationJournal::new(usize::from(config.transaction_capacity.get()))
+                .map_err(CoreBridgeBackendError::NativeInvalidation)?;
         let native_subscriptions =
             SubscriptionRegistry::new(usize::from(config.subscription_capacity.get()))
                 .map_err(CoreBridgeBackendError::Subscription)?;
@@ -219,6 +227,7 @@ where
             subscriptions,
             native_routes,
             native_exchanges,
+            native_invalidations,
             native_subscriptions,
             event_sink,
         })
@@ -294,14 +303,15 @@ where
         })
     }
 
-    /// Advances time-driven bridge policy without requiring an RPC request.
+    /// Advances time-driven policy and reconciles native route authority.
     ///
     /// # Errors
     ///
-    /// Returns a canonical event failure without partially committing an
-    /// ownership transition.
+    /// Returns a canonical lease, profile, or route failure without granting
+    /// authority from a partially reconciled native inventory.
     pub fn tick(&mut self) -> Result<(), RpcFailure> {
-        self.expire_leases()
+        self.expire_leases()?;
+        self.synchronize_native_routes()
     }
 
     /// Atomically activates one transport-confirmed receiver generation.
@@ -693,11 +703,40 @@ where
     }
 
     fn synchronize_native_routes(&mut self) -> Result<(), RpcFailure> {
+        let previous = self.native_routes.inventory().routes;
         let routes = project_native_routes(&self.receivers, &self.profiles)
             .map_err(native_projection_failure)?;
         self.native_routes
             .synchronize(routes, &mut self.identities)
-            .map_err(native_route_failure)
+            .map_err(native_route_failure)?;
+        let current = self.native_routes.inventory().routes;
+
+        for route in &current {
+            if let Some(route_token) = &route.route_token {
+                self.native_invalidations.retire(route_token);
+            }
+        }
+        for route in previous {
+            let Some(route_token) = route.route_token.as_ref() else {
+                continue;
+            };
+            if current
+                .iter()
+                .any(|candidate| candidate.route_token.as_ref() == Some(route_token))
+            {
+                continue;
+            }
+            let rejection = native_route_invalidation(&route, &current);
+            let finding_id = native_finding(rejection.error_kind(), false);
+            self.native_exchanges.invalidate_route(
+                route_token,
+                rejection.error_kind(),
+                &finding_id,
+            );
+            self.native_invalidations
+                .invalidate(route_token.clone(), rejection);
+        }
+        Ok(())
     }
 
     fn qualify_resources(&mut self, request: &LeaseRequest) -> Result<(), RpcFailure> {
@@ -804,6 +843,43 @@ where
             let _ = self.event_sink.try_emit(&event);
         }
         Ok(())
+    }
+
+    fn complete_native_exchange(
+        &mut self,
+        request: NativeExchangeRequest,
+        result: NativeExchangeResult,
+    ) -> Result<NativeExchangeOutcome, RpcFailure> {
+        if let Some(outcome) = self
+            .native_exchanges
+            .retained(&request)
+            .map_err(native_exchange_failure)?
+        {
+            return Ok(outcome);
+        }
+        let outcome = NativeExchangeOutcome {
+            request_id: request.request_id.clone(),
+            route_token: request.route_token.clone(),
+            result,
+        };
+        self.native_exchanges
+            .remember(request, outcome.clone())
+            .map_err(native_exchange_failure)?;
+        Ok(outcome)
+    }
+
+    fn reject_native_before_set(
+        &mut self,
+        request: NativeExchangeRequest,
+        error_kind: ProtocolErrorKind,
+    ) -> Result<NativeExchangeOutcome, RpcFailure> {
+        self.complete_native_exchange(
+            request,
+            NativeExchangeResult::NotSent(NativeExchangeNotSent {
+                error_kind,
+                finding_id: native_finding(error_kind, false),
+            }),
+        )
     }
 }
 
@@ -1022,6 +1098,9 @@ where
     ) -> Result<NativeExchangeOutcome, RpcFailure> {
         Self::authorize_client(context, &request.client_id)?;
         self.tick()?;
+        if let Some(rejection) = self.native_invalidations.rejection(&request.route_token) {
+            return self.reject_native_before_set(request, rejection.error_kind());
+        }
         if let Some(outcome) = self
             .native_exchanges
             .retained(&request)
@@ -1031,44 +1110,54 @@ where
         }
 
         self.synchronize_native_routes()?;
-        let route = self
+        let Some(route) = self
             .native_routes
             .route_by_token(&request.route_token)
             .cloned()
-            .ok_or_else(profile_failure)?;
-        if route.access != NativeRouteAccess::Qualified
-            || route.route_state != RouteState::Available
-        {
-            return Err(profile_failure());
+        else {
+            return self.reject_native_before_set(request, ProtocolErrorKind::UnsupportedFeature);
+        };
+        if route.access != NativeRouteAccess::Qualified {
+            return self.reject_native_before_set(request, ProtocolErrorKind::UnsupportedFeature);
         }
-        let resource = route.resource.clone().ok_or_else(profile_failure)?;
+        if route.route_state != RouteState::Available {
+            return self.reject_native_before_set(request, ProtocolErrorKind::TransportFailure);
+        }
+        let Some(resource) = route.resource.clone() else {
+            return self.reject_native_before_set(request, ProtocolErrorKind::UnsupportedFeature);
+        };
         if !self.leases.owns(
             &request.client_id,
             &request.lease_id,
             std::slice::from_ref(&resource),
             self.clock.now(),
         ) {
-            return Err(ownership_failure());
+            return self.reject_native_before_set(request, ProtocolErrorKind::OwnershipConflict);
         }
         if self.transport.current_generation(&route.receiver_id) != Some(route.generation_id) {
-            return Err(generation_failure());
+            return self.reject_native_before_set(request, ProtocolErrorKind::StaleGeneration);
         }
         if !self
             .transport
             .native_exchange_available(&route.receiver_id, route.generation_id)
         {
-            return Err(transport_unavailable_failure());
+            return self.reject_native_before_set(request, ProtocolErrorKind::TransportFailure);
         }
         if usize::from(route.report_bytes.get()) != NATIVE_REPORT_BYTES {
-            return Err(profile_failure());
+            return self.reject_native_before_set(request, ProtocolErrorKind::InvalidRequest);
         }
 
         let endpoint = match route.device_kind {
             DeviceKind::Mouse => NativeEndpointLane::Pointer,
             DeviceKind::Keyboard => NativeEndpointLane::Keyboard,
-            _ => return Err(profile_failure()),
+            _ => {
+                return self
+                    .reject_native_before_set(request, ProtocolErrorKind::UnsupportedFeature);
+            }
         };
-        let report = decode_native_report(&request.report)?;
+        let Ok(report) = decode_native_report(&request.report) else {
+            return self.reject_native_before_set(request, ProtocolErrorKind::InvalidRequest);
+        };
         let route_token_digest = native_route_token_digest(&request.route_token);
         let dispatch = NativeTransportDispatch {
             session_id: context.session().session_id.clone(),
@@ -1092,15 +1181,24 @@ where
         } else {
             protocol_native_result(&transport_outcome.result)?
         };
-        let outcome = NativeExchangeOutcome {
-            request_id: request.request_id.clone(),
-            route_token: request.route_token.clone(),
-            result,
-        };
-        self.native_exchanges
-            .remember(request, outcome.clone())
-            .map_err(native_exchange_failure)?;
-        Ok(outcome)
+        self.complete_native_exchange(request, result)
+    }
+
+    fn reject_native_exchange(
+        &mut self,
+        context: BackendRequestContext<'_>,
+        request: NativeExchangeRequest,
+        rejection: NativeExchangeRejection,
+    ) -> Result<NativeExchangeOutcome, RpcFailure> {
+        Self::authorize_client(context, &request.client_id)?;
+        self.tick()?;
+        self.reject_native_before_set(request, rejection.error_kind())
+    }
+
+    fn take_native_route_invalidations(
+        &mut self,
+    ) -> Vec<(NativeRouteToken, NativeExchangeRejection)> {
+        self.native_invalidations.take_pending()
     }
 
     fn native_watch(
@@ -1225,6 +1323,29 @@ fn native_finding(error_kind: ProtocolErrorKind, uncertain: bool) -> FindingId {
         ProtocolErrorKind::OutcomeEvicted => ErrorCode::HfxOutcome002,
         ProtocolErrorKind::InternalFailure => ErrorCode::HfxInternal001,
     })
+}
+
+fn native_route_invalidation(
+    previous: &NativeRoute,
+    current: &[NativeRoute],
+) -> NativeExchangeRejection {
+    let replacement = current.iter().find(|candidate| {
+        candidate.receiver_id == previous.receiver_id
+            && candidate.device_id == previous.device_id
+            && candidate.endpoint_id == previous.endpoint_id
+    });
+    match replacement {
+        Some(route) if route.generation_id != previous.generation_id => {
+            NativeExchangeRejection::StaleGeneration
+        }
+        Some(route) if route.access != NativeRouteAccess::Qualified => {
+            NativeExchangeRejection::RouteWithdrawn
+        }
+        Some(route) if route.route_state != RouteState::Available => {
+            NativeExchangeRejection::RouteUnavailable
+        }
+        Some(_) | None => NativeExchangeRejection::RouteUnavailable,
+    }
 }
 
 fn desired_effect_failure(_error: DesiredEffectError) -> RpcFailure {
@@ -1396,5 +1517,83 @@ fn subscription_failure(error: SubscriptionRegistryError) -> RpcFailure {
         SubscriptionRegistryError::InvalidCapacity | SubscriptionRegistryError::Identity(_) => {
             RpcFailure::internal()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hfx_domain::{
+        EndpointId, GenerationId, LogicalDeviceId, NativeProtocolFamily, NativeReportByteCount,
+        ProductId, VendorId,
+    };
+
+    fn text<T>(value: &str) -> T
+    where
+        T: TryFrom<String>,
+        T::Error: fmt::Debug,
+    {
+        T::try_from(value.to_owned()).expect("test value is canonical")
+    }
+
+    fn route(generation: u64, access: NativeRouteAccess, route_state: RouteState) -> NativeRoute {
+        NativeRoute {
+            receiver_id: text::<ReceiverId>("receiver-1"),
+            generation_id: GenerationId::try_from(generation).expect("generation is canonical"),
+            device_id: text::<LogicalDeviceId>("mouse-1"),
+            endpoint_id: text::<EndpointId>("pointer"),
+            device_kind: DeviceKind::Mouse,
+            vendor_id: VendorId::try_from(0x1532_u16).expect("vendor is canonical"),
+            product_id: ProductId::try_from(0x00cd_u16).expect("product is canonical"),
+            route_state,
+            access,
+            protocol_family: text::<NativeProtocolFamily>("razer-feature-report-v1"),
+            report_bytes: NativeReportByteCount::try_from(90_u16)
+                .expect("report size is canonical"),
+            route_token: None,
+            resource: None,
+        }
+    }
+
+    #[test]
+    fn route_invalidation_preserves_generation_availability_and_authority_causes() {
+        let previous = route(1, NativeRouteAccess::Qualified, RouteState::Available);
+        assert_eq!(
+            native_route_invalidation(
+                &previous,
+                &[route(
+                    2,
+                    NativeRouteAccess::Qualified,
+                    RouteState::Available,
+                )],
+            ),
+            NativeExchangeRejection::StaleGeneration
+        );
+        assert_eq!(
+            native_route_invalidation(
+                &previous,
+                &[route(
+                    1,
+                    NativeRouteAccess::Qualified,
+                    RouteState::Unavailable,
+                )],
+            ),
+            NativeExchangeRejection::RouteUnavailable
+        );
+        assert_eq!(
+            native_route_invalidation(
+                &previous,
+                &[route(
+                    1,
+                    NativeRouteAccess::Candidate,
+                    RouteState::Available,
+                )],
+            ),
+            NativeExchangeRejection::RouteWithdrawn
+        );
+        assert_eq!(
+            native_route_invalidation(&previous, &[]),
+            NativeExchangeRejection::RouteUnavailable
+        );
     }
 }
