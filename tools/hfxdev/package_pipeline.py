@@ -250,16 +250,17 @@ def _build_cargo(
     environment: dict[str, str],
     builds: list[BuildSpec],
 ) -> list[BuiltArtifact]:
-    by_package: dict[str, list[BuildSpec]] = {}
+    by_package: dict[tuple[str, str], list[BuildSpec]] = {}
     for build in builds:
-        if build.package is None or build.target is None:
+        if build.package is None or build.target is None or build.cargo_profile is None:
             raise ModelError(f"build {build.id}: incomplete Cargo declaration")
-        by_package.setdefault(build.package, []).append(build)
-    for package, package_builds in sorted(by_package.items()):
+        by_package.setdefault((build.package, build.cargo_profile), []).append(build)
+    for (package, profile), package_builds in sorted(by_package.items()):
         command = [
             "cargo",
             "build",
-            "--release",
+            "--profile",
+            profile,
             "--locked",
             "--offline",
             "--package",
@@ -273,10 +274,11 @@ def _build_cargo(
             environment=environment,
             label=f"Cargo package {package}",
         )
-    release = Path(environment["CARGO_TARGET_DIR"]) / "release"
     return [
         _copy_artifact(
-            release / (build.target or ""),
+            Path(environment["CARGO_TARGET_DIR"])
+            / (build.cargo_profile or "")
+            / (build.target or ""),
             output,
             build,
             kind="cargo-binary",

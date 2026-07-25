@@ -68,12 +68,13 @@
     "cargoBuild": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "kind", "package", "target", "destination", "mode", "required"],
+      "required": ["id", "kind", "package", "target", "profile", "destination", "mode", "required"],
       "properties": {
         "id": {"$ref": "#/$defs/identifier"},
         "kind": {"const": "cargo-binary"},
         "package": {"$ref": "#/$defs/identifier"},
         "target": {"$ref": "#/$defs/identifier"},
+        "profile": {"enum": ["release", "relay"]},
         "destination": {"$ref": "#/$defs/destination"},
         "mode": {"const": "0755"},
         "required": {"const": true}

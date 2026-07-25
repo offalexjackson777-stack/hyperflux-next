@@ -19,7 +19,17 @@ POLICY_KEYS = {
     "enable_service_on_install",
     "preserve_configuration",
 }
-CARGO_KEYS = {"id", "kind", "package", "target", "destination", "mode", "required"}
+CARGO_KEYS = {
+    "id",
+    "kind",
+    "package",
+    "target",
+    "profile",
+    "destination",
+    "mode",
+    "required",
+}
+CARGO_PROFILES = {"release", "relay"}
 CMAKE_KEYS = {
     "id",
     "kind",
@@ -64,6 +74,7 @@ class BuildSpec:
     source: str | None = None
     package: str | None = None
     target: str | None = None
+    cargo_profile: str | None = None
     output: str | None = None
     destination: str | None = None
     mode: int | None = None
@@ -207,12 +218,15 @@ def _cargo_build(value: dict[str, Any], tokens: dict[str, str], label: str) -> B
     _exact(value, CARGO_KEYS, label)
     if value["required"] is not True:
         raise ModelError(f"{label}: Cargo product must be required")
+    if value["profile"] not in CARGO_PROFILES:
+        raise ModelError(f"{label}: unsupported Cargo profile")
     return BuildSpec(
         id=_identifier(value["id"], f"{label} id"),
         kind="cargo-binary",
         required=True,
         package=_identifier(value["package"], f"{label} package"),
         target=_identifier(value["target"], f"{label} target"),
+        cargo_profile=value["profile"],
         destination=_destination(value["destination"], f"{label} destination", tokens),
         mode=_mode(value["mode"], f"{label} mode"),
     )

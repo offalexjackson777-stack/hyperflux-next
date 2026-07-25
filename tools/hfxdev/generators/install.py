@@ -31,6 +31,11 @@ def compiled_plan(manifest: InstallManifest, runtime: LinuxRuntime) -> str:
                 **({"source": build.source} if build.source is not None else {}),
                 **({"package": build.package} if build.package is not None else {}),
                 **({"target": build.target} if build.target is not None else {}),
+                **(
+                    {"profile": build.cargo_profile}
+                    if build.cargo_profile is not None
+                    else {}
+                ),
                 **({"output": build.output} if build.output is not None else {}),
                 **(
                     {"transform": build.transform}

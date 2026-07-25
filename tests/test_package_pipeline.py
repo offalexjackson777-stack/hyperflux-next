@@ -22,6 +22,7 @@ from hfxdev.model import ModelError, sha256_file
 from hfxdev.package_pipeline import (
     BuiltArtifact,
     _base_environment,
+    _build_cargo,
     _build_cmake,
     _build_python,
     _install_wheels,
@@ -39,6 +40,66 @@ from hfxdev.toolchains import load_toolchain_pins
 
 
 class PackagePipelineTests(unittest.TestCase):
+    def test_cargo_builds_use_their_declared_profiles_and_output_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            environment = {"CARGO_TARGET_DIR": str(output / "target")}
+            install = load_install_manifest(ROOT)
+            builds = [
+                install.build("bridge-daemon"),
+                install.build("openrazer-native-relay"),
+            ]
+            commands: list[list[str]] = []
+            copied: list[Path] = []
+
+            def capture_run(
+                command: list[str],
+                *,
+                cwd: Path,
+                environment: dict[str, str],
+                label: str,
+                timeout_seconds: int = 900,
+            ) -> None:
+                del cwd, environment, label, timeout_seconds
+                commands.append(command)
+
+            def capture_copy(
+                source: Path,
+                artifacts_root: Path,
+                build: object,
+                **kwargs: object,
+            ) -> object:
+                del artifacts_root, build, kwargs
+                copied.append(source)
+                return object()
+
+            with (
+                patch("hfxdev.package_pipeline._run", side_effect=capture_run),
+                patch(
+                    "hfxdev.package_pipeline._copy_artifact",
+                    side_effect=capture_copy,
+                ),
+            ):
+                _build_cargo(ROOT, output, environment, builds)
+
+            self.assertEqual(
+                [
+                    (command[command.index("--profile") + 1], command[-1])
+                    for command in commands
+                ],
+                [
+                    ("release", "hyperflux-next-bridge"),
+                    ("relay", "hyperflux-next-uhid-relay"),
+                ],
+            )
+            self.assertEqual(
+                copied,
+                [
+                    output / "target/release/hyperflux-next-bridge",
+                    output / "target/relay/hyperflux-next-uhid-relay",
+                ],
+            )
+
     def test_source_tree_license_contract_accepts_legacy_and_reuse_layouts(self) -> None:
         self.assertTrue(_source_tree_has_license({"LICENSE"}))
         self.assertTrue(

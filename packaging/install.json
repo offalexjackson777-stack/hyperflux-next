@@ -13,6 +13,7 @@
       "kind": "cargo-binary",
       "package": "hfx-daemon",
       "target": "hyperflux-next-bridge",
+      "profile": "release",
       "destination": "@bridge_executable_path@",
       "mode": "0755",
       "required": true
@@ -22,6 +23,7 @@
       "kind": "cargo-binary",
       "package": "hfx-ops",
       "target": "hyperfluxctl",
+      "profile": "release",
       "destination": "@operations_cli_path@",
       "mode": "0755",
       "required": true
@@ -31,6 +33,7 @@
       "kind": "cargo-binary",
       "package": "hfx-ops",
       "target": "hyperflux-next-activate",
+      "profile": "release",
       "destination": "@activation_utility_path@",
       "mode": "0755",
       "required": true
@@ -40,6 +43,7 @@
       "kind": "cargo-binary",
       "package": "hfx-uhid-relay",
       "target": "hyperflux-next-uhid-relay",
+      "profile": "relay",
       "destination": "@openrazer_relay_executable_path@",
       "mode": "0755",
       "required": true

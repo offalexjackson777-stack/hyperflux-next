@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 from pathlib import Path
 import sys
+import tomllib
 import unittest
 from unittest.mock import patch
 
@@ -64,6 +65,33 @@ class InstallManifestTests(unittest.TestCase):
         self.assertIn(f"{source_directory}/dkms.conf", destinations)
         self.assertIn(f"{source_directory}/hyperflux-next-core.c", destinations)
 
+    def test_only_the_feature_relay_uses_the_thin_process_profile(self) -> None:
+        cargo_profiles = {
+            build.id: build.cargo_profile
+            for build in self.manifest.builds
+            if build.kind == "cargo-binary"
+        }
+        self.assertEqual(
+            cargo_profiles,
+            {
+                "bridge-daemon": "release",
+                "operations-cli": "release",
+                "activation-utility": "release",
+                "openrazer-native-relay": "relay",
+            },
+        )
+        cargo = tomllib.loads((ROOT / "Cargo.toml").read_text(encoding="utf-8"))
+        self.assertEqual(
+            cargo["profile"]["relay"],
+            {
+                "inherits": "release",
+                "codegen-units": 1,
+                "lto": "thin",
+                "panic": "abort",
+                "strip": "symbols",
+            },
+        )
+
     def test_python_sdk_license_is_generated_from_repository_authority(self) -> None:
         self.assertEqual(
             (ROOT / "sdk/python/LICENSE").read_bytes(),
@@ -94,6 +122,10 @@ class InstallManifestTests(unittest.TestCase):
         stale_binary = copy.deepcopy(self.value)
         stale_binary["builds"][0]["destination"] = "/usr/bin/hyperflux-next-bridge"
         cases.append(stale_binary)
+
+        unknown_profile = copy.deepcopy(self.value)
+        unknown_profile["builds"][0]["profile"] = "unreviewed"
+        cases.append(unknown_profile)
 
         traversal = copy.deepcopy(self.value)
         traversal["payloads"][0]["destination"] = "/usr/share/../escape"

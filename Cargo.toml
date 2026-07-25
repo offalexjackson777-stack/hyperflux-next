@@ -22,3 +22,10 @@ unsafe_code = "deny"
 [workspace.lints.clippy]
 all = "deny"
 pedantic = "deny"
+
+[profile.relay]
+inherits = "release"
+codegen-units = 1
+lto = "thin"
+panic = "abort"
+strip = "symbols"
