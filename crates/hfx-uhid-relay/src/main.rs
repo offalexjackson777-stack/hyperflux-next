@@ -10,8 +10,7 @@ use std::process::ExitCode;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
-const USAGE: &str =
-    "Usage: hyperflux-next-uhid-relay [--socket ABSOLUTE_PATH] [--uhid ABSOLUTE_PATH]";
+const USAGE: &str = "Usage: hyperflux-next-uhid-relay [--socket ABSOLUTE_PATH] [--uhid ABSOLUTE_PATH] [--hid-driver-root ABSOLUTE_PATH]";
 
 #[derive(Debug, Eq, PartialEq)]
 enum Command {
@@ -71,6 +70,7 @@ fn parse_arguments(arguments: impl IntoIterator<Item = String>) -> Result<Comman
     let mut paths = RelayPaths::linux();
     let mut socket_seen = false;
     let mut uhid_seen = false;
+    let mut hid_driver_root_seen = false;
     let mut index = 0;
     while index < arguments.len() {
         let flag = &arguments[index];
@@ -90,7 +90,11 @@ fn parse_arguments(arguments: impl IntoIterator<Item = String>) -> Result<Comman
                 paths.uhid_device = path;
                 uhid_seen = true;
             }
-            "--socket" | "--uhid" => {
+            "--hid-driver-root" if !hid_driver_root_seen => {
+                paths.hid_driver_root = path;
+                hid_driver_root_seen = true;
+            }
+            "--socket" | "--uhid" | "--hid-driver-root" => {
                 return Err(format!("{flag} may be provided only once\n{USAGE}"));
             }
             _ => return Err(format!("unknown option: {flag}\n{USAGE}")),
@@ -121,6 +125,8 @@ mod tests {
         let command = parse_arguments(strings(&[
             "--uhid",
             "/tmp/test-uhid",
+            "--hid-driver-root",
+            "/tmp/test-hid-drivers",
             "--socket",
             "/tmp/test.sock",
         ]))
@@ -130,6 +136,7 @@ mod tests {
             Command::Run(RelayPaths {
                 bridge_socket: PathBuf::from("/tmp/test.sock"),
                 uhid_device: PathBuf::from("/tmp/test-uhid"),
+                hid_driver_root: PathBuf::from("/tmp/test-hid-drivers"),
             })
         );
     }
@@ -140,6 +147,7 @@ mod tests {
             strings(&["--socket", "relative.sock"]),
             strings(&["--uhid"]),
             strings(&["--socket", "/a", "--socket", "/b"]),
+            strings(&["--hid-driver-root", "/a", "--hid-driver-root", "/b"]),
             strings(&["--other", "/tmp/value"]),
         ] {
             assert!(parse_arguments(arguments).is_err());

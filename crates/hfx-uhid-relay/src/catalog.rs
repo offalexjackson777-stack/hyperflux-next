@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
+use crate::serial::SerialQuerySpec;
 use hfx_domain::{DeviceKind, NativeProtocolFamily, ProductId, VendorId};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 const CATALOG_JSON: &str =
     include_str!("../../../integrations/openrazer/native-route/catalog.json");
 const METADATA_JSON: &str = include_str!("../../../integrations/openrazer/metadata.json");
+const PROBE_CATALOG_JSON: &str =
+    include_str!("../../../integrations/openrazer/native-probe-catalog.json");
 const EXPECTED_SCHEMA: &str = "hyperflux-openrazer-native-route-catalog-v1";
+const EXPECTED_PROBE_SCHEMA: &str = "hyperflux-openrazer-native-probe-catalog-v1";
 const EXPECTED_DESCRIPTOR: &[u8] = &[
     0x06, 0x00, 0xff, 0x09, 0x01, 0xa1, 0x01, 0x15, 0x00, 0x26, 0xff, 0x00, 0x75, 0x08, 0x95, 0x5a,
     0xb1, 0x02, 0xc0,
@@ -28,6 +32,7 @@ pub struct NativeRouteRecord {
     pub source_sha256: String,
     pub direct_data_product_ids: Vec<ProductId>,
     pub event_file_regex: String,
+    pub serial_query: SerialQuerySpec,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -47,6 +52,7 @@ pub enum NativeRouteCatalogError {
     InvalidTransport,
     InvalidRoute,
     DuplicateRoute,
+    ProbeCatalogDrift,
 }
 
 impl fmt::Display for NativeRouteCatalogError {
@@ -58,6 +64,9 @@ impl fmt::Display for NativeRouteCatalogError {
             Self::InvalidTransport => "OpenRazer native Feature transport is invalid",
             Self::InvalidRoute => "OpenRazer native route is invalid",
             Self::DuplicateRoute => "OpenRazer native route identity is duplicated",
+            Self::ProbeCatalogDrift => {
+                "OpenRazer serial probe no longer matches the native-route catalog"
+            }
         })
     }
 }
@@ -108,6 +117,77 @@ struct SourceDocument {
     sha256: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct ProbeCatalogDocument {
+    schema: String,
+    upstream: ProbeUpstreamDocument,
+    report_size: u16,
+    busy_retry: ProbeBusyRetryDocument,
+    devices: Vec<ProbeDeviceDocument>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ProbeUpstreamDocument {
+    commit: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ProbeBusyRetryDocument {
+    status: u8,
+    maximum_attempts: u8,
+}
+
+#[derive(Debug, Deserialize)]
+struct ProbeDeviceDocument {
+    profile_id: String,
+    wireless_identity: ProbeIdentityDocument,
+    direct_usb_reference: ProbeIdentityDocument,
+    probes: Vec<ProbeDocument>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ProbeIdentityDocument {
+    vendor_id: u16,
+    product_id: u16,
+    model_name: String,
+    device_kind: String,
+    transport_variant: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ProbeDocument {
+    method: String,
+    privacy: String,
+    driver: ProbeDriverDocument,
+    request: ProbeRequestDocument,
+    response_summary: String,
+    comparison: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ProbeDriverDocument {
+    attribute: String,
+    reader: String,
+    request_owner: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ProbeRequestDocument {
+    command_class: u8,
+    command_id: u8,
+    data_size: u8,
+    arguments: Vec<u8>,
+    normalized_sha256: String,
+    transaction_id_from_upstream: bool,
+    crc_recomputed_by_upstream: bool,
+}
+
+struct BoundSerialProbe {
+    wireless_identity: ProbeIdentityDocument,
+    direct_usb_reference: ProbeIdentityDocument,
+    query: SerialQuerySpec,
+}
+
 impl NativeRouteCatalog {
     /// Loads the exact generated catalog embedded in this binary.
     ///
@@ -138,6 +218,7 @@ impl NativeRouteCatalog {
         }
         let protocol_family = NativeProtocolFamily::try_from(document.transport.protocol_family)
             .map_err(|_| NativeRouteCatalogError::InvalidTransport)?;
+        let serial_probes = load_serial_probes(&document.upstream_commit)?;
         let mut identities = BTreeSet::new();
         let mut profiles = BTreeSet::new();
         let mut routes = Vec::with_capacity(document.routes.len());
@@ -169,11 +250,16 @@ impl NativeRouteCatalog {
                 .map_err(|_| NativeRouteCatalogError::InvalidRoute)?;
             let direct_data_product_ids = route
                 .direct_data_product_ids
-                .into_iter()
+                .iter()
+                .copied()
                 .map(|product| {
                     ProductId::try_from(product).map_err(|_| NativeRouteCatalogError::InvalidRoute)
                 })
                 .collect::<Result<Vec<_>, _>>()?;
+            let serial_probe = serial_probes
+                .get(&route.profile_id)
+                .ok_or(NativeRouteCatalogError::ProbeCatalogDrift)?;
+            validate_probe_identity(&route, device_kind, &direct_data_product_ids, serial_probe)?;
             routes.push(NativeRouteRecord {
                 profile_id: route.profile_id,
                 vendor_id,
@@ -186,7 +272,11 @@ impl NativeRouteCatalog {
                 source_sha256: route.source.sha256,
                 direct_data_product_ids,
                 event_file_regex: route.event_file_regex,
+                serial_query: serial_probe.query.clone(),
             });
+        }
+        if routes.len() != serial_probes.len() {
+            return Err(NativeRouteCatalogError::ProbeCatalogDrift);
         }
         routes.sort_by_key(|route| {
             (
@@ -242,6 +332,96 @@ impl NativeRouteCatalog {
     pub fn upstream_commit(&self) -> &str {
         &self.upstream_commit
     }
+}
+
+fn load_serial_probes(
+    expected_commit: &str,
+) -> Result<BTreeMap<String, BoundSerialProbe>, NativeRouteCatalogError> {
+    let document: ProbeCatalogDocument = serde_json::from_str(PROBE_CATALOG_JSON)
+        .map_err(|_| NativeRouteCatalogError::InvalidJson)?;
+    if document.schema != EXPECTED_PROBE_SCHEMA
+        || document.upstream.commit != expected_commit
+        || document.report_size != 90
+        || document.busy_retry.status != 1
+        || !(1..=5).contains(&document.busy_retry.maximum_attempts)
+    {
+        return Err(NativeRouteCatalogError::ProbeCatalogDrift);
+    }
+    let mut probes = BTreeMap::new();
+    for device in document.devices {
+        let mut serials = device
+            .probes
+            .into_iter()
+            .filter(|probe| probe.method == "get_serial");
+        let serial = serials
+            .next()
+            .ok_or(NativeRouteCatalogError::ProbeCatalogDrift)?;
+        if serials.next().is_some()
+            || serial.privacy != "redacted-equality-only"
+            || serial.driver.attribute != "device_serial"
+            || serial.driver.reader != "razer_attr_read_device_serial"
+            || serial.driver.request_owner != "razer_attr_read_device_serial"
+            || serial.response_summary != "redacted-serial-equality"
+            || serial.comparison != "redacted-equality"
+            || !serial.request.transaction_id_from_upstream
+            || !serial.request.crc_recomputed_by_upstream
+        {
+            return Err(NativeRouteCatalogError::ProbeCatalogDrift);
+        }
+        let query = SerialQuerySpec::new(
+            serial.request.command_class,
+            serial.request.command_id,
+            serial.request.data_size,
+            serial.request.arguments,
+            serial.request.normalized_sha256,
+        )
+        .map_err(|_| NativeRouteCatalogError::ProbeCatalogDrift)?;
+        if probes
+            .insert(
+                device.profile_id,
+                BoundSerialProbe {
+                    wireless_identity: device.wireless_identity,
+                    direct_usb_reference: device.direct_usb_reference,
+                    query,
+                },
+            )
+            .is_some()
+        {
+            return Err(NativeRouteCatalogError::ProbeCatalogDrift);
+        }
+    }
+    Ok(probes)
+}
+
+fn validate_probe_identity(
+    route: &RouteDocument,
+    device_kind: DeviceKind,
+    direct_products: &[ProductId],
+    probe: &BoundSerialProbe,
+) -> Result<(), NativeRouteCatalogError> {
+    let expected_kind = match device_kind {
+        DeviceKind::Mouse => "mouse",
+        DeviceKind::Keyboard => "keyboard",
+        _ => return Err(NativeRouteCatalogError::ProbeCatalogDrift),
+    };
+    let wireless = &probe.wireless_identity;
+    let direct = &probe.direct_usb_reference;
+    if wireless.vendor_id != route.vendor_id
+        || wireless.product_id != route.wireless_product_id
+        || wireless.model_name != route.model_name
+        || wireless.device_kind != expected_kind
+        || wireless.transport_variant != "wireless"
+        || direct.vendor_id != route.vendor_id
+        || direct.device_kind != expected_kind
+        || direct.transport_variant != "wired"
+        || direct.model_name.is_empty()
+        || !direct_products
+            .iter()
+            .any(|product| product.get() == direct.product_id)
+    {
+        return Err(NativeRouteCatalogError::ProbeCatalogDrift);
+    }
+    Ok(())
 }
 
 fn decode_hex(value: &str) -> Option<Vec<u8>> {

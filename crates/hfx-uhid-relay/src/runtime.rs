@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::{
-    FeatureEndpoint, NativeBridge, NativeRouteCatalog, NativeRouteMonitor, RouteAction,
-    RouteIdentity, RouteSupervisor, UHID_EVENT_BYTES, UhidEvent, UhidReply,
+    BridgeExchangeResult, DirectRouteScanner, DirectRouteSnapshot, DirectRouteTransition,
+    FeatureEndpoint, NativeBridge, NativeRouteCatalog, NativeRouteMonitor, NativeRouteRecord,
+    RouteAction, RouteIdentity, RouteSupervisor, SerialFingerprint, SerialQuerySpec,
+    UHID_EVENT_BYTES, UhidEvent, UhidReply, VirtualDeviceSpec,
 };
 use hfx_domain::EventBatchLimit;
+use hfx_protocol::NativeRoute;
 use hfx_sdk::EventSubscription;
 use rustix::fs::{OFlags, fcntl_getfl, fcntl_setfl};
 use std::collections::{BTreeMap, VecDeque};
@@ -17,6 +20,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 const WATCH_INTERVAL: Duration = Duration::from_millis(100);
+const DIRECT_SCAN_INTERVAL: Duration = Duration::from_millis(250);
+const SERIAL_QUERY_INTERVAL: Duration = Duration::from_secs(1);
 const IDLE_INTERVAL: Duration = Duration::from_millis(10);
 const MAX_PENDING_REPLIES: usize = 8;
 const WATCH_BATCH_SIZE: u16 = 32;
@@ -25,6 +30,7 @@ const WATCH_BATCH_SIZE: u16 = 32;
 pub struct RelayPaths {
     pub bridge_socket: PathBuf,
     pub uhid_device: PathBuf,
+    pub hid_driver_root: PathBuf,
 }
 
 impl RelayPaths {
@@ -33,6 +39,7 @@ impl RelayPaths {
         Self {
             bridge_socket: PathBuf::from(hfx_runtime::BRIDGE_SOCKET_PATH),
             uhid_device: PathBuf::from("/dev/uhid"),
+            hid_driver_root: PathBuf::from("/sys/bus/hid/drivers"),
         }
     }
 }
@@ -85,12 +92,9 @@ struct RunningEndpoint {
 impl RunningEndpoint {
     fn create(
         paths: &RelayPaths,
-        route: hfx_protocol::NativeRoute,
-        device: crate::VirtualDeviceSpec,
-        instance: u32,
+        bridge: NativeBridge,
+        device: VirtualDeviceSpec,
     ) -> Result<Self, RelayRuntimeError> {
-        let bridge = NativeBridge::connect(&paths.bridge_socket, route, instance)
-            .map_err(|_| RelayRuntimeError::Bridge)?;
         let mut file = open_uhid(&paths.uhid_device)?;
         write_blocking(&mut file, &UhidReply::Create(device))?;
         let flags = fcntl_getfl(&file).map_err(|_| RelayRuntimeError::UhidOpen)?;
@@ -101,6 +105,24 @@ impl RunningEndpoint {
             pending: VecDeque::new(),
             destroyed: false,
         })
+    }
+
+    fn query_serial(&mut self, query: &SerialQuerySpec) -> Option<SerialFingerprint> {
+        let request = query.request();
+        let fingerprint = match self.endpoint.management_exchange(request)? {
+            BridgeExchangeResult::MatchedResponse(response) => {
+                query.fingerprint_response(&request, &response)
+            }
+            BridgeExchangeResult::NotSent | BridgeExchangeResult::MayHaveBeenSent => None,
+        };
+        self.endpoint
+            .bridge_mut()
+            .take_observed_serial()
+            .or(fingerprint)
+    }
+
+    fn take_observed_serial(&mut self) -> Option<SerialFingerprint> {
+        self.endpoint.bridge_mut().take_observed_serial()
     }
 
     fn step(&mut self) -> Result<(), RelayRuntimeError> {
@@ -174,6 +196,113 @@ impl RunningEndpoint {
     }
 }
 
+struct ManagedRoute {
+    route: NativeRoute,
+    record: NativeRouteRecord,
+    device: VirtualDeviceSpec,
+    serial_fingerprint: Option<SerialFingerprint>,
+    endpoint: Option<RunningEndpoint>,
+    next_serial_query: Instant,
+}
+
+impl ManagedRoute {
+    fn start(
+        paths: &RelayPaths,
+        route: NativeRoute,
+        record: NativeRouteRecord,
+        device: VirtualDeviceSpec,
+        direct: &DirectRouteSnapshot,
+        instance: u32,
+    ) -> Result<Self, RelayRuntimeError> {
+        let mut bridge = NativeBridge::connect(
+            &paths.bridge_socket,
+            route.clone(),
+            record.serial_query.clone(),
+            instance,
+        )
+        .map_err(|_| RelayRuntimeError::Bridge)?;
+        let queried_serial = direct
+            .has_profile_candidate(&record.profile_id)
+            .then(|| record.serial_query.query(&mut bridge))
+            .flatten();
+        let serial_fingerprint = bridge.take_observed_serial().or(queried_serial);
+        let suppressed = serial_fingerprint
+            .as_ref()
+            .is_some_and(|fingerprint| direct.suppresses(&record.profile_id, fingerprint));
+        let endpoint = if suppressed {
+            None
+        } else {
+            Some(RunningEndpoint::create(paths, bridge, device.clone())?)
+        };
+        Ok(Self {
+            route,
+            record,
+            device,
+            serial_fingerprint,
+            endpoint,
+            next_serial_query: Instant::now() + SERIAL_QUERY_INTERVAL,
+        })
+    }
+
+    fn step(&mut self) -> Result<(), RelayRuntimeError> {
+        if let Some(endpoint) = &mut self.endpoint {
+            endpoint.step()?;
+            if self.serial_fingerprint.is_none() {
+                self.serial_fingerprint = endpoint.take_observed_serial();
+            }
+        }
+        Ok(())
+    }
+
+    fn refresh_direct(
+        &mut self,
+        paths: &RelayPaths,
+        direct: &DirectRouteSnapshot,
+        next_instance: &mut u32,
+    ) -> Result<(), RelayRuntimeError> {
+        if self.serial_fingerprint.is_none()
+            && direct.has_profile_candidate(&self.record.profile_id)
+            && Instant::now() >= self.next_serial_query
+        {
+            if let Some(endpoint) = &mut self.endpoint {
+                self.serial_fingerprint = endpoint.query_serial(&self.record.serial_query);
+            }
+            self.next_serial_query = Instant::now() + SERIAL_QUERY_INTERVAL;
+        }
+
+        match direct.transition(
+            &self.record.profile_id,
+            self.serial_fingerprint.as_ref(),
+            self.endpoint.is_some(),
+        ) {
+            DirectRouteTransition::Suppress => {
+                if let Some(endpoint) = self.endpoint.take() {
+                    endpoint.destroy();
+                }
+            }
+            DirectRouteTransition::Expose => {
+                let instance = take_instance(next_instance)?;
+                let bridge = NativeBridge::connect(
+                    &paths.bridge_socket,
+                    self.route.clone(),
+                    self.record.serial_query.clone(),
+                    instance,
+                )
+                .map_err(|_| RelayRuntimeError::Bridge)?;
+                self.endpoint = Some(RunningEndpoint::create(paths, bridge, self.device.clone())?);
+            }
+            DirectRouteTransition::Keep => {}
+        }
+        Ok(())
+    }
+
+    fn destroy(mut self) {
+        if let Some(endpoint) = self.endpoint.take() {
+            endpoint.destroy();
+        }
+    }
+}
+
 impl Drop for RunningEndpoint {
     fn drop(&mut self) {
         self.destroy_inner();
@@ -188,6 +317,8 @@ impl Drop for RunningEndpoint {
 /// session destroys every virtual endpoint and releases every route lease.
 pub fn run_relay(paths: &RelayPaths, termination: &AtomicBool) -> Result<(), RelayRuntimeError> {
     let catalog = NativeRouteCatalog::load().map_err(|_| RelayRuntimeError::Catalog)?;
+    let mut direct_scanner = DirectRouteScanner::new(paths.hid_driver_root.clone());
+    let mut direct_snapshot = direct_scanner.scan(&catalog).unwrap_or_default();
     let mut monitor =
         NativeRouteMonitor::connect(&paths.bridge_socket).map_err(|_| RelayRuntimeError::Bridge)?;
     let inventory = monitor.enumerate().map_err(|_| RelayRuntimeError::Bridge)?;
@@ -195,19 +326,33 @@ pub fn run_relay(paths: &RelayPaths, termination: &AtomicBool) -> Result<(), Rel
     let actions = supervisor
         .reconcile(&inventory, &catalog)
         .map_err(|_| RelayRuntimeError::Supervisor)?;
-    let mut endpoints = BTreeMap::new();
+    let mut routes = BTreeMap::new();
     let mut next_instance = 1_u32;
-    apply_actions(paths, actions, &mut endpoints, &mut next_instance)?;
+    apply_actions(
+        paths,
+        actions,
+        &mut routes,
+        &direct_snapshot,
+        &mut next_instance,
+    )?;
 
     let batch_limit = EventBatchLimit::try_from(WATCH_BATCH_SIZE)
         .map_err(|_| RelayRuntimeError::InvalidBatchLimit)?;
     let mut subscription_id = None;
     let mut cursor = Some(inventory.cursor);
     let mut next_watch = Instant::now();
+    let mut next_direct_scan = Instant::now() + DIRECT_SCAN_INTERVAL;
 
     while !termination.load(Ordering::Relaxed) {
-        for endpoint in endpoints.values_mut() {
-            endpoint.step()?;
+        for route in routes.values_mut() {
+            route.step()?;
+        }
+        if Instant::now() >= next_direct_scan {
+            if let Ok(snapshot) = direct_scanner.scan(&catalog) {
+                direct_snapshot = snapshot;
+                refresh_direct_routes(paths, &mut routes, &direct_snapshot, &mut next_instance)?;
+            }
+            next_direct_scan = Instant::now() + DIRECT_SCAN_INTERVAL;
         }
         if Instant::now() >= next_watch {
             let batch = monitor
@@ -222,7 +367,13 @@ pub fn run_relay(paths: &RelayPaths, termination: &AtomicBool) -> Result<(), Rel
                 let actions = supervisor
                     .reconcile(&inventory, &catalog)
                     .map_err(|_| RelayRuntimeError::Supervisor)?;
-                apply_actions(paths, actions, &mut endpoints, &mut next_instance)?;
+                apply_actions(
+                    paths,
+                    actions,
+                    &mut routes,
+                    &direct_snapshot,
+                    &mut next_instance,
+                )?;
                 subscription_id = None;
                 cursor = Some(inventory.cursor);
             } else {
@@ -230,7 +381,13 @@ pub fn run_relay(paths: &RelayPaths, termination: &AtomicBool) -> Result<(), Rel
                     let actions = supervisor
                         .apply_event(event, &catalog)
                         .map_err(|_| RelayRuntimeError::Supervisor)?;
-                    apply_actions(paths, actions, &mut endpoints, &mut next_instance)?;
+                    apply_actions(
+                        paths,
+                        actions,
+                        &mut routes,
+                        &direct_snapshot,
+                        &mut next_instance,
+                    )?;
                 }
                 subscription_id = Some(batch.subscription_id);
                 cursor = Some(batch.next_cursor);
@@ -243,35 +400,34 @@ pub fn run_relay(paths: &RelayPaths, termination: &AtomicBool) -> Result<(), Rel
         }
         thread::sleep(IDLE_INTERVAL);
     }
-    destroy_all(&mut endpoints);
+    destroy_all(&mut routes);
     Ok(())
 }
 
 fn apply_actions(
     paths: &RelayPaths,
     actions: Vec<RouteAction>,
-    endpoints: &mut BTreeMap<RouteIdentity, RunningEndpoint>,
+    routes: &mut BTreeMap<RouteIdentity, ManagedRoute>,
+    direct: &DirectRouteSnapshot,
     next_instance: &mut u32,
 ) -> Result<(), RelayRuntimeError> {
     for action in actions {
         match action {
             RouteAction::Stop { identity } => {
-                if let Some(endpoint) = endpoints.remove(&identity) {
-                    endpoint.destroy();
+                if let Some(route) = routes.remove(&identity) {
+                    route.destroy();
                 }
             }
             RouteAction::Start {
                 identity,
                 route,
+                record,
                 device,
-                ..
             } => {
-                let instance = *next_instance;
-                *next_instance = next_instance
-                    .checked_add(1)
-                    .ok_or(RelayRuntimeError::Bridge)?;
-                let endpoint = RunningEndpoint::create(paths, *route, *device, instance)?;
-                if let Some(previous) = endpoints.insert(identity, endpoint) {
+                let instance = take_instance(next_instance)?;
+                let managed =
+                    ManagedRoute::start(paths, *route, *record, *device, direct, instance)?;
+                if let Some(previous) = routes.insert(identity, managed) {
                     previous.destroy();
                 }
             }
@@ -280,9 +436,29 @@ fn apply_actions(
     Ok(())
 }
 
-fn destroy_all(endpoints: &mut BTreeMap<RouteIdentity, RunningEndpoint>) {
-    while let Some((_, endpoint)) = endpoints.pop_first() {
-        endpoint.destroy();
+fn refresh_direct_routes(
+    paths: &RelayPaths,
+    routes: &mut BTreeMap<RouteIdentity, ManagedRoute>,
+    direct: &DirectRouteSnapshot,
+    next_instance: &mut u32,
+) -> Result<(), RelayRuntimeError> {
+    for route in routes.values_mut() {
+        route.refresh_direct(paths, direct, next_instance)?;
+    }
+    Ok(())
+}
+
+fn take_instance(next_instance: &mut u32) -> Result<u32, RelayRuntimeError> {
+    let instance = *next_instance;
+    *next_instance = next_instance
+        .checked_add(1)
+        .ok_or(RelayRuntimeError::Bridge)?;
+    Ok(instance)
+}
+
+fn destroy_all(routes: &mut BTreeMap<RouteIdentity, ManagedRoute>) {
+    while let Some((_, route)) = routes.pop_first() {
+        route.destroy();
     }
 }
 

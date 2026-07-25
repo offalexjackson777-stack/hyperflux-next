@@ -64,6 +64,22 @@ impl<B: BridgeExchange> FeatureEndpoint<B> {
         self.pending_response.is_some()
     }
 
+    pub(crate) fn bridge_mut(&mut self) -> &mut B {
+        &mut self.bridge
+    }
+
+    /// Performs one relay-owned read-only management exchange only when no
+    /// `OpenRazer` response is pending. This keeps direct-route identity probing
+    /// serialized with the same native-control lease as normal Feature traffic.
+    pub fn management_exchange(
+        &mut self,
+        report: [u8; FEATURE_REPORT_BYTES],
+    ) -> Option<BridgeExchangeResult> {
+        self.pending_response
+            .is_none()
+            .then(|| self.bridge.exchange(report))
+    }
+
     /// Handles a decoded UHID event without exposing input collections.
     ///
     /// # Errors
@@ -296,5 +312,29 @@ mod tests {
             Err(EndpointError::InvalidFeatureRequest)
         );
         assert_eq!(endpoint.state(), FeatureEndpointState::Created);
+    }
+
+    #[test]
+    fn management_exchange_never_interleaves_with_a_pending_openrazer_response() {
+        let expected = [0x55; FEATURE_REPORT_BYTES];
+        let mut endpoint = endpoint(vec![
+            BridgeExchangeResult::MatchedResponse(expected),
+            BridgeExchangeResult::NotSent,
+        ]);
+        endpoint.handle(set(1, 0x11)).expect("set succeeds");
+        assert_eq!(
+            endpoint.management_exchange([0x22; FEATURE_REPORT_BYTES]),
+            None
+        );
+        assert_eq!(endpoint.bridge.requests, vec![[0x11; FEATURE_REPORT_BYTES]]);
+        endpoint.handle(get(2)).expect("get consumes response");
+        assert_eq!(
+            endpoint.management_exchange([0x22; FEATURE_REPORT_BYTES]),
+            Some(BridgeExchangeResult::NotSent)
+        );
+        assert_eq!(
+            endpoint.bridge.requests,
+            vec![[0x11; FEATURE_REPORT_BYTES], [0x22; FEATURE_REPORT_BYTES]]
+        );
     }
 }

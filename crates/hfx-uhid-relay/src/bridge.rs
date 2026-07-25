@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::uhid::FEATURE_REPORT_BYTES;
+use crate::{SerialFingerprint, SerialQuerySpec};
 use hfx_domain::{
     ClientId, ClientName, LeaseDurationMs, LeaseId, NativeExchangeTimeoutMs, NativeReportHex,
     NativeRouteAccess, ProtocolFeatureId, ProtocolVersion, RouteState,
@@ -59,6 +60,8 @@ pub struct NativeBridge {
     route: NativeRoute,
     lease_id: LeaseId,
     last_lease_renewal: Instant,
+    serial_query: SerialQuerySpec,
+    observed_serial: Option<SerialFingerprint>,
 }
 
 pub struct NativeRouteMonitor {
@@ -121,6 +124,7 @@ impl NativeBridge {
     pub fn connect(
         socket_path: &Path,
         route: NativeRoute,
+        serial_query: SerialQuerySpec,
         instance: u32,
     ) -> Result<Self, NativeBridgeError> {
         validate_route(&route)?;
@@ -152,7 +156,13 @@ impl NativeBridge {
             route,
             lease_id,
             last_lease_renewal: Instant::now(),
+            serial_query,
+            observed_serial: None,
         })
+    }
+
+    pub(crate) fn take_observed_serial(&mut self) -> Option<SerialFingerprint> {
+        self.observed_serial.take()
     }
 
     fn renew_if_due(&mut self) -> Result<(), NativeBridgeError> {
@@ -184,7 +194,8 @@ impl BridgeExchange for NativeBridge {
         let Some(route_token) = self.route.route_token.clone() else {
             return BridgeExchangeResult::NotSent;
         };
-        let Ok(report) = NativeReportHex::try_from(encode_hex(&report)) else {
+        let wire_request = report;
+        let Ok(report) = NativeReportHex::try_from(encode_hex(&wire_request)) else {
             return BridgeExchangeResult::NotSent;
         };
         let Ok(timeout) = NativeExchangeTimeoutMs::try_from(1_000_u16) else {
@@ -205,10 +216,16 @@ impl BridgeExchange for NativeBridge {
             NativeExchangeResult::NotSent(_) => BridgeExchangeResult::NotSent,
             NativeExchangeResult::MayHaveBeenSent(_) => BridgeExchangeResult::MayHaveBeenSent,
             NativeExchangeResult::MatchedResponse(matched) => {
-                decode_report(matched.response.as_str()).map_or(
-                    BridgeExchangeResult::MayHaveBeenSent,
-                    BridgeExchangeResult::MatchedResponse,
-                )
+                let Some(response) = decode_report(matched.response.as_str()) else {
+                    return BridgeExchangeResult::MayHaveBeenSent;
+                };
+                if let Some(fingerprint) = self
+                    .serial_query
+                    .fingerprint_response(&wire_request, &response)
+                {
+                    self.observed_serial = Some(fingerprint);
+                }
+                BridgeExchangeResult::MatchedResponse(response)
             }
         }
     }

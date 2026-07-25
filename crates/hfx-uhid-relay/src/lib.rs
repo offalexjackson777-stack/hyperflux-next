@@ -9,8 +9,10 @@
 
 mod bridge;
 mod catalog;
+mod direct;
 mod endpoint;
 mod runtime;
+mod serial;
 mod supervisor;
 mod uhid;
 
@@ -18,8 +20,12 @@ pub use bridge::{
     BridgeExchange, BridgeExchangeResult, NativeBridge, NativeBridgeError, NativeRouteMonitor,
 };
 pub use catalog::{NativeRouteCatalog, NativeRouteCatalogError, NativeRouteRecord};
+pub use direct::{
+    DirectRouteScanError, DirectRouteScanner, DirectRouteSnapshot, DirectRouteTransition,
+};
 pub use endpoint::{EndpointError, FeatureEndpoint, FeatureEndpointState};
 pub use runtime::{RelayPaths, RelayRuntimeError, run_relay};
+pub use serial::{SerialFingerprint, SerialQueryError, SerialQuerySpec, fingerprint_serial_bytes};
 pub use supervisor::{RouteAction, RouteIdentity, RouteSupervisor, RouteSupervisorError};
 pub use uhid::{
     FEATURE_REPORT_BYTES, HYPERFLUX_PHYS_PREFIX, TRANSPORT_ENVELOPE_MAGIC, TransportEnvelopeKind,

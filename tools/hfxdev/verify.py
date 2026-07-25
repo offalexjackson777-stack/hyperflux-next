@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -666,6 +667,58 @@ def _run_openrazer_native_route_contracts(root: Path, _node: TestNode) -> None:
     if (prepared.root / ".git").exists():
         raise ModelError("OpenRazer native source output copied upstream Git metadata")
 
+    route_catalog = load_json(
+        root / "integrations" / "openrazer" / "native-route" / "catalog.json"
+    )
+    metadata = load_imported_metadata(root)
+    probes = load_native_probe_catalog(root)
+    metadata_by_profile = {device["profile_id"]: device for device in metadata["devices"]}
+    probes_by_profile = {device["profile_id"]: device for device in probes["devices"]}
+    for route in route_catalog["routes"]:
+        profile_id = route["profile_id"]
+        device = metadata_by_profile.get(profile_id)
+        probe_device = probes_by_profile.get(profile_id)
+        if device is None or probe_device is None:
+            raise ModelError(f"OpenRazer native route {profile_id} lacks an upstream binding")
+        if route["source"] != device["source"]:
+            raise ModelError(f"OpenRazer native route {profile_id} source binding drifted")
+        identity = device["identity"]
+        if any(
+            route[field] != identity[field]
+            for field in ("vendor_id", "model_name", "device_kind")
+        ) or route["wireless_product_id"] != identity["product_id"]:
+            raise ModelError(f"OpenRazer native route {profile_id} identity drifted")
+        direct = probe_device["direct_usb_reference"]
+        if (
+            direct["vendor_id"] != route["vendor_id"]
+            or direct["device_kind"] != route["device_kind"]
+            or direct["product_id"] not in route["direct_data_product_ids"]
+            or route["wireless_product_id"] in route["direct_data_product_ids"]
+        ):
+            raise ModelError(f"OpenRazer native route {profile_id} direct precedence drifted")
+        serials = [probe for probe in probe_device["probes"] if probe["method"] == "get_serial"]
+        if len(serials) != 1 or any(
+            (
+                serials[0]["privacy"] != "redacted-equality-only",
+                serials[0]["driver"]["attribute"] != "device_serial",
+                serials[0]["response_summary"] != "redacted-serial-equality",
+                serials[0]["comparison"] != "redacted-equality",
+            )
+        ):
+            raise ModelError(f"OpenRazer native route {profile_id} serial proof drifted")
+        source_path = source / route["source"]["path"]
+        effective_regex = _openrazer_effective_event_regex(
+            source_path, route["source"]["class_name"]
+        )
+        if effective_regex != route["event_file_regex"]:
+            raise ModelError(f"OpenRazer native route {profile_id} event matcher drifted")
+        try:
+            re.compile(effective_regex)
+        except re.error as error:
+            raise ModelError(
+                f"OpenRazer native route {profile_id} event matcher is invalid: {error}"
+            ) from error
+
     common = (prepared.root / "driver" / "razercommon.c").read_text(encoding="utf-8")
     required_common = (
         'RAZER_HYPERFLUX_PHYS_PREFIX "hyperflux-next/native/v1/"',
@@ -733,6 +786,56 @@ def _run_openrazer_native_route_contracts(root: Path, _node: TestNode) -> None:
         != deployment.relay.executable_path
     ):
         raise ModelError("OpenRazer native deployment drifted from package staging")
+
+
+def _openrazer_effective_event_regex(source: Path, class_name: str) -> str:
+    try:
+        tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
+    except (OSError, SyntaxError) as error:
+        raise ModelError(f"cannot parse OpenRazer event matcher source: {error}") from error
+    classes = {
+        node.name: node
+        for node in tree.body
+        if isinstance(node, ast.ClassDef)
+    }
+
+    def resolve(name: str, visited: set[str]) -> str | None:
+        if name in visited:
+            raise ModelError("OpenRazer event matcher inheritance contains a cycle")
+        node = classes.get(name)
+        if node is None:
+            return None
+        visited = {*visited, name}
+        for statement in node.body:
+            if not isinstance(statement, ast.Assign) or not any(
+                isinstance(target, ast.Name) and target.id == "EVENT_FILE_REGEX"
+                for target in statement.targets
+            ):
+                continue
+            value = statement.value
+            if (
+                isinstance(value, ast.Call)
+                and isinstance(value.func, ast.Attribute)
+                and isinstance(value.func.value, ast.Name)
+                and value.func.value.id == "re"
+                and value.func.attr == "compile"
+                and len(value.args) == 1
+                and isinstance(value.args[0], ast.Constant)
+                and isinstance(value.args[0].value, str)
+            ):
+                return value.args[0].value
+            raise ModelError(f"OpenRazer class {name} has an unsupported event matcher")
+        for base in node.bases:
+            if isinstance(base, ast.Name):
+                inherited = resolve(base.id, visited)
+                if inherited is not None:
+                    return inherited
+        return None
+
+    result = resolve(class_name, set())
+    if result is None:
+        raise ModelError(f"OpenRazer class {class_name} has no effective event matcher")
+    return result
 
 
 def _run_device_knowledge_contracts(root: Path, _node: TestNode) -> None:
