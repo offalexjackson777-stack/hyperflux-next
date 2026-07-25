@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "HyperFlux Next source dependency inventory",
-  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/92006b9561017382240993dd195de5c217e9e6fcc2e3614e6061698fd16b201d",
+  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/27d52db25e0d72e5f52359a11aa5cfd97f1bc98f9b4800bc7c02c69b590a8754",
   "creationInfo": {
     "created": "2026-07-20T00:00:00Z",
     "creators": [
@@ -437,6 +437,24 @@
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
           "referenceLocator": "pkg:cargo/hfx-sim@0.0.0-dev.1"
+        }
+      ],
+      "comment": "HyperFlux workspace crate."
+    },
+    {
+      "SPDXID": "SPDXRef-Cargo-hfx-uhid-relay-0.0.0-dev.1",
+      "name": "hfx-uhid-relay",
+      "versionInfo": "0.0.0-dev.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/hfx-uhid-relay@0.0.0-dev.1"
         }
       ],
       "comment": "HyperFlux workspace crate."
@@ -1445,6 +1463,11 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-ops-0.0.0-dev.1",
       "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-integration-model-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-ops-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-hfx-profiles-0.0.0-dev.1"
     },
     {
@@ -1571,6 +1594,51 @@
       "spdxElementId": "SPDXRef-Cargo-hfx-sim-0.0.0-dev.1",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-domain-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-protocol-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-runtime-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-sdk-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.4"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-1.0.229"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-signal-hook-0.4.4"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hybrid-array-0.4.10",
@@ -1826,6 +1894,11 @@
       "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
       "relationshipType": "CONTAINS",
       "relatedSpdxElement": "SPDXRef-Cargo-hfx-sim-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-uhid-relay-0.0.0-dev.1"
     },
     {
       "spdxElementId": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1",

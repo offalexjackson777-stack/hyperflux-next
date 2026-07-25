@@ -92,6 +92,11 @@ from .generators.linux_runtime import (
     udev_rules,
 )
 from .generators.migration import shadow_comparison_markdown
+from .generators.openrazer_native import (
+    markdown as openrazer_native_markdown,
+    relay_service as openrazer_native_relay_service,
+    rust_constants as openrazer_native_rust_constants,
+)
 from .generators.profiles import (
     compiled_json as profile_compiled_json,
     cpp_catalog as profile_cpp_catalog,
@@ -135,6 +140,7 @@ from .linux_runtime import load_linux_runtime
 from .licensing import load_licensing_policy
 from .local_companion import load_local_companion
 from .openrazer import load_imported_metadata
+from .openrazer_native_route import load_native_deployment
 from .performance import load_performance_budgets
 from .profiles import compiled_catalog, composition_fixtures
 from .protocol import load_protocol_registry
@@ -245,6 +251,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
     integrations = compiled_integration_catalog(root)
     openrazer_metadata = load_imported_metadata(root)
     openrazer_compatibility = load_openrazer_compatibility_contract(root)
+    openrazer_native = load_native_deployment(root)
     test_catalog = load_test_catalog(root)
     linux_runtime = load_linux_runtime(root)
     distribution_catalog = load_distribution_catalog(root)
@@ -393,6 +400,13 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "generated" / "integrations" / "catalog.json": integration_compiled_json(integrations),
         root / "docs" / "generated" / "integrations.md": integration_markdown(integrations),
         root / "crates" / "hfx-integration-model" / "src" / "generated.rs": integration_rust_catalog(integrations),
+        root
+        / "crates"
+        / "hfx-integration-model"
+        / "src"
+        / "openrazer_native_generated.rs": openrazer_native_rust_constants(
+            openrazer_native
+        ),
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "integration_catalog.py": integration_python_catalog(integrations),
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "openrazer_metadata.py": python_openrazer_metadata(openrazer_metadata),
         root / "integrations" / "openrazer" / "compatibility" / "hyperflux_openrazer_compat" / "generated_contract.py": python_openrazer_compatibility_contract(openrazer_compatibility),
@@ -401,7 +415,15 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "linux_runtime.py": linux_runtime_python_constants(linux_runtime),
         root / "driver" / "kernel" / "hyperflux-next-version.h": kernel_version_header(linux_runtime),
         root / "packaging" / "generated" / "dkms.conf": dkms_configuration(linux_runtime),
-        root / "packaging" / "generated" / "hyperflux-next-bridge.service": systemd_service(linux_runtime),
+        root / "packaging" / "generated" / "hyperflux-next-bridge.service": systemd_service(
+            linux_runtime, wanted_units=(openrazer_native.relay.service_unit,)
+        ),
+        root
+        / "packaging"
+        / "generated"
+        / openrazer_native.relay.service_unit: openrazer_native_relay_service(
+            openrazer_native, linux_runtime
+        ),
         root / "packaging" / "generated" / "hyperflux-next-activation.service": activation_service(linux_runtime),
         root / "packaging" / "generated" / "hyperflux-next-confirmation.service": confirmation_service(linux_runtime),
         root / "packaging" / "generated" / "hyperflux-next.sysusers": sysusers(linux_runtime),
@@ -410,6 +432,12 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "packaging" / "generated" / "bridge.json": default_bridge_configuration(linux_runtime),
         root / "packaging" / "generated" / "runtime.env": package_environment(linux_runtime),
         root / "docs" / "generated" / "linux-runtime.md": linux_runtime_markdown(linux_runtime),
+        root
+        / "docs"
+        / "generated"
+        / "openrazer-native-deployment.md": openrazer_native_markdown(
+            openrazer_native, linux_runtime
+        ),
         root / "docs" / "generated" / "distributions.md": distribution_markdown(
             distribution_catalog, linux_runtime
         ),

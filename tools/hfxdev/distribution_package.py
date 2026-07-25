@@ -212,6 +212,8 @@ def _arch_pkgbuild(
             f"depends={_shell_array(list(target.dependencies_for(python_version)))}",
             f"optdepends={_shell_array(optional)}",
             f"conflicts={_shell_array(list(target.conflicts))}",
+            f"provides={_shell_array(list(target.provides))}",
+            f"replaces={_shell_array(list(target.replaces))}",
             "backup=('etc/hyperflux-next/bridge.json')",
             "options=('!strip' '!debug')",
             "install=hyperflux-next.install",
@@ -527,6 +529,8 @@ def _verify_arch_package(
             f"{item.package}: {item.purpose}" for item in target.optional_dependencies
         ),
         "conflict": target.conflicts,
+        "provides": target.provides,
+        "replaces": target.replaces,
         "backup": ("etc/hyperflux-next/bridge.json",),
     }
     for key, expected in repeated.items():

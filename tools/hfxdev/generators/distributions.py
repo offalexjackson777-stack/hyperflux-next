@@ -32,6 +32,14 @@ def markdown(catalog: DistributionCatalog, runtime: LinuxRuntime) -> str:
         lines.append(
             f"| `{target.id}` | {architectures} | {dependencies} | {optional} |"
         )
+    lines.extend(["", "## Package Relationships", ""])
+    for target in catalog.targets.values():
+        lines.append(
+            f"- `{target.id}` provides "
+            f"{', '.join(f'`{item}`' for item in target.provides) or 'nothing'}; replaces "
+            f"{', '.join(f'`{item}`' for item in target.replaces) or 'nothing'}; and conflicts "
+            f"with {', '.join(f'`{item}`' for item in target.conflicts) or 'nothing'}."
+        )
     lines.extend(
         [
             "",

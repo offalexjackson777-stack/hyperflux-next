@@ -3,6 +3,7 @@
 use hfx_domain::{
     ClientId, ClientName, EventBatchLimit, ProtocolFeatureId, ProtocolVersion, SequenceNumber,
 };
+use hfx_integration_model::OPENRAZER_NATIVE_DRIVER_MODULES;
 use hfx_profiles::receiver_profile_by_usb_id;
 use hfx_protocol::{
     BridgeSnapshot, CURRENT_PROTOCOL_VERSION, DiagnosticSnapshot, EventBatch, EventCursor,
@@ -170,10 +171,65 @@ pub struct SystemSnapshot {
     pub package_version: String,
     pub installed_module_identity: Option<String>,
     pub loaded_module_identity: Option<String>,
+    pub openrazer_driver: OpenRazerDriverSnapshot,
     pub service_state: ServiceState,
     pub bridge: Option<BridgeHealth>,
     pub legacy_v2_stack_detected: bool,
     pub supported_receiver_present: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct KernelModuleIdentitySnapshot {
+    pub module_name: String,
+    pub installed_identity: Option<String>,
+    pub loaded: bool,
+    pub loaded_identity: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum OpenRazerDriverState {
+    Ready,
+    ActivationPending,
+    Unavailable,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OpenRazerDriverSnapshot {
+    pub modules: Vec<KernelModuleIdentitySnapshot>,
+}
+
+impl OpenRazerDriverSnapshot {
+    #[must_use]
+    pub fn state(&self) -> OpenRazerDriverState {
+        if self
+            .modules
+            .iter()
+            .any(|module| module.installed_identity.is_none())
+        {
+            return OpenRazerDriverState::Unavailable;
+        }
+        if self.modules.iter().any(|module| {
+            module.loaded
+                && module.loaded_identity.as_deref() != module.installed_identity.as_deref()
+        }) {
+            return OpenRazerDriverState::ActivationPending;
+        }
+        OpenRazerDriverState::Ready
+    }
+
+    #[must_use]
+    pub fn blocking_module(&self) -> Option<&KernelModuleIdentitySnapshot> {
+        self.modules
+            .iter()
+            .find(|module| module.installed_identity.is_none())
+            .or_else(|| {
+                self.modules.iter().find(|module| {
+                    module.loaded
+                        && module.loaded_identity.as_deref() != module.installed_identity.as_deref()
+                })
+            })
+    }
 }
 
 pub trait SystemProbe {
@@ -258,23 +314,44 @@ impl<R: CommandRunner> RealSystemProbe<R> {
     }
 
     fn installed_module_identity(&self) -> Option<String> {
+        self.installed_identity(KERNEL_MODULE_NAME)
+    }
+
+    fn installed_identity(&self, module: &str) -> Option<String> {
         self.runner
-            .run(
-                "modinfo",
-                &["-F", "srcversion", KERNEL_MODULE_NAME],
-                self.timeout,
-            )
+            .run("modinfo", &["-F", "srcversion", module], self.timeout)
             .ok()
             .filter(|output| output.success)
             .and_then(|output| bounded_identity(&output.stdout))
     }
 
     fn loaded_module_identity(&self) -> Option<String> {
-        let module = KERNEL_MODULE_NAME.replace('-', "_");
+        self.loaded_identity(KERNEL_MODULE_NAME)
+    }
+
+    fn loaded_identity(&self, module: &str) -> Option<String> {
+        let module = module.replace('-', "_");
         let path = self.sys_module_root.join(module).join("srcversion");
         fs::read_to_string(path)
             .ok()
             .and_then(|value| bounded_identity(value.trim()))
+    }
+
+    fn openrazer_driver(&self) -> OpenRazerDriverSnapshot {
+        OpenRazerDriverSnapshot {
+            modules: OPENRAZER_NATIVE_DRIVER_MODULES
+                .iter()
+                .map(|module| {
+                    let loaded_path = self.sys_module_root.join(module.replace('-', "_"));
+                    KernelModuleIdentitySnapshot {
+                        module_name: (*module).to_owned(),
+                        installed_identity: self.installed_identity(module),
+                        loaded: loaded_path.is_dir(),
+                        loaded_identity: self.loaded_identity(module),
+                    }
+                })
+                .collect(),
+        }
     }
 
     fn service_state(&self) -> ServiceState {
@@ -456,6 +533,7 @@ impl<R: CommandRunner> SystemProbe for RealSystemProbe<R> {
             package_version: PRODUCT_VERSION.to_owned(),
             installed_module_identity: self.installed_module_identity(),
             loaded_module_identity: self.loaded_module_identity(),
+            openrazer_driver: self.openrazer_driver(),
             service_state,
             bridge,
             legacy_v2_stack_detected: self.legacy_v2_stack_detected(),
@@ -705,6 +783,34 @@ mod tests {
         assert_eq!(bounded_identity(""), None);
         assert_eq!(bounded_identity("not an identity"), None);
         assert_eq!(bounded_identity(&"a".repeat(65)), None);
+    }
+
+    #[test]
+    fn openrazer_driver_state_distinguishes_unloaded_stale_and_missing_modules() {
+        let ready = OpenRazerDriverSnapshot {
+            modules: vec![KernelModuleIdentitySnapshot {
+                module_name: "razerkbd".to_owned(),
+                installed_identity: Some("new".to_owned()),
+                loaded: false,
+                loaded_identity: None,
+            }],
+        };
+        assert_eq!(ready.state(), OpenRazerDriverState::Ready);
+
+        let mut pending = ready.clone();
+        pending.modules[0].loaded = true;
+        pending.modules[0].loaded_identity = Some("old".to_owned());
+        assert_eq!(pending.state(), OpenRazerDriverState::ActivationPending);
+
+        let mut unavailable = ready;
+        unavailable.modules[0].installed_identity = None;
+        assert_eq!(unavailable.state(), OpenRazerDriverState::Unavailable);
+        assert_eq!(
+            unavailable
+                .blocking_module()
+                .map(|module| module.module_name.as_str()),
+            Some("razerkbd")
+        );
     }
 
     #[test]

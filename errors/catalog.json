@@ -17,6 +17,13 @@
       "automatic": false
     },
     {
+      "id": "activate-openrazer-route-driver",
+      "title": "Activate the OpenRazer route driver",
+      "safe_action": "Reboot to activate the source-bound OpenRazer route driver. If Doctor still reports a missing module, reinstall the current HyperFlux package before retrying.",
+      "verification": "Run Doctor and confirm every installed OpenRazer route module is either unloaded or matches its loaded identity.",
+      "automatic": false
+    },
+    {
       "id": "collect-support-bundle",
       "title": "Collect a privacy-safe support bundle",
       "safe_action": "Preview and create the bounded HyperFlux support bundle for the unresolved internal failure.",
@@ -212,6 +219,25 @@
       "user_explanation": "The newly installed driver is not active yet.",
       "privacy": "public",
       "docs_path": "docs/generated/error-catalog.md#hfx-kernel-001"
+    },
+    {
+      "code": "HFX-KERNEL-002",
+      "class": "kernel",
+      "severity": "error",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "activate-openrazer-route-driver",
+      "safe_detail_fields": [
+        {"name": "installed_abi", "type": "identifier", "required": true, "maximum_length": 64, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Installed OpenRazer module source identity."},
+        {"name": "loaded_abi", "type": "identifier", "required": true, "maximum_length": 64, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Loaded OpenRazer module source identity or activation state."},
+        {"name": "module", "type": "identifier", "required": true, "maximum_length": 64, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "OpenRazer native-route kernel module name."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "packaging",
+      "technical_cause": "A required OpenRazer native-route kernel module is missing or an older module remains active.",
+      "user_explanation": "The OpenRazer route driver is not ready yet.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-kernel-002"
     },
     {
       "code": "HFX-OUTCOME-001",

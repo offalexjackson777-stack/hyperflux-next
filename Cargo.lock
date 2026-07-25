@@ -160,6 +160,7 @@ version = "0.0.0-dev.1"
 dependencies = [
  "hfx-domain",
  "hfx-errors",
+ "hfx-integration-model",
  "hfx-profiles",
  "hfx-protocol",
  "hfx-runtime",
@@ -216,6 +217,21 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+]
+
+[[package]]
+name = "hfx-uhid-relay"
+version = "0.0.0-dev.1"
+dependencies = [
+ "hfx-domain",
+ "hfx-protocol",
+ "hfx-runtime",
+ "hfx-sdk",
+ "rustix",
+ "serde",
+ "serde_json",
+ "sha2",
+ "signal-hook",
 ]
 
 [[package]]

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_ops::{
-    ActivationAction, RealSystemProbe, ServiceState, SystemController, SystemProbe, UpdateIntent,
-    confirm_configuration, decide_post_update, load_update_intent, migrate_configuration,
-    record_update_intent, remove_update_intent,
+    ActivationAction, OpenRazerDriverState, RealSystemProbe, ServiceState, SystemController,
+    SystemProbe, UpdateIntent, confirm_configuration, decide_post_update, load_update_intent,
+    migrate_configuration, record_update_intent, remove_update_intent,
 };
 use hfx_runtime::{BRIDGE_CONFIGURATION_FILE_PATH, UPDATE_STATE_PATH};
 use std::env;
@@ -12,7 +12,26 @@ use std::thread;
 use std::time::Duration;
 
 fn usage() -> &'static str {
-    "Usage: hyperflux-next-activate <fresh-install|pre-update|post-update|prepare-start|confirm-start|pre-remove>\n"
+    "Usage: hyperflux-next-activate <fresh-install|pre-update|post-update|prepare-start|check-openrazer-driver|confirm-start|pre-remove>\n"
+}
+
+fn ensure_openrazer_driver(snapshot: &hfx_ops::SystemSnapshot) -> Result<(), String> {
+    match snapshot.openrazer_driver.state() {
+        OpenRazerDriverState::Ready => Ok(()),
+        OpenRazerDriverState::ActivationPending => Err(
+            "an older OpenRazer route module is active; reboot before starting the native relay"
+                .to_owned(),
+        ),
+        OpenRazerDriverState::Unavailable => {
+            let module = snapshot
+                .openrazer_driver
+                .blocking_module()
+                .map_or("unknown", |value| value.module_name.as_str());
+            Err(format!(
+                "the installed OpenRazer route module {module} is unavailable"
+            ))
+        }
+    }
 }
 
 fn wait_for_bridge_and_confirmation(probe: &RealSystemProbe) -> bool {
@@ -63,6 +82,7 @@ fn post_update(probe: &RealSystemProbe) -> Result<(), String> {
         intent.as_ref(),
         snapshot.installed_module_identity.as_deref(),
         snapshot.loaded_module_identity.as_deref(),
+        snapshot.openrazer_driver.state(),
     )
     .map_err(|error| format!("post-update decision failed: {error}"))?;
     match decision.action {
@@ -75,6 +95,16 @@ fn post_update(probe: &RealSystemProbe) -> Result<(), String> {
             println!(
                 "Run hyperfluxctl doctor for the reboot or receiver-disconnect activation path."
             );
+            return Ok(());
+        }
+        ActivationAction::ActivateOpenRazerDriver => {
+            println!("OpenRazer native-route driver activation is required.");
+            println!("Reboot, then run hyperfluxctl doctor before starting the bridge.");
+            return Ok(());
+        }
+        ActivationAction::RepairOpenRazerDriver => {
+            println!("The OpenRazer native-route driver installation is incomplete.");
+            println!("Run hyperfluxctl doctor for the exact missing module and safe action.");
             return Ok(());
         }
     }
@@ -93,6 +123,7 @@ fn prepare_start(probe: &RealSystemProbe) -> Result<(), String> {
     let snapshot = probe.snapshot();
     let installed = snapshot
         .installed_module_identity
+        .as_deref()
         .ok_or_else(|| "the installed kernel module is unavailable".to_owned())?;
     if snapshot
         .loaded_module_identity
@@ -103,10 +134,15 @@ fn prepare_start(probe: &RealSystemProbe) -> Result<(), String> {
             "a newer installed kernel module must be activated before the bridge starts".to_owned(),
         );
     }
+    ensure_openrazer_driver(&snapshot)?;
     migrate_configuration(Path::new(BRIDGE_CONFIGURATION_FILE_PATH))
         .map_err(|error| format!("configuration migration failed: {error}"))?;
     println!("HyperFlux Next start preparation completed.");
     Ok(())
+}
+
+fn check_openrazer_driver(probe: &RealSystemProbe) -> Result<(), String> {
+    ensure_openrazer_driver(&probe.snapshot())
 }
 
 fn confirm_start(_probe: &RealSystemProbe) -> Result<(), String> {
@@ -141,6 +177,7 @@ fn run() -> Result<(), String> {
         "pre-update" => pre_update(&probe),
         "post-update" => post_update(&probe),
         "prepare-start" => prepare_start(&probe),
+        "check-openrazer-driver" => check_openrazer_driver(&probe),
         "confirm-start" => confirm_start(&probe),
         "pre-remove" => pre_remove(&probe),
         _ => Err(usage().to_owned()),

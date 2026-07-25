@@ -33,6 +33,11 @@ def compiled_plan(manifest: InstallManifest, runtime: LinuxRuntime) -> str:
                 **({"target": build.target} if build.target is not None else {}),
                 **({"output": build.output} if build.output is not None else {}),
                 **(
+                    {"transform": build.transform}
+                    if build.transform is not None
+                    else {}
+                ),
+                **(
                     {"destination": build.destination}
                     if build.destination is not None
                     else {}

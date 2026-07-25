@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use crate::probe::write_private_file;
+use crate::probe::{OpenRazerDriverState, write_private_file};
 use hfx_runtime::{LINUX_RUNTIME_SHA256, PRODUCT_VERSION};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -56,6 +56,8 @@ pub enum ActivationAction {
     ResumeBridge,
     LeaveBridgeStopped,
     ActivateDriver,
+    ActivateOpenRazerDriver,
+    RepairOpenRazerDriver,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -65,6 +67,7 @@ pub struct ActivationDecision {
     pub bridge_was_active: bool,
     pub installed_module_identity: Option<String>,
     pub loaded_module_identity: Option<String>,
+    pub openrazer_driver_state: OpenRazerDriverState,
 }
 
 #[derive(Debug)]
@@ -110,6 +113,7 @@ pub fn decide_post_update(
     intent: Option<&UpdateIntent>,
     installed_module_identity: Option<&str>,
     loaded_module_identity: Option<&str>,
+    openrazer_driver_state: OpenRazerDriverState,
 ) -> Result<ActivationDecision, ActivationError> {
     let Some(installed) = installed_module_identity else {
         return Err(ActivationError::InstalledModuleUnavailable);
@@ -117,6 +121,12 @@ pub fn decide_post_update(
     let bridge_was_active = intent.is_some_and(|value| value.bridge_was_active);
     let action = match loaded_module_identity {
         Some(loaded) if loaded != installed => ActivationAction::ActivateDriver,
+        _ if openrazer_driver_state == OpenRazerDriverState::ActivationPending => {
+            ActivationAction::ActivateOpenRazerDriver
+        }
+        _ if openrazer_driver_state == OpenRazerDriverState::Unavailable => {
+            ActivationAction::RepairOpenRazerDriver
+        }
         _ if bridge_was_active => ActivationAction::ResumeBridge,
         _ => ActivationAction::LeaveBridgeStopped,
     };
@@ -125,6 +135,7 @@ pub fn decide_post_update(
         bridge_was_active,
         installed_module_identity: Some(installed.to_owned()),
         loaded_module_identity: loaded_module_identity.map(str::to_owned),
+        openrazer_driver_state,
     })
 }
 
@@ -226,22 +237,50 @@ mod tests {
     #[test]
     fn compatible_update_resumes_only_a_previously_active_bridge() {
         let active = UpdateIntent::new(true, Some("same".to_owned()));
-        let decision =
-            decide_post_update(Some(&active), Some("same"), Some("same")).expect("decision");
+        let decision = decide_post_update(
+            Some(&active),
+            Some("same"),
+            Some("same"),
+            OpenRazerDriverState::Ready,
+        )
+        .expect("decision");
         assert_eq!(decision.action, ActivationAction::ResumeBridge);
 
         let inactive = UpdateIntent::new(false, Some("same".to_owned()));
-        let decision =
-            decide_post_update(Some(&inactive), Some("same"), Some("same")).expect("decision");
+        let decision = decide_post_update(
+            Some(&inactive),
+            Some("same"),
+            Some("same"),
+            OpenRazerDriverState::Ready,
+        )
+        .expect("decision");
         assert_eq!(decision.action, ActivationAction::LeaveBridgeStopped);
     }
 
     #[test]
     fn driver_change_never_restarts_the_bridge() {
         let intent = UpdateIntent::new(true, Some("old".to_owned()));
-        let decision =
-            decide_post_update(Some(&intent), Some("new"), Some("old")).expect("decision");
+        let decision = decide_post_update(
+            Some(&intent),
+            Some("new"),
+            Some("old"),
+            OpenRazerDriverState::Ready,
+        )
+        .expect("decision");
         assert_eq!(decision.action, ActivationAction::ActivateDriver);
+    }
+
+    #[test]
+    fn openrazer_driver_change_keeps_the_bridge_stopped() {
+        let intent = UpdateIntent::new(true, Some("same".to_owned()));
+        let decision = decide_post_update(
+            Some(&intent),
+            Some("same"),
+            Some("same"),
+            OpenRazerDriverState::ActivationPending,
+        )
+        .expect("decision");
+        assert_eq!(decision.action, ActivationAction::ActivateOpenRazerDriver);
     }
 
     #[test]

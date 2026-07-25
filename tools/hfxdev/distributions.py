@@ -39,6 +39,8 @@ class DistributionTarget:
     dependency_roles: dict[str, str]
     optional_dependencies: tuple[OptionalDependency, ...]
     conflicts: tuple[str, ...]
+    provides: tuple[str, ...]
+    replaces: tuple[str, ...]
     python_discovery_path: str
 
     @property
@@ -118,6 +120,8 @@ def _target(target_id: str, value: Any) -> DistributionTarget:
             "dependency_roles",
             "optional_dependencies",
             "conflicts",
+            "provides",
+            "replaces",
             "python_discovery_path",
         },
         f"distribution {target_id}",
@@ -171,6 +175,15 @@ def _target(target_id: str, value: Any) -> DistributionTarget:
     conflicts = tuple(_package(item, f"{target_id} conflict") for item in conflicts_value)
     require_unique(list(conflicts), f"distribution {target_id} conflict")
 
+    relation_values: dict[str, tuple[str, ...]] = {}
+    for relation in ("provides", "replaces"):
+        values = value[relation]
+        if not isinstance(values, list) or len(values) > 16:
+            raise ModelError(f"distribution {target_id}: invalid {relation}")
+        parsed = tuple(_package(item, f"{target_id} {relation}") for item in values)
+        require_unique(list(parsed), f"distribution {target_id} {relation}")
+        relation_values[relation] = parsed
+
     discovery = value["python_discovery_path"]
     if not isinstance(discovery, str) or discovery.count("@python_major_minor@") > 1:
         raise ModelError(f"distribution {target_id}: invalid Python discovery path")
@@ -189,6 +202,8 @@ def _target(target_id: str, value: Any) -> DistributionTarget:
         dependency_roles=dependencies,
         optional_dependencies=tuple(optional),
         conflicts=conflicts,
+        provides=relation_values["provides"],
+        replaces=relation_values["replaces"],
         python_discovery_path=discovery,
     )
 
@@ -231,6 +246,12 @@ def load_distribution_catalog(root: Path) -> DistributionCatalog:
         conflict for target in targets.values() for conflict in target.conflicts
     }:
         raise ModelError("distribution package cannot conflict with itself")
+    if runtime.product.package_name in {
+        relation
+        for target in targets.values()
+        for relation in (*target.provides, *target.replaces)
+    }:
+        raise ModelError("distribution package cannot provide or replace itself")
     return DistributionCatalog(
         source_sha256=sha256_file(path),
         description=description,

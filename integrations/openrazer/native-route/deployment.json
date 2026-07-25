@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../schemas/openrazer-native-deployment.schema.json",
+  "schema": "hyperflux-openrazer-native-deployment-v1",
+  "relay": {
+    "executable_path": "/usr/lib/hyperflux-next/hyperflux-next-uhid-relay",
+    "service_unit": "hyperflux-next-openrazer-relay.service",
+    "uhid_device": "/dev/uhid",
+    "restart_seconds": 2
+  },
+  "driver": {
+    "dkms_name": "openrazer-driver",
+    "dkms_version": "3.12.1",
+    "source_directory": "/usr/src/openrazer-driver-3.12.1",
+    "modules": ["razeraccessory", "razerkbd", "razerkraken", "razermouse"]
+  }
+}

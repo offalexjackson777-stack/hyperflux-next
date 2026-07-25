@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use crate::{ServiceState, SystemSnapshot};
+use crate::{OpenRazerDriverState, ServiceState, SystemSnapshot};
 use hfx_errors::{ErrorCode, error_by_code, remediation_by_id};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -117,6 +117,45 @@ fn classify_driver(snapshot: &SystemSnapshot, working: &mut Vec<String>) -> Driv
     }
 }
 
+fn classify_openrazer_driver(
+    snapshot: &SystemSnapshot,
+    working: &mut Vec<String>,
+    findings: &mut Vec<AssessmentFinding>,
+) -> OpenRazerDriverState {
+    let state = snapshot.openrazer_driver.state();
+    if state == OpenRazerDriverState::Ready {
+        working.push("the OpenRazer native-route driver is ready".to_owned());
+        return state;
+    }
+    if let Some(module) = snapshot.openrazer_driver.blocking_module() {
+        findings.push(local_finding(
+            ErrorCode::HfxKernel002,
+            BTreeMap::from([
+                (
+                    "installed_abi".to_owned(),
+                    module
+                        .installed_identity
+                        .clone()
+                        .unwrap_or_else(|| "not-installed".to_owned()),
+                ),
+                (
+                    "loaded_abi".to_owned(),
+                    if module.loaded {
+                        module
+                            .loaded_identity
+                            .clone()
+                            .unwrap_or_else(|| "identity-unavailable".to_owned())
+                    } else {
+                        "not-loaded".to_owned()
+                    },
+                ),
+                ("module".to_owned(), module.module_name.clone()),
+            ]),
+        ));
+    }
+    state
+}
+
 #[must_use]
 pub fn assess_system(snapshot: &SystemSnapshot) -> Assessment {
     let mut working = vec!["package metadata is available".to_owned()];
@@ -150,6 +189,8 @@ pub fn assess_system(snapshot: &SystemSnapshot) -> Assessment {
         ));
     }
 
+    let openrazer_driver = classify_openrazer_driver(snapshot, &mut working, &mut findings);
+
     let bridge_ready = snapshot.service_state == ServiceState::Active && snapshot.bridge.is_some();
     if bridge_ready {
         working.push("the bridge diagnostic endpoint is responding".to_owned());
@@ -157,7 +198,8 @@ pub fn assess_system(snapshot: &SystemSnapshot) -> Assessment {
     } else if !matches!(
         driver,
         DriverState::ActivationPending | DriverState::Unavailable
-    ) {
+    ) && openrazer_driver == OpenRazerDriverState::Ready
+    {
         findings.push(local_finding(
             ErrorCode::HfxService001,
             BTreeMap::from([(
@@ -282,7 +324,10 @@ pub fn render_status_text(assessment: &Assessment) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{BridgeHealth, ServiceState, SystemSnapshot};
+    use crate::{
+        BridgeHealth, KernelModuleIdentitySnapshot, OpenRazerDriverSnapshot, ServiceState,
+        SystemSnapshot,
+    };
     use hfx_domain::{ProjectionRevision, QueueCapacity, SequenceNumber, StreamEpoch, StreamId};
     use hfx_protocol::{BridgeSnapshot, DiagnosticSnapshot, EventCursor};
 
@@ -311,6 +356,14 @@ mod tests {
             package_version: "0.0.0-dev.1".to_owned(),
             installed_module_identity: Some("installed".to_owned()),
             loaded_module_identity: Some("installed".to_owned()),
+            openrazer_driver: OpenRazerDriverSnapshot {
+                modules: vec![KernelModuleIdentitySnapshot {
+                    module_name: "razerkbd".to_owned(),
+                    installed_identity: Some("installed".to_owned()),
+                    loaded: false,
+                    loaded_identity: None,
+                }],
+            },
             service_state: ServiceState::Active,
             bridge: Some(empty_bridge()),
             legacy_v2_stack_detected: false,
@@ -367,5 +420,21 @@ mod tests {
             assessment.findings[0].details["service_state"],
             "active-unready"
         );
+    }
+
+    #[test]
+    fn stale_openrazer_module_blocks_ready_without_service_noise() {
+        let mut value = snapshot();
+        value.openrazer_driver.modules[0].loaded = true;
+        value.openrazer_driver.modules[0].loaded_identity = Some("old".to_owned());
+        value.service_state = ServiceState::Inactive;
+        value.bridge = None;
+
+        let assessment = assess_system(&value);
+
+        assert_eq!(assessment.state, AssessmentState::NeedsAttention);
+        assert_eq!(assessment.findings.len(), 1);
+        assert_eq!(assessment.findings[0].code, "HFX-KERNEL-002");
+        assert_eq!(assessment.findings[0].details["module"], "razerkbd");
     }
 }

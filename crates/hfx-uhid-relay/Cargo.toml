@@ -1,0 +1,25 @@
+[package]
+name = "hfx-uhid-relay"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+hfx-domain = { path = "../hfx-domain" }
+hfx-protocol = { path = "../hfx-protocol" }
+hfx-runtime = { path = "../hfx-runtime" }
+hfx-sdk = { path = "../hfx-sdk" }
+rustix = { workspace = true, features = ["event"] }
+serde = { workspace = true }
+serde_json.workspace = true
+sha2.workspace = true
+signal-hook.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "hyperflux-next-uhid-relay"
+path = "src/main.rs"

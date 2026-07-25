@@ -18,6 +18,7 @@ from .distribution_native import (
     tree_files,
 )
 from .model import ModelError
+from .openrazer_native_route import load_native_deployment
 
 
 DEBIAN_MAINTAINER = "HyperFlux Next Build System <build@hyperflux.invalid>"
@@ -40,6 +41,8 @@ def _debian_control(context: NativePackageContext) -> str:
     dependencies = ", ".join(context.target.dependencies_for(context.artifacts.python))
     optional = ", ".join(item.package for item in context.target.optional_dependencies)
     conflicts = ", ".join(context.target.conflicts)
+    provides = ", ".join(context.target.provides)
+    replaces = ", ".join(context.target.replaces)
     lines = [
         f"Package: {context.runtime.product.package_name}",
         f"Version: {_debian_version(context.runtime.product.version, context.runtime.product.package_release)}",
@@ -54,6 +57,10 @@ def _debian_control(context: NativePackageContext) -> str:
         lines.append(f"Suggests: {optional}")
     if conflicts:
         lines.append(f"Conflicts: {conflicts}")
+    if provides:
+        lines.append(f"Provides: {provides}")
+    if replaces:
+        lines.append(f"Replaces: {replaces}")
     lines.extend(
         [
             f"Description: {context.catalog.description}",
@@ -77,8 +84,11 @@ def _refresh_system_lines() -> list[str]:
 
 def _debian_scripts(context: NativePackageContext) -> dict[str, str]:
     activation = context.runtime.operations.activation_path
-    module = context.runtime.kernel.dkms_name
-    version = context.runtime.product.version
+    native = load_native_deployment(context.repository_root)
+    modules = (
+        (context.runtime.kernel.dkms_name, context.runtime.product.version),
+        (native.driver.dkms_name, native.driver.dkms_version),
+    )
     postinst = [
         "#!/bin/sh",
         "set -eu",
@@ -89,8 +99,12 @@ def _debian_scripts(context: NativePackageContext) -> dict[str, str]:
         '      echo "HyperFlux Next requires DKMS common.postinst support." >&2',
         "      exit 1",
         "    fi",
-        f"    /usr/lib/dkms/common.postinst {module} {version} /usr/share/hyperflux-next \"\" \"${{2:-}}\"",
     ]
+    postinst.extend(
+        f"    /usr/lib/dkms/common.postinst {module} {version} "
+        f"/usr/share/hyperflux-next \"\" \"${{2:-}}\""
+        for module, version in modules
+    )
     postinst.extend(f"    {line}" for line in _refresh_system_lines())
     postinst.extend(
         [
@@ -134,9 +148,15 @@ def _debian_scripts(context: NativePackageContext) -> dict[str, str]:
                 "",
                 'case "${1:-}" in',
                 "  remove|upgrade|deconfigure|failed-upgrade)",
-                f"    if dkms status -m {module} -v {version} 2>/dev/null | grep -q .; then",
-                f"      dkms remove -m {module} -v {version} --all || true",
-                "    fi",
+                *(
+                    line
+                    for module, version in modules
+                    for line in (
+                        f"    if dkms status -m {module} -v {version} 2>/dev/null | grep -q .; then",
+                        f"      dkms remove -m {module} -v {version} --all || true",
+                        "    fi",
+                    )
+                ),
                 "    ;;",
                 "esac",
                 "exit 0",

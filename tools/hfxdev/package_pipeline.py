@@ -14,6 +14,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import tarfile
 from typing import Any
 import zipfile
 
@@ -23,6 +24,11 @@ from .generators.supply_chain import spdx_json
 from .integrations import load_integration_catalog
 from .linux_runtime import LinuxRuntime, load_linux_runtime
 from .model import ModelError, load_json, require_unique, sha256_file
+from .openrazer_native_route import (
+    load_native_deployment,
+    load_native_transform,
+    prepare_openrazer_native_source,
+)
 from .supply_chain import load_dependency_inventory
 from .toolchains import load_toolchain_pins, verify_current_toolchain
 from .tree_metadata import normalize_tree as _normalize_tree
@@ -418,6 +424,112 @@ def _build_python(
     )
 
 
+def _openrazer_dkms_projection(
+    root: Path,
+    output: Path,
+    environment: dict[str, str],
+    build: BuildSpec,
+    capabilities: dict[str, Path],
+) -> BuiltArtifact:
+    if build.transform != "openrazer-native-route" or build.capability != "openrazer-source":
+        raise ModelError(f"build {build.id}: unsupported source transform")
+    source_value = capabilities.get(build.capability)
+    if source_value is None:
+        raise ModelError(
+            f"build {build.id}: required capability {build.capability} is absent"
+        )
+    source = _pinned_source(root, build.capability, source_value)
+    prepared_path = output / "work" / build.id / "prepared"
+    prepared = prepare_openrazer_native_source(root, source, prepared_path)
+    deployment = load_native_deployment(root)
+    _verify_openrazer_dkms_contract(prepared.root, deployment)
+
+    projection = output / "work" / build.id / "projection"
+    projection.mkdir(parents=True)
+    selected = [
+        (prepared.root / "Makefile", projection / "Makefile"),
+        (
+            prepared.root / "install_files" / "dkms" / "dkms.conf",
+            projection / "dkms.conf",
+        ),
+        (prepared.root / "LICENSE", projection / "LICENSE"),
+        (prepared.root / "driver" / "Makefile", projection / "driver" / "Makefile"),
+    ]
+    selected.extend(
+        (path, projection / "driver" / path.name)
+        for pattern in ("*.c", "*.h")
+        for path in sorted((prepared.root / "driver").glob(pattern))
+    )
+    for source_path, destination in selected:
+        if not source_path.is_file() or source_path.is_symlink():
+            raise ModelError(f"build {build.id}: OpenRazer DKMS source projection is incomplete")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source_path, destination, follow_symlinks=False)
+        destination.chmod(0o644)
+    if len(selected) < 8:
+        raise ModelError(f"build {build.id}: OpenRazer DKMS source projection is empty")
+
+    epoch = int(environment["SOURCE_DATE_EPOCH"])
+    archive = output / "work" / build.id / (
+        f"{deployment.driver.dkms_name}-{deployment.driver.dkms_version}.tar"
+    )
+    _write_source_tree_archive(projection, archive, epoch)
+    return _copy_artifact(
+        archive,
+        output,
+        build,
+        kind="source-tree",
+        destination=build.destination,
+        mode=build.mode or 0o644,
+    )
+
+
+def _verify_openrazer_dkms_contract(prepared: Path, deployment: Any) -> None:
+    path = prepared / "install_files" / "dkms" / "dkms.conf"
+    if not path.is_file() or path.is_symlink():
+        raise ModelError("OpenRazer native DKMS configuration is missing")
+    text = path.read_text(encoding="utf-8")
+    name = re.search(r'^PACKAGE_NAME="([^"]+)"$', text, re.MULTILINE)
+    version = re.search(r'^PACKAGE_VERSION="([^"]+)"$', text, re.MULTILINE)
+    modules = tuple(
+        sorted(re.findall(r'^BUILT_MODULE_NAME\[[0-9]+\]="([a-z0-9_-]+)"$', text, re.MULTILINE))
+    )
+    if (
+        name is None
+        or version is None
+        or name.group(1) != deployment.driver.dkms_name
+        or version.group(1) != deployment.driver.dkms_version
+        or modules != deployment.driver.modules
+    ):
+        raise ModelError("OpenRazer native DKMS configuration differs from deployment authority")
+
+
+def _write_source_tree_archive(source: Path, destination: Path, epoch: int) -> None:
+    with tarfile.open(destination, "w", format=tarfile.USTAR_FORMAT) as archive:
+        for path in sorted(source.rglob("*"), key=lambda item: item.relative_to(source).as_posix()):
+            relative = path.relative_to(source).as_posix()
+            if path.is_symlink():
+                raise ModelError("source transform produced a symbolic link")
+            info = tarfile.TarInfo(relative + ("/" if path.is_dir() else ""))
+            info.uid = 0
+            info.gid = 0
+            info.uname = "root"
+            info.gname = "root"
+            info.mtime = epoch
+            if path.is_dir():
+                info.type = tarfile.DIRTYPE
+                info.mode = 0o755
+                archive.addfile(info)
+            elif path.is_file():
+                info.mode = 0o644
+                info.size = path.stat().st_size
+                with path.open("rb") as source_file:
+                    archive.addfile(info, source_file)
+            else:
+                raise ModelError("source transform produced an unsupported filesystem entry")
+    os.utime(destination, (epoch, epoch))
+
+
 def _artifact_json(artifact: BuiltArtifact, root: Path) -> dict[str, Any]:
     value: dict[str, Any] = {
         "build_id": artifact.build_id,
@@ -442,6 +554,10 @@ def _provenance_inputs(
     expected_sbom = spdx_json(inventory)
     if not sbom_path.is_file() or sbom_path.read_text(encoding="utf-8") != expected_sbom:
         raise ModelError("generated SPDX inventory is stale; run ./hfx generate")
+    transform = load_native_transform(root)
+    deployment = load_native_deployment(root)
+    native_root = root / "integrations" / "openrazer" / "native-route"
+    patch = native_root / transform["patch"]["path"]
     return {
         "install_manifest_sha256": install.source_sha256,
         "linux_runtime_sha256": runtime.source_sha256,
@@ -450,6 +566,10 @@ def _provenance_inputs(
         "toolchain_pins_sha256": sha256_file(root / "toolchains" / "pins.json"),
         "cargo_lock_sha256": sha256_file(root / "Cargo.lock"),
         "integration_catalog_sha256": sha256_file(root / "integrations" / "catalog.json"),
+        "openrazer_native_catalog_sha256": sha256_file(native_root / "catalog.json"),
+        "openrazer_native_transform_sha256": sha256_file(native_root / "transform.json"),
+        "openrazer_native_deployment_sha256": deployment.source_sha256,
+        "openrazer_native_patch_sha256": sha256_file(patch),
     }
 
 
@@ -470,6 +590,22 @@ def _provenance_materials(
             "integration_catalog_sha256",
         ),
         "linux-runtime": ("runtime/linux.json", "linux_runtime_sha256"),
+        "openrazer-native-catalog": (
+            "integrations/openrazer/native-route/catalog.json",
+            "openrazer_native_catalog_sha256",
+        ),
+        "openrazer-native-deployment": (
+            "integrations/openrazer/native-route/deployment.json",
+            "openrazer_native_deployment_sha256",
+        ),
+        "openrazer-native-patch": (
+            "integrations/openrazer/native-route/patches/0001-Add-trusted-HyperFlux-native-HID-transport.patch",
+            "openrazer_native_patch_sha256",
+        ),
+        "openrazer-native-transform": (
+            "integrations/openrazer/native-route/transform.json",
+            "openrazer_native_transform_sha256",
+        ),
         "source-sbom": (
             "assurance/generated/hyperflux-next.spdx.json",
             "sbom_sha256",
@@ -532,6 +668,12 @@ def build_artifacts(
                 artifacts.append(artifact)
         elif build.kind == "python-project":
             artifacts.append(_build_python(root, output, environment, build))
+        elif build.kind == "source-transform":
+            artifacts.append(
+                _openrazer_dkms_projection(
+                    root, output, environment, build, capabilities
+                )
+            )
 
     manifest = {
         "$schema": "https://hyperflux.dev/schemas/package-build-manifest-v2.json",
@@ -573,7 +715,7 @@ def _manifest_artifact(root: Path, value: Any, label: str) -> BuiltArtifact:
     kind = value["kind"]
     if not isinstance(build_id, str) or not re.fullmatch(r"[a-z][a-z0-9-]{0,63}", build_id):
         raise ModelError(f"{label}: invalid build id")
-    if kind not in {"cargo-binary", "cmake-module", "python-wheel"}:
+    if kind not in {"cargo-binary", "cmake-module", "python-wheel", "source-tree"}:
         raise ModelError(f"{label}: invalid artifact kind")
     path_value = value["path"]
     if not isinstance(path_value, str) or path_value.startswith("/"):
@@ -737,6 +879,10 @@ def load_artifact_set(root: Path, manifest_path: Path) -> ArtifactSet:
         "toolchain_pins_sha256",
         "cargo_lock_sha256",
         "integration_catalog_sha256",
+        "openrazer_native_catalog_sha256",
+        "openrazer_native_transform_sha256",
+        "openrazer_native_deployment_sha256",
+        "openrazer_native_patch_sha256",
     }:
         raise ModelError("package build inputs are malformed")
     revision = source["revision"]
@@ -800,7 +946,10 @@ def load_artifact_set(root: Path, manifest_path: Path) -> ArtifactSet:
         build = declared.get(artifact.build_id)
         if build is None:
             raise ModelError(f"artifact {artifact.build_id}: build is not declared")
-        expected_kind = "python-wheel" if build.kind == "python-project" else build.kind
+        expected_kind = {
+            "python-project": "python-wheel",
+            "source-transform": "source-tree",
+        }.get(build.kind, build.kind)
         if artifact.kind != expected_kind:
             raise ModelError(f"artifact {artifact.build_id}: kind does not match install contract")
         if artifact.destination != build.destination or artifact.distribution != build.distribution:
@@ -979,6 +1128,63 @@ def _install_wheels(
         )
 
 
+def _install_source_tree(stage_root: Path, artifact: BuiltArtifact) -> None:
+    if artifact.destination is None:
+        raise ModelError(f"artifact {artifact.build_id}: source tree has no destination")
+    destination = _stage_path(stage_root, artifact.destination)
+    if destination.exists() or destination.is_symlink():
+        raise ModelError(f"artifact {artifact.build_id}: source-tree destination collides")
+    try:
+        archive = tarfile.open(artifact.path, mode="r:")
+    except (OSError, tarfile.TarError) as error:
+        raise ModelError(f"artifact {artifact.build_id}: invalid source-tree archive") from error
+    files: set[str] = set()
+    directories: set[str] = set()
+    with archive:
+        members = archive.getmembers()
+        if not 4 <= len(members) <= 1_024:
+            raise ModelError(f"artifact {artifact.build_id}: source-tree member bound failed")
+        if sum(member.size for member in members) > 64 * 1024 * 1024:
+            raise ModelError(f"artifact {artifact.build_id}: source tree exceeds its size bound")
+        names: set[str] = set()
+        for member in members:
+            raw_name = member.name[:-1] if member.name.endswith("/") else member.name
+            relative = PurePosixPath(raw_name)
+            if (
+                not raw_name
+                or raw_name.startswith("/")
+                or ".." in relative.parts
+                or str(relative) != raw_name
+                or raw_name in names
+                or member.pax_headers
+            ):
+                raise ModelError(f"artifact {artifact.build_id}: unsafe source-tree member")
+            names.add(raw_name)
+            target = destination.joinpath(*relative.parts)
+            if member.isdir():
+                if member.mode != 0o755:
+                    raise ModelError(f"artifact {artifact.build_id}: invalid directory mode")
+                target.mkdir(parents=True, exist_ok=False)
+                target.chmod(0o755)
+                directories.add(raw_name)
+                continue
+            if not member.isfile() or member.mode != 0o644:
+                raise ModelError(f"artifact {artifact.build_id}: unsupported source-tree member")
+            source = archive.extractfile(member)
+            if source is None:
+                raise ModelError(f"artifact {artifact.build_id}: source-tree member is unreadable")
+            _write_to_stage(target, source.read(), 0o644)
+            files.add(raw_name)
+    required = {"Makefile", "LICENSE", "dkms.conf", "driver/Makefile"}
+    if (
+        not required <= files
+        or "driver" not in directories
+        or not any(name.startswith("driver/") and name.endswith(".c") for name in files)
+        or not any(name.startswith("driver/") and name.endswith(".h") for name in files)
+    ):
+        raise ModelError(f"artifact {artifact.build_id}: DKMS source tree is incomplete")
+
+
 def _tree_digest(files: list[Path], root: Path) -> str:
     digest = hashlib.sha256()
     for path in sorted(files, key=lambda item: item.relative_to(root).as_posix()):
@@ -1033,6 +1239,9 @@ def stage_rootfs(root: Path, manifest_path: Path, stage_root: Path) -> StageResu
     for artifact in artifacts.artifacts:
         if artifact.kind == "python-wheel":
             wheels.append(artifact)
+            continue
+        if artifact.kind == "source-tree":
+            _install_source_tree(stage_root, artifact)
             continue
         if artifact.destination is None:
             raise ModelError(f"artifact {artifact.build_id}: missing destination")

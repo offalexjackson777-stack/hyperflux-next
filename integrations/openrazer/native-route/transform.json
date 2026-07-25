@@ -1,0 +1,35 @@
+{
+  "$schema": "../../../schemas/openrazer-native-transform.schema.json",
+  "schema": "hyperflux-openrazer-native-transform-v1",
+  "upstream": {
+    "id": "openrazer",
+    "repository": "https://github.com/openrazer/openrazer.git",
+    "commit": "6820f9da169d354bc7e6e93a0aa8683a6bb75792"
+  },
+  "patch": {
+    "path": "patches/0001-Add-trusted-HyperFlux-native-HID-transport.patch",
+    "sha256": "0fdef2ee1e820505a6e8ffd6a6bc18aed82e57bea2527711d710c8a992147ff4"
+  },
+  "files": [
+    {
+      "path": "driver/razercommon.c",
+      "source_sha256": "984c3f95cba20710e84f3eed8a26b1e2eddf0f8b6e5fe8bca51a32166744509e",
+      "transformed_sha256": "e71aa4484904b6422b974f7c14fa9f3d6c20efc9382d59503d420a1ae0e6fa11"
+    },
+    {
+      "path": "driver/razercommon.h",
+      "source_sha256": "8145e8670a5230fac3a54392b63b901b2ea4c38cf8b82ee016e415d9e3d6de65",
+      "transformed_sha256": "7cf36b2058a54bfc0f38c595d83de9a5da425c6aa053e0ddef07ee07ea706888"
+    },
+    {
+      "path": "driver/razerkbd_driver.c",
+      "source_sha256": "27d8d4558b0026a1df2a7568e3c52bcb4eac337fe0b1acbc0e2a95f0c47593df",
+      "transformed_sha256": "f4d1f902ceb0b1b0145dc50139b2c9860584901730af6668697e69877f13918a"
+    },
+    {
+      "path": "driver/razermouse_driver.c",
+      "source_sha256": "73ccf9e31d04db2d6a4b300376d3545d14c10ff7ae417bf4d11fa18e60ebb0ff",
+      "transformed_sha256": "4b0de8f5971afa01b06c8fe479b70ef269a6804e7feee80c827389f0f5623d7d"
+    }
+  ]
+}

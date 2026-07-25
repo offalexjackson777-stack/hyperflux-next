@@ -108,9 +108,12 @@ class InstallManifestTests(unittest.TestCase):
         cases.append(wrong_schema)
 
         duplicate_distribution = copy.deepcopy(self.value)
-        duplicate_distribution["builds"][5]["distribution"] = duplicate_distribution[
-            "builds"
-        ][4]["distribution"]
+        python_builds = [
+            build
+            for build in duplicate_distribution["builds"]
+            if build["kind"] == "python-project"
+        ]
+        python_builds[1]["distribution"] = python_builds[0]["distribution"]
         cases.append(duplicate_distribution)
 
         for index, value in enumerate(cases):

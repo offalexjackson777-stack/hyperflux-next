@@ -72,6 +72,10 @@ class PackagePipelineTests(unittest.TestCase):
         inputs = _provenance_inputs(ROOT, install, runtime)
         artifacts = []
         for build in install.builds:
+            artifact_kind = {
+                "python-project": "python-wheel",
+                "source-transform": "source-tree",
+            }.get(build.kind, build.kind)
             path = directory / "files" / build.id / (
                 f"{build.id}.whl" if build.kind == "python-project" else build.target or build.id
             )
@@ -79,11 +83,15 @@ class PackagePipelineTests(unittest.TestCase):
             path.write_bytes(f"artifact:{build.id}\n".encode())
             value = {
                 "build_id": build.id,
-                "kind": "python-wheel" if build.kind == "python-project" else build.kind,
+                "kind": artifact_kind,
                 "path": path.relative_to(directory).as_posix(),
                 "sha256": sha256_file(path),
                 "size": path.stat().st_size,
-                "mode": "0644" if build.kind == "python-project" else "0755",
+                "mode": (
+                    "0644"
+                    if build.kind in {"python-project", "source-transform"}
+                    else "0755"
+                ),
             }
             if build.destination is not None:
                 value["destination"] = build.destination
@@ -112,7 +120,7 @@ class PackagePipelineTests(unittest.TestCase):
             },
             "inputs": inputs,
             "materials": _provenance_materials(
-                ROOT, inputs, {"openrgb-source"}
+                ROOT, inputs, {"openrgb-source", "openrazer-source"}
             ),
             "artifacts": artifacts,
             "omitted": [],
@@ -129,7 +137,7 @@ class PackagePipelineTests(unittest.TestCase):
                 return_value=("a" * 40, 1_700_000_000),
             ):
                 artifacts = load_artifact_set(ROOT, path)
-            self.assertEqual(len(artifacts.artifacts), 7)
+            self.assertEqual(len(artifacts.artifacts), 9)
             self.assertFalse(artifacts.omitted)
 
     def test_artifact_tamper_is_rejected_before_staging(self) -> None:

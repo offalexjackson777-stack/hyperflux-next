@@ -9,6 +9,7 @@ from typing import Any, Iterable
 
 from .linux_runtime import LinuxRuntime, load_linux_runtime
 from .model import ModelError, load_json, require_unique, sha256_file
+from .openrazer_native_route import load_native_deployment
 
 
 ROOT_KEYS = {"$schema", "schema", "policy", "builds", "payloads"}
@@ -31,6 +32,15 @@ CMAKE_KEYS = {
     "capability",
 }
 PYTHON_KEYS = {"id", "kind", "source", "distribution", "required"}
+SOURCE_TRANSFORM_KEYS = {
+    "id",
+    "kind",
+    "transform",
+    "destination",
+    "mode",
+    "required",
+    "capability",
+}
 PAYLOAD_KEYS = {"id", "kind", "source", "destination", "mode", "preserve", "include"}
 IDENTIFIER = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
 DISTRIBUTION = re.compile(r"^[a-z][a-z0-9-]{0,95}$")
@@ -59,6 +69,7 @@ class BuildSpec:
     mode: int | None = None
     distribution: str | None = None
     capability: str | None = None
+    transform: str | None = None
 
 
 @dataclass(frozen=True)
@@ -124,7 +135,14 @@ def _identifier(value: Any, label: str) -> str:
     return value
 
 
-def _relative_path(root: Path, value: Any, label: str, *, directory: bool) -> str:
+def _relative_path(
+    root: Path,
+    value: Any,
+    label: str,
+    *,
+    directory: bool,
+    projected_files: tuple[Path, ...] = (),
+) -> str:
     if not isinstance(value, str) or not value or value.startswith("/"):
         raise ModelError(f"{label}: must be a repository-relative path")
     relative = PurePosixPath(value)
@@ -136,7 +154,8 @@ def _relative_path(root: Path, value: Any, label: str, *, directory: bool) -> st
         cursor /= part
         if cursor.is_symlink():
             raise ModelError(f"{label}: symbolic-link source paths are forbidden")
-    expected = path.is_dir() if directory else path.is_file()
+    projected = path.resolve() in projected_files
+    expected = path.is_dir() if directory else path.is_file() or projected
     if not expected or path.is_symlink():
         kind = "directory" if directory else "file"
         raise ModelError(f"{label}: missing regular {kind} {value}")
@@ -168,7 +187,8 @@ def _mode(value: Any, label: str) -> int:
     return MODES[value]
 
 
-def _tokens(runtime: LinuxRuntime) -> dict[str, str]:
+def _tokens(root: Path, runtime: LinuxRuntime) -> dict[str, str]:
+    openrazer = load_native_deployment(root)
     return {
         "@bridge_executable_path@": runtime.bridge.executable_path,
         "@operations_cli_path@": runtime.operations.cli_path,
@@ -178,6 +198,8 @@ def _tokens(runtime: LinuxRuntime) -> dict[str, str]:
             PurePosixPath(runtime.kernel.source_directory) / "dkms.conf"
         ),
         "@bridge_configuration_file_path@": runtime.bridge.configuration_file_path,
+        "@openrazer_relay_executable_path@": openrazer.relay.executable_path,
+        "@openrazer_dkms_source_directory@": openrazer.driver.source_directory,
     }
 
 
@@ -239,6 +261,23 @@ def _python_build(root: Path, value: dict[str, Any], label: str) -> BuildSpec:
     )
 
 
+def _source_transform_build(
+    value: dict[str, Any], tokens: dict[str, str], label: str
+) -> BuildSpec:
+    _exact(value, SOURCE_TRANSFORM_KEYS, label)
+    if value["required"] is not True:
+        raise ModelError(f"{label}: source transform must be required")
+    return BuildSpec(
+        id=_identifier(value["id"], f"{label} id"),
+        kind="source-transform",
+        required=True,
+        transform=_identifier(value["transform"], f"{label} transform"),
+        destination=_destination(value["destination"], f"{label} destination", tokens),
+        mode=_mode(value["mode"], f"{label} mode"),
+        capability=_identifier(value["capability"], f"{label} capability"),
+    )
+
+
 def _load_builds(
     root: Path, values: list[Any], tokens: dict[str, str]
 ) -> tuple[BuildSpec, ...]:
@@ -253,6 +292,8 @@ def _load_builds(
             builds.append(_cmake_build(root, value, tokens, label))
         elif kind == "python-project":
             builds.append(_python_build(root, value, label))
+        elif kind == "source-transform":
+            builds.append(_source_transform_build(value, tokens, label))
         else:
             raise ModelError(f"{label}: unsupported build kind")
     require_unique([build.id for build in builds], "install build id")
@@ -266,7 +307,10 @@ def _load_builds(
 
 
 def _load_payloads(
-    root: Path, values: list[Any], tokens: dict[str, str]
+    root: Path,
+    values: list[Any],
+    tokens: dict[str, str],
+    projected_files: tuple[Path, ...],
 ) -> tuple[PayloadSpec, ...]:
     payloads: list[PayloadSpec] = []
     for index, item in enumerate(values):
@@ -301,7 +345,11 @@ def _load_payloads(
                 id=_identifier(value["id"], f"{label} id"),
                 kind=kind,
                 source=_relative_path(
-                    root, value["source"], f"{label} source", directory=kind == "tree"
+                    root,
+                    value["source"],
+                    f"{label} source",
+                    directory=kind == "tree",
+                    projected_files=projected_files,
                 ),
                 destination=_destination(
                     value["destination"], f"{label} destination", tokens
@@ -377,6 +425,7 @@ def _expand_payload_files(
 
 
 def _check_cross_contract(
+    root: Path,
     runtime: LinuxRuntime,
     policy: InstallPolicy,
     builds: tuple[BuildSpec, ...],
@@ -405,7 +454,34 @@ def _check_cross_contract(
     if "python-sdk" not in build_by_id or not build_by_id["python-sdk"].required:
         raise ModelError("Python SDK must be a required install build")
 
+    openrazer = load_native_deployment(root)
+    relay = build_by_id.get("openrazer-native-relay")
+    if (
+        relay is None
+        or relay.kind != "cargo-binary"
+        or relay.destination != openrazer.relay.executable_path
+        or not relay.required
+    ):
+        raise ModelError("OpenRazer native relay build does not match its deployment authority")
+    driver = build_by_id.get("openrazer-native-driver")
+    if (
+        driver is None
+        or driver.kind != "source-transform"
+        or driver.transform != "openrazer-native-route"
+        or driver.capability != "openrazer-source"
+        or driver.destination != openrazer.driver.source_directory
+        or not driver.required
+    ):
+        raise ModelError("OpenRazer native driver build does not match its deployment authority")
+
     payload_by_id = {payload.id: payload for payload in payloads}
+    relay_service = payload_by_id.get("openrazer-native-relay-service")
+    if (
+        relay_service is None
+        or relay_service.destination
+        != f"/usr/lib/systemd/system/{openrazer.relay.service_unit}"
+    ):
+        raise ModelError("OpenRazer native relay service is missing from the package")
     configuration = payload_by_id.get("default-configuration")
     if (
         configuration is None
@@ -452,7 +528,8 @@ def load_install_manifest(
     policy = InstallPolicy(**policy_value)
 
     runtime = load_linux_runtime(root)
-    tokens = _tokens(runtime)
+    tokens = _tokens(root, runtime)
+    projected = tuple(file.resolve() for file in projected_files)
     builds = _load_builds(
         root,
         _list(value["builds"], "install builds", minimum=1, maximum=32),
@@ -462,9 +539,10 @@ def load_install_manifest(
         root,
         _list(value["payloads"], "install payloads", minimum=1, maximum=128),
         tokens,
+        projected,
     )
     files = _expand_payload_files(root, payloads, projected_files)
-    _check_cross_contract(runtime, policy, builds, payloads, files)
+    _check_cross_contract(root, runtime, policy, builds, payloads, files)
     return InstallManifest(
         root=root.resolve(),
         source_sha256=sha256_file(path),

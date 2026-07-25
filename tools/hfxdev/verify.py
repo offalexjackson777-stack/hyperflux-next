@@ -41,6 +41,10 @@ from .openrazer import (
     load_imported_metadata,
     transformed_metadata,
 )
+from .openrazer_native_route import (
+    load_native_deployment,
+    prepare_openrazer_native_source,
+)
 from .openrgb import extract_openrgb_catalog
 from .package_pipeline import build_artifacts, load_artifact_set, stage_rootfs
 from .performance import (
@@ -638,6 +642,99 @@ def _run_openrazer_metadata_contracts(root: Path, _node: TestNode) -> None:
         )
 
 
+def _run_openrazer_native_route_contracts(root: Path, _node: TestNode) -> None:
+    source = _openrazer_source(root)
+    deployment = load_native_deployment(root)
+    build_directory = root / "build" / "openrazer-native-route-contracts"
+    if build_directory.exists():
+        shutil.rmtree(build_directory)
+    prepared = prepare_openrazer_native_source(root, source, build_directory)
+    if (prepared.result.stat().st_mode & 0o777) != 0o600:
+        raise ModelError("OpenRazer native source binding is not private")
+    result = load_json(prepared.result)
+    if result.get("schema") != "hyperflux-openrazer-native-transform-result-v1":
+        raise ModelError("OpenRazer native source binding schema is invalid")
+    if any(
+        result.get(field) is not False
+        for field in (
+            "network_access_executed",
+            "hardware_queried",
+            "hardware_write_executed",
+        )
+    ):
+        raise ModelError("OpenRazer native source preparation crossed a prohibited boundary")
+    if (prepared.root / ".git").exists():
+        raise ModelError("OpenRazer native source output copied upstream Git metadata")
+
+    common = (prepared.root / "driver" / "razercommon.c").read_text(encoding="utf-8")
+    required_common = (
+        'RAZER_HYPERFLUX_PHYS_PREFIX "hyperflux-next/native/v1/"',
+        "hdev->dev_rsize != sizeof(razer_hyperflux_descriptor)",
+        "hid_hw_raw_request(hdev, 0",
+        "RAZER_HYPERFLUX_TRANSPORT_NOT_SENT",
+        "RAZER_HYPERFLUX_TRANSPORT_MAY_HAVE_BEEN_SENT",
+    )
+    if any(marker not in common for marker in required_common):
+        raise ModelError("OpenRazer native common transport is incomplete")
+    for driver in ("razerkbd_driver.c", "razermouse_driver.c"):
+        source_text = (prepared.root / "driver" / driver).read_text(encoding="utf-8")
+        if source_text.count("HID_DEVICE(BUS_VIRTUAL,HID_GROUP_ANY") != 1:
+            raise ModelError(f"OpenRazer native {driver} has an invalid virtual match boundary")
+        if "identity->bus == BUS_USB" not in source_text:
+            raise ModelError(f"OpenRazer native {driver} no longer reuses its exact USB catalog")
+        if "razer_hyperflux_error_is_uncertain(err)" not in source_text:
+            raise ModelError(f"OpenRazer native {driver} can retry an uncertain transaction")
+
+    service = (
+        root / "packaging" / "generated" / deployment.relay.service_unit
+    ).read_text(encoding="utf-8")
+    runtime = load_linux_runtime(root)
+    required_service = (
+        "User=root",
+        "NoNewPrivileges=yes",
+        "CapabilityBoundingSet=\n",
+        "DevicePolicy=closed",
+        f"DeviceAllow={deployment.relay.uhid_device} rw",
+        f"PartOf={runtime.bridge.service_unit}",
+        f"ExecStartPre={runtime.operations.activation_path} check-openrazer-driver",
+    )
+    if any(marker not in service for marker in required_service):
+        raise ModelError("OpenRazer native relay service sandbox is incomplete")
+    if "PrivateDevices=yes" in service or "SupplementaryGroups=" in service:
+        raise ModelError("OpenRazer native relay exposes a broader device boundary")
+    rust_deployment = (
+        root
+        / "crates"
+        / "hfx-integration-model"
+        / "src"
+        / "openrazer_native_generated.rs"
+    ).read_text(encoding="utf-8")
+    if (
+        deployment.source_sha256 not in rust_deployment
+        or any(
+            f'"{module}"' not in rust_deployment
+            for module in deployment.driver.modules
+        )
+    ):
+        raise ModelError("OpenRazer native Rust deployment projection is incomplete")
+    bridge_service = (
+        root / "packaging" / "generated" / "hyperflux-next-bridge.service"
+    ).read_text(encoding="utf-8")
+    if (
+        deployment.relay.service_unit not in bridge_service
+        or f"Before=" not in bridge_service
+    ):
+        raise ModelError("bridge lifecycle does not pull in the OpenRazer native relay")
+    install = load_install_manifest(root)
+    if (
+        install.build("openrazer-native-driver").destination
+        != deployment.driver.source_directory
+        or install.build("openrazer-native-relay").destination
+        != deployment.relay.executable_path
+    ):
+        raise ModelError("OpenRazer native deployment drifted from package staging")
+
+
 def _run_device_knowledge_contracts(root: Path, _node: TestNode) -> None:
     inputs = load_knowledge_inputs(root)
     catalog = compiled_knowledge_catalog(root)
@@ -1162,7 +1259,10 @@ def _run_package_contracts(root: Path, node: TestNode) -> None:
     manifest_path = build_artifacts(
         root,
         workspace / "artifacts",
-        capabilities={"openrgb-source": _openrgb_source(root)},
+        capabilities={
+            "openrgb-source": _openrgb_source(root),
+            "openrazer-source": _openrazer_source(root),
+        },
     )
     artifacts = load_artifact_set(root, manifest_path)
     if artifacts.omitted:
@@ -1257,6 +1357,7 @@ RUNNERS = {
     "openrgb-adapter-contracts": _run_openrgb_adapter_contracts,
     "openrgb-thread-sanitizer": _run_openrgb_thread_sanitizer,
     "openrazer-metadata-contracts": _run_openrazer_metadata_contracts,
+    "openrazer-native-route-contracts": _run_openrazer_native_route_contracts,
     "openrazer-compatibility-contracts": _run_openrazer_compatibility_contracts,
     "polychromatic-adapter-contracts": _run_polychromatic_adapter_contracts,
     "kernel-profile-contracts": _run_kernel_profile_contracts,

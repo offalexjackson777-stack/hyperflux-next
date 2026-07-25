@@ -162,6 +162,32 @@
       "resume_policy": "rerun"
     },
     {
+      "id": "openrazer-native-route-contracts",
+      "title": "Source-bound OpenRazer native transport and feature-only relay",
+      "owned_domain": "integrations",
+      "lanes": ["full-software"],
+      "runner": "openrazer-native-route-contracts",
+      "required_capabilities": ["openrazer-source"],
+      "hardware_requirement": "none",
+      "writes_hardware": false,
+      "expected_duration_seconds": 2,
+      "timeout_seconds": 60,
+      "dependencies": ["openrazer-metadata-contracts", "rust-unit"],
+      "isolation": "exclusive-process",
+      "cache_inputs": [
+        "Cargo.lock",
+        "Cargo.toml",
+        "crates/hfx-uhid-relay/**/*.rs",
+        "crates/hfx-uhid-relay/Cargo.toml",
+        "integrations/openrazer/native-route/**",
+        "schemas/openrazer-native-*.schema.json",
+        "tools/hfxdev/openrazer_native_route.py",
+        "tools/hfxdev/verify.py"
+      ],
+      "produced_evidence": ["openrazer-native-route-result"],
+      "resume_policy": "rerun"
+    },
+    {
       "id": "device-knowledge-contracts",
       "title": "Provenance-bound device knowledge and exact upstream imports",
       "owned_domain": "profiles",

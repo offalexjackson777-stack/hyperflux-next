@@ -18,6 +18,7 @@ from .distribution_native import (
     write_payload_tar,
 )
 from .model import ModelError
+from .openrazer_native_route import load_native_deployment
 
 
 RPM_BUILDHOST = "hyperflux.invalid"
@@ -79,13 +80,22 @@ def _refresh_system() -> list[str]:
 
 def _rpm_scripts(context: NativePackageContext) -> dict[str, str]:
     activation = context.runtime.operations.activation_path
-    module = context.runtime.kernel.dkms_name
-    version = context.runtime.product.version
+    native = load_native_deployment(context.repository_root)
+    modules = (
+        (context.runtime.kernel.dkms_name, context.runtime.product.version),
+        (native.driver.dkms_name, native.driver.dkms_version),
+    )
     update_state = context.runtime.update_state_path
     post = [
         "set -eu",
-        f"dkms add -m {module} -v {version} --rpm_safe_upgrade",
-        f"dkms autoinstall -m {module} -v {version}",
+        *(
+            line
+            for module, version in modules
+            for line in (
+                f"dkms add -m {module} -v {version} --rpm_safe_upgrade",
+                f"dkms autoinstall -m {module} -v {version}",
+            )
+        ),
         *_refresh_system(),
         'if [ "$1" -eq 1 ]; then',
         f"  {activation} fresh-install",
@@ -107,7 +117,10 @@ def _rpm_scripts(context: NativePackageContext) -> dict[str, str]:
                 'if [ "$1" -eq 0 ]; then',
                 f"  {activation} pre-remove",
                 "fi",
-                f"dkms remove -m {module} -v {version} --all --rpm_safe_upgrade",
+                *(
+                    f"dkms remove -m {module} -v {version} --all --rpm_safe_upgrade"
+                    for module, version in modules
+                ),
             ]
         ),
         "postun": "\n".join(
@@ -164,6 +177,13 @@ def _rpm_spec(context: NativePackageContext) -> str:
         _plain_rpm_dependency(value, "conflict")
         for value in context.target.conflicts
     ]
+    provides = [
+        _format_rpm_dependency(value, "provide") for value in context.target.provides
+    ]
+    replaces = [
+        _format_rpm_dependency(value, "replacement")
+        for value in context.target.replaces
+    ]
     scripts = _rpm_scripts(context)
     lines = [
         "%global debug_package %{nil}",
@@ -180,6 +200,8 @@ def _rpm_spec(context: NativePackageContext) -> str:
     lines.extend(f"Requires: {value}" for value in dependencies)
     lines.extend(f"Suggests: {value}" for value in optional)
     lines.extend(f"Conflicts: {value}" for value in conflicts)
+    lines.extend(f"Provides: {value}" for value in provides)
+    lines.extend(f"Obsoletes: {value}" for value in replaces)
     lines.extend(
         [
             "",
@@ -403,6 +425,20 @@ def _verify_rpm_package(context: NativePackageContext, package: Path) -> None:
         raise ModelError("RPM package suggestions differ from their authority")
     if set(_rpm_names(package, "CONFLICTNAME")) != set(context.target.conflicts):
         raise ModelError("RPM package conflicts differ from their authority")
+    provided = _rpm_relations(package, "PROVIDE")
+    declared_provides = {
+        _rpm_dependency(value, "provide") for value in context.target.provides
+    }
+    unexpected_provides = {
+        relation
+        for relation in provided - declared_provides
+        if relation[0] != context.runtime.product.package_name
+        and not relation[0].startswith(context.runtime.product.package_name + "(")
+    }
+    if not declared_provides <= provided or unexpected_provides:
+        raise ModelError("RPM package provides differ from their authority")
+    if set(_rpm_names(package, "OBSOLETENAME")) != set(context.target.replaces):
+        raise ModelError("RPM package replacements differ from their authority")
     _verify_rpm_scripts(context, package, _rpm_scripts(context))
 
     file_lines = _rpm_query(

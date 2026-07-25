@@ -35,9 +35,10 @@ Every current node is software-only and has zero hardware-write authority.
 | 26 | `openrgb-adapter-contracts` | `integrations` | `none` | `false` | 300s | `rerun` |
 | 27 | `polychromatic-adapter-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
 | 28 | `openrazer-compatibility-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
-| 29 | `migration-shadow-contracts` | `migration` | `none` | `false` | 120s | `rerun` |
-| 30 | `openrgb-thread-sanitizer` | `integrations` | `none` | `false` | 300s | `rerun` |
-| 31 | `package-contracts` | `packaging` | `none` | `false` | 600s | `rerun` |
+| 29 | `openrazer-native-route-contracts` | `integrations` | `none` | `false` | 60s | `rerun` |
+| 30 | `migration-shadow-contracts` | `migration` | `none` | `false` | 120s | `rerun` |
+| 31 | `openrgb-thread-sanitizer` | `integrations` | `none` | `false` | 300s | `rerun` |
+| 32 | `package-contracts` | `packaging` | `none` | `false` | 600s | `rerun` |
 
 ## Dependencies
 
@@ -71,6 +72,7 @@ flowchart LR
     openrgb_adapter_contracts["openrgb-adapter-contracts"]
     polychromatic_adapter_contracts["polychromatic-adapter-contracts"]
     openrazer_compatibility_contracts["openrazer-compatibility-contracts"]
+    openrazer_native_route_contracts["openrazer-native-route-contracts"]
     migration_shadow_contracts["migration-shadow-contracts"]
     openrgb_thread_sanitizer["openrgb-thread-sanitizer"]
     package_contracts["package-contracts"]
@@ -125,6 +127,8 @@ flowchart LR
     python_unit --> polychromatic_adapter_contracts
     openrazer_metadata_contracts --> openrazer_compatibility_contracts
     python_unit --> openrazer_compatibility_contracts
+    openrazer_metadata_contracts --> openrazer_native_route_contracts
+    rust_unit --> openrazer_native_route_contracts
     simulator_contracts --> migration_shadow_contracts
     python_unit --> migration_shadow_contracts
     openrgb_adapter_contracts --> openrgb_thread_sanitizer

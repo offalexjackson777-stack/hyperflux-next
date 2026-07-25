@@ -7,14 +7,14 @@ Release signing and remote attestations remain unavailable until publication is 
 
 ## Inventory
 
-- Workspace crates: 13
+- Workspace crates: 14
 - Checksummed Rust registry packages: 29
 - Repository Python projects: 3
 - Distribution-provided Python packages: 3
 - Vendored source packages: 1
 - Pinned application upstreams: 3
 - Immutable workflow actions: 7
-- Authority SHA-256: `92006b9561017382240993dd195de5c217e9e6fcc2e3614e6061698fd16b201d`
+- Authority SHA-256: `27d52db25e0d72e5f52359a11aa5cfd97f1bc98f9b4800bc7c02c69b590a8754`
 
 ## License Policy
 

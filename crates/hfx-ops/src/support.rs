@@ -227,7 +227,9 @@ fn hex_prefix(bytes: &[u8], length: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ServiceState, SystemSnapshot};
+    use crate::{
+        KernelModuleIdentitySnapshot, OpenRazerDriverSnapshot, ServiceState, SystemSnapshot,
+    };
     use std::fs;
     use std::os::unix::fs::PermissionsExt as _;
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -237,6 +239,14 @@ mod tests {
             package_version: PRODUCT_VERSION.to_owned(),
             installed_module_identity: Some("ABC".to_owned()),
             loaded_module_identity: None,
+            openrazer_driver: OpenRazerDriverSnapshot {
+                modules: vec![KernelModuleIdentitySnapshot {
+                    module_name: "razerkbd".to_owned(),
+                    installed_identity: Some("ABC".to_owned()),
+                    loaded: false,
+                    loaded_identity: None,
+                }],
+            },
             service_state: ServiceState::Inactive,
             bridge: None,
             legacy_v2_stack_detected: false,

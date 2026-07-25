@@ -52,6 +52,8 @@
         "dependency_roles",
         "optional_dependencies",
         "conflicts",
+        "provides",
+        "replaces",
         "python_discovery_path"
       ],
       "properties": {
@@ -94,6 +96,18 @@
           }
         },
         "conflicts": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/packageName"}
+        },
+        "provides": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/packageName"}
+        },
+        "replaces": {
           "type": "array",
           "maxItems": 16,
           "uniqueItems": true,

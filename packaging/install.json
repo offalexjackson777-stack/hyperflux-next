@@ -36,6 +36,24 @@
       "required": true
     },
     {
+      "id": "openrazer-native-relay",
+      "kind": "cargo-binary",
+      "package": "hfx-uhid-relay",
+      "target": "hyperflux-next-uhid-relay",
+      "destination": "@openrazer_relay_executable_path@",
+      "mode": "0755",
+      "required": true
+    },
+    {
+      "id": "openrazer-native-driver",
+      "kind": "source-transform",
+      "transform": "openrazer-native-route",
+      "destination": "@openrazer_dkms_source_directory@",
+      "mode": "0644",
+      "required": true,
+      "capability": "openrazer-source"
+    },
+    {
       "id": "openrgb-native",
       "kind": "cmake-module",
       "source": "integrations/openrgb",
@@ -92,6 +110,15 @@
       "kind": "file",
       "source": "packaging/generated/hyperflux-next-bridge.service",
       "destination": "/usr/lib/systemd/system/hyperflux-next-bridge.service",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "openrazer-native-relay-service",
+      "kind": "file",
+      "source": "packaging/generated/hyperflux-next-openrazer-relay.service",
+      "destination": "/usr/lib/systemd/system/hyperflux-next-openrazer-relay.service",
       "mode": "0644",
       "preserve": false,
       "include": []
@@ -211,7 +238,13 @@
       "destination": "/usr/share/hyperflux-next/integrations",
       "mode": "0644",
       "preserve": false,
-      "include": ["catalog.json", "openrazer/*.json", "openrazer/compatibility.json"]
+      "include": [
+        "catalog.json",
+        "openrazer/*.json",
+        "openrazer/compatibility.json",
+        "openrazer/native-route/*.json",
+        "openrazer/native-route/patches/*.patch"
+      ]
     },
     {
       "id": "cpp-sdk-headers",

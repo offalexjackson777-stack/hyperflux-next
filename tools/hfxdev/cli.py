@@ -23,6 +23,7 @@ from .github_sync import plan as plan_github
 from .github_sync import verify as verify_github
 from .knowledge import import_upstream_catalogs
 from .openrazer import write_imported_metadata
+from .openrazer_native_route import prepare_openrazer_native_source
 from .package_pipeline import build_artifacts, stage_rootfs
 from .testgraph import format_plan, load_test_catalog
 from .upstreams import prepare_upstreams
@@ -117,6 +118,12 @@ def _parser() -> argparse.ArgumentParser:
     parity.add_argument("--direct-capture", required=True, type=Path)
     parity.add_argument("--receiver-capture", type=Path)
     parity.add_argument("--receiver-result", type=Path)
+    native_openrazer = native_commands.add_parser(
+        "prepare-openrazer",
+        help="prepare the source-bound OpenRazer native transport tree",
+    )
+    native_openrazer.add_argument("--source", required=True, type=Path)
+    native_openrazer.add_argument("--output", required=True, type=Path)
 
     upstream = commands.add_parser("upstream", help="manage immutable upstream checkouts")
     upstream_commands = upstream.add_subparsers(dest="upstream_command", required=True)
@@ -169,6 +176,7 @@ def _parser() -> argparse.ArgumentParser:
         "build", help="build source-bound package artifacts"
     )
     package_build.add_argument("--output", required=True, type=Path)
+    package_build.add_argument("--openrazer-source", required=True, type=Path)
     package_build.add_argument("--openrgb-source", type=Path)
     package_build.add_argument("--source-revision")
     package_stage = package_commands.add_parser(
@@ -311,6 +319,13 @@ def main(arguments: list[str] | None = None) -> int:
                 )
                 print(f"Privacy-safe evidence: {destination}")
                 return 0
+            if args.native_command == "prepare-openrazer":
+                prepared = prepare_openrazer_native_source(
+                    root, args.source, args.output
+                )
+                print(f"Prepared OpenRazer source: {prepared.root}")
+                print(f"Source binding: {prepared.result}")
+                return 0
         if args.command == "upstream":
             prepared = prepare_upstreams(root, args.output)
             for identifier in prepared.fetched:
@@ -365,6 +380,7 @@ def main(arguments: list[str] | None = None) -> int:
         if args.command == "package":
             if args.package_command == "build":
                 capabilities = {}
+                capabilities["openrazer-source"] = args.openrazer_source.resolve()
                 if args.openrgb_source is not None:
                     capabilities["openrgb-source"] = args.openrgb_source.resolve()
                 manifest = build_artifacts(

@@ -85,7 +85,12 @@ class DebianPackageTests(unittest.TestCase):
         self.assertIn(f"Maintainer: {DEBIAN_MAINTAINER}\n", control)
         self.assertIn("Depends: dkms, libc6, libgcc-s1, python3 (>= 3.11), systemd, udev\n", control)
         self.assertIn("Suggests: openrgb, polychromatic, python3-dbus, python3-gi\n", control)
-        self.assertIn("Conflicts: hyperflux-v2-linux-dkms\n", control)
+        self.assertIn(
+            "Conflicts: hyperflux-v2-linux-dkms, openrazer-driver-dkms\n",
+            control,
+        )
+        self.assertIn("Provides: openrazer-driver-dkms\n", control)
+        self.assertIn("Replaces: openrazer-driver-dkms\n", control)
         self.assertIn(f"Description: {self.catalog.description}\n", control)
 
     def test_maintainer_scripts_are_posix_and_delegate_lifecycle(self) -> None:

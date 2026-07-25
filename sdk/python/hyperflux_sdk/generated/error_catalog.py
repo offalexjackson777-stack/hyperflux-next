@@ -15,6 +15,7 @@ class ErrorCode(str, Enum):
     HFX_INTEGRATION_001 = "HFX-INTEGRATION-001"
     HFX_INTERNAL_001 = "HFX-INTERNAL-001"
     HFX_KERNEL_001 = "HFX-KERNEL-001"
+    HFX_KERNEL_002 = "HFX-KERNEL-002"
     HFX_OUTCOME_001 = "HFX-OUTCOME-001"
     HFX_OUTCOME_002 = "HFX-OUTCOME-002"
     HFX_OWNERSHIP_001 = "HFX-OWNERSHIP-001"
@@ -36,6 +37,7 @@ class ErrorCode(str, Enum):
 class RemediationId(str, Enum):
     ACQUIRE_NEW_LEASE = "acquire-new-lease"
     ACTIVATE_INSTALLED_DRIVER = "activate-installed-driver"
+    ACTIVATE_OPENRAZER_ROUTE_DRIVER = "activate-openrazer-route-driver"
     COLLECT_SUPPORT_BUNDLE = "collect-support-bundle"
     CORRECT_REQUEST = "correct-request"
     DISABLE_UNSUPPORTED_FEATURE = "disable-unsupported-feature"
@@ -156,7 +158,7 @@ class ErrorDescriptor:
     docs_path: str
 
 
-ERROR_CATALOG_SHA256: Final = "dc21516800b761970c0e7c14a030424a56235610f3355f70f70259e2e4843e91"
+ERROR_CATALOG_SHA256: Final = "5574ceb2d25ce311b99274418912cd2c04efb9bebb5262e5704ef474de79a066"
 MAX_ERROR_COUNT: Final = 256
 MAX_REMEDIATION_COUNT: Final = 128
 MAX_SAFE_DETAIL_FIELDS: Final = 12
@@ -175,6 +177,13 @@ REMEDIATIONS: Final = (
         title="Activate the installed driver",
         safe_action="Use the platform's documented reboot or receiver-disconnect activation path.",
         verification="Run Doctor and confirm the loaded and installed driver identities match.",
+        automatic=False,
+    ),
+    RemediationDescriptor(
+        id=RemediationId.ACTIVATE_OPENRAZER_ROUTE_DRIVER,
+        title="Activate the OpenRazer route driver",
+        safe_action="Reboot to activate the source-bound OpenRazer route driver. If Doctor still reports a missing module, reinstall the current HyperFlux package before retrying.",
+        verification="Run Doctor and confirm every installed OpenRazer route module is either unloaded or matches its loaded identity.",
         automatic=False,
     ),
     RemediationDescriptor(
@@ -401,6 +410,39 @@ DETAILS_4: Final = (
 
 DETAILS_5: Final = (
     SafeDetailFieldDescriptor(
+        name="installed_abi",
+        kind=SafeDetailKind.IDENTIFIER,
+        required=True,
+        maximum_length=64,
+        maximum_value=None,
+        allowed_values=(),
+        privacy=PrivacyClass.PUBLIC,
+        description="Installed OpenRazer module source identity.",
+    ),
+    SafeDetailFieldDescriptor(
+        name="loaded_abi",
+        kind=SafeDetailKind.IDENTIFIER,
+        required=True,
+        maximum_length=64,
+        maximum_value=None,
+        allowed_values=(),
+        privacy=PrivacyClass.PUBLIC,
+        description="Loaded OpenRazer module source identity or activation state.",
+    ),
+    SafeDetailFieldDescriptor(
+        name="module",
+        kind=SafeDetailKind.IDENTIFIER,
+        required=True,
+        maximum_length=64,
+        maximum_value=None,
+        allowed_values=(),
+        privacy=PrivacyClass.PUBLIC,
+        description="OpenRazer native-route kernel module name.",
+    ),
+)
+
+DETAILS_6: Final = (
+    SafeDetailFieldDescriptor(
         name="transaction_id",
         kind=SafeDetailKind.IDENTIFIER,
         required=True,
@@ -412,7 +454,7 @@ DETAILS_5: Final = (
     ),
 )
 
-DETAILS_6: Final = (
+DETAILS_7: Final = (
     SafeDetailFieldDescriptor(
         name="history_capacity",
         kind=SafeDetailKind.U16,
@@ -435,7 +477,7 @@ DETAILS_6: Final = (
     ),
 )
 
-DETAILS_7: Final = (
+DETAILS_8: Final = (
     SafeDetailFieldDescriptor(
         name="owner_name",
         kind=SafeDetailKind.TEXT,
@@ -458,7 +500,7 @@ DETAILS_7: Final = (
     ),
 )
 
-DETAILS_8: Final = (
+DETAILS_9: Final = (
     SafeDetailFieldDescriptor(
         name="lease_id",
         kind=SafeDetailKind.IDENTIFIER,
@@ -481,7 +523,7 @@ DETAILS_8: Final = (
     ),
 )
 
-DETAILS_9: Final = (
+DETAILS_10: Final = (
     SafeDetailFieldDescriptor(
         name="operation",
         kind=SafeDetailKind.ENUM,
@@ -504,7 +546,7 @@ DETAILS_9: Final = (
     ),
 )
 
-DETAILS_10: Final = (
+DETAILS_11: Final = (
     SafeDetailFieldDescriptor(
         name="operation",
         kind=SafeDetailKind.ENUM,
@@ -527,7 +569,7 @@ DETAILS_10: Final = (
     ),
 )
 
-DETAILS_11: Final = (
+DETAILS_12: Final = (
     SafeDetailFieldDescriptor(
         name="capability",
         kind=SafeDetailKind.IDENTIFIER,
@@ -550,7 +592,7 @@ DETAILS_11: Final = (
     ),
 )
 
-DETAILS_12: Final = (
+DETAILS_13: Final = (
     SafeDetailFieldDescriptor(
         name="active_digest",
         kind=SafeDetailKind.IDENTIFIER,
@@ -583,7 +625,7 @@ DETAILS_12: Final = (
     ),
 )
 
-DETAILS_13: Final = (
+DETAILS_14: Final = (
     SafeDetailFieldDescriptor(
         name="client_max_version",
         kind=SafeDetailKind.U16,
@@ -626,7 +668,7 @@ DETAILS_13: Final = (
     ),
 )
 
-DETAILS_14: Final = (
+DETAILS_15: Final = (
     SafeDetailFieldDescriptor(
         name="feature",
         kind=SafeDetailKind.IDENTIFIER,
@@ -639,7 +681,7 @@ DETAILS_14: Final = (
     ),
 )
 
-DETAILS_15: Final = (
+DETAILS_16: Final = (
     SafeDetailFieldDescriptor(
         name="capacity",
         kind=SafeDetailKind.U16,
@@ -662,7 +704,7 @@ DETAILS_15: Final = (
     ),
 )
 
-DETAILS_16: Final = (
+DETAILS_17: Final = (
     SafeDetailFieldDescriptor(
         name="field",
         kind=SafeDetailKind.TEXT,
@@ -695,7 +737,7 @@ DETAILS_16: Final = (
     ),
 )
 
-DETAILS_17: Final = (
+DETAILS_18: Final = (
     SafeDetailFieldDescriptor(
         name="service_state",
         kind=SafeDetailKind.ENUM,
@@ -708,7 +750,7 @@ DETAILS_17: Final = (
     ),
 )
 
-DETAILS_18: Final = (
+DETAILS_19: Final = (
     SafeDetailFieldDescriptor(
         name="reason",
         kind=SafeDetailKind.ENUM,
@@ -731,7 +773,7 @@ DETAILS_18: Final = (
     ),
 )
 
-DETAILS_19: Final = (
+DETAILS_20: Final = (
     SafeDetailFieldDescriptor(
         name="transaction_id",
         kind=SafeDetailKind.IDENTIFIER,
@@ -744,7 +786,7 @@ DETAILS_19: Final = (
     ),
 )
 
-DETAILS_20: Final = (
+DETAILS_21: Final = (
     SafeDetailFieldDescriptor(
         name="delivered_frames",
         kind=SafeDetailKind.U16,
@@ -879,13 +921,33 @@ ERRORS: Final = (
         docs_path="docs/generated/error-catalog.md#hfx-kernel-001",
     ),
     ErrorDescriptor(
+        code=ErrorCode.HFX_KERNEL_002,
+        error_class=ErrorClass.KERNEL,
+        severity=ErrorSeverity.ERROR,
+        retry_policy=RetryPolicy.AFTER_REMEDIATION,
+        side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
+        remediation_id=RemediationId.ACTIVATE_OPENRAZER_ROUTE_DRIVER,
+        safe_detail_fields=DETAILS_5,
+        lifecycle=LifecycleDescriptor(
+            state=ErrorLifecycleState.ACTIVE,
+            introduced_in="0.0.0-dev.1",
+            deprecated_in=None,
+            replacement_code=None,
+        ),
+        owner=ErrorOwner.PACKAGING,
+        technical_cause="A required OpenRazer native-route kernel module is missing or an older module remains active.",
+        user_explanation="The OpenRazer route driver is not ready yet.",
+        privacy=PrivacyClass.PUBLIC,
+        docs_path="docs/generated/error-catalog.md#hfx-kernel-002",
+    ),
+    ErrorDescriptor(
         code=ErrorCode.HFX_OUTCOME_001,
         error_class=ErrorClass.OUTCOME,
         severity=ErrorSeverity.WARNING,
         retry_policy=RetryPolicy.NEVER,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.RECONCILE_TRANSACTION_STATE,
-        safe_detail_fields=DETAILS_5,
+        safe_detail_fields=DETAILS_6,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -905,7 +967,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.NEVER,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.RECONCILE_TRANSACTION_STATE,
-        safe_detail_fields=DETAILS_6,
+        safe_detail_fields=DETAILS_7,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -925,7 +987,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.RELEASE_OWNER,
-        safe_detail_fields=DETAILS_7,
+        safe_detail_fields=DETAILS_8,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -945,7 +1007,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.ACQUIRE_NEW_LEASE,
-        safe_detail_fields=DETAILS_8,
+        safe_detail_fields=DETAILS_9,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -965,7 +1027,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.REPAIR_STATE_STORAGE,
-        safe_detail_fields=DETAILS_9,
+        safe_detail_fields=DETAILS_10,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -985,7 +1047,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.REPAIR_STATE_STORAGE,
-        safe_detail_fields=DETAILS_10,
+        safe_detail_fields=DETAILS_11,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1005,7 +1067,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.QUALIFY_DEVICE,
-        safe_detail_fields=DETAILS_11,
+        safe_detail_fields=DETAILS_12,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1025,7 +1087,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.VERIFY_PROFILE_CATALOG,
-        safe_detail_fields=DETAILS_12,
+        safe_detail_fields=DETAILS_13,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1045,7 +1107,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.UPDATE_PROTOCOL_PEER,
-        safe_detail_fields=DETAILS_13,
+        safe_detail_fields=DETAILS_14,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1065,7 +1127,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.DISABLE_UNSUPPORTED_FEATURE,
-        safe_detail_fields=DETAILS_14,
+        safe_detail_fields=DETAILS_15,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1085,7 +1147,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.BOUNDED_BACKOFF,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.RETRY_BOUNDED,
-        safe_detail_fields=DETAILS_15,
+        safe_detail_fields=DETAILS_16,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1105,7 +1167,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.NEVER,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.CORRECT_REQUEST,
-        safe_detail_fields=DETAILS_16,
+        safe_detail_fields=DETAILS_17,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1125,7 +1187,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.START_BRIDGE,
-        safe_detail_fields=DETAILS_17,
+        safe_detail_fields=DETAILS_18,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1145,7 +1207,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.BOUNDED_BACKOFF,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.RETRY_BOUNDED,
-        safe_detail_fields=DETAILS_18,
+        safe_detail_fields=DETAILS_19,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1165,7 +1227,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.OUTCOME_LOOKUP_ONLY,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.POSSIBLE,
         remediation_id=RemediationId.LOOKUP_TRANSACTION_OUTCOME,
-        safe_detail_fields=DETAILS_19,
+        safe_detail_fields=DETAILS_20,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1185,7 +1247,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.OUTCOME_LOOKUP_ONLY,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.PARTIAL,
         remediation_id=RemediationId.LOOKUP_TRANSACTION_OUTCOME,
-        safe_detail_fields=DETAILS_20,
+        safe_detail_fields=DETAILS_21,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",

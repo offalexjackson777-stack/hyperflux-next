@@ -1331,6 +1331,14 @@ mod tests {
             package_version: PRODUCT_VERSION.to_owned(),
             installed_module_identity: Some("same".to_owned()),
             loaded_module_identity: Some("same".to_owned()),
+            openrazer_driver: crate::OpenRazerDriverSnapshot {
+                modules: vec![crate::KernelModuleIdentitySnapshot {
+                    module_name: "razerkbd".to_owned(),
+                    installed_identity: Some("same".to_owned()),
+                    loaded: false,
+                    loaded_identity: None,
+                }],
+            },
             service_state: ServiceState::Active,
             bridge: None,
             legacy_v2_stack_detected: false,

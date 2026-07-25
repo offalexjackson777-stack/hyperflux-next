@@ -61,7 +61,8 @@
       "oneOf": [
         {"$ref": "#/$defs/cargoBuild"},
         {"$ref": "#/$defs/cmakeBuild"},
-        {"$ref": "#/$defs/pythonBuild"}
+        {"$ref": "#/$defs/pythonBuild"},
+        {"$ref": "#/$defs/sourceTransformBuild"}
       ]
     },
     "cargoBuild": {
@@ -104,6 +105,28 @@
         "source": {"$ref": "#/$defs/relativePath"},
         "distribution": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 96},
         "required": {"type": "boolean"}
+      }
+    },
+    "sourceTransformBuild": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "transform",
+        "destination",
+        "mode",
+        "required",
+        "capability"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "kind": {"const": "source-transform"},
+        "transform": {"$ref": "#/$defs/identifier"},
+        "destination": {"$ref": "#/$defs/destination"},
+        "mode": {"const": "0644"},
+        "required": {"const": true},
+        "capability": {"$ref": "#/$defs/identifier"}
       }
     },
     "payload": {

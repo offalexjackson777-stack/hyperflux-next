@@ -4,9 +4,9 @@
 Description=HyperFlux Next bridge
 Documentation=man:hyperfluxctl(1)
 Requires=hyperflux-next-activation.service
-Wants=hyperflux-next-confirmation.service
+Wants=hyperflux-next-confirmation.service hyperflux-next-openrazer-relay.service
 After=systemd-udevd.service hyperflux-next-activation.service
-Before=hyperflux-next-confirmation.service
+Before=hyperflux-next-confirmation.service hyperflux-next-openrazer-relay.service
 ConditionPathExists=/etc/hyperflux-next/bridge.json
 
 [Service]

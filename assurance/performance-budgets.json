@@ -115,6 +115,20 @@
       "rationale": "Upstream registry reuse must not silently turn the adapter into an oversized application fork."
     },
     {
+      "id": "openrazer-native-relay-size",
+      "title": "OpenRazer native-route relay size",
+      "measurement_kind": "artifact-size",
+      "source": "packaging/install.json",
+      "selector": "openrazer-native-relay",
+      "unit": "bytes",
+      "maximum": 8000000,
+      "status": "enforced-software",
+      "sample_count": 1,
+      "warmup_count": 0,
+      "release_blocking": true,
+      "rationale": "The feature-only relay must remain a thin transport process rather than accumulating device semantics."
+    },
+    {
       "id": "staged-payload-size",
       "title": "Canonical uncompressed installed payload size",
       "measurement_kind": "staged-payload-size",

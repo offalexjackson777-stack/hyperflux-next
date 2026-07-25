@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/openrazer-native-deployment-v1.json",
+  "title": "HyperFlux OpenRazer native-route deployment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "relay", "driver"],
+  "properties": {
+    "$schema": {"const": "../../../schemas/openrazer-native-deployment.schema.json"},
+    "schema": {"const": "hyperflux-openrazer-native-deployment-v1"},
+    "relay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["executable_path", "service_unit", "uhid_device", "restart_seconds"],
+      "properties": {
+        "executable_path": {
+          "type": "string",
+          "pattern": "^/usr/lib/hyperflux-next/[a-z0-9][a-z0-9_.-]{0,95}$"
+        },
+        "service_unit": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9@_.-]{0,95}\\.service$"
+        },
+        "uhid_device": {"const": "/dev/uhid"},
+        "restart_seconds": {"type": "integer", "minimum": 1, "maximum": 60}
+      }
+    },
+    "driver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dkms_name", "dkms_version", "source_directory", "modules"],
+      "properties": {
+        "dkms_name": {"const": "openrazer-driver"},
+        "dkms_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "maxLength": 32
+        },
+        "source_directory": {
+          "type": "string",
+          "pattern": "^/usr/src/openrazer-driver-[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "modules": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"}
+        }
+      }
+    }
+  }
+}

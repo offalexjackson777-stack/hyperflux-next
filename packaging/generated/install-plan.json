@@ -1,6 +1,6 @@
 {
   "schema": "hyperflux-compiled-install-plan-v1",
-  "install_manifest_sha256": "184e6f6d925b3a0aac4aa2fbeae741830e75720f3b7779c562c094b37af01554",
+  "install_manifest_sha256": "b939538cfddbc866e5e72213267f29053a34d6eb636264467cea0f69a7bcc750",
   "product": {
     "name": "hyperflux-next-linux",
     "version": "0.0.0-dev.1",
@@ -39,6 +39,24 @@
       "target": "hyperflux-next-activate",
       "destination": "/usr/lib/hyperflux-next/hyperflux-next-activate",
       "mode": "0755"
+    },
+    {
+      "id": "openrazer-native-relay",
+      "kind": "cargo-binary",
+      "required": true,
+      "package": "hfx-uhid-relay",
+      "target": "hyperflux-next-uhid-relay",
+      "destination": "/usr/lib/hyperflux-next/hyperflux-next-uhid-relay",
+      "mode": "0755"
+    },
+    {
+      "id": "openrazer-native-driver",
+      "kind": "source-transform",
+      "required": true,
+      "transform": "openrazer-native-route",
+      "destination": "/usr/src/openrazer-driver-3.12.1",
+      "mode": "0644",
+      "capability": "openrazer-source"
     },
     {
       "id": "openrgb-native",
@@ -190,6 +208,13 @@
       "component": "bridge-service",
       "source": "packaging/generated/hyperflux-next-bridge.service",
       "destination": "/usr/lib/systemd/system/hyperflux-next-bridge.service",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "openrazer-native-relay-service",
+      "source": "packaging/generated/hyperflux-next-openrazer-relay.service",
+      "destination": "/usr/lib/systemd/system/hyperflux-next-openrazer-relay.service",
       "mode": "0644",
       "preserve": false
     },
@@ -496,6 +521,13 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/openrazer-native-deployment.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/openrazer-native-deployment.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/openrazer-native-method-inventory.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/openrazer-native-method-inventory.schema.json",
       "mode": "0644",
@@ -512,6 +544,20 @@
       "component": "schemas",
       "source": "schemas/openrazer-native-probe-policy.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/openrazer-native-probe-policy.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/openrazer-native-route-catalog.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/openrazer-native-route-catalog.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/openrazer-native-transform.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/openrazer-native-transform.schema.json",
       "mode": "0644",
       "preserve": false
     },
@@ -764,6 +810,34 @@
       "component": "integration-authority",
       "source": "integrations/openrazer/native-probe-policy.json",
       "destination": "/usr/share/hyperflux-next/integrations/openrazer/native-probe-policy.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "integration-authority",
+      "source": "integrations/openrazer/native-route/catalog.json",
+      "destination": "/usr/share/hyperflux-next/integrations/openrazer/native-route/catalog.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "integration-authority",
+      "source": "integrations/openrazer/native-route/deployment.json",
+      "destination": "/usr/share/hyperflux-next/integrations/openrazer/native-route/deployment.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "integration-authority",
+      "source": "integrations/openrazer/native-route/patches/0001-Add-trusted-HyperFlux-native-HID-transport.patch",
+      "destination": "/usr/share/hyperflux-next/integrations/openrazer/native-route/patches/0001-Add-trusted-HyperFlux-native-HID-transport.patch",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "integration-authority",
+      "source": "integrations/openrazer/native-route/transform.json",
+      "destination": "/usr/share/hyperflux-next/integrations/openrazer/native-route/transform.json",
       "mode": "0644",
       "preserve": false
     },
@@ -1205,6 +1279,13 @@
       "component": "documentation",
       "source": "docs/generated/migration-shadow.md",
       "destination": "/usr/share/doc/hyperflux-next/generated/migration-shadow.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/openrazer-native-deployment.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/openrazer-native-deployment.md",
       "mode": "0644",
       "preserve": false
     },

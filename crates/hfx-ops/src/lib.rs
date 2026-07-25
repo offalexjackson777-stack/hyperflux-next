@@ -29,8 +29,9 @@ pub use configuration::{
     migrate_configuration, restore_qualification_configuration,
 };
 pub use probe::{
-    BridgeHealth, BridgeIntegration, CommandOutput, CommandRunner, ProbeError, RealCommandRunner,
-    RealSystemProbe, ServiceState, SystemController, SystemProbe, SystemSnapshot,
+    BridgeHealth, BridgeIntegration, CommandOutput, CommandRunner, KernelModuleIdentitySnapshot,
+    OpenRazerDriverSnapshot, OpenRazerDriverState, ProbeError, RealCommandRunner, RealSystemProbe,
+    ServiceState, SystemController, SystemProbe, SystemSnapshot,
 };
 pub use qualification::{
     ActionConfirmation, BatteryAvailability, BatteryView, CapabilityAccess, CapabilityView,
