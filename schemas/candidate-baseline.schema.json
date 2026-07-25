@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/candidate-baseline-v1.json",
+  "title": "Frozen HyperFlux candidate baseline",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "baseline", "packages", "profiles", "verification", "protected_behavior", "change_boundary"],
+  "properties": {
+    "$schema": {"const": "../schemas/candidate-baseline.schema.json"},
+    "schema": {"const": "hyperflux-candidate-baseline-v1"},
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "revision", "commit_epoch", "branch", "purpose"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{0,127}$"},
+        "revision": {"$ref": "#/$defs/revision"},
+        "commit_epoch": {"type": "integer", "minimum": 1, "maximum": 4102444800},
+        "branch": {"type": "string", "minLength": 1, "maxLength": 160},
+        "purpose": {"type": "string", "minLength": 1, "maxLength": 512}
+      }
+    },
+    "packages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate", "rollback"],
+      "properties": {
+        "candidate": {"$ref": "#/$defs/package"},
+        "rollback": {"$ref": "#/$defs/package"}
+      }
+    },
+    "profiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_sha256", "runtime"],
+      "properties": {
+        "source_sha256": {"$ref": "#/$defs/digest"},
+        "runtime": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["profile_id", "sha256"],
+            "properties": {
+              "profile_id": {"$ref": "#/$defs/identifier"},
+              "sha256": {"$ref": "#/$defs/digest"}
+            }
+          }
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "run_id", "lane", "status", "nodes", "duration_ms", "result_sha256"],
+      "properties": {
+        "schema": {"const": "hyperflux-verification-run-v1"},
+        "run_id": {"type": "string", "pattern": "^hfxv-[0-9a-f]{20}$"},
+        "lane": {"const": "full-software"},
+        "status": {"const": "passed"},
+        "nodes": {"type": "integer", "minimum": 1, "maximum": 256},
+        "duration_ms": {"type": "integer", "minimum": 0, "maximum": 86400000},
+        "result_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "protected_behavior": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "sha256"],
+      "properties": {
+        "schema": {"const": "hyperflux-protected-behavior-v1"},
+        "sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "change_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default_no_touch", "approval_required"],
+      "properties": {
+        "default_no_touch": {"$ref": "#/$defs/stringSet"},
+        "approval_required": {"$ref": "#/$defs/stringSet"}
+      }
+    }
+  },
+  "$defs": {
+    "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "identifier": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"},
+    "stringSet": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 256}
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_revision", "file", "sha256", "size", "manifest_sha256"],
+      "properties": {
+        "source_revision": {"$ref": "#/$defs/revision"},
+        "file": {"type": "string", "pattern": "^[A-Za-z0-9_.+-]+$"},
+        "sha256": {"$ref": "#/$defs/digest"},
+        "size": {"type": "integer", "minimum": 1, "maximum": 1073741824},
+        "manifest_sha256": {"$ref": "#/$defs/digest"}
+      }
+    }
+  }
+}

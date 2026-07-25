@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.formal_model import load_formal_model, run_formal_model
 from hfxdev.generators.supply_chain import spdx_json
-from hfxdev.model import ModelError
+from hfxdev.model import ModelError, load_json, sha256_file
 from hfxdev.performance import (
     load_performance_budgets,
     verify_package_performance_budgets,
@@ -85,6 +85,40 @@ class AssuranceTests(unittest.TestCase):
         self.assertFalse(baseline.integration_only(mixed_advanced_change))
         self.assertTrue(
             baseline.advanced_change_requires_approval(mixed_advanced_change)
+        )
+
+    def test_candidate_baseline_binds_the_exact_protected_system(self) -> None:
+        baseline = load_json(ROOT / "assurance" / "candidate-baseline.json")
+        self.assertEqual(baseline["schema"], "hyperflux-candidate-baseline-v1")
+        self.assertEqual(
+            baseline["baseline"]["revision"],
+            "13975278cda3c7284b1478602ac1cdbd6849b1f4",
+        )
+        self.assertEqual(
+            baseline["packages"]["candidate"]["sha256"],
+            "4f7849b4a815f1b62120c878ff68f839484fc50d923b95830224d58e3f20d054",
+        )
+        self.assertEqual(
+            baseline["packages"]["rollback"]["sha256"],
+            "183d37658d192e977b0c2f381660aeb118a0f736bfb33ec8ac691130d42cb456",
+        )
+        self.assertEqual(
+            sha256_file(ROOT / "assurance" / "protected-behavior.json"),
+            baseline["protected_behavior"]["sha256"],
+        )
+
+        catalog = load_json(ROOT / "generated" / "profiles" / "catalog.json")
+        self.assertEqual(catalog["source_sha256"], baseline["profiles"]["source_sha256"])
+        runtime_digests = {
+            profile["profile_id"]: profile["runtime_sha256"]
+            for profile in catalog["profiles"]
+        }
+        self.assertEqual(
+            runtime_digests,
+            {
+                profile["profile_id"]: profile["sha256"]
+                for profile in baseline["profiles"]["runtime"]
+            },
         )
 
     def test_static_and_package_performance_budgets_fail_closed(self) -> None:

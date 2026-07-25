@@ -251,6 +251,13 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/candidate-baseline.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/candidate-baseline.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/candidate-catalog.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/candidate-catalog.schema.json",
       "mode": "0644",
