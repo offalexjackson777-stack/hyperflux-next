@@ -525,6 +525,35 @@
       "resume_policy": "rerun"
     },
     {
+      "id": "openrgb-native-route-contracts",
+      "title": "Source-bound OpenRGB native Razer transport contracts",
+      "owned_domain": "integrations",
+      "lanes": ["full-software"],
+      "runner": "openrgb-native-route-contracts",
+      "required_capabilities": ["openrgb-source"],
+      "hardware_requirement": "none",
+      "writes_hardware": false,
+      "expected_duration_seconds": 180,
+      "timeout_seconds": 360,
+      "dependencies": ["openrgb-adapter-contracts"],
+      "isolation": "exclusive-process",
+      "cache_inputs": [
+        "integrations/openrgb/**/*.hpp",
+        "integrations/openrgb/**/*.cpp",
+        "integrations/openrgb/CMakeLists.txt",
+        "integrations/openrgb/native-route/**",
+        "schemas/openrgb-native-transform.schema.json",
+        "sdk/cpp/**/*.hpp",
+        "sdk/cpp/**/*.cpp",
+        "tests/cpp/openrgb_*.cpp",
+        "tests/cpp/sdk_native_client_contract.cpp",
+        "tools/hfxdev/openrgb_native_route.py",
+        "tools/hfxdev/verify.py"
+      ],
+      "produced_evidence": ["openrgb-native-route-result"],
+      "resume_policy": "rerun"
+    },
+    {
       "id": "openrgb-thread-sanitizer",
       "title": "OpenRGB adapter concurrency and lifecycle race contracts",
       "owned_domain": "integrations",
@@ -535,7 +564,7 @@
       "writes_hardware": false,
       "expected_duration_seconds": 120,
       "timeout_seconds": 300,
-      "dependencies": ["openrgb-adapter-contracts"],
+      "dependencies": ["openrgb-native-route-contracts"],
       "isolation": "exclusive-process",
       "cache_inputs": ["integrations/openrgb/**/*.hpp", "integrations/openrgb/**/*.cpp", "integrations/openrgb/CMakeLists.txt", "tests/cpp/openrgb_*.cpp", "tools/hfxdev/verify.py"],
       "produced_evidence": ["openrgb-thread-sanitizer-result"],
@@ -605,7 +634,7 @@
       "timeout_seconds": 600,
       "dependencies": [
         "kernel-profile-contracts",
-        "openrgb-adapter-contracts",
+        "openrgb-native-route-contracts",
         "polychromatic-adapter-contracts",
         "openrazer-compatibility-contracts",
         "rust-unit",

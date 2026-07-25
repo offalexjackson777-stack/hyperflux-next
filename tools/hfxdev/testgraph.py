@@ -58,6 +58,7 @@ KNOWN_RUNNERS = {
     "migration-shadow-contracts",
     "cpp-sdk-contracts",
     "openrgb-adapter-contracts",
+    "openrgb-native-route-contracts",
     "openrgb-thread-sanitizer",
     "openrazer-metadata-contracts",
     "openrazer-native-route-contracts",

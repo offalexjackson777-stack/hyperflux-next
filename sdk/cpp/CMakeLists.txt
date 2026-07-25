@@ -11,6 +11,8 @@ add_library(
         src/client.cpp
         src/identity.cpp
         src/lighting.cpp
+        src/native_channel.cpp
+        src/native_client.cpp
         src/recovery.cpp
 )
 set_target_properties(hyperflux_sdk PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -42,5 +44,6 @@ if(BUILD_TESTING)
     add_hyperflux_sdk_contract(sdk-client-contract sdk_client_contract.cpp)
     add_hyperflux_sdk_contract(sdk-channel-contract sdk_channel_contract.cpp)
     add_hyperflux_sdk_contract(sdk-lighting-contract sdk_lighting_contract.cpp)
+    add_hyperflux_sdk_contract(sdk-native-client-contract sdk_native_client_contract.cpp)
     add_hyperflux_sdk_contract(sdk-recovery-contract sdk_recovery_contract.cpp)
 endif()

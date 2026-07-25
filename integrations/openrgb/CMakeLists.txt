@@ -72,7 +72,9 @@ function(hfx_openrgb_enable_thread_sanitizer target)
         message(FATAL_ERROR "HFX_OPENRGB_THREAD_SANITIZER requires Clang or GCC")
     endif()
     target_compile_options(${target} PRIVATE -fsanitize=thread -fno-omit-frame-pointer -g)
-    target_link_options(${target} PRIVATE -fsanitize=thread)
+    # Static libraries carry instrumented objects but do not perform a link of
+    # their own. Export the runtime requirement to every final consumer.
+    target_link_options(${target} PUBLIC -fsanitize=thread)
 endfunction()
 
 if(NOT TARGET hyperflux_sdk)
@@ -114,6 +116,14 @@ if(NOT HFX_OPENRGB_SOURCE_DIR AND DEFINED ENV{HFX_OPENRGB_SOURCE_DIR})
     set(HFX_OPENRGB_SOURCE_DIR "$ENV{HFX_OPENRGB_SOURCE_DIR}")
 endif()
 
+set(
+    HFX_OPENRGB_NATIVE_SOURCE_DIR ""
+    CACHE PATH "Source-bound OpenRGB tree with the HyperFlux feature transport seam"
+)
+if(NOT HFX_OPENRGB_NATIVE_SOURCE_DIR AND DEFINED ENV{HFX_OPENRGB_NATIVE_SOURCE_DIR})
+    set(HFX_OPENRGB_NATIVE_SOURCE_DIR "$ENV{HFX_OPENRGB_NATIVE_SOURCE_DIR}")
+endif()
+
 if(HFX_OPENRGB_SOURCE_DIR)
     find_package(Qt5 5.15 REQUIRED COMPONENTS Core Gui Widgets)
 
@@ -129,6 +139,164 @@ if(HFX_OPENRGB_SOURCE_DIR)
     endif()
     if(NOT HFX_OPENRGB_SOURCE_REVISION STREQUAL "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0")
         message(FATAL_ERROR "OpenRGB source revision does not match the integration catalog")
+    endif()
+
+    if(HFX_OPENRGB_NATIVE_SOURCE_DIR)
+        file(
+            READ
+            "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/hyperflux-native-transform-result.json"
+            HFX_OPENRGB_NATIVE_TRANSFORM_JSON
+        )
+        string(
+            JSON HFX_OPENRGB_NATIVE_TRANSFORM_SCHEMA
+            GET "${HFX_OPENRGB_NATIVE_TRANSFORM_JSON}" schema
+        )
+        string(
+            JSON HFX_OPENRGB_NATIVE_SOURCE_REVISION
+            GET "${HFX_OPENRGB_NATIVE_TRANSFORM_JSON}" source_commit
+        )
+        if(NOT HFX_OPENRGB_NATIVE_TRANSFORM_SCHEMA STREQUAL
+            "hyperflux-openrgb-native-transform-result-v1")
+            message(FATAL_ERROR "OpenRGB native source binding schema is invalid")
+        endif()
+        if(NOT HFX_OPENRGB_NATIVE_SOURCE_REVISION STREQUAL
+            "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0")
+            message(FATAL_ERROR "OpenRGB native source binding has the wrong revision")
+        endif()
+
+        add_library(
+            hyperflux_openrgb_razer_feature_transport
+            STATIC
+                src/native_route_session.cpp
+                src/native_route_worker.cpp
+                src/razer_feature_transport.cpp
+        )
+        set_target_properties(
+            hyperflux_openrgb_razer_feature_transport
+            PROPERTIES POSITION_INDEPENDENT_CODE ON
+        )
+        target_compile_features(
+            hyperflux_openrgb_razer_feature_transport PUBLIC cxx_std_20
+        )
+        target_include_directories(
+            hyperflux_openrgb_razer_feature_transport
+            PUBLIC
+                "${CMAKE_CURRENT_SOURCE_DIR}/include"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/RGBController"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/KeyboardLayoutManager"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/Controllers/RazerController"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/Controllers/RazerController/RazerController"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/interop"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/dependencies/json"
+                "/usr/include/hidapi"
+        )
+        hfx_openrgb_enable_thread_sanitizer(hyperflux_openrgb_razer_feature_transport)
+        target_link_libraries(
+            hyperflux_openrgb_razer_feature_transport
+            PUBLIC hyperflux_sdk
+        )
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            target_compile_options(
+                hyperflux_openrgb_razer_feature_transport
+                PRIVATE -Wall -Wextra -Werror -pedantic
+            )
+        endif()
+
+        find_library(
+            HFX_HIDAPI_LIBRARY
+            NAMES hidapi-hidraw hidapi-libusb
+            REQUIRED
+        )
+        add_library(
+            hyperflux_openrgb_upstream_log
+            STATIC
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/LogManager.cpp"
+        )
+        set_target_properties(
+            hyperflux_openrgb_upstream_log
+            PROPERTIES
+                POSITION_INDEPENDENT_CODE ON
+                CXX_STANDARD 17
+                CXX_STANDARD_REQUIRED ON
+                CXX_EXTENSIONS OFF
+        )
+        target_include_directories(
+            hyperflux_openrgb_upstream_log
+            PUBLIC
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/dependencies/json"
+        )
+        target_compile_definitions(
+            hyperflux_openrgb_upstream_log
+            PRIVATE
+                VERSION_STRING="1.0rc3"
+                GIT_COMMIT_ID="6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0"
+                GIT_COMMIT_DATE="source-bound"
+        )
+        add_library(
+            hyperflux_openrgb_upstream_device_guard
+            STATIC
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/interop/DeviceGuard.cpp"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/interop/DeviceGuardLock.cpp"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/interop/DeviceGuardManager.cpp"
+        )
+        set_target_properties(
+            hyperflux_openrgb_upstream_device_guard
+            PROPERTIES POSITION_INDEPENDENT_CODE ON
+        )
+        target_compile_features(
+            hyperflux_openrgb_upstream_device_guard PUBLIC cxx_std_20
+        )
+        target_include_directories(
+            hyperflux_openrgb_upstream_device_guard
+            PUBLIC
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/interop"
+        )
+        target_link_libraries(
+            hyperflux_openrgb_upstream_device_guard
+            PUBLIC Threads::Threads
+        )
+        add_library(
+            hyperflux_openrgb_native_razer_upstream
+            STATIC
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/Controllers/RazerController/RazerController/RazerController.cpp"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/Controllers/RazerController/RazerDeviceGuard.cpp"
+        )
+        set_target_properties(
+            hyperflux_openrgb_native_razer_upstream
+            PROPERTIES POSITION_INDEPENDENT_CODE ON
+        )
+        target_compile_features(
+            hyperflux_openrgb_native_razer_upstream PUBLIC cxx_std_20
+        )
+        target_include_directories(
+            hyperflux_openrgb_native_razer_upstream
+            PUBLIC
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/RGBController"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/KeyboardLayoutManager"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/Controllers/RazerController"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/Controllers/RazerController/RazerController"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/dependencies/json"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/interop"
+                "/usr/include/hidapi"
+        )
+        target_link_libraries(
+            hyperflux_openrgb_native_razer_upstream
+            PUBLIC
+                hyperflux_openrgb_razer_feature_transport
+                hyperflux_openrgb_razer_registry
+                hyperflux_openrgb_upstream_device_guard
+                "${HFX_HIDAPI_LIBRARY}"
+        )
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            target_compile_options(
+                hyperflux_openrgb_native_razer_upstream
+                PRIVATE -Wall -Wextra -Werror -pedantic
+            )
+        endif()
     endif()
 
     add_library(
@@ -231,6 +399,51 @@ if(HFX_OPENRGB_SOURCE_DIR)
         )
     endif()
 
+    if(TARGET hyperflux_openrgb_native_razer_upstream)
+        add_library(
+            hyperflux_openrgb_upstream_razer_registry
+            STATIC
+                src/upstream_razer_registry.cpp
+                src/upstream_razer_coordinator.cpp
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/Controllers/RazerController/RazerController/RGBController_Razer.cpp"
+        )
+        set_target_properties(
+            hyperflux_openrgb_upstream_razer_registry
+            PROPERTIES POSITION_INDEPENDENT_CODE ON
+        )
+        target_compile_features(
+            hyperflux_openrgb_upstream_razer_registry PUBLIC cxx_std_20
+        )
+        target_include_directories(
+            hyperflux_openrgb_upstream_razer_registry
+            PUBLIC
+                "${CMAKE_CURRENT_SOURCE_DIR}/include"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/RGBController"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/KeyboardLayoutManager"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/Controllers/RazerController"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/Controllers/RazerController/RazerController"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/dependencies/json"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/interop"
+        )
+        target_link_libraries(
+            hyperflux_openrgb_upstream_razer_registry
+            PUBLIC
+                hyperflux_openrgb_native_razer_upstream
+                hyperflux_openrgb_native_controller
+                hyperflux_openrgb_upstream_log
+        )
+        hfx_openrgb_enable_thread_sanitizer(
+            hyperflux_openrgb_upstream_razer_registry
+        )
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            target_compile_options(
+                hyperflux_openrgb_upstream_razer_registry
+                PRIVATE -Wall -Wextra -Werror -pedantic
+            )
+        endif()
+    endif()
+
     configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/hyperflux-next-openrgb.json.in"
         "${HFX_OPENRGB_GENERATED_INCLUDE_DIR}/hyperflux-next-openrgb.json"
@@ -244,6 +457,21 @@ if(HFX_OPENRGB_SOURCE_DIR)
             src/plugin_view_model.cpp
             src/qt_dispatcher.cpp
     )
+    if(TARGET hyperflux_openrgb_upstream_razer_registry)
+        target_sources(
+            hyperflux_openrgb_qt_shell
+            PRIVATE src/native_plugin_application.cpp
+        )
+        target_compile_definitions(
+            hyperflux_openrgb_qt_shell
+            PUBLIC HFX_OPENRGB_NATIVE_ROUTE_ENABLED=1
+        )
+    else()
+        target_compile_definitions(
+            hyperflux_openrgb_qt_shell
+            PUBLIC HFX_OPENRGB_NATIVE_ROUTE_ENABLED=0
+        )
+    endif()
     set_target_properties(
         hyperflux_openrgb_qt_shell
         PROPERTIES POSITION_INDEPENDENT_CODE ON
@@ -263,6 +491,12 @@ if(HFX_OPENRGB_SOURCE_DIR)
         hyperflux_openrgb_qt_shell
         PUBLIC hyperflux_openrgb_native_controller Qt5::Core
     )
+    if(TARGET hyperflux_openrgb_upstream_razer_registry)
+        target_link_libraries(
+            hyperflux_openrgb_qt_shell
+            PUBLIC hyperflux_openrgb_upstream_razer_registry
+        )
+    endif()
     hfx_openrgb_enable_thread_sanitizer(hyperflux_openrgb_qt_shell)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         target_compile_options(
@@ -337,6 +571,164 @@ if(HFX_OPENRGB_SOURCE_DIR)
     endif()
 
     if(BUILD_TESTING)
+        if(TARGET hyperflux_openrgb_razer_feature_transport)
+            add_executable(
+                openrgb-razer-feature-transport-contract
+                "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_razer_feature_transport_contract.cpp"
+            )
+            target_link_libraries(
+                openrgb-razer-feature-transport-contract
+                PRIVATE hyperflux_openrgb_razer_feature_transport
+            )
+            if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+                target_compile_options(
+                    openrgb-razer-feature-transport-contract
+                    PRIVATE -Wall -Wextra -Werror -pedantic
+                )
+            endif()
+            add_test(
+                NAME openrgb-razer-feature-transport-contract
+                COMMAND openrgb-razer-feature-transport-contract
+            )
+
+            add_executable(
+                openrgb-native-route-session-contract
+                "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_native_route_session_contract.cpp"
+            )
+            target_link_libraries(
+                openrgb-native-route-session-contract
+                PRIVATE hyperflux_openrgb_razer_feature_transport
+            )
+            if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+                target_compile_options(
+                    openrgb-native-route-session-contract
+                    PRIVATE -Wall -Wextra -Werror -pedantic
+                )
+            endif()
+            add_test(
+                NAME openrgb-native-route-session-contract
+                COMMAND openrgb-native-route-session-contract
+            )
+
+            add_executable(
+                openrgb-native-route-worker-contract
+                "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_native_route_worker_contract.cpp"
+            )
+            target_link_libraries(
+                openrgb-native-route-worker-contract
+                PRIVATE hyperflux_openrgb_razer_feature_transport Threads::Threads
+            )
+            if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+                target_compile_options(
+                    openrgb-native-route-worker-contract
+                    PRIVATE -Wall -Wextra -Werror -pedantic
+                )
+            endif()
+            add_test(
+                NAME openrgb-native-route-worker-contract
+                COMMAND openrgb-native-route-worker-contract
+            )
+
+            add_executable(
+                openrgb-native-razer-upstream-contract
+                "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_native_razer_upstream_contract.cpp"
+            )
+            target_link_libraries(
+                openrgb-native-razer-upstream-contract
+                PRIVATE hyperflux_openrgb_native_razer_upstream
+            )
+            if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+                target_compile_options(
+                    openrgb-native-razer-upstream-contract
+                    PRIVATE -Wall -Wextra -Werror -pedantic
+                )
+            endif()
+            add_test(
+                NAME openrgb-native-razer-upstream-contract
+                COMMAND openrgb-native-razer-upstream-contract
+            )
+
+            add_executable(
+                openrgb-native-razer-presentation-contract
+                "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_native_razer_presentation_contract.cpp"
+                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/Controllers/RazerController/RazerController/RGBController_Razer.cpp"
+            )
+            target_link_libraries(
+                openrgb-native-razer-presentation-contract
+                PRIVATE
+                    hyperflux_openrgb_native_razer_upstream
+                    hyperflux_openrgb_native_controller
+                    hyperflux_openrgb_upstream_log
+            )
+            if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+                target_compile_options(
+                    openrgb-native-razer-presentation-contract
+                    PRIVATE -Wall -Wextra -Werror -pedantic
+                )
+            endif()
+            add_test(
+                NAME openrgb-native-razer-presentation-contract
+                COMMAND openrgb-native-razer-presentation-contract
+            )
+
+            add_executable(
+                openrgb-upstream-razer-registry-contract
+                "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_upstream_razer_registry_contract.cpp"
+            )
+            target_link_libraries(
+                openrgb-upstream-razer-registry-contract
+                PRIVATE hyperflux_openrgb_upstream_razer_registry
+            )
+            if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+                target_compile_options(
+                    openrgb-upstream-razer-registry-contract
+                    PRIVATE -Wall -Wextra -Werror -pedantic
+                )
+            endif()
+            add_test(
+                NAME openrgb-upstream-razer-registry-contract
+                COMMAND openrgb-upstream-razer-registry-contract
+            )
+
+            add_executable(
+                openrgb-upstream-razer-coordinator-contract
+                "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_upstream_razer_coordinator_contract.cpp"
+            )
+            target_link_libraries(
+                openrgb-upstream-razer-coordinator-contract
+                PRIVATE hyperflux_openrgb_upstream_razer_registry Threads::Threads
+            )
+            if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+                target_compile_options(
+                    openrgb-upstream-razer-coordinator-contract
+                    PRIVATE -Wall -Wextra -Werror -pedantic
+                )
+            endif()
+            add_test(
+                NAME openrgb-upstream-razer-coordinator-contract
+                COMMAND openrgb-upstream-razer-coordinator-contract
+            )
+
+            add_executable(
+                openrgb-native-plugin-application-contract
+                "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_native_plugin_application_contract.cpp"
+            )
+            target_link_libraries(
+                openrgb-native-plugin-application-contract
+                PRIVATE hyperflux_openrgb_qt_shell
+            )
+            if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+                target_compile_options(
+                    openrgb-native-plugin-application-contract
+                    PRIVATE -Wall -Wextra -Werror -pedantic
+                )
+            endif()
+            add_test(
+                NAME openrgb-native-plugin-application-contract
+                COMMAND openrgb-native-plugin-application-contract
+            )
+        endif()
+
         add_executable(
             openrgb-razer-registry-contract
             "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_razer_registry_contract.cpp"

@@ -15,6 +15,7 @@ from tools.hfxdev.verify import (
     _python_sdk_license_files,
     _resolve_schema_reference,
     _run_openrgb_adapter_contracts,
+    _run_openrgb_native_route_contracts,
     _run_openrgb_thread_sanitizer,
 )
 
@@ -94,8 +95,25 @@ class VerificationGuardTests(unittest.TestCase):
             source = root / "openrgb"
             source.mkdir()
             (source / "OpenRGBPluginInterface.h").write_text("// fixture\n", encoding="utf-8")
+            native_source = root / "prepared-openrgb"
+            native_source.mkdir()
+            native_result = native_source / "hyperflux-native-transform-result.json"
+            native_result.write_text(
+                '{"schema":"hyperflux-openrgb-native-transform-result-v1",'
+                '"network_access_executed":false,"hardware_queried":false,'
+                '"hardware_write_executed":false}\n',
+                encoding="utf-8",
+            )
+            native_result.chmod(0o600)
+            prepared = SimpleNamespace(root=native_source, result=native_result)
             node = SimpleNamespace(timeout_seconds=300)
-            with patch("tools.hfxdev.verify._openrgb_source", return_value=source):
+            with (
+                patch("tools.hfxdev.verify._openrgb_source", return_value=source),
+                patch(
+                    "tools.hfxdev.verify.prepare_openrgb_native_source",
+                    return_value=prepared,
+                ) as prepare,
+            ):
                 with patch("tools.hfxdev.verify._run_command") as command:
                     _run_openrgb_adapter_contracts(root, node)
                     self.assertEqual(command.call_count, 3)
@@ -104,6 +122,16 @@ class VerificationGuardTests(unittest.TestCase):
                     self.assertNotIn("-DHFX_OPENRGB_THREAD_SANITIZER=ON", release_configure)
                     self.assertEqual(command.call_args_list[2].args[1][0], "ctest")
                     self.assertIsNone(command.call_args_list[2].kwargs["environment"])
+
+                with patch("tools.hfxdev.verify._run_command") as command:
+                    _run_openrgb_native_route_contracts(root, node)
+                    self.assertEqual(command.call_count, 3)
+                    native_configure = command.call_args_list[0].args[1]
+                    self.assertIn("-DCMAKE_BUILD_TYPE=Release", native_configure)
+                    self.assertIn(
+                        f"-DHFX_OPENRGB_NATIVE_SOURCE_DIR={native_source}",
+                        native_configure,
+                    )
 
                 with patch("tools.hfxdev.verify._run_command") as command:
                     _run_openrgb_thread_sanitizer(root, node)
@@ -116,6 +144,7 @@ class VerificationGuardTests(unittest.TestCase):
                         "halt_on_error=1",
                         command.call_args_list[2].kwargs["environment"]["TSAN_OPTIONS"],
                     )
+                self.assertEqual(prepare.call_count, 2)
 
 
 if __name__ == "__main__":

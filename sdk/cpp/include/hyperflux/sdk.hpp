@@ -8,5 +8,7 @@
 #include <hyperflux/sdk/error.hpp>
 #include <hyperflux/sdk/identity.hpp>
 #include <hyperflux/sdk/lighting.hpp>
+#include <hyperflux/sdk/native_channel.hpp>
+#include <hyperflux/sdk/native_client.hpp>
 #include <hyperflux/sdk/recovery.hpp>
 #include <hyperflux/sdk/result.hpp>

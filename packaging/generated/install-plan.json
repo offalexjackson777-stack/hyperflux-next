@@ -563,6 +563,13 @@
     },
     {
       "component": "schemas",
+      "source": "schemas/openrgb-native-transform.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/openrgb-native-transform.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
       "source": "schemas/package-build-manifest.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/package-build-manifest.schema.json",
       "mode": "0644",
@@ -1034,6 +1041,20 @@
       "component": "cpp-sdk-headers",
       "source": "sdk/cpp/include/hyperflux/sdk/lighting.hpp",
       "destination": "/usr/include/hyperflux/sdk/lighting.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/sdk/native_channel.hpp",
+      "destination": "/usr/include/hyperflux/sdk/native_channel.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/sdk/native_client.hpp",
+      "destination": "/usr/include/hyperflux/sdk/native_client.hpp",
       "mode": "0644",
       "preserve": false
     },

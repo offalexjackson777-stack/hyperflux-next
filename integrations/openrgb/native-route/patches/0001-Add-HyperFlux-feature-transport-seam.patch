@@ -1,0 +1,118 @@
+diff --git a/Controllers/RazerController/RazerController/RazerController.cpp b/Controllers/RazerController/RazerController/RazerController.cpp
+index 0611e76..b9db80a 100644
+--- a/Controllers/RazerController/RazerController/RazerController.cpp
++++ b/Controllers/RazerController/RazerController/RazerController.cpp
+@@ -10,6 +10,7 @@
+ \*---------------------------------------------------------*/
+ 
+ #include <string.h>
++#include <utility>
+ #include "RazerController.h"
+ #include "RazerDevices.h"
+ #include "LogManager.h"
+@@ -17,8 +18,14 @@
+ 
+ using namespace std::chrono_literals;
+ 
+-RazerController::RazerController(hid_device* dev_handle, hid_device* dev_argb_handle, const char* path, unsigned short pid, std::string dev_name)
++RazerController::RazerController(hid_device* dev_handle,
++                                 hid_device* dev_argb_handle,
++                                 const char* path,
++                                 unsigned short pid,
++                                 std::string dev_name,
++                                 std::unique_ptr<RazerFeatureTransport> feature_transport_arg)
+ {
++    feature_transport = std::move(feature_transport_arg);
+     dev               = dev_handle;
+     dev_argb          = dev_argb_handle;
+     dev_pid           = pid;
+@@ -204,7 +211,10 @@ RazerController::~RazerController()
+         keepalive_thread->join();
+     }
+ 
+-    hid_close(dev);
++    if(dev != nullptr)
++    {
++        hid_close(dev);
++    }
+     delete guard_manager_ptr;
+ }
+ 
+@@ -1894,6 +1904,10 @@ bool RazerController::SupportsWave()
+ 
+ int RazerController::razer_usb_receive(razer_report* report)
+ {
++    if(feature_transport != nullptr)
++    {
++        return feature_transport->GetFeatureReport((unsigned char*)report, sizeof(*report));
++    }
+     return hid_get_feature_report(dev, (unsigned char*)report, sizeof(*report));
+ }
+ 
+@@ -1903,11 +1917,19 @@ int RazerController::razer_usb_send(razer_report* report)
+     report->crc = razer_calculate_crc(report);
+ 
+     DeviceGuardLock _ = guard_manager_ptr->AwaitExclusiveAccess();
++    if(feature_transport != nullptr)
++    {
++        return feature_transport->SendFeatureReport((unsigned char*)report, sizeof(*report));
++    }
+     return hid_send_feature_report(dev, (unsigned char*)report, sizeof(*report));
+ }
+ 
+ int RazerController::razer_usb_send_argb(razer_argb_report* report)
+ {
+     DeviceGuardLock _ = guard_manager_ptr->AwaitExclusiveAccess();
++    if(feature_transport != nullptr)
++    {
++        return feature_transport->SendArgbFeatureReport((unsigned char*)report, sizeof(*report));
++    }
+     return hid_send_feature_report(dev_argb, (unsigned char*)report, sizeof(*report));
+ }
+diff --git a/Controllers/RazerController/RazerController/RazerController.h b/Controllers/RazerController/RazerController/RazerController.h
+index 01678ad..5550bdf 100644
+--- a/Controllers/RazerController/RazerController/RazerController.h
++++ b/Controllers/RazerController/RazerController/RazerController.h
+@@ -11,6 +11,7 @@
+ 
+ #include <atomic>
+ #include <chrono>
++#include <memory>
+ #include <string>
+ #include <thread>
+ #include <hidapi.h>
+@@ -218,10 +219,25 @@ PACK(struct razer_argb_report
+     unsigned char color_data[315];
+ });
+ 
++class RazerFeatureTransport
++{
++public:
++    virtual ~RazerFeatureTransport() = default;
++
++    virtual int GetFeatureReport(unsigned char* report, size_t size) = 0;
++    virtual int SendFeatureReport(const unsigned char* report, size_t size) = 0;
++    virtual int SendArgbFeatureReport(const unsigned char* report, size_t size) = 0;
++};
++
+ class RazerController
+ {
+ public:
+-    RazerController(hid_device* dev_handle, hid_device* dev_argb_handle, const char* path, unsigned short pid, std::string dev_name);
++    RazerController(hid_device* dev_handle,
++                    hid_device* dev_argb_handle,
++                    const char* path,
++                    unsigned short pid,
++                    std::string dev_name,
++                    std::unique_ptr<RazerFeatureTransport> feature_transport_arg = {});
+     ~RazerController();
+ 
+     unsigned int            GetDeviceIndex();
+@@ -258,6 +272,7 @@ private:
+     hid_device*             dev;
+     hid_device*             dev_argb;
+     unsigned short          dev_pid;
++    std::unique_ptr<RazerFeatureTransport> feature_transport;
+ 
+     /*---------------------------------------------------------*\
+     | Device-specific protocol settings                         |

@@ -57,7 +57,9 @@
         "openrazer_native_catalog_sha256",
         "openrazer_native_transform_sha256",
         "openrazer_native_deployment_sha256",
-        "openrazer_native_patch_sha256"
+        "openrazer_native_patch_sha256",
+        "openrgb_native_transform_sha256",
+        "openrgb_native_patch_sha256"
       ],
       "properties": {
         "install_manifest_sha256": {"$ref": "#/$defs/digest"},
@@ -70,7 +72,9 @@
         "openrazer_native_catalog_sha256": {"$ref": "#/$defs/digest"},
         "openrazer_native_transform_sha256": {"$ref": "#/$defs/digest"},
         "openrazer_native_deployment_sha256": {"$ref": "#/$defs/digest"},
-        "openrazer_native_patch_sha256": {"$ref": "#/$defs/digest"}
+        "openrazer_native_patch_sha256": {"$ref": "#/$defs/digest"},
+        "openrgb_native_transform_sha256": {"$ref": "#/$defs/digest"},
+        "openrgb_native_patch_sha256": {"$ref": "#/$defs/digest"}
       }
     },
     "materials": {

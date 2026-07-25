@@ -293,4 +293,100 @@ PluginInformationViewModel make_plugin_information_view_model(
     return result;
 }
 
+#if HFX_OPENRGB_NATIVE_ROUTE_ENABLED
+PluginInformationViewModel make_plugin_information_view_model(
+    const NativePluginApplicationStatus& status,
+    const std::vector<UpstreamRazerControllerSummary>& controllers)
+{
+    PluginInformationViewModel result;
+    for(const auto& controller : controllers)
+    {
+        result.devices.push_back({
+            controller.stable_id,
+            controller.name,
+            controller_type(controller.device_kind),
+            "Receiver route",
+            controller.direct_suppressed
+                ? "Direct USB active"
+                : (controller.registered ? "Available" : "Waiting"),
+            "Reported by HyperFlux diagnostics",
+            "Qualified native route",
+            "Upstream modes, zones, LEDs and layout",
+        });
+    }
+    std::sort(
+        result.devices.begin(),
+        result.devices.end(),
+        [](const PluginDeviceRow& left, const PluginDeviceRow& right)
+        {
+            if(left.type != right.type)
+            {
+                return left.type < right.type;
+            }
+            return left.device < right.device;
+        });
+
+    if(!status.loaded)
+    {
+        result.tone = PluginHealthTone::Neutral;
+        result.headline = "Not loaded";
+        result.summary = "The native OpenRGB transport is not active.";
+    }
+    else
+    {
+        if(status.coordinator.last_error.has_value())
+        {
+            result.technical_detail = status.coordinator.last_error->message;
+        }
+        switch(status.coordinator.worker_state)
+        {
+            case NativeRouteWorkerState::Running:
+                result.tone = PluginHealthTone::Positive;
+                result.headline = status.coordinator.registered_controllers == 0
+                    ? "No receiver-routed devices"
+                    : "Native transport ready";
+                result.summary = std::to_string(status.coordinator.registered_controllers)
+                    + (status.coordinator.registered_controllers == 1
+                           ? " upstream Razer controller is active."
+                           : " upstream Razer controllers are active.");
+                if(status.coordinator.direct_suppressed_controllers > 0)
+                {
+                    result.summary += " "
+                        + std::to_string(status.coordinator.direct_suppressed_controllers)
+                        + (status.coordinator.direct_suppressed_controllers == 1
+                               ? " matching receiver route is paused for direct USB."
+                               : " matching receiver routes are paused for direct USB.");
+                }
+                break;
+            case NativeRouteWorkerState::Created:
+            case NativeRouteWorkerState::Starting:
+            case NativeRouteWorkerState::Recovering:
+                result.tone = PluginHealthTone::Warning;
+                result.headline = "Connecting";
+                result.summary = "Waiting for the local HyperFlux native tunnel.";
+                break;
+            case NativeRouteWorkerState::Failed:
+                result.tone = PluginHealthTone::Negative;
+                result.headline = "Needs attention";
+                result.summary = "The native OpenRGB transport could not continue.";
+                break;
+            case NativeRouteWorkerState::Stopping:
+            case NativeRouteWorkerState::Stopped:
+                result.tone = PluginHealthTone::Neutral;
+                result.headline = "Stopped";
+                result.summary = "The native OpenRGB transport is stopped.";
+                break;
+        }
+    }
+    result.lighting_transport =
+        "OpenRGB's upstream Razer controller sends standard Feature reports through the local HyperFlux tunnel.";
+    result.effects_authority =
+        "OpenRGB owns hardware modes, layouts, profiles and software effects; HyperFlux transports their reports unchanged.";
+    result.build_identity = std::string("Version ")
+        + std::string(build_config::component_version) + " | OpenRGB API 4 | Source "
+        + std::string(build_config::source_revision);
+    return result;
+}
+#endif
+
 } // namespace hyperflux::openrgb::native

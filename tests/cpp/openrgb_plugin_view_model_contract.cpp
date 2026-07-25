@@ -98,5 +98,52 @@ int main()
     {
         return failure(__LINE__);
     }
+
+#if HFX_OPENRGB_NATIVE_ROUTE_ENABLED
+    NativePluginApplicationStatus native_status;
+    native_status.loaded = true;
+    native_status.coordinator.worker_state = NativeRouteWorkerState::Running;
+    native_status.coordinator.started = true;
+    native_status.coordinator.controllers = 2;
+    native_status.coordinator.registered_controllers = 1;
+    native_status.coordinator.direct_suppressed_controllers = 1;
+    const std::vector<UpstreamRazerControllerSummary> native_controllers {
+        {
+            "receiver-1/mouse-00cd/endpoint-mouse",
+            "Razer Basilisk V3 Pro 35K (Wireless)",
+            DeviceKind::Mouse,
+            hyperflux::test::number<ProductId>(0x00cd),
+            true,
+            false,
+        },
+        {
+            "receiver-1/keyboard-0296/endpoint-keyboard",
+            "Razer DeathStalker V2 Pro TKL (Wireless)",
+            DeviceKind::Keyboard,
+            hyperflux::test::number<ProductId>(0x0296),
+            false,
+            true,
+        },
+    };
+    const auto native_model = make_plugin_information_view_model(
+        native_status, native_controllers);
+    if(native_model.tone != PluginHealthTone::Positive
+       || native_model.headline != "Native transport ready"
+       || native_model.summary
+              != "1 upstream Razer controller is active. 1 matching receiver route is paused for direct USB."
+       || native_model.devices.size() != 2
+       || native_model.lighting_transport.find("standard Feature reports")
+              == std::string::npos
+       || native_model.effects_authority.find("OpenRGB owns hardware modes")
+              == std::string::npos)
+    {
+        return failure(__LINE__);
+    }
+    if(native_model.devices[0].availability != "Direct USB active"
+       || native_model.devices[1].availability != "Available")
+    {
+        return failure(__LINE__);
+    }
+#endif
     return EXIT_SUCCESS;
 }

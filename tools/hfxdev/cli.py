@@ -24,6 +24,7 @@ from .github_sync import verify as verify_github
 from .knowledge import import_upstream_catalogs
 from .openrazer import write_imported_metadata
 from .openrazer_native_route import prepare_openrazer_native_source
+from .openrgb_native_route import prepare_openrgb_native_source
 from .package_pipeline import build_artifacts, stage_rootfs
 from .testgraph import format_plan, load_test_catalog
 from .upstreams import prepare_upstreams
@@ -124,6 +125,12 @@ def _parser() -> argparse.ArgumentParser:
     )
     native_openrazer.add_argument("--source", required=True, type=Path)
     native_openrazer.add_argument("--output", required=True, type=Path)
+    native_openrgb = native_commands.add_parser(
+        "prepare-openrgb",
+        help="prepare the source-bound OpenRGB native transport tree",
+    )
+    native_openrgb.add_argument("--source", required=True, type=Path)
+    native_openrgb.add_argument("--output", required=True, type=Path)
 
     upstream = commands.add_parser("upstream", help="manage immutable upstream checkouts")
     upstream_commands = upstream.add_subparsers(dest="upstream_command", required=True)
@@ -324,6 +331,13 @@ def main(arguments: list[str] | None = None) -> int:
                     root, args.source, args.output
                 )
                 print(f"Prepared OpenRazer source: {prepared.root}")
+                print(f"Source binding: {prepared.result}")
+                return 0
+            if args.native_command == "prepare-openrgb":
+                prepared = prepare_openrgb_native_source(
+                    root, args.source, args.output
+                )
+                print(f"Prepared OpenRGB source: {prepared.root}")
                 print(f"Source binding: {prepared.result}")
                 return 0
         if args.command == "upstream":

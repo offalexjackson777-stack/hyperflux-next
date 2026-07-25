@@ -26,8 +26,12 @@ from .linux_runtime import LinuxRuntime, load_linux_runtime
 from .model import ModelError, load_json, require_unique, sha256_file
 from .openrazer_native_route import (
     load_native_deployment,
-    load_native_transform,
+    load_native_transform as load_openrazer_native_transform,
     prepare_openrazer_native_source,
+)
+from .openrgb_native_route import (
+    load_native_transform as load_openrgb_native_transform,
+    prepare_openrgb_native_source,
 )
 from .supply_chain import load_dependency_inventory
 from .toolchains import load_toolchain_pins, verify_current_toolchain
@@ -319,6 +323,20 @@ def _build_cmake(
     environment["CXXFLAGS"] = (
         f"{environment.get('CXXFLAGS', '')} {upstream_remap}"
     ).strip()
+    native_upstream: Path | None = None
+    if capability == "openrgb-source":
+        native_upstream = output / "work" / f"{build.id}-native-source"
+        prepared = prepare_openrgb_native_source(root, upstream, native_upstream)
+        native_remap = (
+            f"-ffile-prefix-map={prepared.root}=.upstream/{capability}-native "
+            f"-fdebug-prefix-map={prepared.root}=.upstream/{capability}-native"
+        )
+        environment["CFLAGS"] = (
+            f"{environment.get('CFLAGS', '')} {native_remap}"
+        ).strip()
+        environment["CXXFLAGS"] = (
+            f"{environment.get('CXXFLAGS', '')} {native_remap}"
+        ).strip()
     build_directory = output / "work" / build.id
     configure = [
         "cmake",
@@ -332,6 +350,7 @@ def _build_cmake(
     ]
     if capability == "openrgb-source":
         configure.append(f"-DHFX_OPENRGB_SOURCE_DIR={upstream}")
+        configure.append(f"-DHFX_OPENRGB_NATIVE_SOURCE_DIR={native_upstream}")
     _run(configure, cwd=root, environment=environment, label=f"configure {build.id}")
     _run(
         ["cmake", "--build", str(build_directory), "--target", build.target or ""],
@@ -554,10 +573,13 @@ def _provenance_inputs(
     expected_sbom = spdx_json(inventory)
     if not sbom_path.is_file() or sbom_path.read_text(encoding="utf-8") != expected_sbom:
         raise ModelError("generated SPDX inventory is stale; run ./hfx generate")
-    transform = load_native_transform(root)
+    openrazer_transform = load_openrazer_native_transform(root)
     deployment = load_native_deployment(root)
-    native_root = root / "integrations" / "openrazer" / "native-route"
-    patch = native_root / transform["patch"]["path"]
+    openrazer_root = root / "integrations" / "openrazer" / "native-route"
+    openrazer_patch = openrazer_root / openrazer_transform["patch"]["path"]
+    openrgb_transform = load_openrgb_native_transform(root)
+    openrgb_root = root / "integrations" / "openrgb" / "native-route"
+    openrgb_patch = openrgb_root / openrgb_transform["patch"]["path"]
     return {
         "install_manifest_sha256": install.source_sha256,
         "linux_runtime_sha256": runtime.source_sha256,
@@ -566,10 +588,12 @@ def _provenance_inputs(
         "toolchain_pins_sha256": sha256_file(root / "toolchains" / "pins.json"),
         "cargo_lock_sha256": sha256_file(root / "Cargo.lock"),
         "integration_catalog_sha256": sha256_file(root / "integrations" / "catalog.json"),
-        "openrazer_native_catalog_sha256": sha256_file(native_root / "catalog.json"),
-        "openrazer_native_transform_sha256": sha256_file(native_root / "transform.json"),
+        "openrazer_native_catalog_sha256": sha256_file(openrazer_root / "catalog.json"),
+        "openrazer_native_transform_sha256": sha256_file(openrazer_root / "transform.json"),
         "openrazer_native_deployment_sha256": deployment.source_sha256,
-        "openrazer_native_patch_sha256": sha256_file(patch),
+        "openrazer_native_patch_sha256": sha256_file(openrazer_patch),
+        "openrgb_native_transform_sha256": sha256_file(openrgb_root / "transform.json"),
+        "openrgb_native_patch_sha256": sha256_file(openrgb_patch),
     }
 
 
@@ -605,6 +629,14 @@ def _provenance_materials(
         "openrazer-native-transform": (
             "integrations/openrazer/native-route/transform.json",
             "openrazer_native_transform_sha256",
+        ),
+        "openrgb-native-patch": (
+            "integrations/openrgb/native-route/patches/0001-Add-HyperFlux-feature-transport-seam.patch",
+            "openrgb_native_patch_sha256",
+        ),
+        "openrgb-native-transform": (
+            "integrations/openrgb/native-route/transform.json",
+            "openrgb_native_transform_sha256",
         ),
         "source-sbom": (
             "assurance/generated/hyperflux-next.spdx.json",
@@ -883,6 +915,8 @@ def load_artifact_set(root: Path, manifest_path: Path) -> ArtifactSet:
         "openrazer_native_transform_sha256",
         "openrazer_native_deployment_sha256",
         "openrazer_native_patch_sha256",
+        "openrgb_native_transform_sha256",
+        "openrgb_native_patch_sha256",
     }:
         raise ModelError("package build inputs are malformed")
     revision = source["revision"]

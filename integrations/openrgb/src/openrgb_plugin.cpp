@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 #include <hyperflux/openrgb/build_config.hpp>
+#if HFX_OPENRGB_NATIVE_ROUTE_ENABLED
+#include <hyperflux/openrgb/native_plugin_application.hpp>
+#else
 #include <hyperflux/openrgb/plugin_application.hpp>
+#endif
 #include <hyperflux/openrgb/plugin_view_model.hpp>
 
 #include "plugin_widget.hpp"
@@ -78,10 +82,16 @@ public:
     {
         auto* widget = new PluginInformationWidget([this]
         {
+#if HFX_OPENRGB_NATIVE_ROUTE_ENABLED
+            return make_plugin_information_view_model(
+                application_.status(),
+                application_.controllers());
+#else
             return make_plugin_information_view_model(
                 application_.status(),
                 application_.inventory(),
                 application_.controllers());
+#endif
         });
         connect(
             this,
@@ -106,7 +116,11 @@ signals:
     void status_changed();
 
 private:
+#if HFX_OPENRGB_NATIVE_ROUTE_ENABLED
+    OpenRgbNativePluginApplication application_;
+#else
     OpenRgbPluginApplication application_;
+#endif
 };
 
 } // namespace hyperflux::openrgb::native

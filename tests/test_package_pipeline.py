@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 import zipfile
@@ -21,6 +22,7 @@ from hfxdev.model import ModelError, sha256_file
 from hfxdev.package_pipeline import (
     BuiltArtifact,
     _base_environment,
+    _build_cmake,
     _build_python,
     _install_wheels,
     _inspect_staged_files,
@@ -35,6 +37,62 @@ from hfxdev.toolchains import load_toolchain_pins
 
 
 class PackagePipelineTests(unittest.TestCase):
+    def test_openrgb_build_uses_the_source_bound_native_transform(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            upstream = output / "openrgb-upstream"
+            upstream.mkdir()
+            native = output / "work" / "openrgb-native-native-source"
+            build = load_install_manifest(ROOT).build("openrgb-native")
+            commands: list[tuple[list[str], dict[str, str]]] = []
+
+            def capture_run(
+                command: list[str],
+                *,
+                cwd: Path,
+                environment: dict[str, str],
+                label: str,
+                timeout_seconds: int = 900,
+            ) -> None:
+                del cwd, label, timeout_seconds
+                commands.append((command, environment.copy()))
+
+            expected = object()
+            with (
+                patch(
+                    "hfxdev.package_pipeline._pinned_source",
+                    return_value=upstream,
+                ),
+                patch(
+                    "hfxdev.package_pipeline.prepare_openrgb_native_source",
+                    return_value=SimpleNamespace(root=native),
+                ) as prepare,
+                patch("hfxdev.package_pipeline._run", side_effect=capture_run),
+                patch(
+                    "hfxdev.package_pipeline._copy_artifact",
+                    return_value=expected,
+                ),
+            ):
+                actual = _build_cmake(
+                    ROOT,
+                    output,
+                    {},
+                    build,
+                    {"openrgb-source": upstream},
+                    "a" * 40,
+                )
+
+            self.assertIs(actual, expected)
+            prepare.assert_called_once_with(ROOT, upstream, native)
+            configure, environment = commands[0]
+            self.assertIn(f"-DHFX_OPENRGB_SOURCE_DIR={upstream}", configure)
+            self.assertIn(f"-DHFX_OPENRGB_NATIVE_SOURCE_DIR={native}", configure)
+            self.assertIn(f"-ffile-prefix-map={upstream}=.upstream/openrgb-source", environment["CXXFLAGS"])
+            self.assertIn(
+                f"-ffile-prefix-map={native}=.upstream/openrgb-source-native",
+                environment["CXXFLAGS"],
+            )
+
     def _wheel(
         self,
         path: Path,

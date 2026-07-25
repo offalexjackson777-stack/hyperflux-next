@@ -47,6 +47,7 @@ from .openrazer_native_route import (
     prepare_openrazer_native_source,
 )
 from .openrgb import extract_openrgb_catalog
+from .openrgb_native_route import prepare_openrgb_native_source
 from .package_pipeline import build_artifacts, load_artifact_set, stage_rootfs
 from .performance import (
     load_performance_budgets,
@@ -1021,11 +1022,35 @@ def _run_openrgb_cmake_contracts(
     build_type: str,
     label: str,
     thread_sanitizer: bool,
+    native_route: bool,
 ) -> None:
     source = _openrgb_source(root)
     build_directory = root / "build" / build_name
     if build_directory.exists():
         shutil.rmtree(build_directory)
+    native_source: Path | None = None
+    if native_route:
+        native_source = root / "build" / f"{build_name}-source"
+        if native_source.exists():
+            shutil.rmtree(native_source)
+        prepared = prepare_openrgb_native_source(root, source, native_source)
+        if (prepared.result.stat().st_mode & 0o777) != 0o600:
+            raise ModelError("OpenRGB native source binding is not private")
+        result = load_json(prepared.result)
+        if result.get("schema") != "hyperflux-openrgb-native-transform-result-v1":
+            raise ModelError("OpenRGB native source binding schema is invalid")
+        if any(
+            result.get(field) is not False
+            for field in (
+                "network_access_executed",
+                "hardware_queried",
+                "hardware_write_executed",
+            )
+        ):
+            raise ModelError("OpenRGB native source preparation crossed a prohibited boundary")
+        if (prepared.root / ".git").exists():
+            raise ModelError("OpenRGB native source output copied upstream Git metadata")
+        native_source = prepared.root
     configure = [
         "cmake",
         "-S",
@@ -1036,6 +1061,8 @@ def _run_openrgb_cmake_contracts(
         "-DBUILD_TESTING=ON",
         f"-DHFX_OPENRGB_SOURCE_DIR={source}",
     ]
+    if native_source is not None:
+        configure.append(f"-DHFX_OPENRGB_NATIVE_SOURCE_DIR={native_source}")
     if thread_sanitizer:
         configure.append("-DHFX_OPENRGB_THREAD_SANITIZER=ON")
     _run_command(
@@ -1074,6 +1101,19 @@ def _run_openrgb_adapter_contracts(root: Path, node: TestNode) -> None:
         build_type="Release",
         label="OpenRGB adapter",
         thread_sanitizer=False,
+        native_route=False,
+    )
+
+
+def _run_openrgb_native_route_contracts(root: Path, node: TestNode) -> None:
+    _run_openrgb_cmake_contracts(
+        root,
+        node,
+        build_name="openrgb-native-route",
+        build_type="Release",
+        label="OpenRGB native route",
+        thread_sanitizer=False,
+        native_route=True,
     )
 
 
@@ -1085,6 +1125,7 @@ def _run_openrgb_thread_sanitizer(root: Path, node: TestNode) -> None:
         build_type="RelWithDebInfo",
         label="OpenRGB ThreadSanitizer",
         thread_sanitizer=True,
+        native_route=True,
     )
 
 
@@ -1458,6 +1499,7 @@ RUNNERS = {
     "migration-shadow-contracts": _run_migration_shadow_contracts,
     "cpp-sdk-contracts": _run_cpp_sdk_contracts,
     "openrgb-adapter-contracts": _run_openrgb_adapter_contracts,
+    "openrgb-native-route-contracts": _run_openrgb_native_route_contracts,
     "openrgb-thread-sanitizer": _run_openrgb_thread_sanitizer,
     "openrazer-metadata-contracts": _run_openrazer_metadata_contracts,
     "openrazer-native-route-contracts": _run_openrazer_native_route_contracts,

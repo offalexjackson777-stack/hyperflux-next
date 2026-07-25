@@ -1,0 +1,98 @@
+// SPDX-License-Identifier: GPL-2.0-only
+
+#pragma once
+
+#include "plugin_application.hpp"
+#include "upstream_razer_coordinator.hpp"
+
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <vector>
+
+class ResourceManagerInterface;
+
+namespace hyperflux::openrgb::native
+{
+
+class NativePluginHost : public UpstreamPluginHost
+{
+public:
+    ~NativePluginHost() override = default;
+
+    virtual void register_detection_start(
+        DetectionCallback callback, void* context) noexcept = 0;
+    virtual void register_detection_end(
+        DetectionCallback callback, void* context) noexcept = 0;
+    virtual void unregister_detection_start(
+        DetectionCallback callback, void* context) noexcept = 0;
+    virtual void unregister_detection_end(
+        DetectionCallback callback, void* context) noexcept = 0;
+    virtual void wait_for_detection() noexcept = 0;
+};
+
+struct NativePluginApplicationStatus
+{
+    bool loaded = false;
+    UpstreamRazerCoordinatorStatus coordinator;
+};
+
+struct NativePluginRuntimeFactories
+{
+    NativeDiscoveryClientFactory discovery;
+    NativeFeatureExchangeFactory exchange;
+};
+
+[[nodiscard]] NativePluginRuntimeFactories default_native_plugin_runtime_factories();
+
+/// Production OpenRGB application path using upstream Razer controllers.
+///
+/// The existing semantic-lighting application remains compiled as an explicit
+/// rollback implementation and is never started alongside this native path.
+class OpenRgbNativePluginApplication final
+{
+public:
+    OpenRgbNativePluginApplication();
+    explicit OpenRgbNativePluginApplication(std::function<void()> on_state_changed);
+    OpenRgbNativePluginApplication(
+        NativePluginRuntimeFactories factories,
+        UpstreamRazerCoordinatorConfig coordinator_config);
+    OpenRgbNativePluginApplication(const OpenRgbNativePluginApplication&) = delete;
+    OpenRgbNativePluginApplication& operator=(const OpenRgbNativePluginApplication&) = delete;
+    ~OpenRgbNativePluginApplication();
+
+    [[nodiscard]] sdk::Result<void> load(ResourceManagerInterface* manager);
+    [[nodiscard]] sdk::Result<void> load(std::unique_ptr<NativePluginHost> host);
+    void unload() noexcept;
+    void request_rescan() noexcept;
+
+    [[nodiscard]] NativePluginApplicationStatus status() const;
+    [[nodiscard]] std::vector<UpstreamRazerControllerSummary> controllers() const;
+
+private:
+    enum class State
+    {
+        Unloaded,
+        Loading,
+        Loaded,
+        Unloading,
+    };
+
+    static void detection_started_callback(void* context) noexcept;
+    static void detection_finished_callback(void* context) noexcept;
+    void detection_started() noexcept;
+    void detection_finished() noexcept;
+    void reset_loading_state() noexcept;
+
+    NativePluginRuntimeFactories factories_;
+    UpstreamRazerCoordinatorConfig coordinator_config_;
+    std::unique_ptr<NativePluginHost> host_;
+    std::unique_ptr<class QtApplicationDispatcher> dispatcher_;
+    std::shared_ptr<UpstreamRazerPluginCoordinator> coordinator_;
+    mutable std::mutex lifecycle_mutex_;
+    State state_ = State::Unloaded;
+    bool callbacks_registered_ = false;
+    bool callbacks_enabled_ = false;
+};
+
+} // namespace hyperflux::openrgb::native

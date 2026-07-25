@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schemas/openrgb-native-transform.schema.json",
+  "schema": "hyperflux-openrgb-native-transform-v1",
+  "upstream": {
+    "id": "openrgb",
+    "repository": "https://github.com/CalcProgrammer1/OpenRGB.git",
+    "commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0"
+  },
+  "patch": {
+    "path": "patches/0001-Add-HyperFlux-feature-transport-seam.patch",
+    "sha256": "98d7eebcb93c9e7a3f63b51cc07c7cbcc7f307167d2e44ce68c4ea637bd9c2c6"
+  },
+  "files": [
+    {
+      "path": "Controllers/RazerController/RazerController/RazerController.cpp",
+      "source_sha256": "cf5cd98f56a750f9d7f26828bd935f674fea1627be52971f703ed893ad7fb1c6",
+      "transformed_sha256": "166e71fb66ae0b7da13f216fe02e3a64921ce4c6b4384fdeda82c31b2e694b4d"
+    },
+    {
+      "path": "Controllers/RazerController/RazerController/RazerController.h",
+      "source_sha256": "e05415d4982bb63bd475884d288a6f898c1486d85d38efa62318e2ac1f170c90",
+      "transformed_sha256": "0ecd93121abbdd41e346842a1afc12fc20d9598b2a2dba8ab8e3fe6ee3c70dd5"
+    }
+  ]
+}

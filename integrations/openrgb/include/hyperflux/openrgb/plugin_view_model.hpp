@@ -4,6 +4,10 @@
 
 #include "plugin_application.hpp"
 
+#if HFX_OPENRGB_NATIVE_ROUTE_ENABLED
+#include "native_plugin_application.hpp"
+#endif
+
 #include <optional>
 #include <string>
 #include <vector>
@@ -54,5 +58,11 @@ struct PluginInformationViewModel
     const PluginApplicationStatus& status,
     const std::vector<InventoryReceiverModel>& inventory,
     const std::vector<ControllerModel>& controllers);
+
+#if HFX_OPENRGB_NATIVE_ROUTE_ENABLED
+[[nodiscard]] PluginInformationViewModel make_plugin_information_view_model(
+    const NativePluginApplicationStatus& status,
+    const std::vector<UpstreamRazerControllerSummary>& controllers);
+#endif
 
 } // namespace hyperflux::openrgb::native
