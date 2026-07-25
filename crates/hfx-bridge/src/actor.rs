@@ -304,42 +304,46 @@ where
                 }
             };
 
-            if let Some(command) = command
-                && let Some(reply) = self.process_batch(command)
-            {
-                let exit = self.cleanup_all();
-                let _ = reply.send(exit);
-                return Ok(exit);
+            let mut processed_command = false;
+            if let Some(mut command) = command {
+                for batch_index in 0..self.command_batch_capacity {
+                    if let Some(reply) = self.process(command) {
+                        let exit = self.cleanup_all();
+                        let _ = reply.send(exit);
+                        return Ok(exit);
+                    }
+                    processed_command = true;
+                    match tick(&mut self.backend, &self.sessions) {
+                        Ok(true) => self.cancel_invalidated_native(),
+                        Ok(false) => return Ok(self.cleanup_all()),
+                        Err(error) => {
+                            let cleanup = self.cleanup_all();
+                            return Err(BridgeActorTickFailure { error, cleanup });
+                        }
+                    }
+                    if batch_index + 1 == self.command_batch_capacity {
+                        break;
+                    }
+                    match self.commands.try_recv() {
+                        Ok(next) => command = next,
+                        Err(TryRecvError::Empty | TryRecvError::Disconnected) => break,
+                    }
+                }
             }
             self.cancel_invalidated_native();
             self.dispatch_next_native();
             self.cancel_invalidated_native();
-            match tick(&mut self.backend, &self.sessions) {
-                Ok(true) => self.cancel_invalidated_native(),
-                Ok(false) => return Ok(self.cleanup_all()),
-                Err(error) => {
-                    let cleanup = self.cleanup_all();
-                    return Err(BridgeActorTickFailure { error, cleanup });
-                }
-            }
-        }
-    }
-
-    fn process_batch(&mut self, first: BridgeActorCommand) -> Option<SyncSender<BridgeActorExit>> {
-        if let Some(reply) = self.process(first) {
-            return Some(reply);
-        }
-        for _ in 1..self.command_batch_capacity {
-            match self.commands.try_recv() {
-                Ok(command) => {
-                    if let Some(reply) = self.process(command) {
-                        return Some(reply);
+            if !processed_command {
+                match tick(&mut self.backend, &self.sessions) {
+                    Ok(true) => self.cancel_invalidated_native(),
+                    Ok(false) => return Ok(self.cleanup_all()),
+                    Err(error) => {
+                        let cleanup = self.cleanup_all();
+                        return Err(BridgeActorTickFailure { error, cleanup });
                     }
                 }
-                Err(TryRecvError::Empty | TryRecvError::Disconnected) => break,
             }
         }
-        None
     }
 
     fn process(&mut self, command: BridgeActorCommand) -> Option<SyncSender<BridgeActorExit>> {
