@@ -8,11 +8,16 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from tools.hfxdev.kernel_uapi import MAX_IOCTL_STRUCT_BYTES, load_kernel_uapi
+from tools.hfxdev.kernel_uapi import (
+    MAX_IOCTL_STRUCT_BYTES,
+    load_kernel_uapi,
+    load_kernel_uapi_registry,
+)
 from tools.hfxdev.model import ModelError, load_json
 
 
 ROOT = Path(__file__).resolve().parents[1]
+FROZEN_V1_SOURCE_SHA256 = "e93cdf3e8232d6178015125934b256b671e0560a2b934c193be29b250389e24f"
 
 
 class KernelUapiTests(unittest.TestCase):
@@ -44,6 +49,59 @@ class KernelUapiTests(unittest.TestCase):
             },
         )
         self.assertTrue(all(item.size < MAX_IOCTL_STRUCT_BYTES for item in first.structs))
+
+    def test_v1_source_and_ioctl_contract_remain_frozen(self) -> None:
+        catalog = load_kernel_uapi(ROOT)
+        self.assertEqual(catalog.source_sha256, FROZEN_V1_SOURCE_SHA256)
+        self.assertEqual(catalog.abi_version, 1)
+        self.assertEqual(
+            [(item.name, item.number, item.direction, item.struct_name) for item in catalog.ioctls],
+            [
+                ("get_info", 0x00, "read", "info"),
+                ("begin_session", 0x01, "read_write", "begin_session"),
+                ("end_session", 0x02, "write", "end_session"),
+                ("submit", 0x03, "read_write", "submit"),
+                (
+                    "get_transaction_result",
+                    0x04,
+                    "read_write",
+                    "transaction_result",
+                ),
+                ("read_observations", 0x05, "read_write", "read_observations"),
+            ],
+        )
+
+    def test_native_exchange_is_additive_fixed_width_v2(self) -> None:
+        registry = load_kernel_uapi_registry(ROOT)
+        self.assertEqual(
+            [
+                (entry.abi_version, entry.role, entry.version_macro)
+                for entry in registry.entries
+            ],
+            [
+                (1, "baseline", "abi_version"),
+                (2, "native_exchange", "native_abi_version"),
+            ],
+        )
+        native = registry.entries[1].catalog
+        self.assertEqual(native.ioctl_magic, registry.baseline.ioctl_magic)
+        self.assertEqual(
+            {item.name: item.size for item in native.structs},
+            {"native_exchange_submit": 216, "native_exchange_result": 216},
+        )
+        self.assertEqual(
+            [(item.name, item.number) for item in native.ioctls],
+            [
+                ("submit_native_exchange", 0x06),
+                ("get_native_exchange_result", 0x07),
+            ],
+        )
+        self.assertEqual(native.limits["native_report_bytes"], 90)
+        certainty = next(item for item in native.enums if item.name == "native_exchange_certainty")
+        self.assertEqual(
+            [(item.name, item.value) for item in certainty.values],
+            [("not_sent", 1), ("may_have_been_sent", 2), ("matched_response", 3)],
+        )
 
     def test_boundary_has_no_pointer_or_product_presentation_fields(self) -> None:
         catalog = load_kernel_uapi(ROOT)

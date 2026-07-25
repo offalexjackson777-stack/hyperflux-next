@@ -3,11 +3,11 @@
 use hfx_domain::{
     AuthorizationEpoch, DeliveredFrameCount, DeviceApplicationState, DeviceWriteReadiness,
     DispatchNonce, GenerationId, IntentDigest, IntentRevision, LedCount, LogicalDeviceId,
-    MonotonicMs, PersistenceRevision, PersistenceSchemaVersion, ProfileDigest, ProfileId,
-    ProtocolErrorKind, ReceiverId, RequestDigest, RestoreAttemptNumber, RestoreClaimId,
-    RestoreDeferReason, RestoreInvalidationReason, RestoreRecordState, RestoreTriggerId,
-    RestoreTriggerKind, SessionId, SideEffectCertainty, TransactionId, TransactionState,
-    WallClockUnixMs,
+    MonotonicMs, NativeExchangeTimeoutMs, PersistenceRevision, PersistenceSchemaVersion,
+    ProfileDigest, ProfileId, ProtocolErrorKind, ReceiverId, RequestDigest, RestoreAttemptNumber,
+    RestoreClaimId, RestoreDeferReason, RestoreInvalidationReason, RestoreRecordState,
+    RestoreTriggerId, RestoreTriggerKind, SessionId, SideEffectCertainty, TransactionId,
+    TransactionState, WallClockUnixMs,
 };
 use hfx_protocol::{
     BridgeEvent, DeviceProfileBinding, LeaseRequest, LightingFrame, ResourceKey, RgbColor,
@@ -50,6 +50,42 @@ pub struct TransportDispatch {
     pub receiver_profile_digest: ProfileDigest,
     pub device_profiles: Vec<DeviceProfileBinding>,
     pub frames: Vec<LightingFrame>,
+}
+
+pub const NATIVE_REPORT_BYTES: usize = 90;
+pub const NATIVE_ROUTE_DIGEST_BYTES: usize = 32;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum NativeEndpointLane {
+    Pointer,
+    Keyboard,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct NativeTransportDispatch {
+    pub session_id: SessionId,
+    pub authorization_epoch: AuthorizationEpoch,
+    pub dispatch_nonce: DispatchNonce,
+    pub receiver_id: ReceiverId,
+    pub generation_id: GenerationId,
+    pub endpoint: NativeEndpointLane,
+    pub route_token_digest: [u8; NATIVE_ROUTE_DIGEST_BYTES],
+    pub report: [u8; NATIVE_REPORT_BYTES],
+    pub timeout_ms: NativeExchangeTimeoutMs,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum NativeTransportResult {
+    NotSent { error_kind: ProtocolErrorKind },
+    MayHaveBeenSent { error_kind: ProtocolErrorKind },
+    MatchedResponse([u8; NATIVE_REPORT_BYTES]),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct NativeTransportOutcome {
+    pub dispatch_nonce: DispatchNonce,
+    pub route_token_digest: [u8; NATIVE_ROUTE_DIGEST_BYTES],
+    pub result: NativeTransportResult,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -114,6 +150,20 @@ pub trait ReceiverTransport {
         self.current_generation(receiver_id) == Some(generation_id)
     }
 
+    /// Reports whether the additive opaque child-exchange backend is present
+    /// for one exact current receiver generation.
+    ///
+    /// Lighting write availability does not imply native exchange support.
+    /// Existing transports therefore remain fail-closed unless their adapter
+    /// explicitly overrides this capability probe.
+    fn native_exchange_available(
+        &self,
+        _receiver_id: &ReceiverId,
+        _generation_id: GenerationId,
+    ) -> bool {
+        false
+    }
+
     /// Reconciles one exact dispatch against the adapter's durable outcome log.
     ///
     /// The adapter must bind the lookup to session, authorization epoch,
@@ -132,6 +182,20 @@ pub trait ReceiverTransport {
     /// Returns the adapter's typed transport failure. Callers must preserve
     /// possible side effects and must not infer that retry is safe.
     fn dispatch(&mut self, dispatch: &TransportDispatch) -> Result<TransportReceipt, Self::Error>;
+
+    /// Delivers one opaque, generation-bound child feature-report exchange.
+    ///
+    /// Implementations that do not explicitly support this additive operation
+    /// remain fail-closed and report that no receiver side effect occurred.
+    fn native_exchange(&mut self, dispatch: &NativeTransportDispatch) -> NativeTransportOutcome {
+        NativeTransportOutcome {
+            dispatch_nonce: dispatch.dispatch_nonce,
+            route_token_digest: dispatch.route_token_digest,
+            result: NativeTransportResult::NotSent {
+                error_kind: ProtocolErrorKind::UnsupportedFeature,
+            },
+        }
+    }
 }
 
 /// Confirms that queued work still belongs to one live writer session.

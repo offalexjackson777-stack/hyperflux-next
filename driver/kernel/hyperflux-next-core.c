@@ -67,10 +67,15 @@ void hfx_receiver_release(struct kref *refcount)
 		container_of(refcount, struct hfx_receiver, refcount);
 
 	hfx_transport_free_journal(receiver);
+	hfx_native_exchange_free_journal(receiver);
 	memzero_explicit(receiver->result_tombstones,
 			 sizeof(*receiver->result_tombstones) *
 				 HFX_TOMBSTONE_CAPACITY);
 	kfree(receiver->result_tombstones);
+	memzero_explicit(receiver->native_result_tombstones,
+			 sizeof(*receiver->native_result_tombstones) *
+				 HFX_UAPI_NATIVE_MAX_RESULTS);
+	kfree(receiver->native_result_tombstones);
 	kfree(receiver->observation_ring);
 	usb_put_dev(receiver->udev);
 	kfree(receiver->session_name);
@@ -96,9 +101,15 @@ hfx_receiver_candidate(struct usb_device *udev,
 			sizeof(*candidate->result_tombstones), GFP_KERNEL);
 	if (!candidate->result_tombstones)
 		goto err_observations;
+	candidate->native_result_tombstones =
+		kcalloc(HFX_UAPI_NATIVE_MAX_RESULTS,
+			sizeof(*candidate->native_result_tombstones), GFP_KERNEL);
+	if (!candidate->native_result_tombstones)
+		goto err_result_tombstones;
 
 	INIT_LIST_HEAD(&candidate->node);
 	INIT_LIST_HEAD(&candidate->result_records);
+	INIT_LIST_HEAD(&candidate->native_result_records);
 	mutex_init(&candidate->state_lock);
 	mutex_init(&candidate->transport_lock);
 	spin_lock_init(&candidate->authorization_lock);
@@ -106,10 +117,13 @@ hfx_receiver_candidate(struct usb_device *udev,
 	kref_init(&candidate->refcount);
 	candidate->udev = usb_get_dev(udev);
 	candidate->backend_id = profile->backend_id;
+	candidate->profile = profile;
 	candidate->next_observation_sequence = 0;
 	candidate->next_kernel_sequence = 0;
 	return candidate;
 
+err_result_tombstones:
+	kfree(candidate->result_tombstones);
 err_observations:
 	kfree(candidate->observation_ring);
 err_candidate:
@@ -431,7 +445,7 @@ static int hfx_resume(struct hid_device *hdev)
 }
 
 static const struct hid_device_id hfx_devices[] = {
-#define HFX_RECEIVER_PROFILE(vendor, product, backend, inventory) \
+#define HFX_RECEIVER_PROFILE(vendor, product, backend, ...) \
 	{ HID_USB_DEVICE((vendor), (product)), .driver_data = (backend) },
 #include "generated/hyperflux_receiver_profiles.inc"
 #undef HFX_RECEIVER_PROFILE

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::{
-    LifecyclePolicyRecord, LightingTopology, PROFILES, PassiveTelemetryRecord, PresentationRecord,
-    ProfileRecord, QualificationMigrationRecord, ReturnEvidenceSource,
+    LifecyclePolicyRecord, LightingTopology, NativeExchangeRecord, PROFILES,
+    PassiveTelemetryRecord, PresentationRecord, ProfileRecord, QualificationMigrationRecord,
+    ReturnEvidenceSource,
 };
 use hfx_domain::{
     CapabilityId, CarrierIndex, DeviceKind, DomainValueError, LedCount, ProductId, ProfileDigest,
@@ -126,6 +127,7 @@ pub struct RuntimeProfile {
     pub required_sibling_kinds: &'static [DeviceKind],
     pub exact_child_combinations: bool,
     pub capabilities: Vec<RuntimeCapability>,
+    pub native_exchange: Option<NativeExchangeRecord>,
     pub lighting: Option<RuntimeLightingTopology>,
     pub passive: Option<PassiveTelemetryRecord>,
     pub lifecycle: Option<LifecyclePolicyRecord>,
@@ -280,6 +282,7 @@ fn convert_profile(record: &ProfileRecord) -> Result<RuntimeProfile, ProfileCata
                 })
             })
             .collect::<Result<Vec<_>, ProfileCatalogError>>()?,
+        native_exchange: record.native_exchange,
         lighting: record.lighting.map(convert_lighting).transpose()?,
         passive: record.passive,
         lifecycle: record.lifecycle,

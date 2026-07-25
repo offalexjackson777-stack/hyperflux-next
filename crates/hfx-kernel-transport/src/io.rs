@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::{
-    HfxUapiBeginSession, HfxUapiEndSession, HfxUapiInfo, HfxUapiReadObservations, HfxUapiSubmit,
-    HfxUapiTransactionResult, ioctl_sys,
+    HfxUapiBeginSession, HfxUapiEndSession, HfxUapiInfo, HfxUapiNativeExchangeResult,
+    HfxUapiNativeExchangeSubmit, HfxUapiReadObservations, HfxUapiSubmit, HfxUapiTransactionResult,
+    ioctl_sys,
 };
 use rustix::fs::{Mode, OFlags, open};
 use rustix::time::{ClockId, clock_gettime};
@@ -85,6 +86,28 @@ pub trait KernelIo {
         &self,
         request: &mut HfxUapiTransactionResult,
     ) -> Result<(), KernelIoError>;
+    /// Submits one fixed-size native child feature-report exchange.
+    ///
+    /// The kernel sends the `SET_REPORT` at most once. An error can therefore
+    /// mean that the request may have reached the receiver; callers must
+    /// reconcile the exact result instead of repeating the submit.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for validation, authorization, or transport failure.
+    fn submit_native_exchange(
+        &self,
+        request: &mut HfxUapiNativeExchangeSubmit,
+    ) -> Result<(), KernelIoError>;
+    /// Reconciles one exact native child exchange identity.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the result lookup cannot complete.
+    fn get_native_exchange_result(
+        &self,
+        request: &mut HfxUapiNativeExchangeResult,
+    ) -> Result<(), KernelIoError>;
     /// Reads the next bounded passive-observation batch.
     ///
     /// # Errors
@@ -164,6 +187,21 @@ impl KernelIo for LinuxKernelIo {
         request: &mut HfxUapiTransactionResult,
     ) -> Result<(), KernelIoError> {
         ioctl_sys::get_transaction_result(&self.file, request).map_err(KernelIoError::from_rustix)
+    }
+
+    fn submit_native_exchange(
+        &self,
+        request: &mut HfxUapiNativeExchangeSubmit,
+    ) -> Result<(), KernelIoError> {
+        ioctl_sys::submit_native_exchange(&self.file, request).map_err(KernelIoError::from_rustix)
+    }
+
+    fn get_native_exchange_result(
+        &self,
+        request: &mut HfxUapiNativeExchangeResult,
+    ) -> Result<(), KernelIoError> {
+        ioctl_sys::get_native_exchange_result(&self.file, request)
+            .map_err(KernelIoError::from_rustix)
     }
 
     fn read_observations(

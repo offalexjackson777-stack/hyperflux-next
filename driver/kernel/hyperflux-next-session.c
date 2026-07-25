@@ -353,6 +353,10 @@ static long hfx_session_ioctl(struct file *file, unsigned int command,
 		return hfx_transport_get_result(receiver, context, user_arg);
 	case HFX_UAPI_IOCTL_READ_OBSERVATIONS:
 		return hfx_observation_read(receiver, user_arg);
+	case HFX_UAPI_IOCTL_SUBMIT_NATIVE_EXCHANGE:
+		return hfx_native_exchange_submit(receiver, context, user_arg);
+	case HFX_UAPI_IOCTL_GET_NATIVE_EXCHANGE_RESULT:
+		return hfx_native_exchange_get_result(receiver, context, user_arg);
 	default:
 		return -ENOTTY;
 	}

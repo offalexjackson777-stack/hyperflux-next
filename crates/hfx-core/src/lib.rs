@@ -32,13 +32,15 @@ pub use lifecycle::{
     ReceiverGenerationLifecycle, ReceiverLifecycleMachine, ReturnEpoch, ReturnTransition,
 };
 pub use ports::{
-    Clock, DeviceStateAuthority, EventDelivery, EventSink, PersistedRestorePolicy,
-    PersistedStableEntry, PersistedStableIntent, PersistenceCasOutcome, PersistenceStore,
-    ProfileRegistry, QualifiedDeviceProfile, QualifiedReceiverProfile, ReceiverTransport,
-    RestoreAttempt, RestoreCompletion, RestoreDeferred, RestoreInvalidation, RestoreRecord,
-    RestoreRecordChange, RestoreRecordStatus, RestoreTrigger, SessionAuthority, StableIntentChange,
-    StableIntentTombstone, StableLighting, SubmissionBinding, TransportDispatch, TransportFailure,
-    TransportFailureFacts, TransportReceipt, TransportReconciliation, TransportTerminal, WallClock,
+    Clock, DeviceStateAuthority, EventDelivery, EventSink, NATIVE_REPORT_BYTES,
+    NATIVE_ROUTE_DIGEST_BYTES, NativeEndpointLane, NativeTransportDispatch, NativeTransportOutcome,
+    NativeTransportResult, PersistedRestorePolicy, PersistedStableEntry, PersistedStableIntent,
+    PersistenceCasOutcome, PersistenceStore, ProfileRegistry, QualifiedDeviceProfile,
+    QualifiedReceiverProfile, ReceiverTransport, RestoreAttempt, RestoreCompletion,
+    RestoreDeferred, RestoreInvalidation, RestoreRecord, RestoreRecordChange, RestoreRecordStatus,
+    RestoreTrigger, SessionAuthority, StableIntentChange, StableIntentTombstone, StableLighting,
+    SubmissionBinding, TransportDispatch, TransportFailure, TransportFailureFacts,
+    TransportReceipt, TransportReconciliation, TransportTerminal, WallClock,
 };
 pub use receiver_registry::{
     DEFAULT_MAX_RECEIVERS, ReceiverLifecycleRegistry, ReceiverRegistryError,

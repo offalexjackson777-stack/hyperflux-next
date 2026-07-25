@@ -15,8 +15,8 @@
 namespace hyperflux
 {
 
-inline constexpr std::uint16_t minimum_protocol_version = 6;
-inline constexpr std::uint16_t maximum_protocol_version = 6;
+inline constexpr std::uint16_t minimum_protocol_version = 7;
+inline constexpr std::uint16_t maximum_protocol_version = 7;
 inline constexpr std::size_t max_wire_message_bytes = 1048576;
 inline constexpr std::size_t max_json_depth = 128;
 
@@ -475,6 +475,91 @@ struct ControllerActions
     friend bool operator==(const ControllerActions&, const ControllerActions&) = default;
 };
 
+// One generation-bound receiver child route without a host device path.
+struct NativeRoute
+{
+    ReceiverId receiver_id;
+    GenerationId generation_id;
+    LogicalDeviceId device_id;
+    EndpointId endpoint_id;
+    DeviceKind device_kind;
+    VendorId vendor_id;
+    ProductId product_id;
+    RouteState route_state;
+    NativeRouteAccess access;
+    NativeProtocolFamily protocol_family;
+    NativeReportByteCount report_bytes;
+    std::optional<NativeRouteToken> route_token;
+    std::optional<ResourceKey> resource;
+    friend bool operator==(const NativeRoute&, const NativeRoute&) = default;
+};
+
+// Bounded sequence-consistent native route inventory.
+struct NativeRouteInventory
+{
+    EventCursor cursor;
+    std::vector<NativeRoute> routes;
+    friend bool operator==(const NativeRouteInventory&, const NativeRouteInventory&) = default;
+};
+
+// One idempotent lease-bound native child feature-report exchange.
+struct NativeExchangeRequest
+{
+    RequestId request_id;
+    ClientId client_id;
+    LeaseId lease_id;
+    NativeRouteToken route_token;
+    NativeReportHex report;
+    NativeExchangeTimeoutMs timeout_ms;
+    friend bool operator==(const NativeExchangeRequest&, const NativeExchangeRequest&) = default;
+};
+
+// The native request provably did not reach the receiver.
+struct NativeExchangeNotSent
+{
+    ProtocolErrorKind error_kind;
+    FindingId finding_id;
+    friend bool operator==(const NativeExchangeNotSent&, const NativeExchangeNotSent&) = default;
+};
+
+// The SET report may have reached the receiver and must not be repeated automatically.
+struct NativeExchangeUncertain
+{
+    ProtocolErrorKind error_kind;
+    FindingId finding_id;
+    friend bool operator==(const NativeExchangeUncertain&, const NativeExchangeUncertain&) = default;
+};
+
+// A response matching the exact native request identity was retained.
+struct NativeExchangeMatchedResponse
+{
+    NativeReportHex response;
+    friend bool operator==(const NativeExchangeMatchedResponse&, const NativeExchangeMatchedResponse&) = default;
+};
+
+// One sequence-bound complete native route change.
+struct NativeRouteEvent
+{
+    SequenceNumber sequence;
+    NativeRouteEventKind kind;
+    NativeRoute route;
+    friend bool operator==(const NativeRouteEvent&, const NativeRouteEvent&) = default;
+};
+
+// Bounded native route changes with explicit cursor-gap state.
+struct NativeRouteEventBatch
+{
+    SubscriptionId subscription_id;
+    EventCursor next_cursor;
+    std::vector<NativeRouteEvent> events;
+    SequenceNumber oldest_available;
+    SequenceNumber latest_available;
+    DroppedEventCount dropped_events;
+    bool cursor_gap;
+    bool has_more;
+    friend bool operator==(const NativeRouteEventBatch&, const NativeRouteEventBatch&) = default;
+};
+
 // Stable structured request failure.
 struct RpcError
 {
@@ -566,6 +651,33 @@ struct ControllerOwnershipOwnedByOther
 // Contradiction-free viewer-specific controller ownership.
 using ControllerOwnership = std::variant<ControllerOwnershipUnowned, ControllerOwnershipOwnedByViewer, ControllerOwnershipOwnedByOther>;
 
+// The request is safe to retry with a new identity.
+struct NativeExchangeResultNotSent
+{
+    static constexpr std::string_view certainty = "not-sent";
+    NativeExchangeNotSent detail;
+    friend bool operator==(const NativeExchangeResultNotSent&, const NativeExchangeResultNotSent&) = default;
+};
+
+// Automatic retry is forbidden because SET delivery is uncertain.
+struct NativeExchangeResultMayHaveBeenSent
+{
+    static constexpr std::string_view certainty = "may-have-been-sent";
+    NativeExchangeUncertain detail;
+    friend bool operator==(const NativeExchangeResultMayHaveBeenSent&, const NativeExchangeResultMayHaveBeenSent&) = default;
+};
+
+// The exact matching response was retained.
+struct NativeExchangeResultMatchedResponse
+{
+    static constexpr std::string_view certainty = "matched-response";
+    NativeExchangeMatchedResponse detail;
+    friend bool operator==(const NativeExchangeResultMatchedResponse&, const NativeExchangeResultMatchedResponse&) = default;
+};
+
+// Contradiction-free native transport certainty and response.
+using NativeExchangeResult = std::variant<NativeExchangeResultNotSent, NativeExchangeResultMayHaveBeenSent, NativeExchangeResultMatchedResponse>;
+
 // Exact qualified receiver-backed application controller.
 struct ControllerView
 {
@@ -610,6 +722,15 @@ struct IntegrationView
     EventCursor cursor;
     std::vector<IntegrationReceiverView> receivers;
     friend bool operator==(const IntegrationView&, const IntegrationView&) = default;
+};
+
+// Idempotent native exchange identity and contradiction-free result.
+struct NativeExchangeOutcome
+{
+    RequestId request_id;
+    NativeRouteToken route_token;
+    NativeExchangeResult result;
+    friend bool operator==(const NativeExchangeOutcome&, const NativeExchangeOutcome&) = default;
 };
 
 struct NegotiationRequestEnvelope
@@ -687,7 +808,25 @@ struct RpcRequestDiagnostics
     SessionRequestEnvelope<EmptyRequest> request;
 };
 
-using RpcRequest = std::variant<RpcRequestNegotiate, RpcRequestSnapshot, RpcRequestIntegrationView, RpcRequestAcquireLease, RpcRequestRenewLease, RpcRequestReleaseLease, RpcRequestSubmitTransaction, RpcRequestTransactionOutcome, RpcRequestSubscribe, RpcRequestDiagnostics>;
+struct RpcRequestNativeEnumerate
+{
+    static constexpr std::string_view method = "native-enumerate";
+    SessionRequestEnvelope<EmptyRequest> request;
+};
+
+struct RpcRequestNativeTransact
+{
+    static constexpr std::string_view method = "native-transact";
+    SessionRequestEnvelope<NativeExchangeRequest> request;
+};
+
+struct RpcRequestNativeWatch
+{
+    static constexpr std::string_view method = "native-watch";
+    SessionRequestEnvelope<SubscriptionRequest> request;
+};
+
+using RpcRequest = std::variant<RpcRequestNegotiate, RpcRequestSnapshot, RpcRequestIntegrationView, RpcRequestAcquireLease, RpcRequestRenewLease, RpcRequestReleaseLease, RpcRequestSubmitTransaction, RpcRequestTransactionOutcome, RpcRequestSubscribe, RpcRequestDiagnostics, RpcRequestNativeEnumerate, RpcRequestNativeTransact, RpcRequestNativeWatch>;
 
 template<typename T>
 struct SuccessEnvelope
@@ -764,7 +903,25 @@ struct RpcResponseDiagnosticsSuccess
     SuccessEnvelope<DiagnosticSnapshot> response;
 };
 
-using RpcResponse = std::variant<RpcResponseNegotiateSuccess, RpcResponseSnapshotSuccess, RpcResponseIntegrationViewSuccess, RpcResponseAcquireLeaseSuccess, RpcResponseRenewLeaseSuccess, RpcResponseReleaseLeaseSuccess, RpcResponseSubmitTransactionSuccess, RpcResponseTransactionOutcomeSuccess, RpcResponseSubscribeSuccess, RpcResponseDiagnosticsSuccess, ErrorEnvelope>;
+struct RpcResponseNativeEnumerateSuccess
+{
+    static constexpr std::string_view type = "native-enumerate-success";
+    SuccessEnvelope<NativeRouteInventory> response;
+};
+
+struct RpcResponseNativeTransactSuccess
+{
+    static constexpr std::string_view type = "native-transact-success";
+    SuccessEnvelope<NativeExchangeOutcome> response;
+};
+
+struct RpcResponseNativeWatchSuccess
+{
+    static constexpr std::string_view type = "native-watch-success";
+    SuccessEnvelope<NativeRouteEventBatch> response;
+};
+
+using RpcResponse = std::variant<RpcResponseNegotiateSuccess, RpcResponseSnapshotSuccess, RpcResponseIntegrationViewSuccess, RpcResponseAcquireLeaseSuccess, RpcResponseRenewLeaseSuccess, RpcResponseReleaseLeaseSuccess, RpcResponseSubmitTransactionSuccess, RpcResponseTransactionOutcomeSuccess, RpcResponseSubscribeSuccess, RpcResponseDiagnosticsSuccess, RpcResponseNativeEnumerateSuccess, RpcResponseNativeTransactSuccess, RpcResponseNativeWatchSuccess, ErrorEnvelope>;
 
 struct MethodDescriptor
 {
@@ -774,7 +931,7 @@ struct MethodDescriptor
     std::optional<std::string_view> required_feature;
 };
 
-inline constexpr MethodDescriptor methods[10] = {
+inline constexpr MethodDescriptor methods[13] = {
     {"negotiate", "ClientHello", "ServerHello", std::nullopt},
     {"snapshot", "EmptyRequest", "BridgeSnapshot", std::nullopt},
     {"integration-view", "EmptyRequest", "IntegrationView", std::optional<std::string_view>("integration-view-projection")},
@@ -785,6 +942,9 @@ inline constexpr MethodDescriptor methods[10] = {
     {"transaction-outcome", "TransactionLookup", "TransactionResult", std::optional<std::string_view>("atomic-transactions")},
     {"subscribe", "SubscriptionRequest", "EventBatch", std::optional<std::string_view>("event-subscriptions")},
     {"diagnostics", "EmptyRequest", "DiagnosticSnapshot", std::optional<std::string_view>("structured-diagnostics")},
+    {"native-enumerate", "EmptyRequest", "NativeRouteInventory", std::optional<std::string_view>("native-receiver-tunnel")},
+    {"native-transact", "NativeExchangeRequest", "NativeExchangeOutcome", std::optional<std::string_view>("native-receiver-tunnel")},
+    {"native-watch", "SubscriptionRequest", "NativeRouteEventBatch", std::optional<std::string_view>("native-receiver-tunnel")},
 };
 
 } // namespace hyperflux

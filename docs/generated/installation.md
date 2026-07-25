@@ -33,11 +33,11 @@ The canonical plan contains `4` required and `3` optional build products.
 
 ## Static Payload
 
-The expanded source payload contains `161` files. Every destination is normalized below `/etc` or `/usr` and checked for collisions.
+The expanded source payload contains `167` files. Every destination is normalized below `/etc` or `/usr` and checked for collisions.
 
 | Component | Files | Preserved destination |
 | --- | ---: | --- |
-| `kernel-source` | 14 | `-` |
+| `kernel-source` | 15 | `-` |
 | `dkms-configuration` | 1 | `-` |
 | `bridge-service` | 1 | `-` |
 | `activation-service` | 1 | `-` |
@@ -47,14 +47,14 @@ The expanded source payload contains `161` files. Every destination is normalize
 | `device-permissions` | 1 | `-` |
 | `default-configuration` | 1 | `/etc/hyperflux-next/bridge.json` |
 | `runtime-environment` | 1 | `-` |
-| `schemas` | 54 | `-` |
+| `schemas` | 56 | `-` |
 | `assurance-artifacts` | 1 | `-` |
 | `compiled-catalogs` | 2 | `-` |
 | `device-qualification-console` | 4 | `-` |
 | `runtime-authority` | 1 | `-` |
 | `integration-authority` | 6 | `-` |
-| `cpp-sdk-headers` | 28 | `-` |
-| `documentation` | 38 | `-` |
+| `cpp-sdk-headers` | 30 | `-` |
+| `documentation` | 39 | `-` |
 | `readme` | 1 | `-` |
 | `security-policy` | 1 | `-` |
 | `license` | 1 | `-` |

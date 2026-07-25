@@ -8,7 +8,7 @@ This is a structural collection, not a second source of truth. Follow the author
 
 | Owner | Canonical inputs | Generated outputs |
 | --- | ---: | ---: |
-| [Kernel driver contract](../driver/README.md) | 1 | 0 |
+| [Kernel driver contract](../driver/README.md) | 3 | 0 |
 
 ## Safe Changes
 

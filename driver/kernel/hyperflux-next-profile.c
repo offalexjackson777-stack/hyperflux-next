@@ -4,9 +4,9 @@
 
 #include "hyperflux-next-profile.h"
 
-#define HFX_RECEIVER_PROFILE(vendor, product, backend, inventory) \
-	{ .vendor_id = (vendor), .product_id = (product), .backend_id = (backend), \
-	  .pairing_inventory_kind = (inventory) },
+#define HFX_RECEIVER_PROFILE(vendor, product, backend, ...) \
+	{ .vendor_id = (vendor), .product_id = (product), \
+	  .backend_id = (backend), __VA_ARGS__ },
 
 static const struct hfx_receiver_profile hfx_receiver_profiles[] = {
 #include "generated/hyperflux_receiver_profiles.inc"

@@ -8,6 +8,7 @@ mod generated;
 mod io;
 #[allow(unsafe_code)]
 mod ioctl_sys;
+mod native;
 mod observation;
 mod reader;
 mod router;
@@ -17,6 +18,9 @@ pub use encoder::{EncodedTransaction, ReceiverFrameEncoderRegistry};
 pub use error::{KernelTransportError, KernelTransportErrorKind};
 pub use generated::*;
 pub use io::{KernelIo, KernelIoError, LinuxKernelIo};
+pub use native::{
+    NativeEndpointLane, NativeExchangeCertainty, NativeExchangeOutcome, NativeExchangeRequest,
+};
 pub use observation::{KernelObservationBatch, RawKernelObservation};
 pub use reader::{KernelEndpointFlags, KernelEndpointInfo, KernelObservationReader};
 pub use router::{KernelRouteError, KernelTransportRouter};
@@ -40,6 +44,8 @@ mod tests {
         assert_eq!(size_of::<HfxUapiTransactionResult>(), 104);
         assert_eq!(size_of::<HfxUapiObservation>(), 40);
         assert_eq!(size_of::<HfxUapiReadObservations>(), 1_328);
+        assert_eq!(size_of::<HfxUapiNativeExchangeSubmit>(), 216);
+        assert_eq!(size_of::<HfxUapiNativeExchangeResult>(), 216);
     }
 
     #[test]
@@ -51,6 +57,8 @@ mod tests {
             HFX_UAPI_IOCTL_SUBMIT,
             HFX_UAPI_IOCTL_GET_TRANSACTION_RESULT,
             HFX_UAPI_IOCTL_READ_OBSERVATIONS,
+            HFX_UAPI_IOCTL_SUBMIT_NATIVE_EXCHANGE,
+            HFX_UAPI_IOCTL_GET_NATIVE_EXCHANGE_RESULT,
         ];
         assert!(
             descriptors
@@ -59,5 +67,6 @@ mod tests {
         );
         assert_eq!(HFX_UAPI_IOCTL_MAGIC, 0xb7);
         assert_eq!(HFX_UAPI_ABI_VERSION, 1);
+        assert_eq!(HFX_UAPI_NATIVE_ABI_VERSION, 2);
     }
 }

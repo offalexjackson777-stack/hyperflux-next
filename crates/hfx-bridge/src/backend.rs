@@ -4,31 +4,39 @@ use crate::{
     AuthorizedSession, BackendRequestContext, BridgeRpcBackend, GenerationActivationOutcome,
     GenerationOrchestrationError, GenerationOrchestrator, LifecycleObservation,
     LifecycleObservationError, LifecycleObservationOrchestrator, LifecycleObservationOutcome,
-    ReceiverDisconnectCompletionOutcome, ReceiverDisconnectObservation, ReceiverDisconnectOutcome,
-    ReceiverGenerationObservation, RestorationRuntime, RpcFailure, RuntimeIdentityError,
-    RuntimeIdentityIssuer, RuntimeProfileAuthority, SessionIdentitySource, SessionRegistry,
-    SnapshotProjectionError, SnapshotProjector, SubscriptionRegistry, SubscriptionRegistryError,
+    NativeExchangeJournal, NativeExchangeJournalError, NativeRouteJournal, NativeRouteJournalError,
+    NativeRouteProjectionError, ReceiverDisconnectCompletionOutcome, ReceiverDisconnectObservation,
+    ReceiverDisconnectOutcome, ReceiverGenerationObservation, RestorationRuntime, RpcFailure,
+    RuntimeIdentityError, RuntimeIdentityIssuer, RuntimeProfileAuthority, SessionIdentitySource,
+    SessionRegistry, SnapshotProjectionError, SnapshotProjector, SubscriptionRegistry,
+    SubscriptionRegistryError, project_native_routes,
 };
 use hfx_core::{
     BoundedEventLog, Clock, DesiredEffectError, DiagnosticRegistry, DiagnosticRegistryError,
     DispatchResult, EventDraft, EventLogError, EventSink, LeaseManager, LeaseManagerError,
-    LifecycleLimits, OutcomeJournalError, OutcomeLookup, PersistedStableIntent, ProfileRegistry,
-    ReceiverLifecycleRegistry, ReceiverTransport, RestorationAuthority, RestorationError,
-    RestoreAdvanceResult, RestorePlanResult, RestoreRecord, RestoreTrigger, SessionAuthority,
-    StableCommitOutcome, SubmissionResult, TransactionCoordinator, TransactionCoordinatorError,
-    TransactionQueueError, VolatileEffectRegistry, WallClock,
+    LifecycleLimits, NATIVE_REPORT_BYTES, NativeEndpointLane, NativeTransportDispatch,
+    NativeTransportResult, OutcomeJournalError, OutcomeLookup, PersistedStableIntent,
+    ProfileRegistry, ReceiverLifecycleRegistry, ReceiverTransport, RestorationAuthority,
+    RestorationError, RestoreAdvanceResult, RestorePlanResult, RestoreRecord, RestoreTrigger,
+    SessionAuthority, StableCommitOutcome, SubmissionResult, TransactionCoordinator,
+    TransactionCoordinatorError, TransactionQueueError, VolatileEffectRegistry, WallClock,
 };
 use hfx_domain::{
-    EventKind, FindingId, LeaseDurationMs, MonotonicMs, ProjectionRevision, ProtocolErrorKind,
-    QueueCapacity, ReceiverId, RestoreClaimId, StreamEpoch, StreamId,
+    DeviceKind, EventKind, FindingId, LeaseDurationMs, MonotonicMs, NativeReportHex,
+    NativeRouteAccess, ProjectionRevision, ProtocolErrorKind, QueueCapacity, ReceiverId,
+    ResourceKind, RestoreClaimId, RouteState, StreamEpoch, StreamId,
 };
 use hfx_errors::ErrorCode;
 use hfx_integration_model::project_integration_view;
 use hfx_protocol::{
     BridgeSnapshot, DiagnosticSnapshot, EventBatch, IntegrationView, LeaseRequest, LeaseResult,
-    ReleaseLeaseRequest, RenewLeaseRequest, SubscriptionRequest, TransactionLookup,
-    TransactionRequest, TransactionResult, TransactionUnavailable, validate_lease_request,
+    NativeExchangeMatchedResponse, NativeExchangeNotSent, NativeExchangeOutcome,
+    NativeExchangeRequest, NativeExchangeResult, NativeExchangeUncertain, NativeRouteEventBatch,
+    NativeRouteInventory, ReleaseLeaseRequest, RenewLeaseRequest, SubscriptionRequest,
+    TransactionLookup, TransactionRequest, TransactionResult, TransactionUnavailable,
+    validate_lease_request,
 };
+use sha2::{Digest, Sha256};
 use std::fmt;
 use std::ops::Deref;
 
@@ -83,6 +91,8 @@ pub enum CoreBridgeBackendError {
     Event(EventLogError),
     Diagnostic(DiagnosticRegistryError),
     Subscription(SubscriptionRegistryError),
+    NativeRoute(NativeRouteJournalError),
+    NativeExchange(NativeExchangeJournalError),
 }
 
 impl fmt::Display for CoreBridgeBackendError {
@@ -94,6 +104,8 @@ impl fmt::Display for CoreBridgeBackendError {
             Self::Event(_) => "event stream initialization failed",
             Self::Diagnostic(_) => "diagnostic registry initialization failed",
             Self::Subscription(_) => "subscription registry initialization failed",
+            Self::NativeRoute(_) => "native route journal initialization failed",
+            Self::NativeExchange(_) => "native exchange journal initialization failed",
         })
     }
 }
@@ -117,6 +129,9 @@ pub struct CoreBridgeBackend<C, W, T, R, S> {
     events: BoundedEventLog,
     diagnostics: DiagnosticRegistry,
     subscriptions: SubscriptionRegistry,
+    native_routes: NativeRouteJournal,
+    native_exchanges: NativeExchangeJournal,
+    native_subscriptions: SubscriptionRegistry,
     event_sink: S,
 }
 
@@ -174,6 +189,19 @@ where
         let subscriptions =
             SubscriptionRegistry::new(usize::from(config.subscription_capacity.get()))
                 .map_err(CoreBridgeBackendError::Subscription)?;
+        let native_routes = NativeRouteJournal::new(
+            &config.stream_id,
+            config.stream_epoch,
+            config.projection_revision,
+            usize::from(config.event_capacity.get()),
+        )
+        .map_err(CoreBridgeBackendError::NativeRoute)?;
+        let native_exchanges =
+            NativeExchangeJournal::new(usize::from(config.transaction_capacity.get()))
+                .map_err(CoreBridgeBackendError::NativeExchange)?;
+        let native_subscriptions =
+            SubscriptionRegistry::new(usize::from(config.subscription_capacity.get()))
+                .map_err(CoreBridgeBackendError::Subscription)?;
         Ok(Self {
             config,
             clock,
@@ -189,6 +217,9 @@ where
             events,
             diagnostics,
             subscriptions,
+            native_routes,
+            native_exchanges,
+            native_subscriptions,
             event_sink,
         })
     }
@@ -632,7 +663,9 @@ where
 
     #[must_use]
     pub fn active_subscriptions(&self) -> usize {
-        self.subscriptions.len()
+        self.subscriptions
+            .len()
+            .saturating_add(self.native_subscriptions.len())
     }
 
     fn authorize(context: BackendRequestContext<'_>) -> Result<(), RpcFailure> {
@@ -659,8 +692,23 @@ where
         }
     }
 
-    fn qualify_resources(&self, request: &LeaseRequest) -> Result<(), RpcFailure> {
+    fn synchronize_native_routes(&mut self) -> Result<(), RpcFailure> {
+        let routes = project_native_routes(&self.receivers, &self.profiles)
+            .map_err(native_projection_failure)?;
+        self.native_routes
+            .synchronize(routes, &mut self.identities)
+            .map_err(native_route_failure)
+    }
+
+    fn qualify_resources(&mut self, request: &LeaseRequest) -> Result<(), RpcFailure> {
         validate_lease_request(request).map_err(|_| request_failure())?;
+        if request
+            .resources
+            .iter()
+            .any(|resource| resource.kind == ResourceKind::NativeControl)
+        {
+            self.synchronize_native_routes()?;
+        }
         let profiles = self.profiles.view(&self.receivers);
         for resource in &request.resources {
             if self.transport.current_generation(&resource.receiver_id)
@@ -668,14 +716,38 @@ where
             {
                 return Err(generation_failure());
             }
-            if !self
-                .transport
-                .write_available(&resource.receiver_id, resource.generation_id)
-            {
-                return Err(transport_unavailable_failure());
-            }
-            if !profiles.supports(resource) {
-                return Err(profile_failure());
+            match resource.kind {
+                ResourceKind::Lighting => {
+                    if !self
+                        .transport
+                        .write_available(&resource.receiver_id, resource.generation_id)
+                    {
+                        return Err(transport_unavailable_failure());
+                    }
+                    if !profiles.supports(resource) {
+                        return Err(profile_failure());
+                    }
+                }
+                ResourceKind::NativeControl => {
+                    let route = self
+                        .native_routes
+                        .route_for_resource(resource)
+                        .ok_or_else(profile_failure)?;
+                    if route.access != NativeRouteAccess::Qualified
+                        || route.route_state != RouteState::Available
+                    {
+                        return Err(profile_failure());
+                    }
+                    if !self
+                        .transport
+                        .native_exchange_available(&resource.receiver_id, resource.generation_id)
+                    {
+                        return Err(transport_unavailable_failure());
+                    }
+                }
+                ResourceKind::Settings | ResourceKind::Pairing => {
+                    return Err(profile_failure());
+                }
             }
         }
         Ok(())
@@ -933,10 +1005,126 @@ where
         ))
     }
 
+    fn native_enumerate(
+        &mut self,
+        context: BackendRequestContext<'_>,
+    ) -> Result<NativeRouteInventory, RpcFailure> {
+        Self::authorize(context)?;
+        self.tick()?;
+        self.synchronize_native_routes()?;
+        Ok(self.native_routes.inventory())
+    }
+
+    fn native_transact(
+        &mut self,
+        context: BackendRequestContext<'_>,
+        request: NativeExchangeRequest,
+    ) -> Result<NativeExchangeOutcome, RpcFailure> {
+        Self::authorize_client(context, &request.client_id)?;
+        self.tick()?;
+        if let Some(outcome) = self
+            .native_exchanges
+            .retained(&request)
+            .map_err(native_exchange_failure)?
+        {
+            return Ok(outcome);
+        }
+
+        self.synchronize_native_routes()?;
+        let route = self
+            .native_routes
+            .route_by_token(&request.route_token)
+            .cloned()
+            .ok_or_else(profile_failure)?;
+        if route.access != NativeRouteAccess::Qualified
+            || route.route_state != RouteState::Available
+        {
+            return Err(profile_failure());
+        }
+        let resource = route.resource.clone().ok_or_else(profile_failure)?;
+        if !self.leases.owns(
+            &request.client_id,
+            &request.lease_id,
+            std::slice::from_ref(&resource),
+            self.clock.now(),
+        ) {
+            return Err(ownership_failure());
+        }
+        if self.transport.current_generation(&route.receiver_id) != Some(route.generation_id) {
+            return Err(generation_failure());
+        }
+        if !self
+            .transport
+            .native_exchange_available(&route.receiver_id, route.generation_id)
+        {
+            return Err(transport_unavailable_failure());
+        }
+        if usize::from(route.report_bytes.get()) != NATIVE_REPORT_BYTES {
+            return Err(profile_failure());
+        }
+
+        let endpoint = match route.device_kind {
+            DeviceKind::Mouse => NativeEndpointLane::Pointer,
+            DeviceKind::Keyboard => NativeEndpointLane::Keyboard,
+            _ => return Err(profile_failure()),
+        };
+        let report = decode_native_report(&request.report)?;
+        let route_token_digest = native_route_token_digest(&request.route_token);
+        let dispatch = NativeTransportDispatch {
+            session_id: context.session().session_id.clone(),
+            authorization_epoch: context.session().authorization_epoch,
+            dispatch_nonce: self.identities.dispatch_nonce().map_err(identity_failure)?,
+            receiver_id: route.receiver_id,
+            generation_id: route.generation_id,
+            endpoint,
+            route_token_digest,
+            report,
+            timeout_ms: request.timeout_ms,
+        };
+        let transport_outcome = self.transport.native_exchange(&dispatch);
+        let result = if transport_outcome.dispatch_nonce != dispatch.dispatch_nonce
+            || transport_outcome.route_token_digest != dispatch.route_token_digest
+        {
+            NativeExchangeResult::MayHaveBeenSent(NativeExchangeUncertain {
+                error_kind: ProtocolErrorKind::OutcomeUnknown,
+                finding_id: finding(ErrorCode::HfxTransport002),
+            })
+        } else {
+            protocol_native_result(&transport_outcome.result)?
+        };
+        let outcome = NativeExchangeOutcome {
+            request_id: request.request_id.clone(),
+            route_token: request.route_token.clone(),
+            result,
+        };
+        self.native_exchanges
+            .remember(request, outcome.clone())
+            .map_err(native_exchange_failure)?;
+        Ok(outcome)
+    }
+
+    fn native_watch(
+        &mut self,
+        context: BackendRequestContext<'_>,
+        request: SubscriptionRequest,
+    ) -> Result<NativeRouteEventBatch, RpcFailure> {
+        Self::authorize_client(context, &request.client_id)?;
+        self.tick()?;
+        self.synchronize_native_routes()?;
+        let subscription_id = self
+            .native_subscriptions
+            .resolve(context.session(), &request, &mut self.identities)
+            .map_err(subscription_failure)?;
+        self.native_routes
+            .read(subscription_id, &request)
+            .map_err(native_route_failure)
+    }
+
     fn disconnect(&mut self, session: &AuthorizedSession) -> Result<(), RpcFailure> {
         self.tick()?;
         self.desired_effects.remove_session(&session.session_id);
         let _ = self.subscriptions.revoke_session(session);
+        let _ = self.native_subscriptions.revoke_session(session);
         let released = self.leases.release_client(&session.client_id);
         let mut first_failure = None;
         for grant in released {
@@ -960,8 +1148,110 @@ fn finding(code: ErrorCode) -> FindingId {
         .expect("generated error codes satisfy the finding identity bound")
 }
 
+fn decode_native_report(value: &NativeReportHex) -> Result<[u8; NATIVE_REPORT_BYTES], RpcFailure> {
+    let bytes = value.as_str().as_bytes();
+    if bytes.len() != NATIVE_REPORT_BYTES * 2 {
+        return Err(request_failure());
+    }
+    let mut report = [0_u8; NATIVE_REPORT_BYTES];
+    for (index, pair) in bytes.chunks_exact(2).enumerate() {
+        let high = decode_lower_hex(pair[0]).ok_or_else(request_failure)?;
+        let low = decode_lower_hex(pair[1]).ok_or_else(request_failure)?;
+        report[index] = (high << 4) | low;
+    }
+    Ok(report)
+}
+
+const fn decode_lower_hex(value: u8) -> Option<u8> {
+    match value {
+        b'0'..=b'9' => Some(value - b'0'),
+        b'a'..=b'f' => Some(value - b'a' + 10),
+        _ => None,
+    }
+}
+
+fn encode_native_report(report: &[u8; NATIVE_REPORT_BYTES]) -> Result<NativeReportHex, RpcFailure> {
+    const LOWER_HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut encoded = String::with_capacity(NATIVE_REPORT_BYTES * 2);
+    for byte in report {
+        encoded.push(char::from(LOWER_HEX[usize::from(byte >> 4)]));
+        encoded.push(char::from(LOWER_HEX[usize::from(byte & 0x0f)]));
+    }
+    NativeReportHex::try_from(encoded).map_err(|_| RpcFailure::internal())
+}
+
+fn native_route_token_digest(token: &hfx_domain::NativeRouteToken) -> [u8; 32] {
+    Sha256::digest(token.as_str().as_bytes()).into()
+}
+
+fn protocol_native_result(
+    result: &NativeTransportResult,
+) -> Result<NativeExchangeResult, RpcFailure> {
+    Ok(match result {
+        NativeTransportResult::NotSent { error_kind } => {
+            NativeExchangeResult::NotSent(NativeExchangeNotSent {
+                error_kind: *error_kind,
+                finding_id: native_finding(*error_kind, false),
+            })
+        }
+        NativeTransportResult::MayHaveBeenSent { error_kind } => {
+            NativeExchangeResult::MayHaveBeenSent(NativeExchangeUncertain {
+                error_kind: *error_kind,
+                finding_id: native_finding(*error_kind, true),
+            })
+        }
+        NativeTransportResult::MatchedResponse(response) => {
+            NativeExchangeResult::MatchedResponse(NativeExchangeMatchedResponse {
+                response: encode_native_report(response)?,
+            })
+        }
+    })
+}
+
+fn native_finding(error_kind: ProtocolErrorKind, uncertain: bool) -> FindingId {
+    if uncertain {
+        return finding(ErrorCode::HfxTransport002);
+    }
+    finding(match error_kind {
+        ProtocolErrorKind::IncompatibleVersion => ErrorCode::HfxProtocol001,
+        ProtocolErrorKind::UnsupportedFeature => ErrorCode::HfxProfile001,
+        ProtocolErrorKind::InvalidRequest => ErrorCode::HfxRequest001,
+        ProtocolErrorKind::OwnershipConflict => ErrorCode::HfxOwnership002,
+        ProtocolErrorKind::StaleGeneration => ErrorCode::HfxGeneration001,
+        ProtocolErrorKind::DeadlineExceeded => ErrorCode::HfxDeadline001,
+        ProtocolErrorKind::QueueFull => ErrorCode::HfxQueue001,
+        ProtocolErrorKind::TransportFailure => ErrorCode::HfxTransport001,
+        ProtocolErrorKind::OutcomeUnknown => ErrorCode::HfxOutcome001,
+        ProtocolErrorKind::OutcomeEvicted => ErrorCode::HfxOutcome002,
+        ProtocolErrorKind::InternalFailure => ErrorCode::HfxInternal001,
+    })
+}
+
 fn desired_effect_failure(_error: DesiredEffectError) -> RpcFailure {
     RpcFailure::internal()
+}
+
+fn native_projection_failure(_error: NativeRouteProjectionError) -> RpcFailure {
+    RpcFailure::internal()
+}
+
+fn native_route_failure(error: NativeRouteJournalError) -> RpcFailure {
+    match error {
+        NativeRouteJournalError::SubscriptionMismatch => request_failure(),
+        NativeRouteJournalError::RouteCapacity => queue_failure(),
+        NativeRouteJournalError::InvalidCapacity
+        | NativeRouteJournalError::Identity(_)
+        | NativeRouteJournalError::InvalidStreamIdentity
+        | NativeRouteJournalError::SequenceExhausted
+        | NativeRouteJournalError::DropCounterExhausted => RpcFailure::internal(),
+    }
+}
+
+fn native_exchange_failure(error: NativeExchangeJournalError) -> RpcFailure {
+    match error {
+        NativeExchangeJournalError::RequestIdentityReused => request_failure(),
+        NativeExchangeJournalError::InvalidCapacity => RpcFailure::internal(),
+    }
 }
 
 const fn request_failure() -> RpcFailure {

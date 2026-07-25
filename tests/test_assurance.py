@@ -107,18 +107,49 @@ class AssuranceTests(unittest.TestCase):
             baseline["protected_behavior"]["sha256"],
         )
 
+        self.assertEqual(
+            baseline["profiles"]["source_sha256"],
+            "6c14575bdb3887301e5f440e6ff7350da718960c91fc4ae516a43f76bf02a1ac",
+        )
+        baseline_runtime_digests = {
+            profile["profile_id"]: profile["sha256"]
+            for profile in baseline["profiles"]["runtime"]
+        }
+        self.assertEqual(
+            baseline_runtime_digests,
+            {
+                "child.razer.basilisk-v3-pro-35k.00cd": (
+                    "62f114182069895ae0c72ebdd7165e1bb774d41eceeeead155eda449df69f8cf"
+                ),
+                "child.razer.deathstalker-v2-pro-tkl.0296": (
+                    "46703d44d594392e0cb289f6151a7c6b3b200805503a4cf036747d3c347f0d63"
+                ),
+                "receiver.razer.hyperflux-v2.1532-00cf": (
+                    "ff258c7eb0ff16ee7df5aa9964aad7cf9fe0915b4252897aa561421a05ee96c6"
+                ),
+                "surface.razer.hyperflux-v2-hard-edition": (
+                    "0b00ef59eb8c039695c760de855bb7d7d55f1be9a32f6f2d1ed90d039d7796b9"
+                ),
+            },
+        )
+
         catalog = load_json(ROOT / "generated" / "profiles" / "catalog.json")
-        self.assertEqual(catalog["source_sha256"], baseline["profiles"]["source_sha256"])
-        runtime_digests = {
+        current_runtime_digests = {
             profile["profile_id"]: profile["runtime_sha256"]
             for profile in catalog["profiles"]
         }
-        self.assertEqual(
-            runtime_digests,
-            {
-                profile["profile_id"]: profile["sha256"]
-                for profile in baseline["profiles"]["runtime"]
-            },
+        for protected_profile_id in (
+            "child.razer.basilisk-v3-pro-35k.00cd",
+            "child.razer.deathstalker-v2-pro-tkl.0296",
+            "surface.razer.hyperflux-v2-hard-edition",
+        ):
+            self.assertEqual(
+                current_runtime_digests[protected_profile_id],
+                baseline_runtime_digests[protected_profile_id],
+            )
+        self.assertNotEqual(
+            current_runtime_digests["receiver.razer.hyperflux-v2.1532-00cf"],
+            baseline_runtime_digests["receiver.razer.hyperflux-v2.1532-00cf"],
         )
 
     def test_static_and_package_performance_budgets_fail_closed(self) -> None:

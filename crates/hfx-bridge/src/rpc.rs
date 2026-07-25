@@ -9,8 +9,10 @@ use hfx_domain::{FindingId, HumanMessage, ProtocolErrorKind, RequestId, ServerIn
 use hfx_errors::{ErrorCode, error_by_code};
 use hfx_protocol::{
     BridgeSnapshot, DiagnosticSnapshot, ErrorEnvelope, EventBatch, IntegrationView, LeaseRequest,
-    LeaseResult, ReleaseLeaseRequest, RenewLeaseRequest, RpcError, RpcRequest, RpcResponse,
-    SubscriptionRequest, SuccessEnvelope, TransactionLookup, TransactionRequest, TransactionResult,
+    LeaseResult, NativeExchangeOutcome, NativeExchangeRequest, NativeRouteEventBatch,
+    NativeRouteInventory, ReleaseLeaseRequest, RenewLeaseRequest, RpcError, RpcRequest,
+    RpcResponse, SubscriptionRequest, SuccessEnvelope, TransactionLookup, TransactionRequest,
+    TransactionResult,
 };
 use std::fmt;
 
@@ -227,6 +229,53 @@ pub trait BridgeRpcBackend {
         context: BackendRequestContext<'_>,
     ) -> Result<DiagnosticSnapshot, RpcFailure>;
 
+    /// Enumerates generation-bound receiver child routes without host paths.
+    ///
+    /// # Errors
+    ///
+    /// The default rejects the additive method as unsupported.
+    fn native_enumerate(
+        &mut self,
+        _context: BackendRequestContext<'_>,
+    ) -> Result<NativeRouteInventory, RpcFailure> {
+        Err(RpcFailure::new(
+            ErrorCode::HfxProtocol002,
+            ProtocolErrorKind::UnsupportedFeature,
+        ))
+    }
+
+    /// Performs one exact lease-bound opaque receiver child exchange.
+    ///
+    /// # Errors
+    ///
+    /// The default rejects the additive method as unsupported.
+    fn native_transact(
+        &mut self,
+        _context: BackendRequestContext<'_>,
+        _request: NativeExchangeRequest,
+    ) -> Result<NativeExchangeOutcome, RpcFailure> {
+        Err(RpcFailure::new(
+            ErrorCode::HfxProtocol002,
+            ProtocolErrorKind::UnsupportedFeature,
+        ))
+    }
+
+    /// Reads bounded native-route lifecycle changes after one cursor.
+    ///
+    /// # Errors
+    ///
+    /// The default rejects the additive method as unsupported.
+    fn native_watch(
+        &mut self,
+        _context: BackendRequestContext<'_>,
+        _request: SubscriptionRequest,
+    ) -> Result<NativeRouteEventBatch, RpcFailure> {
+        Err(RpcFailure::new(
+            ErrorCode::HfxProtocol002,
+            ProtocolErrorKind::UnsupportedFeature,
+        ))
+    }
+
     /// Releases client-owned resources and invalidates queued work after the
     /// registry has already revoked session authority.
     ///
@@ -325,6 +374,15 @@ impl ConnectionDispatcher {
             RpcRequest::Diagnostics(_) => backend
                 .diagnostics(context)
                 .map(|result| RpcResponse::DiagnosticsSuccess(self.success(request_id, result))),
+            RpcRequest::NativeEnumerate(_) => backend.native_enumerate(context).map(|result| {
+                RpcResponse::NativeEnumerateSuccess(self.success(request_id, result))
+            }),
+            RpcRequest::NativeTransact(envelope) => backend
+                .native_transact(context, envelope.params)
+                .map(|result| RpcResponse::NativeTransactSuccess(self.success(request_id, result))),
+            RpcRequest::NativeWatch(envelope) => backend
+                .native_watch(context, envelope.params)
+                .map(|result| RpcResponse::NativeWatchSuccess(self.success(request_id, result))),
             RpcRequest::Negotiate(_) => unreachable!("negotiation returned before method routing"),
         };
         response.unwrap_or_else(|failure| self.error_response(Some(error_request_id), failure))

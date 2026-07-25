@@ -727,6 +727,56 @@ private:
     value_type value_;
 };
 
+class NativeExchangeTimeoutMs
+{
+public:
+    using value_type = std::uint16_t;
+    static constexpr value_type minimum = 1;
+    static constexpr value_type maximum = 1000;
+    static constexpr bool wire_as_decimal_string = false;
+
+    [[nodiscard]] static constexpr std::optional<NativeExchangeTimeoutMs> from(value_type value)
+    {
+        if(value < minimum || value > maximum)
+        {
+            return std::nullopt;
+        }
+        return NativeExchangeTimeoutMs(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const NativeExchangeTimeoutMs&, const NativeExchangeTimeoutMs&) = default;
+
+private:
+    explicit constexpr NativeExchangeTimeoutMs(value_type value) : value_(value) {}
+    value_type value_;
+};
+
+class NativeReportByteCount
+{
+public:
+    using value_type = std::uint16_t;
+    static constexpr value_type minimum = 1;
+    static constexpr value_type maximum = 4096;
+    static constexpr bool wire_as_decimal_string = false;
+
+    [[nodiscard]] static constexpr std::optional<NativeReportByteCount> from(value_type value)
+    {
+        if(value < minimum || value > maximum)
+        {
+            return std::nullopt;
+        }
+        return NativeReportByteCount(value);
+    }
+
+    [[nodiscard]] constexpr value_type value() const { return value_; }
+    friend constexpr bool operator==(const NativeReportByteCount&, const NativeReportByteCount&) = default;
+
+private:
+    explicit constexpr NativeReportByteCount(value_type value) : value_(value) {}
+    value_type value_;
+};
+
 class ReceiverId
 {
 public:
@@ -1555,6 +1605,75 @@ private:
     std::string value_;
 };
 
+class NativeRouteToken
+{
+public:
+    static constexpr std::size_t minimum_length = 64;
+    static constexpr std::size_t maximum_length = 64;
+
+    [[nodiscard]] static std::optional<NativeRouteToken> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return NativeRouteToken(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const NativeRouteToken&, const NativeRouteToken&) = default;
+
+private:
+    explicit NativeRouteToken(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class NativeReportHex
+{
+public:
+    static constexpr std::size_t minimum_length = 180;
+    static constexpr std::size_t maximum_length = 180;
+
+    [[nodiscard]] static std::optional<NativeReportHex> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return NativeReportHex(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const NativeReportHex&, const NativeReportHex&) = default;
+
+private:
+    explicit NativeReportHex(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
+class NativeProtocolFamily
+{
+public:
+    static constexpr std::size_t minimum_length = 1;
+    static constexpr std::size_t maximum_length = 64;
+
+    [[nodiscard]] static std::optional<NativeProtocolFamily> from(std::string_view value)
+    {
+        if(value.size() < minimum_length || value.size() > maximum_length)
+        {
+            return std::nullopt;
+        }
+        return NativeProtocolFamily(std::string(value));
+    }
+
+    [[nodiscard]] std::string_view value() const { return value_; }
+    friend bool operator==(const NativeProtocolFamily&, const NativeProtocolFamily&) = default;
+
+private:
+    explicit NativeProtocolFamily(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
 enum class DeviceKind
 {
     Receiver,
@@ -2050,6 +2169,7 @@ enum class ResourceKind
     Lighting,
     Settings,
     Pairing,
+    NativeControl,
 };
 
 [[nodiscard]] constexpr std::string_view to_string(ResourceKind value)
@@ -2059,6 +2179,7 @@ enum class ResourceKind
         case ResourceKind::Lighting: return "lighting";
         case ResourceKind::Settings: return "settings";
         case ResourceKind::Pairing: return "pairing";
+        case ResourceKind::NativeControl: return "native-control";
     }
     return "unknown";
 }
@@ -2551,6 +2672,42 @@ enum class ErrorSeverity
         case ErrorSeverity::Warning: return "warning";
         case ErrorSeverity::Error: return "error";
         case ErrorSeverity::Critical: return "critical";
+    }
+    return "unknown";
+}
+
+enum class NativeRouteAccess
+{
+    Qualified,
+    Candidate,
+    BackendRequired,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(NativeRouteAccess value)
+{
+    switch(value)
+    {
+        case NativeRouteAccess::Qualified: return "qualified";
+        case NativeRouteAccess::Candidate: return "candidate";
+        case NativeRouteAccess::BackendRequired: return "backend-required";
+    }
+    return "unknown";
+}
+
+enum class NativeRouteEventKind
+{
+    Available,
+    Unavailable,
+    GenerationReplaced,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(NativeRouteEventKind value)
+{
+    switch(value)
+    {
+        case NativeRouteEventKind::Available: return "available";
+        case NativeRouteEventKind::Unavailable: return "unavailable";
+        case NativeRouteEventKind::GenerationReplaced: return "generation-replaced";
     }
     return "unknown";
 }

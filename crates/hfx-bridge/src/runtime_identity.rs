@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::{SessionIdentityError, SessionIdentitySource};
-use hfx_domain::{DispatchNonce, LeaseId, RequestId, SubscriptionId, TransactionId};
+use hfx_domain::{
+    DispatchNonce, LeaseId, NativeRouteToken, RequestId, SubscriptionId, TransactionId,
+};
+use sha2::{Digest, Sha256};
 use std::fmt;
 
 const PROCESS_PREFIX_BYTES: usize = 16;
@@ -107,6 +110,32 @@ impl RuntimeIdentityIssuer {
     pub fn dispatch_nonce(&mut self) -> Result<DispatchNonce, RuntimeIdentityError> {
         let sequence = self.take_sequence()?;
         DispatchNonce::try_from(sequence)
+            .map_err(|_| RuntimeIdentityError::InvalidGeneratedIdentity)
+    }
+
+    /// Issues one opaque process-local native route token.
+    ///
+    /// The token contains no host path or hardware serial. Its digest binds a
+    /// kernel exchange while lease and generation checks remain the authority.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error only after the finite process sequence is exhausted or
+    /// if the generated token violates the domain contract.
+    pub fn native_route_token(&mut self) -> Result<NativeRouteToken, RuntimeIdentityError> {
+        let sequence = self.take_sequence()?;
+        let mut hasher = Sha256::new();
+        hasher.update(b"hyperflux-native-route-token-v1\0");
+        hasher.update(self.process_prefix.as_bytes());
+        hasher.update(sequence.to_be_bytes());
+        let digest = hasher.finalize();
+        let mut value = String::with_capacity(64);
+        for byte in digest {
+            use std::fmt::Write as _;
+            write!(value, "{byte:02x}")
+                .map_err(|_| RuntimeIdentityError::InvalidGeneratedIdentity)?;
+        }
+        NativeRouteToken::try_from(value)
             .map_err(|_| RuntimeIdentityError::InvalidGeneratedIdentity)
     }
 

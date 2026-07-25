@@ -43,6 +43,55 @@ class KernelDriverContracts(unittest.TestCase):
         self.assertIn("report->id", callback)
         self.assertNotIn("data[0]", callback)
 
+    def test_native_exchange_transport_is_child_model_agnostic(self) -> None:
+        source = (ROOT / "driver/kernel/hyperflux-next-native.c").read_text(
+            encoding="utf-8"
+        ).lower()
+        for forbidden in (
+            "0x00cd",
+            "0x0296",
+            "basilisk",
+            "deathstalker",
+        ):
+            self.assertNotIn(forbidden, source)
+
+    def test_native_exchange_sends_once_then_retries_only_get(self) -> None:
+        source = (ROOT / "driver/kernel/hyperflux-next-native.c").read_text(
+            encoding="utf-8"
+        )
+        start = source.index("static int hfx_native_record_dispatch")
+        end = source.index("static int hfx_native_reserve", start)
+        dispatch = source[start:end]
+        loop_start = dispatch.index("for (attempt")
+        response_loop = dispatch[loop_start:]
+
+        self.assertEqual(dispatch.count("hfx_native_usb_set("), 1)
+        self.assertNotIn("hfx_native_usb_set(", response_loop)
+        self.assertEqual(response_loop.count("hfx_native_usb_get("), 1)
+        self.assertIn("native_max_response_attempts", response_loop)
+        self.assertIn("native_response_retry_delay_us", response_loop)
+
+    def test_native_exchange_uses_declarative_receiver_profile(self) -> None:
+        source = (ROOT / "driver/kernel/hyperflux-next-native.c").read_text(
+            encoding="utf-8"
+        )
+        for profile_field in (
+            "profile->native_report_bytes",
+            "profile->native_set_report_index",
+            "profile->native_response_report_index",
+            "profile->native_initial_response_delay_us",
+            "profile->native_response_retry_delay_us",
+            "profile->native_max_response_attempts",
+            "profile->native_match_ranges",
+        ):
+            self.assertIn(profile_field, source)
+
+        table = (
+            ROOT / "driver/kernel/generated/hyperflux_receiver_profiles.inc"
+        ).read_text(encoding="utf-8")
+        self.assertIn("HFX_NATIVE_EXCHANGE_RAZER_FEATURE_REPORT_V1", table)
+        self.assertIn(".native_match_ranges", table)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -74,6 +74,26 @@ PASSIVE_KEYS = {
     "route",
     "report_implies_route_available",
 }
+RECEIVER_TRANSPORT_KEYS = {
+    "backend",
+    "backend_id",
+    "maximum_targets",
+    "generation_bound",
+    "application_raw_frames",
+    "pairing_inventory",
+    "native_exchange",
+}
+NATIVE_EXCHANGE_KEYS = {
+    "protocol_family",
+    "report_bytes",
+    "set_report_index",
+    "response_report_index",
+    "initial_response_delay_us",
+    "response_retry_delay_us",
+    "max_response_attempts",
+    "match_ranges",
+}
+NATIVE_MATCH_RANGE_KEYS = {"offset", "length"}
 LIFECYCLE_KEYS = {
     "power_off_departure_evidence",
     "return_policy_id",
@@ -515,6 +535,55 @@ def _raw_values(value: object, label: str) -> list[int]:
     return value
 
 
+def _validate_native_exchange(profile_id: str, value: object) -> None:
+    if not isinstance(value, dict):
+        raise ModelError(f"{profile_id}: native exchange must be an object")
+    _expect_keys(value, NATIVE_EXCHANGE_KEYS, f"{profile_id} native exchange")
+    missing = sorted(NATIVE_EXCHANGE_KEYS - set(value))
+    if missing:
+        raise ModelError(f"{profile_id}: incomplete native exchange: {', '.join(missing)}")
+    if value["protocol_family"] != "razer-feature-report-v1":
+        raise ModelError(f"{profile_id}: unsupported native exchange protocol")
+    if value["report_bytes"] != 90:
+        raise ModelError(f"{profile_id}: native exchange report must be exactly 90 bytes")
+    integer_bounds = {
+        "set_report_index": (0, 255),
+        "response_report_index": (0, 255),
+        "initial_response_delay_us": (0, 100_000),
+        "response_retry_delay_us": (1, 100_000),
+        "max_response_attempts": (1, 16),
+    }
+    for key, (minimum, maximum) in integer_bounds.items():
+        item = value[key]
+        if isinstance(item, bool) or not isinstance(item, int) or not minimum <= item <= maximum:
+            raise ModelError(f"{profile_id}: native exchange {key} is out of bounds")
+    ranges = value["match_ranges"]
+    if not isinstance(ranges, list) or not 1 <= len(ranges) <= 4:
+        raise ModelError(f"{profile_id}: native exchange needs one to four match ranges")
+    previous_end = 0
+    for index, item in enumerate(ranges):
+        if not isinstance(item, dict):
+            raise ModelError(f"{profile_id}: native match range must be an object")
+        _expect_keys(item, NATIVE_MATCH_RANGE_KEYS, f"{profile_id} native match range")
+        if set(item) != NATIVE_MATCH_RANGE_KEYS:
+            raise ModelError(f"{profile_id}: native match range is incomplete")
+        offset = item["offset"]
+        length = item["length"]
+        if (
+            isinstance(offset, bool)
+            or not isinstance(offset, int)
+            or isinstance(length, bool)
+            or not isinstance(length, int)
+            or offset < 0
+            or length <= 0
+            or offset + length > value["report_bytes"]
+        ):
+            raise ModelError(f"{profile_id}: native match range is out of bounds")
+        if index and offset < previous_end:
+            raise ModelError(f"{profile_id}: native match ranges must be sorted and disjoint")
+        previous_end = offset + length
+
+
 def _validate_passive(
     profile: dict[str, Any], lifecycle_policy_index: dict[str, dict[str, Any]]
 ) -> None:
@@ -525,14 +594,7 @@ def _validate_passive(
     if kind == "receiver":
         _expect_keys(
             transport,
-            {
-                "backend",
-                "backend_id",
-                "maximum_targets",
-                "generation_bound",
-                "application_raw_frames",
-                "pairing_inventory",
-            },
+            RECEIVER_TRANSPORT_KEYS,
             f"{profile['profile_id']} receiver transport",
         )
         inventory = transport.get("pairing_inventory")
@@ -550,6 +612,9 @@ def _validate_passive(
                 raise ModelError(
                     f"{profile['profile_id']}: unsupported pairing inventory decoder"
                 )
+        native_exchange = transport.get("native_exchange")
+        if native_exchange is not None:
+            _validate_native_exchange(profile["profile_id"], native_exchange)
         return
     if kind != "child":
         if transport:

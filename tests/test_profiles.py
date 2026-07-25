@@ -88,6 +88,35 @@ class ProfileCompilerTests(unittest.TestCase):
         self.assertEqual(len(digests), len(set(digests)))
         self.assertTrue(all(len(digest) == 64 for digest in digests))
 
+    def test_receiver_native_exchange_is_declarative_bounded_and_digest_bound(self) -> None:
+        profiles, capabilities, claims = self.validation_copies()
+        receiver = next(profile for profile in profiles if profile["kind"] == "receiver")
+        native = receiver["transport"]["native_exchange"]
+        self.assertEqual(native["protocol_family"], "razer-feature-report-v1")
+        self.assertEqual(native["report_bytes"], 90)
+        self.assertEqual(native["set_report_index"], 0)
+        self.assertEqual(native["response_report_index"], 0)
+        self.assertEqual(native["match_ranges"], [{"offset": 2, "length": 2}, {"offset": 6, "length": 2}])
+        before = self.runtime_profile_digest(receiver, capabilities)
+        native["response_retry_delay_us"] += 1
+        self.validate_profiles(profiles, capabilities, claims)
+        self.assertNotEqual(self.runtime_profile_digest(receiver, capabilities), before)
+
+        profiles, capabilities, claims = self.validation_copies()
+        receiver = next(profile for profile in profiles if profile["kind"] == "receiver")
+        receiver["transport"]["native_exchange"]["match_ranges"][1] = {
+            "offset": 3,
+            "length": 5,
+        }
+        with self.assertRaisesRegex(ModelError, "sorted and disjoint"):
+            self.validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        receiver = next(profile for profile in profiles if profile["kind"] == "receiver")
+        receiver["transport"]["native_exchange"]["report_bytes"] = 89
+        with self.assertRaisesRegex(ModelError, "exactly 90 bytes"):
+            self.validate_profiles(profiles, capabilities, claims)
+
     def test_runtime_digest_is_profile_local_and_ignores_presentation_only_edits(self) -> None:
         profiles, capabilities, _ = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")

@@ -19,11 +19,11 @@ use hfx_domain::{
     ActivityState, ApplyOutcome, ClientId, ClientName, ColorChannel, ComponentVersion,
     ConnectionMode, DeliveredFrameCount, DeviceApplicationState, DeviceKind, EventBatchLimit,
     EventKind, EvidenceClaimId, EvidenceConfidence, FrameIndex, FreshnessState, GenerationId,
-    LeaseDurationMs, LogicalDeviceId, MonotonicMs, PairingState, PowerState, ProductId,
-    ProjectionRevision, ProtocolErrorKind, ProtocolFeatureId, ProtocolVersion, QueueCapacity,
-    ReceiverId, RequestId, ResourceKind, RouteKind, RouteState, SequenceNumber, ServerInstanceId,
-    SideEffectCertainty, SleepState, StableLightingMode, StreamEpoch, StreamId, TransactionClass,
-    TransactionId, TransactionState, VendorId, WallClockUnixMs,
+    LeaseDurationMs, LogicalDeviceId, MonotonicMs, NativeRouteAccess, PairingState, PowerState,
+    ProductId, ProjectionRevision, ProtocolErrorKind, ProtocolFeatureId, ProtocolVersion,
+    QueueCapacity, ReceiverId, RequestId, ResourceKind, RouteKind, RouteState, SequenceNumber,
+    ServerInstanceId, SideEffectCertainty, SleepState, StableLightingMode, StreamEpoch, StreamId,
+    TransactionClass, TransactionId, TransactionState, VendorId, WallClockUnixMs,
 };
 use hfx_protocol::{
     DeviceProfileBinding, EmptyRequest, EventCursor, LeaseRequest, LeaseResult, LightingFrame,
@@ -434,6 +434,37 @@ fn negotiate<R: RestorationRuntime>(
     envelope.result
 }
 
+fn negotiate_native<R: RestorationRuntime>(
+    dispatcher: &mut ConnectionDispatcher,
+    identities: &mut DeterministicIdentities,
+    sessions: &mut SessionRegistry,
+    backend: &mut TestBackend<R>,
+) -> hfx_protocol::ServerHello {
+    let response = dispatcher.dispatch(
+        RpcRequest::Negotiate(NegotiationRequestEnvelope {
+            request_id: text::<RequestId>("request-negotiate-native"),
+            params: hfx_protocol::ClientHello {
+                client_id: text::<ClientId>("client-1"),
+                client_name: text::<ClientName>("Core native backend test"),
+                minimum_version: ProtocolVersion::try_from(7_u16).expect("version is canonical"),
+                maximum_version: ProtocolVersion::try_from(7_u16).expect("version is canonical"),
+                required_features: vec![
+                    text::<ProtocolFeatureId>("native-receiver-tunnel"),
+                    text::<ProtocolFeatureId>("ownership-leases"),
+                ],
+                optional_features: Vec::new(),
+            },
+        }),
+        identities,
+        sessions,
+        backend,
+    );
+    let RpcResponse::NegotiateSuccess(envelope) = response else {
+        panic!("native negotiation must succeed: {response:?}");
+    };
+    envelope.result
+}
+
 fn resource(device_id: &str, generation_id: u64) -> ResourceKey {
     ResourceKey {
         receiver_id: text("receiver-1"),
@@ -505,6 +536,73 @@ fn assert_error(response: RpcResponse, finding: &str, kind: ProtocolErrorKind) {
     };
     assert_eq!(envelope.error.finding_id.as_str(), finding);
     assert_eq!(envelope.error.kind, kind);
+}
+
+#[test]
+fn production_backend_enumerates_exact_candidates_without_granting_native_authority() {
+    let mut backend = backend();
+    let mut sessions = SessionRegistry::new(
+        QueueCapacity::try_from(4_u16).expect("session capacity is canonical"),
+    );
+    let mut dispatcher = new_dispatcher();
+    let mut identities = DeterministicIdentities(1);
+    let hello = negotiate_native(
+        &mut dispatcher,
+        &mut identities,
+        &mut sessions,
+        &mut backend,
+    );
+
+    let response = dispatcher.dispatch(
+        RpcRequest::NativeEnumerate(SessionRequestEnvelope {
+            request_id: text("request-native-enumerate"),
+            protocol_session_id: hello.protocol_session_id.clone(),
+            negotiation_token: hello.negotiation_token.clone(),
+            params: EmptyRequest {},
+        }),
+        &mut identities,
+        &mut sessions,
+        &mut backend,
+    );
+    let RpcResponse::NativeEnumerateSuccess(envelope) = response else {
+        panic!("native enumeration must succeed: {response:?}");
+    };
+    assert_eq!(envelope.result.routes.len(), 1);
+    let route = &envelope.result.routes[0];
+    assert_eq!(route.receiver_id.as_str(), "receiver-1");
+    assert_eq!(route.device_id.as_str(), "mouse");
+    assert_eq!(route.endpoint_id.as_str(), "mouse-hyperflux");
+    assert_eq!(route.vendor_id.get(), 0x1532);
+    assert_eq!(route.product_id.get(), 0x00cd);
+    assert_eq!(route.access, NativeRouteAccess::Candidate);
+    assert!(route.route_token.is_none());
+    assert!(route.resource.is_none());
+
+    let response = dispatcher.dispatch(
+        RpcRequest::AcquireLease(SessionRequestEnvelope {
+            request_id: text("request-native-lease"),
+            protocol_session_id: hello.protocol_session_id,
+            negotiation_token: hello.negotiation_token,
+            params: lease_request(
+                "request-native-lease",
+                ResourceKey {
+                    receiver_id: text("receiver-1"),
+                    generation_id: generation(1),
+                    device_id: text("mouse"),
+                    kind: ResourceKind::NativeControl,
+                },
+            ),
+        }),
+        &mut identities,
+        &mut sessions,
+        &mut backend,
+    );
+    assert_error(
+        response,
+        "HFX-PROFILE-001",
+        ProtocolErrorKind::UnsupportedFeature,
+    );
+    assert!(backend.transport().dispatches.is_empty());
 }
 
 #[test]

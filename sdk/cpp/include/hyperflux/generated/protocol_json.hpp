@@ -273,6 +273,60 @@ template<>
 [[nodiscard]] Json encode<::hyperflux::IntegrationView>(const ::hyperflux::IntegrationView& value);
 
 template<>
+[[nodiscard]] ::hyperflux::NativeRoute decode<::hyperflux::NativeRoute>(const Json& value);
+
+template<>
+[[nodiscard]] Json encode<::hyperflux::NativeRoute>(const ::hyperflux::NativeRoute& value);
+
+template<>
+[[nodiscard]] ::hyperflux::NativeRouteInventory decode<::hyperflux::NativeRouteInventory>(const Json& value);
+
+template<>
+[[nodiscard]] Json encode<::hyperflux::NativeRouteInventory>(const ::hyperflux::NativeRouteInventory& value);
+
+template<>
+[[nodiscard]] ::hyperflux::NativeExchangeRequest decode<::hyperflux::NativeExchangeRequest>(const Json& value);
+
+template<>
+[[nodiscard]] Json encode<::hyperflux::NativeExchangeRequest>(const ::hyperflux::NativeExchangeRequest& value);
+
+template<>
+[[nodiscard]] ::hyperflux::NativeExchangeNotSent decode<::hyperflux::NativeExchangeNotSent>(const Json& value);
+
+template<>
+[[nodiscard]] Json encode<::hyperflux::NativeExchangeNotSent>(const ::hyperflux::NativeExchangeNotSent& value);
+
+template<>
+[[nodiscard]] ::hyperflux::NativeExchangeUncertain decode<::hyperflux::NativeExchangeUncertain>(const Json& value);
+
+template<>
+[[nodiscard]] Json encode<::hyperflux::NativeExchangeUncertain>(const ::hyperflux::NativeExchangeUncertain& value);
+
+template<>
+[[nodiscard]] ::hyperflux::NativeExchangeMatchedResponse decode<::hyperflux::NativeExchangeMatchedResponse>(const Json& value);
+
+template<>
+[[nodiscard]] Json encode<::hyperflux::NativeExchangeMatchedResponse>(const ::hyperflux::NativeExchangeMatchedResponse& value);
+
+template<>
+[[nodiscard]] ::hyperflux::NativeExchangeOutcome decode<::hyperflux::NativeExchangeOutcome>(const Json& value);
+
+template<>
+[[nodiscard]] Json encode<::hyperflux::NativeExchangeOutcome>(const ::hyperflux::NativeExchangeOutcome& value);
+
+template<>
+[[nodiscard]] ::hyperflux::NativeRouteEvent decode<::hyperflux::NativeRouteEvent>(const Json& value);
+
+template<>
+[[nodiscard]] Json encode<::hyperflux::NativeRouteEvent>(const ::hyperflux::NativeRouteEvent& value);
+
+template<>
+[[nodiscard]] ::hyperflux::NativeRouteEventBatch decode<::hyperflux::NativeRouteEventBatch>(const Json& value);
+
+template<>
+[[nodiscard]] Json encode<::hyperflux::NativeRouteEventBatch>(const ::hyperflux::NativeRouteEventBatch& value);
+
+template<>
 [[nodiscard]] ::hyperflux::RpcError decode<::hyperflux::RpcError>(const Json& value);
 
 template<>
@@ -295,6 +349,12 @@ template<>
 
 template<>
 [[nodiscard]] Json encode<::hyperflux::ControllerOwnership>(const ::hyperflux::ControllerOwnership& value);
+
+template<>
+[[nodiscard]] ::hyperflux::NativeExchangeResult decode<::hyperflux::NativeExchangeResult>(const Json& value);
+
+template<>
+[[nodiscard]] Json encode<::hyperflux::NativeExchangeResult>(const ::hyperflux::NativeExchangeResult& value);
 
 template<>
 [[nodiscard]] ::hyperflux::NegotiationRequestEnvelope decode<::hyperflux::NegotiationRequestEnvelope>(const Json& value);
@@ -1452,6 +1512,221 @@ template<>
 }
 
 template<>
+[[nodiscard]] inline ::hyperflux::NativeRoute decode<::hyperflux::NativeRoute>(const Json& value)
+{
+    require_object(value, {"receiver_id", "generation_id", "device_id", "endpoint_id", "device_kind", "vendor_id", "product_id", "route_state", "access", "protocol_family", "report_bytes", "route_token", "resource"});
+    return ::hyperflux::NativeRoute {
+        decode<::hyperflux::ReceiverId>(required_field(value, "receiver_id")),
+        decode<::hyperflux::GenerationId>(required_field(value, "generation_id")),
+        decode<::hyperflux::LogicalDeviceId>(required_field(value, "device_id")),
+        decode<::hyperflux::EndpointId>(required_field(value, "endpoint_id")),
+        decode<::hyperflux::DeviceKind>(required_field(value, "device_kind")),
+        decode<::hyperflux::VendorId>(required_field(value, "vendor_id")),
+        decode<::hyperflux::ProductId>(required_field(value, "product_id")),
+        decode<::hyperflux::RouteState>(required_field(value, "route_state")),
+        decode<::hyperflux::NativeRouteAccess>(required_field(value, "access")),
+        decode<::hyperflux::NativeProtocolFamily>(required_field(value, "protocol_family")),
+        decode<::hyperflux::NativeReportByteCount>(required_field(value, "report_bytes")),
+        decode_optional_field<::hyperflux::NativeRouteToken>(value, "route_token"),
+        decode_optional_field<::hyperflux::ResourceKey>(value, "resource"),
+    };
+}
+
+template<>
+[[nodiscard]] inline Json encode<::hyperflux::NativeRoute>(const ::hyperflux::NativeRoute& value)
+{
+    Json result = Json::object();
+    result["receiver_id"] = encode(value.receiver_id);
+    result["generation_id"] = encode(value.generation_id);
+    result["device_id"] = encode(value.device_id);
+    result["endpoint_id"] = encode(value.endpoint_id);
+    result["device_kind"] = encode(value.device_kind);
+    result["vendor_id"] = encode(value.vendor_id);
+    result["product_id"] = encode(value.product_id);
+    result["route_state"] = encode(value.route_state);
+    result["access"] = encode(value.access);
+    result["protocol_family"] = encode(value.protocol_family);
+    result["report_bytes"] = encode(value.report_bytes);
+    result["route_token"] = value.route_token.has_value() ? encode(*value.route_token) : Json(nullptr);
+    result["resource"] = value.resource.has_value() ? encode(*value.resource) : Json(nullptr);
+    return result;
+}
+
+template<>
+[[nodiscard]] inline ::hyperflux::NativeRouteInventory decode<::hyperflux::NativeRouteInventory>(const Json& value)
+{
+    require_object(value, {"cursor", "routes"});
+    return ::hyperflux::NativeRouteInventory {
+        decode<::hyperflux::EventCursor>(required_field(value, "cursor")),
+        decode_vector<::hyperflux::NativeRoute>(required_field(value, "routes"), 32),
+    };
+}
+
+template<>
+[[nodiscard]] inline Json encode<::hyperflux::NativeRouteInventory>(const ::hyperflux::NativeRouteInventory& value)
+{
+    Json result = Json::object();
+    result["cursor"] = encode(value.cursor);
+    result["routes"] = encode_vector(value.routes);
+    return result;
+}
+
+template<>
+[[nodiscard]] inline ::hyperflux::NativeExchangeRequest decode<::hyperflux::NativeExchangeRequest>(const Json& value)
+{
+    require_object(value, {"request_id", "client_id", "lease_id", "route_token", "report", "timeout_ms"});
+    return ::hyperflux::NativeExchangeRequest {
+        decode<::hyperflux::RequestId>(required_field(value, "request_id")),
+        decode<::hyperflux::ClientId>(required_field(value, "client_id")),
+        decode<::hyperflux::LeaseId>(required_field(value, "lease_id")),
+        decode<::hyperflux::NativeRouteToken>(required_field(value, "route_token")),
+        decode<::hyperflux::NativeReportHex>(required_field(value, "report")),
+        decode<::hyperflux::NativeExchangeTimeoutMs>(required_field(value, "timeout_ms")),
+    };
+}
+
+template<>
+[[nodiscard]] inline Json encode<::hyperflux::NativeExchangeRequest>(const ::hyperflux::NativeExchangeRequest& value)
+{
+    Json result = Json::object();
+    result["request_id"] = encode(value.request_id);
+    result["client_id"] = encode(value.client_id);
+    result["lease_id"] = encode(value.lease_id);
+    result["route_token"] = encode(value.route_token);
+    result["report"] = encode(value.report);
+    result["timeout_ms"] = encode(value.timeout_ms);
+    return result;
+}
+
+template<>
+[[nodiscard]] inline ::hyperflux::NativeExchangeNotSent decode<::hyperflux::NativeExchangeNotSent>(const Json& value)
+{
+    require_object(value, {"error_kind", "finding_id"});
+    return ::hyperflux::NativeExchangeNotSent {
+        decode<::hyperflux::ProtocolErrorKind>(required_field(value, "error_kind")),
+        decode<::hyperflux::FindingId>(required_field(value, "finding_id")),
+    };
+}
+
+template<>
+[[nodiscard]] inline Json encode<::hyperflux::NativeExchangeNotSent>(const ::hyperflux::NativeExchangeNotSent& value)
+{
+    Json result = Json::object();
+    result["error_kind"] = encode(value.error_kind);
+    result["finding_id"] = encode(value.finding_id);
+    return result;
+}
+
+template<>
+[[nodiscard]] inline ::hyperflux::NativeExchangeUncertain decode<::hyperflux::NativeExchangeUncertain>(const Json& value)
+{
+    require_object(value, {"error_kind", "finding_id"});
+    return ::hyperflux::NativeExchangeUncertain {
+        decode<::hyperflux::ProtocolErrorKind>(required_field(value, "error_kind")),
+        decode<::hyperflux::FindingId>(required_field(value, "finding_id")),
+    };
+}
+
+template<>
+[[nodiscard]] inline Json encode<::hyperflux::NativeExchangeUncertain>(const ::hyperflux::NativeExchangeUncertain& value)
+{
+    Json result = Json::object();
+    result["error_kind"] = encode(value.error_kind);
+    result["finding_id"] = encode(value.finding_id);
+    return result;
+}
+
+template<>
+[[nodiscard]] inline ::hyperflux::NativeExchangeMatchedResponse decode<::hyperflux::NativeExchangeMatchedResponse>(const Json& value)
+{
+    require_object(value, {"response"});
+    return ::hyperflux::NativeExchangeMatchedResponse {
+        decode<::hyperflux::NativeReportHex>(required_field(value, "response")),
+    };
+}
+
+template<>
+[[nodiscard]] inline Json encode<::hyperflux::NativeExchangeMatchedResponse>(const ::hyperflux::NativeExchangeMatchedResponse& value)
+{
+    Json result = Json::object();
+    result["response"] = encode(value.response);
+    return result;
+}
+
+template<>
+[[nodiscard]] inline ::hyperflux::NativeExchangeOutcome decode<::hyperflux::NativeExchangeOutcome>(const Json& value)
+{
+    require_object(value, {"request_id", "route_token", "result"});
+    return ::hyperflux::NativeExchangeOutcome {
+        decode<::hyperflux::RequestId>(required_field(value, "request_id")),
+        decode<::hyperflux::NativeRouteToken>(required_field(value, "route_token")),
+        decode<::hyperflux::NativeExchangeResult>(required_field(value, "result")),
+    };
+}
+
+template<>
+[[nodiscard]] inline Json encode<::hyperflux::NativeExchangeOutcome>(const ::hyperflux::NativeExchangeOutcome& value)
+{
+    Json result = Json::object();
+    result["request_id"] = encode(value.request_id);
+    result["route_token"] = encode(value.route_token);
+    result["result"] = encode(value.result);
+    return result;
+}
+
+template<>
+[[nodiscard]] inline ::hyperflux::NativeRouteEvent decode<::hyperflux::NativeRouteEvent>(const Json& value)
+{
+    require_object(value, {"sequence", "kind", "route"});
+    return ::hyperflux::NativeRouteEvent {
+        decode<::hyperflux::SequenceNumber>(required_field(value, "sequence")),
+        decode<::hyperflux::NativeRouteEventKind>(required_field(value, "kind")),
+        decode<::hyperflux::NativeRoute>(required_field(value, "route")),
+    };
+}
+
+template<>
+[[nodiscard]] inline Json encode<::hyperflux::NativeRouteEvent>(const ::hyperflux::NativeRouteEvent& value)
+{
+    Json result = Json::object();
+    result["sequence"] = encode(value.sequence);
+    result["kind"] = encode(value.kind);
+    result["route"] = encode(value.route);
+    return result;
+}
+
+template<>
+[[nodiscard]] inline ::hyperflux::NativeRouteEventBatch decode<::hyperflux::NativeRouteEventBatch>(const Json& value)
+{
+    require_object(value, {"subscription_id", "next_cursor", "events", "oldest_available", "latest_available", "dropped_events", "cursor_gap", "has_more"});
+    return ::hyperflux::NativeRouteEventBatch {
+        decode<::hyperflux::SubscriptionId>(required_field(value, "subscription_id")),
+        decode<::hyperflux::EventCursor>(required_field(value, "next_cursor")),
+        decode_vector<::hyperflux::NativeRouteEvent>(required_field(value, "events"), 256),
+        decode<::hyperflux::SequenceNumber>(required_field(value, "oldest_available")),
+        decode<::hyperflux::SequenceNumber>(required_field(value, "latest_available")),
+        decode<::hyperflux::DroppedEventCount>(required_field(value, "dropped_events")),
+        decode<bool>(required_field(value, "cursor_gap")),
+        decode<bool>(required_field(value, "has_more")),
+    };
+}
+
+template<>
+[[nodiscard]] inline Json encode<::hyperflux::NativeRouteEventBatch>(const ::hyperflux::NativeRouteEventBatch& value)
+{
+    Json result = Json::object();
+    result["subscription_id"] = encode(value.subscription_id);
+    result["next_cursor"] = encode(value.next_cursor);
+    result["events"] = encode_vector(value.events);
+    result["oldest_available"] = encode(value.oldest_available);
+    result["latest_available"] = encode(value.latest_available);
+    result["dropped_events"] = encode(value.dropped_events);
+    result["cursor_gap"] = encode(value.cursor_gap);
+    result["has_more"] = encode(value.has_more);
+    return result;
+}
+
+template<>
 [[nodiscard]] inline ::hyperflux::RpcError decode<::hyperflux::RpcError>(const Json& value)
 {
     require_object(value, {"request_id", "kind", "message", "finding_id"});
@@ -1610,6 +1885,51 @@ template<>
 }
 
 template<>
+[[nodiscard]] inline ::hyperflux::NativeExchangeResult decode<::hyperflux::NativeExchangeResult>(const Json& value)
+{
+    require_object(value, {"certainty", "detail"});
+    const auto& tag_value = required_field(value, "certainty");
+    if(!tag_value.is_string())
+    {
+        throw CodecError("NativeExchangeResult tag must be a string");
+    }
+    const auto tag = tag_value.get<std::string>();
+    if(tag == "not-sent")
+    {
+        return ::hyperflux::NativeExchangeResult {::hyperflux::NativeExchangeResultNotSent {
+            decode<::hyperflux::NativeExchangeNotSent>(required_field(value, "detail"))
+        }};
+    }
+    if(tag == "may-have-been-sent")
+    {
+        return ::hyperflux::NativeExchangeResult {::hyperflux::NativeExchangeResultMayHaveBeenSent {
+            decode<::hyperflux::NativeExchangeUncertain>(required_field(value, "detail"))
+        }};
+    }
+    if(tag == "matched-response")
+    {
+        return ::hyperflux::NativeExchangeResult {::hyperflux::NativeExchangeResultMatchedResponse {
+            decode<::hyperflux::NativeExchangeMatchedResponse>(required_field(value, "detail"))
+        }};
+    }
+    throw CodecError("unknown NativeExchangeResult tag");
+}
+
+template<>
+[[nodiscard]] inline Json encode<::hyperflux::NativeExchangeResult>(const ::hyperflux::NativeExchangeResult& value)
+{
+    return std::visit(
+        [](const auto& alternative) {
+            using Alternative = std::decay_t<decltype(alternative)>;
+            return Json {
+                {"certainty", std::string(Alternative::certainty)},
+                {"detail", encode(alternative.detail)},
+            };
+        },
+        value);
+}
+
+template<>
 [[nodiscard]] inline ::hyperflux::NegotiationRequestEnvelope decode<::hyperflux::NegotiationRequestEnvelope>(const Json& value)
 {
     require_object(value, {"request_id", "params"});
@@ -1747,6 +2067,18 @@ template<>
     {
         return ::hyperflux::RpcRequest {::hyperflux::RpcRequestDiagnostics {decode_session_request<::hyperflux::EmptyRequest>(envelope)}};
     }
+    if(method == "native-enumerate")
+    {
+        return ::hyperflux::RpcRequest {::hyperflux::RpcRequestNativeEnumerate {decode_session_request<::hyperflux::EmptyRequest>(envelope)}};
+    }
+    if(method == "native-transact")
+    {
+        return ::hyperflux::RpcRequest {::hyperflux::RpcRequestNativeTransact {decode_session_request<::hyperflux::NativeExchangeRequest>(envelope)}};
+    }
+    if(method == "native-watch")
+    {
+        return ::hyperflux::RpcRequest {::hyperflux::RpcRequestNativeWatch {decode_session_request<::hyperflux::SubscriptionRequest>(envelope)}};
+    }
     throw CodecError("unknown RPC request method");
 }
 
@@ -1842,6 +2174,24 @@ template<>
     {
         return ::hyperflux::RpcResponse {::hyperflux::RpcResponseDiagnosticsSuccess {
             decode_success<::hyperflux::DiagnosticSnapshot>(envelope)
+        }};
+    }
+    if(type == "native-enumerate-success")
+    {
+        return ::hyperflux::RpcResponse {::hyperflux::RpcResponseNativeEnumerateSuccess {
+            decode_success<::hyperflux::NativeRouteInventory>(envelope)
+        }};
+    }
+    if(type == "native-transact-success")
+    {
+        return ::hyperflux::RpcResponse {::hyperflux::RpcResponseNativeTransactSuccess {
+            decode_success<::hyperflux::NativeExchangeOutcome>(envelope)
+        }};
+    }
+    if(type == "native-watch-success")
+    {
+        return ::hyperflux::RpcResponse {::hyperflux::RpcResponseNativeWatchSuccess {
+            decode_success<::hyperflux::NativeRouteEventBatch>(envelope)
         }};
     }
     if(type == "error")

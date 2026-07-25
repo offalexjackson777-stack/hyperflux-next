@@ -5,16 +5,19 @@ use hfx_bridge::{
     SessionIdentityError, SessionIdentitySource, SessionRegistry, serve_connection,
 };
 use hfx_domain::{
-    ClientId, ClientName, ColorChannel, ComponentVersion, ProjectionRevision, ProtocolFeatureId,
-    ProtocolVersion, QueueCapacity, RequestId, SequenceNumber, ServerInstanceId,
-    StableLightingMode, StreamEpoch, StreamId,
+    ClientId, ClientName, ColorChannel, ComponentVersion, DroppedEventCount, LeaseId,
+    NativeExchangeTimeoutMs, NativeReportHex, NativeRouteToken, ProjectionRevision,
+    ProtocolFeatureId, ProtocolVersion, QueueCapacity, RequestId, SequenceNumber, ServerInstanceId,
+    StableLightingMode, StreamEpoch, StreamId, SubscriptionId,
 };
 use hfx_protocol::{
     BridgeSnapshot, DiagnosticSnapshot, EventBatch, EventCursor, FrameError, IntegrationView,
-    LeaseRequest, LeaseResult, ProtocolWireError, ReleaseLeaseRequest, RenewLeaseRequest,
-    RpcRequest, RpcResponse, ServerHello, SubscriptionRequest, SuccessEnvelope, TransactionLookup,
-    TransactionRequest, TransactionResult, decode_rpc_request_for_version, read_rpc_request,
-    read_rpc_request_for_version, write_rpc_response, write_rpc_response_for_version,
+    LeaseRequest, LeaseResult, NativeExchangeNotSent, NativeExchangeOutcome, NativeExchangeRequest,
+    NativeExchangeResult, NativeRouteEventBatch, NativeRouteInventory, ProtocolWireError,
+    ReleaseLeaseRequest, RenewLeaseRequest, RpcRequest, RpcResponse, ServerHello,
+    SubscriptionRequest, SuccessEnvelope, TransactionLookup, TransactionRequest, TransactionResult,
+    decode_rpc_request_for_version, read_rpc_request, read_rpc_request_for_version,
+    write_rpc_response, write_rpc_response_for_version,
 };
 use hfx_sdk::{
     FramedIoChannel, HyperFluxClient, RequestIdentityError, RequestIdentitySource, SdkClientConfig,
@@ -66,6 +69,9 @@ struct SnapshotBackend {
     integration_view_calls: usize,
     disconnect_calls: usize,
     observed_client: Option<ClientId>,
+    native_enumerate_calls: usize,
+    native_transact_calls: usize,
+    native_watch_calls: usize,
 }
 
 impl BridgeRpcBackend for SnapshotBackend {
@@ -142,6 +148,52 @@ impl BridgeRpcBackend for SnapshotBackend {
         Err(RpcFailure::internal())
     }
 
+    fn native_enumerate(
+        &mut self,
+        _context: BackendRequestContext<'_>,
+    ) -> Result<NativeRouteInventory, RpcFailure> {
+        self.native_enumerate_calls += 1;
+        Ok(NativeRouteInventory {
+            cursor: empty_snapshot().cursor,
+            routes: Vec::new(),
+        })
+    }
+
+    fn native_transact(
+        &mut self,
+        _context: BackendRequestContext<'_>,
+        request: NativeExchangeRequest,
+    ) -> Result<NativeExchangeOutcome, RpcFailure> {
+        self.native_transact_calls += 1;
+        Ok(NativeExchangeOutcome {
+            request_id: request.request_id,
+            route_token: request.route_token,
+            result: NativeExchangeResult::NotSent(NativeExchangeNotSent {
+                error_kind: hfx_domain::ProtocolErrorKind::TransportFailure,
+                finding_id: id("HFX-TRANSPORT-001"),
+            }),
+        })
+    }
+
+    fn native_watch(
+        &mut self,
+        _context: BackendRequestContext<'_>,
+        _request: SubscriptionRequest,
+    ) -> Result<NativeRouteEventBatch, RpcFailure> {
+        self.native_watch_calls += 1;
+        let cursor = empty_snapshot().cursor;
+        Ok(NativeRouteEventBatch {
+            subscription_id: id::<SubscriptionId>("native-subscription-1"),
+            next_cursor: cursor.clone(),
+            events: Vec::new(),
+            oldest_available: cursor.sequence,
+            latest_available: cursor.sequence,
+            dropped_events: DroppedEventCount::try_from(0_u64).expect("zero drops are valid"),
+            cursor_gap: false,
+            has_more: false,
+        })
+    }
+
     fn disconnect(&mut self, _session: &AuthorizedSession) -> Result<(), RpcFailure> {
         self.disconnect_calls += 1;
         Ok(())
@@ -174,6 +226,20 @@ fn integration_client_config() -> SdkClientConfig {
         minimum_version: ProtocolVersion::try_from(5_u16).expect("v5 is valid"),
         maximum_version: ProtocolVersion::try_from(5_u16).expect("v5 is valid"),
         required_features: vec![id::<ProtocolFeatureId>("integration-view-projection")],
+        optional_features: Vec::new(),
+    }
+}
+
+fn native_client_config() -> SdkClientConfig {
+    SdkClientConfig {
+        client_id: id::<ClientId>("sdk-native-client-test"),
+        client_name: id::<ClientName>("SDK native tunnel test"),
+        minimum_version: ProtocolVersion::try_from(7_u16).expect("v7 is valid"),
+        maximum_version: ProtocolVersion::try_from(7_u16).expect("v7 is valid"),
+        required_features: vec![
+            id::<ProtocolFeatureId>("native-receiver-tunnel"),
+            id::<ProtocolFeatureId>("ownership-leases"),
+        ],
         optional_features: Vec::new(),
     }
 }
@@ -331,6 +397,79 @@ fn sdk_requests_the_v5_view_over_the_real_bridge_runtime() {
         backend.observed_client,
         Some(id("sdk-integration-client-test"))
     );
+    assert_eq!(remaining_sessions, 0);
+}
+
+#[test]
+fn sdk_v7_exposes_replayable_native_enumerate_transact_and_watch() {
+    let (client_stream, mut server_stream) = configured_pair();
+    let server = thread::spawn(move || {
+        let mut identities = DeterministicSessionIdentities::new();
+        let mut sessions =
+            SessionRegistry::new(QueueCapacity::try_from(4).expect("capacity is valid"));
+        let mut backend = SnapshotBackend::default();
+        let result = serve_connection(
+            &mut server_stream,
+            bridge_config(),
+            &mut identities,
+            &mut sessions,
+            &mut backend,
+        );
+        (result, backend, sessions.len())
+    });
+
+    let mut client = HyperFluxClient::connect(
+        client_stream,
+        native_client_config(),
+        DeterministicRequestIdentities::default(),
+    )
+    .expect("SDK v7 negotiation succeeds");
+    assert_eq!(client.server_hello().selected_version.get(), 7);
+    assert!(
+        client
+            .native_enumerate()
+            .expect("routes enumerate")
+            .routes
+            .is_empty()
+    );
+
+    let prepared = client
+        .prepare_native_exchange(
+            id::<LeaseId>("native-lease-1"),
+            id::<NativeRouteToken>(&"a".repeat(64)),
+            id::<NativeReportHex>(&"0".repeat(180)),
+            NativeExchangeTimeoutMs::try_from(100_u16).expect("timeout is valid"),
+        )
+        .expect("native request identity is prepared");
+    let first = client
+        .native_transact(&prepared)
+        .expect("native outcome is returned");
+    let repeated = client
+        .native_transact(&prepared)
+        .expect("exact prepared identity is replayable");
+    assert_eq!(first, repeated);
+    assert_eq!(first.request_id, prepared.request_id);
+
+    let watched = client
+        .native_watch(hfx_sdk::EventSubscription {
+            subscription_id: None,
+            expected_cursor: None,
+            max_events: hfx_domain::EventBatchLimit::try_from(8_u16).expect("batch limit is valid"),
+        })
+        .expect("native routes are watchable");
+    assert!(watched.events.is_empty());
+
+    client
+        .into_inner()
+        .shutdown(std::net::Shutdown::Write)
+        .expect("client closes its write side");
+    let (result, backend, remaining_sessions) = server.join().expect("server thread joins");
+    let report = result.expect("bridge connection exits cleanly");
+    assert_eq!(report.requests_served, 5);
+    assert_eq!(backend.native_enumerate_calls, 1);
+    assert_eq!(backend.native_transact_calls, 2);
+    assert_eq!(backend.native_watch_calls, 1);
+    assert_eq!(backend.disconnect_calls, 1);
     assert_eq!(remaining_sessions, 0);
 }
 

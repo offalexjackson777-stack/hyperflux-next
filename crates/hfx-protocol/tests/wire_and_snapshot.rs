@@ -3,22 +3,27 @@
 use hfx_domain::{
     ActivityState, BatteryPercent, ClientId, ClientName, ColorChannel, ConnectionMode,
     ContactState, ControllerAvailability, DeviceKind, EvidenceConfidence, FreshnessState,
-    GenerationId, InventoryAvailability, LedCount, ModelName, MonotonicMs, PairingState,
-    PowerState, PresenceState, ProductId, ProjectionRevision, ProtocolFeatureId, ProtocolVersion,
+    GenerationId, InventoryAvailability, LeaseDurationMs, LedCount, ModelName, MonotonicMs,
+    NativeExchangeTimeoutMs, NativeProtocolFamily, NativeReportByteCount, NativeReportHex,
+    NativeRouteAccess, NativeRouteEventKind, NativeRouteToken, PairingState, PowerState,
+    PresenceState, ProductId, ProjectionRevision, ProtocolFeatureId, ProtocolVersion,
     ReceiverLifecycleState, ResourceKind, RestoreDeliveryState, RestoreState, ReturnEvidence,
     ReturnPhase, RouteKind, RouteState, SequenceNumber, SleepState, StableLightingMode,
-    StreamEpoch, SupportLevel, TelemetryAvailability, TransactionClass,
+    StreamEpoch, SupportLevel, TelemetryAvailability, TransactionClass, VendorId,
 };
 use hfx_protocol::{
     BatteryObservation, BridgeSnapshot, ClientHello, ControllerActions, ControllerOwnership,
     ControllerView, DeviceInventoryView, EmptyRequest, EndpointSnapshot, EventCursor,
-    IntegrationReceiverView, IntegrationView, LightingTopologyView, LogicalDeviceSnapshot,
-    MAX_WIRE_MESSAGE_BYTES, NegotiationRequestEnvelope, PresentationView, ProfileBindingView,
-    ProtocolWireError, ReceiverSnapshot, ResourceKey, ReturnEpoch, RpcRequest, RpcResponse,
-    SessionRequestEnvelope, SnapshotValidationError, SuccessEnvelope, UnownedController,
-    decode_rpc_request, decode_rpc_request_for_version, decode_rpc_response,
-    decode_rpc_response_for_version, encode_rpc_request_for_version,
-    encode_rpc_response_for_version, validate_bridge_snapshot, validate_rpc_response_for_version,
+    IntegrationReceiverView, IntegrationView, LeaseRequest, LightingTopologyView,
+    LogicalDeviceSnapshot, MAX_WIRE_MESSAGE_BYTES, NativeExchangeMatchedResponse,
+    NativeExchangeOutcome, NativeExchangeRequest, NativeExchangeResult, NativeRoute,
+    NativeRouteEvent, NativeRouteEventBatch, NativeRouteInventory, NegotiationRequestEnvelope,
+    PresentationView, ProfileBindingView, ProtocolWireError, ReceiverSnapshot, ResourceKey,
+    ResourceOwnershipSnapshot, ReturnEpoch, RpcRequest, RpcResponse, SessionRequestEnvelope,
+    SnapshotValidationError, SuccessEnvelope, UnownedController, decode_rpc_request,
+    decode_rpc_request_for_version, decode_rpc_response, decode_rpc_response_for_version,
+    encode_rpc_request_for_version, encode_rpc_response_for_version, validate_bridge_snapshot,
+    validate_rpc_response_for_version,
 };
 use serde_json::{Value, json};
 
@@ -44,6 +49,46 @@ fn cursor() -> EventCursor {
             .expect("projection revision is valid"),
         sequence: SequenceNumber::try_from(0_u64).expect("sequence is valid"),
     }
+}
+
+fn native_route(access: NativeRouteAccess, route_state: RouteState) -> NativeRoute {
+    let writable = access == NativeRouteAccess::Qualified && route_state == RouteState::Available;
+    NativeRoute {
+        receiver_id: text("receiver-1"),
+        generation_id: GenerationId::try_from(1_u64).expect("generation is valid"),
+        device_id: text("mouse-1"),
+        endpoint_id: text("endpoint-hyperflux"),
+        device_kind: DeviceKind::Mouse,
+        vendor_id: VendorId::try_from(0x1532_u16).expect("vendor id is valid"),
+        product_id: ProductId::try_from(0x00cd_u16).expect("product id is valid"),
+        route_state,
+        access,
+        protocol_family: text::<NativeProtocolFamily>("razer-feature-report-v1"),
+        report_bytes: number::<NativeReportByteCount>(90),
+        route_token: writable.then(|| text::<NativeRouteToken>(&"a".repeat(64))),
+        resource: writable.then(|| ResourceKey {
+            receiver_id: text("receiver-1"),
+            generation_id: GenerationId::try_from(1_u64).expect("generation is valid"),
+            device_id: text("mouse-1"),
+            kind: ResourceKind::NativeControl,
+        }),
+    }
+}
+
+fn native_exchange_request(report: &str) -> RpcRequest {
+    RpcRequest::NativeTransact(SessionRequestEnvelope {
+        request_id: text("native-request-1"),
+        protocol_session_id: text("protocol-session-1"),
+        negotiation_token: text("negotiation-1"),
+        params: NativeExchangeRequest {
+            request_id: text("native-request-1"),
+            client_id: text("client-1"),
+            lease_id: text("native-lease-1"),
+            route_token: text::<NativeRouteToken>(&"a".repeat(64)),
+            report: text::<NativeReportHex>(report),
+            timeout_ms: number::<NativeExchangeTimeoutMs>(100),
+        },
+    })
 }
 
 fn endpoint() -> EndpointSnapshot {
@@ -458,10 +503,14 @@ fn versioned_decoders_reject_changed_or_unknown_wire_shapes_instead_of_guessing(
     );
     assert_eq!(
         decode_rpc_request_for_version(&v3, number(6)),
-        Ok(normalized)
+        Ok(normalized.clone())
     );
     assert_eq!(
         decode_rpc_request_for_version(&v3, number(7)),
+        Ok(normalized)
+    );
+    assert_eq!(
+        decode_rpc_request_for_version(&v3, number(8)),
         Err(ProtocolWireError::UnsupportedProtocolVersion)
     );
 }
@@ -547,7 +596,7 @@ fn responses_are_checked_against_the_exact_negotiated_schema() {
                 server_instance_id: text("bridge-instance-1"),
                 result: snapshot(battery(TelemetryAvailability::Reported, Some(73))),
             }),
-            number(7)
+            number(8)
         ),
         Err(ProtocolWireError::UnsupportedProtocolVersion)
     );
@@ -608,4 +657,204 @@ fn return_epoch_projection_rejects_cross_record_or_false_synchronization_claims(
         validate_bridge_snapshot(&false_sync),
         Err(SnapshotValidationError::ReturnEpochContradiction)
     );
+}
+
+#[test]
+fn v7_native_exchange_round_trips_and_cannot_downgrade() {
+    let report = "00".repeat(90);
+    let request = native_exchange_request(&report);
+    let encoded = encode_rpc_request_for_version(&request, number(7))
+        .expect("canonical native request encodes in v7");
+    assert_eq!(
+        decode_rpc_request_for_version(&encoded, number(7)),
+        Ok(request.clone())
+    );
+    for version in 1_u16..=6 {
+        assert_eq!(
+            encode_rpc_request_for_version(&request, number(version)),
+            Err(ProtocolWireError::UnsupportedVersionMethod)
+        );
+    }
+
+    let response = RpcResponse::NativeTransactSuccess(SuccessEnvelope {
+        request_id: text("native-request-1"),
+        server_instance_id: text("bridge-instance-1"),
+        result: NativeExchangeOutcome {
+            request_id: text("native-request-1"),
+            route_token: text::<NativeRouteToken>(&"a".repeat(64)),
+            result: NativeExchangeResult::MatchedResponse(NativeExchangeMatchedResponse {
+                response: text::<NativeReportHex>(&"01".repeat(90)),
+            }),
+        },
+    });
+    let encoded = encode_rpc_response_for_version(&response, number(7))
+        .expect("canonical native response encodes in v7");
+    assert_eq!(
+        decode_rpc_response_for_version(&encoded, number(7)),
+        Ok(response.clone())
+    );
+    for version in 1_u16..=6 {
+        assert_eq!(
+            encode_rpc_response_for_version(&response, number(version)),
+            Err(ProtocolWireError::UnsupportedVersionMethod)
+        );
+    }
+}
+
+#[test]
+fn native_exchange_rejects_noncanonical_reports_and_request_identity_conflicts() {
+    let uppercase = native_exchange_request(&"AA".repeat(90));
+    assert_eq!(
+        encode_rpc_request_for_version(&uppercase, number(7)),
+        Err(ProtocolWireError::RequestNotCanonical)
+    );
+
+    let mut mismatched = native_exchange_request(&"00".repeat(90));
+    let RpcRequest::NativeTransact(envelope) = &mut mismatched else {
+        panic!("native request expected")
+    };
+    envelope.params.request_id = text("different-request");
+    assert_eq!(
+        encode_rpc_request_for_version(&mismatched, number(7)),
+        Err(ProtocolWireError::RequestNotCanonical)
+    );
+}
+
+#[test]
+fn native_inventory_fails_closed_on_authority_or_identity_contradictions() {
+    let valid = RpcResponse::NativeEnumerateSuccess(SuccessEnvelope {
+        request_id: text("native-enumerate-1"),
+        server_instance_id: text("bridge-instance-1"),
+        result: NativeRouteInventory {
+            cursor: cursor(),
+            routes: vec![native_route(
+                NativeRouteAccess::Qualified,
+                RouteState::Available,
+            )],
+        },
+    });
+    encode_rpc_response_for_version(&valid, number(7)).expect("qualified route is canonical");
+
+    let mut candidate_with_authority = valid.clone();
+    let RpcResponse::NativeEnumerateSuccess(envelope) = &mut candidate_with_authority else {
+        panic!("native inventory expected")
+    };
+    envelope.result.routes[0].access = NativeRouteAccess::Candidate;
+    assert!(matches!(
+        encode_rpc_response_for_version(&candidate_with_authority, number(7)),
+        Err(ProtocolWireError::InvalidResponse(_))
+    ));
+
+    let mut duplicate_identity = valid;
+    let RpcResponse::NativeEnumerateSuccess(envelope) = &mut duplicate_identity else {
+        panic!("native inventory expected")
+    };
+    envelope.result.routes.push(native_route(
+        NativeRouteAccess::Qualified,
+        RouteState::Unavailable,
+    ));
+    assert!(matches!(
+        encode_rpc_response_for_version(&duplicate_identity, number(7)),
+        Err(ProtocolWireError::InvalidResponse(_))
+    ));
+}
+
+#[test]
+fn native_route_events_require_consistent_transitions_and_cursors() {
+    let response = RpcResponse::NativeWatchSuccess(SuccessEnvelope {
+        request_id: text("native-watch-1"),
+        server_instance_id: text("bridge-instance-1"),
+        result: NativeRouteEventBatch {
+            subscription_id: text("native-subscription-1"),
+            next_cursor: EventCursor {
+                sequence: SequenceNumber::try_from(1_u64).expect("sequence is valid"),
+                ..cursor()
+            },
+            events: vec![NativeRouteEvent {
+                sequence: SequenceNumber::try_from(1_u64).expect("sequence is valid"),
+                kind: NativeRouteEventKind::Available,
+                route: native_route(NativeRouteAccess::Qualified, RouteState::Available),
+            }],
+            oldest_available: SequenceNumber::try_from(1_u64).expect("sequence is valid"),
+            latest_available: SequenceNumber::try_from(1_u64).expect("sequence is valid"),
+            dropped_events: hfx_domain::DroppedEventCount::try_from(0_u64)
+                .expect("dropped count is valid"),
+            cursor_gap: false,
+            has_more: false,
+        },
+    });
+    encode_rpc_response_for_version(&response, number(7)).expect("native event batch is valid");
+
+    let mut contradictory = response;
+    let RpcResponse::NativeWatchSuccess(envelope) = &mut contradictory else {
+        panic!("native event response expected")
+    };
+    envelope.result.events[0].kind = NativeRouteEventKind::Unavailable;
+    assert!(matches!(
+        encode_rpc_response_for_version(&contradictory, number(7)),
+        Err(ProtocolWireError::InvalidResponse(_))
+    ));
+}
+
+#[test]
+fn legacy_versions_reject_native_leases_and_hide_native_snapshot_ownership() {
+    let native_resource = ResourceKey {
+        receiver_id: text("receiver-1"),
+        generation_id: GenerationId::try_from(1_u64).expect("generation is valid"),
+        device_id: text("mouse-1"),
+        kind: ResourceKind::NativeControl,
+    };
+    let request = RpcRequest::AcquireLease(SessionRequestEnvelope {
+        request_id: text("native-lease-request"),
+        protocol_session_id: text("protocol-session-1"),
+        negotiation_token: text("negotiation-1"),
+        params: LeaseRequest {
+            request_id: text("native-lease-request"),
+            client_id: text("client-1"),
+            resources: vec![native_resource.clone()],
+            duration_ms: LeaseDurationMs::try_from(10_000_u32).expect("duration is valid"),
+        },
+    });
+    encode_rpc_request_for_version(&request, number(7)).expect("v7 native lease request is valid");
+    assert_eq!(
+        encode_rpc_request_for_version(&request, number(6)),
+        Err(ProtocolWireError::UnsupportedVersionMethod)
+    );
+    let wire = serde_json::to_vec(&request).expect("request serializes");
+    assert_eq!(
+        decode_rpc_request_for_version(&wire, number(6)),
+        Err(ProtocolWireError::UnsupportedVersionMethod)
+    );
+
+    let mut current = snapshot(battery(TelemetryAvailability::Reported, Some(73)));
+    current.receivers[0]
+        .ownership
+        .push(ResourceOwnershipSnapshot {
+            resource: native_resource,
+            client_id: text("native-client"),
+            lease_id: text("native-lease-1"),
+            expires_at_ms: MonotonicMs::try_from(100_u64).expect("time is valid"),
+        });
+    let response = RpcResponse::SnapshotSuccess(SuccessEnvelope {
+        request_id: text("snapshot-with-native-ownership"),
+        server_instance_id: text("bridge-instance-1"),
+        result: current,
+    });
+    let v7 = encode_rpc_response_for_version(&response, number(7))
+        .expect("v7 preserves native ownership");
+    let RpcResponse::SnapshotSuccess(v7) =
+        decode_rpc_response_for_version(&v7, number(7)).expect("v7 snapshot decodes")
+    else {
+        panic!("snapshot response expected")
+    };
+    assert_eq!(v7.result.receivers[0].ownership.len(), 1);
+
+    let v6 = encode_rpc_response_for_version(&response, number(6))
+        .expect("v6 snapshot safely omits native ownership");
+    let RpcResponse::SnapshotSuccess(v6) =
+        decode_rpc_response_for_version(&v6, number(6)).expect("v6 snapshot decodes")
+    else {
+        panic!("snapshot response expected")
+    };
+    assert!(v6.result.receivers[0].ownership.is_empty());
 }

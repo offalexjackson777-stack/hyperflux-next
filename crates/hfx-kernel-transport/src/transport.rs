@@ -4,6 +4,7 @@ use crate::observation::decode_observations;
 use crate::{
     AlignedU64, EncodedTransaction, HFX_UAPI_ABI_VERSION, HFX_UAPI_INFO_FLAG_DISCONNECTING,
     HFX_UAPI_INFO_FLAG_SESSION_ACTIVE, HFX_UAPI_INFO_FLAG_SUSPENDED, HFX_UAPI_MAX_SESSION_NS,
+    HFX_UAPI_NATIVE_ABI_VERSION, HFX_UAPI_NATIVE_REPORT_BYTES,
     HFX_UAPI_RESULT_FLAG_AUTOMATIC_RETRY_SAFE, HFX_UAPI_RESULT_FLAG_WRITE_STARTED,
     HFX_UAPI_REVOKE_REASON_EXPLICIT, HFX_UAPI_REVOKE_REASON_SERVICE_LOSS,
     HFX_UAPI_TRANSPORT_STATUS_CONFLICT, HFX_UAPI_TRANSPORT_STATUS_EVICTED,
@@ -11,17 +12,19 @@ use crate::{
     HFX_UAPI_TRANSPORT_STATUS_RESERVED, HFX_UAPI_TRANSPORT_STATUS_REVOKED,
     HFX_UAPI_TRANSPORT_STATUS_STARTED, HFX_UAPI_TRANSPORT_STATUS_SUCCEEDED,
     HFX_UAPI_TRANSPORT_STATUS_UNAVAILABLE, HfxUapiBeginSession, HfxUapiEndSession, HfxUapiInfo,
-    HfxUapiReadObservations, HfxUapiSubmit, HfxUapiTransactionResult, KernelIo,
-    KernelObservationBatch, KernelTransportError, KernelTransportErrorKind, LinuxKernelIo,
-    ReceiverFrameEncoderRegistry,
+    HfxUapiNativeExchangeResult, HfxUapiNativeExchangeSubmit, HfxUapiReadObservations,
+    HfxUapiSubmit, HfxUapiTransactionResult, KernelIo, KernelObservationBatch,
+    KernelTransportError, KernelTransportErrorKind, LinuxKernelIo, NativeExchangeOutcome,
+    NativeExchangeRequest, ReceiverFrameEncoderRegistry,
 };
 use hfx_core::{
-    ReceiverTransport, TransportDispatch, TransportFailureFacts, TransportReceipt,
-    TransportReconciliation, TransportTerminal,
+    NativeEndpointLane as CoreNativeEndpointLane, NativeTransportDispatch, NativeTransportOutcome,
+    NativeTransportResult, ReceiverTransport, TransportDispatch, TransportFailureFacts,
+    TransportReceipt, TransportReconciliation, TransportTerminal,
 };
 use hfx_domain::{
     DeliveredFrameCount, DeviceApplicationState, GenerationId, ProfileDigest, ProfileId,
-    ProfileKind, ReceiverId, SideEffectCertainty,
+    ProfileKind, ProtocolErrorKind, ReceiverId, SideEffectCertainty,
 };
 use hfx_profiles::RuntimeProfileCatalog;
 use serde_json::to_vec;
@@ -201,6 +204,67 @@ impl<I: KernelIo> KernelReceiverTransport<I> {
         decode_observations(self.material.generation_id, after_sequence, &request)
     }
 
+    /// Reconciles an exact native child exchange without sending a report.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed error for invalid request material, forgotten or
+    /// contradictory nonce bindings, or a malformed kernel result.
+    pub fn reconcile_native_exchange(
+        &self,
+        request: &NativeExchangeRequest,
+    ) -> Result<NativeExchangeOutcome, KernelTransportError> {
+        Self::validate_native_request(request)?;
+        let request_digest = request.request_digest();
+        let authorization_epoch =
+            match self.lookup_dispatch(request.dispatch_nonce, request_digest)? {
+                DispatchLookup::Known(epoch) | DispatchLookup::New(epoch) => epoch,
+                DispatchLookup::Forgotten => {
+                    return Err(KernelTransportError::uncertain(
+                        KernelTransportErrorKind::NativeOutcomeUnavailable,
+                    ));
+                }
+                DispatchLookup::Conflict => {
+                    return Err(KernelTransportError::uncertain(
+                        KernelTransportErrorKind::NativeOutcomeConflict,
+                    ));
+                }
+            };
+        self.query_native_exchange(request, request_digest, authorization_epoch, 0)
+    }
+
+    /// Performs one generation-bound native child feature-report exchange.
+    ///
+    /// The kernel submits `SET_REPORT` at most once for a new nonce. This method
+    /// always reconciles the exact retained result after the ioctl returns and
+    /// never repeats an uncertain submit.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed error for invalid request material, session loss,
+    /// contradictory nonce reuse, or an unavailable/malformed retained result.
+    pub fn native_exchange(
+        &mut self,
+        request: &NativeExchangeRequest,
+    ) -> Result<NativeExchangeOutcome, KernelTransportError> {
+        Self::validate_native_request(request)?;
+        let request_digest = request.request_digest();
+        match self.lookup_dispatch(request.dispatch_nonce, request_digest)? {
+            DispatchLookup::Known(epoch) => {
+                self.query_native_exchange(request, request_digest, epoch, 0)
+            }
+            DispatchLookup::New(epoch) => {
+                self.submit_native_exchange(request, request_digest, epoch)
+            }
+            DispatchLookup::Forgotten => Err(KernelTransportError::uncertain(
+                KernelTransportErrorKind::NativeOutcomeUnavailable,
+            )),
+            DispatchLookup::Conflict => Err(KernelTransportError::uncertain(
+                KernelTransportErrorKind::NativeOutcomeConflict,
+            )),
+        }
+    }
+
     /// Ends the current kernel authorization session explicitly.
     ///
     /// # Errors
@@ -345,6 +409,104 @@ impl<I: KernelIo> KernelReceiverTransport<I> {
         )?;
         let fingerprint = dispatch_fingerprint(dispatch, &encoded)?;
         Ok((encoded, fingerprint))
+    }
+
+    fn validate_native_request(
+        request: &NativeExchangeRequest,
+    ) -> Result<(), KernelTransportError> {
+        if request.validate() {
+            Ok(())
+        } else {
+            Err(KernelTransportError::safe(
+                KernelTransportErrorKind::InvalidNativeExchange,
+            ))
+        }
+    }
+
+    fn query_native_exchange(
+        &self,
+        request: &NativeExchangeRequest,
+        request_digest: [u8; 32],
+        authorization_epoch: u64,
+        kernel_sequence: u64,
+    ) -> Result<NativeExchangeOutcome, KernelTransportError> {
+        let mut query = HfxUapiNativeExchangeResult {
+            version: HFX_UAPI_NATIVE_ABI_VERSION,
+            size: uapi_size::<HfxUapiNativeExchangeResult>()?,
+            receiver_generation: AlignedU64(self.material.generation_id.get()),
+            authorization_epoch: AlignedU64(authorization_epoch),
+            kernel_sequence: AlignedU64(kernel_sequence),
+            dispatch_nonce: AlignedU64(request.dispatch_nonce),
+            endpoint_slot: request.endpoint.as_uapi(),
+            route_token_digest: request.route_token_digest,
+            request_digest,
+            ..HfxUapiNativeExchangeResult::default()
+        };
+        self.io
+            .get_native_exchange_result(&mut query)
+            .map_err(|_| {
+                KernelTransportError::uncertain(KernelTransportErrorKind::NativeOutcomeUnavailable)
+            })?;
+        if query.version != HFX_UAPI_NATIVE_ABI_VERSION
+            || usize::try_from(query.size).ok() != Some(size_of::<HfxUapiNativeExchangeResult>())
+            || query.receiver_generation.0 != self.material.generation_id.get()
+            || query.authorization_epoch.0 != authorization_epoch
+            || query.dispatch_nonce.0 != request.dispatch_nonce
+            || query.endpoint_slot != request.endpoint.as_uapi()
+            || query.route_token_digest != request.route_token_digest
+            || query.request_digest != request_digest
+            || query.reserved != 0
+        {
+            return Err(KernelTransportError::uncertain(
+                KernelTransportErrorKind::NativeOutcomeConflict,
+            ));
+        }
+        NativeExchangeOutcome::decode(&query).ok_or_else(|| {
+            KernelTransportError::uncertain(KernelTransportErrorKind::NativeOutcomeConflict)
+        })
+    }
+
+    fn submit_native_exchange(
+        &self,
+        request: &NativeExchangeRequest,
+        request_digest: [u8; 32],
+        authorization_epoch: u64,
+    ) -> Result<NativeExchangeOutcome, KernelTransportError> {
+        self.remember_dispatch(request.dispatch_nonce, request_digest, authorization_epoch)?;
+        let timeout_ns = u64::try_from(request.timeout.as_nanos()).map_err(|_| {
+            KernelTransportError::safe(KernelTransportErrorKind::InvalidNativeExchange)
+        })?;
+        let now = self.io.boottime_ns().map_err(io_error)?;
+        let deadline = now.checked_add(timeout_ns).ok_or_else(|| {
+            KernelTransportError::safe(KernelTransportErrorKind::InvalidNativeExchange)
+        })?;
+        let mut submit = HfxUapiNativeExchangeSubmit {
+            version: HFX_UAPI_NATIVE_ABI_VERSION,
+            size: uapi_size::<HfxUapiNativeExchangeSubmit>()?,
+            receiver_generation: AlignedU64(self.material.generation_id.get()),
+            authorization_epoch: AlignedU64(authorization_epoch),
+            dispatch_nonce: AlignedU64(request.dispatch_nonce),
+            deadline_boottime_ns: AlignedU64(deadline),
+            endpoint_slot: request.endpoint.as_uapi(),
+            report_length: u32::try_from(HFX_UAPI_NATIVE_REPORT_BYTES).map_err(|_| {
+                KernelTransportError::safe(KernelTransportErrorKind::InvalidNativeExchange)
+            })?,
+            route_token_digest: request.route_token_digest,
+            request_digest,
+            report: request.report,
+            kernel_sequence: AlignedU64(0),
+        };
+        let submit_result = self.io.submit_native_exchange(&mut submit);
+        match self.query_native_exchange(
+            request,
+            request_digest,
+            authorization_epoch,
+            submit.kernel_sequence.0,
+        ) {
+            Ok(outcome) => Ok(outcome),
+            Err(error) if submit_result.is_err() => Err(error),
+            Err(error) => Err(error),
+        }
     }
 
     fn lookup_dispatch(
@@ -520,6 +682,20 @@ impl<I: KernelIo> ReceiverTransport for KernelReceiverTransport<I> {
         Some(self.material.generation_id)
     }
 
+    fn native_exchange_available(
+        &self,
+        receiver_id: &ReceiverId,
+        generation_id: GenerationId,
+    ) -> bool {
+        receiver_id == &self.material.receiver_id
+            && generation_id == self.material.generation_id
+            && self
+                .io
+                .get_info()
+                .ok()
+                .is_some_and(|info| self.validate_writable_info(&info).is_ok())
+    }
+
     fn reconcile(&self, dispatch: &TransportDispatch) -> TransportReconciliation {
         let Ok((encoded, fingerprint)) = self.encode_and_fingerprint(dispatch) else {
             return TransportReconciliation::Conflict;
@@ -549,11 +725,114 @@ impl<I: KernelIo> ReceiverTransport for KernelReceiverTransport<I> {
             )),
         }
     }
+
+    fn native_exchange(&mut self, dispatch: &NativeTransportDispatch) -> NativeTransportOutcome {
+        if dispatch.receiver_id != self.material.receiver_id
+            || dispatch.generation_id != self.material.generation_id
+        {
+            return core_native_failure(dispatch, ProtocolErrorKind::StaleGeneration, true);
+        }
+        let request = NativeExchangeRequest {
+            dispatch_nonce: dispatch.dispatch_nonce.get(),
+            endpoint: match dispatch.endpoint {
+                CoreNativeEndpointLane::Pointer => crate::NativeEndpointLane::Pointer,
+                CoreNativeEndpointLane::Keyboard => crate::NativeEndpointLane::Keyboard,
+            },
+            route_token_digest: dispatch.route_token_digest,
+            report: dispatch.report,
+            timeout: Duration::from_millis(u64::from(dispatch.timeout_ms.get())),
+        };
+        match KernelReceiverTransport::native_exchange(self, &request) {
+            Ok(outcome)
+                if outcome.dispatch_nonce == dispatch.dispatch_nonce.get()
+                    && outcome.route_token_digest == dispatch.route_token_digest =>
+            {
+                let result = match outcome.certainty {
+                    crate::NativeExchangeCertainty::NotSent => NativeTransportResult::NotSent {
+                        error_kind: native_transport_error_kind(outcome.transport_errno),
+                    },
+                    crate::NativeExchangeCertainty::MayHaveBeenSent => {
+                        NativeTransportResult::MayHaveBeenSent {
+                            error_kind: native_transport_error_kind(outcome.transport_errno),
+                        }
+                    }
+                    crate::NativeExchangeCertainty::MatchedResponse => {
+                        let Some(response) = outcome.response else {
+                            return core_native_failure(
+                                dispatch,
+                                ProtocolErrorKind::OutcomeUnknown,
+                                false,
+                            );
+                        };
+                        NativeTransportResult::MatchedResponse(response)
+                    }
+                };
+                NativeTransportOutcome {
+                    dispatch_nonce: dispatch.dispatch_nonce,
+                    route_token_digest: dispatch.route_token_digest,
+                    result,
+                }
+            }
+            Ok(_) => core_native_failure(dispatch, ProtocolErrorKind::OutcomeUnknown, false),
+            Err(error) => core_native_failure(
+                dispatch,
+                kernel_native_error_kind(error.kind()),
+                error.failure_facts().automatic_retry_safe,
+            ),
+        }
+    }
 }
 
 impl<I: KernelIo> Drop for KernelReceiverTransport<I> {
     fn drop(&mut self) {
         let _ = self.end_active_session(HFX_UAPI_REVOKE_REASON_SERVICE_LOSS);
+    }
+}
+
+fn core_native_failure(
+    dispatch: &NativeTransportDispatch,
+    error_kind: ProtocolErrorKind,
+    retry_safe: bool,
+) -> NativeTransportOutcome {
+    NativeTransportOutcome {
+        dispatch_nonce: dispatch.dispatch_nonce,
+        route_token_digest: dispatch.route_token_digest,
+        result: if retry_safe {
+            NativeTransportResult::NotSent { error_kind }
+        } else {
+            NativeTransportResult::MayHaveBeenSent { error_kind }
+        },
+    }
+}
+
+fn native_transport_error_kind(transport_errno: i32) -> ProtocolErrorKind {
+    if transport_errno == 0 {
+        ProtocolErrorKind::OutcomeUnknown
+    } else {
+        ProtocolErrorKind::TransportFailure
+    }
+}
+
+const fn kernel_native_error_kind(kind: KernelTransportErrorKind) -> ProtocolErrorKind {
+    match kind {
+        KernelTransportErrorKind::InvalidNativeExchange
+        | KernelTransportErrorKind::InvalidDispatch
+        | KernelTransportErrorKind::Encoding => ProtocolErrorKind::InvalidRequest,
+        KernelTransportErrorKind::GenerationMismatch
+        | KernelTransportErrorKind::ReceiverMismatch => ProtocolErrorKind::StaleGeneration,
+        KernelTransportErrorKind::OutcomeEvicted => ProtocolErrorKind::OutcomeEvicted,
+        KernelTransportErrorKind::NativeOutcomeUnavailable
+        | KernelTransportErrorKind::NativeOutcomeConflict
+        | KernelTransportErrorKind::OutcomeUnavailable
+        | KernelTransportErrorKind::OutcomeConflict => ProtocolErrorKind::OutcomeUnknown,
+        KernelTransportErrorKind::Io
+        | KernelTransportErrorKind::AbiMismatch
+        | KernelTransportErrorKind::ProfileMismatch
+        | KernelTransportErrorKind::UnsupportedBackend
+        | KernelTransportErrorKind::InvalidSessionMaterial
+        | KernelTransportErrorKind::SessionUnavailable
+        | KernelTransportErrorKind::OutcomeRetainedFailure
+        | KernelTransportErrorKind::KernelRejected => ProtocolErrorKind::TransportFailure,
     }
 }
 

@@ -232,7 +232,7 @@ Defines strict machine-readable shapes for every shared repository fact and gene
 
 **Used by:** [Assurance and release evidence](#assurance), [Kernel driver contract](#driver-contract), [Error catalog](#errors), [Application integration catalog](#integrations), [Composable hardware profiles](#profiles), [Versioned bridge protocol](#protocol), [Linux runtime authority](#runtime-config), [Rust workspace](#rust-workspace), [Repository tooling](#tooling)
 
-**Canonical sources:** `schemas/domain-catalog.json`, `schemas/domain-catalog.schema.json`, `schemas/repository-atlas.schema.json`, `schemas/public-readiness.schema.json`, `schemas/local-companion.schema.json`, `schemas/local-snapshot.schema.json`, `schemas/licensing-policy.schema.json`, `schemas/lifecycle-policy-catalog.schema.json`.
+**Canonical sources:** `schemas/domain-catalog.json`, `schemas/domain-catalog.schema.json`, `schemas/repository-atlas.schema.json`, `schemas/public-readiness.schema.json`, `schemas/local-companion.schema.json`, `schemas/local-snapshot.schema.json`, `schemas/licensing-policy.schema.json`, `schemas/lifecycle-policy-catalog.schema.json`, `schemas/kernel-uapi-registry.schema.json`, `schemas/kernel-uapi-native-exchange.schema.json`.
 
 **Generated projections:** `schemas/README.md`, `docs/generated/domain-types.md`.
 
@@ -612,11 +612,11 @@ Provides the typed Rust client contract used by production integrations and inte
 
 `crates/hfx-kernel-transport` · `runtime` · `implemented`
 
-Adapts the generated kernel UAPI into bounded Rust observation, routing, and envelope I/O.
+Adapts the generated kernel UAPI into bounded Rust observation, routing, envelope I/O, and qualified native exchanges.
 
 **Owns:** Kernel device I/O; UAPI encoding; Receiver route adaptation.
 
-**Must never own:** Qualification policy; Application identity; Unbounded raw reports.
+**Must never own:** Qualification policy; Application identity; Unbounded or unqualified raw reports.
 
 **Depends on:** [Rust workspace](#rust-workspace), [Kernel driver contract](#driver-contract), [Versioned bridge protocol](#protocol)
 
@@ -664,7 +664,7 @@ Exercises generations, failures, persistence, restoration, replay, and migration
 
 `driver` · `runtime` · `implemented`
 
-Defines the generated userspace ABI and the strict boundary around the in-kernel receiver transport.
+Defines additive generated userspace ABIs and the strict boundary around the in-kernel receiver transport.
 
 **Owns:** Kernel UAPI authority; Driver source boundary; Session-device contract.
 
@@ -674,7 +674,7 @@ Defines the generated userspace ABI and the strict boundary around the in-kernel
 
 **Used by:** [Linux HID kernel module](#kernel-module), [Kernel transport adapter](#kernel-transport)
 
-**Canonical sources:** `uapi/kernel-uapi.json`.
+**Canonical sources:** `uapi/registry.json`, `uapi/kernel-uapi.json`, `uapi/native-exchange-v2.json`.
 
 **Generated projections:** `driver/README.md`, `driver/kernel/uapi/hyperflux_next.h`, `docs/generated/kernel-uapi.md`.
 

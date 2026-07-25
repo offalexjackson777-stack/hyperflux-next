@@ -21,8 +21,8 @@ from hfxdev.protocol import (
 class ProtocolCompilerTests(unittest.TestCase):
     def test_catalog_is_versioned_and_generated_deterministically(self) -> None:
         registry = load_protocol_registry(ROOT)
-        self.assertEqual(registry.current_version, 6)
-        self.assertEqual([item.version for item in registry.versions], [1, 2, 3, 4, 5, 6])
+        self.assertEqual(registry.current_version, 7)
+        self.assertEqual([item.version for item in registry.versions], [1, 2, 3, 4, 5, 6, 7])
         self.assertEqual(
             registry.versions[0].source_sha256,
             "ed3df1f1627ca8a836f509ead3ab7dc7a4cbc6116f6da4accb2cc53e7500859f",
@@ -52,6 +52,7 @@ class ProtocolCompilerTests(unittest.TestCase):
         )
         v5 = registry.versions[4].catalog
         v6 = registry.versions[5].catalog
+        v7 = registry.versions[6].catalog
         self.assertNotIn(
             "device_profiles", [field.name for field in v1_transaction.fields]
         )
@@ -90,6 +91,15 @@ class ProtocolCompilerTests(unittest.TestCase):
             record for record in v6.records if record.name == "EndpointSnapshot"
         )
         self.assertIn("return_epoch", [field.name for field in v6_endpoint.fields])
+        self.assertIn("native-receiver-tunnel", registry.versions[6].served_features)
+        self.assertEqual(
+            [
+                method.name
+                for method in v7.methods
+                if method.required_feature == "native-receiver-tunnel"
+            ],
+            ["native-enumerate", "native-transact", "native-watch"],
+        )
         first = load_protocol_catalog(ROOT)
         second = load_protocol_catalog(ROOT)
         self.assertEqual(first, second)
@@ -108,7 +118,8 @@ class ProtocolCompilerTests(unittest.TestCase):
         self.assertIn(
             "Self::Snapshot(envelope)\n"
             "            | Self::IntegrationView(envelope)\n"
-            "            | Self::Diagnostics(envelope) => &envelope.request_id,",
+            "            | Self::Diagnostics(envelope)\n"
+            "            | Self::NativeEnumerate(envelope) => &envelope.request_id,",
             rust,
         )
         self.assertLess(

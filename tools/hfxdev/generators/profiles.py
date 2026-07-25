@@ -309,6 +309,24 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "}",
         "",
         "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct NativeMatchRangeRecord {",
+        "    pub offset: u16,",
+        "    pub length: u16,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct NativeExchangeRecord {",
+        "    pub protocol_family: &'static str,",
+        "    pub report_bytes: u16,",
+        "    pub set_report_index: u8,",
+        "    pub response_report_index: u8,",
+        "    pub initial_response_delay_us: u32,",
+        "    pub response_retry_delay_us: u32,",
+        "    pub max_response_attempts: u8,",
+        "    pub match_ranges: &'static [NativeMatchRangeRecord],",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
         "pub struct ProfileRecord {",
         "    pub id: &'static str,",
         "    pub runtime_sha256: &'static str,",
@@ -326,6 +344,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "    pub required_sibling_kinds: &'static [DeviceKind],",
         "    pub exact_child_combinations: bool,",
         "    pub capabilities: &'static [CapabilityRecord],",
+        "    pub native_exchange: Option<NativeExchangeRecord>,",
         "    pub lighting: Option<LightingTopology>,",
         "    pub passive: Option<PassiveTelemetryRecord>,",
         "    pub lifecycle: Option<LifecyclePolicyRecord>,",
@@ -406,6 +425,19 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                 lines.append(f"const CARRIERS_{index}: &[u16] = &[")
                 lines.extend(_wrapped_numbers(lighting["application_index_to_carrier"]))
                 lines.extend(["];", ""])
+        native_exchange = profile.get("transport", {}).get("native_exchange")
+        if native_exchange:
+            lines.append(f"const NATIVE_MATCH_RANGES_{index}: &[NativeMatchRangeRecord] = &[")
+            for item in native_exchange["match_ranges"]:
+                lines.extend(
+                    [
+                        "    NativeMatchRangeRecord {",
+                        f"        offset: {item['offset']},",
+                        f"        length: {item['length']},",
+                        "    },",
+                    ]
+                )
+            lines.extend(["];", ""])
         passive = profile.get("transport", {}).get("passive")
         if passive:
             contact = passive["contact"] or {"off_mat": [], "on_mat": []}
@@ -443,6 +475,25 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
             "DeviceKind", compatibility.get("required_sibling_kinds", [])
         )
         exact_child_combinations = str(compatibility.get("exact_child_combinations", False)).lower()
+        native_exchange = profile.get("transport", {}).get("native_exchange")
+        if native_exchange:
+            native_exchange_lines = [
+                "        native_exchange: Some(NativeExchangeRecord {",
+                f"            protocol_family: {json.dumps(native_exchange['protocol_family'])},",
+                f"            report_bytes: {native_exchange['report_bytes']},",
+                f"            set_report_index: {native_exchange['set_report_index']},",
+                f"            response_report_index: {native_exchange['response_report_index']},",
+                "            initial_response_delay_us: "
+                f"{native_exchange['initial_response_delay_us']},",
+                "            response_retry_delay_us: "
+                f"{native_exchange['response_retry_delay_us']},",
+                "            max_response_attempts: "
+                f"{native_exchange['max_response_attempts']},",
+                f"            match_ranges: NATIVE_MATCH_RANGES_{index},",
+                "        }),",
+            ]
+        else:
+            native_exchange_lines = ["        native_exchange: None,"]
         lighting = profile.get("transport", {}).get("lighting")
         if lighting:
             lighting_value = None
@@ -534,6 +585,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                 f"        required_sibling_kinds: {required_sibling_kinds},",
                 f"        exact_child_combinations: {exact_child_combinations},",
                 f"        capabilities: CAPABILITIES_{index},",
+                *native_exchange_lines,
                 *(
                     [
                         "        lighting: Some(LightingTopology {",
@@ -937,10 +989,49 @@ def kernel_receiver_table(catalog: dict[str, Any]) -> str:
         }.get(inventory_decoder)
         if inventory_kind is None:
             raise ValueError(f"unsupported kernel pairing inventory decoder: {inventory_decoder}")
-        lines.append(
-            f'HFX_RECEIVER_PROFILE(0x{identity["vendor_id"]:04x}, '
-            f'0x{identity["product_id"]:04x}, {transport["backend_id"]}, '
-            f'{inventory_kind})'
+        native = transport.get("native_exchange")
+        if native is None:
+            native_kind = "HFX_NATIVE_EXCHANGE_NONE"
+            native_values = {
+                "report_bytes": 0,
+                "set_report_index": 0,
+                "response_report_index": 0,
+                "initial_response_delay_us": 0,
+                "response_retry_delay_us": 0,
+                "max_response_attempts": 0,
+            }
+            match_ranges: list[dict[str, int]] = []
+        else:
+            native_kind = {
+                "razer-feature-report-v1": "HFX_NATIVE_EXCHANGE_RAZER_FEATURE_REPORT_V1"
+            }.get(native["protocol_family"])
+            if native_kind is None:
+                raise ValueError(
+                    f"unsupported kernel native exchange protocol: {native['protocol_family']}"
+                )
+            native_values = native
+            match_ranges = native["match_ranges"]
+        range_values = ", ".join(
+            f"{{ .offset = {item['offset']}, .length = {item['length']} }}"
+            for item in match_ranges
+        )
+        lines.extend(
+            [
+                "HFX_RECEIVER_PROFILE(",
+                f'\t0x{identity["vendor_id"]:04x}, 0x{identity["product_id"]:04x},',
+                f'\t{transport["backend_id"]},',
+                f"\t.pairing_inventory_kind = {inventory_kind},",
+                f"\t.native_exchange_kind = {native_kind},",
+                f'\t.native_report_bytes = {native_values["report_bytes"]},',
+                f'\t.native_set_report_index = {native_values["set_report_index"]},',
+                f'\t.native_response_report_index = {native_values["response_report_index"]},',
+                f'\t.native_initial_response_delay_us = {native_values["initial_response_delay_us"]},',
+                f'\t.native_response_retry_delay_us = {native_values["response_retry_delay_us"]},',
+                f'\t.native_max_response_attempts = {native_values["max_response_attempts"]},',
+                f"\t.native_match_range_count = {len(match_ranges)},",
+                f"\t.native_match_ranges = {{ {range_values} }}",
+                ")",
+            ]
         )
     lines.extend(["", "#undef HFX_RECEIVER_PROFILE", ""])
     return "\n".join(lines)

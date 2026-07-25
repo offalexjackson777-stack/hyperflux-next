@@ -311,11 +311,14 @@ fn validate_nested_request_id(request: &RpcRequest) -> Result<(), SessionError> 
         RpcRequest::ReleaseLease(envelope) => Some(&envelope.params.request_id),
         RpcRequest::SubmitTransaction(envelope) => Some(&envelope.params.request_id),
         RpcRequest::TransactionOutcome(envelope) => Some(&envelope.params.request_id),
+        RpcRequest::NativeTransact(envelope) => Some(&envelope.params.request_id),
         RpcRequest::Negotiate(_)
         | RpcRequest::Snapshot(_)
         | RpcRequest::IntegrationView(_)
         | RpcRequest::Subscribe(_)
-        | RpcRequest::Diagnostics(_) => None,
+        | RpcRequest::Diagnostics(_)
+        | RpcRequest::NativeEnumerate(_)
+        | RpcRequest::NativeWatch(_) => None,
     };
     if nested.is_some_and(|request_id| request_id != request.request_id()) {
         return Err(SessionError::RequestIdMismatch);
@@ -323,6 +326,7 @@ fn validate_nested_request_id(request: &RpcRequest) -> Result<(), SessionError> 
     Ok(())
 }
 
+#[allow(clippy::match_same_arms)]
 fn validate_client_id(request: &RpcRequest, expected: &ClientId) -> Result<(), SessionError> {
     let actual = match request {
         RpcRequest::AcquireLease(envelope) => Some(&envelope.params.client_id),
@@ -330,11 +334,15 @@ fn validate_client_id(request: &RpcRequest, expected: &ClientId) -> Result<(), S
         RpcRequest::ReleaseLease(envelope) => Some(&envelope.params.client_id),
         RpcRequest::SubmitTransaction(envelope) => Some(&envelope.params.client_id),
         RpcRequest::TransactionOutcome(envelope) => Some(&envelope.params.client_id),
-        RpcRequest::Subscribe(envelope) => Some(&envelope.params.client_id),
+        RpcRequest::Subscribe(envelope) | RpcRequest::NativeWatch(envelope) => {
+            Some(&envelope.params.client_id)
+        }
+        RpcRequest::NativeTransact(envelope) => Some(&envelope.params.client_id),
         RpcRequest::Negotiate(_)
         | RpcRequest::Snapshot(_)
         | RpcRequest::IntegrationView(_)
-        | RpcRequest::Diagnostics(_) => None,
+        | RpcRequest::Diagnostics(_)
+        | RpcRequest::NativeEnumerate(_) => None,
     };
     if actual.is_some_and(|client_id| client_id != expected) {
         return Err(SessionError::ClientIdMismatch);

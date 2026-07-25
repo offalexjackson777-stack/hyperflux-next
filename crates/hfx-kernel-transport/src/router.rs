@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::{KernelTransportError, KernelTransportErrorKind};
-use hfx_core::{ReceiverTransport, TransportDispatch, TransportReceipt, TransportReconciliation};
+use hfx_core::{
+    NativeTransportDispatch, NativeTransportOutcome, NativeTransportResult, ReceiverTransport,
+    TransportDispatch, TransportReceipt, TransportReconciliation,
+};
 use hfx_domain::{GenerationId, QueueCapacity, ReceiverId};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -178,6 +181,21 @@ where
         )
     }
 
+    fn native_exchange_available(
+        &self,
+        receiver_id: &ReceiverId,
+        generation_id: GenerationId,
+    ) -> bool {
+        matches!(
+            self.routes.get(receiver_id),
+            Some(KernelRoute::Writable {
+                generation_id: active,
+                transport,
+            }) if *active == generation_id
+                && transport.native_exchange_available(receiver_id, generation_id)
+        )
+    }
+
     fn reconcile(&self, dispatch: &TransportDispatch) -> TransportReconciliation {
         match self.routes.get(&dispatch.receiver_id) {
             Some(KernelRoute::Writable {
@@ -197,6 +215,22 @@ where
             _ => Err(KernelTransportError::safe(
                 KernelTransportErrorKind::SessionUnavailable,
             )),
+        }
+    }
+
+    fn native_exchange(&mut self, dispatch: &NativeTransportDispatch) -> NativeTransportOutcome {
+        match self.routes.get_mut(&dispatch.receiver_id) {
+            Some(KernelRoute::Writable {
+                generation_id,
+                transport,
+            }) if *generation_id == dispatch.generation_id => transport.native_exchange(dispatch),
+            _ => NativeTransportOutcome {
+                dispatch_nonce: dispatch.dispatch_nonce,
+                route_token_digest: dispatch.route_token_digest,
+                result: NativeTransportResult::NotSent {
+                    error_kind: hfx_domain::ProtocolErrorKind::StaleGeneration,
+                },
+            },
         }
     }
 }

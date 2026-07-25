@@ -2,7 +2,8 @@
 
 use crate::{
     HFX_UAPI_IOCTL_MAGIC, HfxUapiBeginSession, HfxUapiEndSession, HfxUapiInfo,
-    HfxUapiReadObservations, HfxUapiSubmit, HfxUapiTransactionResult,
+    HfxUapiNativeExchangeResult, HfxUapiNativeExchangeSubmit, HfxUapiReadObservations,
+    HfxUapiSubmit, HfxUapiTransactionResult,
 };
 use rustix::io;
 use rustix::ioctl::{Getter, Setter, Updater, ioctl, opcode};
@@ -19,6 +20,10 @@ const GET_TRANSACTION_RESULT: rustix::ioctl::Opcode =
     opcode::read_write::<HfxUapiTransactionResult>(HFX_UAPI_IOCTL_MAGIC, 0x04);
 const READ_OBSERVATIONS: rustix::ioctl::Opcode =
     opcode::read_write::<HfxUapiReadObservations>(HFX_UAPI_IOCTL_MAGIC, 0x05);
+const SUBMIT_NATIVE_EXCHANGE: rustix::ioctl::Opcode =
+    opcode::read_write::<HfxUapiNativeExchangeSubmit>(HFX_UAPI_IOCTL_MAGIC, 0x06);
+const GET_NATIVE_EXCHANGE_RESULT: rustix::ioctl::Opcode =
+    opcode::read_write::<HfxUapiNativeExchangeResult>(HFX_UAPI_IOCTL_MAGIC, 0x07);
 
 pub fn get_info(fd: impl AsFd) -> io::Result<HfxUapiInfo> {
     // SAFETY: the opcode is generated from the canonical UAPI type and the
@@ -65,6 +70,32 @@ pub fn read_observations(fd: impl AsFd, request: &mut HfxUapiReadObservations) -
         ioctl(
             fd,
             Updater::<READ_OBSERVATIONS, HfxUapiReadObservations>::new(request),
+        )
+    }
+}
+
+pub fn submit_native_exchange(
+    fd: impl AsFd,
+    request: &mut HfxUapiNativeExchangeSubmit,
+) -> io::Result<()> {
+    // SAFETY: the read/write opcode and value type come from the same generated UAPI record.
+    unsafe {
+        ioctl(
+            fd,
+            Updater::<SUBMIT_NATIVE_EXCHANGE, HfxUapiNativeExchangeSubmit>::new(request),
+        )
+    }
+}
+
+pub fn get_native_exchange_result(
+    fd: impl AsFd,
+    request: &mut HfxUapiNativeExchangeResult,
+) -> io::Result<()> {
+    // SAFETY: the read/write opcode and value type come from the same generated UAPI record.
+    unsafe {
+        ioctl(
+            fd,
+            Updater::<GET_NATIVE_EXCHANGE_RESULT, HfxUapiNativeExchangeResult>::new(request),
         )
     }
 }

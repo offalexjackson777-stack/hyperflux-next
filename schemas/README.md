@@ -33,6 +33,8 @@ Defines strict machine-readable shapes for every shared repository fact and gene
 - [`schemas/local-snapshot.schema.json`](local-snapshot.schema.json)
 - [`schemas/licensing-policy.schema.json`](licensing-policy.schema.json)
 - [`schemas/lifecycle-policy-catalog.schema.json`](lifecycle-policy-catalog.schema.json)
+- [`schemas/kernel-uapi-registry.schema.json`](kernel-uapi-registry.schema.json)
+- [`schemas/kernel-uapi-native-exchange.schema.json`](kernel-uapi-native-exchange.schema.json)
 
 ## Verification
 

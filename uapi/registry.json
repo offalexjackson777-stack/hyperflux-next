@@ -1,0 +1,22 @@
+{
+  "$schema": "../schemas/kernel-uapi-registry.schema.json",
+  "schema": "hyperflux-kernel-uapi-registry-v1",
+  "entries": [
+    {
+      "abi_version": 1,
+      "catalog": "kernel-uapi.json",
+      "schema": "hyperflux-kernel-uapi-v1",
+      "schema_ref": "../schemas/kernel-uapi.schema.json",
+      "version_macro": "abi_version",
+      "role": "baseline"
+    },
+    {
+      "abi_version": 2,
+      "catalog": "native-exchange-v2.json",
+      "schema": "hyperflux-kernel-uapi-native-exchange-v2",
+      "schema_ref": "../schemas/kernel-uapi-native-exchange.schema.json",
+      "version_macro": "native_abi_version",
+      "role": "native_exchange"
+    }
+  ]
+}

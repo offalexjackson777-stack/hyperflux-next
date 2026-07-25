@@ -9,13 +9,17 @@ use hfx_domain::{
 use hfx_kernel_transport::{
     AlignedU64, HFX_UAPI_ABI_VERSION, HFX_UAPI_INFO_FLAG_SESSION_ACTIVE,
     HFX_UAPI_INFO_FLAG_SUSPENDED, HFX_UAPI_INFO_FLAG_WRITER_OPEN, HFX_UAPI_MAX_OBSERVATIONS,
+    HFX_UAPI_NATIVE_ABI_VERSION, HFX_UAPI_NATIVE_EXCHANGE_CERTAINTY_MATCHED_RESPONSE,
+    HFX_UAPI_NATIVE_EXCHANGE_CERTAINTY_MAY_HAVE_BEEN_SENT,
+    HFX_UAPI_NATIVE_EXCHANGE_CERTAINTY_NOT_SENT, HFX_UAPI_NATIVE_REPORT_BYTES,
     HFX_UAPI_RESULT_FLAG_AUTOMATIC_RETRY_SAFE, HFX_UAPI_RESULT_FLAG_WRITE_STARTED,
     HFX_UAPI_TRANSPORT_STATUS_FAILED, HFX_UAPI_TRANSPORT_STATUS_NOT_OBSERVED,
     HFX_UAPI_TRANSPORT_STATUS_SUCCEEDED, HFX_UAPI_TRANSPORT_STATUS_UNAVAILABLE,
-    HfxUapiBeginSession, HfxUapiEndSession, HfxUapiInfo, HfxUapiObservation,
-    HfxUapiReadObservations, HfxUapiSubmit, HfxUapiTransactionResult, KernelIo, KernelIoError,
-    KernelReceiverTransport, KernelSessionMaterial, KernelTransportErrorKind,
-    ReceiverFrameEncoderRegistry,
+    HfxUapiBeginSession, HfxUapiEndSession, HfxUapiInfo, HfxUapiNativeExchangeResult,
+    HfxUapiNativeExchangeSubmit, HfxUapiObservation, HfxUapiReadObservations, HfxUapiSubmit,
+    HfxUapiTransactionResult, KernelIo, KernelIoError, KernelReceiverTransport,
+    KernelSessionMaterial, KernelTransportErrorKind, NativeEndpointLane, NativeExchangeCertainty,
+    NativeExchangeRequest, ReceiverFrameEncoderRegistry,
 };
 use hfx_profiles::RuntimeProfileCatalog;
 use hfx_protocol::{DeviceProfileBinding, LightingFrame, RgbColor};
@@ -56,6 +60,10 @@ struct FakeKernelState {
     last_submit: Option<HfxUapiSubmit>,
     results: BTreeMap<(u64, u64), HfxUapiTransactionResult>,
     failure_plan: Option<FailurePlan>,
+    native_submit_calls: usize,
+    last_native_submit: Option<HfxUapiNativeExchangeSubmit>,
+    native_results: BTreeMap<(u64, u64), HfxUapiNativeExchangeResult>,
+    native_failure_errno: Option<i32>,
     observations: Vec<HfxUapiObservation>,
 }
 
@@ -77,6 +85,10 @@ impl FakeKernel {
                 last_submit: None,
                 results: BTreeMap::new(),
                 failure_plan: None,
+                native_submit_calls: 0,
+                last_native_submit: None,
+                native_results: BTreeMap::new(),
+                native_failure_errno: None,
                 observations: Vec::new(),
             })),
         }
@@ -94,6 +106,13 @@ impl FakeKernel {
             .lock()
             .expect("fake kernel lock is healthy")
             .failure_plan = Some(plan);
+    }
+
+    fn fail_next_native_after_set(&self, transport_errno: i32) {
+        self.state
+            .lock()
+            .expect("fake kernel lock is healthy")
+            .native_failure_errno = Some(transport_errno);
     }
 
     fn advance_to_renewal_window(&self) {
@@ -288,6 +307,121 @@ impl KernelIo for FakeKernel {
         Ok(())
     }
 
+    fn submit_native_exchange(
+        &self,
+        request: &mut HfxUapiNativeExchangeSubmit,
+    ) -> Result<(), KernelIoError> {
+        let mut state = self.state.lock().map_err(lock_error)?;
+        if let Some(result) = state
+            .native_results
+            .values()
+            .find(|result| {
+                result.receiver_generation == request.receiver_generation
+                    && result.dispatch_nonce == request.dispatch_nonce
+                    && result.endpoint_slot == request.endpoint_slot
+                    && result.route_token_digest == request.route_token_digest
+                    && result.request_digest == request.request_digest
+            })
+            .copied()
+        {
+            request.kernel_sequence = result.kernel_sequence;
+            return if result.certainty == HFX_UAPI_NATIVE_EXCHANGE_CERTAINTY_MATCHED_RESPONSE {
+                Ok(())
+            } else {
+                Err(fake_error())
+            };
+        }
+        if !state.session_active
+            || request.authorization_epoch.0 != state.authorization_epoch
+            || request.receiver_generation.0 != state.generation
+            || request.dispatch_nonce.0 <= state.maximum_nonce
+        {
+            return Err(fake_error());
+        }
+        state.maximum_nonce = request.dispatch_nonce.0;
+        state.next_sequence = state.next_sequence.saturating_add(1);
+        state.native_submit_calls += 1;
+        request.kernel_sequence = AlignedU64(state.next_sequence);
+        state.last_native_submit = Some(*request);
+        let failure = state.native_failure_errno.take();
+        let matched = failure.is_none();
+        let result = HfxUapiNativeExchangeResult {
+            version: HFX_UAPI_NATIVE_ABI_VERSION,
+            size: u32::try_from(size_of::<HfxUapiNativeExchangeResult>())
+                .map_err(|_| fake_error())?,
+            receiver_generation: request.receiver_generation,
+            authorization_epoch: request.authorization_epoch,
+            kernel_sequence: request.kernel_sequence,
+            dispatch_nonce: request.dispatch_nonce,
+            endpoint_slot: request.endpoint_slot,
+            certainty: if matched {
+                HFX_UAPI_NATIVE_EXCHANGE_CERTAINTY_MATCHED_RESPONSE
+            } else {
+                HFX_UAPI_NATIVE_EXCHANGE_CERTAINTY_MAY_HAVE_BEEN_SENT
+            },
+            route_token_digest: request.route_token_digest,
+            request_digest: request.request_digest,
+            transport_errno: failure.unwrap_or(0),
+            response_length: if matched {
+                u32::try_from(HFX_UAPI_NATIVE_REPORT_BYTES).map_err(|_| fake_error())?
+            } else {
+                0
+            },
+            response: if matched {
+                request.report
+            } else {
+                [0; HFX_UAPI_NATIVE_REPORT_BYTES]
+            },
+            reserved: 0,
+        };
+        state.native_results.insert(
+            (request.authorization_epoch.0, request.dispatch_nonce.0),
+            result,
+        );
+        if matched { Ok(()) } else { Err(fake_error()) }
+    }
+
+    fn get_native_exchange_result(
+        &self,
+        request: &mut HfxUapiNativeExchangeResult,
+    ) -> Result<(), KernelIoError> {
+        let state = self.state.lock().map_err(lock_error)?;
+        if let Some(result) = state.native_results.values().find(|result| {
+            result.receiver_generation == request.receiver_generation
+                && result.dispatch_nonce == request.dispatch_nonce
+                && result.endpoint_slot == request.endpoint_slot
+                && result.route_token_digest == request.route_token_digest
+                && result.request_digest == request.request_digest
+        }) {
+            *request = *result;
+            return Ok(());
+        }
+        if let Some(result) = state
+            .native_results
+            .get(&(request.authorization_epoch.0, request.dispatch_nonce.0))
+        {
+            request.kernel_sequence = result.kernel_sequence;
+            request.certainty = HFX_UAPI_NATIVE_EXCHANGE_CERTAINTY_MAY_HAVE_BEEN_SENT;
+            request.transport_errno = -17;
+            request.response_length = 0;
+            request.response = [0; HFX_UAPI_NATIVE_REPORT_BYTES];
+            return Ok(());
+        }
+        request.kernel_sequence = AlignedU64(0);
+        request.certainty = if state.session_active
+            && request.authorization_epoch.0 == state.authorization_epoch
+            && request.dispatch_nonce.0 > state.maximum_nonce
+        {
+            HFX_UAPI_NATIVE_EXCHANGE_CERTAINTY_NOT_SENT
+        } else {
+            HFX_UAPI_NATIVE_EXCHANGE_CERTAINTY_MAY_HAVE_BEEN_SENT
+        };
+        request.transport_errno = -61;
+        request.response_length = 0;
+        request.response = [0; HFX_UAPI_NATIVE_REPORT_BYTES];
+        Ok(())
+    }
+
     fn read_observations(
         &self,
         request: &mut HfxUapiReadObservations,
@@ -414,6 +548,91 @@ fn adapter_reconciles_exact_success_without_a_second_submit() {
 }
 
 #[test]
+fn native_exchange_reconciles_before_and_after_one_set() {
+    let fake = FakeKernel::new();
+    let mut transport = transport(fake.clone());
+    let request = native_request(1, NativeEndpointLane::Pointer);
+
+    let before = transport
+        .reconcile_native_exchange(&request)
+        .expect("new nonce is provably not sent");
+    assert_eq!(before.certainty, NativeExchangeCertainty::NotSent);
+    assert!(before.certainty.automatic_retry_safe());
+
+    let outcome = transport
+        .native_exchange(&request)
+        .expect("native exchange succeeds");
+    assert_eq!(outcome.certainty, NativeExchangeCertainty::MatchedResponse);
+    assert_eq!(outcome.response, Some(request.report));
+    assert!(!outcome.certainty.automatic_retry_safe());
+
+    assert_eq!(
+        transport.native_exchange(&request),
+        Ok(outcome.clone()),
+        "an exact replay returns the retained response"
+    );
+    let state = fake.snapshot();
+    assert_eq!(state.native_submit_calls, 1);
+    assert_eq!(
+        state
+            .last_native_submit
+            .expect("native submit was captured")
+            .report,
+        request.report
+    );
+}
+
+#[test]
+fn uncertain_native_set_is_retained_and_never_resubmitted() {
+    let fake = FakeKernel::new();
+    fake.fail_next_native_after_set(-110);
+    let mut transport = transport(fake.clone());
+    let request = native_request(1, NativeEndpointLane::Keyboard);
+
+    let outcome = transport
+        .native_exchange(&request)
+        .expect("uncertain delivery remains a typed outcome");
+    assert_eq!(outcome.certainty, NativeExchangeCertainty::MayHaveBeenSent);
+    assert_eq!(outcome.transport_errno, -110);
+    assert_eq!(outcome.response, None);
+    assert!(!outcome.certainty.automatic_retry_safe());
+    assert_eq!(transport.native_exchange(&request), Ok(outcome));
+
+    let mut contradiction = request.clone();
+    contradiction.report[12] ^= 1;
+    assert_eq!(
+        transport
+            .native_exchange(&contradiction)
+            .expect_err("one nonce cannot identify two native requests")
+            .kind(),
+        KernelTransportErrorKind::NativeOutcomeConflict
+    );
+    assert_eq!(fake.snapshot().native_submit_calls, 1);
+}
+
+#[test]
+fn native_and_lighting_submissions_share_one_monotonic_nonce_ledger() {
+    let fake = FakeKernel::new();
+    let mut transport = transport(fake.clone());
+    let catalog = RuntimeProfileCatalog::load().expect("catalog is valid");
+
+    transport
+        .dispatch(&dispatch(&catalog, 1, true, false))
+        .expect("lighting nonce one succeeds");
+    transport
+        .native_exchange(&native_request(2, NativeEndpointLane::Pointer))
+        .expect("native nonce two succeeds");
+    transport
+        .dispatch(&dispatch(&catalog, 3, false, true))
+        .expect("lighting nonce three succeeds");
+
+    let state = fake.snapshot();
+    assert_eq!(state.submit_calls, 2);
+    assert_eq!(state.native_submit_calls, 1);
+    assert_eq!(state.maximum_nonce, 3);
+}
+
+#[test]
 fn retained_result_survives_writer_session_rotation() {
     let fake = FakeKernel::new();
     let catalog = RuntimeProfileCatalog::load().expect("catalog is valid");
@@ -513,14 +732,15 @@ fn suspended_receiver_retains_generation_identity_but_rejects_writes() {
     let fake = FakeKernel::new();
     let mut transport = transport(fake.clone());
     let receiver_id = ReceiverId::try_from("receiver-1").expect("receiver id is valid");
+    let generation = GenerationId::try_from(GENERATION).expect("generation is valid");
     let catalog = RuntimeProfileCatalog::load().expect("catalog is valid");
+
+    assert!(transport.native_exchange_available(&receiver_id, generation));
 
     fake.set_suspended(true);
 
-    assert_eq!(
-        transport.current_generation(&receiver_id),
-        Some(GenerationId::try_from(GENERATION).expect("generation is valid"))
-    );
+    assert_eq!(transport.current_generation(&receiver_id), Some(generation));
+    assert!(!transport.native_exchange_available(&receiver_id, generation));
     let error = transport
         .dispatch(&dispatch(&catalog, 1, true, true))
         .expect_err("suspended receiver cannot admit a write");
@@ -686,6 +906,23 @@ fn keyboard_colors() -> Vec<RgbColor> {
             }
         })
         .collect()
+}
+
+fn native_request(dispatch_nonce: u64, endpoint: NativeEndpointLane) -> NativeExchangeRequest {
+    let mut report = [0_u8; HFX_UAPI_NATIVE_REPORT_BYTES];
+    report[0] = 0x1f;
+    report[6] = 0x00;
+    report[7] = 0x87;
+    report[88] = report[2..88]
+        .iter()
+        .fold(0_u8, |checksum, byte| checksum ^ byte);
+    NativeExchangeRequest {
+        dispatch_nonce,
+        endpoint,
+        route_token_digest: [0x5a; 32],
+        report,
+        timeout: Duration::from_millis(250),
+    }
 }
 
 fn color(red: u8, green: u8, blue: u8) -> RgbColor {

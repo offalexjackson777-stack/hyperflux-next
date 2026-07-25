@@ -104,6 +104,13 @@
     },
     {
       "component": "kernel-source",
+      "source": "driver/kernel/hyperflux-next-native.c",
+      "destination": "/usr/src/hid-hyperflux-next-0.0.0_dev.1/hyperflux-next-native.c",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
       "source": "driver/kernel/hyperflux-next-observation.c",
       "destination": "/usr/src/hid-hyperflux-next-0.0.0_dev.1/hyperflux-next-observation.c",
       "mode": "0644",
@@ -393,6 +400,20 @@
       "component": "schemas",
       "source": "schemas/integration-catalog.schema.json",
       "destination": "/usr/share/hyperflux-next/schemas/integration-catalog.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/kernel-uapi-native-exchange.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/kernel-uapi-native-exchange.schema.json",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "schemas",
+      "source": "schemas/kernel-uapi-registry.schema.json",
+      "destination": "/usr/share/hyperflux-next/schemas/kernel-uapi-registry.schema.json",
       "mode": "0644",
       "preserve": false
     },
@@ -846,6 +867,20 @@
     },
     {
       "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/protocol_v7_json.hpp",
+      "destination": "/usr/include/hyperflux/generated/protocol_v7_json.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
+      "source": "sdk/cpp/include/hyperflux/generated/protocol_v7_types.hpp",
+      "destination": "/usr/include/hyperflux/generated/protocol_v7_types.hpp",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "cpp-sdk-headers",
       "source": "sdk/cpp/include/hyperflux/sdk.hpp",
       "destination": "/usr/include/hyperflux/sdk.hpp",
       "mode": "0644",
@@ -1016,6 +1051,13 @@
       "component": "documentation",
       "source": "docs/generated/bridge-protocol-v6.md",
       "destination": "/usr/share/doc/hyperflux-next/generated/bridge-protocol-v6.md",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "documentation",
+      "source": "docs/generated/bridge-protocol-v7.md",
+      "destination": "/usr/share/doc/hyperflux-next/generated/bridge-protocol-v7.md",
       "mode": "0644",
       "preserve": false
     },

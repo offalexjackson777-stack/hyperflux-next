@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "HyperFlux Next source dependency inventory",
-  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/2874becb4636df0d25308c3cdd27b18585424476379ec3ea74ea87a781344253",
+  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/92006b9561017382240993dd195de5c217e9e6fcc2e3614e6061698fd16b201d",
   "creationInfo": {
     "created": "2026-07-20T00:00:00Z",
     "creators": [
@@ -1256,6 +1256,11 @@
       "spdxElementId": "SPDXRef-Cargo-hfx-bridge-0.0.0-dev.1",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-bridge-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-core-0.0.0-dev.1",

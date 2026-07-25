@@ -7,6 +7,9 @@ mod backend;
 mod clock;
 mod connection;
 mod generation;
+mod native_exchange;
+mod native_projection;
+mod native_routes;
 mod observation;
 mod persistence;
 mod profile_authority;
@@ -41,11 +44,15 @@ pub use hfx_protocol::{
     read_rpc_response, read_rpc_response_for_version, write_rpc_request,
     write_rpc_request_for_version, write_rpc_response, write_rpc_response_for_version,
 };
+pub use native_exchange::{NativeExchangeJournal, NativeExchangeJournalError};
+pub use native_projection::{
+    NATIVE_EXCHANGE_CAPABILITY_ID, NativeRouteProjectionError, project_native_routes,
+};
+pub use native_routes::{NativeRouteJournal, NativeRouteJournalError};
 pub use observation::{
     AppliedLifecycleObservation, LifecycleObservation, LifecycleObservationError,
     LifecycleObservationKind, LifecycleObservationOrchestrator, LifecycleObservationOutcome,
 };
-
 pub use persistence::{
     AtomicFileCommitter, BRIDGE_PERSISTENCE_SCHEMA, BridgePersistenceDocument,
     DEFAULT_MAX_PERSISTED_RECEIVERS, DEFAULT_MAX_PERSISTENCE_BYTES, FilePersistenceConfig,

@@ -8,19 +8,21 @@ use hfx_domain::{
     ErrorSeverity, EventBatchLimit, EventKind, EvidenceClaimId, EvidenceConfidence, FindingId,
     FrameCount, FrameIndex, FreshnessState, GenerationId, HumanMessage, InventoryAvailability,
     LeaseDurationMs, LeaseId, LeaseState, LedCount, LogicalDeviceId, ModelName, MonotonicMs,
-    NegotiationToken, PairingState, PowerState, PresenceState, PresentationKey, PrivacyClass,
-    ProductId, ProfileDigest, ProfileId, ProjectionRevision, ProtocolErrorKind, ProtocolFeatureId,
-    ProtocolSessionId, ProtocolVersion, QueueAdmission, QueueCapacity, ReceiverId,
-    ReceiverLifecycleState, RequestDigest, RequestId, ResourceKind, RestoreDeliveryState,
-    RestoreState, ReturnEvidence, ReturnPhase, RouteKind, RouteState, SequenceNumber,
-    ServerInstanceId, SideEffectCertainty, SleepState, SourceRevision, StableLightingMode,
-    StreamEpoch, StreamId, SubscriptionId, SupportLevel, TelemetryAvailability, TransactionClass,
-    TransactionId, TransactionState, TransportVariant, UpstreamId, UpstreamOwner,
+    NativeExchangeTimeoutMs, NativeProtocolFamily, NativeReportByteCount, NativeReportHex,
+    NativeRouteAccess, NativeRouteEventKind, NativeRouteToken, NegotiationToken, PairingState,
+    PowerState, PresenceState, PresentationKey, PrivacyClass, ProductId, ProfileDigest, ProfileId,
+    ProjectionRevision, ProtocolErrorKind, ProtocolFeatureId, ProtocolSessionId, ProtocolVersion,
+    QueueAdmission, QueueCapacity, ReceiverId, ReceiverLifecycleState, RequestDigest, RequestId,
+    ResourceKind, RestoreDeliveryState, RestoreState, ReturnEvidence, ReturnPhase, RouteKind,
+    RouteState, SequenceNumber, ServerInstanceId, SideEffectCertainty, SleepState, SourceRevision,
+    StableLightingMode, StreamEpoch, StreamId, SubscriptionId, SupportLevel, TelemetryAvailability,
+    TransactionClass, TransactionId, TransactionState, TransportVariant, UpstreamId, UpstreamOwner,
+    VendorId,
 };
 use serde::{Deserialize, Serialize};
 
-pub const MINIMUM_PROTOCOL_VERSION: u16 = 6;
-pub const MAXIMUM_PROTOCOL_VERSION: u16 = 6;
+pub const MINIMUM_PROTOCOL_VERSION: u16 = 7;
+pub const MAXIMUM_PROTOCOL_VERSION: u16 = 7;
 pub const MAX_WIRE_MESSAGE_BYTES: usize = 1_048_576;
 pub const MAX_JSON_DEPTH: usize = 128;
 pub const SUPPORTED_FEATURES: &[&str] = &[
@@ -33,6 +35,7 @@ pub const SUPPORTED_FEATURES: &[&str] = &[
     "event-subscriptions",
     "structured-diagnostics",
     "return-lifecycle-projection",
+    "native-receiver-tunnel",
 ];
 
 /// A method request with no method-specific fields.
@@ -777,6 +780,140 @@ pub struct IntegrationView {
     pub receivers: Vec<IntegrationReceiverView>,
 }
 
+/// One generation-bound receiver child route without a host device path.
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct NativeRoute {
+    /// Receiver that owns this route.
+    pub receiver_id: ReceiverId,
+    /// Exact receiver generation binding.
+    pub generation_id: GenerationId,
+    /// Logical child device identity.
+    pub device_id: LogicalDeviceId,
+    /// Exact receiver child endpoint.
+    pub endpoint_id: EndpointId,
+    /// Observed child device category.
+    pub device_kind: DeviceKind,
+    /// Observed child USB vendor identifier.
+    pub vendor_id: VendorId,
+    /// Observed child USB product identifier.
+    pub product_id: ProductId,
+    /// Current receiver route evidence.
+    pub route_state: RouteState,
+    /// Evidence-backed tunnel access level.
+    pub access: NativeRouteAccess,
+    /// Opaque feature-report protocol family.
+    pub protocol_family: NativeProtocolFamily,
+    /// Exact native report size.
+    pub report_bytes: NativeReportByteCount,
+    /// Opaque writable route token when qualified and available.
+    pub route_token: Option<NativeRouteToken>,
+    /// Native-control lease resource when writable.
+    pub resource: Option<ResourceKey>,
+}
+
+/// Bounded sequence-consistent native route inventory.
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct NativeRouteInventory {
+    /// Complete event position reflected by this inventory.
+    pub cursor: EventCursor,
+    /// Known routes in canonical identity order.
+    pub routes: Vec<NativeRoute>,
+}
+
+/// One idempotent lease-bound native child feature-report exchange.
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct NativeExchangeRequest {
+    /// Client idempotency identity.
+    pub request_id: RequestId,
+    /// Owning application client.
+    pub client_id: ClientId,
+    /// Exact native-control ownership lease.
+    pub lease_id: LeaseId,
+    /// Generation-bound opaque route token.
+    pub route_token: NativeRouteToken,
+    /// Exact lowercase hexadecimal native report.
+    pub report: NativeReportHex,
+    /// Bounded complete exchange deadline.
+    pub timeout_ms: NativeExchangeTimeoutMs,
+}
+
+/// The native request provably did not reach the receiver.
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct NativeExchangeNotSent {
+    /// Stable retry-safe failure category.
+    pub error_kind: ProtocolErrorKind,
+    /// Central diagnostic reference.
+    pub finding_id: FindingId,
+}
+
+/// The SET report may have reached the receiver and must not be repeated automatically.
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct NativeExchangeUncertain {
+    /// Stable uncertain failure category.
+    pub error_kind: ProtocolErrorKind,
+    /// Central diagnostic reference.
+    pub finding_id: FindingId,
+}
+
+/// A response matching the exact native request identity was retained.
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct NativeExchangeMatchedResponse {
+    /// Exact lowercase hexadecimal native response.
+    pub response: NativeReportHex,
+}
+
+/// Idempotent native exchange identity and contradiction-free result.
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct NativeExchangeOutcome {
+    /// Original client request identity.
+    pub request_id: RequestId,
+    /// Exact route token used for the exchange.
+    pub route_token: NativeRouteToken,
+    /// Retained native transport result.
+    pub result: NativeExchangeResult,
+}
+
+/// One sequence-bound complete native route change.
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct NativeRouteEvent {
+    /// Strictly increasing route event sequence.
+    pub sequence: SequenceNumber,
+    /// Typed route transition.
+    pub kind: NativeRouteEventKind,
+    /// Complete route state after the transition.
+    pub route: NativeRoute,
+}
+
+/// Bounded native route changes with explicit cursor-gap state.
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct NativeRouteEventBatch {
+    /// Native route subscription identity.
+    pub subscription_id: SubscriptionId,
+    /// Cursor for the next native route batch.
+    pub next_cursor: EventCursor,
+    /// Native route events after the requested cursor.
+    pub events: Vec<NativeRouteEvent>,
+    /// Oldest retained sequence.
+    pub oldest_available: SequenceNumber,
+    /// Newest retained sequence.
+    pub latest_available: SequenceNumber,
+    /// Events evicted during this stream epoch.
+    pub dropped_events: DroppedEventCount,
+    /// Whether the client must enumerate routes again.
+    pub cursor_gap: bool,
+    /// Whether another retained native route event follows.
+    pub has_more: bool,
+}
+
 /// Stable structured request failure.
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -836,6 +973,21 @@ pub enum ControllerOwnership {
     OwnedByOther(OtherOwnedController),
 }
 
+/// Contradiction-free native transport certainty and response.
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(tag = "certainty", content = "detail")]
+pub enum NativeExchangeResult {
+    /// The request is safe to retry with a new identity.
+    #[serde(rename = "not-sent")]
+    NotSent(NativeExchangeNotSent),
+    /// Automatic retry is forbidden because SET delivery is uncertain.
+    #[serde(rename = "may-have-been-sent")]
+    MayHaveBeenSent(NativeExchangeUncertain),
+    /// The exact matching response was retained.
+    #[serde(rename = "matched-response")]
+    MatchedResponse(NativeExchangeMatchedResponse),
+}
+
 /// Unnegotiated request envelope used only for the handshake.
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -878,6 +1030,12 @@ pub enum RpcRequest {
     Subscribe(SessionRequestEnvelope<SubscriptionRequest>),
     #[serde(rename = "diagnostics")]
     Diagnostics(SessionRequestEnvelope<EmptyRequest>),
+    #[serde(rename = "native-enumerate")]
+    NativeEnumerate(SessionRequestEnvelope<EmptyRequest>),
+    #[serde(rename = "native-transact")]
+    NativeTransact(SessionRequestEnvelope<NativeExchangeRequest>),
+    #[serde(rename = "native-watch")]
+    NativeWatch(SessionRequestEnvelope<SubscriptionRequest>),
 }
 
 /// Successful method response bound to the serving bridge instance.
@@ -922,6 +1080,12 @@ pub enum RpcResponse {
     SubscribeSuccess(SuccessEnvelope<EventBatch>),
     #[serde(rename = "diagnostics-success")]
     DiagnosticsSuccess(SuccessEnvelope<DiagnosticSnapshot>),
+    #[serde(rename = "native-enumerate-success")]
+    NativeEnumerateSuccess(SuccessEnvelope<NativeRouteInventory>),
+    #[serde(rename = "native-transact-success")]
+    NativeTransactSuccess(SuccessEnvelope<NativeExchangeOutcome>),
+    #[serde(rename = "native-watch-success")]
+    NativeWatchSuccess(SuccessEnvelope<NativeRouteEventBatch>),
     #[serde(rename = "error")]
     Error(ErrorEnvelope),
 }
@@ -995,6 +1159,24 @@ pub const METHODS: &[MethodDescriptor] = &[
         response: "DiagnosticSnapshot",
         required_feature: Some("structured-diagnostics"),
     },
+    MethodDescriptor {
+        name: "native-enumerate",
+        request: "EmptyRequest",
+        response: "NativeRouteInventory",
+        required_feature: Some("native-receiver-tunnel"),
+    },
+    MethodDescriptor {
+        name: "native-transact",
+        request: "NativeExchangeRequest",
+        response: "NativeExchangeOutcome",
+        required_feature: Some("native-receiver-tunnel"),
+    },
+    MethodDescriptor {
+        name: "native-watch",
+        request: "SubscriptionRequest",
+        response: "NativeRouteEventBatch",
+        required_feature: Some("native-receiver-tunnel"),
+    },
 ];
 
 impl RpcRequest {
@@ -1005,13 +1187,15 @@ impl RpcRequest {
             Self::Negotiate(envelope) => &envelope.request_id,
             Self::Snapshot(envelope)
             | Self::IntegrationView(envelope)
-            | Self::Diagnostics(envelope) => &envelope.request_id,
+            | Self::Diagnostics(envelope)
+            | Self::NativeEnumerate(envelope) => &envelope.request_id,
             Self::AcquireLease(envelope) => &envelope.request_id,
             Self::RenewLease(envelope) => &envelope.request_id,
             Self::ReleaseLease(envelope) => &envelope.request_id,
             Self::SubmitTransaction(envelope) => &envelope.request_id,
             Self::TransactionOutcome(envelope) => &envelope.request_id,
-            Self::Subscribe(envelope) => &envelope.request_id,
+            Self::Subscribe(envelope) | Self::NativeWatch(envelope) => &envelope.request_id,
+            Self::NativeTransact(envelope) => &envelope.request_id,
         }
     }
 
@@ -1029,6 +1213,9 @@ impl RpcRequest {
             Self::TransactionOutcome(_) => &METHODS[7],
             Self::Subscribe(_) => &METHODS[8],
             Self::Diagnostics(_) => &METHODS[9],
+            Self::NativeEnumerate(_) => &METHODS[10],
+            Self::NativeTransact(_) => &METHODS[11],
+            Self::NativeWatch(_) => &METHODS[12],
         }
     }
 
@@ -1039,7 +1226,8 @@ impl RpcRequest {
             Self::Negotiate(_) => None,
             Self::Snapshot(envelope)
             | Self::IntegrationView(envelope)
-            | Self::Diagnostics(envelope) => {
+            | Self::Diagnostics(envelope)
+            | Self::NativeEnumerate(envelope) => {
                 Some((&envelope.protocol_session_id, &envelope.negotiation_token))
             }
             Self::AcquireLease(envelope) => {
@@ -1057,7 +1245,10 @@ impl RpcRequest {
             Self::TransactionOutcome(envelope) => {
                 Some((&envelope.protocol_session_id, &envelope.negotiation_token))
             }
-            Self::Subscribe(envelope) => {
+            Self::Subscribe(envelope) | Self::NativeWatch(envelope) => {
+                Some((&envelope.protocol_session_id, &envelope.negotiation_token))
+            }
+            Self::NativeTransact(envelope) => {
                 Some((&envelope.protocol_session_id, &envelope.negotiation_token))
             }
         }
@@ -1079,6 +1270,9 @@ impl RpcResponse {
             | Self::TransactionOutcomeSuccess(envelope) => Some(&envelope.request_id),
             Self::SubscribeSuccess(envelope) => Some(&envelope.request_id),
             Self::DiagnosticsSuccess(envelope) => Some(&envelope.request_id),
+            Self::NativeEnumerateSuccess(envelope) => Some(&envelope.request_id),
+            Self::NativeTransactSuccess(envelope) => Some(&envelope.request_id),
+            Self::NativeWatchSuccess(envelope) => Some(&envelope.request_id),
             Self::Error(envelope) => envelope.request_id.as_ref(),
         }
     }
@@ -1097,6 +1291,9 @@ impl RpcResponse {
             | Self::TransactionOutcomeSuccess(envelope) => &envelope.server_instance_id,
             Self::SubscribeSuccess(envelope) => &envelope.server_instance_id,
             Self::DiagnosticsSuccess(envelope) => &envelope.server_instance_id,
+            Self::NativeEnumerateSuccess(envelope) => &envelope.server_instance_id,
+            Self::NativeTransactSuccess(envelope) => &envelope.server_instance_id,
+            Self::NativeWatchSuccess(envelope) => &envelope.server_instance_id,
             Self::Error(envelope) => &envelope.server_instance_id,
         }
     }

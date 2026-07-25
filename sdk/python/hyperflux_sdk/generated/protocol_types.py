@@ -40,6 +40,13 @@ from .domain_types import (
     LogicalDeviceId,
     ModelName,
     MonotonicMs,
+    NativeExchangeTimeoutMs,
+    NativeProtocolFamily,
+    NativeReportByteCount,
+    NativeReportHex,
+    NativeRouteAccess,
+    NativeRouteEventKind,
+    NativeRouteToken,
     NegotiationToken,
     PairingState,
     PowerState,
@@ -84,12 +91,13 @@ from .domain_types import (
     TransportVariant,
     UpstreamId,
     UpstreamOwner,
+    VendorId,
 )
 
 T = TypeVar("T")
 
-MINIMUM_PROTOCOL_VERSION = 6
-MAXIMUM_PROTOCOL_VERSION = 6
+MINIMUM_PROTOCOL_VERSION = 7
+MAXIMUM_PROTOCOL_VERSION = 7
 MAX_WIRE_MESSAGE_BYTES = 1048576
 MAX_JSON_DEPTH = 128
 FIELD_LIMITS = {
@@ -116,6 +124,8 @@ FIELD_LIMITS = {
     ("IntegrationReceiverView", "inventory"): 32,
     ("IntegrationReceiverView", "controllers"): 32,
     ("IntegrationView", "receivers"): 16,
+    ("NativeRouteInventory", "routes"): 32,
+    ("NativeRouteEventBatch", "events"): 256,
 }
 SUPPORTED_FEATURES = (
     "ownership-leases",
@@ -127,6 +137,7 @@ SUPPORTED_FEATURES = (
     "event-subscriptions",
     "structured-diagnostics",
     "return-lifecycle-projection",
+    "native-receiver-tunnel",
 )
 
 @dataclass(frozen=True, slots=True)
@@ -547,6 +558,83 @@ class ControllerActions:
 
 
 @dataclass(frozen=True, slots=True)
+class NativeRoute:
+    """One generation-bound receiver child route without a host device path."""
+    receiver_id: ReceiverId
+    generation_id: GenerationId
+    device_id: LogicalDeviceId
+    endpoint_id: EndpointId
+    device_kind: DeviceKind
+    vendor_id: VendorId
+    product_id: ProductId
+    route_state: RouteState
+    access: NativeRouteAccess
+    protocol_family: NativeProtocolFamily
+    report_bytes: NativeReportByteCount
+    route_token: NativeRouteToken | None
+    resource: ResourceKey | None
+
+
+@dataclass(frozen=True, slots=True)
+class NativeRouteInventory:
+    """Bounded sequence-consistent native route inventory."""
+    cursor: EventCursor
+    routes: tuple[NativeRoute, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class NativeExchangeRequest:
+    """One idempotent lease-bound native child feature-report exchange."""
+    request_id: RequestId
+    client_id: ClientId
+    lease_id: LeaseId
+    route_token: NativeRouteToken
+    report: NativeReportHex
+    timeout_ms: NativeExchangeTimeoutMs
+
+
+@dataclass(frozen=True, slots=True)
+class NativeExchangeNotSent:
+    """The native request provably did not reach the receiver."""
+    error_kind: ProtocolErrorKind
+    finding_id: FindingId
+
+
+@dataclass(frozen=True, slots=True)
+class NativeExchangeUncertain:
+    """The SET report may have reached the receiver and must not be repeated automatically."""
+    error_kind: ProtocolErrorKind
+    finding_id: FindingId
+
+
+@dataclass(frozen=True, slots=True)
+class NativeExchangeMatchedResponse:
+    """A response matching the exact native request identity was retained."""
+    response: NativeReportHex
+
+
+@dataclass(frozen=True, slots=True)
+class NativeRouteEvent:
+    """One sequence-bound complete native route change."""
+    sequence: SequenceNumber
+    kind: NativeRouteEventKind
+    route: NativeRoute
+
+
+@dataclass(frozen=True, slots=True)
+class NativeRouteEventBatch:
+    """Bounded native route changes with explicit cursor-gap state."""
+    subscription_id: SubscriptionId
+    next_cursor: EventCursor
+    events: tuple[NativeRouteEvent, ...]
+    oldest_available: SequenceNumber
+    latest_available: SequenceNumber
+    dropped_events: DroppedEventCount
+    cursor_gap: bool
+    has_more: bool
+
+
+@dataclass(frozen=True, slots=True)
 class RpcError:
     """Stable structured request failure."""
     request_id: RequestId | None
@@ -628,6 +716,30 @@ ControllerOwnership: TypeAlias = ControllerOwnershipUnowned | ControllerOwnershi
 
 
 @dataclass(frozen=True, slots=True)
+class NativeExchangeResultNotSent:
+    """The request is safe to retry with a new identity."""
+    CERTAINTY: ClassVar[str] = "not-sent"
+    detail: NativeExchangeNotSent
+
+
+@dataclass(frozen=True, slots=True)
+class NativeExchangeResultMayHaveBeenSent:
+    """Automatic retry is forbidden because SET delivery is uncertain."""
+    CERTAINTY: ClassVar[str] = "may-have-been-sent"
+    detail: NativeExchangeUncertain
+
+
+@dataclass(frozen=True, slots=True)
+class NativeExchangeResultMatchedResponse:
+    """The exact matching response was retained."""
+    CERTAINTY: ClassVar[str] = "matched-response"
+    detail: NativeExchangeMatchedResponse
+
+
+NativeExchangeResult: TypeAlias = NativeExchangeResultNotSent | NativeExchangeResultMayHaveBeenSent | NativeExchangeResultMatchedResponse
+
+
+@dataclass(frozen=True, slots=True)
 class ControllerView:
     """Exact qualified receiver-backed application controller."""
     receiver_id: ReceiverId
@@ -668,6 +780,14 @@ class IntegrationView:
     """Client-specific application view projected once by bridge policy."""
     cursor: EventCursor
     receivers: tuple[IntegrationReceiverView, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class NativeExchangeOutcome:
+    """Idempotent native exchange identity and contradiction-free result."""
+    request_id: RequestId
+    route_token: NativeRouteToken
+    result: NativeExchangeResult
 
 
 @dataclass(frozen=True, slots=True)
@@ -744,7 +864,25 @@ class RpcRequestDiagnostics:
     request: SessionRequestEnvelope[EmptyRequest]
 
 
-RpcRequest: TypeAlias = RpcRequestNegotiate | RpcRequestSnapshot | RpcRequestIntegrationView | RpcRequestAcquireLease | RpcRequestRenewLease | RpcRequestReleaseLease | RpcRequestSubmitTransaction | RpcRequestTransactionOutcome | RpcRequestSubscribe | RpcRequestDiagnostics
+@dataclass(frozen=True, slots=True)
+class RpcRequestNativeEnumerate:
+    METHOD: ClassVar[str] = "native-enumerate"
+    request: SessionRequestEnvelope[EmptyRequest]
+
+
+@dataclass(frozen=True, slots=True)
+class RpcRequestNativeTransact:
+    METHOD: ClassVar[str] = "native-transact"
+    request: SessionRequestEnvelope[NativeExchangeRequest]
+
+
+@dataclass(frozen=True, slots=True)
+class RpcRequestNativeWatch:
+    METHOD: ClassVar[str] = "native-watch"
+    request: SessionRequestEnvelope[SubscriptionRequest]
+
+
+RpcRequest: TypeAlias = RpcRequestNegotiate | RpcRequestSnapshot | RpcRequestIntegrationView | RpcRequestAcquireLease | RpcRequestRenewLease | RpcRequestReleaseLease | RpcRequestSubmitTransaction | RpcRequestTransactionOutcome | RpcRequestSubscribe | RpcRequestDiagnostics | RpcRequestNativeEnumerate | RpcRequestNativeTransact | RpcRequestNativeWatch
 
 
 @dataclass(frozen=True, slots=True)
@@ -821,7 +959,25 @@ class RpcResponseDiagnosticsSuccess:
     response: SuccessEnvelope[DiagnosticSnapshot]
 
 
-RpcResponse: TypeAlias = RpcResponseNegotiateSuccess | RpcResponseSnapshotSuccess | RpcResponseIntegrationViewSuccess | RpcResponseAcquireLeaseSuccess | RpcResponseRenewLeaseSuccess | RpcResponseReleaseLeaseSuccess | RpcResponseSubmitTransactionSuccess | RpcResponseTransactionOutcomeSuccess | RpcResponseSubscribeSuccess | RpcResponseDiagnosticsSuccess | ErrorEnvelope
+@dataclass(frozen=True, slots=True)
+class RpcResponseNativeEnumerateSuccess:
+    TYPE: ClassVar[str] = "native-enumerate-success"
+    response: SuccessEnvelope[NativeRouteInventory]
+
+
+@dataclass(frozen=True, slots=True)
+class RpcResponseNativeTransactSuccess:
+    TYPE: ClassVar[str] = "native-transact-success"
+    response: SuccessEnvelope[NativeExchangeOutcome]
+
+
+@dataclass(frozen=True, slots=True)
+class RpcResponseNativeWatchSuccess:
+    TYPE: ClassVar[str] = "native-watch-success"
+    response: SuccessEnvelope[NativeRouteEventBatch]
+
+
+RpcResponse: TypeAlias = RpcResponseNegotiateSuccess | RpcResponseSnapshotSuccess | RpcResponseIntegrationViewSuccess | RpcResponseAcquireLeaseSuccess | RpcResponseRenewLeaseSuccess | RpcResponseReleaseLeaseSuccess | RpcResponseSubmitTransactionSuccess | RpcResponseTransactionOutcomeSuccess | RpcResponseSubscribeSuccess | RpcResponseDiagnosticsSuccess | RpcResponseNativeEnumerateSuccess | RpcResponseNativeTransactSuccess | RpcResponseNativeWatchSuccess | ErrorEnvelope
 
 
 METHODS = (
@@ -835,6 +991,9 @@ METHODS = (
     ("transaction-outcome", "TransactionLookup", "TransactionResult", "atomic-transactions"),
     ("subscribe", "SubscriptionRequest", "EventBatch", "event-subscriptions"),
     ("diagnostics", "EmptyRequest", "DiagnosticSnapshot", "structured-diagnostics"),
+    ("native-enumerate", "EmptyRequest", "NativeRouteInventory", "native-receiver-tunnel"),
+    ("native-transact", "NativeExchangeRequest", "NativeExchangeOutcome", "native-receiver-tunnel"),
+    ("native-watch", "SubscriptionRequest", "NativeRouteEventBatch", "native-receiver-tunnel"),
 )
 
 __all__ = [
@@ -885,6 +1044,14 @@ __all__ = [
     "ViewerOwnedController",
     "OtherOwnedController",
     "ControllerActions",
+    "NativeRoute",
+    "NativeRouteInventory",
+    "NativeExchangeRequest",
+    "NativeExchangeNotSent",
+    "NativeExchangeUncertain",
+    "NativeExchangeMatchedResponse",
+    "NativeRouteEvent",
+    "NativeRouteEventBatch",
     "RpcError",
     "LeaseResultGranted",
     "LeaseResultConflict",
@@ -898,9 +1065,14 @@ __all__ = [
     "ControllerOwnershipOwnedByViewer",
     "ControllerOwnershipOwnedByOther",
     "ControllerOwnership",
+    "NativeExchangeResultNotSent",
+    "NativeExchangeResultMayHaveBeenSent",
+    "NativeExchangeResultMatchedResponse",
+    "NativeExchangeResult",
     "ControllerView",
     "IntegrationReceiverView",
     "IntegrationView",
+    "NativeExchangeOutcome",
     "NegotiationRequestEnvelope",
     "SessionRequestEnvelope",
     "SuccessEnvelope",
@@ -915,6 +1087,9 @@ __all__ = [
     "RpcRequestTransactionOutcome",
     "RpcRequestSubscribe",
     "RpcRequestDiagnostics",
+    "RpcRequestNativeEnumerate",
+    "RpcRequestNativeTransact",
+    "RpcRequestNativeWatch",
     "RpcRequest",
     "RpcResponseNegotiateSuccess",
     "RpcResponseSnapshotSuccess",
@@ -926,5 +1101,8 @@ __all__ = [
     "RpcResponseTransactionOutcomeSuccess",
     "RpcResponseSubscribeSuccess",
     "RpcResponseDiagnosticsSuccess",
+    "RpcResponseNativeEnumerateSuccess",
+    "RpcResponseNativeTransactSuccess",
+    "RpcResponseNativeWatchSuccess",
     "RpcResponse",
 ]

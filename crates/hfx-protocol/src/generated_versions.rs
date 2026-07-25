@@ -13,6 +13,8 @@ pub mod v4;
 pub mod v5;
 #[path = "generated_v6.rs"]
 pub mod v6;
+#[path = "generated_v7.rs"]
+pub mod v7;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ProtocolVersionDescriptor {
@@ -22,7 +24,7 @@ pub struct ProtocolVersionDescriptor {
     pub served_features: &'static [&'static str],
 }
 
-pub const CURRENT_PROTOCOL_VERSION: u16 = 6;
+pub const CURRENT_PROTOCOL_VERSION: u16 = 7;
 pub const GENERATED_PROTOCOL_VERSIONS: &[ProtocolVersionDescriptor] = &[
     ProtocolVersionDescriptor {
         version: 1,
@@ -96,6 +98,23 @@ pub const GENERATED_PROTOCOL_VERSIONS: &[ProtocolVersionDescriptor] = &[
             "atomic-transactions",
             "event-subscriptions",
             "integration-view-projection",
+            "ownership-leases",
+            "profile-bound-transactions",
+            "return-lifecycle-projection",
+            "semantic-stable-lighting",
+            "snapshot-profile-bindings",
+            "structured-diagnostics",
+        ],
+    },
+    ProtocolVersionDescriptor {
+        version: 7,
+        catalog_sha256: "39443b1babed1e7f94824dcb3379f9572563263592841fda21378c14aff3bd34",
+        catalog_features: v7::SUPPORTED_FEATURES,
+        served_features: &[
+            "atomic-transactions",
+            "event-subscriptions",
+            "integration-view-projection",
+            "native-receiver-tunnel",
             "ownership-leases",
             "profile-bound-transactions",
             "return-lifecycle-projection",

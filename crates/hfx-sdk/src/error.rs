@@ -16,6 +16,9 @@ pub enum SdkMethod {
     TransactionOutcome,
     Subscribe,
     Diagnostics,
+    NativeEnumerate,
+    NativeTransact,
+    NativeWatch,
 }
 
 impl SdkMethod {
@@ -31,6 +34,9 @@ impl SdkMethod {
             Self::TransactionOutcome => "transaction outcome",
             Self::Subscribe => "subscribe",
             Self::Diagnostics => "diagnostics",
+            Self::NativeEnumerate => "native route enumeration",
+            Self::NativeTransact => "native receiver exchange",
+            Self::NativeWatch => "native route watch",
         }
     }
 }

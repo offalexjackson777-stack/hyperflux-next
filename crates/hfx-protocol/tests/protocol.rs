@@ -160,13 +160,27 @@ fn feature_negotiation_selects_intersection_and_rejects_incompatible_versions() 
             .contains(&value("integration-view-projection"))
     );
 
-    let incompatible = ClientHello {
+    let v7 = ClientHello {
         minimum_version: number(7),
         maximum_version: number(7),
+        required_features: vec![value("native-receiver-tunnel")],
         ..v5
     };
+    let response = negotiate(&v7, context("protocol-session-7")).expect("v7 overlaps");
+    assert_eq!(response.selected_version.get(), 7);
+    assert!(
+        response
+            .enabled_features
+            .contains(&value("native-receiver-tunnel"))
+    );
+
+    let incompatible = ClientHello {
+        minimum_version: number(8),
+        maximum_version: number(8),
+        ..v7
+    };
     assert_eq!(
-        negotiate(&incompatible, context("protocol-session-7")),
+        negotiate(&incompatible, context("protocol-session-8")),
         Err(NegotiationError::IncompatibleVersion)
     );
 }

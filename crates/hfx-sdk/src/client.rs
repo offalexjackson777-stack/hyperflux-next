@@ -3,12 +3,13 @@
 use crate::{FramedIoChannel, RequestIdentitySource, SdkError, SdkMethod};
 use hfx_domain::{
     ClientId, ClientName, EventBatchLimit, GenerationId, LeaseDurationMs, LeaseId, MonotonicMs,
-    ProfileDigest, ProfileId, ProtocolFeatureId, ProtocolVersion, ReceiverId, RequestId,
-    TransactionClass, TransactionId,
+    NativeExchangeTimeoutMs, NativeReportHex, NativeRouteToken, ProfileDigest, ProfileId,
+    ProtocolFeatureId, ProtocolVersion, ReceiverId, RequestId, TransactionClass, TransactionId,
 };
 use hfx_protocol::{
     BridgeSnapshot, ClientHello, DeviceProfileBinding, DiagnosticSnapshot, EmptyRequest,
     EventBatch, EventCursor, IntegrationView, LeaseRequest, LeaseResult, LightingFrame,
+    NativeExchangeOutcome, NativeExchangeRequest, NativeRouteEventBatch, NativeRouteInventory,
     NegotiationRequestEnvelope, ReleaseLeaseRequest, RenewLeaseRequest, RpcRequest, RpcResponse,
     ServerHello, SessionRequestEnvelope, StableLightingIntent, SubscriptionRequest,
     TransactionLookup, TransactionRequest, TransactionResult,
@@ -46,6 +47,20 @@ pub struct TransactionSubmission {
     pub deadline_ms: MonotonicMs,
     pub resources: Vec<hfx_protocol::ResourceKey>,
     pub frames: Vec<LightingFrame>,
+}
+
+/// Exact replayable identity and payload for one native receiver exchange.
+///
+/// Keep this value unchanged until the bridge returns an outcome. Reusing it
+/// cannot issue a second receiver SET; changing any field requires a newly
+/// prepared request identity.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct NativeExchangeSubmission {
+    pub request_id: RequestId,
+    pub lease_id: LeaseId,
+    pub route_token: NativeRouteToken,
+    pub report: NativeReportHex,
+    pub timeout_ms: NativeExchangeTimeoutMs,
 }
 
 #[derive(Debug)]
@@ -346,6 +361,105 @@ where
             RpcResponse::DiagnosticsSuccess(envelope) => Ok(envelope.result),
             _ => Err(SdkError::UnexpectedResponse {
                 expected: SdkMethod::Diagnostics,
+            }),
+        }
+    }
+
+    /// Enumerates receiver-backed child routes without exposing host paths.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed local or server error. Protocol v7 and the
+    /// `native-receiver-tunnel` feature are required.
+    pub fn native_enumerate(&mut self) -> Result<NativeRouteInventory, SdkError> {
+        let request_id = self.next_request_id()?;
+        let response = self.exchange(
+            &RpcRequest::NativeEnumerate(self.envelope(request_id.clone(), EmptyRequest {})),
+            &request_id,
+        )?;
+        match response {
+            RpcResponse::NativeEnumerateSuccess(envelope) => Ok(envelope.result),
+            _ => Err(SdkError::UnexpectedResponse {
+                expected: SdkMethod::NativeEnumerate,
+            }),
+        }
+    }
+
+    /// Allocates one process-unique idempotency identity for a native exchange.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed request-identity failure without sending bytes.
+    pub fn prepare_native_exchange(
+        &mut self,
+        lease_id: LeaseId,
+        route_token: NativeRouteToken,
+        report: NativeReportHex,
+        timeout_ms: NativeExchangeTimeoutMs,
+    ) -> Result<NativeExchangeSubmission, SdkError> {
+        Ok(NativeExchangeSubmission {
+            request_id: self.next_request_id()?,
+            lease_id,
+            route_token,
+            report,
+            timeout_ms,
+        })
+    }
+
+    /// Performs one exact native exchange or returns its retained outcome.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed local or server error. The caller must reuse the exact
+    /// prepared submission after an ambiguous local I/O failure.
+    pub fn native_transact(
+        &mut self,
+        submission: &NativeExchangeSubmission,
+    ) -> Result<NativeExchangeOutcome, SdkError> {
+        let params = NativeExchangeRequest {
+            request_id: submission.request_id.clone(),
+            client_id: self.client_id.clone(),
+            lease_id: submission.lease_id.clone(),
+            route_token: submission.route_token.clone(),
+            report: submission.report.clone(),
+            timeout_ms: submission.timeout_ms,
+        };
+        let response = self.exchange(
+            &RpcRequest::NativeTransact(self.envelope(submission.request_id.clone(), params)),
+            &submission.request_id,
+        )?;
+        match response {
+            RpcResponse::NativeTransactSuccess(envelope) => Ok(envelope.result),
+            _ => Err(SdkError::UnexpectedResponse {
+                expected: SdkMethod::NativeTransact,
+            }),
+        }
+    }
+
+    /// Reads bounded native-route lifecycle transitions.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed local or server error.
+    pub fn native_watch(
+        &mut self,
+        subscription: EventSubscription,
+    ) -> Result<NativeRouteEventBatch, SdkError> {
+        let request_id = self.next_request_id()?;
+        let params = SubscriptionRequest {
+            client_id: self.client_id.clone(),
+            subscription_id: subscription.subscription_id,
+            expected_cursor: subscription.expected_cursor,
+            max_events: subscription.max_events,
+        };
+        let response = self.exchange(
+            &RpcRequest::NativeWatch(self.envelope(request_id.clone(), params)),
+            &request_id,
+        )?;
+        match response {
+            RpcResponse::NativeWatchSuccess(envelope) => Ok(envelope.result),
+            _ => Err(SdkError::UnexpectedResponse {
+                expected: SdkMethod::NativeWatch,
             }),
         }
     }

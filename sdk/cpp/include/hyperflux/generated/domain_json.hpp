@@ -570,6 +570,30 @@ template<>
 }
 
 template<>
+[[nodiscard]] inline NativeExchangeTimeoutMs decode<NativeExchangeTimeoutMs>(const Json& value)
+{
+    return decode_numeric<NativeExchangeTimeoutMs>(value);
+}
+
+template<>
+[[nodiscard]] inline Json encode<NativeExchangeTimeoutMs>(const NativeExchangeTimeoutMs& value)
+{
+    return encode_numeric<NativeExchangeTimeoutMs>(value);
+}
+
+template<>
+[[nodiscard]] inline NativeReportByteCount decode<NativeReportByteCount>(const Json& value)
+{
+    return decode_numeric<NativeReportByteCount>(value);
+}
+
+template<>
+[[nodiscard]] inline Json encode<NativeReportByteCount>(const NativeReportByteCount& value)
+{
+    return encode_numeric<NativeReportByteCount>(value);
+}
+
+template<>
 [[nodiscard]] inline ReceiverId decode<ReceiverId>(const Json& value)
 {
     return decode_string<ReceiverId>(value);
@@ -999,6 +1023,42 @@ template<>
 [[nodiscard]] inline Json encode<RestoreTriggerId>(const RestoreTriggerId& value)
 {
     return encode_string<RestoreTriggerId>(value);
+}
+
+template<>
+[[nodiscard]] inline NativeRouteToken decode<NativeRouteToken>(const Json& value)
+{
+    return decode_string<NativeRouteToken>(value);
+}
+
+template<>
+[[nodiscard]] inline Json encode<NativeRouteToken>(const NativeRouteToken& value)
+{
+    return encode_string<NativeRouteToken>(value);
+}
+
+template<>
+[[nodiscard]] inline NativeReportHex decode<NativeReportHex>(const Json& value)
+{
+    return decode_string<NativeReportHex>(value);
+}
+
+template<>
+[[nodiscard]] inline Json encode<NativeReportHex>(const NativeReportHex& value)
+{
+    return encode_string<NativeReportHex>(value);
+}
+
+template<>
+[[nodiscard]] inline NativeProtocolFamily decode<NativeProtocolFamily>(const Json& value)
+{
+    return decode_string<NativeProtocolFamily>(value);
+}
+
+template<>
+[[nodiscard]] inline Json encode<NativeProtocolFamily>(const NativeProtocolFamily& value)
+{
+    return encode_string<NativeProtocolFamily>(value);
 }
 
 template<>
@@ -1839,6 +1899,10 @@ template<>
     if(wire == "pairing")
     {
         return ResourceKind::Pairing;
+    }
+    if(wire == "native-control")
+    {
+        return ResourceKind::NativeControl;
     }
     throw CodecError("unknown ResourceKind wire value");
 }
@@ -2682,6 +2746,64 @@ template<>
 
 template<>
 [[nodiscard]] inline Json encode<ErrorSeverity>(const ErrorSeverity& value)
+{
+    return Json(std::string(to_string(value)));
+}
+
+template<>
+[[nodiscard]] inline NativeRouteAccess decode<NativeRouteAccess>(const Json& value)
+{
+    if(!value.is_string())
+    {
+        throw CodecError("expected NativeRouteAccess wire string");
+    }
+    const auto wire = value.get<std::string>();
+    if(wire == "qualified")
+    {
+        return NativeRouteAccess::Qualified;
+    }
+    if(wire == "candidate")
+    {
+        return NativeRouteAccess::Candidate;
+    }
+    if(wire == "backend-required")
+    {
+        return NativeRouteAccess::BackendRequired;
+    }
+    throw CodecError("unknown NativeRouteAccess wire value");
+}
+
+template<>
+[[nodiscard]] inline Json encode<NativeRouteAccess>(const NativeRouteAccess& value)
+{
+    return Json(std::string(to_string(value)));
+}
+
+template<>
+[[nodiscard]] inline NativeRouteEventKind decode<NativeRouteEventKind>(const Json& value)
+{
+    if(!value.is_string())
+    {
+        throw CodecError("expected NativeRouteEventKind wire string");
+    }
+    const auto wire = value.get<std::string>();
+    if(wire == "available")
+    {
+        return NativeRouteEventKind::Available;
+    }
+    if(wire == "unavailable")
+    {
+        return NativeRouteEventKind::Unavailable;
+    }
+    if(wire == "generation-replaced")
+    {
+        return NativeRouteEventKind::GenerationReplaced;
+    }
+    throw CodecError("unknown NativeRouteEventKind wire value");
+}
+
+template<>
+[[nodiscard]] inline Json encode<NativeRouteEventKind>(const NativeRouteEventKind& value)
 {
     return Json(std::string(to_string(value)));
 }

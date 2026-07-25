@@ -15,11 +15,14 @@ pub enum KernelTransportErrorKind {
     InvalidSessionMaterial,
     SessionUnavailable,
     InvalidDispatch,
+    InvalidNativeExchange,
     Encoding,
     OutcomeRetainedFailure,
     OutcomeEvicted,
     OutcomeUnavailable,
     OutcomeConflict,
+    NativeOutcomeUnavailable,
+    NativeOutcomeConflict,
     KernelRejected,
 }
 
@@ -84,6 +87,7 @@ impl fmt::Display for KernelTransportError {
                 "kernel transport session is unavailable"
             }
             KernelTransportErrorKind::InvalidDispatch => "kernel transport dispatch is invalid",
+            KernelTransportErrorKind::InvalidNativeExchange => "kernel native exchange is invalid",
             KernelTransportErrorKind::Encoding => "kernel transport dispatch cannot be encoded",
             KernelTransportErrorKind::OutcomeRetainedFailure => {
                 "kernel transport retained a failed outcome"
@@ -94,6 +98,12 @@ impl fmt::Display for KernelTransportError {
             }
             KernelTransportErrorKind::OutcomeConflict => {
                 "kernel transport outcome identity conflicts"
+            }
+            KernelTransportErrorKind::NativeOutcomeUnavailable => {
+                "kernel native exchange outcome is unavailable"
+            }
+            KernelTransportErrorKind::NativeOutcomeConflict => {
+                "kernel native exchange outcome identity conflicts"
             }
             KernelTransportErrorKind::KernelRejected => "kernel transport rejected the dispatch",
         })

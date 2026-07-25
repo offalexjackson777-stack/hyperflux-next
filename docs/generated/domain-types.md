@@ -38,6 +38,8 @@ These types prevent semantically different values from being passed interchangea
 | `DispatchNonce` | `dispatch_nonce` | 1 to 18446744073709551615 | `decimal-string` |
 | `WallClockUnixMs` | `wall_clock_unix_ms` | 0 to 18446744073709551615 | `decimal-string` |
 | `EventBatchLimit` | `event_batch_limit` | 1 to 256 | `number` |
+| `NativeExchangeTimeoutMs` | `native_exchange_timeout_ms` | 1 to 1000 | `number` |
+| `NativeReportByteCount` | `native_report_byte_count` | 1 to 4096 | `number` |
 
 ## Opaque String Types
 
@@ -79,6 +81,9 @@ These types prevent semantically different values from being passed interchangea
 | `PresentationKey` | `presentation_key` | 1 to 160 bytes |
 | `TransportVariant` | `transport_variant` | 1 to 64 bytes |
 | `RestoreTriggerId` | `restore_trigger_id` | 1 to 128 bytes |
+| `NativeRouteToken` | `native_route_token` | 64 to 64 bytes |
+| `NativeReportHex` | `native_report_hex` | 180 to 180 bytes |
+| `NativeProtocolFamily` | `native_protocol_family` | 1 to 64 bytes |
 
 ## Enumerations
 
@@ -105,7 +110,7 @@ These types prevent semantically different values from being passed interchangea
 - `ReceiverState`: `absent`, `discovered-read-only`, `observed`, `profile-qualified`, `session-authorized`, `degraded-read-only`
 - `TransactionState`: `created`, `validated`, `ownership-bound`, `generation-bound`, `queued`, `sent`, `health-pending`, `succeeded`, `failed`, `revoked`, `superseded`
 - `LeaseState`: `requested`, `granted`, `renewed`, `released`, `expired`, `revoked`
-- `ResourceKind`: `lighting`, `settings`, `pairing`
+- `ResourceKind`: `lighting`, `settings`, `pairing`, `native-control`
 - `TransactionClass`: `effect-frame`, `static-lighting`, `device-setting`, `restore`, `pairing`
 - `StableLightingMode`: `static`, `off`
 - `QueueAdmission`: `enqueued`, `coalesced`, `rejected-full`, `rejected-deadline`, `rejected-invalid`
@@ -127,3 +132,5 @@ These types prevent semantically different values from being passed interchangea
 - `TelemetryAvailability`: `unknown`, `unavailable`, `reported`
 - `LeaseOutcome`: `granted`, `conflict`, `rejected`
 - `ErrorSeverity`: `info`, `warning`, `error`, `critical`
+- `NativeRouteAccess`: `qualified`, `candidate`, `backend-required`
+- `NativeRouteEventKind`: `available`, `unavailable`, `generation-replaced`

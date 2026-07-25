@@ -3,16 +3,18 @@
 use crate::{
     CURRENT_PROTOCOL_VERSION, ControllerOwnership, ControllerView, DeviceInventoryView,
     DiagnosticSnapshot, EndpointSnapshot, EventBatch, IntegrationReceiverView, IntegrationView,
-    LeaseResult, MAX_WIRE_MESSAGE_BYTES, ProtocolValidationError, RpcRequest, RpcResponse,
-    SnapshotValidationError, StableLightingIntent, TransactionResult, TransactionTerminal,
-    TransactionUnavailable, v1, v2, v3, v4, v5, v6, validate_bridge_snapshot,
-    validate_lease_request, validate_transaction,
+    LeaseResult, MAX_WIRE_MESSAGE_BYTES, NativeExchangeOutcome, NativeExchangeRequest,
+    NativeExchangeResult, NativeRoute, NativeRouteEventBatch, NativeRouteInventory,
+    ProtocolValidationError, RpcRequest, RpcResponse, SnapshotValidationError,
+    StableLightingIntent, TransactionResult, TransactionTerminal, TransactionUnavailable, v1, v2,
+    v3, v4, v5, v6, v7, validate_bridge_snapshot, validate_lease_request, validate_transaction,
 };
 use hfx_domain::{
-    ConnectionMode, ControllerAvailability, FreshnessState, InventoryAvailability, PairingState,
-    PowerState, PresenceState, ProtocolErrorKind, ProtocolVersion, ReceiverLifecycleState,
-    ResourceKind, RouteKind, RouteState, SideEffectCertainty, SleepState, StableLightingMode,
-    TransactionClass, TransactionState,
+    ConnectionMode, ControllerAvailability, FreshnessState, InventoryAvailability,
+    NativeRouteAccess, NativeRouteEventKind, PairingState, PowerState, PresenceState,
+    ProtocolErrorKind, ProtocolVersion, ReceiverLifecycleState, ResourceKind, RouteKind,
+    RouteState, SideEffectCertainty, SleepState, StableLightingMode, TransactionClass,
+    TransactionState,
 };
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
@@ -212,6 +214,194 @@ fn strictly_ordered<T: Ord>(values: &[T]) -> bool {
     values.windows(2).all(|pair| pair[0] < pair[1])
 }
 
+fn native_report_is_canonical(value: &str) -> bool {
+    value
+        .bytes()
+        .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
+fn native_route_identity_precedes(left: &NativeRoute, right: &NativeRoute) -> bool {
+    (
+        &left.receiver_id,
+        left.generation_id,
+        &left.device_id,
+        &left.endpoint_id,
+    ) < (
+        &right.receiver_id,
+        right.generation_id,
+        &right.device_id,
+        &right.endpoint_id,
+    )
+}
+
+fn validate_native_route(route: &NativeRoute) -> Result<(), ProtocolWireError> {
+    let writable =
+        route.access == NativeRouteAccess::Qualified && route.route_state == RouteState::Available;
+    if writable != route.route_token.is_some() || writable != route.resource.is_some() {
+        return Err(ProtocolWireError::InvalidResponse(
+            "native route authority contradicts access or availability",
+        ));
+    }
+    if !writable {
+        return Ok(());
+    }
+
+    let Some(resource) = &route.resource else {
+        return Err(ProtocolWireError::InvalidResponse(
+            "writable native route lacks its ownership resource",
+        ));
+    };
+    if resource.receiver_id != route.receiver_id
+        || resource.generation_id != route.generation_id
+        || resource.device_id != route.device_id
+        || resource.kind != ResourceKind::NativeControl
+        || usize::from(route.report_bytes.get()).saturating_mul(2)
+            != hfx_domain::NativeReportHex::MIN_LENGTH
+    {
+        return Err(ProtocolWireError::InvalidResponse(
+            "writable native route contradicts identity, resource, or report shape",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_native_route_inventory(
+    inventory: &NativeRouteInventory,
+) -> Result<(), ProtocolWireError> {
+    if inventory.routes.len() > 32
+        || !inventory
+            .routes
+            .windows(2)
+            .all(|pair| native_route_identity_precedes(&pair[0], &pair[1]))
+    {
+        return Err(ProtocolWireError::InvalidResponse(
+            "native routes are oversized, duplicated, or unordered",
+        ));
+    }
+    for route in &inventory.routes {
+        validate_native_route(route)?;
+    }
+    Ok(())
+}
+
+fn validate_native_exchange_request(
+    envelope_request_id: &hfx_domain::RequestId,
+    request: &NativeExchangeRequest,
+) -> Result<(), ProtocolWireError> {
+    if envelope_request_id != &request.request_id {
+        return Err(ProtocolWireError::RequestNotCanonical);
+    }
+    if !native_report_is_canonical(request.report.as_str()) {
+        return Err(ProtocolWireError::RequestNotCanonical);
+    }
+    Ok(())
+}
+
+fn validate_native_exchange_outcome(
+    outcome: &NativeExchangeOutcome,
+) -> Result<(), ProtocolWireError> {
+    if let NativeExchangeResult::MatchedResponse(response) = &outcome.result
+        && !native_report_is_canonical(response.response.as_str())
+    {
+        return Err(ProtocolWireError::InvalidResponse(
+            "native response report is not canonical lowercase hexadecimal",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_native_route_event_batch(
+    batch: &NativeRouteEventBatch,
+) -> Result<(), ProtocolWireError> {
+    if batch.events.len() > 256
+        || batch.oldest_available > batch.latest_available
+        || !batch
+            .events
+            .windows(2)
+            .all(|pair| pair[0].sequence < pair[1].sequence)
+        || batch.events.iter().any(|event| {
+            event.sequence < batch.oldest_available
+                || event.sequence > batch.latest_available
+                || matches!(event.kind, NativeRouteEventKind::Available)
+                    != (event.route.route_state == RouteState::Available)
+        })
+        || batch
+            .events
+            .last()
+            .is_some_and(|event| event.sequence != batch.next_cursor.sequence)
+        || (batch.cursor_gap && (!batch.events.is_empty() || batch.has_more))
+        || (batch.has_more && batch.next_cursor.sequence >= batch.latest_available)
+    {
+        return Err(ProtocolWireError::InvalidResponse(
+            "native route event cursor, sequence, or transition facts contradict",
+        ));
+    }
+    for event in &batch.events {
+        validate_native_route(&event.route)?;
+    }
+    Ok(())
+}
+
+fn request_requires_v7(request: &RpcRequest) -> bool {
+    match request {
+        RpcRequest::NativeEnumerate(_)
+        | RpcRequest::NativeTransact(_)
+        | RpcRequest::NativeWatch(_) => true,
+        RpcRequest::AcquireLease(envelope) => envelope
+            .params
+            .resources
+            .iter()
+            .any(|resource| resource.kind == ResourceKind::NativeControl),
+        RpcRequest::SubmitTransaction(envelope) => envelope
+            .params
+            .resources
+            .iter()
+            .any(|resource| resource.kind == ResourceKind::NativeControl),
+        RpcRequest::Negotiate(_)
+        | RpcRequest::Snapshot(_)
+        | RpcRequest::IntegrationView(_)
+        | RpcRequest::RenewLease(_)
+        | RpcRequest::ReleaseLease(_)
+        | RpcRequest::TransactionOutcome(_)
+        | RpcRequest::Subscribe(_)
+        | RpcRequest::Diagnostics(_) => false,
+    }
+}
+
+fn lease_result_uses_native_control(result: &LeaseResult) -> bool {
+    match result {
+        LeaseResult::Granted(grant) => grant
+            .resources
+            .iter()
+            .any(|resource| resource.kind == ResourceKind::NativeControl),
+        LeaseResult::Conflict(conflict) => {
+            conflict.conflicting_resource.kind == ResourceKind::NativeControl
+        }
+        LeaseResult::Rejected(_) => false,
+    }
+}
+
+fn response_requires_v7(response: &RpcResponse) -> bool {
+    match response {
+        RpcResponse::NativeEnumerateSuccess(_)
+        | RpcResponse::NativeTransactSuccess(_)
+        | RpcResponse::NativeWatchSuccess(_) => true,
+        RpcResponse::AcquireLeaseSuccess(envelope)
+        | RpcResponse::RenewLeaseSuccess(envelope)
+        | RpcResponse::ReleaseLeaseSuccess(envelope) => {
+            lease_result_uses_native_control(&envelope.result)
+        }
+        RpcResponse::NegotiateSuccess(_)
+        | RpcResponse::SnapshotSuccess(_)
+        | RpcResponse::IntegrationViewSuccess(_)
+        | RpcResponse::SubmitTransactionSuccess(_)
+        | RpcResponse::TransactionOutcomeSuccess(_)
+        | RpcResponse::SubscribeSuccess(_)
+        | RpcResponse::DiagnosticsSuccess(_)
+        | RpcResponse::Error(_) => false,
+    }
+}
+
 /// Validates method-specific request bounds after bounded decoding.
 ///
 /// # Errors
@@ -241,13 +431,18 @@ pub fn validate_rpc_request(request: &RpcRequest) -> Result<(), ProtocolWireErro
         RpcRequest::SubmitTransaction(envelope) => {
             validate_transaction(&envelope.params).map_err(ProtocolWireError::InvalidRequest)
         }
+        RpcRequest::NativeTransact(envelope) => {
+            validate_native_exchange_request(&envelope.request_id, &envelope.params)
+        }
         RpcRequest::Snapshot(_)
         | RpcRequest::IntegrationView(_)
         | RpcRequest::RenewLease(_)
         | RpcRequest::ReleaseLease(_)
         | RpcRequest::TransactionOutcome(_)
         | RpcRequest::Subscribe(_)
-        | RpcRequest::Diagnostics(_) => Ok(()),
+        | RpcRequest::Diagnostics(_)
+        | RpcRequest::NativeEnumerate(_)
+        | RpcRequest::NativeWatch(_) => Ok(()),
     }
 }
 
@@ -626,6 +821,15 @@ pub fn validate_rpc_response(response: &RpcResponse) -> Result<(), ProtocolWireE
         }
         RpcResponse::SubscribeSuccess(envelope) => validate_event_batch(&envelope.result),
         RpcResponse::DiagnosticsSuccess(envelope) => validate_diagnostics(&envelope.result),
+        RpcResponse::NativeEnumerateSuccess(envelope) => {
+            validate_native_route_inventory(&envelope.result)
+        }
+        RpcResponse::NativeTransactSuccess(envelope) => {
+            validate_native_exchange_outcome(&envelope.result)
+        }
+        RpcResponse::NativeWatchSuccess(envelope) => {
+            validate_native_route_event_batch(&envelope.result)
+        }
         RpcResponse::Error(_) => Ok(()),
     }
 }
@@ -671,6 +875,9 @@ fn encode_rpc_request_version(
     version: u16,
 ) -> Result<Vec<u8>, ProtocolWireError> {
     validate_rpc_request(request)?;
+    if version < 7 && request_requires_v7(request) {
+        return Err(ProtocolWireError::UnsupportedVersionMethod);
+    }
     if version < 5 && matches!(request, RpcRequest::IntegrationView(_)) {
         return Err(ProtocolWireError::UnsupportedVersionMethod);
     }
@@ -701,6 +908,7 @@ fn encode_rpc_request_version(
         4 => frozen_encoding::<v4::RpcRequest>(value),
         5 => frozen_encoding::<v5::RpcRequest>(value),
         6 => frozen_encoding::<v6::RpcRequest>(value),
+        7 => frozen_encoding::<v7::RpcRequest>(value),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
     }
 }
@@ -722,15 +930,20 @@ pub fn decode_rpc_request_for_version(
 }
 
 fn decode_rpc_request_version(bytes: &[u8], version: u16) -> Result<RpcRequest, ProtocolWireError> {
-    match version {
+    let request = match version {
         1 => normalize_v1_request(decode::<v1::RpcRequest>(bytes)?),
         2 => normalize_v2_request(decode::<v2::RpcRequest>(bytes)?),
         3 => transcode_request(decode::<v3::RpcRequest>(bytes)?),
         4 => transcode_request(decode::<v4::RpcRequest>(bytes)?),
         5 => transcode_request(decode::<v5::RpcRequest>(bytes)?),
         6 => transcode_request(decode::<v6::RpcRequest>(bytes)?),
+        7 => transcode_request(decode::<v7::RpcRequest>(bytes)?),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
+    }?;
+    if version < 7 && request_requires_v7(&request) {
+        return Err(ProtocolWireError::UnsupportedVersionMethod);
     }
+    Ok(request)
 }
 
 /// Decodes one bounded typed response and enforces projection invariants.
@@ -761,15 +974,20 @@ fn decode_rpc_response_version(
     bytes: &[u8],
     version: u16,
 ) -> Result<RpcResponse, ProtocolWireError> {
-    match version {
+    let response = match version {
         1 => transcode_response(decode::<v1::RpcResponse>(bytes)?),
         2 => transcode_response(decode::<v2::RpcResponse>(bytes)?),
         3 => transcode_response(decode::<v3::RpcResponse>(bytes)?),
         4 => transcode_response(decode::<v4::RpcResponse>(bytes)?),
         5 => transcode_response(decode::<v5::RpcResponse>(bytes)?),
         6 => transcode_response(decode::<v6::RpcResponse>(bytes)?),
+        7 => transcode_response(decode::<v7::RpcResponse>(bytes)?),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
+    }?;
+    if version < 7 && response_requires_v7(&response) {
+        return Err(ProtocolWireError::UnsupportedVersionMethod);
     }
+    Ok(response)
 }
 
 /// Encodes one current response after enforcing response invariants.
@@ -800,6 +1018,9 @@ fn encode_rpc_response_version(
     version: u16,
 ) -> Result<Vec<u8>, ProtocolWireError> {
     validate_rpc_response(response)?;
+    if version < 7 && response_requires_v7(response) {
+        return Err(ProtocolWireError::UnsupportedVersionMethod);
+    }
     if version < 5 && matches!(response, RpcResponse::IntegrationViewSuccess(_)) {
         return Err(ProtocolWireError::UnsupportedVersionMethod);
     }
@@ -807,6 +1028,9 @@ fn encode_rpc_response_version(
         serde_json::to_value(response).map_err(|_| ProtocolWireError::VersionTranslation)?;
     if version < 6 {
         remove_return_epochs(response, &mut value)?;
+    }
+    if version < 7 {
+        remove_native_control_snapshot_ownership(response, &mut value)?;
     }
     match version {
         1 => {
@@ -824,8 +1048,44 @@ fn encode_rpc_response_version(
         4 => frozen_encoding::<v4::RpcResponse>(value),
         5 => frozen_encoding::<v5::RpcResponse>(value),
         6 => frozen_encoding::<v6::RpcResponse>(value),
+        7 => frozen_encoding::<v7::RpcResponse>(value),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
     }
+}
+
+fn remove_native_control_snapshot_ownership(
+    response: &RpcResponse,
+    value: &mut Value,
+) -> Result<(), ProtocolWireError> {
+    if !matches!(response, RpcResponse::SnapshotSuccess(_)) {
+        return Ok(());
+    }
+    let receivers = value
+        .as_object_mut()
+        .and_then(|root| root.get_mut("response"))
+        .and_then(Value::as_object_mut)
+        .and_then(|response| response.get_mut("result"))
+        .and_then(Value::as_object_mut)
+        .and_then(|result| result.get_mut("receivers"))
+        .and_then(Value::as_array_mut)
+        .ok_or(ProtocolWireError::VersionTranslation)?;
+    for receiver in receivers {
+        let ownership = receiver
+            .as_object_mut()
+            .and_then(|receiver| receiver.get_mut("ownership"))
+            .and_then(Value::as_array_mut)
+            .ok_or(ProtocolWireError::VersionTranslation)?;
+        ownership.retain(|entry| {
+            entry
+                .as_object()
+                .and_then(|entry| entry.get("resource"))
+                .and_then(Value::as_object)
+                .and_then(|resource| resource.get("kind"))
+                .and_then(Value::as_str)
+                != Some("native-control")
+        });
+    }
+    Ok(())
 }
 
 fn remove_return_epochs(

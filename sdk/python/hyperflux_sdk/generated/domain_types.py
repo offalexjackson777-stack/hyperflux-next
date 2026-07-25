@@ -366,6 +366,30 @@ class EventBatchLimit:
 
 
 @dataclass(frozen=True, slots=True)
+class NativeExchangeTimeoutMs:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("NativeExchangeTimeoutMs requires an integer")
+        if not 1 <= self.value <= 1000:
+            raise ValueError("NativeExchangeTimeoutMs is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
+class NativeReportByteCount:
+    value: int
+    WIRE_ENCODING: ClassVar[str] = "number"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.value, bool) or not isinstance(self.value, int):
+            raise TypeError("NativeReportByteCount requires an integer")
+        if not 1 <= self.value <= 4096:
+            raise ValueError("NativeReportByteCount is outside the canonical range")
+
+
+@dataclass(frozen=True, slots=True)
 class ReceiverId:
     value: str
 
@@ -761,6 +785,39 @@ class RestoreTriggerId:
             raise ValueError("RestoreTriggerId is outside the canonical length")
 
 
+@dataclass(frozen=True, slots=True)
+class NativeRouteToken:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("NativeRouteToken requires a string")
+        if not 64 <= len(self.value) <= 64:
+            raise ValueError("NativeRouteToken is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class NativeReportHex:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("NativeReportHex requires a string")
+        if not 180 <= len(self.value) <= 180:
+            raise ValueError("NativeReportHex is outside the canonical length")
+
+
+@dataclass(frozen=True, slots=True)
+class NativeProtocolFamily:
+    value: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, str):
+            raise TypeError("NativeProtocolFamily requires a string")
+        if not 1 <= len(self.value) <= 64:
+            raise ValueError("NativeProtocolFamily is outside the canonical length")
+
+
 class DeviceKind(str, Enum):
     RECEIVER = "receiver"
     MAT = "mat"
@@ -941,6 +998,7 @@ class ResourceKind(str, Enum):
     LIGHTING = "lighting"
     SETTINGS = "settings"
     PAIRING = "pairing"
+    NATIVE_CONTROL = "native-control"
 
 
 class TransactionClass(str, Enum):
@@ -1126,6 +1184,18 @@ class ErrorSeverity(str, Enum):
     CRITICAL = "critical"
 
 
+class NativeRouteAccess(str, Enum):
+    QUALIFIED = "qualified"
+    CANDIDATE = "candidate"
+    BACKEND_REQUIRED = "backend-required"
+
+
+class NativeRouteEventKind(str, Enum):
+    AVAILABLE = "available"
+    UNAVAILABLE = "unavailable"
+    GENERATION_REPLACED = "generation-replaced"
+
+
 __all__ = [
     "GenerationId",
     "VendorId",
@@ -1157,6 +1227,8 @@ __all__ = [
     "DispatchNonce",
     "WallClockUnixMs",
     "EventBatchLimit",
+    "NativeExchangeTimeoutMs",
+    "NativeReportByteCount",
     "ReceiverId",
     "LogicalDeviceId",
     "EndpointId",
@@ -1193,6 +1265,9 @@ __all__ = [
     "PresentationKey",
     "TransportVariant",
     "RestoreTriggerId",
+    "NativeRouteToken",
+    "NativeReportHex",
+    "NativeProtocolFamily",
     "DeviceKind",
     "ProfileKind",
     "RouteKind",
@@ -1238,4 +1313,6 @@ __all__ = [
     "TelemetryAvailability",
     "LeaseOutcome",
     "ErrorSeverity",
+    "NativeRouteAccess",
+    "NativeRouteEventKind",
 ]

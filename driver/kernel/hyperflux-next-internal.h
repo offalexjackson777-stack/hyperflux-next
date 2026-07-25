@@ -37,6 +37,18 @@ struct hfx_result_tombstone {
 	u8 request_digest[HFX_UAPI_DIGEST_BYTES];
 };
 
+struct hfx_native_result_record {
+	struct list_head node;
+	struct hfx_uapi_native_exchange_result result;
+	u8 request[HFX_UAPI_NATIVE_REPORT_BYTES];
+};
+
+struct hfx_native_result_tombstone {
+	bool valid;
+	struct hfx_uapi_native_exchange_result result;
+	u8 request[HFX_UAPI_NATIVE_REPORT_BYTES];
+};
+
 struct hfx_receiver {
 	struct list_head node;
 	struct usb_device *udev;
@@ -49,6 +61,7 @@ struct hfx_receiver {
 	char *session_name;
 	u64 generation;
 	u32 backend_id;
+	const struct hfx_receiver_profile *profile;
 	DECLARE_BITMAP(bound_interface_numbers, HFX_USB_INTERFACE_LIMIT);
 	unsigned int bound_interfaces;
 	unsigned int suspended_interfaces;
@@ -77,6 +90,11 @@ struct hfx_receiver {
 	struct hfx_result_tombstone *result_tombstones;
 	u32 tombstone_head;
 	u32 tombstone_count;
+	struct list_head native_result_records;
+	u32 native_result_count;
+	struct hfx_native_result_tombstone *native_result_tombstones;
+	u32 native_tombstone_head;
+	u32 native_tombstone_count;
 };
 
 struct hfx_interface {
@@ -127,5 +145,13 @@ long hfx_transport_get_result(struct hfx_receiver *receiver,
 			      struct hfx_file_context *context,
 			      void __user *user_arg);
 void hfx_transport_free_journal(struct hfx_receiver *receiver);
+
+long hfx_native_exchange_submit(struct hfx_receiver *receiver,
+				struct hfx_file_context *context,
+				void __user *user_arg);
+long hfx_native_exchange_get_result(struct hfx_receiver *receiver,
+				    struct hfx_file_context *context,
+				    void __user *user_arg);
+void hfx_native_exchange_free_journal(struct hfx_receiver *receiver);
 
 #endif

@@ -1405,6 +1405,86 @@ impl fmt::Display for EventBatchLimit {
     }
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "u16", into = "u16")]
+pub struct NativeExchangeTimeoutMs(u16);
+
+impl NativeExchangeTimeoutMs {
+    pub const MIN: u16 = 1;
+    pub const MAX: u16 = 1_000;
+
+    #[must_use]
+    pub const fn get(self) -> u16 {
+        self.0
+    }
+}
+
+impl TryFrom<u16> for NativeExchangeTimeoutMs {
+    type Error = DomainValueError;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        if !(Self::MIN..=Self::MAX).contains(&value) {
+            return Err(DomainValueError::new(
+                "NativeExchangeTimeoutMs",
+                "outside the canonical range",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl From<NativeExchangeTimeoutMs> for u16 {
+    fn from(value: NativeExchangeTimeoutMs) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for NativeExchangeTimeoutMs {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "u16", into = "u16")]
+pub struct NativeReportByteCount(u16);
+
+impl NativeReportByteCount {
+    pub const MIN: u16 = 1;
+    pub const MAX: u16 = 4_096;
+
+    #[must_use]
+    pub const fn get(self) -> u16 {
+        self.0
+    }
+}
+
+impl TryFrom<u16> for NativeReportByteCount {
+    type Error = DomainValueError;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        if !(Self::MIN..=Self::MAX).contains(&value) {
+            return Err(DomainValueError::new(
+                "NativeReportByteCount",
+                "outside the canonical range",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl From<NativeReportByteCount> for u16 {
+    fn from(value: NativeReportByteCount) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for NativeReportByteCount {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(try_from = "String", into = "String")]
 pub struct ReceiverId(String);
@@ -3133,6 +3213,150 @@ impl fmt::Display for RestoreTriggerId {
     }
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct NativeRouteToken(String);
+
+impl NativeRouteToken {
+    pub const MIN_LENGTH: usize = 64;
+    pub const MAX_LENGTH: usize = 64;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for NativeRouteToken {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "NativeRouteToken",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for NativeRouteToken {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<NativeRouteToken> for String {
+    fn from(value: NativeRouteToken) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for NativeRouteToken {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct NativeReportHex(String);
+
+impl NativeReportHex {
+    pub const MIN_LENGTH: usize = 180;
+    pub const MAX_LENGTH: usize = 180;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for NativeReportHex {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "NativeReportHex",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for NativeReportHex {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<NativeReportHex> for String {
+    fn from(value: NativeReportHex) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for NativeReportHex {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct NativeProtocolFamily(String);
+
+impl NativeProtocolFamily {
+    pub const MIN_LENGTH: usize = 1;
+    pub const MAX_LENGTH: usize = 64;
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for NativeProtocolFamily {
+    type Error = DomainValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.len() < Self::MIN_LENGTH || value.len() > Self::MAX_LENGTH {
+            return Err(DomainValueError::new(
+                "NativeProtocolFamily",
+                "outside the canonical length",
+            ));
+        }
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&str> for NativeProtocolFamily {
+    type Error = DomainValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl From<NativeProtocolFamily> for String {
+    fn from(value: NativeProtocolFamily) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for NativeProtocolFamily {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum DeviceKind {
     #[serde(rename = "receiver")]
@@ -4213,6 +4437,8 @@ pub enum ResourceKind {
     Settings,
     #[serde(rename = "pairing")]
     Pairing,
+    #[serde(rename = "native-control")]
+    NativeControl,
 }
 
 impl ResourceKind {
@@ -4222,6 +4448,7 @@ impl ResourceKind {
             Self::Lighting => "lighting",
             Self::Settings => "settings",
             Self::Pairing => "pairing",
+            Self::NativeControl => "native-control",
         }
     }
 }
@@ -4234,6 +4461,7 @@ impl FromStr for ResourceKind {
             "lighting" => Ok(Self::Lighting),
             "settings" => Ok(Self::Settings),
             "pairing" => Ok(Self::Pairing),
+            "native-control" => Ok(Self::NativeControl),
             _ => Err(DomainValueError::unknown_wire("ResourceKind")),
         }
     }
@@ -5308,6 +5536,86 @@ impl FromStr for ErrorSeverity {
 }
 
 impl fmt::Display for ErrorSeverity {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum NativeRouteAccess {
+    #[serde(rename = "qualified")]
+    Qualified,
+    #[serde(rename = "candidate")]
+    Candidate,
+    #[serde(rename = "backend-required")]
+    BackendRequired,
+}
+
+impl NativeRouteAccess {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Qualified => "qualified",
+            Self::Candidate => "candidate",
+            Self::BackendRequired => "backend-required",
+        }
+    }
+}
+
+impl FromStr for NativeRouteAccess {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "qualified" => Ok(Self::Qualified),
+            "candidate" => Ok(Self::Candidate),
+            "backend-required" => Ok(Self::BackendRequired),
+            _ => Err(DomainValueError::unknown_wire("NativeRouteAccess")),
+        }
+    }
+}
+
+impl fmt::Display for NativeRouteAccess {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum NativeRouteEventKind {
+    #[serde(rename = "available")]
+    Available,
+    #[serde(rename = "unavailable")]
+    Unavailable,
+    #[serde(rename = "generation-replaced")]
+    GenerationReplaced,
+}
+
+impl NativeRouteEventKind {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Available => "available",
+            Self::Unavailable => "unavailable",
+            Self::GenerationReplaced => "generation-replaced",
+        }
+    }
+}
+
+impl FromStr for NativeRouteEventKind {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "available" => Ok(Self::Available),
+            "unavailable" => Ok(Self::Unavailable),
+            "generation-replaced" => Ok(Self::GenerationReplaced),
+            _ => Err(DomainValueError::unknown_wire("NativeRouteEventKind")),
+        }
+    }
+}
+
+impl fmt::Display for NativeRouteEventKind {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(self.as_str())
     }

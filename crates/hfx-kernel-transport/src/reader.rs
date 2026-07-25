@@ -166,8 +166,8 @@ fn io_error(_: crate::KernelIoError) -> KernelTransportError {
 mod tests {
     use super::*;
     use crate::{
-        HfxUapiBeginSession, HfxUapiEndSession, HfxUapiSubmit, HfxUapiTransactionResult,
-        KernelIoError,
+        HfxUapiBeginSession, HfxUapiEndSession, HfxUapiNativeExchangeResult,
+        HfxUapiNativeExchangeSubmit, HfxUapiSubmit, HfxUapiTransactionResult, KernelIoError,
     };
     use std::cell::Cell;
 
@@ -215,6 +215,20 @@ mod tests {
         fn get_transaction_result(
             &self,
             _: &mut HfxUapiTransactionResult,
+        ) -> Result<(), KernelIoError> {
+            Err(KernelIoError::from_raw_os_error(1))
+        }
+
+        fn submit_native_exchange(
+            &self,
+            _: &mut HfxUapiNativeExchangeSubmit,
+        ) -> Result<(), KernelIoError> {
+            Err(KernelIoError::from_raw_os_error(1))
+        }
+
+        fn get_native_exchange_result(
+            &self,
+            _: &mut HfxUapiNativeExchangeResult,
         ) -> Result<(), KernelIoError> {
             Err(KernelIoError::from_raw_os_error(1))
         }

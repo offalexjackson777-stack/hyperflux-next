@@ -109,7 +109,7 @@ from .generators.protocol import (
     rust_types as protocol_rust_types,
     rust_registry as protocol_rust_registry,
 )
-from .kernel_uapi import load_kernel_uapi
+from .kernel_uapi import load_kernel_uapi_registry
 from .knowledge import compiled_knowledge_catalog
 from .integrations import (
     compiled_catalog as compiled_integration_catalog,
@@ -241,7 +241,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
     protocol_registry = load_protocol_registry(root)
     protocol = protocol_registry.current
     errors = load_error_catalog(root)
-    kernel_uapi = load_kernel_uapi(root)
+    kernel_uapi = load_kernel_uapi_registry(root)
     integrations = compiled_integration_catalog(root)
     openrazer_metadata = load_imported_metadata(root)
     openrazer_compatibility = load_openrazer_compatibility_contract(root)

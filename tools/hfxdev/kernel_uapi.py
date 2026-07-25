@@ -27,6 +27,15 @@ TOP_LEVEL_KEYS = {
     "structs",
     "ioctls",
 }
+REGISTRY_TOP_LEVEL_KEYS = {"$schema", "schema", "entries"}
+REGISTRY_ENTRY_KEYS = {
+    "abi_version",
+    "catalog",
+    "schema",
+    "schema_ref",
+    "version_macro",
+    "role",
+}
 MAX_IOCTL_STRUCT_BYTES = 1 << 14
 
 
@@ -79,6 +88,27 @@ class KernelUapi:
         return next(item for item in self.structs if item.name == name)
 
 
+@dataclass(frozen=True)
+class KernelUapiRegistryEntry:
+    abi_version: int
+    catalog_name: str
+    schema_name: str
+    schema_ref: str
+    version_macro: str
+    role: str
+    catalog: KernelUapi
+
+
+@dataclass(frozen=True)
+class KernelUapiRegistry:
+    entries: tuple[KernelUapiRegistryEntry, ...]
+    source_sha256: str
+
+    @property
+    def baseline(self) -> KernelUapi:
+        return self.entries[0].catalog
+
+
 def _name(value: object, label: str) -> str:
     if not isinstance(value, str) or NAME.fullmatch(value) is None:
         raise ModelError(f"kernel UAPI {label} must be a canonical snake-case name")
@@ -116,13 +146,19 @@ def _align(offset: int, alignment: int) -> int:
     return (offset + alignment - 1) // alignment * alignment
 
 
-def load_kernel_uapi(root: Path) -> KernelUapi:
-    path = root / "uapi" / "kernel-uapi.json"
+def _load_kernel_uapi_catalog(
+    root: Path,
+    catalog_name: str,
+    *,
+    schema_ref: str,
+    schema_name: str,
+) -> KernelUapi:
+    path = root / "uapi" / catalog_name
     value = load_json(path)
     _exact_keys(value, TOP_LEVEL_KEYS, "catalog")
-    if value["$schema"] != "../schemas/kernel-uapi.schema.json":
+    if value["$schema"] != schema_ref:
         raise ModelError("kernel UAPI catalog has an unexpected schema reference")
-    if value["schema"] != "hyperflux-kernel-uapi-v1":
+    if value["schema"] != schema_name:
         raise ModelError("unsupported kernel UAPI catalog schema")
 
     abi_version = _integer(value["abi_version"], "ABI version", minimum=1, maximum=0xFFFFFFFF)
@@ -259,3 +295,114 @@ def load_kernel_uapi(root: Path) -> KernelUapi:
         ioctls=tuple(ioctls),
         source_sha256=sha256_file(path),
     )
+
+
+def load_kernel_uapi(root: Path) -> KernelUapi:
+    return _load_kernel_uapi_catalog(
+        root,
+        "kernel-uapi.json",
+        schema_ref="../schemas/kernel-uapi.schema.json",
+        schema_name="hyperflux-kernel-uapi-v1",
+    )
+
+
+def load_kernel_uapi_registry(root: Path) -> KernelUapiRegistry:
+    path = root / "uapi" / "registry.json"
+    value = load_json(path)
+    _exact_keys(value, REGISTRY_TOP_LEVEL_KEYS, "registry")
+    if value["$schema"] != "../schemas/kernel-uapi-registry.schema.json":
+        raise ModelError("kernel UAPI registry has an unexpected schema reference")
+    if value["schema"] != "hyperflux-kernel-uapi-registry-v1":
+        raise ModelError("unsupported kernel UAPI registry schema")
+
+    raw_entries = value["entries"]
+    if not isinstance(raw_entries, list) or not raw_entries:
+        raise ModelError("kernel UAPI registry entries must be a nonempty array")
+
+    entries: list[KernelUapiRegistryEntry] = []
+    for raw_entry in raw_entries:
+        if not isinstance(raw_entry, dict):
+            raise ModelError("kernel UAPI registry entry must be an object")
+        _exact_keys(raw_entry, REGISTRY_ENTRY_KEYS, "registry entry")
+        abi_version = _integer(
+            raw_entry["abi_version"],
+            "registry ABI version",
+            minimum=1,
+            maximum=0xFFFFFFFF,
+        )
+        catalog_name = raw_entry["catalog"]
+        if (
+            not isinstance(catalog_name, str)
+            or Path(catalog_name).name != catalog_name
+            or not catalog_name.endswith(".json")
+        ):
+            raise ModelError("kernel UAPI registry catalog must be a local JSON file name")
+        schema_name = raw_entry["schema"]
+        schema_ref = raw_entry["schema_ref"]
+        if not isinstance(schema_name, str) or not schema_name.startswith("hyperflux-kernel-uapi-"):
+            raise ModelError("kernel UAPI registry schema name is invalid")
+        if not isinstance(schema_ref, str) or not schema_ref.startswith("../schemas/"):
+            raise ModelError("kernel UAPI registry schema reference is invalid")
+        version_macro = _name(raw_entry["version_macro"], "registry version macro")
+        role = _name(raw_entry["role"], "registry role")
+        catalog = _load_kernel_uapi_catalog(
+            root,
+            catalog_name,
+            schema_ref=schema_ref,
+            schema_name=schema_name,
+        )
+        if catalog.abi_version != abi_version:
+            raise ModelError(
+                f"kernel UAPI registry ABI {abi_version} does not match {catalog_name}"
+            )
+        entries.append(
+            KernelUapiRegistryEntry(
+                abi_version=abi_version,
+                catalog_name=catalog_name,
+                schema_name=schema_name,
+                schema_ref=schema_ref,
+                version_macro=version_macro,
+                role=role,
+                catalog=catalog,
+            )
+        )
+
+    require_unique([str(item.abi_version) for item in entries], "kernel UAPI registry ABI")
+    require_unique([item.catalog_name for item in entries], "kernel UAPI registry catalog")
+    require_unique([item.version_macro for item in entries], "kernel UAPI registry version macro")
+    require_unique([item.role for item in entries], "kernel UAPI registry role")
+    if [item.abi_version for item in entries] != sorted(item.abi_version for item in entries):
+        raise ModelError("kernel UAPI registry entries must be ordered by ABI version")
+    if (
+        entries[0].abi_version != 1
+        or entries[0].catalog_name != "kernel-uapi.json"
+        or entries[0].version_macro != "abi_version"
+        or entries[0].role != "baseline"
+    ):
+        raise ModelError("kernel UAPI registry must preserve the v1 baseline first")
+
+    magic = entries[0].catalog.ioctl_magic
+    if any(item.catalog.ioctl_magic != magic for item in entries):
+        raise ModelError("kernel UAPI registry catalogs must share one ioctl magic")
+    require_unique(
+        [item.name for entry in entries for item in entry.catalog.enums],
+        "kernel UAPI registry enum",
+    )
+    require_unique(
+        [item.name for entry in entries for item in entry.catalog.structs],
+        "kernel UAPI registry struct",
+    )
+    require_unique(
+        [name for entry in entries for name in entry.catalog.limits],
+        "kernel UAPI registry limit",
+    )
+    require_unique(
+        [item.name for entry in entries for item in entry.catalog.ioctls],
+        "kernel UAPI registry ioctl",
+    )
+    require_unique(
+        [str(item.number) for entry in entries for item in entry.catalog.ioctls],
+        "kernel UAPI registry ioctl number",
+    )
+
+    return KernelUapiRegistry(entries=tuple(entries), source_sha256=sha256_file(path))
