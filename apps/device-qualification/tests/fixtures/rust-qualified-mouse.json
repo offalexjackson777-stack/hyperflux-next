@@ -15,7 +15,7 @@
   "system": {
     "driver_version": "0.0.0-dev.1",
     "bridge_version": "0.0.0-dev.1",
-    "profile_catalog_digest": "68c408358f92361f2dfbe461c180cd16eec08924d7c5b22e91753bc299d269ad"
+    "profile_catalog_digest": "ac03ca0358ce92e552fcffb55a48650e87c9608ae684891b8a834b95989ed343"
   },
   "receivers": [
     {
@@ -26,7 +26,7 @@
       "product_id": 207,
       "profile": {
         "id": "receiver.razer.hyperflux-v2.1532-00cf",
-        "digest": "4f469c2f3f7010a79435727ff229a3efedd65c446eb5c98e225dffc0d229ccd2"
+        "digest": "196946934e4ce6c5d55519a8485df416c8698e9682aa30d59abda00203a38e01"
       },
       "lifecycle": "active",
       "devices": [
