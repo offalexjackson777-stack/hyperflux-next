@@ -42,6 +42,18 @@ REVISION = re.compile(r"^[0-9a-f]{40}$")
 DIGEST = re.compile(r"^[0-9a-f]{64}$")
 MANIFEST_NAME = "package-build-manifest.json"
 INVENTORY_PATH = PurePosixPath("/usr/share/hyperflux-next/installed-files.json")
+SOURCE_TREE_REQUIRED_FILES = frozenset({"Makefile", "dkms.conf", "driver/Makefile"})
+
+
+def _source_tree_has_license(files: set[str]) -> bool:
+    if "LICENSE" in files:
+        return True
+    return any(
+        len(path.parts) == 2
+        and path.parts[0] == "LICENSES"
+        and path.suffix == ".txt"
+        for path in map(PurePosixPath, files)
+    )
 
 
 @dataclass(frozen=True)
@@ -517,9 +529,13 @@ def _openrazer_dkms_projection_files(
             for path in sorted(reuse_licenses.glob("*.txt"))
             if path.is_file() and not path.is_symlink()
         )
-    if not license_files:
-        raise ModelError("OpenRazer DKMS source projection has no regular license text")
     selected.extend(license_files)
+    projected_files = {
+        destination.relative_to(projection).as_posix()
+        for _, destination in selected
+    }
+    if not _source_tree_has_license(projected_files):
+        raise ModelError("OpenRazer DKMS source projection has no regular license text")
     return tuple(selected)
 
 
@@ -1229,9 +1245,9 @@ def _install_source_tree(stage_root: Path, artifact: BuiltArtifact) -> None:
                 raise ModelError(f"artifact {artifact.build_id}: source-tree member is unreadable")
             _write_to_stage(target, source.read(), 0o644)
             files.add(raw_name)
-    required = {"Makefile", "LICENSE", "dkms.conf", "driver/Makefile"}
     if (
-        not required <= files
+        not SOURCE_TREE_REQUIRED_FILES <= files
+        or not _source_tree_has_license(files)
         or "driver" not in directories
         or not any(name.startswith("driver/") and name.endswith(".c") for name in files)
         or not any(name.startswith("driver/") and name.endswith(".h") for name in files)

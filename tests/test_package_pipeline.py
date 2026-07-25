@@ -31,6 +31,7 @@ from hfxdev.package_pipeline import (
     _private_stage_prefixes,
     _provenance_inputs,
     _provenance_materials,
+    _source_tree_has_license,
     _tree_digest,
     load_artifact_set,
 )
@@ -38,6 +39,14 @@ from hfxdev.toolchains import load_toolchain_pins
 
 
 class PackagePipelineTests(unittest.TestCase):
+    def test_source_tree_license_contract_accepts_legacy_and_reuse_layouts(self) -> None:
+        self.assertTrue(_source_tree_has_license({"LICENSE"}))
+        self.assertTrue(
+            _source_tree_has_license({"LICENSES/GPL-2.0-or-later.txt"})
+        )
+        self.assertFalse(_source_tree_has_license({"LICENSES/README.md"}))
+        self.assertFalse(_source_tree_has_license({"nested/LICENSE"}))
+
     def test_openrazer_dkms_projection_accepts_reuse_licenses(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
