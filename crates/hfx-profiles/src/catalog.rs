@@ -5,6 +5,7 @@ use crate::{
     PassiveTelemetryRecord, PresentationRecord, ProfileRecord, QualificationMigrationRecord,
     ReturnEvidenceSource,
 };
+use crate::{NativeReportValidationError, validate_native_exchange_record};
 use hfx_domain::{
     CapabilityId, CarrierIndex, DeviceKind, DomainValueError, LedCount, ProductId, ProfileDigest,
     ProfileId, ProfileKind, ProfileRevision, ReturnEvidence, RouteKind, SupportLevel, VendorId,
@@ -22,6 +23,7 @@ pub enum ProfileCatalogError {
     MissingPresentation(ProfileId),
     UnexpectedPresentation(ProfileId),
     InvalidProfileKind(ProfileId),
+    InvalidNativeExchange(ProfileId, NativeReportValidationError),
 }
 
 impl fmt::Display for ProfileCatalogError {
@@ -61,6 +63,12 @@ impl fmt::Display for ProfileCatalogError {
                 write!(
                     formatter,
                     "profile kind and device kind disagree: {profile_id}"
+                )
+            }
+            Self::InvalidNativeExchange(profile_id, error) => {
+                write!(
+                    formatter,
+                    "native exchange profile is invalid for {profile_id}: {error}"
                 )
             }
         }
@@ -255,8 +263,14 @@ impl RuntimeProfileCatalog {
 }
 
 fn convert_profile(record: &ProfileRecord) -> Result<RuntimeProfile, ProfileCatalogError> {
+    let profile_id = ProfileId::try_from(record.id)?;
+    if let Some(native_exchange) = record.native_exchange {
+        validate_native_exchange_record(&native_exchange).map_err(|error| {
+            ProfileCatalogError::InvalidNativeExchange(profile_id.clone(), error)
+        })?;
+    }
     Ok(RuntimeProfile {
-        profile_id: ProfileId::try_from(record.id)?,
+        profile_id,
         runtime_digest: ProfileDigest::try_from(record.runtime_sha256)?,
         revision: ProfileRevision::try_from(record.revision)?,
         profile_kind: record.profile_kind,

@@ -96,6 +96,23 @@ class ProfileCompilerTests(unittest.TestCase):
         self.assertEqual(native["report_bytes"], 90)
         self.assertEqual(native["set_report_index"], 0)
         self.assertEqual(native["response_report_index"], 0)
+        self.assertEqual(
+            native["report_format"],
+            {
+                "request_status": {"offset": 0, "value": 0},
+                "response_status": {"offset": 0, "minimum": 1, "maximum": 5},
+                "protocol_type": {"offset": 4, "value": 0},
+                "data_size": {"offset": 5, "maximum": 80},
+                "checksum": {
+                    "algorithm": "xor8",
+                    "start_offset": 2,
+                    "end_offset_exclusive": 88,
+                    "result_offset": 88,
+                },
+                "trailer": {"offset": 89, "value": 0},
+                "transaction_id": {"offset": 1, "match_mask": 0},
+            },
+        )
         self.assertEqual(native["match_ranges"], [{"offset": 2, "length": 2}, {"offset": 6, "length": 2}])
         before = self.runtime_profile_digest(receiver, capabilities)
         native["response_retry_delay_us"] += 1
@@ -115,6 +132,31 @@ class ProfileCompilerTests(unittest.TestCase):
         receiver = next(profile for profile in profiles if profile["kind"] == "receiver")
         receiver["transport"]["native_exchange"]["report_bytes"] = 89
         with self.assertRaisesRegex(ModelError, "exactly 90 bytes"):
+            self.validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        receiver = next(profile for profile in profiles if profile["kind"] == "receiver")
+        checksum = receiver["transport"]["native_exchange"]["report_format"]["checksum"]
+        checksum["result_offset"] = 87
+        with self.assertRaisesRegex(ModelError, "checksum range is out of bounds"):
+            self.validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        receiver = next(profile for profile in profiles if profile["kind"] == "receiver")
+        transaction = receiver["transport"]["native_exchange"]["report_format"][
+            "transaction_id"
+        ]
+        transaction["match_mask"] = 256
+        with self.assertRaisesRegex(ModelError, "transaction id is out of bounds"):
+            self.validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        receiver = next(profile for profile in profiles if profile["kind"] == "receiver")
+        response_status = receiver["transport"]["native_exchange"]["report_format"][
+            "response_status"
+        ]
+        response_status["minimum"] = 6
+        with self.assertRaisesRegex(ModelError, "response status range is reversed"):
             self.validate_profiles(profiles, capabilities, claims)
 
     def test_runtime_digest_is_profile_local_and_ignores_presentation_only_edits(self) -> None:

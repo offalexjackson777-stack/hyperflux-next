@@ -82,6 +82,18 @@ class KernelDriverContracts(unittest.TestCase):
             "profile->native_initial_response_delay_us",
             "profile->native_response_retry_delay_us",
             "profile->native_max_response_attempts",
+            "profile->native_request_status_offset",
+            "profile->native_response_status_offset",
+            "profile->native_response_status_minimum",
+            "profile->native_response_status_maximum",
+            "profile->native_protocol_type_offset",
+            "profile->native_data_size_offset",
+            "profile->native_checksum_start_offset",
+            "profile->native_checksum_end_offset",
+            "profile->native_checksum_result_offset",
+            "profile->native_trailer_offset",
+            "profile->native_transaction_id_offset",
+            "profile->native_transaction_id_match_mask",
             "profile->native_match_ranges",
         ):
             self.assertIn(profile_field, source)
@@ -90,7 +102,23 @@ class KernelDriverContracts(unittest.TestCase):
             ROOT / "driver/kernel/generated/hyperflux_receiver_profiles.inc"
         ).read_text(encoding="utf-8")
         self.assertIn("HFX_NATIVE_EXCHANGE_RAZER_FEATURE_REPORT_V1", table)
+        self.assertIn("HFX_NATIVE_CHECKSUM_XOR8", table)
         self.assertIn(".native_match_ranges", table)
+
+    def test_native_exchange_validates_request_before_set_and_response_before_match(self) -> None:
+        source = (ROOT / "driver/kernel/hyperflux-next-native.c").read_text(
+            encoding="utf-8"
+        )
+        submit_start = source.index("static int hfx_native_submit_validate")
+        submit_end = source.index("static bool hfx_native_key_matches", submit_start)
+        submit = source[submit_start:submit_end]
+        self.assertIn("hfx_native_request_report_valid", submit)
+
+        match_start = source.index("static bool hfx_native_response_matches")
+        match_end = source.index("static int hfx_native_usb_set", match_start)
+        matcher = source[match_start:match_end]
+        self.assertIn("hfx_native_response_report_valid", matcher)
+        self.assertIn("native_transaction_id_match_mask", matcher)
 
 
 if __name__ == "__main__":

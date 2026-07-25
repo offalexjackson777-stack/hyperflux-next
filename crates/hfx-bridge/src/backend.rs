@@ -17,11 +17,12 @@ use hfx_core::{
     BoundedEventLog, Clock, DesiredEffectError, DiagnosticRegistry, DiagnosticRegistryError,
     DispatchResult, EventDraft, EventLogError, EventSink, LeaseManager, LeaseManagerError,
     LifecycleLimits, NATIVE_REPORT_BYTES, NativeEndpointLane, NativeTransportDispatch,
-    NativeTransportResult, OutcomeJournalError, OutcomeLookup, PersistedStableIntent,
-    ProfileRegistry, ReceiverLifecycleRegistry, ReceiverTransport, RestorationAuthority,
-    RestorationError, RestoreAdvanceResult, RestorePlanResult, RestoreRecord, RestoreTrigger,
-    SessionAuthority, StableCommitOutcome, SubmissionResult, TransactionCoordinator,
-    TransactionCoordinatorError, TransactionQueueError, VolatileEffectRegistry, WallClock,
+    NativeTransportOutcome, NativeTransportResult, OutcomeJournalError, OutcomeLookup,
+    PersistedStableIntent, ProfileRegistry, ReceiverLifecycleRegistry, ReceiverTransport,
+    RestorationAuthority, RestorationError, RestoreAdvanceResult, RestorePlanResult, RestoreRecord,
+    RestoreTrigger, SessionAuthority, StableCommitOutcome, SubmissionResult,
+    TransactionCoordinator, TransactionCoordinatorError, TransactionQueueError,
+    VolatileEffectRegistry, WallClock,
 };
 use hfx_domain::{
     DeviceKind, EventKind, FindingId, LeaseDurationMs, MonotonicMs, NativeReportHex,
@@ -30,6 +31,7 @@ use hfx_domain::{
 };
 use hfx_errors::ErrorCode;
 use hfx_integration_model::project_integration_view;
+use hfx_profiles::{NativeExchangeRecord, native_response_matches, validate_native_request};
 use hfx_protocol::{
     BridgeSnapshot, DiagnosticSnapshot, EventBatch, IntegrationView, LeaseRequest, LeaseResult,
     NativeExchangeMatchedResponse, NativeExchangeNotSent, NativeExchangeOutcome,
@@ -1146,6 +1148,11 @@ where
         if usize::from(route.report_bytes.get()) != NATIVE_REPORT_BYTES {
             return self.reject_native_before_set(request, ProtocolErrorKind::InvalidRequest);
         }
+        let native_profile = match native_profile_for_route(&self.profiles, &self.receivers, &route)
+        {
+            Ok(profile) => profile,
+            Err(error_kind) => return self.reject_native_before_set(request, error_kind),
+        };
 
         let endpoint = match route.device_kind {
             DeviceKind::Mouse => NativeEndpointLane::Pointer,
@@ -1158,6 +1165,9 @@ where
         let Ok(report) = decode_native_report(&request.report) else {
             return self.reject_native_before_set(request, ProtocolErrorKind::InvalidRequest);
         };
+        if validate_native_request(&native_profile, &report).is_err() {
+            return self.reject_native_before_set(request, ProtocolErrorKind::InvalidRequest);
+        }
         let route_token_digest = native_route_token_digest(&request.route_token);
         let dispatch = NativeTransportDispatch {
             session_id: context.session().session_id.clone(),
@@ -1171,16 +1181,12 @@ where
             timeout_ms: request.timeout_ms,
         };
         let transport_outcome = self.transport.native_exchange(&dispatch);
-        let result = if transport_outcome.dispatch_nonce != dispatch.dispatch_nonce
-            || transport_outcome.route_token_digest != dispatch.route_token_digest
-        {
-            NativeExchangeResult::MayHaveBeenSent(NativeExchangeUncertain {
-                error_kind: ProtocolErrorKind::OutcomeUnknown,
-                finding_id: finding(ErrorCode::HfxTransport002),
-            })
-        } else {
-            protocol_native_result(&transport_outcome.result)?
-        };
+        let result = validated_native_transport_result(
+            &native_profile,
+            &report,
+            &dispatch,
+            &transport_outcome,
+        )?;
         self.complete_native_exchange(request, result)
     }
 
@@ -1280,6 +1286,49 @@ fn encode_native_report(report: &[u8; NATIVE_REPORT_BYTES]) -> Result<NativeRepo
 
 fn native_route_token_digest(token: &hfx_domain::NativeRouteToken) -> [u8; 32] {
     Sha256::digest(token.as_str().as_bytes()).into()
+}
+
+fn native_profile_for_route(
+    profiles: &RuntimeProfileAuthority,
+    receivers: &ReceiverLifecycleRegistry,
+    route: &NativeRoute,
+) -> Result<NativeExchangeRecord, ProtocolErrorKind> {
+    let profile = profiles
+        .view(receivers)
+        .native_exchange(&route.receiver_id, route.generation_id)
+        .ok_or(ProtocolErrorKind::UnsupportedFeature)?;
+    if profile.protocol_family != route.protocol_family.as_str()
+        || profile.report_bytes != route.report_bytes.get()
+    {
+        return Err(ProtocolErrorKind::InvalidRequest);
+    }
+    Ok(profile)
+}
+
+fn validated_native_transport_result(
+    profile: &NativeExchangeRecord,
+    request: &[u8; NATIVE_REPORT_BYTES],
+    dispatch: &NativeTransportDispatch,
+    outcome: &NativeTransportOutcome,
+) -> Result<NativeExchangeResult, RpcFailure> {
+    if outcome.dispatch_nonce != dispatch.dispatch_nonce
+        || outcome.route_token_digest != dispatch.route_token_digest
+    {
+        return Ok(native_uncertain_result());
+    }
+    if let NativeTransportResult::MatchedResponse(response) = &outcome.result
+        && native_response_matches(profile, request, response) != Ok(true)
+    {
+        return Ok(native_uncertain_result());
+    }
+    protocol_native_result(&outcome.result)
+}
+
+fn native_uncertain_result() -> NativeExchangeResult {
+    NativeExchangeResult::MayHaveBeenSent(NativeExchangeUncertain {
+        error_kind: ProtocolErrorKind::OutcomeUnknown,
+        finding_id: finding(ErrorCode::HfxTransport002),
+    })
 }
 
 fn protocol_native_result(
@@ -1524,8 +1573,9 @@ fn subscription_failure(error: SubscriptionRegistryError) -> RpcFailure {
 mod tests {
     use super::*;
     use hfx_domain::{
-        EndpointId, GenerationId, LogicalDeviceId, NativeProtocolFamily, NativeReportByteCount,
-        ProductId, VendorId,
+        AuthorizationEpoch, DispatchNonce, EndpointId, GenerationId, LogicalDeviceId,
+        NativeExchangeTimeoutMs, NativeProtocolFamily, NativeReportByteCount, ProductId, SessionId,
+        VendorId,
     };
 
     fn text<T>(value: &str) -> T
@@ -1552,6 +1602,33 @@ mod tests {
                 .expect("report size is canonical"),
             route_token: None,
             resource: None,
+        }
+    }
+
+    fn native_report(status: u8) -> [u8; NATIVE_REPORT_BYTES] {
+        let mut report = [0_u8; NATIVE_REPORT_BYTES];
+        report[0] = status;
+        report[5] = 2;
+        report[6] = 0x1f;
+        report[7] = 0x03;
+        report[8] = 0xaa;
+        report[9] = 0x55;
+        report[88] = report[2..88].iter().fold(0_u8, |value, byte| value ^ byte);
+        report
+    }
+
+    fn native_dispatch() -> NativeTransportDispatch {
+        NativeTransportDispatch {
+            session_id: text::<SessionId>("session-1"),
+            authorization_epoch: AuthorizationEpoch::try_from(1_u64)
+                .expect("authorization epoch is canonical"),
+            dispatch_nonce: DispatchNonce::try_from(1_u64).expect("nonce is canonical"),
+            receiver_id: text("receiver-1"),
+            generation_id: GenerationId::try_from(1_u64).expect("generation is canonical"),
+            endpoint: NativeEndpointLane::Pointer,
+            route_token_digest: [0x5a; 32],
+            report: native_report(0),
+            timeout_ms: NativeExchangeTimeoutMs::try_from(100_u16).expect("timeout is canonical"),
         }
     }
 
@@ -1594,6 +1671,53 @@ mod tests {
         assert_eq!(
             native_route_invalidation(&previous, &[]),
             NativeExchangeRejection::RouteUnavailable
+        );
+    }
+
+    #[test]
+    fn bridge_accepts_only_structurally_valid_matching_native_responses() {
+        let catalog = hfx_profiles::RuntimeProfileCatalog::load().expect("profiles are valid");
+        let profile = catalog
+            .receiver(
+                VendorId::try_from(0x1532_u16).expect("vendor is canonical"),
+                ProductId::try_from(0x00cf_u16).expect("product is canonical"),
+            )
+            .and_then(|receiver| receiver.native_exchange)
+            .expect("receiver native profile exists");
+        let dispatch = native_dispatch();
+        let matched = NativeTransportOutcome {
+            dispatch_nonce: dispatch.dispatch_nonce,
+            route_token_digest: dispatch.route_token_digest,
+            result: NativeTransportResult::MatchedResponse(native_report(2)),
+        };
+        assert!(matches!(
+            validated_native_transport_result(&profile, &dispatch.report, &dispatch, &matched),
+            Ok(NativeExchangeResult::MatchedResponse(_))
+        ));
+
+        let mut malformed = native_report(2);
+        malformed[88] ^= 1;
+        let malformed = NativeTransportOutcome {
+            result: NativeTransportResult::MatchedResponse(malformed),
+            ..matched.clone()
+        };
+        assert_eq!(
+            validated_native_transport_result(&profile, &dispatch.report, &dispatch, &malformed),
+            Ok(native_uncertain_result())
+        );
+
+        let mut unrelated = native_report(2);
+        unrelated[7] ^= 1;
+        unrelated[88] = unrelated[2..88]
+            .iter()
+            .fold(0_u8, |value, byte| value ^ byte);
+        let unrelated = NativeTransportOutcome {
+            result: NativeTransportResult::MatchedResponse(unrelated),
+            ..matched
+        };
+        assert_eq!(
+            validated_native_transport_result(&profile, &dispatch.report, &dispatch, &unrelated),
+            Ok(native_uncertain_result())
         );
     }
 }

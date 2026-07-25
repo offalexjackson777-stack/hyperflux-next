@@ -95,7 +95,7 @@
     "native-exchange": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["protocol_family", "report_bytes", "set_report_index", "response_report_index", "initial_response_delay_us", "response_retry_delay_us", "max_response_attempts", "match_ranges"],
+      "required": ["protocol_family", "report_bytes", "set_report_index", "response_report_index", "initial_response_delay_us", "response_retry_delay_us", "max_response_attempts", "report_format", "match_ranges"],
       "properties": {
         "protocol_family": {"const": "razer-feature-report-v1"},
         "report_bytes": {"const": 90},
@@ -104,6 +104,7 @@
         "initial_response_delay_us": {"type": "integer", "minimum": 0, "maximum": 100000},
         "response_retry_delay_us": {"type": "integer", "minimum": 1, "maximum": 100000},
         "max_response_attempts": {"type": "integer", "minimum": 1, "maximum": 16},
+        "report_format": {"$ref": "#/$defs/native-report-format"},
         "match_ranges": {
           "type": "array",
           "minItems": 1,
@@ -118,6 +119,65 @@
             }
           }
         }
+      }
+    },
+    "native-report-format": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request_status", "response_status", "protocol_type", "data_size", "checksum", "trailer", "transaction_id"],
+      "properties": {
+        "request_status": {"$ref": "#/$defs/native-byte-value"},
+        "response_status": {"$ref": "#/$defs/native-byte-range"},
+        "protocol_type": {"$ref": "#/$defs/native-byte-value"},
+        "data_size": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["offset", "maximum"],
+          "properties": {
+            "offset": {"type": "integer", "minimum": 0, "maximum": 89},
+            "maximum": {"type": "integer", "minimum": 0, "maximum": 255}
+          }
+        },
+        "checksum": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["algorithm", "start_offset", "end_offset_exclusive", "result_offset"],
+          "properties": {
+            "algorithm": {"const": "xor8"},
+            "start_offset": {"type": "integer", "minimum": 0, "maximum": 89},
+            "end_offset_exclusive": {"type": "integer", "minimum": 1, "maximum": 90},
+            "result_offset": {"type": "integer", "minimum": 0, "maximum": 89}
+          }
+        },
+        "trailer": {"$ref": "#/$defs/native-byte-value"},
+        "transaction_id": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["offset", "match_mask"],
+          "properties": {
+            "offset": {"type": "integer", "minimum": 0, "maximum": 89},
+            "match_mask": {"type": "integer", "minimum": 0, "maximum": 255}
+          }
+        }
+      }
+    },
+    "native-byte-value": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["offset", "value"],
+      "properties": {
+        "offset": {"type": "integer", "minimum": 0, "maximum": 89},
+        "value": {"type": "integer", "minimum": 0, "maximum": 255}
+      }
+    },
+    "native-byte-range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["offset", "minimum", "maximum"],
+      "properties": {
+        "offset": {"type": "integer", "minimum": 0, "maximum": 89},
+        "minimum": {"type": "integer", "minimum": 0, "maximum": 255},
+        "maximum": {"type": "integer", "minimum": 0, "maximum": 255}
       }
     },
     "lighting": {

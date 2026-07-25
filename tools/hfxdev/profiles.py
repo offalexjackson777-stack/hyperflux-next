@@ -91,9 +91,29 @@ NATIVE_EXCHANGE_KEYS = {
     "initial_response_delay_us",
     "response_retry_delay_us",
     "max_response_attempts",
+    "report_format",
     "match_ranges",
 }
 NATIVE_MATCH_RANGE_KEYS = {"offset", "length"}
+NATIVE_REPORT_FORMAT_KEYS = {
+    "request_status",
+    "response_status",
+    "protocol_type",
+    "data_size",
+    "checksum",
+    "trailer",
+    "transaction_id",
+}
+NATIVE_BYTE_VALUE_KEYS = {"offset", "value"}
+NATIVE_BYTE_RANGE_KEYS = {"offset", "minimum", "maximum"}
+NATIVE_DATA_SIZE_KEYS = {"offset", "maximum"}
+NATIVE_CHECKSUM_KEYS = {
+    "algorithm",
+    "start_offset",
+    "end_offset_exclusive",
+    "result_offset",
+}
+NATIVE_TRANSACTION_ID_KEYS = {"offset", "match_mask"}
 LIFECYCLE_KEYS = {
     "power_off_departure_evidence",
     "return_policy_id",
@@ -557,6 +577,95 @@ def _validate_native_exchange(profile_id: str, value: object) -> None:
         item = value[key]
         if isinstance(item, bool) or not isinstance(item, int) or not minimum <= item <= maximum:
             raise ModelError(f"{profile_id}: native exchange {key} is out of bounds")
+    report_format = value["report_format"]
+    if not isinstance(report_format, dict):
+        raise ModelError(f"{profile_id}: native report format must be an object")
+    _expect_keys(report_format, NATIVE_REPORT_FORMAT_KEYS, f"{profile_id} native report format")
+    if set(report_format) != NATIVE_REPORT_FORMAT_KEYS:
+        raise ModelError(f"{profile_id}: native report format is incomplete")
+
+    def byte_value(name: str) -> None:
+        item = report_format[name]
+        if not isinstance(item, dict):
+            raise ModelError(f"{profile_id}: native {name} must be an object")
+        _expect_keys(item, NATIVE_BYTE_VALUE_KEYS, f"{profile_id} native {name}")
+        if set(item) != NATIVE_BYTE_VALUE_KEYS:
+            raise ModelError(f"{profile_id}: native {name} is incomplete")
+        if any(
+            isinstance(item[key], bool)
+            or not isinstance(item[key], int)
+            or not 0 <= item[key] <= maximum
+            for key, maximum in (("offset", value["report_bytes"] - 1), ("value", 255))
+        ):
+            raise ModelError(f"{profile_id}: native {name} is out of bounds")
+
+    byte_value("request_status")
+    byte_value("protocol_type")
+    byte_value("trailer")
+    response_status = report_format["response_status"]
+    if not isinstance(response_status, dict):
+        raise ModelError(f"{profile_id}: native response status must be an object")
+    _expect_keys(
+        response_status,
+        NATIVE_BYTE_RANGE_KEYS,
+        f"{profile_id} native response status",
+    )
+    if set(response_status) != NATIVE_BYTE_RANGE_KEYS or any(
+        isinstance(response_status[key], bool)
+        or not isinstance(response_status[key], int)
+        or not 0 <= response_status[key] <= maximum
+        for key, maximum in (
+            ("offset", value["report_bytes"] - 1),
+            ("minimum", 255),
+            ("maximum", 255),
+        )
+    ):
+        raise ModelError(f"{profile_id}: native response status is out of bounds")
+    if response_status["minimum"] > response_status["maximum"]:
+        raise ModelError(f"{profile_id}: native response status range is reversed")
+    data_size = report_format["data_size"]
+    if not isinstance(data_size, dict):
+        raise ModelError(f"{profile_id}: native data size must be an object")
+    _expect_keys(data_size, NATIVE_DATA_SIZE_KEYS, f"{profile_id} native data size")
+    if set(data_size) != NATIVE_DATA_SIZE_KEYS or any(
+        isinstance(data_size[key], bool)
+        or not isinstance(data_size[key], int)
+        or not 0 <= data_size[key] <= maximum
+        for key, maximum in (("offset", value["report_bytes"] - 1), ("maximum", 255))
+    ):
+        raise ModelError(f"{profile_id}: native data size is out of bounds")
+    checksum = report_format["checksum"]
+    if not isinstance(checksum, dict):
+        raise ModelError(f"{profile_id}: native checksum must be an object")
+    _expect_keys(checksum, NATIVE_CHECKSUM_KEYS, f"{profile_id} native checksum")
+    if set(checksum) != NATIVE_CHECKSUM_KEYS or checksum["algorithm"] != "xor8":
+        raise ModelError(f"{profile_id}: native checksum is incomplete or unsupported")
+    for key in ("start_offset", "end_offset_exclusive", "result_offset"):
+        if isinstance(checksum[key], bool) or not isinstance(checksum[key], int):
+            raise ModelError(f"{profile_id}: native checksum {key} is invalid")
+    if not (
+        0 <= checksum["start_offset"] < checksum["end_offset_exclusive"] <= value["report_bytes"]
+        and 0 <= checksum["result_offset"] < value["report_bytes"]
+        and not checksum["start_offset"]
+        <= checksum["result_offset"]
+        < checksum["end_offset_exclusive"]
+    ):
+        raise ModelError(f"{profile_id}: native checksum range is out of bounds")
+    transaction_id = report_format["transaction_id"]
+    if not isinstance(transaction_id, dict):
+        raise ModelError(f"{profile_id}: native transaction id must be an object")
+    _expect_keys(
+        transaction_id,
+        NATIVE_TRANSACTION_ID_KEYS,
+        f"{profile_id} native transaction id",
+    )
+    if set(transaction_id) != NATIVE_TRANSACTION_ID_KEYS or any(
+        isinstance(transaction_id[key], bool)
+        or not isinstance(transaction_id[key], int)
+        or not 0 <= transaction_id[key] <= maximum
+        for key, maximum in (("offset", value["report_bytes"] - 1), ("match_mask", 255))
+    ):
+        raise ModelError(f"{profile_id}: native transaction id is out of bounds")
     ranges = value["match_ranges"]
     if not isinstance(ranges, list) or not 1 <= len(ranges) <= 4:
         raise ModelError(f"{profile_id}: native exchange needs one to four match ranges")

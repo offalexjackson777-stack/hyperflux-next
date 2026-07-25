@@ -4,7 +4,7 @@
 from types import MappingProxyType
 from typing import Final
 
-PROFILE_SOURCE_SHA256: Final = '68c408358f92361f2dfbe461c180cd16eec08924d7c5b22e91753bc299d269ad'
+PROFILE_SOURCE_SHA256: Final = 'ac03ca0358ce92e552fcffb55a48650e87c9608ae684891b8a834b95989ed343'
 PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                  'id': 'razer-basilisk-v3-pro',
                  'official_name': 'Razer Basilisk V3 Pro',
@@ -854,8 +854,8 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                'restrictions': ['Unknown children receive zero writable capabilities.',
                                 'Receiver inventory does not imply child availability.',
                                 'The receiver and mat do not appear as addressable RGB controllers.'],
-               'revision': 2,
-               'runtime_sha256': '4f469c2f3f7010a79435727ff229a3efedd65c446eb5c98e225dffc0d229ccd2',
+               'revision': 3,
+               'runtime_sha256': '196946934e4ce6c5d55519a8485df416c8698e9682aa30d59abda00203a38e01',
                'schema': 'hyperflux-hardware-profile-v1',
                'source_path': 'profiles/receivers/razer-hyperflux-v2-1532-00cf.json',
                'transport': {'application_raw_frames': False,
@@ -869,6 +869,18 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                                                  'max_response_attempts': 5,
                                                  'protocol_family': 'razer-feature-report-v1',
                                                  'report_bytes': 90,
+                                                 'report_format': {'checksum': {'algorithm': 'xor8',
+                                                                                'end_offset_exclusive': 88,
+                                                                                'result_offset': 88,
+                                                                                'start_offset': 2},
+                                                                   'data_size': {'maximum': 80, 'offset': 5},
+                                                                   'protocol_type': {'offset': 4, 'value': 0},
+                                                                   'request_status': {'offset': 0, 'value': 0},
+                                                                   'response_status': {'maximum': 5,
+                                                                                       'minimum': 1,
+                                                                                       'offset': 0},
+                                                                   'trailer': {'offset': 89, 'value': 0},
+                                                                   'transaction_id': {'match_mask': 0, 'offset': 1}},
                                                  'response_report_index': 0,
                                                  'response_retry_delay_us': 10000,
                                                  'set_report_index': 0},
@@ -899,7 +911,7 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                'schema': 'hyperflux-hardware-profile-v1',
                'source_path': 'profiles/surfaces/razer-hyperflux-v2-hard-edition.json'}],
  'schema': 'hyperflux-compiled-profile-catalog-v1',
- 'source_sha256': '68c408358f92361f2dfbe461c180cd16eec08924d7c5b22e91753bc299d269ad'}
+ 'source_sha256': 'ac03ca0358ce92e552fcffb55a48650e87c9608ae684891b8a834b95989ed343'}
 PROFILES_BY_ID: Final = MappingProxyType({profile['profile_id']: profile for profile in PROFILE_CATALOG['profiles']})
 
 __all__ = ["PROFILE_CATALOG", "PROFILE_SOURCE_SHA256", "PROFILES_BY_ID"]

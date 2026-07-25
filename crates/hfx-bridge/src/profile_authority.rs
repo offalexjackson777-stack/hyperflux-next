@@ -8,7 +8,9 @@ use hfx_domain::{
     DeviceWriteReadiness, GenerationId, PresenceState, ProductId, ProfileDigest, ProfileId,
     ProfileKind, ReceiverId, ReceiverLifecycleState, ResourceKind, VendorId,
 };
-use hfx_profiles::{ProfileCatalogError, RuntimeProfile, RuntimeProfileCatalog};
+use hfx_profiles::{
+    NativeExchangeRecord, ProfileCatalogError, RuntimeProfile, RuntimeProfileCatalog,
+};
 use hfx_protocol::ResourceKey;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -218,6 +220,18 @@ pub struct RuntimeProfileView<'a> {
 }
 
 impl<'a> RuntimeProfileView<'a> {
+    /// Returns the generated native-exchange contract for one exact active
+    /// receiver generation.
+    #[must_use]
+    pub fn native_exchange(
+        self,
+        receiver_id: &ReceiverId,
+        generation_id: GenerationId,
+    ) -> Option<NativeExchangeRecord> {
+        let (_, _, receiver_profile) = self.active_generation(receiver_id, generation_id)?;
+        receiver_profile.native_exchange
+    }
+
     #[must_use]
     pub fn profile_for_device(
         self,

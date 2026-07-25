@@ -26,7 +26,24 @@ static bool hfx_native_profile_valid(const struct hfx_receiver_profile *profile)
 	    !profile->native_max_response_attempts ||
 	    profile->native_max_response_attempts > 16U ||
 	    !profile->native_match_range_count ||
-	    profile->native_match_range_count > HFX_NATIVE_MATCH_RANGE_CAPACITY)
+	    profile->native_match_range_count > HFX_NATIVE_MATCH_RANGE_CAPACITY ||
+	    profile->native_request_status_offset >= profile->native_report_bytes ||
+	    profile->native_response_status_offset >= profile->native_report_bytes ||
+	    profile->native_response_status_minimum >
+		    profile->native_response_status_maximum ||
+	    profile->native_protocol_type_offset >= profile->native_report_bytes ||
+	    profile->native_data_size_offset >= profile->native_report_bytes ||
+	    profile->native_checksum_kind != HFX_NATIVE_CHECKSUM_XOR8 ||
+	    profile->native_checksum_start_offset >=
+		    profile->native_checksum_end_offset ||
+	    profile->native_checksum_end_offset > profile->native_report_bytes ||
+	    profile->native_checksum_result_offset >= profile->native_report_bytes ||
+	    (profile->native_checksum_result_offset >=
+		     profile->native_checksum_start_offset &&
+	     profile->native_checksum_result_offset <
+		     profile->native_checksum_end_offset) ||
+	    profile->native_trailer_offset >= profile->native_report_bytes ||
+	    profile->native_transaction_id_offset >= profile->native_report_bytes)
 		return false;
 
 	for (index = 0; index < profile->native_match_range_count; index++) {
@@ -39,6 +56,50 @@ static bool hfx_native_profile_valid(const struct hfx_receiver_profile *profile)
 		previous_end = range->offset + range->length;
 	}
 	return true;
+}
+
+static bool hfx_native_checksum_valid(
+	const struct hfx_receiver_profile *profile, const u8 *report)
+{
+	u8 checksum = 0;
+	u16 index;
+
+	if (profile->native_checksum_kind != HFX_NATIVE_CHECKSUM_XOR8)
+		return false;
+	for (index = profile->native_checksum_start_offset;
+	     index < profile->native_checksum_end_offset; index++)
+		checksum ^= report[index];
+	return checksum == report[profile->native_checksum_result_offset];
+}
+
+static bool hfx_native_request_report_valid(
+	const struct hfx_receiver_profile *profile, const u8 *report)
+{
+	return report[profile->native_request_status_offset] ==
+		       profile->native_request_status_value &&
+		report[profile->native_protocol_type_offset] ==
+		       profile->native_protocol_type_value &&
+		report[profile->native_data_size_offset] <=
+		       profile->native_max_data_size &&
+		hfx_native_checksum_valid(profile, report) &&
+		report[profile->native_trailer_offset] ==
+		       profile->native_trailer_value;
+}
+
+static bool hfx_native_response_report_valid(
+	const struct hfx_receiver_profile *profile, const u8 *report)
+{
+	u8 status = report[profile->native_response_status_offset];
+
+	return status >= profile->native_response_status_minimum &&
+		status <= profile->native_response_status_maximum &&
+		report[profile->native_protocol_type_offset] ==
+		       profile->native_protocol_type_value &&
+		report[profile->native_data_size_offset] <=
+		       profile->native_max_data_size &&
+		hfx_native_checksum_valid(profile, report) &&
+		report[profile->native_trailer_offset] ==
+		       profile->native_trailer_value;
 }
 
 static int hfx_native_submit_validate(
@@ -62,7 +123,8 @@ static int hfx_native_submit_validate(
 	    submit->endpoint_slot != HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE)
 		return -EINVAL;
 	if (submit->report_length != HFX_UAPI_NATIVE_REPORT_BYTES ||
-	    submit->kernel_sequence)
+	    submit->kernel_sequence ||
+	    !hfx_native_request_report_valid(receiver->profile, submit->report))
 		return -EINVAL;
 	if (submit->deadline_boottime_ns <= now_ns ||
 	    submit->deadline_boottime_ns - now_ns >
@@ -256,6 +318,16 @@ static bool hfx_native_response_matches(
 	const u8 *request, const u8 *response)
 {
 	u16 index;
+	u8 transaction_difference;
+
+	if (!hfx_native_response_report_valid(profile, response))
+		return false;
+	transaction_difference =
+		request[profile->native_transaction_id_offset] ^
+		response[profile->native_transaction_id_offset];
+	if (transaction_difference &
+	    profile->native_transaction_id_match_mask)
+		return false;
 
 	for (index = 0; index < profile->native_match_range_count; index++) {
 		const struct hfx_native_match_range *range =
