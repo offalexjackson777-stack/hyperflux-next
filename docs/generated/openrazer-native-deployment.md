@@ -13,7 +13,7 @@ Canonical deployment digest: `8940c61d14a234049e1226d046b0ba41745d5ae69c387ba0c8
 | Bridge socket | `/run/hyperflux-next/bridge.sock` |
 | Exclusive kernel interface | `/dev/uhid` |
 
-The static relay service is pulled in by the bridge service. It runs as root only because `/dev/uhid` remains unavailable to ordinary users, drops every Linux capability, and can access only the bridge socket and UHID device. A read-only preflight refuses to create virtual endpoints while an older transformed driver module remains loaded.
+The static relay service is pulled in by the bridge service. It runs as root only because `/dev/uhid` remains unavailable to ordinary users, drops every Linux capability, and can access only the bridge socket and UHID device. The bridge's start-preparation unit performs the read-only transformed-driver preflight before this sealed relay namespace is entered.
 
 ## OpenRazer Driver Replacement
 

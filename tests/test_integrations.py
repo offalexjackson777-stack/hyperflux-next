@@ -48,6 +48,9 @@ from hfxdev.openrazer_native_route import (
     transformed_native_route_catalog,
 )
 from hfxdev.generators.integrations import python_openrazer_metadata
+from hfxdev.generators.openrazer_native import relay_service
+from hfxdev.linux_runtime import load_linux_runtime
+from hfxdev.openrazer_native_route import load_native_deployment
 from hfxdev.profiles import load_profile_inputs
 
 
@@ -262,6 +265,13 @@ class IntegrationCatalogTests(unittest.TestCase):
         for route in routes["routes"]:
             direct = probes_by_profile[route["profile_id"]]["direct_usb_reference"]
             self.assertEqual(route["direct_data_product_ids"], [direct["product_id"]])
+
+    def test_openrazer_relay_keeps_module_preflight_outside_its_sealed_namespace(self) -> None:
+        runtime = load_linux_runtime(ROOT)
+        service = relay_service(load_native_deployment(ROOT), runtime)
+        self.assertIn(f"Requires={runtime.bridge.service_unit}", service)
+        self.assertIn("ProtectKernelModules=yes", service)
+        self.assertNotIn("ExecStartPre=", service)
 
     def test_openrazer_native_route_catalog_matches_exact_checkout_when_available(self) -> None:
         source_value = os.environ.get("HFX_OPENRAZER_SOURCE_DIR")

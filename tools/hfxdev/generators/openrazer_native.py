@@ -49,7 +49,6 @@ def relay_service(
             "Type=simple",
             "User=root",
             "Group=root",
-            f"ExecStartPre={runtime.operations.activation_path} check-openrazer-driver",
             f"ExecStart={relay.executable_path} --socket {bridge.socket_path} "
             f"--uhid {relay.uhid_device}",
             "UMask=0077",
@@ -111,9 +110,9 @@ def markdown(deployment: OpenRazerNativeDeployment, runtime: LinuxRuntime) -> st
             "",
             "The static relay service is pulled in by the bridge service. It runs as root only "
             "because `/dev/uhid` remains unavailable to ordinary users, drops every Linux "
-            "capability, and can access only the bridge socket and UHID device. A read-only "
-            "preflight refuses to create virtual endpoints while an older transformed driver "
-            "module remains loaded.",
+            "capability, and can access only the bridge socket and UHID device. The bridge's "
+            "start-preparation unit performs the read-only transformed-driver preflight before "
+            "this sealed relay namespace is entered.",
             "",
             "## OpenRazer Driver Replacement",
             "",

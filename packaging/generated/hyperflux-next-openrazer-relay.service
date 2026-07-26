@@ -11,7 +11,6 @@ ConditionPathExists=/dev/uhid
 Type=simple
 User=root
 Group=root
-ExecStartPre=/usr/lib/hyperflux-next/hyperflux-next-activate check-openrazer-driver
 ExecStart=/usr/lib/hyperflux-next/hyperflux-next-uhid-relay --socket /run/hyperflux-next/bridge.sock --uhid /dev/uhid
 UMask=0077
 Restart=on-failure

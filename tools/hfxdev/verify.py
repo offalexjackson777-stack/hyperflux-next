@@ -814,10 +814,14 @@ def _run_openrazer_native_route_contracts(root: Path, node: TestNode) -> None:
         "DevicePolicy=closed",
         f"DeviceAllow={deployment.relay.uhid_device} rw",
         f"PartOf={runtime.bridge.service_unit}",
-        f"ExecStartPre={runtime.operations.activation_path} check-openrazer-driver",
+        "ProtectKernelModules=yes",
     )
     if any(marker not in service for marker in required_service):
         raise ModelError("OpenRazer native relay service sandbox is incomplete")
+    if "ExecStartPre=" in service:
+        raise ModelError(
+            "OpenRazer native relay repeats module inspection inside its sealed namespace"
+        )
     if "PrivateDevices=yes" in service or "SupplementaryGroups=" in service:
         raise ModelError("OpenRazer native relay exposes a broader device boundary")
     rust_deployment = (
@@ -841,8 +845,11 @@ def _run_openrazer_native_route_contracts(root: Path, node: TestNode) -> None:
     if (
         deployment.relay.service_unit not in bridge_service
         or f"Before=" not in bridge_service
+        or f"Requires={runtime.operations.activation_service_unit}" not in bridge_service
     ):
-        raise ModelError("bridge lifecycle does not pull in the OpenRazer native relay")
+        raise ModelError(
+            "bridge lifecycle does not order activation before the OpenRazer native relay"
+        )
     install = load_install_manifest(root)
     if (
         install.build("openrazer-native-driver").destination
