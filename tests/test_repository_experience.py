@@ -9,6 +9,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -158,6 +159,22 @@ class RepositoryExperienceContracts(unittest.TestCase):
             "GPL-2.0 WITH Linux-syscall-note",
         )
         self.assertEqual(expression_for_path(policy, "README.md"), "GPL-2.0-only")
+
+    def test_license_policy_prunes_generated_roots_before_descent(self) -> None:
+        source = ROOT / "tools" / "hfxdev" / "licensing.py"
+
+        def guarded_walk(root: Path, *, topdown: bool, followlinks: bool):
+            directories = ["build", "target", "tools"]
+            yield str(root), directories, []
+            generated = {"build", "target"}.intersection(directories)
+            if generated:
+                raise AssertionError(f"generated roots were traversed: {generated}")
+            yield str(source.parent), [], [source.name]
+
+        with patch("hfxdev.licensing.os.walk", guarded_walk):
+            result = verify_licensing_policy(ROOT)
+
+        self.assertEqual(result["checked_spdx_files"], 1)
 
     def test_ambiguous_root_license_document_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
