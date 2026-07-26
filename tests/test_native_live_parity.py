@@ -97,20 +97,38 @@ def _raw(records: list[dict]) -> dict:
 
 
 class NativeLiveParityTests(unittest.TestCase):
-    def _direct_firmware_evidence(self) -> dict:
-        probe = _probe("get_firmware")
+    def _direct_method_evidence(
+        self,
+        method: str,
+        arguments: bytes,
+        *,
+        status: int = 2,
+        complete_capture: bool = True,
+    ) -> dict:
+        probe = _probe(method)
         request = canonical_request(probe, 0x1F)
-        response = _response(request, bytes((2, 51)))
+        response = _response(request, arguments, status=status)
         with TemporaryDirectory() as directory:
             direct = Path(directory) / "direct.txt"
             direct.write_text(_capture(request, response), encoding="utf-8")
-            return build_offline_parity_evidence(
+            evidence = build_offline_parity_evidence(
                 ROOT,
                 profile_id=PROFILE,
                 direct_capture=direct,
                 created_at="2026-07-26T00:00:00Z",
                 source_revision=REVISION,
             )
+        observation = next(
+            item
+            for item in evidence["observations"]
+            if item["method"] == method
+            and item["origin"] == "direct-semantic-reference"
+        )
+        observation["response"]["complete_capture"] = complete_capture
+        return evidence
+
+    def _direct_firmware_evidence(self) -> dict:
+        return self._direct_method_evidence("get_firmware", bytes((2, 51)))
 
     def test_ephemeral_exact_report_becomes_privacy_safe_parity(self) -> None:
         probe = _probe("get_firmware")
@@ -132,6 +150,136 @@ class NativeLiveParityTests(unittest.TestCase):
         serialized = json.dumps(evidence)
         self.assertNotIn(request.hex(), serialized)
         self.assertNotIn(response.hex(), serialized)
+
+    def test_source_bound_semantic_reference_does_not_require_raw_direct_report(self) -> None:
+        probe = _probe("get_firmware")
+        request = canonical_request(probe, 0x9F)
+        response = _response(request, bytes((2, 51)))
+        evidence = build_live_parity_evidence(
+            ROOT,
+            profile_id=PROFILE,
+            direct_evidence=self._direct_method_evidence(
+                "get_firmware", bytes((2, 51)), complete_capture=False
+            ),
+            raw_qualification=_raw([_raw_record("get_firmware", request, response)]),
+            package_sha256=PACKAGE_SHA256,
+            receiver_generation=7,
+            source_revision=REVISION,
+        )
+        self.assertIn("get_firmware", evidence["coverage"]["passed"])
+
+    def test_matching_terminal_failure_is_preserved_as_transport_parity(self) -> None:
+        probe = _probe("get_brightness")
+        request = canonical_request(probe, 0x9F)
+        response = _response(request, bytes((0,)), status=3)
+        evidence = build_live_parity_evidence(
+            ROOT,
+            profile_id=PROFILE,
+            direct_evidence=self._direct_method_evidence(
+                "get_brightness", bytes((0,)), status=3, complete_capture=False
+            ),
+            raw_qualification=_raw([_raw_record("get_brightness", request, response)]),
+            package_sha256=PACKAGE_SHA256,
+            receiver_generation=7,
+            source_revision=REVISION,
+        )
+        routed = next(
+            item
+            for item in evidence["observations"]
+            if item["method"] == "get_brightness"
+            and item["origin"] == "receiver-route"
+        )
+        self.assertEqual(
+            routed["receiver_comparison"],
+            {
+                "attempts": 1,
+                "unchanged_request": True,
+                "standard_response": True,
+                "semantic_parity": True,
+            },
+        )
+        self.assertIn("get_brightness", evidence["coverage"]["passed"])
+        self.assertNotEqual(evidence["conclusion"], "backend-required")
+
+    def test_terminal_status_mismatch_is_semantic_failure_not_backend_rewrite(self) -> None:
+        probe = _probe("get_brightness")
+        request = canonical_request(probe, 0x9F)
+        response = _response(request, bytes((0,)), status=5)
+        evidence = build_live_parity_evidence(
+            ROOT,
+            profile_id=PROFILE,
+            direct_evidence=self._direct_method_evidence(
+                "get_brightness", bytes((0,)), status=3, complete_capture=False
+            ),
+            raw_qualification=_raw([_raw_record("get_brightness", request, response)]),
+            package_sha256=PACKAGE_SHA256,
+            receiver_generation=7,
+            source_revision=REVISION,
+        )
+        self.assertIn("get_brightness", evidence["coverage"]["failed"])
+        self.assertEqual(evidence["conclusion"], "incomplete")
+
+    def test_matching_terminal_status_with_different_exact_summary_fails_semantics(self) -> None:
+        probe = _probe("get_brightness")
+        request = canonical_request(probe, 0x9F)
+        response = _response(request, bytes((1,)), status=3)
+        evidence = build_live_parity_evidence(
+            ROOT,
+            profile_id=PROFILE,
+            direct_evidence=self._direct_method_evidence(
+                "get_brightness", bytes((0,)), status=3, complete_capture=False
+            ),
+            raw_qualification=_raw([_raw_record("get_brightness", request, response)]),
+            package_sha256=PACKAGE_SHA256,
+            receiver_generation=7,
+            source_revision=REVISION,
+        )
+        self.assertIn("get_brightness", evidence["coverage"]["failed"])
+        self.assertEqual(evidence["conclusion"], "incomplete")
+
+    def test_final_busy_response_remains_incomplete(self) -> None:
+        probe = _probe("get_firmware")
+        request = canonical_request(probe, 0x9F)
+        response = _response(request, bytes((0, 0)), status=1)
+        evidence = build_live_parity_evidence(
+            ROOT,
+            profile_id=PROFILE,
+            direct_evidence=self._direct_firmware_evidence(),
+            raw_qualification=_raw([_raw_record("get_firmware", request, response)]),
+            package_sha256=PACKAGE_SHA256,
+            receiver_generation=7,
+            source_revision=REVISION,
+        )
+        routed = next(
+            item
+            for item in evidence["observations"]
+            if item["method"] == "get_firmware"
+            and item["origin"] == "receiver-route"
+        )
+        self.assertIsNone(routed["receiver_comparison"]["standard_response"])
+        self.assertIsNone(routed["receiver_comparison"]["semantic_parity"])
+        self.assertIn("get_firmware", evidence["coverage"]["missing"])
+        self.assertEqual(evidence["conclusion"], "incomplete")
+
+    def test_malformed_receiver_response_requires_a_backend(self) -> None:
+        probe = _probe("get_firmware")
+        request = canonical_request(probe, 0x9F)
+        response = bytearray(_response(request, bytes((2, 51))))
+        response[1] ^= 1
+        response[88] = _crc(response)
+        evidence = build_live_parity_evidence(
+            ROOT,
+            profile_id=PROFILE,
+            direct_evidence=self._direct_firmware_evidence(),
+            raw_qualification=_raw(
+                [_raw_record("get_firmware", request, bytes(response))]
+            ),
+            package_sha256=PACKAGE_SHA256,
+            receiver_generation=7,
+            source_revision=REVISION,
+        )
+        self.assertIn("get_firmware", evidence["coverage"]["failed"])
+        self.assertEqual(evidence["conclusion"], "backend-required")
 
     def test_unclassified_sent_request_and_rewritten_read_fail_closed(self) -> None:
         probe = _probe("get_firmware")

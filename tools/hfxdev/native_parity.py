@@ -28,7 +28,10 @@ SHA256_PATTERN = re.compile(r"[0-9a-f]{64}\Z")
 SOURCE_REVISION_PATTERN = re.compile(r"[0-9a-f]{40}\Z")
 METHOD_PATTERN = re.compile(r"[a-z][a-z0-9_]{0,127}\Z")
 PROFILE_PATTERN = re.compile(r"child\.[a-z0-9.-]+\Z")
+BUSY_STATUS = 1
 SUCCESS_STATUS = 2
+RESPONSE_STATUS_MINIMUM = 1
+RESPONSE_STATUS_MAXIMUM = 5
 COMPARISONS = {"exact-semantic", "domain-valid", "redacted-equality"}
 QUALIFICATION_CERTAINTIES = {"not-sent", "may-have-been-sent", "matched-response"}
 
@@ -228,6 +231,8 @@ def _request_matches_signature(probe: dict[str, Any], request: bytes) -> bool:
 
 def _response_is_structural(request: bytes, response: bytes) -> bool:
     if len(request) < 8 or len(response) < 8:
+        return False
+    if not RESPONSE_STATUS_MINIMUM <= response[0] <= RESPONSE_STATUS_MAXIMUM:
         return False
     if response[1] != request[1] or response[2:4] != request[2:4]:
         return False
@@ -478,32 +483,76 @@ def _raw_receiver_matches(
     return matched
 
 
+def _standard_terminal_response(item: MatchedExchange) -> bool | None:
+    if not item.response_complete:
+        return None
+    if not item.response_structural:
+        return False
+    if item.exchange.response[0] == BUSY_STATUS:
+        return None
+    return True
+
+
+def _semantic_summary_parity(
+    probe: dict[str, Any],
+    *,
+    direct_status: int,
+    direct_structural: bool,
+    direct_summary: dict[str, Any],
+    receiver_status: int,
+    receiver_structural: bool,
+    receiver_summary: dict[str, Any],
+) -> bool | None:
+    if not direct_structural or not receiver_structural:
+        return False
+    if BUSY_STATUS in {direct_status, receiver_status}:
+        return None
+    if direct_status != receiver_status:
+        return False
+
+    comparison = probe["comparison"]
+    if comparison == "redacted-equality":
+        return None
+    if direct_status != SUCCESS_STATUS:
+        if comparison == "domain-valid":
+            return True
+        if comparison == "exact-semantic":
+            return direct_summary == receiver_summary
+        raise ModelError("native qualification comparison policy is unsupported")
+    if comparison == "domain-valid":
+        if (
+            direct_summary.get("available") is not True
+            or receiver_summary.get("available") is not True
+        ):
+            return None
+        return True
+    if comparison == "exact-semantic":
+        if (
+            direct_summary.get("available") is not True
+            or receiver_summary.get("available") is not True
+        ):
+            return None
+        return direct_summary == receiver_summary
+    raise ModelError("native qualification comparison policy is unsupported")
+
+
 def _semantic_parity_from_evidence(
     probe: dict[str, Any],
     direct: dict[str, Any] | None,
     receiver: MatchedExchange,
 ) -> bool | None:
-    if direct is None:
+    if direct is None or not receiver.response_complete:
         return None
     response = direct["response"]
-    if (
-        response["status"] != SUCCESS_STATUS
-        or response["structural_match"] is not True
-        or response["complete_capture"] is not True
-    ):
-        return None
-    comparison = probe["comparison"]
-    direct_summary = response["summary"]
-    if comparison == "redacted-equality":
-        return None
-    if comparison == "domain-valid":
-        return bool(
-            direct_summary.get("available") is True
-            and receiver.summary.get("available") is True
-        )
-    if comparison == "exact-semantic":
-        return direct_summary == receiver.summary
-    raise ModelError("native qualification comparison policy is unsupported")
+    return _semantic_summary_parity(
+        probe,
+        direct_status=response["status"],
+        direct_structural=response["structural_match"],
+        direct_summary=response["summary"],
+        receiver_status=receiver.exchange.response[0],
+        receiver_structural=receiver.response_structural,
+        receiver_summary=receiver.summary,
+    )
 
 
 def build_live_parity_evidence(
@@ -686,26 +735,34 @@ def _receiver_observation(
     else:
         unchanged = None
 
-    standard: bool | None
-    if final.response_complete:
-        standard = final.response_structural and final.exchange.response[0] == SUCCESS_STATUS
-    else:
-        standard = None
+    standard = _standard_terminal_response(final)
 
     semantic_parity: bool | None = None
     if direct is not None:
         comparison = final.probe["comparison"]
-        if comparison == "redacted-equality":
+        direct_status = direct.exchange.response[0]
+        receiver_status = final.exchange.response[0]
+        if (
+            direct.response_structural
+            and final.response_structural
+            and direct_status == SUCCESS_STATUS
+            and receiver_status == SUCCESS_STATUS
+            and comparison == "redacted-equality"
+        ):
             if final.serial_value is not None and direct.serial_value is not None:
                 semantic_parity = secrets.compare_digest(
                     final.serial_value, direct.serial_value
                 )
-        elif comparison == "domain-valid":
-            semantic_parity = (
-                final.semantic_value is not None and direct.semantic_value is not None
+        else:
+            semantic_parity = _semantic_summary_parity(
+                final.probe,
+                direct_status=direct_status,
+                direct_structural=direct.response_structural,
+                direct_summary=direct.summary,
+                receiver_status=receiver_status,
+                receiver_structural=final.response_structural,
+                receiver_summary=final.summary,
             )
-        elif final.semantic_value is not None and direct.semantic_value is not None:
-            semantic_parity = final.semantic_value == direct.semantic_value
 
     return {
         "method": final.method,

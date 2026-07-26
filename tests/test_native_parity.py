@@ -111,6 +111,57 @@ class NativeParityTests(unittest.TestCase):
             },
         )
 
+    def test_matching_terminal_failure_is_transport_parity_offline(self) -> None:
+        probe = _probe(self.mouse_profile, "get_firmware")
+        direct_request = canonical_request(probe, 0x1F)
+        receiver_request = canonical_request(probe, 0x9F)
+        direct_response = _response(direct_request, bytes((0, 0)), status=3)
+        receiver_response = _response(receiver_request, bytes((0, 0)), status=3)
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            direct = root / "direct.txt"
+            receiver = root / "receiver.txt"
+            direct.write_text(_capture(direct_request, direct_response, device=12))
+            receiver.write_text(_capture(receiver_request, receiver_response, device=11))
+            evidence = build_offline_parity_evidence(
+                ROOT,
+                profile_id=self.mouse_profile,
+                direct_capture=direct,
+                receiver_capture=receiver,
+                created_at="2026-07-25T00:00:00Z",
+                source_revision=REVISION,
+            )
+        self.assertIn("get_firmware", evidence["coverage"]["passed"])
+        routed = next(
+            value
+            for value in evidence["observations"]
+            if value["method"] == "get_firmware" and value["origin"] == "receiver-route"
+        )
+        self.assertTrue(routed["receiver_comparison"]["standard_response"])
+        self.assertTrue(routed["receiver_comparison"]["semantic_parity"])
+
+    def test_matching_terminal_domain_status_does_not_compare_undefined_payloads(self) -> None:
+        probe = _probe(self.mouse_profile, "get_battery")
+        direct_request = canonical_request(probe, 0x1F)
+        receiver_request = canonical_request(probe, 0x9F)
+        direct_response = _response(direct_request, bytes((0, 128)), status=3)
+        receiver_response = _response(receiver_request, bytes((0, 144)), status=3)
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            direct = root / "direct.txt"
+            receiver = root / "receiver.txt"
+            direct.write_text(_capture(direct_request, direct_response, device=12))
+            receiver.write_text(_capture(receiver_request, receiver_response, device=11))
+            evidence = build_offline_parity_evidence(
+                ROOT,
+                profile_id=self.mouse_profile,
+                direct_capture=direct,
+                receiver_capture=receiver,
+                created_at="2026-07-25T00:00:00Z",
+                source_revision=REVISION,
+            )
+        self.assertIn("get_battery", evidence["coverage"]["passed"])
+
     def test_complete_request_rewrite_requires_a_backend(self) -> None:
         probe = _probe(self.mouse_profile, "get_firmware")
         direct_request = canonical_request(probe, 0x1F)
@@ -267,6 +318,35 @@ class NativeParityTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ModelError, "unmatched"):
                 parse_usbmon_capture(capture)
+
+    def test_request_marker_and_out_of_range_status_are_not_standard_responses(self) -> None:
+        probe = _probe(self.mouse_profile, "get_firmware")
+        direct_request = canonical_request(probe, 0x1F)
+        receiver_request = canonical_request(probe, 0x9F)
+        direct_response = _response(direct_request, bytes((2, 51)))
+        for status in (0, 6):
+            with self.subTest(status=status), TemporaryDirectory() as directory:
+                root = Path(directory)
+                direct = root / "direct.txt"
+                receiver = root / "receiver.txt"
+                direct.write_text(_capture(direct_request, direct_response, device=12))
+                receiver.write_text(
+                    _capture(
+                        receiver_request,
+                        _response(receiver_request, bytes((2, 51)), status=status),
+                        device=11,
+                    )
+                )
+                evidence = build_offline_parity_evidence(
+                    ROOT,
+                    profile_id=self.mouse_profile,
+                    direct_capture=direct,
+                    receiver_capture=receiver,
+                    created_at="2026-07-25T00:00:00Z",
+                    source_revision=REVISION,
+                )
+            self.assertIn("get_firmware", evidence["coverage"]["failed"])
+            self.assertEqual(evidence["conclusion"], "backend-required")
 
     def test_writer_rederives_claims_and_rejects_symlink_cache_roots(self) -> None:
         probe = _probe(self.mouse_profile, "get_firmware")
