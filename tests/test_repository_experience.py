@@ -25,6 +25,10 @@ from hfxdev.licensing import (
 )
 from hfxdev.local_companion import load_local_companion
 from hfxdev.model import ModelError, load_json
+from hfxdev.openrazer_native_route import (
+    load_native_deployment,
+    load_native_route_catalog,
+)
 from hfxdev.public_readiness import public_readiness
 from hfxdev.repository_docs import repository_link_issues
 
@@ -35,7 +39,11 @@ class RepositoryExperienceContracts(unittest.TestCase):
         self.assertEqual(
             load_json(ROOT / "generated" / "public-readiness.json"), readiness
         )
-        readme = readme_markdown(load_github_governance(ROOT), readiness)
+        deployment = load_native_deployment(ROOT)
+        routes = load_native_route_catalog(ROOT)
+        readme = readme_markdown(
+            load_github_governance(ROOT), readiness, deployment, routes
+        )
         self.assertEqual((ROOT / "README.md").read_text(encoding="utf-8"), readme)
         for section in ("publication", "evidence"):
             self.assertIn(readiness[section]["summary"], readme)
@@ -43,6 +51,25 @@ class RepositoryExperienceContracts(unittest.TestCase):
         self.assertIn("apps/device-qualification/README.md", readme)
         self.assertIn("Inspect an installed candidate", readme)
         self.assertIn("hardware-changing runners remain explicitly unavailable", readme)
+        self.assertIn(deployment.upstream_commit, readme)
+        self.assertIn(deployment.compatibility.verified_upstream_version, readme)
+        self.assertIn(
+            deployment.compatibility.runtime_capability.expected_value, readme
+        )
+        for route in routes["routes"]:
+            self.assertIn(route["model_name"], readme)
+            self.assertIn(f"{route['wireless_product_id']:04x}", readme)
+        self.assertIn("research-only and non-writable", readme)
+        installation = (ROOT / "docs/generated/installation.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(deployment.driver.source_directory, installation)
+        self.assertIn(deployment.relay.service_unit, installation)
+        self.assertIn("openrazer-driver-dkms", installation)
+        native_deployment = (
+            ROOT / "docs/generated/openrazer-native-deployment.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn(deployment.upstream_commit, native_deployment)
         self.assertNotIn("github.io", readme)
         self.assertNotIn("Documentation portal", readme)
 

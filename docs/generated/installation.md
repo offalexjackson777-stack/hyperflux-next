@@ -71,4 +71,16 @@ The expanded source payload contains `189` files. Every destination is normalize
 
 - `/etc/hyperflux-next/bridge.json` is package-manager preserved.
 
+## OpenRazer Ownership And Updates
+
+The package owns the source-bound patched driver at `/usr/src/openrazer-driver-3.12.4` and provides the OpenRazer driver dependency. Distribution packages must conflict with and replace the ordinary `openrazer-driver-dkms` package so a system update cannot install a second owner over the transformed source tree.
+
+Official OpenRazer `3.12.4` daemon and Python-client packaging may receive distribution release-suffix updates. Runtime readiness is checked with the transformed module capability `hyperflux_native_transport=razer-feature-report-v1`, not a package release string. A different upstream source version fails closed and keeps `hyperflux-next-openrazer-relay.service` stopped until HyperFlux is rebased and reverified.
+
+## Verification And Rollback
+
+Run `hyperfluxctl doctor` after package hooks complete. A compatible update may resume a previously active bridge automatically; an in-use kernel-module change requires the activation action reported by Doctor.
+
+Rollback uses a complete prior source-bound package through the package manager. Do not copy files into `/usr/src`, overwrite DKMS trees, or mix an upstream OpenRazer driver package with the HyperFlux-owned transform. Existing configuration remains preserved across supported package transitions.
+
 Arch, Debian, and RPM packaging must consume the same deterministic staged root instead of maintaining independent file lists.

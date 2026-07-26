@@ -1621,14 +1621,25 @@ def _run_package_contracts(root: Path, node: TestNode) -> None:
         staged_payload_size,
     )
 
-    arch_package = build_distribution_package(
+    first_arch = build_distribution_package(
         root,
         manifest_path,
         "arch",
-        workspace / "arch-package",
-    ).package
+        workspace / "arch-package-a",
+    )
+    second_arch = build_distribution_package(
+        root,
+        manifest_path,
+        "arch",
+        workspace / "arch-package-b",
+    )
+    if (
+        first_arch.package.read_bytes() != second_arch.package.read_bytes()
+        or first_arch.manifest.read_bytes() != second_arch.manifest.read_bytes()
+    ):
+        raise ModelError("independent Arch package builds are not byte-for-byte reproducible")
     verify_arch_openrazer_update_policy(
-        arch_package,
+        first_arch.package,
         package_name=runtime.product.package_name,
         workspace=workspace / "openrazer-update-policy",
         timeout_seconds=node.timeout_seconds,

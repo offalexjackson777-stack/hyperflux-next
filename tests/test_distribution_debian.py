@@ -83,6 +83,7 @@ class DebianPackageTests(unittest.TestCase):
         self.assertIn("Version: 0.0.0~dev.1-1\n", control)
         self.assertIn("Architecture: amd64\n", control)
         self.assertIn(f"Maintainer: {DEBIAN_MAINTAINER}\n", control)
+        self.assertIn(f"Homepage: {self.catalog.homepage}\n", control)
         self.assertIn("Depends: dkms, libc6, libgcc-s1, python3 (>= 3.11), systemd, udev\n", control)
         self.assertIn(
             "Suggests: openrazer-daemon, python3-openrazer, openrgb, polychromatic, "

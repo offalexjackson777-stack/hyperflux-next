@@ -3,6 +3,7 @@
   "schema": "hyperflux-distribution-packages-v1",
   "metadata": {
     "description": "Universal Linux transport, bridge, SDK, and application adapters for Razer HyperFlux V2",
+    "homepage": "https://github.com/offalexjackson777-stack/hyperflux-next",
     "licenses": ["GPL-2.0-only", "GPL-2.0-or-later", "GPL-3.0-only"]
   },
   "targets": {

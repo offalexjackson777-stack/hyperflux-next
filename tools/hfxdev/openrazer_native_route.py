@@ -151,6 +151,8 @@ class OpenRazerCompatibilityDeployment:
 @dataclass(frozen=True)
 class OpenRazerNativeDeployment:
     source_sha256: str
+    upstream_repository: str
+    upstream_commit: str
     relay: OpenRazerRelayDeployment
     driver: OpenRazerDriverDeployment
     access: OpenRazerAccessDeployment
@@ -466,6 +468,13 @@ def load_native_deployment(root: Path) -> OpenRazerNativeDeployment:
     upstream = upstream_index(root).get("openrazer")
     if upstream is None or not str(upstream["version"]).startswith(version):
         raise ModelError("OpenRazer native DKMS version differs from the pinned upstream")
+    transform = load_native_transform(root)
+    transform_upstream = transform["upstream"]
+    if (
+        transform_upstream["id"] != "openrazer"
+        or transform_upstream["commit"] != upstream["commit"]
+    ):
+        raise ModelError("OpenRazer native deployment differs from its source transform")
     source_directory = _deployment_path(
         driver["source_directory"],
         "OpenRazer native DKMS source directory",
@@ -559,6 +568,8 @@ def load_native_deployment(root: Path) -> OpenRazerNativeDeployment:
         raise ModelError("OpenRazer native capability modules are invalid")
     return OpenRazerNativeDeployment(
         source_sha256=sha256_file(path),
+        upstream_repository=transform_upstream["repository"],
+        upstream_commit=transform_upstream["commit"],
         relay=OpenRazerRelayDeployment(
             executable_path=executable,
             service_unit=service,

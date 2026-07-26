@@ -89,6 +89,7 @@ class RpmPackageTests(unittest.TestCase):
         self.assertIn(f"Name: {self.runtime.product.package_name}\n", spec)
         self.assertIn("Version: 0.0.0~dev.1\n", spec)
         self.assertIn("BuildArch: x86_64\n", spec)
+        self.assertIn(f"URL: {self.catalog.homepage}\n", spec)
         self.assertIn("AutoReqProv: no\n", spec)
         for dependency in self.target.dependencies_for("3.14.6"):
             expected = dependency.replace(">=", " >= ").replace("<", " < ")

@@ -50,6 +50,7 @@ def _debian_control(context: NativePackageContext) -> str:
         "Priority: optional",
         f"Architecture: {context.architecture}",
         f"Maintainer: {DEBIAN_MAINTAINER}",
+        f"Homepage: {context.catalog.homepage}",
         f"Installed-Size: {_installed_size(context.package_root)}",
         f"Depends: {dependencies}",
     ]

@@ -41,6 +41,28 @@ dispatch, availability, outcome certainty, and diagnostics. The kernel
 preserves ordinary HID input and transports generation-bound exchanges without
 interpreting device semantics.
 
+## OpenRazer Route
+
+HyperFlux applies a narrow transport patch to official
+[OpenRazer 3.12.4](https://github.com/openrazer/openrazer/commit/1ef8a91712906a89fd332a2ed62bbd105315d6d1).
+The upstream daemon, Python client, device classes, ordinary USB tables, and
+direct-device behavior remain OpenRazer-owned. The patched DKMS modules accept
+only trusted, feature-only HyperFlux UHID routes and advertise
+`hyperflux_native_transport=razer-feature-report-v1`.
+
+| Qualified receiver-backed controller | Native route | Direct USB precedence |
+| --- | --- | --- |
+| Razer Basilisk V3 Pro 35K (Wireless) | `1532:00cd` | `1532:00cc` |
+| Razer DeathStalker V2 Pro TKL (Wireless) | `1532:0296` | `1532:0298` |
+
+Distribution release suffixes do not affect compatibility. A newer OpenRazer
+source line requires a reviewed rebase and fresh verification; until then,
+`hyperflux-next-openrazer-relay.service` remains stopped. See the
+[deployment contract](docs/generated/openrazer-native-deployment.md),
+[installation contract](docs/generated/installation.md), and
+[hardware boundary](docs/generated/supported-hardware.md). Other catalog
+devices remain research-only and non-writable.
+
 ## Current Readiness
 
 <!-- Generated from generated/public-readiness.json. -->

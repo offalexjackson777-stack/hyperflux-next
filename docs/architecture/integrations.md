@@ -57,6 +57,29 @@ devices and sends their reports through protocol v7. Polychromatic therefore
 uses its ordinary OpenRazer backend rather than learning HyperFlux device
 semantics.
 
+## OpenRazer Source And Package Ownership
+
+The exact OpenRazer source, transform digest, DKMS identity, capability marker,
+and relay unit are rendered from one canonical deployment model in the
+[OpenRazer native-route deployment](../generated/openrazer-native-deployment.md).
+The transform changes only the trusted HyperFlux transport boundary and its
+capability markers. It preserves upstream direct USB tables, command building,
+daemon behavior, Python-client behavior, and kernel compatibility fixes.
+
+The HyperFlux distribution package owns the transformed OpenRazer DKMS source
+and satisfies the upstream driver package dependency. Native package metadata
+conflicts with and replaces the ordinary OpenRazer DKMS driver so `pacman -Syu`
+cannot install a second source-tree owner. The official daemon and Python
+client remain separate upstream packages. Distribution release suffixes on the
+verified source line are ignored; a different upstream source line blocks the
+native relay until a new source-bound transform and verification exist.
+
+Loaded modules are trusted by a declared transport capability, not by parsing a
+package version string. Source lineage is checked separately so a newer daemon
+cannot silently use an older patched driver. The generated
+[installation contract](../generated/installation.md) records update,
+activation, Doctor, and rollback behavior.
+
 The private OpenRazer service and SDK-native Polychromatic backend are retained
 only as migration fallbacks until physical parity and a separate retirement gate
 pass. The bridge remains the sole userspace receiver writer; applications own

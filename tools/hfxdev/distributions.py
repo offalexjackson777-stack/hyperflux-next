@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import re
 from typing import Any
+from urllib.parse import urlsplit
 
 from .linux_runtime import load_linux_runtime
 from .model import ModelError, load_json, require_unique, sha256_file
@@ -90,6 +91,7 @@ class DistributionTarget:
 class DistributionCatalog:
     source_sha256: str
     description: str
+    homepage: str
     licenses: tuple[str, ...]
     targets: dict[str, DistributionTarget]
 
@@ -236,7 +238,7 @@ def load_distribution_catalog(root: Path) -> DistributionCatalog:
     metadata = value["metadata"]
     if not isinstance(metadata, dict):
         raise ModelError("distribution metadata must be an object")
-    _exact(metadata, {"description", "licenses"}, "distribution metadata")
+    _exact(metadata, {"description", "homepage", "licenses"}, "distribution metadata")
     description = metadata["description"]
     if (
         not isinstance(description, str)
@@ -246,6 +248,22 @@ def load_distribution_catalog(root: Path) -> DistributionCatalog:
         or CONTROL_CHARACTER.search(description)
     ):
         raise ModelError("distribution description is invalid")
+    homepage = metadata["homepage"]
+    if (
+        not isinstance(homepage, str)
+        or homepage != homepage.strip()
+        or len(homepage) > 256
+        or CONTROL_CHARACTER.search(homepage)
+    ):
+        raise ModelError("distribution homepage is invalid")
+    parsed_homepage = urlsplit(homepage)
+    if (
+        parsed_homepage.scheme != "https"
+        or parsed_homepage.hostname is None
+        or parsed_homepage.username is not None
+        or parsed_homepage.password is not None
+    ):
+        raise ModelError("distribution homepage must be a credential-free HTTPS URL")
     licenses_value = metadata["licenses"]
     if not isinstance(licenses_value, list) or not 1 <= len(licenses_value) <= 8:
         raise ModelError("distribution licenses are invalid")
@@ -275,6 +293,7 @@ def load_distribution_catalog(root: Path) -> DistributionCatalog:
     return DistributionCatalog(
         source_sha256=sha256_file(path),
         description=description,
+        homepage=homepage,
         licenses=licenses,
         targets=targets,
     )

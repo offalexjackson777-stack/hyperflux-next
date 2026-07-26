@@ -140,6 +140,7 @@ def _arch_openrazer_policy_hook(runtime: LinuxRuntime) -> str:
             "[Trigger]",
             "Operation = Install",
             "Operation = Upgrade",
+            "Operation = Remove",
             "Type = Package",
             "Target = openrazer-daemon",
             "Target = python-openrazer",
@@ -147,7 +148,7 @@ def _arch_openrazer_policy_hook(runtime: LinuxRuntime) -> str:
             "[Action]",
             "Description = Check HyperFlux Next OpenRazer source compatibility",
             "When = PostTransaction",
-            f"Exec = {runtime.operations.activation_path} report-openrazer-runtime",
+            f"Exec = {runtime.operations.activation_path} reconcile-openrazer-runtime",
             "",
         ]
     )
@@ -230,7 +231,7 @@ def _arch_pkgbuild(
             f"pkgrel={runtime.product.package_release}",
             f"pkgdesc={_shell_word(catalog.description)}",
             f"arch={_shell_array([architecture])}",
-            "url=''",
+            f"url={_shell_word(catalog.homepage)}",
             f"license={_shell_array(list(catalog.licenses))}",
             f"depends={_shell_array(list(target.dependencies_for(python_version)))}",
             f"optdepends={_shell_array(optional)}",

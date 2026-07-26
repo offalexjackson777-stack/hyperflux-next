@@ -60,6 +60,7 @@ class DistributionPackageTests(unittest.TestCase):
         self.assertIn("'python<3.15'", recipe)
         self.assertIn("'openrazer-driver-dkms'", recipe)
         self.assertIn("'hyperflux-openrazer-driver-abi=3.12.4'", recipe)
+        self.assertIn(f"url='{self.catalog.homepage}'", recipe)
 
     def test_arch_recipe_shell_quotes_human_metadata(self) -> None:
         catalog = replace(self.catalog, description="Receiver's transport")
@@ -135,8 +136,9 @@ class DistributionPackageTests(unittest.TestCase):
         self.assertIn("systemd-sysusers openrazer.conf", install)
         self.assertIn("Target = openrazer-daemon", openrazer_policy)
         self.assertIn("Target = python-openrazer", openrazer_policy)
+        self.assertIn("Operation = Remove", openrazer_policy)
         self.assertIn(
-            f"Exec = {activation} report-openrazer-runtime", openrazer_policy
+            f"Exec = {activation} reconcile-openrazer-runtime", openrazer_policy
         )
         self.assertIn("When = PostTransaction", openrazer_policy)
         for forbidden in ("modprobe", "unbind", "rebind", "hidraw", "1532"):

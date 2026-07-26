@@ -19,6 +19,8 @@ The static relay service is pulled in by the bridge service. It runs as root onl
 
 | Field | Value |
 | --- | --- |
+| Official source | [3.12.4](https://github.com/openrazer/openrazer/commit/1ef8a91712906a89fd332a2ed62bbd105315d6d1) |
+| Source commit | `1ef8a91712906a89fd332a2ed62bbd105315d6d1` |
 | DKMS identity | `openrazer-driver` `3.12.4` |
 | Source tree | `/usr/src/openrazer-driver-3.12.4` |
 | Modules | `razeraccessory`, `razerkbd`, `razerkraken`, `razermouse` |

@@ -6,6 +6,7 @@ import json
 
 from ..install import InstallManifest
 from ..linux_runtime import LinuxRuntime
+from ..openrazer_native_route import OpenRazerNativeDeployment
 
 
 def compiled_plan(manifest: InstallManifest, runtime: LinuxRuntime) -> str:
@@ -75,7 +76,11 @@ def compiled_plan(manifest: InstallManifest, runtime: LinuxRuntime) -> str:
     return json.dumps(value, indent=2, sort_keys=False, ensure_ascii=True) + "\n"
 
 
-def markdown(manifest: InstallManifest, runtime: LinuxRuntime) -> str:
+def markdown(
+    manifest: InstallManifest,
+    runtime: LinuxRuntime,
+    openrazer: OpenRazerNativeDeployment,
+) -> str:
     required = sum(1 for build in manifest.builds if build.required)
     optional = len(manifest.builds) - required
     preserved = [file for file in manifest.files if file.preserve]
@@ -139,6 +144,34 @@ def markdown(manifest: InstallManifest, runtime: LinuxRuntime) -> str:
         lines.append("No mutable configuration was declared, which is an invalid release state.")
     lines.extend(
         [
+            "",
+            "## OpenRazer Ownership And Updates",
+            "",
+            f"The package owns the source-bound patched driver at "
+            f"`{openrazer.driver.source_directory}` and provides the OpenRazer "
+            "driver dependency. Distribution packages must conflict with and replace "
+            "the ordinary `openrazer-driver-dkms` package so a system update cannot "
+            "install a second owner over the transformed source tree.",
+            "",
+            f"Official OpenRazer `{openrazer.compatibility.verified_upstream_version}` "
+            "daemon and Python-client packaging may receive distribution release-suffix "
+            "updates. Runtime readiness is checked with the transformed module capability "
+            f"`{openrazer.compatibility.runtime_capability.modinfo_field}="
+            f"{openrazer.compatibility.runtime_capability.expected_value}`, not a package "
+            "release string. A different upstream source version fails closed and keeps "
+            f"`{openrazer.relay.service_unit}` stopped until HyperFlux is rebased and "
+            "reverified.",
+            "",
+            "## Verification And Rollback",
+            "",
+            "Run `hyperfluxctl doctor` after package hooks complete. A compatible update "
+            "may resume a previously active bridge automatically; an in-use kernel-module "
+            "change requires the activation action reported by Doctor.",
+            "",
+            "Rollback uses a complete prior source-bound package through the package "
+            "manager. Do not copy files into `/usr/src`, overwrite DKMS trees, or mix an "
+            "upstream OpenRazer driver package with the HyperFlux-owned transform. Existing "
+            "configuration remains preserved across supported package transitions.",
             "",
             "Arch, Debian, and RPM packaging must consume the same deterministic staged root "
             "instead of maintaining independent file lists.",

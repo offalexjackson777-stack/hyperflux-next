@@ -6,6 +6,7 @@ from html import escape
 from typing import Any
 
 from ..governance import GitHubGovernance
+from ..openrazer_native_route import OpenRazerNativeDeployment
 
 
 def _badge(label: str, value: str, color: str) -> str:
@@ -35,8 +36,24 @@ def license_badge() -> str:
 def markdown(
     governance: GitHubGovernance,
     readiness: dict[str, Any],
+    openrazer: OpenRazerNativeDeployment,
+    native_routes: dict[str, Any],
 ) -> str:
     repository_url = f"https://github.com/{governance.owner}/{governance.repository}"
+    upstream_url = openrazer.upstream_repository.removesuffix(".git")
+    upstream_commit_url = f"{upstream_url}/commit/{openrazer.upstream_commit}"
+    route_rows = "\n".join(
+        "| {model} | `{vendor:04x}:{wireless:04x}` | {direct} |".format(
+            model=route["model_name"],
+            vendor=route["vendor_id"],
+            wireless=route["wireless_product_id"],
+            direct=", ".join(
+                f"`{route['vendor_id']:04x}:{product_id:04x}`"
+                for product_id in route["direct_data_product_ids"]
+            ),
+        )
+        for route in native_routes["routes"]
+    )
     software = readiness["software"]
     hardware = readiness["hardware"]
     evidence = readiness["evidence"]
@@ -83,6 +100,27 @@ route qualification, generation safety, NativeControl arbitration, bounded
 dispatch, availability, outcome certainty, and diagnostics. The kernel
 preserves ordinary HID input and transports generation-bound exchanges without
 interpreting device semantics.
+
+## OpenRazer Route
+
+HyperFlux applies a narrow transport patch to official
+[OpenRazer {openrazer.compatibility.verified_upstream_version}]({upstream_commit_url}).
+The upstream daemon, Python client, device classes, ordinary USB tables, and
+direct-device behavior remain OpenRazer-owned. The patched DKMS modules accept
+only trusted, feature-only HyperFlux UHID routes and advertise
+`{openrazer.compatibility.runtime_capability.modinfo_field}={openrazer.compatibility.runtime_capability.expected_value}`.
+
+| Qualified receiver-backed controller | Native route | Direct USB precedence |
+| --- | --- | --- |
+{route_rows}
+
+Distribution release suffixes do not affect compatibility. A newer OpenRazer
+source line requires a reviewed rebase and fresh verification; until then,
+`{openrazer.relay.service_unit}` remains stopped. See the
+[deployment contract](docs/generated/openrazer-native-deployment.md),
+[installation contract](docs/generated/installation.md), and
+[hardware boundary](docs/generated/supported-hardware.md). Other catalog
+devices remain research-only and non-writable.
 
 ## Current Readiness
 

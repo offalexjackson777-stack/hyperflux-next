@@ -141,7 +141,10 @@ from .linux_runtime import load_linux_runtime
 from .licensing import load_licensing_policy
 from .local_companion import load_local_companion
 from .openrazer import load_imported_metadata
-from .openrazer_native_route import load_native_deployment
+from .openrazer_native_route import (
+    load_native_deployment,
+    load_native_route_catalog,
+)
 from .performance import load_performance_budgets
 from .profiles import compiled_catalog, composition_fixtures
 from .protocol import load_protocol_registry
@@ -253,6 +256,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
     openrazer_metadata = load_imported_metadata(root)
     openrazer_compatibility = load_openrazer_compatibility_contract(root)
     openrazer_native = load_native_deployment(root)
+    openrazer_native_routes = load_native_route_catalog(root)
     test_catalog = load_test_catalog(root)
     linux_runtime = load_linux_runtime(root)
     distribution_catalog = load_distribution_catalog(root)
@@ -272,7 +276,12 @@ def rendered_files(root: Path) -> dict[Path, str]:
     local_companion = load_local_companion(root)
     licensing_policy = load_licensing_policy(root)
     files = {
-        root / "README.md": readme_markdown(github_governance, readiness),
+        root / "README.md": readme_markdown(
+            github_governance,
+            readiness,
+            openrazer_native,
+            openrazer_native_routes,
+        ),
         root / "generated" / "public-readiness.json": json.dumps(
             readiness, indent=2, sort_keys=True
         )
@@ -525,7 +534,9 @@ def rendered_files(root: Path) -> dict[Path, str]:
         projected_files=(*files, install_plan_path, installation_document_path),
     )
     files[install_plan_path] = compiled_install_plan(install_manifest, linux_runtime)
-    files[installation_document_path] = install_markdown(install_manifest, linux_runtime)
+    files[installation_document_path] = install_markdown(
+        install_manifest, linux_runtime, openrazer_native
+    )
     return files
 
 

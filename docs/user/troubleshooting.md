@@ -32,6 +32,17 @@ installed driver is not active, reboot, or follow the receiver-disconnect and
 module-reload action printed by Doctor. A service restart is not a substitute
 for kernel activation.
 
+For OpenRazer, package release suffixes on the verified source line do not
+matter. A newer upstream source line is deliberately blocked until HyperFlux's
+transport patch is rebased and reverified. Doctor reports that boundary; do not
+replace files under `/usr/src` or force the relay to start. Install a HyperFlux
+package verified for the new source, or keep the matching verified OpenRazer
+daemon and Python client.
+
+Rollback by installing a complete prior source-bound HyperFlux package through
+the package manager. Mixing an ordinary `openrazer-driver-dkms` package with the
+HyperFlux-owned transformed driver is not a supported recovery path.
+
 ## Missing Application Devices
 
 First confirm that Doctor reports the driver and bridge ready. Then restart or

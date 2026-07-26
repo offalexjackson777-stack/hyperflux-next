@@ -11,6 +11,7 @@ from ..openrazer_native_route import OpenRazerNativeDeployment
 
 def rust_constants(deployment: OpenRazerNativeDeployment) -> str:
     driver = deployment.driver
+    relay = deployment.relay
     compatibility = deployment.compatibility
     capability = compatibility.runtime_capability
     modules = ", ".join(json.dumps(module) for module in driver.modules)
@@ -40,6 +41,8 @@ def rust_constants(deployment: OpenRazerNativeDeployment) -> str:
             f"{json.dumps(compatibility.daemon_executable_path)};",
             "pub const OPENRAZER_NATIVE_VERSION_ARGUMENT: &str = "
             f"{json.dumps(compatibility.version_argument)};",
+            "pub const OPENRAZER_NATIVE_RELAY_SERVICE_UNIT: &str = "
+            f"{json.dumps(relay.service_unit)};",
             "",
         ]
     )
@@ -123,6 +126,8 @@ def markdown(deployment: OpenRazerNativeDeployment, runtime: LinuxRuntime) -> st
     access = deployment.access
     compatibility = deployment.compatibility
     capability = compatibility.runtime_capability
+    upstream_url = deployment.upstream_repository.removesuffix(".git")
+    upstream_commit_url = f"{upstream_url}/commit/{deployment.upstream_commit}"
     return "\n".join(
         [
             "# OpenRazer Native Route Deployment",
@@ -150,6 +155,8 @@ def markdown(deployment: OpenRazerNativeDeployment, runtime: LinuxRuntime) -> st
             "",
             "| Field | Value |",
             "| --- | --- |",
+            f"| Official source | [{compatibility.verified_upstream_version}]({upstream_commit_url}) |",
+            f"| Source commit | `{deployment.upstream_commit}` |",
             f"| DKMS identity | `{driver.dkms_name}` `{driver.dkms_version}` |",
             f"| Source tree | `{driver.source_directory}` |",
             f"| Modules | {', '.join(f'`{module}`' for module in driver.modules)} |",

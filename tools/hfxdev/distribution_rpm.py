@@ -192,6 +192,7 @@ def _rpm_spec(context: NativePackageContext) -> str:
         f"Version: {_rpm_version(context.runtime.product.version)}",
         f"Release: {context.runtime.product.package_release}",
         f"Summary: {context.catalog.description}",
+        f"URL: {context.catalog.homepage}",
         f"License: {_rpm_license(context)}",
         f"BuildArch: {context.architecture}",
         "Source0: payload.tar",

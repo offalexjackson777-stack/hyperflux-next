@@ -13,7 +13,7 @@ use std::thread;
 use std::time::Duration;
 
 fn usage() -> &'static str {
-    "Usage: hyperflux-next-activate <fresh-install|pre-update|post-update|prepare-start|check-openrazer-driver|check-openrazer-runtime|report-openrazer-runtime|confirm-start|pre-remove>\n"
+    "Usage: hyperflux-next-activate <fresh-install|pre-update|post-update|prepare-start|check-openrazer-driver|check-openrazer-runtime|reconcile-openrazer-runtime|report-openrazer-runtime|confirm-start|pre-remove>\n"
 }
 
 fn ensure_openrazer_driver(snapshot: &hfx_ops::SystemSnapshot) -> Result<(), String> {
@@ -46,7 +46,10 @@ fn ensure_openrazer_driver(snapshot: &hfx_ops::SystemSnapshot) -> Result<(), Str
 
 fn ensure_openrazer_runtime(snapshot: &hfx_ops::SystemSnapshot) -> Result<(), String> {
     match snapshot.openrazer_runtime.state {
-        OpenRazerRuntimeState::NotInstalled | OpenRazerRuntimeState::Verified => Ok(()),
+        OpenRazerRuntimeState::Verified => Ok(()),
+        OpenRazerRuntimeState::NotInstalled => {
+            Err("the verified OpenRazer runtime is not installed".to_owned())
+        }
         OpenRazerRuntimeState::ReverificationRequired => Err(format!(
             "the installed OpenRazer runtime is outside verified source line {OPENRAZER_NATIVE_VERIFIED_UPSTREAM_VERSION}; rebase and reverification are required"
         )),
@@ -86,6 +89,13 @@ fn report_openrazer_runtime(probe: &RealSystemProbe) {
             println!("Run hyperfluxctl doctor for the safe action.");
         }
     }
+}
+
+fn reconcile_openrazer_runtime(probe: &RealSystemProbe) -> Result<(), String> {
+    report_openrazer_runtime(probe);
+    probe
+        .reconcile_openrazer_relay()
+        .map_err(|error| format!("OpenRazer relay reconciliation failed: {error}"))
 }
 
 fn wait_for_bridge_and_confirmation(probe: &RealSystemProbe) -> bool {
@@ -240,6 +250,7 @@ fn run() -> Result<(), String> {
         "prepare-start" => prepare_start(&probe),
         "check-openrazer-driver" => check_openrazer_driver(&probe),
         "check-openrazer-runtime" => check_openrazer_runtime(&probe),
+        "reconcile-openrazer-runtime" => reconcile_openrazer_runtime(&probe),
         "report-openrazer-runtime" => {
             report_openrazer_runtime(&probe);
             Ok(())

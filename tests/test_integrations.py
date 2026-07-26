@@ -301,7 +301,13 @@ class IntegrationCatalogTests(unittest.TestCase):
 
     def test_openrazer_relay_keeps_module_preflight_outside_its_sealed_namespace(self) -> None:
         runtime = load_linux_runtime(ROOT)
-        service = relay_service(load_native_deployment(ROOT), runtime)
+        deployment = load_native_deployment(ROOT)
+        transform = load_native_transform(ROOT)
+        self.assertEqual(
+            deployment.upstream_repository, transform["upstream"]["repository"]
+        )
+        self.assertEqual(deployment.upstream_commit, transform["upstream"]["commit"])
+        service = relay_service(deployment, runtime)
         self.assertIn(f"Requires={runtime.bridge.service_unit}", service)
         self.assertIn("ProtectKernelModules=yes", service)
         self.assertNotIn("ExecStartPre=", service)

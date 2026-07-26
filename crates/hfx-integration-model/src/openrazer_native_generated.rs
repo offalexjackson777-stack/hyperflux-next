@@ -13,3 +13,4 @@ pub const OPENRAZER_NATIVE_CAPABILITY_VALUE: &str = "razer-feature-report-v1";
 pub const OPENRAZER_NATIVE_VERIFIED_UPSTREAM_VERSION: &str = "3.12.4";
 pub const OPENRAZER_NATIVE_DAEMON_EXECUTABLE_PATH: &str = "/usr/bin/openrazer-daemon";
 pub const OPENRAZER_NATIVE_VERSION_ARGUMENT: &str = "--version";
+pub const OPENRAZER_NATIVE_RELAY_SERVICE_UNIT: &str = "hyperflux-next-openrazer-relay.service";

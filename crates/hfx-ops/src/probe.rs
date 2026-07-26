@@ -6,8 +6,8 @@ use hfx_domain::{
 use hfx_integration_model::{
     OPENRAZER_NATIVE_CAPABILITY_FIELD, OPENRAZER_NATIVE_CAPABILITY_MODULES,
     OPENRAZER_NATIVE_CAPABILITY_VALUE, OPENRAZER_NATIVE_DAEMON_EXECUTABLE_PATH,
-    OPENRAZER_NATIVE_DRIVER_MODULES, OPENRAZER_NATIVE_VERIFIED_UPSTREAM_VERSION,
-    OPENRAZER_NATIVE_VERSION_ARGUMENT,
+    OPENRAZER_NATIVE_DRIVER_MODULES, OPENRAZER_NATIVE_RELAY_SERVICE_UNIT,
+    OPENRAZER_NATIVE_VERIFIED_UPSTREAM_VERSION, OPENRAZER_NATIVE_VERSION_ARGUMENT,
 };
 use hfx_profiles::receiver_profile_by_usb_id;
 use hfx_protocol::{
@@ -307,6 +307,16 @@ pub trait SystemController {
     ///
     /// Returns a bounded local-control failure.
     fn stop_bridge(&self) -> Result<(), ProbeError>;
+
+    /// Restarts the `OpenRazer` relay only when it is already active.
+    ///
+    /// The relay's systemd condition then keeps it stopped when the installed
+    /// `OpenRazer` source line is absent or outside the verified line.
+    ///
+    /// # Errors
+    ///
+    /// Returns a bounded local-control failure.
+    fn reconcile_openrazer_relay(&self) -> Result<(), ProbeError>;
 }
 
 #[derive(Clone, Debug)]
@@ -740,6 +750,19 @@ impl<R: CommandRunner> SystemController for RealSystemProbe<R> {
         let output = self
             .runner
             .run("systemctl", &["stop", BRIDGE_SERVICE_UNIT], self.timeout)?;
+        if output.success {
+            Ok(())
+        } else {
+            Err(ProbeError::CommandUnavailable)
+        }
+    }
+
+    fn reconcile_openrazer_relay(&self) -> Result<(), ProbeError> {
+        let output = self.runner.run(
+            "systemctl",
+            &["try-restart", OPENRAZER_NATIVE_RELAY_SERVICE_UNIT],
+            self.timeout,
+        )?;
         if output.success {
             Ok(())
         } else {
@@ -1216,6 +1239,32 @@ mod tests {
             vec![(
                 "systemctl".to_owned(),
                 vec!["--no-block".to_owned(), "suspend".to_owned()]
+            )]
+        );
+    }
+
+    #[test]
+    fn openrazer_runtime_reconciliation_is_one_bounded_try_restart() {
+        let probe = RealSystemProbe::with_paths(
+            FakeRunner::new(vec![Ok(CommandOutput {
+                success: true,
+                stdout: String::new(),
+            })]),
+            PathBuf::from("/missing"),
+            PathBuf::from("/missing.sock"),
+            Duration::from_millis(10),
+        );
+        probe
+            .reconcile_openrazer_relay()
+            .expect("relay reconciliation succeeds");
+        assert_eq!(
+            probe.runner.calls(),
+            vec![(
+                "systemctl".to_owned(),
+                vec![
+                    "try-restart".to_owned(),
+                    OPENRAZER_NATIVE_RELAY_SERVICE_UNIT.to_owned(),
+                ]
             )]
         );
     }

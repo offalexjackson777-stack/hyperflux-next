@@ -11,13 +11,19 @@
     "metadata": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["description", "licenses"],
+      "required": ["description", "homepage", "licenses"],
       "properties": {
         "description": {
           "type": "string",
           "minLength": 1,
           "maxLength": 160,
           "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "homepage": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 256
         },
         "licenses": {
           "type": "array",
