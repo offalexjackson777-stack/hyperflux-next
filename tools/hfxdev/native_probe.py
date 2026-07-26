@@ -330,6 +330,7 @@ def _expression_function(expression: str) -> str:
 
 
 def _compile_report_expressions(
+    root: Path,
     source_root: Path,
     expressions: list[str],
 ) -> dict[str, bytes]:
@@ -422,7 +423,12 @@ int main(void)
 }}
 """
     compiler = os.environ.get("CC", "cc")
-    with TemporaryDirectory(prefix="hyperflux-openrazer-probe-") as directory:
+    scratch_root = root / "build"
+    scratch_root.mkdir(mode=0o755, parents=True, exist_ok=True)
+    with TemporaryDirectory(
+        prefix="hyperflux-openrazer-probe-",
+        dir=scratch_root,
+    ) as directory:
         executable = Path(directory) / "probe"
         try:
             compiled = subprocess.run(
@@ -491,7 +497,7 @@ def transformed_native_probe_catalog(root: Path, source_root: Path) -> dict[str,
 
     bindings = {value["method"]: value for value in policy["bindings"]}
     expressions = sorted({value["request_expression"] for value in policy["bindings"]})
-    reports = _compile_report_expressions(source_root, expressions)
+    reports = _compile_report_expressions(root, source_root, expressions)
     source_cache: dict[str, str] = {}
     reader_cache: dict[str, dict[str, str]] = {}
     devices: list[dict[str, Any]] = []

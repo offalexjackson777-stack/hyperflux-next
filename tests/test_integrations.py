@@ -253,6 +253,49 @@ class IntegrationCatalogTests(unittest.TestCase):
             load_native_probe_catalog(ROOT),
         )
 
+    def test_openrazer_probe_harness_uses_the_executable_build_root(self) -> None:
+        with TemporaryDirectory(
+            prefix="test-openrazer-probe-",
+            dir=ROOT / "build",
+        ) as directory:
+            temporary_root = Path(directory)
+            root = temporary_root / "repository"
+            source_root = temporary_root / "source"
+            (source_root / "driver").mkdir(parents=True)
+            (source_root / "driver" / "razercommon.h").write_text(
+                "", encoding="utf-8"
+            )
+            (source_root / "driver" / "razerchromacommon.c").write_text(
+                "", encoding="utf-8"
+            )
+            calls: list[dict[str, object]] = []
+
+            def recording_temporary_directory(*args, **kwargs):
+                calls.append(dict(kwargs))
+                return TemporaryDirectory(*args, **kwargs)
+
+            with patch.object(
+                native_probe,
+                "TemporaryDirectory",
+                side_effect=recording_temporary_directory,
+            ):
+                reports = native_probe._compile_report_expressions(
+                    root,
+                    source_root,
+                    ["get_razer_report(0x00, 0x80, 0x00)"],
+                )
+
+            self.assertEqual(len(reports), 1)
+            self.assertEqual(
+                calls,
+                [
+                    {
+                        "prefix": "hyperflux-openrazer-probe-",
+                        "dir": root / "build",
+                    }
+                ],
+            )
+
     def test_openrazer_native_route_catalog_is_fully_authority_bound(self) -> None:
         routes = load_native_route_catalog(ROOT)
         metadata = load_imported_metadata(ROOT)
