@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "HyperFlux Next source dependency inventory",
-  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/ed5da28eb8ace3468707af05fdb8abe79c22544786b46b0527e46f5a3653a4f6",
+  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/28d7686f8ab617943f82bca2e058891c70608adbbbaf6dd0c1f09fb8c4257e9c",
   "creationInfo": {
     "created": "2026-07-20T00:00:00Z",
     "creators": [
@@ -1598,7 +1598,22 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-0.0.0-dev.1",
       "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-daemon-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-hfx-domain-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-kernel-transport-0.0.0-dev.1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-0.0.0-dev.1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-profiles-0.0.0-dev.1"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-0.0.0-dev.1",

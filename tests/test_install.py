@@ -78,6 +78,7 @@ class InstallManifestTests(unittest.TestCase):
                 "operations-cli": "operations",
                 "activation-utility": "operations",
                 "openrazer-native-relay": "relay",
+                "native-readonly-qualifier": "relay",
             },
         )
         cargo = tomllib.loads((ROOT / "Cargo.toml").read_text(encoding="utf-8"))

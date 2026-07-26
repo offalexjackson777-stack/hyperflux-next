@@ -1,6 +1,6 @@
 {
   "schema": "hyperflux-compiled-install-plan-v1",
-  "install_manifest_sha256": "a569e731ee83bb7eb8adba97d0e90868d97977a57a8672710c0ce24176a727ee",
+  "install_manifest_sha256": "1733db54a95a302e1b849aa84fe5f551cab85209db93439c451b86de241d746b",
   "product": {
     "name": "hyperflux-next-linux",
     "version": "0.0.0-dev.1",
@@ -51,6 +51,16 @@
       "target": "hyperflux-next-uhid-relay",
       "profile": "relay",
       "destination": "/usr/lib/hyperflux-next/hyperflux-next-uhid-relay",
+      "mode": "0755"
+    },
+    {
+      "id": "native-readonly-qualifier",
+      "kind": "cargo-binary",
+      "required": true,
+      "package": "hfx-uhid-relay",
+      "target": "hyperflux-next-native-qualifier",
+      "profile": "relay",
+      "destination": "/usr/lib/hyperflux-next/hyperflux-next-native-qualifier",
       "mode": "0755"
     },
     {

@@ -82,17 +82,17 @@ struct PendingWrite {
     offset: usize,
 }
 
-struct RunningEndpoint {
+pub(crate) struct RunningEndpoint<B: crate::BridgeExchange> {
     file: File,
-    endpoint: FeatureEndpoint<NativeBridge>,
+    endpoint: FeatureEndpoint<B>,
     pending: VecDeque<PendingWrite>,
     destroyed: bool,
 }
 
-impl RunningEndpoint {
-    fn create(
+impl<B: crate::BridgeExchange> RunningEndpoint<B> {
+    pub(crate) fn create(
         paths: &RelayPaths,
-        bridge: NativeBridge,
+        bridge: B,
         device: VirtualDeviceSpec,
     ) -> Result<Self, RelayRuntimeError> {
         let mut file = open_uhid(&paths.uhid_device)?;
@@ -107,25 +107,7 @@ impl RunningEndpoint {
         })
     }
 
-    fn query_serial(&mut self, query: &SerialQuerySpec) -> Option<SerialFingerprint> {
-        let request = query.request();
-        let fingerprint = match self.endpoint.management_exchange(request)? {
-            BridgeExchangeResult::MatchedResponse(response) => {
-                query.fingerprint_response(&request, &response)
-            }
-            BridgeExchangeResult::NotSent | BridgeExchangeResult::MayHaveBeenSent => None,
-        };
-        self.endpoint
-            .bridge_mut()
-            .take_observed_serial()
-            .or(fingerprint)
-    }
-
-    fn take_observed_serial(&mut self) -> Option<SerialFingerprint> {
-        self.endpoint.bridge_mut().take_observed_serial()
-    }
-
-    fn step(&mut self) -> Result<(), RelayRuntimeError> {
+    pub(crate) fn step(&mut self) -> Result<(), RelayRuntimeError> {
         self.flush()?;
         let mut bytes = [0_u8; UHID_EVENT_BYTES];
         loop {
@@ -179,8 +161,12 @@ impl RunningEndpoint {
         Ok(())
     }
 
-    fn destroy(mut self) {
+    pub(crate) fn destroy(mut self) {
         self.destroy_inner();
+    }
+
+    pub(crate) fn bridge_mut(&mut self) -> &mut B {
+        self.endpoint.bridge_mut()
     }
 
     fn destroy_inner(&mut self) {
@@ -196,12 +182,32 @@ impl RunningEndpoint {
     }
 }
 
+impl RunningEndpoint<NativeBridge> {
+    fn query_serial(&mut self, query: &SerialQuerySpec) -> Option<SerialFingerprint> {
+        let request = query.request();
+        let fingerprint = match self.endpoint.management_exchange(request)? {
+            BridgeExchangeResult::MatchedResponse(response) => {
+                query.fingerprint_response(&request, &response)
+            }
+            BridgeExchangeResult::NotSent | BridgeExchangeResult::MayHaveBeenSent => None,
+        };
+        self.endpoint
+            .bridge_mut()
+            .take_observed_serial()
+            .or(fingerprint)
+    }
+
+    fn take_observed_serial(&mut self) -> Option<SerialFingerprint> {
+        self.endpoint.bridge_mut().take_observed_serial()
+    }
+}
+
 struct ManagedRoute {
     route: NativeRoute,
     record: NativeRouteRecord,
     device: VirtualDeviceSpec,
     serial_fingerprint: Option<SerialFingerprint>,
-    endpoint: Option<RunningEndpoint>,
+    endpoint: Option<RunningEndpoint<NativeBridge>>,
     next_serial_query: Instant,
 }
 
@@ -303,7 +309,7 @@ impl ManagedRoute {
     }
 }
 
-impl Drop for RunningEndpoint {
+impl<B: crate::BridgeExchange> Drop for RunningEndpoint<B> {
     fn drop(&mut self) {
         self.destroy_inner();
     }

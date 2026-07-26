@@ -303,7 +303,7 @@ class PackagePipelineTests(unittest.TestCase):
                 return_value=("a" * 40, 1_700_000_000),
             ):
                 artifacts = load_artifact_set(ROOT, path)
-            self.assertEqual(len(artifacts.artifacts), 9)
+            self.assertEqual(len(artifacts.artifacts), 10)
             self.assertFalse(artifacts.omitted)
 
     def test_artifact_tamper_is_rejected_before_staging(self) -> None:

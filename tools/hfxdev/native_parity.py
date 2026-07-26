@@ -20,6 +20,7 @@ from .private_artifact import write_new_private_json
 
 
 EVIDENCE_SCHEMA = "hyperflux-native-transport-parity-evidence-v1"
+RAW_QUALIFICATION_SCHEMA = "hyperflux-native-qualification-raw-v1"
 USBMON_LIMIT_BYTES = 16 * 1024 * 1024
 USBMON_LIMIT_LINES = 65536
 PIPE_PATTERN = re.compile(r"C[oi]:(?P<bus>[0-9]+):(?P<device>[0-9]+):(?P<endpoint>[0-9]+)\Z")
@@ -29,6 +30,7 @@ METHOD_PATTERN = re.compile(r"[a-z][a-z0-9_]{0,127}\Z")
 PROFILE_PATTERN = re.compile(r"child\.[a-z0-9.-]+\Z")
 SUCCESS_STATUS = 2
 COMPARISONS = {"exact-semantic", "domain-valid", "redacted-equality"}
+QUALIFICATION_CERTAINTIES = {"not-sent", "may-have-been-sent", "matched-response"}
 
 
 @dataclass(frozen=True)
@@ -350,6 +352,281 @@ def _match_exchanges(
         )
         matched.setdefault(item.method, []).append(item)
     return matched
+
+
+def _validate_raw_qualification(
+    value: dict[str, Any],
+    *,
+    profile_id: str,
+    source_revision: str,
+    package_sha256: str,
+    receiver_generation: int,
+) -> None:
+    if not isinstance(value, dict) or set(value) != {
+        "schema",
+        "source_revision",
+        "package_sha256",
+        "profile_id",
+        "receiver_generation",
+        "read_only",
+        "completed",
+        "records",
+    }:
+        raise ModelError("native qualification raw capture is malformed")
+    if (
+        value["schema"] != RAW_QUALIFICATION_SCHEMA
+        or value["profile_id"] != profile_id
+        or value["source_revision"] != source_revision
+        or value["package_sha256"] != package_sha256
+        or value["receiver_generation"] != receiver_generation
+        or value["read_only"] is not True
+        or not isinstance(value["completed"], bool)
+    ):
+        raise ModelError("native qualification raw capture binding is invalid")
+    records = value["records"]
+    if not isinstance(records, list) or len(records) > 128:
+        raise ModelError("native qualification raw capture is not bounded")
+    expected_sequence = 1
+    for record in records:
+        if not isinstance(record, dict) or set(record) != {
+            "sequence",
+            "method",
+            "attempt",
+            "request_hex",
+            "certainty",
+            "transport_errno",
+            "response_hex",
+        }:
+            raise ModelError("native qualification raw record is malformed")
+        method = record["method"]
+        request_hex = record["request_hex"]
+        response_hex = record["response_hex"]
+        if (
+            record["sequence"] != expected_sequence
+            or (method is not None and (
+                not isinstance(method, str) or METHOD_PATTERN.fullmatch(method) is None
+            ))
+            or not _bounded_int(record["attempt"], 0, 6)
+            or not isinstance(request_hex, str)
+            or re.fullmatch(r"[0-9a-f]{180}", request_hex) is None
+            or record["certainty"] not in QUALIFICATION_CERTAINTIES
+            or not isinstance(record["transport_errno"], int)
+            or not -(2**31) <= record["transport_errno"] < 2**31
+            or (
+                response_hex is not None
+                and (
+                    not isinstance(response_hex, str)
+                    or re.fullmatch(r"[0-9a-f]{180}", response_hex) is None
+                )
+            )
+        ):
+            raise ModelError("native qualification raw record value is invalid")
+        if method is None and (
+            record["certainty"] != "not-sent" or response_hex is not None
+        ):
+            raise ModelError("an unclassified qualification request crossed transport")
+        if record["certainty"] == "matched-response" and response_hex is None:
+            raise ModelError("matched qualification response is absent")
+        if record["certainty"] != "matched-response" and response_hex is not None:
+            raise ModelError("non-matched qualification record contains a response")
+        expected_sequence += 1
+
+
+def _raw_receiver_matches(
+    profile: dict[str, Any], raw: dict[str, Any]
+) -> dict[str, list[MatchedExchange]]:
+    probes = {probe["method"]: probe for probe in profile["probes"]}
+    matched: dict[str, list[MatchedExchange]] = {}
+    for record in raw["records"]:
+        method = record["method"]
+        if method is None or record["certainty"] != "matched-response":
+            continue
+        probe = probes.get(method)
+        if probe is None:
+            raise ModelError("native qualification raw method is not source-bound")
+        request = bytes.fromhex(record["request_hex"])
+        response = bytes.fromhex(record["response_hex"])
+        if not _request_matches_signature(probe, request):
+            raise ModelError("native qualification request differs from its upstream signature")
+        canonical = canonical_request(probe, request[1])
+        if request != canonical:
+            raise ModelError("native qualification request was rewritten")
+        summary, semantic, serial = _semantic_summary(probe["response_summary"], response)
+        item = MatchedExchange(
+            method=method,
+            probe=probe,
+            exchange=UsbmonExchange(
+                timestamp_us=record["sequence"],
+                bus=0,
+                device=0,
+                interface=0,
+                request=request,
+                request_length=REPORT_SIZE,
+                response=response,
+                response_length=REPORT_SIZE,
+            ),
+            canonical_request=canonical,
+            request_complete=True,
+            request_exact=True,
+            response_structural=_response_is_structural(request, response),
+            response_complete=True,
+            summary=summary,
+            semantic_value=semantic,
+            serial_value=serial,
+        )
+        matched.setdefault(method, []).append(item)
+    return matched
+
+
+def _semantic_parity_from_evidence(
+    probe: dict[str, Any],
+    direct: dict[str, Any] | None,
+    receiver: MatchedExchange,
+) -> bool | None:
+    if direct is None:
+        return None
+    response = direct["response"]
+    if (
+        response["status"] != SUCCESS_STATUS
+        or response["structural_match"] is not True
+        or response["complete_capture"] is not True
+    ):
+        return None
+    comparison = probe["comparison"]
+    direct_summary = response["summary"]
+    if comparison == "redacted-equality":
+        return None
+    if comparison == "domain-valid":
+        return bool(
+            direct_summary.get("available") is True
+            and receiver.summary.get("available") is True
+        )
+    if comparison == "exact-semantic":
+        return direct_summary == receiver.summary
+    raise ModelError("native qualification comparison policy is unsupported")
+
+
+def build_live_parity_evidence(
+    root: Path,
+    *,
+    profile_id: str,
+    direct_evidence: dict[str, Any],
+    raw_qualification: dict[str, Any],
+    package_sha256: str,
+    receiver_generation: int,
+    created_at: str | None = None,
+    source_revision: str | None = None,
+) -> dict[str, Any]:
+    """Sanitize one ephemeral receiver qualification into canonical parity evidence."""
+
+    catalog = load_native_probe_catalog(root)
+    profile = _profile(catalog, profile_id)
+    revision = source_revision or _git_revision(root)
+    if SOURCE_REVISION_PATTERN.fullmatch(revision) is None:
+        raise ModelError("native live parity source revision is invalid")
+    if SHA256_PATTERN.fullmatch(package_sha256) is None:
+        raise ModelError("native live parity package digest is invalid")
+    if not _bounded_int(receiver_generation, 1, 2**63 - 1):
+        raise ModelError("native live parity receiver generation is invalid")
+    validate_parity_evidence(direct_evidence)
+    if (
+        direct_evidence["profile_id"] != profile_id
+        or direct_evidence["upstream_commit"] != catalog["upstream"]["commit"]
+        or direct_evidence["catalog_sha256"]
+        != sha256_file(root / "integrations" / "openrazer" / "native-probe-catalog.json")
+    ):
+        raise ModelError("direct semantic reference differs from the live probe authority")
+    _validate_raw_qualification(
+        raw_qualification,
+        profile_id=profile_id,
+        source_revision=revision,
+        package_sha256=package_sha256,
+        receiver_generation=receiver_generation,
+    )
+    receiver_matches = _raw_receiver_matches(profile, raw_qualification)
+    direct_by_method = {
+        observation["method"]: observation
+        for observation in direct_evidence["observations"]
+        if observation["origin"] == "direct-semantic-reference"
+    }
+    maximum_attempts = catalog["busy_retry"]["maximum_attempts"]
+    required = [probe["method"] for probe in profile["probes"]]
+    probes = {probe["method"]: probe for probe in profile["probes"]}
+    observations: list[dict[str, Any]] = []
+    receiver_observations: dict[str, dict[str, Any]] = {}
+    for method in required:
+        direct = direct_by_method.get(method)
+        if direct is not None:
+            observations.append(direct)
+        routed = receiver_matches.get(method, [])
+        if not routed:
+            continue
+        receiver = _receiver_observation(routed, None, maximum_attempts)
+        receiver["receiver_comparison"]["semantic_parity"] = (
+            _semantic_parity_from_evidence(probes[method], direct, routed[-1])
+        )
+        receiver_observations[method] = receiver
+        observations.append(receiver)
+
+    passed: list[str] = []
+    failed: list[str] = []
+    for method in required:
+        receiver = receiver_observations.get(method)
+        if receiver is None:
+            continue
+        comparison = receiver["receiver_comparison"]
+        states = tuple(
+            comparison[field]
+            for field in ("unchanged_request", "standard_response", "semantic_parity")
+        )
+        if all(state is True for state in states):
+            passed.append(method)
+        elif any(state is False for state in states):
+            failed.append(method)
+    missing = [method for method in required if method not in passed and method not in failed]
+    backend_required = any(
+        observation["receiver_comparison"][field] is False
+        for observation in receiver_observations.values()
+        for field in ("unchanged_request", "standard_response")
+    )
+    conclusion = (
+        "backend-required"
+        if backend_required
+        else "passed"
+        if not missing and not failed
+        else "incomplete"
+    )
+    timestamp = created_at or datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    evidence = {
+        "$schema": "https://hyperflux.dev/schemas/native-transport-parity-evidence-v1.json",
+        "schema": EVIDENCE_SCHEMA,
+        "created_at": timestamp,
+        "source_revision": revision,
+        "profile_id": profile_id,
+        "upstream_commit": catalog["upstream"]["commit"],
+        "catalog_sha256": sha256_file(
+            root / "integrations" / "openrazer" / "native-probe-catalog.json"
+        ),
+        "safety": {
+            "read_only": True,
+            "settings_changed": False,
+            "serials_persisted": False,
+            "raw_reports_persisted": False,
+            "private_paths_persisted": False,
+            "network_upload": False,
+            "file_mode": "0600",
+        },
+        "observations": observations,
+        "coverage": {
+            "required": required,
+            "passed": passed,
+            "missing": missing,
+            "failed": failed,
+        },
+        "conclusion": conclusion,
+    }
+    validate_parity_evidence(evidence)
+    return evidence
 
 
 def _request_evidence(item: MatchedExchange) -> dict[str, Any]:

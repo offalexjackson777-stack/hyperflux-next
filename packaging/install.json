@@ -49,6 +49,16 @@
       "required": true
     },
     {
+      "id": "native-readonly-qualifier",
+      "kind": "cargo-binary",
+      "package": "hfx-uhid-relay",
+      "target": "hyperflux-next-native-qualifier",
+      "profile": "relay",
+      "destination": "/usr/lib/hyperflux-next/hyperflux-next-native-qualifier",
+      "mode": "0755",
+      "required": true
+    },
+    {
       "id": "openrazer-native-driver",
       "kind": "source-transform",
       "transform": "openrazer-native-route",

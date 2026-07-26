@@ -223,7 +223,10 @@ dependencies = [
 name = "hfx-uhid-relay"
 version = "0.0.0-dev.1"
 dependencies = [
+ "hfx-daemon",
  "hfx-domain",
+ "hfx-kernel-transport",
+ "hfx-profiles",
  "hfx-protocol",
  "hfx-runtime",
  "hfx-sdk",

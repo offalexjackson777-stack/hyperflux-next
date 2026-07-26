@@ -15,6 +15,7 @@ from .governance import load_github_governance
 from .migration import capture_inventory, run_shadow_comparison, summary
 from .model import ModelError
 from .native_control import write_native_method_inventory
+from .native_live_parity import run_live_parity
 from .native_onboarding import (
     build_draft_from_file,
     build_promotion_from_files,
@@ -129,6 +130,18 @@ def _parser() -> argparse.ArgumentParser:
     parity.add_argument("--direct-capture", required=True, type=Path)
     parity.add_argument("--receiver-capture", type=Path)
     parity.add_argument("--receiver-result", type=Path)
+    live_parity = native_commands.add_parser(
+        "live-parity",
+        help="run one restoration-isolated read-only candidate parity session",
+    )
+    live_parity.add_argument("--profile", required=True)
+    live_parity.add_argument("--direct-evidence", required=True, type=Path)
+    live_parity.add_argument("--package", required=True, type=Path)
+    live_parity.add_argument("--package-sha256", required=True)
+    live_parity.add_argument("--expected-generation", required=True, type=int)
+    live_parity.add_argument("--approval-text", required=True)
+    live_parity.add_argument("--user", required=True)
+    live_parity.add_argument("--timeout-seconds", type=int, default=90)
     native_openrazer = native_commands.add_parser(
         "prepare-openrazer",
         help="prepare the source-bound OpenRazer native transport tree",
@@ -355,6 +368,28 @@ def main(arguments: list[str] | None = None) -> int:
                     f"{len(coverage['failed'])} failed"
                 )
                 print(f"Privacy-safe evidence: {destination}")
+                return 0
+            if args.native_command == "live-parity":
+                result = run_live_parity(
+                    root,
+                    profile_id=args.profile,
+                    direct_evidence_path=args.direct_evidence,
+                    package=args.package,
+                    package_sha256=args.package_sha256,
+                    expected_generation=args.expected_generation,
+                    approval_text=args.approval_text,
+                    user=args.user,
+                    timeout_seconds=args.timeout_seconds,
+                )
+                print(f"Native transport parity: {result.conclusion}")
+                print(
+                    "Coverage: "
+                    f"{len(result.passed)} passed, "
+                    f"{len(result.missing)} incomplete, "
+                    f"{len(result.failed)} failed"
+                )
+                print(f"Privacy-safe evidence: {result.evidence_path}")
+                print(f"Source-bound run: {result.run_path}")
                 return 0
             if args.native_command == "prepare-openrazer":
                 prepared = prepare_openrazer_native_source(

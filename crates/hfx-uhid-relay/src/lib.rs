@@ -11,6 +11,8 @@ mod bridge;
 mod catalog;
 mod direct;
 mod endpoint;
+mod qualification;
+mod qualification_runtime;
 mod runtime;
 mod serial;
 mod supervisor;
@@ -19,11 +21,17 @@ mod uhid;
 pub use bridge::{
     BridgeExchange, BridgeExchangeResult, NativeBridge, NativeBridgeError, NativeRouteMonitor,
 };
-pub use catalog::{NativeRouteCatalog, NativeRouteCatalogError, NativeRouteRecord};
+pub use catalog::{
+    NativeQualificationProbe, NativeRouteCatalog, NativeRouteCatalogError, NativeRouteRecord,
+};
 pub use direct::{
     DirectRouteScanError, DirectRouteScanner, DirectRouteSnapshot, DirectRouteTransition,
 };
 pub use endpoint::{EndpointError, FeatureEndpoint, FeatureEndpointState};
+pub use qualification_runtime::{
+    NATIVE_QUALIFICATION_APPROVAL, QualificationRunConfig, QualificationRunPaths,
+    QualificationRuntimeError, run_qualification,
+};
 pub use runtime::{RelayPaths, RelayRuntimeError, run_relay};
 pub use serial::{SerialFingerprint, SerialQueryError, SerialQuerySpec, fingerprint_serial_bytes};
 pub use supervisor::{RouteAction, RouteIdentity, RouteSupervisor, RouteSupervisorError};
