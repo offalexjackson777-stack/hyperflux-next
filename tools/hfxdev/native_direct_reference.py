@@ -344,6 +344,14 @@ def _private_capture_directory(uid: int, gid: int) -> Iterator[Path]:
             raise ModelError("private direct USB material could not be deleted") from error
 
 
+def _capture_process_identity() -> tuple[int, int]:
+    uid = os.geteuid()
+    gid = os.getegid()
+    if uid != 0:
+        raise ModelError("private direct USB capture must run as root")
+    return uid, gid
+
+
 def _bounded_output(value: bytes, label: str) -> str:
     if len(value) > MAX_PROCESS_OUTPUT_BYTES:
         raise ModelError(f"{label} output exceeded its bound")
@@ -469,8 +477,6 @@ def capture_direct_reference(
     profile_id: str,
     route: dict[str, Any],
     profile: dict[str, Any],
-    uid: int,
-    gid: int,
     source_revision: str,
     driver_root: Path = Path("/sys/bus/hid/drivers"),
     devices_root: Path = Path("/sys/devices"),
@@ -482,7 +488,7 @@ def capture_direct_reference(
         devices_root=devices_root,
     )
     process: CaptureProcess | None = None
-    with _private_capture_directory(uid, gid) as directory:
+    with _private_capture_directory(*_capture_process_identity()) as directory:
         capture = directory / "direct.pcapng"
         try:
             process = _start_dumpcap(f"usbmon{endpoint.bus}", capture)
@@ -599,8 +605,6 @@ def run_staged_live_parity(
         profile_id=profile_id,
         route=preflight.route,
         profile=preflight.profile,
-        uid=uid,
-        gid=gid,
         source_revision=preflight.revision,
     )
     observed = {

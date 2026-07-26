@@ -124,6 +124,17 @@ class NativeDirectReferenceTests(unittest.TestCase):
         self.assertIsNotNone(path)
         self.assertFalse(path.exists())
 
+    def test_raw_capture_uses_the_privileged_process_identity(self) -> None:
+        with (
+            patch.object(direct.os, "geteuid", return_value=0),
+            patch.object(direct.os, "getegid", return_value=0),
+        ):
+            self.assertEqual(direct._capture_process_identity(), (0, 0))
+
+        with patch.object(direct.os, "geteuid", return_value=1000):
+            with self.assertRaisesRegex(ModelError, "must run as root"):
+                direct._capture_process_identity()
+
     def test_dumpcap_uses_private_files_and_hard_capture_bounds(self) -> None:
         process = MagicMock()
         process.poll.return_value = None
