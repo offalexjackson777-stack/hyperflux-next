@@ -113,6 +113,15 @@ class ProfileCompilerTests(unittest.TestCase):
                 "transaction_id": {"offset": 1, "match_mask": 0},
             },
         )
+        self.assertEqual(
+            native["route_selector"],
+            {
+                "field": "transaction-id",
+                "pointer_lane": 0x1F,
+                "keyboard_lane": 0x9F,
+                "restore_original_response": True,
+            },
+        )
         self.assertEqual(native["match_ranges"], [{"offset": 2, "length": 2}, {"offset": 6, "length": 2}])
         before = self.runtime_profile_digest(receiver, capabilities)
         native["response_retry_delay_us"] += 1
@@ -157,6 +166,27 @@ class ProfileCompilerTests(unittest.TestCase):
         ]
         response_status["minimum"] = 6
         with self.assertRaisesRegex(ModelError, "response status range is reversed"):
+            self.validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        receiver = next(profile for profile in profiles if profile["kind"] == "receiver")
+        selector = receiver["transport"]["native_exchange"]["route_selector"]
+        selector["keyboard_lane"] = selector["pointer_lane"]
+        with self.assertRaisesRegex(ModelError, "must isolate endpoint lanes"):
+            self.validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        receiver = next(profile for profile in profiles if profile["kind"] == "receiver")
+        selector = receiver["transport"]["native_exchange"]["route_selector"]
+        selector["pointer_lane"] = 0
+        with self.assertRaisesRegex(ModelError, "pointer_lane is invalid"):
+            self.validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        receiver = next(profile for profile in profiles if profile["kind"] == "receiver")
+        selector = receiver["transport"]["native_exchange"]["route_selector"]
+        selector["restore_original_response"] = False
+        with self.assertRaisesRegex(ModelError, "must restore the application response"):
             self.validate_profiles(profiles, capabilities, claims)
 
     def test_runtime_digest_is_profile_local_and_ignores_presentation_only_edits(self) -> None:

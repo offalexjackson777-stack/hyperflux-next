@@ -94,6 +94,10 @@ class KernelDriverContracts(unittest.TestCase):
             "profile->native_trailer_offset",
             "profile->native_transaction_id_offset",
             "profile->native_transaction_id_match_mask",
+            "profile->native_route_selector_kind",
+            "profile->native_pointer_route_selector",
+            "profile->native_keyboard_route_selector",
+            "profile->native_restore_original_response",
             "profile->native_match_ranges",
         ):
             self.assertIn(profile_field, source)
@@ -103,6 +107,7 @@ class KernelDriverContracts(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("HFX_NATIVE_EXCHANGE_RAZER_FEATURE_REPORT_V1", table)
         self.assertIn("HFX_NATIVE_CHECKSUM_XOR8", table)
+        self.assertIn("HFX_NATIVE_ROUTE_SELECTOR_TRANSACTION_ID", table)
         self.assertIn(".native_match_ranges", table)
 
     def test_native_exchange_validates_request_before_set_and_response_before_match(self) -> None:
@@ -119,6 +124,21 @@ class KernelDriverContracts(unittest.TestCase):
         matcher = source[match_start:match_end]
         self.assertIn("hfx_native_response_report_valid", matcher)
         self.assertIn("native_transaction_id_match_mask", matcher)
+
+    def test_native_route_selector_is_endpoint_declarative_and_response_repaired(self) -> None:
+        source = (ROOT / "driver/kernel/hyperflux-next-native.c").read_text(
+            encoding="utf-8"
+        )
+        route_start = source.index("static int hfx_native_route_selector")
+        route_end = source.index("static int hfx_native_submit_validate", route_start)
+        routing = source[route_start:route_end]
+        self.assertIn("HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE", routing)
+        self.assertIn("HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE", routing)
+        self.assertIn("hfx_native_checksum_update", routing)
+        self.assertIn("hfx_native_restore_response", routing)
+        self.assertIn("response[offset] != receiver_selector", routing)
+        for forbidden in ("0x1f", "0x9f", "0x00cd", "0x0296"):
+            self.assertNotIn(forbidden, routing.lower())
 
 
 if __name__ == "__main__":

@@ -127,13 +127,43 @@
             }
           }
         },
+        "route_translation": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "field",
+                "application_selector",
+                "receiver_selector",
+                "applied",
+                "response_selector",
+                "response_restored_for_application",
+                "authority"
+              ],
+              "properties": {
+                "field": {"const": "transaction-id"},
+                "application_selector": {"type": "integer", "minimum": 0, "maximum": 255},
+                "receiver_selector": {"type": "integer", "minimum": 0, "maximum": 255},
+                "applied": {"type": "boolean"},
+                "response_selector": {"type": ["integer", "null"], "minimum": 0, "maximum": 255},
+                "response_restored_for_application": {"type": ["boolean", "null"]},
+                "authority": {"enum": ["captured-usbmon", "receiver-profile"]}
+              }
+            }
+          ]
+        },
         "receiver_comparison": {
           "type": "object",
           "additionalProperties": false,
           "required": ["attempts", "unchanged_request", "standard_response", "semantic_parity"],
           "properties": {
             "attempts": {"type": "integer", "minimum": 0, "maximum": 8},
-            "unchanged_request": {"type": ["boolean", "null"]},
+            "unchanged_request": {
+              "type": ["boolean", "null"],
+              "description": "Application-owned command fields match the pinned upstream request; a separately declared route-selector field is not treated as command rewriting."
+            },
             "standard_response": {"type": ["boolean", "null"]},
             "semantic_parity": {"type": ["boolean", "null"]}
           }

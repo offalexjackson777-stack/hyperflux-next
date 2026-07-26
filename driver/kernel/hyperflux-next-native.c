@@ -43,7 +43,21 @@ static bool hfx_native_profile_valid(const struct hfx_receiver_profile *profile)
 	     profile->native_checksum_result_offset <
 		     profile->native_checksum_end_offset) ||
 	    profile->native_trailer_offset >= profile->native_report_bytes ||
-	    profile->native_transaction_id_offset >= profile->native_report_bytes)
+	    profile->native_transaction_id_offset >= profile->native_report_bytes ||
+	    (profile->native_route_selector_kind ==
+		     HFX_NATIVE_ROUTE_SELECTOR_NONE &&
+	     (profile->native_pointer_route_selector ||
+	      profile->native_keyboard_route_selector ||
+	      profile->native_restore_original_response)) ||
+	    (profile->native_route_selector_kind !=
+		     HFX_NATIVE_ROUTE_SELECTOR_NONE &&
+	     (profile->native_route_selector_kind !=
+		      HFX_NATIVE_ROUTE_SELECTOR_TRANSACTION_ID ||
+	      !profile->native_pointer_route_selector ||
+	      !profile->native_keyboard_route_selector ||
+	      profile->native_pointer_route_selector ==
+		      profile->native_keyboard_route_selector ||
+	      !profile->native_restore_original_response)))
 		return false;
 
 	for (index = 0; index < profile->native_match_range_count; index++) {
@@ -58,18 +72,31 @@ static bool hfx_native_profile_valid(const struct hfx_receiver_profile *profile)
 	return true;
 }
 
-static bool hfx_native_checksum_valid(
+static u8 hfx_native_checksum(
 	const struct hfx_receiver_profile *profile, const u8 *report)
 {
 	u8 checksum = 0;
 	u16 index;
 
-	if (profile->native_checksum_kind != HFX_NATIVE_CHECKSUM_XOR8)
-		return false;
 	for (index = profile->native_checksum_start_offset;
 	     index < profile->native_checksum_end_offset; index++)
 		checksum ^= report[index];
-	return checksum == report[profile->native_checksum_result_offset];
+	return checksum;
+}
+
+static bool hfx_native_checksum_valid(
+	const struct hfx_receiver_profile *profile, const u8 *report)
+{
+	return profile->native_checksum_kind == HFX_NATIVE_CHECKSUM_XOR8 &&
+		hfx_native_checksum(profile, report) ==
+			report[profile->native_checksum_result_offset];
+}
+
+static void hfx_native_checksum_update(
+	const struct hfx_receiver_profile *profile, u8 *report)
+{
+	report[profile->native_checksum_result_offset] =
+		hfx_native_checksum(profile, report);
 }
 
 static bool hfx_native_request_report_valid(
@@ -100,6 +127,70 @@ static bool hfx_native_response_report_valid(
 		hfx_native_checksum_valid(profile, report) &&
 		report[profile->native_trailer_offset] ==
 		       profile->native_trailer_value;
+}
+
+static int hfx_native_route_selector(
+	const struct hfx_receiver_profile *profile, u32 endpoint_slot,
+	u8 *selector)
+{
+	if (profile->native_route_selector_kind ==
+	    HFX_NATIVE_ROUTE_SELECTOR_NONE)
+		return 0;
+	if (profile->native_route_selector_kind !=
+	    HFX_NATIVE_ROUTE_SELECTOR_TRANSACTION_ID)
+		return -EOPNOTSUPP;
+	if (endpoint_slot == HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE)
+		*selector = profile->native_pointer_route_selector;
+	else if (endpoint_slot == HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE)
+		*selector = profile->native_keyboard_route_selector;
+	else
+		return -EINVAL;
+	return 1;
+}
+
+static int hfx_native_route_request(
+	const struct hfx_receiver_profile *profile, u32 endpoint_slot,
+	u8 *request, u8 *application_selector, bool *translated)
+{
+	u16 offset = profile->native_transaction_id_offset;
+	u8 receiver_selector = 0;
+	int ret;
+
+	*application_selector = request[offset];
+	*translated = false;
+	ret = hfx_native_route_selector(profile, endpoint_slot,
+					&receiver_selector);
+	if (ret <= 0)
+		return ret;
+	if (request[offset] == receiver_selector)
+		return 0;
+	request[offset] = receiver_selector;
+	if (offset >= profile->native_checksum_start_offset &&
+	    offset < profile->native_checksum_end_offset)
+		hfx_native_checksum_update(profile, request);
+	if (!hfx_native_request_report_valid(profile, request))
+		return -EINVAL;
+	*translated = true;
+	return 0;
+}
+
+static int hfx_native_restore_response(
+	const struct hfx_receiver_profile *profile, u8 application_selector,
+	u8 receiver_selector, bool translated, u8 *response)
+{
+	u16 offset = profile->native_transaction_id_offset;
+
+	if (!translated)
+		return 0;
+	if (!profile->native_restore_original_response)
+		return -EOPNOTSUPP;
+	if (response[offset] != receiver_selector)
+		return -EPROTO;
+	response[offset] = application_selector;
+	if (offset >= profile->native_checksum_start_offset &&
+	    offset < profile->native_checksum_end_offset)
+		hfx_native_checksum_update(profile, response);
+	return hfx_native_response_report_valid(profile, response) ? 0 : -EPROTO;
 }
 
 static int hfx_native_submit_validate(
@@ -386,6 +477,9 @@ static int hfx_native_record_dispatch(
 	struct usb_interface *control_interface;
 	u8 *request;
 	u8 *response;
+	u8 application_selector;
+	u8 receiver_selector;
+	bool route_translated;
 	u16 attempt;
 	int ret;
 
@@ -399,6 +493,12 @@ static int hfx_native_record_dispatch(
 		ret = -ENOMEM;
 		goto free_request;
 	}
+	ret = hfx_native_route_request(profile, record->result.endpoint_slot,
+				       request, &application_selector,
+				       &route_translated);
+	if (ret)
+		goto free_buffers;
+	receiver_selector = request[profile->native_transaction_id_offset];
 	control_interface = usb_ifnum_to_if(
 		receiver->udev, profile->native_set_report_index);
 	if (!control_interface) {
@@ -443,6 +543,11 @@ static int hfx_native_record_dispatch(
 		ret = hfx_native_usb_get(receiver, profile, response);
 		if (!ret && hfx_native_response_matches(
 				    profile, request, response)) {
+			ret = hfx_native_restore_response(
+				profile, application_selector, receiver_selector,
+				route_translated, response);
+			if (ret)
+				goto uncertain;
 			record->result.certainty =
 				HFX_UAPI_NATIVE_EXCHANGE_CERTAINTY_MATCHED_RESPONSE;
 			record->result.transport_errno = 0;

@@ -17,6 +17,7 @@ from typing import Any
 from .model import ModelError, sha256_file
 from .native_probe import REPORT_SIZE, load_native_probe_catalog
 from .private_artifact import write_new_private_json
+from .profiles import load_profile_inputs
 
 
 EVIDENCE_SCHEMA = "hyperflux-native-transport-parity-evidence-v1"
@@ -318,6 +319,47 @@ def _profile(catalog: dict[str, Any], profile_id: str) -> dict[str, Any]:
     return matches[0]
 
 
+def _declared_receiver_selector(root: Path, device_kind: str) -> int:
+    lane = {"mouse": "pointer_lane", "keyboard": "keyboard_lane"}.get(device_kind)
+    if lane is None:
+        raise ModelError("native parity device kind has no receiver endpoint lane")
+    inputs = load_profile_inputs(root)
+    receivers = [profile for profile in inputs.profiles if profile["kind"] == "receiver"]
+    if len(receivers) != 1:
+        raise ModelError("native parity requires exactly one canonical receiver profile")
+    route_selector = (
+        receivers[0].get("transport", {})
+        .get("native_exchange", {})
+        .get("route_selector")
+    )
+    if (
+        not isinstance(route_selector, dict)
+        or route_selector.get("field") != "transaction-id"
+        or not _bounded_int(route_selector.get(lane), 1, 255)
+    ):
+        raise ModelError("native parity receiver route selector is unavailable")
+    return route_selector[lane]
+
+
+def _route_translation(
+    *,
+    application_selector: int,
+    receiver_selector: int,
+    response_selector: int | None,
+    response_restored_for_application: bool | None,
+    authority: str,
+) -> dict[str, Any]:
+    return {
+        "field": "transaction-id",
+        "application_selector": application_selector,
+        "receiver_selector": receiver_selector,
+        "applied": application_selector != receiver_selector,
+        "response_selector": response_selector,
+        "response_restored_for_application": response_restored_for_application,
+        "authority": authority,
+    }
+
+
 def _match_exchanges(
     profile: dict[str, Any],
     exchanges: tuple[UsbmonExchange, ...],
@@ -601,6 +643,9 @@ def build_live_parity_evidence(
     maximum_attempts = catalog["busy_retry"]["maximum_attempts"]
     required = [probe["method"] for probe in profile["probes"]]
     probes = {probe["method"]: probe for probe in profile["probes"]}
+    receiver_selector = _declared_receiver_selector(
+        root, profile["wireless_identity"]["device_kind"]
+    )
     observations: list[dict[str, Any]] = []
     receiver_observations: dict[str, dict[str, Any]] = {}
     for method in required:
@@ -610,7 +655,27 @@ def build_live_parity_evidence(
         routed = receiver_matches.get(method, [])
         if not routed:
             continue
-        receiver = _receiver_observation(routed, None, maximum_attempts)
+        final = routed[-1]
+        application_selector = final.exchange.request[1]
+        response_selector = (
+            final.exchange.response[1] if final.response_complete else None
+        )
+        receiver = _receiver_observation(
+            routed,
+            None,
+            maximum_attempts,
+            route_translation=_route_translation(
+                application_selector=application_selector,
+                receiver_selector=receiver_selector,
+                response_selector=response_selector,
+                response_restored_for_application=(
+                    response_selector == application_selector
+                    if response_selector is not None
+                    else None
+                ),
+                authority="receiver-profile",
+            ),
+        )
         receiver["receiver_comparison"]["semantic_parity"] = (
             _semantic_parity_from_evidence(probes[method], direct, routed[-1])
         )
@@ -704,6 +769,7 @@ def _direct_observation(item: MatchedExchange) -> dict[str, Any]:
             "complete_capture": item.response_complete,
             "summary": item.summary,
         },
+        "route_translation": None,
         "receiver_comparison": {
             "attempts": 0,
             "unchanged_request": None,
@@ -717,6 +783,8 @@ def _receiver_observation(
     items: list[MatchedExchange],
     direct: MatchedExchange | None,
     maximum_attempts: int,
+    *,
+    route_translation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not items:
         raise ModelError("receiver parity observation requires at least one exchange")
@@ -775,6 +843,7 @@ def _receiver_observation(
             "complete_capture": final.response_complete,
             "summary": final.summary,
         },
+        "route_translation": route_translation,
         "receiver_comparison": {
             "attempts": len(items),
             "unchanged_request": unchanged,
@@ -878,7 +947,24 @@ def build_offline_parity_evidence(
             observations.append(_direct_observation(direct))
         routed = receiver_matches.get(method, [])
         if routed:
-            receiver = _receiver_observation(routed, direct, maximum_attempts)
+            final = routed[-1]
+            translation = None
+            if direct is not None:
+                translation = _route_translation(
+                    application_selector=direct.exchange.request[1],
+                    receiver_selector=final.exchange.request[1],
+                    response_selector=(
+                        final.exchange.response[1] if final.response_complete else None
+                    ),
+                    response_restored_for_application=None,
+                    authority="captured-usbmon",
+                )
+            receiver = _receiver_observation(
+                routed,
+                direct,
+                maximum_attempts,
+                route_translation=translation,
+            )
             receiver_observations[method] = receiver
             observations.append(receiver)
 
@@ -1068,11 +1154,17 @@ def validate_parity_evidence(value: dict[str, Any]) -> None:
         label = f"native parity observation {index}"
         if not isinstance(observation, dict):
             raise ModelError(f"{label}: expected an object")
-        exact_keys(
-            observation,
-            {"method", "origin", "comparison", "request", "response", "receiver_comparison"},
-            label,
-        )
+        observation_keys = {
+            "method",
+            "origin",
+            "comparison",
+            "request",
+            "response",
+            "receiver_comparison",
+        }
+        if "route_translation" in observation:
+            observation_keys.add("route_translation")
+        exact_keys(observation, observation_keys, label)
         method = observation["method"]
         origin = observation["origin"]
         if method not in required or origin not in {
@@ -1147,10 +1239,49 @@ def validate_parity_evidence(value: dict[str, Any]) -> None:
         if origin == "direct-semantic-reference":
             if attempts != 0 or states != (None, None, None):
                 raise ModelError(f"{label}: direct evidence claims a receiver outcome")
+            if observation.get("route_translation") is not None:
+                raise ModelError(f"{label}: direct evidence claims receiver translation")
         else:
             if not 1 <= attempts <= 8:
                 raise ModelError(f"{label}: receiver attempts exceed the evidence bound")
             routed[method] = observation
+        translation = observation.get("route_translation")
+        if translation is not None:
+            if not isinstance(translation, dict):
+                raise ModelError(f"{label}: malformed route translation")
+            exact_keys(
+                translation,
+                {
+                    "field",
+                    "application_selector",
+                    "receiver_selector",
+                    "applied",
+                    "response_selector",
+                    "response_restored_for_application",
+                    "authority",
+                },
+                f"{label} route translation",
+            )
+            application_selector = translation["application_selector"]
+            receiver_selector = translation["receiver_selector"]
+            response_selector = translation["response_selector"]
+            restored = translation["response_restored_for_application"]
+            if (
+                translation["field"] != "transaction-id"
+                or not _bounded_int(application_selector, 0, 255)
+                or not _bounded_int(receiver_selector, 0, 255)
+                or translation["applied"]
+                != (application_selector != receiver_selector)
+                or (
+                    response_selector is not None
+                    and not _bounded_int(response_selector, 0, 255)
+                )
+                or (restored is not None and not isinstance(restored, bool))
+                or translation["authority"]
+                not in {"captured-usbmon", "receiver-profile"}
+                or (restored is True and response_selector != application_selector)
+            ):
+                raise ModelError(f"{label}: invalid route translation")
 
     derived_passed: list[str] = []
     derived_failed: list[str] = []

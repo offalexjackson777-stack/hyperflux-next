@@ -37,7 +37,9 @@ endpoint slot, route-token digest, generation, and deadline before entering the
 kernel adapter. The adapter submits one 90-byte upstream Feature report through
 UAPI v2 and projects only the kernel's `not-sent`, `may-have-been-sent`, or
 `matched-response` result. It neither constructs device commands nor translates
-LED slots.
+LED slots. A receiver profile may declare one route-selector field; the kernel
+applies that receiver-only addressing rule to a clone and preserves the
+application request.
 
 The retained UAPI-v1 migration path still selects a receiver encoder, resolves
 each child independently, applies its qualified application-slot-to-carrier map,
@@ -101,11 +103,13 @@ shape before reserving a sequence. A per-receiver transport lock permits one
 active exchange and prevents a native operation from interleaving with the
 legacy carrier path.
 
-The SET begins at most once. After it begins, only bounded GET acquisition may
-repeat according to declarative profile timing and response-matching fields.
-The SET is never replayed. A complete matching 90-byte response is returned
-unchanged, including the device's own status; HyperFlux does not reinterpret
-Busy, Failure, or Not Supported as transport success.
+The SET begins at most once. Before it begins, the kernel may replace only the
+receiver profile's declared route selector in a cloned request. After SET begins,
+only bounded GET acquisition may repeat according to declarative profile timing
+and response-matching fields. The SET is never replayed. A complete matching
+90-byte response has the application's original selector restored and is then
+returned without changing the device's own status; HyperFlux does not
+reinterpret Busy, Failure, or Not Supported as transport success.
 
 The native journal retains 128 complete results and 128 digest-bearing
 tombstones. Exact replay resolves the retained outcome without another SET.
@@ -117,7 +121,8 @@ certainty classes mean:
 - `may-have-been-sent`: SET may have begun, so no layer may repeat it
   automatically;
 - `matched-response`: one full response passed declarative correlation and is
-  returned unchanged.
+  returned with only the declared receiver selector restored to the caller's
+  original value.
 
 ### Semantic Envelope V1 Migration Fallback
 

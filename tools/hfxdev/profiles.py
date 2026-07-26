@@ -92,9 +92,17 @@ NATIVE_EXCHANGE_KEYS = {
     "response_retry_delay_us",
     "max_response_attempts",
     "report_format",
+    "route_selector",
     "match_ranges",
 }
+NATIVE_EXCHANGE_REQUIRED_KEYS = NATIVE_EXCHANGE_KEYS - {"route_selector"}
 NATIVE_MATCH_RANGE_KEYS = {"offset", "length"}
+NATIVE_ROUTE_SELECTOR_KEYS = {
+    "field",
+    "pointer_lane",
+    "keyboard_lane",
+    "restore_original_response",
+}
 NATIVE_REPORT_FORMAT_KEYS = {
     "request_status",
     "response_status",
@@ -559,7 +567,7 @@ def _validate_native_exchange(profile_id: str, value: object) -> None:
     if not isinstance(value, dict):
         raise ModelError(f"{profile_id}: native exchange must be an object")
     _expect_keys(value, NATIVE_EXCHANGE_KEYS, f"{profile_id} native exchange")
-    missing = sorted(NATIVE_EXCHANGE_KEYS - set(value))
+    missing = sorted(NATIVE_EXCHANGE_REQUIRED_KEYS - set(value))
     if missing:
         raise ModelError(f"{profile_id}: incomplete native exchange: {', '.join(missing)}")
     if value["protocol_family"] != "razer-feature-report-v1":
@@ -666,6 +674,33 @@ def _validate_native_exchange(profile_id: str, value: object) -> None:
         for key, maximum in (("offset", value["report_bytes"] - 1), ("match_mask", 255))
     ):
         raise ModelError(f"{profile_id}: native transaction id is out of bounds")
+    route_selector = value.get("route_selector")
+    if route_selector is not None:
+        if not isinstance(route_selector, dict):
+            raise ModelError(f"{profile_id}: native route selector must be an object")
+        _expect_keys(
+            route_selector,
+            NATIVE_ROUTE_SELECTOR_KEYS,
+            f"{profile_id} native route selector",
+        )
+        if set(route_selector) != NATIVE_ROUTE_SELECTOR_KEYS:
+            raise ModelError(f"{profile_id}: native route selector is incomplete")
+        if route_selector["field"] != "transaction-id":
+            raise ModelError(f"{profile_id}: native route selector field is unsupported")
+        for lane in ("pointer_lane", "keyboard_lane"):
+            selector = route_selector[lane]
+            if (
+                isinstance(selector, bool)
+                or not isinstance(selector, int)
+                or not 1 <= selector <= 255
+            ):
+                raise ModelError(f"{profile_id}: native route selector {lane} is invalid")
+        if route_selector["pointer_lane"] == route_selector["keyboard_lane"]:
+            raise ModelError(f"{profile_id}: native route selectors must isolate endpoint lanes")
+        if route_selector["restore_original_response"] is not True:
+            raise ModelError(
+                f"{profile_id}: native route selector must restore the application response"
+            )
     ranges = value["match_ranges"]
     if not isinstance(ranges, list) or not 1 <= len(ranges) <= 4:
         raise ModelError(f"{profile_id}: native exchange needs one to four match ranges")

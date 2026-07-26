@@ -52,7 +52,7 @@ An eligible assessment still grants no authority. A maintainer must review the e
 
 ## Promotion Boundary
 
-A same-protocol device may change only profile data, upstream bindings, evidence, and generated projections. It must not require a kernel, bridge, daemon, SDK transport, OpenRazer relay, or OpenRGB transport-engine change.
+A same-protocol device may change only profile data, upstream bindings, evidence, and generated projections. It inherits receiver-level route-selector behavior through profile composition and must not require a kernel, bridge, daemon, SDK transport, OpenRazer relay, or OpenRGB transport-engine change.
 
 If the observed report family or report size differs, the draft is `backend-required`. If either upstream source lacks an exact record, or if identity or topology is ambiguous, the draft remains blocked. Existing unknown candidates remain non-writable.
 

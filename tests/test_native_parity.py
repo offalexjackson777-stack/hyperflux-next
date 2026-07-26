@@ -20,6 +20,7 @@ from hfxdev.native_parity import (
     build_offline_parity_evidence,
     canonical_request,
     parse_usbmon_capture,
+    validate_parity_evidence,
     write_parity_evidence,
 )
 from hfxdev.native_probe import load_native_probe_catalog
@@ -74,10 +75,10 @@ class NativeParityTests(unittest.TestCase):
     mouse_profile = "child.razer.basilisk-v3-pro-35k.00cd"
     keyboard_profile = "child.razer.deathstalker-v2-pro-tkl.0296"
 
-    def test_complete_source_bound_firmware_exchange_passes_that_method(self) -> None:
+    def _mouse_firmware_evidence(self) -> dict:
         probe = _probe(self.mouse_profile, "get_firmware")
         direct_request = canonical_request(probe, 0x1F)
-        receiver_request = canonical_request(probe, 0x9F)
+        receiver_request = canonical_request(probe, 0x1F)
         direct_response = _response(direct_request, bytes((2, 51)))
         receiver_response = _response(receiver_request, bytes((2, 51)))
         with TemporaryDirectory() as directory:
@@ -94,6 +95,10 @@ class NativeParityTests(unittest.TestCase):
                 created_at="2026-07-25T00:00:00Z",
                 source_revision=REVISION,
             )
+        return evidence
+
+    def test_complete_source_bound_firmware_exchange_passes_that_method(self) -> None:
+        evidence = self._mouse_firmware_evidence()
         self.assertIn("get_firmware", evidence["coverage"]["passed"])
         self.assertEqual(evidence["conclusion"], "incomplete")
         routed = next(
@@ -110,11 +115,48 @@ class NativeParityTests(unittest.TestCase):
                 "semantic_parity": True,
             },
         )
+        self.assertEqual(
+            routed["route_translation"],
+            {
+                "field": "transaction-id",
+                "application_selector": 0x1F,
+                "receiver_selector": 0x1F,
+                "applied": False,
+                "response_selector": 0x1F,
+                "response_restored_for_application": None,
+                "authority": "captured-usbmon",
+            },
+        )
+
+    def test_route_translation_remains_optional_for_v1_evidence(self) -> None:
+        legacy = deepcopy(self._mouse_firmware_evidence())
+        for observation in legacy["observations"]:
+            observation.pop("route_translation", None)
+        validate_parity_evidence(legacy)
+
+    def test_route_translation_rejects_applied_mismatch(self) -> None:
+        forged = deepcopy(self._mouse_firmware_evidence())
+        routed = next(
+            value for value in forged["observations"] if value["origin"] == "receiver-route"
+        )
+        routed["route_translation"]["applied"] = True
+        with self.assertRaisesRegex(ModelError, "invalid route translation"):
+            validate_parity_evidence(forged)
+
+    def test_route_translation_rejects_false_response_restoration(self) -> None:
+        forged = deepcopy(self._mouse_firmware_evidence())
+        routed = next(
+            value for value in forged["observations"] if value["origin"] == "receiver-route"
+        )
+        routed["route_translation"]["response_selector"] = 0x9F
+        routed["route_translation"]["response_restored_for_application"] = True
+        with self.assertRaisesRegex(ModelError, "invalid route translation"):
+            validate_parity_evidence(forged)
 
     def test_matching_terminal_failure_is_transport_parity_offline(self) -> None:
         probe = _probe(self.mouse_profile, "get_firmware")
         direct_request = canonical_request(probe, 0x1F)
-        receiver_request = canonical_request(probe, 0x9F)
+        receiver_request = canonical_request(probe, 0x1F)
         direct_response = _response(direct_request, bytes((0, 0)), status=3)
         receiver_response = _response(receiver_request, bytes((0, 0)), status=3)
         with TemporaryDirectory() as directory:
@@ -143,7 +185,7 @@ class NativeParityTests(unittest.TestCase):
     def test_matching_terminal_domain_status_does_not_compare_undefined_payloads(self) -> None:
         probe = _probe(self.mouse_profile, "get_battery")
         direct_request = canonical_request(probe, 0x1F)
-        receiver_request = canonical_request(probe, 0x9F)
+        receiver_request = canonical_request(probe, 0x1F)
         direct_response = _response(direct_request, bytes((0, 128)), status=3)
         receiver_response = _response(receiver_request, bytes((0, 144)), status=3)
         with TemporaryDirectory() as directory:
@@ -166,7 +208,7 @@ class NativeParityTests(unittest.TestCase):
         probe = _probe(self.mouse_profile, "get_firmware")
         direct_request = canonical_request(probe, 0x1F)
         direct_response = _response(direct_request, bytes((2, 51)))
-        receiver_request = bytearray(canonical_request(probe, 0x9F))
+        receiver_request = bytearray(canonical_request(probe, 0x1F))
         receiver_request[89] = 1
         receiver_response = _response(bytes(receiver_request), bytes((2, 51)))
         with TemporaryDirectory() as directory:
@@ -191,7 +233,7 @@ class NativeParityTests(unittest.TestCase):
         serial = b"PRIVATE-SERIAL-1234567"
         self.assertEqual(len(serial), 22)
         direct_request = canonical_request(probe, 0x1F)
-        receiver_request = canonical_request(probe, 0x9F)
+        receiver_request = canonical_request(probe, 0x1F)
         direct_response = _response(direct_request, serial)
         receiver_response = _response(receiver_request, serial)
         with TemporaryDirectory() as directory:
@@ -230,7 +272,7 @@ class NativeParityTests(unittest.TestCase):
     def test_busy_retries_are_bounded_and_only_the_terminal_result_counts(self) -> None:
         probe = _probe(self.mouse_profile, "get_firmware")
         direct_request = canonical_request(probe, 0x1F)
-        receiver_request = canonical_request(probe, 0x9F)
+        receiver_request = canonical_request(probe, 0x1F)
         direct_response = _response(direct_request, bytes((2, 51)))
         busy_response = _response(receiver_request, bytes((0, 0)), status=1)
         success_response = _response(receiver_request, bytes((2, 51)))
@@ -260,7 +302,7 @@ class NativeParityTests(unittest.TestCase):
     def test_dynamic_telemetry_requires_valid_values_not_identical_snapshots(self) -> None:
         probe = _probe(self.mouse_profile, "get_battery")
         direct_request = canonical_request(probe, 0x1F)
-        receiver_request = canonical_request(probe, 0x9F)
+        receiver_request = canonical_request(probe, 0x1F)
         direct_response = _response(direct_request, bytes((0, 128)))
         receiver_response = _response(receiver_request, bytes((0, 144)))
         with TemporaryDirectory() as directory:
@@ -309,6 +351,18 @@ class NativeParityTests(unittest.TestCase):
         )
         self.assertEqual(routed["response"]["summary"]["layout_code"], 6)
         self.assertTrue(routed["receiver_comparison"]["semantic_parity"])
+        self.assertEqual(
+            routed["route_translation"],
+            {
+                "field": "transaction-id",
+                "application_selector": 0xFF,
+                "receiver_selector": 0x9F,
+                "applied": True,
+                "response_selector": 0x9F,
+                "response_restored_for_application": None,
+                "authority": "captured-usbmon",
+            },
+        )
 
     def test_parser_rejects_unmatched_or_nonstandard_reports(self) -> None:
         with TemporaryDirectory() as directory:
@@ -322,7 +376,7 @@ class NativeParityTests(unittest.TestCase):
     def test_request_marker_and_out_of_range_status_are_not_standard_responses(self) -> None:
         probe = _probe(self.mouse_profile, "get_firmware")
         direct_request = canonical_request(probe, 0x1F)
-        receiver_request = canonical_request(probe, 0x9F)
+        receiver_request = canonical_request(probe, 0x1F)
         direct_response = _response(direct_request, bytes((2, 51)))
         for status in (0, 6):
             with self.subTest(status=status), TemporaryDirectory() as directory:

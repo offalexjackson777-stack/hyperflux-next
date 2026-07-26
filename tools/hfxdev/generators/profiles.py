@@ -353,6 +353,19 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "}",
         "",
         "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub enum NativeRouteSelectorField {",
+        "    TransactionId,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct NativeRouteSelectorRecord {",
+        "    pub field: NativeRouteSelectorField,",
+        "    pub pointer_lane: u8,",
+        "    pub keyboard_lane: u8,",
+        "    pub restore_original_response: bool,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
         "pub struct NativeReportFormatRecord {",
         "    pub request_status: NativeByteValueRecord,",
         "    pub response_status: NativeByteRangeRecord,",
@@ -373,6 +386,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "    pub response_retry_delay_us: u32,",
         "    pub max_response_attempts: u8,",
         "    pub report_format: NativeReportFormatRecord,",
+        "    pub route_selector: Option<NativeRouteSelectorRecord>,",
         "    pub match_ranges: &'static [NativeMatchRangeRecord],",
         "}",
         "",
@@ -529,6 +543,20 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         if native_exchange:
             report_format = native_exchange["report_format"]
             checksum = report_format["checksum"]
+            route_selector = native_exchange.get("route_selector")
+            if route_selector is None:
+                route_selector_lines = ["            route_selector: None,"]
+            else:
+                route_selector_lines = [
+                    "            route_selector: Some(NativeRouteSelectorRecord {",
+                    "                field: NativeRouteSelectorField::"
+                    f"{_variant(route_selector['field'])},",
+                    f"                pointer_lane: {route_selector['pointer_lane']},",
+                    f"                keyboard_lane: {route_selector['keyboard_lane']},",
+                    "                restore_original_response: "
+                    f"{str(route_selector['restore_original_response']).lower()},",
+                    "            }),",
+                ]
             native_exchange_lines = [
                 "        native_exchange: Some(NativeExchangeRecord {",
                 f"            protocol_family: {json.dumps(native_exchange['protocol_family'])},",
@@ -574,9 +602,14 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                 f"                    match_mask: {report_format['transaction_id']['match_mask']},",
                 "                },",
                 "            },",
-                f"            match_ranges: NATIVE_MATCH_RANGES_{index},",
-                "        }),",
             ]
+            native_exchange_lines.extend(route_selector_lines)
+            native_exchange_lines.extend(
+                [
+                    f"            match_ranges: NATIVE_MATCH_RANGES_{index},",
+                    "        }),",
+                ]
+            )
         else:
             native_exchange_lines = ["        native_exchange: None,"]
         lighting = profile.get("transport", {}).get("lighting")
@@ -1112,6 +1145,25 @@ def kernel_receiver_table(catalog: dict[str, Any]) -> str:
             match_ranges = native["match_ranges"]
         report_format = native_values["report_format"]
         checksum = report_format["checksum"]
+        route_selector = native_values.get("route_selector")
+        if route_selector is None:
+            route_selector_kind = "HFX_NATIVE_ROUTE_SELECTOR_NONE"
+            pointer_selector = 0
+            keyboard_selector = 0
+            restore_original_response = "false"
+        else:
+            route_selector_kind = {
+                "transaction-id": "HFX_NATIVE_ROUTE_SELECTOR_TRANSACTION_ID"
+            }.get(route_selector["field"])
+            if route_selector_kind is None:
+                raise ValueError(
+                    f"unsupported kernel native route selector: {route_selector['field']}"
+                )
+            pointer_selector = route_selector["pointer_lane"]
+            keyboard_selector = route_selector["keyboard_lane"]
+            restore_original_response = str(
+                route_selector["restore_original_response"]
+            ).lower()
         range_values = ", ".join(
             f"{{ .offset = {item['offset']}, .length = {item['length']} }}"
             for item in match_ranges
@@ -1150,6 +1202,10 @@ def kernel_receiver_table(catalog: dict[str, Any]) -> str:
                 f'\t.native_trailer_value = {report_format["trailer"]["value"]},',
                 f'\t.native_transaction_id_offset = {report_format["transaction_id"]["offset"]},',
                 f'\t.native_transaction_id_match_mask = {report_format["transaction_id"]["match_mask"]},',
+                f"\t.native_route_selector_kind = {route_selector_kind},",
+                f"\t.native_pointer_route_selector = {pointer_selector},",
+                f"\t.native_keyboard_route_selector = {keyboard_selector},",
+                f"\t.native_restore_original_response = {restore_original_response},",
                 f"\t.native_match_range_count = {len(match_ranges)},",
                 f"\t.native_match_ranges = {{ {range_values} }}",
                 ")",

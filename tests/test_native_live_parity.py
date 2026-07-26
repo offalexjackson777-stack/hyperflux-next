@@ -132,7 +132,7 @@ class NativeLiveParityTests(unittest.TestCase):
 
     def test_ephemeral_exact_report_becomes_privacy_safe_parity(self) -> None:
         probe = _probe("get_firmware")
-        request = canonical_request(probe, 0x9F)
+        request = canonical_request(probe, 0x1F)
         response = _response(request, bytes((2, 51)))
         evidence = build_live_parity_evidence(
             ROOT,
@@ -153,7 +153,7 @@ class NativeLiveParityTests(unittest.TestCase):
 
     def test_source_bound_semantic_reference_does_not_require_raw_direct_report(self) -> None:
         probe = _probe("get_firmware")
-        request = canonical_request(probe, 0x9F)
+        request = canonical_request(probe, 0x1F)
         response = _response(request, bytes((2, 51)))
         evidence = build_live_parity_evidence(
             ROOT,
@@ -170,7 +170,7 @@ class NativeLiveParityTests(unittest.TestCase):
 
     def test_matching_terminal_failure_is_preserved_as_transport_parity(self) -> None:
         probe = _probe("get_brightness")
-        request = canonical_request(probe, 0x9F)
+        request = canonical_request(probe, 0x1F)
         response = _response(request, bytes((0,)), status=3)
         evidence = build_live_parity_evidence(
             ROOT,
@@ -198,12 +198,24 @@ class NativeLiveParityTests(unittest.TestCase):
                 "semantic_parity": True,
             },
         )
+        self.assertEqual(
+            routed["route_translation"],
+            {
+                "field": "transaction-id",
+                "application_selector": 0x1F,
+                "receiver_selector": 0x1F,
+                "applied": False,
+                "response_selector": 0x1F,
+                "response_restored_for_application": True,
+                "authority": "receiver-profile",
+            },
+        )
         self.assertIn("get_brightness", evidence["coverage"]["passed"])
         self.assertNotEqual(evidence["conclusion"], "backend-required")
 
     def test_terminal_status_mismatch_is_semantic_failure_not_backend_rewrite(self) -> None:
         probe = _probe("get_brightness")
-        request = canonical_request(probe, 0x9F)
+        request = canonical_request(probe, 0x1F)
         response = _response(request, bytes((0,)), status=5)
         evidence = build_live_parity_evidence(
             ROOT,
@@ -221,7 +233,7 @@ class NativeLiveParityTests(unittest.TestCase):
 
     def test_matching_terminal_status_with_different_exact_summary_fails_semantics(self) -> None:
         probe = _probe("get_brightness")
-        request = canonical_request(probe, 0x9F)
+        request = canonical_request(probe, 0x1F)
         response = _response(request, bytes((1,)), status=3)
         evidence = build_live_parity_evidence(
             ROOT,
@@ -239,7 +251,7 @@ class NativeLiveParityTests(unittest.TestCase):
 
     def test_final_busy_response_remains_incomplete(self) -> None:
         probe = _probe("get_firmware")
-        request = canonical_request(probe, 0x9F)
+        request = canonical_request(probe, 0x1F)
         response = _response(request, bytes((0, 0)), status=1)
         evidence = build_live_parity_evidence(
             ROOT,
@@ -263,7 +275,7 @@ class NativeLiveParityTests(unittest.TestCase):
 
     def test_malformed_receiver_response_requires_a_backend(self) -> None:
         probe = _probe("get_firmware")
-        request = canonical_request(probe, 0x9F)
+        request = canonical_request(probe, 0x1F)
         response = bytearray(_response(request, bytes((2, 51))))
         response[1] ^= 1
         response[88] = _crc(response)
@@ -283,7 +295,7 @@ class NativeLiveParityTests(unittest.TestCase):
 
     def test_unclassified_sent_request_and_rewritten_read_fail_closed(self) -> None:
         probe = _probe("get_firmware")
-        request = canonical_request(probe, 0x9F)
+        request = canonical_request(probe, 0x1F)
         response = _response(request, bytes((2, 51)))
         unknown = _raw_record("get_firmware", request, response)
         unknown["method"] = None

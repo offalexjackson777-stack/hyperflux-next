@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use crate::{NativeChecksumAlgorithm, NativeExchangeRecord};
+use crate::{NativeChecksumAlgorithm, NativeExchangeRecord, NativeRouteSelectorField};
 use std::fmt;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -13,6 +13,19 @@ pub enum NativeReportValidationError {
     InvalidDataSize,
     InvalidChecksum,
     InvalidTrailer,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum NativeRouteLane {
+    Pointer,
+    Keyboard,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct NativeRouteRewrite {
+    pub application_selector: u8,
+    pub receiver_selector: u8,
+    pub translated: bool,
 }
 
 impl fmt::Display for NativeReportValidationError {
@@ -61,6 +74,15 @@ pub fn validate_native_exchange_record(
         || (format.checksum.result_offset >= format.checksum.start_offset
             && format.checksum.result_offset < format.checksum.end_offset_exclusive)
         || profile.match_ranges.is_empty()
+    {
+        return Err(NativeReportValidationError::InvalidProfile);
+    }
+    if let Some(selector) = profile.route_selector
+        && (!matches!(selector.field, NativeRouteSelectorField::TransactionId)
+            || selector.pointer_lane == 0
+            || selector.keyboard_lane == 0
+            || selector.pointer_lane == selector.keyboard_lane
+            || !selector.restore_original_response)
     {
         return Err(NativeReportValidationError::InvalidProfile);
     }
@@ -143,6 +165,73 @@ pub fn native_response_matches(
     }))
 }
 
+/// Rewrites only the receiver-profile route selector while retaining the
+/// application-owned command bytes and original selector for response repair.
+///
+/// # Errors
+///
+/// Returns a typed structural error before mutating malformed input.
+pub fn route_native_request(
+    profile: &NativeExchangeRecord,
+    lane: NativeRouteLane,
+    report: &mut [u8],
+) -> Result<NativeRouteRewrite, NativeReportValidationError> {
+    validate_native_request(profile, report)?;
+    let offset = usize::from(profile.report_format.transaction_id.offset);
+    let application_selector = report[offset];
+    let Some(selector) = profile.route_selector else {
+        return Ok(NativeRouteRewrite {
+            application_selector,
+            receiver_selector: application_selector,
+            translated: false,
+        });
+    };
+    let receiver_selector = match lane {
+        NativeRouteLane::Pointer => selector.pointer_lane,
+        NativeRouteLane::Keyboard => selector.keyboard_lane,
+    };
+    let translated = application_selector != receiver_selector;
+    if translated {
+        report[offset] = receiver_selector;
+        update_checksum_if_covered(profile, offset, report);
+        validate_native_request(profile, report)?;
+    }
+    Ok(NativeRouteRewrite {
+        application_selector,
+        receiver_selector,
+        translated,
+    })
+}
+
+/// Restores the caller's transaction selector after a routed response matched.
+///
+/// # Errors
+///
+/// Returns a typed structural error when the response or profile is invalid.
+pub fn restore_native_response(
+    profile: &NativeExchangeRecord,
+    rewrite: NativeRouteRewrite,
+    report: &mut [u8],
+) -> Result<(), NativeReportValidationError> {
+    validate_native_response(profile, report)?;
+    if !rewrite.translated {
+        return Ok(());
+    }
+    let Some(selector) = profile.route_selector else {
+        return Err(NativeReportValidationError::InvalidProfile);
+    };
+    if !selector.restore_original_response {
+        return Err(NativeReportValidationError::InvalidProfile);
+    }
+    let offset = usize::from(profile.report_format.transaction_id.offset);
+    if report[offset] != rewrite.receiver_selector {
+        return Err(NativeReportValidationError::InvalidProfile);
+    }
+    report[offset] = rewrite.application_selector;
+    update_checksum_if_covered(profile, offset, report);
+    validate_native_response(profile, report)
+}
+
 fn validate_report_length(
     profile: &NativeExchangeRecord,
     report: &[u8],
@@ -180,12 +269,33 @@ fn validate_common_report(
     Ok(())
 }
 
+fn update_checksum_if_covered(
+    profile: &NativeExchangeRecord,
+    changed_offset: usize,
+    report: &mut [u8],
+) {
+    let checksum = profile.report_format.checksum;
+    if changed_offset < usize::from(checksum.start_offset)
+        || changed_offset >= usize::from(checksum.end_offset_exclusive)
+    {
+        return;
+    }
+    let value = match checksum.algorithm {
+        NativeChecksumAlgorithm::Xor8 => report
+            [usize::from(checksum.start_offset)..usize::from(checksum.end_offset_exclusive)]
+            .iter()
+            .fold(0_u8, |current, byte| current ^ byte),
+    };
+    report[usize::from(checksum.result_offset)] = value;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
         NativeByteRangeRecord, NativeByteValueRecord, NativeChecksumRecord, NativeDataSizeRecord,
-        NativeMatchRangeRecord, NativeReportFormatRecord, NativeTransactionIdRecord,
+        NativeMatchRangeRecord, NativeReportFormatRecord, NativeRouteSelectorRecord,
+        NativeTransactionIdRecord,
     };
 
     const MATCH_RANGES: &[NativeMatchRangeRecord] = &[
@@ -241,6 +351,12 @@ mod tests {
                     match_mask: transaction_mask,
                 },
             },
+            route_selector: Some(NativeRouteSelectorRecord {
+                field: NativeRouteSelectorField::TransactionId,
+                pointer_lane: 0x1f,
+                keyboard_lane: 0x9f,
+                restore_original_response: true,
+            }),
             match_ranges: MATCH_RANGES,
         }
     }
@@ -335,5 +451,48 @@ mod tests {
             native_response_matches(&profile(0), &request, &response),
             Err(NativeReportValidationError::InvalidResponseStatus)
         );
+    }
+
+    #[test]
+    fn route_selector_preserves_pointer_and_translates_keyboard() {
+        let pointer_profile = profile(0xff);
+        let mut pointer = report(0, 0x1f);
+        let pointer_rewrite =
+            route_native_request(&pointer_profile, NativeRouteLane::Pointer, &mut pointer)
+                .expect("pointer route");
+        assert_eq!(pointer[1], 0x1f);
+        assert!(!pointer_rewrite.translated);
+
+        let mut keyboard = report(0, 0xff);
+        let rewrite =
+            route_native_request(&pointer_profile, NativeRouteLane::Keyboard, &mut keyboard)
+                .expect("keyboard route");
+        assert_eq!(keyboard[1], 0x9f);
+        assert!(rewrite.translated);
+
+        let mut response = report(2, 0x9f);
+        restore_native_response(&pointer_profile, rewrite, &mut response)
+            .expect("response restoration");
+        assert_eq!(response[1], 0xff);
+    }
+
+    #[test]
+    fn route_selector_recomputes_checksum_when_selected_field_is_covered() {
+        let mut covered = profile(0xff);
+        covered.report_format.transaction_id.offset = 6;
+        let mut request = report(0, 0x00);
+        let before = request[88];
+        let rewrite = route_native_request(&covered, NativeRouteLane::Keyboard, &mut request)
+            .expect("covered route");
+        assert_eq!(request[6], 0x9f);
+        assert_ne!(request[88], before);
+        assert_eq!(validate_native_request(&covered, &request), Ok(()));
+
+        let mut response = request;
+        response[0] = 2;
+        restore_native_response(&covered, rewrite, &mut response)
+            .expect("covered response restoration");
+        assert_eq!(response[6], 0x1f);
+        assert_eq!(validate_native_response(&covered, &response), Ok(()));
     }
 }

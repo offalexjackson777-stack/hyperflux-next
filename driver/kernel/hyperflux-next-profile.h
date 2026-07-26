@@ -19,6 +19,11 @@ enum hfx_native_checksum_kind {
 	HFX_NATIVE_CHECKSUM_XOR8 = 1,
 };
 
+enum hfx_native_route_selector_kind {
+	HFX_NATIVE_ROUTE_SELECTOR_NONE = 0,
+	HFX_NATIVE_ROUTE_SELECTOR_TRANSACTION_ID = 1,
+};
+
 #define HFX_NATIVE_MATCH_RANGE_CAPACITY 4U
 
 struct hfx_native_match_range {
@@ -54,6 +59,10 @@ struct hfx_receiver_profile {
 	u8 native_max_data_size;
 	u8 native_trailer_value;
 	u8 native_transaction_id_match_mask;
+	u8 native_pointer_route_selector;
+	u8 native_keyboard_route_selector;
+	u8 native_restore_original_response;
+	u16 native_route_selector_kind;
 	u32 native_initial_response_delay_us;
 	u32 native_response_retry_delay_us;
 	struct hfx_native_match_range

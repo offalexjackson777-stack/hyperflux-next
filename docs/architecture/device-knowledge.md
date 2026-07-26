@@ -59,8 +59,9 @@ A native route becomes writable only when all of these are true:
    profile, not merely a similar product name.
 3. Pinned OpenRazer or OpenRGB records bind that identity to a fixed upstream
    protocol family and report shape.
-4. Public, device-scoped physical evidence proves that an unchanged upstream
-   report crosses the receiver and returns a matching standard response.
+4. Public, device-scoped physical evidence proves that upstream command
+   semantics, any declared receiver selector translation, and a matching
+   standard response cross the receiver route.
 5. The profile declares response correlation and native qualification, after
    which protocol v7 exposes only the opaque route and bounded exchange.
 
@@ -75,7 +76,7 @@ The pinned OpenRazer source documents wired `0x00A7` and wireless `0x00A8` varia
 
 The pinned OpenRGB source independently documents the same PID pair and a two-slot Logo/Numpad presentation. OpenRazer describes a three-slot matrix. The compiler reports that topology disagreement rather than choosing whichever source is convenient.
 
-Today the official mat snapshot can therefore say a Naga V2 Pro is a reviewed candidate with extensive public device knowledge. It cannot expose a writable native route until an exact receiver-backed identity is observed, its standard report family is bound declaratively, and that transport receives physical evidence. Once qualified, OpenRGB and OpenRazer continue to generate the model-specific commands they already own; HyperFlux carries the unchanged reports without copying Naga packet logic into its kernel, bridge, SDK, relay, or application adapters.
+Today the official mat snapshot can therefore say a Naga V2 Pro is a reviewed candidate with extensive public device knowledge. It cannot expose a writable native route until an exact receiver-backed identity is observed, its standard report family is bound declaratively, and that transport receives physical evidence. Once qualified, OpenRGB and OpenRazer continue to generate the model-specific commands they already own; HyperFlux carries those commands and only declarative receiver addressing without copying Naga packet logic into its kernel, bridge, SDK, relay, or application adapters.
 
 ## Update Workflow
 

@@ -39,6 +39,10 @@ struct ReceiverMatch
     std::uint8_t native_trailer_value;
     std::uint16_t native_transaction_id_offset;
     std::uint8_t native_transaction_id_match_mask;
+    std::uint16_t native_route_selector_kind;
+    std::uint8_t native_pointer_route_selector;
+    std::uint8_t native_keyboard_route_selector;
+    bool native_restore_original_response;
     std::uint16_t native_match_range_count;
     NativeMatchRange native_match_ranges[4];
 };
@@ -49,6 +53,8 @@ struct ReceiverMatch
 #define HFX_NATIVE_EXCHANGE_RAZER_FEATURE_REPORT_V1 1
 #define HFX_NATIVE_CHECKSUM_NONE 0
 #define HFX_NATIVE_CHECKSUM_XOR8 1
+#define HFX_NATIVE_ROUTE_SELECTOR_NONE 0
+#define HFX_NATIVE_ROUTE_SELECTOR_TRANSACTION_ID 1
 #define HFX_RECEIVER_PROFILE(vendor, product, backend, ...) \
     ReceiverMatch{.vendor_id = vendor, .product_id = product, \
                   .backend_id = backend, __VA_ARGS__},
@@ -88,6 +94,10 @@ int main()
     static_assert(receiver_matches[0].native_trailer_value == 0);
     static_assert(receiver_matches[0].native_transaction_id_offset == 1);
     static_assert(receiver_matches[0].native_transaction_id_match_mask == 0);
+    static_assert(receiver_matches[0].native_route_selector_kind == 1);
+    static_assert(receiver_matches[0].native_pointer_route_selector == 0x1f);
+    static_assert(receiver_matches[0].native_keyboard_route_selector == 0x9f);
+    static_assert(receiver_matches[0].native_restore_original_response);
     static_assert(receiver_matches[0].native_match_range_count == 2);
     static_assert(receiver_matches[0].native_match_ranges[0].offset == 2);
     static_assert(receiver_matches[0].native_match_ranges[0].length == 2);
