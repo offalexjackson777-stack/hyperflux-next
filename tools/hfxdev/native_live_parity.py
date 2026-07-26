@@ -59,6 +59,14 @@ class LiveParityResult:
     failed: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class LiveParityPreflight:
+    revision: str
+    probes: dict[str, Any]
+    profile: dict[str, Any]
+    route: dict[str, Any]
+
+
 def _git_revision(root: Path) -> str:
     try:
         result = subprocess.run(
@@ -388,6 +396,33 @@ def _qualifier_command(
     ]
 
 
+def prepare_live_parity(
+    root: Path,
+    *,
+    profile_id: str,
+    package: Path,
+    package_sha256: str,
+    expected_generation: int,
+    timeout_seconds: int,
+) -> LiveParityPreflight:
+    """Checks the immutable software and isolation boundary for a live read."""
+
+    if os.geteuid() != 0:
+        raise ModelError("live native parity must run as root")
+    if not 10 <= timeout_seconds <= 120 or not 1 <= expected_generation < 2**63:
+        raise ModelError("live native parity generation or timeout is invalid")
+    revision = _git_revision(root)
+    _verify_candidate_package(package, package_sha256)
+    _require_isolated_services()
+    probes, profile, route = _profile_authority(root, profile_id)
+    return LiveParityPreflight(
+        revision=revision,
+        probes=probes,
+        profile=profile,
+        route=route,
+    )
+
+
 def run_live_parity(
     root: Path,
     *,
@@ -399,6 +434,7 @@ def run_live_parity(
     approval_text: str,
     user: str,
     timeout_seconds: int = 90,
+    direct_serial_values: dict[str, bytes] | None = None,
 ) -> LiveParityResult:
     """Run one exact, restoration-isolated, read-only receiver parity session."""
 
@@ -406,12 +442,18 @@ def run_live_parity(
         raise ModelError("live native parity must run as root")
     if approval_text != READ_ONLY_APPROVAL:
         raise ModelError("the exact read-only native parity approval is missing")
-    if not 10 <= timeout_seconds <= 120 or not 1 <= expected_generation < 2**63:
-        raise ModelError("live native parity generation or timeout is invalid")
-    revision = _git_revision(root)
-    _verify_candidate_package(package, package_sha256)
-    _require_isolated_services()
-    probes, profile, route = _profile_authority(root, profile_id)
+    preflight = prepare_live_parity(
+        root,
+        profile_id=profile_id,
+        package=package,
+        package_sha256=package_sha256,
+        expected_generation=expected_generation,
+        timeout_seconds=timeout_seconds,
+    )
+    revision = preflight.revision
+    probes = preflight.probes
+    profile = preflight.profile
+    route = preflight.route
     direct_evidence = _read_private_json(direct_evidence_path)
     validate_parity_evidence(direct_evidence)
     parity_cache, uid, gid = _user_cache(user, "native-transport-parity")
@@ -474,6 +516,7 @@ def run_live_parity(
         receiver_generation=expected_generation,
         created_at=timestamp,
         source_revision=revision,
+        direct_serial_values=direct_serial_values,
     )
     _drop_to_operator(user, uid, gid)
     evidence_path = write_parity_evidence(evidence, cache_root=parity_cache)

@@ -17,12 +17,14 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.model import ModelError
 from hfxdev.native_parity import (
+    build_direct_semantic_reference,
     build_offline_parity_evidence,
     canonical_request,
     parse_usbmon_capture,
     validate_parity_evidence,
     write_parity_evidence,
 )
+from hfxdev.native_direct_reference import parse_tshark_usbmon_fields
 from hfxdev.native_probe import load_native_probe_catalog
 
 
@@ -63,6 +65,40 @@ def _capture(request: bytes, response: bytes, *, device: int) -> str:
             "",
         )
     )
+
+
+def _tshark_row(
+    timestamp: str,
+    urb_id: str,
+    event: str,
+    *,
+    request_type: str = "",
+    request_id: str = "",
+    value: str = "",
+    interface: str = "",
+    setup_length: str = "",
+    payload: bytes = b"",
+) -> str:
+    fields = [
+        timestamp,
+        urb_id,
+        event,
+        "2",
+        "3",
+        "12",
+        "0",
+        request_type,
+        request_id,
+        value,
+        interface,
+        setup_length,
+        str(len(payload)) if payload else "0",
+        ":".join(f"{byte:02x}" for byte in payload),
+        "",
+        "",
+        "",
+    ]
+    return "\t".join(fields)
 
 
 def _probe(profile_id: str, method: str) -> dict:
@@ -127,6 +163,85 @@ class NativeParityTests(unittest.TestCase):
                 "authority": "captured-usbmon",
             },
         )
+
+    def test_full_tshark_fields_preserve_complete_direct_reports(self) -> None:
+        probe = _probe(self.mouse_profile, "get_firmware")
+        request = canonical_request(probe, 0x1F)
+        response = _response(request, bytes((2, 51)))
+        rows = "\n".join(
+            (
+                _tshark_row(
+                    "1.000001",
+                    "0x1",
+                    "S",
+                    request_type="0x21",
+                    request_id="9",
+                    value="0x0300",
+                    interface="0",
+                    setup_length="90",
+                    payload=request,
+                ),
+                _tshark_row(
+                    "1.000002",
+                    "0x2",
+                    "S",
+                    request_type="0xa1",
+                    request_id="1",
+                    value="0x0300",
+                    interface="0",
+                    setup_length="90",
+                ),
+                _tshark_row("1.000003", "0x2", "C", payload=response),
+            )
+        )
+        exchanges = parse_tshark_usbmon_fields(
+            rows,
+            target_bus=3,
+            target_device=12,
+        )
+        self.assertEqual(len(exchanges), 1)
+        self.assertEqual(exchanges[0].request, request)
+        self.assertEqual(exchanges[0].response, response)
+        self.assertEqual(exchanges[0].timestamp_us, 1_000_001)
+
+        reference = build_direct_semantic_reference(
+            ROOT,
+            profile_id=self.mouse_profile,
+            exchanges=exchanges,
+            created_at="2026-07-26T00:00:00Z",
+            source_revision=REVISION,
+        )
+        direct = next(
+            item
+            for item in reference.evidence["observations"]
+            if item["method"] == "get_firmware"
+        )
+        self.assertTrue(direct["request"]["complete_capture"])
+        self.assertEqual(direct["response"]["summary"]["minor"], 51)
+
+    def test_tshark_fields_reject_incomplete_or_conflicting_raw_material(self) -> None:
+        probe = _probe(self.mouse_profile, "get_firmware")
+        request = canonical_request(probe, 0x1F)
+        incomplete = _tshark_row(
+            "1.0",
+            "0x1",
+            "S",
+            request_type="0x21",
+            request_id="9",
+            value="0x0300",
+            interface="0",
+            setup_length="90",
+            payload=request[:-1],
+        )
+        with self.assertRaisesRegex(ModelError, "request is not complete"):
+            parse_tshark_usbmon_fields(incomplete, target_bus=3, target_device=12)
+
+        fields = _tshark_row("1.0", "0x1", "C", payload=request).split("\t")
+        fields[14] = (bytes((request[0] ^ 1,)) + request[1:]).hex()
+        with self.assertRaisesRegex(ModelError, "conflicting complete reports"):
+            parse_tshark_usbmon_fields(
+                "\t".join(fields), target_bus=3, target_device=12
+            )
 
     def test_route_translation_remains_optional_for_v1_evidence(self) -> None:
         legacy = deepcopy(self._mouse_firmware_evidence())

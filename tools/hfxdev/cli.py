@@ -15,6 +15,7 @@ from .governance import load_github_governance
 from .migration import capture_inventory, run_shadow_comparison, summary
 from .model import ModelError
 from .native_control import write_native_method_inventory
+from .native_direct_reference import run_staged_live_parity
 from .native_live_parity import run_live_parity
 from .native_onboarding import (
     build_draft_from_file,
@@ -142,6 +143,18 @@ def _parser() -> argparse.ArgumentParser:
     live_parity.add_argument("--approval-text", required=True)
     live_parity.add_argument("--user", required=True)
     live_parity.add_argument("--timeout-seconds", type=int, default=90)
+    staged_parity = native_commands.add_parser(
+        "staged-parity",
+        help="compare one exact device directly and through the receiver in one private session",
+    )
+    staged_parity.add_argument("--profile", required=True)
+    staged_parity.add_argument("--package", required=True, type=Path)
+    staged_parity.add_argument("--package-sha256", required=True)
+    staged_parity.add_argument("--expected-generation", required=True, type=int)
+    staged_parity.add_argument("--approval-text", required=True)
+    staged_parity.add_argument("--user", required=True)
+    staged_parity.add_argument("--timeout-seconds", type=int, default=90)
+    staged_parity.add_argument("--transition-timeout-seconds", type=int, default=300)
     native_openrazer = native_commands.add_parser(
         "prepare-openrazer",
         help="prepare the source-bound OpenRazer native transport tree",
@@ -380,6 +393,28 @@ def main(arguments: list[str] | None = None) -> int:
                     approval_text=args.approval_text,
                     user=args.user,
                     timeout_seconds=args.timeout_seconds,
+                )
+                print(f"Native transport parity: {result.conclusion}")
+                print(
+                    "Coverage: "
+                    f"{len(result.passed)} passed, "
+                    f"{len(result.missing)} incomplete, "
+                    f"{len(result.failed)} failed"
+                )
+                print(f"Privacy-safe evidence: {result.evidence_path}")
+                print(f"Source-bound run: {result.run_path}")
+                return 0
+            if args.native_command == "staged-parity":
+                result = run_staged_live_parity(
+                    root,
+                    profile_id=args.profile,
+                    package=args.package,
+                    package_sha256=args.package_sha256,
+                    expected_generation=args.expected_generation,
+                    approval_text=args.approval_text,
+                    user=args.user,
+                    timeout_seconds=args.timeout_seconds,
+                    transition_timeout_seconds=args.transition_timeout_seconds,
                 )
                 print(f"Native transport parity: {result.conclusion}")
                 print(

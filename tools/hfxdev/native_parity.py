@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 import hashlib
 import json
@@ -62,6 +62,14 @@ class MatchedExchange:
     summary: dict[str, Any]
     semantic_value: Any
     serial_value: bytes | None
+
+
+@dataclass(frozen=True)
+class DirectSemanticReference:
+    """Sanitized direct evidence plus process-local comparison material."""
+
+    evidence: dict[str, Any]
+    serial_values: dict[str, bytes] = field(repr=False)
 
 
 def _bounded_int(value: Any, minimum: int, maximum: int) -> bool:
@@ -251,6 +259,13 @@ def _response_arguments(response: bytes) -> bytes:
     return response[8 : min(len(response), 8 + data_size)]
 
 
+def _serial_comparison_value(value: bytes) -> bytes | None:
+    normalized = value.rstrip(b"\x00\t\n\r\x0b\x0c ")
+    if not normalized or len(normalized) > 80 or b"\x00" in normalized:
+        return None
+    return normalized
+
+
 def _semantic_summary(
     summary_kind: str,
     response: bytes,
@@ -261,9 +276,10 @@ def _semantic_summary(
     summary: dict[str, Any] = {"kind": summary_kind}
 
     if summary_kind == "redacted-serial-equality":
+        serial = _serial_comparison_value(bytes(arguments)) if complete_arguments else None
         summary["redacted"] = True
-        summary["available"] = complete_arguments
-        return summary, None, bytes(arguments) if complete_arguments else None
+        summary["available"] = serial is not None
+        return summary, None, serial
 
     value: Any = None
     if summary_kind == "firmware-version" and len(arguments) >= 2:
@@ -296,12 +312,22 @@ def _semantic_summary(
     elif summary_kind == "dpi-stages" and len(arguments) >= 3:
         active, count = arguments[1], arguments[2]
         required = count * 7 + 1
-        value = (active, count) if len(arguments) >= required else None
+        complete = len(arguments) >= required
+        stages = [
+            {
+                "x": int.from_bytes(arguments[4 + index * 7 : 6 + index * 7], "big"),
+                "y": int.from_bytes(arguments[6 + index * 7 : 8 + index * 7], "big"),
+            }
+            for index in range(count)
+            if 8 + index * 7 <= len(arguments)
+        ]
+        value = (active, tuple((stage["x"], stage["y"]) for stage in stages)) if complete else None
         summary.update(
             {
                 "active_stage": active,
                 "stage_count": count,
-                "complete_stage_table": len(arguments) >= required,
+                "stages": stages,
+                "complete_stage_table": complete,
             }
         )
     elif summary_kind == "keyboard-layout" and len(arguments) >= 2:
@@ -402,6 +428,69 @@ def _match_exchanges(
         )
         matched.setdefault(item.method, []).append(item)
     return matched
+
+
+def build_direct_semantic_reference(
+    root: Path,
+    *,
+    profile_id: str,
+    exchanges: tuple[UsbmonExchange, ...],
+    created_at: str | None = None,
+    source_revision: str | None = None,
+) -> DirectSemanticReference:
+    """Sanitizes complete direct USB exchanges without persisting identity material."""
+
+    if len(exchanges) > 256:
+        raise ModelError("direct semantic reference exceeds its exchange bound")
+    catalog = load_native_probe_catalog(root)
+    profile = _profile(catalog, profile_id)
+    matches = _match_exchanges(profile, exchanges)
+    required = [probe["method"] for probe in profile["probes"]]
+    observations: list[dict[str, Any]] = []
+    serial_values: dict[str, bytes] = {}
+    for method in required:
+        items = matches.get(method, [])
+        if not items:
+            continue
+        item = items[-1]
+        observations.append(_direct_observation(item))
+        if item.serial_value is not None:
+            serial_values[method] = item.serial_value
+    timestamp = (
+        created_at
+        or datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    )
+    revision = source_revision or _git_revision(root)
+    evidence = {
+        "$schema": "https://hyperflux.dev/schemas/native-transport-parity-evidence-v1.json",
+        "schema": EVIDENCE_SCHEMA,
+        "created_at": timestamp,
+        "source_revision": revision,
+        "profile_id": profile_id,
+        "upstream_commit": catalog["upstream"]["commit"],
+        "catalog_sha256": sha256_file(
+            root / "integrations" / "openrazer" / "native-probe-catalog.json"
+        ),
+        "safety": {
+            "read_only": True,
+            "settings_changed": False,
+            "serials_persisted": False,
+            "raw_reports_persisted": False,
+            "private_paths_persisted": False,
+            "network_upload": False,
+            "file_mode": "0600",
+        },
+        "observations": observations,
+        "coverage": {
+            "required": required,
+            "passed": [],
+            "missing": required,
+            "failed": [],
+        },
+        "conclusion": "incomplete",
+    }
+    validate_parity_evidence(evidence)
+    return DirectSemanticReference(evidence=evidence, serial_values=serial_values)
 
 
 def _validate_raw_qualification(
@@ -585,10 +674,30 @@ def _semantic_parity_from_evidence(
     probe: dict[str, Any],
     direct: dict[str, Any] | None,
     receiver: MatchedExchange,
+    direct_serial_value: bytes | None = None,
 ) -> bool | None:
     if direct is None or not receiver.response_complete:
         return None
     response = direct["response"]
+    if probe["comparison"] == "redacted-equality":
+        if not response["structural_match"] or not receiver.response_structural:
+            return False
+        direct_status = response["status"]
+        receiver_status = receiver.exchange.response[0]
+        if BUSY_STATUS in {direct_status, receiver_status}:
+            return None
+        if direct_status != receiver_status:
+            return False
+        if direct_status != SUCCESS_STATUS:
+            return None
+        if (
+            response["summary"].get("available") is not True
+            or receiver.summary.get("available") is not True
+            or direct_serial_value is None
+            or receiver.serial_value is None
+        ):
+            return None
+        return secrets.compare_digest(direct_serial_value, receiver.serial_value)
     return _semantic_summary_parity(
         probe,
         direct_status=response["status"],
@@ -610,6 +719,7 @@ def build_live_parity_evidence(
     receiver_generation: int,
     created_at: str | None = None,
     source_revision: str | None = None,
+    direct_serial_values: dict[str, bytes] | None = None,
 ) -> dict[str, Any]:
     """Sanitize one ephemeral receiver qualification into canonical parity evidence."""
 
@@ -638,14 +748,23 @@ def build_live_parity_evidence(
         receiver_generation=receiver_generation,
     )
     receiver_matches = _raw_receiver_matches(profile, raw_qualification)
+    required = [probe["method"] for probe in profile["probes"]]
+    probes = {probe["method"]: probe for probe in profile["probes"]}
     direct_by_method = {
         observation["method"]: observation
         for observation in direct_evidence["observations"]
         if observation["origin"] == "direct-semantic-reference"
     }
+    private_serials = direct_serial_values or {}
+    if any(
+        method not in direct_by_method
+        or probes[method]["comparison"] != "redacted-equality"
+        or not isinstance(value, bytes)
+        or _serial_comparison_value(value) != value
+        for method, value in private_serials.items()
+    ):
+        raise ModelError("direct serial comparison material is invalid")
     maximum_attempts = catalog["busy_retry"]["maximum_attempts"]
-    required = [probe["method"] for probe in profile["probes"]]
-    probes = {probe["method"]: probe for probe in profile["probes"]}
     receiver_selector = _declared_receiver_selector(
         root, profile["wireless_identity"]["device_kind"]
     )
@@ -680,7 +799,12 @@ def build_live_parity_evidence(
             ),
         )
         receiver["receiver_comparison"]["semantic_parity"] = (
-            _semantic_parity_from_evidence(probes[method], direct, routed[-1])
+            _semantic_parity_from_evidence(
+                probes[method],
+                direct,
+                routed[-1],
+                private_serials.get(method),
+            )
         )
         receiver_observations[method] = receiver
         observations.append(receiver)

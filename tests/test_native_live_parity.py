@@ -151,6 +151,78 @@ class NativeLiveParityTests(unittest.TestCase):
         self.assertNotIn(request.hex(), serialized)
         self.assertNotIn(response.hex(), serialized)
 
+    def test_staged_serial_material_is_compared_only_in_memory(self) -> None:
+        probe = _probe("get_serial")
+        request = canonical_request(probe, 0x1F)
+        serial = b"PRIVATE-SERIAL-1234567"
+        response = _response(request, serial)
+        direct = self._direct_method_evidence("get_serial", serial)
+        evidence = build_live_parity_evidence(
+            ROOT,
+            profile_id=PROFILE,
+            direct_evidence=direct,
+            raw_qualification=_raw([_raw_record("get_serial", request, response)]),
+            package_sha256=PACKAGE_SHA256,
+            receiver_generation=7,
+            source_revision=REVISION,
+            direct_serial_values={"get_serial": serial},
+        )
+        rendered = json.dumps(evidence, sort_keys=True)
+        self.assertIn("get_serial", evidence["coverage"]["passed"])
+        self.assertNotIn(serial.decode(), rendered)
+        self.assertNotIn(hashlib.sha256(serial).hexdigest(), rendered)
+
+        mismatched = build_live_parity_evidence(
+            ROOT,
+            profile_id=PROFILE,
+            direct_evidence=direct,
+            raw_qualification=_raw([_raw_record("get_serial", request, response)]),
+            package_sha256=PACKAGE_SHA256,
+            receiver_generation=7,
+            source_revision=REVISION,
+            direct_serial_values={"get_serial": b"DIFFERENT-SERIAL"},
+        )
+        self.assertIn("get_serial", mismatched["coverage"]["failed"])
+
+    def test_serial_comparison_preserves_leading_bytes(self) -> None:
+        probe = _probe("get_serial")
+        request = canonical_request(probe, 0x1F)
+        direct_serial = b" PRIVATE-SERIAL"
+        receiver_serial = b"PRIVATE-SERIAL"
+        direct = self._direct_method_evidence("get_serial", direct_serial)
+        evidence = build_live_parity_evidence(
+            ROOT,
+            profile_id=PROFILE,
+            direct_evidence=direct,
+            raw_qualification=_raw(
+                [_raw_record("get_serial", request, _response(request, receiver_serial))]
+            ),
+            package_sha256=PACKAGE_SHA256,
+            receiver_generation=7,
+            source_revision=REVISION,
+            direct_serial_values={"get_serial": direct_serial},
+        )
+        self.assertIn("get_serial", evidence["coverage"]["failed"])
+
+    def test_serial_material_is_rejected_for_non_serial_methods(self) -> None:
+        probe = _probe("get_firmware")
+        request = canonical_request(probe, 0x1F)
+        response = _response(request, bytes((2, 51)))
+        direct = self._direct_method_evidence("get_firmware", bytes((2, 51)))
+        with self.assertRaisesRegex(ModelError, "serial comparison material"):
+            build_live_parity_evidence(
+                ROOT,
+                profile_id=PROFILE,
+                direct_evidence=direct,
+                raw_qualification=_raw(
+                    [_raw_record("get_firmware", request, response)]
+                ),
+                package_sha256=PACKAGE_SHA256,
+                receiver_generation=7,
+                source_revision=REVISION,
+                direct_serial_values={"get_firmware": b"NOT-A-SERIAL"},
+            )
+
     def test_source_bound_semantic_reference_does_not_require_raw_direct_report(self) -> None:
         probe = _probe("get_firmware")
         request = canonical_request(probe, 0x1F)
@@ -207,6 +279,82 @@ class NativeLiveParityTests(unittest.TestCase):
                 {"kind": "device-mode", "mode": 4, "parameter": 7, "available": True},
                 {"kind": "device-mode", "mode": 4, "parameter": 7, "available": True},
             ],
+        )
+
+    def test_dpi_stage_summary_covers_every_upstream_exposed_xy_pair(self) -> None:
+        probe = _probe("get_dpi_stages")
+        request = canonical_request(probe, 0x1F)
+        arguments = bytes(
+            (
+                1,
+                2,
+                2,
+                1,
+                0x03,
+                0x20,
+                0x03,
+                0x20,
+                0,
+                0,
+                2,
+                0x07,
+                0x08,
+                0x07,
+                0x08,
+                0,
+                0,
+            )
+        )
+        response = _response(request, arguments)
+        direct = self._direct_method_evidence("get_dpi_stages", arguments)
+        evidence = build_live_parity_evidence(
+            ROOT,
+            profile_id=PROFILE,
+            direct_evidence=direct,
+            raw_qualification=_raw([_raw_record("get_dpi_stages", request, response)]),
+            package_sha256=PACKAGE_SHA256,
+            receiver_generation=7,
+            source_revision=REVISION,
+        )
+        routed = next(
+            item
+            for item in evidence["observations"]
+            if item["method"] == "get_dpi_stages"
+            and item["origin"] == "receiver-route"
+        )
+        self.assertEqual(
+            routed["response"]["summary"],
+            {
+                "kind": "dpi-stages",
+                "active_stage": 2,
+                "stage_count": 2,
+                "stages": [{"x": 800, "y": 800}, {"x": 1800, "y": 1800}],
+                "complete_stage_table": True,
+                "available": True,
+            },
+        )
+        self.assertIn("get_dpi_stages", evidence["coverage"]["passed"])
+
+    def test_truncated_dpi_stage_table_remains_incomplete(self) -> None:
+        direct = self._direct_method_evidence(
+            "get_dpi_stages",
+            bytes((1, 2, 2, 1, 0x03, 0x20, 0x03, 0x20)),
+        )
+        observation = next(
+            item
+            for item in direct["observations"]
+            if item["method"] == "get_dpi_stages"
+        )
+        self.assertEqual(
+            observation["response"]["summary"],
+            {
+                "kind": "dpi-stages",
+                "active_stage": 2,
+                "stage_count": 2,
+                "stages": [{"x": 800, "y": 800}],
+                "complete_stage_table": False,
+                "available": False,
+            },
         )
 
     def test_matching_terminal_failure_is_preserved_as_transport_parity(self) -> None:
