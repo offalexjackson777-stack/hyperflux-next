@@ -156,25 +156,21 @@ class NativeDirectReferenceTests(unittest.TestCase):
                 f"filesize:{direct.MAX_CAPTURE_BYTES // 1024}",
                 command,
             )
+            format_index = command.index("-F")
+            self.assertEqual(command[format_index + 1], "pcap")
             self.assertEqual(started.diagnostic_path.stat().st_mode & 0o777, 0o600)
 
-    def test_capture_export_filters_to_the_exact_physical_device(self) -> None:
-        completed = SimpleNamespace(returncode=0, stdout=b"", stderr=b"")
-        with (
-            patch.object(direct.shutil, "which", return_value="/usr/bin/tshark"),
-            patch.object(direct.subprocess, "run", return_value=completed) as run,
-        ):
-            self.assertEqual(
-                direct._export_capture(Path("direct.pcapng"), bus=3, device=12),
-                "",
-            )
-        command = run.call_args.args[0]
-        self.assertIn("-n", command)
-        filter_index = command.index("-Y")
-        self.assertEqual(
-            command[filter_index + 1],
-            "usb.bus_id == 3 && usb.device_address == 12",
-        )
+    def test_capture_reader_requires_one_bounded_regular_file(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            capture = root / "direct.pcap"
+            capture.write_bytes(b"pcap")
+            self.assertEqual(direct._capture_bytes(capture), b"pcap")
+            with self.assertRaisesRegex(ModelError, "not a regular file"):
+                direct._capture_bytes(root)
+            with patch.object(direct, "MAX_CAPTURE_BYTES", 3):
+                with self.assertRaisesRegex(ModelError, "invalid size"):
+                    direct._capture_bytes(capture)
 
     def test_staged_session_keeps_serial_material_in_process_only(self) -> None:
         preflight = SimpleNamespace(

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
 import os
 from pathlib import Path
 import pwd
@@ -13,6 +12,7 @@ import selectors
 import shutil
 import signal
 import stat
+import struct
 import subprocess
 import sys
 import tempfile
@@ -40,143 +40,166 @@ HID_IDENTITY_PATTERN = re.compile(
 )
 MAX_ATTRIBUTE_BYTES = 4096
 MAX_CAPTURE_BYTES = 32 * 1024 * 1024
+MAX_CAPTURE_PACKETS = 65536
 MAX_PROCESS_OUTPUT_BYTES = 64 * 1024
 CAPTURE_PREFIX = "hyperflux-next-direct-reference-"
 STAGED_PARITY_APPROVAL = (
     "approve HyperFlux Next supervised direct-to-receiver native parity session"
 )
-TSHARK_FIELDS = (
-    "frame.time_epoch",
-    "usb.urb_id",
-    "usb.urb_type",
-    "usb.transfer_type",
-    "usb.bus_id",
-    "usb.device_address",
-    "usb.endpoint_address",
-    "usb.bmRequestType",
-    "usb.setup.bRequest",
-    "usb.setup.wValue",
-    "usb.setup.wIndex",
-    "usb.setup.wLength",
-    "usb.data_len",
-    "usb.capdata",
-    "usb.data_fragment",
-    "usbhid.data",
-    "usbhid.data.vendor",
-)
+PCAP_GLOBAL_HEADER_SIZE = 24
+PCAP_RECORD_HEADER_SIZE = 16
+USBMON_MMAPPED_HEADER_SIZE = 64
+USBMON_MMAPPED_LINKTYPE = 220
+USBMON_CONTROL_TRANSFER = 2
+USBMON_SUBMIT = ord("S")
+USBMON_COMPLETE = ord("C")
+
+PCAP_FORMATS = {
+    b"\xd4\xc3\xb2\xa1": ("<", 1),
+    b"\xa1\xb2\xc3\xd4": (">", 1),
+    b"\x4d\x3c\xb2\xa1": ("<", 1_000),
+    b"\xa1\xb2\x3c\x4d": (">", 1_000),
+}
 
 
-def _numeric_field(value: str, label: str) -> int:
-    candidate = value.strip().lower()
-    if not candidate:
-        raise ModelError(f"tshark USB row lacks {label}")
+def _capture_bytes(path: Path) -> bytes:
     try:
-        return int(candidate, 16 if candidate.startswith("0x") else 10)
-    except ValueError as error:
-        raise ModelError(f"tshark USB row has invalid {label}") from error
+        metadata = path.lstat()
+        if not stat.S_ISREG(metadata.st_mode):
+            raise ModelError("private direct USB capture is not a regular file")
+        if metadata.st_size <= 0 or metadata.st_size > MAX_CAPTURE_BYTES:
+            raise ModelError("private direct USB capture has an invalid size")
+        with path.open("rb") as handle:
+            value = handle.read(MAX_CAPTURE_BYTES + 1)
+    except OSError as error:
+        raise ModelError(f"cannot read private direct USB capture: {error}") from error
+    if len(value) > MAX_CAPTURE_BYTES:
+        raise ModelError("private direct USB capture exceeded its bound")
+    return value
 
 
-def _tshark_payload(values: list[str]) -> bytes:
-    payloads: set[bytes] = set()
-    for value in values:
-        compact = value.replace(":", "").strip()
-        if not compact:
-            continue
-        if re.fullmatch(r"[0-9a-fA-F]+", compact) is None or len(compact) % 2:
-            raise ModelError("tshark USB row contains malformed report bytes")
-        decoded = bytes.fromhex(compact)
-        if len(decoded) == REPORT_SIZE:
-            payloads.add(decoded)
-    if len(payloads) > 1:
-        raise ModelError("tshark USB row exposes conflicting complete reports")
-    return next(iter(payloads), b"")
+def _usbmon_number(value: bytes, *, signed: bool = False) -> int:
+    return int.from_bytes(value, byteorder=sys.byteorder, signed=signed)
 
 
-def parse_tshark_usbmon_fields(
-    text: str,
+def parse_pcap_usbmon_capture(
+    value: bytes,
     *,
     target_bus: int,
     target_device: int,
 ) -> tuple[UsbmonExchange, ...]:
-    """Parses bounded full-capture tshark fields for one direct USB device."""
+    """Parses one bounded Linux usbmon pcap without dissector-dependent fields."""
 
-    encoded = text.encode("utf-8", errors="strict")
-    if len(encoded) > MAX_CAPTURE_BYTES:
-        raise ModelError("tshark USB export exceeds the bounded size limit")
-    lines = text.splitlines()
-    if len(lines) > 65536:
-        raise ModelError("tshark USB export exceeds the bounded line limit")
+    if not isinstance(value, bytes) or len(value) > MAX_CAPTURE_BYTES:
+        raise ModelError("private direct USB capture exceeds the bounded size limit")
+    if len(value) < PCAP_GLOBAL_HEADER_SIZE:
+        raise ModelError("private direct USB capture has a truncated pcap header")
     if not 1 <= target_bus <= 255 or not 1 <= target_device <= 255:
-        raise ModelError("tshark USB target identity is invalid")
+        raise ModelError("direct USB target identity is invalid")
+
+    try:
+        endian, fractional_divisor = PCAP_FORMATS[value[:4]]
+    except KeyError as error:
+        raise ModelError("private direct USB capture has an unsupported pcap format") from error
+    (
+        version_major,
+        version_minor,
+        _zone,
+        _sigfigs,
+        snaplen,
+        linktype,
+    ) = struct.unpack_from(f"{endian}HHiIII", value, 4)
+    if (version_major, version_minor) != (2, 4):
+        raise ModelError("private direct USB capture has an unsupported pcap version")
+    if not 1 <= snaplen <= MAX_CAPTURE_BYTES:
+        raise ModelError("private direct USB capture has an invalid snapshot bound")
+    if linktype != USBMON_MMAPPED_LINKTYPE:
+        raise ModelError("private direct USB capture is not Linux usbmon mmapped data")
 
     pending_sets: list[tuple[int, int, bytes]] = []
-    pending_gets: dict[str, tuple[int, int]] = {}
+    pending_gets: dict[int, tuple[int, int]] = {}
     exchanges: list[UsbmonExchange] = []
-    for line_number, line in enumerate(lines, start=1):
-        fields = line.split("\t")
-        if len(fields) != len(TSHARK_FIELDS):
-            raise ModelError(f"tshark USB row {line_number} has an invalid field count")
-        (
-            timestamp,
-            urb_id,
-            urb_type,
-            transfer_type,
-            bus,
-            device,
-            _endpoint,
-            request_type,
-            request_id,
-            value,
-            interface,
-            setup_length,
-            _data_length,
-            capdata,
-            fragment,
-            hid_data,
-            hid_vendor_data,
-        ) = fields
-        if not bus or not device:
-            continue
+    offset = PCAP_GLOBAL_HEADER_SIZE
+    packet_count = 0
+    while offset < len(value):
+        packet_count += 1
+        if packet_count > MAX_CAPTURE_PACKETS:
+            raise ModelError("private direct USB capture exceeds the packet bound")
+        if len(value) - offset < PCAP_RECORD_HEADER_SIZE:
+            raise ModelError("private direct USB capture ends in a partial pcap record")
+        seconds, fraction, captured_length, original_length = struct.unpack_from(
+            f"{endian}IIII", value, offset
+        )
+        offset += PCAP_RECORD_HEADER_SIZE
         if (
-            _numeric_field(bus, "bus") != target_bus
-            or _numeric_field(device, "device") != target_device
+            captured_length > snaplen
+            or captured_length > MAX_CAPTURE_BYTES
+            or original_length > MAX_CAPTURE_BYTES
+            or original_length < captured_length
+            or len(value) - offset < captured_length
+        ):
+            raise ModelError("private direct USB capture has an invalid pcap record")
+        if fraction >= 1_000_000 * fractional_divisor:
+            raise ModelError("private direct USB capture has an invalid timestamp")
+        frame = value[offset : offset + captured_length]
+        offset += captured_length
+        if len(frame) < 14:
+            continue
+        event = frame[8]
+        transfer_type = frame[9]
+        device = frame[11]
+        bus = _usbmon_number(frame[12:14])
+        if (
+            bus != target_bus
+            or device != target_device
+            or transfer_type != USBMON_CONTROL_TRANSFER
         ):
             continue
-        if not transfer_type or _numeric_field(transfer_type, "transfer type") != 2:
-            continue
-        try:
-            timestamp_us = int(Decimal(timestamp) * 1_000_000)
-        except (InvalidOperation, ValueError) as error:
-            raise ModelError(f"tshark USB row {line_number} has an invalid timestamp") from error
-        event = urb_type.strip()
-        if event in {"0x53", "83"}:
-            event = "S"
-        elif event in {"0x43", "67"}:
-            event = "C"
-        payload = _tshark_payload([capdata, fragment, hid_data, hid_vendor_data])
+        if len(frame) < USBMON_MMAPPED_HEADER_SIZE:
+            raise ModelError("captured direct USB control record is truncated")
 
-        if event == "S" and request_type and request_id and value and setup_length:
+        urb_id = _usbmon_number(frame[0:8])
+        setup_flag = frame[14]
+        data_flag = frame[15]
+        status = _usbmon_number(frame[28:32], signed=True)
+        data_length = _usbmon_number(frame[36:40])
+        payload = frame[USBMON_MMAPPED_HEADER_SIZE:]
+        timestamp_us = seconds * 1_000_000 + fraction // fractional_divisor
+
+        if event == USBMON_SUBMIT and setup_flag == 0:
             setup = (
-                _numeric_field(request_type, "request type"),
-                _numeric_field(request_id, "request identifier"),
-                _numeric_field(value, "report value"),
-                _numeric_field(interface or "0", "interface"),
-                _numeric_field(setup_length, "setup length"),
+                frame[40],
+                frame[41],
+                int.from_bytes(frame[42:44], byteorder="little"),
+                int.from_bytes(frame[44:46], byteorder="little"),
+                int.from_bytes(frame[46:48], byteorder="little"),
             )
             if setup[:3] == (0x21, 0x09, 0x0300) and setup[4] == REPORT_SIZE:
-                if len(payload) != REPORT_SIZE:
+                if (
+                    data_flag != 0
+                    or data_length != REPORT_SIZE
+                    or len(payload) != REPORT_SIZE
+                ):
                     raise ModelError("captured direct Razer request is not complete")
                 pending_sets.append((timestamp_us, setup[3], payload))
             elif setup[:3] == (0xA1, 0x01, 0x0300) and setup[4] == REPORT_SIZE:
-                if not urb_id:
+                if urb_id == 0:
                     raise ModelError("captured direct Razer GET lacks its URB identity")
+                if urb_id in pending_gets:
+                    raise ModelError("captured direct Razer GET reuses a pending URB identity")
                 pending_gets[urb_id] = (timestamp_us, setup[3])
             continue
 
-        if event != "C" or not urb_id or urb_id not in pending_gets or not payload:
+        if event != USBMON_COMPLETE or urb_id not in pending_gets:
             continue
         _get_timestamp, get_interface = pending_gets.pop(urb_id)
-        if len(payload) != REPORT_SIZE:
+        if status != 0:
+            raise ModelError("captured direct Razer response completed with an error")
+        if (
+            data_flag != 0
+            or data_length != REPORT_SIZE
+            or len(payload) != REPORT_SIZE
+        ):
             raise ModelError("captured direct Razer response is not complete")
         if not pending_sets:
             raise ModelError("captured direct Razer response has no preceding SET")
@@ -197,7 +220,7 @@ def parse_tshark_usbmon_fields(
         )
 
     if pending_sets or pending_gets:
-        raise ModelError("tshark USB export ends with an unmatched Razer transfer")
+        raise ModelError("private direct USB capture ends with an unmatched Razer transfer")
     return tuple(exchanges)
 
 
@@ -387,6 +410,8 @@ def _start_dumpcap(interface: str, capture: Path) -> CaptureProcess:
             process = subprocess.Popen(
                 [
                     executable,
+                    "-F",
+                    "pcap",
                     "-i",
                     interface,
                     "-s",
@@ -428,49 +453,6 @@ def _stop_dumpcap(capture: CaptureProcess) -> None:
         raise ModelError(f"private direct USB capture failed: {detail}")
 
 
-def _export_capture(capture: Path, *, bus: int, device: int) -> str:
-    executable = shutil.which("tshark")
-    if executable is None:
-        raise ModelError("tshark is required for complete direct USB references")
-    command = [
-        executable,
-        "-n",
-        "-r",
-        str(capture),
-        "-Y",
-        f"usb.bus_id == {bus} && usb.device_address == {device}",
-        "-T",
-        "fields",
-        "-E",
-        "separator=/t",
-        "-E",
-        "quote=n",
-        "-E",
-        "occurrence=f",
-    ]
-    for field_name in TSHARK_FIELDS:
-        command.extend(("-e", field_name))
-    try:
-        result = subprocess.run(
-            command,
-            check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=20,
-        )
-    except (OSError, subprocess.SubprocessError) as error:
-        raise ModelError(f"cannot sanitize direct USB capture: {error}") from error
-    if result.returncode != 0:
-        detail = _bounded_output(result.stderr, "tshark")
-        raise ModelError(f"cannot sanitize direct USB capture: {detail}")
-    if len(result.stdout) > MAX_CAPTURE_BYTES:
-        raise ModelError("sanitized direct USB capture exceeded its bound")
-    try:
-        return result.stdout.decode("utf-8")
-    except UnicodeError as error:
-        raise ModelError("sanitized direct USB capture is not UTF-8") from error
-
-
 def capture_direct_reference(
     root: Path,
     *,
@@ -489,7 +471,7 @@ def capture_direct_reference(
     )
     process: CaptureProcess | None = None
     with _private_capture_directory(*_capture_process_identity()) as directory:
-        capture = directory / "direct.pcapng"
+        capture = directory / "direct.pcap"
         try:
             process = _start_dumpcap(f"usbmon{endpoint.bus}", capture)
             attributes = trigger_direct_attributes(endpoint.driver_entry, profile)
@@ -508,13 +490,8 @@ def capture_direct_reference(
         ):
             raise ModelError("private direct USB capture has an invalid type or size")
         os.chmod(capture, 0o600)
-        exported = _export_capture(
-            capture,
-            bus=endpoint.bus,
-            device=endpoint.device,
-        )
-        exchanges = parse_tshark_usbmon_fields(
-            exported,
+        exchanges = parse_pcap_usbmon_capture(
+            _capture_bytes(capture),
             target_bus=endpoint.bus,
             target_device=endpoint.device,
         )

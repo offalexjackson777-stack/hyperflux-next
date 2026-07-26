@@ -7,6 +7,7 @@ import json
 from copy import deepcopy
 from pathlib import Path
 import stat
+import struct
 import sys
 from tempfile import TemporaryDirectory
 import unittest
@@ -24,7 +25,7 @@ from hfxdev.native_parity import (
     validate_parity_evidence,
     write_parity_evidence,
 )
-from hfxdev.native_direct_reference import parse_tshark_usbmon_fields
+from hfxdev.native_direct_reference import parse_pcap_usbmon_capture
 from hfxdev.native_probe import load_native_probe_catalog
 
 
@@ -67,38 +68,70 @@ def _capture(request: bytes, response: bytes, *, device: int) -> str:
     )
 
 
-def _tshark_row(
-    timestamp: str,
-    urb_id: str,
+def _usbmon_frame(
+    urb_id: int,
     event: str,
     *,
-    request_type: str = "",
-    request_id: str = "",
-    value: str = "",
-    interface: str = "",
-    setup_length: str = "",
-    payload: bytes = b"",
-) -> str:
-    fields = [
-        timestamp,
-        urb_id,
-        event,
-        "2",
-        "3",
-        "12",
-        "0",
-        request_type,
-        request_id,
-        value,
-        interface,
-        setup_length,
-        str(len(payload)) if payload else "0",
-        ":".join(f"{byte:02x}" for byte in payload),
-        "",
-        "",
-        "",
-    ]
-    return "\t".join(fields)
+    device: int = 12,
+    setup: tuple[int, int, int, int, int] | None = None,
+    data: bytes = b"",
+    status: int = 0,
+) -> bytes:
+    frame = bytearray(64)
+    frame[0:8] = urb_id.to_bytes(8, byteorder=sys.byteorder)
+    frame[8] = ord(event)
+    frame[9] = 2
+    frame[11] = device
+    frame[12:14] = (3).to_bytes(2, byteorder=sys.byteorder)
+    frame[14] = 0 if setup is not None else 1
+    frame[15] = 0 if data else 1
+    frame[28:32] = status.to_bytes(4, byteorder=sys.byteorder, signed=True)
+    frame[32:36] = (setup[4] if setup else len(data)).to_bytes(
+        4, byteorder=sys.byteorder
+    )
+    frame[36:40] = len(data).to_bytes(4, byteorder=sys.byteorder)
+    if setup is not None:
+        request_type, request_id, value, interface, length = setup
+        frame[40] = request_type
+        frame[41] = request_id
+        frame[42:44] = value.to_bytes(2, byteorder="little")
+        frame[44:46] = interface.to_bytes(2, byteorder="little")
+        frame[46:48] = length.to_bytes(2, byteorder="little")
+    return bytes(frame) + data
+
+
+def _pcap_capture(
+    request: bytes,
+    response: bytes,
+    *,
+    device: int = 12,
+    response_status: int = 0,
+    linktype: int = 220,
+) -> bytes:
+    frames = (
+        _usbmon_frame(
+            1,
+            "S",
+            device=device,
+            setup=(0x21, 0x09, 0x0300, 3, 90),
+            data=request,
+        ),
+        _usbmon_frame(1, "C", device=device),
+        _usbmon_frame(
+            2,
+            "S",
+            device=device,
+            setup=(0xA1, 0x01, 0x0300, 3, 90),
+        ),
+        _usbmon_frame(2, "C", device=device, data=response, status=response_status),
+    )
+    capture = bytearray(
+        struct.pack("<IHHIIII", 0xA1B2C3D4, 2, 4, 0, 0, 262144, linktype)
+    )
+    for fraction, frame in enumerate(frames, start=1):
+        capture.extend(struct.pack("<IIII", 1, fraction, len(frame), len(frame)))
+        capture.extend(frame)
+    return bytes(capture)
 
 
 def _probe(profile_id: str, method: str) -> dict:
@@ -164,38 +197,12 @@ class NativeParityTests(unittest.TestCase):
             },
         )
 
-    def test_full_tshark_fields_preserve_complete_direct_reports(self) -> None:
+    def test_linux_usbmon_pcap_preserves_complete_direct_reports(self) -> None:
         probe = _probe(self.mouse_profile, "get_firmware")
         request = canonical_request(probe, 0x1F)
         response = _response(request, bytes((2, 51)))
-        rows = "\n".join(
-            (
-                _tshark_row(
-                    "1.000001",
-                    "0x1",
-                    "S",
-                    request_type="0x21",
-                    request_id="9",
-                    value="0x0300",
-                    interface="0",
-                    setup_length="90",
-                    payload=request,
-                ),
-                _tshark_row(
-                    "1.000002",
-                    "0x2",
-                    "S",
-                    request_type="0xa1",
-                    request_id="1",
-                    value="0x0300",
-                    interface="0",
-                    setup_length="90",
-                ),
-                _tshark_row("1.000003", "0x2", "C", payload=response),
-            )
-        )
-        exchanges = parse_tshark_usbmon_fields(
-            rows,
+        exchanges = parse_pcap_usbmon_capture(
+            _pcap_capture(request, response),
             target_bus=3,
             target_device=12,
         )
@@ -203,6 +210,14 @@ class NativeParityTests(unittest.TestCase):
         self.assertEqual(exchanges[0].request, request)
         self.assertEqual(exchanges[0].response, response)
         self.assertEqual(exchanges[0].timestamp_us, 1_000_001)
+        self.assertEqual(
+            parse_pcap_usbmon_capture(
+                _pcap_capture(request, response),
+                target_bus=3,
+                target_device=11,
+            ),
+            (),
+        )
 
         reference = build_direct_semantic_reference(
             ROOT,
@@ -219,28 +234,29 @@ class NativeParityTests(unittest.TestCase):
         self.assertTrue(direct["request"]["complete_capture"])
         self.assertEqual(direct["response"]["summary"]["minor"], 51)
 
-    def test_tshark_fields_reject_incomplete_or_conflicting_raw_material(self) -> None:
+    def test_linux_usbmon_pcap_rejects_incomplete_or_failed_material(self) -> None:
         probe = _probe(self.mouse_profile, "get_firmware")
         request = canonical_request(probe, 0x1F)
-        incomplete = _tshark_row(
-            "1.0",
-            "0x1",
-            "S",
-            request_type="0x21",
-            request_id="9",
-            value="0x0300",
-            interface="0",
-            setup_length="90",
-            payload=request[:-1],
-        )
+        response = _response(request, bytes((2, 51)))
         with self.assertRaisesRegex(ModelError, "request is not complete"):
-            parse_tshark_usbmon_fields(incomplete, target_bus=3, target_device=12)
+            parse_pcap_usbmon_capture(
+                _pcap_capture(request[:-1], response),
+                target_bus=3,
+                target_device=12,
+            )
 
-        fields = _tshark_row("1.0", "0x1", "C", payload=request).split("\t")
-        fields[14] = (bytes((request[0] ^ 1,)) + request[1:]).hex()
-        with self.assertRaisesRegex(ModelError, "conflicting complete reports"):
-            parse_tshark_usbmon_fields(
-                "\t".join(fields), target_bus=3, target_device=12
+        with self.assertRaisesRegex(ModelError, "completed with an error"):
+            parse_pcap_usbmon_capture(
+                _pcap_capture(request, response, response_status=-32),
+                target_bus=3,
+                target_device=12,
+            )
+
+        with self.assertRaisesRegex(ModelError, "not Linux usbmon"):
+            parse_pcap_usbmon_capture(
+                _pcap_capture(request, response, linktype=1),
+                target_bus=3,
+                target_device=12,
             )
 
     def test_route_translation_remains_optional_for_v1_evidence(self) -> None:
