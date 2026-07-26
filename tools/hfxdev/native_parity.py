@@ -281,8 +281,11 @@ def _semantic_summary(
     elif summary_kind == "be16-seconds" and len(arguments) >= 2:
         value = int.from_bytes(arguments[:2], "big")
         summary["seconds"] = value
-    elif summary_kind == "device-mode" and len(arguments) >= 2:
-        value = (arguments[0], arguments[1])
+    elif summary_kind == "device-mode" and len(response) >= 10:
+        # OpenRazer's device_mode readers consume arguments[0] and
+        # arguments[1] directly.  Some devices report a one-byte response
+        # length while still returning both fixed-position bytes.
+        value = (response[8], response[9])
         summary.update({"mode": value[0], "parameter": value[1]})
     elif summary_kind == "dpi-xy" and len(arguments) >= 5:
         value = (

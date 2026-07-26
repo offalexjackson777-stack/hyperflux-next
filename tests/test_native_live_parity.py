@@ -168,6 +168,47 @@ class NativeLiveParityTests(unittest.TestCase):
         )
         self.assertIn("get_firmware", evidence["coverage"]["passed"])
 
+    def test_device_mode_follows_upstream_fixed_argument_reads(self) -> None:
+        probe = _probe("get_device_mode")
+        request = canonical_request(probe, 0x1F)
+        response = bytearray(_response(request, bytes((4,))))
+        response[9] = 7
+        response[88] = _crc(response)
+        with TemporaryDirectory() as directory:
+            direct = Path(directory) / "direct.txt"
+            direct.write_text(_capture(request, bytes(response)), encoding="utf-8")
+            direct_evidence = build_offline_parity_evidence(
+                ROOT,
+                profile_id=PROFILE,
+                direct_capture=direct,
+                created_at="2026-07-26T00:00:00Z",
+                source_revision=REVISION,
+            )
+        evidence = build_live_parity_evidence(
+            ROOT,
+            profile_id=PROFILE,
+            direct_evidence=direct_evidence,
+            raw_qualification=_raw(
+                [_raw_record("get_device_mode", request, bytes(response))]
+            ),
+            package_sha256=PACKAGE_SHA256,
+            receiver_generation=7,
+            source_revision=REVISION,
+        )
+        self.assertIn("get_device_mode", evidence["coverage"]["passed"])
+        summaries = [
+            item["response"]["summary"]
+            for item in evidence["observations"]
+            if item["method"] == "get_device_mode"
+        ]
+        self.assertEqual(
+            summaries,
+            [
+                {"kind": "device-mode", "mode": 4, "parameter": 7, "available": True},
+                {"kind": "device-mode", "mode": 4, "parameter": 7, "available": True},
+            ],
+        )
+
     def test_matching_terminal_failure_is_preserved_as_transport_parity(self) -> None:
         probe = _probe("get_brightness")
         request = canonical_request(probe, 0x1F)
