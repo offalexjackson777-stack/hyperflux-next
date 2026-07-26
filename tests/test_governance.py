@@ -177,6 +177,17 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertTrue(self.governance.strict_required_status_checks)
         self.assertEqual(fast["permissions"], {"contents": "read"})
 
+        for workflow in (fast, full):
+            steps = workflow["jobs"][next(iter(workflow["jobs"]))]["steps"]
+            by_name = {step["name"]: step for step in steps}
+            upstream = by_name["Restore exact upstream sources"]["with"]
+            build = by_name["Restore verified build caches"]["with"]
+            self.assertEqual(upstream["path"], ".hfx/upstreams\n")
+            self.assertNotIn("restore-keys", upstream)
+            self.assertIn("integrations/catalog.json", upstream["key"])
+            self.assertNotIn(".hfx/upstreams", build["path"])
+            self.assertEqual(build["restore-keys"], "hfx-build-${{ runner.os }}-\n")
+
     def test_required_checks_are_exact_generated_job_contexts(self) -> None:
         workflows = (
             codeql_workflow(self.governance),

@@ -57,16 +57,27 @@ def _checkout(governance: GitHubGovernance) -> dict[str, Any]:
     }
 
 
-def _cache(governance: GitHubGovernance) -> dict[str, Any]:
-    return {
-        "name": "Restore verified software caches",
-        "uses": governance.actions_by_id["cache"].uses,
-        "with": {
-            "path": f"{UPSTREAM_CACHE_PATH}\n{CARGO_CACHE_PATH}\ntarget\n",
-            "key": "hfx-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'toolchains/development-environment.json', 'integrations/catalog.json') }}",
-            "restore-keys": "hfx-${{ runner.os }}-\n",
+def _caches(governance: GitHubGovernance) -> list[dict[str, Any]]:
+    action = governance.actions_by_id["cache"].uses
+    return [
+        {
+            "name": "Restore exact upstream sources",
+            "uses": action,
+            "with": {
+                "path": f"{UPSTREAM_CACHE_PATH}\n",
+                "key": "hfx-upstreams-${{ runner.os }}-${{ hashFiles('integrations/catalog.json') }}",
+            },
         },
-    }
+        {
+            "name": "Restore verified build caches",
+            "uses": action,
+            "with": {
+                "path": f"{CARGO_CACHE_PATH}\ntarget\n",
+                "key": "hfx-build-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'toolchains/development-environment.json') }}",
+                "restore-keys": "hfx-build-${{ runner.os }}-\n",
+            },
+        },
+    ]
 
 
 def _build_environment(governance: GitHubGovernance) -> list[dict[str, Any]]:
@@ -124,7 +135,7 @@ def _verification_summary(output: str) -> dict[str, Any]:
 
 
 def verification_workflow(governance: GitHubGovernance) -> str:
-    steps = [_checkout(governance), _cache(governance), *_build_environment(governance)]
+    steps = [_checkout(governance), *_caches(governance), *_build_environment(governance)]
     steps.extend(
         [
             {
@@ -173,7 +184,7 @@ def verification_workflow(governance: GitHubGovernance) -> str:
 
 
 def full_verification_workflow(governance: GitHubGovernance) -> str:
-    steps = [_checkout(governance), _cache(governance), *_build_environment(governance)]
+    steps = [_checkout(governance), *_caches(governance), *_build_environment(governance)]
     steps.extend(
         [
             {
