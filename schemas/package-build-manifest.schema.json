@@ -111,7 +111,7 @@
       "required": ["build_id", "kind", "path", "sha256", "size", "mode"],
       "properties": {
         "build_id": {"$ref": "#/$defs/identifier"},
-        "kind": {"enum": ["cargo-binary", "cmake-module", "python-wheel", "source-tree"]},
+        "kind": {"enum": ["cargo-binary", "cmake-module", "python-wheel", "source-tree", "source-file"]},
         "path": {"$ref": "#/$defs/relativePath"},
         "sha256": {"$ref": "#/$defs/digest"},
         "size": {"type": "integer", "minimum": 1, "maximum": 1073741824},

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use crate::{OpenRazerDriverState, ServiceState, SystemSnapshot};
+use crate::{OpenRazerAccessState, OpenRazerDriverState, ServiceState, SystemSnapshot};
 use hfx_errors::{ErrorCode, error_by_code, remediation_by_id};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -156,6 +156,30 @@ fn classify_openrazer_driver(
     state
 }
 
+fn classify_openrazer_access(
+    snapshot: &SystemSnapshot,
+    working: &mut Vec<String>,
+    findings: &mut Vec<AssessmentFinding>,
+) {
+    match snapshot.openrazer_access {
+        OpenRazerAccessState::Ready => {
+            working.push("OpenRazer application access is ready".to_owned());
+        }
+        OpenRazerAccessState::GroupUnavailable => findings.push(local_finding(
+            ErrorCode::HfxIntegration002,
+            BTreeMap::from([("access_state".to_owned(), "group-unavailable".to_owned())]),
+        )),
+        OpenRazerAccessState::SessionMembershipRequired => findings.push(local_finding(
+            ErrorCode::HfxIntegration003,
+            BTreeMap::from([(
+                "access_state".to_owned(),
+                "session-membership-required".to_owned(),
+            )]),
+        )),
+        OpenRazerAccessState::NotInstalled | OpenRazerAccessState::Unverified => {}
+    }
+}
+
 #[must_use]
 pub fn assess_system(snapshot: &SystemSnapshot) -> Assessment {
     let mut working = vec!["package metadata is available".to_owned()];
@@ -211,6 +235,8 @@ pub fn assess_system(snapshot: &SystemSnapshot) -> Assessment {
             )]),
         ));
     }
+
+    classify_openrazer_access(snapshot, &mut working, &mut findings);
 
     let (receiver_generations, qualified_generations) =
         snapshot.bridge.as_ref().map_or((0, 0), |bridge| {
@@ -364,6 +390,7 @@ mod tests {
                     loaded_identity: None,
                 }],
             },
+            openrazer_access: OpenRazerAccessState::Ready,
             service_state: ServiceState::Active,
             bridge: Some(empty_bridge()),
             legacy_v2_stack_detected: false,
@@ -436,5 +463,32 @@ mod tests {
         assert_eq!(assessment.findings.len(), 1);
         assert_eq!(assessment.findings[0].code, "HFX-KERNEL-002");
         assert_eq!(assessment.findings[0].details["module"], "razerkbd");
+    }
+
+    #[test]
+    fn optional_openrazer_absence_does_not_block_the_core_bridge() {
+        let mut value = snapshot();
+        value.openrazer_access = OpenRazerAccessState::NotInstalled;
+
+        let assessment = assess_system(&value);
+
+        assert_eq!(assessment.state, AssessmentState::Ready);
+        assert!(assessment.findings.is_empty());
+    }
+
+    #[test]
+    fn installed_openrazer_names_missing_session_membership_exactly() {
+        let mut value = snapshot();
+        value.openrazer_access = OpenRazerAccessState::SessionMembershipRequired;
+
+        let assessment = assess_system(&value);
+
+        assert_eq!(assessment.state, AssessmentState::NeedsAttention);
+        assert_eq!(assessment.findings.len(), 1);
+        assert_eq!(assessment.findings[0].code, "HFX-INTEGRATION-003");
+        assert_eq!(
+            assessment.findings[0].details["access_state"],
+            "session-membership-required"
+        );
     }
 }

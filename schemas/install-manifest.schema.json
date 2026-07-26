@@ -62,7 +62,8 @@
         {"$ref": "#/$defs/cargoBuild"},
         {"$ref": "#/$defs/cmakeBuild"},
         {"$ref": "#/$defs/pythonBuild"},
-        {"$ref": "#/$defs/sourceTransformBuild"}
+        {"$ref": "#/$defs/sourceTransformBuild"},
+        {"$ref": "#/$defs/sourceTransformFileBuild"}
       ]
     },
     "cargoBuild": {
@@ -126,6 +127,30 @@
         "transform": {"$ref": "#/$defs/identifier"},
         "destination": {"$ref": "#/$defs/destination"},
         "mode": {"const": "0644"},
+        "required": {"const": true},
+        "capability": {"$ref": "#/$defs/identifier"}
+      }
+    },
+    "sourceTransformFileBuild": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "transform",
+        "source",
+        "destination",
+        "mode",
+        "required",
+        "capability"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "kind": {"const": "source-transform-file"},
+        "transform": {"$ref": "#/$defs/identifier"},
+        "source": {"$ref": "#/$defs/relativePath"},
+        "destination": {"$ref": "#/$defs/destination"},
+        "mode": {"$ref": "#/$defs/mode"},
         "required": {"const": true},
         "capability": {"$ref": "#/$defs/identifier"}
       }

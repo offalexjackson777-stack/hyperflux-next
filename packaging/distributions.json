@@ -20,6 +20,8 @@
         "device-manager": "systemd"
       },
       "optional_dependencies": [
+        {"package": "openrazer-daemon", "purpose": "official OpenRazer daemon for native receiver children"},
+        {"package": "python-openrazer", "purpose": "official OpenRazer client used by Polychromatic"},
         {"package": "openrgb", "purpose": "native OpenRGB controller integration"},
         {"package": "polychromatic", "purpose": "native Polychromatic backend"},
         {"package": "python-dbus", "purpose": "private OpenRazer compatibility service"},
@@ -44,6 +46,8 @@
         "device-manager": "udev"
       },
       "optional_dependencies": [
+        {"package": "openrazer-daemon", "purpose": "official OpenRazer daemon for native receiver children"},
+        {"package": "python3-openrazer", "purpose": "official OpenRazer client used by Polychromatic"},
         {"package": "openrgb", "purpose": "native OpenRGB controller integration"},
         {"package": "polychromatic", "purpose": "native Polychromatic backend"},
         {"package": "python3-dbus", "purpose": "private OpenRazer compatibility service"},
@@ -68,6 +72,8 @@
         "device-manager": "systemd-udev"
       },
       "optional_dependencies": [
+        {"package": "openrazer-daemon", "purpose": "official OpenRazer daemon for native receiver children"},
+        {"package": "python3-openrazer", "purpose": "official OpenRazer client used by Polychromatic"},
         {"package": "openrgb", "purpose": "native OpenRGB controller integration"},
         {"package": "polychromatic", "purpose": "native Polychromatic backend"},
         {"package": "python3-dbus", "purpose": "private OpenRazer compatibility service"},

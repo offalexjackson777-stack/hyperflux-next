@@ -68,6 +68,26 @@
       "capability": "openrazer-source"
     },
     {
+      "id": "openrazer-native-udev-rules",
+      "kind": "source-transform-file",
+      "transform": "openrazer-native-route",
+      "source": "install_files/udev/99-razer.rules",
+      "destination": "@openrazer_udev_rules_path@",
+      "mode": "0644",
+      "required": true,
+      "capability": "openrazer-source"
+    },
+    {
+      "id": "openrazer-native-mount-helper",
+      "kind": "source-transform-file",
+      "transform": "openrazer-native-route",
+      "source": "install_files/udev/razer_mount",
+      "destination": "@openrazer_mount_helper_path@",
+      "mode": "0755",
+      "required": true,
+      "capability": "openrazer-source"
+    },
+    {
       "id": "openrgb-native",
       "kind": "cmake-module",
       "source": "integrations/openrgb",
@@ -160,6 +180,15 @@
       "kind": "file",
       "source": "packaging/generated/hyperflux-next.sysusers",
       "destination": "/usr/lib/sysusers.d/hyperflux-next.conf",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "openrazer-system-group",
+      "kind": "file",
+      "source": "packaging/generated/openrazer.sysusers",
+      "destination": "@openrazer_sysusers_path@",
       "mode": "0644",
       "preserve": false,
       "include": []

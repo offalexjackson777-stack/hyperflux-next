@@ -26,15 +26,15 @@ pub struct AdapterRecord {
 }
 
 pub const INTEGRATION_SOURCE_SHA256: &str =
-    "fa6daa3a0bc6a8d036d6f41d1105742d70392f7f2e753e90e987a2612135d55f";
+    "f62195a778d79d2de88f8cb4ccc167538fa632a3f657a6d01f7956613fb68ae0";
 
 pub const UPSTREAMS: &[UpstreamRecord] = &[
     UpstreamRecord {
         id: "openrazer",
         name: "OpenRazer",
         repository: "https://github.com/openrazer/openrazer.git",
-        version: "3.12.1-41-g6820f9d",
-        commit: "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+        version: "3.12.2",
+        commit: "ddea89607b86023e88563b8feabc8fa2d5773cdd",
         license_expression: "GPL-2.0-or-later AND CC-BY-SA-4.0",
         api_contract: "org.razer 3.x metadata and D-Bus vocabulary",
         uses: &["compatibility-contract", "metadata-import"],

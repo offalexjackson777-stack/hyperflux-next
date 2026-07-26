@@ -24,6 +24,13 @@
       "automatic": false
     },
     {
+      "id": "activate-openrazer-session-access",
+      "title": "Activate OpenRazer access for this desktop session",
+      "safe_action": "Run sudo gpasswd -a \"$USER\" openrazer, then sign out and back in once.",
+      "verification": "After signing back in, run Doctor and confirm OpenRazer application access is ready.",
+      "automatic": false
+    },
+    {
       "id": "collect-support-bundle",
       "title": "Collect a privacy-safe support bundle",
       "safe_action": "Preview and create the bounded HyperFlux support bundle for the unresolved internal failure.",
@@ -35,6 +42,13 @@
       "title": "Correct the request",
       "safe_action": "Correct the named request field and submit a new request with a new request identifier.",
       "verification": "Validate the corrected request against the negotiated protocol schema.",
+      "automatic": false
+    },
+    {
+      "id": "create-openrazer-access-group",
+      "title": "Create the OpenRazer access group",
+      "safe_action": "Run sudo systemd-sysusers openrazer.conf. If that file is missing, reinstall the current HyperFlux Next package first.",
+      "verification": "Run Doctor and confirm the OpenRazer access-group finding is absent.",
       "automatic": false
     },
     {
@@ -183,6 +197,40 @@
       "user_explanation": "This application adapter must be updated before it can use HyperFlux.",
       "privacy": "public",
       "docs_path": "docs/generated/error-catalog.md#hfx-integration-001"
+    },
+    {
+      "code": "HFX-INTEGRATION-002",
+      "class": "integration",
+      "severity": "error",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "create-openrazer-access-group",
+      "safe_detail_fields": [
+        {"name": "access_state", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["group-unavailable"], "privacy": "public", "description": "OpenRazer access-group state."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "integration",
+      "technical_cause": "OpenRazer is installed, but its standard access group is unavailable.",
+      "user_explanation": "OpenRazer application access was not installed completely.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-integration-002"
+    },
+    {
+      "code": "HFX-INTEGRATION-003",
+      "class": "integration",
+      "severity": "error",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "activate-openrazer-session-access",
+      "safe_detail_fields": [
+        {"name": "access_state", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["session-membership-required"], "privacy": "public", "description": "OpenRazer desktop-session access state."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "integration",
+      "technical_cause": "OpenRazer is installed, but the current desktop session does not have the openrazer group active.",
+      "user_explanation": "This desktop session cannot open OpenRazer devices yet.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-integration-003"
     },
     {
       "code": "HFX-INTERNAL-001",

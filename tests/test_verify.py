@@ -13,6 +13,7 @@ from tools.hfxdev.model import ModelError
 from tools.hfxdev.verify import (
     _check_build_cache_clock,
     _kernel_build_directories,
+    _openrazer_payload_retry_is_safe,
     _python_sdk_license_files,
     _resolve_schema_reference,
     _run_openrgb_adapter_contracts,
@@ -22,6 +23,37 @@ from tools.hfxdev.verify import (
 
 
 class VerificationGuardTests(unittest.TestCase):
+    def test_openrazer_single_attempt_payload_needs_no_retry_guard(self) -> None:
+        source = """
+static int razer_send_payload(struct device *device)
+{
+    int err = razer_get_report(device);
+    return err;
+}
+"""
+        self.assertTrue(_openrazer_payload_retry_is_safe(source))
+
+    def test_openrazer_retry_requires_an_uncertain_outcome_guard(self) -> None:
+        unsafe = """
+static int razer_send_payload(struct device *device)
+{
+    int err;
+retry:
+    err = razer_get_report(device);
+    if (err)
+        goto retry;
+    return err;
+}
+"""
+        guarded = unsafe.replace(
+            "    if (err)\n",
+            "    if (razer_hyperflux_error_is_uncertain(err))\n"
+            "        return err;\n"
+            "    if (err)\n",
+        )
+        self.assertFalse(_openrazer_payload_retry_is_safe(unsafe))
+        self.assertTrue(_openrazer_payload_retry_is_safe(guarded))
+
     def test_kernel_build_directories_deduplicate_resolved_aliases(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

@@ -51,6 +51,7 @@ SOURCE_TRANSFORM_KEYS = {
     "required",
     "capability",
 }
+SOURCE_TRANSFORM_FILE_KEYS = SOURCE_TRANSFORM_KEYS | {"source"}
 PAYLOAD_KEYS = {"id", "kind", "source", "destination", "mode", "preserve", "include"}
 IDENTIFIER = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
 DISTRIBUTION = re.compile(r"^[a-z][a-z0-9-]{0,95}$")
@@ -211,6 +212,9 @@ def _tokens(root: Path, runtime: LinuxRuntime) -> dict[str, str]:
         "@bridge_configuration_file_path@": runtime.bridge.configuration_file_path,
         "@openrazer_relay_executable_path@": openrazer.relay.executable_path,
         "@openrazer_dkms_source_directory@": openrazer.driver.source_directory,
+        "@openrazer_udev_rules_path@": openrazer.access.udev_rules_path,
+        "@openrazer_mount_helper_path@": openrazer.access.mount_helper_path,
+        "@openrazer_sysusers_path@": openrazer.access.sysusers_path,
     }
 
 
@@ -292,6 +296,34 @@ def _source_transform_build(
     )
 
 
+def _source_transform_file_build(
+    value: dict[str, Any], tokens: dict[str, str], label: str
+) -> BuildSpec:
+    _exact(value, SOURCE_TRANSFORM_FILE_KEYS, label)
+    if value["required"] is not True:
+        raise ModelError(f"{label}: source transform file must be required")
+    source = value["source"]
+    if (
+        not isinstance(source, str)
+        or not source
+        or source.startswith("/")
+        or str(PurePosixPath(source)) != source
+        or ".." in PurePosixPath(source).parts
+        or len(source.encode()) > 256
+    ):
+        raise ModelError(f"{label}: source transform file path is invalid")
+    return BuildSpec(
+        id=_identifier(value["id"], f"{label} id"),
+        kind="source-transform-file",
+        required=True,
+        source=source,
+        transform=_identifier(value["transform"], f"{label} transform"),
+        destination=_destination(value["destination"], f"{label} destination", tokens),
+        mode=_mode(value["mode"], f"{label} mode"),
+        capability=_identifier(value["capability"], f"{label} capability"),
+    )
+
+
 def _load_builds(
     root: Path, values: list[Any], tokens: dict[str, str]
 ) -> tuple[BuildSpec, ...]:
@@ -308,6 +340,8 @@ def _load_builds(
             builds.append(_python_build(root, value, label))
         elif kind == "source-transform":
             builds.append(_source_transform_build(value, tokens, label))
+        elif kind == "source-transform-file":
+            builds.append(_source_transform_file_build(value, tokens, label))
         else:
             raise ModelError(f"{label}: unsupported build kind")
     require_unique([build.id for build in builds], "install build id")
@@ -487,6 +521,30 @@ def _check_cross_contract(
         or not driver.required
     ):
         raise ModelError("OpenRazer native driver build does not match its deployment authority")
+    rules = build_by_id.get("openrazer-native-udev-rules")
+    if (
+        rules is None
+        or rules.kind != "source-transform-file"
+        or rules.transform != "openrazer-native-route"
+        or rules.capability != "openrazer-source"
+        or rules.source != openrazer.access.udev_rules_source
+        or rules.destination != openrazer.access.udev_rules_path
+        or rules.mode != 0o644
+        or not rules.required
+    ):
+        raise ModelError("OpenRazer native udev rules build does not match its deployment authority")
+    helper = build_by_id.get("openrazer-native-mount-helper")
+    if (
+        helper is None
+        or helper.kind != "source-transform-file"
+        or helper.transform != "openrazer-native-route"
+        or helper.capability != "openrazer-source"
+        or helper.source != openrazer.access.mount_helper_source
+        or helper.destination != openrazer.access.mount_helper_path
+        or helper.mode != 0o755
+        or not helper.required
+    ):
+        raise ModelError("OpenRazer native mount helper build does not match its deployment authority")
 
     payload_by_id = {payload.id: payload for payload in payloads}
     relay_service = payload_by_id.get("openrazer-native-relay-service")
@@ -496,6 +554,15 @@ def _check_cross_contract(
         != f"/usr/lib/systemd/system/{openrazer.relay.service_unit}"
     ):
         raise ModelError("OpenRazer native relay service is missing from the package")
+    openrazer_group = payload_by_id.get("openrazer-system-group")
+    if (
+        openrazer_group is None
+        or openrazer_group.source != "packaging/generated/openrazer.sysusers"
+        or openrazer_group.destination != openrazer.access.sysusers_path
+        or openrazer_group.mode != 0o644
+        or openrazer_group.preserve
+    ):
+        raise ModelError("OpenRazer native system group is missing from the package")
     configuration = payload_by_id.get("default-configuration")
     if (
         configuration is None

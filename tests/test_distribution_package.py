@@ -127,6 +127,8 @@ class DistributionPackageTests(unittest.TestCase):
         self.assertIn(f"Exec = {activation} post-update", transaction)
         self.assertIn("When = PostTransaction", transaction)
         self.assertIn("udevadm control --reload", install)
+        self.assertIn("systemd-sysusers hyperflux-next.conf", install)
+        self.assertIn("systemd-sysusers openrazer.conf", install)
         for forbidden in ("modprobe", "unbind", "rebind", "hidraw", "1532"):
             self.assertNotIn(forbidden, install + transaction)
 

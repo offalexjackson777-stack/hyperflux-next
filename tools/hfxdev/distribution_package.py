@@ -140,6 +140,7 @@ def _arch_install(runtime: LinuxRuntime) -> str:
             "",
             "_hyperflux_refresh_system() {",
             "  systemd-sysusers hyperflux-next.conf",
+            "  systemd-sysusers openrazer.conf",
             "  systemd-tmpfiles --create hyperflux-next.conf",
             "  systemctl daemon-reload",
             "  udevadm control --reload",

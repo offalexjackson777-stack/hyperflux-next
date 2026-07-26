@@ -28,6 +28,8 @@ use std::time::{Duration, Instant};
 const MAX_COMMAND_OUTPUT_BYTES: usize = 4_096;
 const MAX_USB_DEVICE_ENTRIES: usize = 256;
 const USB_DEVICES_ROOT: &str = "/sys/bus/usb/devices";
+const OPENRAZER_DAEMON_PATH: &str = "/usr/bin/openrazer-daemon";
+const OPENRAZER_GROUP: &str = "openrazer";
 const EVENT_SUBSCRIPTIONS_FEATURE: &str = "event-subscriptions";
 const INTEGRATION_VIEW_FEATURE: &str = "integration-view-projection";
 const STRUCTURED_DIAGNOSTICS_FEATURE: &str = "structured-diagnostics";
@@ -173,10 +175,21 @@ pub struct SystemSnapshot {
     pub installed_module_identity: Option<String>,
     pub loaded_module_identity: Option<String>,
     pub openrazer_driver: OpenRazerDriverSnapshot,
+    pub openrazer_access: OpenRazerAccessState,
     pub service_state: ServiceState,
     pub bridge: Option<BridgeHealth>,
     pub legacy_v2_stack_detected: bool,
     pub supported_receiver_present: bool,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum OpenRazerAccessState {
+    NotInstalled,
+    Ready,
+    GroupUnavailable,
+    SessionMembershipRequired,
+    Unverified,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -265,6 +278,7 @@ pub struct RealSystemProbe<R = RealCommandRunner> {
     runner: R,
     sys_module_root: PathBuf,
     usb_devices_root: PathBuf,
+    openrazer_daemon_path: PathBuf,
     socket_path: PathBuf,
     timeout: Duration,
 }
@@ -275,6 +289,7 @@ impl Default for RealSystemProbe<RealCommandRunner> {
             runner: RealCommandRunner,
             sys_module_root: PathBuf::from("/sys/module"),
             usb_devices_root: PathBuf::from(USB_DEVICES_ROOT),
+            openrazer_daemon_path: PathBuf::from(OPENRAZER_DAEMON_PATH),
             socket_path: PathBuf::from(BRIDGE_SOCKET_PATH),
             timeout: Duration::from_millis(STATUS_TIMEOUT_MS),
         }
@@ -293,6 +308,7 @@ impl<R: CommandRunner> RealSystemProbe<R> {
             runner,
             sys_module_root,
             PathBuf::from(USB_DEVICES_ROOT),
+            PathBuf::from(OPENRAZER_DAEMON_PATH),
             socket_path,
             timeout,
         )
@@ -302,6 +318,7 @@ impl<R: CommandRunner> RealSystemProbe<R> {
         runner: R,
         sys_module_root: PathBuf,
         usb_devices_root: PathBuf,
+        openrazer_daemon_path: PathBuf,
         socket_path: PathBuf,
         timeout: Duration,
     ) -> Self {
@@ -309,6 +326,7 @@ impl<R: CommandRunner> RealSystemProbe<R> {
             runner,
             sys_module_root,
             usb_devices_root,
+            openrazer_daemon_path,
             socket_path,
             timeout,
         }
@@ -352,6 +370,47 @@ impl<R: CommandRunner> RealSystemProbe<R> {
                     }
                 })
                 .collect(),
+        }
+    }
+
+    fn openrazer_access(&self) -> OpenRazerAccessState {
+        if !self.openrazer_daemon_path.is_file() {
+            return OpenRazerAccessState::NotInstalled;
+        }
+        let Ok(group) = self
+            .runner
+            .run("getent", &["group", OPENRAZER_GROUP], self.timeout)
+        else {
+            return OpenRazerAccessState::Unverified;
+        };
+        let Some(group_id) = group
+            .success
+            .then(|| parse_group_id(&group.stdout))
+            .flatten()
+        else {
+            return OpenRazerAccessState::GroupUnavailable;
+        };
+        let Ok(user_id) = self.runner.run("id", &["-u"], self.timeout) else {
+            return OpenRazerAccessState::Unverified;
+        };
+        if user_id.success && user_id.stdout.parse::<u32>() == Ok(0) {
+            return OpenRazerAccessState::Ready;
+        }
+        let Ok(group_ids) = self.runner.run("id", &["-G"], self.timeout) else {
+            return OpenRazerAccessState::Unverified;
+        };
+        if !user_id.success || !group_ids.success {
+            return OpenRazerAccessState::Unverified;
+        }
+        if group_ids
+            .stdout
+            .split_ascii_whitespace()
+            .filter_map(|value| value.parse::<u32>().ok())
+            .any(|value| value == group_id)
+        {
+            OpenRazerAccessState::Ready
+        } else {
+            OpenRazerAccessState::SessionMembershipRequired
         }
     }
 
@@ -553,6 +612,7 @@ impl<R: CommandRunner> SystemProbe for RealSystemProbe<R> {
             installed_module_identity: self.installed_module_identity(),
             loaded_module_identity: self.loaded_module_identity(),
             openrazer_driver: self.openrazer_driver(),
+            openrazer_access: self.openrazer_access(),
             service_state,
             bridge,
             legacy_v2_stack_detected: self.legacy_v2_stack_detected(),
@@ -678,6 +738,17 @@ fn bounded_identity(value: &str) -> Option<String> {
     } else {
         Some(value.to_owned())
     }
+}
+
+fn parse_group_id(value: &str) -> Option<u32> {
+    let mut fields = value.split(':');
+    if fields.next()? != OPENRAZER_GROUP {
+        return None;
+    }
+    let _password = fields.next()?;
+    let group_id = fields.next()?.parse::<u32>().ok()?;
+    let _members = fields.next()?;
+    fields.next().is_none().then_some(group_id)
 }
 
 fn read_usb_hex_id(path: &Path) -> Option<u16> {
@@ -833,6 +904,77 @@ mod tests {
     }
 
     #[test]
+    fn openrazer_group_id_requires_the_exact_group_record() {
+        assert_eq!(parse_group_id("openrazer:x:946:"), Some(946));
+        assert_eq!(parse_group_id("other:x:946:"), None);
+        assert_eq!(parse_group_id("openrazer:x:not-a-number:"), None);
+        assert_eq!(parse_group_id("openrazer:x:946::extra"), None);
+    }
+
+    #[test]
+    fn installed_openrazer_daemon_requires_active_session_membership() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let daemon = std::env::temp_dir().join(format!("hfx-openrazer-{unique}"));
+        fs::write(&daemon, "fixture").expect("write daemon fixture");
+        let probe = RealSystemProbe::with_all_paths(
+            FakeRunner::new(vec![
+                Ok(CommandOutput {
+                    success: true,
+                    stdout: "openrazer:x:946:".to_owned(),
+                }),
+                Ok(CommandOutput {
+                    success: true,
+                    stdout: "1000".to_owned(),
+                }),
+                Ok(CommandOutput {
+                    success: true,
+                    stdout: "1000 998".to_owned(),
+                }),
+            ]),
+            PathBuf::from("/missing"),
+            PathBuf::from("/missing-usb"),
+            daemon.clone(),
+            PathBuf::from("/missing.sock"),
+            Duration::from_millis(10),
+        );
+
+        assert_eq!(
+            probe.openrazer_access(),
+            OpenRazerAccessState::SessionMembershipRequired
+        );
+        assert_eq!(
+            probe.runner.calls(),
+            vec![
+                (
+                    "getent".to_owned(),
+                    vec!["group".to_owned(), "openrazer".to_owned()]
+                ),
+                ("id".to_owned(), vec!["-u".to_owned()]),
+                ("id".to_owned(), vec!["-G".to_owned()]),
+            ]
+        );
+        fs::remove_file(daemon).expect("remove daemon fixture");
+    }
+
+    #[test]
+    fn absent_openrazer_daemon_does_not_require_group_access() {
+        let probe = RealSystemProbe::with_all_paths(
+            FakeRunner::new(Vec::new()),
+            PathBuf::from("/missing"),
+            PathBuf::from("/missing-usb"),
+            PathBuf::from("/missing-openrazer-daemon"),
+            PathBuf::from("/missing.sock"),
+            Duration::from_millis(10),
+        );
+
+        assert_eq!(probe.openrazer_access(), OpenRazerAccessState::NotInstalled);
+        assert!(probe.runner.calls().is_empty());
+    }
+
+    #[test]
     fn legacy_v2_service_is_detected_without_claiming_next_is_ready() {
         let probe = RealSystemProbe::with_paths(
             FakeRunner::new(vec![Ok(CommandOutput {
@@ -898,6 +1040,7 @@ mod tests {
             FakeRunner::new(Vec::new()),
             PathBuf::from("/missing"),
             usb_root.clone(),
+            PathBuf::from("/missing-openrazer-daemon"),
             PathBuf::from("/missing.sock"),
             Duration::from_millis(10),
         );
@@ -921,6 +1064,7 @@ mod tests {
             FakeRunner::new(Vec::new()),
             PathBuf::from("/missing"),
             usb_root.clone(),
+            PathBuf::from("/missing-openrazer-daemon"),
             PathBuf::from("/missing.sock"),
             Duration::from_millis(10),
         );

@@ -2,7 +2,7 @@
   "$schema": "../../schemas/upstream-metadata-import.schema.json",
   "schema": "hyperflux-upstream-metadata-import-v1",
   "upstream_id": "openrazer",
-  "source_commit": "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+  "source_commit": "ddea89607b86023e88563b8feabc8fa2d5773cdd",
   "devices": [
     {
       "profile_id": "child.razer.basilisk-v3-pro-35k.00cd",

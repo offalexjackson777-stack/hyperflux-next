@@ -29,6 +29,7 @@ from hfxdev.package_pipeline import (
     _inspect_staged_files,
     _normalize_tree,
     _openrazer_dkms_projection_files,
+    _openrazer_source_file_projection,
     _private_stage_prefixes,
     _provenance_inputs,
     _provenance_materials,
@@ -145,6 +146,59 @@ class PackagePipelineTests(unittest.TestCase):
             with self.assertRaisesRegex(ModelError, "no regular license text"):
                 _openrazer_dkms_projection_files(prepared, projection)
 
+    def test_openrazer_access_files_keep_authoritative_destinations_and_modes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            prepared = root / "prepared"
+            rules = prepared / "install_files/udev/99-razer.rules"
+            helper = prepared / "install_files/udev/razer_mount"
+            rules.parent.mkdir(parents=True)
+            rules.write_text('GROUP="openrazer"\n', encoding="utf-8")
+            helper.write_text("#!/bin/sh\n", encoding="utf-8")
+            install = load_install_manifest(ROOT)
+
+            expected = {
+                "openrazer-native-udev-rules": (
+                    "/usr/lib/udev/rules.d/99-razer.rules",
+                    0o644,
+                    'GROUP="openrazer"\n',
+                ),
+                "openrazer-native-mount-helper": (
+                    "/usr/lib/udev/razer_mount",
+                    0o755,
+                    "#!/bin/sh\n",
+                ),
+            }
+            for build_id, (destination, mode, content) in expected.items():
+                artifact = _openrazer_source_file_projection(
+                    root / "artifacts",
+                    install.build(build_id),
+                    SimpleNamespace(root=prepared),
+                )
+                self.assertEqual(artifact.kind, "source-file")
+                self.assertEqual(artifact.destination, destination)
+                self.assertEqual(artifact.mode, mode)
+                self.assertEqual(artifact.path.stat().st_mode & 0o777, mode)
+                self.assertEqual(artifact.path.read_text(encoding="utf-8"), content)
+
+    def test_openrazer_access_file_rejects_a_symbolic_link(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            prepared = root / "prepared"
+            source = prepared / "install_files/udev/99-razer.rules"
+            source.parent.mkdir(parents=True)
+            target = root / "outside.rules"
+            target.write_text('GROUP="openrazer"\n', encoding="utf-8")
+            source.symlink_to(target)
+            build = load_install_manifest(ROOT).build("openrazer-native-udev-rules")
+
+            with self.assertRaisesRegex(ModelError, "transformed source file is missing"):
+                _openrazer_source_file_projection(
+                    root / "artifacts",
+                    build,
+                    SimpleNamespace(root=prepared),
+                )
+
     def test_openrgb_build_uses_the_source_bound_native_transform(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary)
@@ -241,6 +295,7 @@ class PackagePipelineTests(unittest.TestCase):
             artifact_kind = {
                 "python-project": "python-wheel",
                 "source-transform": "source-tree",
+                "source-transform-file": "source-file",
             }.get(build.kind, build.kind)
             path = directory / "files" / build.id / (
                 f"{build.id}.whl" if build.kind == "python-project" else build.target or build.id
@@ -253,11 +308,7 @@ class PackagePipelineTests(unittest.TestCase):
                 "path": path.relative_to(directory).as_posix(),
                 "sha256": sha256_file(path),
                 "size": path.stat().st_size,
-                "mode": (
-                    "0644"
-                    if build.kind in {"python-project", "source-transform"}
-                    else "0755"
-                ),
+                "mode": f"{(build.mode or 0o644):04o}",
             }
             if build.destination is not None:
                 value["destination"] = build.destination
@@ -303,7 +354,10 @@ class PackagePipelineTests(unittest.TestCase):
                 return_value=("a" * 40, 1_700_000_000),
             ):
                 artifacts = load_artifact_set(ROOT, path)
-            self.assertEqual(len(artifacts.artifacts), 10)
+            self.assertEqual(
+                len(artifacts.artifacts),
+                len(load_install_manifest(ROOT).builds),
+            )
             self.assertFalse(artifacts.omitted)
 
     def test_artifact_tamper_is_rejected_before_staging(self) -> None:

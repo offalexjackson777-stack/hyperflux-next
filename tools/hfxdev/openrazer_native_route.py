@@ -30,9 +30,17 @@ TRANSFORM_SCHEMA = "hyperflux-openrazer-native-transform-v1"
 DEPLOYMENT_SCHEMA = "hyperflux-openrazer-native-deployment-v1"
 CATALOG_SCHEMA = "hyperflux-openrazer-native-route-catalog-v1"
 TRANSFORM_KEYS = {"$schema", "schema", "upstream", "patch", "files"}
-DEPLOYMENT_KEYS = {"$schema", "schema", "relay", "driver"}
+DEPLOYMENT_KEYS = {"$schema", "schema", "relay", "driver", "access"}
 RELAY_KEYS = {"executable_path", "service_unit", "uhid_device", "restart_seconds"}
 DRIVER_KEYS = {"dkms_name", "dkms_version", "source_directory", "modules"}
+ACCESS_KEYS = {
+    "group",
+    "udev_rules_source",
+    "udev_rules_path",
+    "mount_helper_source",
+    "mount_helper_path",
+    "sysusers_path",
+}
 UPSTREAM_KEYS = {"id", "repository", "commit"}
 PATCH_KEYS = {"path", "sha256"}
 FILE_KEYS = {"path", "source_sha256", "transformed_sha256"}
@@ -67,6 +75,10 @@ NATIVE_DESCRIPTOR_HEX = "0600ff0901a101150026ff007508955ab102c0"
 NATIVE_PROTOCOL_FAMILY = "razer-feature-report-v1"
 NATIVE_REPORT_BYTES = 90
 NATIVE_PHYS_PREFIX = "hyperflux-next/native/v1/"
+NATIVE_AUXILIARY_TRANSFORM_PATHS = {
+    "install_files/udev/99-razer.rules",
+    "install_files/udev/razer_mount",
+}
 
 
 @dataclass(frozen=True)
@@ -94,10 +106,21 @@ class OpenRazerDriverDeployment:
 
 
 @dataclass(frozen=True)
+class OpenRazerAccessDeployment:
+    group: str
+    udev_rules_source: str
+    udev_rules_path: str
+    mount_helper_source: str
+    mount_helper_path: str
+    sysusers_path: str
+
+
+@dataclass(frozen=True)
 class OpenRazerNativeDeployment:
     source_sha256: str
     relay: OpenRazerRelayDeployment
     driver: OpenRazerDriverDeployment
+    access: OpenRazerAccessDeployment
 
 
 def _json_payload(value: dict[str, Any]) -> bytes:
@@ -342,8 +365,16 @@ def load_native_transform(root: Path) -> dict[str, Any]:
             raise ModelError(f"OpenRazer native transform file {index}: expected an object")
         _exact_keys(record, FILE_KEYS, f"OpenRazer native transform file {index}")
         path = _safe_relative_path(record["path"], f"OpenRazer native transform file {index}")
-        if not path.parts or path.parts[0] != "driver":
-            raise ModelError(f"OpenRazer native transform file {index}: path must remain below driver/")
+        if (
+            not path.parts
+            or (
+                path.parts[0] != "driver"
+                and path.as_posix() not in NATIVE_AUXILIARY_TRANSFORM_PATHS
+            )
+        ):
+            raise ModelError(
+                f"OpenRazer native transform file {index}: path is outside the approved source set"
+            )
         _digest(record["source_sha256"], f"OpenRazer native transform file {index} source")
         _digest(
             record["transformed_sha256"],
@@ -421,6 +452,23 @@ def load_native_deployment(root: Path) -> OpenRazerNativeDeployment:
         )
     ):
         raise ModelError("OpenRazer native DKMS module inventory is invalid")
+
+    access = value["access"]
+    if not isinstance(access, dict):
+        raise ModelError("OpenRazer native access deployment must be an object")
+    _exact_keys(access, ACCESS_KEYS, "OpenRazer native access deployment")
+    if access["group"] != "openrazer":
+        raise ModelError("OpenRazer native access group must match the distribution contract")
+    expected_access = {
+        "udev_rules_source": "install_files/udev/99-razer.rules",
+        "udev_rules_path": "/usr/lib/udev/rules.d/99-razer.rules",
+        "mount_helper_source": "install_files/udev/razer_mount",
+        "mount_helper_path": "/usr/lib/udev/razer_mount",
+        "sysusers_path": "/usr/lib/sysusers.d/openrazer.conf",
+    }
+    for key, expected in expected_access.items():
+        if access[key] != expected:
+            raise ModelError(f"OpenRazer native access {key} differs from its deployment contract")
     return OpenRazerNativeDeployment(
         source_sha256=sha256_file(path),
         relay=OpenRazerRelayDeployment(
@@ -434,6 +482,14 @@ def load_native_deployment(root: Path) -> OpenRazerNativeDeployment:
             dkms_version=version,
             source_directory=source_directory,
             modules=tuple(modules),
+        ),
+        access=OpenRazerAccessDeployment(
+            group=access["group"],
+            udev_rules_source=access["udev_rules_source"],
+            udev_rules_path=access["udev_rules_path"],
+            mount_helper_source=access["mount_helper_source"],
+            mount_helper_path=access["mount_helper_path"],
+            sysusers_path=access["sysusers_path"],
         ),
     )
 

@@ -128,12 +128,12 @@
     }
   ],
   "schema": "hyperflux-integration-catalog-v1",
-  "source_sha256": "fa6daa3a0bc6a8d036d6f41d1105742d70392f7f2e753e90e987a2612135d55f",
+  "source_sha256": "f62195a778d79d2de88f8cb4ccc167538fa632a3f657a6d01f7956613fb68ae0",
   "upstreams": [
     {
       "api_contract": "org.razer 3.x metadata and D-Bus vocabulary",
       "build_network_access": false,
-      "commit": "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+      "commit": "ddea89607b86023e88563b8feabc8fa2d5773cdd",
       "id": "openrazer",
       "license_expression": "GPL-2.0-or-later AND CC-BY-SA-4.0",
       "name": "OpenRazer",
@@ -142,7 +142,7 @@
         "compatibility-contract",
         "metadata-import"
       ],
-      "version": "3.12.1-41-g6820f9d"
+      "version": "3.12.2"
     },
     {
       "api_contract": "OpenRGB plugin API 4",

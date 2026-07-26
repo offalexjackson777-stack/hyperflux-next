@@ -68,11 +68,11 @@ hyperflux::v5::ControllerView controller(
         {
             text<UpstreamId>(upstream),
             text<UpstreamOwner>(upstream == "openrgb" ? "OpenRGB" : "OpenRazer"),
-            text<ComponentVersion>(upstream == "openrgb" ? "1.0rc3" : "3.12.1"),
+            text<ComponentVersion>(upstream == "openrgb" ? "1.0rc3" : "3.12.2"),
             text<SourceRevision>(
                 upstream == "openrgb"
                     ? "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0"
-                    : "6820f9da169d354bc7e6e93a0aa8683a6bb75792"),
+                    : "ddea89607b86023e88563b8feabc8fa2d5773cdd"),
             text<PresentationKey>(std::string(device) + "_device"),
             kind == DeviceKind::Keyboard
                 ? std::optional<PresentationKey>(text<PresentationKey>("keyboard_layout"))

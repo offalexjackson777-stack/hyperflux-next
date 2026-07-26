@@ -84,7 +84,11 @@ class DebianPackageTests(unittest.TestCase):
         self.assertIn("Architecture: amd64\n", control)
         self.assertIn(f"Maintainer: {DEBIAN_MAINTAINER}\n", control)
         self.assertIn("Depends: dkms, libc6, libgcc-s1, python3 (>= 3.11), systemd, udev\n", control)
-        self.assertIn("Suggests: openrgb, polychromatic, python3-dbus, python3-gi\n", control)
+        self.assertIn(
+            "Suggests: openrazer-daemon, python3-openrazer, openrgb, polychromatic, "
+            "python3-dbus, python3-gi\n",
+            control,
+        )
         self.assertIn(
             "Conflicts: hyperflux-v2-linux-dkms, openrazer-driver-dkms\n",
             control,

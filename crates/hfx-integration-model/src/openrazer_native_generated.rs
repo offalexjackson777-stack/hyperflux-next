@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 pub const OPENRAZER_NATIVE_DEPLOYMENT_SHA256: &str =
-    "8940c61d14a234049e1226d046b0ba41745d5ae69c387ba0c89f02b37c8dcd28";
+    "c918380e3017ab6e5cd996a21d32c7ea8b5410d8f13b2881d0f85a08df6b8bbd";
 pub const OPENRAZER_NATIVE_DKMS_NAME: &str = "openrazer-driver";
-pub const OPENRAZER_NATIVE_DKMS_VERSION: &str = "3.12.1";
+pub const OPENRAZER_NATIVE_DKMS_VERSION: &str = "3.12.2";
 pub const OPENRAZER_NATIVE_DRIVER_MODULES: &[&str] =
     &["razeraccessory", "razerkbd", "razerkraken", "razermouse"];

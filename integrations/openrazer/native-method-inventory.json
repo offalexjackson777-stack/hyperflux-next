@@ -4,17 +4,17 @@
   "upstream": {
     "id": "openrazer",
     "repository": "https://github.com/openrazer/openrazer.git",
-    "version": "3.12.1-41-g6820f9d",
-    "commit": "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+    "version": "3.12.2",
+    "commit": "ddea89607b86023e88563b8feabc8fa2d5773cdd",
     "license_expression": "GPL-2.0-or-later AND CC-BY-SA-4.0"
   },
-  "policy_sha256": "0d2b4e21cc66e8bb85519eeaf9e47ef42b1885cf0b9c4ea3145782080e376d14",
-  "metadata_selection_sha256": "0bd97b07f4c8f9d2c99ac3a3622477704661d5069bd984a0ef8d4a72bf32998f",
+  "policy_sha256": "b109fb8473a004f6b27e85c399486e2b2bd57d99589e5caa15c10d673dafcf7e",
+  "metadata_selection_sha256": "a6d800974ce98c56ff2e0ff1dd584e65128c5a95f806e31f278c99fd7c0736c9",
   "report_size": 90,
   "source_files": [
     {
       "path": "daemon/openrazer_daemon/hardware/device_base.py",
-      "sha256": "7dcece1e1d9afb84d672f3995acd0cb5f24e8e908f212dba2601a50f4fab362d"
+      "sha256": "525da09ddbbabb2dbd97dbfcd41f000465b8d609285d3cddc2b1bacb691a49c2"
     },
     {
       "path": "daemon/openrazer_daemon/hardware/keyboards.py",
@@ -26,7 +26,7 @@
     },
     {
       "path": "driver/razerchromacommon.c",
-      "sha256": "3aeaf974d3ecd5b6b3fd405dc22a4383dc1951e1f3c64824f1bdcf4caf852829"
+      "sha256": "6362884bc962a7dbf9768e6e3c7a1759d913acd4ab8d1bd0bd99d3e401ba4acc"
     },
     {
       "path": "driver/razerchromacommon.h",
@@ -34,27 +34,27 @@
     },
     {
       "path": "driver/razercommon.c",
-      "sha256": "984c3f95cba20710e84f3eed8a26b1e2eddf0f8b6e5fe8bca51a32166744509e"
+      "sha256": "635f9403432150c055f446b38413218771476df7f70e74ae432bba43a089d14b"
     },
     {
       "path": "driver/razercommon.h",
-      "sha256": "8145e8670a5230fac3a54392b63b901b2ea4c38cf8b82ee016e415d9e3d6de65"
+      "sha256": "cf7964af6d08f8a33eaad7956e6fd0aa1d251ff397e72a117e2b13ba947ef39f"
     },
     {
       "path": "driver/razerkbd_driver.c",
-      "sha256": "27d8d4558b0026a1df2a7568e3c52bcb4eac337fe0b1acbc0e2a95f0c47593df"
+      "sha256": "08b2582ededa530e304167802c72bdca0c766d912b813bc032735a697a9d61b4"
     },
     {
       "path": "driver/razerkbd_driver.h",
-      "sha256": "068af601b5f1adc79eaebdcbcd728a5062cf258607229990e1ad9b999ebb1a80"
+      "sha256": "55192a7eca55a6eeedf7b692f61a41dd9c5636548d7b7b3975e743870fe79f9c"
     },
     {
       "path": "driver/razermouse_driver.c",
-      "sha256": "73ccf9e31d04db2d6a4b300376d3545d14c10ff7ae417bf4d11fa18e60ebb0ff"
+      "sha256": "73ea67d5314316ecd59d07dc8def979a1fbcfc5d398a728fed733a8f1f4f31b1"
     },
     {
       "path": "driver/razermouse_driver.h",
-      "sha256": "7a34037673253eb5e75889333a3e63dd59924cc7a9b5c14b294a2ee40947b336"
+      "sha256": "fb58a57422672a085d77c57b11ca39b1b58d01d6474248c1317fd3d9de0b8ab4"
     }
   ],
   "devices": [

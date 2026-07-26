@@ -72,7 +72,7 @@ OPENRAZER_COMPATIBILITY_CONTRACT: Final = {'$schema': '../../schemas/openrazer-c
                                   'root_path': '/dev/hyperflux/OpenRazer1'},
              'reconcile_interval_ms': {'default': 5000, 'maximum': 300000, 'minimum': 250}},
  'upstream': {'api_contract': 'org.razer 3.x metadata and D-Bus vocabulary',
-              'commit': '6820f9da169d354bc7e6e93a0aa8683a6bb75792',
+              'commit': 'ddea89607b86023e88563b8feabc8fa2d5773cdd',
               'id': 'openrazer'}}
 
 __all__ = ["OPENRAZER_COMPATIBILITY_CONTRACT"]

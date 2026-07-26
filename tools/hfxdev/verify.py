@@ -32,6 +32,7 @@ from .native_control import (
     transformed_native_inventory,
 )
 from .native_probe import (
+    c_function_source,
     load_native_probe_catalog,
     load_native_probe_policy,
     transformed_native_probe_catalog,
@@ -89,6 +90,19 @@ IGNORED_PATH_PARTS = {
 }
 FUTURE_MTIME_TOLERANCE_SECONDS = 5.0
 INSTALLED_SCHEMA_ROOT = Path("/usr/share/hyperflux-next/schemas")
+
+
+def _openrazer_payload_retry_is_safe(source: str) -> bool:
+    payload, _ = c_function_source(source, "razer_send_payload")
+    if "razer_hyperflux_error_is_uncertain(err)" in payload:
+        return True
+    return (
+        payload.count("razer_get_report(") == 1
+        and "goto " not in payload
+        and "retry:" not in payload
+        and not re.search(r"\b(?:for|while)\s*\(", payload)
+        and not re.search(r"\bdo\s*\{", payload)
+    )
 
 
 def _check_constitution(constitution: dict) -> None:
@@ -746,6 +760,7 @@ def _run_openrazer_native_route_contracts(root: Path, node: TestNode) -> None:
     common = (prepared.root / "driver" / "razercommon.c").read_text(encoding="utf-8")
     required_common = (
         'RAZER_HYPERFLUX_PHYS_PREFIX "hyperflux-next/native/v1/"',
+        "!hdev->phys[0]",
         "hdev->dev_rsize != sizeof(razer_hyperflux_descriptor)",
         "hid_hw_raw_request(hdev, 0",
         "RAZER_HYPERFLUX_TRANSPORT_NOT_SENT",
@@ -753,13 +768,38 @@ def _run_openrazer_native_route_contracts(root: Path, node: TestNode) -> None:
     )
     if any(marker not in common for marker in required_common):
         raise ModelError("OpenRazer native common transport is incomplete")
+
+    rules = (prepared.root / "install_files" / "udev" / "99-razer.rules").read_text(
+        encoding="utf-8"
+    )
+    bind_rules = (
+        'ACTION=="bind", SUBSYSTEM=="hid", KERNEL=="0006:1532:*", '
+        'ENV{HID_PHYS}=="hyperflux-next/native/v1/*", DRIVER=="razerkbd", '
+        'RUN+="razer_mount razerkbd $kernel"',
+        'ACTION=="bind", SUBSYSTEM=="hid", KERNEL=="0006:1532:*", '
+        'ENV{HID_PHYS}=="hyperflux-next/native/v1/*", DRIVER=="razermouse", '
+        'RUN+="razer_mount razermouse $kernel"',
+    )
+    if any(rules.count(marker) != 1 for marker in bind_rules):
+        raise ModelError("OpenRazer native virtual-device access rules are incomplete")
+    if any(rules.index(marker) > rules.index('ACTION!="add"') for marker in bind_rules):
+        raise ModelError("OpenRazer native virtual-device access rules run after the add-only gate")
+    if 'GROUP:="openrazer"' not in rules or "plugdev" in rules:
+        raise ModelError("OpenRazer native udev group differs from its deployment authority")
+
+    mount_helper = (prepared.root / "install_files" / "udev" / "razer_mount").read_text(
+        encoding="utf-8"
+    )
+    if "chgrp -R openrazer" not in mount_helper or "plugdev" in mount_helper:
+        raise ModelError("OpenRazer native mount helper group differs from its deployment authority")
+
     for driver in ("razerkbd_driver.c", "razermouse_driver.c"):
         source_text = (prepared.root / "driver" / driver).read_text(encoding="utf-8")
         if source_text.count("HID_DEVICE(BUS_VIRTUAL,HID_GROUP_ANY") != 1:
             raise ModelError(f"OpenRazer native {driver} has an invalid virtual match boundary")
         if "identity->bus == BUS_USB" not in source_text:
             raise ModelError(f"OpenRazer native {driver} no longer reuses its exact USB catalog")
-        if "razer_hyperflux_error_is_uncertain(err)" not in source_text:
+        if not _openrazer_payload_retry_is_safe(source_text):
             raise ModelError(f"OpenRazer native {driver} can retry an uncertain transaction")
 
     prepared_driver = prepared.root / "driver"

@@ -33,7 +33,7 @@ struct AdapterRecord
     std::string_view coexistence_policy;
 };
 
-inline constexpr std::string_view integration_source_sha256 = "fa6daa3a0bc6a8d036d6f41d1105742d70392f7f2e753e90e987a2612135d55f";
+inline constexpr std::string_view integration_source_sha256 = "f62195a778d79d2de88f8cb4ccc167538fa632a3f657a6d01f7956613fb68ae0";
 
 inline constexpr std::array<std::string_view, 2> upstream_uses_0 {{"compatibility-contract", "metadata-import"}};
 inline constexpr std::array<std::string_view, 3> upstream_uses_1 {{"effect-engine", "model-layout-registry", "plugin-build-contract"}};
@@ -52,7 +52,7 @@ inline constexpr std::array<std::uint16_t, 1> adapter_protocols_3 {{5}};
 inline constexpr std::array<std::string_view, 5> adapter_features_3 {{"inventory", "lighting", "ownership", "presentation", "telemetry"}};
 
 inline constexpr std::array<UpstreamRecord, 3> upstreams {{
-    {"openrazer", "OpenRazer", "https://github.com/openrazer/openrazer.git", "3.12.1-41-g6820f9d", "6820f9da169d354bc7e6e93a0aa8683a6bb75792", "GPL-2.0-or-later AND CC-BY-SA-4.0", "org.razer 3.x metadata and D-Bus vocabulary", upstream_uses_0},
+    {"openrazer", "OpenRazer", "https://github.com/openrazer/openrazer.git", "3.12.2", "ddea89607b86023e88563b8feabc8fa2d5773cdd", "GPL-2.0-or-later AND CC-BY-SA-4.0", "org.razer 3.x metadata and D-Bus vocabulary", upstream_uses_0},
     {"openrgb", "OpenRGB", "https://github.com/CalcProgrammer1/OpenRGB.git", "1.0rc3", "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0", "GPL-2.0-only", "OpenRGB plugin API 4", upstream_uses_1},
     {"polychromatic", "Polychromatic", "https://github.com/polychromatic/polychromatic.git", "0.9.7-7-g716737b", "716737bf444ab7e962f4d3b7a5188b2f07c0c4a1", "GPL-3.0-only", "Polychromatic 0.9 native backend contract", upstream_uses_2},
 }};

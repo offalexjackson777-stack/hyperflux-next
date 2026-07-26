@@ -9,8 +9,16 @@
   },
   "driver": {
     "dkms_name": "openrazer-driver",
-    "dkms_version": "3.12.1",
-    "source_directory": "/usr/src/openrazer-driver-3.12.1",
+    "dkms_version": "3.12.2",
+    "source_directory": "/usr/src/openrazer-driver-3.12.2",
     "modules": ["razeraccessory", "razerkbd", "razerkraken", "razermouse"]
+  },
+  "access": {
+    "group": "openrazer",
+    "udev_rules_source": "install_files/udev/99-razer.rules",
+    "udev_rules_path": "/usr/lib/udev/rules.d/99-razer.rules",
+    "mount_helper_source": "install_files/udev/razer_mount",
+    "mount_helper_path": "/usr/lib/udev/razer_mount",
+    "sysusers_path": "/usr/lib/sysusers.d/openrazer.conf"
   }
 }

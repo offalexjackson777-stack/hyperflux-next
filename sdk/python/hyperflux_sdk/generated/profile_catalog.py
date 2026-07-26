@@ -4,7 +4,7 @@
 from types import MappingProxyType
 from typing import Final
 
-PROFILE_SOURCE_SHA256: Final = '2c438f5f49e436fa8621bd38b2a99d8aceb1ed650ed2da9ae3d393c329dfaea0'
+PROFILE_SOURCE_SHA256: Final = 'b2ec3710f950fa0c871fb9f10da71a75cef144b7c2ef8444cce82fad4045dd70'
 PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                  'id': 'razer-basilisk-v3-pro',
                  'official_name': 'Razer Basilisk V3 Pro',
@@ -474,8 +474,8 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                          'retry_offsets_ms': [0, 100, 200, 300, 500, 750, 1000, 1500, 2250, 3250, 4500, 6000],
                          'strategy': 'activity-assisted-return-epoch',
                          'timing_authorities': [{'kind': 'pinned-upstream-contract',
-                                                 'source_id': 'openrazer:6820f9da169d354bc7e6e93a0aa8683a6bb75792:driver/razerchromacommon.c:1339',
-                                                 'source_sha256': '3aeaf974d3ecd5b6b3fd405dc22a4383dc1951e1f3c64824f1bdcf4caf852829',
+                                                 'source_id': 'openrazer:ddea89607b86023e88563b8feabc8fa2d5773cdd:driver/razerchromacommon.c:1339',
+                                                 'source_sha256': '6362884bc962a7dbf9768e6e3c7a1759d913acd4ab8d1bd0bd99d3e401ba4acc',
                                                  'summary': 'The pinned upstream idle-time command accepts 60 through '
                                                             '900 seconds; 60 seconds is therefore a conservative '
                                                             'quiescent candidate, never a claim that the endpoint '
@@ -915,7 +915,7 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                'schema': 'hyperflux-hardware-profile-v1',
                'source_path': 'profiles/surfaces/razer-hyperflux-v2-hard-edition.json'}],
  'schema': 'hyperflux-compiled-profile-catalog-v1',
- 'source_sha256': '2c438f5f49e436fa8621bd38b2a99d8aceb1ed650ed2da9ae3d393c329dfaea0'}
+ 'source_sha256': 'b2ec3710f950fa0c871fb9f10da71a75cef144b7c2ef8444cce82fad4045dd70'}
 PROFILES_BY_ID: Final = MappingProxyType({profile['profile_id']: profile for profile in PROFILE_CATALOG['profiles']})
 
 __all__ = ["PROFILE_CATALOG", "PROFILE_SOURCE_SHA256", "PROFILES_BY_ID"]

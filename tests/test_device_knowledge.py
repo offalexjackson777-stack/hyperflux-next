@@ -277,7 +277,7 @@ class DeviceKnowledgeContractTests(unittest.TestCase):
         self.assertEqual(sources["openrgb"]["record_count"], 112)
         self.assertEqual(
             sources["openrazer"]["commit"],
-            "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+            "ddea89607b86023e88563b8feabc8fa2d5773cdd",
         )
         self.assertEqual(
             sources["openrgb"]["commit"],

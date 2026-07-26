@@ -1,8 +1,8 @@
 {
   "$schema": "../../../schemas/openrazer-native-route-catalog.schema.json",
   "schema": "hyperflux-openrazer-native-route-catalog-v1",
-  "upstream_commit": "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
-  "metadata_sha256": "36a26c62f1992a9f84f7925c9f9a4252e449f966efb61ab6511d08fb2569eee2",
+  "upstream_commit": "ddea89607b86023e88563b8feabc8fa2d5773cdd",
+  "metadata_sha256": "529bf7d31c496a96ef5d0798fd08555f8c16c8c9a7e3670c42689a51e964589a",
   "transport": {
     "protocol_family": "razer-feature-report-v1",
     "report_bytes": 90,
@@ -23,7 +23,9 @@
         "class_name": "RazerBasiliskV3Pro35KWireless",
         "sha256": "c36180167f3f07f2299eb2653dd171ce6086a5cb0c30a898d9ee2be3dc3c4c03"
       },
-      "direct_data_product_ids": [204],
+      "direct_data_product_ids": [
+        204
+      ],
       "event_file_regex": ".*Razer_Basilisk_V3_Pro_35K_000000000000-if0(1|2)-event-kbd"
     },
     {
@@ -38,7 +40,9 @@
         "class_name": "RazerDeathStalkerV2ProTKLWireless",
         "sha256": "a4d6b54f4e6da3a7ff65a727ccc5b047efb345d3170d0a2f8256b5f0a7c1d5e9"
       },
-      "direct_data_product_ids": [664],
+      "direct_data_product_ids": [
+        664
+      ],
       "event_file_regex": ".*DSV2Pro_TKL_000000000000-if01-event-mouse"
     }
   ]

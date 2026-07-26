@@ -36,8 +36,9 @@ pub use native_onboarding::{
 };
 pub use probe::{
     BridgeHealth, BridgeIntegration, CommandOutput, CommandRunner, KernelModuleIdentitySnapshot,
-    OpenRazerDriverSnapshot, OpenRazerDriverState, ProbeError, RealCommandRunner, RealSystemProbe,
-    ServiceState, SystemController, SystemProbe, SystemSnapshot,
+    OpenRazerAccessState, OpenRazerDriverSnapshot, OpenRazerDriverState, ProbeError,
+    RealCommandRunner, RealSystemProbe, ServiceState, SystemController, SystemProbe,
+    SystemSnapshot,
 };
 pub use qualification::{
     ActionConfirmation, BatteryAvailability, BatteryView, CapabilityAccess, CapabilityView,

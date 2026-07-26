@@ -1039,7 +1039,7 @@
             "path": "daemon/openrazer_daemon/hardware/mouse.py"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/mouse.py#L1659",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/mouse.py#L1659",
           "usb_identity": {
             "product_id": 170,
             "vendor_id": 5426
@@ -1111,7 +1111,7 @@
             "path": "daemon/openrazer_daemon/hardware/mouse.py"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/mouse.py#L1695",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/mouse.py#L1695",
           "usb_identity": {
             "product_id": 171,
             "vendor_id": 5426
@@ -2400,7 +2400,7 @@
             "path": "daemon/openrazer_daemon/hardware/mouse.py"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/mouse.py#L1703",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/mouse.py#L1703",
           "usb_identity": {
             "product_id": 204,
             "vendor_id": 5426
@@ -2472,7 +2472,7 @@
             "path": "daemon/openrazer_daemon/hardware/mouse.py"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/mouse.py#L1739",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/mouse.py#L1739",
           "usb_identity": {
             "product_id": 205,
             "vendor_id": 5426
@@ -3440,7 +3440,7 @@
             "path": "daemon/openrazer_daemon/hardware/keyboards.py"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/keyboards.py#L379",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/keyboards.py#L379",
           "usb_identity": {
             "product_id": 602,
             "vendor_id": 5426
@@ -3504,7 +3504,7 @@
             "path": "daemon/openrazer_daemon/hardware/keyboards.py"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/keyboards.py#L402",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/keyboards.py#L402",
           "usb_identity": {
             "product_id": 604,
             "vendor_id": 5426
@@ -6256,7 +6256,7 @@
             "path": "daemon/openrazer_daemon/hardware/keyboards.py"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/keyboards.py#L1156",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/keyboards.py#L1156",
           "usb_identity": {
             "product_id": 697,
             "vendor_id": 5426
@@ -6318,7 +6318,7 @@
             "path": "daemon/openrazer_daemon/hardware/keyboards.py"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/keyboards.py#L1177",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/keyboards.py#L1177",
           "usb_identity": {
             "product_id": 698,
             "vendor_id": 5426
@@ -7212,7 +7212,7 @@
             "path": "daemon/openrazer_daemon/hardware/keyboards.py"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/keyboards.py#L423",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/keyboards.py#L423",
           "usb_identity": {
             "product_id": 727,
             "vendor_id": 5426
@@ -7276,7 +7276,7 @@
             "path": "daemon/openrazer_daemon/hardware/keyboards.py"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/keyboards.py#L445",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/keyboards.py#L445",
           "usb_identity": {
             "product_id": 725,
             "vendor_id": 5426
@@ -8843,7 +8843,7 @@
             "path": "daemon/openrazer_daemon/hardware/mouse.py"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/mouse.py#L1566",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/mouse.py#L1566",
           "usb_identity": {
             "product_id": 175,
             "vendor_id": 5426
@@ -8897,7 +8897,7 @@
             "path": "daemon/openrazer_daemon/hardware/mouse.py"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/mouse.py#L1595",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/mouse.py#L1595",
           "usb_identity": {
             "product_id": 176,
             "vendor_id": 5426
@@ -9799,7 +9799,7 @@
             "path": "daemon/openrazer_daemon/hardware/keyboards.py"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/keyboards.py#L1422",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/keyboards.py#L1422",
           "usb_identity": {
             "product_id": 658,
             "vendor_id": 5426
@@ -9857,7 +9857,7 @@
             "path": "daemon/openrazer_daemon/hardware/keyboards.py"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/keyboards.py#L1444",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/keyboards.py#L1444",
           "usb_identity": {
             "product_id": 656,
             "vendor_id": 5426
@@ -10782,7 +10782,7 @@
             "path": "daemon/openrazer_daemon/hardware/keyboards.py"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/keyboards.py#L1451",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/keyboards.py#L1451",
           "usb_identity": {
             "product_id": 664,
             "vendor_id": 5426
@@ -10840,7 +10840,7 @@
             "path": "daemon/openrazer_daemon/hardware/keyboards.py"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/keyboards.py#L1473",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/keyboards.py#L1473",
           "usb_identity": {
             "product_id": 662,
             "vendor_id": 5426
@@ -11958,7 +11958,7 @@
             "path": "daemon/openrazer_daemon/hardware/mouse.py"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/mouse.py#L1011",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/mouse.py#L1011",
           "usb_identity": {
             "product_id": 167,
             "vendor_id": 5426
@@ -12030,7 +12030,7 @@
             "path": "daemon/openrazer_daemon/hardware/mouse.py"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/openrazer/openrazer/blob/6820f9da169d354bc7e6e93a0aa8683a6bb75792/daemon/openrazer_daemon/hardware/mouse.py#L1038",
+          "source_url": "https://github.com/openrazer/openrazer/blob/ddea89607b86023e88563b8feabc8fa2d5773cdd/daemon/openrazer_daemon/hardware/mouse.py#L1038",
           "usb_identity": {
             "product_id": 168,
             "vendor_id": 5426
@@ -12626,10 +12626,10 @@
     }
   ],
   "schema": "hyperflux-compiled-device-knowledge-v1",
-  "source_sha256": "2f96676467fe0dc2bf7f6f93ca31c1e6e7c5efbbad005ad1a5932da321fb7e3d",
+  "source_sha256": "89d25e0d74052f49df34f125f96f02faf107985e727262f59f7314363ba8a212",
   "upstreams": [
     {
-      "commit": "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+      "commit": "ddea89607b86023e88563b8feabc8fa2d5773cdd",
       "extractor": "python-ast-v1",
       "license_expression": "GPL-2.0-or-later AND CC-BY-SA-4.0",
       "record_count": 232,
@@ -12645,7 +12645,7 @@
         }
       ],
       "upstream_id": "openrazer",
-      "version": "3.12.1-41-g6820f9d"
+      "version": "3.12.2"
     },
     {
       "commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0",

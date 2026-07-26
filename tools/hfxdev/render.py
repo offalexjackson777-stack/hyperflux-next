@@ -96,6 +96,7 @@ from .generators.openrazer_native import (
     markdown as openrazer_native_markdown,
     relay_service as openrazer_native_relay_service,
     rust_constants as openrazer_native_rust_constants,
+    sysusers as openrazer_native_sysusers,
 )
 from .generators.profiles import (
     compiled_json as profile_compiled_json,
@@ -423,6 +424,9 @@ def rendered_files(root: Path) -> dict[Path, str]:
         / "generated"
         / openrazer_native.relay.service_unit: openrazer_native_relay_service(
             openrazer_native, linux_runtime
+        ),
+        root / "packaging" / "generated" / "openrazer.sysusers": openrazer_native_sysusers(
+            openrazer_native
         ),
         root / "packaging" / "generated" / "hyperflux-next-activation.service": activation_service(linux_runtime),
         root / "packaging" / "generated" / "hyperflux-next-confirmation.service": confirmation_service(linux_runtime),

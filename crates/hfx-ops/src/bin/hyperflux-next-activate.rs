@@ -56,6 +56,9 @@ fn fresh_install(probe: &RealSystemProbe) -> Result<(), String> {
     let _ = probe;
     println!("HyperFlux Next installed with conservative read-only defaults.");
     println!("The bridge remains disabled until the user explicitly enables it.");
+    println!("OpenRazer and Polychromatic use the standard openrazer access group.");
+    println!("For the desktop user, run: sudo gpasswd -a \"$USER\" openrazer");
+    println!("Then sign out and back in once so the session receives the group.");
     Ok(())
 }
 

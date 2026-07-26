@@ -25,6 +25,7 @@ from .integrations import load_integration_catalog
 from .linux_runtime import LinuxRuntime, load_linux_runtime
 from .model import ModelError, load_json, require_unique, sha256_file
 from .openrazer_native_route import (
+    PreparedOpenRazerNativeSource,
     load_native_deployment,
     load_native_transform as load_openrazer_native_transform,
     prepare_openrazer_native_source,
@@ -462,18 +463,10 @@ def _openrazer_dkms_projection(
     output: Path,
     environment: dict[str, str],
     build: BuildSpec,
-    capabilities: dict[str, Path],
+    prepared: PreparedOpenRazerNativeSource,
 ) -> BuiltArtifact:
     if build.transform != "openrazer-native-route" or build.capability != "openrazer-source":
         raise ModelError(f"build {build.id}: unsupported source transform")
-    source_value = capabilities.get(build.capability)
-    if source_value is None:
-        raise ModelError(
-            f"build {build.id}: required capability {build.capability} is absent"
-        )
-    source = _pinned_source(root, build.capability, source_value)
-    prepared_path = output / "work" / build.id / "prepared"
-    prepared = prepare_openrazer_native_source(root, source, prepared_path)
     deployment = load_native_deployment(root)
     _verify_openrazer_dkms_contract(prepared.root, deployment)
 
@@ -502,6 +495,52 @@ def _openrazer_dkms_projection(
         destination=build.destination,
         mode=build.mode or 0o644,
     )
+
+
+def _openrazer_source_file_projection(
+    output: Path,
+    build: BuildSpec,
+    prepared: PreparedOpenRazerNativeSource,
+) -> BuiltArtifact:
+    if build.transform != "openrazer-native-route" or build.capability != "openrazer-source":
+        raise ModelError(f"build {build.id}: unsupported source transform file")
+    if build.source is None or build.destination is None or build.mode is None:
+        raise ModelError(f"build {build.id}: source transform file is incomplete")
+    source = prepared.root / PurePosixPath(build.source)
+    if (
+        not source.is_file()
+        or source.is_symlink()
+        or not source.resolve().is_relative_to(prepared.root.resolve())
+    ):
+        raise ModelError(f"build {build.id}: transformed source file is missing")
+    return _copy_artifact(
+        source,
+        output,
+        build,
+        kind="source-file",
+        destination=build.destination,
+        mode=build.mode,
+    )
+
+
+def _prepare_openrazer_source_transform(
+    root: Path,
+    output: Path,
+    builds: list[BuildSpec],
+    capabilities: dict[str, Path],
+) -> PreparedOpenRazerNativeSource:
+    if any(
+        build.transform != "openrazer-native-route"
+        or build.capability != "openrazer-source"
+        for build in builds
+    ):
+        raise ModelError("OpenRazer source transform build set is inconsistent")
+    source_value = capabilities.get("openrazer-source")
+    if source_value is None:
+        raise ModelError("required capability openrazer-source is absent")
+    source = _pinned_source(root, "openrazer-source", source_value)
+    prepared_path = output / "work" / "openrazer-native-route" / "prepared"
+    return prepare_openrazer_native_source(root, source, prepared_path)
 
 
 def _openrazer_dkms_projection_files(
@@ -726,6 +765,18 @@ def build_artifacts(
     artifacts: list[BuiltArtifact] = []
     cargo = [build for build in install.builds if build.kind == "cargo-binary"]
     artifacts.extend(_build_cargo(root, output, environment, cargo))
+    openrazer_builds = [
+        build
+        for build in install.builds
+        if build.kind in {"source-transform", "source-transform-file"}
+    ]
+    prepared_openrazer = (
+        _prepare_openrazer_source_transform(
+            root, output, openrazer_builds, capabilities
+        )
+        if openrazer_builds
+        else None
+    )
     omitted: list[tuple[str, str]] = []
     for build in install.builds:
         if build.kind == "cmake-module":
@@ -741,7 +792,13 @@ def build_artifacts(
         elif build.kind == "source-transform":
             artifacts.append(
                 _openrazer_dkms_projection(
-                    root, output, environment, build, capabilities
+                    root, output, environment, build, prepared_openrazer
+                )
+            )
+        elif build.kind == "source-transform-file":
+            artifacts.append(
+                _openrazer_source_file_projection(
+                    output, build, prepared_openrazer
                 )
             )
 
@@ -785,7 +842,13 @@ def _manifest_artifact(root: Path, value: Any, label: str) -> BuiltArtifact:
     kind = value["kind"]
     if not isinstance(build_id, str) or not re.fullmatch(r"[a-z][a-z0-9-]{0,63}", build_id):
         raise ModelError(f"{label}: invalid build id")
-    if kind not in {"cargo-binary", "cmake-module", "python-wheel", "source-tree"}:
+    if kind not in {
+        "cargo-binary",
+        "cmake-module",
+        "python-wheel",
+        "source-tree",
+        "source-file",
+    }:
         raise ModelError(f"{label}: invalid artifact kind")
     path_value = value["path"]
     if not isinstance(path_value, str) or path_value.startswith("/"):
@@ -1021,6 +1084,7 @@ def load_artifact_set(root: Path, manifest_path: Path) -> ArtifactSet:
         expected_kind = {
             "python-project": "python-wheel",
             "source-transform": "source-tree",
+            "source-transform-file": "source-file",
         }.get(build.kind, build.kind)
         if artifact.kind != expected_kind:
             raise ModelError(f"artifact {artifact.build_id}: kind does not match install contract")

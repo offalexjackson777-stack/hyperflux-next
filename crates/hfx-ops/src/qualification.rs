@@ -1339,6 +1339,7 @@ mod tests {
                     loaded_identity: None,
                 }],
             },
+            openrazer_access: crate::OpenRazerAccessState::NotInstalled,
             service_state: ServiceState::Active,
             bridge: None,
             legacy_v2_stack_detected: false,

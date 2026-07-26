@@ -259,9 +259,9 @@ def _skip_c_quoted(source: str, index: int, quote: str) -> int:
     raise ModelError("unterminated quoted string in pinned OpenRazer source")
 
 
-def _c_function(source: str, name: str) -> tuple[str, int]:
+def c_function_source(source: str, name: str) -> tuple[str, int]:
     pattern = re.compile(
-        rf"(?m)^(?:static\s+)?(?:ssize_t|struct\s+razer_report)\s+{re.escape(name)}\s*\("
+        rf"(?m)^(?:static\s+)?(?:int|ssize_t|struct\s+razer_report)\s+{re.escape(name)}\s*\("
     )
     match = pattern.search(source)
     if match is None:
@@ -358,7 +358,7 @@ def _compile_report_expressions(
             if _expression_function(expression) != "get_razer_report"
         }
     )
-    function_sources = [_c_function(chroma_source, name)[0] for name in functions]
+    function_sources = [c_function_source(chroma_source, name)[0] for name in functions]
     constant_lines = "\n".join(
         f"#define {name} {constants[name]}" for name in required_constants
     )
@@ -515,9 +515,9 @@ def transformed_native_probe_catalog(root: Path, source_root: Path) -> dict[str,
             reader = readers.get(attribute)
             if reader is None:
                 raise ModelError(f"OpenRazer driver lacks readable attribute {attribute}")
-            reader_source, _ = _c_function(source, reader)
+            reader_source, _ = c_function_source(source, reader)
             owner = binding["request_owner"]
-            owner_source, owner_line = _c_function(source, owner)
+            owner_source, owner_line = c_function_source(source, owner)
             if reader != owner and owner not in reader_source:
                 raise ModelError(
                     f"OpenRazer attribute {attribute} does not delegate to {owner}"

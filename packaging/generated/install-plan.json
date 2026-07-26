@@ -1,6 +1,6 @@
 {
   "schema": "hyperflux-compiled-install-plan-v1",
-  "install_manifest_sha256": "1733db54a95a302e1b849aa84fe5f551cab85209db93439c451b86de241d746b",
+  "install_manifest_sha256": "4b5a1bb4f376550379f673465149af66d48909247f7af7de69e2c1ee9ac7a723",
   "product": {
     "name": "hyperflux-next-linux",
     "version": "0.0.0-dev.1",
@@ -68,8 +68,28 @@
       "kind": "source-transform",
       "required": true,
       "transform": "openrazer-native-route",
-      "destination": "/usr/src/openrazer-driver-3.12.1",
+      "destination": "/usr/src/openrazer-driver-3.12.2",
       "mode": "0644",
+      "capability": "openrazer-source"
+    },
+    {
+      "id": "openrazer-native-udev-rules",
+      "kind": "source-transform-file",
+      "required": true,
+      "source": "install_files/udev/99-razer.rules",
+      "transform": "openrazer-native-route",
+      "destination": "/usr/lib/udev/rules.d/99-razer.rules",
+      "mode": "0644",
+      "capability": "openrazer-source"
+    },
+    {
+      "id": "openrazer-native-mount-helper",
+      "kind": "source-transform-file",
+      "required": true,
+      "source": "install_files/udev/razer_mount",
+      "transform": "openrazer-native-route",
+      "destination": "/usr/lib/udev/razer_mount",
+      "mode": "0755",
       "capability": "openrazer-source"
     },
     {
@@ -250,6 +270,13 @@
       "component": "system-users",
       "source": "packaging/generated/hyperflux-next.sysusers",
       "destination": "/usr/lib/sysusers.d/hyperflux-next.conf",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "openrazer-system-group",
+      "source": "packaging/generated/openrazer.sysusers",
+      "destination": "/usr/lib/sysusers.d/openrazer.conf",
       "mode": "0644",
       "preserve": false
     },

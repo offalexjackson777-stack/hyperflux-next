@@ -4,8 +4,8 @@
   "source": {
     "upstream_id": "openrazer",
     "repository": "https://github.com/openrazer/openrazer.git",
-    "version": "3.12.1-41-g6820f9d",
-    "commit": "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+    "version": "3.12.2",
+    "commit": "ddea89607b86023e88563b8feabc8fa2d5773cdd",
     "license_expression": "GPL-2.0-or-later AND CC-BY-SA-4.0",
     "extractor": "python-ast-v1",
     "source_files": [

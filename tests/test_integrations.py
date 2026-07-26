@@ -25,6 +25,7 @@ from hfxdev.model import load_json as model_load_json
 import hfxdev.native_control as native_control
 import hfxdev.native_probe as native_probe
 import hfxdev.openrazer as openrazer
+import hfxdev.openrazer_native_route as openrazer_native_route
 from hfxdev.native_control import (
     load_native_control_policy,
     load_native_method_inventory,
@@ -44,6 +45,7 @@ from hfxdev.openrazer import (
     verify_global_event_file_matcher,
 )
 from hfxdev.openrazer_native_route import (
+    load_native_transform,
     load_native_route_catalog,
     transformed_native_route_catalog,
 )
@@ -68,7 +70,7 @@ class IntegrationCatalogTests(unittest.TestCase):
         )
         self.assertEqual(
             upstreams["openrazer"]["commit"],
-            "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+            "ddea89607b86023e88563b8feabc8fa2d5773cdd",
         )
         self.assertEqual(
             upstreams["polychromatic"]["commit"],
@@ -265,6 +267,37 @@ class IntegrationCatalogTests(unittest.TestCase):
         for route in routes["routes"]:
             direct = probes_by_profile[route["profile_id"]]["direct_usb_reference"]
             self.assertEqual(route["direct_data_product_ids"], [direct["product_id"]])
+
+    def test_openrazer_native_transform_auxiliary_source_set_is_exact(self) -> None:
+        transform = load_native_transform(ROOT)
+        auxiliary = {
+            record["path"]
+            for record in transform["files"]
+            if not record["path"].startswith("driver/")
+        }
+        self.assertEqual(
+            auxiliary,
+            {
+                "install_files/udev/99-razer.rules",
+                "install_files/udev/razer_mount",
+            },
+        )
+
+        drifted = deepcopy(transform)
+        drifted["files"][-1]["path"] = "install_files/udev/unreviewed-helper"
+        path = ROOT / "integrations/openrazer/native-route/transform.json"
+
+        def substituted_load(candidate: Path):
+            if candidate == path:
+                return deepcopy(drifted)
+            return model_load_json(candidate)
+
+        with patch.object(
+            openrazer_native_route,
+            "load_json",
+            side_effect=substituted_load,
+        ), self.assertRaisesRegex(ModelError, "outside the approved source set"):
+            load_native_transform(ROOT)
 
     def test_openrazer_relay_keeps_module_preflight_outside_its_sealed_namespace(self) -> None:
         runtime = load_linux_runtime(ROOT)

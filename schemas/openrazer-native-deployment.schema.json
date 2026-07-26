@@ -4,7 +4,7 @@
   "title": "HyperFlux OpenRazer native-route deployment",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "schema", "relay", "driver"],
+  "required": ["$schema", "schema", "relay", "driver", "access"],
   "properties": {
     "$schema": {"const": "../../../schemas/openrazer-native-deployment.schema.json"},
     "schema": {"const": "hyperflux-openrazer-native-deployment-v1"},
@@ -47,6 +47,26 @@
           "uniqueItems": true,
           "items": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"}
         }
+      }
+    },
+    "access": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "group",
+        "udev_rules_source",
+        "udev_rules_path",
+        "mount_helper_source",
+        "mount_helper_path",
+        "sysusers_path"
+      ],
+      "properties": {
+        "group": {"const": "openrazer"},
+        "udev_rules_source": {"const": "install_files/udev/99-razer.rules"},
+        "udev_rules_path": {"const": "/usr/lib/udev/rules.d/99-razer.rules"},
+        "mount_helper_source": {"const": "install_files/udev/razer_mount"},
+        "mount_helper_path": {"const": "/usr/lib/udev/razer_mount"},
+        "sysusers_path": {"const": "/usr/lib/sysusers.d/openrazer.conf"}
       }
     }
   }

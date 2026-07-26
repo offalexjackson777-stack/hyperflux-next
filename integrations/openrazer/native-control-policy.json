@@ -2,7 +2,7 @@
   "$schema": "../../schemas/openrazer-native-control-policy.schema.json",
   "schema": "hyperflux-openrazer-native-control-policy-v1",
   "upstream_id": "openrazer",
-  "source_commit": "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+  "source_commit": "ddea89607b86023e88563b8feabc8fa2d5773cdd",
   "scope": "transport-facing-exact-wireless-classes",
   "report_size": 90,
   "common_methods": [

@@ -25,7 +25,7 @@ This is the only ordinary setup step that uses the network. It creates clean, de
 
 | Upstream | Commit | Contract |
 | --- | --- | --- |
-| OpenRazer | `6820f9da169d354bc7e6e93a0aa8683a6bb75792` | org.razer 3.x metadata and D-Bus vocabulary |
+| OpenRazer | `ddea89607b86023e88563b8feabc8fa2d5773cdd` | org.razer 3.x metadata and D-Bus vocabulary |
 | OpenRGB | `6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0` | OpenRGB plugin API 4 |
 | Polychromatic | `716737bf444ab7e962f4d3b7a5188b2f07c0c4a1` | Polychromatic 0.9 native backend contract |
 
