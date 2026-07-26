@@ -28,7 +28,7 @@ The canonical plan contains `9` required and `3` optional build products.
 | `activation-utility` | `cargo-binary` | yes | `/usr/lib/hyperflux-next/hyperflux-next-activate` |
 | `openrazer-native-relay` | `cargo-binary` | yes | `/usr/lib/hyperflux-next/hyperflux-next-uhid-relay` |
 | `native-readonly-qualifier` | `cargo-binary` | yes | `/usr/lib/hyperflux-next/hyperflux-next-native-qualifier` |
-| `openrazer-native-driver` | `source-transform` | yes | `/usr/src/openrazer-driver-3.12.2` |
+| `openrazer-native-driver` | `source-transform` | yes | `/usr/src/openrazer-driver-3.12.4` |
 | `openrazer-native-udev-rules` | `source-transform-file` | yes | `/usr/lib/udev/rules.d/99-razer.rules` |
 | `openrazer-native-mount-helper` | `source-transform-file` | yes | `/usr/lib/udev/razer_mount` |
 | `openrgb-native` | `cmake-module` | no | `/usr/lib/openrgb/plugins/hyperflux-next-openrgb.so` |

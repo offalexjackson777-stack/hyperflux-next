@@ -1,8 +1,8 @@
 {
   "$schema": "../../../schemas/openrazer-native-route-catalog.schema.json",
   "schema": "hyperflux-openrazer-native-route-catalog-v1",
-  "upstream_commit": "ddea89607b86023e88563b8feabc8fa2d5773cdd",
-  "metadata_sha256": "529bf7d31c496a96ef5d0798fd08555f8c16c8c9a7e3670c42689a51e964589a",
+  "upstream_commit": "1ef8a91712906a89fd332a2ed62bbd105315d6d1",
+  "metadata_sha256": "1bf4f15eee0d31f10b144eb303d3659981bba9022a61d9155d3b1af56757bc66",
   "transport": {
     "protocol_family": "razer-feature-report-v1",
     "report_bytes": 90,

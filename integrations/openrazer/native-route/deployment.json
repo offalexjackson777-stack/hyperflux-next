@@ -1,6 +1,6 @@
 {
   "$schema": "../../../schemas/openrazer-native-deployment.schema.json",
-  "schema": "hyperflux-openrazer-native-deployment-v1",
+  "schema": "hyperflux-openrazer-native-deployment-v2",
   "relay": {
     "executable_path": "/usr/lib/hyperflux-next/hyperflux-next-uhid-relay",
     "service_unit": "hyperflux-next-openrazer-relay.service",
@@ -9,8 +9,8 @@
   },
   "driver": {
     "dkms_name": "openrazer-driver",
-    "dkms_version": "3.12.2",
-    "source_directory": "/usr/src/openrazer-driver-3.12.2",
+    "dkms_version": "3.12.4",
+    "source_directory": "/usr/src/openrazer-driver-3.12.4",
     "modules": ["razeraccessory", "razerkbd", "razerkraken", "razermouse"]
   },
   "access": {
@@ -20,5 +20,17 @@
     "mount_helper_source": "install_files/udev/razer_mount",
     "mount_helper_path": "/usr/lib/udev/razer_mount",
     "sysusers_path": "/usr/lib/sysusers.d/openrazer.conf"
+  },
+  "compatibility": {
+    "verified_upstream_version": "3.12.4",
+    "daemon_executable_path": "/usr/bin/openrazer-daemon",
+    "version_argument": "--version",
+    "package_release_policy": "ignored",
+    "unverified_upstream_policy": "rebase-reverification-required",
+    "runtime_capability": {
+      "modinfo_field": "hyperflux_native_transport",
+      "expected_value": "razer-feature-report-v1",
+      "modules": ["razerkbd", "razermouse"]
+    }
   }
 }

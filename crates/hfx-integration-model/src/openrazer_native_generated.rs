@@ -2,8 +2,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 pub const OPENRAZER_NATIVE_DEPLOYMENT_SHA256: &str =
-    "c918380e3017ab6e5cd996a21d32c7ea8b5410d8f13b2881d0f85a08df6b8bbd";
+    "8f480cb8afb2eb7e00fcae311d841ecd0e364a838b421fbce786288639768c66";
 pub const OPENRAZER_NATIVE_DKMS_NAME: &str = "openrazer-driver";
-pub const OPENRAZER_NATIVE_DKMS_VERSION: &str = "3.12.2";
+pub const OPENRAZER_NATIVE_DKMS_VERSION: &str = "3.12.4";
 pub const OPENRAZER_NATIVE_DRIVER_MODULES: &[&str] =
     &["razeraccessory", "razerkbd", "razerkraken", "razermouse"];
+pub const OPENRAZER_NATIVE_CAPABILITY_MODULES: &[&str] = &["razerkbd", "razermouse"];
+pub const OPENRAZER_NATIVE_CAPABILITY_FIELD: &str = "hyperflux_native_transport";
+pub const OPENRAZER_NATIVE_CAPABILITY_VALUE: &str = "razer-feature-report-v1";
+pub const OPENRAZER_NATIVE_VERIFIED_UPSTREAM_VERSION: &str = "3.12.4";
+pub const OPENRAZER_NATIVE_DAEMON_EXECUTABLE_PATH: &str = "/usr/bin/openrazer-daemon";
+pub const OPENRAZER_NATIVE_VERSION_ARGUMENT: &str = "--version";

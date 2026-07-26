@@ -9,6 +9,7 @@ from typing import Any
 
 from .linux_runtime import load_linux_runtime
 from .model import ModelError, load_json, require_unique, sha256_file
+from .openrazer_native_route import load_native_deployment
 
 
 TARGET_IDS = ("arch", "debian", "rpm")
@@ -24,6 +25,7 @@ PACKAGE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9+_.() >=~-]{0,95}$")
 ARCHITECTURE = re.compile(r"^[A-Za-z0-9_.-]{1,127}$")
 LICENSE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.+-]{0,63}$")
 CONTROL_CHARACTER = re.compile(r"[\x00-\x1f\x7f]")
+OPENRAZER_DRIVER_VERSION_TOKEN = "@openrazer_driver_version@"
 
 
 @dataclass(frozen=True)
@@ -110,7 +112,18 @@ def _package(value: Any, label: str) -> str:
     return value
 
 
-def _target(target_id: str, value: Any) -> DistributionTarget:
+def _package_relation(value: Any, label: str, openrazer_version: str) -> str:
+    if not isinstance(value, str) or value.count(OPENRAZER_DRIVER_VERSION_TOKEN) > 1:
+        raise ModelError(f"{label}: invalid package expression")
+    return _package(
+        value.replace(OPENRAZER_DRIVER_VERSION_TOKEN, openrazer_version),
+        label,
+    )
+
+
+def _target(
+    target_id: str, value: Any, openrazer_version: str
+) -> DistributionTarget:
     if not isinstance(value, dict):
         raise ModelError(f"distribution {target_id}: must be an object")
     _exact(
@@ -180,7 +193,10 @@ def _target(target_id: str, value: Any) -> DistributionTarget:
         values = value[relation]
         if not isinstance(values, list) or len(values) > 16:
             raise ModelError(f"distribution {target_id}: invalid {relation}")
-        parsed = tuple(_package(item, f"{target_id} {relation}") for item in values)
+        parsed = tuple(
+            _package_relation(item, f"{target_id} {relation}", openrazer_version)
+            for item in values
+        )
         require_unique(list(parsed), f"distribution {target_id} {relation}")
         relation_values[relation] = parsed
 
@@ -240,7 +256,11 @@ def load_distribution_catalog(root: Path) -> DistributionCatalog:
     targets_value = value["targets"]
     if not isinstance(targets_value, dict) or set(targets_value) != set(TARGET_IDS):
         raise ModelError("distribution targets must be exactly arch, debian, and rpm")
-    targets = {target_id: _target(target_id, targets_value[target_id]) for target_id in TARGET_IDS}
+    openrazer_version = load_native_deployment(root).driver.dkms_version
+    targets = {
+        target_id: _target(target_id, targets_value[target_id], openrazer_version)
+        for target_id in TARGET_IDS
+    }
     runtime = load_linux_runtime(root)
     if runtime.product.package_name in {
         conflict for target in targets.values() for conflict in target.conflicts

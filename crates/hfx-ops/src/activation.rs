@@ -124,7 +124,11 @@ pub fn decide_post_update(
         _ if openrazer_driver_state == OpenRazerDriverState::ActivationPending => {
             ActivationAction::ActivateOpenRazerDriver
         }
-        _ if openrazer_driver_state == OpenRazerDriverState::Unavailable => {
+        _ if matches!(
+            openrazer_driver_state,
+            OpenRazerDriverState::CapabilityUnavailable | OpenRazerDriverState::Unavailable
+        ) =>
+        {
             ActivationAction::RepairOpenRazerDriver
         }
         _ if bridge_was_active => ActivationAction::ResumeBridge,

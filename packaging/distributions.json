@@ -28,7 +28,10 @@
         {"package": "python-gobject", "purpose": "private OpenRazer compatibility event loop"}
       ],
       "conflicts": ["hyperflux-v2-linux-dkms", "openrazer-driver-dkms"],
-      "provides": ["openrazer-driver-dkms"],
+      "provides": [
+        "openrazer-driver-dkms",
+        "hyperflux-openrazer-driver-abi=@openrazer_driver_version@"
+      ],
       "replaces": ["openrazer-driver-dkms"],
       "python_discovery_path": "/usr/lib/python@python_major_minor@/site-packages/hyperflux-next.pth"
     },
@@ -54,7 +57,10 @@
         {"package": "python3-gi", "purpose": "private OpenRazer compatibility event loop"}
       ],
       "conflicts": ["hyperflux-v2-linux-dkms", "openrazer-driver-dkms"],
-      "provides": ["openrazer-driver-dkms"],
+      "provides": [
+        "openrazer-driver-dkms",
+        "hyperflux-openrazer-driver-abi (= @openrazer_driver_version@)"
+      ],
       "replaces": ["openrazer-driver-dkms"],
       "python_discovery_path": "/usr/lib/python3/dist-packages/hyperflux-next.pth"
     },
@@ -80,7 +86,10 @@
         {"package": "python3-gobject", "purpose": "private OpenRazer compatibility event loop"}
       ],
       "conflicts": ["hyperflux-v2-linux-dkms", "openrazer-driver-dkms"],
-      "provides": ["openrazer-driver-dkms"],
+      "provides": [
+        "openrazer-driver-dkms",
+        "hyperflux-openrazer-driver-abi=@openrazer_driver_version@"
+      ],
       "replaces": ["openrazer-driver-dkms"],
       "python_discovery_path": "/usr/lib/python@python_major_minor@/site-packages/hyperflux-next.pth"
     }

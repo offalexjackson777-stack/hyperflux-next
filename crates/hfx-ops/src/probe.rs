@@ -3,7 +3,12 @@
 use hfx_domain::{
     ClientId, ClientName, EventBatchLimit, ProtocolFeatureId, ProtocolVersion, SequenceNumber,
 };
-use hfx_integration_model::OPENRAZER_NATIVE_DRIVER_MODULES;
+use hfx_integration_model::{
+    OPENRAZER_NATIVE_CAPABILITY_FIELD, OPENRAZER_NATIVE_CAPABILITY_MODULES,
+    OPENRAZER_NATIVE_CAPABILITY_VALUE, OPENRAZER_NATIVE_DAEMON_EXECUTABLE_PATH,
+    OPENRAZER_NATIVE_DRIVER_MODULES, OPENRAZER_NATIVE_VERIFIED_UPSTREAM_VERSION,
+    OPENRAZER_NATIVE_VERSION_ARGUMENT,
+};
 use hfx_profiles::receiver_profile_by_usb_id;
 use hfx_protocol::{
     BridgeSnapshot, CURRENT_PROTOCOL_VERSION, DiagnosticSnapshot, EventBatch, EventCursor,
@@ -28,7 +33,6 @@ use std::time::{Duration, Instant};
 const MAX_COMMAND_OUTPUT_BYTES: usize = 4_096;
 const MAX_USB_DEVICE_ENTRIES: usize = 256;
 const USB_DEVICES_ROOT: &str = "/sys/bus/usb/devices";
-const OPENRAZER_DAEMON_PATH: &str = "/usr/bin/openrazer-daemon";
 const OPENRAZER_GROUP: &str = "openrazer";
 const EVENT_SUBSCRIPTIONS_FEATURE: &str = "event-subscriptions";
 const INTEGRATION_VIEW_FEATURE: &str = "integration-view-projection";
@@ -175,6 +179,7 @@ pub struct SystemSnapshot {
     pub installed_module_identity: Option<String>,
     pub loaded_module_identity: Option<String>,
     pub openrazer_driver: OpenRazerDriverSnapshot,
+    pub openrazer_runtime: OpenRazerRuntimeSnapshot,
     pub openrazer_access: OpenRazerAccessState,
     pub service_state: ServiceState,
     pub bridge: Option<BridgeHealth>,
@@ -192,12 +197,28 @@ pub enum OpenRazerAccessState {
     Unverified,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum OpenRazerRuntimeState {
+    NotInstalled,
+    Verified,
+    ReverificationRequired,
+    Unverified,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OpenRazerRuntimeSnapshot {
+    pub state: OpenRazerRuntimeState,
+    pub observed_upstream_version: Option<String>,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct KernelModuleIdentitySnapshot {
     pub module_name: String,
     pub installed_identity: Option<String>,
     pub loaded: bool,
     pub loaded_identity: Option<String>,
+    pub native_transport_capability: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -205,6 +226,7 @@ pub struct KernelModuleIdentitySnapshot {
 pub enum OpenRazerDriverState {
     Ready,
     ActivationPending,
+    CapabilityUnavailable,
     Unavailable,
 }
 
@@ -224,6 +246,13 @@ impl OpenRazerDriverSnapshot {
             return OpenRazerDriverState::Unavailable;
         }
         if self.modules.iter().any(|module| {
+            OPENRAZER_NATIVE_CAPABILITY_MODULES.contains(&module.module_name.as_str())
+                && module.native_transport_capability.as_deref()
+                    != Some(OPENRAZER_NATIVE_CAPABILITY_VALUE)
+        }) {
+            return OpenRazerDriverState::CapabilityUnavailable;
+        }
+        if self.modules.iter().any(|module| {
             module.loaded
                 && module.loaded_identity.as_deref() != module.installed_identity.as_deref()
         }) {
@@ -237,6 +266,13 @@ impl OpenRazerDriverSnapshot {
         self.modules
             .iter()
             .find(|module| module.installed_identity.is_none())
+            .or_else(|| {
+                self.modules.iter().find(|module| {
+                    OPENRAZER_NATIVE_CAPABILITY_MODULES.contains(&module.module_name.as_str())
+                        && module.native_transport_capability.as_deref()
+                            != Some(OPENRAZER_NATIVE_CAPABILITY_VALUE)
+                })
+            })
             .or_else(|| {
                 self.modules.iter().find(|module| {
                     module.loaded
@@ -289,7 +325,7 @@ impl Default for RealSystemProbe<RealCommandRunner> {
             runner: RealCommandRunner,
             sys_module_root: PathBuf::from("/sys/module"),
             usb_devices_root: PathBuf::from(USB_DEVICES_ROOT),
-            openrazer_daemon_path: PathBuf::from(OPENRAZER_DAEMON_PATH),
+            openrazer_daemon_path: PathBuf::from(OPENRAZER_NATIVE_DAEMON_EXECUTABLE_PATH),
             socket_path: PathBuf::from(BRIDGE_SOCKET_PATH),
             timeout: Duration::from_millis(STATUS_TIMEOUT_MS),
         }
@@ -308,7 +344,7 @@ impl<R: CommandRunner> RealSystemProbe<R> {
             runner,
             sys_module_root,
             PathBuf::from(USB_DEVICES_ROOT),
-            PathBuf::from(OPENRAZER_DAEMON_PATH),
+            PathBuf::from(OPENRAZER_NATIVE_DAEMON_EXECUTABLE_PATH),
             socket_path,
             timeout,
         )
@@ -344,6 +380,21 @@ impl<R: CommandRunner> RealSystemProbe<R> {
             .and_then(|output| bounded_identity(&output.stdout))
     }
 
+    fn installed_native_capability(&self, module: &str) -> Option<String> {
+        if !OPENRAZER_NATIVE_CAPABILITY_MODULES.contains(&module) {
+            return None;
+        }
+        self.runner
+            .run(
+                "modinfo",
+                &["-F", OPENRAZER_NATIVE_CAPABILITY_FIELD, module],
+                self.timeout,
+            )
+            .ok()
+            .filter(|output| output.success)
+            .and_then(|output| bounded_identity(&output.stdout))
+    }
+
     fn loaded_module_identity(&self) -> Option<String> {
         self.loaded_identity(KERNEL_MODULE_NAME)
     }
@@ -367,9 +418,47 @@ impl<R: CommandRunner> RealSystemProbe<R> {
                         installed_identity: self.installed_identity(module),
                         loaded: loaded_path.is_dir(),
                         loaded_identity: self.loaded_identity(module),
+                        native_transport_capability: self.installed_native_capability(module),
                     }
                 })
                 .collect(),
+        }
+    }
+
+    fn openrazer_runtime(&self) -> OpenRazerRuntimeSnapshot {
+        if !self.openrazer_daemon_path.is_file() {
+            return OpenRazerRuntimeSnapshot {
+                state: OpenRazerRuntimeState::NotInstalled,
+                observed_upstream_version: None,
+            };
+        }
+        let Some(program) = self.openrazer_daemon_path.to_str() else {
+            return OpenRazerRuntimeSnapshot {
+                state: OpenRazerRuntimeState::Unverified,
+                observed_upstream_version: None,
+            };
+        };
+        let Ok(output) =
+            self.runner
+                .run(program, &[OPENRAZER_NATIVE_VERSION_ARGUMENT], self.timeout)
+        else {
+            return OpenRazerRuntimeSnapshot {
+                state: OpenRazerRuntimeState::Unverified,
+                observed_upstream_version: None,
+            };
+        };
+        let observed = output
+            .success
+            .then(|| parse_openrazer_upstream_version(&output.stdout))
+            .flatten();
+        let state = match observed.as_deref() {
+            Some(OPENRAZER_NATIVE_VERIFIED_UPSTREAM_VERSION) => OpenRazerRuntimeState::Verified,
+            Some(_) => OpenRazerRuntimeState::ReverificationRequired,
+            None => OpenRazerRuntimeState::Unverified,
+        };
+        OpenRazerRuntimeSnapshot {
+            state,
+            observed_upstream_version: observed,
         }
     }
 
@@ -612,6 +701,7 @@ impl<R: CommandRunner> SystemProbe for RealSystemProbe<R> {
             installed_module_identity: self.installed_module_identity(),
             loaded_module_identity: self.loaded_module_identity(),
             openrazer_driver: self.openrazer_driver(),
+            openrazer_runtime: self.openrazer_runtime(),
             openrazer_access: self.openrazer_access(),
             service_state,
             bridge,
@@ -738,6 +828,29 @@ fn bounded_identity(value: &str) -> Option<String> {
     } else {
         Some(value.to_owned())
     }
+}
+
+fn parse_openrazer_upstream_version(value: &str) -> Option<String> {
+    let version = value.strip_prefix("openrazer-daemon ")?;
+    if version.is_empty()
+        || version.len() > 64
+        || version.bytes().any(|byte| {
+            !(byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'+' | b'-' | b'~'))
+        })
+    {
+        return None;
+    }
+    let suffix = version.find(['-', '+', '~']).unwrap_or(version.len());
+    let upstream = &version[..suffix];
+    let components = upstream.split('.').collect::<Vec<_>>();
+    if !(2..=4).contains(&components.len())
+        || components.iter().any(|component| {
+            component.is_empty() || !component.bytes().all(|byte| byte.is_ascii_digit())
+        })
+    {
+        return None;
+    }
+    Some(upstream.to_owned())
 }
 
 fn parse_group_id(value: &str) -> Option<u32> {
@@ -883,6 +996,7 @@ mod tests {
                 installed_identity: Some("new".to_owned()),
                 loaded: false,
                 loaded_identity: None,
+                native_transport_capability: Some(OPENRAZER_NATIVE_CAPABILITY_VALUE.to_owned()),
             }],
         };
         assert_eq!(ready.state(), OpenRazerDriverState::Ready);
@@ -901,6 +1015,87 @@ mod tests {
                 .map(|module| module.module_name.as_str()),
             Some("razerkbd")
         );
+
+        let mut missing_capability = pending;
+        missing_capability.modules[0].loaded = false;
+        missing_capability.modules[0].loaded_identity = None;
+        missing_capability.modules[0].native_transport_capability = None;
+        assert_eq!(
+            missing_capability.state(),
+            OpenRazerDriverState::CapabilityUnavailable
+        );
+    }
+
+    #[test]
+    fn openrazer_source_line_ignores_package_release_but_requires_reverification_for_new_sources() {
+        for value in [
+            "openrazer-daemon 3.12.4",
+            "openrazer-daemon 3.12.4-3",
+            "openrazer-daemon 3.12.4-4",
+            "openrazer-daemon 3.12.4+distribution.4",
+        ] {
+            assert_eq!(
+                parse_openrazer_upstream_version(value).as_deref(),
+                Some("3.12.4")
+            );
+        }
+        assert_eq!(
+            parse_openrazer_upstream_version("openrazer-daemon 3.12.5-1").as_deref(),
+            Some("3.12.5")
+        );
+        assert_eq!(
+            parse_openrazer_upstream_version("openrazer-daemon 3.13-1").as_deref(),
+            Some("3.13")
+        );
+        assert_eq!(parse_openrazer_upstream_version("OpenRazer 3.12.4"), None);
+        assert_eq!(
+            parse_openrazer_upstream_version("openrazer-daemon 3.12.4rc1"),
+            None
+        );
+    }
+
+    #[test]
+    fn openrazer_runtime_classifies_verified_and_future_source_lines_separately() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let daemon = std::env::temp_dir().join(format!("hfx-openrazer-runtime-{unique}"));
+        fs::write(&daemon, "fixture").expect("write daemon fixture");
+
+        let verified = RealSystemProbe::with_all_paths(
+            FakeRunner::new(vec![Ok(CommandOutput {
+                success: true,
+                stdout: "openrazer-daemon 3.12.4-4".to_owned(),
+            })]),
+            PathBuf::from("/missing"),
+            PathBuf::from("/missing-usb"),
+            daemon.clone(),
+            PathBuf::from("/missing.sock"),
+            Duration::from_millis(10),
+        )
+        .openrazer_runtime();
+        assert_eq!(verified.state, OpenRazerRuntimeState::Verified);
+        assert_eq!(
+            verified.observed_upstream_version.as_deref(),
+            Some("3.12.4")
+        );
+
+        let future = RealSystemProbe::with_all_paths(
+            FakeRunner::new(vec![Ok(CommandOutput {
+                success: true,
+                stdout: "openrazer-daemon 3.13.0-1".to_owned(),
+            })]),
+            PathBuf::from("/missing"),
+            PathBuf::from("/missing-usb"),
+            daemon.clone(),
+            PathBuf::from("/missing.sock"),
+            Duration::from_millis(10),
+        )
+        .openrazer_runtime();
+        assert_eq!(future.state, OpenRazerRuntimeState::ReverificationRequired);
+        assert_eq!(future.observed_upstream_version.as_deref(), Some("3.13.0"));
+        fs::remove_file(daemon).expect("remove daemon fixture");
     }
 
     #[test]

@@ -40,6 +40,9 @@ INSTALLED_MANIFEST_PATH = PurePosixPath(
 ARCH_POST_TRANSACTION_HOOK = PurePosixPath(
     "/usr/share/libalpm/hooks/95-hyperflux-next-post-transaction.hook"
 )
+ARCH_OPENRAZER_POLICY_HOOK = PurePosixPath(
+    "/usr/share/libalpm/hooks/96-hyperflux-next-openrazer-policy.hook"
+)
 
 
 @dataclass(frozen=True)
@@ -126,6 +129,25 @@ def _arch_hook(runtime: LinuxRuntime) -> str:
             "Description = Complete HyperFlux Next compatibility activation",
             "When = PostTransaction",
             f"Exec = {runtime.operations.activation_path} post-update",
+            "",
+        ]
+    )
+
+
+def _arch_openrazer_policy_hook(runtime: LinuxRuntime) -> str:
+    return "\n".join(
+        [
+            "[Trigger]",
+            "Operation = Install",
+            "Operation = Upgrade",
+            "Type = Package",
+            "Target = openrazer-daemon",
+            "Target = python-openrazer",
+            "",
+            "[Action]",
+            "Description = Check HyperFlux Next OpenRazer source compatibility",
+            "When = PostTransaction",
+            f"Exec = {runtime.operations.activation_path} report-openrazer-runtime",
             "",
         ]
     )
@@ -629,7 +651,10 @@ def _backend_overlays(
     distribution: str, runtime: LinuxRuntime
 ) -> tuple[tuple[PurePosixPath, str], ...]:
     if distribution == "arch":
-        return ((ARCH_POST_TRANSACTION_HOOK, _arch_hook(runtime)),)
+        return (
+            (ARCH_POST_TRANSACTION_HOOK, _arch_hook(runtime)),
+            (ARCH_OPENRAZER_POLICY_HOOK, _arch_openrazer_policy_hook(runtime)),
+        )
     if distribution in {"debian", "rpm"}:
         return ()
     raise ModelError(f"unknown distribution package target {distribution}")

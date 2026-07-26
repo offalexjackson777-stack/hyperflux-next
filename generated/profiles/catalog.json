@@ -783,7 +783,7 @@
       "timing_authorities": [
         {
           "kind": "pinned-upstream-contract",
-          "source_id": "openrazer:ddea89607b86023e88563b8feabc8fa2d5773cdd:driver/razerchromacommon.c:1339",
+          "source_id": "openrazer:1ef8a91712906a89fd332a2ed62bbd105315d6d1:driver/razerchromacommon.c:1339",
           "source_sha256": "6362884bc962a7dbf9768e6e3c7a1759d913acd4ab8d1bd0bd99d3e401ba4acc",
           "summary": "The pinned upstream idle-time command accepts 60 through 900 seconds; 60 seconds is therefore a conservative quiescent candidate, never a claim that the endpoint slept."
         },
@@ -1573,5 +1573,5 @@
     }
   ],
   "schema": "hyperflux-compiled-profile-catalog-v1",
-  "source_sha256": "b2ec3710f950fa0c871fb9f10da71a75cef144b7c2ef8444cce82fad4045dd70"
+  "source_sha256": "80c196e5d3abe93f5be17b05c9036c04a9fbea2188896b4189c50b1e478fc2ee"
 }

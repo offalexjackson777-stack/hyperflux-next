@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -14,6 +15,7 @@ import time
 
 from .model import ModelError, load_foundation, load_json, require_unique, sha256_file
 from .assurance import load_design_coverage
+from .arch_update_policy import verify_arch_openrazer_update_policy
 from .atlas import load_repository_atlas
 from .development import load_development_environment
 from .errors import load_error_catalog
@@ -53,6 +55,7 @@ from .openrazer_native_route import (
 from .openrgb import extract_openrgb_catalog
 from .openrgb_native_route import prepare_openrgb_native_source
 from .package_pipeline import build_artifacts, load_artifact_set, stage_rootfs
+from .distribution_package import build_distribution_package
 from .performance import (
     load_performance_budgets,
     verify_package_performance_budgets,
@@ -769,6 +772,40 @@ def _run_openrazer_native_route_contracts(root: Path, node: TestNode) -> None:
     if any(marker not in common for marker in required_common):
         raise ModelError("OpenRazer native common transport is incomplete")
 
+    keyboard_source = (prepared.root / "driver" / "razerkbd_driver.c").read_text(
+        encoding="utf-8"
+    )
+    preserved_keyboard_fixes = (
+        "strscpy(&serial_string[0], dmi_get_system_info(DMI_PRODUCT_SERIAL), 50);",
+        "memcpy(&serial_string[0], &response.arguments[0], 22);",
+        "(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 93)",
+        "(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 143)",
+        "(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 176)",
+        "(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 210)",
+        "(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 259)",
+        "#define LINUX_HID_REPORT_RAW_EVENT_WITH_BUFFER_SIZE",
+        "hid_report_raw_event(hdev, HID_INPUT_REPORT, xdata, sizeof(xdata), sizeof(xdata), 0);",
+        "hid_report_raw_event(hdev, HID_INPUT_REPORT, xdata, sizeof(xdata), 0);",
+    )
+    if any(marker not in keyboard_source for marker in preserved_keyboard_fixes):
+        raise ModelError(
+            "OpenRazer native keyboard source lost a required upstream 3.12.4 fix"
+        )
+    if keyboard_source.count("#ifdef LINUX_HID_REPORT_RAW_EVENT_WITH_BUFFER_SIZE") != 2:
+        raise ModelError("OpenRazer native keyboard HID backport guard is incomplete")
+
+    accessory_source = (
+        prepared.root / "driver" / "razeraccessory_driver.c"
+    ).read_text(encoding="utf-8")
+    preserved_accessory_fixes = (
+        "strscpy(&serial_string[0], &device->serial[0], sizeof(serial_string));",
+        "memcpy(&serial_string[0], &response.arguments[0], 22);",
+    )
+    if any(marker not in accessory_source for marker in preserved_accessory_fixes):
+        raise ModelError(
+            "OpenRazer native accessory source lost a required upstream 3.12.4 fix"
+        )
+
     rules = (prepared.root / "install_files" / "udev" / "99-razer.rules").read_text(
         encoding="utf-8"
     )
@@ -801,6 +838,20 @@ def _run_openrazer_native_route_contracts(root: Path, node: TestNode) -> None:
             raise ModelError(f"OpenRazer native {driver} no longer reuses its exact USB catalog")
         if not _openrazer_payload_retry_is_safe(source_text):
             raise ModelError(f"OpenRazer native {driver} can retry an uncertain transaction")
+
+    capability = deployment.compatibility.runtime_capability
+    capability_marker = (
+        f'MODULE_INFO({capability.modinfo_field}, "{capability.expected_value}");'
+    )
+    for module in deployment.driver.modules:
+        source_text = (prepared.root / "driver" / f"{module}_driver.c").read_text(
+            encoding="utf-8"
+        )
+        expected_count = 1 if module in capability.modules else 0
+        if source_text.count(capability_marker) != expected_count:
+            raise ModelError(
+                f"OpenRazer native {module} capability marker differs from deployment policy"
+            )
 
     prepared_driver = prepared.root / "driver"
     prepared_source_link = prepared_driver / "source"
@@ -855,6 +906,7 @@ def _run_openrazer_native_route_contracts(root: Path, node: TestNode) -> None:
         f"DeviceAllow={deployment.relay.uhid_device} rw",
         f"PartOf={runtime.bridge.service_unit}",
         "ProtectKernelModules=yes",
+        f"ExecCondition={runtime.operations.activation_path} check-openrazer-runtime",
     )
     if any(marker not in service for marker in required_service):
         raise ModelError("OpenRazer native relay service sandbox is incomplete")
@@ -954,6 +1006,29 @@ def _run_repository_atlas_contracts(root: Path, _node: TestNode) -> None:
 
 def _run_openrazer_compatibility_contracts(root: Path, node: TestNode) -> None:
     source = _openrazer_source(root)
+    deployment = load_native_deployment(root)
+    expected_version = deployment.compatibility.verified_upstream_version
+    version_sources = (
+        source / "daemon" / "openrazer_daemon" / "daemon.py",
+        source / "pylib" / "openrazer" / "client" / "device_manager.py",
+    )
+    for path in version_sources:
+        module = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        versions = [
+            node.value.value
+            for node in module.body
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name) and target.id == "__version__"
+                for target in node.targets
+            )
+            and isinstance(node.value, ast.Constant)
+            and isinstance(node.value.value, str)
+        ]
+        if versions != [expected_version]:
+            raise ModelError(
+                f"OpenRazer {path.relative_to(source)} version differs from native deployment"
+            )
     build_directory = root / "build" / "openrazer-compatibility"
     if build_directory.exists():
         shutil.rmtree(build_directory)
@@ -1544,6 +1619,19 @@ def _run_package_contracts(root: Path, node: TestNode) -> None:
         load_performance_budgets(root),
         {artifact.build_id: artifact.size for artifact in artifacts.artifacts},
         staged_payload_size,
+    )
+
+    arch_package = build_distribution_package(
+        root,
+        manifest_path,
+        "arch",
+        workspace / "arch-package",
+    ).package
+    verify_arch_openrazer_update_policy(
+        arch_package,
+        package_name=runtime.product.package_name,
+        workspace=workspace / "openrazer-update-policy",
+        timeout_seconds=node.timeout_seconds,
     )
 
 

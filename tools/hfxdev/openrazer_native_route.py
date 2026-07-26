@@ -27,10 +27,17 @@ from .openrazer import (
 
 
 TRANSFORM_SCHEMA = "hyperflux-openrazer-native-transform-v1"
-DEPLOYMENT_SCHEMA = "hyperflux-openrazer-native-deployment-v1"
+DEPLOYMENT_SCHEMA = "hyperflux-openrazer-native-deployment-v2"
 CATALOG_SCHEMA = "hyperflux-openrazer-native-route-catalog-v1"
 TRANSFORM_KEYS = {"$schema", "schema", "upstream", "patch", "files"}
-DEPLOYMENT_KEYS = {"$schema", "schema", "relay", "driver", "access"}
+DEPLOYMENT_KEYS = {
+    "$schema",
+    "schema",
+    "relay",
+    "driver",
+    "access",
+    "compatibility",
+}
 RELAY_KEYS = {"executable_path", "service_unit", "uhid_device", "restart_seconds"}
 DRIVER_KEYS = {"dkms_name", "dkms_version", "source_directory", "modules"}
 ACCESS_KEYS = {
@@ -41,6 +48,15 @@ ACCESS_KEYS = {
     "mount_helper_path",
     "sysusers_path",
 }
+COMPATIBILITY_KEYS = {
+    "verified_upstream_version",
+    "daemon_executable_path",
+    "version_argument",
+    "package_release_policy",
+    "unverified_upstream_policy",
+    "runtime_capability",
+}
+RUNTIME_CAPABILITY_KEYS = {"modinfo_field", "expected_value", "modules"}
 UPSTREAM_KEYS = {"id", "repository", "commit"}
 PATCH_KEYS = {"path", "sha256"}
 FILE_KEYS = {"path", "source_sha256", "transformed_sha256"}
@@ -116,11 +132,29 @@ class OpenRazerAccessDeployment:
 
 
 @dataclass(frozen=True)
+class OpenRazerRuntimeCapability:
+    modinfo_field: str
+    expected_value: str
+    modules: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class OpenRazerCompatibilityDeployment:
+    verified_upstream_version: str
+    daemon_executable_path: str
+    version_argument: str
+    package_release_policy: str
+    unverified_upstream_policy: str
+    runtime_capability: OpenRazerRuntimeCapability
+
+
+@dataclass(frozen=True)
 class OpenRazerNativeDeployment:
     source_sha256: str
     relay: OpenRazerRelayDeployment
     driver: OpenRazerDriverDeployment
     access: OpenRazerAccessDeployment
+    compatibility: OpenRazerCompatibilityDeployment
 
 
 def _json_payload(value: dict[str, Any]) -> bytes:
@@ -469,6 +503,60 @@ def load_native_deployment(root: Path) -> OpenRazerNativeDeployment:
     for key, expected in expected_access.items():
         if access[key] != expected:
             raise ModelError(f"OpenRazer native access {key} differs from its deployment contract")
+
+    compatibility = value["compatibility"]
+    if not isinstance(compatibility, dict):
+        raise ModelError("OpenRazer native compatibility deployment must be an object")
+    _exact_keys(
+        compatibility,
+        COMPATIBILITY_KEYS,
+        "OpenRazer native compatibility deployment",
+    )
+    verified_version = compatibility["verified_upstream_version"]
+    if verified_version != upstream["version"] or verified_version != version:
+        raise ModelError(
+            "OpenRazer native compatibility version differs from its pinned source"
+        )
+    daemon_executable = _deployment_path(
+        compatibility["daemon_executable_path"],
+        "OpenRazer daemon executable",
+        ("/", "usr", "bin"),
+    )
+    if daemon_executable != "/usr/bin/openrazer-daemon":
+        raise ModelError("OpenRazer daemon executable differs from its runtime contract")
+    if compatibility["version_argument"] != "--version":
+        raise ModelError("OpenRazer version argument differs from its runtime contract")
+    if compatibility["package_release_policy"] != "ignored":
+        raise ModelError("OpenRazer package release policy must ignore packaging revisions")
+    if compatibility["unverified_upstream_policy"] != "rebase-reverification-required":
+        raise ModelError("OpenRazer unverified source policy must fail closed")
+
+    capability = compatibility["runtime_capability"]
+    if not isinstance(capability, dict):
+        raise ModelError("OpenRazer native runtime capability must be an object")
+    _exact_keys(
+        capability,
+        RUNTIME_CAPABILITY_KEYS,
+        "OpenRazer native runtime capability",
+    )
+    field = capability["modinfo_field"]
+    expected_value = capability["expected_value"]
+    capability_modules = capability["modules"]
+    if not isinstance(field, str) or re.fullmatch(r"[a-z][a-z0-9_]{0,63}", field) is None:
+        raise ModelError("OpenRazer native capability field is invalid")
+    if (
+        not isinstance(expected_value, str)
+        or re.fullmatch(r"[a-z0-9][a-z0-9_.-]{0,63}", expected_value) is None
+    ):
+        raise ModelError("OpenRazer native capability value is invalid")
+    if (
+        not isinstance(capability_modules, list)
+        or not capability_modules
+        or capability_modules != sorted(capability_modules)
+        or len(set(capability_modules)) != len(capability_modules)
+        or not set(capability_modules).issubset(modules)
+    ):
+        raise ModelError("OpenRazer native capability modules are invalid")
     return OpenRazerNativeDeployment(
         source_sha256=sha256_file(path),
         relay=OpenRazerRelayDeployment(
@@ -490,6 +578,18 @@ def load_native_deployment(root: Path) -> OpenRazerNativeDeployment:
             mount_helper_source=access["mount_helper_source"],
             mount_helper_path=access["mount_helper_path"],
             sysusers_path=access["sysusers_path"],
+        ),
+        compatibility=OpenRazerCompatibilityDeployment(
+            verified_upstream_version=verified_version,
+            daemon_executable_path=daemon_executable,
+            version_argument=compatibility["version_argument"],
+            package_release_policy=compatibility["package_release_policy"],
+            unverified_upstream_policy=compatibility["unverified_upstream_policy"],
+            runtime_capability=OpenRazerRuntimeCapability(
+                modinfo_field=field,
+                expected_value=expected_value,
+                modules=tuple(capability_modules),
+            ),
         ),
     )
 

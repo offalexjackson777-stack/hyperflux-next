@@ -4,12 +4,12 @@
   "upstream": {
     "id": "openrazer",
     "repository": "https://github.com/openrazer/openrazer.git",
-    "version": "3.12.2",
-    "commit": "ddea89607b86023e88563b8feabc8fa2d5773cdd",
+    "version": "3.12.4",
+    "commit": "1ef8a91712906a89fd332a2ed62bbd105315d6d1",
     "license_expression": "GPL-2.0-or-later AND CC-BY-SA-4.0"
   },
-  "policy_sha256": "35f634e6a6ee688aed8887ddd4abca369822052414605a9e04dcf893c89dd073",
-  "inventory_sha256": "0d88389f31c899515e7995a441bbfa12e64aad230caf670060c5b0da12c3e385",
+  "policy_sha256": "33a7a0e24dd65999995d5f1681f01aff6c480add8ad6c3494b429f99adea8679",
+  "inventory_sha256": "285326b4daba9dc1e6e060d12614c0f7cd228bb072bb31e150f178489c12ab1c",
   "report_size": 90,
   "busy_retry": {
     "status": 1,
@@ -22,15 +22,15 @@
     },
     {
       "path": "driver/razercommon.h",
-      "sha256": "cf7964af6d08f8a33eaad7956e6fd0aa1d251ff397e72a117e2b13ba947ef39f"
+      "sha256": "193a0e3c98621cd726659319d6cd25328877f832bcd24d7eef95e3b0b5fa2b60"
     },
     {
       "path": "driver/razerkbd_driver.c",
-      "sha256": "08b2582ededa530e304167802c72bdca0c766d912b813bc032735a697a9d61b4"
+      "sha256": "ac68e071cf135ce2f4e64fdbc698a6dc20c711d3465124182af040460fe11782"
     },
     {
       "path": "driver/razermouse_driver.c",
-      "sha256": "73ea67d5314316ecd59d07dc8def979a1fbcfc5d398a728fed733a8f1f4f31b1"
+      "sha256": "bd00162b46710394b28f34f66a37dbfdeeccc161acdc63f8afea362c2521f01a"
     }
   ],
   "devices": [
@@ -86,7 +86,7 @@
             "reader": "razer_attr_read_device_serial",
             "request_owner": "razer_attr_read_device_serial",
             "source_line": 1320,
-            "source_sha256": "2944c301199de96b7daa010af48ccee4b106eda5ce5135bb394a5a207dc73290"
+            "source_sha256": "43f8db36c6a2e35e3060b60044b10f573f6e02fdfe091b7c5f50cafd45fe5780"
           },
           "request": {
             "command_class": 0,
@@ -556,7 +556,7 @@
             "source_path": "driver/razerkbd_driver.c",
             "reader": "razer_attr_read_firmware_version",
             "request_owner": "razer_attr_read_firmware_version",
-            "source_line": 2044,
+            "source_line": 2060,
             "source_sha256": "c4437ed6144a46d785ae773fe3c851432c80c63e2d740b6d01070f6d7f7ff21f"
           },
           "request": {
@@ -582,8 +582,8 @@
             "source_path": "driver/razerkbd_driver.c",
             "reader": "razer_attr_read_device_serial",
             "request_owner": "razer_attr_read_device_serial",
-            "source_line": 2014,
-            "source_sha256": "eddbee64061c17aed62a4241b1e172a7abeab5961833170855441fdbe29f38ab"
+            "source_line": 2030,
+            "source_sha256": "c1fa93fb199ea1867ecca392a0fd9931abd86e47fae6f58fe97c8edc7b5ec2bf"
           },
           "request": {
             "command_class": 0,
@@ -628,7 +628,7 @@
             "source_path": "driver/razerkbd_driver.c",
             "reader": "razer_attr_read_device_mode",
             "request_owner": "razer_attr_read_device_mode",
-            "source_line": 4039,
+            "source_line": 4055,
             "source_sha256": "39236061ef91779c100d8eccd1606023e3b60e9b694af79d140a8dc4382b1ea3"
           },
           "request": {
@@ -654,7 +654,7 @@
             "source_path": "driver/razerkbd_driver.c",
             "reader": "razer_attr_read_kbd_layout",
             "request_owner": "razer_attr_read_kbd_layout",
-            "source_line": 470,
+            "source_line": 486,
             "source_sha256": "ddeb5301cf7a572e443da7893454cd38cae3ac049162d68e3f6402b5bc4b6006"
           },
           "request": {
@@ -680,7 +680,7 @@
             "source_path": "driver/razerkbd_driver.c",
             "reader": "razer_attr_read_charge_level",
             "request_owner": "razer_attr_read_charge_level",
-            "source_line": 642,
+            "source_line": 658,
             "source_sha256": "7883389bbba439585de271db6bc5565ffa89d9829337f577b72e835a38b04133"
           },
           "request": {
@@ -706,7 +706,7 @@
             "source_path": "driver/razerkbd_driver.c",
             "reader": "razer_attr_read_charge_status",
             "request_owner": "razer_attr_read_charge_status",
-            "source_line": 687,
+            "source_line": 703,
             "source_sha256": "fe90a99badadce54aafbfe60458ff63cd6d99d4d81a712b685878febd683ae66"
           },
           "request": {
@@ -732,7 +732,7 @@
             "source_path": "driver/razerkbd_driver.c",
             "reader": "razer_attr_read_game_led_state",
             "request_owner": "razer_attr_read_game_led_state",
-            "source_line": 922,
+            "source_line": 938,
             "source_sha256": "6c17d88e0814bf372c766b7de4cea7b368002f47c3acdcaca47f4dfc91406ce7"
           },
           "request": {
@@ -759,7 +759,7 @@
             "source_path": "driver/razerkbd_driver.c",
             "reader": "razer_attr_read_macro_led_state",
             "request_owner": "razer_attr_read_macro_led_state",
-            "source_line": 1101,
+            "source_line": 1117,
             "source_sha256": "888e0973122d9ae89ec4d68a920e8981356ff8c58970f1e4c148da321bc1cd2d"
           },
           "request": {
@@ -786,7 +786,7 @@
             "source_path": "driver/razerkbd_driver.c",
             "reader": "razer_attr_read_macro_led_effect",
             "request_owner": "razer_attr_read_macro_led_effect",
-            "source_line": 1724,
+            "source_line": 1740,
             "source_sha256": "2ff2b62f16d8ece600d215adb4a4088a4198307cc7c62132713f429c1b0b3b3c"
           },
           "request": {

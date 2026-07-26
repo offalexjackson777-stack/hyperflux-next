@@ -99,12 +99,12 @@ OPENRAZER_METADATA: Final = {'$schema': '../../schemas/imported-device-metadata.
                          'path': 'daemon/openrazer_daemon/hardware/keyboards.py',
                          'sha256': 'a4d6b54f4e6da3a7ff65a727ccc5b047efb345d3170d0a2f8256b5f0a7c1d5e9'}}],
  'schema': 'hyperflux-imported-device-metadata-v1',
- 'selection_sha256': 'a6d800974ce98c56ff2e0ff1dd584e65128c5a95f806e31f278c99fd7c0736c9',
- 'upstream': {'commit': 'ddea89607b86023e88563b8feabc8fa2d5773cdd',
+ 'selection_sha256': '6994cfb256cf9e3b54c302eed2ad9023095c150f29992aee9510b850cef02188',
+ 'upstream': {'commit': '1ef8a91712906a89fd332a2ed62bbd105315d6d1',
               'id': 'openrazer',
               'license_expression': 'GPL-2.0-or-later AND CC-BY-SA-4.0',
               'repository': 'https://github.com/openrazer/openrazer.git',
-              'version': '3.12.2'}}
+              'version': '3.12.4'}}
 OPENRAZER_DEVICES_BY_PROFILE: Final = MappingProxyType(
     {value['profile_id']: value for value in OPENRAZER_METADATA['devices']}
 )

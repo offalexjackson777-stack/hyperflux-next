@@ -21,6 +21,7 @@ from hfxdev.distribution_package import (
     _canonical_arch_mtree,
     _canonical_arch_buildinfo,
     _arch_hook,
+    _arch_openrazer_policy_hook,
     _arch_install,
     _arch_pkgbuild,
     _tar_payload,
@@ -57,6 +58,8 @@ class DistributionPackageTests(unittest.TestCase):
                 self.assertIn(dependency, recipe)
         self.assertIn("'python>=3.14'", recipe)
         self.assertIn("'python<3.15'", recipe)
+        self.assertIn("'openrazer-driver-dkms'", recipe)
+        self.assertIn("'hyperflux-openrazer-driver-abi=3.12.4'", recipe)
 
     def test_arch_recipe_shell_quotes_human_metadata(self) -> None:
         catalog = replace(self.catalog, description="Receiver's transport")
@@ -121,6 +124,7 @@ class DistributionPackageTests(unittest.TestCase):
     def test_arch_hooks_delegate_lifecycle_without_hardware_logic(self) -> None:
         install = _arch_install(self.runtime)
         transaction = _arch_hook(self.runtime)
+        openrazer_policy = _arch_openrazer_policy_hook(self.runtime)
         activation = self.runtime.operations.activation_path
         for command in ("fresh-install", "pre-update", "pre-remove"):
             self.assertIn(f"{activation} {command}", install)
@@ -129,8 +133,14 @@ class DistributionPackageTests(unittest.TestCase):
         self.assertIn("udevadm control --reload", install)
         self.assertIn("systemd-sysusers hyperflux-next.conf", install)
         self.assertIn("systemd-sysusers openrazer.conf", install)
+        self.assertIn("Target = openrazer-daemon", openrazer_policy)
+        self.assertIn("Target = python-openrazer", openrazer_policy)
+        self.assertIn(
+            f"Exec = {activation} report-openrazer-runtime", openrazer_policy
+        )
+        self.assertIn("When = PostTransaction", openrazer_policy)
         for forbidden in ("modprobe", "unbind", "rebind", "hidraw", "1532"):
-            self.assertNotIn(forbidden, install + transaction)
+            self.assertNotIn(forbidden, install + transaction + openrazer_policy)
 
     def test_payload_tar_is_reproducible_and_root_owned(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

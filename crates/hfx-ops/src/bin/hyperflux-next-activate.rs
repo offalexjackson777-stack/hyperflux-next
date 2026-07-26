@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
+use hfx_integration_model::OPENRAZER_NATIVE_VERIFIED_UPSTREAM_VERSION;
 use hfx_ops::{
-    ActivationAction, OpenRazerDriverState, RealSystemProbe, ServiceState, SystemController,
-    SystemProbe, UpdateIntent, confirm_configuration, decide_post_update, load_update_intent,
-    migrate_configuration, record_update_intent, remove_update_intent,
+    ActivationAction, OpenRazerDriverState, OpenRazerRuntimeState, RealSystemProbe, ServiceState,
+    SystemController, SystemProbe, UpdateIntent, confirm_configuration, decide_post_update,
+    load_update_intent, migrate_configuration, record_update_intent, remove_update_intent,
 };
 use hfx_runtime::{BRIDGE_CONFIGURATION_FILE_PATH, UPDATE_STATE_PATH};
 use std::env;
@@ -12,7 +13,7 @@ use std::thread;
 use std::time::Duration;
 
 fn usage() -> &'static str {
-    "Usage: hyperflux-next-activate <fresh-install|pre-update|post-update|prepare-start|check-openrazer-driver|confirm-start|pre-remove>\n"
+    "Usage: hyperflux-next-activate <fresh-install|pre-update|post-update|prepare-start|check-openrazer-driver|check-openrazer-runtime|report-openrazer-runtime|confirm-start|pre-remove>\n"
 }
 
 fn ensure_openrazer_driver(snapshot: &hfx_ops::SystemSnapshot) -> Result<(), String> {
@@ -22,6 +23,15 @@ fn ensure_openrazer_driver(snapshot: &hfx_ops::SystemSnapshot) -> Result<(), Str
             "an older OpenRazer route module is active; reboot before starting the native relay"
                 .to_owned(),
         ),
+        OpenRazerDriverState::CapabilityUnavailable => {
+            let module = snapshot
+                .openrazer_driver
+                .blocking_module()
+                .map_or("unknown", |value| value.module_name.as_str());
+            Err(format!(
+                "the installed OpenRazer route module {module} lacks the HyperFlux native transport capability"
+            ))
+        }
         OpenRazerDriverState::Unavailable => {
             let module = snapshot
                 .openrazer_driver
@@ -30,6 +40,50 @@ fn ensure_openrazer_driver(snapshot: &hfx_ops::SystemSnapshot) -> Result<(), Str
             Err(format!(
                 "the installed OpenRazer route module {module} is unavailable"
             ))
+        }
+    }
+}
+
+fn ensure_openrazer_runtime(snapshot: &hfx_ops::SystemSnapshot) -> Result<(), String> {
+    match snapshot.openrazer_runtime.state {
+        OpenRazerRuntimeState::NotInstalled | OpenRazerRuntimeState::Verified => Ok(()),
+        OpenRazerRuntimeState::ReverificationRequired => Err(format!(
+            "the installed OpenRazer runtime is outside verified source line {OPENRAZER_NATIVE_VERIFIED_UPSTREAM_VERSION}; rebase and reverification are required"
+        )),
+        OpenRazerRuntimeState::Unverified => Err(
+            "the installed OpenRazer runtime source line could not be verified; rebase and reverification are required"
+                .to_owned(),
+        ),
+    }
+}
+
+fn report_openrazer_runtime(probe: &RealSystemProbe) {
+    let snapshot = probe.snapshot();
+    match snapshot.openrazer_runtime.state {
+        OpenRazerRuntimeState::Verified => println!(
+            "HyperFlux Next: OpenRazer remains on verified upstream source line {OPENRAZER_NATIVE_VERIFIED_UPSTREAM_VERSION}; package release changes are compatible."
+        ),
+        OpenRazerRuntimeState::NotInstalled => {
+            println!(
+                "HyperFlux Next: OpenRazer is not installed; no native-route action is required."
+            );
+        }
+        OpenRazerRuntimeState::ReverificationRequired => {
+            let observed = snapshot
+                .openrazer_runtime
+                .observed_upstream_version
+                .as_deref()
+                .unwrap_or("unavailable");
+            println!(
+                "HyperFlux Next: OpenRazer {observed} requires a native-route rebase and reverification; the relay will be skipped on its next start."
+            );
+            println!("Run hyperfluxctl doctor for the verified source line and safe action.");
+        }
+        OpenRazerRuntimeState::Unverified => {
+            println!(
+                "HyperFlux Next: the OpenRazer source line could not be verified; the relay will be skipped on its next start."
+            );
+            println!("Run hyperfluxctl doctor for the safe action.");
         }
     }
 }
@@ -148,6 +202,10 @@ fn check_openrazer_driver(probe: &RealSystemProbe) -> Result<(), String> {
     ensure_openrazer_driver(&probe.snapshot())
 }
 
+fn check_openrazer_runtime(probe: &RealSystemProbe) -> Result<(), String> {
+    ensure_openrazer_runtime(&probe.snapshot())
+}
+
 fn confirm_start(_probe: &RealSystemProbe) -> Result<(), String> {
     confirm_configuration(Path::new(BRIDGE_CONFIGURATION_FILE_PATH))
         .map_err(|error| format!("configuration confirmation failed: {error}"))?;
@@ -181,6 +239,11 @@ fn run() -> Result<(), String> {
         "post-update" => post_update(&probe),
         "prepare-start" => prepare_start(&probe),
         "check-openrazer-driver" => check_openrazer_driver(&probe),
+        "check-openrazer-runtime" => check_openrazer_runtime(&probe),
+        "report-openrazer-runtime" => {
+            report_openrazer_runtime(&probe);
+            Ok(())
+        }
         "confirm-start" => confirm_start(&probe),
         "pre-remove" => pre_remove(&probe),
         _ => Err(usage().to_owned()),

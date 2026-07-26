@@ -4,12 +4,12 @@
   "upstream": {
     "id": "openrazer",
     "repository": "https://github.com/openrazer/openrazer.git",
-    "version": "3.12.2",
-    "commit": "ddea89607b86023e88563b8feabc8fa2d5773cdd",
+    "version": "3.12.4",
+    "commit": "1ef8a91712906a89fd332a2ed62bbd105315d6d1",
     "license_expression": "GPL-2.0-or-later AND CC-BY-SA-4.0"
   },
-  "policy_sha256": "b109fb8473a004f6b27e85c399486e2b2bd57d99589e5caa15c10d673dafcf7e",
-  "metadata_selection_sha256": "a6d800974ce98c56ff2e0ff1dd584e65128c5a95f806e31f278c99fd7c0736c9",
+  "policy_sha256": "9cb97e7808ad894a3d762f5c2c9e00e894e1bcaa373f79a2e951a3e181b972a4",
+  "metadata_selection_sha256": "6994cfb256cf9e3b54c302eed2ad9023095c150f29992aee9510b850cef02188",
   "report_size": 90,
   "source_files": [
     {
@@ -38,11 +38,11 @@
     },
     {
       "path": "driver/razercommon.h",
-      "sha256": "cf7964af6d08f8a33eaad7956e6fd0aa1d251ff397e72a117e2b13ba947ef39f"
+      "sha256": "193a0e3c98621cd726659319d6cd25328877f832bcd24d7eef95e3b0b5fa2b60"
     },
     {
       "path": "driver/razerkbd_driver.c",
-      "sha256": "08b2582ededa530e304167802c72bdca0c766d912b813bc032735a697a9d61b4"
+      "sha256": "ac68e071cf135ce2f4e64fdbc698a6dc20c711d3465124182af040460fe11782"
     },
     {
       "path": "driver/razerkbd_driver.h",
@@ -50,7 +50,7 @@
     },
     {
       "path": "driver/razermouse_driver.c",
-      "sha256": "73ea67d5314316ecd59d07dc8def979a1fbcfc5d398a728fed733a8f1f4f31b1"
+      "sha256": "bd00162b46710394b28f34f66a37dbfdeeccc161acdc63f8afea362c2521f01a"
     },
     {
       "path": "driver/razermouse_driver.h",

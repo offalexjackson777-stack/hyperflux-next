@@ -245,7 +245,12 @@ mod tests {
                     installed_identity: Some("ABC".to_owned()),
                     loaded: false,
                     loaded_identity: None,
+                    native_transport_capability: Some("razer-feature-report-v1".to_owned()),
                 }],
+            },
+            openrazer_runtime: crate::OpenRazerRuntimeSnapshot {
+                state: crate::OpenRazerRuntimeState::NotInstalled,
+                observed_upstream_version: None,
             },
             openrazer_access: crate::OpenRazerAccessState::NotInstalled,
             service_state: ServiceState::Inactive,

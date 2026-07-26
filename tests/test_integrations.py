@@ -70,7 +70,7 @@ class IntegrationCatalogTests(unittest.TestCase):
         )
         self.assertEqual(
             upstreams["openrazer"]["commit"],
-            "ddea89607b86023e88563b8feabc8fa2d5773cdd",
+            "1ef8a91712906a89fd332a2ed62bbd105315d6d1",
         )
         self.assertEqual(
             upstreams["polychromatic"]["commit"],

@@ -68,7 +68,7 @@
       "kind": "source-transform",
       "required": true,
       "transform": "openrazer-native-route",
-      "destination": "/usr/src/openrazer-driver-3.12.2",
+      "destination": "/usr/src/openrazer-driver-3.12.4",
       "mode": "0644",
       "capability": "openrazer-source"
     },

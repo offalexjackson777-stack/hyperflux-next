@@ -93,7 +93,11 @@ class DebianPackageTests(unittest.TestCase):
             "Conflicts: hyperflux-v2-linux-dkms, openrazer-driver-dkms\n",
             control,
         )
-        self.assertIn("Provides: openrazer-driver-dkms\n", control)
+        self.assertIn(
+            "Provides: openrazer-driver-dkms, "
+            "hyperflux-openrazer-driver-abi (= 3.12.4)\n",
+            control,
+        )
         self.assertIn("Replaces: openrazer-driver-dkms\n", control)
         self.assertIn(f"Description: {self.catalog.description}\n", control)
 

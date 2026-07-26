@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use crate::{OpenRazerAccessState, OpenRazerDriverState, ServiceState, SystemSnapshot};
+use crate::{
+    OpenRazerAccessState, OpenRazerDriverState, OpenRazerRuntimeState, ServiceState, SystemSnapshot,
+};
 use hfx_errors::{ErrorCode, error_by_code, remediation_by_id};
+use hfx_integration_model::{
+    OPENRAZER_NATIVE_CAPABILITY_FIELD, OPENRAZER_NATIVE_VERIFIED_UPSTREAM_VERSION,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -128,6 +133,19 @@ fn classify_openrazer_driver(
         return state;
     }
     if let Some(module) = snapshot.openrazer_driver.blocking_module() {
+        if state == OpenRazerDriverState::CapabilityUnavailable {
+            findings.push(local_finding(
+                ErrorCode::HfxIntegration004,
+                BTreeMap::from([
+                    (
+                        "capability".to_owned(),
+                        OPENRAZER_NATIVE_CAPABILITY_FIELD.to_owned(),
+                    ),
+                    ("module".to_owned(), module.module_name.clone()),
+                ]),
+            ));
+            return state;
+        }
         findings.push(local_finding(
             ErrorCode::HfxKernel002,
             BTreeMap::from([
@@ -154,6 +172,49 @@ fn classify_openrazer_driver(
         ));
     }
     state
+}
+
+fn classify_openrazer_runtime(
+    snapshot: &SystemSnapshot,
+    working: &mut Vec<String>,
+    findings: &mut Vec<AssessmentFinding>,
+) {
+    match snapshot.openrazer_runtime.state {
+        OpenRazerRuntimeState::Verified => {
+            working.push("the OpenRazer runtime source line is verified".to_owned());
+        }
+        OpenRazerRuntimeState::ReverificationRequired | OpenRazerRuntimeState::Unverified => {
+            findings.push(local_finding(
+                ErrorCode::HfxIntegration005,
+                BTreeMap::from([
+                    (
+                        "observed_version".to_owned(),
+                        snapshot
+                            .openrazer_runtime
+                            .observed_upstream_version
+                            .clone()
+                            .unwrap_or_else(|| "unavailable".to_owned()),
+                    ),
+                    (
+                        "runtime_state".to_owned(),
+                        if snapshot.openrazer_runtime.state
+                            == OpenRazerRuntimeState::ReverificationRequired
+                        {
+                            "rebase-reverification-required"
+                        } else {
+                            "version-unverified"
+                        }
+                        .to_owned(),
+                    ),
+                    (
+                        "verified_version".to_owned(),
+                        OPENRAZER_NATIVE_VERIFIED_UPSTREAM_VERSION.to_owned(),
+                    ),
+                ]),
+            ));
+        }
+        OpenRazerRuntimeState::NotInstalled => {}
+    }
 }
 
 fn classify_openrazer_access(
@@ -236,6 +297,7 @@ pub fn assess_system(snapshot: &SystemSnapshot) -> Assessment {
         ));
     }
 
+    classify_openrazer_runtime(snapshot, &mut working, &mut findings);
     classify_openrazer_access(snapshot, &mut working, &mut findings);
 
     let (receiver_generations, qualified_generations) =
@@ -388,7 +450,12 @@ mod tests {
                     installed_identity: Some("installed".to_owned()),
                     loaded: false,
                     loaded_identity: None,
+                    native_transport_capability: Some("razer-feature-report-v1".to_owned()),
                 }],
+            },
+            openrazer_runtime: crate::OpenRazerRuntimeSnapshot {
+                state: crate::OpenRazerRuntimeState::Verified,
+                observed_upstream_version: Some("3.12.4".to_owned()),
             },
             openrazer_access: OpenRazerAccessState::Ready,
             service_state: ServiceState::Active,
@@ -468,12 +535,54 @@ mod tests {
     #[test]
     fn optional_openrazer_absence_does_not_block_the_core_bridge() {
         let mut value = snapshot();
+        value.openrazer_runtime = crate::OpenRazerRuntimeSnapshot {
+            state: crate::OpenRazerRuntimeState::NotInstalled,
+            observed_upstream_version: None,
+        };
         value.openrazer_access = OpenRazerAccessState::NotInstalled;
 
         let assessment = assess_system(&value);
 
         assert_eq!(assessment.state, AssessmentState::Ready);
         assert!(assessment.findings.is_empty());
+    }
+
+    #[test]
+    fn missing_native_module_capability_is_distinct_from_a_version_change() {
+        let mut value = snapshot();
+        value.openrazer_driver.modules[0].native_transport_capability = None;
+
+        let assessment = assess_system(&value);
+
+        assert_eq!(assessment.state, AssessmentState::NeedsAttention);
+        assert_eq!(assessment.findings.len(), 1);
+        assert_eq!(assessment.findings[0].code, "HFX-INTEGRATION-004");
+        assert_eq!(assessment.findings[0].details["module"], "razerkbd");
+        assert_eq!(
+            assessment.findings[0].details["capability"],
+            "hyperflux_native_transport"
+        );
+    }
+
+    #[test]
+    fn future_openrazer_source_line_requires_rebase_without_claiming_capability_loss() {
+        let mut value = snapshot();
+        value.openrazer_runtime = crate::OpenRazerRuntimeSnapshot {
+            state: crate::OpenRazerRuntimeState::ReverificationRequired,
+            observed_upstream_version: Some("3.13.0".to_owned()),
+        };
+
+        let assessment = assess_system(&value);
+
+        assert_eq!(assessment.state, AssessmentState::NeedsAttention);
+        assert_eq!(assessment.findings.len(), 1);
+        assert_eq!(assessment.findings[0].code, "HFX-INTEGRATION-005");
+        assert_eq!(
+            assessment.findings[0].details["runtime_state"],
+            "rebase-reverification-required"
+        );
+        assert_eq!(assessment.findings[0].details["observed_version"], "3.13.0");
+        assert_eq!(assessment.findings[0].details["verified_version"], "3.12.4");
     }
 
     #[test]

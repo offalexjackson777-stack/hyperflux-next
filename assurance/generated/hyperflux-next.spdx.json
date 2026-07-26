@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "HyperFlux Next source dependency inventory",
-  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/5db9df91fc4c065eb1cc1cac43895ebc25f0d4d017084dc830be83b8e3dfc53b",
+  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/6235b6f83cecf4a78814eaf8f4e4f393a526082c09fc0161f15b2a2d8a07d66c",
   "creationInfo": {
     "created": "2026-07-20T00:00:00Z",
     "creators": [
@@ -1139,15 +1139,15 @@
       "comment": "Distribution-provided build dependency."
     },
     {
-      "SPDXID": "SPDXRef-Upstream-openrazer-ddea89607b86023e88563b8feabc8fa2d5773cdd",
+      "SPDXID": "SPDXRef-Upstream-openrazer-1ef8a91712906a89fd332a2ed62bbd105315d6d1",
       "name": "OpenRazer",
-      "versionInfo": "3.12.2",
+      "versionInfo": "3.12.4",
       "downloadLocation": "https://github.com/openrazer/openrazer.git",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "GPL-2.0-or-later AND CC-BY-SA-4.0",
       "copyrightText": "NOASSERTION",
-      "comment": "Pinned integration source commit ddea89607b86023e88563b8feabc8fa2d5773cdd."
+      "comment": "Pinned integration source commit 1ef8a91712906a89fd332a2ed62bbd105315d6d1."
     },
     {
       "SPDXID": "SPDXRef-Upstream-openrgb-6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0",
@@ -2096,7 +2096,7 @@
       "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
     },
     {
-      "spdxElementId": "SPDXRef-Upstream-openrazer-ddea89607b86023e88563b8feabc8fa2d5773cdd",
+      "spdxElementId": "SPDXRef-Upstream-openrazer-1ef8a91712906a89fd332a2ed62bbd105315d6d1",
       "relationshipType": "BUILD_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-0.0.0-dev.1"
     },

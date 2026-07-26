@@ -87,6 +87,13 @@
       "automatic": true
     },
     {
+      "id": "reinstall-openrazer-route-driver",
+      "title": "Restore the OpenRazer native-route capability",
+      "safe_action": "Reinstall the current HyperFlux Next package, then use the driver activation action reported by Doctor.",
+      "verification": "Run Doctor and confirm the OpenRazer native-route capability finding is absent.",
+      "automatic": false
+    },
+    {
       "id": "release-owner",
       "title": "Release the current owner",
       "safe_action": "Release control in the owning application or close it, then request ownership again.",
@@ -106,6 +113,13 @@
       "safe_action": "Retry with bounded backoff only while the original deadline remains valid.",
       "verification": "Confirm the new attempt is admitted once and produces one terminal outcome.",
       "automatic": true
+    },
+    {
+      "id": "reverify-openrazer-source",
+      "title": "Use a verified OpenRazer source line",
+      "safe_action": "Keep the native OpenRazer relay stopped. Install the verified OpenRazer runtime named by the current HyperFlux package, or install a newer HyperFlux package whose OpenRazer transform has been rebased and reverified.",
+      "verification": "Run Doctor and confirm the OpenRazer source-line finding is absent before starting the native relay.",
+      "automatic": false
     },
     {
       "id": "start-bridge",
@@ -231,6 +245,43 @@
       "user_explanation": "This desktop session cannot open OpenRazer devices yet.",
       "privacy": "public",
       "docs_path": "docs/generated/error-catalog.md#hfx-integration-003"
+    },
+    {
+      "code": "HFX-INTEGRATION-004",
+      "class": "integration",
+      "severity": "error",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "reinstall-openrazer-route-driver",
+      "safe_detail_fields": [
+        {"name": "capability", "type": "identifier", "required": true, "maximum_length": 64, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Required HyperFlux native transport capability."},
+        {"name": "module", "type": "identifier", "required": true, "maximum_length": 64, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "OpenRazer module missing the native transport capability."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "integration",
+      "technical_cause": "An installed OpenRazer route module does not advertise the source-bound HyperFlux native transport capability.",
+      "user_explanation": "The installed OpenRazer driver is not the verified HyperFlux native-route build.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-integration-004"
+    },
+    {
+      "code": "HFX-INTEGRATION-005",
+      "class": "integration",
+      "severity": "error",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "reverify-openrazer-source",
+      "safe_detail_fields": [
+        {"name": "observed_version", "type": "text", "required": true, "maximum_length": 32, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Bounded upstream version reported by the installed OpenRazer daemon, or unavailable."},
+        {"name": "runtime_state", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["rebase-reverification-required", "version-unverified"], "privacy": "public", "description": "OpenRazer source-line verification state."},
+        {"name": "verified_version", "type": "text", "required": true, "maximum_length": 32, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "OpenRazer upstream source version verified by this HyperFlux package."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "0.0.0-dev.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "integration",
+      "technical_cause": "The installed OpenRazer runtime is not bound to the upstream source line verified by the current HyperFlux native-route transform.",
+      "user_explanation": "This OpenRazer update needs a HyperFlux rebase and fresh verification before the native relay can use it.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-integration-005"
     },
     {
       "code": "HFX-INTERNAL-001",

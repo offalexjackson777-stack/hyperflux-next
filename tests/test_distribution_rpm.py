@@ -95,6 +95,8 @@ class RpmPackageTests(unittest.TestCase):
             self.assertIn(f"Requires: {expected}\n", spec)
         for item in self.target.optional_dependencies:
             self.assertIn(f"Suggests: {item.package}\n", spec)
+        self.assertIn("Provides: openrazer-driver-dkms\n", spec)
+        self.assertIn("Provides: hyperflux-openrazer-driver-abi = 3.12.4\n", spec)
         self.assertIn(f"%config(noreplace) %attr(0640,root,root) {RPM_CONFIGURATION}", spec)
         self.assertIn(
             "%dir %attr(2750,root,root) /etc/hyperflux-next",
