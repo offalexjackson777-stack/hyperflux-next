@@ -1,0 +1,4464 @@
+{
+  "$schema": "../../schemas/upstream-device-catalog.schema.json",
+  "schema": "hyperflux-upstream-device-catalog-v1",
+  "source": {
+    "upstream_id": "openrgb",
+    "repository": "https://github.com/CalcProgrammer1/OpenRGB.git",
+    "version": "1.0rc3",
+    "commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0",
+    "license_expression": "GPL-2.0-only",
+    "extractor": "cpp-initializer-v1",
+    "source_files": [
+      {
+        "path": "Controllers/RazerController/RazerControllerDetect.cpp",
+        "sha256": "11ce7a0485ceda8951d01f4cb9d50f89dffea348bf2c99333a7a6e3b23af0d9d"
+      },
+      {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "sha256": "e959c103c0a776b0143c8eeea405c36b55fffd1bad5361107e52af19f08b8a6b"
+      },
+      {
+        "path": "Controllers/RazerController/RazerDevices.h",
+        "sha256": "d3489af9b0548be24b2259a5858f7757897c0dff99c693feffac0a40a0f7a069"
+      }
+    ]
+  },
+  "records": [
+    {
+      "record_id": "openrgb:abyssus_elite_dva_edition_device",
+      "source_device_key": "abyssus_elite_dva_edition_device",
+      "model_name": "Razer Abyssus Elite DVa Edition",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 106
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 1,
+        "application_slot_count": 1,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 4426
+      }
+    },
+    {
+      "record_id": "openrgb:abyssus_essential_device",
+      "source_device_key": "abyssus_essential_device",
+      "model_name": "Razer Abyssus Essential",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 107
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 1,
+        "application_slot_count": 1,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 4461
+      }
+    },
+    {
+      "record_id": "openrgb:basilisk_device",
+      "source_device_key": "basilisk_device",
+      "model_name": "Razer Basilisk",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 100
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 2,
+        "application_slot_count": 2,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 4508
+      }
+    },
+    {
+      "record_id": "openrgb:basilisk_essential_device",
+      "source_device_key": "basilisk_essential_device",
+      "model_name": "Razer Basilisk Essential",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 101
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 1,
+        "application_slot_count": 1,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 4543
+      }
+    },
+    {
+      "record_id": "openrgb:basilisk_ultimate_wired_device",
+      "source_device_key": "basilisk_ultimate_wired_device",
+      "model_name": "Razer Basilisk Ultimate",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 134
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 14,
+        "application_slot_count": 14,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Left LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 8
+          },
+          {
+            "name": "Right LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 4
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 4614
+      }
+    },
+    {
+      "record_id": "openrgb:basilisk_ultimate_wireless_device",
+      "source_device_key": "basilisk_ultimate_wireless_device",
+      "model_name": "Razer Basilisk Ultimate (Wireless)",
+      "device_kind": "mouse",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 136
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 14,
+        "application_slot_count": 14,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Left LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 8
+          },
+          {
+            "name": "Right LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 4
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 4685
+      }
+    },
+    {
+      "record_id": "openrgb:basilisk_v2_device",
+      "source_device_key": "basilisk_v2_device",
+      "model_name": "Razer Basilisk V2",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 133
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 2,
+        "application_slot_count": 2,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 4732
+      }
+    },
+    {
+      "record_id": "openrgb:basilisk_v3_35k_device",
+      "source_device_key": "basilisk_v3_35k_device",
+      "model_name": "Razer Basilisk V3 35K",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 203
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 11,
+        "application_slot_count": 11,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 9
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 4850
+      }
+    },
+    {
+      "record_id": "openrgb:basilisk_v3_device",
+      "source_device_key": "basilisk_v3_device",
+      "model_name": "Razer Basilisk V3",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 153
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 11,
+        "application_slot_count": 11,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 9
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 4791
+      }
+    },
+    {
+      "record_id": "openrgb:basilisk_v3_pro_35k_pg_bluetooth_device",
+      "source_device_key": "basilisk_v3_pro_35k_pg_bluetooth_device",
+      "model_name": "Razer Basilisk V3 Pro 35K Phantom Green Edition (Bluetooth)",
+      "device_kind": "mouse",
+      "source_route": "bluetooth",
+      "usb_identity": {
+        "vendor_id": null,
+        "product_id": 216
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 13,
+        "application_slot_count": 13,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 11
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": false,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5181
+      }
+    },
+    {
+      "record_id": "openrgb:basilisk_v3_pro_35k_pg_wired_device",
+      "source_device_key": "basilisk_v3_pro_35k_pg_wired_device",
+      "model_name": "Razer Basilisk V3 Pro 35K Phantom Green Edition (Wired)",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 214
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 13,
+        "application_slot_count": 13,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 11
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5117
+      }
+    },
+    {
+      "record_id": "openrgb:basilisk_v3_pro_35k_pg_wireless_device",
+      "source_device_key": "basilisk_v3_pro_35k_pg_wireless_device",
+      "model_name": "Razer Basilisk V3 Pro 35K Phantom Green Edition (Wireless)",
+      "device_kind": "mouse",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 215
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 13,
+        "application_slot_count": 13,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 11
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5149
+      }
+    },
+    {
+      "record_id": "openrgb:basilisk_v3_pro_35k_wired_device",
+      "source_device_key": "basilisk_v3_pro_35k_wired_device",
+      "model_name": "Razer Basilisk V3 Pro 35K (Wired)",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 204
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 13,
+        "application_slot_count": 13,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 11
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5026
+      }
+    },
+    {
+      "record_id": "openrgb:basilisk_v3_pro_35k_wireless_device",
+      "source_device_key": "basilisk_v3_pro_35k_wireless_device",
+      "model_name": "Razer Basilisk V3 Pro 35K (Wireless)",
+      "device_kind": "mouse",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 205
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 13,
+        "application_slot_count": 13,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 11
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5085
+      }
+    },
+    {
+      "record_id": "openrgb:basilisk_v3_pro_bluetooth_device",
+      "source_device_key": "basilisk_v3_pro_bluetooth_device",
+      "model_name": "Razer Basilisk V3 Pro (Bluetooth)",
+      "device_kind": "mouse",
+      "source_route": "bluetooth",
+      "usb_identity": {
+        "vendor_id": null,
+        "product_id": 172
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 13,
+        "application_slot_count": 13,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 11
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": false,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5240
+      }
+    },
+    {
+      "record_id": "openrgb:basilisk_v3_pro_wired_device",
+      "source_device_key": "basilisk_v3_pro_wired_device",
+      "model_name": "Razer Basilisk V3 Pro (Wired)",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 170
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 13,
+        "application_slot_count": 13,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 11
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 4909
+      }
+    },
+    {
+      "record_id": "openrgb:basilisk_v3_pro_wireless_device",
+      "source_device_key": "basilisk_v3_pro_wireless_device",
+      "model_name": "Razer Basilisk V3 Pro (Wireless)",
+      "device_kind": "mouse",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 171
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 13,
+        "application_slot_count": 13,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 11
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 4968
+      }
+    },
+    {
+      "record_id": "openrgb:basilisk_v3_x_hyperspeed_device",
+      "source_device_key": "basilisk_v3_x_hyperspeed_device",
+      "model_name": "Razer Basilisk V3 X HyperSpeed",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 185
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 1,
+        "application_slot_count": 1,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5275
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_2019_device",
+      "source_device_key": "blackwidow_2019_device",
+      "model_name": "Razer BlackWidow 2019",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 577
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_blackwidow_2019_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1298
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_chroma_device",
+      "source_device_key": "blackwidow_chroma_device",
+      "model_name": "Razer BlackWidow Chroma",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 515
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_STANDARD",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_blackwidow_chroma_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1333
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_chroma_overwatch_device",
+      "source_device_key": "blackwidow_chroma_overwatch_device",
+      "model_name": "Razer Blackwidow Chroma Overwatch",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 529
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_STANDARD",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1368
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_chroma_te_device",
+      "source_device_key": "blackwidow_chroma_te_device",
+      "model_name": "Razer BlackWidow Chroma Tournament Edition",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 521
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_STANDARD",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_blackwidow_chroma_te_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1403
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_chroma_v2_device",
+      "source_device_key": "blackwidow_chroma_v2_device",
+      "model_name": "Razer BlackWidow Chroma V2",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 545
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_STANDARD",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_blackwidow_chroma_v2_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1438
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_elite_device",
+      "source_device_key": "blackwidow_elite_device",
+      "model_name": "Razer BlackWidow Elite",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 552
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_blackwidow_elite_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1473
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_v3_device",
+      "source_device_key": "blackwidow_v3_device",
+      "model_name": "Razer Blackwidow V3",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 590
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_blackwidow_v3_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1508
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_v3_mini_wired_device",
+      "source_device_key": "blackwidow_v3_mini_wired_device",
+      "model_name": "Razer BlackWidow V3 Mini (Wired)",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 600
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 5,
+        "columns": 16,
+        "application_slot_count": 80,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 5,
+            "columns": 16
+          }
+        ],
+        "layout_key": "razer_blackwidow_v3_mini_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1683
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_v3_mini_wireless_device",
+      "source_device_key": "blackwidow_v3_mini_wireless_device",
+      "model_name": "Razer BlackWidow V3 Mini (Wireless)",
+      "device_kind": "keyboard",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 625
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 5,
+        "columns": 16,
+        "application_slot_count": 80,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 5,
+            "columns": 16
+          }
+        ],
+        "layout_key": "razer_blackwidow_v3_mini_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 159
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1710
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_v3_pro_bluetooth_device",
+      "source_device_key": "blackwidow_v3_pro_bluetooth_device",
+      "model_name": "Razer BlackWidow V3 Pro (Bluetooth)",
+      "device_kind": "keyboard",
+      "source_route": "bluetooth",
+      "usb_identity": {
+        "vendor_id": null,
+        "product_id": 603
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_blackwidow_v3_pro_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": false,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1578
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_v3_pro_wired_device",
+      "source_device_key": "blackwidow_v3_pro_wired_device",
+      "model_name": "Razer BlackWidow V3 Pro (Wired)",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 602
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_blackwidow_v3_pro_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1543
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_v3_pro_wireless_device",
+      "source_device_key": "blackwidow_v3_pro_wireless_device",
+      "model_name": "Razer BlackWidow V3 Pro (Wireless)",
+      "device_kind": "keyboard",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 604
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_blackwidow_v3_pro_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1613
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_v3_tkl_device",
+      "source_device_key": "blackwidow_v3_tkl_device",
+      "model_name": "Razer BlackWidow V3 TKL",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 2596
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 18,
+        "application_slot_count": 108,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 18
+          }
+        ],
+        "layout_key": "razer_blackwidow_v3_tkl_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1648
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_v4_75_wired_device",
+      "source_device_key": "blackwidow_v4_75_wired_device",
+      "model_name": "Razer Blackwidow V4 75% (Wired)",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 677
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 18,
+        "application_slot_count": 108,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 18
+          }
+        ],
+        "layout_key": "razer_blackwidow_v4_pro_75_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1958
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_v4_device",
+      "source_device_key": "blackwidow_v4_device",
+      "model_name": "Razer Blackwidow V4",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 647
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 8,
+        "columns": 23,
+        "application_slot_count": 184,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 23
+          },
+          {
+            "name": "Underglow Left",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 9
+          },
+          {
+            "name": "Underglow Right",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 9
+          }
+        ],
+        "layout_key": "razer_blackwidow_v4_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1770
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_v4_lowprofile_tkl_wired_device",
+      "source_device_key": "blackwidow_v4_lowprofile_tkl_wired_device",
+      "model_name": "Razer Blackwidow V4 Low Profile TKL (Wired)",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 724
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 18,
+        "application_slot_count": 108,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 18
+          }
+        ],
+        "layout_key": "razer_blackwidow_v4_tkl_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2098
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_v4_lowprofile_tkl_wireless_device",
+      "source_device_key": "blackwidow_v4_lowprofile_tkl_wireless_device",
+      "model_name": "Razer Blackwidow V4 Low Profile TKL (Wireless)",
+      "device_kind": "keyboard",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 722
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 18,
+        "application_slot_count": 108,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 18
+          }
+        ],
+        "layout_key": "razer_blackwidow_v4_tkl_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 159
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2133
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_v4_pro_75_wired_device",
+      "source_device_key": "blackwidow_v4_pro_75_wired_device",
+      "model_name": "Razer Blackwidow V4 Pro 75% (Wired)",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 691
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 18,
+        "application_slot_count": 108,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 18
+          }
+        ],
+        "layout_key": "razer_blackwidow_v4_pro_75_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1888
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_v4_pro_75_wireless_device",
+      "source_device_key": "blackwidow_v4_pro_75_wireless_device",
+      "model_name": "Razer Blackwidow V4 Pro 75% (Wireless)",
+      "device_kind": "keyboard",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 692
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 18,
+        "application_slot_count": 108,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 18
+          }
+        ],
+        "layout_key": "razer_blackwidow_v4_pro_75_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1923
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_v4_pro_device",
+      "source_device_key": "blackwidow_v4_pro_device",
+      "model_name": "Razer Blackwidow V4 Pro",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 653
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 8,
+        "columns": 23,
+        "application_slot_count": 184,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 23
+          },
+          {
+            "name": "Underglow Left",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 9
+          },
+          {
+            "name": "Underglow Right",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 9
+          },
+          {
+            "name": "Void",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 5
+          },
+          {
+            "name": "Underglow Wrist Rest",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 20
+          }
+        ],
+        "layout_key": "razer_blackwidow_v4_pro_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1853
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_v4_tkl_wired_device",
+      "source_device_key": "blackwidow_v4_tkl_wired_device",
+      "model_name": "Razer Blackwidow V4 TKL (Wired)",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 727
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 18,
+        "application_slot_count": 108,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 18
+          }
+        ],
+        "layout_key": "razer_blackwidow_v4_tkl_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2028
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_v4_tkl_wireless_device",
+      "source_device_key": "blackwidow_v4_tkl_wireless_device",
+      "model_name": "Razer Blackwidow V4 TKL (Wireless)",
+      "device_kind": "keyboard",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 725
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 18,
+        "application_slot_count": 108,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 18
+          }
+        ],
+        "layout_key": "razer_blackwidow_v4_tkl_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 159
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2063
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_v4_x_device",
+      "source_device_key": "blackwidow_v4_x_device",
+      "model_name": "Razer Blackwidow V4 X",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 659
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_blackwidow_v4_x_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 1993
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_x_chroma_device",
+      "source_device_key": "blackwidow_x_chroma_device",
+      "model_name": "Razer BlackWidow X Chroma",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 534
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_STANDARD",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_blackwidow_x_chroma_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2168
+      }
+    },
+    {
+      "record_id": "openrgb:blackwidow_x_chroma_te_device",
+      "source_device_key": "blackwidow_x_chroma_te_device",
+      "model_name": "Razer BlackWidow X Chroma Tournament Edition",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 538
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_STANDARD",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_blackwidow_x_chroma_te_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2203
+      }
+    },
+    {
+      "record_id": "openrgb:cobra_device",
+      "source_device_key": "cobra_device",
+      "model_name": "Razer Cobra",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 163
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 1,
+        "application_slot_count": 1,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5310
+      }
+    },
+    {
+      "record_id": "openrgb:cobra_pro_wired_device",
+      "source_device_key": "cobra_pro_wired_device",
+      "model_name": "Razer Cobra Pro (Wired)",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 175
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 11,
+        "application_slot_count": 11,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Underglow",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 9
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5369
+      }
+    },
+    {
+      "record_id": "openrgb:cobra_pro_wireless_device",
+      "source_device_key": "cobra_pro_wireless_device",
+      "model_name": "Razer Cobra Pro (Wireless)",
+      "device_kind": "mouse",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 176
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 11,
+        "application_slot_count": 11,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Underglow",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 9
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5428
+      }
+    },
+    {
+      "record_id": "openrgb:cynosa_chroma_device",
+      "source_device_key": "cynosa_chroma_device",
+      "model_name": "Razer Cynosa Chroma",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 554
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_cynosa_chroma_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2238
+      }
+    },
+    {
+      "record_id": "openrgb:cynosa_lite_device",
+      "source_device_key": "cynosa_lite_device",
+      "model_name": "Razer Cynosa Lite",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 575
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 1,
+        "application_slot_count": 1,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2308
+      }
+    },
+    {
+      "record_id": "openrgb:cynosa_v2_device",
+      "source_device_key": "cynosa_v2_device",
+      "model_name": "Razer Cynosa v2",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 606
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_cynosa_chroma_v2_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2273
+      }
+    },
+    {
+      "record_id": "openrgb:deathadder_chroma_device",
+      "source_device_key": "deathadder_chroma_device",
+      "model_name": "Razer DeathAdder Chroma",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 67
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_CUSTOM",
+        "rows": 1,
+        "columns": 2,
+        "application_slot_count": 2,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5475
+      }
+    },
+    {
+      "record_id": "openrgb:deathadder_elite_device",
+      "source_device_key": "deathadder_elite_device",
+      "model_name": "Razer DeathAdder Elite",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 92
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 2,
+        "application_slot_count": 2,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5522
+      }
+    },
+    {
+      "record_id": "openrgb:deathadder_essential_device",
+      "source_device_key": "deathadder_essential_device",
+      "model_name": "Razer DeathAdder Essential",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 110
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 2,
+        "application_slot_count": 2,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5569
+      }
+    },
+    {
+      "record_id": "openrgb:deathadder_essential_v2_device",
+      "source_device_key": "deathadder_essential_v2_device",
+      "model_name": "Razer DeathAdder Essential V2",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 152
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 2,
+        "application_slot_count": 2,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5616
+      }
+    },
+    {
+      "record_id": "openrgb:deathadder_essential_white_edition_device",
+      "source_device_key": "deathadder_essential_white_edition_device",
+      "model_name": "Razer DeathAdder Essential (White Edition)",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 113
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 2,
+        "application_slot_count": 2,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5663
+      }
+    },
+    {
+      "record_id": "openrgb:deathadder_v2_device",
+      "source_device_key": "deathadder_v2_device",
+      "model_name": "Razer DeathAdder V2",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 132
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 2,
+        "application_slot_count": 2,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5710
+      }
+    },
+    {
+      "record_id": "openrgb:deathadder_v2_mini_device",
+      "source_device_key": "deathadder_v2_mini_device",
+      "model_name": "Razer DeathAdder V2 Mini",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 140
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 1,
+        "application_slot_count": 1,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5745
+      }
+    },
+    {
+      "record_id": "openrgb:deathadder_v2_pro_wired_device",
+      "source_device_key": "deathadder_v2_pro_wired_device",
+      "model_name": "Razer DeathAdder V2 (Wired)",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 124
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 1,
+        "application_slot_count": 1,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5780
+      }
+    },
+    {
+      "record_id": "openrgb:deathadder_v2_pro_wireless_device",
+      "source_device_key": "deathadder_v2_pro_wireless_device",
+      "model_name": "Razer DeathAdder V2 (Wireless)",
+      "device_kind": "mouse",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 125
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 1,
+        "application_slot_count": 1,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5815
+      }
+    },
+    {
+      "record_id": "openrgb:deathstalker_chroma_device",
+      "source_device_key": "deathstalker_chroma_device",
+      "model_name": "Razer DeathStalker Chroma",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 516
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_LINEAR",
+        "rows": 1,
+        "columns": 12,
+        "application_slot_count": 12,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 12
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2588
+      }
+    },
+    {
+      "record_id": "openrgb:deathstalker_v2_device",
+      "source_device_key": "deathstalker_v2_device",
+      "model_name": "Razer Deathstalker V2",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 661
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_deathstalker_v2_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2623
+      }
+    },
+    {
+      "record_id": "openrgb:deathstalker_v2_pro_tkl_wired_device",
+      "source_device_key": "deathstalker_v2_pro_tkl_wired_device",
+      "model_name": "Razer DeathStalker V2 Pro TKL (Wired)",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 664
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 17,
+        "application_slot_count": 102,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 17
+          }
+        ],
+        "layout_key": "razer_deathstalker_v2_pro_tkl_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2660
+      }
+    },
+    {
+      "record_id": "openrgb:deathstalker_v2_pro_tkl_wireless_device",
+      "source_device_key": "deathstalker_v2_pro_tkl_wireless_device",
+      "model_name": "Razer DeathStalker V2 Pro TKL (Wireless)",
+      "device_kind": "keyboard",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 662
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 17,
+        "application_slot_count": 102,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 17
+          }
+        ],
+        "layout_key": "razer_deathstalker_v2_pro_tkl_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 159
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2680
+      }
+    },
+    {
+      "record_id": "openrgb:deathstalker_v2_pro_wired_device",
+      "source_device_key": "deathstalker_v2_pro_wired_device",
+      "model_name": "Razer DeathStalker V2 Pro (Wired)",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 658
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_deathstalker_v2_pro_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 159
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2750
+      }
+    },
+    {
+      "record_id": "openrgb:deathstalker_v2_pro_wireless_device",
+      "source_device_key": "deathstalker_v2_pro_wireless_device",
+      "model_name": "Razer DeathStalker V2 Pro (Wireless)",
+      "device_kind": "keyboard",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 656
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_deathstalker_v2_pro_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 159
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2715
+      }
+    },
+    {
+      "record_id": "openrgb:diamondback_chroma_device",
+      "source_device_key": "diamondback_chroma_device",
+      "model_name": "Razer Diamondback Chroma",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 76
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_LINEAR",
+        "rows": 1,
+        "columns": 21,
+        "application_slot_count": 21,
+        "zones": [
+          {
+            "name": "LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 19
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5874
+      }
+    },
+    {
+      "record_id": "openrgb:huntsman_device",
+      "source_device_key": "huntsman_device",
+      "model_name": "Razer Huntsman",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 551
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_full_size_shifted_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2785
+      }
+    },
+    {
+      "record_id": "openrgb:huntsman_elite_device",
+      "source_device_key": "huntsman_elite_device",
+      "model_name": "Razer Huntsman Elite",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 550
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 9,
+        "columns": 22,
+        "application_slot_count": 198,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          },
+          {
+            "name": "Underglow",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 3,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_huntsman_common_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2832
+      }
+    },
+    {
+      "record_id": "openrgb:huntsman_mini_analog_device",
+      "source_device_key": "huntsman_mini_analog_device",
+      "model_name": "Razer Huntsman Mini Analog",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 642
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 5,
+        "columns": 15,
+        "application_slot_count": 75,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 5,
+            "columns": 15
+          }
+        ],
+        "layout_key": "razer_huntsman_mini_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2949
+      }
+    },
+    {
+      "record_id": "openrgb:huntsman_mini_device",
+      "source_device_key": "huntsman_mini_device",
+      "model_name": "Razer Huntsman Mini",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 599
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 5,
+        "columns": 15,
+        "application_slot_count": 75,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 5,
+            "columns": 15
+          }
+        ],
+        "layout_key": "razer_huntsman_mini_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2914
+      }
+    },
+    {
+      "record_id": "openrgb:huntsman_te_device",
+      "source_device_key": "huntsman_te_device",
+      "model_name": "Razer Huntsman Tournament Edition",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 579
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 18,
+        "application_slot_count": 108,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 18
+          }
+        ],
+        "layout_key": "razer_huntsman_te_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2984
+      }
+    },
+    {
+      "record_id": "openrgb:huntsman_v2_analog_device",
+      "source_device_key": "huntsman_v2_analog_device",
+      "model_name": "Razer Huntsman V2 Analog",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 614
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 9,
+        "columns": 22,
+        "application_slot_count": 198,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          },
+          {
+            "name": "Underglow",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 3,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_huntsman_common_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2879
+      }
+    },
+    {
+      "record_id": "openrgb:huntsman_v2_device",
+      "source_device_key": "huntsman_v2_device",
+      "model_name": "Razer Huntsman V2",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 620
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_huntsman_v2_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 3054
+      }
+    },
+    {
+      "record_id": "openrgb:huntsman_v2_tkl_device",
+      "source_device_key": "huntsman_v2_tkl_device",
+      "model_name": "Razer Huntsman V2 TKL",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 619
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 17,
+        "application_slot_count": 102,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 17
+          }
+        ],
+        "layout_key": "razer_huntsman_v2_tkl_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 3019
+      }
+    },
+    {
+      "record_id": "openrgb:huntsman_v3_pro_device",
+      "source_device_key": "huntsman_v3_pro_device",
+      "model_name": "Razer Huntsman V3 Pro",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 678
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_huntsman_v3_pro_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 3089
+      }
+    },
+    {
+      "record_id": "openrgb:huntsman_v3_pro_tkl_device",
+      "source_device_key": "huntsman_v3_pro_tkl_device",
+      "model_name": "Razer Huntsman V3 Pro TKL White",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 679
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 19,
+        "application_slot_count": 114,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 19
+          }
+        ],
+        "layout_key": "razer_huntsman_v3_pro_tkl_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 3124
+      }
+    },
+    {
+      "record_id": "openrgb:lancehead_2017_wired_device",
+      "source_device_key": "lancehead_2017_wired_device",
+      "model_name": "Razer Lancehead 2017 (Wired)",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 89
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 16,
+        "application_slot_count": 16,
+        "zones": [
+          {
+            "name": "Right LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 7
+          },
+          {
+            "name": "Left LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 7
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 5945
+      }
+    },
+    {
+      "record_id": "openrgb:lancehead_2017_wireless_device",
+      "source_device_key": "lancehead_2017_wireless_device",
+      "model_name": "Razer Lancehead 2017 (Wireless)",
+      "device_kind": "mouse",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 90
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 16,
+        "application_slot_count": 16,
+        "zones": [
+          {
+            "name": "Right LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 7
+          },
+          {
+            "name": "Left LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 7
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 6016
+      }
+    },
+    {
+      "record_id": "openrgb:lancehead_2019_wired_device",
+      "source_device_key": "lancehead_2019_wired_device",
+      "model_name": "Razer Lancehead 2019 (Wired)",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 112
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 16,
+        "application_slot_count": 16,
+        "zones": [
+          {
+            "name": "Right LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 7
+          },
+          {
+            "name": "Left LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 7
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 6087
+      }
+    },
+    {
+      "record_id": "openrgb:lancehead_2019_wireless_device",
+      "source_device_key": "lancehead_2019_wireless_device",
+      "model_name": "Razer Lancehead 2019 (Wireless)",
+      "device_kind": "mouse",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 111
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 16,
+        "application_slot_count": 16,
+        "zones": [
+          {
+            "name": "Right LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 7
+          },
+          {
+            "name": "Left LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 7
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 6158
+      }
+    },
+    {
+      "record_id": "openrgb:lancehead_te_device",
+      "source_device_key": "lancehead_te_device",
+      "model_name": "Razer Lancehead Tournament Edition",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 96
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 16,
+        "application_slot_count": 16,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Right LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 7
+          },
+          {
+            "name": "Left LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 7
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 6229
+      }
+    },
+    {
+      "record_id": "openrgb:mamba_2012_wired_device",
+      "source_device_key": "mamba_2012_wired_device",
+      "model_name": "Razer Mamba 2012 (Wired)",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 36
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_CUSTOM",
+        "rows": 1,
+        "columns": 15,
+        "application_slot_count": 15,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 6334
+      }
+    },
+    {
+      "record_id": "openrgb:mamba_2012_wireless_device",
+      "source_device_key": "mamba_2012_wireless_device",
+      "model_name": "Razer Mamba 2012 (Wireless)",
+      "device_kind": "mouse",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 37
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_CUSTOM",
+        "rows": 1,
+        "columns": 15,
+        "application_slot_count": 15,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 6369
+      }
+    },
+    {
+      "record_id": "openrgb:mamba_2015_wired_device",
+      "source_device_key": "mamba_2015_wired_device",
+      "model_name": "Razer Mamba 2015 (Wired)",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 68
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_LINEAR",
+        "rows": 1,
+        "columns": 15,
+        "application_slot_count": 15,
+        "zones": [
+          {
+            "name": "Chroma Zone",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 15
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 6404
+      }
+    },
+    {
+      "record_id": "openrgb:mamba_2015_wireless_device",
+      "source_device_key": "mamba_2015_wireless_device",
+      "model_name": "Razer Mamba (Wireless)",
+      "device_kind": "mouse",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 69
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_LINEAR",
+        "rows": 1,
+        "columns": 15,
+        "application_slot_count": 15,
+        "zones": [
+          {
+            "name": "Chroma Zone",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 15
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 6439
+      }
+    },
+    {
+      "record_id": "openrgb:mamba_2018_wired_device",
+      "source_device_key": "mamba_2018_wired_device",
+      "model_name": "Razer Mamba 2018 (Wired)",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 115
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 2,
+        "application_slot_count": 2,
+        "zones": [
+          {
+            "name": "Scroll Wheel Zone",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo Zone",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 6486
+      }
+    },
+    {
+      "record_id": "openrgb:mamba_2018_wireless_device",
+      "source_device_key": "mamba_2018_wireless_device",
+      "model_name": "Razer Mamba 2018 (Wireless)",
+      "device_kind": "mouse",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 114
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 2,
+        "application_slot_count": 2,
+        "zones": [
+          {
+            "name": "Scroll Wheel Zone",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo Zone",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 6534
+      }
+    },
+    {
+      "record_id": "openrgb:mamba_elite_device",
+      "source_device_key": "mamba_elite_device",
+      "model_name": "Razer Mamba Elite",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 108
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 20,
+        "application_slot_count": 20,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Left LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 9
+          },
+          {
+            "name": "Right LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 9
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 6606
+      }
+    },
+    {
+      "record_id": "openrgb:mamba_hyperflux_device",
+      "source_device_key": "mamba_hyperflux_device",
+      "model_name": "Razer Mamba Hyperflux (Wired)",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 105
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 2,
+        "application_slot_count": 2,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 6725
+      }
+    },
+    {
+      "record_id": "openrgb:mamba_te_device",
+      "source_device_key": "mamba_te_device",
+      "model_name": "Razer Mamba Tournament Edition",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 70
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_LINEAR",
+        "rows": 1,
+        "columns": 16,
+        "application_slot_count": 16,
+        "zones": [
+          {
+            "name": "Left LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 7
+          },
+          {
+            "name": "Right LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 7
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 6677
+      }
+    },
+    {
+      "record_id": "openrgb:mouse_bungee_device",
+      "source_device_key": "mouse_bungee_device",
+      "model_name": "Razer Mouse Bungee V3 Chroma",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 3869
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 8,
+        "application_slot_count": 8,
+        "zones": [
+          {
+            "name": "LED Strip",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 8
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 8854
+      }
+    },
+    {
+      "record_id": "openrgb:naga_chroma_device",
+      "source_device_key": "naga_chroma_device",
+      "model_name": "Razer Naga Chroma",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 83
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_LINEAR",
+        "rows": 1,
+        "columns": 3,
+        "application_slot_count": 3,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Numpad",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 6784
+      }
+    },
+    {
+      "record_id": "openrgb:naga_classic_device",
+      "source_device_key": "naga_classic_device",
+      "model_name": "Razer Naga Classic",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 147
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 3,
+        "application_slot_count": 3,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Numpad",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 6843
+      }
+    },
+    {
+      "record_id": "openrgb:naga_epic_chroma_device",
+      "source_device_key": "naga_epic_chroma_device",
+      "model_name": "Razer Naga Epic Chroma",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 62
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_CUSTOM",
+        "rows": 1,
+        "columns": 2,
+        "application_slot_count": 2,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Numpad",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 7388
+      }
+    },
+    {
+      "record_id": "openrgb:naga_hex_v2_device",
+      "source_device_key": "naga_hex_v2_device",
+      "model_name": "Razer Naga Hex V2",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 80
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_STANDARD",
+        "rows": 1,
+        "columns": 3,
+        "application_slot_count": 3,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Numpad",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 6902
+      }
+    },
+    {
+      "record_id": "openrgb:naga_left_handed_device",
+      "source_device_key": "naga_left_handed_device",
+      "model_name": "Razer Naga Left Handed",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 141
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 3,
+        "application_slot_count": 3,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Numpad",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 6961
+      }
+    },
+    {
+      "record_id": "openrgb:naga_pro_v2_wired_device",
+      "source_device_key": "naga_pro_v2_wired_device",
+      "model_name": "Razer Naga Pro V2 (Wired)",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 167
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 2,
+        "application_slot_count": 2,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Numpad",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 7146
+      }
+    },
+    {
+      "record_id": "openrgb:naga_pro_v2_wireless_device",
+      "source_device_key": "naga_pro_v2_wireless_device",
+      "model_name": "Razer Naga Pro V2 (Wireless)",
+      "device_kind": "mouse",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 168
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 2,
+        "application_slot_count": 2,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Numpad",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 7166
+      }
+    },
+    {
+      "record_id": "openrgb:naga_pro_wired_device",
+      "source_device_key": "naga_pro_wired_device",
+      "model_name": "Razer Naga Pro (Wired)",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 143
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 3,
+        "application_slot_count": 3,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Numpad",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 7079
+      }
+    },
+    {
+      "record_id": "openrgb:naga_pro_wireless_device",
+      "source_device_key": "naga_pro_wireless_device",
+      "model_name": "Razer Naga Pro (Wireless)",
+      "device_kind": "mouse",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 144
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 3,
+        "application_slot_count": 3,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Numpad",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 7099
+      }
+    },
+    {
+      "record_id": "openrgb:naga_trinity_device",
+      "source_device_key": "naga_trinity_device",
+      "model_name": "Razer Naga Trinity",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 103
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 3,
+        "application_slot_count": 3,
+        "zones": [
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Numpad",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 7020
+      }
+    },
+    {
+      "record_id": "openrgb:ornata_chroma_device",
+      "source_device_key": "ornata_chroma_device",
+      "model_name": "Razer Ornata Chroma",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 542
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_full_size_shifted_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2343
+      }
+    },
+    {
+      "record_id": "openrgb:ornata_chroma_v2_device",
+      "source_device_key": "ornata_chroma_v2_device",
+      "model_name": "Razer Ornata Chroma V2",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 605
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": "razer_ornata_chroma_v2_layout"
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2378
+      }
+    },
+    {
+      "record_id": "openrgb:ornata_v3_device",
+      "source_device_key": "ornata_v3_device",
+      "model_name": "Razer Ornata V3",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 655
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 10,
+        "application_slot_count": 10,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 10
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2413
+      }
+    },
+    {
+      "record_id": "openrgb:ornata_v3_rev2_device",
+      "source_device_key": "ornata_v3_rev2_device",
+      "model_name": "Razer Ornata V3 rev2",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 673
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 10,
+        "application_slot_count": 10,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_LINEAR",
+            "rows": 1,
+            "columns": 10
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2448
+      }
+    },
+    {
+      "record_id": "openrgb:ornata_v3_tkl_device",
+      "source_device_key": "ornata_v3_tkl_device",
+      "model_name": "Razer Ornata V3 TKL",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 675
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 8,
+        "application_slot_count": 8,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 8
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2483
+      }
+    },
+    {
+      "record_id": "openrgb:ornata_v3_x_device",
+      "source_device_key": "ornata_v3_x_device",
+      "model_name": "Razer Ornata V3 X",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 660
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 1,
+        "application_slot_count": 1,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2518
+      }
+    },
+    {
+      "record_id": "openrgb:ornata_v3_x_v2_device",
+      "source_device_key": "ornata_v3_x_v2_device",
+      "model_name": "Razer Ornata V3 X Rev2",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 674
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 1,
+        "application_slot_count": 1,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 2553
+      }
+    },
+    {
+      "record_id": "openrgb:viper_8khz_device",
+      "source_device_key": "viper_8khz_device",
+      "model_name": "Razer Viper 8kHz",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 145
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 1,
+        "application_slot_count": 1,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 7201
+      }
+    },
+    {
+      "record_id": "openrgb:viper_device",
+      "source_device_key": "viper_device",
+      "model_name": "Razer Viper",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 120
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 1,
+        "application_slot_count": 1,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 7341
+      }
+    },
+    {
+      "record_id": "openrgb:viper_mini_device",
+      "source_device_key": "viper_mini_device",
+      "model_name": "Razer Viper Mini",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 138
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 1,
+        "application_slot_count": 1,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 7236
+      }
+    },
+    {
+      "record_id": "openrgb:viper_ultimate_wired_device",
+      "source_device_key": "viper_ultimate_wired_device",
+      "model_name": "Razer Viper Ultimate (Wired)",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 122
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 1,
+        "application_slot_count": 1,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 7271
+      }
+    },
+    {
+      "record_id": "openrgb:viper_ultimate_wireless_device",
+      "source_device_key": "viper_ultimate_wireless_device",
+      "model_name": "Razer Viper Ultimate (Wireless)",
+      "device_kind": "mouse",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 123
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 1,
+        "application_slot_count": 1,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 7306
+      }
+    }
+  ]
+}

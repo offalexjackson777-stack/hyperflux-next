@@ -1,0 +1,629 @@
+// SPDX-License-Identifier: GPL-2.0-only
+
+#pragma once
+
+#include <hyperflux/openrgb/runtime_core.hpp>
+#include <hyperflux/generated/protocol_v5_json.hpp>
+
+#include <algorithm>
+#include <atomic>
+#include <cstdint>
+#include <deque>
+#include <map>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <variant>
+#include <vector>
+
+namespace hyperflux::test
+{
+
+template <typename T> T text(std::string_view value)
+{
+    auto decoded = T::from(value);
+    if(!decoded.has_value())
+    {
+        throw std::runtime_error("invalid test string domain value");
+    }
+    return *decoded;
+}
+
+template <typename T> T number(std::uint64_t value)
+{
+    auto decoded = T::from(static_cast<typename T::value_type>(value));
+    if(!decoded.has_value())
+    {
+        throw std::runtime_error("invalid test numeric domain value");
+    }
+    return *decoded;
+}
+
+inline v5::RgbColor color(std::uint8_t red)
+{
+    return {
+        number<ColorChannel>(red),
+        number<ColorChannel>(0),
+        number<ColorChannel>(0),
+    };
+}
+
+inline v5::EventCursor cursor(std::uint64_t sequence)
+{
+    return {
+        text<StreamId>("integration-stream"),
+        number<StreamEpoch>(1),
+        number<ProjectionRevision>(sequence),
+        number<SequenceNumber>(sequence),
+    };
+}
+
+inline v5::ControllerView controller_for(std::string_view receiver,
+    std::string_view device,
+    DeviceKind kind,
+    std::uint64_t generation,
+    std::uint16_t product,
+    std::uint16_t slots,
+    ControllerAvailability availability)
+{
+    const auto receiver_id = text<ReceiverId>(receiver);
+    const auto generation_id = number<GenerationId>(generation);
+    const auto device_id = text<LogicalDeviceId>(device);
+    const v5::ProfileBindingView receiver_profile {
+        text<ProfileId>("receiver.razer.hyperflux-v2.00cf"),
+        text<ProfileDigest>(std::string(64, 'a')),
+    };
+    const v5::ProfileBindingView device_profile {
+        text<ProfileId>(std::string("child.test.") + std::string(device)),
+        text<ProfileDigest>(std::string(64, 'b')),
+    };
+    return {
+        receiver_id,
+        generation_id,
+        device_id,
+        text<EndpointId>(std::string("endpoint-") + std::string(device)),
+        kind,
+        number<ProductId>(product),
+        receiver_profile,
+        device_profile,
+        text<ModelName>(std::string("Test ") + std::string(device)),
+        {
+            text<UpstreamId>("openrgb"),
+            text<UpstreamOwner>("OpenRGB"),
+            text<ComponentVersion>("1.0rc3"),
+            text<SourceRevision>("6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0"),
+            text<PresentationKey>(std::string(device) + "_device"),
+            kind == DeviceKind::Keyboard
+                ? std::optional<PresentationKey>(text<PresentationKey>("keyboard_layout"))
+                : std::nullopt,
+            text<TransportVariant>("wireless"),
+        },
+        availability,
+        {
+            TelemetryAvailability::Unavailable,
+            std::nullopt,
+            FreshnessState::Unknown,
+            EvidenceConfidence::Unknown,
+            std::nullopt,
+        },
+        {text<CapabilityId>("lighting.direct-frame")},
+        {
+            number<LedCount>(slots),
+            number<LedCount>(slots),
+            number<LedCount>(1),
+            number<LedCount>(slots),
+        },
+        {receiver_id, generation_id, device_id, ResourceKind::Lighting},
+        v5::ControllerOwnershipUnowned {v5::UnownedController {}},
+        {availability == ControllerAvailability::Ready, false, false},
+    };
+}
+
+inline v5::ControllerView controller(std::string_view device,
+    DeviceKind kind,
+    std::uint64_t generation,
+    std::uint16_t product,
+    std::uint16_t slots,
+    ControllerAvailability availability)
+{
+    return controller_for(
+        "receiver-1",
+        device,
+        kind,
+        generation,
+        product,
+        slots,
+        availability);
+}
+
+inline v5::IntegrationReceiverView receiver_view(std::string_view receiver,
+    std::uint64_t generation,
+    std::vector<v5::ControllerView> controllers)
+{
+    return {
+        text<ReceiverId>(receiver),
+        number<GenerationId>(generation),
+        std::nullopt,
+        std::nullopt,
+        ReceiverLifecycleState::Active,
+        false,
+        RestoreState::Idle,
+        {},
+        std::move(controllers),
+    };
+}
+
+inline v5::IntegrationView view(std::uint64_t generation,
+    std::uint64_t sequence,
+    ControllerAvailability mouse = ControllerAvailability::Ready,
+    ControllerAvailability keyboard = ControllerAvailability::Ready)
+{
+    return {
+        cursor(sequence),
+        {{
+            text<ReceiverId>("receiver-1"),
+            number<GenerationId>(generation),
+            std::nullopt,
+            std::nullopt,
+            ReceiverLifecycleState::Active,
+            false,
+            RestoreState::Idle,
+            {},
+            {
+                controller("mouse", DeviceKind::Mouse, generation, 205, 13, mouse),
+                controller("keyboard", DeviceKind::Keyboard, generation, 662, 102, keyboard),
+            },
+        }},
+    };
+}
+
+inline v5::IntegrationView multi_receiver_view(
+    std::uint64_t generation,
+    std::uint64_t sequence)
+{
+    return {
+        cursor(sequence),
+        {
+            receiver_view(
+                "receiver-1",
+                generation,
+                {controller_for(
+                    "receiver-1",
+                    "mouse-a",
+                    DeviceKind::Mouse,
+                    generation,
+                    205,
+                    13,
+                    ControllerAvailability::Ready)}),
+            receiver_view(
+                "receiver-2",
+                generation,
+                {controller_for(
+                    "receiver-2",
+                    "mouse-b",
+                    DeviceKind::Mouse,
+                    generation,
+                    205,
+                    13,
+                    ControllerAvailability::Ready)}),
+        },
+    };
+}
+
+inline openrgb::QueuedLightingFrame frame(
+    const openrgb::ControllerModel& controller_model, std::uint8_t red)
+{
+    return {
+        controller_model.authority.receiver_id,
+        controller_model.authority.generation_id,
+        controller_model.stable_id,
+        controller_model.lighting.application_slot_count.value(),
+        std::vector<v5::RgbColor>(
+            controller_model.lighting.application_slot_count.value(), color(red)),
+    };
+}
+
+inline const openrgb::ControllerModel& model(const openrgb::RuntimeCore& runtime, DeviceKind kind)
+{
+    for(const auto& controller_model : runtime.controllers())
+    {
+        if(controller_model.device_kind == kind)
+        {
+            return controller_model;
+        }
+    }
+    throw std::runtime_error("missing test controller");
+}
+
+inline const openrgb::ControllerModel& model(
+    const openrgb::RuntimeCore& runtime,
+    std::string_view receiver,
+    DeviceKind kind)
+{
+    for(const auto& controller_model : runtime.controllers())
+    {
+        if(controller_model.authority.receiver_id.value() == receiver
+           && controller_model.device_kind == kind)
+        {
+            return controller_model;
+        }
+    }
+    throw std::runtime_error("missing receiver-scoped test controller");
+}
+
+inline v5::IntegrationView copy_integration_view(const v5::IntegrationView& value)
+{
+    // Match the real SDK boundary and avoid sharing nested variant storage
+    // between the mutable fake bridge and the consumer under test.
+    return json_codec::decode<v5::IntegrationView>(json_codec::encode(value));
+}
+
+class FakeBridge final : public openrgb::RuntimeBridge
+{
+public:
+    explicit FakeBridge(v5::IntegrationView initial)
+        : current(std::move(initial))
+    {
+    }
+
+    v5::IntegrationView current;
+    std::deque<v5::EventBatch> event_batches;
+    std::vector<sdk::TransactionSubmission> submissions;
+    std::vector<TransactionId> outcome_queries;
+    std::atomic_size_t submission_count {0};
+    std::map<std::string, v5::TransactionResult> outcomes;
+    std::vector<v5::ResourceKey> leased_resources;
+    std::vector<std::vector<v5::ResourceKey>> lease_acquisitions;
+    bool conflict = false;
+    bool terminal_on_submit = false;
+    bool unavailable_on_submit = false;
+    std::size_t acquire_count = 0;
+    std::size_t renew_count = 0;
+    std::size_t release_count = 0;
+    std::uint64_t lease_expiry_ms = 100'000;
+    std::uint64_t connection_epoch_value = 1;
+    std::optional<std::uint64_t> fail_integration_call;
+    std::optional<std::uint64_t> fail_acquire_call;
+    std::optional<std::uint64_t> fail_renew_call;
+    std::atomic_uint64_t integration_calls {0};
+
+    std::uint64_t connection_epoch() const noexcept override
+    {
+        return connection_epoch_value;
+    }
+
+    sdk::Result<TransactionId> next_transaction_id() override
+    {
+        ++transaction_counter_;
+        return sdk::Result<TransactionId>::success(
+            text<TransactionId>("transaction-" + std::to_string(transaction_counter_)));
+    }
+
+    sdk::Result<v5::IntegrationView> integration_view() override
+    {
+        const auto call = integration_calls.fetch_add(1, std::memory_order_acq_rel) + 1;
+        if(fail_integration_call == call)
+        {
+            return sdk::Result<v5::IntegrationView>::failure({
+                sdk::ErrorCode::ReadFailed,
+                "injected OpenRGB bridge interruption",
+                "HFX-SERVICE-001",
+            });
+        }
+        project_leases();
+        return sdk::Result<v5::IntegrationView>::success(copy_integration_view(current));
+    }
+
+    sdk::Result<v5::LeaseResult> acquire_lease(
+        std::vector<v5::ResourceKey> resources, LeaseDurationMs) override
+    {
+        ++acquire_count;
+        if(fail_acquire_call == acquire_count)
+        {
+            return sdk::Result<v5::LeaseResult>::failure({
+                sdk::ErrorCode::SocketConnect,
+                "injected lease transport interruption",
+                "HFX-SERVICE-001",
+            });
+        }
+        if(conflict)
+        {
+            return sdk::Result<v5::LeaseResult>::success(v5::LeaseResultConflict {{
+                text<ClientId>("another-client"),
+                resources.front(),
+            }});
+        }
+        leased_resources = resources;
+        lease_acquisitions.push_back(resources);
+        const auto lease_id = text<LeaseId>("lease-" + std::to_string(acquire_count));
+        leases_.insert_or_assign(std::string(lease_id.value()), std::move(resources));
+        mark_owned(lease_id, leases_.at(std::string(lease_id.value())));
+        return sdk::Result<v5::LeaseResult>::success(
+            v5::LeaseResultGranted {grant(lease_id, LeaseState::Granted)});
+    }
+
+    sdk::Result<v5::LeaseResult> renew_lease(LeaseId lease_id, LeaseDurationMs) override
+    {
+        ++renew_count;
+        if(!leases_.contains(std::string(lease_id.value())))
+        {
+            return sdk::Result<v5::LeaseResult>::failure({
+                sdk::ErrorCode::LeaseRejected,
+                "test bridge cannot renew an unknown lease",
+                "HFX-OWNERSHIP-002",
+            });
+        }
+        if(fail_renew_call == renew_count)
+        {
+            mark_unowned(lease_id, leases_.at(std::string(lease_id.value())));
+            leases_.erase(std::string(lease_id.value()));
+            return sdk::Result<v5::LeaseResult>::failure({
+                sdk::ErrorCode::LeaseRejected,
+                "injected lease renewal rejection",
+                "HFX-OWNERSHIP-002",
+            });
+        }
+        mark_owned(lease_id, leases_.at(std::string(lease_id.value())));
+        return sdk::Result<v5::LeaseResult>::success(
+            v5::LeaseResultGranted {grant(lease_id, LeaseState::Renewed)});
+    }
+
+    sdk::Result<v5::LeaseResult> release_lease(LeaseId lease_id) override
+    {
+        ++release_count;
+        if(!leases_.contains(std::string(lease_id.value())))
+        {
+            return sdk::Result<v5::LeaseResult>::failure({
+                sdk::ErrorCode::LeaseRejected,
+                "test bridge cannot release an unknown lease",
+                "HFX-OWNERSHIP-002",
+            });
+        }
+        auto released = grant(lease_id, LeaseState::Released);
+        mark_unowned(lease_id, leases_.at(std::string(lease_id.value())));
+        leases_.erase(std::string(lease_id.value()));
+        return sdk::Result<v5::LeaseResult>::success(
+            v5::LeaseResultGranted {std::move(released)});
+    }
+
+    sdk::Result<v5::TransactionResult> submit_transaction(
+        sdk::TransactionSubmission submission) override
+    {
+        const auto lease = leases_.find(std::string(submission.lease_id.value()));
+        if(lease == leases_.end()
+           || !std::all_of(
+               submission.resources.begin(),
+               submission.resources.end(),
+               [&lease](const v5::ResourceKey& resource) {
+                   return std::find(
+                              lease->second.begin(),
+                              lease->second.end(),
+                              resource)
+                       != lease->second.end();
+               }))
+        {
+            return sdk::Result<v5::TransactionResult>::failure({
+                sdk::ErrorCode::LeaseRejected,
+                "test transaction names a resource outside its lease",
+                "HFX-OWNERSHIP-002",
+            });
+        }
+        submissions.push_back(submission);
+        submission_count.fetch_add(1, std::memory_order_release);
+        if(unavailable_on_submit)
+        {
+            return sdk::Result<v5::TransactionResult>::success(v5::TransactionResultUnavailable {{
+                submission.transaction_id,
+                ProtocolErrorKind::OutcomeUnknown,
+                text<FindingId>("HFX-OUTCOME-001"),
+            }});
+        }
+        if(terminal_on_submit)
+        {
+            return sdk::Result<v5::TransactionResult>::success(
+                terminal(submission, TransactionState::Succeeded, submission.frames.size()));
+        }
+        const v5::TransactionResult result = v5::TransactionResultProgress {{
+            text<RequestId>("request-submit"),
+            text<RequestDigest>(std::string(64, 'd')),
+            submission.transaction_id,
+            submission.receiver_id,
+            submission.generation_id,
+            TransactionState::Queued,
+            QueueAdmission::Enqueued,
+            number<FrameCount>(submission.frames.size()),
+            number<DeliveredFrameCount>(0),
+            SideEffectCertainty::None,
+            false,
+        }};
+        outcomes.insert_or_assign(std::string(submission.transaction_id.value()), result);
+        return sdk::Result<v5::TransactionResult>::success(result);
+    }
+
+    sdk::Result<v5::TransactionResult> transaction_outcome(TransactionId transaction_id) override
+    {
+        outcome_queries.push_back(transaction_id);
+        return sdk::Result<v5::TransactionResult>::success(
+            outcomes.at(std::string(transaction_id.value())));
+    }
+
+    sdk::Result<v5::EventBatch> subscribe(sdk::EventSubscription subscription) override
+    {
+        if(!event_batches.empty())
+        {
+            auto result = std::move(event_batches.front());
+            event_batches.pop_front();
+            return sdk::Result<v5::EventBatch>::success(std::move(result));
+        }
+        return sdk::Result<v5::EventBatch>::success({
+            subscription.subscription_id.value_or(text<SubscriptionId>("subscription-1")),
+            current.cursor,
+            {},
+            current.cursor.sequence,
+            current.cursor.sequence,
+            number<DroppedEventCount>(0),
+            false,
+            false,
+        });
+    }
+
+    void complete_last(TransactionState state,
+        std::uint16_t delivered,
+        SideEffectCertainty certainty,
+        bool live,
+        std::optional<ProtocolErrorKind> error = std::nullopt)
+    {
+        const auto& submission = submissions.back();
+        outcomes.insert_or_assign(std::string(submission.transaction_id.value()),
+            terminal(submission, state, delivered, certainty, live, error));
+    }
+
+    void complete_submission(std::size_t index,
+        TransactionState state,
+        std::uint16_t delivered,
+        SideEffectCertainty certainty,
+        bool live,
+        std::optional<ProtocolErrorKind> error = std::nullopt)
+    {
+        const auto& submission = submissions.at(index);
+        outcomes.insert_or_assign(std::string(submission.transaction_id.value()),
+            terminal(submission, state, delivered, certainty, live, error));
+    }
+
+    void event(EventKind kind, bool gap = false)
+    {
+        std::vector<v5::BridgeEvent> events;
+        if(!gap)
+        {
+            events.push_back({
+                current.cursor.sequence,
+                kind,
+                text<ReceiverId>("receiver-1"),
+                current.receivers.front().generation_id,
+                std::nullopt,
+                std::nullopt,
+                std::nullopt,
+                std::nullopt,
+            });
+        }
+        event_batches.push_back({
+            text<SubscriptionId>("subscription-1"),
+            current.cursor,
+            std::move(events),
+            current.cursor.sequence,
+            current.cursor.sequence,
+            number<DroppedEventCount>(gap ? 1 : 0),
+            gap,
+            false,
+        });
+    }
+
+private:
+    void project_leases()
+    {
+        for(const auto& [lease_id, resources] : leases_)
+        {
+            mark_owned(text<LeaseId>(lease_id), resources);
+        }
+    }
+
+    void mark_owned(
+        const LeaseId& lease_id,
+        const std::vector<v5::ResourceKey>& resources)
+    {
+        for(auto& receiver : current.receivers)
+        {
+            for(auto& controller : receiver.controllers)
+            {
+                if(std::find(resources.begin(), resources.end(), controller.resource)
+                   == resources.end())
+                {
+                    continue;
+                }
+                controller.ownership = v5::ControllerOwnershipOwnedByViewer {{
+                    lease_id,
+                    number<MonotonicMs>(lease_expiry_ms),
+                }};
+                controller.actions = {
+                    false,
+                    true,
+                    controller.availability == ControllerAvailability::Ready,
+                };
+            }
+        }
+    }
+
+    void mark_unowned(
+        const LeaseId& lease_id,
+        const std::vector<v5::ResourceKey>& resources)
+    {
+        for(auto& receiver : current.receivers)
+        {
+            for(auto& controller : receiver.controllers)
+            {
+                if(std::find(resources.begin(), resources.end(), controller.resource)
+                   == resources.end())
+                {
+                    continue;
+                }
+                const auto* owned = std::get_if<v5::ControllerOwnershipOwnedByViewer>(
+                    &controller.ownership);
+                if(owned == nullptr || owned->detail.lease_id != lease_id)
+                {
+                    continue;
+                }
+                controller.ownership =
+                    v5::ControllerOwnershipUnowned {v5::UnownedController {}};
+                controller.actions = {
+                    controller.availability == ControllerAvailability::Ready,
+                    false,
+                    false,
+                };
+            }
+        }
+    }
+
+    v5::LeaseGrant grant(const LeaseId& lease_id, LeaseState state) const
+    {
+        return {
+            lease_id,
+            text<ClientId>("openrgb"),
+            leases_.at(std::string(lease_id.value())),
+            number<MonotonicMs>(lease_expiry_ms),
+            state,
+        };
+    }
+
+    v5::TransactionResult terminal(const sdk::TransactionSubmission& submission,
+        TransactionState state,
+        std::size_t delivered,
+        SideEffectCertainty certainty = SideEffectCertainty::Committed,
+        bool live = true,
+        std::optional<ProtocolErrorKind> error = std::nullopt) const
+    {
+        return v5::TransactionResultTerminal {{
+            text<RequestId>("request-terminal"),
+            text<RequestDigest>(std::string(64, 'e')),
+            submission.transaction_id,
+            submission.receiver_id,
+            submission.generation_id,
+            state,
+            number<FrameCount>(submission.frames.size()),
+            number<DeliveredFrameCount>(delivered),
+            certainty,
+            live,
+            false,
+            DeviceApplicationState::Unverified,
+            number<SequenceNumber>(current.cursor.sequence.value() + 1),
+            error,
+            std::nullopt,
+        }};
+    }
+
+    std::uint64_t transaction_counter_ = 0;
+    std::map<std::string, std::vector<v5::ResourceKey>> leases_;
+};
+
+} // namespace hyperflux::test

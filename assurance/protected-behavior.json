@@ -1,0 +1,63 @@
+{
+  "$schema": "../schemas/protected-behavior.schema.json",
+  "schema": "hyperflux-protected-behavior-v1",
+  "source_revision": "0f5b13e8a22cc19f0bdd5d70b4f97cc679b1728a",
+  "software_baseline": {
+    "lane": "fast",
+    "status": "passed",
+    "required_nodes": [
+      "foundation-contracts",
+      "profile-contracts",
+      "protocol-contracts",
+      "rust-unit",
+      "simulator-contracts",
+      "kernel-profile-contracts",
+      "integration-contracts"
+    ]
+  },
+  "protected_surfaces": [
+    {
+      "id": "paired-identity-and-telemetry",
+      "summary": "Exact paired identities and passive telemetry remain generation-bound, profile-local, and fail closed.",
+      "authority_paths": ["profiles/children/", "profiles/receivers/", "driver/kernel/hyperflux-next-observation.c"],
+      "claim_ids": ["claim.child.00cd.passive-identity-telemetry", "claim.child.0296.passive-identity-telemetry", "claim.receiver.1532-00cf.generation-session"],
+      "verification_nodes": ["profile-contracts", "kernel-profile-contracts", "rust-unit"]
+    },
+    {
+      "id": "qualified-lighting-topology",
+      "summary": "The qualified mouse and keyboard LED maps, Static, Off, brightness, complete black, and software-effect frame transport remain unchanged.",
+      "authority_paths": ["profiles/children/", "crates/hfx-kernel-transport/", "protocol/"],
+      "claim_ids": ["claim.child.00cd.complete-led-map", "claim.child.0296.complete-keyboard-map", "claim.children.complete-static-black", "claim.children.static-off-brightness", "claim.children.software-effect-frame-continuity"],
+      "verification_nodes": ["profile-contracts", "protocol-contracts", "rust-unit", "integration-contracts"]
+    },
+    {
+      "id": "input-and-transport-safety",
+      "summary": "Ordinary HID input, sibling isolation, generation replacement, session ownership, and conservative transport outcomes remain protected.",
+      "authority_paths": ["driver/kernel/", "crates/hfx-core/", "crates/hfx-bridge/", "crates/hfx-kernel-transport/"],
+      "claim_ids": ["claim.receiver.1532-00cf.generation-session"],
+      "verification_nodes": ["formal-model-contracts", "kernel-profile-contracts", "rust-unit", "simulator-contracts"]
+    },
+    {
+      "id": "stable-lifecycle-restoration",
+      "summary": "Service start, receiver renewal, and system-resume restoration remain qualified while natural child wake remains explicitly outside this claim.",
+      "authority_paths": ["crates/hfx-core/src/restoration.rs", "crates/hfx-daemon/src/restoration.rs", "profiles/evidence/claims.json"],
+      "claim_ids": ["claim.receiver.stable-state-lifecycle-restore"],
+      "verification_nodes": ["rust-unit", "simulator-contracts"]
+    }
+  ],
+  "known_gaps": [
+    {
+      "id": "natural-device-wake-restoration",
+      "summary": "A terminal receiver transaction does not prove that a naturally waking child displayed the selected frame; the existing quiet-gap heuristic can finish too early.",
+      "forbidden_claim": "Natural device wake is not qualified until repeated watched cycles show no visible firmware Spectrum interval.",
+      "required_evidence": ["profile-bound return epochs", "bounded coalesced retries", "no-visible-Spectrum watched qualification", "controls preserved throughout every cycle"]
+    }
+  ],
+  "change_policy": {
+    "integration_only_prefixes": ["integrations/", "tests/cpp/", "tests/openrazer_version_matrix_contracts.py"],
+    "protected_prefixes": ["driver/kernel/", "crates/hfx-core/", "crates/hfx-bridge/", "crates/hfx-daemon/", "crates/hfx-kernel-transport/", "profiles/", "protocol/", "runtime/"],
+    "advanced_capability_prefixes": ["knowledge/", "integrations/", "profiles/capabilities.json"],
+    "approval_required_when": ["advanced-change-touches-protected-prefix", "qualified-profile-runtime-digest-changes", "public-protocol-semantics-change"],
+    "required_reverification": ["profile-contracts", "protocol-contracts", "kernel-profile-contracts", "rust-unit", "simulator-contracts", "integration-contracts"]
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "$schema": "../schemas/journey-source-coverage.schema.json",
+  "schema": "hyperflux-journey-source-coverage-v2",
+  "public_document": "docs/project/journey.md",
+  "publication": {
+    "voice": "first-person-founder",
+    "technical_appendix": true,
+    "publication_mode": "paraphrase-only",
+    "direct_quotes_approved": 0,
+    "raw_project_records_published": false,
+    "privacy_review": "passed"
+  },
+  "private_evidence": {
+    "pipeline_overlay_sha256": "f53f0ea9088dc4c84486b36251359fb6f0d5cdd7d7d0721d8ed6c998a3f9b9f8",
+    "source_snapshot_sha256": "c6d5bfd3be702239dd7529a454c890949ee5bdb8a289dea638a192d8d80272cd",
+    "source_manifest_sha256": "448e80cad65bc9704a0029733b3cf260d4f20a4cbc2575cb0fa3f902a1593122",
+    "source_ledger_sha256": "fccccd007cde367d640982564e2fe04e60b99661dc30b1cf1e6646392fb3f354",
+    "curation_plan_sha256": "1de32e285cad73d886abca6097077d2eff5cc0ed008c646f6e9b1251c036b08f",
+    "curation_manifest_sha256": "80b535c7dda682b9833cd980cf1733d82f1a768ebdde4178163355363062c6fe",
+    "curated_ledger_sha256": "68bd9582bbba3d4c6d730798e8fcf54bd19a7e830f4ddcefc0b16834780b77c0",
+    "extracted_event_count": 1018,
+    "curated_event_count": 16
+  },
+  "prior_art_review": {
+    "scope": "bounded-pinned-authority-review",
+    "outcome": "no-absolute-novelty-claim",
+    "absolute_novelty_claims": 0,
+    "sources": [
+      "integrations/catalog.json",
+      "integrations/openrazer/import.json",
+      "integrations/openrgb/native-route/transform.json",
+      "knowledge/reviewed-facts.json",
+      "profiles/candidates/razer-hyperflux-v2-2026-07-21.json"
+    ]
+  },
+  "eras": [
+    {
+      "id": "receiver-problem",
+      "title": "The Receiver Problem",
+      "order": 1,
+      "motivation_event_count": 2,
+      "technical_sources": [
+        {"kind": "commit", "reference": "da4b63a6233de34669c2ac2b4da4f9c22bebe1e0", "supports": "The architecture began with explicit ownership and failure boundaries."},
+        {"kind": "commit", "reference": "3ba2f51bebbd53e73f1b3664878f74fb79a07a34", "supports": "Hardware eligibility became composable and evidence-backed."},
+        {"kind": "commit", "reference": "5d8ab8777e3f6cd614dd33d4f0737ef7c25e878e", "supports": "A deterministic virtual receiver graph separated software proof from physical assurance."},
+        {"kind": "authority", "reference": "architecture/constitution.json", "supports": "The product constitution defines the bridge mission and non-ownership boundaries."},
+        {"kind": "authority", "reference": "profiles/candidates/razer-hyperflux-v2-2026-07-21.json", "supports": "The release inventory is capability-based rather than a local serial or port allowlist."}
+      ]
+    },
+    {
+      "id": "transport-discovery",
+      "title": "Learning The Transport",
+      "order": 2,
+      "motivation_event_count": 2,
+      "technical_sources": [
+        {"kind": "commit", "reference": "2dc409b49b3aab1c09de60cf9158565a97d3d997", "supports": "The bridge protocol became a generated and versioned SDK contract."},
+        {"kind": "commit", "reference": "4c89108c5e852ebae0238320fc985dae7ae0f9ac", "supports": "The kernel interface was reduced to a stable bounded UAPI."},
+        {"kind": "commit", "reference": "baf01ea46aeb84b2c064d749b4b6d257e2de5b92", "supports": "Receiver transport entered the kernel with bounded I/O and preserved input ownership."},
+        {"kind": "commit", "reference": "8487cc5fd637bb3a27291d8129607d52e63ab982", "supports": "Native receiver exchange was generalized without device-instance branches."},
+        {"kind": "authority", "reference": "protocol/registry.json", "supports": "Protocol versions one through seven remain explicit compatibility surfaces."},
+        {"kind": "authority", "reference": "uapi/registry.json", "supports": "Kernel operations and versions remain canonical and fixed-width."}
+      ]
+    },
+    {
+      "id": "bridge-foundation",
+      "title": "From Prototype To Bridge",
+      "order": 3,
+      "motivation_event_count": 2,
+      "technical_sources": [
+        {"kind": "commit", "reference": "3cc3392e863e82f3b83a44e6f78587874c727aee", "supports": "Lifecycle and transaction authority became explicit core state machines."},
+        {"kind": "commit", "reference": "b1bb3a59218f07a29457a9facb95f0a7080f4d6d", "supports": "Stable restoration records became crash-safe and durable."},
+        {"kind": "commit", "reference": "db22e4ae9c22ec40e3eef35fd1ffee5074bddc7e", "supports": "Receiver generations became an atomic bridge orchestration boundary."},
+        {"kind": "commit", "reference": "d9a9b6dbda16e52fb3df5575094c470680f2ad62", "supports": "Stale-profile restoration work was suppressed before claim creation."},
+        {"kind": "authority", "reference": "assurance/protected-behavior.json", "supports": "Protected behavior and known evidence gaps are explicit release inputs."},
+        {"kind": "authority", "reference": "docs/architecture/persistence.md", "supports": "Persistence, locking, and restoration failure semantics are documented separately from normal operation."}
+      ]
+    },
+    {
+      "id": "application-compatibility",
+      "title": "Application Compatibility",
+      "order": 4,
+      "motivation_event_count": 3,
+      "technical_sources": [
+        {"kind": "commit", "reference": "6dca5c1ff3b9272360adf95eeb8d442c8940b174", "supports": "OpenRGB integration began from a pinned adapter boundary."},
+        {"kind": "commit", "reference": "719ee9c0dac853f9e7bed8edd80d05e402b8f61e", "supports": "Canonical controllers were adapted to the stock OpenRGB native API."},
+        {"kind": "commit", "reference": "6598d19e876f10a7e677f3a2e236ebb6ed104af7", "supports": "The OpenRazer route was implemented as a source-bound native relay."},
+        {"kind": "commit", "reference": "ea04da73c0e9aaf9858a8fa8c78dee5107353d8f", "supports": "The OpenRGB route became source-bound without replacing the application."},
+        {"kind": "commit", "reference": "7a6a473d8979258c31e72068cf794379d8ccacc0", "supports": "Private application takeover boundaries were removed."},
+        {"kind": "commit", "reference": "6aa101acd294f84a57b2e91f5e7b0eefbef90031", "supports": "The exact two-package Pacman transition was qualified."},
+        {"kind": "authority", "reference": "integrations/catalog.json", "supports": "Stock application ownership and connector boundaries are canonical."},
+        {"kind": "authority", "reference": "integrations/openrazer/import.json", "supports": "The OpenRazer adaptation remains pinned to reviewed upstream source."},
+        {"kind": "authority", "reference": "integrations/openrgb/native-route/transform.json", "supports": "The packaged plugin transform records accepted and rejected upstream behavior."}
+      ]
+    },
+    {
+      "id": "evidence-recovery",
+      "title": "Evidence And Recovery",
+      "order": 5,
+      "motivation_event_count": 3,
+      "technical_sources": [
+        {"kind": "commit", "reference": "5902a19b340347b35421ec5d02b021df96a1a81c", "supports": "Verification began emitting source-bound run evidence."},
+        {"kind": "commit", "reference": "75d666bf32a32a5c2b64d90a6f41115a8715d6a8", "supports": "Hardware lifecycle qualification acquired explicit supervision and stop gates."},
+        {"kind": "commit", "reference": "f9d4598999d2db0091859b24d60b26ff3bba0ff7", "supports": "Native parity gained a bounded read-only qualifier."},
+        {"kind": "commit", "reference": "5fa98e4bfffd6afab95ed411f8477f98bd0667ab", "supports": "Relay publication was gated by stable source-derived serial identity."},
+        {"kind": "commit", "reference": "c348305bb9c6790141932ddf79f707e5223bb51c", "supports": "Release eight became the accepted private behavioral reference."},
+        {"kind": "evidence", "reference": "assurance/installed-baselines.json", "supports": "The accepted installed baseline separates machine evidence, operator observations, and limitations."},
+        {"kind": "evidence", "reference": "assurance/release-gates.json", "supports": "Release and publication authority remain separate from passing tests."}
+      ]
+    },
+    {
+      "id": "reconstruction-2-0",
+      "title": "Reconstructing 2.0",
+      "order": 6,
+      "motivation_event_count": 4,
+      "technical_sources": [
+        {"kind": "commit", "reference": "ea5b2deb8b45cee6620ad6fbc13c8653a6b9569c", "supports": "The installed release eight baseline was sealed before reconstruction."},
+        {"kind": "commit", "reference": "62af0fba25f68fbd26a03143ed4526d4088618bc", "supports": "Every 2.0 source disposition entered an auditable reconstruction ledger."},
+        {"kind": "commit", "reference": "cd0c02ed2f8f974b276c7a34381f54288d648139", "supports": "The lean Core and integration-complete Full boundary became canonical."},
+        {"kind": "commit", "reference": "afa0b934228a0e678f409acb05cca5da7a425328", "supports": "Embedded subsystem tests were extracted without changing public behavior."},
+        {"kind": "commit", "reference": "01041eb06757520c534722f7af6f8c8660abe44c", "supports": "Large-module dispositions became explicit Phase 4 evidence."},
+        {"kind": "commit", "reference": "5856ea1b00d86aca6f23cb50a37db6bc147f06e8", "supports": "Quality, security, and measured optimization received a bounded audit."},
+        {"kind": "commit", "reference": "a4d738eb571b49a21c198a79334a672bc5e917ae", "supports": "The private journey extraction scope became fail-closed and product-specific."},
+        {"kind": "evidence", "reference": "reconstruction/2.0/ledger.json", "supports": "The reconstruction ledger records every keep, move, split, and retirement decision."},
+        {"kind": "evidence", "reference": "assurance/quality-audit.json", "supports": "The Phase 5 audit records quality, security, dependency, and performance outcomes."}
+      ]
+    }
+  ]
+}

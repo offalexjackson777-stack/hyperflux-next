@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/openrazer-userspace-version-matrix-v1.json",
+  "title": "Matched OpenRazer userspace verification matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "upstream_id", "cases"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-openrazer-userspace-version-matrix-v1"},
+    "upstream_id": {"const": "openrazer"},
+    "cases": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "display_version", "channel", "source_ref", "commit", "devices"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^openrazer-[a-z0-9.-]+$"},
+          "display_version": {"type": "string", "minLength": 1, "maxLength": 32},
+          "channel": {"enum": ["release", "upstream-head"]},
+          "source_ref": {"type": "string", "pattern": "^refs/(tags|heads)/[A-Za-z0-9._{}^/-]+$"},
+          "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+          "devices": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["profile_id", "fake_driver", "definition"],
+              "properties": {
+                "profile_id": {"type": "string", "pattern": "^child\\.[a-z0-9.-]+$"},
+                "fake_driver": {"type": "string", "pattern": "^razer[a-z0-9]+$"},
+                "definition": {"enum": ["present", "absent"]}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

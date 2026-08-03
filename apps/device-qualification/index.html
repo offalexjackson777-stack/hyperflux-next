@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="description" content="Local qualification console for HyperFlux Next devices.">
+    <title>HyperFlux Next | Device Qualification</title>
+    <link rel="stylesheet" href="/assets/app.css">
+    <script type="module" src="/assets/app.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand" aria-label="HyperFlux Next Device Qualification">
+        <span class="brand-mark" aria-hidden="true">HF</span>
+        <span class="brand-name">HyperFlux Next</span>
+        <span class="brand-context">Device Qualification</span>
+      </div>
+      <div class="topbar-actions">
+        <span class="local-boundary">Local only</span>
+        <span class="connection-state" id="connection-state" data-state="loading" role="status">
+          <i aria-hidden="true"></i><span>Connecting</span>
+        </span>
+        <button class="icon-command" id="refresh-view" type="button" title="Refresh local state">Refresh</button>
+      </div>
+    </header>
+    <div class="global-notice" id="global-notice" role="alert" hidden></div>
+    <main id="app" class="app" aria-live="polite" aria-busy="true">
+      <section class="loading-state">
+        <p class="eyebrow">Local companion</p>
+        <h1>Reading installed hardware state</h1>
+        <p>No device data is loaded from the internet.</p>
+      </section>
+    </main>
+    <noscript>
+      <p class="noscript">This local console needs JavaScript to render the installed companion response.</p>
+    </noscript>
+  </body>
+</html>

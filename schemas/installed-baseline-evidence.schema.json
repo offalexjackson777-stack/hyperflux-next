@@ -1,0 +1,374 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/installed-baseline-evidence-v1.json",
+  "title": "HyperFlux append-only installed behavioral baselines",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "append_only", "records"],
+  "properties": {
+    "$schema": {"const": "../schemas/installed-baseline-evidence.schema.json"},
+    "schema": {"const": "hyperflux-installed-baseline-evidence-v1"},
+    "append_only": {"const": true},
+    "records": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {"$ref": "#/$defs/record"}
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "summary": {"type": "string", "minLength": 1, "maxLength": 320},
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "recorded_at",
+        "release",
+        "source",
+        "artifacts",
+        "installation",
+        "kernel",
+        "runtime",
+        "behavior",
+        "accepted_limitations",
+        "evidence",
+        "release_state"
+      ],
+      "properties": {
+        "id": {"type": "string", "pattern": "^installed-baseline\\.[a-z0-9.-]+$", "maxLength": 128},
+        "recorded_at": {"type": "string", "format": "date-time"},
+        "release": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["distribution", "architecture", "product_version", "package_version"],
+          "properties": {
+            "distribution": {"const": "arch"},
+            "architecture": {"const": "x86_64"},
+            "product_version": {"type": "string", "minLength": 1, "maxLength": 64},
+            "package_version": {"type": "string", "minLength": 1, "maxLength": 64}
+          }
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["revision", "tree"],
+          "properties": {
+            "revision": {"$ref": "#/$defs/revision"},
+            "tree": {"$ref": "#/$defs/revision"}
+          }
+        },
+        "artifacts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["frozen_manifest_sha256", "artifact_manifest_sha256", "distribution_manifest_sha256", "packages"],
+          "properties": {
+            "frozen_manifest_sha256": {"$ref": "#/$defs/sha256"},
+            "artifact_manifest_sha256": {"$ref": "#/$defs/sha256"},
+            "distribution_manifest_sha256": {"$ref": "#/$defs/sha256"},
+            "packages": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {"$ref": "#/$defs/artifact_package"}
+            }
+          }
+        },
+        "installation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["captured_at", "packages", "file_manifest", "ownership_differences"],
+          "properties": {
+            "captured_at": {"type": "string", "format": "date-time"},
+            "packages": {
+              "type": "array",
+              "minItems": 6,
+              "maxItems": 24,
+              "items": {"$ref": "#/$defs/installed_package"}
+            },
+            "file_manifest": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path", "sha256", "entries"],
+              "properties": {
+                "path": {"$ref": "#/$defs/path"},
+                "sha256": {"$ref": "#/$defs/sha256"},
+                "entries": {"type": "integer", "minimum": 1, "maximum": 4096}
+              }
+            },
+            "ownership_differences": {
+              "type": "array",
+              "maxItems": 32,
+              "items": {"$ref": "#/$defs/ownership_difference"}
+            }
+          }
+        },
+        "kernel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["running_kernel", "dkms", "modules"],
+          "properties": {
+            "running_kernel": {"type": "string", "minLength": 1, "maxLength": 96},
+            "dkms": {"type": "array", "minItems": 2, "maxItems": 16, "items": {"$ref": "#/$defs/dkms"}},
+            "modules": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"$ref": "#/$defs/module"}}
+          }
+        },
+        "runtime": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["bridge_mode", "restoration_enabled", "doctor", "services", "sockets", "routes", "uhid", "applications", "idle_sample"],
+          "properties": {
+            "bridge_mode": {"const": "qualified-live"},
+            "restoration_enabled": {"const": false},
+            "doctor": {"$ref": "#/$defs/doctor"},
+            "services": {"type": "array", "minItems": 5, "maxItems": 16, "items": {"$ref": "#/$defs/service"}},
+            "sockets": {"type": "array", "minItems": 2, "maxItems": 8, "items": {"$ref": "#/$defs/socket"}},
+            "routes": {"type": "array", "minItems": 2, "maxItems": 32, "items": {"$ref": "#/$defs/route"}},
+            "uhid": {"type": "array", "minItems": 2, "maxItems": 32, "items": {"$ref": "#/$defs/uhid"}},
+            "applications": {"type": "array", "minItems": 3, "maxItems": 16, "items": {"$ref": "#/$defs/application"}},
+            "idle_sample": {"$ref": "#/$defs/idle_sample"}
+          }
+        },
+        "behavior": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/behavior"}
+        },
+        "accepted_limitations": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 16,
+          "items": {"$ref": "#/$defs/limitation"}
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/evidence"}
+        },
+        "release_state": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["artifact_frozen", "installed_verified", "behavioral_baseline_accepted", "public_release_authorized"],
+          "properties": {
+            "artifact_frozen": {"const": true},
+            "installed_verified": {"const": true},
+            "behavioral_baseline_accepted": {"const": true},
+            "public_release_authorized": {"const": false}
+          }
+        }
+      }
+    },
+    "artifact_package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "sha256", "size", "payload_sha256", "payload_files"],
+      "properties": {
+        "name": {"enum": ["hyperflux-next-linux", "hyperflux-next-full"]},
+        "version": {"type": "string", "minLength": 1, "maxLength": 64},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "size": {"type": "integer", "minimum": 1},
+        "payload_sha256": {"$ref": "#/$defs/sha256"},
+        "payload_files": {"type": "integer", "minimum": 1, "maximum": 4096}
+      }
+    },
+    "installed_package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "reason", "integrity"],
+      "properties": {
+        "name": {"type": "string", "pattern": "^[a-z0-9@._+-]+$", "maxLength": 96},
+        "version": {"type": "string", "minLength": 1, "maxLength": 96},
+        "reason": {"enum": ["explicit", "dependency"]},
+        "integrity": {"enum": ["clean", "expected-managed-ownership-difference"]}
+      }
+    },
+    "ownership_difference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "package_owner", "observed_owner", "authority", "accepted"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^/", "maxLength": 256},
+        "package_owner": {"type": "string", "minLength": 1, "maxLength": 64},
+        "observed_owner": {"type": "string", "minLength": 1, "maxLength": 64},
+        "authority": {"type": "string", "minLength": 1, "maxLength": 160},
+        "accepted": {"const": true}
+      }
+    },
+    "dkms": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "kernels"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "maxLength": 96},
+        "version": {"type": "string", "minLength": 1, "maxLength": 64},
+        "kernels": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 96}}
+      }
+    },
+    "module": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "srcversion", "loaded", "files"],
+      "properties": {
+        "name": {"type": "string", "pattern": "^[a-z0-9_]+$", "maxLength": 96},
+        "srcversion": {"type": "string", "pattern": "^[A-F0-9]+$", "maxLength": 64},
+        "loaded": {"type": "boolean"},
+        "files": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kernel", "sha256"],
+            "properties": {
+              "kernel": {"type": "string", "minLength": 1, "maxLength": 96},
+              "sha256": {"$ref": "#/$defs/sha256"}
+            }
+          }
+        }
+      }
+    },
+    "doctor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "state", "findings", "sha256"],
+      "properties": {
+        "schema": {"const": "hyperflux-system-assessment-v1"},
+        "state": {"const": "ready"},
+        "findings": {"const": 0},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unit", "scope", "active", "sub", "result", "restarts"],
+      "properties": {
+        "unit": {"type": "string", "minLength": 1, "maxLength": 160},
+        "scope": {"enum": ["system", "user"]},
+        "active": {"enum": ["active", "inactive"]},
+        "sub": {"enum": ["running", "dead", "listening", "exited"]},
+        "result": {"const": "success"},
+        "restarts": {"type": "integer", "minimum": 0, "maximum": 65535}
+      }
+    },
+    "socket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "mode", "owner", "group", "state"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^/", "maxLength": 256},
+        "mode": {"type": "string", "pattern": "^[0-7]{3,4}$"},
+        "owner": {"type": "string", "minLength": 1, "maxLength": 64},
+        "group": {"type": "string", "minLength": 1, "maxLength": 64},
+        "state": {"const": "listening"}
+      }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "vendor_id", "product_id", "kind", "state", "failure", "attempt"],
+      "properties": {
+        "profile_id": {"type": "string", "minLength": 1, "maxLength": 160},
+        "vendor_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "product_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "kind": {"enum": ["mouse", "keyboard"]},
+        "state": {"const": "kernel-started"},
+        "failure": {"type": "null"},
+        "attempt": {"const": 0}
+      }
+    },
+    "uhid": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["vendor_id", "product_id", "driver", "bus", "count"],
+      "properties": {
+        "vendor_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "product_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "driver": {"enum": ["razerkbd", "razermouse"]},
+        "bus": {"const": "uhid"},
+        "count": {"const": 1}
+      }
+    },
+    "application": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "boundary", "device_count", "verdict"],
+      "properties": {
+        "name": {"enum": ["OpenRGB", "OpenRazer", "Polychromatic"]},
+        "boundary": {"type": "string", "minLength": 1, "maxLength": 160},
+        "device_count": {"const": 2},
+        "verdict": {"const": "passed"}
+      }
+    },
+    "idle_sample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["duration_seconds", "processes", "bridge_relay_warning_entries"],
+      "properties": {
+        "duration_seconds": {"type": "integer", "minimum": 30, "maximum": 3600},
+        "processes": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "rss_kib_before", "rss_kib_after", "cpu_seconds_delta"],
+            "properties": {
+              "name": {"type": "string", "minLength": 1, "maxLength": 160},
+              "rss_kib_before": {"type": "integer", "minimum": 0},
+              "rss_kib_after": {"type": "integer", "minimum": 0},
+              "cpu_seconds_delta": {"type": "integer", "minimum": 0, "maximum": 60}
+            }
+          }
+        },
+        "bridge_relay_warning_entries": {"const": 0}
+      }
+    },
+    "behavior": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "verdict", "evidence_level", "summary", "limitations"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^baseline\\.[a-z0-9.-]+$", "maxLength": 128},
+        "verdict": {"enum": ["passed", "accepted-limitation"]},
+        "evidence_level": {"enum": ["machine-captured", "operator-confirmed", "source-reviewed", "bounded-negative-reproduction"]},
+        "summary": {"$ref": "#/$defs/summary"},
+        "limitations": {"type": "array", "maxItems": 8, "items": {"$ref": "#/$defs/summary"}}
+      }
+    },
+    "limitation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "summary", "user_visible"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^limitation\\.[a-z0-9.-]+$", "maxLength": 128},
+        "status": {"enum": ["unsupported", "upstream-limitation"]},
+        "summary": {"$ref": "#/$defs/summary"},
+        "user_visible": {"const": true}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sha256", "privacy", "summary"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^evidence\\.[a-z0-9.-]+$", "maxLength": 160},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "privacy": {"enum": ["public", "public-summary", "private"]},
+        "summary": {"$ref": "#/$defs/summary"}
+      }
+    }
+  }
+}

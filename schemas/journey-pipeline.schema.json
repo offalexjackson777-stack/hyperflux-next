@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/journey-pipeline-v2.json",
+  "title": "HyperFlux private journey extraction policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "topic_terms",
+    "private_overlay_sha256",
+    "context_messages_before",
+    "context_messages_after",
+    "maximum_line_bytes",
+    "maximum_narrative_bytes",
+    "eras"
+  ],
+  "properties": {
+    "$schema": {"const": "../schemas/journey-pipeline.schema.json"},
+    "schema": {"const": "hyperflux-journey-pipeline-v2"},
+    "topic_terms": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 2, "maxLength": 64}
+    },
+    "private_overlay_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "context_messages_before": {"type": "integer", "minimum": 0, "maximum": 16},
+    "context_messages_after": {"type": "integer", "minimum": 1, "maximum": 64},
+    "maximum_line_bytes": {"type": "integer", "minimum": 1048576, "maximum": 33554432},
+    "maximum_narrative_bytes": {"type": "integer", "minimum": 4096, "maximum": 1048576},
+    "eras": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "order"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+          "title": {"type": "string", "minLength": 1, "maxLength": 80},
+          "order": {"type": "integer", "minimum": 1, "maximum": 6}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,207 @@
+{
+  "$schema": "../schemas/installed-baseline-evidence.schema.json",
+  "schema": "hyperflux-installed-baseline-evidence-v1",
+  "append_only": true,
+  "records": [
+    {
+      "id": "installed-baseline.arch.release-8.2026-08-02",
+      "recorded_at": "2026-08-02T01:11:42+04:00",
+      "release": {
+        "distribution": "arch",
+        "architecture": "x86_64",
+        "product_version": "0.0.0-dev.1",
+        "package_version": "0.0.0_dev.1-8"
+      },
+      "source": {
+        "revision": "c348305bb9c6790141932ddf79f707e5223bb51c",
+        "tree": "f317ba86eae88019f27c6b02188c60a61941c315"
+      },
+      "artifacts": {
+        "frozen_manifest_sha256": "82d1cf664d2f1133b68375ceae6758642b76329caab1644d9793173ab16c3d8f",
+        "artifact_manifest_sha256": "f9c1864af67e23f5959436ff74f3c504c651c589b187c84965d20fe562f25dd5",
+        "distribution_manifest_sha256": "761c1131ebf3c906ade91188443e4c9232c75dee604c3121a0cb4f7e95d396f7",
+        "packages": [
+          {
+            "name": "hyperflux-next-linux",
+            "version": "0.0.0_dev.1-8",
+            "sha256": "4f3c9ab25029f65e75b03e2cdf0a50aa00d2a043abb79b25d3082d468fe00697",
+            "size": 4791507,
+            "payload_sha256": "a7a25565cdf4e7dd762d04209e3835d2485eea8bfdde5595a433649627c74db5",
+            "payload_files": 52
+          },
+          {
+            "name": "hyperflux-next-full",
+            "version": "0.0.0_dev.1-8",
+            "sha256": "1cd840343323ea761e89bae175993c4c1547f0c2f4ae7a825e26ce1b308fa1d3",
+            "size": 440510,
+            "payload_sha256": "5a747a9dcf0fe3adbbbc2ededc5735a1710594ad2cc7f4c225bf0fb414522f23",
+            "payload_files": 2
+          }
+        ]
+      },
+      "installation": {
+        "captured_at": "2026-08-02T01:11:42+04:00",
+        "packages": [
+          {"name": "hyperflux-next-linux", "version": "0.0.0_dev.1-8", "reason": "explicit", "integrity": "expected-managed-ownership-difference"},
+          {"name": "hyperflux-next-full", "version": "0.0.0_dev.1-8", "reason": "explicit", "integrity": "clean"},
+          {"name": "openrgb", "version": "1.0rc3-1", "reason": "explicit", "integrity": "clean"},
+          {"name": "openrazer-daemon", "version": "3.12.4-0.1", "reason": "dependency", "integrity": "clean"},
+          {"name": "python-openrazer", "version": "3.12.4-0.1", "reason": "dependency", "integrity": "clean"},
+          {"name": "polychromatic", "version": "0.9.7-1", "reason": "explicit", "integrity": "clean"}
+        ],
+        "file_manifest": {
+          "path": "evidence/installed-baselines/release-8-installed-files.sha256",
+          "sha256": "1d548f10ad0b7fa67c88d38963eaef7a9419b3c87fc92a32ad9fa1fd5292286c",
+          "entries": 54
+        },
+        "ownership_differences": [
+          {
+            "path": "/etc/hyperflux-next",
+            "package_owner": "root:root",
+            "observed_owner": "root:hyperflux-next",
+            "authority": "systemd-tmpfiles applies the packaged HyperFlux managed group",
+            "accepted": true
+          }
+        ]
+      },
+      "kernel": {
+        "running_kernel": "6.18.37-1-lts",
+        "dkms": [
+          {"name": "hid-hyperflux-next", "version": "0.0.0_dev.1", "kernels": ["6.18.37-1-lts", "7.0.14-arch1-1"]},
+          {"name": "openrazer-driver", "version": "3.12.4", "kernels": ["6.18.37-1-lts", "7.0.14-arch1-1"]}
+        ],
+        "modules": [
+          {
+            "name": "hid_hyperflux_next",
+            "srcversion": "3B495AD0CD893AD030CFD01",
+            "loaded": true,
+            "files": [
+              {"kernel": "6.18.37-1-lts", "sha256": "9d8234d2c110fc05e22cef92eb3b41196d23790235efcdda7378e75ae3d39066"},
+              {"kernel": "7.0.14-arch1-1", "sha256": "c91122b29aaf29fed4eabfc48a0ba61f9cbf1aed567bae740ab3bb4330dca060"}
+            ]
+          },
+          {
+            "name": "razeraccessory",
+            "srcversion": "E69FDC0A54D3ADD871EB5CC",
+            "loaded": false,
+            "files": [
+              {"kernel": "6.18.37-1-lts", "sha256": "cacf26fcc66e0e009527289e009dbeb0dfbb586b367ab26b32212977cd4b4e0f"},
+              {"kernel": "7.0.14-arch1-1", "sha256": "d6c438ab2b3760baeabb83c7f42e1668ed85a47de35c116b4e0630d81ab11798"}
+            ]
+          },
+          {
+            "name": "razerkbd",
+            "srcversion": "907D1FCDEEB09F2013A765F",
+            "loaded": true,
+            "files": [
+              {"kernel": "6.18.37-1-lts", "sha256": "bec3878bb31b26f6a1ca191b972d808553d41f86fe2ded9ba107c945990a800f"},
+              {"kernel": "7.0.14-arch1-1", "sha256": "fe5d0f6db9ab8cb5aae9af0cf34551d2c459282e4da7ec96e72f2c1dfa29a21b"}
+            ]
+          },
+          {
+            "name": "razerkraken",
+            "srcversion": "961BC36EA3468AE7012A757",
+            "loaded": false,
+            "files": [
+              {"kernel": "6.18.37-1-lts", "sha256": "671a82a9bdcff6c3950e0478dc7a1be67beb59f28dba42f1f8b0d56283d12474"},
+              {"kernel": "7.0.14-arch1-1", "sha256": "b5c5e8ced3a7ee44708ef5e15d11f3fd967210dc36ca6ccf2790e935e05fa7c2"}
+            ]
+          },
+          {
+            "name": "razermouse",
+            "srcversion": "AB9E8EC0E543DD387467946",
+            "loaded": true,
+            "files": [
+              {"kernel": "6.18.37-1-lts", "sha256": "e139b4fe8e45afb7ec40a7a1401386bce235507f75136d9a01e0f479b75fc5b2"},
+              {"kernel": "7.0.14-arch1-1", "sha256": "f8dab0d9f4c534e1c29568822e58a6e88f0d2742a1640a38d9d19362d04e89a3"}
+            ]
+          }
+        ]
+      },
+      "runtime": {
+        "bridge_mode": "qualified-live",
+        "restoration_enabled": false,
+        "doctor": {
+          "schema": "hyperflux-system-assessment-v1",
+          "state": "ready",
+          "findings": 0,
+          "sha256": "e36675e0b8fc70d8ec9f738b7c46f5f87b180a0e5c75035b1a3d6b54e15ecb2d"
+        },
+        "services": [
+          {"unit": "hyperflux-next-bridge.service", "scope": "system", "active": "active", "sub": "running", "result": "success", "restarts": 0},
+          {"unit": "hyperflux-next-openrazer-driver-preflight.service", "scope": "system", "active": "inactive", "sub": "dead", "result": "success", "restarts": 0},
+          {"unit": "hyperflux-next-openrazer-relay.service", "scope": "system", "active": "active", "sub": "running", "result": "success", "restarts": 0},
+          {"unit": "hyperflux-next-client@1000.service", "scope": "system", "active": "active", "sub": "running", "result": "success", "restarts": 0},
+          {"unit": "openrazer-daemon.service", "scope": "user", "active": "active", "sub": "running", "result": "success", "restarts": 0}
+        ],
+        "sockets": [
+          {"path": "/run/hyperflux-next/bridge.sock", "mode": "660", "owner": "hyperflux-next", "group": "hyperflux", "state": "listening"},
+          {"path": "/run/user/1000/hyperflux-next-bridge.sock", "mode": "600", "owner": "uid-1000", "group": "gid-1001", "state": "listening"}
+        ],
+        "routes": [
+          {"profile_id": "child.razer.basilisk-v3-pro-35k.00cd", "vendor_id": 5426, "product_id": 205, "kind": "mouse", "state": "kernel-started", "failure": null, "attempt": 0},
+          {"profile_id": "child.razer.deathstalker-v2-pro-tkl.0296", "vendor_id": 5426, "product_id": 662, "kind": "keyboard", "state": "kernel-started", "failure": null, "attempt": 0}
+        ],
+        "uhid": [
+          {"vendor_id": 5426, "product_id": 205, "driver": "razermouse", "bus": "uhid", "count": 1},
+          {"vendor_id": 5426, "product_id": 662, "driver": "razerkbd", "bus": "uhid", "count": 1}
+        ],
+        "applications": [
+          {"name": "OpenRGB", "boundary": "stock application plus packaged HyperFlux plugin", "device_count": 2, "verdict": "passed"},
+          {"name": "OpenRazer", "boundary": "stock user daemon and public D-Bus API", "device_count": 2, "verdict": "passed"},
+          {"name": "Polychromatic", "boundary": "stock application through stock OpenRazer API", "device_count": 2, "verdict": "passed"}
+        ],
+        "idle_sample": {
+          "duration_seconds": 60,
+          "processes": [
+            {"name": "hyperflux-next-bridge", "rss_kib_before": 11540, "rss_kib_after": 11540, "cpu_seconds_delta": 1},
+            {"name": "hyperflux-next-openrazer-relay", "rss_kib_before": 7628, "rss_kib_after": 7628, "cpu_seconds_delta": 1},
+            {"name": "hyperflux-next-client-proxy", "rss_kib_before": 4600, "rss_kib_after": 4600, "cpu_seconds_delta": 0},
+            {"name": "stock-openrazer-daemon", "rss_kib_before": 38272, "rss_kib_after": 38272, "cpu_seconds_delta": 1}
+          ],
+          "bridge_relay_warning_entries": 0
+        }
+      },
+      "behavior": [
+        {"id": "baseline.normal-boot-doctor", "verdict": "passed", "evidence_level": "machine-captured", "summary": "A normal connected boot and desktop login reached Doctor Ready without manual binding.", "limitations": []},
+        {"id": "baseline.openrgb-enumeration-control", "verdict": "passed", "evidence_level": "operator-confirmed", "summary": "Stock OpenRGB enumerated exactly the mouse and keyboard and applied independent reversible lighting and effects.", "limitations": []},
+        {"id": "baseline.polychromatic-enumeration-control", "verdict": "passed", "evidence_level": "operator-confirmed", "summary": "Stock Polychromatic enumerated both children through stock OpenRazer and exercised the exposed reversible controls.", "limitations": []},
+        {"id": "baseline.keyboard-return", "verdict": "passed", "evidence_level": "operator-confirmed", "summary": "Keyboard off and on withdrew and republished one keyboard route while preserving the mouse.", "limitations": ["One ordinary Polychromatic refresh was needed to update its already-open device page during the staged component run."]},
+        {"id": "baseline.mouse-return", "verdict": "passed", "evidence_level": "operator-confirmed", "summary": "Mouse off and on withdrew and republished one mouse route while preserving the keyboard.", "limitations": []},
+        {"id": "baseline.direct-usb-precedence", "verdict": "passed", "evidence_level": "operator-confirmed", "summary": "Direct USB precedence suppressed the wireless duplicate and the wireless route returned after cable removal.", "limitations": []},
+        {"id": "baseline.input-controls", "verdict": "passed", "evidence_level": "operator-confirmed", "summary": "Ordinary input, mouse DPI and scroll controls, and keyboard media and roller controls remained functional.", "limitations": []},
+        {"id": "baseline.battery-charging", "verdict": "passed", "evidence_level": "operator-confirmed", "summary": "Battery stayed truthful without a false zero and charging state followed cable removal and reconnection.", "limitations": []},
+        {"id": "baseline.reconnect-latency", "verdict": "passed", "evidence_level": "machine-captured", "summary": "Supported child return converged within the bounded fifteen-second live gate without a service restart.", "limitations": []},
+        {"id": "baseline.idle-health", "verdict": "passed", "evidence_level": "machine-captured", "summary": "A sixty-second idle sample showed stable RSS, bounded CPU growth, and no bridge or relay warning entries.", "limitations": []},
+        {"id": "baseline.mixed-capability-effects", "verdict": "passed", "evidence_level": "operator-confirmed", "summary": "Polychromatic safely filtered Breathing, Starlight, and Reactive to supporting devices while leaving the sibling unchanged.", "limitations": ["Ripple was intentionally excluded from this positive result."]},
+        {"id": "baseline.ripple-negative-reproduction", "verdict": "accepted-limitation", "evidence_level": "bounded-negative-reproduction", "summary": "The bounded Ripple run completed 1599 feature exchanges with final input released and did not reproduce the historic latch.", "limitations": ["The first capture watched the wrong click interface and ended before its completeness marker, so causal attribution and universal safety were not proven."]},
+        {"id": "baseline.openrgb-quartz-label", "verdict": "accepted-limitation", "evidence_level": "operator-confirmed", "summary": "The false Quartz label also occurs in stock OpenRGB over direct USB and is not treated as HyperFlux identity authority.", "limitations": ["The label remains a cosmetic upstream limitation."]}
+      ],
+      "accepted_limitations": [
+        {"id": "limitation.polychromatic-ripple", "status": "unsupported", "summary": "Ripple lacks a route-associated stock OpenRazer KeyWatcher input source; the bounded negative reproduction is not universal proof.", "user_visible": true},
+        {"id": "limitation.openrgb-quartz-label", "status": "upstream-limitation", "summary": "Stock OpenRGB reports Quartz for the same black keyboard over direct USB; no machine-specific override is shipped.", "user_visible": true}
+      ],
+      "evidence": [
+        {"id": "evidence.release-8-frozen-manifest", "sha256": "82d1cf664d2f1133b68375ceae6758642b76329caab1644d9793173ab16c3d8f", "privacy": "private", "summary": "Exact frozen build, package, source, and accepted-limitation manifest."},
+        {"id": "evidence.release-8-artifact-manifest", "sha256": "f9c1864af67e23f5959436ff74f3c504c651c589b187c84965d20fe562f25dd5", "privacy": "private", "summary": "Pinned network-disabled package build manifest."},
+        {"id": "evidence.release-8-distribution-manifest", "sha256": "761c1131ebf3c906ade91188443e4c9232c75dee604c3121a0cb4f7e95d396f7", "privacy": "private", "summary": "Byte-identical independent Arch package assembly manifest."},
+        {"id": "evidence.release-8-installed-files", "sha256": "1d548f10ad0b7fa67c88d38963eaef7a9419b3c87fc92a32ad9fa1fd5292286c", "privacy": "public", "summary": "Complete installed regular-file hash manifest for Core and Full."},
+        {"id": "evidence.relay-hotadd-candidate-manifest", "sha256": "3475f23fbfb950027d8f10297cc8ca985ac56f12e8ada5b0f87f74ef41a080d5", "privacy": "private", "summary": "Live-first relay source and binary identity."},
+        {"id": "evidence.relay-hotadd-route-status", "sha256": "ebf9afb8f5f23089ee9d8aaec95885e17fb43105eccbf812f04ff02aeb2c8e6c", "privacy": "private", "summary": "Two route-local kernel-started projections with no failures or retries."},
+        {"id": "evidence.relay-hotadd-outcome", "sha256": "4b28e11ca7f95248b57f3e3f0b084120e91f31f43ba5f603326802e5b646d20f", "privacy": "private", "summary": "Keyboard hot-add, sibling preservation, stock application, and special-control outcome."},
+        {"id": "evidence.relay-battery-outcome", "sha256": "e79330fbf090aacebfbbd7a0c9bfd1e9cdb4d3ce46360b820640c49d07a6e61c", "privacy": "private", "summary": "Final bounded battery and transient busy retry component outcome."},
+        {"id": "evidence.ripple-input-preservation", "sha256": "8ad48c17c160d53800f7d245ab6e915f95ffbc138236780bff63f108f9d0dbf3", "privacy": "private", "summary": "Bounded Ripple transport and final input-state evidence."},
+        {"id": "evidence.ripple-operator-observation", "sha256": "66e0d74534b3098767baee2ab391ad0e21250385dd79d08cac456912eddaaa02", "privacy": "private", "summary": "Operator result and explicit capture limitation for the single Ripple run."},
+        {"id": "evidence.mixed-capability-effects", "sha256": "ec706a5a69952ad1a1fcba81a55b640a8deae92076101a817adb19d1288b337", "privacy": "private", "summary": "Breathing, Starlight, and Reactive mixed-capability operator pass."},
+        {"id": "evidence.test-staging-closure", "sha256": "7cb91e7d639809f909c27ddce237d8d007d6fa4c93331d379085afcd81edf304", "privacy": "private", "summary": "Test staging closure and healthy service boundary."},
+        {"id": "evidence.post-reboot-doctor", "sha256": "e36675e0b8fc70d8ec9f738b7c46f5f87b180a0e5c75035b1a3d6b54e15ecb2d", "privacy": "public-summary", "summary": "Post-reboot Doctor Ready JSON bytes with no findings."}
+      ],
+      "release_state": {
+        "artifact_frozen": true,
+        "installed_verified": true,
+        "behavioral_baseline_accepted": true,
+        "public_release_authorized": false
+      }
+    }
+  ]
+}

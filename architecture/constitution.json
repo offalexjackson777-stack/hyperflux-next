@@ -1,0 +1,118 @@
+{
+  "$schema": "../schemas/architecture-constitution.schema.json",
+  "schema": "hyperflux-architecture-constitution-v1",
+  "product": "HyperFlux Next",
+  "phase": "public-source-pre-release",
+  "direction": [
+    "applications",
+    "integrations",
+    "sdk",
+    "bridge",
+    "kernel",
+    "receiver"
+  ],
+  "invariants": [
+    {
+      "id": "HFX-INV-001",
+      "statement": "Generic mouse and keyboard input remains independent of optional device-control applications."
+    },
+    {
+      "id": "HFX-INV-002",
+      "statement": "A qualified native integration may submit exactly one fixed upstream Feature report through an opaque route; no application may submit arbitrary USB setup packets, sysfs operations, or receiver carrier frames."
+    },
+    {
+      "id": "HFX-INV-003",
+      "statement": "One bridge is the sole userspace authority for receiver writes and one renewable lease owns each writable resource."
+    },
+    {
+      "id": "HFX-INV-004",
+      "statement": "Every native exchange is bound to a live receiver generation, qualified opaque route, declarative report profile, NativeControl owner, deadline, and transaction identity."
+    },
+    {
+      "id": "HFX-INV-005",
+      "statement": "Native availability is only available, temporarily-unavailable, or withdrawn; pairing, silence, and retail sleep or power labels never grant route authority. Only generation-bound explicit route evidence or endpoint-local traffic qualified by the receiver profile may produce available."
+    },
+    {
+      "id": "HFX-INV-006",
+      "statement": "Unknown devices expose safe identity and passive observations but inherit no writable capability."
+    },
+    {
+      "id": "HFX-INV-007",
+      "statement": "Receiver, child, and surface profiles compose independently; no exact mouse and keyboard pair is required."
+    },
+    {
+      "id": "HFX-INV-008",
+      "statement": "Every queue, journal, event buffer, frame stream, message, and retry policy is explicitly bounded."
+    },
+    {
+      "id": "HFX-INV-009",
+      "statement": "Only a complete correlated response is matched-response; a possible SET is may-have-been-sent and is never automatically repeated or reported as success."
+    },
+    {
+      "id": "HFX-INV-010",
+      "statement": "Canonical schemas own shared facts; generated bindings and documentation may not drift from them."
+    },
+    {
+      "id": "HFX-INV-011",
+      "statement": "Research code, raw captures, private identifiers, machine paths, and watched mission coordinators are not product dependencies."
+    },
+    {
+      "id": "HFX-INV-012",
+      "statement": "No compile, test, package, tag, repository, or green workflow alone grants publication authorization."
+    }
+  ],
+  "components": [
+    {
+      "id": "applications",
+      "owns": ["user workflows", "device commands and settings", "presentation and layouts", "profiles, effects, and persistence"],
+      "must_not_own": ["receiver carrier encoding", "route qualification", "kernel access"]
+    },
+    {
+      "id": "integrations",
+      "owns": ["thin Feature-transport adaptation", "application contract adaptation", "tested route view models"],
+      "must_not_own": ["device semantic duplication", "receiver carrier transport", "profile qualification", "uncertain-write retry policy"]
+    },
+    {
+      "id": "sdk",
+      "owns": ["version negotiation", "qualified native routes", "availability events", "NativeControl leases", "exact fixed-size Feature exchanges", "typed errors"],
+      "must_not_own": ["application widgets or device commands", "receiver carrier frames", "raw socket framing in callers"]
+    },
+    {
+      "id": "bridge",
+      "owns": ["route qualification", "profile resolution", "NativeControl arbitration", "bounded native transactions and certainty", "availability", "diagnostics", "retained migration fallback"],
+      "must_not_own": ["device commands or settings", "application presentation, effects, profiles, or persistence", "arbitrary USB or receiver reports"]
+    },
+    {
+      "id": "kernel",
+      "owns": ["HID binding", "input preservation", "receiver generations", "passive observations", "exclusive writer session", "qualified fixed-size native exchange", "bounded fallback envelopes"],
+      "must_not_own": ["retail names", "effects", "profiles", "application ownership", "package repair"]
+    },
+    {
+      "id": "profiles",
+      "owns": ["identity predicates", "native report shape and response matching", "upstream bindings", "route qualification", "evidence references", "retained fallback mappings"],
+      "must_not_own": ["live observations", "leases", "application desired state", "model commands", "guessed transport"]
+    },
+    {
+      "id": "verification",
+      "owns": ["typed test graph", "simulator", "replay", "evidence manifests", "change selection"],
+      "must_not_own": ["production policy", "unbounded reruns", "implicit hardware authorization"]
+    }
+  ],
+  "publication_interlock": {
+    "local_first": true,
+    "remote_repository_created": true,
+    "publication_authorized": false,
+    "required_gate_ids": [
+      "HFX-GATE-FOUNDATION",
+      "HFX-GATE-SCHEMAS",
+      "HFX-GATE-SIMULATION",
+      "HFX-GATE-BRIDGE-SDK",
+      "HFX-GATE-KERNEL",
+      "HFX-GATE-INTEGRATIONS",
+      "HFX-GATE-PACKAGING",
+      "HFX-GATE-SOFTWARE",
+      "HFX-GATE-HARDWARE",
+      "HFX-GATE-PUBLICATION-DECISION"
+    ]
+  }
+}

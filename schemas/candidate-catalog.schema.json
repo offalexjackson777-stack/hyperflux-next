@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/candidate-catalog-v1.json",
+  "title": "Unqualified compatibility candidate snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "snapshot_id", "retrieved_utc", "source_claim", "candidates"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-candidate-catalog-v1"},
+    "snapshot_id": {"type": "string"},
+    "retrieved_utc": {"type": "string", "format": "date"},
+    "supersedes_snapshot_id": {"type": "string"},
+    "source_claim": {"type": "string"},
+    "official_receiver_scope": {"$ref": "#/$defs/official_receiver_scope"},
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "device_kind", "official_name", "support_level", "writable_capabilities"],
+        "properties": {
+          "id": {"type": "string"},
+          "device_kind": {"enum": ["mouse", "keyboard"]},
+          "official_name": {"type": "string", "minLength": 1},
+          "support_level": {"const": "candidate"},
+          "writable_capabilities": {"type": "array", "maxItems": 0}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "official_receiver_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["vendor_id", "receiver_product_id", "entries"],
+      "properties": {
+        "vendor_id": {"const": 5426},
+        "receiver_product_id": {"const": 207},
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {"$ref": "#/$defs/official_receiver_entry"}
+        }
+      }
+    },
+    "official_receiver_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "wireless_product_id",
+        "direct_usb_product_id",
+        "upstream_pending"
+      ],
+      "properties": {
+        "candidate_id": {"type": "string", "minLength": 1},
+        "wireless_product_id": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "direct_usb_product_id": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "upstream_pending": {
+          "type": "array",
+          "maxItems": 2,
+          "items": {"$ref": "#/$defs/upstream_pending"}
+        }
+      }
+    },
+    "upstream_pending": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["application", "reference"],
+      "properties": {
+        "application": {"enum": ["openrazer", "openrgb"]},
+        "reference": {
+          "type": "string",
+          "pattern": "^https://github\\.com/(openrazer/openrazer|CalcProgrammer1/OpenRGB)/pull/[1-9][0-9]*$"
+        }
+      }
+    }
+  }
+}

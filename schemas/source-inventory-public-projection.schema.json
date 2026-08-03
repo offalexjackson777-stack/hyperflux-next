@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/source-inventory-public-projection-v1.json",
+  "title": "Sanitized public projection of a private source inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "source",
+    "commit",
+    "entry_count",
+    "entries",
+    "path_representation",
+    "private_inventory_sha256",
+    "sanitized_path_count",
+    "aliases_are_original_paths"
+  ],
+  "properties": {
+    "$schema": {"const": "../../schemas/source-inventory-public-projection.schema.json"},
+    "schema": {"const": "hyperflux-source-inventory-public-projection-v1"},
+    "source": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "entry_count": {"type": "integer", "minimum": 1},
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/entry"}
+    },
+    "path_representation": {"const": "verbatim-or-opaque-alias"},
+    "private_inventory_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "sanitized_path_count": {"type": "integer", "minimum": 1},
+    "aliases_are_original_paths": {"const": false}
+  },
+  "$defs": {
+    "base": {
+      "type": "object",
+      "properties": {
+        "mode": {"type": "string", "pattern": "^[0-7]{6}$"},
+        "object": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "type": {"enum": ["blob", "commit"]}
+      }
+    },
+    "entry": {
+      "oneOf": [
+        {
+          "allOf": [
+            {"$ref": "#/$defs/base"},
+            {
+              "additionalProperties": false,
+              "required": ["mode", "object", "path", "type"],
+              "properties": {
+                "mode": true,
+                "object": true,
+                "path": {"type": "string", "minLength": 1},
+                "type": true
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {"$ref": "#/$defs/base"},
+            {
+              "additionalProperties": false,
+              "required": ["mode", "object", "path_alias", "path_representation", "type"],
+              "properties": {
+                "mode": true,
+                "object": true,
+                "path_alias": {"type": "string", "pattern": "^evidence/snapshots/context-filtered-group/record-[0-9]{2}$"},
+                "path_representation": {"const": "opaque-alias"},
+                "type": true
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

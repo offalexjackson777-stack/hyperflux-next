@@ -1,0 +1,643 @@
+{
+  "$schema": "../../schemas/openrazer-native-command-policy.schema.json",
+  "schema": "hyperflux-openrazer-native-command-policy-v1",
+  "upstream_id": "openrazer",
+  "source_commit": "1ef8a91712906a89fd332a2ed62bbd105315d6d1",
+  "report_size": 90,
+  "families": [
+    {
+      "device_kind": "mouse",
+      "rules": [
+        {
+          "id": "charge-colour",
+          "methods": ["set_charge_colour"],
+          "command_class": 3,
+          "command_id": 1,
+          "data_size": 5,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [0, 3]}, {"kind": "rgb", "offset": 2, "pixels": 1}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_standard_set_led_rgb"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_charge_colour"]}
+          ]
+        },
+        {
+          "id": "charge-effect",
+          "methods": ["set_charge_colour", "set_charge_effect"],
+          "command_class": 3,
+          "command_id": 16,
+          "data_size": 1,
+          "matcher": {"kind": "fields", "fields": [{"kind": "one-of", "offset": 0, "values": [0, 1]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_misc_set_dock_charge_type"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_charge_colour", "razer_attr_write_charge_effect"]}
+          ]
+        },
+        {
+          "id": "custom-frame",
+          "methods": ["set_key_row"],
+          "command_class": 15,
+          "command_id": 3,
+          "data_size": 71,
+          "matcher": {"kind": "custom-frame", "rows": 1, "columns": 13},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_set_custom_frame", "razer_chroma_extended_matrix_set_custom_frame2"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_matrix_custom_frame"]}
+          ]
+        },
+        {
+          "id": "custom-mode",
+          "methods": ["set_custom_effect"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 12,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_custom_frame"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_matrix_effect_custom"]}
+          ]
+        },
+        {
+          "id": "device-mode",
+          "methods": ["set_device_mode"],
+          "command_class": 0,
+          "command_id": 4,
+          "data_size": 2,
+          "matcher": {"kind": "fields", "fields": [{"kind": "one-of", "offset": 0, "values": [0, 3]}, {"kind": "exact", "offset": 1, "bytes": [0]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_standard_set_device_mode"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_device_mode"]}
+          ]
+        },
+        {
+          "id": "dpi",
+          "methods": ["set_dpi_xy"],
+          "command_class": 4,
+          "command_id": 5,
+          "data_size": 7,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1]}, {"kind": "be16-range", "offset": 1, "minimum": 100, "maximum": 35000}, {"kind": "be16-range", "offset": 3, "minimum": 100, "maximum": 35000}, {"kind": "exact", "offset": 5, "bytes": [0, 0]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_misc_set_dpi_xy"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_dpi"]}
+          ]
+        },
+        {
+          "id": "dpi-stages",
+          "methods": ["set_dpi_stages"],
+          "command_class": 4,
+          "command_id": 6,
+          "data_size": 38,
+          "matcher": {"kind": "dpi-stages", "maximum_stages": 5, "minimum_dpi": 100, "maximum_dpi": 35000},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_misc_set_dpi_stages"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_dpi_stages"]}
+          ]
+        },
+        {
+          "id": "idle-time",
+          "methods": ["set_idle_time"],
+          "command_class": 7,
+          "command_id": 3,
+          "data_size": 2,
+          "matcher": {"kind": "fields", "fields": [{"kind": "be16-range", "offset": 0, "minimum": 60, "maximum": 900}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_misc_set_idle_time"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_device_idle_time"]}
+          ]
+        },
+        {
+          "id": "led-breath-dual",
+          "methods": ["set_breath_dual_effect", "set_logo_breath_dual"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 12,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1]}, {"kind": "one-of", "offset": 1, "values": [0, 1, 4, 5]}, {"kind": "exact", "offset": 2, "bytes": [2, 2, 0, 2]}, {"kind": "rgb", "offset": 6, "pixels": 2}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_breathing_dual"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_matrix_effect_breath", "razer_attr_write_matrix_effect_breath_common"]}
+          ]
+        },
+        {
+          "id": "led-breath-random",
+          "methods": ["set_breath_random_effect", "set_logo_breath_random"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 6,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1]}, {"kind": "one-of", "offset": 1, "values": [0, 1, 4, 5]}, {"kind": "exact", "offset": 2, "bytes": [2, 0, 0, 0]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_breathing_random"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_matrix_effect_breath", "razer_attr_write_matrix_effect_breath_common"]}
+          ]
+        },
+        {
+          "id": "led-breath-single",
+          "methods": ["set_breath_single_effect", "set_logo_breath_single"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 9,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1]}, {"kind": "one-of", "offset": 1, "values": [0, 1, 4, 5]}, {"kind": "exact", "offset": 2, "bytes": [2, 1, 0, 1]}, {"kind": "rgb", "offset": 6, "pixels": 1}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_breathing_single"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_matrix_effect_breath", "razer_attr_write_matrix_effect_breath_common"]}
+          ]
+        },
+        {
+          "id": "led-brightness",
+          "methods": ["set_brightness", "set_logo_brightness", "set_scroll_brightness"],
+          "command_class": 15,
+          "command_id": 4,
+          "data_size": 3,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1]}, {"kind": "one-of", "offset": 1, "values": [0, 1, 4, 5]}, {"kind": "u8-range", "offset": 2, "minimum": 0, "maximum": 255}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_brightness"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_led_brightness", "razer_attr_write_matrix_brightness"]}
+          ]
+        },
+        {
+          "id": "led-none",
+          "methods": ["set_logo_none", "set_none_effect", "set_scroll_none"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 6,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1]}, {"kind": "one-of", "offset": 1, "values": [0, 1, 4, 5]}, {"kind": "exact", "offset": 2, "bytes": [0, 0, 0, 0]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_none"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_matrix_effect_none", "razer_attr_write_matrix_effect_none_common"]}
+          ]
+        },
+        {
+          "id": "led-reactive",
+          "methods": ["set_logo_reactive", "set_reactive_effect"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 9,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1]}, {"kind": "one-of", "offset": 1, "values": [0, 1, 4, 5]}, {"kind": "exact", "offset": 2, "bytes": [5, 0]}, {"kind": "u8-range", "offset": 4, "minimum": 1, "maximum": 4}, {"kind": "exact", "offset": 5, "bytes": [1]}, {"kind": "rgb", "offset": 6, "pixels": 1}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_reactive"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_matrix_effect_reactive", "razer_attr_write_matrix_effect_reactive_common"]}
+          ]
+        },
+        {
+          "id": "led-spectrum",
+          "methods": ["set_logo_spectrum", "set_scroll_spectrum", "set_spectrum_effect"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 6,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1]}, {"kind": "one-of", "offset": 1, "values": [0, 1, 4, 5]}, {"kind": "exact", "offset": 2, "bytes": [3, 0, 0, 0]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_spectrum"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_matrix_effect_spectrum", "razer_attr_write_matrix_effect_spectrum_common"]}
+          ]
+        },
+        {
+          "id": "led-static",
+          "methods": ["set_logo_static", "set_scroll_static", "set_static_effect"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 9,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1]}, {"kind": "one-of", "offset": 1, "values": [0, 1, 4, 5]}, {"kind": "exact", "offset": 2, "bytes": [1, 0, 0, 1]}, {"kind": "rgb", "offset": 6, "pixels": 1}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_static"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_matrix_effect_static", "razer_attr_write_matrix_effect_static_common"]}
+          ]
+        },
+        {
+          "id": "led-wave",
+          "methods": ["set_logo_wave", "set_scroll_wave", "set_wave_effect"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 6,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1]}, {"kind": "one-of", "offset": 1, "values": [0, 1, 4, 5]}, {"kind": "exact", "offset": 2, "bytes": [4]}, {"kind": "u8-range", "offset": 3, "minimum": 0, "maximum": 2}, {"kind": "exact", "offset": 4, "bytes": [40, 0]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_wave"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_matrix_effect_wave", "razer_attr_write_matrix_effect_wave_common"]}
+          ]
+        },
+        {
+          "id": "low-battery-threshold",
+          "methods": ["set_low_battery_threshold"],
+          "command_class": 7,
+          "command_id": 1,
+          "data_size": 1,
+          "matcher": {"kind": "fields", "fields": [{"kind": "u8-range", "offset": 0, "minimum": 12, "maximum": 63}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_misc_set_low_battery_threshold"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_charge_low_threshold"]}
+          ]
+        },
+        {
+          "id": "mouse-effect-breath-dual",
+          "methods": ["set_breath_dual_effect"],
+          "command_class": 3,
+          "command_id": 13,
+          "data_size": 10,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 3, 2]}, {"kind": "rgb", "offset": 4, "pixels": 2}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_mouse_extended_matrix_effect_breathing_dual"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_matrix_effect_breath"]}
+          ]
+        },
+        {
+          "id": "mouse-effect-breath-random",
+          "methods": ["set_breath_random_effect"],
+          "command_class": 3,
+          "command_id": 13,
+          "data_size": 10,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 3, 3, 0, 0, 0, 0, 0, 0]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_mouse_extended_matrix_effect_breathing_random"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_matrix_effect_breath"]}
+          ]
+        },
+        {
+          "id": "mouse-effect-breath-single",
+          "methods": ["set_breath_single_effect"],
+          "command_class": 3,
+          "command_id": 13,
+          "data_size": 10,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 3, 1]}, {"kind": "rgb", "offset": 4, "pixels": 1}, {"kind": "exact", "offset": 7, "bytes": [0, 0, 0]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_mouse_extended_matrix_effect_breathing_single"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_matrix_effect_breath"]}
+          ]
+        },
+        {
+          "id": "mouse-effect-none",
+          "methods": ["set_none_effect"],
+          "command_class": 3,
+          "command_id": 13,
+          "data_size": 3,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 0]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_mouse_extended_matrix_effect_none"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_matrix_effect_none"]}
+          ]
+        },
+        {
+          "id": "mouse-effect-reactive",
+          "methods": ["set_reactive_effect"],
+          "command_class": 3,
+          "command_id": 13,
+          "data_size": 7,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 2]}, {"kind": "u8-range", "offset": 3, "minimum": 1, "maximum": 4}, {"kind": "rgb", "offset": 4, "pixels": 1}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_mouse_extended_matrix_effect_reactive"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_matrix_effect_reactive"]}
+          ]
+        },
+        {
+          "id": "mouse-effect-spectrum",
+          "methods": ["set_spectrum_effect"],
+          "command_class": 3,
+          "command_id": 13,
+          "data_size": 3,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 4]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_mouse_extended_matrix_effect_spectrum"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_matrix_effect_spectrum"]}
+          ]
+        },
+        {
+          "id": "mouse-effect-static",
+          "methods": ["set_static_effect"],
+          "command_class": 3,
+          "command_id": 13,
+          "data_size": 6,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 6]}, {"kind": "rgb", "offset": 3, "pixels": 1}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_mouse_extended_matrix_effect_static"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_matrix_effect_static"]}
+          ]
+        },
+        {
+          "id": "poll-rate",
+          "methods": ["set_poll_rate"],
+          "command_class": 0,
+          "command_id": 5,
+          "data_size": 1,
+          "matcher": {"kind": "fields", "fields": [{"kind": "one-of", "offset": 0, "values": [1, 2, 8]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_misc_set_polling_rate"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_poll_rate"]}
+          ]
+        },
+        {
+          "id": "poll-rate2",
+          "methods": ["set_poll_rate"],
+          "command_class": 0,
+          "command_id": 64,
+          "data_size": 2,
+          "matcher": {"kind": "fields", "fields": [{"kind": "one-of", "offset": 0, "values": [0, 1]}, {"kind": "one-of", "offset": 1, "values": [1, 2, 4, 8, 16, 32, 64]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_misc_set_polling_rate2"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_poll_rate"]}
+          ]
+        },
+        {
+          "id": "scroll-acceleration",
+          "methods": ["set_scroll_acceleration"],
+          "command_class": 2,
+          "command_id": 22,
+          "data_size": 2,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1]}, {"kind": "one-of", "offset": 1, "values": [0, 1]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_misc_set_scroll_acceleration"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_scroll_acceleration"]}
+          ]
+        },
+        {
+          "id": "scroll-mode",
+          "methods": ["set_scroll_mode"],
+          "command_class": 2,
+          "command_id": 20,
+          "data_size": 2,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1]}, {"kind": "one-of", "offset": 1, "values": [0, 1]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_misc_set_scroll_mode"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_scroll_mode"]}
+          ]
+        },
+        {
+          "id": "scroll-smart-reel",
+          "methods": ["set_scroll_smart_reel"],
+          "command_class": 2,
+          "command_id": 23,
+          "data_size": 2,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1]}, {"kind": "one-of", "offset": 1, "values": [0, 1]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_misc_set_scroll_smart_reel"]},
+            {"path": "driver/razermouse_driver.c", "functions": ["razer_attr_write_scroll_smart_reel"]}
+          ]
+        }
+      ]
+    },
+    {
+      "device_kind": "keyboard",
+      "rules": [
+        {
+          "id": "breathing-dual",
+          "methods": ["set_breath_dual_effect"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 12,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 2, 2, 0, 2]}, {"kind": "rgb", "offset": 6, "pixels": 2}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_breathing_dual"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_matrix_effect_breath"]}
+          ]
+        },
+        {
+          "id": "breathing-random",
+          "methods": ["set_breath_random_effect"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 6,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 2, 0, 0, 0]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_breathing_random"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_matrix_effect_breath"]}
+          ]
+        },
+        {
+          "id": "breathing-single",
+          "methods": ["set_breath_single_effect"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 9,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 2, 1, 0, 1]}, {"kind": "rgb", "offset": 6, "pixels": 1}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_breathing_single"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_matrix_effect_breath"]}
+          ]
+        },
+        {
+          "id": "brightness",
+          "methods": ["set_brightness"],
+          "command_class": 15,
+          "command_id": 4,
+          "data_size": 3,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5]}, {"kind": "u8-range", "offset": 2, "minimum": 0, "maximum": 255}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_brightness"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_matrix_brightness"]}
+          ]
+        },
+        {
+          "id": "charge-colour",
+          "methods": ["set_charge_colour"],
+          "command_class": 3,
+          "command_id": 1,
+          "data_size": 5,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [0, 3]}, {"kind": "rgb", "offset": 2, "pixels": 1}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_standard_set_led_rgb"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_charge_colour"]}
+          ]
+        },
+        {
+          "id": "charge-effect",
+          "methods": ["set_charge_colour", "set_charge_effect"],
+          "command_class": 3,
+          "command_id": 16,
+          "data_size": 1,
+          "matcher": {"kind": "fields", "fields": [{"kind": "one-of", "offset": 0, "values": [0, 1]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_misc_set_dock_charge_type"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_charge_colour", "razer_attr_write_charge_effect"]}
+          ]
+        },
+        {
+          "id": "custom-frame",
+          "methods": ["set_key_row", "set_ripple_effect", "set_ripple_effect_random_colour"],
+          "command_class": 15,
+          "command_id": 3,
+          "data_size": 71,
+          "matcher": {"kind": "custom-frame", "rows": 6, "columns": 17},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_set_custom_frame", "razer_chroma_extended_matrix_set_custom_frame2"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_matrix_custom_frame"]}
+          ]
+        },
+        {
+          "id": "custom-mode",
+          "methods": ["set_custom_effect", "set_ripple_effect", "set_ripple_effect_random_colour"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 12,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_custom_frame"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_matrix_effect_custom"]}
+          ]
+        },
+        {
+          "id": "device-mode",
+          "methods": ["set_device_mode"],
+          "command_class": 0,
+          "command_id": 4,
+          "data_size": 2,
+          "matcher": {"kind": "fields", "fields": [{"kind": "one-of", "offset": 0, "values": [0, 3]}, {"kind": "exact", "offset": 1, "bytes": [0]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_standard_set_device_mode"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_device_mode"]}
+          ]
+        },
+        {
+          "id": "game-mode",
+          "methods": ["set_game_mode"],
+          "command_class": 3,
+          "command_id": 0,
+          "data_size": 3,
+          "matcher": {"kind": "fields", "fields": [{"kind": "one-of", "offset": 0, "values": [0, 1]}, {"kind": "exact", "offset": 1, "bytes": [8]}, {"kind": "one-of", "offset": 2, "values": [0, 1]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_standard_set_led_state"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_game_led_state"]}
+          ]
+        },
+        {
+          "id": "low-battery-threshold",
+          "methods": ["set_low_battery_threshold"],
+          "command_class": 7,
+          "command_id": 1,
+          "data_size": 1,
+          "matcher": {"kind": "fields", "fields": [{"kind": "u8-range", "offset": 0, "minimum": 12, "maximum": 63}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_misc_set_low_battery_threshold"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_charge_low_threshold"]}
+          ]
+        },
+        {
+          "id": "macro-effect",
+          "methods": ["set_macro_effect"],
+          "command_class": 3,
+          "command_id": 2,
+          "data_size": 3,
+          "matcher": {"kind": "fields", "fields": [{"kind": "one-of", "offset": 0, "values": [0, 1]}, {"kind": "exact", "offset": 1, "bytes": [7]}, {"kind": "u8-range", "offset": 2, "minimum": 0, "maximum": 5}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_standard_set_led_effect"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_macro_led_effect"]}
+          ]
+        },
+        {
+          "id": "macro-mode",
+          "methods": ["set_macro_mode"],
+          "command_class": 3,
+          "command_id": 0,
+          "data_size": 3,
+          "matcher": {"kind": "fields", "fields": [{"kind": "one-of", "offset": 0, "values": [0, 1]}, {"kind": "exact", "offset": 1, "bytes": [7]}, {"kind": "one-of", "offset": 2, "values": [0, 1]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_standard_set_led_state"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_macro_led_state"]}
+          ]
+        },
+        {
+          "id": "none",
+          "methods": ["set_none_effect"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 6,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 0, 0, 0, 0]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_none"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_matrix_effect_none"]}
+          ]
+        },
+        {
+          "id": "poll-rate2",
+          "methods": ["set_poll_rate"],
+          "command_class": 0,
+          "command_id": 64,
+          "data_size": 2,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [0]}, {"kind": "one-of", "offset": 1, "values": [1, 2, 4, 8, 16, 32, 64]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_misc_set_polling_rate2"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_poll_rate"]}
+          ]
+        },
+        {
+          "id": "reactive",
+          "methods": ["set_reactive_effect"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 9,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 5, 0]}, {"kind": "u8-range", "offset": 4, "minimum": 1, "maximum": 4}, {"kind": "exact", "offset": 5, "bytes": [1]}, {"kind": "rgb", "offset": 6, "pixels": 1}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_reactive"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_matrix_effect_reactive"]}
+          ]
+        },
+        {
+          "id": "spectrum",
+          "methods": ["set_spectrum_effect"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 6,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 3, 0, 0, 0]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_spectrum"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_matrix_effect_spectrum"]}
+          ]
+        },
+        {
+          "id": "starlight-dual",
+          "methods": ["set_starlight_dual_effect"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 12,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 7, 0]}, {"kind": "u8-range", "offset": 4, "minimum": 1, "maximum": 3}, {"kind": "exact", "offset": 5, "bytes": [2]}, {"kind": "rgb", "offset": 6, "pixels": 2}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_starlight_dual"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_matrix_effect_starlight"]}
+          ]
+        },
+        {
+          "id": "starlight-random",
+          "methods": ["set_starlight_random_effect"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 6,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 7, 0]}, {"kind": "u8-range", "offset": 4, "minimum": 1, "maximum": 3}, {"kind": "exact", "offset": 5, "bytes": [0]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_starlight_random"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_matrix_effect_starlight"]}
+          ]
+        },
+        {
+          "id": "starlight-single",
+          "methods": ["set_starlight_single_effect"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 9,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 7, 0]}, {"kind": "u8-range", "offset": 4, "minimum": 1, "maximum": 3}, {"kind": "exact", "offset": 5, "bytes": [1]}, {"kind": "rgb", "offset": 6, "pixels": 1}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_starlight_single"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_matrix_effect_starlight"]}
+          ]
+        },
+        {
+          "id": "static",
+          "methods": ["set_static_effect"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 9,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 1, 0, 0, 1]}, {"kind": "rgb", "offset": 6, "pixels": 1}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_static"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_matrix_effect_static"]}
+          ]
+        },
+        {
+          "id": "wave",
+          "methods": ["set_wave_effect"],
+          "command_class": 15,
+          "command_id": 2,
+          "data_size": 6,
+          "matcher": {"kind": "fields", "fields": [{"kind": "exact", "offset": 0, "bytes": [1, 5, 4]}, {"kind": "u8-range", "offset": 3, "minimum": 0, "maximum": 2}, {"kind": "exact", "offset": 4, "bytes": [40, 0]}]},
+          "sources": [
+            {"path": "driver/razerchromacommon.c", "functions": ["razer_chroma_extended_matrix_effect_wave"]},
+            {"path": "driver/razerkbd_driver.c", "functions": ["razer_attr_write_matrix_effect_wave"]}
+          ]
+        }
+      ]
+    }
+  ]
+}

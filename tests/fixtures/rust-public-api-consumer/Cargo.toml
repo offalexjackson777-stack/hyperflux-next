@@ -1,0 +1,26 @@
+# Generated fixture authority is reconstruction/2.0/interface-baseline.json.
+# SPDX-License-Identifier: GPL-2.0-only
+
+[package]
+name = "hyperflux-public-api-consumer"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+hfx-bridge = { path = "../../../crates/hfx-bridge" }
+hfx-core = { path = "../../../crates/hfx-core" }
+hfx-daemon = { path = "../../../crates/hfx-daemon" }
+hfx-domain = { path = "../../../crates/hfx-domain" }
+hfx-errors = { path = "../../../crates/hfx-errors" }
+hfx-integration-model = { path = "../../../crates/hfx-integration-model" }
+hfx-kernel-transport = { path = "../../../crates/hfx-kernel-transport" }
+hfx-ops = { path = "../../../crates/hfx-ops" }
+hfx-profiles = { path = "../../../crates/hfx-profiles" }
+hfx-protocol = { path = "../../../crates/hfx-protocol" }
+hfx-runtime = { path = "../../../crates/hfx-runtime" }
+hfx-sdk = { path = "../../../crates/hfx-sdk" }
+hfx-sim = { path = "../../../crates/hfx-sim" }
+hfx-uhid-relay = { path = "../../../crates/hfx-uhid-relay" }
+
+[workspace]

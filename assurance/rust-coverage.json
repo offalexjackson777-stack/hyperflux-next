@@ -1,0 +1,52 @@
+{
+  "$schema": "../schemas/rust-coverage.schema.json",
+  "schema": "hyperflux-rust-coverage-v1",
+  "tool": {
+    "name": "cargo-llvm-cov",
+    "version": "0.8.7",
+    "rust_toolchain": "1.95.0-x86_64-unknown-linux-gnu",
+    "network_access": false
+  },
+  "command": [
+    "cargo",
+    "llvm-cov",
+    "--workspace",
+    "--all-targets",
+    "--locked",
+    "--offline",
+    "--json",
+    "--summary-only",
+    "--output-path",
+    "build/rust-coverage-current.json",
+    "--",
+    "--quiet"
+  ],
+  "baseline": {
+    "source_revision": "77809b7a39230ab47b385238774d77c4ae01694b",
+    "report_sha256": "3a4d6b6ad84290846f0eaafaa77a90f3e6ded858ffe1a9ec73ca04d75d0fbfa2",
+    "report_format": "llvm.coverage.json.export-3.1.0"
+  },
+  "metrics": {
+    "lines": {
+      "baseline_count": 38069,
+      "baseline_covered": 27728,
+      "baseline_notcovered": 10341,
+      "minimum_covered": 27728,
+      "maximum_notcovered": 10341
+    },
+    "functions": {
+      "baseline_count": 3854,
+      "baseline_covered": 2723,
+      "baseline_notcovered": 1131,
+      "minimum_covered": 2723,
+      "maximum_notcovered": 1131
+    },
+    "regions": {
+      "baseline_count": 50329,
+      "baseline_covered": 36245,
+      "baseline_notcovered": 14084,
+      "minimum_covered": 36245,
+      "maximum_notcovered": 14084
+    }
+  }
+}

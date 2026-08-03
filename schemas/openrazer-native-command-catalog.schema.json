@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/openrazer-native-command-catalog-v1.json",
+  "title": "Source-bound OpenRazer native command catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "upstream",
+    "policy_sha256",
+    "inventory_sha256",
+    "probe_catalog_sha256",
+    "report_size",
+    "devices"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-openrazer-native-command-catalog-v1"},
+    "upstream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "repository", "version", "commit", "license_expression"],
+      "properties": {
+        "id": {"const": "openrazer"},
+        "repository": {"type": "string", "format": "uri"},
+        "version": {"type": "string"},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "license_expression": {"type": "string"}
+      }
+    },
+    "policy_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "inventory_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "probe_catalog_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "report_size": {"const": 90},
+    "devices": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["profile_id", "rules"],
+        "properties": {
+          "profile_id": {"type": "string", "pattern": "^child\\.[a-z0-9.-]+$"},
+          "rules": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 256,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "methods",
+                "direction",
+                "command_class",
+                "command_id",
+                "data_size",
+                "matcher",
+                "sources"
+              ],
+              "properties": {
+                "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,127}$"},
+                "methods": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 32,
+                  "uniqueItems": true,
+                  "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,127}$"}
+                },
+                "direction": {"enum": ["read", "write"]},
+                "command_class": {"type": "integer", "minimum": 0, "maximum": 255},
+                "command_id": {"type": "integer", "minimum": 0, "maximum": 255},
+                "data_size": {"type": "integer", "minimum": 0, "maximum": 80},
+                "matcher": {"$ref": "openrazer-native-command-policy.schema.json#/$defs/matcher"},
+                "sources": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 32,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["path", "function", "line", "sha256"],
+                    "properties": {
+                      "path": {"type": "string", "pattern": "^[A-Za-z0-9_./-]+$"},
+                      "function": {"type": "string", "pattern": "^razer_[a-z0-9_]+$"},
+                      "line": {"type": "integer", "minimum": 1},
+                      "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/imported-device-metadata-v1.json",
+  "title": "Reproducibly transformed upstream device metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "upstream", "selection_sha256", "devices"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-imported-device-metadata-v1"},
+    "upstream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "repository", "version", "commit", "license_expression"],
+      "properties": {
+        "id": {"type": "string"},
+        "repository": {"type": "string"},
+        "version": {"type": "string"},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "license_expression": {"type": "string"}
+      }
+    },
+    "selection_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "devices": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["profile_id", "source", "identity", "presentation", "advertised_methods"],
+        "properties": {
+          "profile_id": {"type": "string"},
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "class_name", "sha256"],
+            "properties": {
+              "path": {"type": "string"},
+              "class_name": {"type": "string"},
+              "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+            }
+          },
+          "identity": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["vendor_id", "product_id", "model_name", "device_kind", "transport_variant"],
+            "properties": {
+              "vendor_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+              "product_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+              "model_name": {"type": "string", "minLength": 1, "maxLength": 128},
+              "device_kind": {"enum": ["keyboard", "mouse"]},
+              "transport_variant": {"enum": ["wireless", "wired", "bluetooth"]}
+            }
+          },
+          "presentation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["image_url", "has_matrix", "matrix_rows", "matrix_columns"],
+            "properties": {
+              "image_url": {"type": "string", "pattern": "^https://"},
+              "has_matrix": {"type": "boolean"},
+              "matrix_rows": {"type": "integer", "minimum": 0, "maximum": 128},
+              "matrix_columns": {"type": "integer", "minimum": 0, "maximum": 128}
+            }
+          },
+          "advertised_methods": {
+            "type": "array",
+            "maxItems": 256,
+            "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,127}$"}
+          }
+        }
+      }
+    }
+  }
+}

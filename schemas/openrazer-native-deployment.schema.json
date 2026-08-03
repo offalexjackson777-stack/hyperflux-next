@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/openrazer-native-deployment-v2.json",
+  "title": "HyperFlux OpenRazer native-route deployment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "relay", "driver", "access", "compatibility"],
+  "properties": {
+    "$schema": {"const": "../../../schemas/openrazer-native-deployment.schema.json"},
+    "schema": {"const": "hyperflux-openrazer-native-deployment-v2"},
+    "relay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "executable_path",
+        "service_unit",
+        "preflight_service_unit",
+        "uhid_device",
+        "automatic_restart"
+      ],
+      "properties": {
+        "executable_path": {
+          "type": "string",
+          "pattern": "^/usr/lib/hyperflux-next/[a-z0-9][a-z0-9_.-]{0,95}$"
+        },
+        "service_unit": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9@_.-]{0,95}\\.service$"
+        },
+        "preflight_service_unit": {
+          "const": "hyperflux-next-openrazer-driver-preflight.service"
+        },
+        "uhid_device": {"const": "/dev/uhid"},
+        "automatic_restart": {"const": false}
+      }
+    },
+    "driver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dkms_name", "dkms_version", "source_directory", "modules"],
+      "properties": {
+        "dkms_name": {"const": "openrazer-driver"},
+        "dkms_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "maxLength": 32
+        },
+        "source_directory": {
+          "type": "string",
+          "pattern": "^/usr/src/openrazer-driver-[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "modules": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"}
+        }
+      }
+    },
+    "access": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "group",
+        "udev_rules_source",
+        "udev_rules_path",
+        "mount_helper_source",
+        "mount_helper_path",
+        "sysusers_path"
+      ],
+      "properties": {
+        "group": {"const": "openrazer"},
+        "udev_rules_source": {"const": "install_files/udev/99-razer.rules"},
+        "udev_rules_path": {"const": "/usr/lib/udev/rules.d/99-razer.rules"},
+        "mount_helper_source": {"const": "install_files/udev/razer_mount"},
+        "mount_helper_path": {"const": "/usr/lib/udev/razer_mount"},
+        "sysusers_path": {"const": "/usr/lib/sysusers.d/openrazer.conf"}
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verified_upstream_version",
+        "daemon_executable_path",
+        "version_argument",
+        "package_release_policy",
+        "userspace_version_policy",
+        "runtime_capability"
+      ],
+      "properties": {
+        "verified_upstream_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "maxLength": 32
+        },
+        "daemon_executable_path": {"const": "/usr/bin/openrazer-daemon"},
+        "version_argument": {"const": "--version"},
+        "package_release_policy": {"const": "ignored"},
+        "userspace_version_policy": {"const": "diagnostic-only"},
+        "runtime_capability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["modinfo_field", "expected_value", "modules"],
+          "properties": {
+            "modinfo_field": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+            },
+            "expected_value": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"
+            },
+            "modules": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 16,
+              "uniqueItems": true,
+              "items": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

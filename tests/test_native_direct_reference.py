@@ -1,0 +1,316 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+import subprocess
+from types import SimpleNamespace
+import sys
+from tempfile import TemporaryDirectory
+import unittest
+from unittest.mock import MagicMock, patch
+
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
+
+from hfxdev.model import ModelError
+import hfxdev.native_direct_reference as direct
+from hfxdev.native_parity import DirectSemanticReference
+
+
+ROUTE = {
+    "driver_family": "razermouse",
+    "vendor_id": 0x1532,
+    "direct_data_product_ids": [0x00CC],
+}
+PROFILE = {
+    "probes": [
+        {"method": "get_serial", "driver": {"attribute": "device_serial"}},
+        {"method": "get_dpi_stages", "driver": {"attribute": "dpi_stages"}},
+    ]
+}
+
+
+class DirectTree:
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.devices = root / "devices"
+        self.drivers = root / "drivers"
+        self.devices.mkdir()
+        self.drivers.mkdir()
+
+    def add(
+        self,
+        *,
+        identity: str,
+        bus: int,
+        device: int,
+        port: int = 2,
+        attributes: tuple[str, ...] = ("device_serial", "dpi_stages"),
+    ) -> None:
+        usb = self.devices / f"usb{bus}" / f"{bus}-{port}"
+        hid = usb / f"{bus}-{port}:1.0" / identity
+        hid.mkdir(parents=True)
+        (usb / "busnum").write_text(f"{bus}\n", encoding="ascii")
+        (usb / "devnum").write_text(f"{device}\n", encoding="ascii")
+        for attribute in attributes:
+            (hid / attribute).write_bytes(b"fixture")
+        family = self.drivers / "razermouse"
+        family.mkdir(exist_ok=True)
+        (family / identity).symlink_to(hid)
+
+
+class NativeDirectReferenceTests(unittest.TestCase):
+    def test_exact_direct_identity_and_complete_attribute_carrier_are_required(self) -> None:
+        with TemporaryDirectory() as directory:
+            tree = DirectTree(Path(directory))
+            tree.add(identity="0003:1532:00CD.0001", bus=3, device=4)
+            tree.add(
+                identity="0003:1532:00CC.0002",
+                bus=3,
+                device=5,
+                attributes=("device_serial",),
+            )
+            tree.add(identity="0003:1532:00CC.0003", bus=3, device=6)
+            endpoint = direct.find_exact_direct_endpoint(
+                ROUTE,
+                PROFILE,
+                driver_root=tree.drivers,
+                devices_root=tree.devices,
+            )
+        self.assertEqual((endpoint.bus, endpoint.device), (3, 6))
+        self.assertEqual(endpoint.driver_entry.name, "0003:1532:00CC.0003")
+
+    def test_bluetooth_identities_are_rejected_before_location_or_attribute_capture(self) -> None:
+        with TemporaryDirectory() as directory:
+            tree = DirectTree(Path(directory))
+            tree.add(identity="0005:1532:00AC.0001", bus=5, device=4, port=2)
+            tree.add(identity="0005:1532:025B.0001", bus=5, device=5, port=3)
+            tree.add(identity="0005:1532:00CC.0001", bus=5, device=6, port=4)
+            with patch.object(direct, "_usb_location") as location:
+                with self.assertRaisesRegex(ModelError, "data route.*absent"):
+                    direct.find_exact_direct_endpoint(
+                        ROUTE,
+                        PROFILE,
+                        driver_root=tree.drivers,
+                        devices_root=tree.devices,
+                    )
+        location.assert_not_called()
+
+    def test_mixed_usb_and_bluetooth_selects_only_the_usb_carrier(self) -> None:
+        with TemporaryDirectory() as directory:
+            tree = DirectTree(Path(directory))
+            tree.add(identity="0005:1532:00CC.0001", bus=5, device=4, port=2)
+            tree.add(identity="0003:1532:00CC.0002", bus=3, device=5, port=3)
+            real_location = direct._usb_location
+            visited: list[str] = []
+
+            def traced_location(entry: Path, devices_root: Path) -> tuple[int, int]:
+                visited.append(entry.name)
+                return real_location(entry, devices_root)
+
+            with patch.object(direct, "_usb_location", side_effect=traced_location):
+                endpoint = direct.find_exact_direct_endpoint(
+                    ROUTE,
+                    PROFILE,
+                    driver_root=tree.drivers,
+                    devices_root=tree.devices,
+                )
+        self.assertEqual(endpoint.driver_entry.name, "0003:1532:00CC.0002")
+        self.assertEqual((endpoint.bus, endpoint.device), (3, 5))
+        self.assertEqual(visited, ["0003:1532:00CC.0002"])
+
+    def test_virtual_uhid_and_unrelated_usb_entries_are_not_direct_references(self) -> None:
+        with TemporaryDirectory() as directory:
+            tree = DirectTree(Path(directory))
+            tree.add(identity="0006:1532:00CC.0001", bus=6, device=4, port=2)
+            tree.add(identity="0003:1532:FFFF.0002", bus=3, device=5, port=3)
+            with patch.object(direct, "_usb_location") as location:
+                with self.assertRaisesRegex(ModelError, "data route.*absent"):
+                    direct.find_exact_direct_endpoint(
+                        ROUTE,
+                        PROFILE,
+                        driver_root=tree.drivers,
+                        devices_root=tree.devices,
+                    )
+        location.assert_not_called()
+
+    def test_absent_or_duplicate_direct_data_routes_fail_closed(self) -> None:
+        with TemporaryDirectory() as directory:
+            tree = DirectTree(Path(directory))
+            with self.assertRaisesRegex(ModelError, "data route.*absent"):
+                direct.find_exact_direct_endpoint(
+                    ROUTE,
+                    PROFILE,
+                    driver_root=tree.drivers,
+                    devices_root=tree.devices,
+                )
+            tree.add(identity="0003:1532:00CC.0001", bus=3, device=5, port=2)
+            tree.add(identity="0003:1532:00CC.0002", bus=3, device=6, port=3)
+            with self.assertRaisesRegex(ModelError, "more than one exact"):
+                direct.find_exact_direct_endpoint(
+                    ROUTE,
+                    PROFILE,
+                    driver_root=tree.drivers,
+                    devices_root=tree.devices,
+                )
+
+    def test_only_source_bound_attributes_are_read(self) -> None:
+        seen: list[str] = []
+        with patch.object(
+            direct,
+            "_read_attribute",
+            side_effect=lambda path: seen.append(path.name),
+        ):
+            result = direct.trigger_direct_attributes(Path("/sys/fake"), PROFILE)
+        self.assertEqual(result, ("device_serial", "dpi_stages"))
+        self.assertEqual(seen, ["device_serial", "dpi_stages"])
+
+    def test_private_capture_directory_is_removed_on_failure(self) -> None:
+        path: Path | None = None
+        with self.assertRaisesRegex(RuntimeError, "stop"):
+            with direct._private_capture_directory(os.getuid(), os.getgid()) as directory:
+                path = directory
+                self.assertEqual(directory.stat().st_mode & 0o777, 0o700)
+                raise RuntimeError("stop")
+        self.assertIsNotNone(path)
+        self.assertFalse(path.exists())
+
+    def test_raw_capture_uses_the_privileged_process_identity(self) -> None:
+        with (
+            patch.object(direct.os, "geteuid", return_value=0),
+            patch.object(direct.os, "getegid", return_value=0),
+        ):
+            self.assertEqual(direct._capture_process_identity(), (0, 0))
+
+        with patch.object(direct.os, "geteuid", return_value=1000):
+            with self.assertRaisesRegex(ModelError, "must run as root"):
+                direct._capture_process_identity()
+
+    def test_dumpcap_uses_private_files_and_hard_capture_bounds(self) -> None:
+        process = MagicMock()
+        process.poll.return_value = None
+        with TemporaryDirectory() as directory:
+            capture = Path(directory) / "direct.pcapng"
+            with (
+                patch.object(direct.shutil, "which", return_value="/usr/bin/dumpcap"),
+                patch.object(direct.subprocess, "Popen", return_value=process) as popen,
+                patch.object(direct.time, "sleep"),
+            ):
+                started = direct._start_dumpcap("usbmon3", capture)
+            command = popen.call_args.args[0]
+            diagnostic = popen.call_args.kwargs["stderr"]
+            self.assertIs(started.process, process)
+            self.assertNotEqual(diagnostic, subprocess.PIPE)
+            self.assertTrue(diagnostic.closed)
+            self.assertIn("duration:5", command)
+            self.assertIn(
+                f"filesize:{direct.MAX_CAPTURE_BYTES // 1024}",
+                command,
+            )
+            format_index = command.index("-F")
+            self.assertEqual(command[format_index + 1], "pcap")
+            self.assertEqual(started.diagnostic_path.stat().st_mode & 0o777, 0o600)
+
+    def test_capture_reader_requires_one_bounded_regular_file(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            capture = root / "direct.pcap"
+            capture.write_bytes(b"pcap")
+            self.assertEqual(direct._capture_bytes(capture), b"pcap")
+            with self.assertRaisesRegex(ModelError, "not a regular file"):
+                direct._capture_bytes(root)
+            with patch.object(direct, "MAX_CAPTURE_BYTES", 3):
+                with self.assertRaisesRegex(ModelError, "invalid size"):
+                    direct._capture_bytes(capture)
+
+    def test_staged_session_keeps_serial_material_in_process_only(self) -> None:
+        preflight = SimpleNamespace(
+            route=ROUTE,
+            profile=PROFILE,
+            revision="a" * 40,
+        )
+        reference = DirectSemanticReference(
+            evidence={
+                "observations": [
+                    {"method": "get_serial"},
+                    {"method": "get_dpi_stages"},
+                ]
+            },
+            serial_values={"get_serial": b"PRIVATE-SERIAL"},
+        )
+        captured = direct.CapturedDirectReference(
+            reference=reference,
+            attributes_read=("device_serial", "dpi_stages"),
+            bus=3,
+            device=12,
+        )
+        expected = SimpleNamespace(
+            conclusion="passed",
+            passed=("get_serial", "get_dpi_stages"),
+            missing=(),
+            failed=(),
+        )
+        with (
+            patch.object(direct, "prepare_live_parity", return_value=preflight),
+            patch.object(direct, "_operator_identity", return_value=(os.getuid(), os.getgid())),
+            patch.object(direct, "capture_direct_reference", return_value=captured),
+            patch.object(direct, "_wait_for_operator"),
+            patch.object(direct, "_require_direct_route_absent"),
+            patch.object(direct, "run_live_parity", return_value=expected) as run,
+            patch("builtins.print"),
+        ):
+            result = direct.run_staged_live_parity(
+                ROOT,
+                profile_id="child.razer.example.0001",
+                package=Path("candidate.pkg.tar.zst"),
+                package_sha256="b" * 64,
+                expected_generation=7,
+                approval_text=direct.STAGED_PARITY_APPROVAL,
+                user="operator",
+            )
+        self.assertIs(result, expected)
+        keywords = run.call_args.kwargs
+        self.assertEqual(
+            keywords["direct_serial_values"], {"get_serial": b"PRIVATE-SERIAL"}
+        )
+        self.assertFalse(keywords["direct_evidence_path"].exists())
+
+    def test_staged_session_rejects_incomplete_direct_capture_before_transition(self) -> None:
+        preflight = SimpleNamespace(
+            route=ROUTE,
+            profile=PROFILE,
+            revision="a" * 40,
+        )
+        captured = direct.CapturedDirectReference(
+            reference=DirectSemanticReference(
+                evidence={"observations": [{"method": "get_serial"}]},
+                serial_values={"get_serial": b"PRIVATE-SERIAL"},
+            ),
+            attributes_read=("device_serial",),
+            bus=3,
+            device=12,
+        )
+        with (
+            patch.object(direct, "prepare_live_parity", return_value=preflight),
+            patch.object(direct, "_operator_identity", return_value=(os.getuid(), os.getgid())),
+            patch.object(direct, "capture_direct_reference", return_value=captured),
+            patch.object(direct, "_wait_for_operator") as wait,
+        ):
+            with self.assertRaisesRegex(ModelError, "missed source-bound methods"):
+                direct.run_staged_live_parity(
+                    ROOT,
+                    profile_id="child.razer.example.0001",
+                    package=Path("candidate.pkg.tar.zst"),
+                    package_sha256="b" * 64,
+                    expected_generation=7,
+                    approval_text=direct.STAGED_PARITY_APPROVAL,
+                    user="operator",
+                )
+        wait.assert_not_called()
+
+
+if __name__ == "__main__":
+    unittest.main()

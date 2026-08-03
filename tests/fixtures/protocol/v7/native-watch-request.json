@@ -1,0 +1,1 @@
+{"method":"native-watch","request":{"request_id":"native-watch-1","protocol_session_id":"protocol-session-1","negotiation_token":"negotiation-1","params":{"client_id":"client-1","subscription_id":null,"expected_cursor":{"stream_id":"stream-1","stream_epoch":"1","projection_revision":1,"sequence":"0"},"max_events":16}}}

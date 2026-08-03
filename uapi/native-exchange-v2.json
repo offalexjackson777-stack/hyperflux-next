@@ -1,0 +1,74 @@
+{
+  "$schema": "../schemas/kernel-uapi-native-exchange.schema.json",
+  "schema": "hyperflux-kernel-uapi-native-exchange-v2",
+  "abi_version": 2,
+  "ioctl_magic": 183,
+  "limits": {
+    "native_digest_bytes": 32,
+    "native_report_bytes": 90,
+    "native_max_results": 128,
+    "native_control_timeout_ns": 1000000000
+  },
+  "enums": [
+    {
+      "name": "native_exchange_certainty",
+      "values": [
+        {"name": "not_sent", "value": 1},
+        {"name": "may_have_been_sent", "value": 2},
+        {"name": "matched_response", "value": 3}
+      ]
+    }
+  ],
+  "structs": [
+    {
+      "name": "native_exchange_submit",
+      "fields": [
+        {"name": "version", "type": "u32"},
+        {"name": "size", "type": "u32"},
+        {"name": "receiver_generation", "type": "u64"},
+        {"name": "authorization_epoch", "type": "u64"},
+        {"name": "dispatch_nonce", "type": "u64"},
+        {"name": "deadline_boottime_ns", "type": "u64"},
+        {"name": "endpoint_slot", "type": "u32"},
+        {"name": "report_length", "type": "u32"},
+        {"name": "route_token_digest", "type": "u8", "count": "native_digest_bytes"},
+        {"name": "request_digest", "type": "u8", "count": "native_digest_bytes"},
+        {"name": "report", "type": "u8", "count": "native_report_bytes"},
+        {"name": "kernel_sequence", "type": "u64"}
+      ]
+    },
+    {
+      "name": "native_exchange_result",
+      "fields": [
+        {"name": "version", "type": "u32"},
+        {"name": "size", "type": "u32"},
+        {"name": "receiver_generation", "type": "u64"},
+        {"name": "authorization_epoch", "type": "u64"},
+        {"name": "kernel_sequence", "type": "u64"},
+        {"name": "dispatch_nonce", "type": "u64"},
+        {"name": "endpoint_slot", "type": "u32"},
+        {"name": "certainty", "type": "u32"},
+        {"name": "route_token_digest", "type": "u8", "count": "native_digest_bytes"},
+        {"name": "request_digest", "type": "u8", "count": "native_digest_bytes"},
+        {"name": "transport_errno", "type": "i32"},
+        {"name": "response_length", "type": "u32"},
+        {"name": "response", "type": "u8", "count": "native_report_bytes"},
+        {"name": "reserved", "type": "u16"}
+      ]
+    }
+  ],
+  "ioctls": [
+    {
+      "name": "submit_native_exchange",
+      "number": 6,
+      "direction": "read_write",
+      "struct": "native_exchange_submit"
+    },
+    {
+      "name": "get_native_exchange_result",
+      "number": 7,
+      "direction": "read_write",
+      "struct": "native_exchange_result"
+    }
+  ]
+}

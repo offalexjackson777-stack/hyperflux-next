@@ -1,0 +1,630 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+from __future__ import annotations
+
+from contextlib import contextmanager
+from dataclasses import dataclass
+import os
+from pathlib import Path
+import pwd
+import re
+import selectors
+import shutil
+import signal
+import stat
+import struct
+import subprocess
+import sys
+import tempfile
+import time
+from typing import Any, Iterator
+
+from .model import ModelError
+from .native_parity import (
+    DirectSemanticReference,
+    UsbmonExchange,
+    build_direct_semantic_reference,
+)
+from .native_live_parity import (
+    READ_ONLY_APPROVAL,
+    LiveParityResult,
+    prepare_live_parity,
+    run_live_parity,
+)
+from .native_probe import REPORT_SIZE
+from .private_artifact import write_new_private_json
+
+
+HID_IDENTITY_PATTERN = re.compile(
+    r"0003:(?P<vendor>[0-9A-Fa-f]{4}):(?P<product>[0-9A-Fa-f]{4})\.[0-9A-Fa-f]{4}\Z"
+)
+MAX_ATTRIBUTE_BYTES = 4096
+MAX_CAPTURE_BYTES = 32 * 1024 * 1024
+MAX_CAPTURE_PACKETS = 65536
+MAX_PROCESS_OUTPUT_BYTES = 64 * 1024
+CAPTURE_PREFIX = "hyperflux-next-direct-reference-"
+STAGED_PARITY_APPROVAL = (
+    "approve HyperFlux Next supervised direct-to-receiver native parity session"
+)
+PCAP_GLOBAL_HEADER_SIZE = 24
+PCAP_RECORD_HEADER_SIZE = 16
+USBMON_MMAPPED_HEADER_SIZE = 64
+USBMON_MMAPPED_LINKTYPE = 220
+USBMON_CONTROL_TRANSFER = 2
+USBMON_SUBMIT = ord("S")
+USBMON_COMPLETE = ord("C")
+
+PCAP_FORMATS = {
+    b"\xd4\xc3\xb2\xa1": ("<", 1),
+    b"\xa1\xb2\xc3\xd4": (">", 1),
+    b"\x4d\x3c\xb2\xa1": ("<", 1_000),
+    b"\xa1\xb2\x3c\x4d": (">", 1_000),
+}
+
+
+def _capture_bytes(path: Path) -> bytes:
+    try:
+        metadata = path.lstat()
+        if not stat.S_ISREG(metadata.st_mode):
+            raise ModelError("private direct USB capture is not a regular file")
+        if metadata.st_size <= 0 or metadata.st_size > MAX_CAPTURE_BYTES:
+            raise ModelError("private direct USB capture has an invalid size")
+        with path.open("rb") as handle:
+            value = handle.read(MAX_CAPTURE_BYTES + 1)
+    except OSError as error:
+        raise ModelError(f"cannot read private direct USB capture: {error}") from error
+    if len(value) > MAX_CAPTURE_BYTES:
+        raise ModelError("private direct USB capture exceeded its bound")
+    return value
+
+
+def _usbmon_number(value: bytes, *, signed: bool = False) -> int:
+    return int.from_bytes(value, byteorder=sys.byteorder, signed=signed)
+
+
+def parse_pcap_usbmon_capture(
+    value: bytes,
+    *,
+    target_bus: int,
+    target_device: int,
+) -> tuple[UsbmonExchange, ...]:
+    """Parses one bounded Linux usbmon pcap without dissector-dependent fields."""
+
+    if not isinstance(value, bytes) or len(value) > MAX_CAPTURE_BYTES:
+        raise ModelError("private direct USB capture exceeds the bounded size limit")
+    if len(value) < PCAP_GLOBAL_HEADER_SIZE:
+        raise ModelError("private direct USB capture has a truncated pcap header")
+    if not 1 <= target_bus <= 255 or not 1 <= target_device <= 255:
+        raise ModelError("direct USB target identity is invalid")
+
+    try:
+        endian, fractional_divisor = PCAP_FORMATS[value[:4]]
+    except KeyError as error:
+        raise ModelError("private direct USB capture has an unsupported pcap format") from error
+    (
+        version_major,
+        version_minor,
+        _zone,
+        _sigfigs,
+        snaplen,
+        linktype,
+    ) = struct.unpack_from(f"{endian}HHiIII", value, 4)
+    if (version_major, version_minor) != (2, 4):
+        raise ModelError("private direct USB capture has an unsupported pcap version")
+    if not 1 <= snaplen <= MAX_CAPTURE_BYTES:
+        raise ModelError("private direct USB capture has an invalid snapshot bound")
+    if linktype != USBMON_MMAPPED_LINKTYPE:
+        raise ModelError("private direct USB capture is not Linux usbmon mmapped data")
+
+    pending_sets: list[tuple[int, int, bytes]] = []
+    pending_gets: dict[int, tuple[int, int]] = {}
+    exchanges: list[UsbmonExchange] = []
+    offset = PCAP_GLOBAL_HEADER_SIZE
+    packet_count = 0
+    while offset < len(value):
+        packet_count += 1
+        if packet_count > MAX_CAPTURE_PACKETS:
+            raise ModelError("private direct USB capture exceeds the packet bound")
+        if len(value) - offset < PCAP_RECORD_HEADER_SIZE:
+            raise ModelError("private direct USB capture ends in a partial pcap record")
+        seconds, fraction, captured_length, original_length = struct.unpack_from(
+            f"{endian}IIII", value, offset
+        )
+        offset += PCAP_RECORD_HEADER_SIZE
+        if (
+            captured_length > snaplen
+            or captured_length > MAX_CAPTURE_BYTES
+            or original_length > MAX_CAPTURE_BYTES
+            or original_length < captured_length
+            or len(value) - offset < captured_length
+        ):
+            raise ModelError("private direct USB capture has an invalid pcap record")
+        if fraction >= 1_000_000 * fractional_divisor:
+            raise ModelError("private direct USB capture has an invalid timestamp")
+        frame = value[offset : offset + captured_length]
+        offset += captured_length
+        if len(frame) < 14:
+            continue
+        event = frame[8]
+        transfer_type = frame[9]
+        device = frame[11]
+        bus = _usbmon_number(frame[12:14])
+        if (
+            bus != target_bus
+            or device != target_device
+            or transfer_type != USBMON_CONTROL_TRANSFER
+        ):
+            continue
+        if len(frame) < USBMON_MMAPPED_HEADER_SIZE:
+            raise ModelError("captured direct USB control record is truncated")
+
+        urb_id = _usbmon_number(frame[0:8])
+        setup_flag = frame[14]
+        data_flag = frame[15]
+        status = _usbmon_number(frame[28:32], signed=True)
+        data_length = _usbmon_number(frame[36:40])
+        payload = frame[USBMON_MMAPPED_HEADER_SIZE:]
+        timestamp_us = seconds * 1_000_000 + fraction // fractional_divisor
+
+        if event == USBMON_SUBMIT and setup_flag == 0:
+            setup = (
+                frame[40],
+                frame[41],
+                int.from_bytes(frame[42:44], byteorder="little"),
+                int.from_bytes(frame[44:46], byteorder="little"),
+                int.from_bytes(frame[46:48], byteorder="little"),
+            )
+            if setup[:3] == (0x21, 0x09, 0x0300) and setup[4] == REPORT_SIZE:
+                if (
+                    data_flag != 0
+                    or data_length != REPORT_SIZE
+                    or len(payload) != REPORT_SIZE
+                ):
+                    raise ModelError("captured direct Razer request is not complete")
+                pending_sets.append((timestamp_us, setup[3], payload))
+            elif setup[:3] == (0xA1, 0x01, 0x0300) and setup[4] == REPORT_SIZE:
+                if urb_id == 0:
+                    raise ModelError("captured direct Razer GET lacks its URB identity")
+                if urb_id in pending_gets:
+                    raise ModelError("captured direct Razer GET reuses a pending URB identity")
+                pending_gets[urb_id] = (timestamp_us, setup[3])
+            continue
+
+        if event != USBMON_COMPLETE or urb_id not in pending_gets:
+            continue
+        _get_timestamp, get_interface = pending_gets.pop(urb_id)
+        if status != 0:
+            raise ModelError("captured direct Razer response completed with an error")
+        if (
+            data_flag != 0
+            or data_length != REPORT_SIZE
+            or len(payload) != REPORT_SIZE
+        ):
+            raise ModelError("captured direct Razer response is not complete")
+        if not pending_sets:
+            raise ModelError("captured direct Razer response has no preceding SET")
+        request_timestamp, set_interface, request = pending_sets.pop(0)
+        if set_interface != get_interface:
+            raise ModelError("captured direct Razer SET and GET use different interfaces")
+        exchanges.append(
+            UsbmonExchange(
+                timestamp_us=request_timestamp,
+                bus=target_bus,
+                device=target_device,
+                interface=set_interface,
+                request=request,
+                request_length=REPORT_SIZE,
+                response=payload,
+                response_length=REPORT_SIZE,
+            )
+        )
+
+    if pending_sets or pending_gets:
+        raise ModelError("private direct USB capture ends with an unmatched Razer transfer")
+    return tuple(exchanges)
+
+
+@dataclass(frozen=True)
+class DirectUsbEndpoint:
+    driver_entry: Path
+    bus: int
+    device: int
+
+
+@dataclass(frozen=True)
+class CapturedDirectReference:
+    reference: DirectSemanticReference
+    attributes_read: tuple[str, ...]
+    bus: int
+    device: int
+
+
+def _bounded_sysfs_number(path: Path, label: str) -> int:
+    try:
+        metadata = path.stat()
+        if not stat.S_ISREG(metadata.st_mode):
+            raise ModelError(f"direct USB {label} is not a sysfs value")
+        with path.open("rb") as handle:
+            value = handle.read(17)
+    except OSError as error:
+        raise ModelError(f"cannot read direct USB {label}: {error}") from error
+    if not value or len(value) > 16:
+        raise ModelError(f"direct USB {label} is outside its bound")
+    try:
+        number = int(value.strip(), 10)
+    except ValueError as error:
+        raise ModelError(f"direct USB {label} is invalid") from error
+    if not 1 <= number <= 255:
+        raise ModelError(f"direct USB {label} is outside one byte")
+    return number
+
+
+def _usb_location(entry: Path, devices_root: Path) -> tuple[int, int]:
+    try:
+        resolved = entry.resolve(strict=True)
+        authority = devices_root.resolve(strict=True)
+        resolved.relative_to(authority)
+    except (OSError, ValueError) as error:
+        raise ModelError("direct USB driver entry escapes the sysfs device tree") from error
+    for parent in (resolved, *resolved.parents):
+        if parent == authority.parent:
+            break
+        busnum = parent / "busnum"
+        devnum = parent / "devnum"
+        if busnum.exists() and devnum.exists():
+            return (
+                _bounded_sysfs_number(busnum, "bus number"),
+                _bounded_sysfs_number(devnum, "device number"),
+            )
+        if parent == authority:
+            break
+    raise ModelError("direct USB driver entry has no physical bus/device identity")
+
+
+def find_exact_direct_endpoint(
+    route: dict[str, Any],
+    profile: dict[str, Any],
+    *,
+    driver_root: Path = Path("/sys/bus/hid/drivers"),
+    devices_root: Path = Path("/sys/devices"),
+) -> DirectUsbEndpoint:
+    """Finds one physical direct-data route from exact source-bound identities."""
+
+    family = route["driver_family"]
+    vendor = route["vendor_id"]
+    products = set(route["direct_data_product_ids"])
+    attributes = tuple(probe["driver"]["attribute"] for probe in profile["probes"])
+    directory = driver_root / family
+    try:
+        entries = tuple(directory.iterdir())
+    except FileNotFoundError as error:
+        raise ModelError("the exact direct USB data route is absent") from error
+    except OSError as error:
+        raise ModelError(f"cannot inspect direct USB driver entries: {error}") from error
+
+    candidates: dict[tuple[int, int], list[Path]] = {}
+    for entry in entries:
+        match = HID_IDENTITY_PATTERN.fullmatch(entry.name)
+        if match is None:
+            continue
+        if int(match.group("vendor"), 16) != vendor:
+            continue
+        if int(match.group("product"), 16) not in products:
+            continue
+        if not all((entry / attribute).is_file() for attribute in attributes):
+            continue
+        location = _usb_location(entry, devices_root)
+        candidates.setdefault(location, []).append(entry)
+    if not candidates:
+        raise ModelError(
+            "the exact direct USB data route with every source-bound read attribute is absent"
+        )
+    if len(candidates) != 1:
+        raise ModelError("more than one exact direct USB device is connected")
+    (bus, device), carriers = next(iter(candidates.items()))
+    carrier = sorted(carriers, key=lambda value: value.name)[0]
+    return DirectUsbEndpoint(driver_entry=carrier, bus=bus, device=device)
+
+
+def _read_attribute(path: Path) -> None:
+    flags = os.O_RDONLY | os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as error:
+        raise ModelError(f"cannot open source-bound OpenRazer attribute: {error}") from error
+    try:
+        value = os.read(descriptor, MAX_ATTRIBUTE_BYTES + 1)
+    except OSError as error:
+        raise ModelError(f"cannot read source-bound OpenRazer attribute: {error}") from error
+    finally:
+        os.close(descriptor)
+    if len(value) > MAX_ATTRIBUTE_BYTES:
+        raise ModelError("source-bound OpenRazer attribute exceeded its read bound")
+
+
+def trigger_direct_attributes(entry: Path, profile: dict[str, Any]) -> tuple[str, ...]:
+    attributes: list[str] = []
+    for probe in profile["probes"]:
+        attribute = probe["driver"]["attribute"]
+        _read_attribute(entry / attribute)
+        attributes.append(attribute)
+    return tuple(attributes)
+
+
+@contextmanager
+def _private_capture_directory(uid: int, gid: int) -> Iterator[Path]:
+    directory = Path(tempfile.mkdtemp(prefix=CAPTURE_PREFIX, dir="/dev/shm"))
+    try:
+        os.chmod(directory, 0o700)
+        os.chown(directory, uid, gid)
+        yield directory
+    finally:
+        try:
+            shutil.rmtree(directory)
+        except OSError as error:
+            raise ModelError("private direct USB material could not be deleted") from error
+
+
+def _capture_process_identity() -> tuple[int, int]:
+    uid = os.geteuid()
+    gid = os.getegid()
+    if uid != 0:
+        raise ModelError("private direct USB capture must run as root")
+    return uid, gid
+
+
+def _bounded_output(value: bytes, label: str) -> str:
+    if len(value) > MAX_PROCESS_OUTPUT_BYTES:
+        raise ModelError(f"{label} output exceeded its bound")
+    return value.decode("utf-8", errors="replace").strip()
+
+
+def _bounded_log(path: Path, label: str) -> str:
+    try:
+        metadata = path.lstat()
+        if not stat.S_ISREG(metadata.st_mode):
+            raise ModelError(f"{label} log is not a regular file")
+        with path.open("rb") as handle:
+            value = handle.read(MAX_PROCESS_OUTPUT_BYTES + 1)
+    except OSError as error:
+        raise ModelError(f"cannot read {label} log: {error}") from error
+    return _bounded_output(value, label)
+
+
+@dataclass(frozen=True)
+class CaptureProcess:
+    process: subprocess.Popen[bytes]
+    diagnostic_path: Path
+
+
+def _start_dumpcap(interface: str, capture: Path) -> CaptureProcess:
+    executable = shutil.which("dumpcap")
+    if executable is None:
+        raise ModelError("dumpcap is required for complete direct USB references")
+    diagnostic_path = capture.with_name("dumpcap.log")
+    previous_umask = os.umask(0o077)
+    try:
+        with diagnostic_path.open("xb") as diagnostic:
+            process = subprocess.Popen(
+                [
+                    executable,
+                    "-F",
+                    "pcap",
+                    "-i",
+                    interface,
+                    "-s",
+                    "0",
+                    "-q",
+                    "-a",
+                    "duration:5",
+                    "-a",
+                    f"filesize:{MAX_CAPTURE_BYTES // 1024}",
+                    "-w",
+                    str(capture),
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=diagnostic,
+            )
+    except OSError as error:
+        raise ModelError(f"cannot start private direct USB capture: {error}") from error
+    finally:
+        os.umask(previous_umask)
+    time.sleep(0.25)
+    if process.poll() is not None:
+        process.wait(timeout=1)
+        detail = _bounded_log(diagnostic_path, "dumpcap")
+        raise ModelError(f"private direct USB capture did not start: {detail}")
+    return CaptureProcess(process=process, diagnostic_path=diagnostic_path)
+
+
+def _stop_dumpcap(capture: CaptureProcess) -> None:
+    process = capture.process
+    if process.poll() is None:
+        process.send_signal(signal.SIGINT)
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=2)
+    detail = _bounded_log(capture.diagnostic_path, "dumpcap")
+    if process.returncode not in {0, 130}:
+        raise ModelError(f"private direct USB capture failed: {detail}")
+
+
+def capture_direct_reference(
+    root: Path,
+    *,
+    profile_id: str,
+    route: dict[str, Any],
+    profile: dict[str, Any],
+    source_revision: str,
+    driver_root: Path = Path("/sys/bus/hid/drivers"),
+    devices_root: Path = Path("/sys/devices"),
+) -> CapturedDirectReference:
+    endpoint = find_exact_direct_endpoint(
+        route,
+        profile,
+        driver_root=driver_root,
+        devices_root=devices_root,
+    )
+    process: CaptureProcess | None = None
+    with _private_capture_directory(*_capture_process_identity()) as directory:
+        capture = directory / "direct.pcap"
+        try:
+            process = _start_dumpcap(f"usbmon{endpoint.bus}", capture)
+            attributes = trigger_direct_attributes(endpoint.driver_entry, profile)
+            time.sleep(0.25)
+        finally:
+            if process is not None:
+                _stop_dumpcap(process)
+        try:
+            metadata = capture.lstat()
+        except OSError as error:
+            raise ModelError(f"private direct USB capture is absent: {error}") from error
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or metadata.st_size <= 0
+            or metadata.st_size > MAX_CAPTURE_BYTES
+        ):
+            raise ModelError("private direct USB capture has an invalid type or size")
+        os.chmod(capture, 0o600)
+        exchanges = parse_pcap_usbmon_capture(
+            _capture_bytes(capture),
+            target_bus=endpoint.bus,
+            target_device=endpoint.device,
+        )
+        reference = build_direct_semantic_reference(
+            root,
+            profile_id=profile_id,
+            exchanges=exchanges,
+            source_revision=source_revision,
+        )
+    if directory.exists():
+        raise ModelError("private direct USB capture directory was not deleted")
+    return CapturedDirectReference(
+        reference=reference,
+        attributes_read=attributes,
+        bus=endpoint.bus,
+        device=endpoint.device,
+    )
+
+
+def _operator_identity(user: str) -> tuple[int, int]:
+    try:
+        account = pwd.getpwnam(user)
+    except KeyError as error:
+        raise ModelError("staged parity operator does not exist") from error
+    if account.pw_uid == 0:
+        raise ModelError("staged parity operator must not be root")
+    return account.pw_uid, account.pw_gid
+
+
+def _wait_for_operator(timeout_seconds: int) -> None:
+    if not 30 <= timeout_seconds <= 600:
+        raise ModelError("staged parity transition timeout is invalid")
+    selector = selectors.DefaultSelector()
+    try:
+        selector.register(sys.stdin, selectors.EVENT_READ)
+        events = selector.select(timeout_seconds)
+        if not events:
+            raise ModelError("staged direct-to-receiver transition timed out")
+        if sys.stdin.readline() == "":
+            raise ModelError("staged direct-to-receiver transition input closed")
+    finally:
+        selector.close()
+
+
+def _require_direct_route_absent(
+    route: dict[str, Any],
+    profile: dict[str, Any],
+) -> None:
+    try:
+        find_exact_direct_endpoint(route, profile)
+    except ModelError as error:
+        if str(error) in {
+            "the exact direct USB data route is absent",
+            "the exact direct USB data route with every source-bound read attribute is absent",
+        }:
+            return
+        raise
+    raise ModelError("the direct USB data route is still active after the transition")
+
+
+def run_staged_live_parity(
+    root: Path,
+    *,
+    profile_id: str,
+    package: Path,
+    package_sha256: str,
+    expected_generation: int,
+    approval_text: str,
+    user: str,
+    timeout_seconds: int = 90,
+    transition_timeout_seconds: int = 300,
+) -> LiveParityResult:
+    """Captures upstream direct reads, then compares the same device via the receiver."""
+
+    if approval_text != STAGED_PARITY_APPROVAL:
+        raise ModelError("the exact staged native parity approval is missing")
+    preflight = prepare_live_parity(
+        root,
+        profile_id=profile_id,
+        package=package,
+        package_sha256=package_sha256,
+        expected_generation=expected_generation,
+        timeout_seconds=timeout_seconds,
+    )
+    uid, gid = _operator_identity(user)
+    captured = capture_direct_reference(
+        root,
+        profile_id=profile_id,
+        route=preflight.route,
+        profile=preflight.profile,
+        source_revision=preflight.revision,
+    )
+    observed = {
+        item["method"]
+        for item in captured.reference.evidence["observations"]
+    }
+    required = {
+        probe["method"]
+        for probe in preflight.profile["probes"]
+    }
+    missing = sorted(required - observed)
+    if missing:
+        raise ModelError(
+            "direct OpenRazer capture missed source-bound methods: " + ", ".join(missing)
+        )
+    print(
+        "Direct OpenRazer reference captured completely.\n"
+        "Switch this same device to 2.4 GHz, remove its direct USB data route, "
+        "place or wake it on the HyperFlux receiver, and exercise it.\n"
+        "Press Enter only after it is ready. The receiver itself stays connected.",
+        flush=True,
+    )
+    _wait_for_operator(transition_timeout_seconds)
+    _require_direct_route_absent(preflight.route, preflight.profile)
+
+    with _private_capture_directory(uid, gid) as directory:
+        direct_evidence = write_new_private_json(
+            directory,
+            "direct-evidence.json",
+            captured.reference.evidence,
+        )
+        result = run_live_parity(
+            root,
+            profile_id=profile_id,
+            direct_evidence_path=direct_evidence,
+            package=package,
+            package_sha256=package_sha256,
+            expected_generation=expected_generation,
+            approval_text=READ_ONLY_APPROVAL,
+            user=user,
+            timeout_seconds=timeout_seconds,
+            direct_serial_values=captured.reference.serial_values,
+        )
+    if directory.exists():
+        raise ModelError("ephemeral staged parity material was not deleted")
+    return result

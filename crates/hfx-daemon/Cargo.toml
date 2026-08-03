@@ -1,0 +1,30 @@
+[package]
+name = "hfx-daemon"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+hfx-bridge = { path = "../hfx-bridge" }
+hfx-core = { path = "../hfx-core" }
+hfx-domain = { path = "../hfx-domain" }
+hfx-kernel-transport = { path = "../hfx-kernel-transport" }
+hfx-profiles = { path = "../hfx-profiles" }
+hfx-protocol = { path = "../hfx-protocol" }
+hfx-runtime = { path = "../hfx-runtime" }
+rustix.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+signal-hook.workspace = true
+
+[dev-dependencies]
+hfx-sdk = { path = "../hfx-sdk" }
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "hyperflux-next-bridge"
+path = "src/main.rs"

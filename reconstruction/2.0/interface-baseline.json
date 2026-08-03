@@ -1,0 +1,2594 @@
+{
+  "$schema": "../../schemas/reconstruction-interface-baseline.schema.json",
+  "behavioral_reference_commit": "c348305bb9c6790141932ddf79f707e5223bb51c",
+  "characterization_commit": "0ee607601187b7b4c34bb7ad8148321056c1a330",
+  "generated_outputs": [
+    {
+      "path": ".devcontainer/Containerfile",
+      "sha256": "7b8153ccddd492170bb24fa681500e38f9dba8b51b0585e75f5c2859ac16f423"
+    },
+    {
+      "path": ".devcontainer/README.md",
+      "sha256": "d81469d7dc6bb9fd9b9be10c347bb0c9ddac844860d28582a27947423c0a8839"
+    },
+    {
+      "path": ".devcontainer/devcontainer.json",
+      "sha256": "a133c50708c5a8b17666bc336c57703d60b9385c9d7c123faa0defc39797b56f"
+    },
+    {
+      "path": ".github/CODEOWNERS",
+      "sha256": "9e9e8c38887b9f43f1807e7d22e205bac6a808ea1f713e4ddb9e0becc00696b1"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/bug_report.yml",
+      "sha256": "e2d52ca86a52db8382ff91ec4a329e6308b8deb58a29117c81ad96c6c5946add"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/config.yml",
+      "sha256": "d3d5c775e20bd9fff7cf882592c916ac13a3b32c0b4e80f62374422026f4bb88"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/device_qualification.yml",
+      "sha256": "3efe8c3881a9403dd1103ba6027a66c2238eede8689cd69fac5e386d6150ac55"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/documentation.yml",
+      "sha256": "a8ad93bb61ab786a2e449853c619fe11774ab2b51f8253cb6fbac02dad2c59ea"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/feature_request.yml",
+      "sha256": "50f37f296981065597774f556e534ea13737f576d0b68c56d327ae88f81a51d9"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/hardware_research.yml",
+      "sha256": "5f71a1eb45eb4f6c10141c88621380065712e7ac017e75fbc58aaab6fac57df5"
+    },
+    {
+      "path": ".github/dependabot.yml",
+      "sha256": "73f898d685b651d31bc5efdb6d1f743204d4dabe32b55c2167f6ab5fc3146e8a"
+    },
+    {
+      "path": ".github/pull_request_template.md",
+      "sha256": "b0dbdfe8d4b7bc1713439646769017266210a4e0c2401d807961c12858317763"
+    },
+    {
+      "path": ".github/release.yml",
+      "sha256": "adcecc9f00dcc821d63d98ac1585af6a5c20b80c537f3e3f4f2335b2dc99c0d0"
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "sha256": "0edaae06da6d1e4cce18c93ae465cd647b93aa425d365664bb3f0d214500d97c"
+    },
+    {
+      "path": ".github/workflows/dependency-review.yml",
+      "sha256": "b234c299c54e86783cbac71d2254d1d6409a2cd11236706b4220fe2f408a7c8f"
+    },
+    {
+      "path": ".github/workflows/full-verification.yml",
+      "sha256": "ab36615d7b70a969a1365f397b6c8820291f66391c22dcd19267a008f8572921"
+    },
+    {
+      "path": ".github/workflows/verification.yml",
+      "sha256": "ddb5c47593b21a1e5101b738c4cef7c2f587647cfdda903ca71ddb54693c6524"
+    },
+    {
+      "path": "LICENSES/README.md",
+      "sha256": "cdf92616d48814ecf9cbebcd6177da5eb4dc88aa4db4bf05a319bbc811973867"
+    },
+    {
+      "path": "README.md",
+      "sha256": "749b8e66ac6781ae11c69083666f15fdac75c444a41cbae5fba8231289bbaba0"
+    },
+    {
+      "path": "apps/README.md",
+      "sha256": "c10c5ae059f92a33b3ae7048222457002c465bd1c210bfcdbdc736850f0c2c18"
+    },
+    {
+      "path": "apps/device-qualification/README.md",
+      "sha256": "2b8cd0a0b623a8a8b4d10c9b7400a8cfdf087d32089a5d8ef2ea896f2f05a00c"
+    },
+    {
+      "path": "architecture/README.md",
+      "sha256": "058ed5c1bf0ac567f9b6fe774bdd48334872498eb9384d2459e5cdbd05fb80bd"
+    },
+    {
+      "path": "assurance/README.md",
+      "sha256": "072141b14a585b87cb6c6c06c556f5c3ce54004898adf03c3c7a44eb44c0e3af"
+    },
+    {
+      "path": "assurance/generated/hyperflux-next.spdx.json",
+      "sha256": "6ec77fb45aa3af2ac1acb2897acda6c36a8c5ba1f6500310b81e6a191b800037"
+    },
+    {
+      "path": "crates/README.md",
+      "sha256": "8e47f3d13624f17494f7a718698b624abf7c0f9049a4201f33da7ec68902648e"
+    },
+    {
+      "path": "crates/hfx-bridge/README.md",
+      "sha256": "0aced479c3cc3409e6a37816125af0f4fd430ec4472ad94615b961c214e62ba3"
+    },
+    {
+      "path": "crates/hfx-core/README.md",
+      "sha256": "aef973cd355d84dfb00a01d6175436641229f256b156c222757e4727bb195ebe"
+    },
+    {
+      "path": "crates/hfx-daemon/README.md",
+      "sha256": "27e9b97a3df87bb3953e4d14deed46021c82399fe77c915790f8074d9b063f7d"
+    },
+    {
+      "path": "crates/hfx-domain/src/generated.rs",
+      "sha256": "8fcd640996d6ce048be37416ae4c4323a5a2f8c1a82dd658f8025c78d1ee7dbc"
+    },
+    {
+      "path": "crates/hfx-errors/src/generated.rs",
+      "sha256": "5e3f2194430dc2a2ebbe71c9d5765c41623e52076f84175d7ef159ab16d0741a"
+    },
+    {
+      "path": "crates/hfx-integration-model/src/generated.rs",
+      "sha256": "2ca17404ef96b46754cdae7e017a36c46758e73e69a3b059ae5f78215c1c2e3e"
+    },
+    {
+      "path": "crates/hfx-integration-model/src/openrazer_native_generated.rs",
+      "sha256": "d3605bd02f4ab43937efdfdf4e7fb6b14a58fb46024549334bc4ab1bb81a8c2b"
+    },
+    {
+      "path": "crates/hfx-kernel-transport/README.md",
+      "sha256": "276e4a6e6e8ad5b882fe9823b2d7637a873267da0a218a697fb30136a83ef49c"
+    },
+    {
+      "path": "crates/hfx-kernel-transport/src/generated.rs",
+      "sha256": "3662e214163871a0c3bef7de5b4f440d8cd784af338f78f24c16913a2c444419"
+    },
+    {
+      "path": "crates/hfx-ops/README.md",
+      "sha256": "9d5ce6bdd1f0f5a17f19e3237e4af5e3d2e91dead83eaf7d31b6cf5c18c09ada"
+    },
+    {
+      "path": "crates/hfx-profiles/src/generated.rs",
+      "sha256": "6325e84e28c572b8306a1728bcc1ba487181e4e7738d3abffbdfe1dbe470ce19"
+    },
+    {
+      "path": "crates/hfx-protocol/src/generated.rs",
+      "sha256": "0d5a91164a782205359b3490dc49c22ecb92d00b570cdf06e372fab7f994743a"
+    },
+    {
+      "path": "crates/hfx-protocol/src/generated_v1.rs",
+      "sha256": "26f1cb6ab6f262c465a820357a0b425330b3d1943d03ddaca657e6d2f52184fd"
+    },
+    {
+      "path": "crates/hfx-protocol/src/generated_v2.rs",
+      "sha256": "e475a55c67bf33557603a0607614284398b685001a49f65c1a75be7fbba85e09"
+    },
+    {
+      "path": "crates/hfx-protocol/src/generated_v3.rs",
+      "sha256": "2517f9de0feaf16d63296f1f86e7a92037da725677ab8def28debc971522c57a"
+    },
+    {
+      "path": "crates/hfx-protocol/src/generated_v4.rs",
+      "sha256": "0a9e449bb2def94caf182d1839950122bdf9493bf39554bd0214eb2c658d3f28"
+    },
+    {
+      "path": "crates/hfx-protocol/src/generated_v5.rs",
+      "sha256": "d3f51982f780371391aa90c3332745e5fa64afc08e3ec59e6914dd61b0f379c7"
+    },
+    {
+      "path": "crates/hfx-protocol/src/generated_v6.rs",
+      "sha256": "bfcb3c8f3d5451649b24932a30e2cc73070147909fc25f01925337ff60815cb6"
+    },
+    {
+      "path": "crates/hfx-protocol/src/generated_v7.rs",
+      "sha256": "0d5a91164a782205359b3490dc49c22ecb92d00b570cdf06e372fab7f994743a"
+    },
+    {
+      "path": "crates/hfx-protocol/src/generated_versions.rs",
+      "sha256": "bf627ead534238c3a679f547ea07584c0b1080db5adabf644462d4a37cee47ed"
+    },
+    {
+      "path": "crates/hfx-runtime/src/generated.rs",
+      "sha256": "9af09992cf47d38352c94f3880845c085641b33a3422945cf973f3c6b0e661c6"
+    },
+    {
+      "path": "crates/hfx-sdk/README.md",
+      "sha256": "40988ddb2ebafc4c0c59c73020eabfbd4620c71f89d318b3873b23034d22c6a9"
+    },
+    {
+      "path": "crates/hfx-sim/README.md",
+      "sha256": "9b119a31d072ea2fbf4580b6d3d1fe6b65f0650e456c609cd0d1c49d1128bfda"
+    },
+    {
+      "path": "docs/README.md",
+      "sha256": "d2caa312d525ebe38ab9d0365a1648087f10207fc2bce7944b1262401a4c7a42"
+    },
+    {
+      "path": "docs/assets/badge-license.svg",
+      "sha256": "2e8ebff2210d005c7c32f7d5cfead85eef0c1e65723d4c877b14e74d999739b3"
+    },
+    {
+      "path": "docs/assets/badge-state.svg",
+      "sha256": "cb9970295c4ea65d71dfb59f8fc6bc1268ccb9df61c69d62db934c08d059444c"
+    },
+    {
+      "path": "docs/assets/social-preview.png",
+      "sha256": "784b49b57d82b486a803125c636d173c5888544840faedb18cfe4e3b0c59f6b3"
+    },
+    {
+      "path": "docs/generated/architecture.md",
+      "sha256": "c546eff99cd57aba7431fbba205e52c2b121bb2f7e3c7de39b50f650c6750e35"
+    },
+    {
+      "path": "docs/generated/bridge-protocol-v1.md",
+      "sha256": "0e1a94c429e7ca19bdba1c3d2d6066cb8401d6dd713c618eb0c49875391c0015"
+    },
+    {
+      "path": "docs/generated/bridge-protocol-v2.md",
+      "sha256": "0b3e31ea30648cf9f258dd61a0817952b18d335e8cff02bb7b218456d4213cda"
+    },
+    {
+      "path": "docs/generated/bridge-protocol-v3.md",
+      "sha256": "2b0c04f7341ecf115f7875681602a544d86f3d45f19abc7216a8f275ca048591"
+    },
+    {
+      "path": "docs/generated/bridge-protocol-v4.md",
+      "sha256": "f0e33323db5bcfa95039a4d2da079d789aca4128c6141ef47c47e66c5c6a6259"
+    },
+    {
+      "path": "docs/generated/bridge-protocol-v5.md",
+      "sha256": "481406f918f16b111c5503861d017a24940dfc3a4cfbb7c0ccdc9ff572a9c107"
+    },
+    {
+      "path": "docs/generated/bridge-protocol-v6.md",
+      "sha256": "8305df9323136d4e8678f4a0d107a338fc9651da222fdc2aad66ed19985c5188"
+    },
+    {
+      "path": "docs/generated/bridge-protocol-v7.md",
+      "sha256": "31a0abb5eea86590905fcce5ad54a8b002404ba3cb03587ce43ba15bf3c9dc5f"
+    },
+    {
+      "path": "docs/generated/bridge-protocol.md",
+      "sha256": "8c43e50d548547a456ca9882974accdf7a1ca8c2258f71ee32de96f3354cab66"
+    },
+    {
+      "path": "docs/generated/design-coverage.md",
+      "sha256": "929f666e6c823dc7a17d2d396003a44625961161b1f30ff3379cc279eaf0039d"
+    },
+    {
+      "path": "docs/generated/development-environment.md",
+      "sha256": "00681ba5bf6f1cf9aa97e3a3e75d5c1521fb1be64da96bbdc7febfc4f78cd8fc"
+    },
+    {
+      "path": "docs/generated/device-knowledge.md",
+      "sha256": "2a44e3eb165ae3a3a6de2bb22d780d7eb5718e24bafaa671bda902de59c110d0"
+    },
+    {
+      "path": "docs/generated/distributions.md",
+      "sha256": "01b82bff2007896636822f06b3b4b65c5e40157c3008daf8ab35338f3230417e"
+    },
+    {
+      "path": "docs/generated/domain-types.md",
+      "sha256": "b6b82d7b06d032238d91dc2341bb4cf1cff9f6a5cf8e354a50f1b0c6e659ab6b"
+    },
+    {
+      "path": "docs/generated/error-catalog.md",
+      "sha256": "01bb09bfb735cde4d1047105eb19fbc8c76b8ca9ea82a4c32a9e1a9aa9e027c5"
+    },
+    {
+      "path": "docs/generated/formal-model.md",
+      "sha256": "0ca74253d29c027f5a1283e5eeed8337c7301bab33514472f6207188d9eb5371"
+    },
+    {
+      "path": "docs/generated/github-governance.md",
+      "sha256": "f85d4dbb1b7e6d0dc91fb688e6e6692245f0f80f5c8e744f70bda185be300a74"
+    },
+    {
+      "path": "docs/generated/installation.md",
+      "sha256": "50b020f8444a1216fa8f6f2f852ea244f1f04e0fdb47970ab5b26841f2f1c81b"
+    },
+    {
+      "path": "docs/generated/integrations.md",
+      "sha256": "914200de0df6f2147243fce915cbaadc3ff26b4e242ce874ac6900ea5ac19787"
+    },
+    {
+      "path": "docs/generated/kernel-uapi.md",
+      "sha256": "5f86a3a57b4187fa43c22b618cd434f7e30cfd2a4692298b160cd9103b97ce9d"
+    },
+    {
+      "path": "docs/generated/linux-runtime.md",
+      "sha256": "f518b454a072e2f4d60e1f9276ae9f7eea9681f63ea2fcce6713e9eae1d23b8a"
+    },
+    {
+      "path": "docs/generated/local-companion.md",
+      "sha256": "acde59be1c0250721d7ea9e09cac0354d4a412613f569621ba847abc335a870e"
+    },
+    {
+      "path": "docs/generated/migration-ledger.md",
+      "sha256": "4ef4d9b27ddc88fcf0af0b4f84a610d7e05656b2aab701c63f4a01022f630d6d"
+    },
+    {
+      "path": "docs/generated/migration-shadow.md",
+      "sha256": "6e2c474ceae7abd4ce75f19fbf450e1d2eae8401de967ba2ab1067effa0a6213"
+    },
+    {
+      "path": "docs/generated/openrazer-native-deployment.md",
+      "sha256": "1971f3388189f84895e0428c13ec2f524f197ab0dda9d93ca95d8a545157f5d5"
+    },
+    {
+      "path": "docs/generated/performance-budgets.md",
+      "sha256": "daafa900c6d659c205bcc2bd7fd08156e52f8275566c63230fc38b9f4a1d310c"
+    },
+    {
+      "path": "docs/generated/release-gates.md",
+      "sha256": "4bb50a117151daa67617c1f18abc04f841100dd6e0e5f03ffc39cb74cccf369c"
+    },
+    {
+      "path": "docs/generated/repository-atlas.md",
+      "sha256": "9ac59507f6af6ba976d1c82fccf20d5bd866ae4c726cc3bd1e034d67097bf61e"
+    },
+    {
+      "path": "docs/generated/supply-chain.md",
+      "sha256": "418221d314756e95537ee430191c0a2aac88024d3748a6fae6a6384993ceb045"
+    },
+    {
+      "path": "docs/generated/supported-hardware.md",
+      "sha256": "ccd8e4eaf43b8378a97f0417d92e680b3a69f49a7e7926a06623a419b25eb3cb"
+    },
+    {
+      "path": "docs/generated/verification.md",
+      "sha256": "cf9822fa1f10ea4e83d22ce53a56737cba534d0adf8d76a46a399224e19e3c6b"
+    },
+    {
+      "path": "docs/legal/licensing.md",
+      "sha256": "6f8a7289dda72dba3a4a5a0e7030037d8a72d57d1c61875b90675d313013a708"
+    },
+    {
+      "path": "driver/README.md",
+      "sha256": "6f3c260acd7d7c9d4667d3c4ad328767431cee323d033144513d359af39cf652"
+    },
+    {
+      "path": "driver/kernel/README.md",
+      "sha256": "7b64bd80efdcd20d39147d5bb3ce3813b2193ea67907262692415e278e4d92b9"
+    },
+    {
+      "path": "driver/kernel/generated/hyperflux_receiver_profiles.inc",
+      "sha256": "364e10f64e84b17f681b989c6709dedf525505a1ba13952322c86529c4909bf0"
+    },
+    {
+      "path": "driver/kernel/hyperflux-next-version.h",
+      "sha256": "7bce8fc3b7e1b33440de6d243df90be1d8dcf5f5df17ea41c649b681c03d83bd"
+    },
+    {
+      "path": "driver/kernel/uapi/hyperflux_next.h",
+      "sha256": "0d1bfac09001247be4a690540c14efbdef5f3b1ad71d7e8e33fa70abe95c0841"
+    },
+    {
+      "path": "errors/README.md",
+      "sha256": "84d01d1a43aeeb05cd61ff4b86a73b64993e4d71999e64e38870b3a37e475a4c"
+    },
+    {
+      "path": "generated/README.md",
+      "sha256": "42d8f1dd92d147de930093979cf073c8ec0de3388e82b22167e7dc33366943a9"
+    },
+    {
+      "path": "generated/integrations/catalog.json",
+      "sha256": "a04a05ee93518ebee07839981d1251c662a888ccf8457370a8bd14f8263611df"
+    },
+    {
+      "path": "generated/knowledge/catalog.json",
+      "sha256": "d4045facdfd3c42adedfb005a8de0e8f2952600d445093b6401a151622381141"
+    },
+    {
+      "path": "generated/profiles/catalog.json",
+      "sha256": "1f10e1c51547a76954ab99ebd0dc00fee719b2bfbc02f9f51b62498c2942e607"
+    },
+    {
+      "path": "generated/public-readiness.json",
+      "sha256": "797afe7198d6c170c12be3da2b6c9c2784bb767c52518963c8770623432cefc7"
+    },
+    {
+      "path": "governance/README.md",
+      "sha256": "20d16ffae0ac1acf48661ec400d417083af26f1218586dcb0566fffeae494ba2"
+    },
+    {
+      "path": "governance/generated/github-experience-plan.json",
+      "sha256": "2506e05fd3af0b6ad7440802c98d07c9868e061c5ca31875ce006eec923e96a5"
+    },
+    {
+      "path": "governance/generated/github-labels.json",
+      "sha256": "e5af10cf18d348a50d6113e2c97e4214d9a8cc7fa5673fb0633f4019a97ef39b"
+    },
+    {
+      "path": "governance/generated/github-protection-plan.json",
+      "sha256": "a5c293863801db3d68e065f4d974ad811b8f454a0fe092dcf48946359ca24168"
+    },
+    {
+      "path": "integrations/README.md",
+      "sha256": "4bea118e7f5095f45287f79a0c6b30ff8e3dd6dcd7f6e78e5b95365183176399"
+    },
+    {
+      "path": "integrations/openrazer/README.md",
+      "sha256": "1b46e4b4d5364f2806ed3888db0e8b2008d9fc2ffce3c863621a8504cb9bc14b"
+    },
+    {
+      "path": "integrations/openrgb/README.md",
+      "sha256": "b11e3689fd2f12af5da4d6d82f6ac58321e280f5d4ef5eb5767c094d647d7af6"
+    },
+    {
+      "path": "integrations/openrgb/include/hyperflux/openrgb/generated_source_validated_routes.hpp",
+      "sha256": "a742ff0b6033f6090ec6167aa711feb14dbefb142c567daae5f3e6cb343777be"
+    },
+    {
+      "path": "knowledge/README.md",
+      "sha256": "3b602fc693299dddc1d2655c53d17c8b8907506a1ca3e844d50dcab16ea010fd"
+    },
+    {
+      "path": "migration/README.md",
+      "sha256": "cc097e73a1c7ad25927e84f6cc2fe123af3874c2f62c4e7741e0d2ed131dbf99"
+    },
+    {
+      "path": "packaging/README.md",
+      "sha256": "ad18411bf21400d1c58ddad013ec936fe555771a5d797e35e9b4c2626598dee9"
+    },
+    {
+      "path": "packaging/generated/99-hyperflux-next.rules",
+      "sha256": "fbacb86b0c7870e39bb0322386a6c5b1e0d069a2d36caaa1e1456db4fc127bdc"
+    },
+    {
+      "path": "packaging/generated/bridge.json",
+      "sha256": "6042c5f9858e36e8a371212c4b89d6a936b9e553c559f134c2bfa1037332e3aa"
+    },
+    {
+      "path": "packaging/generated/dkms.conf",
+      "sha256": "856f044180a48b58af23514afa9485f328c2e7e0058bb8ed1e5290262867f0e0"
+    },
+    {
+      "path": "packaging/generated/hyperflux-next-bridge.service",
+      "sha256": "3b68f2a9754e88c45dc5f11193a1dfd8d8cdd51d41e9317dd7010d69dcdbd266"
+    },
+    {
+      "path": "packaging/generated/hyperflux-next-client@.service",
+      "sha256": "cbdface7d5d0ea5bce407779a77f5ab458449643747ea908298732bac0c06bf9"
+    },
+    {
+      "path": "packaging/generated/hyperflux-next-client@.socket",
+      "sha256": "de4cbbbeda7567b8ea0c2a369c94a600cffb8bb3f397a612182310ead3799024"
+    },
+    {
+      "path": "packaging/generated/hyperflux-next-openrazer-driver-preflight.service",
+      "sha256": "833ecc773610c0e0acf61b02c13fb084e6e894a850e23ac1070324b1d3da4ad3"
+    },
+    {
+      "path": "packaging/generated/hyperflux-next-openrazer-relay.service",
+      "sha256": "bf33b90e48e04b68f917a1b084d2effee622334db49397b98a6edb0ca156fa24"
+    },
+    {
+      "path": "packaging/generated/hyperflux-next.sysusers",
+      "sha256": "cb8ae3b55e796c4b9502208d243b89cb34fc1d55e34ca869da31a94a5236ecea"
+    },
+    {
+      "path": "packaging/generated/hyperflux-next.tmpfiles",
+      "sha256": "90a33486d23ea3b21932d76bf6a5a5986ab2f2f74aa328a0a6faf631806cbf56"
+    },
+    {
+      "path": "packaging/generated/install-plan.json",
+      "sha256": "e98d957327f79f58a8065eeb5efaf66da866da9e3ae2eb4a3d65030779fa3a03"
+    },
+    {
+      "path": "packaging/generated/openrazer.sysusers",
+      "sha256": "75c314573575a748764b2017627ea44392abca32f70acfb4f3fa527bfa9b07d9"
+    },
+    {
+      "path": "packaging/generated/runtime.env",
+      "sha256": "deb9844cb69d55ea12e6cea0e0189396323aca7ca4c286f9a2bd64f443f89b77"
+    },
+    {
+      "path": "profiles/README.md",
+      "sha256": "158cc6d8784bf915d3c3852c788c9608966d518fd50c91a61d0dd76645a06887"
+    },
+    {
+      "path": "protocol/README.md",
+      "sha256": "f2f879bb472c3aa9c6e456772bf72728ce960f615a34e86d0002ea84d56f538a"
+    },
+    {
+      "path": "runtime/README.md",
+      "sha256": "dc4ead5bafc35effc83febd86cb47b5bfff79c87c6ec89c5293aff354b44dc93"
+    },
+    {
+      "path": "schemas/README.md",
+      "sha256": "e3e5e210e9c7ff7ab4d358b981f7b12ba46feff0e0f71aa9395c465d00d748ab"
+    },
+    {
+      "path": "sdk/README.md",
+      "sha256": "85819633982b470bb4e040034bcc5e9468e6069d4e387efa8f6c8f914710f62f"
+    },
+    {
+      "path": "sdk/cpp/README.md",
+      "sha256": "76a912d0a3867e17310d04590ff674661a24379161fc53d92e539426e8effc5c"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/domain_json.hpp",
+      "sha256": "f7fad28115fd7e0b48f51acaec08ed5159d32dd762bee1a98976b2d87c79da9c"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/domain_types.hpp",
+      "sha256": "16379abcdfb2580b2d64da7f681fbb231e3a6642af477d8a6590415203786c2b"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/error_catalog.hpp",
+      "sha256": "eb75169cb105c869630e5299575d0f3efb78a903009cca6e312a652516137d38"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/integration_catalog.hpp",
+      "sha256": "67bc7a3b602f1f255bb8763c73f195ee76a30b6ed39d1ad1c2173285765847bd"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/profile_catalog.hpp",
+      "sha256": "f6bbabc8d689c4272620c943824ce59fd2e8e2cb55e32dab2f89d96e389018ae"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/protocol_json.hpp",
+      "sha256": "08dff7d8931145c282dba9cd674794bb8cfa83997d03253f8483cb78b7c5ac64"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/protocol_types.hpp",
+      "sha256": "7b8a5c04d75960792903832c420f79587f4bc6a96c75d4e2dd1db57d4d930791"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/protocol_v1_json.hpp",
+      "sha256": "d70b1461c94ba3c0937638884e71c1c71cfbdbd0e571dcab1c27bc5a1bb46d37"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/protocol_v1_types.hpp",
+      "sha256": "b0dab4645b16ff12b6ae8529ddaabcd631072b8cd5e5091559ea10b3355f2126"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/protocol_v2_json.hpp",
+      "sha256": "6b6d46453809f4e7050f9f9f95a8ea1fed73069388cd3f177d0f776548f169e7"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/protocol_v2_types.hpp",
+      "sha256": "9af0e0b5c527131f0cbdc4e9ec603c375f2ed57dee29d574ea2f4fe796764eb8"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/protocol_v3_json.hpp",
+      "sha256": "3a3a76d6afa996617c64cec455d90cedf3c393ccad79a7242215cb0c0d73380b"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/protocol_v3_types.hpp",
+      "sha256": "d5cf760dc25835d4f003f29a98d03a5a45adc1fd7382d687710b797ff4555722"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/protocol_v4_json.hpp",
+      "sha256": "f530d53e536eec2f7875010ef6135ded5034871e42f9e1631684e59058d690c8"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/protocol_v4_types.hpp",
+      "sha256": "9805064538484cf2ccc85d7a5eb997c4330cdcda810830e38ebcd2a00467b661"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/protocol_v5_json.hpp",
+      "sha256": "d9b9489b3f4b31ffd28c3f6206991d52eac8ec939f259bd3ba910f4757752d81"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/protocol_v5_types.hpp",
+      "sha256": "d8cc99fa7ba65edd481491fb073df472654caabe130b91f68ea21681278513b8"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/protocol_v6_json.hpp",
+      "sha256": "98d7058b95ce8093e402bae4a6a6f71d01645976e6c8d2a78607a3056ee8d85d"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/protocol_v6_types.hpp",
+      "sha256": "e79f19e448fa326bfebacf98c7fd7bf83299a1ac7e133f66b8bdfc6db88cf4df"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/protocol_v7_json.hpp",
+      "sha256": "0549dbe8e375828324007b6588716b1d15c2ab11bee51a5b7ff4e71c762d8de9"
+    },
+    {
+      "path": "sdk/cpp/include/hyperflux/generated/protocol_v7_types.hpp",
+      "sha256": "dde6563a4f8784d7dc92669c25780ca94c957148affdcb80c8e7901c3d110163"
+    },
+    {
+      "path": "sdk/python/LICENSE",
+      "sha256": "aaf135472f81c5b4a0dca9367e5bb5e9750032b5bebe5442b36e4c0a47430df3"
+    },
+    {
+      "path": "sdk/python/README.md",
+      "sha256": "b7a3a5b6bf48559cd780075b022c1d9d40a1f8fd128d6765e0c5847a7124a59b"
+    },
+    {
+      "path": "sdk/python/hyperflux_sdk/_version.py",
+      "sha256": "b13488993fa55fb3921b54ba192a852ec010a85a03da9730c000f084086e34c5"
+    },
+    {
+      "path": "sdk/python/hyperflux_sdk/generated/domain_types.py",
+      "sha256": "871ef44191e2815a83ee0c18d4df339dc400446b564e6f635e2d70932bc8f038"
+    },
+    {
+      "path": "sdk/python/hyperflux_sdk/generated/error_catalog.py",
+      "sha256": "5e0ee47bb6fdf680dd92ce31f87a993ea1ab170095823ebe0d426ceaeb21bf12"
+    },
+    {
+      "path": "sdk/python/hyperflux_sdk/generated/integration_catalog.py",
+      "sha256": "a8c160b959b802d8cef97b5c39c2ac0652b555b63504544ab6175929fbb8133b"
+    },
+    {
+      "path": "sdk/python/hyperflux_sdk/generated/linux_runtime.py",
+      "sha256": "2bea7804a5f23b164912dc1e1f3edb8ce11d852868deee5159b8d0fd3f8c3a79"
+    },
+    {
+      "path": "sdk/python/hyperflux_sdk/generated/openrazer_metadata.py",
+      "sha256": "9056bee3d07907629eea927f6adc9bb1648728ea508f92c081e73303215678c4"
+    },
+    {
+      "path": "sdk/python/hyperflux_sdk/generated/profile_catalog.py",
+      "sha256": "c0aaf1960976f05150dab410fe29ff72959929cbc0a8c318d6cff22450920c45"
+    },
+    {
+      "path": "sdk/python/hyperflux_sdk/generated/protocol_types.py",
+      "sha256": "bdc0d4e48d27faa43101b7a9941ac1aabf6280fd1ae46b2c68275989d2d34b2a"
+    },
+    {
+      "path": "sdk/python/hyperflux_sdk/generated/protocol_v1_types.py",
+      "sha256": "b03abc1c64e2de4b63296ac8a9ad40df1bc56189f3e3c3a6cd46e38f9d9e711f"
+    },
+    {
+      "path": "sdk/python/hyperflux_sdk/generated/protocol_v2_types.py",
+      "sha256": "5c2d1d4da35d8f35a331e2554a82af71824c10e1cb2bdf3b7a7cb613fc93aaf0"
+    },
+    {
+      "path": "sdk/python/hyperflux_sdk/generated/protocol_v3_types.py",
+      "sha256": "8e8b82b4f14b462d9c27f8155232047ad58889b82b9141ef29e9f02bdc96d0a8"
+    },
+    {
+      "path": "sdk/python/hyperflux_sdk/generated/protocol_v4_types.py",
+      "sha256": "0dcd0df30ec74b695baadc0bbde46fa40977627a5e567868a3749e6a6dfa2e63"
+    },
+    {
+      "path": "sdk/python/hyperflux_sdk/generated/protocol_v5_types.py",
+      "sha256": "f2755aea91351f97c42108d0fd37eac8c77e2e5be2ef9e9248adc8ef65e89242"
+    },
+    {
+      "path": "sdk/python/hyperflux_sdk/generated/protocol_v6_types.py",
+      "sha256": "09711f0d4a6460a267f38d14c5766afe335896db6a056cff44e3873e1d3615fc"
+    },
+    {
+      "path": "sdk/python/hyperflux_sdk/generated/protocol_v7_types.py",
+      "sha256": "bdc0d4e48d27faa43101b7a9941ac1aabf6280fd1ae46b2c68275989d2d34b2a"
+    },
+    {
+      "path": "tests/README.md",
+      "sha256": "b1a08cce0ab984a5bcd84b1749637d0ba11f999c7eb9963ad418af9f0e92a236"
+    },
+    {
+      "path": "tests/fixtures/generated/profile-compositions.json",
+      "sha256": "ddb0fecc9e34b7aefcdf579f608031be0f0d9998b71b4779f1ffd44e8256d9ca"
+    },
+    {
+      "path": "toolchains/README.md",
+      "sha256": "240f16b4c96122971b0996bdb26db4ff5299a44e0261c524b17f8f5e3a75461a"
+    },
+    {
+      "path": "tools/README.md",
+      "sha256": "48d49f5cac048a2be9e58b8abe93decbe91f8c72f3508399eed6bf511bbefa9d"
+    },
+    {
+      "path": "uapi/README.md",
+      "sha256": "cc5d518386aa4db466c34fd1a06b5ac3498e5790eb299468b7df6ca94edcaa0e"
+    },
+    {
+      "path": "verification/README.md",
+      "sha256": "e53ecafc53e8529b255a49b32237f4fdb27eb0968de47566122a97264552abc6"
+    }
+  ],
+  "packages": [
+    {
+      "archive_name": "hyperflux-next-linux-0.0.0_dev.1-8-x86_64.pkg.tar.zst",
+      "archive_sha256": "4f3c9ab25029f65e75b03e2cdf0a50aa00d2a043abb79b25d3082d468fe00697",
+      "archive_size": 4791507,
+      "component": "linux",
+      "payload": [
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "etc",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "2751",
+          "path": "etc/hyperflux-next",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "etc/hyperflux-next/bridge.json",
+          "sha256": "6042c5f9858e36e8a371212c4b89d6a936b9e553c559f134c2bfa1037332e3aa",
+          "size": 258,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/bin",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/bin/hyperfluxctl",
+          "sha256": "2c91bada09dbb8e2b040ba6f6a3c561b45ff8b2840e070d01ad22e371c7d2e45",
+          "size": 7032232,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/lib",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/lib/hyperflux-next",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/lib/hyperflux-next/hyperflux-next-activate",
+          "sha256": "28640e6637e8194b963a6be38f90deadbf24fc7a3ded28e30cf3728e15b33a00",
+          "size": 523176,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/lib/hyperflux-next/hyperflux-next-bridge",
+          "sha256": "54eb1e69d900c9c006a2b76b350552e1a9c16e6004f606655400b4b282cd4b4a",
+          "size": 11380824,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/lib/hyperflux-next/hyperflux-next-uhid-relay",
+          "sha256": "5cf832338d4c3728dd61bf47caa0403e337701b32e1ef83d0fd551acaff09f8c",
+          "size": 7164040,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/lib/systemd",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/lib/systemd/system",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/lib/systemd/system/hyperflux-next-bridge.service",
+          "sha256": "3b68f2a9754e88c45dc5f11193a1dfd8d8cdd51d41e9317dd7010d69dcdbd266",
+          "size": 1356,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/lib/systemd/system/hyperflux-next-client@.service",
+          "sha256": "cbdface7d5d0ea5bce407779a77f5ab458449643747ea908298732bac0c06bf9",
+          "size": 1112,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/lib/systemd/system/hyperflux-next-client@.socket",
+          "sha256": "de4cbbbeda7567b8ea0c2a369c94a600cffb8bb3f397a612182310ead3799024",
+          "size": 544,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/lib/systemd/system/hyperflux-next-openrazer-driver-preflight.service",
+          "sha256": "833ecc773610c0e0acf61b02c13fb084e6e894a850e23ac1070324b1d3da4ad3",
+          "size": 1109,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/lib/systemd/system/hyperflux-next-openrazer-relay.service",
+          "sha256": "bf33b90e48e04b68f917a1b084d2effee622334db49397b98a6edb0ca156fa24",
+          "size": 1561,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/lib/sysusers.d",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/lib/sysusers.d/hyperflux-next.conf",
+          "sha256": "cb8ae3b55e796c4b9502208d243b89cb34fc1d55e34ca869da31a94a5236ecea",
+          "size": 241,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/lib/sysusers.d/openrazer.conf",
+          "sha256": "75c314573575a748764b2017627ea44392abca32f70acfb4f3fa527bfa9b07d9",
+          "size": 107,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/lib/tmpfiles.d",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/lib/tmpfiles.d/hyperflux-next.conf",
+          "sha256": "90a33486d23ea3b21932d76bf6a5a5986ab2f2f74aa328a0a6faf631806cbf56",
+          "size": 254,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/lib/udev",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/lib/udev/razer_mount",
+          "sha256": "4a46f0a70945ccdb9863db6b8cbd62b5d68b90e180554d23f791950f5327e02a",
+          "size": 1387,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/lib/udev/rules.d",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/lib/udev/rules.d/99-hyperflux-next.rules",
+          "sha256": "fbacb86b0c7870e39bb0322386a6c5b1e0d069a2d36caaa1e1456db4fc127bdc",
+          "size": 176,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/lib/udev/rules.d/99-razer.rules",
+          "sha256": "e30dd8f41033b4a050716fefcdeed833eff081206df6ef90e4f673a10adb6d3d",
+          "size": 2794,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/share",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/share/doc",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/share/doc/hyperflux-next",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/share/doc/hyperflux-next/troubleshooting.md",
+          "sha256": "0717440b540c9b191179610f3268b78655b44ead2b0f23772362e28152aaa618",
+          "size": 2236,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/share/licenses",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/share/licenses/hyperflux-next-linux",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/share/licenses/hyperflux-next-linux/LICENSE",
+          "sha256": "aaf135472f81c5b4a0dca9367e5bb5e9750032b5bebe5442b36e4c0a47430df3",
+          "size": 17337,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/src",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/Makefile",
+          "sha256": "e7953d078b4f54625f26525b05d19f036a81aa33bb6929e64d33d6e73339805d",
+          "size": 723,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/dkms.conf",
+          "sha256": "856f044180a48b58af23514afa9485f328c2e7e0058bb8ed1e5290262867f0e0",
+          "size": 343,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/generated",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/generated/hyperflux_receiver_profiles.inc",
+          "sha256": "364e10f64e84b17f681b989c6709dedf525505a1ba13952322c86529c4909bf0",
+          "size": 1662,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/hyperflux-next-core.c",
+          "sha256": "bf05935baeb19955c35857810f78f6692f98bae5af4ca784d488ffd1f70e30e5",
+          "size": 13830,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/hyperflux-next-internal.h",
+          "sha256": "96facc8d8ca94ab16c048b2eec84025f5ba2374e6f8cd97cce8758e16a66cf95",
+          "size": 5014,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/hyperflux-next-native.c",
+          "sha256": "d178b3e45e0444c43adedaf2333274920e47ad1382275c1aad5fb6781d8af01a",
+          "size": 27265,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/hyperflux-next-observation.c",
+          "sha256": "2eb166825ac146ac088d997582ede88aeda3d615eb1e9d32d5daff1667699207",
+          "size": 10730,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/hyperflux-next-pairing-inventory.h",
+          "sha256": "36e32ad5ab88da2c648d7faeeaa5792a7ff0e4011b9bcc963bd1137215b0f713",
+          "size": 3236,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/hyperflux-next-passive.h",
+          "sha256": "68fcb124e1b92a53a8f575575ec4f9332fa9ba689c739f1520fa46f62255837a",
+          "size": 3437,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/hyperflux-next-profile.c",
+          "sha256": "475aea22bb3d1689f2a14e609cbd6cadc5a0c3ab0099be6ec619116190b33a80",
+          "size": 795,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/hyperflux-next-profile.h",
+          "sha256": "43ec23277f385e6d7c71dd0acbe397f937b74034bacf29f84164487cdc14596f",
+          "size": 1987,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/hyperflux-next-session.c",
+          "sha256": "1eb9b38b39ac319598809646ecbfdd98b8aeb72d45b5355ff93825483fe3878b",
+          "size": 12738,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/hyperflux-next-transport.c",
+          "sha256": "b260f351f6ea9a332b7d6fb4ffe9b30efe96396e0af69bd758faa68b0bdfb524",
+          "size": 17692,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/hyperflux-next-version.h",
+          "sha256": "7bce8fc3b7e1b33440de6d243df90be1d8dcf5f5df17ea41c649b681c03d83bd",
+          "size": 285,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/hyperflux-next-wire.h",
+          "sha256": "c137c720c4bee913815d05fb546d9b19602d47c5f7c41272c5619f208a36c1f9",
+          "size": 3216,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/uapi",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/hid-hyperflux-next-0.0.0_dev.1/uapi/hyperflux_next.h",
+          "sha256": "0d1bfac09001247be4a690540c14efbdef5f3b1ad71d7e8e33fa70abe95c0841",
+          "size": 7454,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/src/openrazer-driver-3.12.4",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/src/openrazer-driver-3.12.4/LICENSES",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/LICENSES/CC-BY-SA-4.0.txt",
+          "sha256": "cde7883b9050a1104f4ac19a1572aafd6e5d7323b68351aaf51fbf4beba54966",
+          "size": 18375,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/LICENSES/GPL-2.0-or-later.txt",
+          "sha256": "aaf135472f81c5b4a0dca9367e5bb5e9750032b5bebe5442b36e4c0a47430df3",
+          "size": 17337,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/Makefile",
+          "sha256": "3021405f1f4447467b090f4b02e5d55fd541c3137c95b59576f4597a04f7c241",
+          "size": 5786,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/dkms.conf",
+          "sha256": "7ccab1cfce27cb3a66419d74f08b0cf053cc6cdfe2999e12afe4e68da6cf1925",
+          "size": 598,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/src/openrazer-driver-3.12.4/driver",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/driver/Makefile",
+          "sha256": "eae1e45054d2d79771a49776c936a66b541f143a047945ac628e24f461167300",
+          "size": 376,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/driver/razeraccessory_driver.c",
+          "sha256": "7f88da2b1852e7690afa273dc9be47970003fba6ac97d068c237d19101c9dcc4",
+          "size": 116377,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/driver/razeraccessory_driver.h",
+          "sha256": "68b0bf693051169103692391ade7c5ede919d2d392f56e53f2eef6b899828a6c",
+          "size": 2110,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/driver/razerchromacommon.c",
+          "sha256": "6362884bc962a7dbf9768e6e3c7a1759d913acd4ab8d1bd0bd99d3e401ba4acc",
+          "size": 51353,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/driver/razerchromacommon.h",
+          "sha256": "b271c8aff5de897266f73a7fff054a57454f47055120daf697877db4740ac68b",
+          "size": 10486,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/driver/razercommon.c",
+          "sha256": "ffaa400ceccad65a560aec1f0e16913303cfd3e7e5be0fb303716f461a0c0624",
+          "size": 12520,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/driver/razercommon.h",
+          "sha256": "e2ef3b6f59983774aa672c5ca15f7c4ff8e0f54bb8ff71bbdc2d8f48e0efcd73",
+          "size": 6019,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/driver/razerkbd_driver.c",
+          "sha256": "44cdfb708d0bd45055ce5e868b66074cc9caed7532580f2fb3849217516b2652",
+          "size": 291441,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/driver/razerkbd_driver.h",
+          "sha256": "db0a98b84fcb6173d9982bd514a09c02596ae3a639ae0da966169f5644ea16c5",
+          "size": 8887,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/driver/razerkraken_driver.c",
+          "sha256": "ad43f75231b762b1ce9687be788a1caa49c37a9c945479f1b0389dbf7ce98ed6",
+          "size": 32329,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/driver/razerkraken_driver.h",
+          "sha256": "5137714568b7614d9bd65b23abc1bb27fb565f456a2f714cecb2c5eff460e87a",
+          "size": 4743,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/driver/razermouse_driver.c",
+          "sha256": "58dc8dfe662ce48acefad27eac734b142ad70851137a9d53828c436af0e1cb1e",
+          "size": 392154,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/driver/razermouse_driver.h",
+          "sha256": "bcd7d6bc7ca6122d5d0da680b32b7e8b078b44d64cb4d4b64894860226b206f1",
+          "size": 8321,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/src/openrazer-driver-3.12.4/driver/usb_hid_keys.h",
+          "sha256": "c969609b72cebb8314110dd610f3900373ed3d2495f131bfd654f55586ef64b9",
+          "size": 1147,
+          "type": "file",
+          "uid": 0
+        }
+      ],
+      "pkginfo": {
+        "arch": [
+          "x86_64"
+        ],
+        "backup": [
+          "etc/hyperflux-next/bridge.json"
+        ],
+        "builddate": [
+          "1785611229"
+        ],
+        "conflict": [
+          "hyperflux-v2-linux-dkms",
+          "openrazer-driver-dkms"
+        ],
+        "depend": [
+          "dkms",
+          "glibc",
+          "libgcc",
+          "systemd"
+        ],
+        "license": [
+          "GPL-2.0-only",
+          "GPL-2.0-or-later",
+          "GPL-3.0-only"
+        ],
+        "packager": [
+          "HyperFlux Next Build System <build@hyperflux.invalid>"
+        ],
+        "pkgbase": [
+          "hyperflux-next"
+        ],
+        "pkgdesc": [
+          "HyperFlux bridge runtime and patched OpenRazer kernel transport"
+        ],
+        "pkgname": [
+          "hyperflux-next-linux"
+        ],
+        "pkgver": [
+          "0.0.0_dev.1-8"
+        ],
+        "provides": [
+          "openrazer-driver-dkms=3.12.4",
+          "hyperflux-openrazer-driver-abi=3.12.4"
+        ],
+        "replaces": [
+          "openrazer-driver-dkms"
+        ],
+        "size": [
+          "27221510"
+        ],
+        "url": [
+          "https://github.com/offalexjackson777-stack/hyperflux-next"
+        ],
+        "xdata": [
+          "pkgtype=split"
+        ]
+      }
+    },
+    {
+      "archive_name": "hyperflux-next-full-0.0.0_dev.1-8-x86_64.pkg.tar.zst",
+      "archive_sha256": "1cd840343323ea761e89bae175993c4c1547f0c2f4ae7a825e26ce1b308fa1d3",
+      "archive_size": 440510,
+      "component": "full",
+      "payload": [
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/lib",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/lib/openrgb",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/lib/openrgb/plugins",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/lib/openrgb/plugins/hyperflux-next-openrgb.so",
+          "sha256": "6836f38b1e7d0148a4a6f111ed9741a129f8ea76615afbc051cd26e0e48add6e",
+          "size": 2091616,
+          "type": "file",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/share",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/share/licenses",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "755",
+          "path": "usr/share/licenses/hyperflux-next-full",
+          "type": "dir",
+          "uid": 0
+        },
+        {
+          "gid": 0,
+          "mode": "644",
+          "path": "usr/share/licenses/hyperflux-next-full/LICENSE",
+          "sha256": "aaf135472f81c5b4a0dca9367e5bb5e9750032b5bebe5442b36e4c0a47430df3",
+          "size": 17337,
+          "type": "file",
+          "uid": 0
+        }
+      ],
+      "pkginfo": {
+        "arch": [
+          "x86_64"
+        ],
+        "builddate": [
+          "1785611229"
+        ],
+        "conflict": [
+          "hyperflux-next-openrgb=0.0.0_dev.1-2"
+        ],
+        "depend": [
+          "glibc",
+          "libgcc",
+          "hyperflux-next-linux=0.0.0_dev.1-8",
+          "qt5-base",
+          "hidapi",
+          "libstdc++"
+        ],
+        "license": [
+          "GPL-2.0-only",
+          "GPL-2.0-or-later",
+          "GPL-3.0-only"
+        ],
+        "optdepend": [
+          "openrgb: Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0rc3/plugin API 4 verified",
+          "openrazer-daemon: Stock OpenRazer service for compatible application access",
+          "python-openrazer: Official Python OpenRazer client API",
+          "polychromatic: Stock graphical OpenRazer frontend"
+        ],
+        "packager": [
+          "HyperFlux Next Build System <build@hyperflux.invalid>"
+        ],
+        "pkgbase": [
+          "hyperflux-next"
+        ],
+        "pkgdesc": [
+          "HyperFlux application adapters for optional stock applications"
+        ],
+        "pkgname": [
+          "hyperflux-next-full"
+        ],
+        "pkgver": [
+          "0.0.0_dev.1-8"
+        ],
+        "replaces": [
+          "hyperflux-next-openrgb=0.0.0_dev.1-2"
+        ],
+        "size": [
+          "2108953"
+        ],
+        "url": [
+          "https://github.com/offalexjackson777-stack/hyperflux-next"
+        ],
+        "xdata": [
+          "pkgtype=split"
+        ]
+      }
+    }
+  ],
+  "release": {
+    "package_release": 8,
+    "version": "0.0.0_dev.1"
+  },
+  "rust_root_exports": [
+    {
+      "import": "hfx_bridge",
+      "package": "hfx-bridge",
+      "path": "crates/hfx-bridge",
+      "symbols": [
+        "ActiveSubscription",
+        "ActorConnectionServeError",
+        "AppliedLifecycleObservation",
+        "AtomicFileCommitter",
+        "AuthorizedSession",
+        "BRIDGE_PERSISTENCE_SCHEMA",
+        "BackendRequestContext",
+        "BridgeActor",
+        "BridgeActorError",
+        "BridgeActorExit",
+        "BridgeActorHandle",
+        "BridgeActorLimits",
+        "BridgeActorStartError",
+        "BridgeActorTickFailure",
+        "BridgeConnectionId",
+        "BridgeDispatchResult",
+        "BridgePersistenceDocument",
+        "BridgeRpcBackend",
+        "BridgeSession",
+        "BridgeSessionConfig",
+        "ConnectionDispatcher",
+        "ConnectionServeError",
+        "ConnectionServeReport",
+        "CoreBridgeBackend",
+        "CoreBridgeBackendError",
+        "CoreBridgeConfig",
+        "DEFAULT_MAX_PERSISTED_RECEIVERS",
+        "DEFAULT_MAX_PERSISTENCE_BYTES",
+        "DEFAULT_MAX_PROFILE_BINDINGS",
+        "DEFAULT_MAX_SUBSCRIPTIONS",
+        "DesiredEffectReplayStatus",
+        "DisabledRestorationSource",
+        "DurableRestorationRuntime",
+        "FRAME_LENGTH_BYTES",
+        "FilePersistenceConfig",
+        "FilePersistenceError",
+        "FilePersistenceStore",
+        "FrameError",
+        "FrameIoStage",
+        "GenerationActivation",
+        "GenerationActivationOutcome",
+        "GenerationOrchestrationError",
+        "GenerationOrchestrator",
+        "GenerationQualification",
+        "KernelSessionIdentitySource",
+        "LifecycleObservation",
+        "LifecycleObservationError",
+        "LifecycleObservationKind",
+        "LifecycleObservationOrchestrator",
+        "LifecycleObservationOutcome",
+        "LinuxMonotonicClock",
+        "LinuxWallClock",
+        "NativeExchangeJournal",
+        "NativeExchangeJournalError",
+        "NativeExchangeRejection",
+        "NativeInvalidationJournalError",
+        "NativeRouteJournal",
+        "NativeRouteJournalError",
+        "NativeRouteProjectionError",
+        "PersistenceCommitter",
+        "PersistenceIoStage",
+        "ProfileBindingOutcome",
+        "ReceiverDisconnectBegan",
+        "ReceiverDisconnectCompleted",
+        "ReceiverDisconnectCompletionOutcome",
+        "ReceiverDisconnectObservation",
+        "ReceiverDisconnectOutcome",
+        "ReceiverGenerationObservation",
+        "ReceiverProfileBinding",
+        "ReceiverRestorationSnapshot",
+        "RestorationProjectionError",
+        "RestorationRuntime",
+        "RestorationSnapshotSource",
+        "RpcFailure",
+        "RuntimeIdentityError",
+        "RuntimeIdentityIssuer",
+        "RuntimeProfileAuthority",
+        "RuntimeProfileAuthorityError",
+        "RuntimeProfileView",
+        "SessionError",
+        "SessionIdentityError",
+        "SessionIdentitySource",
+        "SessionRegistry",
+        "SessionRegistryError",
+        "SnapshotProjectionError",
+        "SnapshotProjector",
+        "StableCaptureStatus",
+        "SubscriptionRegistry",
+        "SubscriptionRegistryError",
+        "project_native_routes",
+        "read_rpc_request",
+        "read_rpc_request_for_version",
+        "read_rpc_response",
+        "read_rpc_response_for_version",
+        "serve_actor_connection",
+        "serve_connection",
+        "write_rpc_request",
+        "write_rpc_request_for_version",
+        "write_rpc_response",
+        "write_rpc_response_for_version"
+      ]
+    },
+    {
+      "import": "hfx_core",
+      "package": "hfx-core",
+      "path": "crates/hfx-core",
+      "symbols": [
+        "BatteryLifecycle",
+        "BatteryValue",
+        "BoundedDiagnosticSink",
+        "BoundedEventLog",
+        "BoundedOutcomeJournal",
+        "BoundedTransactionQueue",
+        "CURRENT_PERSISTENCE_SCHEMA_VERSION",
+        "ChildIdentity",
+        "Clock",
+        "CompletedTransaction",
+        "DEFAULT_MAX_DEVICE_ENDPOINTS",
+        "DEFAULT_MAX_LIFECYCLE_DEVICES",
+        "DEFAULT_MAX_RECEIVERS",
+        "DequeueDecision",
+        "DesiredEffectError",
+        "DeviceLifecycle",
+        "DeviceStateAuthority",
+        "DiagnosticRegistry",
+        "DiagnosticRegistryError",
+        "DispatchResult",
+        "EffectCapture",
+        "EffectFrameKey",
+        "EffectReplay",
+        "EndpointIdentity",
+        "EndpointLifecycle",
+        "EndpointReturnLifecycle",
+        "EndpointReturnPolicy",
+        "EventDelivery",
+        "EventDraft",
+        "EventLogError",
+        "EventSink",
+        "LeaseDecision",
+        "LeaseManager",
+        "LeaseManagerError",
+        "LifecycleError",
+        "LifecycleFact",
+        "LifecycleLimits",
+        "MAX_RESTORE_RECORDS_PER_RECEIVER",
+        "MAX_RETURN_RETRY_ATTEMPTS",
+        "MAX_RETURN_RETRY_WINDOW_MS",
+        "MAX_STABLE_ENTRIES_PER_RECEIVER",
+        "NATIVE_REPORT_BYTES",
+        "NATIVE_ROUTE_DIGEST_BYTES",
+        "NativeEndpointLane",
+        "NativeTransportDispatch",
+        "NativeTransportOutcome",
+        "NativeTransportResult",
+        "ObservationStamp",
+        "OutcomeJournalError",
+        "OutcomeLookup",
+        "PersistedRestorePolicy",
+        "PersistedStableEntry",
+        "PersistedStableIntent",
+        "PersistenceCasOutcome",
+        "PersistenceOperation",
+        "PersistenceStore",
+        "ProfileRegistry",
+        "QualifiedDeviceProfile",
+        "QualifiedReceiverProfile",
+        "QueueDecision",
+        "QueuedTransaction",
+        "ReceiverGenerationLifecycle",
+        "ReceiverLifecycleMachine",
+        "ReceiverLifecycleRegistry",
+        "ReceiverRegistryError",
+        "ReceiverTransport",
+        "RequestDigestError",
+        "RequestReplay",
+        "RestorationAuthority",
+        "RestorationCoordinator",
+        "RestorationError",
+        "RestoreAdvanceResult",
+        "RestoreAttempt",
+        "RestoreCompletion",
+        "RestoreDeferred",
+        "RestoreDeliveryState",
+        "RestoreGenerationRetirement",
+        "RestoreInvalidation",
+        "RestorePlanResult",
+        "RestoreRecord",
+        "RestoreRecordChange",
+        "RestoreRecordStatus",
+        "RestoreTrigger",
+        "ReturnEpoch",
+        "ReturnEvidence",
+        "ReturnPhase",
+        "ReturnTransition",
+        "SessionAuthority",
+        "StableCommitOutcome",
+        "StableIntentCapture",
+        "StableIntentChange",
+        "StableIntentTombstone",
+        "StableLighting",
+        "SubmissionBinding",
+        "SubmissionResult",
+        "TransactionCoordinator",
+        "TransactionCoordinatorError",
+        "TransactionMachine",
+        "TransactionQueueError",
+        "TransactionTransitionError",
+        "TransportDispatch",
+        "TransportFailure",
+        "TransportFailureFacts",
+        "TransportReceipt",
+        "TransportReconciliation",
+        "TransportTerminal",
+        "VolatileEffectRegistry",
+        "WallClock",
+        "canonical_request_digest"
+      ]
+    },
+    {
+      "import": "hfx_daemon",
+      "package": "hfx-daemon",
+      "path": "crates/hfx-daemon",
+      "symbols": [
+        "BoundUnixListener",
+        "DAEMON_NONCE_BYTES",
+        "DeviceRestoreReadinessPhase",
+        "EndpointCandidate",
+        "EndpointDiscovery",
+        "EndpointDiscoveryError",
+        "EndpointName",
+        "LinuxRuntimeManager",
+        "PassiveDisposition",
+        "PassiveObservationTranslator",
+        "PassiveTranslation",
+        "PassiveTranslationError",
+        "ProductionBackend",
+        "ProductionBuildError",
+        "ProductionComposition",
+        "ProductionConfigError",
+        "ProductionRestoration",
+        "ProductionServiceError",
+        "ProductionServiceExit",
+        "ProductionServicePaths",
+        "ProductionTransport",
+        "ProductionWriter",
+        "ReceiverIdentityAuthority",
+        "ReceiverIdentityError",
+        "RestorationScheduleError",
+        "RestorationScheduler",
+        "RestorationTickReport",
+        "RuntimeTickError",
+        "RuntimeTickReport",
+        "SocketBindError",
+        "StructuredEventLogger",
+        "StructuredEventLoggerError",
+        "StructuredEventLoggerExit",
+        "StructuredEventSink",
+        "WriterAuthorityError",
+        "compose_production",
+        "derive_capability_digest",
+        "generate_daemon_nonce",
+        "load_production_config",
+        "run_production_service"
+      ]
+    },
+    {
+      "import": "hfx_domain",
+      "package": "hfx-domain",
+      "path": "crates/hfx-domain",
+      "symbols": [
+        "ActivityState",
+        "ApplyOutcome",
+        "AuthorizationEpoch",
+        "BatteryPercent",
+        "Brightness",
+        "CapabilityId",
+        "CarrierIndex",
+        "ClientId",
+        "ClientName",
+        "ColorChannel",
+        "ComponentVersion",
+        "ConnectionMode",
+        "ContactState",
+        "ControllerAvailability",
+        "CorrelationId",
+        "DeliveredFrameCount",
+        "DeviceApplicationState",
+        "DeviceKind",
+        "DeviceWriteReadiness",
+        "DispatchNonce",
+        "DocumentationPath",
+        "DomainValueError",
+        "DroppedEventCount",
+        "DurationMs",
+        "EndpointId",
+        "ErrorSeverity",
+        "EventBatchLimit",
+        "EventKind",
+        "EvidenceClaimId",
+        "EvidenceConfidence",
+        "EvidenceLevel",
+        "FindingId",
+        "FixtureSource",
+        "FrameCount",
+        "FrameIndex",
+        "FreshnessState",
+        "GenerationId",
+        "HumanMessage",
+        "IntentDigest",
+        "IntentRevision",
+        "InventoryAvailability",
+        "LeaseDurationMs",
+        "LeaseId",
+        "LeaseOutcome",
+        "LeaseState",
+        "LedCount",
+        "LedIndex",
+        "LogicalDeviceId",
+        "ModelName",
+        "MonotonicMs",
+        "NativeExchangeTimeoutMs",
+        "NativeProtocolFamily",
+        "NativeReportByteCount",
+        "NativeReportHex",
+        "NativeRouteAccess",
+        "NativeRouteEventKind",
+        "NativeRouteState",
+        "NativeRouteToken",
+        "NegotiationToken",
+        "PairingState",
+        "PersistenceRevision",
+        "PersistenceSchemaVersion",
+        "PowerState",
+        "PresenceState",
+        "PresentationKey",
+        "PrivacyClass",
+        "ProductId",
+        "ProfileDigest",
+        "ProfileId",
+        "ProfileKind",
+        "ProfileRevision",
+        "ProjectionRevision",
+        "ProtocolErrorKind",
+        "ProtocolFeatureId",
+        "ProtocolSessionId",
+        "ProtocolVersion",
+        "QueueAdmission",
+        "QueueCapacity",
+        "ReceiverId",
+        "ReceiverLifecycleState",
+        "ReceiverState",
+        "RequestDigest",
+        "RequestId",
+        "ResourceKind",
+        "RestoreAttemptNumber",
+        "RestoreClaimId",
+        "RestoreDeferReason",
+        "RestoreDeliveryState",
+        "RestoreId",
+        "RestoreInvalidationReason",
+        "RestoreRecordState",
+        "RestoreState",
+        "RestoreTriggerId",
+        "RestoreTriggerKind",
+        "ReturnEvidence",
+        "ReturnPhase",
+        "RouteKind",
+        "RouteState",
+        "ScenarioId",
+        "SequenceNumber",
+        "ServerInstanceId",
+        "SessionId",
+        "SideEffectCertainty",
+        "SleepState",
+        "SourceRevision",
+        "StableLightingMode",
+        "StreamEpoch",
+        "StreamId",
+        "SubscriptionId",
+        "SupportLevel",
+        "TelemetryAvailability",
+        "TransactionClass",
+        "TransactionId",
+        "TransactionState",
+        "TransportOutcome",
+        "TransportVariant",
+        "UpstreamId",
+        "UpstreamOwner",
+        "VendorId",
+        "WallClockUnixMs"
+      ]
+    },
+    {
+      "import": "hfx_errors",
+      "package": "hfx-errors",
+      "path": "crates/hfx-errors",
+      "symbols": [
+        "CatalogValueError",
+        "ERROR_CATALOG_SHA256",
+        "ERRORS",
+        "ErrorDescriptor",
+        "ErrorSeverity",
+        "LifecycleDescriptor",
+        "MAX_ERROR_COUNT",
+        "MAX_REMEDIATION_COUNT",
+        "MAX_SAFE_DETAIL_FIELDS",
+        "MAX_SAFE_DETAIL_LENGTH",
+        "PrivacyClass",
+        "REMEDIATIONS",
+        "RemediationDescriptor",
+        "SafeDetail",
+        "SafeDetailFieldDescriptor",
+        "SafeDetailValidationError",
+        "SafeDetailValue",
+        "error_by_code",
+        "remediation_by_id",
+        "validate_safe_details"
+      ]
+    },
+    {
+      "import": "hfx_integration_model",
+      "package": "hfx-integration-model",
+      "path": "crates/hfx-integration-model",
+      "symbols": [
+        "ADAPTERS",
+        "AdapterRecord",
+        "INTEGRATION_SOURCE_SHA256",
+        "NativeCommandPolicy",
+        "NativeCommandPolicyError",
+        "OPENRAZER_NATIVE_CAPABILITY_FIELD",
+        "OPENRAZER_NATIVE_CAPABILITY_MODULES",
+        "OPENRAZER_NATIVE_CAPABILITY_VALUE",
+        "OPENRAZER_NATIVE_DAEMON_EXECUTABLE_PATH",
+        "OPENRAZER_NATIVE_DEPLOYMENT_SHA256",
+        "OPENRAZER_NATIVE_DKMS_NAME",
+        "OPENRAZER_NATIVE_DKMS_VERSION",
+        "OPENRAZER_NATIVE_DRIVER_MODULES",
+        "OPENRAZER_NATIVE_DRIVER_PREFLIGHT_SERVICE_UNIT",
+        "OPENRAZER_NATIVE_RELAY_SERVICE_UNIT",
+        "OPENRAZER_NATIVE_UPSTREAM_COMMIT",
+        "OPENRAZER_NATIVE_VERIFIED_UPSTREAM_VERSION",
+        "OPENRAZER_NATIVE_VERSION_ARGUMENT",
+        "SourceValidatedCatalogError",
+        "SourceValidatedDevice",
+        "SourceValidatedDeviceCatalog",
+        "SourceValidatedOpenRazer",
+        "SourceValidatedOpenRgb",
+        "SourceValidatedPublicationIdentity",
+        "UPSTREAMS",
+        "UpstreamRecord",
+        "ViewModelError",
+        "adapter_by_id",
+        "load_native_command_policies",
+        "project_integration_view",
+        "upstream_by_id"
+      ]
+    },
+    {
+      "import": "hfx_kernel_transport",
+      "package": "hfx-kernel-transport",
+      "path": "crates/hfx-kernel-transport",
+      "symbols": [
+        "AlignedU64",
+        "EncodedTransaction",
+        "HFX_UAPI_ABI_VERSION",
+        "HFX_UAPI_DIGEST_BYTES",
+        "HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE",
+        "HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE",
+        "HFX_UAPI_ENDPOINT_SLOT_RECEIVER",
+        "HFX_UAPI_FRAME_KIND_USB_CLASS_SET_REPORT",
+        "HFX_UAPI_INFO_FLAG_DISCONNECTING",
+        "HFX_UAPI_INFO_FLAG_SESSION_ACTIVE",
+        "HFX_UAPI_INFO_FLAG_SUSPENDED",
+        "HFX_UAPI_INFO_FLAG_WRITER_OPEN",
+        "HFX_UAPI_IOCTL_BEGIN_SESSION",
+        "HFX_UAPI_IOCTL_END_SESSION",
+        "HFX_UAPI_IOCTL_GET_INFO",
+        "HFX_UAPI_IOCTL_GET_NATIVE_EXCHANGE_RESULT",
+        "HFX_UAPI_IOCTL_GET_TRANSACTION_RESULT",
+        "HFX_UAPI_IOCTL_MAGIC",
+        "HFX_UAPI_IOCTL_READ_OBSERVATIONS",
+        "HFX_UAPI_IOCTL_SUBMIT",
+        "HFX_UAPI_IOCTL_SUBMIT_NATIVE_EXCHANGE",
+        "HFX_UAPI_MAX_FRAME_BYTES",
+        "HFX_UAPI_MAX_FRAME_DELAY_US",
+        "HFX_UAPI_MAX_FRAMES",
+        "HFX_UAPI_MAX_OBSERVATIONS",
+        "HFX_UAPI_MAX_SESSION_NS",
+        "HFX_UAPI_MAX_TRANSACTION_DELAY_US",
+        "HFX_UAPI_NATIVE_ABI_VERSION",
+        "HFX_UAPI_NATIVE_CONTROL_TIMEOUT_NS",
+        "HFX_UAPI_NATIVE_DIGEST_BYTES",
+        "HFX_UAPI_NATIVE_EXCHANGE_CERTAINTY_MATCHED_RESPONSE",
+        "HFX_UAPI_NATIVE_EXCHANGE_CERTAINTY_MAY_HAVE_BEEN_SENT",
+        "HFX_UAPI_NATIVE_EXCHANGE_CERTAINTY_NOT_SENT",
+        "HFX_UAPI_NATIVE_MAX_RESULTS",
+        "HFX_UAPI_NATIVE_REPORT_BYTES",
+        "HFX_UAPI_NONCE_BYTES",
+        "HFX_UAPI_OBSERVATION_BATCH_FLAG_CURSOR_GAP",
+        "HFX_UAPI_OBSERVATION_CONFIDENCE_EXACT",
+        "HFX_UAPI_OBSERVATION_CONFIDENCE_OBSERVED",
+        "HFX_UAPI_OBSERVATION_CONFIDENCE_RAW",
+        "HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ACTIVITY",
+        "HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW",
+        "HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CHARGE_RAW",
+        "HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CONTACT_RAW",
+        "HFX_UAPI_OBSERVATION_KIND_ENDPOINT_PRODUCT_ID",
+        "HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ROUTE_RAW",
+        "HFX_UAPI_OBSERVATION_KIND_IDENTITY_CONFLICT",
+        "HFX_UAPI_OBSERVATION_KIND_RECEIVER_AVAILABLE",
+        "HFX_UAPI_OBSERVATION_KIND_RECEIVER_SUSPENDED",
+        "HFX_UAPI_OBSERVATION_SOURCE_HID_FEATURE",
+        "HFX_UAPI_OBSERVATION_SOURCE_HID_INPUT",
+        "HFX_UAPI_OBSERVATION_SOURCE_HID_PASSIVE",
+        "HFX_UAPI_OBSERVATION_SOURCE_POWER_MANAGEMENT",
+        "HFX_UAPI_RESULT_FLAG_AUTOMATIC_RETRY_SAFE",
+        "HFX_UAPI_RESULT_FLAG_WRITE_STARTED",
+        "HFX_UAPI_REVOKE_REASON_CLOSE",
+        "HFX_UAPI_REVOKE_REASON_DISCONNECT",
+        "HFX_UAPI_REVOKE_REASON_EXPLICIT",
+        "HFX_UAPI_REVOKE_REASON_GENERATION_CHANGE",
+        "HFX_UAPI_REVOKE_REASON_NONE",
+        "HFX_UAPI_REVOKE_REASON_SERVICE_LOSS",
+        "HFX_UAPI_REVOKE_REASON_SUSPEND",
+        "HFX_UAPI_REVOKE_REASON_TIMEOUT",
+        "HFX_UAPI_REVOKE_REASON_TRANSPORT_FAILURE",
+        "HFX_UAPI_TRANSPORT_STATUS_CONFLICT",
+        "HFX_UAPI_TRANSPORT_STATUS_EVICTED",
+        "HFX_UAPI_TRANSPORT_STATUS_FAILED",
+        "HFX_UAPI_TRANSPORT_STATUS_NOT_OBSERVED",
+        "HFX_UAPI_TRANSPORT_STATUS_RESERVED",
+        "HFX_UAPI_TRANSPORT_STATUS_REVOKED",
+        "HFX_UAPI_TRANSPORT_STATUS_STARTED",
+        "HFX_UAPI_TRANSPORT_STATUS_SUCCEEDED",
+        "HFX_UAPI_TRANSPORT_STATUS_UNAVAILABLE",
+        "HfxUapiBeginSession",
+        "HfxUapiEndSession",
+        "HfxUapiFrame",
+        "HfxUapiInfo",
+        "HfxUapiNativeExchangeResult",
+        "HfxUapiNativeExchangeSubmit",
+        "HfxUapiObservation",
+        "HfxUapiReadObservations",
+        "HfxUapiSubmit",
+        "HfxUapiTransactionResult",
+        "IoctlDescriptor",
+        "IoctlDirection",
+        "KernelEndpointFlags",
+        "KernelEndpointInfo",
+        "KernelIo",
+        "KernelIoError",
+        "KernelObservationBatch",
+        "KernelObservationReader",
+        "KernelReceiverTransport",
+        "KernelRouteError",
+        "KernelSessionMaterial",
+        "KernelTransportError",
+        "KernelTransportErrorKind",
+        "KernelTransportRouter",
+        "LinuxKernelIo",
+        "NativeEndpointLane",
+        "NativeExchangeCertainty",
+        "NativeExchangeOutcome",
+        "NativeExchangeRequest",
+        "RawKernelObservation",
+        "ReceiverFrameEncoderRegistry"
+      ]
+    },
+    {
+      "import": "hfx_ops",
+      "package": "hfx-ops",
+      "path": "crates/hfx-ops",
+      "symbols": [
+        "ActionConfirmation",
+        "Assessment",
+        "AssessmentFinding",
+        "AssessmentState",
+        "BatteryAvailability",
+        "BatteryView",
+        "BridgeHealth",
+        "BridgeIntegration",
+        "CapabilityAccess",
+        "CapabilityView",
+        "CommandOutput",
+        "CommandRunner",
+        "CompanionAction",
+        "CompanionState",
+        "CompanionView",
+        "ConfigMigrationError",
+        "ConfigMigrationOutcome",
+        "ConfigMigrationPlan",
+        "DeviceView",
+        "DriverActivationController",
+        "DriverActivationError",
+        "DriverActivationReceipt",
+        "DriverState",
+        "EvidenceArtifactState",
+        "EvidenceView",
+        "KernelModuleIdentitySnapshot",
+        "NativeObservationError",
+        "NativeObservationPrivacy",
+        "NativeRouteObservation",
+        "ObservationChoice",
+        "ObservationPrompt",
+        "OpenRazerAccessState",
+        "OpenRazerDriverProbe",
+        "OpenRazerDriverSnapshot",
+        "OpenRazerDriverState",
+        "OpenRazerPublishedDevice",
+        "OpenRazerRuntimeSnapshot",
+        "OpenRazerRuntimeState",
+        "OperationalConfigurationOutcome",
+        "PresenceView",
+        "ProbeError",
+        "ProfileBindingView",
+        "QUALIFICATION_API_VERSION",
+        "QUALIFICATION_ENDPOINT",
+        "QUALIFICATION_SCHEMA",
+        "QualificationConfigurationOutcome",
+        "QualificationGroup",
+        "QualificationPlan",
+        "QualificationServerConfig",
+        "QualificationServerError",
+        "QualificationStage",
+        "QualificationSystemView",
+        "QualificationView",
+        "RealCommandRunner",
+        "RealSystemProbe",
+        "ReceiverLifecycleView",
+        "ReceiverView",
+        "RiskLevel",
+        "RunnerAvailability",
+        "RunnerCapabilities",
+        "ServiceState",
+        "StageKind",
+        "StageResult",
+        "StageStatus",
+        "SupportBundle",
+        "SupportBundleError",
+        "SupportBundlePreview",
+        "SupportOutputDeclaration",
+        "SupportSideEffectDeclaration",
+        "SupportView",
+        "SystemController",
+        "SystemProbe",
+        "SystemSnapshot",
+        "VerdictState",
+        "assess_system",
+        "build_native_route_observations",
+        "build_qualification_view",
+        "build_support_bundle",
+        "confirm_configuration",
+        "default_native_observation_directory",
+        "enable_operational_configuration",
+        "enable_qualification_configuration",
+        "migrate_configuration",
+        "preview_support_bundle",
+        "qualification_generated_at",
+        "render_doctor_text",
+        "render_status_text",
+        "restore_qualification_configuration",
+        "serve_qualification_console",
+        "suggested_support_name",
+        "write_native_route_observations",
+        "write_support_bundle"
+      ]
+    },
+    {
+      "import": "hfx_profiles",
+      "package": "hfx-profiles",
+      "path": "crates/hfx-profiles",
+      "symbols": [
+        "CapabilityRecord",
+        "LifecyclePolicyRecord",
+        "LightingTopology",
+        "NativeByteRangeRecord",
+        "NativeByteValueRecord",
+        "NativeChecksumAlgorithm",
+        "NativeChecksumRecord",
+        "NativeDataSizeRecord",
+        "NativeExchangeRecord",
+        "NativeMatchRangeRecord",
+        "NativeReportFormatRecord",
+        "NativeReportValidationError",
+        "NativeRouteLane",
+        "NativeRouteRewrite",
+        "NativeRouteSelectorField",
+        "NativeRouteSelectorRecord",
+        "NativeTransactionIdRecord",
+        "PROFILE_SOURCE_SHA256",
+        "PROFILES",
+        "PassiveBatteryEncoding",
+        "PassiveEndpointLane",
+        "PassiveTelemetryRecord",
+        "PowerOffDepartureEvidence",
+        "PresentationRecord",
+        "ProfileCatalogError",
+        "ProfileRecord",
+        "QualificationMigrationRecord",
+        "RETURN_POLICIES",
+        "ReturnDeliverySemantics",
+        "ReturnEvidenceSource",
+        "ReturnPolicyQualification",
+        "ReturnPolicyRecord",
+        "ReturnPolicyStrategy",
+        "RuntimeCapability",
+        "RuntimeLightingTopology",
+        "RuntimePresentation",
+        "RuntimeProfile",
+        "RuntimeProfileCatalog",
+        "child_profile_by_product_id",
+        "native_response_matches",
+        "profile_by_id",
+        "receiver_profile_by_usb_id",
+        "restore_native_response",
+        "return_policy_by_id",
+        "route_native_request",
+        "validate_native_exchange_record",
+        "validate_native_request",
+        "validate_native_response"
+      ]
+    },
+    {
+      "import": "hfx_protocol",
+      "package": "hfx-protocol",
+      "path": "crates/hfx-protocol",
+      "symbols": [
+        "BatteryObservation",
+        "BridgeEvent",
+        "BridgeSnapshot",
+        "CURRENT_PROTOCOL_VERSION",
+        "ClientHello",
+        "ControllerActions",
+        "ControllerOwnership",
+        "ControllerView",
+        "DeviceInventoryView",
+        "DeviceProfileBinding",
+        "DiagnosticFinding",
+        "DiagnosticSnapshot",
+        "EmptyRequest",
+        "EndpointSnapshot",
+        "ErrorEnvelope",
+        "EventBatch",
+        "EventCursor",
+        "FRAME_LENGTH_BYTES",
+        "FrameError",
+        "FrameIoStage",
+        "GENERATED_CONTRACT",
+        "GENERATED_PROTOCOL_VERSIONS",
+        "IntegrationReceiverView",
+        "IntegrationView",
+        "LeaseConflict",
+        "LeaseGrant",
+        "LeaseRejection",
+        "LeaseRequest",
+        "LeaseResult",
+        "LightingFrame",
+        "LightingTopologyView",
+        "LogicalDeviceSnapshot",
+        "MAX_JSON_DEPTH",
+        "MAX_WIRE_MESSAGE_BYTES",
+        "MAXIMUM_PROTOCOL_VERSION",
+        "METHODS",
+        "MINIMUM_PROTOCOL_VERSION",
+        "MethodDescriptor",
+        "NativeExchangeMatchedResponse",
+        "NativeExchangeNotSent",
+        "NativeExchangeOutcome",
+        "NativeExchangeRequest",
+        "NativeExchangeResult",
+        "NativeExchangeUncertain",
+        "NativeRoute",
+        "NativeRouteEvent",
+        "NativeRouteEventBatch",
+        "NativeRouteInventory",
+        "NegotiationContext",
+        "NegotiationError",
+        "NegotiationRequestEnvelope",
+        "OtherOwnedController",
+        "PresentationView",
+        "ProfileBindingView",
+        "ProtocolContract",
+        "ProtocolValidationError",
+        "ProtocolVersionDescriptor",
+        "ProtocolWireError",
+        "ReceiverSnapshot",
+        "ReleaseLeaseRequest",
+        "RenewLeaseRequest",
+        "ResourceKey",
+        "ResourceOwnershipSnapshot",
+        "ReturnEpoch",
+        "RgbColor",
+        "RpcError",
+        "RpcRequest",
+        "RpcResponse",
+        "SUPPORTED_FEATURES",
+        "ServerHello",
+        "SessionRequestEnvelope",
+        "SnapshotValidationError",
+        "StableLightingIntent",
+        "SubscriptionRequest",
+        "SuccessEnvelope",
+        "TransactionLookup",
+        "TransactionProgress",
+        "TransactionRequest",
+        "TransactionResult",
+        "TransactionTerminal",
+        "TransactionUnavailable",
+        "UnownedController",
+        "ViewerOwnedController",
+        "decode_rpc_request",
+        "decode_rpc_request_for_version",
+        "decode_rpc_response",
+        "decode_rpc_response_for_version",
+        "encode_rpc_request",
+        "encode_rpc_request_for_version",
+        "encode_rpc_response",
+        "encode_rpc_response_for_version",
+        "negotiate",
+        "negotiate_with_contract",
+        "read_rpc_request",
+        "read_rpc_request_for_version",
+        "read_rpc_response",
+        "read_rpc_response_for_version",
+        "validate_bridge_snapshot",
+        "validate_lease_request",
+        "validate_rpc_request",
+        "validate_rpc_response",
+        "validate_rpc_response_for_version",
+        "validate_transaction",
+        "write_rpc_request",
+        "write_rpc_request_for_version",
+        "write_rpc_response",
+        "write_rpc_response_for_version"
+      ]
+    },
+    {
+      "import": "hfx_runtime",
+      "package": "hfx-runtime",
+      "path": "crates/hfx-runtime",
+      "symbols": [
+        "ACCEPT_POLL_INTERVAL_MS",
+        "ACTIVATION_UTILITY_PATH",
+        "ACTOR_RESPONSE_TIMEOUT_MS",
+        "BRIDGE_CLIENT_GROUP",
+        "BRIDGE_CONFIG_SCHEMA",
+        "BRIDGE_CONFIGURATION_DIRECTORY",
+        "BRIDGE_CONFIGURATION_FILE_PATH",
+        "BRIDGE_EXECUTABLE_PATH",
+        "BRIDGE_IDENTITY_SECRET_FILE_PATH",
+        "BRIDGE_KERNEL_ACCESS_GROUP",
+        "BRIDGE_RUNTIME_DIRECTORY",
+        "BRIDGE_SERVICE_ACCOUNT",
+        "BRIDGE_SERVICE_UNIT",
+        "BRIDGE_SOCKET_LOCK_PATH",
+        "BRIDGE_SOCKET_NAME",
+        "BRIDGE_SOCKET_PATH",
+        "BRIDGE_STATE_DIRECTORY",
+        "BRIDGE_STATE_FILE_PATH",
+        "BridgeConfig",
+        "BridgeConfigError",
+        "BridgeMode",
+        "COMMAND_QUEUE_CAPACITY",
+        "CONFIGURATION_MAX_BYTES",
+        "DESKTOP_BRIDGE_PROXY_SERVICE_UNIT",
+        "DESKTOP_BRIDGE_SOCKET_NAME",
+        "DESKTOP_BRIDGE_SOCKET_UNIT",
+        "DESKTOP_SOCKET_PROXY_PATH",
+        "DESKTOP_USER_RUNTIME_ROOT",
+        "DIAGNOSTIC_CAPACITY",
+        "DISCOVERY_INTERVAL_MS",
+        "DISPATCHES_PER_TICK",
+        "EVENT_CAPACITY",
+        "KERNEL_DEVICE_PREFIX",
+        "KERNEL_DKMS_NAME",
+        "KERNEL_MODULE_NAME",
+        "KERNEL_SESSION_DURATION_MS",
+        "KERNEL_SOURCE_DIRECTORY",
+        "LEASE_CAPACITY",
+        "LEASE_HISTORY_CAPACITY",
+        "LINUX_RUNTIME_SHA256",
+        "MAX_CONNECTIONS",
+        "MAX_RECEIVER_GENERATIONS",
+        "MAX_STRUCTURED_EVENTS",
+        "MAX_SUPPORT_BUNDLE_BYTES",
+        "MAX_TRANSACTION_OUTCOMES",
+        "OBSERVATION_BATCHES_PER_TICK",
+        "OPERATIONS_CLI_PATH",
+        "PACKAGE_NAME",
+        "PACKAGE_RELEASE",
+        "PRODUCT_DISPLAY_NAME",
+        "PRODUCT_VERSION",
+        "RESTORATION_AUTHORITY_WINDOW_MS",
+        "RESTORATION_CLAIMS_PER_TICK",
+        "RESTORATION_LEASE_DURATION_MS",
+        "RESTORATION_MAX_PENDING_CLAIMS",
+        "RESTORATION_MAX_PENDING_TRIGGERS",
+        "RESTORATION_MAX_PERSISTED_RECEIVERS",
+        "RESTORATION_MAX_PERSISTENCE_BYTES",
+        "RESTORATION_RETRY_INTERVAL_MS",
+        "RestorationConfig",
+        "STATUS_TIMEOUT_MS",
+        "SUBSCRIPTION_CAPACITY",
+        "SUPPORT_BUNDLE_PREFIX",
+        "SocketConfig",
+        "TRANSACTION_CAPACITY"
+      ]
+    },
+    {
+      "import": "hfx_sdk",
+      "package": "hfx-sdk",
+      "path": "crates/hfx-sdk",
+      "symbols": [
+        "EventSubscription",
+        "FramedIoChannel",
+        "HyperFluxClient",
+        "KernelRequestIdentitySource",
+        "NativeExchangeSubmission",
+        "RequestIdentityError",
+        "RequestIdentitySource",
+        "SdkClientConfig",
+        "SdkError",
+        "SdkMethod",
+        "TransactionSubmission"
+      ]
+    },
+    {
+      "import": "hfx_sim",
+      "package": "hfx-sim",
+      "path": "crates/hfx-sim",
+      "symbols": [
+        "BatteryState",
+        "ClockError",
+        "CrashCheckpoint",
+        "CrashExecution",
+        "DeviceSnapshot",
+        "EvidenceCell",
+        "InitialChild",
+        "InitialState",
+        "MAX_EVENTS",
+        "MAX_REPLAY_BYTES",
+        "MAX_SCENARIO_TIME_MS",
+        "MalformedDimension",
+        "MalformedReason",
+        "Provenance",
+        "ReplayMetrics",
+        "ReplayResult",
+        "RestoreSnapshot",
+        "SHADOW_FIXTURE_SCHEMA",
+        "SHADOW_RESULT_SCHEMA",
+        "Scenario",
+        "ScheduledEvent",
+        "ShadowAuthority",
+        "ShadowCheckpointComparison",
+        "ShadowComparisonResult",
+        "ShadowDifference",
+        "ShadowDomain",
+        "ShadowDomainSummary",
+        "ShadowError",
+        "ShadowExecutionBoundary",
+        "ShadowFixture",
+        "ShadowSideEffects",
+        "ShadowValueComparison",
+        "SimDeviceProfile",
+        "SimJournalState",
+        "SimPersistenceError",
+        "SimPersistenceStore",
+        "SimReceiverTransport",
+        "SimRestorationConfig",
+        "SimRestorationError",
+        "SimRestorationHarness",
+        "SimRetryEnvelope",
+        "SimReturnLifecycle",
+        "SimReturnLifecycleError",
+        "SimTransportConfigError",
+        "SimTransportCrashPoint",
+        "SimTransportError",
+        "SimTransportErrorKind",
+        "SimTransportFailurePlan",
+        "SimTransportJournalRecord",
+        "SimTransportMetrics",
+        "Simulator",
+        "SimulatorError",
+        "SimulatorEvent",
+        "StateSnapshot",
+        "TraceRecord",
+        "VirtualClock",
+        "parse_replay",
+        "parse_shadow_fixture",
+        "run_replay",
+        "run_shadow_comparison"
+      ]
+    },
+    {
+      "import": "hfx_uhid_relay",
+      "package": "hfx-uhid-relay",
+      "path": "crates/hfx-uhid-relay",
+      "symbols": [
+        "BridgeExchange",
+        "BridgeExchangeFailure",
+        "BridgeExchangeResult",
+        "DirectRouteScanError",
+        "DirectRouteScanner",
+        "DirectRouteSnapshot",
+        "DirectRouteTransition",
+        "EndpointError",
+        "FEATURE_REPORT_BYTES",
+        "FeatureEndpoint",
+        "FeatureEndpointState",
+        "HYPERFLUX_PHYS_PREFIX",
+        "NATIVE_QUALIFICATION_APPROVAL",
+        "NativeBridge",
+        "NativeBridgeError",
+        "NativeCommandPolicy",
+        "NativeQualificationProbe",
+        "NativeRouteCatalog",
+        "NativeRouteCatalogError",
+        "NativeRouteMonitor",
+        "NativeRouteRecord",
+        "PublicationFailureDisposition",
+        "PublicationIdentityFailure",
+        "QualificationRunConfig",
+        "QualificationRunPaths",
+        "QualificationRuntimeError",
+        "RelayPaths",
+        "RelayRuntimeError",
+        "RouteAction",
+        "RouteIdentity",
+        "RouteSupervisor",
+        "RouteSupervisorError",
+        "SerialFingerprint",
+        "SerialQueryError",
+        "SerialQuerySpec",
+        "TRANSPORT_ENVELOPE_MAGIC",
+        "TransportEnvelopeKind",
+        "UHID_EVENT_BYTES",
+        "UhidCodecError",
+        "UhidEvent",
+        "UhidReply",
+        "VirtualDeviceSpec",
+        "decode_transport_envelope",
+        "encode_transport_envelope",
+        "fingerprint_serial_bytes",
+        "run_qualification",
+        "run_relay"
+      ]
+    }
+  ],
+  "schema": "hyperflux-reconstruction-interface-baseline-v1",
+  "stock_application_boundary": {
+    "forbidden_payload_prefixes": [
+      "usr/bin/openrgb",
+      "usr/bin/openrazer-daemon",
+      "usr/bin/polychromatic",
+      "usr/lib/python",
+      "usr/share/openrgb",
+      "usr/share/openrazer",
+      "usr/share/polychromatic"
+    ],
+    "optional_packages": [
+      "openrgb",
+      "openrazer-daemon",
+      "python-openrazer",
+      "polychromatic"
+    ]
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/documentation-audit-v1.json",
+  "title": "HyperFlux documentation and render audit",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "source_revision", "inputs", "render", "visual_review", "verification"],
+  "properties": {
+    "$schema": {"const": "../schemas/documentation-audit.schema.json"},
+    "schema": {"const": "hyperflux-documentation-audit-v1"},
+    "source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["catalog_sha256", "policy_sha256", "renderer_sha256", "journey_source_coverage_sha256", "rendered_documents_sha256"],
+      "properties": {
+        "catalog_sha256": {"$ref": "#/$defs/digest"},
+        "policy_sha256": {"$ref": "#/$defs/digest"},
+        "renderer_sha256": {"$ref": "#/$defs/digest"},
+        "journey_source_coverage_sha256": {"$ref": "#/$defs/digest"},
+        "rendered_documents_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "render": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "result_sha256", "document_count", "check_count", "screenshot_count", "issue_count", "outbound_network_requests", "external_image_placeholders", "viewport_widths", "themes", "screenshot_manifest_sha256", "runtime"],
+      "properties": {
+        "status": {"const": "passed"},
+        "result_sha256": {"$ref": "#/$defs/digest"},
+        "document_count": {"type": "integer", "minimum": 1, "maximum": 64},
+        "check_count": {"type": "integer", "minimum": 6, "maximum": 384},
+        "screenshot_count": {"const": 36},
+        "issue_count": {"const": 0},
+        "outbound_network_requests": {"const": 0},
+        "external_image_placeholders": {"type": "integer", "minimum": 0, "maximum": 64},
+        "viewport_widths": {"const": [375, 768, 1280]},
+        "themes": {"const": ["light", "dark"]},
+        "screenshot_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "runtime": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["node", "playwright", "marked", "chromium"],
+          "properties": {
+            "node": {"$ref": "#/$defs/version"},
+            "playwright": {"$ref": "#/$defs/version"},
+            "marked": {"$ref": "#/$defs/version"},
+            "chromium": {"$ref": "#/$defs/version"}
+          }
+        }
+      }
+    },
+    "visual_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reviewed_screenshots"],
+      "properties": {
+        "status": {"const": "passed"},
+        "reviewed_screenshots": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {"$ref": "#/$defs/screenshot"}
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fast_run_id", "fast_evidence_sha256", "fast_result_sha256", "full_run_id", "full_source_revision", "full_evidence_sha256", "full_result_sha256", "second_generation_identical", "links", "privacy", "release_gate_changes"],
+      "properties": {
+        "fast_run_id": {"type": "string", "pattern": "^hfxv-[0-9a-f]{20}$"},
+        "fast_evidence_sha256": {"$ref": "#/$defs/digest"},
+        "fast_result_sha256": {"$ref": "#/$defs/digest"},
+        "full_run_id": {"type": "string", "pattern": "^hfxv-[0-9a-f]{20}$"},
+        "full_source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "full_evidence_sha256": {"$ref": "#/$defs/digest"},
+        "full_result_sha256": {"$ref": "#/$defs/digest"},
+        "second_generation_identical": {"const": true},
+        "links": {"const": "passed"},
+        "privacy": {"const": "passed"},
+        "release_gate_changes": {"const": []}
+      }
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "version": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9.+-]+$"},
+    "screenshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "sha256"],
+      "properties": {
+        "file": {"type": "string", "pattern": "^screenshots/[A-Za-z0-9_-]+--(?:375|768|1280)--(?:light|dark)\\.png$"},
+        "sha256": {"$ref": "#/$defs/digest"}
+      }
+    }
+  }
+}

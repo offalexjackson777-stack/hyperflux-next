@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/rust-coverage-v1.json",
+  "title": "HyperFlux Rust coverage baseline and ratchet",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "tool", "command", "baseline", "metrics"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-rust-coverage-v1"},
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "rust_toolchain", "network_access"],
+      "properties": {
+        "name": {"const": "cargo-llvm-cov"},
+        "version": {"const": "0.8.7"},
+        "rust_toolchain": {"const": "1.95.0-x86_64-unknown-linux-gnu"},
+        "network_access": {"const": false}
+      }
+    },
+    "command": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": {"type": "string", "minLength": 1, "maxLength": 128}
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_revision", "report_sha256", "report_format"],
+      "properties": {
+        "source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "report_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "report_format": {"const": "llvm.coverage.json.export-3.1.0"}
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lines", "functions", "regions"],
+      "properties": {
+        "lines": {"$ref": "#/$defs/metric"},
+        "functions": {"$ref": "#/$defs/metric"},
+        "regions": {"$ref": "#/$defs/metric"}
+      }
+    }
+  },
+  "$defs": {
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline_count",
+        "baseline_covered",
+        "baseline_notcovered",
+        "minimum_covered",
+        "maximum_notcovered"
+      ],
+      "properties": {
+        "baseline_count": {"type": "integer", "minimum": 1},
+        "baseline_covered": {"type": "integer", "minimum": 1},
+        "baseline_notcovered": {"type": "integer", "minimum": 0},
+        "minimum_covered": {"type": "integer", "minimum": 1},
+        "maximum_notcovered": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

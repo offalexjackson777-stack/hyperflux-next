@@ -1,0 +1,29 @@
+{
+  "$schema": "../schemas/journey-pipeline.schema.json",
+  "schema": "hyperflux-journey-pipeline-v2",
+  "topic_terms": [
+    "hyperflux",
+    "openrazer",
+    "openrgb",
+    "polychromatic",
+    "receiver",
+    "uhid",
+    "hid_hyperflux",
+    "1532:00cf",
+    "1532:00cd",
+    "1532:0296"
+  ],
+  "private_overlay_sha256": "f53f0ea9088dc4c84486b36251359fb6f0d5cdd7d7d0721d8ed6c998a3f9b9f8",
+  "context_messages_before": 0,
+  "context_messages_after": 8,
+  "maximum_line_bytes": 16777216,
+  "maximum_narrative_bytes": 262144,
+  "eras": [
+    {"id": "receiver-problem", "title": "The Receiver Problem", "order": 1},
+    {"id": "transport-discovery", "title": "Learning The Transport", "order": 2},
+    {"id": "bridge-foundation", "title": "From Prototype To Bridge", "order": 3},
+    {"id": "application-compatibility", "title": "Application Compatibility", "order": 4},
+    {"id": "evidence-recovery", "title": "Evidence And Recovery", "order": 5},
+    {"id": "reconstruction-2-0", "title": "Reconstructing 2.0", "order": 6}
+  ]
+}

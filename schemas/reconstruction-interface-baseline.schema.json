@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/reconstruction-interface-baseline.schema.json",
+  "title": "HyperFlux reconstruction interface baseline",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schema",
+    "behavioral_reference_commit",
+    "characterization_commit",
+    "release",
+    "packages",
+    "rust_root_exports",
+    "generated_outputs",
+    "stock_application_boundary"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-reconstruction-interface-baseline-v1"},
+    "behavioral_reference_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "characterization_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "release": {
+      "type": "object",
+      "required": ["version", "package_release"],
+      "additionalProperties": false,
+      "properties": {
+        "version": {"const": "0.0.0_dev.1"},
+        "package_release": {"const": 8}
+      }
+    },
+    "packages": {"type": "array", "minItems": 2, "maxItems": 2},
+    "rust_root_exports": {"type": "array", "minItems": 1},
+    "generated_outputs": {"type": "array", "minItems": 1},
+    "stock_application_boundary": {"type": "object"}
+  }
+}

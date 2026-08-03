@@ -1,0 +1,1 @@
+{"method":"negotiate","request":{"request_id":"request-1","params":{"client_id":"client-1","client_name":"OpenRGB","minimum_version":6,"maximum_version":6,"required_features":["return-lifecycle-projection"],"optional_features":[]}}}

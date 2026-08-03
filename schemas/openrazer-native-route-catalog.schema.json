@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/openrazer-native-route-catalog-v1.json",
+  "title": "Source-bound OpenRazer native-route catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "upstream_commit", "metadata_sha256", "transport", "routes"],
+  "properties": {
+    "$schema": {"const": "../../../schemas/openrazer-native-route-catalog.schema.json"},
+    "schema": {"const": "hyperflux-openrazer-native-route-catalog-v1"},
+    "upstream_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "metadata_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "transport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol_family", "report_bytes", "phys_prefix", "descriptor_hex", "descriptor_sha256"],
+      "properties": {
+        "protocol_family": {"const": "razer-feature-report-v1"},
+        "report_bytes": {"const": 90},
+        "phys_prefix": {"const": "hyperflux-next/native/v1/"},
+        "descriptor_hex": {"type": "string", "pattern": "^[0-9a-f]+$", "minLength": 2, "maxLength": 8192},
+        "descriptor_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "routes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1024,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["profile_id", "vendor_id", "wireless_product_id", "model_name", "device_kind", "driver_family", "source", "direct_data_product_ids", "event_file_regex"],
+        "properties": {
+          "profile_id": {"type": "string", "minLength": 1, "maxLength": 128},
+          "vendor_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+          "wireless_product_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+          "model_name": {"type": "string", "minLength": 1, "maxLength": 127},
+          "device_kind": {"enum": ["mouse", "keyboard"]},
+          "driver_family": {"enum": ["razermouse", "razerkbd"]},
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "class_name", "sha256"],
+            "properties": {
+              "path": {"type": "string", "minLength": 1, "maxLength": 256},
+              "class_name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+              "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+            }
+          },
+          "direct_data_product_ids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "uniqueItems": true,
+            "items": {"type": "integer", "minimum": 0, "maximum": 65535}
+          },
+          "event_file_regex": {"type": "string", "minLength": 1, "maxLength": 256}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/kernel-uapi-v1.json",
+  "title": "HyperFlux kernel UAPI catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "abi_version", "ioctl_magic", "limits", "enums", "structs", "ioctls"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-kernel-uapi-v1"},
+    "abi_version": {"type": "integer", "minimum": 1, "maximum": 4294967295},
+    "ioctl_magic": {"type": "integer", "minimum": 1, "maximum": 255},
+    "limits": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": "integer", "minimum": 1, "maximum": 18446744073709551615}
+    },
+    "enums": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "values"],
+        "properties": {
+          "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+          "values": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "value"],
+              "properties": {
+                "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+                "value": {"type": "integer", "minimum": 0, "maximum": 4294967295}
+              }
+            }
+          }
+        }
+      }
+    },
+    "structs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "fields"],
+        "properties": {
+          "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "type"],
+              "properties": {
+                "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+                "type": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+                "count": {
+                  "oneOf": [
+                    {"type": "integer", "minimum": 1, "maximum": 4096},
+                    {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ioctls": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "number", "direction", "struct"],
+        "properties": {
+          "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+          "number": {"type": "integer", "minimum": 0, "maximum": 255},
+          "direction": {"enum": ["read", "write", "read_write"]},
+          "struct": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}
+        }
+      }
+    }
+  }
+}

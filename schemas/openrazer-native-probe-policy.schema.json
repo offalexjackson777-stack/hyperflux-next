@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/openrazer-native-probe-policy-v1.json",
+  "title": "OpenRazer native read-only qualification probe policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "upstream_id",
+    "source_commit",
+    "report_size",
+    "busy_retry",
+    "bindings"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-openrazer-native-probe-policy-v1"},
+    "upstream_id": {"const": "openrazer"},
+    "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "report_size": {"const": 90},
+    "busy_retry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "maximum_attempts"],
+      "properties": {
+        "status": {"const": 1},
+        "maximum_attempts": {"type": "integer", "minimum": 1, "maximum": 8}
+      }
+    },
+    "bindings": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "method",
+          "device_kinds",
+          "driver_attribute",
+          "request_owner",
+          "request_expression",
+          "response_summary",
+          "comparison"
+        ],
+        "properties": {
+          "method": {"$ref": "#/$defs/method"},
+          "device_kinds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "uniqueItems": true,
+            "items": {"enum": ["keyboard", "mouse"]}
+          },
+          "driver_attribute": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,127}$"},
+          "request_owner": {"type": "string", "pattern": "^razer_attr_read_[a-z0-9_]+$"},
+          "request_expression": {
+            "type": "string",
+            "pattern": "^(?:razer_chroma_[a-z0-9_]+|get_razer_report)\\([A-Z0-9_x, ]*\\)$"
+          },
+          "response_summary": {
+            "enum": [
+              "battery-u8",
+              "be16-seconds",
+              "boolean-u8",
+              "device-mode",
+              "dpi-stages",
+              "dpi-xy",
+              "firmware-version",
+              "keyboard-layout",
+              "led-effect",
+              "led-state",
+              "polling-rate-code",
+              "redacted-serial-equality",
+              "u8-value"
+            ]
+          },
+          "comparison": {
+            "enum": ["exact-semantic", "domain-valid", "redacted-equality"]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "method": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,127}$"}
+  }
+}

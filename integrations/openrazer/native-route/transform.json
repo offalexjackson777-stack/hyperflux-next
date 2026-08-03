@@ -1,0 +1,55 @@
+{
+  "$schema": "../../../schemas/openrazer-native-transform.schema.json",
+  "schema": "hyperflux-openrazer-native-transform-v1",
+  "upstream": {
+    "id": "openrazer",
+    "repository": "https://github.com/openrazer/openrazer.git",
+    "commit": "1ef8a91712906a89fd332a2ed62bbd105315d6d1"
+  },
+  "patch": {
+    "path": "patches/0001-Add-trusted-HyperFlux-native-HID-transport.patch",
+    "sha256": "7e314458ba84e5574d86efaac28838fbfbf14871f763c190c341f0af4b852b88"
+  },
+  "files": [
+    {
+      "path": "driver/razercommon.c",
+      "source_sha256": "635f9403432150c055f446b38413218771476df7f70e74ae432bba43a089d14b",
+      "transformed_sha256": "ffaa400ceccad65a560aec1f0e16913303cfd3e7e5be0fb303716f461a0c0624"
+    },
+    {
+      "path": "driver/razercommon.h",
+      "source_sha256": "193a0e3c98621cd726659319d6cd25328877f832bcd24d7eef95e3b0b5fa2b60",
+      "transformed_sha256": "e2ef3b6f59983774aa672c5ca15f7c4ff8e0f54bb8ff71bbdc2d8f48e0efcd73"
+    },
+    {
+      "path": "driver/razerkbd_driver.c",
+      "source_sha256": "ac68e071cf135ce2f4e64fdbc698a6dc20c711d3465124182af040460fe11782",
+      "transformed_sha256": "44cdfb708d0bd45055ce5e868b66074cc9caed7532580f2fb3849217516b2652"
+    },
+    {
+      "path": "driver/razerkbd_driver.h",
+      "source_sha256": "55192a7eca55a6eeedf7b692f61a41dd9c5636548d7b7b3975e743870fe79f9c",
+      "transformed_sha256": "db0a98b84fcb6173d9982bd514a09c02596ae3a639ae0da966169f5644ea16c5"
+    },
+    {
+      "path": "driver/razermouse_driver.c",
+      "source_sha256": "bd00162b46710394b28f34f66a37dbfdeeccc161acdc63f8afea362c2521f01a",
+      "transformed_sha256": "58dc8dfe662ce48acefad27eac734b142ad70851137a9d53828c436af0e1cb1e"
+    },
+    {
+      "path": "driver/razermouse_driver.h",
+      "source_sha256": "fb58a57422672a085d77c57b11ca39b1b58d01d6474248c1317fd3d9de0b8ab4",
+      "transformed_sha256": "bcd7d6bc7ca6122d5d0da680b32b7e8b078b44d64cb4d4b64894860226b206f1"
+    },
+    {
+      "path": "install_files/udev/99-razer.rules",
+      "source_sha256": "5c18d8c8353cab82cf3d162cfb99100af3208ebca9a528d6229228f2f8684a84",
+      "transformed_sha256": "e30dd8f41033b4a050716fefcdeed833eff081206df6ef90e4f673a10adb6d3d"
+    },
+    {
+      "path": "install_files/udev/razer_mount",
+      "source_sha256": "4ea2cb22653e9ac1924533228704767d91210ec2a7643f5d4955671e31130a21",
+      "transformed_sha256": "4a46f0a70945ccdb9863db6b8cbd62b5d68b90e180554d23f791950f5327e02a"
+    }
+  ]
+}

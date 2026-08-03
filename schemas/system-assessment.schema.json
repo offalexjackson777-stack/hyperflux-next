@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/system-assessment-v2.json",
+  "title": "HyperFlux Core and Full system assessment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "state",
+    "package_version",
+    "components",
+    "driver",
+    "bridge_ready",
+    "receiver_generations",
+    "qualified_generations",
+    "working",
+    "findings",
+    "next_action"
+  ],
+  "properties": {
+    "schema": {"const": "hyperflux-system-assessment-v2"},
+    "state": {"enum": ["ready", "needs-attention"]},
+    "package_version": {"type": "string", "minLength": 1, "maxLength": 64},
+    "components": {
+      "type": "array",
+      "prefixItems": [
+        {"$ref": "#/$defs/coreComponent"},
+        {"$ref": "#/$defs/fullComponent"}
+      ],
+      "items": false,
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "driver": {"enum": ["installed-idle", "active", "activation-pending", "unavailable"]},
+    "bridge_ready": {"type": "boolean"},
+    "receiver_generations": {"type": "integer", "minimum": 0, "maximum": 16},
+    "qualified_generations": {"type": "integer", "minimum": 0, "maximum": 16},
+    "working": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {"type": "string", "minLength": 1, "maxLength": 256}
+    },
+    "findings": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {"$ref": "#/$defs/finding"}
+    },
+    "next_action": {"type": "string", "minLength": 1, "maxLength": 512}
+  },
+  "$defs": {
+    "componentState": {"enum": ["ready", "optional-not-installed", "needs-attention"]},
+    "coreComponent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component", "state", "required", "installed", "version"],
+      "properties": {
+        "component": {"const": "core"},
+        "state": {"enum": ["ready", "needs-attention"]},
+        "required": {"const": true},
+        "installed": {"const": true},
+        "version": {"type": "string", "minLength": 1, "maxLength": 64}
+      }
+    },
+    "fullComponent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component", "state", "required", "installed", "version"],
+      "properties": {
+        "component": {"const": "full"},
+        "state": {"$ref": "#/$defs/componentState"},
+        "required": {"const": false},
+        "installed": {"type": "boolean"},
+        "version": {"type": ["string", "null"], "minLength": 1, "maxLength": 64}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"state": {"const": "optional-not-installed"}}},
+          "then": {"properties": {"installed": {"const": false}, "version": {"const": null}}},
+          "else": {"properties": {"installed": {"const": true}}}
+        }
+      ]
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "severity",
+        "technical_cause",
+        "user_explanation",
+        "safe_action",
+        "verification",
+        "documentation",
+        "details"
+      ],
+      "properties": {
+        "code": {"type": "string", "pattern": "^HFX-[A-Z]+-[0-9]{3}$"},
+        "severity": {"enum": ["info", "warning", "error", "critical"]},
+        "technical_cause": {"type": "string", "minLength": 1, "maxLength": 1024},
+        "user_explanation": {"type": "string", "minLength": 1, "maxLength": 1024},
+        "safe_action": {"type": "string", "minLength": 1, "maxLength": 1024},
+        "verification": {"type": "string", "minLength": 1, "maxLength": 1024},
+        "documentation": {"type": "string", "minLength": 1, "maxLength": 256},
+        "details": {
+          "type": "object",
+          "maxProperties": 32,
+          "additionalProperties": {"type": "string", "maxLength": 256}
+        }
+      }
+    }
+  }
+}

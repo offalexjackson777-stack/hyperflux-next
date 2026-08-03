@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/performance-budgets-v1.json",
+  "title": "HyperFlux performance budgets",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "metrics"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-performance-budgets-v1"},
+    "metrics": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {"$ref": "#/$defs/metric"}
+    }
+  },
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "measurement_kind",
+        "source",
+        "selector",
+        "unit",
+        "maximum",
+        "status",
+        "sample_count",
+        "warmup_count",
+        "release_blocking",
+        "rationale"
+      ],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,95}$"},
+        "title": {"type": "string", "minLength": 1, "maxLength": 160},
+        "measurement_kind": {
+          "enum": ["json-pointer", "artifact-size", "staged-payload-size", "physical"]
+        },
+        "source": {"$ref": "#/$defs/path"},
+        "selector": {"type": "string", "minLength": 1, "maxLength": 256},
+        "unit": {"enum": ["bytes", "count", "milliseconds", "percent"]},
+        "maximum": {"type": "number", "exclusiveMinimum": 0},
+        "status": {"enum": ["enforced-software", "blocked-by-physical-evidence"]},
+        "sample_count": {"type": "integer", "minimum": 1, "maximum": 10000},
+        "warmup_count": {"type": "integer", "minimum": 0, "maximum": 1000},
+        "release_blocking": {"type": "boolean"},
+        "rationale": {"type": "string", "minLength": 1, "maxLength": 300}
+      }
+    }
+  }
+}

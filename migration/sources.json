@@ -1,0 +1,60 @@
+{
+  "$schema": "../schemas/migration-sources.schema.json",
+  "schema": "hyperflux-migration-sources-v1",
+  "sources": [
+    {
+      "id": "design-book",
+      "kind": "imported-document",
+      "role": "governing product design",
+      "imported_path": "docs/architecture/design-book.md",
+      "sha256": "22d094cd3e58a24a5eff30c93e0e3820bb11598aca8a6865fe051e8b1c5f7c92"
+    },
+    {
+      "id": "device-knowledge-research",
+      "kind": "imported-document",
+      "role": "reviewed product capabilities, contradictions, and compatibility boundaries",
+      "imported_path": "knowledge/reviewed-facts.json",
+      "sha256": "9abb50aae93723a32e1e7304f858b394d727bd3a0f43f2064941bc7c69021130"
+    },
+    {
+      "id": "native-parity-basilisk-v3-pro-35k-00cd-ceb4f91",
+      "kind": "imported-document",
+      "role": "source-bound direct-to-receiver native Feature-report parity for the exact mouse profile",
+      "imported_path": "evidence/native-transport/basilisk-v3-pro-35k-00cd-read-parity-20260727.md",
+      "sha256": "48f63aa65fecf0b337513bd03b14975290f17c41c5768d1a04ab05d39f301419"
+    },
+    {
+      "id": "native-parity-deathstalker-v2-pro-tkl-0296-ceb4f91",
+      "kind": "imported-document",
+      "role": "source-bound direct-to-receiver native Feature-report parity for the exact keyboard profile",
+      "imported_path": "evidence/native-transport/deathstalker-v2-pro-tkl-0296-read-parity-20260727.md",
+      "sha256": "db7e016a2b766f25a74db73f2e7fcffbbd68724d66be8499513b679aaefee19c"
+    },
+    {
+      "id": "reverse-engineering-archive",
+      "kind": "git",
+      "role": "protocol research, captures, experiments, and historical failures",
+      "remote": "https://github.com/offalexjackson777-stack/hyperflux-v2-reverse-engineering.git",
+      "commit": "fc6045ab",
+      "inventory": "migration/inventory/reverse-engineering-archive.json",
+      "inventory_representation": "sanitized-public-projection",
+      "private_inventory_sha256": "bf4382c6ad738458a45473ba7c9462bcc8f0e08a0947f420ece4a4da0745d1ad"
+    },
+    {
+      "id": "engineering-laboratory",
+      "kind": "git",
+      "role": "current evidence-backed engineering implementation and watched proof history",
+      "remote": "https://github.com/offalexjackson777-stack/hyperflux-v2-linux.git",
+      "commit": "5ec780ac79e11346567a2055caec76e25e2ceca4",
+      "inventory": "migration/inventory/engineering-laboratory.json"
+    },
+    {
+      "id": "engineering-protected-main",
+      "kind": "git",
+      "role": "published engineering baseline used to distinguish unmerged laboratory work",
+      "remote": "https://github.com/offalexjackson777-stack/hyperflux-v2-linux.git",
+      "commit": "84f48166f282289bfff26986276a31ec07f99a5e",
+      "inventory": "migration/inventory/engineering-protected-main.json"
+    }
+  ]
+}

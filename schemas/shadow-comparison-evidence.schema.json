@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/shadow-comparison-evidence-v1.json",
+  "title": "Source-bound HyperFlux shadow comparison evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "run_id",
+    "comparison",
+    "comparison_sha256",
+    "comparison_status",
+    "source",
+    "materials",
+    "hardware",
+    "publication_authorized"
+  ],
+  "properties": {
+    "$schema": {"const": "https://hyperflux.dev/schemas/shadow-comparison-evidence-v1.json"},
+    "schema": {"const": "hyperflux-shadow-comparison-evidence-v1"},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 192},
+    "comparison": {"const": "comparison.json"},
+    "comparison_sha256": {"$ref": "#/$defs/sha256"},
+    "comparison_status": {"enum": ["matched", "diverged"]},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "commit_epoch", "worktree", "worktree_sha256"],
+      "properties": {
+        "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "commit_epoch": {"type": "integer", "minimum": 0},
+        "worktree": {"enum": ["clean", "dirty"]},
+        "worktree_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "materials": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        {"$ref": "#/$defs/legacyFixtureMaterial"},
+        {"$ref": "#/$defs/legacyInventoryMaterial"},
+        {"$ref": "#/$defs/profileCatalogMaterial"}
+      ],
+      "items": false
+    },
+    "hardware": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["queried", "writes_executed", "generations"],
+      "properties": {
+        "queried": {"const": false},
+        "writes_executed": {"const": false},
+        "generations": {"type": "array", "maxItems": 0}
+      }
+    },
+    "publication_authorized": {"const": false}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "material": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "sha256"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "path": {"type": "string", "minLength": 1, "maxLength": 512},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "legacyFixtureMaterial": {
+      "allOf": [
+        {"$ref": "#/$defs/material"},
+        {"properties": {"id": {"const": "legacy-decision-fixture"}}}
+      ]
+    },
+    "legacyInventoryMaterial": {
+      "allOf": [
+        {"$ref": "#/$defs/material"},
+        {
+          "properties": {
+            "id": {"const": "legacy-source-inventory"},
+            "path": {"const": "migration/inventory/engineering-laboratory.json"}
+          }
+        }
+      ]
+    },
+    "profileCatalogMaterial": {
+      "allOf": [
+        {"$ref": "#/$defs/material"},
+        {
+          "properties": {
+            "id": {"const": "generated-profile-catalog"},
+            "path": {"const": "generated/profiles/catalog.json"}
+          }
+        }
+      ]
+    }
+  }
+}

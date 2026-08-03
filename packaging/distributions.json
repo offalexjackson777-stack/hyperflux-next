@@ -1,0 +1,95 @@
+{
+  "$schema": "../schemas/distribution-packages.schema.json",
+  "schema": "hyperflux-distribution-packages-v2",
+  "metadata": {
+    "description": "HyperFlux bridge runtime with optional stock-application integrations",
+    "homepage": "https://github.com/offalexjackson777-stack/hyperflux-next",
+    "licenses": [
+      "GPL-2.0-only",
+      "GPL-2.0-or-later",
+      "GPL-3.0-only"
+    ]
+  },
+  "targets": {
+    "arch": {
+      "architectures": {
+        "aarch64-unknown-linux-gnu": "aarch64",
+        "x86_64-unknown-linux-gnu": "x86_64"
+      },
+      "dependency_roles": {
+        "dkms": "dkms",
+        "c-runtime": "glibc",
+        "compiler-runtime": "libgcc",
+        "service-manager": "systemd",
+        "device-manager": "systemd"
+      },
+      "components": {
+        "linux": {
+          "package_name": "hyperflux-next-linux",
+          "description": "HyperFlux receiver driver, bridge runtime, SDK endpoint, and operations tools",
+          "dependency_roles": [
+            "dkms",
+            "c-runtime",
+            "compiler-runtime",
+            "service-manager",
+            "device-manager"
+          ],
+          "dependencies": [],
+          "optional_dependencies": [],
+          "conflicts": [
+            "hyperflux-v2-linux-dkms"
+          ],
+          "provides": [],
+          "replaces": []
+        },
+        "full": {
+          "package_name": "hyperflux-next-full",
+          "description": "HyperFlux OpenRazer transport and OpenRGB plugin for optional stock applications",
+          "dependency_roles": [
+            "dkms",
+            "c-runtime",
+            "compiler-runtime",
+            "service-manager",
+            "device-manager"
+          ],
+          "dependencies": [
+            "hyperflux-next-linux=@sibling_version@",
+            "qt5-base",
+            "hidapi",
+            "libstdc++"
+          ],
+          "optional_dependencies": [
+            {
+              "package": "openrgb",
+              "purpose": "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0rc3/plugin API 4 verified"
+            },
+            {
+              "package": "openrazer-daemon",
+              "purpose": "Stock OpenRazer service for compatible application access"
+            },
+            {
+              "package": "python-openrazer",
+              "purpose": "Official Python OpenRazer client API"
+            },
+            {
+              "package": "polychromatic",
+              "purpose": "Stock graphical OpenRazer frontend"
+            }
+          ],
+          "conflicts": [
+            "hyperflux-next-openrgb=0.0.0_dev.1-2",
+            "openrazer-driver-dkms"
+          ],
+          "provides": [
+            "openrazer-driver-dkms=@openrazer_driver_version@",
+            "hyperflux-openrazer-driver-abi=@openrazer_driver_version@"
+          ],
+          "replaces": [
+            "hyperflux-next-openrgb=0.0.0_dev.1-2",
+            "openrazer-driver-dkms"
+          ]
+        }
+      }
+    }
+  }
+}

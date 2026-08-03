@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/journey-source-coverage-v2.json",
+  "title": "HyperFlux public journey source coverage",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "public_document",
+    "publication",
+    "private_evidence",
+    "prior_art_review",
+    "eras"
+  ],
+  "properties": {
+    "$schema": {"const": "../schemas/journey-source-coverage.schema.json"},
+    "schema": {"const": "hyperflux-journey-source-coverage-v2"},
+    "public_document": {"const": "docs/project/journey.md"},
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "voice",
+        "technical_appendix",
+        "publication_mode",
+        "direct_quotes_approved",
+        "raw_project_records_published",
+        "privacy_review"
+      ],
+      "properties": {
+        "voice": {"const": "first-person-founder"},
+        "technical_appendix": {"const": true},
+        "publication_mode": {"const": "paraphrase-only"},
+        "direct_quotes_approved": {"const": 0},
+        "raw_project_records_published": {"const": false},
+        "privacy_review": {"const": "passed"}
+      }
+    },
+    "private_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pipeline_overlay_sha256",
+        "source_snapshot_sha256",
+        "source_manifest_sha256",
+        "source_ledger_sha256",
+        "curation_plan_sha256",
+        "curation_manifest_sha256",
+        "curated_ledger_sha256",
+        "extracted_event_count",
+        "curated_event_count"
+      ],
+      "properties": {
+        "pipeline_overlay_sha256": {"$ref": "#/$defs/sha256"},
+        "source_snapshot_sha256": {"$ref": "#/$defs/sha256"},
+        "source_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "source_ledger_sha256": {"$ref": "#/$defs/sha256"},
+        "curation_plan_sha256": {"$ref": "#/$defs/sha256"},
+        "curation_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "curated_ledger_sha256": {"$ref": "#/$defs/sha256"},
+        "extracted_event_count": {"type": "integer", "minimum": 1},
+        "curated_event_count": {"type": "integer", "minimum": 6}
+      }
+    },
+    "prior_art_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "outcome", "absolute_novelty_claims", "sources"],
+      "properties": {
+        "scope": {"const": "bounded-pinned-authority-review"},
+        "outcome": {"const": "no-absolute-novelty-claim"},
+        "absolute_novelty_claims": {"const": 0},
+        "sources": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/path"}
+        }
+      }
+    },
+    "eras": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {"$ref": "#/$defs/era"}
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?!/)(?!build/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "reference", "supports"],
+      "properties": {
+        "kind": {"enum": ["commit", "authority", "evidence"]},
+        "reference": {"type": "string", "minLength": 1, "maxLength": 256},
+        "supports": {"type": "string", "minLength": 1, "maxLength": 240}
+      }
+    },
+    "era": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "order",
+        "motivation_event_count",
+        "technical_sources"
+      ],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+        "title": {"type": "string", "minLength": 1, "maxLength": 80},
+        "order": {"type": "integer", "minimum": 1, "maximum": 6},
+        "motivation_event_count": {"type": "integer", "minimum": 1},
+        "technical_sources": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 16,
+          "items": {"$ref": "#/$defs/source"}
+        }
+      }
+    }
+  }
+}

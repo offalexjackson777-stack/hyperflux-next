@@ -1,0 +1,296 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/hardware-profile-v1.json",
+  "title": "Composable HyperFlux hardware profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "profile_id", "revision", "kind", "device_kind", "identity", "capabilities", "evidence_claims", "restrictions"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-hardware-profile-v1"},
+    "profile_id": {"type": "string", "pattern": "^(receiver|child|surface)\\.[a-z0-9.-]+$"},
+    "revision": {"type": "integer", "minimum": 1},
+    "kind": {"enum": ["receiver", "child", "surface"]},
+    "device_kind": {"enum": ["receiver", "mat", "mouse", "keyboard"]},
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manufacturer", "model_name", "authority"],
+      "properties": {
+        "manufacturer": {"type": "string", "minLength": 1},
+        "model_name": {"type": "string", "minLength": 1},
+        "authority": {"enum": ["usb", "paired-product-id", "reviewed-metadata"]},
+        "vendor_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "product_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "variant_key": {"type": "string"}
+      }
+    },
+    "compatibility": {"type": "object"},
+    "transport": {"$ref": "#/$defs/transport"},
+    "qualification_migrations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/qualification-migration"}
+    },
+    "presentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["upstream_id", "owner", "project_version", "source_commit", "model_key", "layout_key", "transport_variant"],
+      "properties": {
+        "upstream_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+        "owner": {"type": "string", "minLength": 1, "maxLength": 64},
+        "project_version": {"type": "string", "minLength": 1, "maxLength": 64},
+        "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "model_key": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,127}$"},
+        "layout_key": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,127}$"}
+          ]
+        },
+        "transport_variant": {"enum": ["wireless", "wired", "bluetooth"]}
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "support_level", "evidence_claims"],
+        "properties": {
+          "id": {"type": "string"},
+          "support_level": {"enum": ["candidate", "identified", "read-only", "telemetry-qualified", "lighting-qualified", "settings-qualified", "pairing-qualified", "production-qualified"]},
+          "evidence_claims": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}}
+        }
+      }
+    },
+    "evidence_claims": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+    "restrictions": {"type": "array", "items": {"type": "string", "minLength": 1}}
+  },
+  "$defs": {
+    "transport": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "backend": {"type": "string", "minLength": 1},
+        "backend_id": {"type": "integer", "minimum": 1, "maximum": 4294967295},
+        "maximum_targets": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "generation_bound": {"type": "boolean"},
+        "application_raw_frames": {"type": "boolean"},
+        "pairing_inventory": {"$ref": "#/$defs/pairing-inventory"},
+        "native_exchange": {"$ref": "#/$defs/native-exchange"},
+        "lighting": {"$ref": "#/$defs/lighting"},
+        "passive": {"$ref": "#/$defs/passive"},
+        "lifecycle": {"$ref": "#/$defs/lifecycle-policy"}
+      }
+    },
+    "pairing-inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decoder"],
+      "properties": {
+        "decoder": {"enum": ["razer-hyperflux-v2-feature-01-v1"]}
+      }
+    },
+    "native-exchange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol_family", "report_bytes", "set_report_index", "response_report_index", "initial_response_delay_us", "response_retry_delay_us", "max_response_attempts", "report_format", "match_ranges"],
+      "properties": {
+        "protocol_family": {"const": "razer-feature-report-v1"},
+        "report_bytes": {"const": 90},
+        "set_report_index": {"type": "integer", "minimum": 0, "maximum": 255},
+        "response_report_index": {"type": "integer", "minimum": 0, "maximum": 255},
+        "initial_response_delay_us": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "response_retry_delay_us": {"type": "integer", "minimum": 1, "maximum": 100000},
+        "max_response_attempts": {"type": "integer", "minimum": 1, "maximum": 16},
+        "report_format": {"$ref": "#/$defs/native-report-format"},
+        "route_selector": {"$ref": "#/$defs/native-route-selector"},
+        "match_ranges": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["offset", "length"],
+            "properties": {
+              "offset": {"type": "integer", "minimum": 0, "maximum": 89},
+              "length": {"type": "integer", "minimum": 1, "maximum": 90}
+            }
+          }
+        }
+      }
+    },
+    "native-route-selector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "pointer_lane", "keyboard_lane", "restore_original_response"],
+      "properties": {
+        "field": {"const": "transaction-id"},
+        "pointer_lane": {"type": "integer", "minimum": 1, "maximum": 255},
+        "keyboard_lane": {"type": "integer", "minimum": 1, "maximum": 255},
+        "restore_original_response": {"const": true}
+      }
+    },
+    "native-report-format": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request_status", "response_status", "protocol_type", "data_size", "checksum", "trailer", "transaction_id"],
+      "properties": {
+        "request_status": {"$ref": "#/$defs/native-byte-value"},
+        "response_status": {"$ref": "#/$defs/native-byte-range"},
+        "protocol_type": {"$ref": "#/$defs/native-byte-value"},
+        "data_size": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["offset", "maximum"],
+          "properties": {
+            "offset": {"type": "integer", "minimum": 0, "maximum": 89},
+            "maximum": {"type": "integer", "minimum": 0, "maximum": 255}
+          }
+        },
+        "checksum": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["algorithm", "start_offset", "end_offset_exclusive", "result_offset"],
+          "properties": {
+            "algorithm": {"const": "xor8"},
+            "start_offset": {"type": "integer", "minimum": 0, "maximum": 89},
+            "end_offset_exclusive": {"type": "integer", "minimum": 1, "maximum": 90},
+            "result_offset": {"type": "integer", "minimum": 0, "maximum": 89}
+          }
+        },
+        "trailer": {"$ref": "#/$defs/native-byte-value"},
+        "transaction_id": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["offset", "match_mask"],
+          "properties": {
+            "offset": {"type": "integer", "minimum": 0, "maximum": 89},
+            "match_mask": {"type": "integer", "minimum": 0, "maximum": 255}
+          }
+        }
+      }
+    },
+    "native-byte-value": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["offset", "value"],
+      "properties": {
+        "offset": {"type": "integer", "minimum": 0, "maximum": 89},
+        "value": {"type": "integer", "minimum": 0, "maximum": 255}
+      }
+    },
+    "native-byte-range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["offset", "minimum", "maximum"],
+      "properties": {
+        "offset": {"type": "integer", "minimum": 0, "maximum": 89},
+        "minimum": {"type": "integer", "minimum": 0, "maximum": 255},
+        "maximum": {"type": "integer", "minimum": 0, "maximum": 255}
+      }
+    },
+    "lighting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["physical_led_count", "application_slot_count", "carrier_count", "rows", "columns", "application_index_to_carrier"],
+      "properties": {
+        "physical_led_count": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "application_slot_count": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "carrier_count": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "rows": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "columns": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "application_index_to_carrier": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "integer", "minimum": 0, "maximum": 65535}
+        }
+      }
+    },
+    "passive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["endpoint_lane", "battery_encoding", "contact", "route", "report_implies_route_available"],
+      "properties": {
+        "endpoint_lane": {"enum": ["pointer", "keyboard"]},
+        "battery_encoding": {"enum": ["linear-255"]},
+        "contact": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/contact-decoder"}
+          ]
+        },
+        "route": {"$ref": "#/$defs/route-decoder"},
+        "report_implies_route_available": {"type": "boolean"}
+      }
+    },
+    "lifecycle-policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["power_off_departure_evidence", "return_policy_id", "open_evidence", "accelerator_evidence"],
+      "properties": {
+        "power_off_departure_evidence": {"enum": ["receiver-state", "watched-retained-route"]},
+        "return_policy_id": {"type": "string", "pattern": "^[a-z][a-z0-9.-]{0,95}$"},
+        "open_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["battery-report", "contact-report", "endpoint-activity", "route-return"]}
+        },
+        "accelerator_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["battery-report", "contact-report", "endpoint-activity", "route-return"]}
+        }
+      }
+    },
+    "qualification-migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from_runtime_sha256", "preserve_stage_roles"],
+      "properties": {
+        "from_runtime_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "preserve_stage_roles": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["telemetry", "map", "lighting"]}
+        }
+      }
+    },
+    "contact-decoder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["off_mat", "on_mat"],
+      "properties": {
+        "off_mat": {"$ref": "#/$defs/raw-values"},
+        "on_mat": {"$ref": "#/$defs/raw-values"}
+      }
+    },
+    "route-decoder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["available", "unavailable"],
+      "properties": {
+        "available": {"$ref": "#/$defs/raw-values"},
+        "unavailable": {"$ref": "#/$defs/raw-values"},
+        "indeterminate": {"$ref": "#/$defs/raw-values"}
+      }
+    },
+    "raw-values": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "integer", "minimum": 0, "maximum": 4294967295}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"kind": {"const": "child"}}, "required": ["kind"]},
+      "then": {"required": ["compatibility", "transport", "presentation"]},
+      "else": {"not": {"required": ["presentation"]}}
+    }
+  ]
+}

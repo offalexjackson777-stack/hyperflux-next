@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/openrazer-userspace-capability-policy.schema.json",
+  "title": "HyperFlux OpenRazer userspace capability policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "upstream_id",
+    "source_commit",
+    "service",
+    "root",
+    "device",
+    "features"
+  ],
+  "properties": {
+    "$schema": { "const": "../../schemas/openrazer-userspace-capability-policy.schema.json" },
+    "schema": { "const": "hyperflux-openrazer-userspace-capability-policy-v1" },
+    "upstream_id": { "const": "openrazer" },
+    "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bus_name", "root_path", "device_path_prefix"],
+      "properties": {
+        "bus_name": { "const": "org.razer" },
+        "root_path": { "const": "/org/razer" },
+        "device_path_prefix": { "const": "/org/razer/device/" }
+      }
+    },
+    "root": { "$ref": "#/$defs/methodSelection" },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required_common", "required_by_kind", "semantic_probes"],
+      "properties": {
+        "required_common": { "$ref": "#/$defs/methodList" },
+        "required_by_kind": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["keyboard", "mouse"],
+          "properties": {
+            "keyboard": { "$ref": "#/$defs/methodList" },
+            "mouse": { "$ref": "#/$defs/methodList" }
+          }
+        },
+        "semantic_probes": { "$ref": "#/$defs/methodList" }
+      }
+    },
+    "features": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "device_kinds", "requirement", "methods"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{0,63}$" },
+          "device_kinds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "uniqueItems": true,
+            "items": { "enum": ["keyboard", "mouse"] }
+          },
+          "requirement": { "enum": ["required", "optional"] },
+          "methods": { "$ref": "#/$defs/methodList" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "methodId": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,127}$" },
+    "methodList": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/methodId" }
+    },
+    "methodSelection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required_methods", "diagnostic_methods", "required_signals"],
+      "properties": {
+        "required_methods": { "$ref": "#/$defs/methodList" },
+        "diagnostic_methods": { "$ref": "#/$defs/methodList" },
+        "required_signals": { "$ref": "#/$defs/methodList" }
+      }
+    }
+  }
+}

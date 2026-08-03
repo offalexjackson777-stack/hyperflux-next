@@ -1,0 +1,102 @@
+{
+  "$schema": "../../schemas/openrazer-userspace-version-matrix.schema.json",
+  "schema": "hyperflux-openrazer-userspace-version-matrix-v1",
+  "upstream_id": "openrazer",
+  "cases": [
+    {
+      "id": "openrazer-3.6.0",
+      "display_version": "3.6.0",
+      "channel": "release",
+      "source_ref": "refs/tags/v3.6.0^{}",
+      "commit": "5b21a6c425617fb51ead5ff0e17ba3993b5147e2",
+      "devices": [
+        {
+          "profile_id": "child.razer.basilisk-v3-pro-35k.00cd",
+          "fake_driver": "razerbasiliskv3pro35kwireless",
+          "definition": "absent"
+        },
+        {
+          "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296",
+          "fake_driver": "razerdeathstalkerv2protklwireless",
+          "definition": "present"
+        }
+      ]
+    },
+    {
+      "id": "openrazer-3.10.0",
+      "display_version": "3.10.0",
+      "channel": "release",
+      "source_ref": "refs/tags/v3.10.0^{}",
+      "commit": "2c5cfb1f3cf30c813bf1c1a11874a1e21190ce88",
+      "devices": [
+        {
+          "profile_id": "child.razer.basilisk-v3-pro-35k.00cd",
+          "fake_driver": "razerbasiliskv3pro35kwireless",
+          "definition": "present"
+        },
+        {
+          "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296",
+          "fake_driver": "razerdeathstalkerv2protklwireless",
+          "definition": "present"
+        }
+      ]
+    },
+    {
+      "id": "openrazer-3.12.2",
+      "display_version": "3.12.2",
+      "channel": "release",
+      "source_ref": "refs/tags/v3.12.2^{}",
+      "commit": "ddea89607b86023e88563b8feabc8fa2d5773cdd",
+      "devices": [
+        {
+          "profile_id": "child.razer.basilisk-v3-pro-35k.00cd",
+          "fake_driver": "razerbasiliskv3pro35kwireless",
+          "definition": "present"
+        },
+        {
+          "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296",
+          "fake_driver": "razerdeathstalkerv2protklwireless",
+          "definition": "present"
+        }
+      ]
+    },
+    {
+      "id": "openrazer-3.12.4",
+      "display_version": "3.12.4",
+      "channel": "release",
+      "source_ref": "refs/tags/v3.12.4^{}",
+      "commit": "1ef8a91712906a89fd332a2ed62bbd105315d6d1",
+      "devices": [
+        {
+          "profile_id": "child.razer.basilisk-v3-pro-35k.00cd",
+          "fake_driver": "razerbasiliskv3pro35kwireless",
+          "definition": "present"
+        },
+        {
+          "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296",
+          "fake_driver": "razerdeathstalkerv2protklwireless",
+          "definition": "present"
+        }
+      ]
+    },
+    {
+      "id": "openrazer-master",
+      "display_version": "master",
+      "channel": "upstream-head",
+      "source_ref": "refs/heads/master",
+      "commit": "6820f9da169d354bc7e6e93a0aa8683a6bb75792",
+      "devices": [
+        {
+          "profile_id": "child.razer.basilisk-v3-pro-35k.00cd",
+          "fake_driver": "razerbasiliskv3pro35kwireless",
+          "definition": "present"
+        },
+        {
+          "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296",
+          "fake_driver": "razerdeathstalkerv2protklwireless",
+          "definition": "present"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/openrazer-native-probe-catalog-v1.json",
+  "title": "Source-bound OpenRazer native qualification probe catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "upstream",
+    "policy_sha256",
+    "inventory_sha256",
+    "report_size",
+    "busy_retry",
+    "source_files",
+    "devices"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-openrazer-native-probe-catalog-v1"},
+    "upstream": {"$ref": "#/$defs/upstream"},
+    "policy_sha256": {"$ref": "#/$defs/sha256"},
+    "inventory_sha256": {"$ref": "#/$defs/sha256"},
+    "report_size": {"const": 90},
+    "busy_retry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "maximum_attempts"],
+      "properties": {
+        "status": {"const": 1},
+        "maximum_attempts": {"type": "integer", "minimum": 1, "maximum": 8}
+      }
+    },
+    "source_files": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": {"type": "string", "pattern": "^[A-Za-z0-9_./-]+$"},
+          "sha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    "devices": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {"$ref": "#/$defs/device"}
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "upstream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "repository", "version", "commit", "license_expression"],
+      "properties": {
+        "id": {"const": "openrazer"},
+        "repository": {"type": "string", "format": "uri"},
+        "version": {"type": "string"},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "license_expression": {"type": "string"}
+      }
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["vendor_id", "product_id", "model_name", "device_kind", "transport_variant"],
+      "properties": {
+        "vendor_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "product_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "model_name": {"type": "string", "minLength": 1},
+        "device_kind": {"enum": ["keyboard", "mouse"]},
+        "transport_variant": {"enum": ["wired", "wireless"]}
+      }
+    },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "wireless_identity", "direct_usb_reference", "probes"],
+      "properties": {
+        "profile_id": {"type": "string", "pattern": "^child\\.[a-z0-9.-]+$"},
+        "wireless_identity": {"$ref": "#/$defs/identity"},
+        "direct_usb_reference": {"$ref": "#/$defs/identity"},
+        "probes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "items": {"$ref": "#/$defs/probe"}
+        }
+      }
+    },
+    "probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "privacy", "driver", "request", "response_summary", "comparison"],
+      "properties": {
+        "method": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,127}$"},
+        "privacy": {"enum": ["summary-only", "redacted-equality-only"]},
+        "driver": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["attribute", "source_path", "reader", "request_owner", "source_line", "source_sha256"],
+          "properties": {
+            "attribute": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,127}$"},
+            "source_path": {"enum": ["driver/razerkbd_driver.c", "driver/razermouse_driver.c"]},
+            "reader": {"type": "string", "pattern": "^razer_attr_read_[a-z0-9_]+$"},
+            "request_owner": {"type": "string", "pattern": "^razer_attr_read_[a-z0-9_]+$"},
+            "source_line": {"type": "integer", "minimum": 1},
+            "source_sha256": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "request": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "command_class",
+            "command_id",
+            "data_size",
+            "arguments",
+            "normalized_sha256",
+            "transaction_id_from_upstream",
+            "crc_recomputed_by_upstream"
+          ],
+          "properties": {
+            "command_class": {"type": "integer", "minimum": 0, "maximum": 255},
+            "command_id": {"type": "integer", "minimum": 128, "maximum": 255},
+            "data_size": {"type": "integer", "minimum": 0, "maximum": 80},
+            "arguments": {
+              "type": "array",
+              "maxItems": 80,
+              "items": {"type": "integer", "minimum": 0, "maximum": 255}
+            },
+            "normalized_sha256": {"$ref": "#/$defs/sha256"},
+            "transaction_id_from_upstream": {"const": true},
+            "crc_recomputed_by_upstream": {"const": true}
+          }
+        },
+        "response_summary": {
+          "enum": [
+            "battery-u8",
+            "be16-seconds",
+            "boolean-u8",
+            "device-mode",
+            "dpi-stages",
+            "dpi-xy",
+            "firmware-version",
+            "keyboard-layout",
+            "led-effect",
+            "led-state",
+            "polling-rate-code",
+            "redacted-serial-equality",
+            "u8-value"
+          ]
+        },
+        "comparison": {
+          "enum": ["exact-semantic", "domain-valid", "redacted-equality"]
+        }
+      }
+    }
+  }
+}

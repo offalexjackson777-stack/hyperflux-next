@@ -1,0 +1,116 @@
+{
+  "$schema": "../schemas/release-gates.schema.json",
+  "schema": "hyperflux-release-gates-v2",
+  "target": {
+    "product_version": "2.0.0",
+    "package_release": 1,
+    "state": "reconstruction"
+  },
+  "behavioral_baseline": {
+    "installed_baseline_id": "installed-baseline.arch.release-8.2026-08-02",
+    "scope": "private-behavioral-reference",
+    "applies_to_target_artifacts": false
+  },
+  "gates": [
+    {
+      "id": "HFX-GATE-FOUNDATION",
+      "title": "Architecture and migration foundation",
+      "status": "software-satisfied",
+      "criteria": ["The architecture constitution is internally consistent.", "Every design-book section has one truthful evidence and gap entry."],
+      "evidence": ["architecture/constitution.json", "assurance/design-coverage.json"],
+      "remaining": [],
+      "physical_evidence_required": false,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-SCHEMAS",
+      "title": "Canonical schemas and generated contracts",
+      "status": "software-satisfied",
+      "criteria": ["Shared facts have strict canonical schemas.", "Generated bindings and documents are reproducible in one pass."],
+      "evidence": ["schemas/domain-catalog.json", "tools/hfxdev/render.py", "tests/test_generated_domain.py"],
+      "remaining": [],
+      "physical_evidence_required": false,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-SIMULATION",
+      "title": "Virtual receiver and deterministic replay",
+      "status": "software-satisfied",
+      "criteria": ["The simulator exercises generation, presence, qualification, transport, and restoration without hardware authority.", "Committed replay is sanitized and deterministic."],
+      "evidence": ["crates/hfx-sim", "tests/fixtures/replay/qualified-lifecycle-v1.json"],
+      "remaining": [],
+      "physical_evidence_required": false,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-BRIDGE-SDK",
+      "title": "Bridge, ownership, restoration, and SDK",
+      "status": "software-satisfied",
+      "criteria": ["The bridge is the sole userspace receiver writer.", "SDK requests are versioned, bounded, lease-owned, generation-bound, and conservatively reconciled."],
+      "evidence": ["crates/hfx-bridge", "crates/hfx-core", "crates/hfx-sdk", "sdk/cpp", "sdk/python"],
+      "remaining": [],
+      "physical_evidence_required": false,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-KERNEL",
+      "title": "Kernel transport and activation",
+      "status": "blocked-by-physical-evidence",
+      "criteria": ["The module builds warning-clean against supported headers.", "Input preservation, generations, passive observation, and bounded writer transport are qualified on an exact candidate."],
+      "evidence": ["driver/kernel", "uapi/kernel-uapi.json", "crates/hfx-kernel-transport", "assurance/installed-baselines.json"],
+      "remaining": ["Requalify input preservation, reconnect, suspend, and writer-session behavior against the exact reconstructed 2.0 candidate; installed release 8 remains reference evidence only."],
+      "physical_evidence_required": true,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-INTEGRATIONS",
+      "title": "Application integrations",
+      "status": "blocked-by-physical-evidence",
+      "criteria": ["The OpenRGB plugin and OpenRazer transport adapter preserve unrelated devices.", "Stock OpenRazer daemon and client releases consume the patched driver through their ordinary public API.", "Stock Polychromatic discovers receiver-backed children through the stock OpenRazer backend without HyperFlux application code."],
+      "evidence": ["integrations/catalog.json", "integrations/openrgb", "integrations/openrazer/native-route", "tests/openrazer_version_matrix_contracts.py", "assurance/installed-baselines.json"],
+      "remaining": ["Requalify the exact reconstructed 2.0 packaged OpenRGB plugin against both system and desktop sockets.", "Rerun isolated stock OpenRazer 3.12.2 and 3.12.4 plus Polychromatic 0.9.7 compatibility against the reconstructed package boundary.", "Confirm the exact reconstructed 2.0 candidate publishes each supported receiver-backed child once."],
+      "physical_evidence_required": true,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-PACKAGING",
+      "title": "Native package lifecycle",
+      "status": "software-satisfied",
+      "criteria": ["The two Arch sibling packages derive from component-aware canonical payloads and are reproducible.", "Fresh install, monolith upgrade, connector retirement, rollback, uninstall, explicit activation boundaries, and configuration preservation pass in a disposable Arch root."],
+      "evidence": ["packaging/install.json", "packaging/distributions.json", "tools/hfxdev/distribution_package.py", "tests/package_ownership_qualification.py", "tests/arch_split_transaction_qualification.py", "tests/arch_two_package_matrix_inner.sh"],
+      "remaining": [],
+      "physical_evidence_required": false,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-SOFTWARE",
+      "title": "Complete software verification",
+      "status": "software-satisfied",
+      "criteria": ["Every full-software graph node passes from a clean source revision.", "No software result is presented as physical qualification or publication authorization."],
+      "evidence": ["verification/tests.json", "tools/hfxdev/verify.py", "assurance/design-coverage.json"],
+      "remaining": [],
+      "physical_evidence_required": false,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-HARDWARE",
+      "title": "Targeted hardware qualification",
+      "status": "blocked-by-physical-evidence",
+      "criteria": ["Every promoted writable capability has exact candidate-bound physical evidence.", "Unknown models remain safe and non-writable."],
+      "evidence": ["profiles/evidence/claims.json", "migration/ledger.json", "assurance/installed-baselines.json"],
+      "remaining": ["Freeze the exact reconstructed 2.0 release candidate and execute its bounded final parity gate without repeating or weakening the accepted release 8 baseline."],
+      "physical_evidence_required": true,
+      "publication_authorization_required": false
+    },
+    {
+      "id": "HFX-GATE-PUBLICATION-DECISION",
+      "title": "Explicit publication decision",
+      "status": "publication-locked",
+      "criteria": ["Every preceding release-blocking gate is satisfied.", "A human publication decision explicitly authorizes the chosen channel and artifacts."],
+      "evidence": ["architecture/constitution.json", "assurance/release-gates.json"],
+      "remaining": ["Product publication remains unauthorized. Do not create a release, tag, package channel, or supported-product claim from software evidence alone."],
+      "physical_evidence_required": true,
+      "publication_authorization_required": true
+    }
+  ]
+}

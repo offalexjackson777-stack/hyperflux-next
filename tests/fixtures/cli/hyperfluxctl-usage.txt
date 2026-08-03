@@ -1,0 +1,5 @@
+Usage:
+  hyperfluxctl status [--json]
+  hyperfluxctl doctor [--explain] [--json]
+  hyperfluxctl support-bundle --preview
+  hyperfluxctl support-bundle --output PATH

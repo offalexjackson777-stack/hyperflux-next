@@ -1,0 +1,272 @@
+{
+  "$schema": "../schemas/install-manifest.schema.json",
+  "schema": "hyperflux-install-manifest-v2",
+  "policy": {
+    "hardware_writes_on_install": false,
+    "start_service_on_install": false,
+    "enable_service_on_install": false,
+    "preserve_configuration": true
+  },
+  "builds": [
+    {
+      "id": "bridge-daemon",
+      "distribution_component": "linux",
+      "kind": "cargo-binary",
+      "package": "hfx-daemon",
+      "target": "hyperflux-next-bridge",
+      "profile": "release",
+      "destination": "@bridge_executable_path@",
+      "mode": "0755",
+      "required": true
+    },
+    {
+      "id": "operations-cli",
+      "distribution_component": "linux",
+      "kind": "cargo-binary",
+      "package": "hfx-ops",
+      "target": "hyperfluxctl",
+      "profile": "operations",
+      "destination": "@operations_cli_path@",
+      "mode": "0755",
+      "required": true
+    },
+    {
+      "id": "activation-utility",
+      "distribution_component": "linux",
+      "kind": "cargo-binary",
+      "package": "hfx-ops",
+      "target": "hyperflux-next-activate",
+      "profile": "operations",
+      "destination": "@activation_utility_path@",
+      "mode": "0755",
+      "required": true
+    },
+    {
+      "id": "openrazer-native-relay",
+      "distribution_component": "full",
+      "kind": "cargo-binary",
+      "package": "hfx-uhid-relay",
+      "target": "hyperflux-next-uhid-relay",
+      "profile": "relay",
+      "destination": "@openrazer_relay_executable_path@",
+      "mode": "0755",
+      "required": true
+    },
+    {
+      "id": "openrazer-native-driver",
+      "distribution_component": "full",
+      "kind": "source-transform",
+      "transform": "openrazer-native-route",
+      "destination": "@openrazer_dkms_source_directory@",
+      "mode": "0644",
+      "required": true,
+      "capability": "openrazer-source"
+    },
+    {
+      "id": "openrazer-native-udev-rules",
+      "distribution_component": "full",
+      "kind": "source-transform-file",
+      "transform": "openrazer-native-route",
+      "source": "install_files/udev/99-razer.rules",
+      "destination": "@openrazer_udev_rules_path@",
+      "mode": "0644",
+      "required": true,
+      "capability": "openrazer-source"
+    },
+    {
+      "id": "openrazer-native-mount-helper",
+      "distribution_component": "full",
+      "kind": "source-transform-file",
+      "transform": "openrazer-native-route",
+      "source": "install_files/udev/razer_mount",
+      "destination": "@openrazer_mount_helper_path@",
+      "mode": "0755",
+      "required": true,
+      "capability": "openrazer-source"
+    },
+    {
+      "id": "openrgb-native",
+      "distribution_component": "full",
+      "kind": "cmake-module",
+      "source": "integrations/openrgb",
+      "target": "hyperflux-next-openrgb",
+      "output": "hyperflux-next-openrgb.so",
+      "destination": "/usr/lib/openrgb/plugins/hyperflux-next-openrgb.so",
+      "mode": "0755",
+      "required": true,
+      "capability": "openrgb-source"
+    }
+  ],
+  "payloads": [
+    {
+      "id": "kernel-source",
+      "distribution_component": "linux",
+      "kind": "tree",
+      "source": "driver/kernel",
+      "destination": "@kernel_source_directory@",
+      "mode": "0644",
+      "preserve": false,
+      "include": ["Makefile", "*.c", "*.h", "generated/*.inc", "uapi/*.h"]
+    },
+    {
+      "id": "dkms-configuration",
+      "distribution_component": "linux",
+      "kind": "file",
+      "source": "packaging/generated/dkms.conf",
+      "destination": "@kernel_dkms_configuration_path@",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "bridge-service",
+      "distribution_component": "linux",
+      "kind": "file",
+      "source": "packaging/generated/hyperflux-next-bridge.service",
+      "destination": "/usr/lib/systemd/system/hyperflux-next-bridge.service",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "desktop-bridge-socket",
+      "distribution_component": "linux",
+      "kind": "file",
+      "source": "packaging/generated/hyperflux-next-client@.socket",
+      "destination": "/usr/lib/systemd/system/hyperflux-next-client@.socket",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "desktop-bridge-proxy-service",
+      "distribution_component": "linux",
+      "kind": "file",
+      "source": "packaging/generated/hyperflux-next-client@.service",
+      "destination": "/usr/lib/systemd/system/hyperflux-next-client@.service",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "openrazer-native-relay-service",
+      "distribution_component": "full",
+      "kind": "file",
+      "source": "packaging/generated/hyperflux-next-openrazer-relay.service",
+      "destination": "/usr/lib/systemd/system/hyperflux-next-openrazer-relay.service",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "openrazer-native-driver-preflight-service",
+      "distribution_component": "full",
+      "kind": "file",
+      "source": "packaging/generated/hyperflux-next-openrazer-driver-preflight.service",
+      "destination": "/usr/lib/systemd/system/hyperflux-next-openrazer-driver-preflight.service",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "system-users",
+      "distribution_component": "linux",
+      "kind": "file",
+      "source": "packaging/generated/hyperflux-next.sysusers",
+      "destination": "/usr/lib/sysusers.d/hyperflux-next.conf",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "openrazer-system-group",
+      "distribution_component": "full",
+      "kind": "file",
+      "source": "packaging/generated/openrazer.sysusers",
+      "destination": "@openrazer_sysusers_path@",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "full-bridge-integration-drop-in",
+      "distribution_component": "full",
+      "kind": "file",
+      "source": "packaging/generated/hyperflux-next-bridge.service.d/50-full.conf",
+      "destination": "/usr/lib/systemd/system/hyperflux-next-bridge.service.d/50-full.conf",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "full-component-descriptor",
+      "distribution_component": "full",
+      "kind": "file",
+      "source": "packaging/generated/full-component.json",
+      "destination": "/usr/share/hyperflux-next/components/full.json",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "runtime-directories",
+      "distribution_component": "linux",
+      "kind": "file",
+      "source": "packaging/generated/hyperflux-next.tmpfiles",
+      "destination": "/usr/lib/tmpfiles.d/hyperflux-next.conf",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "device-permissions",
+      "distribution_component": "linux",
+      "kind": "file",
+      "source": "packaging/generated/99-hyperflux-next.rules",
+      "destination": "/usr/lib/udev/rules.d/99-hyperflux-next.rules",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "default-configuration",
+      "distribution_component": "linux",
+      "kind": "file",
+      "source": "packaging/generated/bridge.json",
+      "destination": "@bridge_configuration_file_path@",
+      "mode": "0644",
+      "preserve": true,
+      "include": []
+    },
+    {
+      "id": "operator-troubleshooting",
+      "distribution_component": "linux",
+      "kind": "file",
+      "source": "docs/user/troubleshooting.md",
+      "destination": "/usr/share/doc/hyperflux-next/troubleshooting.md",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "core-license",
+      "distribution_component": "linux",
+      "kind": "file",
+      "source": "LICENSE",
+      "destination": "/usr/share/licenses/hyperflux-next-linux/LICENSE",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "openrgb-license",
+      "distribution_component": "full",
+      "kind": "file",
+      "source": "LICENSE",
+      "destination": "/usr/share/licenses/hyperflux-next-full/LICENSE",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    }
+  ]
+}

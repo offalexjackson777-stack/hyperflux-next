@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/distribution-component-descriptor-v1.json",
+  "title": "HyperFlux installed distribution component descriptor",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "component_id", "product_version", "capabilities"],
+  "properties": {
+    "$schema": {"const": "https://hyperflux.dev/schemas/distribution-component-descriptor-v1.json"},
+    "schema": {"const": "hyperflux-distribution-component-v1"},
+    "component_id": {"const": "full"},
+    "product_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "capabilities": {
+      "type": "array",
+      "prefixItems": [
+        {"const": "openrazer-native-route"},
+        {"const": "openrgb-plugin"}
+      ],
+      "items": false,
+      "minItems": 2,
+      "maxItems": 2
+    }
+  }
+}

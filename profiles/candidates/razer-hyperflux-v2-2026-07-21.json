@@ -1,0 +1,40 @@
+{
+  "$schema": "../../schemas/candidate-catalog.schema.json",
+  "schema": "hyperflux-candidate-catalog-v1",
+  "snapshot_id": "catalog.razer.hyperflux-v2.2026-07-21",
+  "retrieved_utc": "2026-07-21",
+  "supersedes_snapshot_id": "catalog.razer.hyperflux-v2.2026-07-13",
+  "source_claim": "claim.catalog.razer-hyperflux-v2-20260721",
+  "official_receiver_scope": {
+    "vendor_id": 5426,
+    "receiver_product_id": 207,
+    "entries": [
+      {"candidate_id": "razer-basilisk-v3-pro", "wireless_product_id": 171, "direct_usb_product_id": 170, "upstream_pending": []},
+      {"candidate_id": "razer-basilisk-v3-pro-35k", "wireless_product_id": 205, "direct_usb_product_id": 204, "upstream_pending": []},
+      {"candidate_id": "razer-blackwidow-v3-pro", "wireless_product_id": 604, "direct_usb_product_id": 602, "upstream_pending": []},
+      {"candidate_id": "razer-blackwidow-v4-low-profile-hyperspeed", "wireless_product_id": 713, "direct_usb_product_id": 716, "upstream_pending": [{"application": "openrazer", "reference": "https://github.com/openrazer/openrazer/pull/2700"}]},
+      {"candidate_id": "razer-blackwidow-v4-low-profile-tenkeyless-hyperspeed", "wireless_product_id": 722, "direct_usb_product_id": 724, "upstream_pending": []},
+      {"candidate_id": "razer-blackwidow-v4-mini-hyperspeed", "wireless_product_id": 698, "direct_usb_product_id": 697, "upstream_pending": []},
+      {"candidate_id": "razer-blackwidow-v4-tenkeyless-hyperspeed", "wireless_product_id": 725, "direct_usb_product_id": 727, "upstream_pending": []},
+      {"candidate_id": "razer-cobra-hyperspeed", "wireless_product_id": 219, "direct_usb_product_id": 218, "upstream_pending": [{"application": "openrazer", "reference": "https://github.com/openrazer/openrazer/pull/2583"}]},
+      {"candidate_id": "razer-cobra-pro", "wireless_product_id": 176, "direct_usb_product_id": 175, "upstream_pending": []},
+      {"candidate_id": "razer-deathstalker-v2-pro", "wireless_product_id": 656, "direct_usb_product_id": 658, "upstream_pending": []},
+      {"candidate_id": "razer-deathstalker-v2-pro-tenkeyless", "wireless_product_id": 662, "direct_usb_product_id": 664, "upstream_pending": []},
+      {"candidate_id": "razer-naga-v2-pro", "wireless_product_id": 168, "direct_usb_product_id": 167, "upstream_pending": []}
+    ]
+  },
+  "candidates": [
+    {"id": "razer-basilisk-v3-pro", "device_kind": "mouse", "official_name": "Razer Basilisk V3 Pro", "support_level": "candidate", "writable_capabilities": []},
+    {"id": "razer-basilisk-v3-pro-35k", "device_kind": "mouse", "official_name": "Razer Basilisk V3 Pro 35K", "support_level": "candidate", "writable_capabilities": []},
+    {"id": "razer-cobra-hyperspeed", "device_kind": "mouse", "official_name": "Razer Cobra HyperSpeed", "support_level": "candidate", "writable_capabilities": []},
+    {"id": "razer-cobra-pro", "device_kind": "mouse", "official_name": "Razer Cobra Pro", "support_level": "candidate", "writable_capabilities": []},
+    {"id": "razer-naga-v2-pro", "device_kind": "mouse", "official_name": "Razer Naga V2 Pro", "support_level": "candidate", "writable_capabilities": []},
+    {"id": "razer-blackwidow-v3-pro", "device_kind": "keyboard", "official_name": "Razer BlackWidow V3 Pro", "support_level": "candidate", "writable_capabilities": []},
+    {"id": "razer-blackwidow-v4-low-profile-hyperspeed", "device_kind": "keyboard", "official_name": "Razer BlackWidow V4 Low-profile HyperSpeed", "support_level": "candidate", "writable_capabilities": []},
+    {"id": "razer-blackwidow-v4-low-profile-tenkeyless-hyperspeed", "device_kind": "keyboard", "official_name": "Razer BlackWidow V4 Low-profile Tenkeyless HyperSpeed", "support_level": "candidate", "writable_capabilities": []},
+    {"id": "razer-blackwidow-v4-mini-hyperspeed", "device_kind": "keyboard", "official_name": "Razer BlackWidow V4 Mini HyperSpeed", "support_level": "candidate", "writable_capabilities": []},
+    {"id": "razer-blackwidow-v4-tenkeyless-hyperspeed", "device_kind": "keyboard", "official_name": "Razer BlackWidow V4 Tenkeyless HyperSpeed", "support_level": "candidate", "writable_capabilities": []},
+    {"id": "razer-deathstalker-v2-pro", "device_kind": "keyboard", "official_name": "Razer DeathStalker V2 Pro", "support_level": "candidate", "writable_capabilities": []},
+    {"id": "razer-deathstalker-v2-pro-tenkeyless", "device_kind": "keyboard", "official_name": "Razer DeathStalker V2 Pro Tenkeyless", "support_level": "candidate", "writable_capabilities": []}
+  ]
+}

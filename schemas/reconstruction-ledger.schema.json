@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/reconstruction-ledger-v1.json",
+  "title": "HyperFlux 2.0 reconstruction ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "baseline_commit",
+    "target",
+    "binaries",
+    "units",
+    "rules",
+    "package_artifacts",
+    "dependencies",
+    "compatibility_subsystems",
+    "generated_families",
+    "handwritten_modules"
+  ],
+  "$defs": {
+    "decision": {
+      "type": "object",
+      "required": ["id", "action", "target_owner", "phase", "rationale"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "action": {"enum": ["KEEP", "MOVE", "RETIRE"]},
+        "target_owner": {
+          "enum": [
+            "core",
+            "full",
+            "source-only",
+            "workspace-shared",
+            "generated",
+            "phase-3-workspace",
+            "phase-4-modules",
+            "deferred",
+            "none"
+          ]
+        },
+        "phase": {"type": "integer", "minimum": 1, "maximum": 9},
+        "rationale": {"type": "string", "minLength": 1}
+      }
+    },
+    "pathDecision": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        {"$ref": "#/$defs/decision"},
+        {
+          "type": "object",
+          "required": ["path"],
+          "properties": {
+            "path": {"type": "string", "minLength": 1}
+          }
+        }
+      ]
+    },
+    "authorityDecision": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        {"$ref": "#/$defs/decision"},
+        {
+          "type": "object",
+          "required": ["authority_key"],
+          "properties": {
+            "authority_key": {"type": "string", "minLength": 1}
+          }
+        }
+      ]
+    }
+  },
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-reconstruction-ledger-v1"},
+    "baseline_commit": {
+      "const": "c348305bb9c6790141932ddf79f707e5223bb51c"
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "package_release"],
+      "properties": {
+        "version": {"const": "2.0.0"},
+        "package_release": {"const": 1}
+      }
+    },
+    "binaries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/pathDecision"}
+    },
+    "units": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/authorityDecision"}
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/authorityDecision"}
+    },
+    "package_artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/authorityDecision"}
+    },
+    "dependencies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/authorityDecision"}
+    },
+    "compatibility_subsystems": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/authorityDecision"}
+    },
+    "generated_families": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "unevaluatedProperties": false,
+        "allOf": [
+          {"$ref": "#/$defs/decision"},
+          {
+            "type": "object",
+            "required": ["patterns"],
+            "properties": {
+              "patterns": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {"type": "string", "minLength": 1}
+              }
+            }
+          }
+        ]
+      }
+    },
+    "handwritten_modules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "unevaluatedProperties": false,
+        "allOf": [
+          {"$ref": "#/$defs/pathDecision"},
+          {
+            "type": "object",
+            "required": ["baseline_lines"],
+            "properties": {
+              "baseline_lines": {"type": "integer", "minimum": 800}
+            }
+          }
+        ]
+      }
+    }
+  }
+}

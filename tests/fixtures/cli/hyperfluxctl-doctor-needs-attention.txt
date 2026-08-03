@@ -1,0 +1,6 @@
+HyperFlux Next needs attention.
+Primary issue: [HFX-SERVICE-001] The bridge is not ready.
+Why: The local bridge socket did not provide a usable snapshot.
+Do: Verify the bridge service without changing device state.
+Verify: Run Doctor again and confirm the bridge is ready.
+Support: hyperfluxctl support-bundle --preview if the problem remains.

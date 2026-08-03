@@ -1,0 +1,56 @@
+{
+  "$schema": "../schemas/public-readiness.schema.json",
+  "baseline": {
+    "artifact_frozen": true,
+    "behavioral_baseline_accepted": true,
+    "id": "installed-baseline.arch.release-8.2026-08-02",
+    "installed_verified": true,
+    "label": "Behavioral baseline",
+    "package_version": "0.0.0_dev.1-8",
+    "public_release_authorized": false,
+    "state": "ready",
+    "summary": "Exact installed release 8 is frozen, verified, and accepted as the private reconstruction oracle."
+  },
+  "evidence": {
+    "hardware_gates": 3,
+    "known_gaps": 23,
+    "label": "Remaining evidence",
+    "lifecycle_gates": 0,
+    "reviewed_facts": 191,
+    "state": "blocked",
+    "summary": "The 2.0 target retains 3 physical gates and 0 lifecycle gates; baseline evidence is not target authorization."
+  },
+  "generated_from": [
+    "architecture/repository-atlas.json",
+    "assurance/installed-baselines.json",
+    "assurance/release-gates.json",
+    "generated/knowledge/catalog.json"
+  ],
+  "hardware": {
+    "label": "Hardware qualification",
+    "qualified_routes": 2,
+    "research_candidates": 10,
+    "state": "partial",
+    "summary": "2 release-8 reference routes have bounded physical evidence; 10 candidates remain research only."
+  },
+  "publication": {
+    "label": "Unreleased",
+    "state": "locked",
+    "summary": "Release 8 is an accepted private baseline; reconstructed 2.0 artifacts and publication remain unauthorized."
+  },
+  "qualification_console_access": "loopback-only",
+  "repository": {
+    "atlas_subsystems": 34,
+    "label": "Repository map",
+    "state": "ready",
+    "summary": "The Repository Atlas owns 34 subsystem records and their generated projections."
+  },
+  "schema": "hyperflux-public-readiness-v2",
+  "software": {
+    "gates_ready": 6,
+    "gates_total": 10,
+    "label": "2.0 software verification",
+    "state": "partial",
+    "summary": "6 of 10 release gates are ready in software."
+  }
+}

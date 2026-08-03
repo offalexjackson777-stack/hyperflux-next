@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/openrazer-native-control-policy-v1.json",
+  "title": "OpenRazer native-control method policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "upstream_id",
+    "source_commit",
+    "scope",
+    "report_size",
+    "common_methods",
+    "kind_methods",
+    "source_validated_methods",
+    "event_source_required_methods",
+    "classifications",
+    "qualification_probes",
+    "privacy_overrides"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-openrazer-native-control-policy-v1"},
+    "upstream_id": {"const": "openrazer"},
+    "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "scope": {"const": "transport-facing-exact-wireless-classes"},
+    "report_size": {"const": 90},
+    "common_methods": {"$ref": "#/$defs/method-list"},
+    "kind_methods": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["keyboard", "mouse"],
+      "properties": {
+        "keyboard": {"$ref": "#/$defs/method-list"},
+        "mouse": {"$ref": "#/$defs/method-list"}
+      }
+    },
+    "source_validated_methods": {"$ref": "#/$defs/method-list"},
+    "event_source_required_methods": {"$ref": "#/$defs/method-list"},
+    "classifications": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["read_only", "reversible_with_readback", "software_only", "unsafe"],
+      "properties": {
+        "read_only": {"$ref": "#/$defs/method-list"},
+        "reversible_with_readback": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["method", "readback"],
+            "properties": {
+              "method": {"$ref": "#/$defs/method"},
+              "readback": {"$ref": "#/$defs/method"}
+            }
+          }
+        },
+        "software_only": {"$ref": "#/$defs/method-list"},
+        "unsafe": {"$ref": "#/$defs/method-list"}
+      }
+    },
+    "qualification_probes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["profile_id", "methods"],
+        "properties": {
+          "profile_id": {"type": "string", "pattern": "^child\\.[a-z0-9.-]+$"},
+          "methods": {"$ref": "#/$defs/method-list"}
+        }
+      }
+    },
+    "privacy_overrides": {
+      "type": "object",
+      "propertyNames": {"$ref": "#/$defs/method"},
+      "additionalProperties": {
+        "enum": ["summary-only", "redacted-equality-only"]
+      }
+    }
+  },
+  "$defs": {
+    "method": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,127}$"},
+    "method-list": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/method"}
+    }
+  }
+}
