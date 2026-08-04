@@ -1,0 +1,1436 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+from __future__ import annotations
+
+import json
+from pprint import pformat
+import re
+from typing import Any
+
+from ..source_validated_catalog import (
+    PHYSICALLY_PROVEN,
+    SOURCE_QUALIFIED_OPERATIONAL,
+    UPSTREAM_BLOCKED_OR_RESEARCH_ONLY,
+    public_support_tier,
+    public_support_tier_counts,
+)
+
+
+def _symbol(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9]+", "_", value).strip("_").upper()
+
+
+def _variant(value: str) -> str:
+    return "".join(part[:1].upper() + part[1:] for part in value.replace(".", "-").split("-"))
+
+
+def _rust_strings(values: list[str]) -> str:
+    return "&[" + ", ".join(json.dumps(value) for value in values) + "]"
+
+
+def _rust_variants(type_name: str, values: list[str]) -> str:
+    return "&[" + ", ".join(f"{type_name}::{_variant(value)}" for value in values) + "]"
+
+
+def _rust_variant_field(
+    field_name: str, type_name: str, values: list[str], *, indent: str
+) -> list[str]:
+    tokens = [f"{type_name}::{_variant(value)}" for value in values]
+    single_line = f"{indent}{field_name}: &[{', '.join(tokens)}],"
+    if len(single_line) <= 100:
+        return [single_line]
+    return [
+        f"{indent}{field_name}: &[",
+        *(f"{indent}    {token}," for token in tokens),
+        f"{indent}],",
+    ]
+
+
+def _rust_number_field(field_name: str, values: list[int], *, indent: str) -> list[str]:
+    single_line = f"{indent}{field_name}: &[{', '.join(str(value) for value in values)}],"
+    if len(values) <= 8 and len(single_line) <= 100:
+        return [single_line]
+    return [
+        f"{indent}{field_name}: &[",
+        *_wrapped_numbers(values, indent=f"{indent}    "),
+        f"{indent}],",
+    ]
+
+
+def _rust_qualification_migrations(index: int, migrations: list[dict[str, Any]]) -> list[str]:
+    declaration = (
+        f"const QUALIFICATION_MIGRATIONS_{index}: &[QualificationMigrationRecord]"
+    )
+    if not migrations:
+        return [f"{declaration} = &[];", ""]
+
+    if len(migrations) == 1:
+        migration = migrations[0]
+        return [
+            f"{declaration} =",
+            "    &[QualificationMigrationRecord {",
+            f'        from_runtime_sha256: "{migration["from_runtime_sha256"]}",',
+            "        preserve_stage_roles: "
+            f"{_rust_strings(migration['preserve_stage_roles'])},",
+            "    }];",
+            "",
+        ]
+
+    lines = [f"{declaration} = &["]
+    for migration in migrations:
+        lines.extend(
+            [
+                "    QualificationMigrationRecord {",
+                f'        from_runtime_sha256: "{migration["from_runtime_sha256"]}",',
+                "        preserve_stage_roles: "
+                f"{_rust_strings(migration['preserve_stage_roles'])},",
+                "    },",
+            ]
+        )
+    return [*lines, "];", ""]
+
+
+def _wrapped_numbers(values: list[int], *, indent: str = "    ", width: int = 100) -> list[str]:
+    lines: list[str] = []
+    current = indent
+    for value in values:
+        token = f"{value},"
+        separator = "" if current == indent else " "
+        if len(current) + len(separator) + len(token) > width:
+            lines.append(current)
+            current = indent + token
+        else:
+            current += separator + token
+    if current != indent:
+        lines.append(current)
+    return lines
+
+
+def compiled_json(catalog: dict[str, Any]) -> str:
+    return json.dumps(catalog, indent=2, sort_keys=True, ensure_ascii=True) + "\n"
+
+
+def fixtures_json(fixtures: dict[str, Any]) -> str:
+    return json.dumps(fixtures, indent=2, sort_keys=True, ensure_ascii=True) + "\n"
+
+
+def _admitted_methods(device: dict[str, Any], integration: str) -> list[str]:
+    rule_methods = {
+        method
+        for rule in device["rules"]
+        if integration in rule["integrations"]
+        for method in rule["methods"]
+    }
+    openrazer_record = device["integrations"]["openrazer"]
+    openrazer_methods = (
+        set(openrazer_record["methods"])
+        if openrazer_record["state"] == "source-validated"
+        else set()
+    )
+    if integration == "openrazer":
+        return sorted(rule_methods & openrazer_methods)
+    return sorted(rule_methods - openrazer_methods)
+
+
+def _pending_reference(entry: dict[str, Any], integration: str) -> str | None:
+    pending = next(
+        (
+            item
+            for item in entry["upstream_pending"]
+            if item["application"] == integration
+        ),
+        None,
+    )
+    if pending is None:
+        return None
+    reference = pending["reference"]
+    number = reference.rsplit("/", maxsplit=1)[-1]
+    return f"upstream pending ([#{number}]({reference})); not merged"
+
+
+def _integration_state(
+    device: dict[str, Any], entry: dict[str, Any], integration: str
+) -> str:
+    record = device["integrations"][integration]
+    if record["state"] == "source-validated":
+        return f"merged and source-validated (`{record['record_id']}`)"
+    pending = _pending_reference(entry, integration)
+    if pending is not None:
+        return pending
+    if record["state"] == "backend-required":
+        return f"merged but blocked (`{record['reason']}`)"
+    return "absent from pinned merged source"
+
+
+def _method_details(device: dict[str, Any]) -> str:
+    openrazer = _admitted_methods(device, "openrazer")
+    openrgb = _admitted_methods(device, "openrgb")
+    summary = f"OpenRazer {len(openrazer)} / OpenRGB {len(openrgb)}"
+
+    def methods(label: str, values: list[str]) -> str:
+        if not values:
+            return f"<strong>{label}:</strong> none"
+        rendered = ", ".join(f"<code>{value}</code>" for value in values)
+        return f"<strong>{label}:</strong> {rendered}"
+
+    return (
+        f"<details><summary>{summary}</summary>"
+        f"{methods('OpenRazer', openrazer)}<br>"
+        f"{methods('OpenRGB', openrgb)}</details>"
+    )
+
+
+def technical_markdown(catalog: dict[str, Any], source_validated: dict[str, Any]) -> str:
+    capabilities = {item["id"]: item for item in catalog["capabilities"]}
+    lines = [
+        "# Supported Hardware",
+        "",
+        "> Generated by `./hfx generate`. Do not edit manually.",
+        "",
+        f"Profile source: `{catalog['source_sha256']}`",
+        "",
+        "Support is capability-specific. A listed model does not transfer its transport map to a similar name or PID.",
+        "",
+        "## Qualified Profiles",
+        "",
+        "| Profile | Kind | Identity | Runtime binding | Read capabilities | Write capabilities |",
+        "| --- | --- | --- | --- | ---: | ---: |",
+    ]
+    for profile in catalog["profiles"]:
+        identity = profile["identity"]
+        if "product_id" in identity:
+            hardware = f"`{identity['vendor_id']:04x}:{identity['product_id']:04x}`"
+        else:
+            hardware = "reviewed surface metadata (no USB identity)"
+        reads = sum(capabilities[item["id"]]["access"] == "read" for item in profile["capabilities"])
+        writes = sum(capabilities[item["id"]]["access"] == "write" for item in profile["capabilities"])
+        lines.append(
+            f"| **{identity['model_name']}**<br><code>{profile['profile_id']}</code> | "
+            f"{profile['device_kind']} | {hardware} | `{profile['runtime_sha256'][:12]}` | {reads} | {writes} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Composition Contract",
+            "",
+            "- A receiver profile, zero or more independently qualified child profiles, and optional surface metadata compose at runtime.",
+            "- A mouse does not require a keyboard. A keyboard does not require a mouse.",
+            "- Unknown children expose observed identity safely and receive **zero writable capabilities**.",
+            "- Surface variants are never selected by an invented USB product ID.",
+            "- The receiver and mat are transport and system-information objects, not addressable RGB controllers.",
+            "",
+            "## Qualified Lighting Topology",
+            "",
+            "| Device | Physical LEDs | Application slots | Transport map | Presentation owner |",
+            "| --- | ---: | ---: | --- | --- |",
+        ]
+    )
+    for profile in catalog["profiles"]:
+        lighting = profile.get("transport", {}).get("lighting")
+        if not lighting:
+            continue
+        mapping = lighting["application_index_to_carrier"]
+        map_summary = "identity" if mapping == list(range(len(mapping))) else "profile permutation"
+        lines.append(
+            f"| {profile['identity']['model_name']} | {lighting['physical_led_count']} | "
+            f"{lighting['application_slot_count']} | {map_summary} | {profile['presentation']['owner']} |"
+        )
+    lines.extend(
+        [
+            "",
+            "OpenRGB owns key names, geometry, zones, layout variants, and visual ordering. HyperFlux owns only the evidence-backed receiver-carrier translation and transport policy.",
+            "",
+            "## Official HyperFlux V2 Receiver Scope",
+            "",
+            "Official membership establishes the exact receiver-child identity boundary. An application becomes operational only when its own pinned merged source is independently validated; hardware assurance neither grants nor withholds access.",
+            "",
+            f"Receiver identity: `{catalog['official_receiver_scope']['vendor_id']:04X}:{catalog['official_receiver_scope']['receiver_product_id']:04X}`. Authority: `{catalog['official_receiver_scope']['snapshot_id']}` / `{catalog['official_receiver_scope']['source_claim']}`.",
+            "",
+            "| Model | Kind | Wireless / direct USB | Scope | OpenRazer | OpenRGB | Admitted methods | Hardware assurance |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        ]
+    )
+    routes = {
+        (device["identity"]["product_id"], device["identity"]["device_kind"]): device
+        for device in source_validated["devices"]
+    }
+    for entry in catalog["official_receiver_scope"]["entries"]:
+        route = routes[(entry["wireless_product_id"], entry["device_kind"])]
+        assurance = route["hardware_assurance"]
+        assurance_text = assurance["state"]
+        if assurance["profile_id"] is not None:
+            assurance_text += f" (`{assurance['profile_id']}`)"
+        lines.append(
+            f"| **{entry['official_name']}** | {entry['device_kind']} | "
+            f"`1532:{entry['wireless_product_id']:04X}` / `1532:{entry['direct_usb_product_id']:04X}` | "
+            f"official | {_integration_state(route, entry, 'openrazer')} | "
+            f"{_integration_state(route, entry, 'openrgb')} | {_method_details(route)} | "
+            f"{assurance_text} |"
+        )
+    lines.extend(["", "## Evidence Boundaries", ""])
+    for claim in catalog["evidence_claims"]:
+        limits = " ".join(claim["limitations"])
+        lines.extend(
+            [
+                f"### `{claim['id']}`",
+                "",
+                f"{claim['summary']} Evidence: `{claim['evidence_level']}`; privacy: `{claim['privacy']}`.",
+                "",
+                f"Boundary: {limits}",
+                "",
+            ]
+        )
+    return "\n".join(lines)
+
+
+def _application_paths(device: dict[str, Any]) -> str:
+    labels = {"openrazer": "OpenRazer / Polychromatic", "openrgb": "OpenRGB"}
+    available = [
+        labels[name]
+        for name in ("openrazer", "openrgb")
+        if device["integrations"][name]["state"] == "source-validated"
+    ]
+    return ", ".join(available) or "none"
+
+
+def _blocked_reason(device: dict[str, Any], entry: dict[str, Any]) -> str:
+    pending = [item["application"] for item in entry["upstream_pending"]]
+    if pending:
+        return "Upstream support pending for " + ", ".join(sorted(pending))
+    reasons = sorted(
+        {
+            integration["reason"]
+            for integration in device["integrations"].values()
+            if integration["state"] == "backend-required"
+            and integration["reason"] is not None
+        }
+    )
+    if reasons:
+        return "; ".join(reasons)
+    return "No validated stock-application path in the pinned upstream sources"
+
+
+def markdown(catalog: dict[str, Any], source_validated: dict[str, Any]) -> str:
+    devices = source_validated["devices"]
+    counts = public_support_tier_counts(devices)
+    entries = {
+        (entry["wireless_product_id"], entry["device_kind"]): entry
+        for entry in catalog["official_receiver_scope"]["entries"]
+    }
+    grouped = {
+        tier: [device for device in devices if public_support_tier(device) == tier]
+        for tier in (
+            PHYSICALLY_PROVEN,
+            SOURCE_QUALIFIED_OPERATIONAL,
+            UPSTREAM_BLOCKED_OR_RESEARCH_ONLY,
+        )
+    }
+    lines = [
+        "# Supported Hardware",
+        "",
+        "> Generated by `./hfx generate`. Do not edit manually.",
+        "",
+        "HyperFlux support is capability-based and plug-and-play. The two physically "
+        "tested devices are assurance fixtures, not a runtime allowlist.",
+        "",
+        f"- **Physically proven:** {counts[PHYSICALLY_PROVEN]}",
+        f"- **Source-qualified operational candidates:** {counts[SOURCE_QUALIFIED_OPERATIONAL]}",
+        f"- **Upstream-blocked or research-only:** {counts[UPSTREAM_BLOCKED_OR_RESEARCH_ONLY]}",
+        "",
+        "## Physically Proven",
+        "",
+        "These devices completed end-to-end hardware, application, and lifecycle checks.",
+        "",
+        "| Device | Type | Wireless / direct USB | Validated stock applications |",
+        "| --- | --- | --- | --- |",
+    ]
+    for device in grouped[PHYSICALLY_PROVEN]:
+        identity = device["identity"]
+        entry = entries[(identity["product_id"], identity["device_kind"])]
+        lines.append(
+            f"| {device['model_name']} | {identity['device_kind']} | "
+            f"`1532:{identity['product_id']:04x}` / "
+            f"`1532:{entry['direct_usb_product_id']:04x}` | {_application_paths(device)} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Source-Qualified Operational Candidates",
+            "",
+            "Pinned upstream source and generated command policy provide at least one "
+            "validated stock-application path. These devices have not received the same "
+            "physical assurance as the fixtures above.",
+            "",
+            "| Device | Type | Wireless / direct USB | Validated stock applications |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
+    for device in grouped[SOURCE_QUALIFIED_OPERATIONAL]:
+        identity = device["identity"]
+        entry = entries[(identity["product_id"], identity["device_kind"])]
+        lines.append(
+            f"| {device['model_name']} | {identity['device_kind']} | "
+            f"`1532:{identity['product_id']:04x}` / "
+            f"`1532:{entry['direct_usb_product_id']:04x}` | {_application_paths(device)} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Upstream-Blocked Or Research-Only",
+            "",
+            "These receiver-scope identities are not operational support claims. They "
+            "remain fail-closed until a stock-application path is source-qualified.",
+            "",
+            "| Device | Type | Wireless / direct USB | Current boundary |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
+    for device in grouped[UPSTREAM_BLOCKED_OR_RESEARCH_ONLY]:
+        identity = device["identity"]
+        entry = entries[(identity["product_id"], identity["device_kind"])]
+        lines.append(
+            f"| {device['model_name']} | {identity['device_kind']} | "
+            f"`1532:{identity['product_id']:04x}` / "
+            f"`1532:{entry['direct_usb_product_id']:04x}` | "
+            f"{_blocked_reason(device, entry)} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Eligibility Boundary",
+            "",
+            "A listed identity still needs the exact active receiver generation, route, "
+            "report family, and source-derived policy. Similar names, vendor-wide matches, "
+            "pairing inventory, and local USB paths never grant write authority.",
+            "",
+            "Maintainers can inspect the complete machine-readable profile catalog in "
+            "[`generated/profiles/catalog.json`](../../generated/profiles/catalog.json) "
+            "and the source-qualified application routes in "
+            "[`integrations/native-route/source-validated.json`](../../integrations/native-route/source-validated.json).",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def rust_catalog(catalog: dict[str, Any]) -> str:
+    lines = [
+        "// Generated by ./hfx generate. Do not edit manually.",
+        "// SPDX-License-Identifier: GPL-2.0-only",
+        f"// Profile source SHA-256: {catalog['source_sha256']}",
+        "",
+        "use hfx_domain::{DeviceKind, ProfileKind, RouteKind, SupportLevel};",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct CapabilityRecord {",
+        "    pub id: &'static str,",
+        "    pub support_level: SupportLevel,",
+        "    pub writable: bool,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct LightingTopology {",
+        "    pub physical_led_count: u16,",
+        "    pub application_slot_count: u16,",
+        "    pub carrier_count: u16,",
+        "    pub rows: u16,",
+        "    pub columns: u16,",
+        "    pub application_index_to_carrier: &'static [u16],",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub enum PassiveEndpointLane {",
+        "    Pointer,",
+        "    Keyboard,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub enum PassiveBatteryEncoding {",
+        "    Linear255,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct PassiveTelemetryRecord {",
+        "    pub endpoint_lane: PassiveEndpointLane,",
+        "    pub battery_encoding: PassiveBatteryEncoding,",
+        "    pub contact_off_mat: &'static [u32],",
+        "    pub contact_on_mat: &'static [u32],",
+        "    pub route_available: &'static [u32],",
+        "    pub route_unavailable: &'static [u32],",
+        "    pub route_indeterminate: &'static [u32],",
+        "    pub report_implies_route_available: bool,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub enum PowerOffDepartureEvidence {",
+        "    ReceiverState,",
+        "    WatchedRetainedRoute,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub enum ReturnEvidenceSource {",
+        "    BatteryReport,",
+        "    ContactReport,",
+        "    EndpointActivity,",
+        "    RouteReturn,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub enum ReturnPolicyStrategy {",
+        "    ActivityAssistedReturnEpoch,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub enum ReturnPolicyQualification {",
+        "    PrequalificationCandidate,",
+        "    Qualified,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub enum ReturnDeliverySemantics {",
+        "    ReceiverDeliveredNotChildApplied,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct ReturnPolicyRecord {",
+        "    pub id: &'static str,",
+        "    pub strategy: ReturnPolicyStrategy,",
+        "    pub qualification: ReturnPolicyQualification,",
+        "    pub quiescence_candidate_ms: u64,",
+        "    pub observation_jitter_ms: u64,",
+        "    pub retry_offsets_ms: &'static [u64],",
+        "    pub allowed_open_evidence: &'static [ReturnEvidenceSource],",
+        "    pub allowed_accelerator_evidence: &'static [ReturnEvidenceSource],",
+        "    pub delivery_semantics: ReturnDeliverySemantics,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct LifecyclePolicyRecord {",
+        "    pub power_off_departure_evidence: PowerOffDepartureEvidence,",
+        "    pub return_policy_id: &'static str,",
+        "    pub open_evidence: &'static [ReturnEvidenceSource],",
+        "    pub accelerator_evidence: &'static [ReturnEvidenceSource],",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct QualificationMigrationRecord {",
+        "    pub from_runtime_sha256: &'static str,",
+        "    pub preserve_stage_roles: &'static [&'static str],",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct PresentationRecord {",
+        "    pub upstream_id: &'static str,",
+        "    pub owner: &'static str,",
+        "    pub project_version: &'static str,",
+        "    pub source_commit: &'static str,",
+        "    pub model_key: &'static str,",
+        "    pub layout_key: Option<&'static str>,",
+        "    pub transport_variant: &'static str,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct NativeMatchRangeRecord {",
+        "    pub offset: u16,",
+        "    pub length: u16,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub enum NativeChecksumAlgorithm {",
+        "    Xor8,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct NativeByteValueRecord {",
+        "    pub offset: u16,",
+        "    pub value: u8,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct NativeByteRangeRecord {",
+        "    pub offset: u16,",
+        "    pub minimum: u8,",
+        "    pub maximum: u8,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct NativeDataSizeRecord {",
+        "    pub offset: u16,",
+        "    pub maximum: u8,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct NativeChecksumRecord {",
+        "    pub algorithm: NativeChecksumAlgorithm,",
+        "    pub start_offset: u16,",
+        "    pub end_offset_exclusive: u16,",
+        "    pub result_offset: u16,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct NativeTransactionIdRecord {",
+        "    pub offset: u16,",
+        "    pub match_mask: u8,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub enum NativeRouteSelectorField {",
+        "    TransactionId,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct NativeRouteSelectorRecord {",
+        "    pub field: NativeRouteSelectorField,",
+        "    pub pointer_lane: u8,",
+        "    pub keyboard_lane: u8,",
+        "    pub restore_original_response: bool,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct NativeReportFormatRecord {",
+        "    pub request_status: NativeByteValueRecord,",
+        "    pub response_status: NativeByteRangeRecord,",
+        "    pub protocol_type: NativeByteValueRecord,",
+        "    pub data_size: NativeDataSizeRecord,",
+        "    pub checksum: NativeChecksumRecord,",
+        "    pub trailer: NativeByteValueRecord,",
+        "    pub transaction_id: NativeTransactionIdRecord,",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct NativeExchangeRecord {",
+        "    pub protocol_family: &'static str,",
+        "    pub report_bytes: u16,",
+        "    pub set_report_index: u8,",
+        "    pub response_report_index: u8,",
+        "    pub initial_response_delay_us: u32,",
+        "    pub response_retry_delay_us: u32,",
+        "    pub max_response_attempts: u8,",
+        "    pub report_format: NativeReportFormatRecord,",
+        "    pub route_selector: Option<NativeRouteSelectorRecord>,",
+        "    pub match_ranges: &'static [NativeMatchRangeRecord],",
+        "}",
+        "",
+        "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
+        "pub struct ProfileRecord {",
+        "    pub id: &'static str,",
+        "    pub runtime_sha256: &'static str,",
+        "    pub revision: u32,",
+        "    pub profile_kind: ProfileKind,",
+        "    pub device_kind: DeviceKind,",
+        "    pub vendor_id: Option<u16>,",
+        "    pub product_id: Option<u16>,",
+        "    pub model_name: &'static str,",
+        "    pub transport_backend_id: Option<u32>,",
+        "    pub protocol_family: Option<&'static str>,",
+        "    pub receiver_protocols: &'static [&'static str],",
+        "    pub routes: &'static [RouteKind],",
+        "    pub supported_child_kinds: &'static [DeviceKind],",
+        "    pub required_sibling_kinds: &'static [DeviceKind],",
+        "    pub exact_child_combinations: bool,",
+        "    pub capabilities: &'static [CapabilityRecord],",
+        "    pub native_exchange: Option<NativeExchangeRecord>,",
+        "    pub lighting: Option<LightingTopology>,",
+        "    pub passive: Option<PassiveTelemetryRecord>,",
+        "    pub lifecycle: Option<LifecyclePolicyRecord>,",
+        "    pub qualification_migrations: &'static [QualificationMigrationRecord],",
+        "    pub presentation: Option<PresentationRecord>,",
+        "}",
+        "",
+        "pub const PROFILE_SOURCE_SHA256: &str =",
+        f'    "{catalog["source_sha256"]}";',
+        "",
+    ]
+    policies = catalog["lifecycle_policies"]
+    single_policy = len(policies) == 1
+    lines.append(
+        "pub const RETURN_POLICIES: &[ReturnPolicyRecord] = &[ReturnPolicyRecord {"
+        if single_policy
+        else "pub const RETURN_POLICIES: &[ReturnPolicyRecord] = &["
+    )
+    for policy in policies:
+        if not single_policy:
+            lines.append("    ReturnPolicyRecord {")
+        indent = "    " if single_policy else "        "
+        lines.extend(
+            [
+                f'{indent}id: {json.dumps(policy["id"])},',
+                f"{indent}strategy: ReturnPolicyStrategy::"
+                f"{_variant(policy['strategy'])},",
+                f"{indent}qualification: ReturnPolicyQualification::"
+                f"{_variant(policy['qualification'])},",
+                f"{indent}quiescence_candidate_ms: {policy['quiescence_candidate_ms']},",
+                f"{indent}observation_jitter_ms: {policy['observation_jitter_ms']},",
+                *_rust_number_field(
+                    "retry_offsets_ms", policy["retry_offsets_ms"], indent=indent
+                ),
+                *_rust_variant_field(
+                    "allowed_open_evidence",
+                    "ReturnEvidenceSource",
+                    policy["allowed_open_evidence"],
+                    indent=indent,
+                ),
+                *_rust_variant_field(
+                    "allowed_accelerator_evidence",
+                    "ReturnEvidenceSource",
+                    policy["allowed_accelerator_evidence"],
+                    indent=indent,
+                ),
+                f"{indent}delivery_semantics: ReturnDeliverySemantics::"
+                f"{_variant(policy['delivery_semantics'])},",
+            ]
+        )
+        lines.append("}];" if single_policy else "    },")
+    if not single_policy:
+        lines.append("];")
+    lines.append("")
+    capability_defs = {item["id"]: item for item in catalog["capabilities"]}
+    for index, profile in enumerate(catalog["profiles"]):
+        capabilities_name = f"CAPABILITIES_{index}"
+        lines.append(f"const {capabilities_name}: &[CapabilityRecord] = &[")
+        for capability in profile["capabilities"]:
+            writable = str(capability_defs[capability["id"]]["access"] == "write").lower()
+            lines.extend(
+                [
+                    "    CapabilityRecord {",
+                    f'        id: "{capability["id"]}",',
+                    f"        support_level: SupportLevel::{_variant(capability['support_level'])},",
+                    f"        writable: {writable},",
+                    "    },",
+                ]
+            )
+        lines.extend(["];", ""])
+        lighting = profile.get("transport", {}).get("lighting")
+        if lighting:
+            values = ", ".join(str(value) for value in lighting["application_index_to_carrier"])
+            single_line = f"const CARRIERS_{index}: &[u16] = &[{values}];"
+            if len(single_line) <= 100:
+                lines.extend([single_line, ""])
+            else:
+                lines.append(f"const CARRIERS_{index}: &[u16] = &[")
+                lines.extend(_wrapped_numbers(lighting["application_index_to_carrier"]))
+                lines.extend(["];", ""])
+        native_exchange = profile.get("transport", {}).get("native_exchange")
+        if native_exchange:
+            lines.append(f"const NATIVE_MATCH_RANGES_{index}: &[NativeMatchRangeRecord] = &[")
+            for item in native_exchange["match_ranges"]:
+                lines.extend(
+                    [
+                        "    NativeMatchRangeRecord {",
+                        f"        offset: {item['offset']},",
+                        f"        length: {item['length']},",
+                        "    },",
+                    ]
+                )
+            lines.extend(["];", ""])
+        passive = profile.get("transport", {}).get("passive")
+        if passive:
+            contact = passive["contact"] or {"off_mat": [], "on_mat": []}
+            for suffix, values in (
+                ("CONTACT_OFF_MAT", contact["off_mat"]),
+                ("CONTACT_ON_MAT", contact["on_mat"]),
+                ("ROUTE_AVAILABLE", passive["route"]["available"]),
+                ("ROUTE_UNAVAILABLE", passive["route"]["unavailable"]),
+                ("ROUTE_INDETERMINATE", passive["route"].get("indeterminate", [])),
+            ):
+                rendered = ", ".join(str(value) for value in values)
+                lines.append(f"const PASSIVE_{suffix}_{index}: &[u32] = &[{rendered}];")
+            lines.append("")
+        lines.extend(
+            _rust_qualification_migrations(
+                index, profile.get("qualification_migrations", [])
+            )
+        )
+    lines.extend(["pub const PROFILES: &[ProfileRecord] = &[",])
+    for index, profile in enumerate(catalog["profiles"]):
+        identity = profile["identity"]
+        compatibility = profile.get("compatibility", {})
+        vendor = f"Some({identity['vendor_id']})" if "vendor_id" in identity else "None"
+        product = f"Some({identity['product_id']})" if "product_id" in identity else "None"
+        protocol_family = compatibility.get("protocol_family")
+        protocol_family = f"Some({json.dumps(protocol_family)})" if protocol_family else "None"
+        backend_id = profile.get("transport", {}).get("backend_id")
+        backend_id = f"Some({backend_id})" if backend_id is not None else "None"
+        receiver_protocols = _rust_strings(compatibility.get("receiver_protocols", []))
+        routes = _rust_variants("RouteKind", compatibility.get("routes", []))
+        supported_child_kinds = _rust_variants(
+            "DeviceKind", compatibility.get("supported_child_kinds", [])
+        )
+        required_sibling_kinds = _rust_variants(
+            "DeviceKind", compatibility.get("required_sibling_kinds", [])
+        )
+        exact_child_combinations = str(compatibility.get("exact_child_combinations", False)).lower()
+        native_exchange = profile.get("transport", {}).get("native_exchange")
+        if native_exchange:
+            report_format = native_exchange["report_format"]
+            checksum = report_format["checksum"]
+            route_selector = native_exchange.get("route_selector")
+            if route_selector is None:
+                route_selector_lines = ["            route_selector: None,"]
+            else:
+                route_selector_lines = [
+                    "            route_selector: Some(NativeRouteSelectorRecord {",
+                    "                field: NativeRouteSelectorField::"
+                    f"{_variant(route_selector['field'])},",
+                    f"                pointer_lane: {route_selector['pointer_lane']},",
+                    f"                keyboard_lane: {route_selector['keyboard_lane']},",
+                    "                restore_original_response: "
+                    f"{str(route_selector['restore_original_response']).lower()},",
+                    "            }),",
+                ]
+            native_exchange_lines = [
+                "        native_exchange: Some(NativeExchangeRecord {",
+                f"            protocol_family: {json.dumps(native_exchange['protocol_family'])},",
+                f"            report_bytes: {native_exchange['report_bytes']},",
+                f"            set_report_index: {native_exchange['set_report_index']},",
+                f"            response_report_index: {native_exchange['response_report_index']},",
+                "            initial_response_delay_us: "
+                f"{native_exchange['initial_response_delay_us']},",
+                "            response_retry_delay_us: "
+                f"{native_exchange['response_retry_delay_us']},",
+                "            max_response_attempts: "
+                f"{native_exchange['max_response_attempts']},",
+                "            report_format: NativeReportFormatRecord {",
+                "                request_status: NativeByteValueRecord {",
+                f"                    offset: {report_format['request_status']['offset']},",
+                f"                    value: {report_format['request_status']['value']},",
+                "                },",
+                "                response_status: NativeByteRangeRecord {",
+                f"                    offset: {report_format['response_status']['offset']},",
+                f"                    minimum: {report_format['response_status']['minimum']},",
+                f"                    maximum: {report_format['response_status']['maximum']},",
+                "                },",
+                "                protocol_type: NativeByteValueRecord {",
+                f"                    offset: {report_format['protocol_type']['offset']},",
+                f"                    value: {report_format['protocol_type']['value']},",
+                "                },",
+                "                data_size: NativeDataSizeRecord {",
+                f"                    offset: {report_format['data_size']['offset']},",
+                f"                    maximum: {report_format['data_size']['maximum']},",
+                "                },",
+                "                checksum: NativeChecksumRecord {",
+                f"                    algorithm: NativeChecksumAlgorithm::{_variant(checksum['algorithm'])},",
+                f"                    start_offset: {checksum['start_offset']},",
+                f"                    end_offset_exclusive: {checksum['end_offset_exclusive']},",
+                f"                    result_offset: {checksum['result_offset']},",
+                "                },",
+                "                trailer: NativeByteValueRecord {",
+                f"                    offset: {report_format['trailer']['offset']},",
+                f"                    value: {report_format['trailer']['value']},",
+                "                },",
+                "                transaction_id: NativeTransactionIdRecord {",
+                f"                    offset: {report_format['transaction_id']['offset']},",
+                f"                    match_mask: {report_format['transaction_id']['match_mask']},",
+                "                },",
+                "            },",
+            ]
+            native_exchange_lines.extend(route_selector_lines)
+            native_exchange_lines.extend(
+                [
+                    f"            match_ranges: NATIVE_MATCH_RANGES_{index},",
+                    "        }),",
+                ]
+            )
+        else:
+            native_exchange_lines = ["        native_exchange: None,"]
+        lighting = profile.get("transport", {}).get("lighting")
+        if lighting:
+            lighting_value = None
+        else:
+            lighting_value = "None"
+        passive = profile.get("transport", {}).get("passive")
+        if passive:
+            lane = _variant(passive["endpoint_lane"])
+            battery = _variant(passive["battery_encoding"])
+            route_implied = str(passive["report_implies_route_available"]).lower()
+            passive_lines = [
+                "        passive: Some(PassiveTelemetryRecord {",
+                f"            endpoint_lane: PassiveEndpointLane::{lane},",
+                f"            battery_encoding: PassiveBatteryEncoding::{battery},",
+                f"            contact_off_mat: PASSIVE_CONTACT_OFF_MAT_{index},",
+                f"            contact_on_mat: PASSIVE_CONTACT_ON_MAT_{index},",
+                f"            route_available: PASSIVE_ROUTE_AVAILABLE_{index},",
+                f"            route_unavailable: PASSIVE_ROUTE_UNAVAILABLE_{index},",
+                f"            route_indeterminate: PASSIVE_ROUTE_INDETERMINATE_{index},",
+                f"            report_implies_route_available: {route_implied},",
+                "        }),",
+            ]
+        else:
+            passive_lines = ["        passive: None,"]
+        lifecycle = profile.get("transport", {}).get("lifecycle")
+        if lifecycle:
+            departure = _variant(lifecycle["power_off_departure_evidence"])
+            lifecycle_lines = [
+                "        lifecycle: Some(LifecyclePolicyRecord {",
+                "            power_off_departure_evidence: "
+                f"PowerOffDepartureEvidence::{departure},",
+                f'            return_policy_id: {json.dumps(lifecycle["return_policy_id"])},',
+            ]
+            lifecycle_lines.extend(
+                _rust_variant_field(
+                    "open_evidence",
+                    "ReturnEvidenceSource",
+                    lifecycle["open_evidence"],
+                    indent="            ",
+                )
+            )
+            lifecycle_lines.extend(
+                _rust_variant_field(
+                    "accelerator_evidence",
+                    "ReturnEvidenceSource",
+                    lifecycle["accelerator_evidence"],
+                    indent="            ",
+                )
+            )
+            lifecycle_lines.append("        }),")
+        else:
+            lifecycle_lines = ["        lifecycle: None,"]
+        presentation = profile.get("presentation")
+        if presentation:
+            layout_key = (
+                f"Some({json.dumps(presentation['layout_key'])})"
+                if presentation["layout_key"] is not None
+                else "None"
+            )
+            presentation_lines = [
+                "        presentation: Some(PresentationRecord {",
+                f"            upstream_id: {json.dumps(presentation['upstream_id'])},",
+                f"            owner: {json.dumps(presentation['owner'])},",
+                f"            project_version: {json.dumps(presentation['project_version'])},",
+                f"            source_commit: {json.dumps(presentation['source_commit'])},",
+                f"            model_key: {json.dumps(presentation['model_key'])},",
+                f"            layout_key: {layout_key},",
+                f"            transport_variant: {json.dumps(presentation['transport_variant'])},",
+                "        }),",
+            ]
+        else:
+            presentation_lines = ["        presentation: None,"]
+        lines.extend(
+            [
+                "    ProfileRecord {",
+                f'        id: "{profile["profile_id"]}",',
+                f'        runtime_sha256: "{profile["runtime_sha256"]}",',
+                f"        revision: {profile['revision']},",
+                f"        profile_kind: ProfileKind::{_variant(profile['kind'])},",
+                f"        device_kind: DeviceKind::{_variant(profile['device_kind'])},",
+                f"        vendor_id: {vendor},",
+                f"        product_id: {product},",
+                f'        model_name: "{profile["identity"]["model_name"]}",',
+                f"        transport_backend_id: {backend_id},",
+                f"        protocol_family: {protocol_family},",
+                f"        receiver_protocols: {receiver_protocols},",
+                f"        routes: {routes},",
+                f"        supported_child_kinds: {supported_child_kinds},",
+                f"        required_sibling_kinds: {required_sibling_kinds},",
+                f"        exact_child_combinations: {exact_child_combinations},",
+                f"        capabilities: CAPABILITIES_{index},",
+                *native_exchange_lines,
+                *(
+                    [
+                        "        lighting: Some(LightingTopology {",
+                        f"            physical_led_count: {lighting['physical_led_count']},",
+                        f"            application_slot_count: {lighting['application_slot_count']},",
+                        f"            carrier_count: {lighting['carrier_count']},",
+                        f"            rows: {lighting['rows']},",
+                        f"            columns: {lighting['columns']},",
+                        f"            application_index_to_carrier: CARRIERS_{index},",
+                        "        }),",
+                    ]
+                    if lighting
+                    else [f"        lighting: {lighting_value},"]
+                ),
+                *passive_lines,
+                *lifecycle_lines,
+                f"        qualification_migrations: QUALIFICATION_MIGRATIONS_{index},",
+                *presentation_lines,
+                "    },",
+            ]
+        )
+    lines.extend(
+        [
+            "];",
+            "",
+            "#[must_use]",
+            "pub fn profile_by_id(id: &str) -> Option<&'static ProfileRecord> {",
+            "    PROFILES.iter().find(|profile| profile.id == id)",
+            "}",
+            "",
+            "#[must_use]",
+            "pub fn receiver_profile_by_usb_id(",
+            "    vendor_id: u16,",
+            "    product_id: u16,",
+            ") -> Option<&'static ProfileRecord> {",
+            "    PROFILES.iter().find(|profile| {",
+            "        profile.profile_kind == ProfileKind::Receiver",
+            "            && profile.vendor_id == Some(vendor_id)",
+            "            && profile.product_id == Some(product_id)",
+            "    })",
+            "}",
+            "",
+            "#[must_use]",
+            "pub fn child_profile_by_product_id(product_id: u16) -> Option<&'static ProfileRecord> {",
+            "    PROFILES.iter().find(|profile| {",
+            "        profile.profile_kind == ProfileKind::Child && profile.product_id == Some(product_id)",
+            "    })",
+            "}",
+            "",
+            "#[must_use]",
+            "pub fn return_policy_by_id(id: &str) -> Option<&'static ReturnPolicyRecord> {",
+            "    RETURN_POLICIES.iter().find(|policy| policy.id == id)",
+            "}",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def cpp_catalog(catalog: dict[str, Any]) -> str:
+    capability_defs = {item["id"]: item for item in catalog["capabilities"]}
+    lines = [
+        "// Generated by ./hfx generate. Do not edit manually.",
+        "// SPDX-License-Identifier: GPL-2.0-only",
+        f"// Profile source SHA-256: {catalog['source_sha256']}",
+        "",
+        "#pragma once",
+        "",
+        "#include <array>",
+        "#include <cstdint>",
+        "#include <optional>",
+        "#include <span>",
+        "#include <string_view>",
+        "",
+        "#include <hyperflux/generated/domain_types.hpp>",
+        "",
+        "namespace hyperflux::profiles",
+        "{",
+        "",
+        "struct CapabilityRecord",
+        "{",
+        "    std::string_view id;",
+        "    SupportLevel support_level;",
+        "    bool writable;",
+        "};",
+        "",
+        "struct LightingTopology",
+        "{",
+        "    std::uint16_t physical_led_count;",
+        "    std::uint16_t application_slot_count;",
+        "    std::uint16_t carrier_count;",
+        "    std::uint16_t rows;",
+        "    std::uint16_t columns;",
+        "    std::span<const std::uint16_t> application_index_to_carrier;",
+        "};",
+        "",
+        "enum class PowerOffDepartureEvidence",
+        "{",
+        "    ReceiverState,",
+        "    WatchedRetainedRoute,",
+        "};",
+        "",
+        "enum class ReturnEvidenceSource",
+        "{",
+        "    BatteryReport,",
+        "    ContactReport,",
+        "    EndpointActivity,",
+        "    RouteReturn,",
+        "};",
+        "",
+        "enum class ReturnPolicyStrategy",
+        "{",
+        "    ActivityAssistedReturnEpoch,",
+        "};",
+        "",
+        "enum class ReturnPolicyQualification",
+        "{",
+        "    PrequalificationCandidate,",
+        "    Qualified,",
+        "};",
+        "",
+        "enum class ReturnDeliverySemantics",
+        "{",
+        "    ReceiverDeliveredNotChildApplied,",
+        "};",
+        "",
+        "struct ReturnPolicyRecord",
+        "{",
+        "    std::string_view id;",
+        "    ReturnPolicyStrategy strategy;",
+        "    ReturnPolicyQualification qualification;",
+        "    std::uint64_t quiescence_candidate_ms;",
+        "    std::uint64_t observation_jitter_ms;",
+        "    std::span<const std::uint64_t> retry_offsets_ms;",
+        "    std::span<const ReturnEvidenceSource> allowed_open_evidence;",
+        "    std::span<const ReturnEvidenceSource> allowed_accelerator_evidence;",
+        "    ReturnDeliverySemantics delivery_semantics;",
+        "};",
+        "",
+        "struct LifecyclePolicyRecord",
+        "{",
+        "    PowerOffDepartureEvidence power_off_departure_evidence;",
+        "    std::string_view return_policy_id;",
+        "    std::span<const ReturnEvidenceSource> open_evidence;",
+        "    std::span<const ReturnEvidenceSource> accelerator_evidence;",
+        "};",
+        "",
+        "struct PresentationRecord",
+        "{",
+        "    std::string_view upstream_id;",
+        "    std::string_view owner;",
+        "    std::string_view project_version;",
+        "    std::string_view source_commit;",
+        "    std::string_view model_key;",
+        "    std::optional<std::string_view> layout_key;",
+        "    std::string_view transport_variant;",
+        "};",
+        "",
+        "struct ProfileRecord",
+        "{",
+        "    std::string_view id;",
+        "    std::string_view runtime_sha256;",
+        "    std::uint32_t revision;",
+        "    ProfileKind profile_kind;",
+        "    DeviceKind device_kind;",
+        "    bool has_usb_identity;",
+        "    std::uint16_t vendor_id;",
+        "    std::uint16_t product_id;",
+        "    std::string_view model_name;",
+        "    std::optional<std::uint32_t> transport_backend_id;",
+        "    std::string_view protocol_family;",
+        "    std::span<const std::string_view> receiver_protocols;",
+        "    std::span<const RouteKind> routes;",
+        "    std::span<const DeviceKind> supported_child_kinds;",
+        "    std::span<const DeviceKind> required_sibling_kinds;",
+        "    bool exact_child_combinations;",
+        "    std::span<const CapabilityRecord> capabilities;",
+        "    const LightingTopology* lighting;",
+        "    const LifecyclePolicyRecord* lifecycle;",
+        "    const PresentationRecord* presentation;",
+        "};",
+        "",
+        f'inline constexpr std::string_view profile_source_sha256 = "{catalog["source_sha256"]}";',
+        "",
+    ]
+    for index, policy in enumerate(catalog["lifecycle_policies"]):
+        offsets = ", ".join(str(value) for value in policy["retry_offsets_ms"])
+        open_evidence = ", ".join(
+            f"ReturnEvidenceSource::{_variant(value)}" for value in policy["allowed_open_evidence"]
+        )
+        accelerator_evidence = ", ".join(
+            f"ReturnEvidenceSource::{_variant(value)}"
+            for value in policy["allowed_accelerator_evidence"]
+        )
+        lines.extend(
+            [
+                f"inline constexpr std::array<std::uint64_t, {len(policy['retry_offsets_ms'])}> return_retry_offsets_{index} {{{{{offsets}}}}};",
+                f"inline constexpr std::array<ReturnEvidenceSource, {len(policy['allowed_open_evidence'])}> return_open_evidence_{index} {{{{{open_evidence}}}}};",
+                f"inline constexpr std::array<ReturnEvidenceSource, {len(policy['allowed_accelerator_evidence'])}> return_accelerator_evidence_{index} {{{{{accelerator_evidence}}}}};",
+                "",
+            ]
+        )
+    lines.append(
+        f"inline constexpr std::array<ReturnPolicyRecord, {len(catalog['lifecycle_policies'])}> return_policies {{{{"
+    )
+    for index, policy in enumerate(catalog["lifecycle_policies"]):
+        lines.append(
+            "    {"
+            f'{json.dumps(policy["id"])}, '
+            f"ReturnPolicyStrategy::{_variant(policy['strategy'])}, "
+            f"ReturnPolicyQualification::{_variant(policy['qualification'])}, "
+            f"{policy['quiescence_candidate_ms']}, {policy['observation_jitter_ms']}, "
+            f"return_retry_offsets_{index}, "
+            f"return_open_evidence_{index}, return_accelerator_evidence_{index}, "
+            f"ReturnDeliverySemantics::{_variant(policy['delivery_semantics'])}"
+            "},"
+        )
+    lines.extend(["}};", ""])
+    for index, profile in enumerate(catalog["profiles"]):
+        compatibility = profile.get("compatibility", {})
+        receiver_protocols = compatibility.get("receiver_protocols", [])
+        routes = compatibility.get("routes", [])
+        supported_child_kinds = compatibility.get("supported_child_kinds", [])
+        required_sibling_kinds = compatibility.get("required_sibling_kinds", [])
+        lines.extend(
+            [
+                f"inline constexpr std::array<std::string_view, {len(receiver_protocols)}> receiver_protocols_{index} {{{{"
+                + ", ".join(json.dumps(value) for value in receiver_protocols)
+                + "}};",
+                f"inline constexpr std::array<RouteKind, {len(routes)}> routes_{index} {{{{"
+                + ", ".join(f"RouteKind::{_variant(value)}" for value in routes)
+                + "}};",
+                f"inline constexpr std::array<DeviceKind, {len(supported_child_kinds)}> supported_child_kinds_{index} {{{{"
+                + ", ".join(f"DeviceKind::{_variant(value)}" for value in supported_child_kinds)
+                + "}};",
+                f"inline constexpr std::array<DeviceKind, {len(required_sibling_kinds)}> required_sibling_kinds_{index} {{{{"
+                + ", ".join(f"DeviceKind::{_variant(value)}" for value in required_sibling_kinds)
+                + "}};",
+                "",
+            ]
+        )
+        lines.append(f"inline constexpr std::array<CapabilityRecord, {len(profile['capabilities'])}> capabilities_{index} {{{{")
+        for capability in profile["capabilities"]:
+            writable = str(capability_defs[capability["id"]]["access"] == "write").lower()
+            lines.append(
+                f'    {{"{capability["id"]}", SupportLevel::{_variant(capability["support_level"])}, {writable}}},'
+            )
+        lines.extend(["}};", ""])
+        lighting = profile.get("transport", {}).get("lighting")
+        if lighting:
+            mapping = ", ".join(str(value) for value in lighting["application_index_to_carrier"])
+            lines.extend(
+                [
+                    f"inline constexpr std::array<std::uint16_t, {len(lighting['application_index_to_carrier'])}> carriers_{index} {{{{{mapping}}}}};",
+                    f"inline constexpr LightingTopology lighting_{index} {{",
+                    f"    {lighting['physical_led_count']}, {lighting['application_slot_count']}, {lighting['carrier_count']}, {lighting['rows']}, {lighting['columns']}, carriers_{index}",
+                    "};",
+                    "",
+                ]
+            )
+        lifecycle = profile.get("transport", {}).get("lifecycle")
+        if lifecycle:
+            open_evidence = ", ".join(
+                f"ReturnEvidenceSource::{_variant(value)}" for value in lifecycle["open_evidence"]
+            )
+            accelerator_evidence = ", ".join(
+                f"ReturnEvidenceSource::{_variant(value)}"
+                for value in lifecycle["accelerator_evidence"]
+            )
+            lines.extend(
+                [
+                    f"inline constexpr std::array<ReturnEvidenceSource, {len(lifecycle['open_evidence'])}> lifecycle_open_evidence_{index} {{{{{open_evidence}}}}};",
+                    f"inline constexpr std::array<ReturnEvidenceSource, {len(lifecycle['accelerator_evidence'])}> lifecycle_accelerator_evidence_{index} {{{{{accelerator_evidence}}}}};",
+                    f"inline constexpr LifecyclePolicyRecord lifecycle_{index} {{",
+                    f"    PowerOffDepartureEvidence::{_variant(lifecycle['power_off_departure_evidence'])},",
+                    f"    {json.dumps(lifecycle['return_policy_id'])},",
+                    f"    lifecycle_open_evidence_{index}, lifecycle_accelerator_evidence_{index}",
+                    "};",
+                    "",
+                ]
+            )
+        presentation = profile.get("presentation")
+        if presentation:
+            layout_key = (
+                f"std::string_view{{{json.dumps(presentation['layout_key'])}}}"
+                if presentation["layout_key"] is not None
+                else "std::nullopt"
+            )
+            lines.extend(
+                [
+                    f"inline constexpr PresentationRecord presentation_{index} {{",
+                    f"    {json.dumps(presentation['upstream_id'])}, {json.dumps(presentation['owner'])},",
+                    f"    {json.dumps(presentation['project_version'])}, {json.dumps(presentation['source_commit'])},",
+                    f"    {json.dumps(presentation['model_key'])}, {layout_key},",
+                    f"    {json.dumps(presentation['transport_variant'])}",
+                    "};",
+                    "",
+                ]
+            )
+    lines.append(f"inline constexpr std::array<ProfileRecord, {len(catalog['profiles'])}> catalog {{{{")
+    for index, profile in enumerate(catalog["profiles"]):
+        identity = profile["identity"]
+        compatibility = profile.get("compatibility", {})
+        has_usb = "vendor_id" in identity
+        vendor = identity.get("vendor_id", 0)
+        product = identity.get("product_id", 0)
+        protocol_family = json.dumps(compatibility.get("protocol_family", ""))
+        backend_id = profile.get("transport", {}).get("backend_id")
+        backend_id = (
+            f"std::uint32_t{{{backend_id}}}" if backend_id is not None else "std::nullopt"
+        )
+        exact_child_combinations = str(compatibility.get("exact_child_combinations", False)).lower()
+        lighting = f"&lighting_{index}" if profile.get("transport", {}).get("lighting") else "nullptr"
+        lifecycle = f"&lifecycle_{index}" if profile.get("transport", {}).get("lifecycle") else "nullptr"
+        presentation = f"&presentation_{index}" if profile.get("presentation") else "nullptr"
+        lines.append(
+            "    {"
+            f'"{profile["profile_id"]}", "{profile["runtime_sha256"]}", {profile["revision"]}, ProfileKind::{_variant(profile["kind"])}, '
+            f'DeviceKind::{_variant(profile["device_kind"])}, {str(has_usb).lower()}, {vendor}, {product}, '
+            f'"{profile["identity"]["model_name"]}", {backend_id}, {protocol_family}, receiver_protocols_{index}, routes_{index}, '
+            f'supported_child_kinds_{index}, required_sibling_kinds_{index}, {exact_child_combinations}, capabilities_{index}, {lighting}, {lifecycle}, {presentation}'
+            "},"
+        )
+    lines.extend(
+        [
+            "}};",
+            "",
+            "[[nodiscard]] constexpr const ProfileRecord* profile_by_id(std::string_view id)",
+            "{",
+            "    for(const auto& profile : catalog)",
+            "    {",
+            "        if(profile.id == id)",
+            "        {",
+            "            return &profile;",
+            "        }",
+            "    }",
+            "    return nullptr;",
+            "}",
+            "",
+            "[[nodiscard]] constexpr const ReturnPolicyRecord* return_policy_by_id(std::string_view id)",
+            "{",
+            "    for(const auto& policy : return_policies)",
+            "    {",
+            "        if(policy.id == id)",
+            "        {",
+            "            return &policy;",
+            "        }",
+            "    }",
+            "    return nullptr;",
+            "}",
+            "",
+            "} // namespace hyperflux::profiles",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def python_catalog(catalog: dict[str, Any]) -> str:
+    value = pformat(catalog, width=120, sort_dicts=True)
+    return "\n".join(
+        [
+            '"""Generated by ./hfx generate. Do not edit manually."""',
+            "# SPDX-License-Identifier: GPL-2.0-or-later",
+            "",
+            "from types import MappingProxyType",
+            "from typing import Final",
+            "",
+            f"PROFILE_SOURCE_SHA256: Final = {catalog['source_sha256']!r}",
+            f"PROFILE_CATALOG: Final = {value}",
+            "PROFILES_BY_ID: Final = MappingProxyType({profile['profile_id']: profile for profile in PROFILE_CATALOG['profiles']})",
+            "",
+            '__all__ = ["PROFILE_CATALOG", "PROFILE_SOURCE_SHA256", "PROFILES_BY_ID"]',
+            "",
+        ]
+    )
+
+
+def kernel_receiver_table(catalog: dict[str, Any]) -> str:
+    lines = [
+        "/* Generated by ./hfx generate. Do not edit manually. */",
+        "/* SPDX-License-Identifier: GPL-2.0-only */",
+        f"/* Profile source SHA-256: {catalog['source_sha256']} */",
+        "",
+        "#ifndef HFX_RECEIVER_PROFILE",
+        '#error "Define HFX_RECEIVER_PROFILE before including this table"',
+        "#endif",
+        "",
+    ]
+    for profile in catalog["profiles"]:
+        if profile["kind"] != "receiver":
+            continue
+        identity = profile["identity"]
+        transport = profile["transport"]
+        inventory_decoder = transport.get("pairing_inventory", {}).get("decoder")
+        inventory_kind = {
+            None: "HFX_PAIRING_INVENTORY_NONE",
+            "razer-hyperflux-v2-feature-01-v1": (
+                "HFX_PAIRING_INVENTORY_RAZER_HYPERFLUX_V2_FEATURE_01_V1"
+            ),
+        }.get(inventory_decoder)
+        if inventory_kind is None:
+            raise ValueError(f"unsupported kernel pairing inventory decoder: {inventory_decoder}")
+        native = transport.get("native_exchange")
+        if native is None:
+            native_kind = "HFX_NATIVE_EXCHANGE_NONE"
+            native_values = {
+                "report_bytes": 0,
+                "set_report_index": 0,
+                "response_report_index": 0,
+                "initial_response_delay_us": 0,
+                "response_retry_delay_us": 0,
+                "max_response_attempts": 0,
+                "report_format": {
+                    "request_status": {"offset": 0, "value": 0},
+                    "response_status": {"offset": 0, "minimum": 0, "maximum": 0},
+                    "protocol_type": {"offset": 0, "value": 0},
+                    "data_size": {"offset": 0, "maximum": 0},
+                    "checksum": {
+                        "algorithm": "xor8",
+                        "start_offset": 0,
+                        "end_offset_exclusive": 0,
+                        "result_offset": 0,
+                    },
+                    "trailer": {"offset": 0, "value": 0},
+                    "transaction_id": {"offset": 0, "match_mask": 0},
+                },
+            }
+            match_ranges: list[dict[str, int]] = []
+        else:
+            native_kind = {
+                "razer-feature-report-v1": "HFX_NATIVE_EXCHANGE_RAZER_FEATURE_REPORT_V1"
+            }.get(native["protocol_family"])
+            if native_kind is None:
+                raise ValueError(
+                    f"unsupported kernel native exchange protocol: {native['protocol_family']}"
+                )
+            native_values = native
+            match_ranges = native["match_ranges"]
+        report_format = native_values["report_format"]
+        checksum = report_format["checksum"]
+        route_selector = native_values.get("route_selector")
+        if route_selector is None:
+            route_selector_kind = "HFX_NATIVE_ROUTE_SELECTOR_NONE"
+            pointer_selector = 0
+            keyboard_selector = 0
+            restore_original_response = "false"
+        else:
+            route_selector_kind = {
+                "transaction-id": "HFX_NATIVE_ROUTE_SELECTOR_TRANSACTION_ID"
+            }.get(route_selector["field"])
+            if route_selector_kind is None:
+                raise ValueError(
+                    f"unsupported kernel native route selector: {route_selector['field']}"
+                )
+            pointer_selector = route_selector["pointer_lane"]
+            keyboard_selector = route_selector["keyboard_lane"]
+            restore_original_response = str(
+                route_selector["restore_original_response"]
+            ).lower()
+        range_values = ", ".join(
+            f"{{ .offset = {item['offset']}, .length = {item['length']} }}"
+            for item in match_ranges
+        )
+        lines.extend(
+            [
+                "HFX_RECEIVER_PROFILE(",
+                f'\t0x{identity["vendor_id"]:04x}, 0x{identity["product_id"]:04x},',
+                f'\t{transport["backend_id"]},',
+                f"\t.pairing_inventory_kind = {inventory_kind},",
+                f"\t.native_exchange_kind = {native_kind},",
+                f'\t.native_report_bytes = {native_values["report_bytes"]},',
+                f'\t.native_set_report_index = {native_values["set_report_index"]},',
+                f'\t.native_response_report_index = {native_values["response_report_index"]},',
+                f'\t.native_initial_response_delay_us = {native_values["initial_response_delay_us"]},',
+                f'\t.native_response_retry_delay_us = {native_values["response_retry_delay_us"]},',
+                f'\t.native_max_response_attempts = {native_values["max_response_attempts"]},',
+                f'\t.native_request_status_offset = {report_format["request_status"]["offset"]},',
+                f'\t.native_request_status_value = {report_format["request_status"]["value"]},',
+                f'\t.native_response_status_offset = {report_format["response_status"]["offset"]},',
+                f'\t.native_response_status_minimum = {report_format["response_status"]["minimum"]},',
+                f'\t.native_response_status_maximum = {report_format["response_status"]["maximum"]},',
+                f'\t.native_protocol_type_offset = {report_format["protocol_type"]["offset"]},',
+                f'\t.native_protocol_type_value = {report_format["protocol_type"]["value"]},',
+                f'\t.native_data_size_offset = {report_format["data_size"]["offset"]},',
+                f'\t.native_max_data_size = {report_format["data_size"]["maximum"]},',
+                "\t.native_checksum_kind = "
+                + {
+                    "xor8": "HFX_NATIVE_CHECKSUM_XOR8",
+                }[checksum["algorithm"]]
+                + ",",
+                f'\t.native_checksum_start_offset = {checksum["start_offset"]},',
+                f'\t.native_checksum_end_offset = {checksum["end_offset_exclusive"]},',
+                f'\t.native_checksum_result_offset = {checksum["result_offset"]},',
+                f'\t.native_trailer_offset = {report_format["trailer"]["offset"]},',
+                f'\t.native_trailer_value = {report_format["trailer"]["value"]},',
+                f'\t.native_transaction_id_offset = {report_format["transaction_id"]["offset"]},',
+                f'\t.native_transaction_id_match_mask = {report_format["transaction_id"]["match_mask"]},',
+                f"\t.native_route_selector_kind = {route_selector_kind},",
+                f"\t.native_pointer_route_selector = {pointer_selector},",
+                f"\t.native_keyboard_route_selector = {keyboard_selector},",
+                f"\t.native_restore_original_response = {restore_original_response},",
+                f"\t.native_match_range_count = {len(match_ranges)},",
+                f"\t.native_match_ranges = {{ {range_values} }}",
+                ")",
+            ]
+        )
+    lines.extend(["", "#undef HFX_RECEIVER_PROFILE", ""])
+    return "\n".join(lines)

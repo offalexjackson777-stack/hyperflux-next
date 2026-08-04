@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/toolchain-pins-v1.json",
+  "title": "HyperFlux development and package-build toolchain pins",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "rustup_toolchain",
+    "rustc",
+    "cargo",
+    "python",
+    "pip",
+    "setuptools",
+    "wheel",
+    "clang",
+    "cmake",
+    "ninja"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-toolchain-pins-v1"},
+    "rustup_toolchain": {"type": "string", "minLength": 1, "maxLength": 128},
+    "rustc": {"type": "string", "minLength": 1, "maxLength": 160},
+    "cargo": {"type": "string", "minLength": 1, "maxLength": 160},
+    "python": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+$"},
+    "pip": {"type": "string", "minLength": 1, "maxLength": 64},
+    "setuptools": {"type": "string", "minLength": 1, "maxLength": 64},
+    "wheel": {"type": "string", "minLength": 1, "maxLength": 64},
+    "clang": {"type": "string", "minLength": 1, "maxLength": 160},
+    "cmake": {"type": "string", "minLength": 1, "maxLength": 160},
+    "ninja": {"type": "string", "minLength": 1, "maxLength": 64}
+  }
+}

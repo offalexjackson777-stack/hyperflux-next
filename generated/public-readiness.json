@@ -1,0 +1,46 @@
+{
+  "$schema": "../schemas/public-readiness.schema.json",
+  "evidence": {
+    "hardware_gates": 0,
+    "known_gaps": 23,
+    "label": "Remaining evidence",
+    "lifecycle_gates": 0,
+    "reviewed_facts": 191,
+    "state": "ready",
+    "summary": "The 2.0 candidate retains 0 physical gates and 0 lifecycle gates; technical evidence does not authorize publication."
+  },
+  "generated_from": [
+    "architecture/repository-atlas.json",
+    "assurance/release-gates.json",
+    "generated/knowledge/catalog.json",
+    "integrations/native-route/source-validated.json"
+  ],
+  "hardware": {
+    "label": "Hardware support tiers",
+    "physically_proven": 2,
+    "source_qualified_operational": 8,
+    "state": "ready",
+    "summary": "2 devices are physically proven, 8 are source-qualified operational candidates, and 2 are upstream-blocked or research-only.",
+    "upstream_blocked_or_research_only": 2
+  },
+  "publication": {
+    "label": "Pre-release",
+    "state": "locked",
+    "summary": "The source is available for review; no product release, version tag, or package channel is published."
+  },
+  "qualification_console_access": "loopback-only",
+  "repository": {
+    "atlas_subsystems": 33,
+    "label": "Repository map",
+    "state": "ready",
+    "summary": "The Repository Atlas owns 33 subsystem records and their generated projections."
+  },
+  "schema": "hyperflux-public-readiness-v3",
+  "software": {
+    "gates_ready": 9,
+    "gates_total": 10,
+    "label": "2.0 verification",
+    "state": "partial",
+    "summary": "9 of 10 release gates are verified; publication remains a separate decision."
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/documentation-render-policy-v2.json",
+  "title": "HyperFlux documentation render-preview policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "render_modes",
+    "viewports",
+    "themes",
+    "screenshot_documents",
+    "capture",
+    "limits"
+  ],
+  "properties": {
+    "$schema": {"const": "../schemas/documentation-render-policy.schema.json"},
+    "schema": {"const": "hyperflux-documentation-render-policy-v2"},
+    "render_modes": {
+      "const": ["human", "hybrid", "generated"]
+    },
+    "viewports": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/viewport"}
+    },
+    "themes": {
+      "const": ["light", "dark"]
+    },
+    "screenshot_documents": {
+      "type": "array",
+      "minItems": 18,
+      "maxItems": 18,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/path"}
+    },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "max_page_height"],
+      "properties": {
+        "mode": {"const": "full-page"},
+        "max_page_height": {"const": 32768}
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_documents",
+        "max_markdown_bytes",
+        "max_rendered_html_bytes",
+        "max_issues",
+        "max_screenshots",
+        "max_screenshot_bytes",
+        "max_result_bytes",
+        "max_table_columns"
+      ],
+      "properties": {
+        "max_documents": {"type": "integer", "const": 64},
+        "max_markdown_bytes": {"type": "integer", "const": 1048576},
+        "max_rendered_html_bytes": {"type": "integer", "const": 4194304},
+        "max_issues": {"type": "integer", "const": 128},
+        "max_screenshots": {"type": "integer", "const": 108},
+        "max_screenshot_bytes": {"type": "integer", "const": 8388608},
+        "max_result_bytes": {"type": "integer", "const": 2097152},
+        "max_table_columns": {"type": "integer", "const": 8}
+      }
+    }
+  },
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "viewport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": {"type": "integer", "minimum": 320, "maximum": 1920},
+        "height": {"type": "integer", "minimum": 600, "maximum": 1200}
+      }
+    }
+  }
+}

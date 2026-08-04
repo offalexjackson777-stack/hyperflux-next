@@ -1,0 +1,45 @@
+{
+  "$schema": "../schemas/documentation-render-policy.schema.json",
+  "schema": "hyperflux-documentation-render-policy-v2",
+  "render_modes": ["human", "hybrid", "generated"],
+  "viewports": [
+    {"width": 375, "height": 812},
+    {"width": 768, "height": 1024},
+    {"width": 1280, "height": 900}
+  ],
+  "themes": ["light", "dark"],
+  "screenshot_documents": [
+    "CONTRIBUTING.md",
+    "README.md",
+    "SECURITY.md",
+    "SUPPORT.md",
+    "docs/README.md",
+    "docs/architecture/design-book.md",
+    "docs/developer/architecture.md",
+    "docs/generated/distributions.md",
+    "docs/generated/installation.md",
+    "docs/generated/repository-atlas.md",
+    "docs/generated/supported-hardware.md",
+    "docs/generated/verification.md",
+    "docs/project/journey.md",
+    "docs/project/release-status.md",
+    "docs/user/first-run.md",
+    "docs/user/hardware.md",
+    "docs/user/installation.md",
+    "docs/user/troubleshooting.md"
+  ],
+  "capture": {
+    "mode": "full-page",
+    "max_page_height": 32768
+  },
+  "limits": {
+    "max_documents": 64,
+    "max_markdown_bytes": 1048576,
+    "max_rendered_html_bytes": 4194304,
+    "max_issues": 128,
+    "max_screenshots": 108,
+    "max_screenshot_bytes": 8388608,
+    "max_result_bytes": 2097152,
+    "max_table_columns": 8
+  }
+}

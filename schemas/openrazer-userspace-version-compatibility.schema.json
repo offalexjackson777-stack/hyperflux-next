@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/openrazer-userspace-version-compatibility-v1.json",
+  "title": "Matched OpenRazer userspace compatibility evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "matrix_sha256",
+    "capability_catalog_sha256",
+    "network_access_executed",
+    "hardware_queried",
+    "hardware_write_executed",
+    "cases"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-openrazer-userspace-version-compatibility-v1"},
+    "matrix_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "capability_catalog_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "network_access_executed": {"const": false},
+    "hardware_queried": {"const": false},
+    "hardware_write_executed": {"const": false},
+    "cases": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "display_version",
+          "channel",
+          "commit",
+          "matched_source_pair",
+          "client_declared_version",
+          "daemon_declared_version",
+          "daemon_owner_acquired",
+          "reported_version",
+          "version_probe_state",
+          "overall_state",
+          "devices"
+        ],
+        "properties": {
+          "id": {"type": "string"},
+          "display_version": {"type": "string"},
+          "channel": {"enum": ["release", "upstream-head"]},
+          "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+          "matched_source_pair": {"const": true},
+          "client_declared_version": {"type": "string", "minLength": 1, "maxLength": 128},
+          "daemon_declared_version": {"type": "string", "minLength": 1, "maxLength": 128},
+          "daemon_owner_acquired": {"const": true},
+          "reported_version": {"type": ["string", "null"]},
+          "version_probe_state": {"type": "string"},
+          "overall_state": {"type": "string"},
+          "devices": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "profile_id",
+                "device_kind",
+                "definition",
+                "client_enumerated",
+                "daemon_enumerated",
+                "state",
+                "required_problems",
+                "features",
+                "semantic_probes"
+              ],
+              "properties": {
+                "profile_id": {"type": "string"},
+                "device_kind": {"enum": ["keyboard", "mouse"]},
+                "definition": {"enum": ["present", "absent"]},
+                "client_enumerated": {"type": "boolean"},
+                "daemon_enumerated": {"type": "boolean"},
+                "state": {"type": "string"},
+                "required_problems": {"type": "array"},
+                "features": {"type": "array"},
+                "semantic_probes": {"type": "array"}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

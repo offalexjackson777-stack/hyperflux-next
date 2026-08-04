@@ -1,0 +1,980 @@
+{
+  "$schema": "../schemas/documentation-screenshot-manifest.schema.json",
+  "schema": "hyperflux-documentation-screenshot-manifest-v1",
+  "source_revision": "a74e44c92eb2baedccb3ea6eccbe92293a957fe4",
+  "render_result_sha256": "e5b20ee05d336596fdef364d0adacc837a2dc5163924c1af8a75ed74a8e2afd8",
+  "screenshots": [
+    {
+      "file": "screenshots/CONTRIBUTING--1280--dark.png",
+      "path": "CONTRIBUTING.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "43cfbeea4057ecc8a5681a94ed3d289ac7d3be0274c36d30832ff32f3b6c46f4",
+      "bytes": 209887
+    },
+    {
+      "file": "screenshots/CONTRIBUTING--1280--light.png",
+      "path": "CONTRIBUTING.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "99de8738ea3a27ce26d9fdd39a78f4d7cda3121c6fbbdbdc279e43b71de79388",
+      "bytes": 205013
+    },
+    {
+      "file": "screenshots/CONTRIBUTING--375--dark.png",
+      "path": "CONTRIBUTING.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "aa746f9048670c9d1f69140d3cb3f1d62291ce2f2e14b974d1203250e1fde5b1",
+      "bytes": 205712
+    },
+    {
+      "file": "screenshots/CONTRIBUTING--375--light.png",
+      "path": "CONTRIBUTING.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "05265d74f772e52a231522a0ebad7d5b6f36b09a4d427cda3a06e529b405e525",
+      "bytes": 200071
+    },
+    {
+      "file": "screenshots/CONTRIBUTING--768--dark.png",
+      "path": "CONTRIBUTING.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "0bbf5bd55f426e6f69553e1279455d6dfb8e93b9babb664af171d2b8262b4502",
+      "bytes": 217497
+    },
+    {
+      "file": "screenshots/CONTRIBUTING--768--light.png",
+      "path": "CONTRIBUTING.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "e41f018d2a05769ff6183afe2f7eb370431558bb61c48115075bd32a16ee883d",
+      "bytes": 212056
+    },
+    {
+      "file": "screenshots/README--1280--dark.png",
+      "path": "README.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "0e63a2b3907273f96e85b26f94b9ba565433541d169a3298d210cfcb305ef7f0",
+      "bytes": 169752
+    },
+    {
+      "file": "screenshots/README--1280--light.png",
+      "path": "README.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "c7b348935e83525f979f4534974beb2cabdbb169e243f11cbff2a2d78ce18642",
+      "bytes": 165652
+    },
+    {
+      "file": "screenshots/README--375--dark.png",
+      "path": "README.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "9a4c910f3775ca0eadadabf1ad6446c917d46a254b22d4957f971f8b24adedfe",
+      "bytes": 166523
+    },
+    {
+      "file": "screenshots/README--375--light.png",
+      "path": "README.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "1b3e821bbd103b9df51305c77b186b41e80f3cafa4fdf6d31f76bcebe7676be7",
+      "bytes": 162601
+    },
+    {
+      "file": "screenshots/README--768--dark.png",
+      "path": "README.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "35914aa5e7dbf200e86aa1160ceef86a64e62907739285c7cb374d4c30aa38cf",
+      "bytes": 176448
+    },
+    {
+      "file": "screenshots/README--768--light.png",
+      "path": "README.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "618783ef1b8f97225b6809f4093065f1f19c6c09abf0886c12324bb02cc7b1b7",
+      "bytes": 172143
+    },
+    {
+      "file": "screenshots/SECURITY--1280--dark.png",
+      "path": "SECURITY.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "094aec85ecc0c733c8880a8ac48d8f0b470d8e592189dadb24bd44981bb3978e",
+      "bytes": 170928
+    },
+    {
+      "file": "screenshots/SECURITY--1280--light.png",
+      "path": "SECURITY.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "26a419d957a49500df7abd8365569250eb3985dd86a85e8813620aad98096fd8",
+      "bytes": 167308
+    },
+    {
+      "file": "screenshots/SECURITY--375--dark.png",
+      "path": "SECURITY.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "cda5683f5f36bf5dd93a09a707ec72a48cc24a1b269afe915c142b810c6b0a5d",
+      "bytes": 165832
+    },
+    {
+      "file": "screenshots/SECURITY--375--light.png",
+      "path": "SECURITY.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "007025ef4459acd33114e6763d312741bc8eb81cde1f97a0f1198c0be52ee6ff",
+      "bytes": 161490
+    },
+    {
+      "file": "screenshots/SECURITY--768--dark.png",
+      "path": "SECURITY.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "6ef4b249ca17f490ab3923f8c72db39fdc4c10a03279a61f1e1218fc0ee3bdb3",
+      "bytes": 173124
+    },
+    {
+      "file": "screenshots/SECURITY--768--light.png",
+      "path": "SECURITY.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "acf2a447450c8adc8de55f5ea55b4a165ddd4e154d8907f4a60ed0162153ccef",
+      "bytes": 169105
+    },
+    {
+      "file": "screenshots/SUPPORT--1280--dark.png",
+      "path": "SUPPORT.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "f454bd8017f5f74e5da6d60138207ef9b021d2ec798347711a0e7a46e40461ae",
+      "bytes": 137867
+    },
+    {
+      "file": "screenshots/SUPPORT--1280--light.png",
+      "path": "SUPPORT.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "add0cc221304f55a27e0a7087e0b36fa5e175bfd0766afe67d9f666616a5a37b",
+      "bytes": 135236
+    },
+    {
+      "file": "screenshots/SUPPORT--375--dark.png",
+      "path": "SUPPORT.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "d9d2e6fc5a6947aa601c505b27e0496cdeb184bf350fd4b877afef597ff2f49f",
+      "bytes": 136823
+    },
+    {
+      "file": "screenshots/SUPPORT--375--light.png",
+      "path": "SUPPORT.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "2efae23bcf785d192e54f3ca6a5b69d9245fa008da65b54e74488a7cf35dfe05",
+      "bytes": 133267
+    },
+    {
+      "file": "screenshots/SUPPORT--768--dark.png",
+      "path": "SUPPORT.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "acbdd613d17577b9596dcc0d35fa48cfa07aaffba2bde91ddec98cecc79c37d0",
+      "bytes": 138007
+    },
+    {
+      "file": "screenshots/SUPPORT--768--light.png",
+      "path": "SUPPORT.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "4db014b94693a4175048485791e24d4b0a8d5ffc21ea264569f176cced06a6ea",
+      "bytes": 135091
+    },
+    {
+      "file": "screenshots/docs__README--1280--dark.png",
+      "path": "docs/README.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "c55172463de49382c44eea4124018f10c2ee989785fe17800b36f1a6f0ff0d6b",
+      "bytes": 100711
+    },
+    {
+      "file": "screenshots/docs__README--1280--light.png",
+      "path": "docs/README.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "437c9ad067b1b6627a95af1d276664db727d61a70baf98aab8c22e6439fed554",
+      "bytes": 99185
+    },
+    {
+      "file": "screenshots/docs__README--375--dark.png",
+      "path": "docs/README.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "a77ac9eb6910484fdbedfa1110cab20599d03bb7dd2b38345e03265923f9cb08",
+      "bytes": 93035
+    },
+    {
+      "file": "screenshots/docs__README--375--light.png",
+      "path": "docs/README.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "c36de074e4401d9e292f823d67c065bcccde6652ef4eb6325bcb28e8d059ee15",
+      "bytes": 91249
+    },
+    {
+      "file": "screenshots/docs__README--768--dark.png",
+      "path": "docs/README.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "af7b093685767437b64fed7957d99d3a51bb6a68ba07f27edc71c1d342bd30f3",
+      "bytes": 100749
+    },
+    {
+      "file": "screenshots/docs__README--768--light.png",
+      "path": "docs/README.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "60bcb52c19b2079112dd313c46e9910f4271b92a1e4a69f41ff020a082ed42e8",
+      "bytes": 98966
+    },
+    {
+      "file": "screenshots/docs__architecture__design__book--1280--dark.png",
+      "path": "docs/architecture/design-book.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "6ef115755b94dfbb97b6046602eef2d7f4f07e6f8f8092d1fbe0ede7ca0686d0",
+      "bytes": 2613295
+    },
+    {
+      "file": "screenshots/docs__architecture__design__book--1280--light.png",
+      "path": "docs/architecture/design-book.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "14c7e4a3ad0c417ce5b83acecf0493bd60f07641c204788a07ef54bb93f1b73a",
+      "bytes": 2551699
+    },
+    {
+      "file": "screenshots/docs__architecture__design__book--375--dark.png",
+      "path": "docs/architecture/design-book.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "831c1d27417fa239b87f6d25dd43249ebbe641d43844b9f4afaf70a8a1f6c414",
+      "bytes": 2398877
+    },
+    {
+      "file": "screenshots/docs__architecture__design__book--375--light.png",
+      "path": "docs/architecture/design-book.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "9a1a4ead83a5b65a531ac3a6f43dc075d5ad847f574cf11e93b7f7a77a99227e",
+      "bytes": 2354501
+    },
+    {
+      "file": "screenshots/docs__architecture__design__book--768--dark.png",
+      "path": "docs/architecture/design-book.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "def79c50614ffe64869d2dfcf3647192be41cb6723414a184ecdb8cd80ff74b7",
+      "bytes": 2738809
+    },
+    {
+      "file": "screenshots/docs__architecture__design__book--768--light.png",
+      "path": "docs/architecture/design-book.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "aba37e4154bf231605dc9ef98723cf15e18b0bbf38ede56ce8b4e836efa8438e",
+      "bytes": 2666467
+    },
+    {
+      "file": "screenshots/docs__developer__architecture--1280--dark.png",
+      "path": "docs/developer/architecture.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "779d51e796ad0a4dd9ece14b955bd9bacb9799591c17a9e58afaebcdf94d3551",
+      "bytes": 58643
+    },
+    {
+      "file": "screenshots/docs__developer__architecture--1280--light.png",
+      "path": "docs/developer/architecture.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "3aded546b2bf6b0296641a23be6d246c83ebfe62bf101c5b576e50e516ee2b0e",
+      "bytes": 57369
+    },
+    {
+      "file": "screenshots/docs__developer__architecture--375--dark.png",
+      "path": "docs/developer/architecture.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "089f44e39de67214cd1465634015820a17c2a02d5b7b2703c61eab33969d41ac",
+      "bytes": 53539
+    },
+    {
+      "file": "screenshots/docs__developer__architecture--375--light.png",
+      "path": "docs/developer/architecture.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "dad697b6b65eabba283436ee47506ad5e3400f28a4bb48253aec578fff52366f",
+      "bytes": 52789
+    },
+    {
+      "file": "screenshots/docs__developer__architecture--768--dark.png",
+      "path": "docs/developer/architecture.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "c3d621cca3ac98bf47bcb680d201359c37a3087bd9e05ec49724b294e98e427c",
+      "bytes": 57756
+    },
+    {
+      "file": "screenshots/docs__developer__architecture--768--light.png",
+      "path": "docs/developer/architecture.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "3e4720d98f8e07a1527633540258a4ffce0d1cd19e7e99301639a24580e8d2bf",
+      "bytes": 56365
+    },
+    {
+      "file": "screenshots/docs__generated__distributions--1280--dark.png",
+      "path": "docs/generated/distributions.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "a9d8250bed28399f686cd2ffe25fc52bd5544e97070e6477ab3d225f75c8d5f4",
+      "bytes": 228786
+    },
+    {
+      "file": "screenshots/docs__generated__distributions--1280--light.png",
+      "path": "docs/generated/distributions.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "df971ea39a8b78d8b8a7e96659639424a29dbd65d5ee7d24dd99e6969894e3a5",
+      "bytes": 224228
+    },
+    {
+      "file": "screenshots/docs__generated__distributions--375--dark.png",
+      "path": "docs/generated/distributions.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "75c6ee66ad236b5aa86bb1f8ed7239e95fd079a7c916c5e4c2f8efd59e50c395",
+      "bytes": 160320
+    },
+    {
+      "file": "screenshots/docs__generated__distributions--375--light.png",
+      "path": "docs/generated/distributions.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "b7090edc4394559f67aa3589dfaad9218d75f6432fee618cd6c0153aaf7dcae2",
+      "bytes": 155353
+    },
+    {
+      "file": "screenshots/docs__generated__distributions--768--dark.png",
+      "path": "docs/generated/distributions.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "7241eb6219f9a71a40fc74183fc0541c8a1992d114016f370fded784c63358f4",
+      "bytes": 211561
+    },
+    {
+      "file": "screenshots/docs__generated__distributions--768--light.png",
+      "path": "docs/generated/distributions.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "06327ef5959e0ebb38d52880bae4b703efb846883a7a92480cfd072f56beeb51",
+      "bytes": 206551
+    },
+    {
+      "file": "screenshots/docs__generated__installation--1280--dark.png",
+      "path": "docs/generated/installation.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "9f7921453ba600732f1aa9389c7f553fe90410d06287b136c771ed2ba2e9aab1",
+      "bytes": 381106
+    },
+    {
+      "file": "screenshots/docs__generated__installation--1280--light.png",
+      "path": "docs/generated/installation.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "4ce607a1171966eec587796d8ec2a891269b206c7b74842e637fa43b30b63d6a",
+      "bytes": 371945
+    },
+    {
+      "file": "screenshots/docs__generated__installation--375--dark.png",
+      "path": "docs/generated/installation.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "02d7bd311e108979f0a2ec606b49cf04cc67711a76f9bd4fcc8029a825b5dff5",
+      "bytes": 348170
+    },
+    {
+      "file": "screenshots/docs__generated__installation--375--light.png",
+      "path": "docs/generated/installation.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "7ef59deca7e6390906e988ca2b4e97b7b42e535846ceecc21d1a348433adb374",
+      "bytes": 338661
+    },
+    {
+      "file": "screenshots/docs__generated__installation--768--dark.png",
+      "path": "docs/generated/installation.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "5daa48e99df2119c13d8d03053143b899935fb25db467e3d49703476e1bfa075",
+      "bytes": 387086
+    },
+    {
+      "file": "screenshots/docs__generated__installation--768--light.png",
+      "path": "docs/generated/installation.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "712f2f47cbc4067fe7f175c5f70a4406130fc7546e9c14974a27bf56e19b47fc",
+      "bytes": 377275
+    },
+    {
+      "file": "screenshots/docs__generated__repository__atlas--1280--dark.png",
+      "path": "docs/generated/repository-atlas.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "1b5eeb0ef41d7af230a9a98ae0499e78ca8e3dfc559a4499c175e830cf478874",
+      "bytes": 690622
+    },
+    {
+      "file": "screenshots/docs__generated__repository__atlas--1280--light.png",
+      "path": "docs/generated/repository-atlas.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "8bca67daf1fa792330dbc41d86be5893afbd17fa9f130c39fde00b72bc5a4709",
+      "bytes": 677855
+    },
+    {
+      "file": "screenshots/docs__generated__repository__atlas--375--dark.png",
+      "path": "docs/generated/repository-atlas.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "461c49f6bd20d330a03994b1f94d5d78ccbb5f8cc8e9cc6ddf61b8794b16aa05",
+      "bytes": 789205
+    },
+    {
+      "file": "screenshots/docs__generated__repository__atlas--375--light.png",
+      "path": "docs/generated/repository-atlas.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "bfdfd10d22521e96ffebcc11a2fa40bce13a13830f9a88867c97bc08014730a4",
+      "bytes": 772015
+    },
+    {
+      "file": "screenshots/docs__generated__repository__atlas--768--dark.png",
+      "path": "docs/generated/repository-atlas.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "fcfad006ddae6531ef3735ea0b1d12e42c11300e2073c60e6d24163cdec2726f",
+      "bytes": 718626
+    },
+    {
+      "file": "screenshots/docs__generated__repository__atlas--768--light.png",
+      "path": "docs/generated/repository-atlas.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "fe563b8ce5e7f9ff2a12c42038914be047168d2c2bc2813ab1c15f402df0dcd0",
+      "bytes": 705290
+    },
+    {
+      "file": "screenshots/docs__generated__supported__hardware--1280--dark.png",
+      "path": "docs/generated/supported-hardware.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "68caa0c70204cdeb84c591c85da7563d93ff4388c86840ce25e8b2221468da28",
+      "bytes": 300597
+    },
+    {
+      "file": "screenshots/docs__generated__supported__hardware--1280--light.png",
+      "path": "docs/generated/supported-hardware.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "c513e0c01a266e713ddd282202c2b3d304d599bf0503d01dce04c1f3e6953b18",
+      "bytes": 294045
+    },
+    {
+      "file": "screenshots/docs__generated__supported__hardware--375--dark.png",
+      "path": "docs/generated/supported-hardware.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "f3ccc7207c93ce19aa7bd031103a4b876645ee8c9cfc94e2be23b4613bda2f2a",
+      "bytes": 298941
+    },
+    {
+      "file": "screenshots/docs__generated__supported__hardware--375--light.png",
+      "path": "docs/generated/supported-hardware.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "f2a00d3e380d6a9d6ae4b771b731dc7d3730b46403214c65cea45240917ef8e5",
+      "bytes": 293258
+    },
+    {
+      "file": "screenshots/docs__generated__supported__hardware--768--dark.png",
+      "path": "docs/generated/supported-hardware.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "4a53bf1f2256547a376da9fc0379af717f4f757c3added3ac1d7785e99c33d8c",
+      "bytes": 301973
+    },
+    {
+      "file": "screenshots/docs__generated__supported__hardware--768--light.png",
+      "path": "docs/generated/supported-hardware.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "22385cf5097e913e2e85f2951e4ce79f696f1c6f4db5388b2a8f823e5780d614",
+      "bytes": 295526
+    },
+    {
+      "file": "screenshots/docs__generated__verification--1280--dark.png",
+      "path": "docs/generated/verification.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "fe1ad2ad82792c2c44ac90bb2d9093cc21c119869399d6706af6345623647fe1",
+      "bytes": 264239
+    },
+    {
+      "file": "screenshots/docs__generated__verification--1280--light.png",
+      "path": "docs/generated/verification.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "f8b533630b578441efe0321852d0e48930101580de0edb8a96cce60ae48f3b91",
+      "bytes": 259047
+    },
+    {
+      "file": "screenshots/docs__generated__verification--375--dark.png",
+      "path": "docs/generated/verification.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "fb68f07190bddf6a11a93bf64276fab9b5bbe2579a3d5bf401d39bceca839b18",
+      "bytes": 218079
+    },
+    {
+      "file": "screenshots/docs__generated__verification--375--light.png",
+      "path": "docs/generated/verification.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "40ec8f35613fe2c1fb94c8c83fe517126dfab272397b6e630e603a6758d5bef7",
+      "bytes": 212416
+    },
+    {
+      "file": "screenshots/docs__generated__verification--768--dark.png",
+      "path": "docs/generated/verification.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "2c1977656bcc66507e0c87c32af536d5adcd06a87b2571319bf06360e8b54c8f",
+      "bytes": 277818
+    },
+    {
+      "file": "screenshots/docs__generated__verification--768--light.png",
+      "path": "docs/generated/verification.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "29969b2e0ea161cf857a7dd426d23be4cb21643b221f785d2932ebca31ecb577",
+      "bytes": 273998
+    },
+    {
+      "file": "screenshots/docs__project__journey--1280--dark.png",
+      "path": "docs/project/journey.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "d6d7ff3d36f4550b9907443b89b155ec9d4c8a222b5596e3b8ea3550ab80c6dd",
+      "bytes": 889422
+    },
+    {
+      "file": "screenshots/docs__project__journey--1280--light.png",
+      "path": "docs/project/journey.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "ea3d6e55dc3b1821d4e70d87358c4ebd46ff4bbe31bf400bc113791008eec833",
+      "bytes": 866714
+    },
+    {
+      "file": "screenshots/docs__project__journey--375--dark.png",
+      "path": "docs/project/journey.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "ee2a19f199d54d16cec8d2e341bf5bbbfcc6b28ef6f327fa9fa28926d889e636",
+      "bytes": 883637
+    },
+    {
+      "file": "screenshots/docs__project__journey--375--light.png",
+      "path": "docs/project/journey.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "7e4a63c1f4817671648b13f45d726dd6013e8ccc32bedea8dcfac0efe1617638",
+      "bytes": 861820
+    },
+    {
+      "file": "screenshots/docs__project__journey--768--dark.png",
+      "path": "docs/project/journey.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "2ad8d0dd92f3521fbec6b809c2d02df96972af373ac5a0c06116e80dc47505f7",
+      "bytes": 937352
+    },
+    {
+      "file": "screenshots/docs__project__journey--768--light.png",
+      "path": "docs/project/journey.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "7307f64feaf251f2b7a4d9df5ea252338fa9bc23148a7dc63435f6197ad73cb0",
+      "bytes": 914335
+    },
+    {
+      "file": "screenshots/docs__project__release__status--1280--dark.png",
+      "path": "docs/project/release-status.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "ee64f9aafdbae66647333c46b27e211c49a9b4e7efe4805d75ae544bee3efac6",
+      "bytes": 53282
+    },
+    {
+      "file": "screenshots/docs__project__release__status--1280--light.png",
+      "path": "docs/project/release-status.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "3c965dc9fb9c072371bc3a85986696ec62327aa76bd1f50361e4d8d0e6938251",
+      "bytes": 51689
+    },
+    {
+      "file": "screenshots/docs__project__release__status--375--dark.png",
+      "path": "docs/project/release-status.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "408fb38634aca046c0228666350525fbd68b6a8715a03e29482cd601381745e0",
+      "bytes": 49644
+    },
+    {
+      "file": "screenshots/docs__project__release__status--375--light.png",
+      "path": "docs/project/release-status.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "5df313262d7b8cc274a580f749de8b50652191330c317f2cef0733329daeb775",
+      "bytes": 48566
+    },
+    {
+      "file": "screenshots/docs__project__release__status--768--dark.png",
+      "path": "docs/project/release-status.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "e0c21fe61a3731b5d28c487e0fd77f8430293970a59b734ca2a04f91faa7d238",
+      "bytes": 54904
+    },
+    {
+      "file": "screenshots/docs__project__release__status--768--light.png",
+      "path": "docs/project/release-status.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "fa5bfe332426719ba5dbe1492c89e531af41b149e979261f04d5b71c5fb58edb",
+      "bytes": 53217
+    },
+    {
+      "file": "screenshots/docs__user__first__run--1280--dark.png",
+      "path": "docs/user/first-run.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "1777f63e5f329cf7323f22bd35eff695931ab415327c0284f798c598d06d64a2",
+      "bytes": 116481
+    },
+    {
+      "file": "screenshots/docs__user__first__run--1280--light.png",
+      "path": "docs/user/first-run.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "c7bfd3e963562c79fa054fe1cc7e24df7437aabd8c24c77be2e32970f7d40947",
+      "bytes": 113771
+    },
+    {
+      "file": "screenshots/docs__user__first__run--375--dark.png",
+      "path": "docs/user/first-run.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "da75166f746ba7d2c9f9fd83dfeb6ab3b524cb5f569ee44e28f3fa5a5f38f4a1",
+      "bytes": 104295
+    },
+    {
+      "file": "screenshots/docs__user__first__run--375--light.png",
+      "path": "docs/user/first-run.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "c0c650a9e082942d316299859e20ad0dd4d3faa7394193ca07b87c33aa79f070",
+      "bytes": 102537
+    },
+    {
+      "file": "screenshots/docs__user__first__run--768--dark.png",
+      "path": "docs/user/first-run.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "1bf002c90fb76c5906f2e1bed3a53083a1a2389e790ab3d2646acc5e1646c55f",
+      "bytes": 123481
+    },
+    {
+      "file": "screenshots/docs__user__first__run--768--light.png",
+      "path": "docs/user/first-run.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "21943be803e82ac4f60ca36f73b6af366b36d1a2f5f01f8f7dbbb9f9b6b78686",
+      "bytes": 120369
+    },
+    {
+      "file": "screenshots/docs__user__hardware--1280--dark.png",
+      "path": "docs/user/hardware.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "aa65a8f3a2b6f4839f756c8e456ce3549167c71e97faba7a20549fc2401aff60",
+      "bytes": 118994
+    },
+    {
+      "file": "screenshots/docs__user__hardware--1280--light.png",
+      "path": "docs/user/hardware.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "3c86ea52d0a1c4543f367de89b2b985de3d462129865776e225fe433c749d510",
+      "bytes": 116472
+    },
+    {
+      "file": "screenshots/docs__user__hardware--375--dark.png",
+      "path": "docs/user/hardware.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "814d0cda8482ff0a94063f31627f46a9193fff7412fe37d4b09eec7c87f18249",
+      "bytes": 112451
+    },
+    {
+      "file": "screenshots/docs__user__hardware--375--light.png",
+      "path": "docs/user/hardware.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "13157a70aa8013a838aaefad30804323cac543eea2f2551498a4060b8cdb0311",
+      "bytes": 110170
+    },
+    {
+      "file": "screenshots/docs__user__hardware--768--dark.png",
+      "path": "docs/user/hardware.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "e0af8829f06e7ecdecc04c2eb24c97b522e7c009cd629d5e0d4556adead1a8ba",
+      "bytes": 122631
+    },
+    {
+      "file": "screenshots/docs__user__hardware--768--light.png",
+      "path": "docs/user/hardware.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "03985c3bf965ee96483d70b597964ada6551cedd6cdb63745ec77066a90eeeb2",
+      "bytes": 119776
+    },
+    {
+      "file": "screenshots/docs__user__installation--1280--dark.png",
+      "path": "docs/user/installation.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "e53fd824b77483abfc79aa8e75654a499110055b004f0fdda687e7a9d69acc4a",
+      "bytes": 151901
+    },
+    {
+      "file": "screenshots/docs__user__installation--1280--light.png",
+      "path": "docs/user/installation.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "9a7fcb69393da83f8023d91a78230909c140d3a1d739975c49e49428e8ed43cd",
+      "bytes": 147575
+    },
+    {
+      "file": "screenshots/docs__user__installation--375--dark.png",
+      "path": "docs/user/installation.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "bb6dbd259a3a22c722e75616a2d415f3637d79371c56d7e949c511d4ecc9ae91",
+      "bytes": 146584
+    },
+    {
+      "file": "screenshots/docs__user__installation--375--light.png",
+      "path": "docs/user/installation.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "c4da2505e907bd8f5542f3fff3a72332e3c96463e42e178704f33de7c323caed",
+      "bytes": 142025
+    },
+    {
+      "file": "screenshots/docs__user__installation--768--dark.png",
+      "path": "docs/user/installation.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "04891a4be4f585f5e7a96d81abb1e78e76a14ce0d1a30ed95819712a7bab37ff",
+      "bytes": 153874
+    },
+    {
+      "file": "screenshots/docs__user__installation--768--light.png",
+      "path": "docs/user/installation.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "85460c55c80863c53eb0e7a633525039126dd7e62ef352d7046a912ebfe8f675",
+      "bytes": 150035
+    },
+    {
+      "file": "screenshots/docs__user__troubleshooting--1280--dark.png",
+      "path": "docs/user/troubleshooting.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "dark",
+      "sha256": "437f3bdd0e604a3db22a975518e1fcaa0d7788f3b6951c45ecad74fda57b1501",
+      "bytes": 212751
+    },
+    {
+      "file": "screenshots/docs__user__troubleshooting--1280--light.png",
+      "path": "docs/user/troubleshooting.md",
+      "width": 1280,
+      "height": 900,
+      "theme": "light",
+      "sha256": "286ccd1faae87e44e78e5c91bd8b3138bebb1ca37e91673a3d957954c759e9f9",
+      "bytes": 207402
+    },
+    {
+      "file": "screenshots/docs__user__troubleshooting--375--dark.png",
+      "path": "docs/user/troubleshooting.md",
+      "width": 375,
+      "height": 812,
+      "theme": "dark",
+      "sha256": "7f9a0877a05ca37a05b5a6fd49fb46f45ac392fbaec1d94638bed21dcd851b3e",
+      "bytes": 191952
+    },
+    {
+      "file": "screenshots/docs__user__troubleshooting--375--light.png",
+      "path": "docs/user/troubleshooting.md",
+      "width": 375,
+      "height": 812,
+      "theme": "light",
+      "sha256": "7f5f2e462808938543d548be99bf64ab648d62c4602bd25b4b6ad90dfac21a45",
+      "bytes": 188191
+    },
+    {
+      "file": "screenshots/docs__user__troubleshooting--768--dark.png",
+      "path": "docs/user/troubleshooting.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "sha256": "a4c7a31ba8b95f7a80d94c79007b242941cd4e41c183faae1473e020c52e31ca",
+      "bytes": 208236
+    },
+    {
+      "file": "screenshots/docs__user__troubleshooting--768--light.png",
+      "path": "docs/user/troubleshooting.md",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "sha256": "48cb06b13a639891cb6badfaa2a9d7d7a0b08363d22eec8ccf32819f6500810c",
+      "bytes": 203863
+    }
+  ]
+}

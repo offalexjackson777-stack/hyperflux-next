@@ -1,0 +1,26 @@
+[package]
+name = "hfx-device-qualification"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+hfx-domain = { path = "../hfx-domain" }
+hfx-profiles = { path = "../hfx-profiles" }
+hfx-protocol = { path = "../hfx-protocol" }
+hfx-runtime = { path = "../hfx-runtime" }
+hfx-sdk = { path = "../hfx-sdk" }
+hfx-system-probe = { path = "../hfx-system-probe" }
+rustix.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "hyperflux-next-device-qualification"
+path = "src/bin/hyperflux-next-device-qualification.rs"

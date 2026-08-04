@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/test-catalog-v1.json",
+  "title": "HyperFlux typed verification catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "tests"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-test-catalog-v1"},
+    "tests": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/test"}
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "test": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "owned_domain",
+        "lanes",
+        "runner",
+        "required_capabilities",
+        "hardware_requirement",
+        "writes_hardware",
+        "expected_duration_seconds",
+        "timeout_seconds",
+        "dependencies",
+        "isolation",
+        "cache_inputs",
+        "produced_evidence",
+        "resume_policy"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "title": {"type": "string", "minLength": 1, "maxLength": 160},
+        "owned_domain": {"$ref": "#/$defs/identifier"},
+        "lanes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["fast", "full-software", "hardware"]}
+        },
+        "runner": {"$ref": "#/$defs/identifier"},
+        "required_capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        },
+        "hardware_requirement": {"enum": ["none", "optional", "required"]},
+        "writes_hardware": {"type": "boolean"},
+        "expected_duration_seconds": {"type": "integer", "minimum": 0, "maximum": 86400},
+        "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 86400},
+        "dependencies": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        },
+        "isolation": {"enum": ["shared", "exclusive-process", "exclusive-system", "exclusive-hardware"]},
+        "cache_inputs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/relativePath"}
+        },
+        "produced_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        },
+        "resume_policy": {"enum": ["rerun", "reuse-verified", "checkpoint"]}
+      }
+    }
+  }
+}

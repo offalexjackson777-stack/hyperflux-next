@@ -1,0 +1,31 @@
+{
+  "schema": "hyperflux-system-assessment-v2",
+  "state": "ready",
+  "package_version": "2.0.0",
+  "components": [
+    {
+      "component": "core",
+      "state": "ready",
+      "required": true,
+      "installed": true,
+      "version": "2.0.0"
+    },
+    {
+      "component": "full",
+      "state": "ready",
+      "required": false,
+      "installed": true,
+      "version": "2.0.0"
+    }
+  ],
+  "driver": "active",
+  "bridge_ready": true,
+  "receiver_generations": 1,
+  "qualified_generations": 1,
+  "working": [
+    "the installed driver is active",
+    "the bridge is serving one qualified receiver"
+  ],
+  "findings": [],
+  "next_action": "no action required"
+}

@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/native-device-onboarding-draft-v1.json",
+  "title": "Fail-closed native receiver device onboarding draft",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "created_at", "source_revision", "observation", "source_bindings", "assessment", "candidate_profile", "promotion_contract", "safety"],
+  "properties": {
+    "$schema": {"const": "https://hyperflux.dev/schemas/native-device-onboarding-draft-v1.json"},
+    "schema": {"const": "hyperflux-native-device-onboarding-draft-v1"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "source_revision": {"$ref": "#/$defs/revision"},
+    "observation": {"$ref": "#/$defs/observation"},
+    "source_bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["openrazer", "openrgb"],
+      "properties": {
+        "openrazer": {"$ref": "#/$defs/source-binding"},
+        "openrgb": {"$ref": "#/$defs/source-binding"}
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "reason_codes", "same_protocol", "identity_state", "topology_state", "existing_profile_id", "writable"],
+      "properties": {
+        "state": {"enum": ["candidate", "partial", "conflicted", "ambiguous", "unknown", "backend-required"]},
+        "reason_codes": {"$ref": "#/$defs/strings"},
+        "same_protocol": {"type": "boolean"},
+        "identity_state": {"enum": ["agreement", "partial", "unresolved"]},
+        "topology_state": {"enum": ["agreement", "partial", "conflict", "unavailable"]},
+        "existing_profile_id": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/profile-id"}]},
+        "writable": {"const": false}
+      }
+    },
+    "candidate_profile": {"$ref": "#/$defs/candidate-profile"},
+    "promotion_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "engine_changes_allowed", "allowed_domains", "immutable_engine_domains"],
+      "properties": {
+        "decision": {"enum": ["profile-only-candidate", "blocked", "backend-required"]},
+        "engine_changes_allowed": {"const": false},
+        "allowed_domains": {"$ref": "#/$defs/strings"},
+        "immutable_engine_domains": {"$ref": "#/$defs/strings"}
+      }
+    },
+    "safety": {"$ref": "#/$defs/safety"}
+  },
+  "$defs": {
+    "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "profile-id": {"type": "string", "pattern": "^child\\.[a-z0-9.-]+$", "maxLength": 128},
+    "strings": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 256}
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observed_at", "source", "receiver_generation", "vendor_id", "product_id", "device_kind", "route_kind", "route_state", "access", "protocol_family", "report_bytes"],
+      "properties": {
+        "observed_at": {"type": "string", "format": "date-time"},
+        "source": {"const": "bridge-native-route-v7"},
+        "receiver_generation": {"type": "integer", "minimum": 1},
+        "vendor_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "product_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "device_kind": {"enum": ["mouse", "keyboard"]},
+        "route_kind": {"const": "hyperflux-wireless"},
+        "route_state": {"enum": ["available", "stale", "unavailable", "unknown"]},
+        "access": {"enum": ["candidate", "qualified", "backend-required"]},
+        "protocol_family": {"type": "string", "minLength": 1, "maxLength": 64},
+        "report_bytes": {"type": "integer", "minimum": 1, "maximum": 4096}
+      }
+    },
+    "source-binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["upstream_id", "commit", "catalog_sha256", "match_state", "records"],
+      "properties": {
+        "upstream_id": {"enum": ["openrazer", "openrgb"]},
+        "commit": {"$ref": "#/$defs/revision"},
+        "catalog_sha256": {"$ref": "#/$defs/sha256"},
+        "match_state": {"enum": ["absent", "exact", "ambiguous"]},
+        "records": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {"$ref": "https://hyperflux.dev/schemas/upstream-device-catalog-v1.json#/properties/records/items"}
+        }
+      }
+    },
+    "candidate-profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "revision", "kind", "device_kind", "identity", "compatibility", "presentation", "upstream_record_ids", "native_control", "topology", "required_evidence", "restrictions"],
+      "properties": {
+        "profile_id": {"$ref": "#/$defs/profile-id"},
+        "revision": {"type": ["integer", "null"], "minimum": 1},
+        "kind": {"const": "child"},
+        "device_kind": {"enum": ["mouse", "keyboard"]},
+        "identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["manufacturer", "model_name", "authority", "vendor_id", "product_id"],
+          "properties": {
+            "manufacturer": {"const": "Razer"},
+            "model_name": {"type": "string", "minLength": 1, "maxLength": 128},
+            "authority": {"const": "paired-product-id"},
+            "vendor_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+            "product_id": {"type": "integer", "minimum": 0, "maximum": 65535}
+          }
+        },
+        "compatibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["receiver_protocols", "routes", "required_sibling_kinds"],
+          "properties": {
+            "receiver_protocols": {"const": ["razer-hyperflux-v2"]},
+            "routes": {"const": ["hyperflux-wireless"]},
+            "required_sibling_kinds": {"const": []}
+          }
+        },
+        "presentation": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["upstream_id", "owner", "project_version", "source_commit", "model_key", "layout_key", "transport_variant"],
+              "properties": {
+                "upstream_id": {"const": "openrgb"},
+                "owner": {"const": "OpenRGB"},
+                "project_version": {"type": "string", "minLength": 1, "maxLength": 64},
+                "source_commit": {"$ref": "#/$defs/revision"},
+                "model_key": {"type": "string", "pattern": "^[A-Za-z0-9_]+$"},
+                "layout_key": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9_]+$"},
+                "transport_variant": {"const": "wireless"}
+              }
+            }
+          ]
+        },
+        "upstream_record_ids": {"$ref": "#/$defs/strings"},
+        "native_control": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["protocol_family", "report_bytes", "capability_id", "support_level", "write_authority"],
+          "properties": {
+            "protocol_family": {"type": "string", "minLength": 1, "maxLength": 64},
+            "report_bytes": {"type": "integer", "minimum": 1, "maximum": 4096},
+            "capability_id": {"const": "native.feature-report-exchange"},
+            "support_level": {"const": "candidate"},
+            "write_authority": {"const": false}
+          }
+        },
+        "topology": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["authority", "state", "hyperflux_carrier_map"],
+          "properties": {
+            "authority": {"const": "upstream"},
+            "state": {"enum": ["agreement", "partial", "conflict", "unavailable"]},
+            "hyperflux_carrier_map": {"const": null}
+          }
+        },
+        "required_evidence": {"$ref": "#/$defs/strings"},
+        "restrictions": {"$ref": "#/$defs/strings"}
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate_only", "write_authority_granted", "serials_persisted", "raw_reports_persisted", "private_paths_persisted", "network_upload", "hardware_queried_by_tool", "hardware_write_executed", "file_mode"],
+      "properties": {
+        "candidate_only": {"const": true},
+        "write_authority_granted": {"const": false},
+        "serials_persisted": {"const": false},
+        "raw_reports_persisted": {"const": false},
+        "private_paths_persisted": {"const": false},
+        "network_upload": {"const": false},
+        "hardware_queried_by_tool": {"const": false},
+        "hardware_write_executed": {"const": false},
+        "file_mode": {"const": "0600"}
+      }
+    }
+  }
+}

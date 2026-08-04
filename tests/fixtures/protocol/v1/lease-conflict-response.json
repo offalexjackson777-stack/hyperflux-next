@@ -1,0 +1,1 @@
+{"type":"acquire-lease-success","response":{"request_id":"request-2","server_instance_id":"bridge-instance-1","result":{"outcome":"conflict","detail":{"conflicting_client":"client-2","conflicting_resource":{"receiver_id":"receiver-1","generation_id":"1","device_id":"mouse-1","kind":"lighting"}}}}}

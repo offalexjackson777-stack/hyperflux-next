@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/public-readiness-v3.json",
+  "title": "HyperFlux public readiness projection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "generated_from", "publication", "software", "hardware", "evidence", "repository", "qualification_console_access"],
+  "properties": {
+    "$schema": {"const": "../schemas/public-readiness.schema.json"},
+    "schema": {"const": "hyperflux-public-readiness-v3"},
+    "generated_from": {
+      "type": "array",
+      "minItems": 4,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"}
+    },
+    "publication": {"$ref": "#/$defs/status", "unevaluatedProperties": false},
+    "software": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        {"$ref": "#/$defs/status"},
+        {"type": "object", "required": ["gates_ready", "gates_total"], "properties": {"gates_ready": {"type": "integer", "minimum": 0}, "gates_total": {"type": "integer", "minimum": 1}}}
+      ]
+    },
+    "hardware": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        {"$ref": "#/$defs/status"},
+        {"type": "object", "required": ["physically_proven", "source_qualified_operational", "upstream_blocked_or_research_only"], "properties": {"physically_proven": {"type": "integer", "minimum": 0}, "source_qualified_operational": {"type": "integer", "minimum": 0}, "upstream_blocked_or_research_only": {"type": "integer", "minimum": 0}}}
+      ]
+    },
+    "evidence": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        {"$ref": "#/$defs/status"},
+        {"type": "object", "required": ["hardware_gates", "lifecycle_gates", "reviewed_facts", "known_gaps"], "properties": {"hardware_gates": {"type": "integer", "minimum": 0}, "lifecycle_gates": {"type": "integer", "minimum": 0}, "reviewed_facts": {"type": "integer", "minimum": 0}, "known_gaps": {"type": "integer", "minimum": 0}}}
+      ]
+    },
+    "repository": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        {"$ref": "#/$defs/status"},
+        {"type": "object", "required": ["atlas_subsystems"], "properties": {"atlas_subsystems": {"type": "integer", "minimum": 1}}}
+      ]
+    },
+    "qualification_console_access": {"const": "loopback-only"}
+  },
+  "$defs": {
+    "status": {
+      "type": "object",
+      "required": ["state", "label", "summary"],
+      "properties": {
+        "state": {"enum": ["ready", "partial", "blocked", "locked", "unknown"]},
+        "label": {"type": "string", "minLength": 1, "maxLength": 80},
+        "summary": {"type": "string", "minLength": 1, "maxLength": 240}
+      }
+    }
+  }
+}

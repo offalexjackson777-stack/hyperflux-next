@@ -1,0 +1,135 @@
+{
+  "$schema": "../schemas/quality-audit.schema.json",
+  "schema": "hyperflux-quality-audit-v1",
+  "source_revision": "86b9d4be20d463283e6ac8aabe5679ccfec7f5a4",
+  "reviews": [
+    {
+      "id": "code-removal",
+      "status": "reviewed-no-unproven-removal",
+      "evidence": ["architecture/constitution.json", "packaging/install.json", "verification/tests.json"],
+      "finding": "No additional runtime, package, schema, replay, compatibility, or supported migration path is proven removable by current ownership and test coverage.",
+      "action": "Require current ownership and affected verification before removing product code."
+    },
+    {
+      "id": "rust-unsafe",
+      "status": "enforced",
+      "evidence": ["Cargo.toml", "verification/tests.json"],
+      "finding": "The workspace denies unsafe Rust and warning-fatal clippy covers every workspace target.",
+      "action": "Keep unsafe_code=deny and rust-clippy release-blocking."
+    },
+    {
+      "id": "rust-sanitizer",
+      "status": "unsupported-by-pinned-toolchain",
+      "evidence": ["toolchains/pins.json", "toolchains/development-environment.json"],
+      "finding": "Pinned stable Rust 1.95 has no Miri component and exposes no stable sanitizer codegen option.",
+      "action": "Add a separately pinned nightly sanitizer lane before claiming Rust sanitizer coverage."
+    },
+    {
+      "id": "openrgb-thread-sanitizer",
+      "status": "enforced",
+      "evidence": ["verification/tests.json", "tools/hfxdev/verify.py"],
+      "finding": "The complete native OpenRGB adapter pipeline remains covered by a release-blocking ThreadSanitizer node.",
+      "action": "Retain openrgb-thread-sanitizer in the Full lane."
+    },
+    {
+      "id": "diagnostics-and-logs",
+      "status": "enforced",
+      "evidence": ["runtime/linux.json", "crates/hfx-daemon/src/logging.rs", "crates/hfx-uhid-relay/src/status.rs"],
+      "finding": "Bridge histories, logger queues, relay status documents, connections, and protocol messages have explicit capacities or byte bounds.",
+      "action": "Reject zero, oversized, or exhausted bounds and preserve typed drop/failure evidence."
+    },
+    {
+      "id": "parsing-and-copies",
+      "status": "reviewed-no-change",
+      "evidence": ["crates/hfx-protocol/src", "crates/hfx-uhid-relay/src/serial.rs", "assurance/rust-coverage.json"],
+      "finding": "Repeated parsing and copies remain bounded by the one MiB protocol envelope or the fixed 90-byte native report; no measured hot-path regression justified a semantic change.",
+      "action": "Make no speculative copy or parser rewrite before latency profiling."
+    },
+    {
+      "id": "idle-wakeups-and-polling",
+      "status": "reviewed-bounded",
+      "evidence": ["crates/hfx-uhid-relay/src/runtime.rs", "runtime/linux.json"],
+      "finding": "Relay and bridge polling intervals are finite and the relay's fastest idle loop is 10 ms; installed CPU impact still requires the frozen physical performance gate.",
+      "action": "Retain current behavior until installed CPU and publication-latency measurements can justify an event-driven or interval change."
+    },
+    {
+      "id": "package-and-binary-size",
+      "status": "measured",
+      "evidence": ["assurance/performance-budgets.json", "packaging/install.json"],
+      "finding": "Phase 3 A/B artifacts measured 29,357,049 uncompressed payload bytes and every binary remained below its canonical budget.",
+      "action": "Recompute and enforce the same budgets after every package-contracts run."
+    },
+    {
+      "id": "startup-latency",
+      "status": "blocked-by-physical-evidence",
+      "evidence": ["assurance/performance-budgets.json"],
+      "finding": "Software tests cannot measure installed bridge readiness across kernel, permissions, profile loading, and socket startup.",
+      "action": "Measure at the separately authorized Phase 7 physical parity gate."
+    },
+    {
+      "id": "reconnect-latency",
+      "status": "blocked-by-physical-evidence",
+      "evidence": ["assurance/performance-budgets.json"],
+      "finding": "Real USB enumeration and application republication remain physical measurements.",
+      "action": "Measure at the separately authorized Phase 7 physical parity gate."
+    },
+    {
+      "id": "publication-latency",
+      "status": "blocked-by-physical-evidence",
+      "evidence": ["assurance/performance-budgets.json", "crates/hfx-uhid-relay/src/runtime.rs"],
+      "finding": "Deterministic route tests prove bounded state transitions but not wall-clock UHID and stock-application publication on hardware.",
+      "action": "Measure route-to-application publication during Phase 7 parity."
+    },
+    {
+      "id": "command-latency",
+      "status": "blocked-by-physical-evidence",
+      "evidence": ["assurance/performance-budgets.json", "crates/hfx-kernel-transport/src/transport/native_exchange.rs"],
+      "finding": "Software exchange deadlines do not prove visible device response latency.",
+      "action": "Measure reversible command and effect-frame latency during Phase 7 parity."
+    },
+    {
+      "id": "capability-discovery",
+      "status": "enforced",
+      "evidence": ["docs/developer/connectors.md", "tests/test_connector_contract.py", "tests/test_source_validated_universality.py"],
+      "finding": "Runtime and connector authority remain capability- and source-derived with no serial, receiver, path, layout, colorway, or two-device binding.",
+      "action": "Keep universality and connector tests release-blocking."
+    }
+  ],
+  "measurements": {
+    "package_baseline": {
+      "source_revision": "e2b887400152d559e569e34aa6b933861da2dd77",
+      "manifest_sha256": "abcd4ed9145122eea4ac51e5df1960c62e48d1722c7980d6d1fc8ad7ac8d7fd8",
+      "linux_inventory_sha256": "095cd4b043dc49ebf087f549912fd3658b8a0bfbc66c89e506501c598911f69c",
+      "full_inventory_sha256": "edd776861123510835be67a130aa053605c8445be158a41f34ce065cca406ebe",
+      "artifact_sizes_bytes": {
+        "activation-utility": 523728,
+        "bridge-daemon": 11381776,
+        "openrazer-native-driver": 1003520,
+        "openrazer-native-mount-helper": 1387,
+        "openrazer-native-relay": 7164040,
+        "openrazer-native-udev-rules": 2794,
+        "openrgb-native": 2091848,
+        "operations-cli": 7056720
+      },
+      "staged_payload_bytes": 29357049
+    },
+    "relay_polling": {
+      "watch_ms": 100,
+      "startup_retry_ms": 100,
+      "direct_scan_ms": 250,
+      "identity_stability_ms": 250,
+      "identity_fast_retry_ms": 100,
+      "idle_ms": 10,
+      "uhid_start_timeout_ms": 10000
+    },
+    "build_profile_trial": {
+      "id": "bridge-thin-lto-one-codegen-unit",
+      "status": "rejected-before-artifact",
+      "minimum_elapsed_seconds": 392,
+      "sampled_cpu_percent": 98.8,
+      "artifact_produced": false,
+      "production_change_applied": false,
+      "rationale": "The isolated offline build remained in dependency LTO after more than 392 seconds at 98.8 percent sampled CPU, so it was stopped before an artifact and no profile change was made."
+    }
+  }
+}

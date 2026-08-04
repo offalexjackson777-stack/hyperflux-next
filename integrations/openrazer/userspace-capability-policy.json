@@ -1,0 +1,110 @@
+{
+  "$schema": "../../schemas/openrazer-userspace-capability-policy.schema.json",
+  "schema": "hyperflux-openrazer-userspace-capability-policy-v1",
+  "upstream_id": "openrazer",
+  "source_commit": "1ef8a91712906a89fd332a2ed62bbd105315d6d1",
+  "service": {
+    "bus_name": "org.razer",
+    "root_path": "/org/razer",
+    "device_path_prefix": "/org/razer/device/"
+  },
+  "root": {
+    "required_methods": ["get_serial_list"],
+    "diagnostic_methods": ["version"],
+    "required_signals": ["device_added", "device_removed"]
+  },
+  "device": {
+    "required_common": [
+      "get_device_name",
+      "get_firmware",
+      "get_serial",
+      "get_vid_pid",
+      "has_matrix"
+    ],
+    "required_by_kind": {
+      "keyboard": ["get_device_type_keyboard"],
+      "mouse": ["get_device_type_mouse"]
+    },
+    "semantic_probes": [
+      "get_device_name",
+      "get_firmware",
+      "get_serial",
+      "get_vid_pid"
+    ]
+  },
+  "features": [
+    {
+      "id": "brightness",
+      "device_kinds": ["keyboard", "mouse"],
+      "requirement": "required",
+      "methods": ["get_brightness", "set_brightness"]
+    },
+    {
+      "id": "lighting-core",
+      "device_kinds": ["keyboard", "mouse"],
+      "requirement": "required",
+      "methods": [
+        "set_custom_effect",
+        "set_key_row",
+        "set_none_effect",
+        "set_static_effect"
+      ]
+    },
+    {
+      "id": "battery",
+      "device_kinds": ["keyboard", "mouse"],
+      "requirement": "optional",
+      "methods": ["get_battery", "is_charging"]
+    },
+    {
+      "id": "firmware-effects",
+      "device_kinds": ["keyboard", "mouse"],
+      "requirement": "optional",
+      "methods": ["set_spectrum_effect", "set_wave_effect"]
+    },
+    {
+      "id": "keyboard-modes",
+      "device_kinds": ["keyboard"],
+      "requirement": "optional",
+      "methods": [
+        "get_game_mode",
+        "get_macro_effect",
+        "get_macro_mode",
+        "set_game_mode",
+        "set_macro_effect",
+        "set_macro_mode"
+      ]
+    },
+    {
+      "id": "mouse-dpi",
+      "device_kinds": ["mouse"],
+      "requirement": "optional",
+      "methods": ["get_dpi_stages", "get_dpi_xy", "max_dpi", "set_dpi_stages", "set_dpi_xy"]
+    },
+    {
+      "id": "mouse-idle",
+      "device_kinds": ["mouse"],
+      "requirement": "optional",
+      "methods": ["get_idle_time", "get_low_battery_threshold", "set_idle_time", "set_low_battery_threshold"]
+    },
+    {
+      "id": "mouse-polling",
+      "device_kinds": ["mouse"],
+      "requirement": "optional",
+      "methods": ["get_poll_rate", "set_poll_rate"]
+    },
+    {
+      "id": "mouse-scroll",
+      "device_kinds": ["mouse"],
+      "requirement": "optional",
+      "methods": [
+        "get_scroll_acceleration",
+        "get_scroll_mode",
+        "get_scroll_smart_reel",
+        "set_scroll_acceleration",
+        "set_scroll_mode",
+        "set_scroll_smart_reel"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/journey-source-coverage-v3.json",
+  "title": "HyperFlux public journey source map",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "public_document", "publication", "prior_art_review", "eras"],
+  "properties": {
+    "$schema": {"const": "../schemas/journey-source-coverage.schema.json"},
+    "schema": {"const": "hyperflux-journey-source-coverage-v3"},
+    "public_document": {"const": "docs/project/journey.md"},
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["voice", "technical_appendix", "direct_quotes", "public_sources_only", "privacy_review"],
+      "properties": {
+        "voice": {"const": "first-person-founder"},
+        "technical_appendix": {"const": true},
+        "direct_quotes": {"const": false},
+        "public_sources_only": {"const": true},
+        "privacy_review": {"const": "passed"}
+      }
+    },
+    "prior_art_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "outcome", "absolute_novelty_claims", "sources"],
+      "properties": {
+        "scope": {"const": "bounded-pinned-authority-review"},
+        "outcome": {"const": "no-absolute-novelty-claim"},
+        "absolute_novelty_claims": {"const": 0},
+        "sources": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/path"}
+        }
+      }
+    },
+    "eras": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {"$ref": "#/$defs/era"}
+    }
+  },
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?!/)(?!build/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "reference", "supports"],
+      "properties": {
+        "kind": {"enum": ["authority", "test", "upstream"]},
+        "reference": {"$ref": "#/$defs/path"},
+        "supports": {"type": "string", "minLength": 1, "maxLength": 240}
+      }
+    },
+    "era": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "order", "technical_sources"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+        "title": {"type": "string", "minLength": 1, "maxLength": 80},
+        "order": {"type": "integer", "minimum": 1, "maximum": 6},
+        "technical_sources": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 16,
+          "items": {"$ref": "#/$defs/source"}
+        }
+      }
+    }
+  }
+}

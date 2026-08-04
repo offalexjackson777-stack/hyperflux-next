@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/native-device-promotion-assessment-v1.json",
+  "title": "Native receiver profile-only promotion assessment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "created_at", "source_revision", "draft_sha256", "profile_id", "state", "reason_codes", "evidence_bindings", "change_contract", "safety"],
+  "properties": {
+    "$schema": {"const": "https://hyperflux.dev/schemas/native-device-promotion-assessment-v1.json"},
+    "schema": {"const": "hyperflux-native-device-promotion-assessment-v1"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "source_revision": {"$ref": "#/$defs/revision"},
+    "draft_sha256": {"$ref": "#/$defs/sha256"},
+    "profile_id": {"type": "string", "pattern": "^child\\.[a-z0-9.-]+$", "maxLength": 128},
+    "state": {"enum": ["ready-for-reviewed-profile-promotion", "blocked", "backend-required"]},
+    "reason_codes": {"$ref": "#/$defs/strings"},
+    "evidence_bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["onboarding_source_revision", "parity_source_revision", "openrazer_commit", "native_probe_catalog_sha256", "parity_conclusion"],
+      "properties": {
+        "onboarding_source_revision": {"$ref": "#/$defs/revision"},
+        "parity_source_revision": {"$ref": "#/$defs/revision"},
+        "openrazer_commit": {"$ref": "#/$defs/revision"},
+        "native_probe_catalog_sha256": {"$ref": "#/$defs/sha256"},
+        "parity_conclusion": {"enum": ["passed", "incomplete", "backend-required"]}
+      }
+    },
+    "change_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engine_changes_allowed", "allowed_domains", "immutable_engine_domains", "automatic_write_authority_granted"],
+      "properties": {
+        "engine_changes_allowed": {"const": false},
+        "allowed_domains": {"$ref": "#/$defs/strings"},
+        "immutable_engine_domains": {"$ref": "#/$defs/strings"},
+        "automatic_write_authority_granted": {"const": false}
+      }
+    },
+    "safety": {"$ref": "https://hyperflux.dev/schemas/native-device-onboarding-draft-v1.json#/$defs/safety"}
+  },
+  "$defs": {
+    "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "strings": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 256}
+    }
+  }
+}

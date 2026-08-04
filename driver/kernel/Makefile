@@ -1,0 +1,28 @@
+obj-m += hid-hyperflux-next.o
+
+hid-hyperflux-next-y := \
+	hyperflux-next-core.o \
+	hyperflux-next-observation.o \
+	hyperflux-next-profile.o \
+	hyperflux-next-session.o \
+	hyperflux-next-native.o \
+	hyperflux-next-transport.o
+
+KDIR ?= /lib/modules/$(shell uname -r)/build
+KERNEL_RELEASE ?= $(shell $(MAKE) --no-print-directory -s -C $(KDIR) kernelrelease)
+MO ?= $(abspath $(CURDIR)/../../build/kernel/$(KERNEL_RELEASE))
+
+.PHONY: all clean dkms
+
+all:
+	@mkdir -p $(MO)
+	$(MAKE) -C $(KDIR) M=$(CURDIR) MO=$(MO) modules
+
+dkms:
+	$(MAKE) -C $(KDIR) M=$(CURDIR) modules
+
+clean:
+	$(MAKE) -C $(KDIR) M=$(CURDIR) clean
+	@test ! -L $(CURDIR)/source || test "$$(readlink $(CURDIR)/source)" = "."
+	$(RM) $(CURDIR)/source
+	$(RM) -r $(MO)

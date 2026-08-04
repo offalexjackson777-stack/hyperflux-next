@@ -1,0 +1,19 @@
+[package]
+name = "hfx-sdk"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+hfx-domain = { path = "../hfx-domain" }
+hfx-protocol = { path = "../hfx-protocol" }
+rustix.workspace = true
+
+[dev-dependencies]
+hfx-bridge = { path = "../hfx-bridge" }
+serde_json.workspace = true
+
+[lints]
+workspace = true

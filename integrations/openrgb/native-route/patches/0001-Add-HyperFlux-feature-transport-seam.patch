@@ -1,0 +1,233 @@
+diff --git a/RGBController/RGBController.cpp b/RGBController/RGBController.cpp
+index b1bfd6b..a8b89c8 100644
+--- a/RGBController/RGBController.cpp
++++ b/RGBController/RGBController.cpp
+@@ -13,6 +13,16 @@
+ #include <cstring>
+ #include "RGBController.h"
+ 
++#if defined(HFX_OPENRGB_TSAN_ANNOTATIONS)
++extern "C" void __tsan_acquire(void* address);
++extern "C" void __tsan_release(void* address);
++#define HFX_TSAN_ACQUIRE(address) __tsan_acquire(address)
++#define HFX_TSAN_RELEASE(address) __tsan_release(address)
++#else
++#define HFX_TSAN_ACQUIRE(address) ((void)0)
++#define HFX_TSAN_RELEASE(address) ((void)0)
++#endif
++
+ using namespace std::chrono_literals;
+ 
+ mode::mode()
+@@ -59,14 +69,15 @@ zone::~zone()
+ RGBController::RGBController()
+ {
+     flags       = 0;
++    CallFlag_UpdateLEDs = false;
++    CallFlag_UpdateMode = false;
+     DeviceThreadRunning = true;
+     DeviceCallThread = new std::thread(&RGBController::DeviceCallThreadFunction, this);
+ }
+ 
+ RGBController::~RGBController()
+ {
+-    DeviceThreadRunning = false;
+-    DeviceCallThread->join();
++    StopDeviceCallThread();
+     delete DeviceCallThread;
+ 
+     leds.clear();
+@@ -75,6 +86,15 @@ RGBController::~RGBController()
+     modes.clear();
+ }
+ 
++void RGBController::StopDeviceCallThread()
++{
++    DeviceThreadRunning = false;
++    if(DeviceCallThread != nullptr && DeviceCallThread->joinable())
++    {
++        DeviceCallThread->join();
++    }
++}
++
+ std::string RGBController::GetName()
+ {
+     return(name);
+@@ -2050,6 +2070,7 @@ void RGBController::SignalUpdate()
+ }
+ void RGBController::UpdateLEDs()
+ {
++    HFX_TSAN_RELEASE(this);
+     CallFlag_UpdateLEDs = true;
+ 
+     SignalUpdate();
+@@ -2057,6 +2078,7 @@ void RGBController::UpdateLEDs()
+ 
+ void RGBController::UpdateMode()
+ {
++    HFX_TSAN_RELEASE(this);
+     CallFlag_UpdateMode = true;
+ }
+ 
+@@ -2110,13 +2132,11 @@ void RGBController::DeviceUpdateMode()
+ 
+ void RGBController::DeviceCallThreadFunction()
+ {
+-    CallFlag_UpdateLEDs = false;
+-    CallFlag_UpdateMode = false;
+-
+     while(DeviceThreadRunning.load() == true)
+     {
+         if(CallFlag_UpdateMode.load() == true)
+         {
++            HFX_TSAN_ACQUIRE(this);
+             if(flags & CONTROLLER_FLAG_RESET_BEFORE_UPDATE)
+             {
+                 CallFlag_UpdateMode = false;
+@@ -2130,6 +2150,7 @@ void RGBController::DeviceCallThreadFunction()
+         }
+         if(CallFlag_UpdateLEDs.load() == true)
+         {
++            HFX_TSAN_ACQUIRE(this);
+             if(flags & CONTROLLER_FLAG_RESET_BEFORE_UPDATE)
+             {
+                 CallFlag_UpdateLEDs = false;
+diff --git a/RGBController/RGBController.h b/RGBController/RGBController.h
+index 364adca..e16a25d 100644
+--- a/RGBController/RGBController.h
++++ b/RGBController/RGBController.h
+@@ -394,6 +394,7 @@ public:
+     void                    SaveMode();
+ 
+     void                    DeviceCallThreadFunction();
++    void                    StopDeviceCallThread();
+ 
+     void                    ClearSegments(int zone);
+     void                    AddSegment(int zone, segment new_segment);
+diff --git a/Controllers/RazerController/RazerController/RazerController.cpp b/Controllers/RazerController/RazerController/RazerController.cpp
+index 0611e76..b9db80a 100644
+--- a/Controllers/RazerController/RazerController/RazerController.cpp
++++ b/Controllers/RazerController/RazerController/RazerController.cpp
+@@ -10,6 +10,7 @@
+ \*---------------------------------------------------------*/
+ 
+ #include <string.h>
++#include <utility>
+ #include "RazerController.h"
+ #include "RazerDevices.h"
+ #include "LogManager.h"
+@@ -17,8 +18,14 @@
+ 
+ using namespace std::chrono_literals;
+ 
+-RazerController::RazerController(hid_device* dev_handle, hid_device* dev_argb_handle, const char* path, unsigned short pid, std::string dev_name)
++RazerController::RazerController(hid_device* dev_handle,
++                                 hid_device* dev_argb_handle,
++                                 const char* path,
++                                 unsigned short pid,
++                                 std::string dev_name,
++                                 std::unique_ptr<RazerFeatureTransport> feature_transport_arg)
+ {
++    feature_transport = std::move(feature_transport_arg);
+     dev               = dev_handle;
+     dev_argb          = dev_argb_handle;
+     dev_pid           = pid;
+@@ -204,7 +211,10 @@ RazerController::~RazerController()
+         keepalive_thread->join();
+     }
+ 
+-    hid_close(dev);
++    if(dev != nullptr)
++    {
++        hid_close(dev);
++    }
+     delete guard_manager_ptr;
+ }
+ 
+@@ -1111,7 +1121,7 @@ std::string RazerController::razer_get_serial()
+ 
+ void RazerController::razer_get_keyboard_info(unsigned char* layout, unsigned char* variant)
+ {
+-    struct razer_report report              = razer_create_report(0x00, RAZER_COMMAND_ID_GET_KEYBOARD_INFO, 0x00);
++    struct razer_report report              = razer_create_report(0x00, RAZER_COMMAND_ID_GET_KEYBOARD_INFO, 0x02);
+     struct razer_report response_report     = razer_create_response();
+ 
+     std::this_thread::sleep_for(1ms);
+@@ -1894,6 +1904,10 @@ bool RazerController::SupportsWave()
+ 
+ int RazerController::razer_usb_receive(razer_report* report)
+ {
++    if(feature_transport != nullptr)
++    {
++        return feature_transport->GetFeatureReport((unsigned char*)report, sizeof(*report));
++    }
+     return hid_get_feature_report(dev, (unsigned char*)report, sizeof(*report));
+ }
+ 
+@@ -1903,11 +1917,19 @@ int RazerController::razer_usb_send(razer_report* report)
+     report->crc = razer_calculate_crc(report);
+ 
+     DeviceGuardLock _ = guard_manager_ptr->AwaitExclusiveAccess();
++    if(feature_transport != nullptr)
++    {
++        return feature_transport->SendFeatureReport((unsigned char*)report, sizeof(*report));
++    }
+     return hid_send_feature_report(dev, (unsigned char*)report, sizeof(*report));
+ }
+ 
+ int RazerController::razer_usb_send_argb(razer_argb_report* report)
+ {
+     DeviceGuardLock _ = guard_manager_ptr->AwaitExclusiveAccess();
++    if(feature_transport != nullptr)
++    {
++        return feature_transport->SendArgbFeatureReport((unsigned char*)report, sizeof(*report));
++    }
+     return hid_send_feature_report(dev_argb, (unsigned char*)report, sizeof(*report));
+ }
+diff --git a/Controllers/RazerController/RazerController/RazerController.h b/Controllers/RazerController/RazerController/RazerController.h
+index 01678ad..5550bdf 100644
+--- a/Controllers/RazerController/RazerController/RazerController.h
++++ b/Controllers/RazerController/RazerController/RazerController.h
+@@ -11,6 +11,7 @@
+ 
+ #include <atomic>
+ #include <chrono>
++#include <memory>
+ #include <string>
+ #include <thread>
+ #include <hidapi.h>
+@@ -218,10 +219,25 @@ PACK(struct razer_argb_report
+     unsigned char color_data[315];
+ });
+ 
++class RazerFeatureTransport
++{
++public:
++    virtual ~RazerFeatureTransport() = default;
++
++    virtual int GetFeatureReport(unsigned char* report, size_t size) = 0;
++    virtual int SendFeatureReport(const unsigned char* report, size_t size) = 0;
++    virtual int SendArgbFeatureReport(const unsigned char* report, size_t size) = 0;
++};
++
+ class RazerController
+ {
+ public:
+-    RazerController(hid_device* dev_handle, hid_device* dev_argb_handle, const char* path, unsigned short pid, std::string dev_name);
++    RazerController(hid_device* dev_handle,
++                    hid_device* dev_argb_handle,
++                    const char* path,
++                    unsigned short pid,
++                    std::string dev_name,
++                    std::unique_ptr<RazerFeatureTransport> feature_transport_arg = {});
+     ~RazerController();
+ 
+     unsigned int            GetDeviceIndex();
+@@ -258,6 +272,7 @@ private:
+     hid_device*             dev;
+     hid_device*             dev_argb;
+     unsigned short          dev_pid;
++    std::unique_ptr<RazerFeatureTransport> feature_transport;
+ 
+     /*---------------------------------------------------------*\
+     | Device-specific protocol settings                         |

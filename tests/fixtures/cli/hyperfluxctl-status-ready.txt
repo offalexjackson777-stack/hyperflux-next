@@ -1,0 +1,5 @@
+HyperFlux Next status
+Driver: active
+Bridge: running
+Receivers: 1 generation(s), 1 qualified
+Next: no action required

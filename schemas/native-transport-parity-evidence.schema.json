@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/native-transport-parity-evidence-v1.json",
+  "title": "Privacy-safe native transport parity evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "created_at",
+    "source_revision",
+    "profile_id",
+    "upstream_commit",
+    "catalog_sha256",
+    "safety",
+    "observations",
+    "coverage",
+    "conclusion"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-native-transport-parity-evidence-v1"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "profile_id": {"type": "string", "pattern": "^child\\.[a-z0-9.-]+$"},
+    "upstream_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "catalog_sha256": {"$ref": "#/$defs/sha256"},
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "read_only",
+        "settings_changed",
+        "serials_persisted",
+        "raw_reports_persisted",
+        "private_paths_persisted",
+        "network_upload",
+        "file_mode"
+      ],
+      "properties": {
+        "read_only": {"const": true},
+        "settings_changed": {"const": false},
+        "serials_persisted": {"const": false},
+        "raw_reports_persisted": {"const": false},
+        "private_paths_persisted": {"const": false},
+        "network_upload": {"const": false},
+        "file_mode": {"const": "0600"}
+      }
+    },
+    "observations": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {"$ref": "#/$defs/observation"}
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "passed", "missing", "failed"],
+      "properties": {
+        "required": {"$ref": "#/$defs/methods"},
+        "passed": {"$ref": "#/$defs/methods"},
+        "missing": {"$ref": "#/$defs/methods"},
+        "failed": {"$ref": "#/$defs/methods"}
+      }
+    },
+    "conclusion": {"enum": ["passed", "incomplete", "backend-required"]}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "methods": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,127}$"}
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "origin",
+        "comparison",
+        "request",
+        "response",
+        "receiver_comparison"
+      ],
+      "properties": {
+        "method": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,127}$"},
+        "origin": {"enum": ["direct-semantic-reference", "receiver-route"]},
+        "comparison": {
+          "enum": ["exact-semantic", "domain-valid", "redacted-equality"]
+        },
+        "request": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sha256",
+            "command_class",
+            "command_id",
+            "data_size",
+            "upstream_signature_matched",
+            "complete_capture",
+            "reconstructed_from_upstream"
+          ],
+          "properties": {
+            "sha256": {"$ref": "#/$defs/sha256"},
+            "command_class": {"type": "integer", "minimum": 0, "maximum": 255},
+            "command_id": {"type": "integer", "minimum": 128, "maximum": 255},
+            "data_size": {"type": "integer", "minimum": 0, "maximum": 80},
+            "upstream_signature_matched": {"type": "boolean"},
+            "complete_capture": {"type": "boolean"},
+            "reconstructed_from_upstream": {"type": "boolean"}
+          }
+        },
+        "response": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "structural_match", "complete_capture", "summary"],
+          "properties": {
+            "status": {"type": "integer", "minimum": 0, "maximum": 255},
+            "structural_match": {"type": "boolean"},
+            "complete_capture": {"type": "boolean"},
+            "summary": {
+              "type": "object",
+              "additionalProperties": {
+                "type": ["boolean", "integer", "string", "array", "null"]
+              }
+            }
+          }
+        },
+        "route_translation": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "field",
+                "application_selector",
+                "receiver_selector",
+                "applied",
+                "response_selector",
+                "response_restored_for_application",
+                "authority"
+              ],
+              "properties": {
+                "field": {"const": "transaction-id"},
+                "application_selector": {"type": "integer", "minimum": 0, "maximum": 255},
+                "receiver_selector": {"type": "integer", "minimum": 0, "maximum": 255},
+                "applied": {"type": "boolean"},
+                "response_selector": {"type": ["integer", "null"], "minimum": 0, "maximum": 255},
+                "response_restored_for_application": {"type": ["boolean", "null"]},
+                "authority": {"enum": ["captured-usbmon", "receiver-profile"]}
+              }
+            }
+          ]
+        },
+        "receiver_comparison": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["attempts", "unchanged_request", "standard_response", "semantic_parity"],
+          "properties": {
+            "attempts": {"type": "integer", "minimum": 0, "maximum": 8},
+            "unchanged_request": {
+              "type": ["boolean", "null"],
+              "description": "Application-owned command fields match the pinned upstream request; a separately declared route-selector field is not treated as command rewriting."
+            },
+            "standard_response": {"type": ["boolean", "null"]},
+            "semantic_parity": {"type": ["boolean", "null"]}
+          }
+        }
+      }
+    }
+  }
+}

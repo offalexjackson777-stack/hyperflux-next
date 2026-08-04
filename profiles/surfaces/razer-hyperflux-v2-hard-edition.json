@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schemas/hardware-profile.schema.json",
+  "schema": "hyperflux-hardware-profile-v1",
+  "profile_id": "surface.razer.hyperflux-v2-hard-edition",
+  "revision": 1,
+  "kind": "surface",
+  "device_kind": "mat",
+  "identity": {"manufacturer": "Razer", "model_name": "Razer HyperFlux V2 Hard Edition", "authority": "reviewed-metadata", "variant_key": "hard-edition"},
+  "compatibility": {"receiver_protocols": ["razer-hyperflux-v2"], "selection": "explicit-metadata-not-usb-guess"},
+  "capabilities": [
+    {"id": "identity.model", "support_level": "identified", "evidence_claims": ["claim.surface.hard-edition.identity-indicator"]},
+    {"id": "surface.firmware-status-indicator", "support_level": "read-only", "evidence_claims": ["claim.surface.hard-edition.identity-indicator"]}
+  ],
+  "evidence_claims": ["claim.surface.hard-edition.identity-indicator"],
+  "restrictions": ["No product ID is invented for this physical surface variant.", "The firmware-owned indicator exports zero user-addressable RGB targets.", "Hard Edition evidence does not identify Cloth Edition behavior."]
+}

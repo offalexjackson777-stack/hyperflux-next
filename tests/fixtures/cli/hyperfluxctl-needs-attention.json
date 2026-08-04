@@ -1,0 +1,41 @@
+{
+  "schema": "hyperflux-system-assessment-v2",
+  "state": "needs-attention",
+  "package_version": "2.0.0",
+  "components": [
+    {
+      "component": "core",
+      "state": "needs-attention",
+      "required": true,
+      "installed": true,
+      "version": "2.0.0"
+    },
+    {
+      "component": "full",
+      "state": "ready",
+      "required": false,
+      "installed": true,
+      "version": "2.0.0"
+    }
+  ],
+  "driver": "active",
+  "bridge_ready": false,
+  "receiver_generations": 0,
+  "qualified_generations": 0,
+  "working": [
+    "the installed driver is active"
+  ],
+  "findings": [
+    {
+      "code": "HFX-SERVICE-001",
+      "severity": "error",
+      "technical_cause": "The local bridge socket did not provide a usable snapshot.",
+      "user_explanation": "The bridge is not ready.",
+      "safe_action": "Verify the bridge service without changing device state.",
+      "verification": "Run Doctor again and confirm the bridge is ready.",
+      "documentation": "docs/operators/troubleshooting.md",
+      "details": {}
+    }
+  ],
+  "next_action": "Verify the bridge service without changing device state."
+}

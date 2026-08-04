@@ -1,0 +1,21 @@
+{
+  "$schema": "https://hyperflux.dev/schemas/native-route-observation-v1.json",
+  "schema": "hyperflux-native-route-observation-v1",
+  "observed_at": "2026-07-25T00:00:00Z",
+  "source": "bridge-native-route-v7",
+  "receiver_generation": 7,
+  "vendor_id": 5426,
+  "product_id": 123,
+  "device_kind": "mouse",
+  "route_kind": "hyperflux-wireless",
+  "route_state": "available",
+  "access": "candidate",
+  "protocol_family": "razer-feature-report-v1",
+  "report_bytes": 90,
+  "privacy": {
+    "serials_included": false,
+    "route_tokens_included": false,
+    "host_paths_included": false,
+    "raw_reports_included": false
+  }
+}

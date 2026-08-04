@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/upstream-metadata-import-v1.json",
+  "title": "Pinned upstream metadata import selection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "upstream_id", "source_commit", "devices"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-upstream-metadata-import-v1"},
+    "upstream_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "devices": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["profile_id", "source_path", "class_name", "device_kind", "transport_variant"],
+        "properties": {
+          "profile_id": {"type": "string", "pattern": "^child\\.[a-z0-9.-]+$"},
+          "source_path": {"type": "string", "pattern": "^[A-Za-z0-9_./-]+\\.py$"},
+          "class_name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+          "device_kind": {"enum": ["keyboard", "mouse"]},
+          "transport_variant": {"enum": ["wireless", "wired", "bluetooth"]}
+        }
+      }
+    }
+  }
+}

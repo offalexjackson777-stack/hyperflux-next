@@ -1,0 +1,209 @@
+{
+  "$schema": "../schemas/github-governance.schema.json",
+  "schema": "hyperflux-github-governance-v3",
+  "repository": {
+    "owner": "offalexjackson777-stack",
+    "name": "hyperflux-next",
+    "default_branch": "main",
+    "remote_state": "public-pre-release",
+    "visibility": "public",
+    "description": "Linux support for Razer devices paired through HyperFlux V2, with OpenRazer, Polychromatic, and OpenRGB integration.",
+    "homepage": "",
+    "social_preview_asset": "docs/assets/social-preview.png",
+    "topics": ["device-driver", "hid", "hyperflux", "linux", "openrazer", "openrgb", "polychromatic", "razer", "rgb-lighting"],
+    "pages_source": "disabled"
+  },
+  "publication_interlock": {
+    "source_repository_authorized": true,
+    "pages_deployment_authorized": false,
+    "collaboration_features_authorized": true,
+    "product_publication_authorized": false,
+    "release_workflows_authorized": false,
+    "package_publication_authorized": false,
+    "tag_creation_authorized": false,
+    "hardware_ci_authorized": false
+  },
+  "collaboration": {
+    "discussions": {
+      "apply_authorized": true,
+      "categories": [
+        {"id": "announcements", "name": "Announcements", "format": "announcement", "description": "Maintainer updates, verified milestones, and release-boundary changes."},
+        {"id": "hardware-qualification", "name": "Hardware qualification", "format": "discussion", "description": "Public planning around candidate devices and bounded evidence needs."},
+        {"id": "help", "name": "Help", "format": "q-and-a", "description": "User questions after running Doctor and reviewing privacy-safe diagnostics."},
+        {"id": "ideas", "name": "Ideas", "format": "discussion", "description": "Universal workflows and architecture proposals before issue commitment."}
+      ]
+    },
+    "project": {"apply_authorized": false}
+  },
+  "security_posture": {
+    "private_vulnerability_reporting": {"state": "required-enabled", "activation_boundary": "public-source-pre-release", "data_boundary": "GitHub private security advisories; never public issue intake"},
+    "dependency_graph": {"state": "required-enabled", "activation_boundary": "public-source-pre-release", "data_boundary": "Repository dependency metadata only"},
+    "dependabot_security_updates": {"state": "required-enabled", "activation_boundary": "public-source-pre-release", "data_boundary": "GitHub dependency alerts and update pull requests"},
+    "secret_scanning": {"state": "required-when-available", "activation_boundary": "public-source-pre-release", "data_boundary": "Repository content scanned by GitHub; no hardware diagnostics"},
+    "secret_scanning_push_protection": {"state": "required-when-available", "activation_boundary": "public-source-pre-release", "data_boundary": "Git pushes checked for supported secret patterns"},
+    "code_scanning": {"state": "required-enabled", "activation_boundary": "public-source-pre-release", "data_boundary": "Source analysis uploaded by the pinned CodeQL workflow"},
+    "source_sbom": {"state": "implemented", "activation_boundary": "current-generation", "data_boundary": "Generated SPDX inventory from reviewed manifests and workflow pins"},
+    "artifact_attestations": {"state": "deferred", "activation_boundary": "after-release-workflow-authorization", "data_boundary": "Release artifacts and provenance only; no hardware evidence or private diagnostics"}
+  },
+  "service_evaluations": [
+    {
+      "id": "codecov",
+      "service": "Codecov",
+      "decision": "not-selected",
+      "benefits": ["Coverage trends and pull-request annotations"],
+      "required_permissions": ["contents: read", "checks: write", "external coverage upload"],
+      "privacy": "Would transmit source-derived coverage metadata to an external service.",
+      "maintenance_cost": "medium",
+      "rationale": "Current verification is evidence-oriented rather than line-coverage gated; external upload is not justified before publication."
+    },
+    {
+      "id": "dependabot",
+      "service": "Dependabot",
+      "decision": "preferred-native",
+      "benefits": ["Native grouped updates for Actions, Cargo, and Python manifests", "No separately hosted bot token"],
+      "required_permissions": ["contents: read", "pull requests: write"],
+      "privacy": "Uses GitHub-native dependency metadata within the repository account.",
+      "maintenance_cost": "low",
+      "rationale": "Already modeled with bounded weekly groups and fewer moving parts than an external dependency bot."
+    },
+    {
+      "id": "openssf-scorecard",
+      "service": "OpenSSF Scorecard",
+      "decision": "deferred",
+      "benefits": ["Independent repository security-posture checks", "Machine-readable security findings"],
+      "required_permissions": ["contents: read", "security-events: write", "id-token: write"],
+      "privacy": "Publishes or uploads repository posture metadata and is most useful after the project has a stable remote history.",
+      "maintenance_cost": "medium",
+      "rationale": "Reconsider after the public repository has stable history; native controls already cover the current security boundary."
+    },
+    {
+      "id": "renovate",
+      "service": "Renovate",
+      "decision": "not-selected",
+      "benefits": ["Highly configurable dependency grouping and cross-file updates"],
+      "required_permissions": ["contents: read", "pull requests: write", "issues: write", "external app or bot credential"],
+      "privacy": "An external app would receive repository metadata and dependency manifests.",
+      "maintenance_cost": "high",
+      "rationale": "Its flexibility does not currently outweigh an additional app, credential, policy surface, and duplicate update authority."
+    }
+  ],
+  "ownership": {
+    "default": ["@offalexjackson777-stack"],
+    "rules": [
+      {
+        "paths": ["/driver/**", "/uapi/**"],
+        "owners": ["@offalexjackson777-stack"]
+      },
+      {
+        "paths": ["/schemas/**", "/protocol/**", "/profiles/**"],
+        "owners": ["@offalexjackson777-stack"]
+      },
+      {
+        "paths": ["/assurance/**", "/governance/**", "/SECURITY.md", "/SUPPORT.md", "/CODE_OF_CONDUCT.md"],
+        "owners": ["@offalexjackson777-stack"]
+      },
+      {
+        "paths": ["/integrations/**", "/sdk/**"],
+        "owners": ["@offalexjackson777-stack"]
+      },
+      {
+        "paths": ["/packaging/**", "/docs/**", "/.github/**"],
+        "owners": ["@offalexjackson777-stack"]
+      }
+    ]
+  },
+  "protection": {
+    "profile": "solo-maintainer",
+    "trusted_maintainers": 1,
+    "linear_history": true,
+    "required_approvals": 0,
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": false,
+    "require_conversation_resolution": true,
+    "prevent_deletions": true,
+    "prevent_force_pushes": true,
+    "strict_required_status_checks": true,
+    "required_checks": [
+      "Analyze (c-cpp)",
+      "Analyze (python)",
+      "Dependency review",
+      "Fast software",
+      "Full software"
+    ]
+  },
+  "labels": [
+    {"name": "area: documentation", "color": "1d76db", "description": "Documentation, navigation, and user guidance"},
+    {"name": "area: integration", "color": "5319e7", "description": "Application adapter or SDK integration"},
+    {"name": "area: kernel", "color": "b60205", "description": "Kernel transport, UAPI, or lifecycle"},
+    {"name": "area: packaging", "color": "006b75", "description": "Installation, distribution, or package lifecycle"},
+    {"name": "area: runtime", "color": "008672", "description": "Bridge runtime, operations, restoration, or diagnostics"},
+    {"name": "area: security", "color": "d93f0b", "description": "Security, privacy, provenance, or governance"},
+    {"name": "kind: bug", "color": "d73a4a", "description": "Confirmed or suspected incorrect behavior"},
+    {"name": "kind: device-support", "color": "ffd33d", "description": "Device support research or capability qualification"},
+    {"name": "kind: documentation", "color": "0075ca", "description": "Documentation content, navigation, or generated-view issue"},
+    {"name": "kind: feature", "color": "a2eeef", "description": "New capability or workflow proposal"},
+    {"name": "kind: limitation", "color": "fef2c0", "description": "Known limitation that needs clear user-facing treatment"},
+    {"name": "skip-changelog", "color": "ededed", "description": "Exclude this change from generated release notes"}
+  ],
+  "automation": {
+    "runner": "ubuntu-24.04",
+    "development_image": "hyperflux-next-dev:ci",
+    "dependency_update_day": "monday",
+    "full_verification_cron": "17 3 * * 1",
+    "job_summary": {
+      "enabled": true,
+      "sections": ["source-revision", "affected-domains", "selection", "failures", "timings", "generated-freshness", "performance-budgets", "release-gate-impact"]
+    },
+    "actions": [
+      {
+        "id": "build-push",
+        "repository": "docker/build-push-action",
+        "version": "v7.3.0",
+        "commit": "53b7df96c91f9c12dcc8a07bcb9ccacbed38856a",
+        "license_expression": "Apache-2.0"
+      },
+      {
+        "id": "cache",
+        "repository": "actions/cache",
+        "version": "v6.1.0",
+        "commit": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+        "license_expression": "MIT"
+      },
+      {
+        "id": "checkout",
+        "repository": "actions/checkout",
+        "version": "v7.0.0",
+        "commit": "9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+        "license_expression": "MIT"
+      },
+      {
+        "id": "codeql",
+        "repository": "github/codeql-action",
+        "version": "v4.37.1",
+        "commit": "7188fc363630916deb702c7fdcf4e481b751f97a",
+        "license_expression": "MIT"
+      },
+      {
+        "id": "dependency-review",
+        "repository": "actions/dependency-review-action",
+        "version": "v5.0.0",
+        "commit": "a1d282b36b6f3519aa1f3fc636f609c47dddb294",
+        "license_expression": "MIT"
+      },
+      {
+        "id": "setup-buildx",
+        "repository": "docker/setup-buildx-action",
+        "version": "v4.2.0",
+        "commit": "bb05f3f5519dd87d3ba754cc423b652a5edd6d2c",
+        "license_expression": "Apache-2.0"
+      },
+      {
+        "id": "upload-artifact",
+        "repository": "actions/upload-artifact",
+        "version": "v7.0.1",
+        "commit": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+        "license_expression": "MIT"
+      }
+    ]
+  }
+}

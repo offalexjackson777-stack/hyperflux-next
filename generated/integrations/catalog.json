@@ -1,0 +1,115 @@
+{
+  "adapters": [
+    {
+      "application": "Stock OpenRazer daemon and Polychromatic clients",
+      "coexistence_policy": "upstream-transport-extension",
+      "feature_families": [
+        "availability",
+        "inventory",
+        "native-control",
+        "presentation"
+      ],
+      "id": "openrazer-native-route",
+      "kind": "transport-adapter",
+      "must_not_own": [
+        "device commands, capabilities, images, or persistence",
+        "official OpenRazer daemon or D-Bus API",
+        "ordinary direct-USB devices"
+      ],
+      "owns": [
+        "feature-only UHID endpoint lifecycle",
+        "serial-proven direct-route precedence",
+        "trusted OpenRazer transport adaptation"
+      ],
+      "sdk_protocol_versions": [
+        7
+      ],
+      "status": "software-verified",
+      "transport_access": "sdk-only",
+      "unrelated_device_policy": "preserve",
+      "upstream_ids": [
+        "openrazer",
+        "polychromatic"
+      ]
+    },
+    {
+      "application": "OpenRGB",
+      "coexistence_policy": "application-plugin",
+      "feature_families": [
+        "availability",
+        "inventory",
+        "native-control",
+        "presentation"
+      ],
+      "id": "openrgb-native",
+      "kind": "native-plugin",
+      "must_not_own": [
+        "device models, layouts, zones, modes, effects, or persistence",
+        "direct USB hidapi transport",
+        "unrelated OpenRGB controllers"
+      ],
+      "owns": [
+        "feature transport adaptation for qualified receiver routes",
+        "native controller registration lifecycle",
+        "serial-proven direct-route precedence"
+      ],
+      "sdk_protocol_versions": [
+        7
+      ],
+      "status": "software-verified",
+      "transport_access": "sdk-only",
+      "unrelated_device_policy": "preserve",
+      "upstream_ids": [
+        "openrgb"
+      ]
+    }
+  ],
+  "schema": "hyperflux-integration-catalog-v1",
+  "source_sha256": "3f75b2772c23a15b1f5d0a4d134bcd0fca170178318ce168fdd1cb2a09627b32",
+  "upstreams": [
+    {
+      "api_contract": "org.razer 3.x metadata and D-Bus vocabulary",
+      "build_network_access": false,
+      "commit": "1ef8a91712906a89fd332a2ed62bbd105315d6d1",
+      "id": "openrazer",
+      "license_expression": "GPL-2.0-or-later AND CC-BY-SA-4.0",
+      "name": "OpenRazer",
+      "repository": "https://github.com/openrazer/openrazer.git",
+      "uses": [
+        "daemon-client-api-contract",
+        "driver-transform",
+        "metadata-import"
+      ],
+      "version": "3.12.4"
+    },
+    {
+      "api_contract": "OpenRGB plugin API 4",
+      "build_network_access": false,
+      "commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0",
+      "id": "openrgb",
+      "license_expression": "GPL-2.0-only",
+      "name": "OpenRGB",
+      "repository": "https://github.com/CalcProgrammer1/OpenRGB.git",
+      "uses": [
+        "effect-engine",
+        "model-layout-registry",
+        "plugin-build-contract"
+      ],
+      "version": "1.0rc3"
+    },
+    {
+      "api_contract": "Polychromatic 0.9.7 stock OpenRazer backend contract",
+      "build_network_access": false,
+      "commit": "716737bf444ab7e962f4d3b7a5188b2f07c0c4a1",
+      "id": "polychromatic",
+      "license_expression": "GPL-3.0-only",
+      "name": "Polychromatic",
+      "repository": "https://github.com/polychromatic/polychromatic.git",
+      "uses": [
+        "presentation-reference",
+        "stock-compatibility-contract"
+      ],
+      "version": "0.9.7-7-g716737b"
+    }
+  ]
+}

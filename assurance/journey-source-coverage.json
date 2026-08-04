@@ -1,0 +1,94 @@
+{
+  "$schema": "../schemas/journey-source-coverage.schema.json",
+  "schema": "hyperflux-journey-source-coverage-v3",
+  "public_document": "docs/project/journey.md",
+  "publication": {
+    "voice": "first-person-founder",
+    "technical_appendix": true,
+    "direct_quotes": false,
+    "public_sources_only": true,
+    "privacy_review": "passed"
+  },
+  "prior_art_review": {
+    "scope": "bounded-pinned-authority-review",
+    "outcome": "no-absolute-novelty-claim",
+    "absolute_novelty_claims": 0,
+    "sources": [
+      "integrations/catalog.json",
+      "integrations/openrazer/import.json",
+      "integrations/openrgb/native-route/transform.json",
+      "knowledge/reviewed-facts.json",
+      "profiles/candidates/razer-hyperflux-v2-2026-07-21.json"
+    ]
+  },
+  "eras": [
+    {
+      "id": "receiver-problem",
+      "title": "The Receiver Problem",
+      "order": 1,
+      "technical_sources": [
+        {"kind": "authority", "reference": "architecture/constitution.json", "supports": "The product constitution defines the bridge mission and application non-ownership boundaries."},
+        {"kind": "authority", "reference": "profiles/candidates/razer-hyperflux-v2-2026-07-21.json", "supports": "The receiver inventory is capability-based rather than a local serial or port allowlist."},
+        {"kind": "test", "reference": "tests/test_profiles.py", "supports": "Profile compilation preserves independent receiver and child identities."},
+        {"kind": "test", "reference": "tests/test_source_validated_universality.py", "supports": "Source-derived support rejects device-specific runtime branches."}
+      ]
+    },
+    {
+      "id": "transport-discovery",
+      "title": "Learning The Transport",
+      "order": 2,
+      "technical_sources": [
+        {"kind": "authority", "reference": "protocol/registry.json", "supports": "Protocol versions one through seven remain explicit compatibility surfaces."},
+        {"kind": "authority", "reference": "uapi/registry.json", "supports": "Kernel operations and versions remain canonical and fixed-width."},
+        {"kind": "test", "reference": "tests/test_protocol.py", "supports": "Wire compatibility and semantic validation are covered by generated and golden tests."},
+        {"kind": "test", "reference": "tests/test_kernel_uapi.py", "supports": "The public kernel boundary remains bounded and versioned."}
+      ]
+    },
+    {
+      "id": "bridge-foundation",
+      "title": "From Prototype To Bridge",
+      "order": 3,
+      "technical_sources": [
+        {"kind": "authority", "reference": "assurance/protected-behavior.json", "supports": "Protected bridge behavior and known evidence limits are explicit release inputs."},
+        {"kind": "authority", "reference": "runtime/linux.json", "supports": "Service, socket, and bounded runtime relationships are canonical."},
+        {"kind": "test", "reference": "crates/hfx-core/tests/restoration.rs", "supports": "Restoration planning and stale-authority suppression are deterministic."},
+        {"kind": "test", "reference": "crates/hfx-bridge/tests/generation_orchestration.rs", "supports": "Receiver generations are enforced as atomic bridge authority epochs."}
+      ]
+    },
+    {
+      "id": "application-compatibility",
+      "title": "Preserving Application Ownership",
+      "order": 4,
+      "technical_sources": [
+        {"kind": "authority", "reference": "integrations/catalog.json", "supports": "Stock application ownership and connector boundaries are canonical."},
+        {"kind": "authority", "reference": "packaging/distributions.json", "supports": "Core and Full preserve the two-package application-optional boundary."},
+        {"kind": "upstream", "reference": "integrations/openrazer/import.json", "supports": "The OpenRazer adaptation remains pinned to reviewed upstream source."},
+        {"kind": "test", "reference": "tests/stock_application_compatibility.py", "supports": "Stock OpenRazer and Polychromatic compatibility is qualified without a replacement application."},
+        {"kind": "test", "reference": "tests/openrgb_packaged_plugin_sdk_qualification.py", "supports": "OpenRGB integration is exercised as a packaged plugin against stock application interfaces."}
+      ]
+    },
+    {
+      "id": "evidence-recovery",
+      "title": "Evidence And Recovery",
+      "order": 5,
+      "technical_sources": [
+        {"kind": "authority", "reference": "assurance/protected-behavior.json", "supports": "Failure certainty, route ownership, and write boundaries remain explicit."},
+        {"kind": "authority", "reference": "assurance/performance-budgets.json", "supports": "Runtime and package performance claims use recorded limits rather than impressions."},
+        {"kind": "test", "reference": "tests/test_native_parity.py", "supports": "Native transport parity uses bounded, source-validated evidence contracts."},
+        {"kind": "test", "reference": "tests/test_bridge_only_release_qualifiers.py", "supports": "Release qualification keeps software, application, and physical claims separate."}
+      ]
+    },
+    {
+      "id": "smaller-2-0",
+      "title": "Building A Smaller 2.0",
+      "order": 6,
+      "technical_sources": [
+        {"kind": "authority", "reference": "packaging/distributions.json", "supports": "The final package contract is lean Core plus integration-complete Full."},
+        {"kind": "authority", "reference": "assurance/quality-audit.json", "supports": "Quality, dependency, security, and performance outcomes remain bounded and reviewable."},
+        {"kind": "authority", "reference": "docs/catalog.json", "supports": "Public documentation has explicit ownership and canonical sources."},
+        {"kind": "test", "reference": "tests/test_package_pipeline.py", "supports": "Package staging and manifests preserve component ownership and reproducibility."},
+        {"kind": "test", "reference": "tests/test_quality.py", "supports": "Quality and performance claims are validated against canonical evidence."}
+      ]
+    }
+  ]
+}

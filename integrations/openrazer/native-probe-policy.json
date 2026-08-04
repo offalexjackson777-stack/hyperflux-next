@@ -1,0 +1,202 @@
+{
+  "$schema": "../../schemas/openrazer-native-probe-policy.schema.json",
+  "schema": "hyperflux-openrazer-native-probe-policy-v1",
+  "upstream_id": "openrazer",
+  "source_commit": "1ef8a91712906a89fd332a2ed62bbd105315d6d1",
+  "report_size": 90,
+  "busy_retry": {
+    "status": 1,
+    "maximum_attempts": 5
+  },
+  "bindings": [
+    {
+      "method": "get_battery",
+      "device_kinds": ["keyboard", "mouse"],
+      "driver_attribute": "charge_level",
+      "request_owner": "razer_attr_read_charge_level",
+      "request_expression": "razer_chroma_misc_get_battery_level()",
+      "response_summary": "battery-u8",
+      "comparison": "domain-valid"
+    },
+    {
+      "method": "get_brightness",
+      "device_kinds": ["keyboard"],
+      "driver_attribute": "matrix_brightness",
+      "request_owner": "razer_attr_read_matrix_brightness",
+      "request_expression": "razer_chroma_extended_matrix_get_brightness(VARSTORE, BACKLIGHT_LED)",
+      "response_summary": "u8-value",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_brightness",
+      "device_kinds": ["mouse"],
+      "driver_attribute": "matrix_brightness",
+      "request_owner": "razer_attr_read_matrix_brightness",
+      "request_expression": "razer_chroma_extended_matrix_get_brightness(VARSTORE, ZERO_LED)",
+      "response_summary": "u8-value",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_device_mode",
+      "device_kinds": ["keyboard", "mouse"],
+      "driver_attribute": "device_mode",
+      "request_owner": "razer_attr_read_device_mode",
+      "request_expression": "razer_chroma_standard_get_device_mode()",
+      "response_summary": "device-mode",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_dpi_stages",
+      "device_kinds": ["mouse"],
+      "driver_attribute": "dpi_stages",
+      "request_owner": "razer_attr_read_dpi_stages",
+      "request_expression": "razer_chroma_misc_get_dpi_stages(VARSTORE)",
+      "response_summary": "dpi-stages",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_dpi_xy",
+      "device_kinds": ["mouse"],
+      "driver_attribute": "dpi",
+      "request_owner": "razer_attr_read_dpi",
+      "request_expression": "razer_chroma_misc_get_dpi_xy(NOSTORE)",
+      "response_summary": "dpi-xy",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_firmware",
+      "device_kinds": ["keyboard", "mouse"],
+      "driver_attribute": "firmware_version",
+      "request_owner": "razer_attr_read_firmware_version",
+      "request_expression": "razer_chroma_standard_get_firmware_version()",
+      "response_summary": "firmware-version",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_game_mode",
+      "device_kinds": ["keyboard"],
+      "driver_attribute": "game_led_state",
+      "request_owner": "razer_attr_read_game_led_state",
+      "request_expression": "razer_chroma_standard_get_led_state(VARSTORE, GAME_LED)",
+      "response_summary": "led-state",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_idle_time",
+      "device_kinds": ["mouse"],
+      "driver_attribute": "device_idle_time",
+      "request_owner": "razer_attr_read_device_idle_time",
+      "request_expression": "razer_chroma_misc_get_idle_time()",
+      "response_summary": "be16-seconds",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_keyboard_layout",
+      "device_kinds": ["keyboard"],
+      "driver_attribute": "kbd_layout",
+      "request_owner": "razer_attr_read_kbd_layout",
+      "request_expression": "get_razer_report(0x00, 0x86, 0x02)",
+      "response_summary": "keyboard-layout",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_logo_brightness",
+      "device_kinds": ["mouse"],
+      "driver_attribute": "logo_led_brightness",
+      "request_owner": "razer_attr_read_led_brightness",
+      "request_expression": "razer_chroma_extended_matrix_get_brightness(VARSTORE, LOGO_LED)",
+      "response_summary": "u8-value",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_low_battery_threshold",
+      "device_kinds": ["mouse"],
+      "driver_attribute": "charge_low_threshold",
+      "request_owner": "razer_attr_read_charge_low_threshold",
+      "request_expression": "razer_chroma_misc_get_low_battery_threshold()",
+      "response_summary": "u8-value",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_macro_effect",
+      "device_kinds": ["keyboard"],
+      "driver_attribute": "macro_led_effect",
+      "request_owner": "razer_attr_read_macro_led_effect",
+      "request_expression": "razer_chroma_standard_get_led_effect(VARSTORE, MACRO_LED)",
+      "response_summary": "led-effect",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_macro_mode",
+      "device_kinds": ["keyboard"],
+      "driver_attribute": "macro_led_state",
+      "request_owner": "razer_attr_read_macro_led_state",
+      "request_expression": "razer_chroma_standard_get_led_state(VARSTORE, MACRO_LED)",
+      "response_summary": "led-state",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_poll_rate",
+      "device_kinds": ["mouse"],
+      "driver_attribute": "poll_rate",
+      "request_owner": "razer_attr_read_poll_rate",
+      "request_expression": "razer_chroma_misc_get_polling_rate()",
+      "response_summary": "polling-rate-code",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_scroll_acceleration",
+      "device_kinds": ["mouse"],
+      "driver_attribute": "scroll_acceleration",
+      "request_owner": "razer_attr_read_scroll_acceleration",
+      "request_expression": "razer_chroma_misc_get_scroll_acceleration()",
+      "response_summary": "boolean-u8",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_scroll_brightness",
+      "device_kinds": ["mouse"],
+      "driver_attribute": "scroll_led_brightness",
+      "request_owner": "razer_attr_read_led_brightness",
+      "request_expression": "razer_chroma_extended_matrix_get_brightness(VARSTORE, SCROLL_WHEEL_LED)",
+      "response_summary": "u8-value",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_scroll_mode",
+      "device_kinds": ["mouse"],
+      "driver_attribute": "scroll_mode",
+      "request_owner": "razer_attr_read_scroll_mode",
+      "request_expression": "razer_chroma_misc_get_scroll_mode()",
+      "response_summary": "u8-value",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_scroll_smart_reel",
+      "device_kinds": ["mouse"],
+      "driver_attribute": "scroll_smart_reel",
+      "request_owner": "razer_attr_read_scroll_smart_reel",
+      "request_expression": "razer_chroma_misc_get_scroll_smart_reel()",
+      "response_summary": "boolean-u8",
+      "comparison": "exact-semantic"
+    },
+    {
+      "method": "get_serial",
+      "device_kinds": ["keyboard", "mouse"],
+      "driver_attribute": "device_serial",
+      "request_owner": "razer_attr_read_device_serial",
+      "request_expression": "razer_chroma_standard_get_serial()",
+      "response_summary": "redacted-serial-equality",
+      "comparison": "redacted-equality"
+    },
+    {
+      "method": "is_charging",
+      "device_kinds": ["keyboard", "mouse"],
+      "driver_attribute": "charge_status",
+      "request_owner": "razer_attr_read_charge_status",
+      "request_expression": "razer_chroma_misc_get_charging_status()",
+      "response_summary": "boolean-u8",
+      "comparison": "domain-valid"
+    }
+  ]
+}

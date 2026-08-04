@@ -1,0 +1,121 @@
+{
+  "$schema": "../schemas/device-knowledge-links.schema.json",
+  "schema": "hyperflux-device-knowledge-links-v1",
+  "candidate_snapshot_id": "catalog.razer.hyperflux-v2.2026-07-21",
+  "links": [
+    {
+      "candidate_id": "razer-basilisk-v3-pro",
+      "assurance": "reviewed-link",
+      "source_records": {
+        "openrazer": ["openrazer:RazerBasiliskV3ProWired", "openrazer:RazerBasiliskV3ProWireless"],
+        "openrgb": ["openrgb:basilisk_v3_pro_bluetooth_device", "openrgb:basilisk_v3_pro_wired_device", "openrgb:basilisk_v3_pro_wireless_device"]
+      },
+      "hyperflux_profile_ids": [],
+      "notes": ["Source knowledge does not qualify the HyperFlux receiver route."]
+    },
+    {
+      "candidate_id": "razer-basilisk-v3-pro-35k",
+      "assurance": "reviewed-link",
+      "source_records": {
+        "openrazer": ["openrazer:RazerBasiliskV3Pro35KWired", "openrazer:RazerBasiliskV3Pro35KWireless"],
+        "openrgb": ["openrgb:basilisk_v3_pro_35k_wired_device", "openrgb:basilisk_v3_pro_35k_wireless_device"]
+      },
+      "hyperflux_profile_ids": ["child.razer.basilisk-v3-pro-35k.00cd"],
+      "notes": ["Only the exact 0x00CD HyperFlux child profile carries receiver-route authority."]
+    },
+    {
+      "candidate_id": "razer-blackwidow-v3-pro",
+      "assurance": "reviewed-link",
+      "source_records": {
+        "openrazer": ["openrazer:RazerBlackWidowV3ProWired", "openrazer:RazerBlackWidowV3ProWireless"],
+        "openrgb": ["openrgb:blackwidow_v3_pro_bluetooth_device", "openrgb:blackwidow_v3_pro_wired_device", "openrgb:blackwidow_v3_pro_wireless_device"]
+      },
+      "hyperflux_profile_ids": [],
+      "notes": ["Source knowledge does not qualify the HyperFlux receiver route."]
+    },
+    {
+      "candidate_id": "razer-blackwidow-v4-low-profile-hyperspeed",
+      "assurance": "reviewed-link",
+      "source_records": {"openrazer": [], "openrgb": []},
+      "hyperflux_profile_ids": [],
+      "notes": ["Neither pinned upstream revision contains an exact reviewed model record."]
+    },
+    {
+      "candidate_id": "razer-blackwidow-v4-low-profile-tenkeyless-hyperspeed",
+      "assurance": "reviewed-link",
+      "source_records": {
+        "openrazer": [],
+        "openrgb": ["openrgb:blackwidow_v4_lowprofile_tkl_wired_device", "openrgb:blackwidow_v4_lowprofile_tkl_wireless_device"]
+      },
+      "hyperflux_profile_ids": [],
+      "notes": ["The pinned OpenRazer revision has no exact low-profile TKL record."]
+    },
+    {
+      "candidate_id": "razer-blackwidow-v4-mini-hyperspeed",
+      "assurance": "reviewed-link",
+      "source_records": {
+        "openrazer": ["openrazer:RazerBlackWidowV4MiniHyperSpeedWired", "openrazer:RazerBlackWidowV4MiniHyperSpeedWireless"],
+        "openrgb": []
+      },
+      "hyperflux_profile_ids": [],
+      "notes": ["Source knowledge does not qualify the HyperFlux receiver route.", "The pinned OpenRGB revision has no exact V4 Mini record; its V3 Mini entries use different identities and are intentionally not linked."]
+    },
+    {
+      "candidate_id": "razer-blackwidow-v4-tenkeyless-hyperspeed",
+      "assurance": "reviewed-link",
+      "source_records": {
+        "openrazer": ["openrazer:RazerBlackWidowV4TenkeylessHyperSpeedWired", "openrazer:RazerBlackWidowV4TenkeylessHyperSpeedWireless"],
+        "openrgb": ["openrgb:blackwidow_v4_tkl_wired_device", "openrgb:blackwidow_v4_tkl_wireless_device"]
+      },
+      "hyperflux_profile_ids": [],
+      "notes": ["OpenRGB shortens the presentation name to TKL; the PID pairs match the reviewed OpenRazer records."]
+    },
+    {
+      "candidate_id": "razer-cobra-hyperspeed",
+      "assurance": "reviewed-link",
+      "source_records": {"openrazer": [], "openrgb": []},
+      "hyperflux_profile_ids": [],
+      "notes": ["The plain Razer Cobra record is intentionally not treated as Cobra HyperSpeed."]
+    },
+    {
+      "candidate_id": "razer-cobra-pro",
+      "assurance": "reviewed-link",
+      "source_records": {
+        "openrazer": ["openrazer:RazerCobraProWired", "openrazer:RazerCobraProWireless"],
+        "openrgb": ["openrgb:cobra_pro_wired_device", "openrgb:cobra_pro_wireless_device"]
+      },
+      "hyperflux_profile_ids": [],
+      "notes": ["Source knowledge does not qualify the HyperFlux receiver route."]
+    },
+    {
+      "candidate_id": "razer-deathstalker-v2-pro",
+      "assurance": "reviewed-link",
+      "source_records": {
+        "openrazer": ["openrazer:RazerDeathStalkerV2ProWired", "openrazer:RazerDeathStalkerV2ProWireless"],
+        "openrgb": ["openrgb:deathstalker_v2_pro_wired_device", "openrgb:deathstalker_v2_pro_wireless_device"]
+      },
+      "hyperflux_profile_ids": [],
+      "notes": ["Source knowledge does not qualify the HyperFlux receiver route."]
+    },
+    {
+      "candidate_id": "razer-deathstalker-v2-pro-tenkeyless",
+      "assurance": "reviewed-link",
+      "source_records": {
+        "openrazer": ["openrazer:RazerDeathStalkerV2ProTKLWired", "openrazer:RazerDeathStalkerV2ProTKLWireless"],
+        "openrgb": ["openrgb:deathstalker_v2_pro_tkl_wired_device", "openrgb:deathstalker_v2_pro_tkl_wireless_device"]
+      },
+      "hyperflux_profile_ids": ["child.razer.deathstalker-v2-pro-tkl.0296"],
+      "notes": ["Only the exact 0x0296 HyperFlux child profile carries receiver-route authority."]
+    },
+    {
+      "candidate_id": "razer-naga-v2-pro",
+      "assurance": "reviewed-link",
+      "source_records": {
+        "openrazer": ["openrazer:RazerNagaV2ProWired", "openrazer:RazerNagaV2ProWireless"],
+        "openrgb": ["openrgb:naga_pro_v2_wired_device", "openrgb:naga_pro_v2_wireless_device"]
+      },
+      "hyperflux_profile_ids": [],
+      "notes": ["The Naga V2 Pro and Naga Pro V2 naming difference is explicitly reviewed, not heuristically merged.", "The pinned sources disagree on lighting slot count; no topology is promoted from that conflict."]
+    }
+  ]
+}

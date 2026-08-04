@@ -1,0 +1,79 @@
+{
+  "$schema": "../schemas/candidate-baseline.schema.json",
+  "schema": "hyperflux-candidate-baseline-v1",
+  "baseline": {
+    "id": "universal-return-1397527",
+    "revision": "13975278cda3c7284b1478602ac1cdbd6849b1f4",
+    "commit_epoch": 1784899106,
+    "branch": "fix/universal-return-restoration",
+    "purpose": "Immutable pre-semantic-readiness baseline for universal first-writable restoration."
+  },
+  "packages": {
+    "candidate": {
+      "source_revision": "13975278cda3c7284b1478602ac1cdbd6849b1f4",
+      "file": "hyperflux-next-linux-0.0.0_dev.1-1-x86_64.pkg.tar.zst",
+      "sha256": "4f7849b4a815f1b62120c878ff68f839484fc50d923b95830224d58e3f20d054",
+      "size": 4807330,
+      "manifest_sha256": "412bf856f7a12f59c3d102ad6f89e5442da0e78ebe31b808bb400a2aaa528456"
+    },
+    "rollback": {
+      "source_revision": "9e1c7b6724302b3ef8742c32e0a68bb43a2e9499",
+      "file": "hyperflux-next-linux-0.0.0_dev.1-1-x86_64.pkg.tar.zst",
+      "sha256": "183d37658d192e977b0c2f381660aeb118a0f736bfb33ec8ac691130d42cb456",
+      "size": 5194140,
+      "manifest_sha256": "27545824a03e839c7e594b87c779db68c33a3e8096f898641b34f7827bb49ed0"
+    }
+  },
+  "profiles": {
+    "source_sha256": "6c14575bdb3887301e5f440e6ff7350da718960c91fc4ae516a43f76bf02a1ac",
+    "runtime": [
+      {
+        "profile_id": "child.razer.basilisk-v3-pro-35k.00cd",
+        "sha256": "62f114182069895ae0c72ebdd7165e1bb774d41eceeeead155eda449df69f8cf"
+      },
+      {
+        "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296",
+        "sha256": "46703d44d594392e0cb289f6151a7c6b3b200805503a4cf036747d3c347f0d63"
+      },
+      {
+        "profile_id": "receiver.razer.hyperflux-v2.1532-00cf",
+        "sha256": "ff258c7eb0ff16ee7df5aa9964aad7cf9fe0915b4252897aa561421a05ee96c6"
+      },
+      {
+        "profile_id": "surface.razer.hyperflux-v2-hard-edition",
+        "sha256": "0b00ef59eb8c039695c760de855bb7d7d55f1be9a32f6f2d1ed90d039d7796b9"
+      }
+    ]
+  },
+  "verification": {
+    "schema": "hyperflux-verification-run-v1",
+    "run_id": "hfxv-15883ee2d3e1a5a18c52",
+    "lane": "full-software",
+    "status": "passed",
+    "nodes": 31,
+    "duration_ms": 477496,
+    "result_sha256": "f127347d88256bca3b2b9d9940f7887407a95133773c65e9c1f60eb2dc457640"
+  },
+  "protected_behavior": {
+    "schema": "hyperflux-protected-behavior-v1",
+    "sha256": "67b8195a662053fd008a47a4fe2c6e186af13f2b1c0e2e1cb2c34e7792012080"
+  },
+  "change_boundary": {
+    "default_no_touch": [
+      "application integrations",
+      "identity and battery decoding",
+      "input forwarding",
+      "proven receiver-renewal restoration",
+      "proven service-start restoration",
+      "proven system-resume restoration",
+      "qualified LED maps",
+      "receiver frame encoder"
+    ],
+    "approval_required": [
+      "existing qualified map or decoder change",
+      "kernel or UAPI change",
+      "protocol-v6 semantic change",
+      "proven restoration behavior change"
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "apply_authorized": true,
+  "default_branch": "main",
+  "excluded_components": [
+    "package-publication",
+    "release-tags",
+    "release-publication",
+    "hardware-ci"
+  ],
+  "remote_state": "public-pre-release",
+  "repository": "offalexjackson777-stack/hyperflux-next",
+  "ruleset": {
+    "bypass_actors": [],
+    "dismiss_stale_reviews": true,
+    "enforcement": "active",
+    "prevent_deletions": true,
+    "prevent_force_pushes": true,
+    "profile": "solo-maintainer",
+    "require_code_owner_reviews": false,
+    "require_conversation_resolution": true,
+    "require_linear_history": true,
+    "required_approvals": 0,
+    "required_status_checks": [
+      "Analyze (c-cpp)",
+      "Analyze (python)",
+      "Dependency review",
+      "Fast software",
+      "Full software"
+    ],
+    "strict_required_status_checks": true,
+    "trusted_maintainers": 1
+  },
+  "schema": "hyperflux-github-protection-plan-v1"
+}

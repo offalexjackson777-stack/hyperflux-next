@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/documentation-screenshot-manifest-v1.json",
+  "title": "HyperFlux documentation screenshot manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "source_revision", "render_result_sha256", "screenshots"],
+  "properties": {
+    "$schema": {"const": "../schemas/documentation-screenshot-manifest.schema.json"},
+    "schema": {"const": "hyperflux-documentation-screenshot-manifest-v1"},
+    "source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "render_result_sha256": {"$ref": "#/$defs/digest"},
+    "screenshots": {
+      "type": "array",
+      "minItems": 108,
+      "maxItems": 108,
+      "items": {"$ref": "#/$defs/screenshot"}
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "screenshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "path", "width", "height", "theme", "sha256", "bytes"],
+      "properties": {
+        "file": {"type": "string", "pattern": "^screenshots/[A-Za-z0-9_-]+--(?:375|768|1280)--(?:light|dark)\\.png$"},
+        "path": {"$ref": "#/$defs/path"},
+        "width": {"enum": [375, 768, 1280]},
+        "height": {"enum": [812, 1024, 900]},
+        "theme": {"enum": ["light", "dark"]},
+        "sha256": {"$ref": "#/$defs/digest"},
+        "bytes": {"type": "integer", "minimum": 1, "maximum": 8388608}
+      }
+    }
+  }
+}

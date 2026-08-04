@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/document-catalog-v2.json",
+  "title": "HyperFlux documentation catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "documents", "classified_markdown"],
+  "properties": {
+    "$schema": {"const": "../schemas/document-catalog.schema.json"},
+    "schema": {"const": "hyperflux-document-catalog-v2"},
+    "documents": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {"$ref": "#/$defs/document"}
+    },
+    "classified_markdown": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {"$ref": "#/$defs/classified-markdown"}
+    }
+  },
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "classified-markdown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "classification"],
+      "properties": {
+        "path": {"$ref": "#/$defs/path"},
+        "classification": {
+          "enum": [
+            "evidence-record",
+            "generated-front-door",
+            "repository-template",
+            "vendored-component-note"
+          ]
+        }
+      }
+    },
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "title",
+        "audience",
+        "purpose",
+        "owner",
+        "navigation_group",
+        "mode",
+        "canonical_sources",
+        "generated_block_ids"
+      ],
+      "properties": {
+        "path": {"$ref": "#/$defs/path"},
+        "title": {"type": "string", "minLength": 1, "maxLength": 120},
+        "audience": {
+          "enum": [
+            "users",
+            "developers",
+            "contributors",
+            "maintainers",
+            "project-followers",
+            "mixed"
+          ]
+        },
+        "purpose": {"type": "string", "minLength": 1, "maxLength": 320},
+        "owner": {"$ref": "#/$defs/identifier"},
+        "navigation_group": {
+          "enum": [
+            "home",
+            "user",
+            "developer",
+            "project",
+            "generated",
+            "architecture",
+            "assurance",
+            "legal"
+          ]
+        },
+        "mode": {"enum": ["human", "hybrid", "generated"]},
+        "canonical_sources": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/path"}
+        },
+        "generated_block_ids": {
+          "type": "array",
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "release-status",
+              "recommended-package",
+              "compatibility-summary"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,131 @@
+{
+  "$schema": "../schemas/documentation-audit.schema.json",
+  "schema": "hyperflux-documentation-audit-v2",
+  "source_revision": "a74e44c92eb2baedccb3ea6eccbe92293a957fe4",
+  "inputs": {
+    "catalog_sha256": "2909ded09cc3b57a83dac7a2af2508c0cae1bf6e6e9debd985271d9d3f6b3162",
+    "policy_sha256": "afad995f01f447fdf79edea77682603abb26eeec123a00c74b134d3efdc413a2",
+    "renderer_sha256": "065d95640162f64657854db2d4d5caccc005ee245f3a731a3b3d36f3e8397fe4",
+    "journey_source_coverage_sha256": "7dc3e929079eb76fe8ce82b0b026c2a373af8dc4c829352f38374a6d6983495a",
+    "rendered_documents_sha256": "40dd0e9b99fef9024c7ba02aff81fa24410e0dcc86cb3b8b0970d5716e1db4a6"
+  },
+  "render": {
+    "status": "passed",
+    "result_sha256": "e5b20ee05d336596fdef364d0adacc837a2dc5163924c1af8a75ed74a8e2afd8",
+    "document_count": 64,
+    "check_count": 384,
+    "screenshot_count": 108,
+    "issue_count": 0,
+    "outbound_network_requests": 0,
+    "external_image_placeholders": 12,
+    "viewport_widths": [
+      375,
+      768,
+      1280
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "screenshot_manifest_sha256": "50c38108a762532492148bbeb4d11839f8b59d1e0f58e2fcc8b365a5313eb2dd",
+    "capture_mode": "full-page",
+    "max_page_height": 32768,
+    "render_contract": "github-compatible-gfm-v2",
+    "runtime": {
+      "node": "v24.14.0",
+      "playwright": "1.62.0",
+      "marked": "17.0.5",
+      "chromium": "149.0.7827.55"
+    }
+  },
+  "visual_review": {
+    "status": "passed",
+    "reviewed_screenshots": [
+      {
+        "file": "screenshots/CONTRIBUTING--375--dark.png",
+        "sha256": "aa746f9048670c9d1f69140d3cb3f1d62291ce2f2e14b974d1203250e1fde5b1"
+      },
+      {
+        "file": "screenshots/README--1280--light.png",
+        "sha256": "c7b348935e83525f979f4534974beb2cabdbb169e243f11cbff2a2d78ce18642"
+      },
+      {
+        "file": "screenshots/SECURITY--768--dark.png",
+        "sha256": "6ef4b249ca17f490ab3923f8c72db39fdc4c10a03279a61f1e1218fc0ee3bdb3"
+      },
+      {
+        "file": "screenshots/SUPPORT--375--light.png",
+        "sha256": "2efae23bcf785d192e54f3ca6a5b69d9245fa008da65b54e74488a7cf35dfe05"
+      },
+      {
+        "file": "screenshots/docs__README--1280--dark.png",
+        "sha256": "c55172463de49382c44eea4124018f10c2ee989785fe17800b36f1a6f0ff0d6b"
+      },
+      {
+        "file": "screenshots/docs__architecture__design__book--375--light.png",
+        "sha256": "9a1a4ead83a5b65a531ac3a6f43dc075d5ad847f574cf11e93b7f7a77a99227e"
+      },
+      {
+        "file": "screenshots/docs__developer__architecture--768--light.png",
+        "sha256": "3e4720d98f8e07a1527633540258a4ffce0d1cd19e7e99301639a24580e8d2bf"
+      },
+      {
+        "file": "screenshots/docs__generated__distributions--1280--dark.png",
+        "sha256": "a9d8250bed28399f686cd2ffe25fc52bd5544e97070e6477ab3d225f75c8d5f4"
+      },
+      {
+        "file": "screenshots/docs__generated__installation--375--dark.png",
+        "sha256": "02d7bd311e108979f0a2ec606b49cf04cc67711a76f9bd4fcc8029a825b5dff5"
+      },
+      {
+        "file": "screenshots/docs__generated__repository__atlas--768--light.png",
+        "sha256": "fe563b8ce5e7f9ff2a12c42038914be047168d2c2bc2813ab1c15f402df0dcd0"
+      },
+      {
+        "file": "screenshots/docs__generated__supported__hardware--375--dark.png",
+        "sha256": "f3ccc7207c93ce19aa7bd031103a4b876645ee8c9cfc94e2be23b4613bda2f2a"
+      },
+      {
+        "file": "screenshots/docs__generated__verification--1280--light.png",
+        "sha256": "f8b533630b578441efe0321852d0e48930101580de0edb8a96cce60ae48f3b91"
+      },
+      {
+        "file": "screenshots/docs__project__journey--1280--light.png",
+        "sha256": "ea3d6e55dc3b1821d4e70d87358c4ebd46ff4bbe31bf400bc113791008eec833"
+      },
+      {
+        "file": "screenshots/docs__project__release__status--768--dark.png",
+        "sha256": "e0c21fe61a3731b5d28c487e0fd77f8430293970a59b734ca2a04f91faa7d238"
+      },
+      {
+        "file": "screenshots/docs__user__first__run--375--light.png",
+        "sha256": "c0c650a9e082942d316299859e20ad0dd4d3faa7394193ca07b87c33aa79f070"
+      },
+      {
+        "file": "screenshots/docs__user__hardware--1280--dark.png",
+        "sha256": "aa65a8f3a2b6f4839f756c8e456ce3549167c71e97faba7a20549fc2401aff60"
+      },
+      {
+        "file": "screenshots/docs__user__installation--768--light.png",
+        "sha256": "85460c55c80863c53eb0e7a633525039126dd7e62ef352d7046a912ebfe8f675"
+      },
+      {
+        "file": "screenshots/docs__user__troubleshooting--375--dark.png",
+        "sha256": "7f9a0877a05ca37a05b5a6fd49fb46f45ac392fbaec1d94638bed21dcd851b3e"
+      }
+    ]
+  },
+  "verification": {
+    "fast_run_id": "hfxv-d0afa1944820df3392c1",
+    "fast_evidence_sha256": "d2f03c76d3b00327bc677db5150e6b908207835716ac24b30fe8397121272bf9",
+    "fast_result_sha256": "1985fcd2045c5b79198f12dd383e4c88cd61cb4abc87f852afae528eb6986a3c",
+    "full_run_id": "hfxv-3bcd1b3f81f41b544d7c",
+    "full_source_revision": "a9de5e1b89b0259c7c43ff985f4edfdf49c02642",
+    "full_evidence_sha256": "411560cb81b79d53a7011f5251b7d4a5a01afadace293b5a2ebba933d3fac58b",
+    "full_result_sha256": "ae4a1042cd8803d4f7c8b42b08be7a721cc5e4346b1b233c14a2fbfaf0689c14",
+    "second_generation_identical": true,
+    "links": "passed",
+    "privacy": "passed",
+    "release_gate_changes": []
+  }
+}

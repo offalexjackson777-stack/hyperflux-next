@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/openrgb-native-transform-v1.json",
+  "title": "Source-bound OpenRGB native transport transformation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "upstream", "patch", "files"],
+  "properties": {
+    "$schema": {"const": "../../../schemas/openrgb-native-transform.schema.json"},
+    "schema": {"const": "hyperflux-openrgb-native-transform-v1"},
+    "upstream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "repository", "commit"],
+      "properties": {
+        "id": {"const": "openrgb"},
+        "repository": {"const": "https://github.com/CalcProgrammer1/OpenRGB.git"},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "patch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^patches/[A-Za-z0-9._-]+\\.patch$"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "source_sha256", "transformed_sha256"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^(Controllers/RazerController/RazerController/[A-Za-z0-9._-]+|RGBController/RGBController\\.(cpp|h))$"
+          },
+          "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "transformed_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    }
+  }
+}

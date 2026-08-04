@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/quality-audit-v1.json",
+  "title": "HyperFlux quality, security, and performance audit",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "source_revision", "reviews", "measurements"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema": {"const": "hyperflux-quality-audit-v1"},
+    "source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "reviews": {
+      "type": "array",
+      "minItems": 13,
+      "maxItems": 13,
+      "items": {"$ref": "#/$defs/review"}
+    },
+    "measurements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package_baseline", "relay_polling", "build_profile_trial"],
+      "properties": {
+        "package_baseline": {"$ref": "#/$defs/packageBaseline"},
+        "relay_polling": {"$ref": "#/$defs/relayPolling"},
+        "build_profile_trial": {"$ref": "#/$defs/buildTrial"}
+      }
+    }
+  },
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "evidence", "finding", "action"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,95}$"},
+        "status": {
+          "enum": [
+            "enforced",
+            "measured",
+            "reviewed-bounded",
+            "reviewed-no-change",
+            "reviewed-no-unproven-removal",
+            "unsupported-by-pinned-toolchain",
+            "blocked-by-physical-evidence"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/path"}
+        },
+        "finding": {"type": "string", "minLength": 1, "maxLength": 400},
+        "action": {"type": "string", "minLength": 1, "maxLength": 400}
+      }
+    },
+    "packageBaseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_revision",
+        "manifest_sha256",
+        "linux_inventory_sha256",
+        "full_inventory_sha256",
+        "artifact_sizes_bytes",
+        "staged_payload_bytes"
+      ],
+      "properties": {
+        "source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "linux_inventory_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "full_inventory_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "artifact_sizes_bytes": {
+          "type": "object",
+          "minProperties": 8,
+          "maxProperties": 8,
+          "additionalProperties": {"type": "integer", "minimum": 1}
+        },
+        "staged_payload_bytes": {"type": "integer", "minimum": 1}
+      }
+    },
+    "relayPolling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "watch_ms",
+        "startup_retry_ms",
+        "direct_scan_ms",
+        "identity_stability_ms",
+        "identity_fast_retry_ms",
+        "idle_ms",
+        "uhid_start_timeout_ms"
+      ],
+      "properties": {
+        "watch_ms": {"type": "integer", "minimum": 1},
+        "startup_retry_ms": {"type": "integer", "minimum": 1},
+        "direct_scan_ms": {"type": "integer", "minimum": 1},
+        "identity_stability_ms": {"type": "integer", "minimum": 1},
+        "identity_fast_retry_ms": {"type": "integer", "minimum": 1},
+        "idle_ms": {"type": "integer", "minimum": 1},
+        "uhid_start_timeout_ms": {"type": "integer", "minimum": 1}
+      }
+    },
+    "buildTrial": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "status",
+        "minimum_elapsed_seconds",
+        "sampled_cpu_percent",
+        "artifact_produced",
+        "production_change_applied",
+        "rationale"
+      ],
+      "properties": {
+        "id": {"const": "bridge-thin-lto-one-codegen-unit"},
+        "status": {"const": "rejected-before-artifact"},
+        "minimum_elapsed_seconds": {"type": "integer", "minimum": 1},
+        "sampled_cpu_percent": {"type": "number", "minimum": 0, "maximum": 100},
+        "artifact_produced": {"const": false},
+        "production_change_applied": {"const": false},
+        "rationale": {"type": "string", "minLength": 1, "maxLength": 400}
+      }
+    }
+  }
+}

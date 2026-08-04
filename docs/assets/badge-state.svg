@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="164" height="24" role="img" aria-label="state: unreleased">
+  <title>state: unreleased</title>
+  <rect width="72" height="24" fill="#252d35"/>
+  <rect x="72" width="92" height="24" fill="#b34a42"/>
+  <g fill="#edf3f2" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="11" text-anchor="middle">
+    <text x="36" y="16">state</text>
+    <text x="118" y="16">unreleased</text>
+  </g>
+</svg>

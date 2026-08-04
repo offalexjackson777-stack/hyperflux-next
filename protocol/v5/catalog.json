@@ -1,0 +1,554 @@
+{
+  "$schema": "../../schemas/protocol-catalog.schema.json",
+  "schema": "hyperflux-protocol-catalog-v1",
+  "minimum_version": 5,
+  "maximum_version": 5,
+  "limits": {
+    "max_message_bytes": 1048576,
+    "max_json_depth": 128
+  },
+  "features": ["ownership-leases", "atomic-transactions", "profile-bound-transactions", "semantic-stable-lighting", "snapshot-profile-bindings", "integration-view-projection", "event-subscriptions", "structured-diagnostics"],
+  "records": [
+    {
+      "name": "EmptyRequest",
+      "description": "A method request with no method-specific fields.",
+      "fields": []
+    },
+    {
+      "name": "RgbColor",
+      "description": "One canonical eight-bit RGB color.",
+      "fields": [
+        {"name": "red", "type": "ColorChannel", "required": true, "many": false, "max_items": null, "description": "Red channel."},
+        {"name": "green", "type": "ColorChannel", "required": true, "many": false, "max_items": null, "description": "Green channel."},
+        {"name": "blue", "type": "ColorChannel", "required": true, "many": false, "max_items": null, "description": "Blue channel."}
+      ]
+    },
+    {
+      "name": "ClientHello",
+      "description": "Bounded client protocol and feature offer.",
+      "fields": [
+        {"name": "client_id", "type": "ClientId", "required": true, "many": false, "max_items": null, "description": "Process-scoped client identity."},
+        {"name": "client_name", "type": "ClientName", "required": true, "many": false, "max_items": null, "description": "User-facing application name."},
+        {"name": "minimum_version", "type": "ProtocolVersion", "required": true, "many": false, "max_items": null, "description": "Oldest protocol accepted by the client."},
+        {"name": "maximum_version", "type": "ProtocolVersion", "required": true, "many": false, "max_items": null, "description": "Newest protocol accepted by the client."},
+        {"name": "required_features", "type": "ProtocolFeatureId", "required": true, "many": true, "max_items": 64, "description": "Features without which this client cannot operate."},
+        {"name": "optional_features", "type": "ProtocolFeatureId", "required": true, "many": true, "max_items": 64, "description": "Features the client can use when available."}
+      ]
+    },
+    {
+      "name": "ServerHello",
+      "description": "Negotiated protocol version and bridge feature set.",
+      "fields": [
+        {"name": "selected_version", "type": "ProtocolVersion", "required": true, "many": false, "max_items": null, "description": "Mutually supported protocol version."},
+        {"name": "server_instance_id", "type": "ServerInstanceId", "required": true, "many": false, "max_items": null, "description": "Changes whenever the bridge process identity changes."},
+        {"name": "protocol_session_id", "type": "ProtocolSessionId", "required": true, "many": false, "max_items": null, "description": "Server-issued connection ownership identity."},
+        {"name": "negotiation_token", "type": "NegotiationToken", "required": true, "many": false, "max_items": null, "description": "Binds subsequent requests to this negotiated selection."},
+        {"name": "bridge_version", "type": "ComponentVersion", "required": true, "many": false, "max_items": null, "description": "Bridge component version."},
+        {"name": "enabled_features", "type": "ProtocolFeatureId", "required": true, "many": true, "max_items": 64, "description": "Protocol features enabled for this connection."},
+        {"name": "event_buffer_capacity", "type": "QueueCapacity", "required": true, "many": false, "max_items": null, "description": "Maximum retained event count."}
+      ]
+    },
+    {
+      "name": "ResourceKey",
+      "description": "One device-scoped writable resource.",
+      "fields": [
+        {"name": "receiver_id", "type": "ReceiverId", "required": true, "many": false, "max_items": null, "description": "Receiver that owns the route."},
+        {"name": "generation_id", "type": "GenerationId", "required": true, "many": false, "max_items": null, "description": "Receiver generation to which ownership is bound."},
+        {"name": "device_id", "type": "LogicalDeviceId", "required": true, "many": false, "max_items": null, "description": "Logical resource owner."},
+        {"name": "kind", "type": "ResourceKind", "required": true, "many": false, "max_items": null, "description": "Generic resource domain."}
+      ]
+    },
+    {
+      "name": "LeaseRequest",
+      "description": "Atomic request for one or more writable resources.",
+      "fields": [
+        {"name": "request_id", "type": "RequestId", "required": true, "many": false, "max_items": null, "description": "Idempotency identity."},
+        {"name": "client_id", "type": "ClientId", "required": true, "many": false, "max_items": null, "description": "Requesting client."},
+        {"name": "resources", "type": "ResourceKey", "required": true, "many": true, "max_items": 32, "description": "Complete atomic resource set."},
+        {"name": "duration_ms", "type": "LeaseDurationMs", "required": true, "many": false, "max_items": null, "description": "Renewable lease duration."}
+      ]
+    },
+    {
+      "name": "LeaseGrant",
+      "description": "Granted ownership lease.",
+      "fields": [
+        {"name": "lease_id", "type": "LeaseId", "required": true, "many": false, "max_items": null, "description": "Lease identity."},
+        {"name": "client_id", "type": "ClientId", "required": true, "many": false, "max_items": null, "description": "Owning client."},
+        {"name": "resources", "type": "ResourceKey", "required": true, "many": true, "max_items": 32, "description": "Atomically owned resources."},
+        {"name": "expires_at_ms", "type": "MonotonicMs", "required": true, "many": false, "max_items": null, "description": "Exclusive monotonic expiry."},
+        {"name": "state", "type": "LeaseState", "required": true, "many": false, "max_items": null, "description": "Current lease state."}
+      ]
+    },
+    {
+      "name": "LeaseConflict",
+      "description": "Deterministic first conflict from an otherwise atomic lease request.",
+      "fields": [
+        {"name": "conflicting_client", "type": "ClientId", "required": true, "many": false, "max_items": null, "description": "Current owner."},
+        {"name": "conflicting_resource", "type": "ResourceKey", "required": true, "many": false, "max_items": null, "description": "First conflict in canonical resource order."}
+      ]
+    },
+    {
+      "name": "LeaseRejection",
+      "description": "Structured lease rejection unrelated to another owner.",
+      "fields": [
+        {"name": "error_kind", "type": "ProtocolErrorKind", "required": true, "many": false, "max_items": null, "description": "Stable rejection category."},
+        {"name": "finding_id", "type": "FindingId", "required": true, "many": false, "max_items": null, "description": "Central error catalog reference."}
+      ]
+    },
+    {
+      "name": "RenewLeaseRequest",
+      "description": "Idempotent renewal of one existing lease.",
+      "fields": [
+        {"name": "request_id", "type": "RequestId", "required": true, "many": false, "max_items": null, "description": "Idempotency identity."},
+        {"name": "client_id", "type": "ClientId", "required": true, "many": false, "max_items": null, "description": "Owning client."},
+        {"name": "lease_id", "type": "LeaseId", "required": true, "many": false, "max_items": null, "description": "Lease to renew."},
+        {"name": "duration_ms", "type": "LeaseDurationMs", "required": true, "many": false, "max_items": null, "description": "New bounded duration."}
+      ]
+    },
+    {
+      "name": "ReleaseLeaseRequest",
+      "description": "Idempotent release of one existing lease.",
+      "fields": [
+        {"name": "request_id", "type": "RequestId", "required": true, "many": false, "max_items": null, "description": "Idempotency identity."},
+        {"name": "client_id", "type": "ClientId", "required": true, "many": false, "max_items": null, "description": "Owning client."},
+        {"name": "lease_id", "type": "LeaseId", "required": true, "many": false, "max_items": null, "description": "Lease to release."}
+      ]
+    },
+    {
+      "name": "EventCursor",
+      "description": "Complete resumable position in one event stream projection.",
+      "fields": [
+        {"name": "stream_id", "type": "StreamId", "required": true, "many": false, "max_items": null, "description": "Bridge event-stream identity."},
+        {"name": "stream_epoch", "type": "StreamEpoch", "required": true, "many": false, "max_items": null, "description": "Changes whenever the event stream restarts."},
+        {"name": "projection_revision", "type": "ProjectionRevision", "required": true, "many": false, "max_items": null, "description": "Snapshot and event projection contract revision."},
+        {"name": "sequence", "type": "SequenceNumber", "required": true, "many": false, "max_items": null, "description": "Last event reflected by this cursor."}
+      ]
+    },
+    {
+      "name": "EndpointSnapshot",
+      "description": "Independent route, power, sleep, activity, contact, and freshness facts.",
+      "fields": [
+        {"name": "endpoint_id", "type": "EndpointId", "required": true, "many": false, "max_items": null, "description": "Stable logical route identity."},
+        {"name": "route_kind", "type": "RouteKind", "required": true, "many": false, "max_items": null, "description": "Transport route category."},
+        {"name": "route_state", "type": "RouteState", "required": true, "many": false, "max_items": null, "description": "Current route evidence."},
+        {"name": "connection_mode", "type": "ConnectionMode", "required": true, "many": false, "max_items": null, "description": "User-facing connection mode."},
+        {"name": "power_state", "type": "PowerState", "required": true, "many": false, "max_items": null, "description": "Explicit power evidence, independent of route."},
+        {"name": "sleep_state", "type": "SleepState", "required": true, "many": false, "max_items": null, "description": "Explicit sleep evidence."},
+        {"name": "activity_state", "type": "ActivityState", "required": true, "many": false, "max_items": null, "description": "Recent activity evidence."},
+        {"name": "contact_state", "type": "ContactState", "required": true, "many": false, "max_items": null, "description": "Mat-contact evidence where applicable."},
+        {"name": "freshness", "type": "FreshnessState", "required": true, "many": false, "max_items": null, "description": "Freshness of the route projection."},
+        {"name": "confidence", "type": "EvidenceConfidence", "required": true, "many": false, "max_items": null, "description": "How directly the state was established."},
+        {"name": "evidence_claim_id", "type": "EvidenceClaimId", "required": false, "many": false, "max_items": null, "description": "Privacy-safe evidence provenance when available."},
+        {"name": "observed_at_ms", "type": "MonotonicMs", "required": false, "many": false, "max_items": null, "description": "Bridge-local observation instant."}
+      ]
+    },
+    {
+      "name": "BatteryObservation",
+      "description": "Battery availability and value without collapsing unknown and unavailable.",
+      "fields": [
+        {"name": "availability", "type": "TelemetryAvailability", "required": true, "many": false, "max_items": null, "description": "Whether a current value exists."},
+        {"name": "percentage", "type": "BatteryPercent", "required": false, "many": false, "max_items": null, "description": "Reported value only when availability is reported."},
+        {"name": "freshness", "type": "FreshnessState", "required": true, "many": false, "max_items": null, "description": "Freshness of the battery observation."},
+        {"name": "confidence", "type": "EvidenceConfidence", "required": true, "many": false, "max_items": null, "description": "How directly the value was established."},
+        {"name": "observed_at_ms", "type": "MonotonicMs", "required": false, "many": false, "max_items": null, "description": "Bridge-local observation instant."}
+      ]
+    },
+    {
+      "name": "ResourceOwnershipSnapshot",
+      "description": "Current bounded application ownership for one generation-scoped resource.",
+      "fields": [
+        {"name": "resource", "type": "ResourceKey", "required": true, "many": false, "max_items": null, "description": "Owned resource."},
+        {"name": "client_id", "type": "ClientId", "required": true, "many": false, "max_items": null, "description": "Current owning client."},
+        {"name": "lease_id", "type": "LeaseId", "required": true, "many": false, "max_items": null, "description": "Authorizing lease."},
+        {"name": "expires_at_ms", "type": "MonotonicMs", "required": true, "many": false, "max_items": null, "description": "Exclusive bridge-clock expiry."}
+      ]
+    },
+    {
+      "name": "LogicalDeviceSnapshot",
+      "description": "Application-neutral logical controller state.",
+      "fields": [
+        {"name": "device_id", "type": "LogicalDeviceId", "required": true, "many": false, "max_items": null, "description": "Logical identity."},
+        {"name": "device_kind", "type": "DeviceKind", "required": true, "many": false, "max_items": null, "description": "Device category."},
+        {"name": "product_id", "type": "ProductId", "required": true, "many": false, "max_items": null, "description": "Observed product id."},
+        {"name": "profile_id", "type": "ProfileId", "required": false, "many": false, "max_items": null, "description": "Qualified profile when available."},
+        {"name": "profile_digest", "type": "ProfileDigest", "required": false, "many": false, "max_items": null, "description": "Immutable qualified child profile digest when available."},
+        {"name": "pairing", "type": "PairingState", "required": true, "many": false, "max_items": null, "description": "Receiver inventory state independent of route."},
+        {"name": "presence", "type": "PresenceState", "required": true, "many": false, "max_items": null, "description": "Derived controller presence."},
+        {"name": "support_level", "type": "SupportLevel", "required": true, "many": false, "max_items": null, "description": "Evidence-backed support level."},
+        {"name": "endpoints", "type": "EndpointSnapshot", "required": true, "many": true, "max_items": 8, "description": "Independent known routes in canonical endpoint order."},
+        {"name": "battery", "type": "BatteryObservation", "required": true, "many": false, "max_items": null, "description": "Current battery projection."},
+        {"name": "capabilities", "type": "CapabilityId", "required": true, "many": true, "max_items": 128, "description": "Qualified semantic capabilities."}
+      ]
+    },
+    {
+      "name": "ReceiverSnapshot",
+      "description": "Generation-bound receiver and child inventory.",
+      "fields": [
+        {"name": "receiver_id", "type": "ReceiverId", "required": true, "many": false, "max_items": null, "description": "Logical receiver identity."},
+        {"name": "generation_id", "type": "GenerationId", "required": true, "many": false, "max_items": null, "description": "Current receiver generation."},
+        {"name": "profile_id", "type": "ProfileId", "required": false, "many": false, "max_items": null, "description": "Exact qualified receiver profile when available."},
+        {"name": "profile_digest", "type": "ProfileDigest", "required": false, "many": false, "max_items": null, "description": "Immutable qualified receiver profile digest when available."},
+        {"name": "lifecycle", "type": "ReceiverLifecycleState", "required": true, "many": false, "max_items": null, "description": "Receiver lifecycle state."},
+        {"name": "devices", "type": "LogicalDeviceSnapshot", "required": true, "many": true, "max_items": 32, "description": "Independent logical children."},
+        {"name": "ownership", "type": "ResourceOwnershipSnapshot", "required": true, "many": true, "max_items": 96, "description": "Current generation-scoped write ownership."},
+        {"name": "stable_restore_enabled", "type": "Boolean", "required": true, "many": false, "max_items": null, "description": "Whether stable state restoration is enabled."},
+        {"name": "restore_state", "type": "RestoreState", "required": true, "many": false, "max_items": null, "description": "Current restoration state."}
+      ]
+    },
+    {
+      "name": "BridgeSnapshot",
+      "description": "Sequence-bound complete bridge snapshot.",
+      "fields": [
+        {"name": "cursor", "type": "EventCursor", "required": true, "many": false, "max_items": null, "description": "Complete event position reflected by this snapshot."},
+        {"name": "receivers", "type": "ReceiverSnapshot", "required": true, "many": true, "max_items": 16, "description": "Exactly one current generation per receiver in canonical order."}
+      ]
+    },
+    {
+      "name": "LightingFrame",
+      "description": "One logical-device direct-mode frame.",
+      "fields": [
+        {"name": "device_id", "type": "LogicalDeviceId", "required": true, "many": false, "max_items": null, "description": "Frame target."},
+        {"name": "frame_index", "type": "FrameIndex", "required": true, "many": false, "max_items": null, "description": "Transaction-local frame order."},
+        {"name": "colors", "type": "RgbColor", "required": true, "many": true, "max_items": 4096, "description": "Logical LED colors before carrier translation."}
+      ]
+    },
+    {
+      "name": "DeviceProfileBinding",
+      "description": "Exact profile and lighting dimensions bound to one transaction target.",
+      "fields": [
+        {"name": "device_id", "type": "LogicalDeviceId", "required": true, "many": false, "max_items": null, "description": "Logical transaction target."},
+        {"name": "profile_id", "type": "ProfileId", "required": true, "many": false, "max_items": null, "description": "Qualified child profile selected at admission."},
+        {"name": "profile_digest", "type": "ProfileDigest", "required": true, "many": false, "max_items": null, "description": "Immutable profile-catalog digest selected at admission."},
+        {"name": "application_slot_count", "type": "LedCount", "required": true, "many": false, "max_items": null, "description": "Exact logical color count required by this profile."}
+      ]
+    },
+    {
+      "name": "StableLightingIntent",
+      "description": "Explicit semantic stable-lighting intent for one frame target.",
+      "fields": [
+        {"name": "device_id", "type": "LogicalDeviceId", "required": true, "many": false, "max_items": null, "description": "Logical stable-lighting target."},
+        {"name": "mode", "type": "StableLightingMode", "required": true, "many": false, "max_items": null, "description": "Stable Static or Off meaning independent of RGB payload values."}
+      ]
+    },
+    {
+      "name": "TransactionRequest",
+      "description": "Atomic generation- and ownership-bound operation.",
+      "fields": [
+        {"name": "request_id", "type": "RequestId", "required": true, "many": false, "max_items": null, "description": "Idempotency identity."},
+        {"name": "transaction_id", "type": "TransactionId", "required": true, "many": false, "max_items": null, "description": "Transaction identity."},
+        {"name": "client_id", "type": "ClientId", "required": true, "many": false, "max_items": null, "description": "Submitting client."},
+        {"name": "lease_id", "type": "LeaseId", "required": true, "many": false, "max_items": null, "description": "Atomic ownership proof."},
+        {"name": "receiver_id", "type": "ReceiverId", "required": true, "many": false, "max_items": null, "description": "Receiver target."},
+        {"name": "generation_id", "type": "GenerationId", "required": true, "many": false, "max_items": null, "description": "Generation binding."},
+        {"name": "receiver_profile_id", "type": "ProfileId", "required": true, "many": false, "max_items": null, "description": "Exact qualified receiver profile selected at admission."},
+        {"name": "receiver_profile_digest", "type": "ProfileDigest", "required": true, "many": false, "max_items": null, "description": "Immutable receiver profile-catalog digest selected at admission."},
+        {"name": "device_profiles", "type": "DeviceProfileBinding", "required": true, "many": true, "max_items": 32, "description": "Complete canonical profile binding for every frame target."},
+        {"name": "transaction_class", "type": "TransactionClass", "required": true, "many": false, "max_items": null, "description": "Ordering and coalescing class."},
+        {"name": "stable_intents", "type": "StableLightingIntent", "required": true, "many": true, "max_items": 32, "description": "Canonical per-target semantic intent for static-lighting; empty for every other transaction class."},
+        {"name": "deadline_ms", "type": "MonotonicMs", "required": true, "many": false, "max_items": null, "description": "Absolute monotonic deadline."},
+        {"name": "resources", "type": "ResourceKey", "required": true, "many": true, "max_items": 32, "description": "Complete ownership set."},
+        {"name": "frames", "type": "LightingFrame", "required": true, "many": true, "max_items": 32, "description": "Complete atomic frame batch."}
+      ]
+    },
+    {
+      "name": "TransactionProgress",
+      "description": "Nonterminal generation-bound transaction projection.",
+      "fields": [
+        {"name": "request_id", "type": "RequestId", "required": true, "many": false, "max_items": null, "description": "Original idempotency identity."},
+        {"name": "request_digest", "type": "RequestDigest", "required": true, "many": false, "max_items": null, "description": "Canonical request digest used for exact replay."},
+        {"name": "transaction_id", "type": "TransactionId", "required": true, "many": false, "max_items": null, "description": "Transaction identity."},
+        {"name": "receiver_id", "type": "ReceiverId", "required": true, "many": false, "max_items": null, "description": "Bound receiver."},
+        {"name": "generation_id", "type": "GenerationId", "required": true, "many": false, "max_items": null, "description": "Bound receiver generation."},
+        {"name": "state", "type": "TransactionState", "required": true, "many": false, "max_items": null, "description": "Current nonterminal state."},
+        {"name": "admission", "type": "QueueAdmission", "required": true, "many": false, "max_items": null, "description": "Bounded queue decision."},
+        {"name": "declared_frames", "type": "FrameCount", "required": true, "many": false, "max_items": null, "description": "Frames promised by the transaction."},
+        {"name": "delivered_frames", "type": "DeliveredFrameCount", "required": true, "many": false, "max_items": null, "description": "Frames terminally accepted so far."},
+        {"name": "side_effect_certainty", "type": "SideEffectCertainty", "required": true, "many": false, "max_items": null, "description": "Current transport side-effect knowledge."},
+        {"name": "live_write_executed", "type": "Boolean", "required": true, "many": false, "max_items": null, "description": "Whether transport has begun a hardware write."}
+      ]
+    },
+    {
+      "name": "TransactionTerminal",
+      "description": "Immutable terminal transaction outcome retained for bounded lookup.",
+      "fields": [
+        {"name": "request_id", "type": "RequestId", "required": true, "many": false, "max_items": null, "description": "Original idempotency identity."},
+        {"name": "request_digest", "type": "RequestDigest", "required": true, "many": false, "max_items": null, "description": "Canonical request digest used for exact replay."},
+        {"name": "transaction_id", "type": "TransactionId", "required": true, "many": false, "max_items": null, "description": "Transaction identity."},
+        {"name": "receiver_id", "type": "ReceiverId", "required": true, "many": false, "max_items": null, "description": "Bound receiver."},
+        {"name": "generation_id", "type": "GenerationId", "required": true, "many": false, "max_items": null, "description": "Bound receiver generation."},
+        {"name": "state", "type": "TransactionState", "required": true, "many": false, "max_items": null, "description": "Terminal succeeded, failed, revoked, or superseded state."},
+        {"name": "declared_frames", "type": "FrameCount", "required": true, "many": false, "max_items": null, "description": "Frames promised by the transaction."},
+        {"name": "delivered_frames", "type": "DeliveredFrameCount", "required": true, "many": false, "max_items": null, "description": "Frames terminally accepted by transport."},
+        {"name": "side_effect_certainty", "type": "SideEffectCertainty", "required": true, "many": false, "max_items": null, "description": "Terminal transport side-effect knowledge."},
+        {"name": "live_write_executed", "type": "Boolean", "required": true, "many": false, "max_items": null, "description": "Whether transport began a hardware write."},
+        {"name": "automatic_retry", "type": "Boolean", "required": true, "many": false, "max_items": null, "description": "Whether exact automatic replay is safe; false after possible transport."},
+        {"name": "device_application", "type": "DeviceApplicationState", "required": true, "many": false, "max_items": null, "description": "Separate child-application evidence."},
+        {"name": "terminal_sequence", "type": "SequenceNumber", "required": true, "many": false, "max_items": null, "description": "Immutable completion event sequence."},
+        {"name": "error_kind", "type": "ProtocolErrorKind", "required": false, "many": false, "max_items": null, "description": "Structured failure category."},
+        {"name": "superseded_by", "type": "TransactionId", "required": false, "many": false, "max_items": null, "description": "Newer unsent effect transaction that replaced this one."}
+      ]
+    },
+    {
+      "name": "TransactionUnavailable",
+      "description": "Outcome lookup cannot return a retained transaction record.",
+      "fields": [
+        {"name": "transaction_id", "type": "TransactionId", "required": true, "many": false, "max_items": null, "description": "Requested transaction identity."},
+        {"name": "error_kind", "type": "ProtocolErrorKind", "required": true, "many": false, "max_items": null, "description": "Unknown or evicted outcome category."},
+        {"name": "finding_id", "type": "FindingId", "required": true, "many": false, "max_items": null, "description": "Central error catalog reference."}
+      ]
+    },
+    {
+      "name": "TransactionLookup",
+      "description": "Idempotent lookup of one previously submitted transaction.",
+      "fields": [
+        {"name": "request_id", "type": "RequestId", "required": true, "many": false, "max_items": null, "description": "Lookup request identity."},
+        {"name": "client_id", "type": "ClientId", "required": true, "many": false, "max_items": null, "description": "Original transaction owner."},
+        {"name": "transaction_id", "type": "TransactionId", "required": true, "many": false, "max_items": null, "description": "Transaction to inspect."}
+      ]
+    },
+    {
+      "name": "SubscriptionRequest",
+      "description": "Bounded event subscription cursor.",
+      "fields": [
+        {"name": "client_id", "type": "ClientId", "required": true, "many": false, "max_items": null, "description": "Subscribing client."},
+        {"name": "subscription_id", "type": "SubscriptionId", "required": false, "many": false, "max_items": null, "description": "Server-issued subscription identity when continuing."},
+        {"name": "expected_cursor", "type": "EventCursor", "required": false, "many": false, "max_items": null, "description": "Previously observed complete event cursor."},
+        {"name": "max_events", "type": "EventBatchLimit", "required": true, "many": false, "max_items": null, "description": "Maximum events requested in this batch."}
+      ]
+    },
+    {
+      "name": "BridgeEvent",
+      "description": "Sequence-bound typed event with snapshot references.",
+      "fields": [
+        {"name": "sequence", "type": "SequenceNumber", "required": true, "many": false, "max_items": null, "description": "Strictly increasing sequence."},
+        {"name": "kind", "type": "EventKind", "required": true, "many": false, "max_items": null, "description": "Typed event category."},
+        {"name": "receiver_id", "type": "ReceiverId", "required": false, "many": false, "max_items": null, "description": "Affected receiver when applicable."},
+        {"name": "generation_id", "type": "GenerationId", "required": false, "many": false, "max_items": null, "description": "Affected generation when applicable."},
+        {"name": "device_id", "type": "LogicalDeviceId", "required": false, "many": false, "max_items": null, "description": "Affected logical device when applicable."},
+        {"name": "lease_id", "type": "LeaseId", "required": false, "many": false, "max_items": null, "description": "Affected lease when applicable."},
+        {"name": "transaction_id", "type": "TransactionId", "required": false, "many": false, "max_items": null, "description": "Affected transaction when applicable."},
+        {"name": "finding_id", "type": "FindingId", "required": false, "many": false, "max_items": null, "description": "Affected finding when applicable."}
+      ]
+    },
+    {
+      "name": "EventBatch",
+      "description": "Bounded event result with explicit cursor-gap state.",
+      "fields": [
+        {"name": "subscription_id", "type": "SubscriptionId", "required": true, "many": false, "max_items": null, "description": "Subscription identity."},
+        {"name": "next_cursor", "type": "EventCursor", "required": true, "many": false, "max_items": null, "description": "Cursor to supply for the next batch."},
+        {"name": "events", "type": "BridgeEvent", "required": true, "many": true, "max_items": 256, "description": "Events after the requested cursor."},
+        {"name": "oldest_available", "type": "SequenceNumber", "required": true, "many": false, "max_items": null, "description": "Oldest retained sequence."},
+        {"name": "latest_available", "type": "SequenceNumber", "required": true, "many": false, "max_items": null, "description": "Newest retained sequence."},
+        {"name": "dropped_events", "type": "DroppedEventCount", "required": true, "many": false, "max_items": null, "description": "Events evicted since this stream epoch began."},
+        {"name": "cursor_gap", "type": "Boolean", "required": true, "many": false, "max_items": null, "description": "Whether the client must refresh its snapshot."},
+        {"name": "has_more", "type": "Boolean", "required": true, "many": false, "max_items": null, "description": "Whether another retained event follows this batch."}
+      ]
+    },
+    {
+      "name": "DiagnosticFinding",
+      "description": "One privacy-classified actionable finding.",
+      "fields": [
+        {"name": "finding_id", "type": "FindingId", "required": true, "many": false, "max_items": null, "description": "Stable finding code."},
+        {"name": "severity", "type": "ErrorSeverity", "required": true, "many": false, "max_items": null, "description": "User-facing severity."},
+        {"name": "cause", "type": "HumanMessage", "required": true, "many": false, "max_items": null, "description": "Bounded technical cause."},
+        {"name": "explanation", "type": "HumanMessage", "required": true, "many": false, "max_items": null, "description": "Plain user explanation."},
+        {"name": "safe_action", "type": "HumanMessage", "required": true, "many": false, "max_items": null, "description": "One safe remediation."},
+        {"name": "privacy", "type": "PrivacyClass", "required": true, "many": false, "max_items": null, "description": "Support-output privacy class."},
+        {"name": "documentation", "type": "DocumentationPath", "required": true, "many": false, "max_items": null, "description": "Stable documentation path."}
+      ]
+    },
+    {
+      "name": "DiagnosticSnapshot",
+      "description": "Bounded bridge findings and queue health.",
+      "fields": [
+        {"name": "sequence", "type": "SequenceNumber", "required": true, "many": false, "max_items": null, "description": "Latest reflected event sequence."},
+        {"name": "findings", "type": "DiagnosticFinding", "required": true, "many": true, "max_items": 128, "description": "Active actionable findings."},
+        {"name": "event_buffer_capacity", "type": "QueueCapacity", "required": true, "many": false, "max_items": null, "description": "Configured event bound."},
+        {"name": "transaction_queue_capacity", "type": "QueueCapacity", "required": true, "many": false, "max_items": null, "description": "Configured transaction bound."}
+      ]
+    },
+    {
+      "name": "ProfileBindingView",
+      "description": "Exact immutable profile authority exposed to integrations.",
+      "fields": [
+        {"name": "profile_id", "type": "ProfileId", "required": true, "many": false, "max_items": null, "description": "Qualified profile identity."},
+        {"name": "profile_digest", "type": "ProfileDigest", "required": true, "many": false, "max_items": null, "description": "Immutable runtime profile digest."}
+      ]
+    },
+    {
+      "name": "DeviceInventoryView",
+      "description": "Truthful paired-device inventory independent of application controller registration.",
+      "fields": [
+        {"name": "device_id", "type": "LogicalDeviceId", "required": true, "many": false, "max_items": null, "description": "Logical device identity."},
+        {"name": "device_kind", "type": "DeviceKind", "required": true, "many": false, "max_items": null, "description": "Device category."},
+        {"name": "product_id", "type": "ProductId", "required": true, "many": false, "max_items": null, "description": "Observed product id."},
+        {"name": "profile", "type": "ProfileBindingView", "required": false, "many": false, "max_items": null, "description": "Exact qualified child profile when available."},
+        {"name": "model_name", "type": "ModelName", "required": false, "many": false, "max_items": null, "description": "Qualified model name when available."},
+        {"name": "pairing", "type": "PairingState", "required": true, "many": false, "max_items": null, "description": "Receiver pairing truth."},
+        {"name": "presence", "type": "PresenceState", "required": true, "many": false, "max_items": null, "description": "Derived device presence."},
+        {"name": "availability", "type": "InventoryAvailability", "required": true, "many": false, "max_items": null, "description": "Inventory-facing availability with receiver and pairing context."},
+        {"name": "support_level", "type": "SupportLevel", "required": true, "many": false, "max_items": null, "description": "Evidence-backed support level."},
+        {"name": "endpoints", "type": "EndpointSnapshot", "required": true, "many": true, "max_items": 8, "description": "Independent known routes."},
+        {"name": "battery", "type": "BatteryObservation", "required": true, "many": false, "max_items": null, "description": "Battery truth without collapsing unavailable states."},
+        {"name": "capabilities", "type": "CapabilityId", "required": true, "many": true, "max_items": 128, "description": "Qualified semantic capabilities."}
+      ]
+    },
+    {
+      "name": "PresentationView",
+      "description": "Pinned upstream presentation authority without hardware transport policy.",
+      "fields": [
+        {"name": "upstream_id", "type": "UpstreamId", "required": true, "many": false, "max_items": null, "description": "Pinned upstream catalog identity."},
+        {"name": "owner", "type": "UpstreamOwner", "required": true, "many": false, "max_items": null, "description": "Upstream project responsible for presentation."},
+        {"name": "project_version", "type": "ComponentVersion", "required": true, "many": false, "max_items": null, "description": "Pinned upstream project version."},
+        {"name": "source_revision", "type": "SourceRevision", "required": true, "many": false, "max_items": null, "description": "Pinned upstream source revision."},
+        {"name": "model_key", "type": "PresentationKey", "required": true, "many": false, "max_items": null, "description": "Upstream model registry key."},
+        {"name": "layout_key", "type": "PresentationKey", "required": false, "many": false, "max_items": null, "description": "Upstream layout registry key when applicable."},
+        {"name": "transport_variant", "type": "TransportVariant", "required": true, "many": false, "max_items": null, "description": "Presentation variant for this route."}
+      ]
+    },
+    {
+      "name": "LightingTopologyView",
+      "description": "Application-facing lighting dimensions without receiver carrier mapping.",
+      "fields": [
+        {"name": "physical_led_count", "type": "LedCount", "required": true, "many": false, "max_items": null, "description": "Physically illuminated LED count."},
+        {"name": "application_slot_count", "type": "LedCount", "required": true, "many": false, "max_items": null, "description": "Exact application color count."},
+        {"name": "rows", "type": "LedCount", "required": true, "many": false, "max_items": null, "description": "Application layout row count."},
+        {"name": "columns", "type": "LedCount", "required": true, "many": false, "max_items": null, "description": "Application layout column count."}
+      ]
+    },
+    {
+      "name": "UnownedController",
+      "description": "Writable controller currently has no application owner.",
+      "fields": []
+    },
+    {
+      "name": "ViewerOwnedController",
+      "description": "Writable controller is owned by the requesting client.",
+      "fields": [
+        {"name": "lease_id", "type": "LeaseId", "required": true, "many": false, "max_items": null, "description": "Current ownership lease."},
+        {"name": "expires_at_ms", "type": "MonotonicMs", "required": true, "many": false, "max_items": null, "description": "Exclusive bridge-clock lease expiry."}
+      ]
+    },
+    {
+      "name": "OtherOwnedController",
+      "description": "Writable controller is owned by another application client.",
+      "fields": [
+        {"name": "client_id", "type": "ClientId", "required": true, "many": false, "max_items": null, "description": "Current owning client."},
+        {"name": "lease_id", "type": "LeaseId", "required": true, "many": false, "max_items": null, "description": "Current ownership lease."},
+        {"name": "expires_at_ms", "type": "MonotonicMs", "required": true, "many": false, "max_items": null, "description": "Exclusive bridge-clock lease expiry."}
+      ]
+    },
+    {
+      "name": "ControllerActions",
+      "description": "Viewer-specific actions derived from availability and ownership.",
+      "fields": [
+        {"name": "can_acquire", "type": "Boolean", "required": true, "many": false, "max_items": null, "description": "Viewer may atomically acquire this resource."},
+        {"name": "can_release", "type": "Boolean", "required": true, "many": false, "max_items": null, "description": "Viewer may release its current lease."},
+        {"name": "can_submit_now", "type": "Boolean", "required": true, "many": false, "max_items": null, "description": "Viewer owns a currently writable route."}
+      ]
+    },
+    {
+      "name": "ControllerView",
+      "description": "Exact qualified receiver-backed application controller.",
+      "fields": [
+        {"name": "receiver_id", "type": "ReceiverId", "required": true, "many": false, "max_items": null, "description": "Owning receiver."},
+        {"name": "generation_id", "type": "GenerationId", "required": true, "many": false, "max_items": null, "description": "Generation binding."},
+        {"name": "device_id", "type": "LogicalDeviceId", "required": true, "many": false, "max_items": null, "description": "Logical controller identity."},
+        {"name": "endpoint_id", "type": "EndpointId", "required": true, "many": false, "max_items": null, "description": "Exact usable receiver endpoint."},
+        {"name": "device_kind", "type": "DeviceKind", "required": true, "many": false, "max_items": null, "description": "Controller category."},
+        {"name": "product_id", "type": "ProductId", "required": true, "many": false, "max_items": null, "description": "Qualified product id."},
+        {"name": "receiver_profile", "type": "ProfileBindingView", "required": true, "many": false, "max_items": null, "description": "Exact receiver profile authority."},
+        {"name": "device_profile", "type": "ProfileBindingView", "required": true, "many": false, "max_items": null, "description": "Exact child profile authority."},
+        {"name": "model_name", "type": "ModelName", "required": true, "many": false, "max_items": null, "description": "Qualified model name."},
+        {"name": "presentation", "type": "PresentationView", "required": true, "many": false, "max_items": null, "description": "Pinned application presentation authority."},
+        {"name": "availability", "type": "ControllerAvailability", "required": true, "many": false, "max_items": null, "description": "Ready or sleeping controller state."},
+        {"name": "battery", "type": "BatteryObservation", "required": true, "many": false, "max_items": null, "description": "Current battery projection."},
+        {"name": "capabilities", "type": "CapabilityId", "required": true, "many": true, "max_items": 128, "description": "Qualified semantic capabilities."},
+        {"name": "lighting", "type": "LightingTopologyView", "required": true, "many": false, "max_items": null, "description": "Application-facing lighting dimensions."},
+        {"name": "resource", "type": "ResourceKey", "required": true, "many": false, "max_items": null, "description": "Generation-scoped lighting ownership resource."},
+        {"name": "ownership", "type": "ControllerOwnership", "required": true, "many": false, "max_items": null, "description": "Viewer-specific ownership state."},
+        {"name": "actions", "type": "ControllerActions", "required": true, "many": false, "max_items": null, "description": "Viewer-specific safe actions."}
+      ]
+    },
+    {
+      "name": "IntegrationReceiverView",
+      "description": "One receiver generation with complete inventory and qualified controllers.",
+      "fields": [
+        {"name": "receiver_id", "type": "ReceiverId", "required": true, "many": false, "max_items": null, "description": "Logical receiver identity."},
+        {"name": "generation_id", "type": "GenerationId", "required": true, "many": false, "max_items": null, "description": "Current receiver generation."},
+        {"name": "profile", "type": "ProfileBindingView", "required": false, "many": false, "max_items": null, "description": "Exact receiver profile when qualified."},
+        {"name": "model_name", "type": "ModelName", "required": false, "many": false, "max_items": null, "description": "Qualified receiver model name."},
+        {"name": "lifecycle", "type": "ReceiverLifecycleState", "required": true, "many": false, "max_items": null, "description": "Current receiver lifecycle."},
+        {"name": "stable_restore_enabled", "type": "Boolean", "required": true, "many": false, "max_items": null, "description": "Stable lighting restore policy."},
+        {"name": "restore_state", "type": "RestoreState", "required": true, "many": false, "max_items": null, "description": "Current restoration state."},
+        {"name": "inventory", "type": "DeviceInventoryView", "required": true, "many": true, "max_items": 32, "description": "Complete paired and observed inventory."},
+        {"name": "controllers", "type": "ControllerView", "required": true, "many": true, "max_items": 32, "description": "Exact qualified application controllers."}
+      ]
+    },
+    {
+      "name": "IntegrationView",
+      "description": "Client-specific application view projected once by bridge policy.",
+      "fields": [
+        {"name": "cursor", "type": "EventCursor", "required": true, "many": false, "max_items": null, "description": "Complete event position reflected by the projection."},
+        {"name": "receivers", "type": "IntegrationReceiverView", "required": true, "many": true, "max_items": 16, "description": "Current receiver integration projections."}
+      ]
+    },
+    {
+      "name": "RpcError",
+      "description": "Stable structured request failure.",
+      "fields": [
+        {"name": "request_id", "type": "RequestId", "required": false, "many": false, "max_items": null, "description": "Related request when parsing reached it."},
+        {"name": "kind", "type": "ProtocolErrorKind", "required": true, "many": false, "max_items": null, "description": "Machine-readable failure class."},
+        {"name": "message", "type": "HumanMessage", "required": true, "many": false, "max_items": null, "description": "Bounded user-safe explanation."},
+        {"name": "finding_id", "type": "FindingId", "required": true, "many": false, "max_items": null, "description": "Diagnostic catalog reference."}
+      ]
+    }
+  ],
+  "unions": [
+    {
+      "name": "LeaseResult",
+      "description": "Contradiction-free atomic lease outcome.",
+      "tag": "outcome",
+      "content": "detail",
+      "variants": [
+        {"name": "Granted", "wire": "granted", "type": "LeaseGrant", "description": "Every requested resource was granted."},
+        {"name": "Conflict", "wire": "conflict", "type": "LeaseConflict", "description": "Another client owns at least one requested resource; none were granted."},
+        {"name": "Rejected", "wire": "rejected", "type": "LeaseRejection", "description": "The request failed without granting any resource."}
+      ]
+    },
+    {
+      "name": "TransactionResult",
+      "description": "Contradiction-free current, terminal, or unavailable transaction outcome.",
+      "tag": "outcome",
+      "content": "detail",
+      "variants": [
+        {"name": "Progress", "wire": "progress", "type": "TransactionProgress", "description": "The transaction has not reached a terminal state."},
+        {"name": "Terminal", "wire": "terminal", "type": "TransactionTerminal", "description": "The immutable terminal outcome is retained."},
+        {"name": "Unavailable", "wire": "unavailable", "type": "TransactionUnavailable", "description": "No retained outcome can answer this lookup."}
+      ]
+    },
+    {
+      "name": "ControllerOwnership",
+      "description": "Contradiction-free viewer-specific controller ownership.",
+      "tag": "state",
+      "content": "detail",
+      "variants": [
+        {"name": "Unowned", "wire": "unowned", "type": "UnownedController", "description": "No application currently owns the controller."},
+        {"name": "OwnedByViewer", "wire": "owned-by-viewer", "type": "ViewerOwnedController", "description": "The requesting client owns the controller."},
+        {"name": "OwnedByOther", "wire": "owned-by-other", "type": "OtherOwnedController", "description": "Another application client owns the controller."}
+      ]
+    }
+  ],
+  "methods": [
+    {"name": "negotiate", "request": "ClientHello", "response": "ServerHello", "required_feature": null, "description": "Select one compatible protocol version and optional feature set."},
+    {"name": "snapshot", "request": "EmptyRequest", "response": "BridgeSnapshot", "required_feature": null, "description": "Read one sequence-bound complete logical-device snapshot."},
+    {"name": "integration-view", "request": "EmptyRequest", "response": "IntegrationView", "required_feature": "integration-view-projection", "description": "Read one canonical client-specific inventory and controller projection."},
+    {"name": "acquire-lease", "request": "LeaseRequest", "response": "LeaseResult", "required_feature": "ownership-leases", "description": "Acquire a complete resource set atomically."},
+    {"name": "renew-lease", "request": "RenewLeaseRequest", "response": "LeaseResult", "required_feature": "ownership-leases", "description": "Renew one owned lease."},
+    {"name": "release-lease", "request": "ReleaseLeaseRequest", "response": "LeaseResult", "required_feature": "ownership-leases", "description": "Release one owned lease without forced takeover."},
+    {"name": "submit-transaction", "request": "TransactionRequest", "response": "TransactionResult", "required_feature": "atomic-transactions", "description": "Submit one complete generation-bound transaction."},
+    {"name": "transaction-outcome", "request": "TransactionLookup", "response": "TransactionResult", "required_feature": "atomic-transactions", "description": "Resolve a prior result without resubmitting transport."},
+    {"name": "subscribe", "request": "SubscriptionRequest", "response": "EventBatch", "required_feature": "event-subscriptions", "description": "Read bounded typed events after a sequence cursor."},
+    {"name": "diagnostics", "request": "EmptyRequest", "response": "DiagnosticSnapshot", "required_feature": "structured-diagnostics", "description": "Read privacy-classified diagnostics and queue health."}
+  ]
+}
