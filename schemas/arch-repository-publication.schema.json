@@ -1,0 +1,91 @@
+{
+  "$id": "https://hyperflux.dev/schemas/arch-repository-publication-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HyperFlux Next public Arch repository receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "source_revision", "verified_at", "release", "repository", "pacman"],
+  "properties": {
+    "$schema": {"const": "../schemas/arch-repository-publication.schema.json"},
+    "schema": {"const": "hyperflux-arch-repository-publication-v1"},
+    "source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "verified_at": {"type": "string", "format": "date-time"},
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tag", "url", "prerelease", "human_facing_product_release", "github_release_id", "anonymous_api_url", "latest_product_release_tag"],
+      "properties": {
+        "tag": {"const": "arch-repository"},
+        "url": {"const": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/arch-repository"},
+        "prerelease": {"const": true},
+        "human_facing_product_release": {"const": false},
+        "github_release_id": {"type": "integer", "minimum": 1},
+        "anonymous_api_url": {"const": "https://api.github.com/repos/offalexjackson777-stack/hyperflux-next/releases/tags/arch-repository"},
+        "latest_product_release_tag": {"const": "v2.0.0"}
+      }
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "server_url", "primary_fingerprint", "signing_subkey_fingerprint", "manifest_sha256", "checksums_sha256", "anonymous_https_assets"],
+      "properties": {
+        "name": {"const": "hyperflux-next"},
+        "server_url": {"const": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository"},
+        "primary_fingerprint": {"type": "string", "pattern": "^[0-9A-F]{40}$"},
+        "signing_subkey_fingerprint": {"type": "string", "pattern": "^[0-9A-F]{40}$"},
+        "manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "checksums_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "anonymous_https_assets": {
+          "type": "array",
+          "minItems": 16,
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "request_url", "effective_url", "sha256", "size"],
+            "properties": {
+              "name": {"type": "string", "minLength": 1},
+              "request_url": {"type": "string", "format": "uri", "pattern": "^https://"},
+              "effective_url": {"type": "string", "format": "uri", "pattern": "^https://"},
+              "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+              "size": {"type": "integer", "minimum": 1}
+            }
+          }
+        }
+      }
+    },
+    "pacman": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["database_authenticated", "database_sync_output", "full_query_authenticated", "planned_packages", "dependency_assumptions", "package_signatures_authenticated", "downloaded_package_sha256"],
+      "properties": {
+        "database_authenticated": {"const": true},
+        "database_sync_output": {"type": "string"},
+        "full_query_authenticated": {"const": true},
+        "planned_packages": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "version", "url"],
+            "properties": {
+              "name": {"enum": ["hyperflux-next-linux", "hyperflux-next-full"]},
+              "version": {"const": "2.0.0-1"},
+              "url": {"type": "string", "format": "uri", "pattern": "^https://"}
+            }
+          }
+        },
+        "dependency_assumptions": {"type": "array", "items": {"type": "string"}},
+        "package_signatures_authenticated": {"const": true},
+        "downloaded_package_sha256": {
+          "type": "object",
+          "minProperties": 2,
+          "maxProperties": 2,
+          "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    }
+  }
+}

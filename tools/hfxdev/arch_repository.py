@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import hashlib
+import base64
 import json
 import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import tarfile
 import tempfile
-from typing import Any
+from typing import Any, Callable
 
 from .arch_update_policy import _package_metadata
 from .model import ModelError, load_json, sha256_file
@@ -38,6 +39,11 @@ class ArchRepositoryPolicy:
     server_url: str
     release_url: str
     release_tag: str
+    product_release_url: str
+    product_release_tag: str
+    channel_purpose: str
+    github_release_prerelease: bool
+    human_facing_product_release: bool
     signature_level: str
     primary_fingerprint: str
     signing_subkey_fingerprint: str
@@ -51,7 +57,6 @@ class ArchRepositoryPolicy:
     database_archive: str
     files: str
     files_archive: str
-    configuration: str
     manifest: str
     checksums: str
 
@@ -110,6 +115,11 @@ def load_arch_repository_policy(root: Path) -> ArchRepositoryPolicy:
             "server_url",
             "release_url",
             "release_tag",
+            "product_release_url",
+            "product_release_tag",
+            "channel_purpose",
+            "github_release_prerelease",
+            "human_facing_product_release",
             "signature_level",
         },
         "Arch repository identity",
@@ -120,13 +130,21 @@ def load_arch_repository_policy(root: Path) -> ArchRepositoryPolicy:
         "official_arch_repository": False,
         "server_url": (
             "https://github.com/offalexjackson777-stack/hyperflux-next/"
-            "releases/latest/download"
+            "releases/download/arch-repository"
         ),
         "release_url": (
             "https://github.com/offalexjackson777-stack/hyperflux-next/"
+            "releases/tag/arch-repository"
+        ),
+        "release_tag": "arch-repository",
+        "product_release_url": (
+            "https://github.com/offalexjackson777-stack/hyperflux-next/"
             "releases/tag/v2.0.0"
         ),
-        "release_tag": "v2.0.0",
+        "product_release_tag": "v2.0.0",
+        "channel_purpose": "machine-managed-arch-repository",
+        "github_release_prerelease": True,
+        "human_facing_product_release": False,
         "signature_level": "Required DatabaseRequired TrustedOnly",
     }
     if repository != expected_repository:
@@ -162,6 +180,16 @@ def load_arch_repository_policy(root: Path) -> ArchRepositoryPolicy:
         "Z"
     ):
         raise ModelError("Arch repository signing expiration is invalid")
+    expected_signing_assets = {
+        "public_key_path": "packaging/keys/hyperflux-next-arch-repository-key.asc",
+        "public_key_asset": "hyperflux-next-arch-repository-key.asc",
+        "fingerprint_asset": "hyperflux-next-arch-repository-fingerprint.txt",
+    }
+    for field, expected in expected_signing_assets.items():
+        if signing[field] != expected:
+            raise ModelError(f"Arch repository {field} is not canonical")
+        if field.endswith("_asset") and Path(signing[field]).name != signing[field]:
+            raise ModelError(f"Arch repository {field} is not a plain asset name")
 
     raw_packages = value["packages"]
     if not isinstance(raw_packages, list) or len(raw_packages) != 2:
@@ -195,7 +223,6 @@ def load_arch_repository_policy(root: Path) -> ArchRepositoryPolicy:
             "database_archive",
             "files",
             "files_archive",
-            "configuration",
             "manifest",
             "checksums",
         },
@@ -206,7 +233,6 @@ def load_arch_repository_policy(root: Path) -> ArchRepositoryPolicy:
         "database_archive": "hyperflux-next.db.tar.zst",
         "files": "hyperflux-next.files",
         "files_archive": "hyperflux-next.files.tar.zst",
-        "configuration": "hyperflux-next.conf",
         "manifest": "hyperflux-next-arch-repository-manifest.json",
         "checksums": "SHA256SUMS-repository",
     }
@@ -214,9 +240,12 @@ def load_arch_repository_policy(root: Path) -> ArchRepositoryPolicy:
         raise ModelError("Arch repository asset names are not stable")
 
     public_key_path = signing["public_key_path"]
-    if public_key_path != "packaging/keys/hyperflux-next-arch-repository-key.asc":
-        raise ModelError("Arch repository public key path is not canonical")
+    root_resolved = root.resolve(strict=True)
     public_key = root / public_key_path
+    try:
+        public_key.resolve(strict=True).relative_to(root_resolved)
+    except (OSError, ValueError) as error:
+        raise ModelError("Arch repository public key path escapes the source tree") from error
     if not public_key.is_file() or public_key.is_symlink():
         raise ModelError("Arch repository public key is missing or unsafe")
     key_text = public_key.read_text(encoding="ascii")
@@ -271,7 +300,6 @@ def _payload_asset_names(policy: ArchRepositoryPolicy) -> tuple[str, ...]:
         f"{policy.files}.sig",
         policy.files_archive,
         f"{policy.files_archive}.sig",
-        policy.configuration,
         policy.public_key_asset,
         policy.fingerprint_asset,
     ]
@@ -301,7 +329,7 @@ def _sign(
             "--faked-system-time",
             f"{policy.signature_timestamp}!",
             "--local-user",
-            policy.primary_fingerprint,
+            f"{policy.signing_subkey_fingerprint}!",
             "--detach-sign",
             "--output",
             str(signature),
@@ -386,66 +414,70 @@ def _write_json(path: Path, value: dict[str, Any]) -> None:
     path.chmod(0o644)
 
 
-def build_arch_repository(
+def _validate_private_gnupg_home(gnupg_home: Path) -> None:
+    try:
+        home_stat = gnupg_home.lstat()
+    except OSError as error:
+        raise ModelError("repository signing home is missing or unsafe") from error
+    if (
+        not stat.S_ISDIR(home_stat.st_mode)
+        or gnupg_home.is_symlink()
+        or home_stat.st_uid != os.geteuid()
+        or stat.S_IMODE(home_stat.st_mode) != 0o700
+    ):
+        raise ModelError(
+            "repository signing home must be owned by the current user and mode 0700"
+        )
+    for entry in gnupg_home.rglob("*"):
+        entry_stat = entry.lstat()
+        if entry_stat.st_uid != os.geteuid() or stat.S_ISLNK(entry_stat.st_mode):
+            raise ModelError("repository signing home contains an unsafe owner or link")
+        mode = stat.S_IMODE(entry_stat.st_mode)
+        if stat.S_ISDIR(entry_stat.st_mode):
+            if mode != 0o700:
+                raise ModelError("repository signing directories must be mode 0700")
+        elif stat.S_ISREG(entry_stat.st_mode):
+            if mode != 0o600:
+                raise ModelError("repository signing files must be mode 0600")
+        else:
+            raise ModelError("repository signing home contains an unsupported file type")
+
+
+def _manifest_policy(root: Path) -> dict[str, Any]:
+    return load_json(root / "assurance" / "arch-repository.json")
+
+
+def _repository_manifest(
+    root: Path,
+    repository: Path,
+    policy: ArchRepositoryPolicy,
+) -> dict[str, Any]:
+    payload_assets = [
+        {
+            "name": name,
+            "sha256": sha256_file(repository / name),
+            "size": (repository / name).stat().st_size,
+        }
+        for name in _payload_asset_names(policy)
+    ]
+    authority = root / "assurance" / "arch-repository.json"
+    return {
+        "schema": "hyperflux-arch-repository-manifest-v2",
+        "policy_sha256": sha256_file(authority),
+        "policy": _manifest_policy(root),
+        "published_assets": payload_assets,
+    }
+
+
+def _build_arch_repository_directory(
     root: Path,
     *,
-    core_package: Path,
-    full_package: Path,
+    supplied: dict[str, Path],
     gnupg_home: Path,
-    key_fingerprint: str,
+    policy: ArchRepositoryPolicy,
     output: Path,
-) -> Path:
-    policy = load_arch_repository_policy(root)
-    if key_fingerprint != policy.primary_fingerprint:
-        raise ModelError(
-            "repository signing key differs from the canonical fingerprint"
-        )
-    if not gnupg_home.is_dir() or gnupg_home.is_symlink():
-        raise ModelError("repository signing home is missing or unsafe")
-    if output.exists() or output.is_symlink():
-        raise ModelError("repository output must not already exist")
-
-    supplied = {core_package.name: core_package, full_package.name: full_package}
-    if set(supplied) != {package.filename for package in policy.packages}:
-        raise ModelError("repository package filenames differ from the frozen release")
-    for package in policy.packages:
-        source = supplied[package.filename]
-        if not source.is_file() or source.is_symlink():
-            raise ModelError(
-                f"repository package is missing or unsafe: {package.filename}"
-            )
-        if sha256_file(source) != package.sha256:
-            raise ModelError(f"repository package bytes differ: {package.filename}")
-        name, version, _ = _package_metadata(
-            source, label=package.name, timeout_seconds=30
-        )
-        if (name, version) != (package.name, package.version):
-            raise ModelError(f"repository package metadata differs: {package.filename}")
-
-    key_listing = _run(
-        [
-            "gpg",
-            "--batch",
-            "--homedir",
-            str(gnupg_home),
-            "--with-colons",
-            "--list-secret-keys",
-            policy.primary_fingerprint,
-        ],
-        label="inspect repository signing key",
-    ).stdout
-    fingerprints = tuple(
-        line.split(":")[9]
-        for line in key_listing.splitlines()
-        if line.startswith("fpr:")
-    )
-    if (
-        policy.primary_fingerprint not in fingerprints
-        or policy.signing_subkey_fingerprint not in fingerprints
-    ):
-        raise ModelError("repository signing home lacks the canonical key and subkey")
-
-    output.mkdir(parents=True, mode=0o755)
+) -> None:
+    output.mkdir(mode=0o755)
     for package in policy.packages:
         destination = output / package.filename
         shutil.copyfile(supplied[package.filename], destination)
@@ -489,49 +521,106 @@ def build_arch_repository(
         fingerprint_receipt(policy), encoding="utf-8"
     )
     (output / policy.fingerprint_asset).chmod(0o644)
-    (output / policy.configuration).write_text(
-        repository_configuration(policy), encoding="utf-8"
-    )
-    (output / policy.configuration).chmod(0o644)
 
-    payload_assets = [
-        {
-            "name": name,
-            "sha256": sha256_file(output / name),
-            "size": (output / name).stat().st_size,
-        }
-        for name in _payload_asset_names(policy)
-    ]
-    manifest = {
-        "schema": "hyperflux-arch-repository-manifest-v1",
-        "release_tag": policy.release_tag,
-        "release_url": policy.release_url,
-        "server_url": policy.server_url,
-        "repository": policy.name,
-        "architecture": policy.architecture,
-        "official_arch_repository": policy.official_arch_repository,
-        "signature_level": policy.signature_level,
-        "primary_fingerprint": policy.primary_fingerprint,
-        "signing_subkey_fingerprint": policy.signing_subkey_fingerprint,
-        "signature_timestamp": policy.signature_timestamp,
-        "packages": [
-            {
-                "name": package.name,
-                "version": package.version,
-                "filename": package.filename,
-                "sha256": package.sha256,
-            }
-            for package in policy.packages
-        ],
-        "assets": payload_assets,
-    }
-    _write_json(output / policy.manifest, manifest)
+    _write_json(output / policy.manifest, _repository_manifest(root, output, policy))
     checksum_names = sorted((*_payload_asset_names(policy), policy.manifest))
     (output / policy.checksums).write_text(
         "".join(f"{sha256_file(output / name)}  {name}\n" for name in checksum_names),
         encoding="ascii",
     )
     (output / policy.checksums).chmod(0o644)
+    verify_arch_repository(root, output)
+
+
+def _publish_atomic_directory(
+    output: Path,
+    build: Callable[[Path], None],
+) -> None:
+    if output.exists() or output.is_symlink():
+        raise ModelError("repository output must not already exist")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    if output.parent.is_symlink() or not output.parent.is_dir():
+        raise ModelError("repository output parent is unsafe")
+    temporary = Path(
+        tempfile.mkdtemp(prefix=f".{output.name}.tmp-", dir=output.parent)
+    )
+    temporary.rmdir()
+    try:
+        build(temporary)
+        os.replace(temporary, output)
+    except BaseException:
+        if temporary.exists():
+            shutil.rmtree(temporary)
+        raise
+
+
+def build_arch_repository(
+    root: Path,
+    *,
+    core_package: Path,
+    full_package: Path,
+    gnupg_home: Path,
+    key_fingerprint: str,
+    output: Path,
+) -> Path:
+    policy = load_arch_repository_policy(root)
+    if key_fingerprint != policy.primary_fingerprint:
+        raise ModelError(
+            "repository signing key differs from the canonical fingerprint"
+        )
+    _validate_private_gnupg_home(gnupg_home)
+
+    supplied = {core_package.name: core_package, full_package.name: full_package}
+    if set(supplied) != {package.filename for package in policy.packages}:
+        raise ModelError("repository package filenames differ from the frozen release")
+    for package in policy.packages:
+        source = supplied[package.filename]
+        if not source.is_file() or source.is_symlink():
+            raise ModelError(
+                f"repository package is missing or unsafe: {package.filename}"
+            )
+        if sha256_file(source) != package.sha256:
+            raise ModelError(f"repository package bytes differ: {package.filename}")
+        name, version, _ = _package_metadata(
+            source, label=package.name, timeout_seconds=30
+        )
+        if (name, version) != (package.name, package.version):
+            raise ModelError(f"repository package metadata differs: {package.filename}")
+
+    key_listing = _run(
+        [
+            "gpg",
+            "--batch",
+            "--homedir",
+            str(gnupg_home),
+            "--with-colons",
+            "--list-secret-keys",
+            policy.primary_fingerprint,
+        ],
+        label="inspect repository signing key",
+    ).stdout
+    fingerprints = tuple(
+        line.split(":")[9]
+        for line in key_listing.splitlines()
+        if line.startswith("fpr:")
+    )
+    if (
+        policy.primary_fingerprint not in fingerprints
+        or policy.signing_subkey_fingerprint not in fingerprints
+    ):
+        raise ModelError("repository signing home lacks the canonical key and subkey")
+
+    def build(temporary: Path) -> None:
+        _build_arch_repository_directory(
+            root,
+            supplied=supplied,
+            gnupg_home=gnupg_home,
+            policy=policy,
+            output=temporary,
+        )
+        _validate_private_gnupg_home(gnupg_home)
+
+    _publish_atomic_directory(output, build)
     verify_arch_repository(root, output)
     return output / policy.manifest
 
@@ -627,10 +716,6 @@ def verify_arch_repository(root: Path, repository: Path) -> dict[str, Any]:
     ).read_bytes():
         raise ModelError("stable files signature alias differs")
 
-    if (repository / policy.configuration).read_text(
-        encoding="utf-8"
-    ) != repository_configuration(policy):
-        raise ModelError("published Pacman configuration differs from policy")
     if (repository / policy.fingerprint_asset).read_text(
         encoding="utf-8"
     ) != fingerprint_receipt(policy):
@@ -702,7 +787,7 @@ def verify_arch_repository(root: Path, repository: Path) -> dict[str, Any]:
         raise ModelError(
             "Arch repository database does not contain exactly two packages"
         )
-    database_packages: set[tuple[str, str, str]] = set()
+    database_packages: set[tuple[str, str, str, str, str]] = set()
     for description in descriptions:
         text = _run(
             [
@@ -717,6 +802,11 @@ def verify_arch_repository(root: Path, repository: Path) -> dict[str, Any]:
         lines = text.splitlines()
         for index, line in enumerate(lines[:-1]):
             if line.startswith("%") and line.endswith("%"):
+                if line in fields or not lines[index + 1]:
+                    raise ModelError(
+                        f"Arch repository description repeats or empties {line}: "
+                        f"{description}"
+                    )
                 fields[line] = lines[index + 1]
         required = {"%NAME%", "%VERSION%", "%FILENAME%", "%SHA256SUM%", "%PGPSIG%"}
         if not required <= fields.keys():
@@ -724,38 +814,38 @@ def verify_arch_repository(root: Path, repository: Path) -> dict[str, Any]:
                 f"Arch repository description is incomplete: {description}"
             )
         database_packages.add(
-            (fields["%NAME%"], fields["%VERSION%"], fields["%SHA256SUM%"])
+            (
+                fields["%NAME%"],
+                fields["%VERSION%"],
+                fields["%FILENAME%"],
+                fields["%SHA256SUM%"],
+                fields["%PGPSIG%"],
+            )
         )
     expected_packages = {
-        (package.name, package.version, package.sha256) for package in policy.packages
+        (
+            package.name,
+            package.version,
+            package.filename,
+            package.sha256,
+            base64.b64encode(
+                (repository / f"{package.filename}.sig").read_bytes()
+            ).decode("ascii"),
+        )
+        for package in policy.packages
     }
     if database_packages != expected_packages:
         raise ModelError("Arch repository database package identities differ")
 
     manifest = load_json(repository / policy.manifest)
-    expected_manifest_keys = {
-        "schema",
-        "release_tag",
-        "release_url",
-        "server_url",
-        "repository",
-        "architecture",
-        "official_arch_repository",
-        "signature_level",
-        "primary_fingerprint",
-        "signing_subkey_fingerprint",
-        "signature_timestamp",
-        "packages",
-        "assets",
-    }
+    expected_manifest_keys = {"schema", "policy_sha256", "policy", "published_assets"}
     _exact_keys(manifest, expected_manifest_keys, "Arch repository manifest")
-    if manifest["schema"] != "hyperflux-arch-repository-manifest-v1":
+    if manifest["schema"] != "hyperflux-arch-repository-manifest-v2":
         raise ModelError("unsupported Arch repository manifest")
-    if manifest["primary_fingerprint"] != policy.primary_fingerprint or manifest[
-        "signing_subkey_fingerprint"
-    ] != policy.signing_subkey_fingerprint:
-        raise ModelError("Arch repository manifest signing identity differs")
-    manifest_assets = manifest["assets"]
+    expected_manifest = _repository_manifest(root, repository, policy)
+    if manifest != expected_manifest:
+        raise ModelError("Arch repository manifest differs from the complete policy")
+    manifest_assets = manifest["published_assets"]
     if not isinstance(manifest_assets, list) or [
         item["name"] for item in manifest_assets
     ] != list(_payload_asset_names(policy)):

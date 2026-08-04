@@ -12,6 +12,7 @@ import time
 
 from .actions_summary import write_actions_summary
 from .arch_repository import build_arch_repository, verify_arch_repository
+from .arch_repository_public import verify_public_arch_repository
 from .ci import (
     PINNED_VERIFICATION_ENVIRONMENT,
     container_invocation,
@@ -283,6 +284,11 @@ def _parser() -> argparse.ArgumentParser:
         "verify", help="verify one complete signed repository asset directory"
     )
     arch_repository_verify.add_argument("--repository", required=True, type=Path)
+    arch_repository_verify_public = arch_repository_commands.add_parser(
+        "verify-public",
+        help="prove the anonymous HTTPS repository with an isolated Pacman state",
+    )
+    arch_repository_verify_public.add_argument("--output", required=True, type=Path)
     return parser
 
 
@@ -655,8 +661,12 @@ def main(arguments: list[str] | None = None) -> int:
                 )
                 print(f"Signed Arch repository manifest: {manifest}")
                 return 0
-            result = verify_arch_repository(root, args.repository.resolve())
-            print(json.dumps(result, indent=2, sort_keys=True))
+            if args.arch_repository_command == "verify":
+                result = verify_arch_repository(root, args.repository.resolve())
+                print(json.dumps(result, indent=2, sort_keys=True))
+                return 0
+            receipt = verify_public_arch_repository(root, args.output.resolve())
+            print(f"Public Arch repository receipt: {receipt}")
             return 0
     except ModelError as error:
         print(f"hfx: {error}", file=sys.stderr)

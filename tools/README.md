@@ -29,6 +29,7 @@ Provides the single developer CLI, canonical loaders, deterministic generators, 
 - [`tools/hfxdev/verify.py`](hfxdev/verify.py)
 - [`tools/hfxdev/public_readiness.py`](hfxdev/public_readiness.py)
 - [`tools/hfxdev/arch_repository.py`](hfxdev/arch_repository.py)
+- [`tools/hfxdev/arch_repository_public.py`](hfxdev/arch_repository_public.py)
 - [`tools/hfxdev/local_companion.py`](hfxdev/local_companion.py)
 - [`tools/hfxdev/licensing.py`](hfxdev/licensing.py)
 - [`tools/hfxdev/native_onboarding.py`](hfxdev/native_onboarding.py)
