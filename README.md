@@ -9,7 +9,7 @@ available to ordinary Linux applications without replacing those applications.
 
 <!-- HFX-GENERATED-BEGIN: release-status -->
 > [!IMPORTANT]
-> **Arch 2.0.0 release.** Arch Linux x86_64 Core and Full 2.0.0-1 packages are published through GitHub Release v2.0.0; no pacman repository or signing key is published.
+> **Arch 2.0.0 release.** Arch Linux x86_64 Core and Full 2.0.0-1 packages are published through the signed HyperFlux Next third-party Pacman repository backed by GitHub Release v2.0.0.
 <!-- HFX-GENERATED-END: release-status -->
 
 ## What It Does
@@ -30,9 +30,10 @@ available to ordinary Linux applications without replacing those applications.
 
 The Arch Linux x86_64 packages are published in
 [GitHub Release v2.0.0](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.0).
-There is no pacman repository yet: verify `SHA256SUMS`, then install the two
-downloaded files together with `pacman -U`. See
-[installation](docs/user/installation.md) for the exact command.
+The signed project-operated Pacman repository resolves Full and its exact Core
+dependency with `sudo pacman -S hyperflux-next-full`. It is a third-party
+repository, not an official Arch Linux repository. See
+[installation](docs/user/installation.md) for the one-time key and repository setup.
 <!-- HFX-GENERATED-END: recommended-package -->
 
 ## Hardware And Applications

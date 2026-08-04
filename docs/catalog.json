@@ -611,11 +611,11 @@
       "path": "docs/project/release-status.md",
       "title": "Release Status",
       "audience": "project-followers",
-      "purpose": "Explains the evidence boundary and next release gate without granting publication authority.",
+      "purpose": "Explains the published Arch release, signed third-party repository, and retained evidence boundaries.",
       "owner": "documentation",
       "navigation_group": "project",
       "mode": "hybrid",
-      "canonical_sources": ["generated/public-readiness.json", "assurance/release-gates.json"],
+      "canonical_sources": ["generated/public-readiness.json", "assurance/release-gates.json", "assurance/arch-repository.json"],
       "generated_block_ids": ["release-status"]
     },
     {

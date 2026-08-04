@@ -12,6 +12,7 @@
   "generated_from": [
     "architecture/repository-atlas.json",
     "assurance/release-gates.json",
+    "assurance/arch-repository.json",
     "generated/knowledge/catalog.json",
     "integrations/native-route/source-validated.json"
   ],
@@ -26,7 +27,7 @@
   "publication": {
     "label": "Arch 2.0.0 release",
     "state": "ready",
-    "summary": "Arch Linux x86_64 Core and Full 2.0.0-1 packages are published through GitHub Release v2.0.0; no pacman repository or signing key is published."
+    "summary": "Arch Linux x86_64 Core and Full 2.0.0-1 packages are published through the signed HyperFlux Next third-party Pacman repository backed by GitHub Release v2.0.0."
   },
   "qualification_console_access": "loopback-only",
   "repository": {

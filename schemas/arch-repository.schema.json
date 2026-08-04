@@ -1,0 +1,70 @@
+{
+  "$id": "https://hyperflux.dev/schemas/arch-repository-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HyperFlux Next Arch repository policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "repository", "signing", "packages", "assets"],
+  "properties": {
+    "$schema": {"const": "../schemas/arch-repository.schema.json"},
+    "schema": {"const": "hyperflux-arch-repository-v1"},
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "architecture", "official_arch_repository", "server_url", "release_url", "release_tag", "signature_level"],
+      "properties": {
+        "name": {"const": "hyperflux-next"},
+        "architecture": {"const": "x86_64"},
+        "official_arch_repository": {"const": false},
+        "server_url": {"const": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/latest/download"},
+        "release_url": {"const": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.0"},
+        "release_tag": {"const": "v2.0.0"},
+        "signature_level": {"const": "Required DatabaseRequired TrustedOnly"}
+      }
+    },
+    "signing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary_fingerprint", "signing_subkey_fingerprint", "public_key_path", "public_key_asset", "fingerprint_asset", "signature_timestamp", "expires_at"],
+      "properties": {
+        "primary_fingerprint": {"type": "string", "pattern": "^[0-9A-F]{40}$"},
+        "signing_subkey_fingerprint": {"type": "string", "pattern": "^[0-9A-F]{40}$"},
+        "public_key_path": {"const": "packaging/keys/hyperflux-next-arch-repository-key.asc"},
+        "public_key_asset": {"const": "hyperflux-next-arch-repository-key.asc"},
+        "fingerprint_asset": {"const": "hyperflux-next-arch-repository-fingerprint.txt"},
+        "signature_timestamp": {"type": "integer", "minimum": 1},
+        "expires_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "packages": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "version", "filename", "sha256"],
+        "properties": {
+          "name": {"enum": ["hyperflux-next-linux", "hyperflux-next-full"]},
+          "version": {"const": "2.0.0-1"},
+          "filename": {"type": "string", "pattern": "^hyperflux-next-(linux|full)-2\\.0\\.0-1-x86_64\\.pkg\\.tar\\.zst$"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "assets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["database", "database_archive", "files", "files_archive", "configuration", "manifest", "checksums"],
+      "properties": {
+        "database": {"const": "hyperflux-next.db"},
+        "database_archive": {"const": "hyperflux-next.db.tar.zst"},
+        "files": {"const": "hyperflux-next.files"},
+        "files_archive": {"const": "hyperflux-next.files.tar.zst"},
+        "configuration": {"const": "hyperflux-next.conf"},
+        "manifest": {"const": "hyperflux-next-arch-repository-manifest.json"},
+        "checksums": {"const": "SHA256SUMS-repository"}
+      }
+    }
+  }
+}

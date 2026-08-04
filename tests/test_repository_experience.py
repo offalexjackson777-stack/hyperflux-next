@@ -97,9 +97,20 @@ class RepositoryExperienceContracts(unittest.TestCase):
             expected = f"{component.description}."
             for page in product_pages:
                 self.assertIn(expected, " ".join(page.split()))
-        self.assertNotIn("sudo pacman -S", readme)
-        self.assertIn("pacman -U", readme)
+        self.assertIn("sudo pacman -S hyperflux-next-full", readme)
+        self.assertIn("third-party", readme)
+        self.assertIn("not an official Arch Linux repository", readme)
         self.assertIn("releases/tag/v2.0.0", readme)
+        installation_guide = (ROOT / "docs/user/installation.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("sudo pacman -Syu hyperflux-next-full", installation_guide)
+        self.assertIn("pacman -U", installation_guide)
+        self.assertIn(
+            "8BF8 A266 E756 BD1C 24C9 3091 8B3F 3850 0071 59E8",
+            installation_guide,
+        )
+        self.assertNotIn("SigLevel = Never", installation_guide)
         installation = (ROOT / "docs/generated/installation.md").read_text(
             encoding="utf-8"
         )

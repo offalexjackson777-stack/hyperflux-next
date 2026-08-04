@@ -1,0 +1,45 @@
+{
+  "$schema": "../schemas/arch-repository.schema.json",
+  "schema": "hyperflux-arch-repository-v1",
+  "repository": {
+    "name": "hyperflux-next",
+    "architecture": "x86_64",
+    "official_arch_repository": false,
+    "server_url": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/latest/download",
+    "release_url": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.0",
+    "release_tag": "v2.0.0",
+    "signature_level": "Required DatabaseRequired TrustedOnly"
+  },
+  "signing": {
+    "primary_fingerprint": "8BF8A266E756BD1C24C930918B3F3850007159E8",
+    "signing_subkey_fingerprint": "4C64CE4C855BC6844B4C1670C67DD9C42253ED27",
+    "public_key_path": "packaging/keys/hyperflux-next-arch-repository-key.asc",
+    "public_key_asset": "hyperflux-next-arch-repository-key.asc",
+    "fingerprint_asset": "hyperflux-next-arch-repository-fingerprint.txt",
+    "signature_timestamp": 1785854158,
+    "expires_at": "2029-08-03T14:35:56Z"
+  },
+  "packages": [
+    {
+      "name": "hyperflux-next-linux",
+      "version": "2.0.0-1",
+      "filename": "hyperflux-next-linux-2.0.0-1-x86_64.pkg.tar.zst",
+      "sha256": "c2a75938da12cc73cbceff8d88eacd3c0e46977dde56c5c3707080a53d9ba56b"
+    },
+    {
+      "name": "hyperflux-next-full",
+      "version": "2.0.0-1",
+      "filename": "hyperflux-next-full-2.0.0-1-x86_64.pkg.tar.zst",
+      "sha256": "379641df4e94b028b9b906891258d2f5c0f065dae7b599988b46e26b868e0dda"
+    }
+  ],
+  "assets": {
+    "database": "hyperflux-next.db",
+    "database_archive": "hyperflux-next.db.tar.zst",
+    "files": "hyperflux-next.files",
+    "files_archive": "hyperflux-next.files.tar.zst",
+    "configuration": "hyperflux-next.conf",
+    "manifest": "hyperflux-next-arch-repository-manifest.json",
+    "checksums": "SHA256SUMS-repository"
+  }
+}

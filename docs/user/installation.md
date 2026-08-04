@@ -13,9 +13,61 @@ OpenRGB remain separate, optional distribution packages.
 
 Arch Linux x86_64 Core and Full packages are published in
 [GitHub Release v2.0.0](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.0).
-There is no pacman repository yet, so `pacman -S hyperflux-next-full` is not
-available. Download both package files and `SHA256SUMS`, then verify and install
-the exact local files:
+The HyperFlux Next project operates a signed third-party Pacman repository. It
+is not an official Arch Linux repository.
+
+Download the public key, its fingerprint receipt, and the repository block:
+
+```bash
+curl --proto '=https' --tlsv1.2 --fail --location --remote-name-all -- \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/latest/download/hyperflux-next-arch-repository-key.asc \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/latest/download/hyperflux-next-arch-repository-fingerprint.txt \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/latest/download/hyperflux-next.conf
+gpg --show-keys --with-fingerprint --with-subkey-fingerprint \
+  ./hyperflux-next-arch-repository-key.asc
+cat ./hyperflux-next-arch-repository-fingerprint.txt
+```
+
+Before trusting the key, require the displayed primary fingerprint to match in
+full:
+
+```text
+8BF8 A266 E756 BD1C 24C9 3091 8B3F 3850 0071 59E8
+```
+
+Import and locally trust only that verified key, then install the repository
+block:
+
+```bash
+sudo pacman-key --add ./hyperflux-next-arch-repository-key.asc
+sudo pacman-key --lsign-key 8BF8A266E756BD1C24C930918B3F3850007159E8
+sudo install -Dm0644 ./hyperflux-next.conf \
+  /etc/pacman.d/hyperflux-next.conf
+```
+
+Add this line once to `/etc/pacman.conf`, outside every existing repository
+section:
+
+```ini
+Include = /etc/pacman.d/hyperflux-next.conf
+```
+
+Synchronize through a normal full system upgrade and install Full. Pacman
+selects the exact Core dependency automatically:
+
+```bash
+sudo pacman -Syu hyperflux-next-full
+```
+
+After that first synchronized refresh, the ordinary package command is also
+available and future `pacman -Syu` runs discover HyperFlux updates:
+
+```bash
+sudo pacman -S hyperflux-next-full
+```
+
+The release assets retain a local-file fallback. Download both packages and
+`SHA256SUMS`, then verify and install them together:
 
 ```bash
 sha256sum -c SHA256SUMS
@@ -24,8 +76,8 @@ sudo pacman -U -- \
   ./hyperflux-next-full-2.0.0-1-x86_64.pkg.tar.zst
 ```
 
-The assets are unsigned. Check the published SHA-256 values; no private signing
-key is published.
+Both package archives and the repository database/files metadata have detached
+OpenPGP signatures. The private signing key is never published.
 
 ## Safe Desktop Lifecycle
 

@@ -71,8 +71,8 @@
       "id": "HFX-GATE-PACKAGING",
       "title": "Native package lifecycle",
       "status": "verified",
-      "criteria": ["The two Arch sibling packages derive from component-aware canonical payloads and are reproducible.", "Fresh install, monolith upgrade, connector retirement, rollback, uninstall, explicit activation boundaries, and configuration preservation pass in a disposable Arch root."],
-      "evidence": ["packaging/install.json", "packaging/distributions.json", "tools/hfxdev/distribution_package.py", "tests/package_ownership_qualification.py", "tests/arch_split_transaction_qualification.py", "tests/arch_two_package_matrix_inner.sh"],
+      "criteria": ["The two Arch sibling packages derive from component-aware canonical payloads and are reproducible.", "Fresh install, monolith upgrade, connector retirement, rollback, uninstall, explicit activation boundaries, and configuration preservation pass in a disposable Arch root.", "The project-operated Arch repository requires the published trusted signing key for package and database metadata."],
+      "evidence": ["packaging/install.json", "packaging/distributions.json", "assurance/arch-repository.json", "tools/hfxdev/distribution_package.py", "tools/hfxdev/arch_repository.py", "tests/package_ownership_qualification.py", "tests/arch_split_transaction_qualification.py", "tests/arch_two_package_matrix_inner.sh", "tests/test_arch_repository.py"],
       "remaining": [],
       "physical_evidence_required": false,
       "publication_authorization_required": false
@@ -101,8 +101,8 @@
       "id": "HFX-GATE-PUBLICATION-DECISION",
       "title": "Explicit publication decision",
       "status": "verified",
-      "criteria": ["Every preceding release-blocking gate is satisfied.", "A human publication decision explicitly authorizes the chosen channel and artifacts."],
-      "evidence": ["architecture/constitution.json", "assurance/release-gates.json"],
+      "criteria": ["Every preceding release-blocking gate is satisfied.", "A human publication decision explicitly authorizes the chosen channel and artifacts.", "The published Arch channel is identified as a signed project-operated third-party repository rather than an official distribution repository."],
+      "evidence": ["architecture/constitution.json", "assurance/release-gates.json", "assurance/arch-repository.json"],
       "remaining": [],
       "physical_evidence_required": true,
       "publication_authorization_required": true
