@@ -495,7 +495,14 @@ def validate_documentation_render_audit(
         verification["second_generation_identical"] is not True
         or verification["links"] != "passed"
         or verification["privacy"] != "passed"
-        or verification["release_gate_changes"] != []
+        or verification["release_gate_changes"]
+        != (
+            ["HFX-GATE-PUBLICATION-DECISION"]
+            if load_json(root / "architecture" / "constitution.json")[
+                "publication_interlock"
+            ]["publication_authorized"]
+            else []
+        )
     ):
         raise ModelError("documentation audit verification boundary drifted")
     return DocumentationRenderAudit(
