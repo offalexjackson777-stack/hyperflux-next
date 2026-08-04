@@ -1,17 +1,17 @@
 {
   "$schema": "../schemas/documentation-audit.schema.json",
   "schema": "hyperflux-documentation-audit-v2",
-  "source_revision": "dc5e257842cd40b71b9d98041abf958aab86f069",
+  "source_revision": "304b311402fa3a3769629078d7f446b1a7d50123",
   "inputs": {
-    "catalog_sha256": "2909ded09cc3b57a83dac7a2af2508c0cae1bf6e6e9debd985271d9d3f6b3162",
+    "catalog_sha256": "433c022f0d5398ac2c1112c2852cbbf9db688628972e86bb97cded0a24bd9184",
     "policy_sha256": "afad995f01f447fdf79edea77682603abb26eeec123a00c74b134d3efdc413a2",
     "renderer_sha256": "065d95640162f64657854db2d4d5caccc005ee245f3a731a3b3d36f3e8397fe4",
     "journey_source_coverage_sha256": "7dc3e929079eb76fe8ce82b0b026c2a373af8dc4c829352f38374a6d6983495a",
-    "rendered_documents_sha256": "a2af33ae67cbf5219895e26d8981049c1d2d9c5257dcb2eb75cba930a9c3c92d"
+    "rendered_documents_sha256": "487f88e9b2a016aec17f48beb5ca099e53bf746c591cc4e2e11130902f4b6a36"
   },
   "render": {
     "status": "passed",
-    "result_sha256": "007e7fea4ae5c85f55e7acc2d8ce289315b2e8bd699eb39d296075ba40a7b01b",
+    "result_sha256": "a299b7cb3ed2c2e496d77f92ac9c909f72fbf9b3ab12b2febfb4020d0daa574e",
     "document_count": 64,
     "check_count": 384,
     "screenshot_count": 108,
@@ -27,7 +27,7 @@
       "light",
       "dark"
     ],
-    "screenshot_manifest_sha256": "580b242cdb1259963dea77f5a52bf5611a53d6f5c85b5d2b930663048176ad16",
+    "screenshot_manifest_sha256": "95c0c85be68af4393d8855216ef0743bea86f099df3d4dc77866d2f6df6cd1c5",
     "capture_mode": "full-page",
     "max_page_height": 32768,
     "render_contract": "github-compatible-gfm-v2",
@@ -47,7 +47,7 @@
       },
       {
         "file": "screenshots/README--1280--light.png",
-        "sha256": "f68da1b1a43dd3ca8319f3fbc6e13ee8c3f76ae1f98221928a4b60515797d243"
+        "sha256": "07f27286ee4904f1e8b54c5d12469db176786572075914f2271d77319da1ee39"
       },
       {
         "file": "screenshots/SECURITY--768--dark.png",
@@ -59,7 +59,7 @@
       },
       {
         "file": "screenshots/docs__README--1280--dark.png",
-        "sha256": "ee4059922074fd6bd0c352a29860e8e9429da126422cff9d5be5863ba9d77d1b"
+        "sha256": "93033634da68d23f0fd00bb72246bb7d40825d3be07d77ab9658c7f2757c0d4c"
       },
       {
         "file": "screenshots/docs__architecture__design__book--375--light.png",
@@ -79,7 +79,7 @@
       },
       {
         "file": "screenshots/docs__generated__repository__atlas--768--light.png",
-        "sha256": "c103374a4552d78190ca3e451db969da58df65eade55c677b4f3d968f675cc92"
+        "sha256": "dacaea11b853dbe2d95f81591b6f32fc7b41c111ee3853a37d153b2de24ee38b"
       },
       {
         "file": "screenshots/docs__generated__supported__hardware--375--dark.png",
@@ -95,7 +95,7 @@
       },
       {
         "file": "screenshots/docs__project__release__status--768--dark.png",
-        "sha256": "970b5734c5a7698f7abd9c3a25b4f7778450ce975bd95de61032771eb26c2832"
+        "sha256": "e6e7712c9dca2d0c8303d906369911ca2810905c2d76a806052f195d470e3f6f"
       },
       {
         "file": "screenshots/docs__user__first__run--375--light.png",
@@ -107,7 +107,7 @@
       },
       {
         "file": "screenshots/docs__user__installation--768--light.png",
-        "sha256": "8f57e8c6a89625fc3679026c2df1969f16b40ff644c618a7fe384da7c255e0aa"
+        "sha256": "cbb316b6fd4f5e385ffe16a6df8ecf801e7b1c66524b46167e22ea9ea510f8ea"
       },
       {
         "file": "screenshots/docs__user__troubleshooting--375--dark.png",
