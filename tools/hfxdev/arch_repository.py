@@ -273,7 +273,8 @@ def repository_configuration(policy: ArchRepositoryPolicy) -> str:
 
 def repository_setup_script(policy: ArchRepositoryPolicy) -> str:
     configuration = repository_configuration(policy).rstrip()
-    return f"""set -euo pipefail
+    return f"""bash <<'HFX_REPOSITORY_SETUP'
+set -euo pipefail
 
 expected_primary='{policy.primary_fingerprint}'
 expected_signing='{policy.signing_subkey_fingerprint}'
@@ -321,6 +322,7 @@ EOF
 if [[ "$include_count" -eq 0 ]]; then
   printf '\\n%s\\n' "$include_line" | sudo tee -a /etc/pacman.conf >/dev/null
 fi
+HFX_REPOSITORY_SETUP
 """
 
 
