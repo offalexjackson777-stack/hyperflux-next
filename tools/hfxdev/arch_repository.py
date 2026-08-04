@@ -271,6 +271,59 @@ def repository_configuration(policy: ArchRepositoryPolicy) -> str:
     )
 
 
+def repository_setup_script(policy: ArchRepositoryPolicy) -> str:
+    configuration = repository_configuration(policy).rstrip()
+    return f"""set -euo pipefail
+
+expected_primary='{policy.primary_fingerprint}'
+expected_signing='{policy.signing_subkey_fingerprint}'
+key_url='{policy.server_url}/{policy.public_key_asset}'
+key_dir="$(mktemp -d)"
+trap 'rm -rf "$key_dir"' EXIT
+key_file="$key_dir/{policy.public_key_asset}"
+
+curl --disable --proto '=https' --tlsv1.2 --fail --location \\
+  --silent --show-error --output "$key_file" -- "$key_url"
+mapfile -t fingerprints < <(
+  gpg --batch --with-colons --show-keys "$key_file" | \\
+    awk -F: '$1 == "fpr" {{ print $10 }}'
+)
+actual_primary="${{fingerprints[0]-}}"
+actual_signing="${{fingerprints[1]-}}"
+if [[ ${{#fingerprints[@]}} -ne 2 ||
+      "$actual_primary" != "$expected_primary" ||
+      "$actual_signing" != "$expected_signing" ]]; then
+  printf 'HyperFlux repository key fingerprint mismatch; no trust or config changed.\\n' >&2
+  exit 1
+fi
+
+include_path='/etc/pacman.d/hyperflux-next.conf'
+include_line='Include = /etc/pacman.d/hyperflux-next.conf'
+include_count="$(sudo awk '
+  /^[[:space:]]*Include[[:space:]]*=[[:space:]]*\\/etc\\/pacman\\.d\\/hyperflux-next\\.conf[[:space:]]*$/ {{ count++ }}
+  END {{ print count + 0 }}
+' /etc/pacman.conf)"
+section_count="$(sudo awk '
+  /^[[:space:]]*\\[hyperflux-next\\][[:space:]]*$/ {{ count++ }}
+  END {{ print count + 0 }}
+' /etc/pacman.conf)"
+if [[ "$include_count" -gt 1 || "$section_count" -gt 0 ]]; then
+  printf 'Existing HyperFlux Pacman entries conflict; no trust or config changed.\\n' >&2
+  exit 1
+fi
+
+sudo pacman-key --add "$key_file"
+sudo pacman-key --lsign-key "$expected_primary"
+sudo install -d -m 0755 /etc/pacman.d
+sudo install -m 0644 /dev/stdin "$include_path" <<'EOF'
+{configuration}
+EOF
+if [[ "$include_count" -eq 0 ]]; then
+  printf '\\n%s\\n' "$include_line" | sudo tee -a /etc/pacman.conf >/dev/null
+fi
+"""
+
+
 def fingerprint_receipt(policy: ArchRepositoryPolicy) -> str:
     grouped = " ".join(
         policy.primary_fingerprint[index : index + 4]

@@ -21,6 +21,7 @@ from hfxdev.arch_repository import (
     fingerprint_receipt,
     load_arch_repository_policy,
     repository_configuration,
+    repository_setup_script,
 )
 from hfxdev.model import ModelError
 
@@ -61,6 +62,32 @@ class ArchRepositoryTests(unittest.TestCase):
         self.assertNotIn("Never", configuration)
         self.assertNotIn("TrustAll", configuration)
         self.assertNotIn("file://", configuration)
+
+    def test_displayed_setup_is_one_fail_closed_idempotent_block(self) -> None:
+        policy = load_arch_repository_policy(ROOT)
+        script = repository_setup_script(policy).rstrip()
+        self.assertIn(policy.primary_fingerprint, script)
+        self.assertIn(policy.signing_subkey_fingerprint, script)
+        self.assertIn(policy.server_url, script)
+        self.assertIn("SigLevel = Required DatabaseRequired TrustedOnly", script)
+        self.assertIn("include_count", script)
+        self.assertIn("section_count", script)
+        self.assertIn("[[ \"$include_count\" -eq 0 ]]", script)
+        self.assertNotIn("SigLevel = Never", script)
+        self.assertNotIn("TrustAll", script)
+        self.assertNotIn("curl |", script)
+        self.assertNotIn(f"{policy.server_url}/hyperflux-next.conf", script)
+        self.assertLess(script.index("fingerprint mismatch"), script.index("sudo"))
+        fenced = f"```bash\n{script}\n```"
+        for path in (ROOT / "README.md", ROOT / "docs" / "user" / "installation.md"):
+            document = path.read_text(encoding="utf-8")
+            self.assertEqual(document.count(fenced), 1, path)
+            self.assertEqual(
+                document.count("sudo pacman -Syu hyperflux-next-full"), 1, path
+            )
+            self.assertEqual(
+                document.count("sudo pacman -Syu hyperflux-next-linux"), 1, path
+            )
 
     def test_fingerprint_receipt_is_full_and_truthfully_third_party(self) -> None:
         policy = load_arch_repository_policy(ROOT)

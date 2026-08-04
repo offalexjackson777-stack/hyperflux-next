@@ -19,55 +19,89 @@ in a separate fixed `arch-repository` channel so the v2.0.0 release remains a
 clear, human-facing product page. Users do not manually download or choose the
 repository databases and signatures.
 
-Download the public key from the fixed machine channel and inspect it locally:
+## 1. Add the HyperFlux repository - one time only
 
 ```bash
-curl --proto '=https' --tlsv1.2 --fail --location --output \
-  ./hyperflux-next-arch-repository-key.asc -- \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository/hyperflux-next-arch-repository-key.asc
-gpg --show-keys --with-fingerprint --with-subkey-fingerprint \
-  ./hyperflux-next-arch-repository-key.asc
-```
+set -euo pipefail
 
-Before trusting the key, require the displayed primary fingerprint to match in
-full:
+expected_primary='8BF8A266E756BD1C24C930918B3F3850007159E8'
+expected_signing='4C64CE4C855BC6844B4C1670C67DD9C42253ED27'
+key_url='https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository/hyperflux-next-arch-repository-key.asc'
+key_dir="$(mktemp -d)"
+trap 'rm -rf "$key_dir"' EXIT
+key_file="$key_dir/hyperflux-next-arch-repository-key.asc"
 
-```text
-8BF8 A266 E756 BD1C 24C9 3091 8B3F 3850 0071 59E8
-```
+curl --disable --proto '=https' --tlsv1.2 --fail --location \
+  --silent --show-error --output "$key_file" -- "$key_url"
+mapfile -t fingerprints < <(
+  gpg --batch --with-colons --show-keys "$key_file" | \
+    awk -F: '$1 == "fpr" { print $10 }'
+)
+actual_primary="${fingerprints[0]-}"
+actual_signing="${fingerprints[1]-}"
+if [[ ${#fingerprints[@]} -ne 2 ||
+      "$actual_primary" != "$expected_primary" ||
+      "$actual_signing" != "$expected_signing" ]]; then
+  printf 'HyperFlux repository key fingerprint mismatch; no trust or config changed.\n' >&2
+  exit 1
+fi
 
-Import and locally trust only that verified key. Create the exact repository
-block locally; do not install a downloaded configuration file:
+include_path='/etc/pacman.d/hyperflux-next.conf'
+include_line='Include = /etc/pacman.d/hyperflux-next.conf'
+include_count="$(sudo awk '
+  /^[[:space:]]*Include[[:space:]]*=[[:space:]]*\/etc\/pacman\.d\/hyperflux-next\.conf[[:space:]]*$/ { count++ }
+  END { print count + 0 }
+' /etc/pacman.conf)"
+section_count="$(sudo awk '
+  /^[[:space:]]*\[hyperflux-next\][[:space:]]*$/ { count++ }
+  END { print count + 0 }
+' /etc/pacman.conf)"
+if [[ "$include_count" -gt 1 || "$section_count" -gt 0 ]]; then
+  printf 'Existing HyperFlux Pacman entries conflict; no trust or config changed.\n' >&2
+  exit 1
+fi
 
-```bash
-sudo pacman-key --add ./hyperflux-next-arch-repository-key.asc
-sudo pacman-key --lsign-key 8BF8A266E756BD1C24C930918B3F3850007159E8
-sudo install -Dm0644 /dev/stdin /etc/pacman.d/hyperflux-next.conf <<'EOF'
+sudo pacman-key --add "$key_file"
+sudo pacman-key --lsign-key "$expected_primary"
+sudo install -d -m 0755 /etc/pacman.d
+sudo install -m 0644 /dev/stdin "$include_path" <<'EOF'
 [hyperflux-next]
 SigLevel = Required DatabaseRequired TrustedOnly
 Server = https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository
 EOF
+if [[ "$include_count" -eq 0 ]]; then
+  printf '\n%s\n' "$include_line" | sudo tee -a /etc/pacman.conf >/dev/null
+fi
 ```
 
-Add this line once to `/etc/pacman.conf`, outside every existing repository
-section:
-
-```ini
-Include = /etc/pacman.d/hyperflux-next.conf
-```
-
-Choose one installation after the one-time setup. Full is recommended and
-selects the exact Core dependency automatically:
+## 2. Install Full - recommended
 
 ```bash
-# Recommended desktop installation: Full plus exact Core.
 sudo pacman -Syu hyperflux-next-full
+```
 
-# Core only.
+Full resolves the exact Core package automatically. For an advanced Core-only
+installation:
+
+```bash
 sudo pacman -Syu hyperflux-next-linux
 ```
 
 Thereafter, ordinary `sudo pacman -Syu` runs discover HyperFlux updates.
+
+## Security details
+
+The one-time block downloads only the public key. It requires exactly the full
+primary fingerprint `8BF8 A266 E756 BD1C 24C9 3091 8B3F 3850 0071 59E8` and
+signing subkey before changing trust or configuration. It writes the strict
+`Required DatabaseRequired TrustedOnly` repository locally and adds one
+idempotent include without replacing existing Pacman settings. It does not
+execute a remote script or install a downloaded configuration file.
+
+Pacman consumes the separate machine channel automatically. Users never
+manually download its databases, signatures, manifest, or checksum receipt.
+
+## Local package fallback
 
 The human-facing v2.0.0 release retains a local-file fallback. Download its two
 packages and checksum receipt, select exactly those two receipt entries, then
