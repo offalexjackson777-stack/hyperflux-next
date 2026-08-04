@@ -7,11 +7,10 @@ Software verification never substitutes for physical evidence or a publication d
 
 ## Summary
 
-- `blocked-by-physical-evidence`: 2
-- `partially-implemented`: 10
+- `blocked-by-physical-evidence`: 1
+- `partially-implemented`: 7
 - `policy-defined`: 3
-- `publication-locked`: 1
-- `software-verified`: 51
+- `software-verified`: 56
 
 
 ## Open Or Release-Bounding Work
@@ -34,18 +33,10 @@ Only sections with remaining work, a release boundary, or a non-complete status 
 | 42 | [Watched-Test Application](../architecture/design-book.md#42-watched-test-application) | `policy-defined` | `verification` | No open software gap. |
 | 45 | [Advanced Testing Methods](../architecture/design-book.md#45-advanced-testing-methods) | `partially-implemented` | `verification` | Add explicit fuzz, property, mutation, and broader fault-injection lanes only where each tool has a defined failure class. |
 | 47 | [Language-Specific Tooling](../architecture/design-book.md#47-language-specific-tooling) | `partially-implemented` | `toolchains` | Add reviewed dependency, static-analysis, fuzz, and API-compatibility tools incrementally without making unavailable tools produce false green results. |
-| 50 | [Doctor](../architecture/design-book.md#50-doctor) | `software-verified` | `operations` | Installed-candidate behavior still requires ordinary-user lifecycle qualification before release. |
-| 53 | [Package Lifecycle](../architecture/design-book.md#53-package-lifecycle) | `software-verified` | `packaging` | Fresh install, rollback, and uninstall must still run in disposable native distribution images before release. |
-| 54 | [Kernel Activation](../architecture/design-book.md#54-kernel-activation) | `software-verified` | `operations` | A real explicit disconnected-driver activation remains an installed-candidate qualification gate. Physical evidence is required. |
-| 55 | [Reproducible Development Environment](../architecture/design-book.md#55-reproducible-development-environment) | `partially-implemented` | `toolchains` | Build the digest-pinned OCI image on a hosted runner and bind its successful offline verification evidence to the release candidate. |
-| 56 | [Supply-Chain Security](../architecture/design-book.md#56-supply-chain-security) | `partially-implemented` | `security` | Add publication-locked signed-tag, package-signing, Sigstore attestation, and SLSA provenance workflows without authorizing or executing a release. |
-| 57 | [Performance Budgets](../architecture/design-book.md#57-performance-budgets) | `blocked-by-physical-evidence` | `verification` | Record repeatable installed startup, visible effect latency, reconnect recovery, CPU, and memory measurements against the exact release candidate. Physical evidence is required. |
-| 58 | [Change-Aware CI](../architecture/design-book.md#58-change-aware-ci) | `partially-implemented` | `verification` | Run the generated current-head workflows after remote creation is explicitly authorized and retain their source-bound hosted evidence. |
-| 59 | [Dependency Updates](../architecture/design-book.md#59-dependency-updates) | `partially-implemented` | `security` | Activate grouped dependency updates only after remote creation and verify the first generated pull request against license, API, generated-data, size, and verification policy. |
-| 61 | [GitHub Repository Experience](../architecture/design-book.md#61-github-repository-experience) | `partially-implemented` | `governance` | After remote creation is explicitly authorized, establish exact hosted check names, review the generated protection plan, enable private vulnerability reporting, and apply the plan without weakening its safeguards. |
+| 56 | [Supply-Chain Security](../architecture/design-book.md#56-supply-chain-security) | `partially-implemented` | `security` | Add signed packages, Sigstore attestations, and SLSA provenance in a separately reviewed channel update. |
+| 59 | [Dependency Updates](../architecture/design-book.md#59-dependency-updates) | `partially-implemented` | `security` | Review future grouped dependency updates against license, API, generated-data, size, and verification policy. |
 | 64 | [Safe Change Order](../architecture/design-book.md#64-safe-change-order) | `policy-defined` | `release` | No open software gap. |
-| 65 | [Release Channels](../architecture/design-book.md#65-release-channels) | `policy-defined` | `release` | No channel may be published until its canonical gates and explicit publication decision are satisfied. Physical evidence is required. |
-| 67 | [Final Definition Of Success](../architecture/design-book.md#67-final-definition-of-success) | `publication-locked` | `release` | Targeted physical qualification, native lifecycle evidence, release-gate review, and explicit publication authorization remain mandatory. Physical evidence is required. |
+| 65 | [Release Channels](../architecture/design-book.md#65-release-channels) | `policy-defined` | `release` | No open software gap. Physical evidence is required. |
 
 ## Reading The Complete Record
 

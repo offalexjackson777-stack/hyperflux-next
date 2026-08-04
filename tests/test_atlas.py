@@ -18,6 +18,7 @@ from hfxdev.testgraph import load_test_catalog, select_tests
 class RepositoryAtlasTests(unittest.TestCase):
     def test_graph_covers_required_subsystems_with_unique_ownership(self) -> None:
         atlas = load_repository_atlas(ROOT)
+        self.assertEqual(atlas.publication_state, "public-arch-release")
         self.assertIn("device-qualification-console", atlas.by_id)
         self.assertEqual(
             {node.category for node in atlas.nodes},

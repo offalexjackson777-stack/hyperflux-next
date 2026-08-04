@@ -32,7 +32,7 @@ def _badge(label: str, value: str, color: str) -> str:
 
 
 def development_badge() -> str:
-    return _badge("state", "unreleased", "#b34a42")
+    return _badge("state", "Arch 2.0", "#287d6c")
 
 
 def license_badge() -> str:
@@ -52,9 +52,11 @@ def recommended_package(catalog: DistributionCatalog) -> str:
 
 **Full (`{full.package_name}`):** {full.description}.
 
-No public package channel exists yet, so there is no supported install command.
-See [installation](docs/user/installation.md) and the
-[distribution roadmap](docs/project/roadmap.md) for current availability."""
+The Arch Linux x86_64 packages are published in
+[GitHub Release v2.0.0](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.0).
+There is no pacman repository yet: verify `SHA256SUMS`, then install the two
+downloaded files together with `pacman -U`. See
+[installation](docs/user/installation.md) for the exact command."""
 
 
 def compatibility_summary(

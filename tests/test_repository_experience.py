@@ -98,6 +98,8 @@ class RepositoryExperienceContracts(unittest.TestCase):
             for page in product_pages:
                 self.assertIn(expected, " ".join(page.split()))
         self.assertNotIn("sudo pacman -S", readme)
+        self.assertIn("pacman -U", readme)
+        self.assertIn("releases/tag/v2.0.0", readme)
         installation = (ROOT / "docs/generated/installation.md").read_text(
             encoding="utf-8"
         )

@@ -6,7 +6,7 @@ interfaces and safe changes; project pages record status and history.
 
 <!-- HFX-GENERATED-BEGIN: release-status -->
 > [!IMPORTANT]
-> **Pre-release.** The source is available for review; no product release, version tag, or package channel is published.
+> **Arch 2.0.0 release.** Arch Linux x86_64 Core and Full 2.0.0-1 packages are published through GitHub Release v2.0.0; no pacman repository or signing key is published.
 <!-- HFX-GENERATED-END: release-status -->
 
 ## Use HyperFlux Next

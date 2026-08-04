@@ -407,8 +407,8 @@ def _evidence(
     catalog = load_integration_catalog(root)
     constitution = load_json(root / "architecture" / "constitution.json")
     publication = constitution.get("publication_interlock", {}).get("publication_authorized")
-    if publication is not False:
-        raise ModelError("verification evidence requires publication authorization to remain false")
+    if not isinstance(publication, bool):
+        raise ModelError("verification evidence requires an explicit publication interlock")
     claims = [
         {"node_id": node["id"], "evidence_id": evidence_id, "status": node["status"]}
         for node in result["nodes"]

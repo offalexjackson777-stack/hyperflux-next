@@ -105,8 +105,10 @@ def _check_constitution(constitution: dict) -> None:
     require_unique(component_ids, "architecture component id")
     if constitution["publication_interlock"].get("remote_repository_created") is not True:
         raise ModelError("public-source phase requires the remote repository authority")
-    if constitution["publication_interlock"].get("publication_authorized") is not False:
-        raise ModelError("publication interlock must keep publication authorization false")
+    if constitution.get("phase") != "public-arch-release":
+        raise ModelError("architecture phase must identify the published Arch release")
+    if constitution["publication_interlock"].get("publication_authorized") is not True:
+        raise ModelError("published Arch source must record explicit publication authorization")
 
 
 def _check_generated(root: Path) -> None:

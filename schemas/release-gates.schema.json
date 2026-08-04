@@ -15,7 +15,7 @@
       "properties": {
         "product_version": {"const": "2.0.0"},
         "package_release": {"const": 1},
-        "state": {"const": "verified-candidate"}
+        "state": {"const": "published-arch-release"}
       }
     },
     "gates": {
