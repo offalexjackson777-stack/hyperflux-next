@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import argparse
 from datetime import UTC, datetime
+import json
 import os
 from pathlib import Path
 import sys
 import time
 
 from .actions_summary import write_actions_summary
+from .arch_repository import build_arch_repository, verify_arch_repository
 from .ci import (
     PINNED_VERIFICATION_ENVIRONMENT,
     container_invocation,
@@ -261,6 +263,26 @@ def _parser() -> argparse.ArgumentParser:
     package_distro.add_argument("--distribution", required=True, choices=["arch"])
     package_distro.add_argument("--build-manifest", required=True, type=Path)
     package_distro.add_argument("--output", required=True, type=Path)
+
+    arch_repository = commands.add_parser(
+        "arch-repository",
+        help="build or verify the signed third-party Arch repository",
+    )
+    arch_repository_commands = arch_repository.add_subparsers(
+        dest="arch_repository_command", required=True
+    )
+    arch_repository_build = arch_repository_commands.add_parser(
+        "build", help="sign exact frozen packages and create repository metadata"
+    )
+    arch_repository_build.add_argument("--core", required=True, type=Path)
+    arch_repository_build.add_argument("--full", required=True, type=Path)
+    arch_repository_build.add_argument("--gnupg-home", required=True, type=Path)
+    arch_repository_build.add_argument("--key-fingerprint", required=True)
+    arch_repository_build.add_argument("--output", required=True, type=Path)
+    arch_repository_verify = arch_repository_commands.add_parser(
+        "verify", help="verify one complete signed repository asset directory"
+    )
+    arch_repository_verify.add_argument("--repository", required=True, type=Path)
     return parser
 
 
@@ -620,6 +642,21 @@ def main(arguments: list[str] | None = None) -> int:
                     f"Distribution package ({package.component}): {package.package}"
                 )
             print(f"Build manifest: {result.manifest}")
+            return 0
+        if args.command == "arch-repository":
+            if args.arch_repository_command == "build":
+                manifest = build_arch_repository(
+                    root,
+                    core_package=args.core.resolve(),
+                    full_package=args.full.resolve(),
+                    gnupg_home=args.gnupg_home.resolve(),
+                    key_fingerprint=args.key_fingerprint,
+                    output=args.output.resolve(),
+                )
+                print(f"Signed Arch repository manifest: {manifest}")
+                return 0
+            result = verify_arch_repository(root, args.repository.resolve())
+            print(json.dumps(result, indent=2, sort_keys=True))
             return 0
     except ModelError as error:
         print(f"hfx: {error}", file=sys.stderr)

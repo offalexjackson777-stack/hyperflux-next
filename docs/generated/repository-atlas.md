@@ -47,7 +47,7 @@ This is the compact public index for repository ownership. The complete dependen
 | [Kernel driver contract](../../driver/README.md) | `implemented` | Defines additive generated userspace ABIs and the strict boundary around the in-kernel receiver transport. |
 | [Linux HID kernel module](../../driver/kernel/README.md) | `implemented` | Binds the receiver, preserves generic input, records passive observations, performs qualified fixed-size native exchanges, and retains bounded migration envelopes. |
 | [Linux runtime authority](../../runtime/README.md) | `implemented` | Defines package version, service identities, filesystem paths, permissions, activation, and runtime defaults once. |
-| [Packaging and installation](../../packaging/README.md) | `implemented` | Builds reproducible distribution artifacts and a canonical installed root from explicit manifests. |
+| [Packaging and installation](../../packaging/README.md) | `implemented` | Builds reproducible distribution artifacts, a canonical installed root, and signed public repository metadata from explicit manifests. |
 | [C++ SDK](../../sdk/cpp/README.md) | `implemented` | Provides typed C++ bridge access for qualified native routes, exact Feature exchanges, and generated adapter contracts. |
 | [Python SDK](../../sdk/python/README.md) | `implemented` | Provides typed Python bridge access and generated contracts for scripting and Python application adapters. |
 | [Repository tooling](../../tools/README.md) | `implemented` | Provides the single developer CLI, canonical loaders, deterministic generators, and verification orchestration. |

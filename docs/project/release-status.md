@@ -2,7 +2,7 @@
 
 <!-- HFX-GENERATED-BEGIN: release-status -->
 > [!IMPORTANT]
-> **Arch 2.0.0 release.** Arch Linux x86_64 Core and Full 2.0.0-1 packages are published through GitHub Release v2.0.0; no pacman repository or signing key is published.
+> **Arch 2.0.0 release.** Arch Linux x86_64 Core and Full 2.0.0-1 packages are published through the signed HyperFlux Next third-party Pacman repository backed by GitHub Release v2.0.0.
 <!-- HFX-GENERATED-END: release-status -->
 
 ## Release State
@@ -14,6 +14,9 @@ evidence.
 
 ## Availability
 
-The GitHub Release is the current package channel. There is no pacman repository
-or published signing key; users verify `SHA256SUMS` and install both local files
-with `pacman -U` as documented in the [installation guide](../user/installation.md).
+The signed `hyperflux-next` project repository is the primary Arch package
+channel. It is a third-party repository backed by stable GitHub Release assets,
+not an official Arch Linux repository. Its published key fingerprint is
+`8BF8 A266 E756 BD1C 24C9 3091 8B3F 3850 0071 59E8`. Full resolves the exact
+Core dependency through ordinary Pacman. Local `pacman -U` remains a documented
+fallback in the [installation guide](../user/installation.md).

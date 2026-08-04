@@ -24,6 +24,7 @@ Owns explicit design coverage, bounded formal models, performance budgets, depen
 
 ## Key Files
 
+- [`assurance/arch-repository.json`](arch-repository.json)
 - [`assurance/design-coverage.json`](design-coverage.json)
 - [`assurance/dependencies.json`](dependencies.json)
 - [`assurance/documentation-audit.json`](documentation-audit.json)

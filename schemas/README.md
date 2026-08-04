@@ -25,15 +25,15 @@ Defines strict machine-readable shapes for every shared repository fact and gene
 
 - [`schemas/domain-catalog.json`](domain-catalog.json); [`schemas/domain-catalog.schema.json`](domain-catalog.schema.json)
 - [`schemas/repository-atlas.schema.json`](repository-atlas.schema.json); [`schemas/public-readiness.schema.json`](public-readiness.schema.json)
-- [`schemas/distribution-component-descriptor.schema.json`](distribution-component-descriptor.schema.json); [`schemas/system-assessment.schema.json`](system-assessment.schema.json)
-- [`schemas/local-companion.schema.json`](local-companion.schema.json); [`schemas/local-snapshot.schema.json`](local-snapshot.schema.json)
-- [`schemas/licensing-policy.schema.json`](licensing-policy.schema.json); [`schemas/lifecycle-policy-catalog.schema.json`](lifecycle-policy-catalog.schema.json)
-- [`schemas/kernel-uapi-registry.schema.json`](kernel-uapi-registry.schema.json); [`schemas/kernel-uapi-native-exchange.schema.json`](kernel-uapi-native-exchange.schema.json)
-- [`schemas/native-route-observation.schema.json`](native-route-observation.schema.json); [`schemas/native-device-onboarding-draft.schema.json`](native-device-onboarding-draft.schema.json)
-- [`schemas/native-device-promotion-assessment.schema.json`](native-device-promotion-assessment.schema.json); [`schemas/document-catalog.schema.json`](document-catalog.schema.json)
-- [`schemas/documentation-audit.schema.json`](documentation-audit.schema.json); [`schemas/documentation-render-policy.schema.json`](documentation-render-policy.schema.json)
-- [`schemas/journey-source-coverage.schema.json`](journey-source-coverage.schema.json); [`schemas/publication-privacy.schema.json`](publication-privacy.schema.json)
-- [`schemas/source-inventory-public-projection.schema.json`](source-inventory-public-projection.schema.json)
+- [`schemas/arch-repository.schema.json`](arch-repository.schema.json); [`schemas/distribution-component-descriptor.schema.json`](distribution-component-descriptor.schema.json)
+- [`schemas/system-assessment.schema.json`](system-assessment.schema.json); [`schemas/local-companion.schema.json`](local-companion.schema.json)
+- [`schemas/local-snapshot.schema.json`](local-snapshot.schema.json); [`schemas/licensing-policy.schema.json`](licensing-policy.schema.json)
+- [`schemas/lifecycle-policy-catalog.schema.json`](lifecycle-policy-catalog.schema.json); [`schemas/kernel-uapi-registry.schema.json`](kernel-uapi-registry.schema.json)
+- [`schemas/kernel-uapi-native-exchange.schema.json`](kernel-uapi-native-exchange.schema.json); [`schemas/native-route-observation.schema.json`](native-route-observation.schema.json)
+- [`schemas/native-device-onboarding-draft.schema.json`](native-device-onboarding-draft.schema.json); [`schemas/native-device-promotion-assessment.schema.json`](native-device-promotion-assessment.schema.json)
+- [`schemas/document-catalog.schema.json`](document-catalog.schema.json); [`schemas/documentation-audit.schema.json`](documentation-audit.schema.json)
+- [`schemas/documentation-render-policy.schema.json`](documentation-render-policy.schema.json); [`schemas/journey-source-coverage.schema.json`](journey-source-coverage.schema.json)
+- [`schemas/publication-privacy.schema.json`](publication-privacy.schema.json); [`schemas/source-inventory-public-projection.schema.json`](source-inventory-public-projection.schema.json)
 
 ## Verify
 

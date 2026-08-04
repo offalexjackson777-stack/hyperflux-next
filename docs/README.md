@@ -6,7 +6,7 @@ interfaces and safe changes; project pages record status and history.
 
 <!-- HFX-GENERATED-BEGIN: release-status -->
 > [!IMPORTANT]
-> **Arch 2.0.0 release.** Arch Linux x86_64 Core and Full 2.0.0-1 packages are published through GitHub Release v2.0.0; no pacman repository or signing key is published.
+> **Arch 2.0.0 release.** Arch Linux x86_64 Core and Full 2.0.0-1 packages are published through the signed HyperFlux Next third-party Pacman repository backed by GitHub Release v2.0.0.
 <!-- HFX-GENERATED-END: release-status -->
 
 ## Use HyperFlux Next

@@ -16,6 +16,10 @@ Use Doctor before application testing. Kernel or service activation is an
 explicit operation and may require a normal reboot when the active module bytes
 do not match the installed candidate.
 
+The signed third-party repository participates in ordinary `pacman -Syu` runs.
+Pacman verifies the repository database and package signatures against the
+locally trusted HyperFlux Next key before selecting an update.
+
 ## Removal
 
 Remove packages through the distribution package manager so ownership decides

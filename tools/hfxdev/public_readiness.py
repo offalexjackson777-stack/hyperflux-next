@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .arch_repository import load_arch_repository_policy
 from .atlas import load_repository_atlas
 from .knowledge import compiled_knowledge_catalog
 from .release import load_release_context
@@ -26,6 +27,7 @@ def public_readiness(root: Path) -> dict[str, Any]:
     support_counts = public_support_tier_counts(
         load_source_validated_catalog(root)["devices"]
     )
+    arch_repository = load_arch_repository_policy(root)
     gates_ready = sum(gate.status == "verified" for gate in gates)
     hardware_remaining = sum(
         gate.status == "blocked-by-physical-evidence" for gate in gates
@@ -44,6 +46,7 @@ def public_readiness(root: Path) -> dict[str, Any]:
         "generated_from": [
             "architecture/repository-atlas.json",
             "assurance/release-gates.json",
+            "assurance/arch-repository.json",
             "generated/knowledge/catalog.json",
             "integrations/native-route/source-validated.json",
         ],
@@ -52,8 +55,8 @@ def public_readiness(root: Path) -> dict[str, Any]:
             "label": "Arch 2.0.0 release" if published else "Pre-release",
             "summary": (
                 "Arch Linux x86_64 Core and Full 2.0.0-1 packages are published "
-                "through GitHub Release v2.0.0; no pacman repository or signing key "
-                "is published."
+                "through the signed HyperFlux Next third-party Pacman repository "
+                f"backed by GitHub Release {arch_repository.release_tag}."
                 if published
                 else "The source is available for review; no product release, version "
                 "tag, or package channel is published."
