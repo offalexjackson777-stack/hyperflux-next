@@ -5,9 +5,14 @@
     "name": "hyperflux-next",
     "architecture": "x86_64",
     "official_arch_repository": false,
-    "server_url": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/latest/download",
-    "release_url": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.0",
-    "release_tag": "v2.0.0",
+    "server_url": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository",
+    "release_url": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/arch-repository",
+    "release_tag": "arch-repository",
+    "product_release_url": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.0",
+    "product_release_tag": "v2.0.0",
+    "channel_purpose": "machine-managed-arch-repository",
+    "github_release_prerelease": true,
+    "human_facing_product_release": false,
     "signature_level": "Required DatabaseRequired TrustedOnly"
   },
   "signing": {
@@ -38,7 +43,6 @@
     "database_archive": "hyperflux-next.db.tar.zst",
     "files": "hyperflux-next.files",
     "files_archive": "hyperflux-next.files.tar.zst",
-    "configuration": "hyperflux-next.conf",
     "manifest": "hyperflux-next-arch-repository-manifest.json",
     "checksums": "SHA256SUMS-repository"
   }

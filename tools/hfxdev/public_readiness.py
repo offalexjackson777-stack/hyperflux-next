@@ -55,8 +55,9 @@ def public_readiness(root: Path) -> dict[str, Any]:
             "label": "Arch 2.0.0 release" if published else "Pre-release",
             "summary": (
                 "Arch Linux x86_64 Core and Full 2.0.0-1 packages are published "
-                "through the signed HyperFlux Next third-party Pacman repository "
-                f"backed by GitHub Release {arch_repository.release_tag}."
+                "in the human-facing GitHub Release v2.0.0. The signed HyperFlux "
+                "Next third-party Pacman repository is served separately through "
+                f"the fixed `{arch_repository.release_tag}` machine channel."
                 if published
                 else "The source is available for review; no product release, version "
                 "tag, or package channel is published."

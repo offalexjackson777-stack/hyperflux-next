@@ -26,9 +26,11 @@ contract](../generated/distributions.md) for those procedures.
 ## Signed Arch Repository
 
 The release-side repository procedure wraps exact frozen package bytes; it does
-not rebuild or rewrite them. First update `assurance/arch-repository.json` with
-the reviewed release tag, filenames, hashes, public key, and full fingerprints.
-Then use a fresh output directory and a private GnuPG home containing that key:
+not rebuild or rewrite them. Release constants are deliberately checked in the
+policy, its JSON schema, and the fail-closed loader/tests. Update and review all
+of those together; editing only `assurance/arch-repository.json` is not a
+complete release update. Then use a fresh output path and a private GnuPG home
+containing the reviewed key:
 
 ```sh
 ./hfx arch-repository build \
@@ -41,13 +43,17 @@ Then use a fresh output directory and a private GnuPG home containing that key:
   --repository /path/to/fresh-repository-assets
 ```
 
-The builder rejects package-byte or metadata drift, requires the canonical
-signing subkey, creates stable database/files aliases and their canonical
-archives, signs every package and metadata artifact, embeds package signatures
-in the database, and seals a checksum-bound manifest. Publish every generated
-asset together at the stable release path. Keep the private key and its verified
+The builder rejects package-byte or metadata drift, requires the exact signing
+subkey and a private owner-only GnuPG home, creates stable database/files aliases
+and their canonical archives, signs every package and metadata artifact, embeds
+package signatures in the database, and seals a checksum-bound manifest. It
+builds and verifies in a sibling temporary directory before atomically exposing
+the requested output. Publish that complete output only on the fixed
+`arch-repository` machine channel, marked as a prerelease so it does not replace
+the latest human-facing product release. Keep the private key and its verified
 backup outside the repository; publish only the tracked public key and full
-fingerprint.
+fingerprint. The user guide creates the three-line Pacman block locally rather
+than trusting a downloaded configuration asset.
 
 ## Generated Files
 

@@ -54,10 +54,14 @@ def recommended_package(catalog: DistributionCatalog) -> str:
 
 The Arch Linux x86_64 packages are published in
 [GitHub Release v2.0.0](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.0).
-The signed project-operated Pacman repository resolves Full and its exact Core
-dependency with `sudo pacman -S hyperflux-next-full`. It is a third-party
-repository, not an official Arch Linux repository. See
-[installation](docs/user/installation.md) for the one-time key and repository setup."""
+The signed project-operated Pacman repository is a separate machine-managed
+channel, not an official Arch Linux repository. After the one-time setup:
+
+- Recommended: `sudo pacman -Syu hyperflux-next-full` (resolves exact Core).
+- Core only: `sudo pacman -Syu hyperflux-next-linux`.
+
+Users do not manually select repository database or signature assets. See
+[installation](docs/user/installation.md) for the key and repository setup."""
 
 
 def compatibility_summary(

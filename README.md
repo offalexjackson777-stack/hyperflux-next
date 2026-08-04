@@ -9,7 +9,7 @@ available to ordinary Linux applications without replacing those applications.
 
 <!-- HFX-GENERATED-BEGIN: release-status -->
 > [!IMPORTANT]
-> **Arch 2.0.0 release.** Arch Linux x86_64 Core and Full 2.0.0-1 packages are published through the signed HyperFlux Next third-party Pacman repository backed by GitHub Release v2.0.0.
+> **Arch 2.0.0 release.** Arch Linux x86_64 Core and Full 2.0.0-1 packages are published in the human-facing GitHub Release v2.0.0. The signed HyperFlux Next third-party Pacman repository is served separately through the fixed `arch-repository` machine channel.
 <!-- HFX-GENERATED-END: release-status -->
 
 ## What It Does
@@ -30,10 +30,14 @@ available to ordinary Linux applications without replacing those applications.
 
 The Arch Linux x86_64 packages are published in
 [GitHub Release v2.0.0](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.0).
-The signed project-operated Pacman repository resolves Full and its exact Core
-dependency with `sudo pacman -S hyperflux-next-full`. It is a third-party
-repository, not an official Arch Linux repository. See
-[installation](docs/user/installation.md) for the one-time key and repository setup.
+The signed project-operated Pacman repository is a separate machine-managed
+channel, not an official Arch Linux repository. After the one-time setup:
+
+- Recommended: `sudo pacman -Syu hyperflux-next-full` (resolves exact Core).
+- Core only: `sudo pacman -Syu hyperflux-next-linux`.
+
+Users do not manually select repository database or signature assets. See
+[installation](docs/user/installation.md) for the key and repository setup.
 <!-- HFX-GENERATED-END: recommended-package -->
 
 ## Hardware And Applications
