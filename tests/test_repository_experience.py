@@ -291,22 +291,22 @@ class RepositoryExperienceContracts(unittest.TestCase):
     def test_document_render_audit_binds_sources_visual_review_and_fast_gate(self) -> None:
         audit = load_documentation_render_audit(ROOT)
         policy = load_documentation_render_policy(ROOT)
-        self.assertEqual(audit.source_revision, "a74e44c92eb2baedccb3ea6eccbe92293a957fe4")
+        self.assertEqual(audit.source_revision, "dc5e257842cd40b71b9d98041abf958aab86f069")
         self.assertEqual(audit.check_count, policy.check_count)
         self.assertEqual(audit.screenshot_count, policy.screenshot_count)
         self.assertEqual(audit.capture_mode, "full-page")
-        self.assertEqual(audit.fast_run_id, "hfxv-d0afa1944820df3392c1")
-        self.assertEqual(audit.full_run_id, "hfxv-3bcd1b3f81f41b544d7c")
+        self.assertEqual(audit.fast_run_id, "hfxv-591106dafead36b83b77")
+        self.assertEqual(audit.full_run_id, "hfxv-9d9fe8246a443a155051")
         self.assertEqual(
             audit.full_source_revision,
-            "a9de5e1b89b0259c7c43ff985f4edfdf49c02642",
+            "446c2c064444e98b0f89b5ef2ee7db5e8ce546a0",
         )
 
         canonical = load_json(ROOT / "assurance" / "documentation-audit.json")
         mutations = (
             lambda value: value["render"].update(issue_count=1),
             lambda value: value["verification"].update(
-                release_gate_changes=["HFX-GATE-PUBLICATION-DECISION"]
+                release_gate_changes=[]
             ),
             lambda value: value["visual_review"]["reviewed_screenshots"].__setitem__(
                 0,
