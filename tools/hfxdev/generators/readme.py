@@ -5,6 +5,7 @@ from __future__ import annotations
 from html import escape
 from typing import Any
 
+from ..arch_repository import ArchRepositoryPolicy, repository_setup_script
 from ..distributions import DistributionCatalog
 from ..openrazer_native_route import OpenRazerNativeDeployment
 from ..source_validated_catalog import (
@@ -44,7 +45,10 @@ def release_status(readiness: dict[str, Any]) -> str:
     return f"> [!IMPORTANT]\n> **{publication['label']}.** {publication['summary']}"
 
 
-def recommended_package(catalog: DistributionCatalog) -> str:
+def recommended_package(
+    catalog: DistributionCatalog,
+    repository: ArchRepositoryPolicy,
+) -> str:
     arch = catalog.targets["arch"]
     core = arch.components["linux"]
     full = arch.components["full"]
@@ -55,13 +59,34 @@ def recommended_package(catalog: DistributionCatalog) -> str:
 The Arch Linux x86_64 packages are published in
 [GitHub Release v2.0.0](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.0).
 The signed project-operated Pacman repository is a separate machine-managed
-channel, not an official Arch Linux repository. After the one-time setup:
+channel, not an official Arch Linux repository.
 
-- Recommended: `sudo pacman -Syu hyperflux-next-full` (resolves exact Core).
-- Core only: `sudo pacman -Syu hyperflux-next-linux`.
+### 1. Add the HyperFlux repository - one time only
 
-Users do not manually select repository database or signature assets. See
-[installation](docs/user/installation.md) for the key and repository setup."""
+```bash
+{repository_setup_script(repository).rstrip()}
+```
+
+### 2. Install Full - recommended
+
+```bash
+sudo pacman -Syu hyperflux-next-full
+```
+
+Full resolves its exact Core dependency automatically. Core alone is an
+advanced alternative:
+
+```bash
+sudo pacman -Syu hyperflux-next-linux
+```
+
+### Security details
+
+The setup block pins the complete primary and signing-subkey fingerprints,
+locally writes `Required DatabaseRequired TrustedOnly`, and adds one idempotent
+Pacman include. It never downloads a configuration or executes a remote script.
+Users never manually select machine-repository assets. See
+[installation](docs/user/installation.md) for details and the local-file fallback."""
 
 
 def compatibility_summary(

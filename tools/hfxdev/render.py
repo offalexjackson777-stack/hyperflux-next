@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .arch_repository import load_arch_repository_policy
 from .assurance import load_design_coverage
 from .atlas import load_repository_atlas
 from .development import load_development_environment
@@ -273,12 +274,13 @@ def rendered_files(root: Path) -> dict[Path, str]:
     repository_atlas = load_repository_atlas(root)
     document_catalog = load_document_catalog(root)
     readiness = public_readiness(root)
+    arch_repository = load_arch_repository_policy(root)
     local_companion = load_local_companion(root)
     licensing_policy = load_licensing_policy(root)
     readme_renderers = {
         "release-status": lambda: readme_release_status(readiness),
         "recommended-package": lambda: readme_recommended_package(
-            distribution_catalog
+            distribution_catalog, arch_repository
         ),
         "compatibility-summary": lambda: readme_compatibility_summary(
             readiness, openrazer_native, source_validated_devices

@@ -31,13 +31,83 @@ available to ordinary Linux applications without replacing those applications.
 The Arch Linux x86_64 packages are published in
 [GitHub Release v2.0.0](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.0).
 The signed project-operated Pacman repository is a separate machine-managed
-channel, not an official Arch Linux repository. After the one-time setup:
+channel, not an official Arch Linux repository.
 
-- Recommended: `sudo pacman -Syu hyperflux-next-full` (resolves exact Core).
-- Core only: `sudo pacman -Syu hyperflux-next-linux`.
+### 1. Add the HyperFlux repository - one time only
 
-Users do not manually select repository database or signature assets. See
-[installation](docs/user/installation.md) for the key and repository setup.
+```bash
+set -euo pipefail
+
+expected_primary='8BF8A266E756BD1C24C930918B3F3850007159E8'
+expected_signing='4C64CE4C855BC6844B4C1670C67DD9C42253ED27'
+key_url='https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository/hyperflux-next-arch-repository-key.asc'
+key_dir="$(mktemp -d)"
+trap 'rm -rf "$key_dir"' EXIT
+key_file="$key_dir/hyperflux-next-arch-repository-key.asc"
+
+curl --disable --proto '=https' --tlsv1.2 --fail --location \
+  --silent --show-error --output "$key_file" -- "$key_url"
+mapfile -t fingerprints < <(
+  gpg --batch --with-colons --show-keys "$key_file" | \
+    awk -F: '$1 == "fpr" { print $10 }'
+)
+actual_primary="${fingerprints[0]-}"
+actual_signing="${fingerprints[1]-}"
+if [[ ${#fingerprints[@]} -ne 2 ||
+      "$actual_primary" != "$expected_primary" ||
+      "$actual_signing" != "$expected_signing" ]]; then
+  printf 'HyperFlux repository key fingerprint mismatch; no trust or config changed.\n' >&2
+  exit 1
+fi
+
+include_path='/etc/pacman.d/hyperflux-next.conf'
+include_line='Include = /etc/pacman.d/hyperflux-next.conf'
+include_count="$(sudo awk '
+  /^[[:space:]]*Include[[:space:]]*=[[:space:]]*\/etc\/pacman\.d\/hyperflux-next\.conf[[:space:]]*$/ { count++ }
+  END { print count + 0 }
+' /etc/pacman.conf)"
+section_count="$(sudo awk '
+  /^[[:space:]]*\[hyperflux-next\][[:space:]]*$/ { count++ }
+  END { print count + 0 }
+' /etc/pacman.conf)"
+if [[ "$include_count" -gt 1 || "$section_count" -gt 0 ]]; then
+  printf 'Existing HyperFlux Pacman entries conflict; no trust or config changed.\n' >&2
+  exit 1
+fi
+
+sudo pacman-key --add "$key_file"
+sudo pacman-key --lsign-key "$expected_primary"
+sudo install -d -m 0755 /etc/pacman.d
+sudo install -m 0644 /dev/stdin "$include_path" <<'EOF'
+[hyperflux-next]
+SigLevel = Required DatabaseRequired TrustedOnly
+Server = https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository
+EOF
+if [[ "$include_count" -eq 0 ]]; then
+  printf '\n%s\n' "$include_line" | sudo tee -a /etc/pacman.conf >/dev/null
+fi
+```
+
+### 2. Install Full - recommended
+
+```bash
+sudo pacman -Syu hyperflux-next-full
+```
+
+Full resolves its exact Core dependency automatically. Core alone is an
+advanced alternative:
+
+```bash
+sudo pacman -Syu hyperflux-next-linux
+```
+
+### Security details
+
+The setup block pins the complete primary and signing-subkey fingerprints,
+locally writes `Required DatabaseRequired TrustedOnly`, and adds one idempotent
+Pacman include. It never downloads a configuration or executes a remote script.
+Users never manually select machine-repository assets. See
+[installation](docs/user/installation.md) for details and the local-file fallback.
 <!-- HFX-GENERATED-END: recommended-package -->
 
 ## Hardware And Applications
