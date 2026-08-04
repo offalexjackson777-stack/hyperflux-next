@@ -36,6 +36,7 @@ channel, not an official Arch Linux repository.
 ### 1. Add the HyperFlux repository - one time only
 
 ```bash
+bash <<'HFX_REPOSITORY_SETUP'
 set -euo pipefail
 
 expected_primary='8BF8A266E756BD1C24C930918B3F3850007159E8'
@@ -86,6 +87,7 @@ EOF
 if [[ "$include_count" -eq 0 ]]; then
   printf '\n%s\n' "$include_line" | sudo tee -a /etc/pacman.conf >/dev/null
 fi
+HFX_REPOSITORY_SETUP
 ```
 
 ### 2. Install Full - recommended

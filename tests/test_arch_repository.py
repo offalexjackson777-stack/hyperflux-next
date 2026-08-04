@@ -66,6 +66,14 @@ class ArchRepositoryTests(unittest.TestCase):
     def test_displayed_setup_is_one_fail_closed_idempotent_block(self) -> None:
         policy = load_arch_repository_policy(ROOT)
         script = repository_setup_script(policy).rstrip()
+        self.assertTrue(
+            script.startswith(
+                "bash <<'HFX_REPOSITORY_SETUP'\nset -euo pipefail\n"
+            )
+        )
+        self.assertTrue(script.endswith("\nHFX_REPOSITORY_SETUP"))
+        self.assertNotEqual(script.splitlines()[0], "set -euo pipefail")
+        self.assertEqual(script.count("HFX_REPOSITORY_SETUP"), 2)
         self.assertIn(policy.primary_fingerprint, script)
         self.assertIn(policy.signing_subkey_fingerprint, script)
         self.assertIn(policy.server_url, script)
