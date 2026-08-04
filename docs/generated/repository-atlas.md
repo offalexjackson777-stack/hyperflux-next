@@ -6,7 +6,7 @@ This is the compact public index for repository ownership. The complete dependen
 
 - **Subsystems:** 33
 - **Categories:** 8
-- **Publication state:** `public-source-pre-release`
+- **Publication state:** `public-arch-release`
 
 ## Browse By Area
 

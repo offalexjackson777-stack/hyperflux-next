@@ -86,6 +86,8 @@ def load_release_context(root: Path) -> ReleaseContext:
     if value["schema"] != "hyperflux-release-gates-v3":
         raise ModelError("unsupported release-gate schema")
 
+    constitution = load_foundation(root)
+    published = constitution["publication_interlock"]["publication_authorized"]
     target = value["target"]
     if not isinstance(target, dict) or set(target) != {
         "product_version",
@@ -93,17 +95,17 @@ def load_release_context(root: Path) -> ReleaseContext:
         "state",
     }:
         raise ModelError("release target has missing or unknown fields")
-    if target != {
+    expected_target = {
         "product_version": "2.0.0",
         "package_release": 1,
-        "state": "verified-candidate",
-    }:
-        raise ModelError("release target must remain the locked 2.0.0-1 candidate")
+        "state": "published-arch-release" if published else "verified-candidate",
+    }
+    if target != expected_target:
+        raise ModelError("release target differs from the publication interlock")
 
     raw_gates = value["gates"]
     if not isinstance(raw_gates, list) or len(raw_gates) != 10:
         raise ModelError("release-gate ledger must contain exactly ten gates")
-    constitution = load_foundation(root)
     expected = constitution["publication_interlock"]["required_gate_ids"]
     gates: list[ReleaseGate] = []
     for index, raw in enumerate(raw_gates):
@@ -148,8 +150,9 @@ def load_release_context(root: Path) -> ReleaseContext:
     if [gate.id for gate in gates] != expected:
         raise ModelError("release gates must exactly match constitution order and identity")
     final = gates[-1]
-    if final.id != "HFX-GATE-PUBLICATION-DECISION" or final.status != "publication-locked":
-        raise ModelError("final publication decision must remain locked")
+    expected_final = "verified" if published else "publication-locked"
+    if final.id != "HFX-GATE-PUBLICATION-DECISION" or final.status != expected_final:
+        raise ModelError("final publication decision differs from the publication interlock")
     if any(gate.status != "verified" for gate in gates[:-1]):
         raise ModelError("every technical release gate must be verified before public cutover")
     return ReleaseContext(target=ReleaseTarget(**target), gates=tuple(gates))

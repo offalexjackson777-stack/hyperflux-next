@@ -9,7 +9,7 @@ available to ordinary Linux applications without replacing those applications.
 
 <!-- HFX-GENERATED-BEGIN: release-status -->
 > [!IMPORTANT]
-> **Pre-release.** The source is available for review; no product release, version tag, or package channel is published.
+> **Arch 2.0.0 release.** Arch Linux x86_64 Core and Full 2.0.0-1 packages are published through GitHub Release v2.0.0; no pacman repository or signing key is published.
 <!-- HFX-GENERATED-END: release-status -->
 
 ## What It Does
@@ -28,9 +28,11 @@ available to ordinary Linux applications without replacing those applications.
 
 **Full (`hyperflux-next-full`):** Core plus the OpenRazer compatibility transport and OpenRGB integration for optional stock applications.
 
-No public package channel exists yet, so there is no supported install command.
-See [installation](docs/user/installation.md) and the
-[distribution roadmap](docs/project/roadmap.md) for current availability.
+The Arch Linux x86_64 packages are published in
+[GitHub Release v2.0.0](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.0).
+There is no pacman repository yet: verify `SHA256SUMS`, then install the two
+downloaded files together with `pacman -U`. See
+[installation](docs/user/installation.md) for the exact command.
 <!-- HFX-GENERATED-END: recommended-package -->
 
 ## Hardware And Applications

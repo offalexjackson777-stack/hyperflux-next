@@ -7,7 +7,7 @@ from pathlib import Path, PurePosixPath
 import re
 from typing import Any
 
-from .model import ModelError, load_json, require_unique
+from .model import ModelError, load_foundation, load_json, require_unique
 
 
 STATUSES = {
@@ -124,6 +124,10 @@ def load_design_coverage(root: Path) -> tuple[DesignCoverageEntry, ...]:
         )
     if [entry.section for entry in entries] != list(range(1, 68)):
         raise ModelError("design coverage entries must be ordered sections 1 through 67")
-    if entries[-1].status != "publication-locked" or not entries[-1].release_blocking:
-        raise ModelError("final success must remain publication-locked and release-blocking")
+    published = load_foundation(root)["publication_interlock"]["publication_authorized"]
+    if published:
+        if entries[-1].status != "software-verified" or entries[-1].release_blocking:
+            raise ModelError("published final success must be verified and non-blocking")
+    elif entries[-1].status != "publication-locked" or not entries[-1].release_blocking:
+        raise ModelError("unpublished final success must remain publication-locked")
     return tuple(entries)

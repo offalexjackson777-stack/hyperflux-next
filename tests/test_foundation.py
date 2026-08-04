@@ -28,8 +28,8 @@ class FoundationTests(unittest.TestCase):
     def test_design_book_has_one_truthful_coverage_entry_per_section(self) -> None:
         entries = load_design_coverage(ROOT)
         self.assertEqual([entry.section for entry in entries], list(range(1, 68)))
-        self.assertEqual(entries[-1].status, "publication-locked")
-        self.assertTrue(entries[-1].release_blocking)
+        self.assertEqual(entries[-1].status, "software-verified")
+        self.assertFalse(entries[-1].release_blocking)
 
     def test_incomplete_design_sections_name_remaining_work(self) -> None:
         entries = load_design_coverage(ROOT)
@@ -49,11 +49,11 @@ class FoundationTests(unittest.TestCase):
         self.assertEqual(direction[-1], "receiver")
         self.assertEqual(len(direction), len(set(direction)))
 
-    def test_publication_is_explicitly_locked(self) -> None:
+    def test_publication_is_explicitly_recorded(self) -> None:
         constitution = load_foundation(ROOT)
         interlock = constitution["publication_interlock"]
         self.assertTrue(interlock["remote_repository_created"])
-        self.assertFalse(interlock["publication_authorized"])
+        self.assertTrue(interlock["publication_authorized"])
         self.assertIn("HFX-GATE-PUBLICATION-DECISION", interlock["required_gate_ids"])
 
     def test_every_component_has_positive_and_negative_ownership(self) -> None:

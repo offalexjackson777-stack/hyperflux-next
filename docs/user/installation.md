@@ -11,17 +11,30 @@ OpenRGB remain separate, optional distribution packages.
 
 ## Availability
 
-No public package channel exists yet, so this repository does not publish a
-supported install command. Release artifacts, a version tag, and signing-key
-distribution remain separate decisions.
+Arch Linux x86_64 Core and Full packages are published in
+[GitHub Release v2.0.0](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.0).
+There is no pacman repository yet, so `pacman -S hyperflux-next-full` is not
+available. Download both package files and `SHA256SUMS`, then verify and install
+the exact local files:
+
+```bash
+sha256sum -c SHA256SUMS
+sudo pacman -U -- \
+  ./hyperflux-next-linux-2.0.0-1-x86_64.pkg.tar.zst \
+  ./hyperflux-next-full-2.0.0-1-x86_64.pkg.tar.zst
+```
+
+The assets are unsigned. Check the published SHA-256 values; no private signing
+key is published.
 
 ## Safe Desktop Lifecycle
 
-When packages become available, the normal receiver-only desktop path is:
+The normal receiver-only desktop path is:
 
 1. Keep the receiver and devices connected.
-2. Install Core or Full through the native package manager.
-3. Enable the documented bridge and per-user socket services.
+2. Install Core and Full together with the command above.
+3. Enable the bridge and per-user socket services:
+   `sudo systemctl enable hyperflux-next-bridge.service "hyperflux-next-client@$(id -u).socket"`.
 4. Reboot normally.
 5. Run `hyperfluxctl status` and `hyperfluxctl doctor` after login.
 

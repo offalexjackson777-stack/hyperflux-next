@@ -62,17 +62,17 @@ class AssuranceTests(unittest.TestCase):
             document["documentNamespace"].endswith(self.inventory.authority_sha256)
         )
 
-    def test_release_gates_match_constitution_and_keep_publication_locked(self) -> None:
+    def test_release_gates_match_constitution_and_record_publication(self) -> None:
         context = load_release_context(ROOT)
         gates = context.gates
         self.assertEqual(load_release_gates(ROOT), gates)
         self.assertEqual(len(gates), 10)
         self.assertEqual(context.target.product_version, "2.0.0")
         self.assertEqual(context.target.package_release, 1)
-        self.assertEqual(context.target.state, "verified-candidate")
-        self.assertTrue(all(gate.status == "verified" for gate in gates[:-1]))
+        self.assertEqual(context.target.state, "published-arch-release")
+        self.assertTrue(all(gate.status == "verified" for gate in gates))
         self.assertEqual(gates[-1].id, "HFX-GATE-PUBLICATION-DECISION")
-        self.assertEqual(gates[-1].status, "publication-locked")
+        self.assertEqual(gates[-1].status, "verified")
         self.assertTrue(gates[-1].publication_authorization_required)
 
     def test_protected_behavior_freezes_claims_and_the_natural_wake_gap(self) -> None:

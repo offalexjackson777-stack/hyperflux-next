@@ -37,6 +37,7 @@ def public_readiness(root: Path) -> dict[str, Any]:
     known_gaps = sum(len(candidate["knowledge_gaps"]) for candidate in candidates)
     hardware_gate_label = "gate" if hardware_remaining == 1 else "gates"
     lifecycle_gate_label = "gate" if lifecycle_remaining == 1 else "gates"
+    published = atlas.publication_state == "public-arch-release"
     return {
         "$schema": "../schemas/public-readiness.schema.json",
         "schema": "hyperflux-public-readiness-v3",
@@ -47,11 +48,15 @@ def public_readiness(root: Path) -> dict[str, Any]:
             "integrations/native-route/source-validated.json",
         ],
         "publication": {
-            "state": "locked",
-            "label": "Pre-release",
+            "state": "ready" if published else "locked",
+            "label": "Arch 2.0.0 release" if published else "Pre-release",
             "summary": (
-                "The source is available for review; no product release, version tag, "
-                "or package channel is published."
+                "Arch Linux x86_64 Core and Full 2.0.0-1 packages are published "
+                "through GitHub Release v2.0.0; no pacman repository or signing key "
+                "is published."
+                if published
+                else "The source is available for review; no product release, version "
+                "tag, or package channel is published."
             ),
         },
         "software": {
@@ -90,7 +95,12 @@ def public_readiness(root: Path) -> dict[str, Any]:
             "reviewed_facts": reviewed_facts,
             "known_gaps": known_gaps,
             "summary": (
-                f"The 2.0 candidate retains {hardware_remaining} physical "
+                f"The 2.0 release retains {hardware_remaining} physical "
+                f"{hardware_gate_label} and {lifecycle_remaining} lifecycle "
+                f"{lifecycle_gate_label}; publication was authorized separately from "
+                "technical verification."
+                if published
+                else f"The 2.0 candidate retains {hardware_remaining} physical "
                 f"{hardware_gate_label} and {lifecycle_remaining} lifecycle "
                 f"{lifecycle_gate_label}; technical evidence does not authorize publication."
             ),

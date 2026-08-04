@@ -4,7 +4,7 @@
   "target": {
     "product_version": "2.0.0",
     "package_release": 1,
-    "state": "verified-candidate"
+    "state": "published-arch-release"
   },
   "gates": [
     {
@@ -100,10 +100,10 @@
     {
       "id": "HFX-GATE-PUBLICATION-DECISION",
       "title": "Explicit publication decision",
-      "status": "publication-locked",
+      "status": "verified",
       "criteria": ["Every preceding release-blocking gate is satisfied.", "A human publication decision explicitly authorizes the chosen channel and artifacts."],
       "evidence": ["architecture/constitution.json", "assurance/release-gates.json"],
-      "remaining": ["Product publication remains unauthorized. Do not create a release, tag, package channel, or supported-product claim from software evidence alone."],
+      "remaining": [],
       "physical_evidence_required": true,
       "publication_authorization_required": true
     }

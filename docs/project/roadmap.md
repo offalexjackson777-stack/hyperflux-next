@@ -3,14 +3,18 @@
 HyperFlux Next 2.0 keeps a lean Core package and an integration-complete Full
 package while preserving stock OpenRazer, Polychromatic, and OpenRGB ownership.
 
-## Current Work
+## Current Release
 
-1. Establish the clean, verified public source tree.
-2. Qualify native distribution backends independently, with Arch as the
-   reference implementation.
+HyperFlux Next 2.0.0-1 is published for Arch Linux x86_64 as reproducible Core
+and Full packages. The GitHub Release is the current package channel; a native
+pacman repository and signed package channel remain future work.
+
+## Future Targets
+
+1. Maintain the verified Arch reference backend.
+2. Evaluate other native distribution backends independently.
 3. Advance each distribution only through evidence it actually has.
-4. Make a separate decision about release artifacts, package channels, tags,
-   and signing keys.
+4. Add signing and native package channels only after separate review.
 
 ## Continuing Boundaries
 

@@ -50,7 +50,7 @@
       "properties": {
         "local_first": {"const": true},
         "remote_repository_created": {"const": true},
-        "publication_authorized": {"const": false},
+        "publication_authorized": {"const": true},
         "required_gate_ids": {
           "type": "array",
           "minItems": 1,
