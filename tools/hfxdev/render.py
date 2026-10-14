@@ -99,6 +99,7 @@ from .generators.openrazer_native import (
     markdown as openrazer_native_markdown,
     relay_service as openrazer_native_relay_service,
     rust_constants as openrazer_native_rust_constants,
+    modules_load as openrazer_native_modules_load,
     sysusers as openrazer_native_sysusers,
 )
 from .generators.profiles import (
@@ -482,6 +483,12 @@ def rendered_files(root: Path) -> dict[Path, str]:
             openrazer_native, linux_runtime
         ),
         root / "packaging" / "generated" / "openrazer.sysusers": openrazer_native_sysusers(
+            openrazer_native
+        ),
+        root
+        / "packaging"
+        / "generated"
+        / "hyperflux-next-openrazer.modules-load.conf": openrazer_native_modules_load(
             openrazer_native
         ),
         root / "packaging" / "generated" / "hyperflux-next.sysusers": sysusers(linux_runtime),

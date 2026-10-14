@@ -58,7 +58,11 @@ from hfxdev.openrazer_native_route import (
 )
 from hfxdev.generators.integrations import python_openrazer_metadata
 from hfxdev.generators.linux_runtime import systemd_service
-from hfxdev.generators.openrazer_native import driver_preflight_service, relay_service
+from hfxdev.generators.openrazer_native import (
+    driver_preflight_service,
+    modules_load,
+    relay_service,
+)
 from hfxdev.linux_runtime import load_linux_runtime
 from hfxdev.openrazer_native_route import load_native_deployment
 from hfxdev.profiles import load_profile_inputs
@@ -545,6 +549,14 @@ class IntegrationCatalogTests(unittest.TestCase):
             service,
         )
         self.assertIn("Before=systemd-user-sessions.service", service)
+        # REL-003: the native drivers load at boot, so the first virtual Razer
+        # device is never bound by hid-generic and re-probed under the relay.
+        boot_modules = [
+            line for line in modules_load(deployment).splitlines() if line and not line.startswith("#")
+        ]
+        self.assertEqual(boot_modules, list(deployment.driver.modules))
+        self.assertIn("razerkbd", boot_modules)
+        self.assertIn("razermouse", boot_modules)
         self.assertIn(
             f"SupplementaryGroups={runtime.bridge.client_group}", service
         )

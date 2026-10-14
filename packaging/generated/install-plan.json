@@ -1,6 +1,6 @@
 {
   "schema": "hyperflux-compiled-install-plan-v2",
-  "install_manifest_sha256": "28a323af2902620bd7a9f46da6c8a2d361df85ac48c19c505942e1c1b88d9d15",
+  "install_manifest_sha256": "b3fe0b89c07ec4c3f00c489b68023e51645dfdb05a8af828567b82e3bd51f787",
   "product": {
     "name": "hyperflux-next-linux",
     "version": "2.0.0",
@@ -284,6 +284,14 @@
       "distribution_component": "full",
       "source": "packaging/generated/openrazer.sysusers",
       "destination": "/usr/lib/sysusers.d/openrazer.conf",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "openrazer-native-modules-load",
+      "distribution_component": "full",
+      "source": "packaging/generated/hyperflux-next-openrazer.modules-load.conf",
+      "destination": "/usr/lib/modules-load.d/hyperflux-next-openrazer.conf",
       "mode": "0644",
       "preserve": false
     },

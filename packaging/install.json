@@ -189,6 +189,16 @@
       "include": []
     },
     {
+      "id": "openrazer-native-modules-load",
+      "distribution_component": "full",
+      "kind": "file",
+      "source": "packaging/generated/hyperflux-next-openrazer.modules-load.conf",
+      "destination": "/usr/lib/modules-load.d/hyperflux-next-openrazer.conf",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
       "id": "full-bridge-integration-drop-in",
       "distribution_component": "full",
       "kind": "file",

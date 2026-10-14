@@ -39,6 +39,7 @@ FORBIDDEN_CORE_PREFIXES = (
 )
 FULL_REQUIRED_FILES = {
     "usr/lib/hyperflux-next/hyperflux-next-uhid-relay",
+    "usr/lib/modules-load.d/hyperflux-next-openrazer.conf",
     "usr/lib/openrgb/plugins/hyperflux-next-openrgb.so",
     "usr/lib/systemd/system/hyperflux-next-bridge.service.d/50-full.conf",
     "usr/lib/systemd/system/hyperflux-next-openrazer-driver-preflight.service",

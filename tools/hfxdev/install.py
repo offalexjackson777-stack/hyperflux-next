@@ -642,6 +642,16 @@ def _check_cross_contract(
         or openrazer_group.preserve
     ):
         raise ModelError("OpenRazer native system group is missing from the package")
+    modules_load = payload_by_id.get("openrazer-native-modules-load")
+    if (
+        modules_load is None
+        or modules_load.distribution_component != "full"
+        or modules_load.source != "packaging/generated/hyperflux-next-openrazer.modules-load.conf"
+        or modules_load.destination != "/usr/lib/modules-load.d/hyperflux-next-openrazer.conf"
+        or modules_load.mode != 0o644
+        or modules_load.preserve
+    ):
+        raise ModelError("OpenRazer native boot module list is missing from the package")
     configuration = payload_by_id.get("default-configuration")
     if (
         configuration is None
@@ -670,6 +680,7 @@ def _check_cross_contract(
         "openrazer-native-relay-service",
         "openrazer-native-driver-preflight-service",
         "openrazer-system-group",
+        "openrazer-native-modules-load",
         "full-bridge-integration-drop-in",
         "full-component-descriptor",
         "openrgb-license",
