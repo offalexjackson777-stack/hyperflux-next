@@ -239,6 +239,38 @@ fn exactly_two_matching_source_serial_reads_publish_one_endpoint() {
 }
 
 #[test]
+fn fresh_evidence_resets_only_a_backing_off_publication_once() {
+    let now = Instant::now();
+
+    // Backing off after a retryable failure: fresh evidence probes next tick.
+    let (bridge, _) = publication_bridge(Vec::new());
+    let mut backing_off =
+        PendingPublication::retrying(bridge, PublicationIdentityFailure::Status(0x04), now);
+    assert_eq!(backing_off.gate.state(), RelayPublicationState::BackingOff);
+    let later = now + Duration::from_millis(5);
+    backing_off.fresh_evidence(later);
+    assert!(backing_off.gate.due(later), "the next tick probes");
+    assert_eq!(
+        backing_off.gate.attempts, 1,
+        "a later failure keeps normal backoff"
+    );
+
+    // Healthy (pending, no failure) and terminal publications are untouched.
+    let (bridge, _) = publication_bridge(Vec::new());
+    let mut healthy = PendingPublication::new(bridge, now);
+    let probe_before = healthy.gate.next_probe;
+    healthy.fresh_evidence(later);
+    assert_eq!(healthy.gate.next_probe, probe_before);
+
+    let (bridge, _) = publication_bridge(Vec::new());
+    let mut blocked = PendingPublication::new(bridge, now);
+    blocked.block(PublicationIdentityFailure::CrcMismatch);
+    blocked.fresh_evidence(later);
+    assert!(blocked.terminal_failure.is_some());
+    assert!(!blocked.ready());
+}
+
+#[test]
 fn kernel_binding_stop_republishes_on_the_same_bridge_instead_of_blocking() {
     // REL-003: at boot hid-generic can bind the first virtual device and then be
     // re-probed away by a late-loading OpenRazer module, stopping the device.

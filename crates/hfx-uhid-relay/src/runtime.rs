@@ -552,6 +552,21 @@ impl<B: crate::BridgeExchange> PendingPublication<B> {
         }
     }
 
+    /// Fresh qualified evidence resets a retryable backoff once so the next
+    /// tick probes; healthy, pass-one, blocked, terminal, and direct-suppressed
+    /// publications are left exactly as they are (REL-021).
+    fn fresh_evidence(&mut self, now: Instant) {
+        if self.bridge.is_some()
+            && self.terminal_failure.is_none()
+            && !self.direct_suppressed
+            && self.ready_fingerprint.is_none()
+            && self.gate.state() == RelayPublicationState::BackingOff
+        {
+            self.gate.next_probe = now;
+            self.gate.next_delay = Duration::ZERO;
+        }
+    }
+
     fn direct_scan_failed(&mut self) {
         if self.ready_fingerprint.take().is_some() {
             self.gate.fail(
@@ -685,6 +700,12 @@ impl ManagedRoute {
                 endpoint.destroy();
             }
             self.publication.block(failure);
+        }
+    }
+
+    fn fresh_evidence(&mut self, now: Instant) {
+        if self.endpoint.is_none() {
+            self.publication.fresh_evidence(now);
         }
     }
 
@@ -1048,6 +1069,11 @@ fn apply_actions(
                         },
                     );
                     route.destroy();
+                }
+            }
+            RouteAction::FreshEvidence { identity } => {
+                if let Some(route) = routes.get_mut(&identity) {
+                    route.fresh_evidence(Instant::now());
                 }
             }
             RouteAction::Start {

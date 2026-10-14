@@ -463,6 +463,18 @@ impl LinuxRuntimeManager {
             }
         }
         if let Some(readiness) = translation.restore_ready {
+            if readiness.phase == DeviceRestoreReadinessPhase::EpochOpened {
+                // REL-021: let route consumers act on the newer epoch at once
+                // instead of waiting out a stale publication backoff.
+                backend
+                    .refresh_native_routes_for_return_epoch(
+                        receiver_id,
+                        generation_id,
+                        &readiness.device_id,
+                        readiness.epoch_sequence,
+                    )
+                    .map_err(RuntimeTickError::NativeRoutes)?;
+            }
             match readiness.phase {
                 DeviceRestoreReadinessPhase::EpochOpened => {
                     self.restoration.schedule_device_return_epoch_at(

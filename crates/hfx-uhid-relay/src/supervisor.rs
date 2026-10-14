@@ -42,6 +42,11 @@ pub enum RouteAction {
     Stop {
         identity: RouteIdentity,
     },
+    /// The exact active route reported fresh availability evidence; the
+    /// endpoint is kept and only a backing-off publication may retry early.
+    FreshEvidence {
+        identity: RouteIdentity,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -167,6 +172,11 @@ impl RouteSupervisor {
                 )?;
             }
             NativeRouteEventKind::Available => {
+                if self.active.get(&identity) == Some(&event.route) {
+                    actions.push(RouteAction::FreshEvidence { identity });
+                    self.last_sequence = Some(event.sequence);
+                    return Ok(actions);
+                }
                 if let Some(previous) = self.active.get(&identity)
                     && previous != &event.route
                 {
@@ -497,6 +507,40 @@ mod tests {
         assert!(matches!(actions.first(), Some(RouteAction::Stop { .. })));
         assert!(matches!(actions.get(1), Some(RouteAction::Start { .. })));
         assert_eq!(actions.len(), 2);
+    }
+
+    #[test]
+    fn identical_available_event_is_fresh_evidence_not_a_restart() {
+        // REL-021: a refresh for the active route must not recreate its endpoint.
+        let catalog = NativeRouteCatalog::load().expect("catalog loads");
+        let mut supervisor = RouteSupervisor::default();
+        let available = route(
+            "receiver-1",
+            "mouse-1",
+            1,
+            0x00cd,
+            DeviceKind::Mouse,
+            NativeRouteAccess::Qualified,
+            NativeRouteState::Available,
+        );
+        supervisor
+            .reconcile(&inventory(10, vec![available.clone()]), &catalog)
+            .expect("initial inventory reconciles");
+        let actions = supervisor
+            .apply_event(
+                &NativeRouteEvent {
+                    sequence: SequenceNumber::try_from(11_u64).expect("sequence is valid"),
+                    kind: NativeRouteEventKind::Available,
+                    route: available,
+                },
+                &catalog,
+            )
+            .expect("refresh applies");
+        assert!(matches!(
+            actions.as_slice(),
+            [RouteAction::FreshEvidence { .. }]
+        ));
+        assert_eq!(supervisor.active_identities().len(), 1);
     }
 
     #[test]

@@ -35,6 +35,25 @@ where
     R: RestorationRuntime,
     S: EventSink,
 {
+    /// Publishes one native-route `Available` refresh for a strictly newer
+    /// device return epoch (REL-021).
+    ///
+    /// # Errors
+    ///
+    /// Returns a canonical route failure without changing the journal.
+    pub fn refresh_native_routes_for_return_epoch(
+        &mut self,
+        receiver_id: &hfx_domain::ReceiverId,
+        generation_id: hfx_domain::GenerationId,
+        device_id: &hfx_domain::LogicalDeviceId,
+        epoch: hfx_domain::SequenceNumber,
+    ) -> Result<(), RpcFailure> {
+        self.native_routes
+            .refresh_for_return_epoch(receiver_id, generation_id, device_id, epoch)
+            .map(|_| ())
+            .map_err(native_route_failure)
+    }
+
     pub(super) fn synchronize_native_routes(&mut self) -> Result<(), RpcFailure> {
         let previous = self.native_routes.inventory().routes;
         let mut routes = project_native_routes(

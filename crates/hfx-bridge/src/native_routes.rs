@@ -75,6 +75,8 @@ pub struct NativeRouteJournal {
     events: VecDeque<NativeRouteEvent>,
     latest: SequenceNumber,
     dropped: DroppedEventCount,
+    /// Last return epoch acted on per route, with the generation it belongs to.
+    return_epochs: BTreeMap<NativeRouteKey, (hfx_domain::GenerationId, SequenceNumber)>,
 }
 
 impl NativeRouteJournal {
@@ -111,6 +113,7 @@ impl NativeRouteJournal {
                 .map_err(|_| NativeRouteJournalError::SequenceExhausted)?,
             dropped: DroppedEventCount::try_from(0_u64)
                 .map_err(|_| NativeRouteJournalError::DropCounterExhausted)?,
+            return_epochs: BTreeMap::new(),
         })
     }
 
@@ -172,7 +175,66 @@ impl NativeRouteJournal {
             }
         }
         self.current = incoming;
+        // Unavailability, withdrawal, or generation replacement forgets the
+        // remembered return epoch.
+        let current = &self.current;
+        self.return_epochs.retain(|key, (generation, _)| {
+            current.get(key).is_some_and(|route| {
+                route.generation_id == *generation
+                    && route.access == NativeRouteAccess::Qualified
+                    && route.route_state == NativeRouteState::Available
+            })
+        });
         Ok(())
+    }
+
+    /// Records a strictly newer device return epoch by appending one ordinary
+    /// `Available` refresh for each unchanged, available, qualified route of
+    /// that exact device and generation, so consumers act on fresh evidence
+    /// instead of waiting out a stale retry timer (REL-021). Duplicate or older
+    /// epochs, other generations, siblings, and unavailable routes are no-ops.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed sequence or drop-counter failure without partially
+    /// changing the journal.
+    pub fn refresh_for_return_epoch(
+        &mut self,
+        receiver_id: &ReceiverId,
+        generation_id: hfx_domain::GenerationId,
+        device_id: &hfx_domain::LogicalDeviceId,
+        epoch: SequenceNumber,
+    ) -> Result<usize, NativeRouteJournalError> {
+        let mut next = self.clone();
+        let mut refreshed = 0;
+        let candidates = next
+            .current
+            .iter()
+            .filter(|(_, route)| {
+                &route.receiver_id == receiver_id
+                    && route.generation_id == generation_id
+                    && &route.device_id == device_id
+                    && route.access == NativeRouteAccess::Qualified
+                    && route.route_state == NativeRouteState::Available
+            })
+            .map(|(key, route)| (key.clone(), route.clone()))
+            .collect::<Vec<_>>();
+        for (key, route) in candidates {
+            if next
+                .return_epochs
+                .get(&key)
+                .is_some_and(|(generation, last)| {
+                    *generation == generation_id && last.get() >= epoch.get()
+                })
+            {
+                continue;
+            }
+            next.return_epochs.insert(key, (generation_id, epoch));
+            next.append(NativeRouteEventKind::Available, route)?;
+            refreshed += 1;
+        }
+        *self = next;
+        Ok(refreshed)
     }
 
     fn bind_route_authority(
@@ -416,6 +478,93 @@ mod tests {
             route_token: None,
             resource: None,
         }
+    }
+
+    #[test]
+    fn newer_return_epoch_refreshes_an_unchanged_available_route_exactly_once() {
+        // REL-021: a device returning to an unchanged route must reach consumers.
+        let (mut journal, mut identities) = journal(16);
+        let available = route(1, NativeRouteAccess::Qualified, NativeRouteState::Available);
+        journal
+            .synchronize(vec![available.clone()], &mut identities)
+            .expect("route synchronizes");
+        let receiver = available.receiver_id.clone();
+        let device = available.device_id.clone();
+        let generation = available.generation_id;
+        let epoch = |value: u64| SequenceNumber::try_from(value).expect("epoch is valid");
+        let before = journal.cursor().sequence.get();
+
+        assert_eq!(
+            journal.refresh_for_return_epoch(&receiver, generation, &device, epoch(5)),
+            Ok(1)
+        );
+        assert_eq!(journal.cursor().sequence.get(), before + 1);
+        // Duplicate and older epochs are no-ops.
+        assert_eq!(
+            journal.refresh_for_return_epoch(&receiver, generation, &device, epoch(5)),
+            Ok(0)
+        );
+        assert_eq!(
+            journal.refresh_for_return_epoch(&receiver, generation, &device, epoch(4)),
+            Ok(0)
+        );
+        // A sibling device and another generation are no-ops.
+        let sibling = text("keyboard-1");
+        assert_eq!(
+            journal.refresh_for_return_epoch(&receiver, generation, &sibling, epoch(9)),
+            Ok(0)
+        );
+        let other = GenerationId::try_from(2_u64).expect("generation is valid");
+        assert_eq!(
+            journal.refresh_for_return_epoch(&receiver, other, &device, epoch(9)),
+            Ok(0)
+        );
+        assert_eq!(journal.cursor().sequence.get(), before + 1);
+        // A strictly newer epoch refreshes again.
+        assert_eq!(
+            journal.refresh_for_return_epoch(&receiver, generation, &device, epoch(6)),
+            Ok(1)
+        );
+    }
+
+    #[test]
+    fn unavailable_routes_ignore_return_epochs_and_forget_the_last_one() {
+        let (mut journal, mut identities) = journal(16);
+        let available = route(1, NativeRouteAccess::Qualified, NativeRouteState::Available);
+        let receiver = available.receiver_id.clone();
+        let device = available.device_id.clone();
+        let epoch = SequenceNumber::try_from(7_u64).expect("epoch is valid");
+        journal
+            .synchronize(vec![available.clone()], &mut identities)
+            .expect("route synchronizes");
+        assert_eq!(
+            journal.refresh_for_return_epoch(&receiver, available.generation_id, &device, epoch),
+            Ok(1)
+        );
+
+        journal
+            .synchronize(
+                vec![route(
+                    1,
+                    NativeRouteAccess::Qualified,
+                    NativeRouteState::TemporarilyUnavailable,
+                )],
+                &mut identities,
+            )
+            .expect("route becomes unavailable");
+        assert_eq!(
+            journal.refresh_for_return_epoch(&receiver, available.generation_id, &device, epoch),
+            Ok(0)
+        );
+
+        journal
+            .synchronize(vec![available.clone()], &mut identities)
+            .expect("route returns");
+        assert_eq!(
+            journal.refresh_for_return_epoch(&receiver, available.generation_id, &device, epoch),
+            Ok(1),
+            "unavailability cleared the remembered epoch"
+        );
     }
 
     #[test]
