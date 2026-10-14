@@ -158,8 +158,8 @@
       {
         "id": "build-push",
         "repository": "docker/build-push-action",
-        "version": "v7.3.0",
-        "commit": "53b7df96c91f9c12dcc8a07bcb9ccacbed38856a",
+        "version": "v7.4.0",
+        "commit": "c3c9e263c25d99ce0380d002d59b67737d91b0dc",
         "license_expression": "Apache-2.0"
       },
       {
@@ -172,15 +172,15 @@
       {
         "id": "checkout",
         "repository": "actions/checkout",
-        "version": "v7.0.0",
-        "commit": "9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+        "version": "v7.0.1",
+        "commit": "3d3c42e5aac5ba805825da76410c181273ba90b1",
         "license_expression": "MIT"
       },
       {
         "id": "codeql",
         "repository": "github/codeql-action",
-        "version": "v4.37.1",
-        "commit": "7188fc363630916deb702c7fdcf4e481b751f97a",
+        "version": "v4.38.3",
+        "commit": "24c54180a607b1449ed407dd24f251e4e9147c8d",
         "license_expression": "MIT"
       },
       {
@@ -193,15 +193,15 @@
       {
         "id": "setup-buildx",
         "repository": "docker/setup-buildx-action",
-        "version": "v4.2.0",
-        "commit": "bb05f3f5519dd87d3ba754cc423b652a5edd6d2c",
+        "version": "v4.4.1",
+        "commit": "f87e5991a6d7451dcb8d9637bfbc97413f497069",
         "license_expression": "Apache-2.0"
       },
       {
         "id": "upload-artifact",
         "repository": "actions/upload-artifact",
-        "version": "v7.0.1",
-        "commit": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+        "version": "v7.0.2",
+        "commit": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
         "license_expression": "MIT"
       }
     ]

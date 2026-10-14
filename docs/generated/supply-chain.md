@@ -14,7 +14,7 @@ The Arch package channel publishes package and repository signatures. This sourc
 - Vendored source packages: 1
 - Pinned application upstreams: 3
 - Immutable workflow actions: 7
-- Authority SHA-256: `800f6888e453ba2af7e2661b67afc11d485ae509a1591fc46966ce2b78f4fdd0`
+- Authority SHA-256: `0439ce3d4428c85022692626b602e7af81fb80ac3f9564678f0853788f37e20c`
 
 ## License Policy
 
@@ -41,10 +41,10 @@ It describes source and build dependencies; a future authorized release must add
 
 | Action | Reviewed version | Commit | License |
 | --- | --- | --- | --- |
-| `docker/build-push-action` | `v7.3.0` | `53b7df96c91f9c12dcc8a07bcb9ccacbed38856a` | `Apache-2.0` |
+| `docker/build-push-action` | `v7.4.0` | `c3c9e263c25d99ce0380d002d59b67737d91b0dc` | `Apache-2.0` |
 | `actions/cache` | `v6.1.0` | `55cc8345863c7cc4c66a329aec7e433d2d1c52a9` | `MIT` |
-| `actions/checkout` | `v7.0.0` | `9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0` | `MIT` |
-| `github/codeql-action` | `v4.37.1` | `7188fc363630916deb702c7fdcf4e481b751f97a` | `MIT` |
+| `actions/checkout` | `v7.0.1` | `3d3c42e5aac5ba805825da76410c181273ba90b1` | `MIT` |
+| `github/codeql-action` | `v4.38.3` | `24c54180a607b1449ed407dd24f251e4e9147c8d` | `MIT` |
 | `actions/dependency-review-action` | `v5.0.0` | `a1d282b36b6f3519aa1f3fc636f609c47dddb294` | `MIT` |
-| `docker/setup-buildx-action` | `v4.2.0` | `bb05f3f5519dd87d3ba754cc423b652a5edd6d2c` | `Apache-2.0` |
-| `actions/upload-artifact` | `v7.0.1` | `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a` | `MIT` |
+| `docker/setup-buildx-action` | `v4.4.1` | `f87e5991a6d7451dcb8d9637bfbc97413f497069` | `Apache-2.0` |
+| `actions/upload-artifact` | `v7.0.2` | `cf430e030ddbb5b0abf93d22962f4752f3646cd9` | `MIT` |
