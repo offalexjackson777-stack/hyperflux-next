@@ -497,6 +497,28 @@ class RepositoryExperienceContracts(unittest.TestCase):
 
         self.assertEqual(result["checked_spdx_files"], 1)
 
+    def test_license_scan_ignores_untracked_build_and_environment_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "governance").mkdir()
+            shutil.copy2(ROOT / "governance" / "licensing.json", root / "governance")
+            shutil.copy2(ROOT / "LICENSE", root / "LICENSE")
+            shutil.copytree(ROOT / "LICENSES", root / "LICENSES")
+            for stray in (
+                ".venv/lib/site.py",
+                "integrations/x/build/lib/module.py",
+                "tools/__pycache__/cached.py",
+            ):
+                path = root / stray
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("# SPDX-License-Identifier: Apache-2.0\n", encoding="utf-8")
+            verify_licensing_policy(root)
+
+            source = root / "tools" / "real.py"
+            source.write_text("# SPDX-License-Identifier: Apache-2.0\n", encoding="utf-8")
+            with self.assertRaisesRegex(ModelError, "license policy mismatch"):
+                verify_licensing_policy(root)
+
     def test_ambiguous_root_license_document_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

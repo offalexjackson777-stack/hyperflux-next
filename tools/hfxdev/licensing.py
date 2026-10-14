@@ -101,7 +101,9 @@ def verify_licensing_policy(root: Path) -> dict[str, Any]:
         raise ModelError("root LICENSE does not match the declared GPL-2.0-only text")
     checked = 0
     mismatches: list[str] = []
-    ignored_roots = {".git", ".hfx", "build", "target", "LICENSES"}
+    # Same untracked/generated directory names the other repository walkers
+    # skip, at any depth, so local virtualenvs and build outputs never count.
+    ignored_names = {".git", ".hfx", ".venv", "__pycache__", "build", "dist", "target"}
     for directory, directories, filenames in os.walk(
         root, topdown=True, followlinks=False
     ):
@@ -110,7 +112,8 @@ def verify_licensing_policy(root: Path) -> dict[str, Any]:
             name
             for name in directories
             if not (current / name).is_symlink()
-            and (current != root or name not in ignored_roots)
+            and name not in ignored_names
+            and (current != root or name != "LICENSES")
         )
         for filename in sorted(filenames):
             path = current / filename
