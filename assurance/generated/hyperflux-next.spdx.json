@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "HyperFlux Next source dependency inventory",
-  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/f49f163f902624710ed8fab9813e48fad6612795118cedbe9620cff083bcf646",
+  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/800f6888e453ba2af7e2661b67afc11d485ae509a1591fc46966ce2b78f4fdd0",
   "creationInfo": {
     "created": "2026-07-20T00:00:00Z",
     "creators": [
@@ -664,9 +664,9 @@
       "comment": "Checksummed Cargo.lock registry dependency."
     },
     {
-      "SPDXID": "SPDXRef-Cargo-rustix-1.1.4",
+      "SPDXID": "SPDXRef-Cargo-rustix-1.1.5",
       "name": "rustix",
-      "versionInfo": "1.1.4",
+      "versionInfo": "1.1.5",
       "downloadLocation": "https://crates.io/",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
@@ -675,14 +675,14 @@
       "checksums": [
         {
           "algorithm": "SHA256",
-          "checksumValue": "b6fe4565b9518b83ef4f91bb47ce29620ca828bd32cb7e408f0062e9930ba190"
+          "checksumValue": "891efababe418670775f199f0d233d84843c227a0949a883ce15b37c78d6629d"
         }
       ],
       "externalRefs": [
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:cargo/rustix@1.1.4"
+          "referenceLocator": "pkg:cargo/rustix@1.1.5"
         }
       ],
       "comment": "Checksummed Cargo.lock registry dependency."
@@ -760,9 +760,9 @@
       "comment": "Checksummed Cargo.lock registry dependency."
     },
     {
-      "SPDXID": "SPDXRef-Cargo-serde-json-1.0.150",
+      "SPDXID": "SPDXRef-Cargo-serde-json-1.0.152",
       "name": "serde_json",
-      "versionInfo": "1.0.150",
+      "versionInfo": "1.0.152",
       "downloadLocation": "https://crates.io/",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
@@ -771,14 +771,14 @@
       "checksums": [
         {
           "algorithm": "SHA256",
-          "checksumValue": "e8014e44b4736ed0538adeecded0fce2a272f22dc9578a7eb6b2d9993c74cfb9"
+          "checksumValue": "1741ab7a6cc54a03a89b5d563ed60075c277d9e3cfa73ad0c1f23f23974703c6"
         }
       ],
       "externalRefs": [
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:cargo/serde_json@1.0.150"
+          "referenceLocator": "pkg:cargo/serde_json@1.0.152"
         }
       ],
       "comment": "Checksummed Cargo.lock registry dependency."
@@ -808,9 +808,9 @@
       "comment": "Checksummed Cargo.lock registry dependency."
     },
     {
-      "SPDXID": "SPDXRef-Cargo-signal-hook-0.4.4",
+      "SPDXID": "SPDXRef-Cargo-signal-hook-0.4.5",
       "name": "signal-hook",
-      "versionInfo": "0.4.4",
+      "versionInfo": "0.4.5",
       "downloadLocation": "https://crates.io/",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
@@ -819,14 +819,14 @@
       "checksums": [
         {
           "algorithm": "SHA256",
-          "checksumValue": "b2a0c28ca5908dbdbcd52e6fdaa00358ab88637f8ab33e1f188dd510eb44b53d"
+          "checksumValue": "b29ffa27d3d59a049bb328258de100f8012848d1b08d444e08bbc02ac468435e"
         }
       ],
       "externalRefs": [
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:cargo/signal-hook@0.4.4"
+          "referenceLocator": "pkg:cargo/signal-hook@0.4.5"
         }
       ],
       "comment": "Checksummed Cargo.lock registry dependency."
@@ -1241,7 +1241,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-bridge-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.4"
+      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.5"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-bridge-2.0.0",
@@ -1251,7 +1251,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-bridge-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-bridge-2.0.0",
@@ -1276,7 +1276,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-core-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-core-2.0.0",
@@ -1326,12 +1326,12 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-daemon-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.4"
+      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.5"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-daemon-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-daemon-2.0.0",
@@ -1341,7 +1341,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-daemon-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-signal-hook-0.4.4"
+      "relatedSpdxElement": "SPDXRef-Cargo-signal-hook-0.4.5"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-device-qualification-2.0.0",
@@ -1376,7 +1376,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-device-qualification-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.4"
+      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.5"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-device-qualification-2.0.0",
@@ -1386,7 +1386,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-device-qualification-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-device-qualification-2.0.0",
@@ -1401,7 +1401,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-domain-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-errors-2.0.0",
@@ -1416,7 +1416,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-errors-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-integration-model-2.0.0",
@@ -1441,7 +1441,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-integration-model-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-integration-model-2.0.0",
@@ -1471,12 +1471,12 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-kernel-transport-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.4"
+      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.5"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-kernel-transport-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-kernel-transport-2.0.0",
@@ -1521,7 +1521,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-ops-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.4"
+      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.5"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-ops-2.0.0",
@@ -1531,7 +1531,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-ops-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-ops-2.0.0",
@@ -1556,7 +1556,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-protocol-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-runtime-2.0.0",
@@ -1566,7 +1566,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-runtime-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-sdk-2.0.0",
@@ -1586,12 +1586,12 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-sdk-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.4"
+      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.5"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-sdk-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-sim-2.0.0",
@@ -1621,7 +1621,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-sim-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-sim-2.0.0",
@@ -1661,7 +1661,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-system-probe-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.4"
+      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.5"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-system-probe-2.0.0",
@@ -1671,7 +1671,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-system-probe-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-2.0.0",
@@ -1721,7 +1721,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.4"
+      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.5"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-2.0.0",
@@ -1731,7 +1731,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-2.0.0",
@@ -1741,7 +1741,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-signal-hook-0.4.4"
+      "relatedSpdxElement": "SPDXRef-Cargo-signal-hook-0.4.5"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hybrid-array-0.4.10",
@@ -1759,27 +1759,27 @@
       "relatedSpdxElement": "SPDXRef-Cargo-proc-macro2-1.0.107"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-rustix-1.1.4",
+      "spdxElementId": "SPDXRef-Cargo-rustix-1.1.5",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-bitflags-2.13.1"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-rustix-1.1.4",
+      "spdxElementId": "SPDXRef-Cargo-rustix-1.1.5",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-errno-0.3.14"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-rustix-1.1.4",
+      "spdxElementId": "SPDXRef-Cargo-rustix-1.1.5",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-libc-0.2.183"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-rustix-1.1.4",
+      "spdxElementId": "SPDXRef-Cargo-rustix-1.1.5",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-linux-raw-sys-0.12.1"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-rustix-1.1.4",
+      "spdxElementId": "SPDXRef-Cargo-rustix-1.1.5",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-windows-sys-0.61.2"
     },
@@ -1814,27 +1814,27 @@
       "relatedSpdxElement": "SPDXRef-Cargo-syn-3.0.2"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.150",
+      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.152",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-itoa-1.0.18"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.150",
+      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.152",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-memchr-2.8.3"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.150",
+      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.152",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-serde-1.0.229"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.150",
+      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.152",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-serde-core-1.0.229"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.150",
+      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.152",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-zmij-1.0.23"
     },
@@ -1854,12 +1854,12 @@
       "relatedSpdxElement": "SPDXRef-Cargo-digest-0.11.2"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-signal-hook-0.4.4",
+      "spdxElementId": "SPDXRef-Cargo-signal-hook-0.4.5",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-libc-0.2.183"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-signal-hook-0.4.4",
+      "spdxElementId": "SPDXRef-Cargo-signal-hook-0.4.5",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-signal-hook-registry-1.4.8"
     },
@@ -2101,7 +2101,7 @@
     {
       "spdxElementId": "SPDXRef-Package-hyperflux-next-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.4"
+      "relatedSpdxElement": "SPDXRef-Cargo-rustix-1.1.5"
     },
     {
       "spdxElementId": "SPDXRef-Package-hyperflux-next-2.0.0",
@@ -2121,7 +2121,7 @@
     {
       "spdxElementId": "SPDXRef-Package-hyperflux-next-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.150"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
     },
     {
       "spdxElementId": "SPDXRef-Package-hyperflux-next-2.0.0",
@@ -2131,7 +2131,7 @@
     {
       "spdxElementId": "SPDXRef-Package-hyperflux-next-2.0.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-signal-hook-0.4.4"
+      "relatedSpdxElement": "SPDXRef-Cargo-signal-hook-0.4.5"
     },
     {
       "spdxElementId": "SPDXRef-Package-hyperflux-next-2.0.0",
