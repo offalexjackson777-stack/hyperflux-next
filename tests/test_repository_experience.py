@@ -308,7 +308,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
     def test_document_render_audit_binds_sources_visual_review_and_fast_gate(self) -> None:
         audit = load_documentation_render_audit(ROOT)
         policy = load_documentation_render_policy(ROOT)
-        self.assertEqual(audit.source_revision, "bf0f7b8fd2c4cf5b8c69e612566606abef8565a3")
+        self.assertEqual(audit.source_revision, "5383808860a1c96053c934a8953e5c91b7a2a0f6")
         self.assertEqual(audit.check_count, policy.check_count)
         self.assertEqual(audit.screenshot_count, policy.screenshot_count)
         self.assertEqual(audit.capture_mode, "full-page")
