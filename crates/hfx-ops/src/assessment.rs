@@ -77,6 +77,10 @@ pub struct Assessment {
     pub components: Vec<ComponentAssessment>,
     pub driver: DriverState,
     pub bridge_ready: bool,
+    /// Whether the bridge process answered at all. Not part of the JSON contract:
+    /// `bridge_ready` keeps its published meaning (bridge and child routes ready).
+    #[serde(skip)]
+    pub bridge_responding: bool,
     pub receiver_generations: usize,
     pub qualified_generations: usize,
     pub working: Vec<String>,
@@ -376,15 +380,52 @@ fn child_routes_ready(snapshot: &SystemSnapshot) -> bool {
     })
 }
 
-fn bridge_service_finding_value(snapshot: &SystemSnapshot, responding: bool) -> String {
-    if responding {
-        "active-unready".to_owned()
+/// Names the layer that is actually not ready. A responding bridge is never
+/// reported as a service failure: restarting it cannot create receiver or
+/// child-route evidence (Discussion #19).
+fn readiness_finding(snapshot: &SystemSnapshot, bridge_responding: bool) -> AssessmentFinding {
+    let receivers = snapshot
+        .bridge
+        .as_ref()
+        .filter(|_| bridge_responding)
+        .map(|bridge| &bridge.snapshot.receivers);
+    let Some(receivers) = receivers else {
+        return local_finding(
+            ErrorCode::HfxService001,
+            BTreeMap::from([(
+                "service_state".to_owned(),
+                snapshot
+                    .service_state
+                    .finding_value(snapshot.bridge.is_some())
+                    .to_owned(),
+            )]),
+        );
+    };
+    let receiver_state = if receivers.is_empty() {
+        Some("not-registered")
+    } else if receivers
+        .iter()
+        .any(|receiver| receiver.profile_id.is_none() || receiver.profile_digest.is_none())
+    {
+        Some("unqualified")
     } else {
-        snapshot
-            .service_state
-            .finding_value(snapshot.bridge.is_some())
-            .to_owned()
+        None
+    };
+    if let Some(receiver_state) = receiver_state {
+        return local_finding(
+            ErrorCode::HfxService002,
+            BTreeMap::from([("receiver_state".to_owned(), receiver_state.to_owned())]),
+        );
     }
+    let route_state = if receivers.iter().any(|receiver| receiver.devices.is_empty()) {
+        "no-paired-device"
+    } else {
+        "not-live"
+    };
+    local_finding(
+        ErrorCode::HfxService003,
+        BTreeMap::from([("route_state".to_owned(), route_state.to_owned())]),
+    )
 }
 
 fn assess_full_component(
@@ -504,13 +545,7 @@ pub fn assess_system(snapshot: &SystemSnapshot) -> Assessment {
             DriverState::ActivationPending | DriverState::Unavailable
         )
     {
-        findings.push(local_finding(
-            ErrorCode::HfxService001,
-            BTreeMap::from([(
-                "service_state".to_owned(),
-                bridge_service_finding_value(snapshot, bridge_responding),
-            )]),
-        ));
+        findings.push(readiness_finding(snapshot, bridge_responding));
     }
 
     let core_finding_count = findings.len();
@@ -545,6 +580,7 @@ pub fn assess_system(snapshot: &SystemSnapshot) -> Assessment {
         components,
         driver,
         bridge_ready,
+        bridge_responding,
         receiver_generations,
         qualified_generations,
         working,
@@ -610,7 +646,7 @@ pub fn render_status_text(assessment: &Assessment) -> String {
         DriverState::ActivationPending => "activation pending",
         DriverState::Unavailable => "unavailable",
     };
-    let bridge = if assessment.bridge_ready {
+    let bridge = if assessment.bridge_responding {
         "running"
     } else {
         "unavailable"
@@ -843,10 +879,11 @@ mod tests {
 
         assert_eq!(assessment.state, AssessmentState::NeedsAttention);
         assert!(!assessment.bridge_ready);
-        assert_eq!(assessment.findings[0].code, "HFX-SERVICE-001");
+        assert!(assessment.bridge_responding);
+        assert_eq!(assessment.findings[0].code, "HFX-SERVICE-002");
         assert_eq!(
-            assessment.findings[0].details["service_state"],
-            "active-unready"
+            assessment.findings[0].details["receiver_state"],
+            "not-registered"
         );
     }
 
@@ -943,7 +980,85 @@ mod tests {
 
         assert_eq!(assessment.state, AssessmentState::NeedsAttention);
         assert!(!assessment.bridge_ready);
+        assert_eq!(assessment.findings[0].code, "HFX-SERVICE-003");
+        assert_eq!(assessment.findings[0].details["route_state"], "not-live");
+    }
+
+    #[test]
+    fn paired_mouse_without_a_live_route_is_not_a_bridge_failure() {
+        // Discussion #19: bridge running, receiver qualified, mouse paired but
+        // not live. Restarting the bridge cannot help, so it must not be advised.
+        let mut value = snapshot();
+        value.supported_receiver_present = true;
+        value.bridge = Some(bridge_with_child(RouteState::Unavailable));
+
+        let assessment = assess_system(&value);
+
+        assert_eq!(assessment.state, AssessmentState::NeedsAttention);
+        assert!(!assessment.bridge_ready);
+        assert!(assessment.bridge_responding);
+        assert_eq!(assessment.findings.len(), 1);
+        assert_eq!(assessment.findings[0].code, "HFX-SERVICE-003");
+        assert_eq!(assessment.findings[0].details["route_state"], "not-live");
+        assert!(
+            !assessment.next_action.contains("restart"),
+            "a responding bridge must not be restarted: {}",
+            assessment.next_action
+        );
+        let status = render_status_text(&assessment);
+        assert!(status.contains("Bridge: running\n"), "{status}");
+        assert!(
+            status.contains("Next: Move or click the paired device."),
+            "{status}"
+        );
+    }
+
+    #[test]
+    fn qualified_receiver_without_paired_devices_names_the_route_state() {
+        let mut value = snapshot();
+        value.supported_receiver_present = true;
+        let mut bridge = bridge_with_child(RouteState::Available);
+        bridge.snapshot.receivers[0].devices.clear();
+        value.bridge = Some(bridge);
+
+        let assessment = assess_system(&value);
+
+        assert_eq!(assessment.findings[0].code, "HFX-SERVICE-003");
+        assert_eq!(
+            assessment.findings[0].details["route_state"],
+            "no-paired-device"
+        );
+    }
+
+    #[test]
+    fn unqualified_receiver_is_named_without_blaming_the_bridge() {
+        let mut value = snapshot();
+        value.supported_receiver_present = true;
+        let mut bridge = bridge_with_child(RouteState::Available);
+        bridge.snapshot.receivers[0].profile_id = None;
+        value.bridge = Some(bridge);
+
+        let assessment = assess_system(&value);
+
+        assert!(assessment.bridge_responding);
+        assert_eq!(assessment.findings[0].code, "HFX-SERVICE-002");
+        assert_eq!(
+            assessment.findings[0].details["receiver_state"],
+            "unqualified"
+        );
+    }
+
+    #[test]
+    fn unreachable_bridge_still_reports_the_service_and_unavailable_status() {
+        let mut value = snapshot();
+        value.supported_receiver_present = true;
+        value.bridge = None;
+
+        let assessment = assess_system(&value);
+
+        assert!(!assessment.bridge_responding);
         assert_eq!(assessment.findings[0].code, "HFX-SERVICE-001");
+        assert!(render_status_text(&assessment).contains("Bridge: unavailable\n"));
     }
 
     #[test]

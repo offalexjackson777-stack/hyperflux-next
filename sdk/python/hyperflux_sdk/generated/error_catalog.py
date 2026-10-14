@@ -34,6 +34,8 @@ class ErrorCode(str, Enum):
     HFX_QUEUE_001 = "HFX-QUEUE-001"
     HFX_REQUEST_001 = "HFX-REQUEST-001"
     HFX_SERVICE_001 = "HFX-SERVICE-001"
+    HFX_SERVICE_002 = "HFX-SERVICE-002"
+    HFX_SERVICE_003 = "HFX-SERVICE-003"
     HFX_TRANSPORT_001 = "HFX-TRANSPORT-001"
     HFX_TRANSPORT_002 = "HFX-TRANSPORT-002"
     HFX_TRANSPORT_003 = "HFX-TRANSPORT-003"
@@ -51,6 +53,7 @@ class RemediationId(str, Enum):
     LOOKUP_TRANSACTION_OUTCOME = "lookup-transaction-outcome"
     QUALIFY_DEVICE = "qualify-device"
     RECONCILE_TRANSACTION_STATE = "reconcile-transaction-state"
+    RECONNECT_RECEIVER = "reconnect-receiver"
     REFRESH_GENERATION = "refresh-generation"
     REINSTALL_FULL_COMPONENT = "reinstall-full-component"
     REINSTALL_OPENRAZER_ROUTE_DRIVER = "reinstall-openrazer-route-driver"
@@ -63,6 +66,7 @@ class RemediationId(str, Enum):
     UPDATE_INTEGRATION = "update-integration"
     UPDATE_PROTOCOL_PEER = "update-protocol-peer"
     VERIFY_PROFILE_CATALOG = "verify-profile-catalog"
+    WAKE_PAIRED_DEVICE = "wake-paired-device"
 
 
 class ErrorClass(str, Enum):
@@ -168,7 +172,7 @@ class ErrorDescriptor:
     docs_path: str
 
 
-ERROR_CATALOG_SHA256: Final = "d381e3c7d2309205505e80b652afaa2e746919eceb52820bff28bd45d46e5252"
+ERROR_CATALOG_SHA256: Final = "ccee636c98accd0fee5906e3b246ec23cfe93ccb537e2b4ae22b01640a49e4a8"
 MAX_ERROR_COUNT: Final = 256
 MAX_REMEDIATION_COUNT: Final = 128
 MAX_SAFE_DETAIL_FIELDS: Final = 12
@@ -250,6 +254,13 @@ REMEDIATIONS: Final = (
         title="Reconcile the current device state",
         safe_action="Do not repeat the old hardware operation automatically; refresh device state and submit only a new intentional request.",
         verification="Confirm the application has refreshed the active generation and is not replaying the unavailable transaction.",
+        automatic=False,
+    ),
+    RemediationDescriptor(
+        id=RemediationId.RECONNECT_RECEIVER,
+        title="Reconnect the receiver",
+        safe_action="Unplug the HyperFlux receiver, wait a few seconds, and plug it back in, or reboot. If Doctor still reports this, create a support bundle.",
+        verification="Run Doctor and confirm a profile-qualified receiver generation is registered.",
         automatic=False,
     ),
     RemediationDescriptor(
@@ -335,6 +346,13 @@ REMEDIATIONS: Final = (
         safe_action="Reload the generated profile catalog and retain read-only behavior until its digest matches.",
         verification="Confirm the active profile identifier, revision, and digest match the generated catalog.",
         automatic=True,
+    ),
+    RemediationDescriptor(
+        id=RemediationId.WAKE_PAIRED_DEVICE,
+        title="Wake the paired device",
+        safe_action="Move or click the paired device. If it does not appear within 30 seconds, switch it off and on. If it still does not appear, create a support bundle.",
+        verification="Run Doctor and confirm a paired device has a live route.",
+        automatic=False,
     ),
 )
 
@@ -892,6 +910,32 @@ DETAILS_23: Final = (
 
 DETAILS_24: Final = (
     SafeDetailFieldDescriptor(
+        name="receiver_state",
+        kind=SafeDetailKind.ENUM,
+        required=True,
+        maximum_length=None,
+        maximum_value=None,
+        allowed_values=('not-registered', 'unqualified'),
+        privacy=PrivacyClass.PUBLIC,
+        description="Sanitized receiver registration state.",
+    ),
+)
+
+DETAILS_25: Final = (
+    SafeDetailFieldDescriptor(
+        name="route_state",
+        kind=SafeDetailKind.ENUM,
+        required=True,
+        maximum_length=None,
+        maximum_value=None,
+        allowed_values=('no-paired-device', 'not-live'),
+        privacy=PrivacyClass.PUBLIC,
+        description="Sanitized paired-device route state.",
+    ),
+)
+
+DETAILS_26: Final = (
+    SafeDetailFieldDescriptor(
         name="reason",
         kind=SafeDetailKind.ENUM,
         required=True,
@@ -913,7 +957,7 @@ DETAILS_24: Final = (
     ),
 )
 
-DETAILS_25: Final = (
+DETAILS_27: Final = (
     SafeDetailFieldDescriptor(
         name="transaction_id",
         kind=SafeDetailKind.IDENTIFIER,
@@ -926,7 +970,7 @@ DETAILS_25: Final = (
     ),
 )
 
-DETAILS_26: Final = (
+DETAILS_28: Final = (
     SafeDetailFieldDescriptor(
         name="delivered_frames",
         kind=SafeDetailKind.U16,
@@ -1441,13 +1485,53 @@ ERRORS: Final = (
         docs_path="docs/generated/error-catalog.md#hfx-service-001",
     ),
     ErrorDescriptor(
+        code=ErrorCode.HFX_SERVICE_002,
+        error_class=ErrorClass.SERVICE,
+        severity=ErrorSeverity.WARNING,
+        retry_policy=RetryPolicy.AFTER_REMEDIATION,
+        side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
+        remediation_id=RemediationId.RECONNECT_RECEIVER,
+        safe_detail_fields=DETAILS_24,
+        lifecycle=LifecycleDescriptor(
+            state=ErrorLifecycleState.ACTIVE,
+            introduced_in="2.0.1",
+            deprecated_in=None,
+            replacement_code=None,
+        ),
+        owner=ErrorOwner.BRIDGE,
+        technical_cause="The bridge is responding, but no profile-qualified receiver generation is registered for an attached supported receiver.",
+        user_explanation="HyperFlux is running, but the receiver is not ready yet.",
+        privacy=PrivacyClass.PUBLIC,
+        docs_path="docs/generated/error-catalog.md#hfx-service-002",
+    ),
+    ErrorDescriptor(
+        code=ErrorCode.HFX_SERVICE_003,
+        error_class=ErrorClass.SERVICE,
+        severity=ErrorSeverity.WARNING,
+        retry_policy=RetryPolicy.AFTER_REMEDIATION,
+        side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
+        remediation_id=RemediationId.WAKE_PAIRED_DEVICE,
+        safe_detail_fields=DETAILS_25,
+        lifecycle=LifecycleDescriptor(
+            state=ErrorLifecycleState.ACTIVE,
+            introduced_in="2.0.1",
+            deprecated_in=None,
+            replacement_code=None,
+        ),
+        owner=ErrorOwner.BRIDGE,
+        technical_cause="The bridge and receiver are ready, but no paired device has a live qualified HyperFlux wireless route.",
+        user_explanation="HyperFlux is running, but no paired device is online yet.",
+        privacy=PrivacyClass.PUBLIC,
+        docs_path="docs/generated/error-catalog.md#hfx-service-003",
+    ),
+    ErrorDescriptor(
         code=ErrorCode.HFX_TRANSPORT_001,
         error_class=ErrorClass.TRANSPORT,
         severity=ErrorSeverity.WARNING,
         retry_policy=RetryPolicy.BOUNDED_BACKOFF,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.RETRY_BOUNDED,
-        safe_detail_fields=DETAILS_24,
+        safe_detail_fields=DETAILS_26,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1467,7 +1551,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.OUTCOME_LOOKUP_ONLY,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.POSSIBLE,
         remediation_id=RemediationId.LOOKUP_TRANSACTION_OUTCOME,
-        safe_detail_fields=DETAILS_25,
+        safe_detail_fields=DETAILS_27,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1487,7 +1571,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.OUTCOME_LOOKUP_ONLY,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.PARTIAL,
         remediation_id=RemediationId.LOOKUP_TRANSACTION_OUTCOME,
-        safe_detail_fields=DETAILS_26,
+        safe_detail_fields=DETAILS_28,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",

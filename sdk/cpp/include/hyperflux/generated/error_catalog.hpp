@@ -41,6 +41,8 @@ enum class ErrorCode
     HfxQueue001,
     HfxRequest001,
     HfxService001,
+    HfxService002,
+    HfxService003,
     HfxTransport001,
     HfxTransport002,
     HfxTransport003,
@@ -74,6 +76,8 @@ enum class ErrorCode
         case ErrorCode::HfxQueue001: return "HFX-QUEUE-001";
         case ErrorCode::HfxRequest001: return "HFX-REQUEST-001";
         case ErrorCode::HfxService001: return "HFX-SERVICE-001";
+        case ErrorCode::HfxService002: return "HFX-SERVICE-002";
+        case ErrorCode::HfxService003: return "HFX-SERVICE-003";
         case ErrorCode::HfxTransport001: return "HFX-TRANSPORT-001";
         case ErrorCode::HfxTransport002: return "HFX-TRANSPORT-002";
         case ErrorCode::HfxTransport003: return "HFX-TRANSPORT-003";
@@ -94,6 +98,7 @@ enum class RemediationId
     LookupTransactionOutcome,
     QualifyDevice,
     ReconcileTransactionState,
+    ReconnectReceiver,
     RefreshGeneration,
     ReinstallFullComponent,
     ReinstallOpenrazerRouteDriver,
@@ -106,6 +111,7 @@ enum class RemediationId
     UpdateIntegration,
     UpdateProtocolPeer,
     VerifyProfileCatalog,
+    WakePairedDevice,
 };
 
 [[nodiscard]] constexpr std::string_view to_string(RemediationId value)
@@ -123,6 +129,7 @@ enum class RemediationId
         case RemediationId::LookupTransactionOutcome: return "lookup-transaction-outcome";
         case RemediationId::QualifyDevice: return "qualify-device";
         case RemediationId::ReconcileTransactionState: return "reconcile-transaction-state";
+        case RemediationId::ReconnectReceiver: return "reconnect-receiver";
         case RemediationId::RefreshGeneration: return "refresh-generation";
         case RemediationId::ReinstallFullComponent: return "reinstall-full-component";
         case RemediationId::ReinstallOpenrazerRouteDriver: return "reinstall-openrazer-route-driver";
@@ -135,6 +142,7 @@ enum class RemediationId
         case RemediationId::UpdateIntegration: return "update-integration";
         case RemediationId::UpdateProtocolPeer: return "update-protocol-peer";
         case RemediationId::VerifyProfileCatalog: return "verify-profile-catalog";
+        case RemediationId::WakePairedDevice: return "wake-paired-device";
     }
     return "unknown";
 }
@@ -335,13 +343,13 @@ struct ErrorDescriptor
     std::string_view docs_path;
 };
 
-inline constexpr std::string_view error_catalog_sha256 = "d381e3c7d2309205505e80b652afaa2e746919eceb52820bff28bd45d46e5252";
+inline constexpr std::string_view error_catalog_sha256 = "ccee636c98accd0fee5906e3b246ec23cfe93ccb537e2b4ae22b01640a49e4a8";
 inline constexpr std::size_t max_error_count = 256;
 inline constexpr std::size_t max_remediation_count = 128;
 inline constexpr std::size_t max_safe_detail_fields = 12;
 inline constexpr std::size_t max_safe_detail_length = 256;
 
-inline constexpr std::array<RemediationDescriptor, 23> remediations {{
+inline constexpr std::array<RemediationDescriptor, 25> remediations {{
     {RemediationId::AcquireNewLease, "Acquire a current lease", "Request a new lease for the complete resource set before submitting another operation.", "Read the ownership snapshot and confirm the new lease is current.", false},
     {RemediationId::ActivateInstalledDriver, "Activate the installed driver", "Reboot, or disconnect every supported HyperFlux receiver and run sudo /usr/lib/hyperflux-next/hyperflux-next-activate activate-disconnected-driver. Reconnect only after matching installed and loaded identities are reported.", "Run Doctor and confirm the loaded and installed driver identities match.", false},
     {RemediationId::ActivateOpenrazerRouteDriver, "Activate the OpenRazer route driver", "Reboot to activate the source-bound OpenRazer route driver. If Doctor still reports a missing module, reinstall the current HyperFlux package before retrying.", "Run Doctor and confirm every installed OpenRazer route module is either unloaded or matches its loaded identity.", false},
@@ -353,6 +361,7 @@ inline constexpr std::array<RemediationDescriptor, 23> remediations {{
     {RemediationId::LookupTransactionOutcome, "Resolve the existing transaction", "Look up the existing transaction identifier; do not resubmit the hardware operation.", "Confirm the transaction reaches exactly one recorded terminal outcome.", false},
     {RemediationId::QualifyDevice, "Use a qualified device capability", "Keep the device read-only until an evidence-backed profile qualifies the requested capability.", "Inspect the capability snapshot and confirm the support level permits the operation.", false},
     {RemediationId::ReconcileTransactionState, "Reconcile the current device state", "Do not repeat the old hardware operation automatically; refresh device state and submit only a new intentional request.", "Confirm the application has refreshed the active generation and is not replaying the unavailable transaction.", false},
+    {RemediationId::ReconnectReceiver, "Reconnect the receiver", "Unplug the HyperFlux receiver, wait a few seconds, and plug it back in, or reboot. If Doctor still reports this, create a support bundle.", "Run Doctor and confirm a profile-qualified receiver generation is registered.", false},
     {RemediationId::RefreshGeneration, "Refresh receiver state", "Discard state from the old generation and request a fresh snapshot before new work.", "Confirm the request uses the currently active generation identifier.", true},
     {RemediationId::ReinstallFullComponent, "Restore the matching Full integration component", "Install or reinstall the exact HyperFlux Next Full package version required by the installed Core package.", "Run Doctor and confirm the Full component is ready or explicitly reported as optional and not installed.", false},
     {RemediationId::ReinstallOpenrazerRouteDriver, "Restore the OpenRazer native-route capability", "Reinstall the current HyperFlux Next package, then use the driver activation action reported by Doctor.", "Run Doctor and confirm the OpenRazer native-route capability finding is absent.", false},
@@ -365,6 +374,7 @@ inline constexpr std::array<RemediationDescriptor, 23> remediations {{
     {RemediationId::UpdateIntegration, "Update the application integration", "Install an integration compatible with the negotiated HyperFlux SDK protocol.", "Restart the application and confirm protocol negotiation succeeds.", false},
     {RemediationId::UpdateProtocolPeer, "Update the protocol peer", "Update either peer so their supported protocol version ranges overlap.", "Repeat negotiation and confirm one common protocol version is selected.", false},
     {RemediationId::VerifyProfileCatalog, "Verify the profile catalog", "Reload the generated profile catalog and retain read-only behavior until its digest matches.", "Confirm the active profile identifier, revision, and digest match the generated catalog.", true},
+    {RemediationId::WakePairedDevice, "Wake the paired device", "Move or click the paired device. If it does not appear within 30 seconds, switch it off and on. If it still does not appear, create a support bundle.", "Run Doctor and confirm a paired device has a live route.", false},
 }};
 
 inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_0 {{
@@ -513,24 +523,36 @@ inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_23 {{
     {"service_state", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_23_0, PrivacyClass::Public, "Sanitized bridge service state."},
 }};
 
-inline constexpr std::array<std::string_view, 3> detail_values_24_0 {{"device-absent", "session-unavailable", "transport-busy"}};
+inline constexpr std::array<std::string_view, 2> detail_values_24_0 {{"not-registered", "unqualified"}};
 
-inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_24 {{
-    {"reason", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_24_0, PrivacyClass::Public, "Sanitized pre-dispatch failure reason."},
+inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_24 {{
+    {"receiver_state", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_24_0, PrivacyClass::Public, "Sanitized receiver registration state."},
+}};
+
+inline constexpr std::array<std::string_view, 2> detail_values_25_0 {{"no-paired-device", "not-live"}};
+
+inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_25 {{
+    {"route_state", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_25_0, PrivacyClass::Public, "Sanitized paired-device route state."},
+}};
+
+inline constexpr std::array<std::string_view, 3> detail_values_26_0 {{"device-absent", "session-unavailable", "transport-busy"}};
+
+inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_26 {{
+    {"reason", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_26_0, PrivacyClass::Public, "Sanitized pre-dispatch failure reason."},
     {"transaction_id", SafeDetailKind::Identifier, true, 128ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::PublicSummary, "Transaction that did not begin transport."},
 }};
 
-inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_25 {{
+inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_27 {{
     {"transaction_id", SafeDetailKind::Identifier, true, 128ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::PublicSummary, "Transaction whose transport outcome is uncertain."},
 }};
 
-inline constexpr std::array<SafeDetailFieldDescriptor, 3> details_26 {{
+inline constexpr std::array<SafeDetailFieldDescriptor, 3> details_28 {{
     {"delivered_frames", SafeDetailKind::U16, true, std::nullopt, 4096ULL, std::span<const std::string_view>{}, PrivacyClass::Public, "Frames terminally delivered before failure."},
     {"total_frames", SafeDetailKind::U16, true, std::nullopt, 4096ULL, std::span<const std::string_view>{}, PrivacyClass::Public, "Frames declared by the transaction."},
     {"transaction_id", SafeDetailKind::Identifier, true, 128ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::PublicSummary, "Partially delivered transaction identity."},
 }};
 
-inline constexpr std::array<ErrorDescriptor, 27> errors {{
+inline constexpr std::array<ErrorDescriptor, 29> errors {{
     {
         ErrorCode::HfxDeadline001, ErrorClass::Deadline,
         ErrorSeverity::Warning, RetryPolicy::Never,
@@ -772,10 +794,30 @@ inline constexpr std::array<ErrorDescriptor, 27> errors {{
         "docs/generated/error-catalog.md#hfx-service-001"
     },
     {
+        ErrorCode::HfxService002, ErrorClass::Service,
+        ErrorSeverity::Warning, RetryPolicy::AfterRemediation,
+        SideEffectCertaintyPolicy::NotApplicable,
+        RemediationId::ReconnectReceiver, details_24,
+        {ErrorLifecycleState::Active, "2.0.1", std::nullopt, std::nullopt},
+        ErrorOwner::Bridge, "The bridge is responding, but no profile-qualified receiver generation is registered for an attached supported receiver.",
+        "HyperFlux is running, but the receiver is not ready yet.", PrivacyClass::Public,
+        "docs/generated/error-catalog.md#hfx-service-002"
+    },
+    {
+        ErrorCode::HfxService003, ErrorClass::Service,
+        ErrorSeverity::Warning, RetryPolicy::AfterRemediation,
+        SideEffectCertaintyPolicy::NotApplicable,
+        RemediationId::WakePairedDevice, details_25,
+        {ErrorLifecycleState::Active, "2.0.1", std::nullopt, std::nullopt},
+        ErrorOwner::Bridge, "The bridge and receiver are ready, but no paired device has a live qualified HyperFlux wireless route.",
+        "HyperFlux is running, but no paired device is online yet.", PrivacyClass::Public,
+        "docs/generated/error-catalog.md#hfx-service-003"
+    },
+    {
         ErrorCode::HfxTransport001, ErrorClass::Transport,
         ErrorSeverity::Warning, RetryPolicy::BoundedBackoff,
         SideEffectCertaintyPolicy::MustBeNone,
-        RemediationId::RetryBounded, details_24,
+        RemediationId::RetryBounded, details_26,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "Transport failed before any hardware frame was dispatched.",
         "The receiver was unavailable before HyperFlux sent anything.", PrivacyClass::PublicSummary,
@@ -785,7 +827,7 @@ inline constexpr std::array<ErrorDescriptor, 27> errors {{
         ErrorCode::HfxTransport002, ErrorClass::Transport,
         ErrorSeverity::Error, RetryPolicy::OutcomeLookupOnly,
         SideEffectCertaintyPolicy::Possible,
-        RemediationId::LookupTransactionOutcome, details_25,
+        RemediationId::LookupTransactionOutcome, details_27,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "Transport began, but the bridge could not prove whether the receiver accepted a frame.",
         "The operation may have reached the receiver, so HyperFlux will not repeat it automatically.", PrivacyClass::PublicSummary,
@@ -795,7 +837,7 @@ inline constexpr std::array<ErrorDescriptor, 27> errors {{
         ErrorCode::HfxTransport003, ErrorClass::Transport,
         ErrorSeverity::Error, RetryPolicy::OutcomeLookupOnly,
         SideEffectCertaintyPolicy::Partial,
-        RemediationId::LookupTransactionOutcome, details_26,
+        RemediationId::LookupTransactionOutcome, details_28,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "At least one declared frame was delivered before a later frame failed.",
         "The operation was only partly delivered and will not be repeated automatically.", PrivacyClass::PublicSummary,

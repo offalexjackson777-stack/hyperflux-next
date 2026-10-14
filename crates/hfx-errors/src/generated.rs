@@ -87,6 +87,8 @@ wire_enum!(ErrorCode {
     HfxQueue001 => "HFX-QUEUE-001",
     HfxRequest001 => "HFX-REQUEST-001",
     HfxService001 => "HFX-SERVICE-001",
+    HfxService002 => "HFX-SERVICE-002",
+    HfxService003 => "HFX-SERVICE-003",
     HfxTransport001 => "HFX-TRANSPORT-001",
     HfxTransport002 => "HFX-TRANSPORT-002",
     HfxTransport003 => "HFX-TRANSPORT-003",
@@ -104,6 +106,7 @@ wire_enum!(RemediationId {
     LookupTransactionOutcome => "lookup-transaction-outcome",
     QualifyDevice => "qualify-device",
     ReconcileTransactionState => "reconcile-transaction-state",
+    ReconnectReceiver => "reconnect-receiver",
     RefreshGeneration => "refresh-generation",
     ReinstallFullComponent => "reinstall-full-component",
     ReinstallOpenrazerRouteDriver => "reinstall-openrazer-route-driver",
@@ -116,6 +119,7 @@ wire_enum!(RemediationId {
     UpdateIntegration => "update-integration",
     UpdateProtocolPeer => "update-protocol-peer",
     VerifyProfileCatalog => "verify-profile-catalog",
+    WakePairedDevice => "wake-paired-device",
 });
 
 wire_enum!(ErrorClass {
@@ -222,7 +226,7 @@ pub struct ErrorDescriptor {
 }
 
 pub const ERROR_CATALOG_SHA256: &str =
-    "d381e3c7d2309205505e80b652afaa2e746919eceb52820bff28bd45d46e5252";
+    "ccee636c98accd0fee5906e3b246ec23cfe93ccb537e2b4ae22b01640a49e4a8";
 pub const MAX_ERROR_COUNT: usize = 256;
 pub const MAX_REMEDIATION_COUNT: usize = 128;
 pub const MAX_SAFE_DETAIL_FIELDS: usize = 12;
@@ -304,6 +308,13 @@ pub const REMEDIATIONS: &[RemediationDescriptor] = &[
         title: "Reconcile the current device state",
         safe_action: "Do not repeat the old hardware operation automatically; refresh device state and submit only a new intentional request.",
         verification: "Confirm the application has refreshed the active generation and is not replaying the unavailable transaction.",
+        automatic: false,
+    },
+    RemediationDescriptor {
+        id: RemediationId::ReconnectReceiver,
+        title: "Reconnect the receiver",
+        safe_action: "Unplug the HyperFlux receiver, wait a few seconds, and plug it back in, or reboot. If Doctor still reports this, create a support bundle.",
+        verification: "Run Doctor and confirm a profile-qualified receiver generation is registered.",
         automatic: false,
     },
     RemediationDescriptor {
@@ -389,6 +400,13 @@ pub const REMEDIATIONS: &[RemediationDescriptor] = &[
         safe_action: "Reload the generated profile catalog and retain read-only behavior until its digest matches.",
         verification: "Confirm the active profile identifier, revision, and digest match the generated catalog.",
         automatic: true,
+    },
+    RemediationDescriptor {
+        id: RemediationId::WakePairedDevice,
+        title: "Wake the paired device",
+        safe_action: "Move or click the paired device. If it does not appear within 30 seconds, switch it off and on. If it still does not appear, create a support bundle.",
+        verification: "Run Doctor and confirm a paired device has a live route.",
+        automatic: false,
     },
 ];
 
@@ -997,16 +1015,42 @@ const DETAILS_23: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
     description: "Sanitized bridge service state.",
 }];
 
-const DETAIL_VALUES_24_0: &[&str] = &["device-absent", "session-unavailable", "transport-busy"];
+const DETAIL_VALUES_24_0: &[&str] = &["not-registered", "unqualified"];
 
-const DETAILS_24: &[SafeDetailFieldDescriptor] = &[
+const DETAILS_24: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
+    name: "receiver_state",
+    kind: SafeDetailKind::Enum,
+    required: true,
+    maximum_length: None,
+    maximum_value: None,
+    allowed_values: DETAIL_VALUES_24_0,
+    privacy: PrivacyClass::Public,
+    description: "Sanitized receiver registration state.",
+}];
+
+const DETAIL_VALUES_25_0: &[&str] = &["no-paired-device", "not-live"];
+
+const DETAILS_25: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
+    name: "route_state",
+    kind: SafeDetailKind::Enum,
+    required: true,
+    maximum_length: None,
+    maximum_value: None,
+    allowed_values: DETAIL_VALUES_25_0,
+    privacy: PrivacyClass::Public,
+    description: "Sanitized paired-device route state.",
+}];
+
+const DETAIL_VALUES_26_0: &[&str] = &["device-absent", "session-unavailable", "transport-busy"];
+
+const DETAILS_26: &[SafeDetailFieldDescriptor] = &[
     SafeDetailFieldDescriptor {
         name: "reason",
         kind: SafeDetailKind::Enum,
         required: true,
         maximum_length: None,
         maximum_value: None,
-        allowed_values: DETAIL_VALUES_24_0,
+        allowed_values: DETAIL_VALUES_26_0,
         privacy: PrivacyClass::Public,
         description: "Sanitized pre-dispatch failure reason.",
     },
@@ -1022,7 +1066,7 @@ const DETAILS_24: &[SafeDetailFieldDescriptor] = &[
     },
 ];
 
-const DETAILS_25: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
+const DETAILS_27: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
     name: "transaction_id",
     kind: SafeDetailKind::Identifier,
     required: true,
@@ -1033,7 +1077,7 @@ const DETAILS_25: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
     description: "Transaction whose transport outcome is uncertain.",
 }];
 
-const DETAILS_26: &[SafeDetailFieldDescriptor] = &[
+const DETAILS_28: &[SafeDetailFieldDescriptor] = &[
     SafeDetailFieldDescriptor {
         name: "delivered_frames",
         kind: SafeDetailKind::U16,
@@ -1548,13 +1592,53 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         docs_path: "docs/generated/error-catalog.md#hfx-service-001",
     },
     ErrorDescriptor {
+        code: ErrorCode::HfxService002,
+        error_class: ErrorClass::Service,
+        severity: ErrorSeverity::Warning,
+        retry_policy: RetryPolicy::AfterRemediation,
+        side_effect_certainty_policy: SideEffectCertaintyPolicy::NotApplicable,
+        remediation_id: RemediationId::ReconnectReceiver,
+        safe_detail_fields: DETAILS_24,
+        lifecycle: LifecycleDescriptor {
+            state: ErrorLifecycleState::Active,
+            introduced_in: "2.0.1",
+            deprecated_in: None,
+            replacement_code: None,
+        },
+        owner: ErrorOwner::Bridge,
+        technical_cause: "The bridge is responding, but no profile-qualified receiver generation is registered for an attached supported receiver.",
+        user_explanation: "HyperFlux is running, but the receiver is not ready yet.",
+        privacy: PrivacyClass::Public,
+        docs_path: "docs/generated/error-catalog.md#hfx-service-002",
+    },
+    ErrorDescriptor {
+        code: ErrorCode::HfxService003,
+        error_class: ErrorClass::Service,
+        severity: ErrorSeverity::Warning,
+        retry_policy: RetryPolicy::AfterRemediation,
+        side_effect_certainty_policy: SideEffectCertaintyPolicy::NotApplicable,
+        remediation_id: RemediationId::WakePairedDevice,
+        safe_detail_fields: DETAILS_25,
+        lifecycle: LifecycleDescriptor {
+            state: ErrorLifecycleState::Active,
+            introduced_in: "2.0.1",
+            deprecated_in: None,
+            replacement_code: None,
+        },
+        owner: ErrorOwner::Bridge,
+        technical_cause: "The bridge and receiver are ready, but no paired device has a live qualified HyperFlux wireless route.",
+        user_explanation: "HyperFlux is running, but no paired device is online yet.",
+        privacy: PrivacyClass::Public,
+        docs_path: "docs/generated/error-catalog.md#hfx-service-003",
+    },
+    ErrorDescriptor {
         code: ErrorCode::HfxTransport001,
         error_class: ErrorClass::Transport,
         severity: ErrorSeverity::Warning,
         retry_policy: RetryPolicy::BoundedBackoff,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::MustBeNone,
         remediation_id: RemediationId::RetryBounded,
-        safe_detail_fields: DETAILS_24,
+        safe_detail_fields: DETAILS_26,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1574,7 +1658,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::OutcomeLookupOnly,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::Possible,
         remediation_id: RemediationId::LookupTransactionOutcome,
-        safe_detail_fields: DETAILS_25,
+        safe_detail_fields: DETAILS_27,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1594,7 +1678,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::OutcomeLookupOnly,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::Partial,
         remediation_id: RemediationId::LookupTransactionOutcome,
-        safe_detail_fields: DETAILS_26,
+        safe_detail_fields: DETAILS_28,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",

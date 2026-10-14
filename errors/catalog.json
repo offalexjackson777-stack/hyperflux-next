@@ -80,6 +80,13 @@
       "automatic": false
     },
     {
+      "id": "reconnect-receiver",
+      "title": "Reconnect the receiver",
+      "safe_action": "Unplug the HyperFlux receiver, wait a few seconds, and plug it back in, or reboot. If Doctor still reports this, create a support bundle.",
+      "verification": "Run Doctor and confirm a profile-qualified receiver generation is registered.",
+      "automatic": false
+    },
+    {
       "id": "refresh-generation",
       "title": "Refresh receiver state",
       "safe_action": "Discard state from the old generation and request a fresh snapshot before new work.",
@@ -162,6 +169,13 @@
       "safe_action": "Reload the generated profile catalog and retain read-only behavior until its digest matches.",
       "verification": "Confirm the active profile identifier, revision, and digest match the generated catalog.",
       "automatic": true
+    },
+    {
+      "id": "wake-paired-device",
+      "title": "Wake the paired device",
+      "safe_action": "Move or click the paired device. If it does not appear within 30 seconds, switch it off and on. If it still does not appear, create a support bundle.",
+      "verification": "Run Doctor and confirm a paired device has a live route.",
+      "automatic": false
     }
   ],
   "errors": [
@@ -596,6 +610,40 @@
       "user_explanation": "The HyperFlux service is not ready yet.",
       "privacy": "public",
       "docs_path": "docs/generated/error-catalog.md#hfx-service-001"
+    },
+    {
+      "code": "HFX-SERVICE-002",
+      "class": "service",
+      "severity": "warning",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "reconnect-receiver",
+      "safe_detail_fields": [
+        {"name": "receiver_state", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["not-registered", "unqualified"], "privacy": "public", "description": "Sanitized receiver registration state."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "2.0.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "The bridge is responding, but no profile-qualified receiver generation is registered for an attached supported receiver.",
+      "user_explanation": "HyperFlux is running, but the receiver is not ready yet.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-service-002"
+    },
+    {
+      "code": "HFX-SERVICE-003",
+      "class": "service",
+      "severity": "warning",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "wake-paired-device",
+      "safe_detail_fields": [
+        {"name": "route_state", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["no-paired-device", "not-live"], "privacy": "public", "description": "Sanitized paired-device route state."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "2.0.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "The bridge and receiver are ready, but no paired device has a live qualified HyperFlux wireless route.",
+      "user_explanation": "HyperFlux is running, but no paired device is online yet.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-service-003"
     },
     {
       "code": "HFX-TRANSPORT-001",

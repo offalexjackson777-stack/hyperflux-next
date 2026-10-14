@@ -14,6 +14,7 @@ fn frozen_ready_assessment() -> Assessment {
         components: healthy_components(),
         driver: DriverState::Active,
         bridge_ready: true,
+        bridge_responding: true,
         receiver_generations: 1,
         qualified_generations: 1,
         working: vec![
@@ -48,6 +49,7 @@ fn frozen_needs_attention_assessment() -> Assessment {
         ],
         driver: DriverState::Active,
         bridge_ready: false,
+        bridge_responding: false,
         receiver_generations: 0,
         qualified_generations: 0,
         working: vec!["the installed driver is active".to_owned()],
