@@ -239,6 +239,88 @@ fn exactly_two_matching_source_serial_reads_publish_one_endpoint() {
 }
 
 #[test]
+fn kernel_binding_stop_republishes_on_the_same_bridge_instead_of_blocking() {
+    // REL-003: at boot hid-generic can bind the first virtual device and then be
+    // re-probed away by a late-loading OpenRazer module, stopping the device.
+    let first_path = temporary_uhid_file();
+    let second_path = temporary_uhid_file();
+    let catalog = NativeRouteCatalog::load().expect("native catalog loads");
+    let record = catalog
+        .profile("child.razer.deathstalker-v2-pro-tkl.0296")
+        .expect("keyboard route exists")
+        .clone();
+    let (device, policy) = fixture_from_record(&catalog, &record, "rebinding-keyboard");
+    let (bridge, calls) = publication_bridge(vec![
+        ScriptOutcome::Serial(b"KEYBOARD-SERIAL"),
+        ScriptOutcome::Serial(b"KEYBOARD-SERIAL"),
+    ]);
+    let mut endpoint = RunningEndpoint::create(
+        &test_paths(first_path.clone()),
+        bridge,
+        device.clone(),
+        policy,
+    )
+    .expect("published endpoint is created");
+    endpoint
+        .process_event(UhidEvent::Start { flags: 0 })
+        .expect("hid-generic starts the device");
+    endpoint
+        .process_event(UhidEvent::Stop)
+        .expect("re-probe stops the device");
+    assert_eq!(endpoint.state(), FeatureEndpointState::Stopped);
+
+    assert_eq!(
+        PublicationIdentityFailure::KernelBinding.disposition(),
+        PublicationFailureDisposition::Retryable
+    );
+    let (placeholder, _) = publication_bridge(Vec::new());
+    let now = Instant::now();
+    let mut publication = PendingPublication::new(placeholder, now);
+    let mut fingerprint =
+        Some(crate::fingerprint_serial_bytes(b"KEYBOARD-SERIAL").expect("serial is valid"));
+    recover_kernel_binding(endpoint, &mut publication, &mut fingerprint, now);
+
+    assert_eq!(fingerprint, None);
+    assert_eq!(
+        publication.gate.failure,
+        Some(PublicationIdentityFailure::KernelBinding)
+    );
+    assert_eq!(publication.gate.state(), RelayPublicationState::BackingOff);
+    assert!(
+        publication.terminal_failure.is_none(),
+        "the route is not blocked"
+    );
+
+    publication.gate.next_probe = Instant::now();
+    publication.probe(&record);
+    publication.gate.next_probe = Instant::now();
+    publication.probe(&record);
+    assert!(
+        publication.ready(),
+        "the same bridge re-qualifies the device"
+    );
+    let mut returned_fingerprint = None;
+    let mut returned_endpoint = None;
+    publication.complete(
+        &test_paths(second_path.clone()),
+        &DirectRouteSnapshot::default(),
+        &record,
+        &device,
+        &mut returned_fingerprint,
+        &mut returned_endpoint,
+    );
+    assert!(
+        returned_endpoint.is_some(),
+        "a fresh virtual device is published"
+    );
+    assert_eq!(calls.borrow().len(), 2);
+
+    drop(returned_endpoint.take());
+    fs::remove_file(first_path).expect("first transcript is removed");
+    fs::remove_file(second_path).expect("second transcript is removed");
+}
+
+#[test]
 fn retained_route_timeout_withdraws_once_and_requires_fresh_serial_identity() {
     let first_path = temporary_uhid_file();
     let second_path = temporary_uhid_file();

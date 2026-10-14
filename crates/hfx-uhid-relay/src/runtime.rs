@@ -32,6 +32,9 @@ const ROUTE_IDENTITY_STABILITY_INTERVAL: Duration = Duration::from_millis(250);
 const ROUTE_IDENTITY_FAST_RETRY: Duration = Duration::from_millis(100);
 const ROUTE_IDENTITY_FAST_ATTEMPTS: u32 = 5;
 const MAX_ROUTE_IDENTITY_ATTEMPTS: u32 = u16::MAX as u32;
+/// Bounded automatic recoveries from a kernel-binding failure per route, so a
+/// device never needs a power-cycle yet one that can never bind cannot churn.
+const MAX_KERNEL_BINDING_RECOVERIES: u8 = 3;
 const UHID_START_TIMEOUT: Duration = Duration::from_secs(10);
 const IDLE_INTERVAL: Duration = Duration::from_millis(10);
 const MAX_PENDING_REPLIES: usize = 8;
@@ -351,6 +354,7 @@ struct ManagedRoute {
     publication: PendingPublication<NativeBridge>,
     endpoint: Option<RunningEndpoint<NativeBridge>>,
     last_diagnostic: Option<DiagnosticKey>,
+    kernel_binding_recoveries: u8,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -630,6 +634,7 @@ impl ManagedRoute {
             publication: PendingPublication::new(bridge, Instant::now()),
             endpoint: None,
             last_diagnostic: None,
+            kernel_binding_recoveries: 0,
         })
     }
 
@@ -663,6 +668,19 @@ impl ManagedRoute {
             return;
         }
         if let Some(failure) = failure {
+            if failure == PublicationIdentityFailure::KernelBinding
+                && self.kernel_binding_recoveries < MAX_KERNEL_BINDING_RECOVERIES
+                && let Some(endpoint) = self.endpoint.take()
+            {
+                self.kernel_binding_recoveries += 1;
+                recover_kernel_binding(
+                    endpoint,
+                    &mut self.publication,
+                    &mut self.serial_fingerprint,
+                    Instant::now(),
+                );
+                return;
+            }
             if let Some(endpoint) = self.endpoint.take() {
                 endpoint.destroy();
             }
@@ -776,6 +794,21 @@ impl ManagedRoute {
             endpoint.destroy();
         }
     }
+}
+
+/// Withdraws a virtual device whose kernel binding failed and re-arms its
+/// publication on the same bridge connection with the normal backoff, instead
+/// of blocking the route until the device is power-cycled (REL-003).
+fn recover_kernel_binding<B: crate::BridgeExchange>(
+    endpoint: RunningEndpoint<B>,
+    publication: &mut PendingPublication<B>,
+    serial_fingerprint: &mut Option<SerialFingerprint>,
+    now: Instant,
+) {
+    let bridge = endpoint.destroy_into_bridge();
+    *serial_fingerprint = None;
+    *publication =
+        PendingPublication::retrying(bridge, PublicationIdentityFailure::KernelBinding, now);
 }
 
 fn recycle_retained_route<B: crate::BridgeExchange>(
