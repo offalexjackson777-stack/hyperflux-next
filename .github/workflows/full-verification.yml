@@ -70,5 +70,7 @@ jobs:
         path: |-
           build/ci/full
           build/ci/openrgb-qualification
+          build/rust-coverage-current.json
+          build/rust-coverage-current.lcov
         if-no-files-found: error
         retention-days: 30

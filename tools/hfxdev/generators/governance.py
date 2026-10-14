@@ -194,7 +194,10 @@ def full_verification_workflow(governance: GitHubGovernance) -> str:
             _upload(
                 governance,
                 name="hyperflux-full-evidence",
-                path="build/ci/full\nbuild/ci/openrgb-qualification",
+                path=(
+                    "build/ci/full\nbuild/ci/openrgb-qualification\n"
+                    "build/rust-coverage-current.json\nbuild/rust-coverage-current.lcov"
+                ),
                 retention_days=30,
             ),
         ]

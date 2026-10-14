@@ -175,6 +175,14 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertIn("./hfx ci qualify-openrgb", full_text)
         self.assertIn("--openrgb-qualification", full_text)
         self.assertIn("build/ci/full/result.json", full_text)
+        upload = next(
+            step
+            for step in full["jobs"]["full-software"]["steps"]
+            if step.get("name") == "Upload hyperflux-full-evidence"
+        )
+        self.assertEqual(upload["if"], "${{ always() }}")
+        self.assertIn("build/rust-coverage-current.lcov", upload["with"]["path"])
+        self.assertIn("build/rust-coverage-current.json", upload["with"]["path"])
         self.assertNotIn("release", fast["on"])
         self.assertNotIn("release", full["on"])
         self.assertIn("pull_request", full["on"])

@@ -350,6 +350,28 @@ def _run_rust_coverage_contracts(root: Path, node: TestNode) -> None:
         "Rust workspace coverage",
         node.timeout_seconds,
     )
+    # Keep line-level evidence next to the summary, written before the ratchet
+    # is checked so it exists exactly when a coverage failure must be explained.
+    line_report = report.with_suffix(".lcov")
+    if line_report.is_symlink():
+        raise ModelError("Rust line coverage output path may not be a symlink")
+    if line_report.exists():
+        if not line_report.is_file():
+            raise ModelError("Rust line coverage output path is not a regular file")
+        line_report.unlink()
+    _run_command(
+        root,
+        [
+            "cargo",
+            "llvm-cov",
+            "report",
+            "--lcov",
+            "--output-path",
+            line_report.relative_to(root).as_posix(),
+        ],
+        "Rust line-level coverage report",
+        node.timeout_seconds,
+    )
     verify_rust_coverage_report(policy, parse_llvm_coverage_summary(report))
 
 
