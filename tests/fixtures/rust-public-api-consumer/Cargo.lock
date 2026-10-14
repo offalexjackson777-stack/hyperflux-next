@@ -70,7 +70,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-bridge"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "hfx-core",
  "hfx-domain",
@@ -86,7 +86,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-core"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "hfx-domain",
  "hfx-protocol",
@@ -97,7 +97,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-daemon"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "hfx-bridge",
  "hfx-core",
@@ -114,7 +114,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-device-qualification"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "hfx-domain",
  "hfx-profiles",
@@ -130,14 +130,14 @@ dependencies = [
 
 [[package]]
 name = "hfx-domain"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "hfx-errors"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "hfx-domain",
  "serde",
@@ -145,7 +145,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-integration-model"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "hfx-domain",
  "hfx-profiles",
@@ -157,7 +157,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-kernel-transport"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "hfx-core",
  "hfx-domain",
@@ -170,7 +170,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-ops"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "hfx-device-qualification",
  "hfx-domain",
@@ -187,14 +187,14 @@ dependencies = [
 
 [[package]]
 name = "hfx-profiles"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "hfx-domain",
 ]
 
 [[package]]
 name = "hfx-protocol"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "hfx-domain",
  "serde",
@@ -203,14 +203,14 @@ dependencies = [
 
 [[package]]
 name = "hfx-runtime"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "hfx-sdk"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "hfx-domain",
  "hfx-protocol",
@@ -219,7 +219,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-sim"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "hfx-core",
  "hfx-domain",
@@ -232,7 +232,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-system-probe"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "hfx-domain",
  "hfx-integration-model",
@@ -247,7 +247,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-uhid-relay"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "hfx-daemon",
  "hfx-domain",

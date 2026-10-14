@@ -184,7 +184,7 @@ def assert_no_application_relations(record: dict[str, Any]) -> None:
 
 
 def assert_component_contract(linux: dict[str, Any], full: dict[str, Any]) -> None:
-    if linux["name"] != "hyperflux-next-linux" or linux["version"] != "2.0.0-1":
+    if linux["name"] != "hyperflux-next-linux" or linux["version"] != "2.0.1-1":
         raise RuntimeError("core component identity differs from the release contract")
     if full["name"] != "hyperflux-next-full" or full["version"] != linux["version"]:
         raise RuntimeError("full component identity differs from the release contract")

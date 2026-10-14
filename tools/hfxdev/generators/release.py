@@ -18,6 +18,9 @@ def release_gates_markdown(context: ReleaseContext) -> str:
         + (
             "The Arch release and its signed third-party repository are published."
             if published
+            else f"This candidate is not published; `{context.published_release}` remains "
+            "the published Arch release."
+            if context.published_release
             else "Publication remains separately locked."
         ),
         "",
@@ -38,6 +41,10 @@ def release_gates_markdown(context: ReleaseContext) -> str:
                 "The project-operated Arch repository signs packages and repository metadata; "
                 "it is not an official Arch Linux repository."
                 if published
+                else "A passing build, test, package, or hardware check does not publish this "
+                "candidate. The published release, its version tag, and the signed repository "
+                "stay unchanged until the candidate is separately released."
+                if context.published_release
                 else "A passing build, test, package, or hardware check does not create a release. "
                 "No version tag, release artifact, package channel, or signing key is published."
             ),

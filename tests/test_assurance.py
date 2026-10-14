@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -67,13 +68,21 @@ class AssuranceTests(unittest.TestCase):
         gates = context.gates
         self.assertEqual(load_release_gates(ROOT), gates)
         self.assertEqual(len(gates), 10)
-        self.assertEqual(context.target.product_version, "2.0.0")
+        self.assertEqual(context.target.product_version, "2.0.1")
         self.assertEqual(context.target.package_release, 1)
-        self.assertEqual(context.target.state, "published-arch-release")
+        self.assertEqual(context.target.state, "verified-candidate")
+        self.assertEqual(context.published_release, "2.0.0-1")
         self.assertTrue(all(gate.status == "verified" for gate in gates))
         self.assertEqual(gates[-1].id, "HFX-GATE-PUBLICATION-DECISION")
         self.assertEqual(gates[-1].status, "verified")
         self.assertTrue(gates[-1].publication_authorization_required)
+
+    def test_release_target_claims_publication_only_for_the_published_version(self) -> None:
+        with (
+            patch("hfxdev.release.published_arch_release", return_value="2.0.1-1"),
+            self.assertRaisesRegex(ModelError, "publication interlock"),
+        ):
+            load_release_context(ROOT)
 
     def test_protected_behavior_freezes_claims_and_the_natural_wake_gap(self) -> None:
         baseline = load_protected_behavior(ROOT)

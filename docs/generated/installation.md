@@ -4,7 +4,7 @@
 
 Canonical manifest digest: `b3fe0b89c07ec4c3f00c489b68023e51645dfdb05a8af828567b82e3bd51f787`.
 
-Packages: lean Core `hyperflux-next-linux` and optional-integration Full at `2.0.0` release `1`.
+Packages: lean Core `hyperflux-next-linux` and optional-integration Full at `2.0.1` release `1`.
 
 ## Safety Policy
 

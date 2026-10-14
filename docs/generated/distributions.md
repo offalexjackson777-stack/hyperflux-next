@@ -9,7 +9,7 @@ The Arch `pkgbase=hyperflux-next` emits two non-overlapping user-facing packages
 | Component | Package | Required packages | Optional packages | Conflicts | Provides | Replaces |
 | --- | --- | --- | --- | --- | --- | --- |
 | `linux` | `hyperflux-next-linux` | `dkms`, `glibc`, `libgcc`, `systemd` | none | `hyperflux-v2-linux-dkms` | none | none |
-| `full` | `hyperflux-next-full` | `dkms`, `glibc`, `libgcc`, `systemd`, `hyperflux-next-linux=2.0.0-1`, `qt5-base`, `hidapi`, `libstdc++` | `openrgb` (Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0rc3/plugin API 4 verified), `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend) | `hyperflux-next-openrgb=0.0.0_dev.1-2`, `openrazer-driver-dkms` | `openrazer-driver-dkms=3.12.4`, `hyperflux-openrazer-driver-abi=3.12.4` | `hyperflux-next-openrgb=0.0.0_dev.1-2`, `openrazer-driver-dkms` |
+| `full` | `hyperflux-next-full` | `dkms`, `glibc`, `libgcc`, `systemd`, `hyperflux-next-linux=2.0.1-1`, `qt5-base`, `hidapi`, `libstdc++` | `openrgb` (Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0rc3/plugin API 4 verified), `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend) | `hyperflux-next-openrgb=0.0.0_dev.1-2`, `openrazer-driver-dkms` | `openrazer-driver-dkms=3.12.4`, `hyperflux-openrazer-driver-abi=3.12.4` | `hyperflux-next-openrgb=0.0.0_dev.1-2`, `openrazer-driver-dkms` |
 
 ## Ownership Boundary
 

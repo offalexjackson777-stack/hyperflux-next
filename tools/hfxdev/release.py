@@ -7,6 +7,8 @@ from pathlib import Path, PurePosixPath
 import re
 from typing import Any
 
+from .arch_repository import load_arch_repository_policy, published_arch_release
+from .linux_runtime import load_linux_runtime
 from .model import ModelError, load_foundation, load_json, require_unique
 
 
@@ -52,6 +54,7 @@ class ReleaseTarget:
 class ReleaseContext:
     target: ReleaseTarget
     gates: tuple[ReleaseGate, ...]
+    published_release: str | None
 
 
 def _strings(value: Any, label: str, *, nonempty: bool = False) -> tuple[str, ...]:
@@ -95,10 +98,19 @@ def load_release_context(root: Path) -> ReleaseContext:
         "state",
     }:
         raise ModelError("release target has missing or unknown fields")
+    product = load_linux_runtime(root).product
+    published_release = (
+        published_arch_release(load_arch_repository_policy(root)) if published else None
+    )
+    candidate = f"{product.version}-{product.package_release}"
     expected_target = {
-        "product_version": "2.0.0",
-        "package_release": 1,
-        "state": "published-arch-release" if published else "verified-candidate",
+        "product_version": product.version,
+        "package_release": product.package_release,
+        "state": (
+            "published-arch-release"
+            if candidate == published_release
+            else "verified-candidate"
+        ),
     }
     if target != expected_target:
         raise ModelError("release target differs from the publication interlock")
@@ -155,7 +167,11 @@ def load_release_context(root: Path) -> ReleaseContext:
         raise ModelError("final publication decision differs from the publication interlock")
     if any(gate.status != "verified" for gate in gates[:-1]):
         raise ModelError("every technical release gate must be verified before public cutover")
-    return ReleaseContext(target=ReleaseTarget(**target), gates=tuple(gates))
+    return ReleaseContext(
+        target=ReleaseTarget(**target),
+        gates=tuple(gates),
+        published_release=published_release,
+    )
 
 
 def load_release_gates(root: Path) -> tuple[ReleaseGate, ...]:

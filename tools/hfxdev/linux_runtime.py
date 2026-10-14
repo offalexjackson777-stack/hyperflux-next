@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import re
+import tomllib
 from typing import Any
 
 from .model import ModelError, load_json, sha256_file
@@ -353,6 +354,15 @@ def _private_file_mode(value: Any, label: str) -> int:
     return mode
 
 
+def _cargo_workspace_version(root: Path) -> str:
+    with (root / "Cargo.toml").open("rb") as handle:
+        manifest = tomllib.load(handle)
+    version = manifest.get("workspace", {}).get("package", {}).get("version")
+    if not isinstance(version, str):
+        raise ModelError("Cargo workspace must declare one package version")
+    return version
+
+
 def load_linux_runtime(root: Path) -> LinuxRuntime:
     path = root / "runtime" / "linux.json"
     value = load_json(path)
@@ -375,6 +385,8 @@ def load_linux_runtime(root: Path) -> LinuxRuntime:
             product_value["package_release"], "Linux package release", 1, 65_535
         ),
     )
+    if _cargo_workspace_version(root) != product.version:
+        raise ModelError("Cargo workspace version must equal the Linux product version")
 
     bridge_value = _object(value["bridge"], "Linux bridge runtime")
     _exact(bridge_value, BRIDGE_KEYS, "Linux bridge runtime")

@@ -260,6 +260,11 @@ def load_arch_repository_policy(root: Path) -> ArchRepositoryPolicy:
     )
 
 
+def published_arch_release(policy: ArchRepositoryPolicy) -> str:
+    (version,) = {package.version for package in policy.packages}
+    return version
+
+
 def repository_configuration(policy: ArchRepositoryPolicy) -> str:
     return "\n".join(
         (
