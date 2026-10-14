@@ -274,7 +274,7 @@ class DeviceKnowledgeContractTests(unittest.TestCase):
     def test_source_catalogs_match_exact_integration_pins(self) -> None:
         sources = {value["upstream_id"]: value for value in self.catalog["upstreams"]}
         self.assertEqual(sources["openrazer"]["record_count"], 232)
-        self.assertEqual(sources["openrgb"]["record_count"], 112)
+        self.assertEqual(sources["openrgb"]["record_count"], 113)
         self.assertEqual(
             sources["openrazer"]["commit"],
             "1ef8a91712906a89fd332a2ed62bbd105315d6d1",
@@ -284,7 +284,7 @@ class DeviceKnowledgeContractTests(unittest.TestCase):
             "81bbe18a84c2e507006f19dd252e397e40a56bfe",
         )
         self.assertEqual(len(self.inputs.source_catalogs["openrazer"]["records"]), 232)
-        self.assertEqual(len(self.inputs.source_catalogs["openrgb"]["records"]), 112)
+        self.assertEqual(len(self.inputs.source_catalogs["openrgb"]["records"]), 113)
 
     def test_naga_knowledge_is_rich_but_fails_closed_without_route_profile(self) -> None:
         naga = next(
