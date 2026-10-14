@@ -14,7 +14,7 @@ The Arch package channel publishes package and repository signatures. This sourc
 - Vendored source packages: 1
 - Pinned application upstreams: 3
 - Immutable workflow actions: 7
-- Authority SHA-256: `0439ce3d4428c85022692626b602e7af81fb80ac3f9564678f0853788f37e20c`
+- Authority SHA-256: `4aa31f4d6cda16f50b5d137d143d67b6102fbf8a6441819404952116d0875fce`
 
 ## License Policy
 

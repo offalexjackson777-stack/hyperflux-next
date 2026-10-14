@@ -1,15 +1,15 @@
 # Support
 
-HyperFlux Next is unreleased. There is currently no supported installation or
-package channel, but public source, generated documentation, and development
-discussion are available.
+HyperFlux Next 2.0 is released for Arch Linux x86_64. To install or update it,
+follow the [installation guide](docs/user/installation.md). Only the latest
+2.0.x release is supported; see [SECURITY.md](SECURITY.md#supported-versions).
 
 ## Choose The Right Route
 
 | Need | Next action |
 | --- | --- |
 | Understand the project | Start at the [documentation hub](docs/README.md) |
-| Check installation availability | Read [installation status](docs/generated/installation.md) |
+| Install or update HyperFlux Next | Follow the [installation guide](docs/user/installation.md) |
 | Ask a usage or development question | Open a [Help discussion](https://github.com/offalexjackson777-stack/hyperflux-next/discussions/categories/help) |
 | Explore an early idea | Start an [Ideas discussion](https://github.com/offalexjackson777-stack/hyperflux-next/discussions/categories/ideas) |
 | Report incorrect behavior | Use the [bug form](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=bug_report.yml) |

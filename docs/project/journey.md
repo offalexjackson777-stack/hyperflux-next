@@ -145,7 +145,7 @@ device mode, direct USB precedence, application handoff, and special controls.
 Keyboard and mouse power cycles now withdraw and republish only the affected
 endpoint. Normal input stays on the physical receiver throughout.
 
-The current Arch candidate completed that bounded parity work with both physical
+The 2.0.0 Arch release completed that bounded parity work with both physical
 fixtures. The verification layers and what each one can claim are explained in
 the [verification guide](../developer/verification.md).
 
@@ -170,8 +170,8 @@ assigns each public page an owner and canonical source so factual projections do
 not drift away from the product.
 
 Version 2.0 is the result of those choices: a smaller public surface around the
-same protocol, UAPI, capability model, and stock-application boundary. Release
-artifacts have not been published yet.
+same protocol, UAPI, capability model, and stock-application boundary. Version
+2.0.0 was published for Arch Linux x86_64 on 2026-08-04.
 
 ## Technical Appendix
 

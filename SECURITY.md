@@ -1,8 +1,15 @@
 # Security Policy
 
-HyperFlux Next is public pre-release source with **no supported product
-version**. Do not interpret a green workflow, a public page, or source
-availability as release support.
+## Supported Versions
+
+| Version | Platform | Supported |
+| --- | --- | --- |
+| Latest 2.0.x release (currently 2.0.0) | Arch Linux x86_64 | Yes |
+| Earlier 2.0.x patch releases | Arch Linux x86_64 | No - update to the latest 2.0.x |
+| Development branches and unpublished builds | Any | No |
+
+Each 2.0.x patch release replaces the previous one. Other distributions are not
+supported yet.
 
 ## Report Privately
 
@@ -24,7 +31,7 @@ privacy-reviewed artifact after initial triage.
 - Receipt should be acknowledged within 7 days when maintainer availability
   permits.
 - Remediation and disclosure timing depend on severity, reproducibility, and
-  whether the affected behavior exists only in unreleased development source.
+  whether the affected behavior exists in a published release.
 - Security-report handling does not imply that a package, tag, or hardware
   qualification is ready.
 

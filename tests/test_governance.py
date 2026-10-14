@@ -85,7 +85,7 @@ class GitHubGovernanceTests(unittest.TestCase):
 
     def test_public_source_is_authorized_while_product_publication_remains_locked(self) -> None:
         source = json.loads((ROOT / "governance" / "github.json").read_text(encoding="utf-8"))
-        self.assertEqual(self.governance.remote_state, "public-pre-release")
+        self.assertEqual(self.governance.remote_state, "public-released")
         interlock = source["publication_interlock"]
         self.assertTrue(interlock["source_repository_authorized"])
         self.assertFalse(interlock["pages_deployment_authorized"])

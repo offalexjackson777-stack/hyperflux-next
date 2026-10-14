@@ -7,7 +7,7 @@ The public repository, Discussions, issue intake, and native security controls a
 ## Current Interlock
 
 - Planned repository: `offalexjackson777-stack/hyperflux-next`
-- Remote state: `public-pre-release`
+- Remote state: `public-released`
 - Public source: `authorized`
 - Pages deployment: `disabled`
 - Product publication: `locked`

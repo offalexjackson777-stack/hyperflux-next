@@ -28,7 +28,7 @@
         "owner": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}$"},
         "name": {"const": "hyperflux-next"},
         "default_branch": {"const": "main"},
-        "remote_state": {"const": "public-pre-release"},
+        "remote_state": {"const": "public-released"},
         "visibility": {"const": "public"},
         "description": {"type": "string", "minLength": 1, "maxLength": 350},
         "homepage": {"const": ""},

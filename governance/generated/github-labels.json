@@ -62,7 +62,7 @@
       "name": "skip-changelog"
     }
   ],
-  "remote_state": "public-pre-release",
+  "remote_state": "public-released",
   "repository": "offalexjackson777-stack/hyperflux-next",
   "schema": "hyperflux-github-label-plan-v1"
 }

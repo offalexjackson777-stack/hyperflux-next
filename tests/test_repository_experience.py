@@ -348,6 +348,24 @@ class RepositoryExperienceContracts(unittest.TestCase):
         issues = repository_link_issues(ROOT)
         self.assertEqual(issues, (), "\n".join(str(issue) for issue in issues))
 
+    def test_public_pages_do_not_contradict_the_published_release(self) -> None:
+        # 2.0.0 is published; no public page may claim otherwise (DOC-001).
+        stale = (
+            "is unreleased",
+            "no supported product version",
+            "no supported installation",
+            "public pre-release source",
+            "have not been published yet",
+        )
+        pages = sorted(ROOT.glob("*.md")) + sorted((ROOT / "docs").rglob("*.md"))
+        found = [
+            f"{page.relative_to(ROOT)}: {phrase!r}"
+            for page in pages
+            for phrase in stale
+            if phrase in page.read_text(encoding="utf-8").lower()
+        ]
+        self.assertEqual(found, [], "\n".join(found))
+
     def test_repository_link_contract_rejects_missing_files_and_anchors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

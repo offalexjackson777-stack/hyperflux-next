@@ -36,7 +36,7 @@
     "apply_authorized": false,
     "operation": "close-or-disable-existing-empty-project"
   },
-  "remote_state": "public-pre-release",
+  "remote_state": "public-released",
   "repository": "offalexjackson777-stack/hyperflux-next",
   "repository_metadata": {
     "description": "Linux support for Razer devices paired through HyperFlux V2, with OpenRazer, Polychromatic, and OpenRGB integration.",

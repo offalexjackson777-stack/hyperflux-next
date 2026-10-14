@@ -238,7 +238,7 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         "owner": "offalexjackson777-stack",
         "name": "hyperflux-next",
         "default_branch": "main",
-        "remote_state": "public-pre-release",
+        "remote_state": "public-released",
         "visibility": "public",
         "description": "Linux support for Razer devices paired through HyperFlux V2, with OpenRazer, Polychromatic, and OpenRGB integration.",
         "homepage": "",
