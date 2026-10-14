@@ -412,6 +412,67 @@ fn shared_actor_serves_two_independent_clients_without_backend_lock_ownership() 
 }
 
 #[test]
+fn run_loop_drains_commands_queued_before_it_starts() {
+    // CI-001: cover the batch-drain arm of the actor loop deterministically in
+    // this test binary. Other tests reach it only when two client commands race
+    // into the queue together, which made Rust coverage vary by one line.
+    let limits = BridgeActorLimits {
+        command_capacity: QueueCapacity::try_from(2).expect("command capacity is valid"),
+        connection_capacity: QueueCapacity::try_from(2).expect("connection capacity is valid"),
+        native_transaction_capacity: QueueCapacity::try_from(4).expect("native capacity is valid"),
+        response_timeout: Duration::from_secs(30),
+    };
+    let (actor, handle) = BridgeActor::new(
+        config(),
+        DeterministicIdentities::new(),
+        registry(),
+        FakeBackend::default(),
+        limits,
+    )
+    .expect("actor configuration is valid");
+
+    // Three clients race for a two-command queue while the actor is not running:
+    // exactly two queue an Open and wait, the third is rejected immediately.
+    let (results, finished) = std::sync::mpsc::channel();
+    let clients: Vec<_> = (0..3)
+        .map(|_| {
+            let handle = handle.clone();
+            let results = results.clone();
+            thread::spawn(move || {
+                results
+                    .send(handle.open_connection())
+                    .expect("result channel is open");
+            })
+        })
+        .collect();
+    // The first result can only be the rejection, and a rejection proves the
+    // queue is full, so both remaining commands are queued before the loop runs.
+    assert_eq!(
+        finished.recv().expect("one client finishes first"),
+        Err(hfx_bridge::BridgeActorError::Busy)
+    );
+
+    let actor_thread = thread::spawn(move || actor.run());
+    let mut opened: Vec<_> = (0..2)
+        .map(|_| {
+            finished
+                .recv()
+                .expect("queued client finishes")
+                .expect("queued connection opens")
+        })
+        .collect();
+    opened.sort_unstable();
+    assert_eq!(opened.len(), 2);
+    assert_ne!(opened[0], opened[1]);
+    for client in clients {
+        client.join().expect("client thread joins");
+    }
+    let exit = handle.shutdown().expect("actor shuts down");
+    assert_eq!(exit.connections_cleaned, 2);
+    assert_eq!(actor_thread.join().expect("actor thread joins"), exit);
+}
+
+#[test]
 fn runtime_tick_runs_after_commands_even_when_idle_timeout_is_long() {
     let metrics = Arc::new(Mutex::new(SharedMetrics::default()));
     let limits = BridgeActorLimits {
