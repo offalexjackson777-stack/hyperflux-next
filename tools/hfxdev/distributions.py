@@ -370,14 +370,14 @@ def _check_arch_contract(target: DistributionTarget, sibling_version: str) -> No
         target.dependency_roles["service-manager"],
         target.dependency_roles["device-manager"],
         f"hyperflux-next-linux={sibling_version}",
-        "qt5-base",
+        "qt6-base",
         "hidapi",
         "libstdc++",
     }
     if set(full.dependencies) != expected_full:
         raise ModelError("full-package dependencies differ from the adapter contract")
     expected_optional = {
-        "openrgb": "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0rc3/plugin API 4 verified",
+        "openrgb": "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified",
         "openrazer-daemon": "Stock OpenRazer service for compatible application access",
         "python-openrazer": "Official Python OpenRazer client API",
         "polychromatic": "Stock graphical OpenRazer frontend",

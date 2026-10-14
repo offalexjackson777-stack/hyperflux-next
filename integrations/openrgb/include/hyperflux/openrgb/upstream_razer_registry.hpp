@@ -18,6 +18,7 @@
 #include <vector>
 
 class RGBController;
+class RGBControllerInterface;
 
 namespace hyperflux::openrgb::native
 {
@@ -32,6 +33,7 @@ public:
     [[nodiscard]] RGBController& controller() noexcept;
     [[nodiscard]] const RGBController& controller() const noexcept;
     [[nodiscard]] const v7::NativeRoute& route() const noexcept;
+    [[nodiscard]] std::string_view name() const noexcept;
     [[nodiscard]] std::string_view serial() const noexcept;
 
 private:
@@ -45,6 +47,8 @@ private:
     v7::NativeRoute route_;
     std::unique_ptr<NativeFeatureExchange> exchange_;
     std::unique_ptr<RGBController> controller_;
+    std::string name_;
+    std::string serial_;
 };
 
 using NativeFeatureExchangeFactory = std::function<
@@ -161,6 +165,6 @@ private:
 [[nodiscard]] bool is_eligible_upstream_razer_route(const v7::NativeRoute& route) noexcept;
 [[nodiscard]] std::string canonical_queried_serial(std::string_view serial);
 [[nodiscard]] std::vector<std::string> collect_direct_razer_serials(
-    const std::vector<RGBController*>& controllers);
+    const std::vector<RGBControllerInterface*>& controllers);
 
 } // namespace hyperflux::openrgb::native

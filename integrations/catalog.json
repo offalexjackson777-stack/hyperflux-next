@@ -17,10 +17,10 @@
       "id": "openrgb",
       "name": "OpenRGB",
       "repository": "https://github.com/CalcProgrammer1/OpenRGB.git",
-      "version": "1.0rc3",
-      "commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0",
+      "version": "1.0",
+      "commit": "81bbe18a84c2e507006f19dd252e397e40a56bfe",
       "license_expression": "GPL-2.0-only",
-      "api_contract": "OpenRGB plugin API 4",
+      "api_contract": "OpenRGB plugin API 5",
       "uses": ["effect-engine", "model-layout-registry", "plugin-build-contract"],
       "build_network_access": false
     },

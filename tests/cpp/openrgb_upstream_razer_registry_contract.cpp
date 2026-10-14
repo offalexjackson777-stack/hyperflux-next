@@ -20,6 +20,7 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <utility>
 #include <vector>
 
 namespace
@@ -214,25 +215,56 @@ public:
 class TestController final : public RGBController
 {
 public:
-    void SetupZones() override {}
-    void ResizeZone(int, int) override {}
-    void DeviceUpdateLEDs() override {}
-    void UpdateZoneLEDs(int) override {}
-    void UpdateSingleLED(int) override {}
-    void DeviceUpdateMode() override {}
+    TestController(std::string device_vendor, std::string device_location, std::string device_serial)
+    {
+        vendor = std::move(device_vendor);
+        location = std::move(device_location);
+        serial = std::move(device_serial);
+    }
+};
+
+// OpenRGB 1.0 offers no getter for a mode's protocol value; read the
+// controller's mode table directly for contract inspection.
+struct ControllerState : RGBController
+{
+    static const std::vector<mode>& modes_of(const RGBController& controller)
+    {
+        return controller.*(&ControllerState::modes);
+    }
 };
 
 std::size_t mode_index(const RGBController& controller, int value)
 {
+    const auto& modes = ControllerState::modes_of(controller);
     const auto found = std::find_if(
-        controller.modes.begin(),
-        controller.modes.end(),
+        modes.begin(),
+        modes.end(),
         [value](const mode& candidate) { return candidate.value == value; });
-    if(found == controller.modes.end())
+    if(found == modes.end())
     {
         throw std::runtime_error("test controller mode is absent");
     }
-    return static_cast<std::size_t>(std::distance(controller.modes.begin(), found));
+    return static_cast<std::size_t>(std::distance(modes.begin(), found));
+}
+
+bool all_colors_are(RGBController& controller, RGBColor color)
+{
+    for(unsigned int led = 0; led < controller.GetLEDCount(); ++led)
+    {
+        if(controller.GetColor(led) != color)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+void set_all_colors(RGBController& controller, RGBColor color)
+{
+    for(unsigned int led = 0; led < controller.GetLEDCount(); ++led)
+    {
+        controller.SetColor(led, color);
+    }
 }
 
 bool is_request(
@@ -378,24 +410,21 @@ int main()
     const auto mouse_controller = std::find_if(
         host.registered.begin(),
         host.registered.end(),
-        [](const RGBController* controller)
+        [](RGBController* controller)
         {
-            return canonical_queried_serial(controller->serial) == "MOUSE-SERIAL-0001";
+            return canonical_queried_serial(controller->GetSerial()) == "MOUSE-SERIAL-0001";
         });
     if(mouse_controller == host.registered.end()
-       || (*mouse_controller)->colors.empty()
-       || !std::all_of(
-           (*mouse_controller)->colors.begin(),
-           (*mouse_controller)->colors.end(),
-           [](RGBColor color) { return color == ToRGBColor(0, 0, 0); }))
+       || (*mouse_controller)->GetLEDCount() == 0
+       || !all_colors_are(**mouse_controller, ToRGBColor(0, 0, 0)))
     {
         return 17;
     }
     auto mouse_requests = request_traces.at("MOUSE-SERIAL-0001");
     const auto initial_mouse_requests = mouse_requests->snapshot();
     const auto mouse_brightness_modes = static_cast<std::size_t>(std::count_if(
-        (*mouse_controller)->modes.begin(),
-        (*mouse_controller)->modes.end(),
+        ControllerState::modes_of(**mouse_controller).begin(),
+        ControllerState::modes_of(**mouse_controller).end(),
         [](const mode& candidate)
         {
             return (candidate.flags & MODE_FLAG_HAS_BRIGHTNESS) != 0;
@@ -403,8 +432,8 @@ int main()
     if(request_count(initial_mouse_requests, 0x0f, 0x84) != 0
        || mouse_brightness_modes == 0
        || !std::all_of(
-           (*mouse_controller)->modes.begin(),
-           (*mouse_controller)->modes.end(),
+           ControllerState::modes_of(**mouse_controller).begin(),
+           ControllerState::modes_of(**mouse_controller).end(),
            [](const mode& candidate)
            {
                return (candidate.flags & MODE_FLAG_HAS_BRIGHTNESS) == 0
@@ -415,11 +444,11 @@ int main()
     }
 
     const auto direct_mode = mode_index(**mouse_controller, RAZER_MODE_DIRECT);
-    (*mouse_controller)->modes[direct_mode].brightness = 60;
+    (*mouse_controller)->SetModeBrightness(static_cast<unsigned int>(direct_mode), 60);
     const auto before_brightness_callback = mouse_requests->snapshot();
     const auto custom_frames_before = request_count(
         before_brightness_callback, 0x0f, 0x03);
-    (*mouse_controller)->SetMode(static_cast<int>(direct_mode));
+    (*mouse_controller)->SetActiveMode(static_cast<int>(direct_mode));
     if(!mouse_requests->wait_for(
            [before = before_brightness_callback.size()](const auto& requests)
            {
@@ -441,17 +470,10 @@ int main()
         return 24;
     }
 
-    // OpenRGB exposes no signal that distinguishes this first intentional black
-    // Direct frame from its uninitialized all-zero color buffer. The safety guard
-    // must suppress both until a non-black Direct frame establishes intent.
-    (*mouse_controller)->UpdateLEDs();
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    if(request_count(mouse_requests->snapshot(), 0x0f, 0x03) != custom_frames_before)
-    {
-        return 18;
-    }
-    (*mouse_controller)->colors.assign(
-        (*mouse_controller)->colors.size(), ToRGBColor(0x20, 0x00, 0x00));
+    // The plugin-local controller forwards every Direct frame. The initial
+    // all-black guard lives in the API 5 mirror (virtual-controller-mirror
+    // contract).
+    set_all_colors(**mouse_controller, ToRGBColor(0x20, 0x00, 0x00));
     const auto custom_modes_before = static_cast<std::size_t>(std::count_if(
         before_brightness_callback.begin(),
         before_brightness_callback.end(),
@@ -480,8 +502,7 @@ int main()
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
     const auto after_initialized_direct = request_count(
         mouse_requests->snapshot(), 0x0f, 0x03);
-    (*mouse_controller)->colors.assign(
-        (*mouse_controller)->colors.size(), ToRGBColor(0x00, 0x00, 0x00));
+    set_all_colors(**mouse_controller, ToRGBColor(0x00, 0x00, 0x00));
     (*mouse_controller)->UpdateLEDs();
     if(!mouse_requests->wait_for(
            [after_initialized_direct](const auto& requests)
@@ -494,10 +515,12 @@ int main()
     }
 
     const auto static_mode = mode_index(**mouse_controller, RAZER_MODE_STATIC);
-    (*mouse_controller)->modes[static_mode].colors.assign(1, ToRGBColor(0, 0, 0));
-    (*mouse_controller)->modes[static_mode].brightness = 80;
+    (*mouse_controller)->SetModeColorsCount(static_cast<unsigned int>(static_mode), 1);
+    (*mouse_controller)->SetModeColor(
+        static_cast<unsigned int>(static_mode), 0, ToRGBColor(0, 0, 0));
+    (*mouse_controller)->SetModeBrightness(static_cast<unsigned int>(static_mode), 80);
     const auto before_static = mouse_requests->size();
-    (*mouse_controller)->SetMode(static_cast<int>(static_mode));
+    (*mouse_controller)->SetActiveMode(static_cast<int>(static_mode));
     if(!mouse_requests->wait_for(
            [before_static](const auto& requests)
            {
@@ -518,7 +541,7 @@ int main()
 
     const auto off_mode = mode_index(**mouse_controller, RAZER_MODE_OFF);
     const auto before_off = mouse_requests->size();
-    (*mouse_controller)->SetMode(static_cast<int>(off_mode));
+    (*mouse_controller)->SetActiveMode(static_cast<int>(off_mode));
     if(!mouse_requests->wait_for(
            [before_off](const auto& requests)
            {
@@ -538,9 +561,9 @@ int main()
     const auto keyboard_controller = std::find_if(
         host.registered.begin(),
         host.registered.end(),
-        [](const RGBController* controller)
+        [](RGBController* controller)
         {
-            return canonical_queried_serial(controller->serial) == "KEYBOARD-SERIAL-0001";
+            return canonical_queried_serial(controller->GetSerial()) == "KEYBOARD-SERIAL-0001";
         });
     const auto keyboard_requests = request_traces.at("KEYBOARD-SERIAL-0001")->snapshot();
     const auto keyboard_info = std::find_if(
@@ -555,7 +578,7 @@ int main()
     {
         return 16;
     }
-    if((*keyboard_controller)->description != "Razer Device, UK (ISO), Black")
+    if((*keyboard_controller)->GetDescription() != "Razer Device, UK (ISO), Black")
     {
         return 34;
     }
@@ -569,8 +592,8 @@ int main()
         return 36;
     }
     const auto keyboard_brightness_modes = static_cast<std::size_t>(std::count_if(
-        (*keyboard_controller)->modes.begin(),
-        (*keyboard_controller)->modes.end(),
+        ControllerState::modes_of(**keyboard_controller).begin(),
+        ControllerState::modes_of(**keyboard_controller).end(),
         [](const mode& candidate)
         {
             return (candidate.flags & MODE_FLAG_HAS_BRIGHTNESS) != 0;
@@ -578,8 +601,8 @@ int main()
     if(request_count(keyboard_requests, 0x0f, 0x84) != 0
        || keyboard_brightness_modes == 0
        || !std::all_of(
-           (*keyboard_controller)->modes.begin(),
-           (*keyboard_controller)->modes.end(),
+           ControllerState::modes_of(**keyboard_controller).begin(),
+           ControllerState::modes_of(**keyboard_controller).end(),
            [](const mode& candidate)
            {
                return (candidate.flags & MODE_FLAG_HAS_BRIGHTNESS) == 0
@@ -588,9 +611,10 @@ int main()
     {
         return 38;
     }
-    const auto* keyboard_map = (*keyboard_controller)->zones.front().matrix_map->map;
-    if((*keyboard_controller)->leds[4 * 17 + 1].name != "Key: \\ (ISO)"
-       || !(*keyboard_controller)->leds[2 * 17 + 13].name.empty()
+    const auto keyboard_map = (*keyboard_controller)->GetZoneMatrixMap(0).map;
+    if(keyboard_map.size() != 6 * 17
+       || (*keyboard_controller)->GetLEDName(4 * 17 + 1) != "Key: \\ (ISO)"
+       || !(*keyboard_controller)->GetLEDName(2 * 17 + 13).empty()
        || keyboard_map[4 * 17 + 1] == std::numeric_limits<unsigned int>::max()
        || keyboard_map[2 * 17 + 13] != std::numeric_limits<unsigned int>::max())
     {
@@ -606,7 +630,7 @@ int main()
         'h');
     auto french_instance = factory.create(french_keyboard);
     if(!french_instance
-       || french_instance.value()->controller().description
+       || french_instance.value()->controller().GetDescription()
               != "Razer Device, French (ISO), Quartz")
     {
         return 27;
@@ -630,8 +654,8 @@ int main()
     if(!no_getter_instance
        || request_count(no_getter_requests, 0x0f, 0x84) != 0
        || std::none_of(
-           no_getter_instance.value()->controller().modes.begin(),
-           no_getter_instance.value()->controller().modes.end(),
+           ControllerState::modes_of(no_getter_instance.value()->controller()).begin(),
+           ControllerState::modes_of(no_getter_instance.value()->controller()).end(),
            [](const mode& candidate)
            {
                return (candidate.flags & MODE_FLAG_HAS_BRIGHTNESS) != 0;
@@ -650,13 +674,13 @@ int main()
     const auto original_controller = std::find_if(
         host.registered.begin(),
         host.registered.end(),
-        [](const RGBController* controller)
+        [](RGBController* controller)
         {
-            return canonical_queried_serial(controller->serial) == "ORIGINAL-SERIAL-01";
+            return canonical_queried_serial(controller->GetSerial()) == "ORIGINAL-SERIAL-01";
         });
     if(original_controller == host.registered.end()
-       || (*original_controller)->leds.size() != 13
-       || (*original_controller)->zones.size() != 3)
+       || (*original_controller)->GetLEDCount() != 13
+       || (*original_controller)->GetZoneCount() != 3)
     {
         return 13;
     }
@@ -690,22 +714,10 @@ int main()
         return 3;
     }
 
-    TestController direct_mouse_controller;
-    direct_mouse_controller.vendor = "Razer";
-    direct_mouse_controller.location = "HID: /dev/hidraw-direct-mouse";
-    direct_mouse_controller.serial = "MOUSE-SERIAL-0001     ";
-    TestController network_controller;
-    network_controller.vendor = "Razer";
-    network_controller.location = "Network: 127.0.0.1";
-    network_controller.serial = "MOUSE-SERIAL-0001";
-    TestController unrelated_controller;
-    unrelated_controller.vendor = "Other";
-    unrelated_controller.location = "HID: /dev/hidraw-other";
-    unrelated_controller.serial = "MOUSE-SERIAL-0001";
-    TestController blank_serial_controller;
-    blank_serial_controller.vendor = "Razer";
-    blank_serial_controller.location = "HID: /dev/hidraw-blank";
-    blank_serial_controller.serial = "                      ";
+    TestController direct_mouse_controller("Razer", "HID: /dev/hidraw-direct-mouse", "MOUSE-SERIAL-0001     ");
+    TestController network_controller("Razer", "Network: 127.0.0.1", "MOUSE-SERIAL-0001");
+    TestController unrelated_controller("Other", "HID: /dev/hidraw-other", "MOUSE-SERIAL-0001");
+    TestController blank_serial_controller("Razer", "HID: /dev/hidraw-blank", "                      ");
     const auto direct_serials = collect_direct_razer_serials({
         &direct_mouse_controller,
         &network_controller,
@@ -721,7 +733,7 @@ int main()
     const auto direct_mouse = registry.apply_direct_serials(direct_serials);
     if(direct_mouse.newly_suppressed != 1 || registry.suppressed_count() != 1
        || registry.registered_count() != 1 || host.registered.size() != 1
-       || canonical_queried_serial(host.registered.front()->serial)
+       || canonical_queried_serial(host.registered.front()->GetSerial())
               != "KEYBOARD-SERIAL-0001")
     {
         return 4;

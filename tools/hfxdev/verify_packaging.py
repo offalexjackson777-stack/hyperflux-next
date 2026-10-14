@@ -242,7 +242,7 @@ def _build_openrgb_qualification_harness(
     _run_command(
         root,
         [
-            "qmake",
+            "qmake6",
             "-o",
             str(build_directory / "Makefile"),
             str(project),

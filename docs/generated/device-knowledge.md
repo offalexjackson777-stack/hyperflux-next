@@ -76,9 +76,9 @@ Reviewed sources:
 | --- | --- | --- | --- | --- |
 | [`openrazer:RazerBasiliskV3ProWired`](https://github.com/openrazer/openrazer/blob/1ef8a91712906a89fd332a2ed62bbd105315d6d1/daemon/openrazer_daemon/hardware/mouse.py#L1659) | `direct-usb` | `1532:00aa` | hardware class | matrix 1x13 |
 | [`openrazer:RazerBasiliskV3ProWireless`](https://github.com/openrazer/openrazer/blob/1ef8a91712906a89fd332a2ed62bbd105315d6d1/daemon/openrazer_daemon/hardware/mouse.py#L1695) | `vendor-wireless-receiver` | `1532:00ab` | hardware class | matrix 1x13 |
-| [`openrgb:basilisk_v3_pro_bluetooth_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L5240) | `bluetooth` | `unknown:00ac` | table only | slots 1x13; zones Scroll Wheel, Logo, LED Strip |
-| [`openrgb:basilisk_v3_pro_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L4909) | `direct-usb` | `1532:00aa` | active detector | slots 1x13; zones Scroll Wheel, Logo, LED Strip |
-| [`openrgb:basilisk_v3_pro_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L4968) | `vendor-wireless-receiver` | `1532:00ab` | active detector | slots 1x13; zones Scroll Wheel, Logo, LED Strip |
+| [`openrgb:basilisk_v3_pro_bluetooth_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5279) | `bluetooth` | `unknown:00ac` | table only | slots 1x13; zones Scroll Wheel, Logo, LED Strip |
+| [`openrgb:basilisk_v3_pro_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L4948) | `direct-usb` | `1532:00aa` | active detector | slots 1x13; zones Scroll Wheel, Logo, LED Strip |
+| [`openrgb:basilisk_v3_pro_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5007) | `vendor-wireless-receiver` | `1532:00ab` | active detector | slots 1x13; zones Scroll Wheel, Logo, LED Strip |
 
 | Pinned Linux semantic | Presentation | HyperFlux state | Missing capability |
 | --- | --- | --- | --- |
@@ -192,8 +192,8 @@ Reviewed sources:
 | --- | --- | --- | --- | --- |
 | [`openrazer:RazerBasiliskV3Pro35KWired`](https://github.com/openrazer/openrazer/blob/1ef8a91712906a89fd332a2ed62bbd105315d6d1/daemon/openrazer_daemon/hardware/mouse.py#L1703) | `direct-usb` | `1532:00cc` | hardware class | matrix 1x13 |
 | [`openrazer:RazerBasiliskV3Pro35KWireless`](https://github.com/openrazer/openrazer/blob/1ef8a91712906a89fd332a2ed62bbd105315d6d1/daemon/openrazer_daemon/hardware/mouse.py#L1739) | `vendor-wireless-receiver` | `1532:00cd` | hardware class | matrix 1x13 |
-| [`openrgb:basilisk_v3_pro_35k_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L5026) | `direct-usb` | `1532:00cc` | active detector | slots 1x13; zones Scroll Wheel, Logo, LED Strip |
-| [`openrgb:basilisk_v3_pro_35k_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L5085) | `vendor-wireless-receiver` | `1532:00cd` | active detector | slots 1x13; zones Scroll Wheel, Logo, LED Strip |
+| [`openrgb:basilisk_v3_pro_35k_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5065) | `direct-usb` | `1532:00cc` | active detector | slots 1x13; zones Scroll Wheel, Logo, LED Strip |
+| [`openrgb:basilisk_v3_pro_35k_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5124) | `vendor-wireless-receiver` | `1532:00cd` | active detector | slots 1x13; zones Scroll Wheel, Logo, LED Strip |
 
 | Pinned Linux semantic | Presentation | HyperFlux state | Missing capability |
 | --- | --- | --- | --- |
@@ -302,9 +302,9 @@ Reviewed sources:
 | --- | --- | --- | --- | --- |
 | [`openrazer:RazerBlackWidowV3ProWired`](https://github.com/openrazer/openrazer/blob/1ef8a91712906a89fd332a2ed62bbd105315d6d1/daemon/openrazer_daemon/hardware/keyboards.py#L379) | `direct-usb` | `1532:025a` | hardware class | matrix 6x22 |
 | [`openrazer:RazerBlackWidowV3ProWireless`](https://github.com/openrazer/openrazer/blob/1ef8a91712906a89fd332a2ed62bbd105315d6d1/daemon/openrazer_daemon/hardware/keyboards.py#L402) | `vendor-wireless-receiver` | `1532:025c` | hardware class | matrix 6x22 |
-| [`openrgb:blackwidow_v3_pro_bluetooth_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L1578) | `bluetooth` | `unknown:025b` | table only | slots 6x22; zones ZONE_EN_KEYBOARD; layout razer_blackwidow_v3_pro_layout |
-| [`openrgb:blackwidow_v3_pro_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L1543) | `direct-usb` | `1532:025a` | active detector | slots 6x22; zones ZONE_EN_KEYBOARD; layout razer_blackwidow_v3_pro_layout |
-| [`openrgb:blackwidow_v3_pro_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L1613) | `vendor-wireless-receiver` | `1532:025c` | active detector | slots 6x22; zones ZONE_EN_KEYBOARD; layout razer_blackwidow_v3_pro_layout |
+| [`openrgb:blackwidow_v3_pro_bluetooth_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L1578) | `bluetooth` | `unknown:025b` | table only | slots 6x22; zones ZONE_EN_KEYBOARD; layout razer_blackwidow_v3_pro_layout |
+| [`openrgb:blackwidow_v3_pro_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L1543) | `direct-usb` | `1532:025a` | active detector | slots 6x22; zones ZONE_EN_KEYBOARD; layout razer_blackwidow_v3_pro_layout |
+| [`openrgb:blackwidow_v3_pro_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L1613) | `vendor-wireless-receiver` | `1532:025c` | active detector | slots 6x22; zones ZONE_EN_KEYBOARD; layout razer_blackwidow_v3_pro_layout |
 
 | Pinned Linux semantic | Presentation | HyperFlux state | Missing capability |
 | --- | --- | --- | --- |
@@ -466,8 +466,8 @@ Reviewed sources:
 
 | Exact source record | Route | USB identity | Registration | Topology |
 | --- | --- | --- | --- | --- |
-| [`openrgb:blackwidow_v4_lowprofile_tkl_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L2098) | `direct-usb` | `1532:02d4` | active detector | slots 6x18; zones ZONE_EN_KEYBOARD; layout razer_blackwidow_v4_tkl_layout |
-| [`openrgb:blackwidow_v4_lowprofile_tkl_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L2133) | `vendor-wireless-receiver` | `1532:02d2` | active detector | slots 6x18; zones ZONE_EN_KEYBOARD; layout razer_blackwidow_v4_tkl_layout |
+| [`openrgb:blackwidow_v4_lowprofile_tkl_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2098) | `direct-usb` | `1532:02d4` | active detector | slots 6x18; zones ZONE_EN_KEYBOARD; layout razer_blackwidow_v4_tkl_layout |
+| [`openrgb:blackwidow_v4_lowprofile_tkl_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2133) | `vendor-wireless-receiver` | `1532:02d2` | active detector | slots 6x18; zones ZONE_EN_KEYBOARD; layout razer_blackwidow_v4_tkl_layout |
 
 | Pinned Linux semantic | Presentation | HyperFlux state | Missing capability |
 | --- | --- | --- | --- |
@@ -636,8 +636,8 @@ Reviewed sources:
 | --- | --- | --- | --- | --- |
 | [`openrazer:RazerBlackWidowV4TenkeylessHyperSpeedWired`](https://github.com/openrazer/openrazer/blob/1ef8a91712906a89fd332a2ed62bbd105315d6d1/daemon/openrazer_daemon/hardware/keyboards.py#L423) | `direct-usb` | `1532:02d7` | hardware class | matrix 6x18 |
 | [`openrazer:RazerBlackWidowV4TenkeylessHyperSpeedWireless`](https://github.com/openrazer/openrazer/blob/1ef8a91712906a89fd332a2ed62bbd105315d6d1/daemon/openrazer_daemon/hardware/keyboards.py#L445) | `vendor-wireless-receiver` | `1532:02d5` | hardware class | matrix 6x18 |
-| [`openrgb:blackwidow_v4_tkl_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L2028) | `direct-usb` | `1532:02d7` | active detector | slots 6x18; zones ZONE_EN_KEYBOARD; layout razer_blackwidow_v4_tkl_layout |
-| [`openrgb:blackwidow_v4_tkl_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L2063) | `vendor-wireless-receiver` | `1532:02d5` | active detector | slots 6x18; zones ZONE_EN_KEYBOARD; layout razer_blackwidow_v4_tkl_layout |
+| [`openrgb:blackwidow_v4_tkl_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2028) | `direct-usb` | `1532:02d7` | active detector | slots 6x18; zones ZONE_EN_KEYBOARD; layout razer_blackwidow_v4_tkl_layout |
+| [`openrgb:blackwidow_v4_tkl_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2063) | `vendor-wireless-receiver` | `1532:02d5` | active detector | slots 6x18; zones ZONE_EN_KEYBOARD; layout razer_blackwidow_v4_tkl_layout |
 
 | Pinned Linux semantic | Presentation | HyperFlux state | Missing capability |
 | --- | --- | --- | --- |
@@ -779,8 +779,8 @@ Reviewed sources:
 | --- | --- | --- | --- | --- |
 | [`openrazer:RazerCobraProWired`](https://github.com/openrazer/openrazer/blob/1ef8a91712906a89fd332a2ed62bbd105315d6d1/daemon/openrazer_daemon/hardware/mouse.py#L1566) | `direct-usb` | `1532:00af` | hardware class | not documented |
 | [`openrazer:RazerCobraProWireless`](https://github.com/openrazer/openrazer/blob/1ef8a91712906a89fd332a2ed62bbd105315d6d1/daemon/openrazer_daemon/hardware/mouse.py#L1595) | `vendor-wireless-receiver` | `1532:00b0` | hardware class | not documented |
-| [`openrgb:cobra_pro_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L5369) | `direct-usb` | `1532:00af` | active detector | slots 1x11; zones Logo, Scroll Wheel, Underglow |
-| [`openrgb:cobra_pro_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L5428) | `vendor-wireless-receiver` | `1532:00b0` | active detector | slots 1x11; zones Logo, Scroll Wheel, Underglow |
+| [`openrgb:cobra_pro_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5408) | `direct-usb` | `1532:00af` | active detector | slots 1x11; zones Logo, Scroll Wheel, Underglow |
+| [`openrgb:cobra_pro_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5467) | `vendor-wireless-receiver` | `1532:00b0` | active detector | slots 1x11; zones Logo, Scroll Wheel, Underglow |
 
 | Pinned Linux semantic | Presentation | HyperFlux state | Missing capability |
 | --- | --- | --- | --- |
@@ -882,8 +882,8 @@ Reviewed sources:
 | --- | --- | --- | --- | --- |
 | [`openrazer:RazerDeathStalkerV2ProWired`](https://github.com/openrazer/openrazer/blob/1ef8a91712906a89fd332a2ed62bbd105315d6d1/daemon/openrazer_daemon/hardware/keyboards.py#L1422) | `direct-usb` | `1532:0292` | hardware class | matrix 6x22 |
 | [`openrazer:RazerDeathStalkerV2ProWireless`](https://github.com/openrazer/openrazer/blob/1ef8a91712906a89fd332a2ed62bbd105315d6d1/daemon/openrazer_daemon/hardware/keyboards.py#L1444) | `vendor-wireless-receiver` | `1532:0290` | hardware class | matrix 6x22 |
-| [`openrgb:deathstalker_v2_pro_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L2750) | `direct-usb` | `1532:0292` | active detector | slots 6x22; zones ZONE_EN_KEYBOARD; layout razer_deathstalker_v2_pro_layout |
-| [`openrgb:deathstalker_v2_pro_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L2715) | `vendor-wireless-receiver` | `1532:0290` | active detector | slots 6x22; zones ZONE_EN_KEYBOARD; layout razer_deathstalker_v2_pro_layout |
+| [`openrgb:deathstalker_v2_pro_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2750) | `direct-usb` | `1532:0292` | active detector | slots 6x22; zones ZONE_EN_KEYBOARD; layout razer_deathstalker_v2_pro_layout |
+| [`openrgb:deathstalker_v2_pro_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2715) | `vendor-wireless-receiver` | `1532:0290` | active detector | slots 6x22; zones ZONE_EN_KEYBOARD; layout razer_deathstalker_v2_pro_layout |
 
 | Pinned Linux semantic | Presentation | HyperFlux state | Missing capability |
 | --- | --- | --- | --- |
@@ -973,8 +973,8 @@ Reviewed sources:
 | --- | --- | --- | --- | --- |
 | [`openrazer:RazerDeathStalkerV2ProTKLWired`](https://github.com/openrazer/openrazer/blob/1ef8a91712906a89fd332a2ed62bbd105315d6d1/daemon/openrazer_daemon/hardware/keyboards.py#L1451) | `direct-usb` | `1532:0298` | hardware class | matrix 6x17 |
 | [`openrazer:RazerDeathStalkerV2ProTKLWireless`](https://github.com/openrazer/openrazer/blob/1ef8a91712906a89fd332a2ed62bbd105315d6d1/daemon/openrazer_daemon/hardware/keyboards.py#L1473) | `vendor-wireless-receiver` | `1532:0296` | hardware class | matrix 6x17 |
-| [`openrgb:deathstalker_v2_pro_tkl_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L2660) | `direct-usb` | `1532:0298` | active detector | slots 6x17; zones ZONE_EN_KEYBOARD; layout razer_deathstalker_v2_pro_tkl_layout |
-| [`openrgb:deathstalker_v2_pro_tkl_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L2680) | `vendor-wireless-receiver` | `1532:0296` | active detector | slots 6x17; zones ZONE_EN_KEYBOARD; layout razer_deathstalker_v2_pro_tkl_layout |
+| [`openrgb:deathstalker_v2_pro_tkl_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2660) | `direct-usb` | `1532:0298` | active detector | slots 6x17; zones ZONE_EN_KEYBOARD; layout razer_deathstalker_v2_pro_tkl_layout |
+| [`openrgb:deathstalker_v2_pro_tkl_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2680) | `vendor-wireless-receiver` | `1532:0296` | active detector | slots 6x17; zones ZONE_EN_KEYBOARD; layout razer_deathstalker_v2_pro_tkl_layout |
 
 | Pinned Linux semantic | Presentation | HyperFlux state | Missing capability |
 | --- | --- | --- | --- |
@@ -1067,8 +1067,8 @@ Reviewed sources:
 | --- | --- | --- | --- | --- |
 | [`openrazer:RazerNagaV2ProWired`](https://github.com/openrazer/openrazer/blob/1ef8a91712906a89fd332a2ed62bbd105315d6d1/daemon/openrazer_daemon/hardware/mouse.py#L1011) | `direct-usb` | `1532:00a7` | hardware class | matrix 1x3 |
 | [`openrazer:RazerNagaV2ProWireless`](https://github.com/openrazer/openrazer/blob/1ef8a91712906a89fd332a2ed62bbd105315d6d1/daemon/openrazer_daemon/hardware/mouse.py#L1038) | `vendor-wireless-receiver` | `1532:00a8` | hardware class | matrix 1x3 |
-| [`openrgb:naga_pro_v2_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L7146) | `direct-usb` | `1532:00a7` | active detector | slots 1x2; zones Logo, Numpad |
-| [`openrgb:naga_pro_v2_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L7166) | `vendor-wireless-receiver` | `1532:00a8` | active detector | slots 1x2; zones Logo, Numpad |
+| [`openrgb:naga_pro_v2_wired_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L7185) | `direct-usb` | `1532:00a7` | active detector | slots 1x2; zones Logo, Numpad |
+| [`openrgb:naga_pro_v2_wireless_device`](https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L7205) | `vendor-wireless-receiver` | `1532:00a8` | active detector | slots 1x2; zones Logo, Numpad |
 
 Pinned code disagreements:
 

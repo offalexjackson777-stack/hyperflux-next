@@ -124,9 +124,15 @@ sdk::Result<std::unique_ptr<NativeController>> NativeController::create(
         return sdk::Result<std::unique_ptr<NativeController>>::failure(
             controller_error("OpenRGB controller requires a component version"));
     }
-    return sdk::Result<std::unique_ptr<NativeController>>::success(
-        std::unique_ptr<NativeController>(new NativeController(
-            model, std::move(presentation), sink, std::move(component_version))));
+    std::unique_ptr<NativeController> controller(new NativeController(
+        model, std::move(presentation), sink, std::move(component_version)));
+    NativeController* created = controller.get();
+    if(!created->barrier_.await(*created))
+    {
+        return sdk::Result<std::unique_ptr<NativeController>>::failure(
+            controller_error("OpenRGB controller device thread did not start"));
+    }
+    return sdk::Result<std::unique_ptr<NativeController>>::success(std::move(controller));
 }
 
 NativeController::NativeController(const ControllerModel& model,
@@ -146,9 +152,7 @@ NativeController::NativeController(const ControllerModel& model,
 
 NativeController::~NativeController()
 {
-#if defined(HFX_OPENRGB_SAFE_DEVICE_THREAD_STOP)
-    StopDeviceCallThread();
-#endif
+    Shutdown();
 }
 
 const std::string& NativeController::stable_id() const noexcept
@@ -177,7 +181,9 @@ void NativeController::configure()
     location = "hyperflux-next:" + stable_id_;
     type = presentation_.device_kind == DeviceKind::Keyboard ? DEVICE_TYPE_KEYBOARD
                                                              : DEVICE_TYPE_MOUSE;
-    flags = CONTROLLER_FLAG_LOCAL;
+    // Reset-before-update keeps an update requested while a frame is
+    // written, and lets DeviceThreadBarrier drain its repeated probes.
+    flags = CONTROLLER_FLAG_LOCAL | CONTROLLER_FLAG_RESET_BEFORE_UPDATE;
     active_mode = static_cast<int>(ControllerMode::Direct);
 
     mode direct;
@@ -209,7 +215,6 @@ void NativeController::configure()
     static_mode.brightness = kBrightnessMaximum;
     modes.push_back(std::move(static_mode));
 
-    matrices_.reserve(presentation_.zones.size());
     zones.reserve(presentation_.zones.size());
     for(const auto& source : presentation_.zones)
     {
@@ -223,17 +228,9 @@ void NativeController::configure()
         target.flags = 0;
         if(source.kind == LayoutZoneKind::Matrix)
         {
-            auto storage = std::make_unique<MatrixStorage>();
-            storage->values = source.matrix_map;
-            storage->native.height = source.rows;
-            storage->native.width = source.columns;
-            storage->native.map = storage->values.data();
-            target.matrix_map = &storage->native;
-            matrices_.push_back(std::move(storage));
-        }
-        else
-        {
-            target.matrix_map = nullptr;
+            target.matrix_map.height = source.rows;
+            target.matrix_map.width = source.columns;
+            target.matrix_map.map = source.matrix_map;
         }
         zones.push_back(std::move(target));
     }
@@ -247,14 +244,6 @@ void NativeController::configure()
         leds.push_back(std::move(target));
     }
     SetupColors();
-}
-
-void NativeController::SetupZones()
-{
-}
-
-void NativeController::ResizeZone(int, int)
-{
 }
 
 std::vector<v5::RgbColor> NativeController::direct_colors(unsigned int brightness) const
@@ -341,20 +330,33 @@ void NativeController::record(sdk::Result<EnqueueDisposition> result)
 
 void NativeController::DeviceUpdateLEDs()
 {
-    DeviceUpdateMode();
+    if(barrier_.absorb_leds())
+    {
+        return;
+    }
+    apply_active_mode();
 }
 
-void NativeController::UpdateZoneLEDs(int)
+void NativeController::DeviceUpdateZoneLEDs(int)
 {
     DeviceUpdateLEDs();
 }
 
-void NativeController::UpdateSingleLED(int)
+void NativeController::DeviceUpdateSingleLED(int)
 {
     DeviceUpdateLEDs();
 }
 
 void NativeController::DeviceUpdateMode()
+{
+    if(barrier_.absorb_mode())
+    {
+        return;
+    }
+    apply_active_mode();
+}
+
+void NativeController::apply_active_mode()
 {
     if(active_mode < static_cast<int>(ControllerMode::Direct)
         || active_mode > static_cast<int>(ControllerMode::Static))

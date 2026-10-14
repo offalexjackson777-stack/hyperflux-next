@@ -6,7 +6,9 @@
 
 #include "qt_dispatcher.hpp"
 
-#include "ResourceManagerInterface.h"
+#include <hyperflux/openrgb/virtual_controller_mirror.hpp>
+
+#include "OpenRGBPluginInterface.h"
 
 #include <exception>
 #include <memory>
@@ -27,55 +29,26 @@ sdk::Error application_error(std::string message)
     };
 }
 
-class ResourceManagerPluginHost final : public PluginHost
+class OpenRgbApiPluginHost final : public PluginHost
 {
 public:
-    explicit ResourceManagerPluginHost(ResourceManagerInterface& manager) noexcept
-        : manager_(&manager)
+    explicit OpenRgbApiPluginHost(OpenRGBPluginAPIInterface& api) noexcept
+        : mirrors_(api)
     {
     }
 
     void register_controller(NativeController& controller) noexcept override
     {
-        manager_->RegisterRGBController(&controller);
+        mirrors_.add(controller);
     }
 
     void unregister_controller(NativeController& controller) noexcept override
     {
-        manager_->UnregisterRGBController(&controller);
-    }
-
-    void register_detection_start(
-        DetectionCallback callback, void* context) noexcept override
-    {
-        manager_->RegisterDetectionStartCallback(callback, context);
-    }
-
-    void register_detection_end(
-        DetectionCallback callback, void* context) noexcept override
-    {
-        manager_->RegisterDetectionEndCallback(callback, context);
-    }
-
-    void unregister_detection_start(
-        DetectionCallback callback, void* context) noexcept override
-    {
-        manager_->UnregisterDetectionStartCallback(callback, context);
-    }
-
-    void unregister_detection_end(
-        DetectionCallback callback, void* context) noexcept override
-    {
-        manager_->UnregisterDetectionEndCallback(callback, context);
-    }
-
-    void wait_for_detection() noexcept override
-    {
-        manager_->WaitForDeviceDetection();
+        mirrors_.remove(controller);
     }
 
 private:
-    ResourceManagerInterface* manager_;
+    VirtualControllerMirrorSet mirrors_;
 };
 
 } // namespace
@@ -112,14 +85,14 @@ OpenRgbPluginApplication::~OpenRgbPluginApplication()
     unload();
 }
 
-sdk::Result<void> OpenRgbPluginApplication::load(ResourceManagerInterface* manager)
+sdk::Result<void> OpenRgbPluginApplication::load(OpenRGBPluginAPIInterface* api)
 {
-    if(manager == nullptr)
+    if(api == nullptr)
     {
         return sdk::Result<void>::failure(
-            application_error("OpenRGB plugin requires a resource manager"));
+            application_error("OpenRGB plugin requires the plugin API"));
     }
-    return load(std::make_unique<ResourceManagerPluginHost>(*manager));
+    return load(std::make_unique<OpenRgbApiPluginHost>(*api));
 }
 
 sdk::Result<void> OpenRgbPluginApplication::load(std::unique_ptr<PluginHost> host)
@@ -199,13 +172,6 @@ sdk::Result<void> OpenRgbPluginApplication::load(std::unique_ptr<PluginHost> hos
         coordinator_ = std::move(coordinator).value();
         callbacks_enabled_ = true;
     }
-    host_->register_detection_start(&detection_started_callback, this);
-    host_->register_detection_end(&detection_finished_callback, this);
-    {
-        std::lock_guard lock(lifecycle_mutex_);
-        callbacks_registered_ = true;
-    }
-
     auto started = coordinator_->start();
     if(!started)
     {
@@ -222,8 +188,6 @@ sdk::Result<void> OpenRgbPluginApplication::load(std::unique_ptr<PluginHost> hos
 
 void OpenRgbPluginApplication::unload() noexcept
 {
-    PluginHost* host = nullptr;
-    bool callbacks_registered = false;
     {
         std::lock_guard lock(lifecycle_mutex_);
         if(state_ == State::Unloaded || state_ == State::Unloading)
@@ -232,26 +196,14 @@ void OpenRgbPluginApplication::unload() noexcept
         }
         state_ = State::Unloading;
         callbacks_enabled_ = false;
-        host = host_.get();
-        callbacks_registered = callbacks_registered_;
     }
 
-    if(host != nullptr)
-    {
-        host->wait_for_detection();
-        if(callbacks_registered)
-        {
-            host->unregister_detection_start(&detection_started_callback, this);
-            host->unregister_detection_end(&detection_finished_callback, this);
-        }
-    }
 
     std::shared_ptr<PluginCoordinator> coordinator;
     std::unique_ptr<QtApplicationDispatcher> dispatcher;
     std::unique_ptr<PluginHost> owned_host;
     {
         std::lock_guard lock(lifecycle_mutex_);
-        callbacks_registered_ = false;
         coordinator = std::move(coordinator_);
         dispatcher = std::move(dispatcher_);
         owned_host = std::move(host_);
@@ -310,53 +262,31 @@ std::vector<InventoryReceiverModel> OpenRgbPluginApplication::inventory() const
                                   : coordinator->inventory();
 }
 
-void OpenRgbPluginApplication::detection_started_callback(void* context) noexcept
+void OpenRgbPluginApplication::detection_completed() noexcept
 {
-    if(context != nullptr)
-    {
-        static_cast<OpenRgbPluginApplication*>(context)->detection_started();
-    }
-}
-
-void OpenRgbPluginApplication::detection_finished_callback(void* context) noexcept
-{
-    if(context != nullptr)
-    {
-        static_cast<OpenRgbPluginApplication*>(context)->detection_finished();
-    }
-}
-
-void OpenRgbPluginApplication::detection_started() noexcept
-{
-    std::shared_ptr<PluginCoordinator> coordinator;
+    // Plugin controllers survive OpenRGB 1.0 rescans, so only the completed
+    // device list needs reconciling. Registration changes must run on the Qt
+    // application thread: OpenRGB refreshes its device list there and blocks
+    // any other registering thread until the refresh is done.
+    try
     {
         std::lock_guard lock(lifecycle_mutex_);
-        if(!callbacks_enabled_)
+        if(!callbacks_enabled_ || dispatcher_ == nullptr || coordinator_ == nullptr)
         {
             return;
         }
-        coordinator = coordinator_;
-    }
-    if(coordinator != nullptr)
-    {
-        coordinator->detection_started();
-    }
-}
-
-void OpenRgbPluginApplication::detection_finished() noexcept
-{
-    std::shared_ptr<PluginCoordinator> coordinator;
-    {
-        std::lock_guard lock(lifecycle_mutex_);
-        if(!callbacks_enabled_)
+        std::weak_ptr<PluginCoordinator> weak = coordinator_;
+        static_cast<void>(dispatcher_->post([weak]
         {
-            return;
-        }
-        coordinator = coordinator_;
+            if(auto coordinator = weak.lock())
+            {
+                coordinator->detection_finished();
+            }
+        }));
     }
-    if(coordinator != nullptr)
+    catch(...)
     {
-        coordinator->detection_finished();
+        return;
     }
 }
 

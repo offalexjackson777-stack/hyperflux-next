@@ -4,11 +4,11 @@
   "upstream": {
     "id": "openrgb",
     "repository": "https://github.com/CalcProgrammer1/OpenRGB.git",
-    "commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0"
+    "commit": "81bbe18a84c2e507006f19dd252e397e40a56bfe"
   },
   "patch": {
     "path": "patches/0001-Add-HyperFlux-feature-transport-seam.patch",
-    "sha256": "be386ea6616da7a3e196807a8a1aaa7be69469f3e080a7b71e24860774b1d51f"
+    "sha256": "828d55a5b083d0cfd5d8a591486194717fb171b37c23bf3b33ef4da62d45796b"
   },
   "files": [
     {
@@ -23,13 +23,8 @@
     },
     {
       "path": "RGBController/RGBController.cpp",
-      "source_sha256": "6ff82efa28baa5476a445839d75893a33d37ccf8c2d01149e3230a18e691e201",
-      "transformed_sha256": "225e9c1094bee2c222a153f44821b0a31d8379c7575bbf7451214f92694011e6"
-    },
-    {
-      "path": "RGBController/RGBController.h",
-      "source_sha256": "3351b862b9acc0832f46246cc8b5d8554af3d1597eecefc30901213802f59e0b",
-      "transformed_sha256": "4ed90b93d513ddfd019c71518409fa6479e8cca2bb77e410eca4a65e7b8075e4"
+      "source_sha256": "9434c7dde305f506ef1d1c55bc7749f4084c0c6d955789b3b95d2b199710e8a7",
+      "transformed_sha256": "ea63c1035ab2ecf57b66ef9d41315ddc41112873d61790860d3c6dd9d1d0bf6d"
     }
   ]
 }

@@ -7,8 +7,8 @@
       "catalog_sha256": "331fb9347dfbe8b092a735894fccadc601ea7b327d0d79b450487d83af5e9af2"
     },
     "openrgb": {
-      "commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0",
-      "catalog_sha256": "46fe2762bf15f473ff5d6d3c36beca6ddfedbfc6068cc882a63c304c43e5e02c"
+      "commit": "81bbe18a84c2e507006f19dd252e397e40a56bfe",
+      "catalog_sha256": "08f7d491e9bd6ddb2254b6fbb5d9f83cb7f913da6fe2ceec707aece5393352b1"
     }
   },
   "transport": {
@@ -43,8 +43,8 @@
           "source_device_key": "naga_pro_v2_wireless_device",
           "source": {
             "path": "Controllers/RazerController/RazerDevices.cpp",
-            "line": 7166,
-            "sha256": "e959c103c0a776b0143c8eeea405c36b55fffd1bad5361107e52af19f08b8a6b"
+            "line": 7205,
+            "sha256": "0018d5741583df069f83c13474b41c38904979f73e6680f48b9807ea4048bf0c"
           },
           "transaction_id": 31,
           "led_selector": 0,
@@ -810,8 +810,8 @@
           "source_device_key": "basilisk_v3_pro_wireless_device",
           "source": {
             "path": "Controllers/RazerController/RazerDevices.cpp",
-            "line": 4968,
-            "sha256": "e959c103c0a776b0143c8eeea405c36b55fffd1bad5361107e52af19f08b8a6b"
+            "line": 5007,
+            "sha256": "0018d5741583df069f83c13474b41c38904979f73e6680f48b9807ea4048bf0c"
           },
           "transaction_id": 31,
           "led_selector": 0,
@@ -3287,8 +3287,8 @@
           "source_device_key": "cobra_pro_wireless_device",
           "source": {
             "path": "Controllers/RazerController/RazerDevices.cpp",
-            "line": 5428,
-            "sha256": "e959c103c0a776b0143c8eeea405c36b55fffd1bad5361107e52af19f08b8a6b"
+            "line": 5467,
+            "sha256": "0018d5741583df069f83c13474b41c38904979f73e6680f48b9807ea4048bf0c"
           },
           "transaction_id": 31,
           "led_selector": 0,
@@ -5353,8 +5353,8 @@
           "source_device_key": "basilisk_v3_pro_35k_wireless_device",
           "source": {
             "path": "Controllers/RazerController/RazerDevices.cpp",
-            "line": 5085,
-            "sha256": "e959c103c0a776b0143c8eeea405c36b55fffd1bad5361107e52af19f08b8a6b"
+            "line": 5124,
+            "sha256": "0018d5741583df069f83c13474b41c38904979f73e6680f48b9807ea4048bf0c"
           },
           "transaction_id": 31,
           "led_selector": 0,
@@ -7859,7 +7859,7 @@
           "source": {
             "path": "Controllers/RazerController/RazerDevices.cpp",
             "line": 1613,
-            "sha256": "e959c103c0a776b0143c8eeea405c36b55fffd1bad5361107e52af19f08b8a6b"
+            "sha256": "0018d5741583df069f83c13474b41c38904979f73e6680f48b9807ea4048bf0c"
           },
           "transaction_id": 63,
           "led_selector": 5,
@@ -10428,7 +10428,7 @@
           "source": {
             "path": "Controllers/RazerController/RazerDevices.cpp",
             "line": 2715,
-            "sha256": "e959c103c0a776b0143c8eeea405c36b55fffd1bad5361107e52af19f08b8a6b"
+            "sha256": "0018d5741583df069f83c13474b41c38904979f73e6680f48b9807ea4048bf0c"
           },
           "transaction_id": 159,
           "led_selector": 0,
@@ -12780,7 +12780,7 @@
           "source": {
             "path": "Controllers/RazerController/RazerDevices.cpp",
             "line": 2680,
-            "sha256": "e959c103c0a776b0143c8eeea405c36b55fffd1bad5361107e52af19f08b8a6b"
+            "sha256": "0018d5741583df069f83c13474b41c38904979f73e6680f48b9807ea4048bf0c"
           },
           "transaction_id": 159,
           "led_selector": 0,
@@ -16935,7 +16935,7 @@
           "source": {
             "path": "Controllers/RazerController/RazerDevices.cpp",
             "line": 2133,
-            "sha256": "e959c103c0a776b0143c8eeea405c36b55fffd1bad5361107e52af19f08b8a6b"
+            "sha256": "0018d5741583df069f83c13474b41c38904979f73e6680f48b9807ea4048bf0c"
           },
           "transaction_id": 159,
           "led_selector": 5,
@@ -17733,7 +17733,7 @@
           "source": {
             "path": "Controllers/RazerController/RazerDevices.cpp",
             "line": 2063,
-            "sha256": "e959c103c0a776b0143c8eeea405c36b55fffd1bad5361107e52af19f08b8a6b"
+            "sha256": "0018d5741583df069f83c13474b41c38904979f73e6680f48b9807ea4048bf0c"
           },
           "transaction_id": 159,
           "led_selector": 5,

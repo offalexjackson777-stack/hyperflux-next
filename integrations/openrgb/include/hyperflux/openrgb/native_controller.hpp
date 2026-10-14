@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "device_thread_barrier.hpp"
 #include "native_command.hpp"
 #include "razer_registry.hpp"
 
@@ -33,7 +34,7 @@ struct CommandStatus
     friend bool operator==(const CommandStatus&, const CommandStatus&) = default;
 };
 
-/// Thin OpenRGB API-4 controller backed exclusively by RuntimeWorker.
+/// Thin OpenRGB API-5 controller backed exclusively by RuntimeWorker.
 class NativeController final : public RGBController
 {
 public:
@@ -53,20 +54,12 @@ public:
     [[nodiscard]] CommandStatus command_status() const;
     void update_generation(const GenerationId& generation_id) noexcept;
 
-    void SetupZones() override;
-    void ResizeZone(int zone, int new_size) override;
     void DeviceUpdateLEDs() override;
-    void UpdateZoneLEDs(int zone) override;
-    void UpdateSingleLED(int led) override;
+    void DeviceUpdateZoneLEDs(int zone) override;
+    void DeviceUpdateSingleLED(int led) override;
     void DeviceUpdateMode() override;
 
 private:
-    struct MatrixStorage
-    {
-        std::vector<unsigned int> values;
-        matrix_map_type native {};
-    };
-
     NativeController(const ControllerModel& model,
         RazerPresentation presentation,
         LightingCommandSink& sink,
@@ -77,6 +70,7 @@ private:
     [[nodiscard]] std::vector<v5::RgbColor> uniform_colors(
         RGBColor color, unsigned int brightness) const;
     [[nodiscard]] unsigned int active_brightness() const noexcept;
+    void apply_active_mode();
     void dispatch(ControllerMode requested_mode);
     void record(sdk::Result<EnqueueDisposition> result);
 
@@ -87,10 +81,10 @@ private:
     RazerPresentation presentation_;
     LightingCommandSink* sink_;
     std::string component_version_;
-    std::vector<std::unique_ptr<MatrixStorage>> matrices_;
 
     mutable std::mutex status_mutex_;
     CommandStatus status_ {EnqueueDisposition::Accepted, std::nullopt};
+    DeviceThreadBarrier barrier_;
 };
 
 } // namespace hyperflux::openrgb::native

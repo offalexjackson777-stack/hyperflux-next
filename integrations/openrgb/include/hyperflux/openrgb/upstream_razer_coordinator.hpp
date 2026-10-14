@@ -15,7 +15,7 @@
 #include <string_view>
 #include <vector>
 
-class RGBController;
+class RGBControllerInterface;
 
 namespace hyperflux::openrgb::native
 {
@@ -24,7 +24,7 @@ class UpstreamPluginHost : public UpstreamControllerHost
 {
 public:
     ~UpstreamPluginHost() override = default;
-    [[nodiscard]] virtual std::vector<RGBController*> controllers() const = 0;
+    [[nodiscard]] virtual std::vector<RGBControllerInterface*> controllers() const = 0;
 };
 
 struct UpstreamRazerCoordinatorConfig

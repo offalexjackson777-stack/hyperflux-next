@@ -59,42 +59,6 @@ std::string route_location(const v7::NativeRoute& route)
         + "/endpoint/" + std::string(route.endpoint_id.value());
 }
 
-class HyperFluxRazerController final : public RGBController_Razer
-{
-public:
-    explicit HyperFluxRazerController(RazerController* controller)
-        : RGBController_Razer(controller)
-    {
-    }
-
-    ~HyperFluxRazerController() override
-    {
-        StopDeviceCallThread();
-    }
-
-    void DeviceUpdateLEDs() override
-    {
-        if(!direct_colors_initialized_)
-        {
-            // OpenRGB provides no callback metadata that distinguishes its
-            // initial zero buffer from an intentional first black Direct frame.
-            const bool has_explicit_color = std::any_of(
-                colors.begin(),
-                colors.end(),
-                [](RGBColor color) { return color != ToRGBColor(0, 0, 0); });
-            if(!has_explicit_color)
-            {
-                return;
-            }
-            direct_colors_initialized_ = true;
-        }
-        RGBController_Razer::DeviceUpdateLEDs();
-    }
-
-private:
-    bool direct_colors_initialized_ = false;
-};
-
 } // namespace
 
 UpstreamRazerControllerInstance::UpstreamRazerControllerInstance(
@@ -103,7 +67,9 @@ UpstreamRazerControllerInstance::UpstreamRazerControllerInstance(
     std::unique_ptr<RGBController> controller)
     : route_(std::move(route)),
       exchange_(std::move(exchange)),
-      controller_(std::move(controller))
+      controller_(std::move(controller)),
+      name_(controller_->GetName()),
+      serial_(controller_->GetSerial())
 {
 }
 
@@ -124,9 +90,14 @@ const v7::NativeRoute& UpstreamRazerControllerInstance::route() const noexcept
     return route_;
 }
 
+std::string_view UpstreamRazerControllerInstance::name() const noexcept
+{
+    return name_;
+}
+
 std::string_view UpstreamRazerControllerInstance::serial() const noexcept
 {
-    return controller_->serial;
+    return serial_;
 }
 
 NativeFeatureExchangeFactory make_unix_native_feature_exchange_factory(
@@ -200,7 +171,7 @@ UpstreamRazerControllerFactory::create(const v7::NativeRoute& route)
         device->name.c_str(),
         std::move(transport));
     std::unique_ptr<RGBController> controller =
-        std::make_unique<HyperFluxRazerController>(upstream.release());
+        std::make_unique<RGBController_Razer>(upstream.release());
     return sdk::Result<std::unique_ptr<UpstreamRazerControllerInstance>>::success(
         std::unique_ptr<UpstreamRazerControllerInstance>(new UpstreamRazerControllerInstance(
             route,
@@ -471,7 +442,7 @@ UpstreamRazerControllerRegistry::summaries() const
         const auto& route = entry.instance->route();
         result.push_back({
             id,
-            entry.instance->controller().name,
+            std::string(entry.instance->name()),
             route.device_kind,
             route.product_id,
             entry.registered,
@@ -516,21 +487,24 @@ std::string canonical_queried_serial(std::string_view serial)
 }
 
 std::vector<std::string> collect_direct_razer_serials(
-    const std::vector<RGBController*>& controllers)
+    const std::vector<RGBControllerInterface*>& controllers)
 {
     std::set<std::string, std::less<>> unique;
     constexpr std::string_view hid_prefix = "HID: ";
     constexpr std::string_view native_prefix = "HID: hyperflux-next/native/";
-    for(const auto* controller : controllers)
+    for(auto* controller : controllers)
     {
-        if(controller == nullptr || controller->vendor != "Razer"
-           || !std::string_view(controller->location).starts_with(hid_prefix)
-           || std::string_view(controller->location).starts_with(native_prefix)
-           || controller->location.size() == hid_prefix.size())
+        if(controller == nullptr || controller->GetVendor() != "Razer")
         {
             continue;
         }
-        auto serial = canonical_queried_serial(controller->serial);
+        const std::string location = controller->GetLocation();
+        if(!location.starts_with(hid_prefix) || location.starts_with(native_prefix)
+           || location.size() == hid_prefix.size())
+        {
+            continue;
+        }
+        auto serial = canonical_queried_serial(controller->GetSerial());
         if(!serial.empty())
         {
             unique.insert(std::move(serial));

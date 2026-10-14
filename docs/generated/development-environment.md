@@ -27,7 +27,7 @@ This is the only ordinary setup step that uses the network. It creates clean, de
 | Upstream | Commit | Contract |
 | --- | --- | --- |
 | OpenRazer | `1ef8a91712906a89fd332a2ed62bbd105315d6d1` | org.razer 3.x metadata and D-Bus vocabulary |
-| OpenRGB | `6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0` | OpenRGB plugin API 4 |
+| OpenRGB | `81bbe18a84c2e507006f19dd252e397e40a56bfe` | OpenRGB plugin API 5 |
 | Polychromatic | `716737bf444ab7e962f4d3b7a5188b2f07c0c4a1` | Polychromatic 0.9.7 stock OpenRazer backend contract |
 
 Then run either software lane without network access:
@@ -88,7 +88,7 @@ Archive package retrieval permits up to 3 attempts. Low-speed transfer expiry is
 | `python-setuptools` | `1:83.0.0-1` |
 | `python-wheel` | `0.47.0-1` |
 | `python-yaml` | `6.0.3-2` |
-| `qt5-base` | `5.15.19+kde+r96-1` |
+| `qt6-base` | `6.11.1-1` |
 | `rpm-tools` | `6.0.1-2` |
 | `rustup` | `1.29.0-2` |
 | `sudo` | `1.9.17.p2-6` |

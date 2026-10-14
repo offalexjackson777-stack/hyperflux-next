@@ -4,7 +4,7 @@
 from types import MappingProxyType
 from typing import Final
 
-PROFILE_SOURCE_SHA256: Final = '8e22e1e842e215e2b732b2af6f525c3d96bf528c97ab76121b5981dcda6f3605'
+PROFILE_SOURCE_SHA256: Final = '0692a7738da6631b2e8cff29506ea883e4ac9ee7ecbcbe61b77a4af8e91528db'
 PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                  'id': 'razer-basilisk-v3-pro',
                  'official_name': 'Razer Basilisk V3 Pro',
@@ -431,7 +431,7 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                       'summary': 'Direct and Static brightness endpoints, explicit Off, and controller-local '
                                  'restoration were physically verified for both children.'},
                      {'evidence_level': 'source-reviewed',
-                      'id': 'claim.presentation.openrgb-1.0rc3-model-layouts',
+                      'id': 'claim.presentation.openrgb-1.0-model-layouts',
                       'limitations': ['Upstream presentation cannot authorize a receiver command or qualify an unknown '
                                       'child.'],
                       'privacy': 'public',
@@ -682,7 +682,7 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                                    'claim.children.complete-static-black',
                                    'claim.children.software-effect-frame-continuity',
                                    'claim.children.static-off-brightness',
-                                   'claim.presentation.openrgb-1.0rc3-model-layouts'],
+                                   'claim.presentation.openrgb-1.0-model-layouts'],
                'identity': {'authority': 'paired-product-id',
                             'manufacturer': 'Razer',
                             'model_name': 'Razer Basilisk V3 Pro 35K',
@@ -692,8 +692,8 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                'presentation': {'layout_key': None,
                                 'model_key': 'basilisk_v3_pro_35k_wireless_device',
                                 'owner': 'OpenRGB',
-                                'project_version': '1.0rc3',
-                                'source_commit': '6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0',
+                                'project_version': '1.0',
+                                'source_commit': '81bbe18a84c2e507006f19dd252e397e40a56bfe',
                                 'transport_variant': 'wireless',
                                 'upstream_id': 'openrgb'},
                'profile_id': 'child.razer.basilisk-v3-pro-35k.00cd',
@@ -795,7 +795,7 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                                    'claim.children.complete-static-black',
                                    'claim.children.software-effect-frame-continuity',
                                    'claim.children.static-off-brightness',
-                                   'claim.presentation.openrgb-1.0rc3-model-layouts'],
+                                   'claim.presentation.openrgb-1.0-model-layouts'],
                'identity': {'authority': 'paired-product-id',
                             'manufacturer': 'Razer',
                             'model_name': 'Razer DeathStalker V2 Pro Tenkeyless',
@@ -805,8 +805,8 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                'presentation': {'layout_key': 'razer_deathstalker_v2_pro_tkl_layout',
                                 'model_key': 'deathstalker_v2_pro_tkl_wireless_device',
                                 'owner': 'OpenRGB',
-                                'project_version': '1.0rc3',
-                                'source_commit': '6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0',
+                                'project_version': '1.0',
+                                'source_commit': '81bbe18a84c2e507006f19dd252e397e40a56bfe',
                                 'transport_variant': 'wireless',
                                 'upstream_id': 'openrgb'},
                'profile_id': 'child.razer.deathstalker-v2-pro-tkl.0296',
@@ -1052,7 +1052,7 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                'schema': 'hyperflux-hardware-profile-v1',
                'source_path': 'profiles/surfaces/razer-hyperflux-v2-hard-edition.json'}],
  'schema': 'hyperflux-compiled-profile-catalog-v1',
- 'source_sha256': '8e22e1e842e215e2b732b2af6f525c3d96bf528c97ab76121b5981dcda6f3605'}
+ 'source_sha256': '0692a7738da6631b2e8cff29506ea883e4ac9ee7ecbcbe61b77a4af8e91528db'}
 PROFILES_BY_ID: Final = MappingProxyType({profile['profile_id']: profile for profile in PROFILE_CATALOG['profiles']})
 
 __all__ = ["PROFILE_CATALOG", "PROFILE_SOURCE_SHA256", "PROFILES_BY_ID"]

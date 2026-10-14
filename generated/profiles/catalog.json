@@ -692,7 +692,7 @@
     },
     {
       "evidence_level": "source-reviewed",
-      "id": "claim.presentation.openrgb-1.0rc3-model-layouts",
+      "id": "claim.presentation.openrgb-1.0-model-layouts",
       "limitations": [
         "Upstream presentation cannot authorize a receiver command or qualify an unknown child."
       ],
@@ -1119,7 +1119,7 @@
         "claim.children.complete-static-black",
         "claim.children.software-effect-frame-continuity",
         "claim.children.static-off-brightness",
-        "claim.presentation.openrgb-1.0rc3-model-layouts"
+        "claim.presentation.openrgb-1.0-model-layouts"
       ],
       "identity": {
         "authority": "paired-product-id",
@@ -1133,8 +1133,8 @@
         "layout_key": null,
         "model_key": "basilisk_v3_pro_35k_wireless_device",
         "owner": "OpenRGB",
-        "project_version": "1.0rc3",
-        "source_commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0",
+        "project_version": "1.0",
+        "source_commit": "81bbe18a84c2e507006f19dd252e397e40a56bfe",
         "transport_variant": "wireless",
         "upstream_id": "openrgb"
       },
@@ -1361,7 +1361,7 @@
         "claim.children.complete-static-black",
         "claim.children.software-effect-frame-continuity",
         "claim.children.static-off-brightness",
-        "claim.presentation.openrgb-1.0rc3-model-layouts"
+        "claim.presentation.openrgb-1.0-model-layouts"
       ],
       "identity": {
         "authority": "paired-product-id",
@@ -1375,8 +1375,8 @@
         "layout_key": "razer_deathstalker_v2_pro_tkl_layout",
         "model_key": "deathstalker_v2_pro_tkl_wireless_device",
         "owner": "OpenRGB",
-        "project_version": "1.0rc3",
-        "source_commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0",
+        "project_version": "1.0",
+        "source_commit": "81bbe18a84c2e507006f19dd252e397e40a56bfe",
         "transport_variant": "wireless",
         "upstream_id": "openrgb"
       },
@@ -1786,5 +1786,5 @@
     }
   ],
   "schema": "hyperflux-compiled-profile-catalog-v1",
-  "source_sha256": "8e22e1e842e215e2b732b2af6f525c3d96bf528c97ab76121b5981dcda6f3605"
+  "source_sha256": "0692a7738da6631b2e8cff29506ea883e4ac9ee7ecbcbe61b77a4af8e91528db"
 }

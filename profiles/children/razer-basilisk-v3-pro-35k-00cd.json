@@ -28,7 +28,7 @@
     {"from_runtime_sha256": "62f114182069895ae0c72ebdd7165e1bb774d41eceeeead155eda449df69f8cf", "preserve_stage_roles": ["lighting", "map", "telemetry"]},
     {"from_runtime_sha256": "f72d38a70e9f4f7fb56848937abafa4773902de64b9d07b22e11c12df6dbfe33", "preserve_stage_roles": ["lighting", "map", "telemetry"]}
   ],
-  "presentation": {"upstream_id": "openrgb", "owner": "OpenRGB", "project_version": "1.0rc3", "source_commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0", "model_key": "basilisk_v3_pro_35k_wireless_device", "layout_key": null, "transport_variant": "wireless"},
+  "presentation": {"upstream_id": "openrgb", "owner": "OpenRGB", "project_version": "1.0", "source_commit": "81bbe18a84c2e507006f19dd252e397e40a56bfe", "model_key": "basilisk_v3_pro_35k_wireless_device", "layout_key": null, "transport_variant": "wireless"},
   "capabilities": [
     {"id": "identity.model", "support_level": "identified", "evidence_claims": ["claim.child.00cd.passive-identity-telemetry"]},
     {"id": "identity.paired-product-id", "support_level": "read-only", "evidence_claims": ["claim.child.00cd.passive-identity-telemetry"]},
@@ -46,6 +46,6 @@
     {"id": "telemetry.connection-evidence", "support_level": "telemetry-qualified", "evidence_claims": ["claim.child.00cd.passive-identity-telemetry"]},
     {"id": "telemetry.mouse-contact", "support_level": "telemetry-qualified", "evidence_claims": ["claim.child.00cd.passive-identity-telemetry"]}
   ],
-  "evidence_claims": ["claim.child.00cd.complete-led-map", "claim.child.00cd.native-feature-report-parity", "claim.child.00cd.passive-identity-telemetry", "claim.children.complete-static-black", "claim.children.software-effect-frame-continuity", "claim.children.static-off-brightness", "claim.presentation.openrgb-1.0rc3-model-layouts"],
+  "evidence_claims": ["claim.child.00cd.complete-led-map", "claim.child.00cd.native-feature-report-parity", "claim.child.00cd.passive-identity-telemetry", "claim.children.complete-static-black", "claim.children.software-effect-frame-continuity", "claim.children.static-off-brightness", "claim.presentation.openrgb-1.0-model-layouts"],
   "restrictions": ["Another Basilisk name or PID inherits no map.", "OpenRGB owns zone labels and geometry presentation.", "Contact, inactivity, darkness, and power-off remain distinct facts.", "A physical mouse power-off can retain the receiver route; watched qualification records that physical boundary without inventing a disconnect.", "Native Feature-report authority is limited to the exact 90-byte report family and generated OpenRazer command policy."]
 }
