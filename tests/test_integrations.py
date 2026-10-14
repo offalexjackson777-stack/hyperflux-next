@@ -544,6 +544,7 @@ class IntegrationCatalogTests(unittest.TestCase):
             f"{deployment.relay.preflight_service_unit} systemd-udevd.service",
             service,
         )
+        self.assertIn("Before=systemd-user-sessions.service", service)
         self.assertIn(
             f"SupplementaryGroups={runtime.bridge.client_group}", service
         )

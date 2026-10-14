@@ -72,6 +72,7 @@ def relay_service(
             f"PartOf={bridge.service_unit}",
             f"Requires={bridge.service_unit} {relay.preflight_service_unit}",
             f"After={bridge.service_unit} {relay.preflight_service_unit} systemd-udevd.service",
+            "Before=systemd-user-sessions.service",
             f"ConditionPathExists={relay.uhid_device}",
             f"ConditionFileIsExecutable={deployment.compatibility.daemon_executable_path}",
             "",

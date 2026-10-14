@@ -5,6 +5,7 @@ Description=HyperFlux Next OpenRazer native-route relay
 PartOf=hyperflux-next-bridge.service
 Requires=hyperflux-next-bridge.service hyperflux-next-openrazer-driver-preflight.service
 After=hyperflux-next-bridge.service hyperflux-next-openrazer-driver-preflight.service systemd-udevd.service
+Before=systemd-user-sessions.service
 ConditionPathExists=/dev/uhid
 ConditionFileIsExecutable=/usr/bin/openrazer-daemon
 
