@@ -1,17 +1,17 @@
 {
   "$schema": "../schemas/documentation-audit.schema.json",
   "schema": "hyperflux-documentation-audit-v2",
-  "source_revision": "304b311402fa3a3769629078d7f446b1a7d50123",
+  "source_revision": "bf0f7b8fd2c4cf5b8c69e612566606abef8565a3",
   "inputs": {
     "catalog_sha256": "433c022f0d5398ac2c1112c2852cbbf9db688628972e86bb97cded0a24bd9184",
     "policy_sha256": "afad995f01f447fdf79edea77682603abb26eeec123a00c74b134d3efdc413a2",
     "renderer_sha256": "065d95640162f64657854db2d4d5caccc005ee245f3a731a3b3d36f3e8397fe4",
     "journey_source_coverage_sha256": "7dc3e929079eb76fe8ce82b0b026c2a373af8dc4c829352f38374a6d6983495a",
-    "rendered_documents_sha256": "487f88e9b2a016aec17f48beb5ca099e53bf746c591cc4e2e11130902f4b6a36"
+    "rendered_documents_sha256": "78000c03cd79f5947a522cc8b35babef263178360815954e89ab9fb1b23a9533"
   },
   "render": {
     "status": "passed",
-    "result_sha256": "a299b7cb3ed2c2e496d77f92ac9c909f72fbf9b3ab12b2febfb4020d0daa574e",
+    "result_sha256": "23ce3632ea9e4302654aa9a5e29ebdf35f62237357748ffd1d54c86d1c994998",
     "document_count": 64,
     "check_count": 384,
     "screenshot_count": 108,
@@ -27,15 +27,15 @@
       "light",
       "dark"
     ],
-    "screenshot_manifest_sha256": "95c0c85be68af4393d8855216ef0743bea86f099df3d4dc77866d2f6df6cd1c5",
+    "screenshot_manifest_sha256": "9c1ae112090622a916dd3de83fda608fc72f7049e8e7fa7600dc5e95784fd9a1",
     "capture_mode": "full-page",
     "max_page_height": 32768,
     "render_contract": "github-compatible-gfm-v2",
     "runtime": {
-      "node": "v22.22.2",
+      "node": "v26.9.0",
       "playwright": "1.62.0",
       "marked": "17.0.5",
-      "chromium": "149.0.7827.55"
+      "chromium": "151.0.7922.34"
     }
   },
   "visual_review": {
@@ -43,75 +43,75 @@
     "reviewed_screenshots": [
       {
         "file": "screenshots/CONTRIBUTING--375--dark.png",
-        "sha256": "aa746f9048670c9d1f69140d3cb3f1d62291ce2f2e14b974d1203250e1fde5b1"
+        "sha256": "2b6691e6b1fe49ce810852d1d714fe349b4088681b9a3026f1b27bf36ab5a6ca"
       },
       {
         "file": "screenshots/README--1280--light.png",
-        "sha256": "07f27286ee4904f1e8b54c5d12469db176786572075914f2271d77319da1ee39"
+        "sha256": "22cee20f9c661f1e349f80fd35e79c663693b43f5d067dd413b66d986e17c390"
       },
       {
         "file": "screenshots/SECURITY--768--dark.png",
-        "sha256": "6ef4b249ca17f490ab3923f8c72db39fdc4c10a03279a61f1e1218fc0ee3bdb3"
+        "sha256": "3d6d2975fbedc15763723a0fcb681c1d7c4ac9e6e638c5811b701ae0c4a8e0f1"
       },
       {
         "file": "screenshots/SUPPORT--375--light.png",
-        "sha256": "2efae23bcf785d192e54f3ca6a5b69d9245fa008da65b54e74488a7cf35dfe05"
+        "sha256": "e6f09d00d7c12ebb83f3e2e497b472a6f149a4d0876da99ddc24b795fcba7910"
       },
       {
         "file": "screenshots/docs__README--1280--dark.png",
-        "sha256": "93033634da68d23f0fd00bb72246bb7d40825d3be07d77ab9658c7f2757c0d4c"
+        "sha256": "8fe15ef099bdc79634cc254fab4d107390408236518504aa9cd7d6ce4a8bf434"
       },
       {
         "file": "screenshots/docs__architecture__design__book--375--light.png",
-        "sha256": "9a1a4ead83a5b65a531ac3a6f43dc075d5ad847f574cf11e93b7f7a77a99227e"
+        "sha256": "71a2145024696cafcd693ca49361b8f7ed8ff3576d05ac519141e10434cf9c3e"
       },
       {
         "file": "screenshots/docs__developer__architecture--768--light.png",
-        "sha256": "3e4720d98f8e07a1527633540258a4ffce0d1cd19e7e99301639a24580e8d2bf"
+        "sha256": "ef763233514c4a36c4466fafcdba3307556b4394616170dccc9cbe8657af6e26"
       },
       {
         "file": "screenshots/docs__generated__distributions--1280--dark.png",
-        "sha256": "a9d8250bed28399f686cd2ffe25fc52bd5544e97070e6477ab3d225f75c8d5f4"
+        "sha256": "59718cd382c94eb78422b89473c26a688a433629bd5f482a0aa3d7d79bab1666"
       },
       {
         "file": "screenshots/docs__generated__installation--375--dark.png",
-        "sha256": "02d7bd311e108979f0a2ec606b49cf04cc67711a76f9bd4fcc8029a825b5dff5"
+        "sha256": "cd50bf9c5c45d2462de303bb6f4a81cf9bbb05c542084edb174ef97dd37db38f"
       },
       {
         "file": "screenshots/docs__generated__repository__atlas--768--light.png",
-        "sha256": "dacaea11b853dbe2d95f81591b6f32fc7b41c111ee3853a37d153b2de24ee38b"
+        "sha256": "a7150b0f1f7ac337b218e791c0e7c157c51ea10dc92164b4bb25d2133412ed50"
       },
       {
         "file": "screenshots/docs__generated__supported__hardware--375--dark.png",
-        "sha256": "f3ccc7207c93ce19aa7bd031103a4b876645ee8c9cfc94e2be23b4613bda2f2a"
+        "sha256": "d738cde2be1272253f9dc4d19ca620d3f2e18ac823223d88869e5505bdf9c350"
       },
       {
         "file": "screenshots/docs__generated__verification--1280--light.png",
-        "sha256": "f8b533630b578441efe0321852d0e48930101580de0edb8a96cce60ae48f3b91"
+        "sha256": "a3d3aed02a57e8d2cbca8380d4dd5145833a3b332b807143088b9a85147fca7a"
       },
       {
         "file": "screenshots/docs__project__journey--1280--light.png",
-        "sha256": "ea3d6e55dc3b1821d4e70d87358c4ebd46ff4bbe31bf400bc113791008eec833"
+        "sha256": "ae8d30480e2aad2b97e34ca3673de0ec6cf1856e16172eb1d393b8461c582ee6"
       },
       {
         "file": "screenshots/docs__project__release__status--768--dark.png",
-        "sha256": "e6e7712c9dca2d0c8303d906369911ca2810905c2d76a806052f195d470e3f6f"
+        "sha256": "e24a21a52f24b88a312743d7c5c0f979fda17b74364b540cf4d509f956c89a29"
       },
       {
         "file": "screenshots/docs__user__first__run--375--light.png",
-        "sha256": "c0c650a9e082942d316299859e20ad0dd4d3faa7394193ca07b87c33aa79f070"
+        "sha256": "21d2eba24dce92b9cd40d83d1408c0f3965c3173d930e11893a000bf403ed187"
       },
       {
         "file": "screenshots/docs__user__hardware--1280--dark.png",
-        "sha256": "aa65a8f3a2b6f4839f756c8e456ce3549167c71e97faba7a20549fc2401aff60"
+        "sha256": "e0e7251448ce16e5163573f234716315087d32f2039a4fdd8518317524163e43"
       },
       {
         "file": "screenshots/docs__user__installation--768--light.png",
-        "sha256": "cbb316b6fd4f5e385ffe16a6df8ecf801e7b1c66524b46167e22ea9ea510f8ea"
+        "sha256": "eb058a1cc4097fba722e972f40b0ef58e75148d50dd57a5ca27880b45c4d4e28"
       },
       {
         "file": "screenshots/docs__user__troubleshooting--375--dark.png",
-        "sha256": "7f9a0877a05ca37a05b5a6fd49fb46f45ac392fbaec1d94638bed21dcd851b3e"
+        "sha256": "5199c65f1793a51f54ebc56bf25318ebf9a85c778ab5ebb12f285c29fde4e861"
       }
     ]
   },
