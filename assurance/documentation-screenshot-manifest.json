@@ -1,8 +1,8 @@
 {
   "$schema": "../schemas/documentation-screenshot-manifest.schema.json",
   "schema": "hyperflux-documentation-screenshot-manifest-v1",
-  "source_revision": "5383808860a1c96053c934a8953e5c91b7a2a0f6",
-  "render_result_sha256": "551dc818494ed65bcee3f52e4651162e7ffd0c93617180b98daf1aae0c5ccab2",
+  "source_revision": "d6f8081679669e5958bda5db485fed98b7e369a0",
+  "render_result_sha256": "f9a51c509f6a3640ac9e805999be6f7ff77128bb714c1f0f066ffa601be2b647",
   "screenshots": [
     {
       "file": "screenshots/CONTRIBUTING--1280--dark.png",
@@ -388,8 +388,8 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "5cfa96a22a2f0892cfa3993be96f7e038f84680e5ee0e727f0cbe4847be9a52d",
-      "bytes": 231258
+      "sha256": "7814e184d2e18b04bef31c9dd4a2c1fa0a2c533cfef2ea7e863edd6d3b7c6411",
+      "bytes": 231527
     },
     {
       "file": "screenshots/docs__generated__distributions--1280--light.png",
@@ -397,8 +397,8 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "e3f74d3a5895f1adfba13f1187e3b13ed5b9c07295f3003f7f33d079a584e04f",
-      "bytes": 228214
+      "sha256": "a4af54f0197057f26fcb9af335d4ee1351b8906282dcaefff0fcafbb65001b5d",
+      "bytes": 228368
     },
     {
       "file": "screenshots/docs__generated__distributions--375--dark.png",
@@ -406,8 +406,8 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "e995dc2715358923d98dde26277a2376ed6c686379a4e560d119520f18a29cf2",
-      "bytes": 163721
+      "sha256": "7b9d34ab4065b11a090c321926562c11fb67ac6fb1222498147d5550b1f358de",
+      "bytes": 164848
     },
     {
       "file": "screenshots/docs__generated__distributions--375--light.png",
@@ -415,8 +415,8 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "5b5500f473117a6c5fdd955d670d20f75006ffff8ee2c5cdace524067a4adf43",
-      "bytes": 157552
+      "sha256": "485b12bd8d2a869e3feff664e2c9e3c2789cfab469432f464f4b46478ddb35c7",
+      "bytes": 158390
     },
     {
       "file": "screenshots/docs__generated__distributions--768--dark.png",
@@ -424,8 +424,8 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "59aa61496efed9a224a695503de6cca946d4f61992a007c80023812fad54a175",
-      "bytes": 214638
+      "sha256": "11dd78e408f49df4e91a12f35456a47c99f697ca4d8cecbe8061ed1ebc9fc4a9",
+      "bytes": 214943
     },
     {
       "file": "screenshots/docs__generated__distributions--768--light.png",
@@ -433,8 +433,8 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "8a6cc6d54a89649ef5683d8a88dec32004443f25b2d06cb24265a49956b5fce6",
-      "bytes": 210487
+      "sha256": "2b5ddaaf07dc3f21311f2c4d1cf34179f67a5e37718d6716113a1d0aafdbca36",
+      "bytes": 210768
     },
     {
       "file": "screenshots/docs__generated__installation--1280--dark.png",
