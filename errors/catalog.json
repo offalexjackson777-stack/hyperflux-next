@@ -66,6 +66,13 @@
       "automatic": false
     },
     {
+      "id": "migrate-retired-driver",
+      "title": "Migrate away from retired drivers",
+      "safe_action": "Run sudo hyperflux-next-activate migrate-retired-dkms to preview the fix, then run it again with --apply and reboot normally. It only removes known retired HyperFlux drivers; any other driver is reported and left untouched.",
+      "verification": "After rebooting, run Doctor and confirm every receiver interface uses the released HyperFlux driver and no retired driver is registered.",
+      "automatic": false
+    },
+    {
       "id": "qualify-device",
       "title": "Use a qualified device capability",
       "safe_action": "Keep the device read-only until an evidence-backed profile qualifies the requested capability.",
@@ -375,6 +382,41 @@
       "user_explanation": "The OpenRazer route driver is not ready yet.",
       "privacy": "public",
       "docs_path": "docs/generated/error-catalog.md#hfx-kernel-002"
+    },
+    {
+      "code": "HFX-KERNEL-003",
+      "class": "kernel",
+      "severity": "error",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "migrate-retired-driver",
+      "safe_detail_fields": [
+        {"name": "actual_driver", "type": "identifier", "required": true, "maximum_length": 64, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Kernel driver bound to the receiver interface, or unbound."},
+        {"name": "owner_kind", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["retired-hyperflux", "unbound", "unknown"], "privacy": "public", "description": "Whether the owner is a known retired HyperFlux driver, no driver, or an unknown driver."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "2.0.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "packaging",
+      "technical_cause": "A qualified receiver interface is bound to a driver other than the released HyperFlux driver, or to no driver at all.",
+      "user_explanation": "Another driver has taken the HyperFlux receiver.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-kernel-003"
+    },
+    {
+      "code": "HFX-KERNEL-004",
+      "class": "kernel",
+      "severity": "warning",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "migrate-retired-driver",
+      "safe_detail_fields": [
+        {"name": "registration", "type": "identifier", "required": true, "maximum_length": 64, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Retired DKMS registration as name/version."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "2.0.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "packaging",
+      "technical_cause": "A retired HyperFlux DKMS driver is still registered; a kernel update rebuilds it and it can take the receiver at the next boot.",
+      "user_explanation": "An old HyperFlux driver is still installed and may take over after a kernel update.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-kernel-004"
     },
     {
       "code": "HFX-OUTCOME-001",

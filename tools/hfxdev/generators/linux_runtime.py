@@ -63,6 +63,19 @@ def rust_constants(runtime: LinuxRuntime) -> str:
             lines.append(declaration)
         else:
             lines.extend([f"pub const {name}: &str =", f"    {_json(value)};"])
+    retired = [
+        f"    ({_json(driver.name)}, {_json(version)}),"
+        for driver in kernel.retired_drivers
+        for version in driver.versions
+    ]
+    lines.extend(
+        [
+            "/// Retired pre-release DKMS drivers, as `(name, version)` pairs.",
+            "pub const RETIRED_KERNEL_DRIVERS: &[(&str, &str)] = &[",
+            *retired,
+            "];",
+        ]
+    )
     lines.extend(
         [
             f"pub const PACKAGE_RELEASE: u16 = {product.package_release};",

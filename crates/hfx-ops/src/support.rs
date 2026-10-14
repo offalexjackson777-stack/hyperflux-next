@@ -259,6 +259,8 @@ mod tests {
             bridge: None,
             legacy_v2_stack_detected: false,
             supported_receiver_present: false,
+            receiver_interface_drivers: Vec::new(),
+            retired_driver_registrations: Vec::new(),
         }
     }
 

@@ -169,9 +169,29 @@
         "dkms_name",
         "device_prefix",
         "source_directory",
-        "control_transfer_timeout_ms"
+        "control_transfer_timeout_ms",
+        "retired_drivers"
       ],
       "properties": {
+        "retired_drivers": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "versions"],
+            "properties": {
+              "name": {"$ref": "#/$defs/kernelName"},
+              "versions": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 16,
+                "uniqueItems": true,
+                "items": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$", "maxLength": 64}
+              }
+            }
+          }
+        },
         "module_name": {"$ref": "#/$defs/kernelName"},
         "dkms_name": {"$ref": "#/$defs/kernelName"},
         "device_prefix": {"$ref": "#/$defs/kernelName"},

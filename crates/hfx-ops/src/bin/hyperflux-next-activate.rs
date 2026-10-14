@@ -6,11 +6,15 @@ use hfx_ops::{
     RealSystemProbe, enable_operational_configuration,
 };
 use hfx_runtime::BRIDGE_CONFIGURATION_FILE_PATH;
+use hfx_system_probe::{
+    MigrationRoots, RealMigrationHost, SystemProbe, apply_migration, plan_migration,
+    render_migration_preview,
+};
 use std::env;
 use std::path::Path;
 
 fn usage() -> &'static str {
-    "Usage: hyperflux-next-activate <activate-disconnected-driver|check-openrazer-driver>\n"
+    "Usage: hyperflux-next-activate <activate-disconnected-driver|check-openrazer-driver|migrate-retired-dkms [--apply]>\n"
 }
 
 fn ensure_openrazer_driver(snapshot: &OpenRazerDriverSnapshot) -> Result<(), String> {
@@ -73,16 +77,48 @@ fn check_openrazer_driver(probe: &impl OpenRazerDriverProbe) -> Result<(), Strin
     ensure_openrazer_driver(&probe.openrazer_driver_snapshot())
 }
 
+/// Previews, or with `--apply` performs, the migration away from retired
+/// `HyperFlux` DKMS drivers that can take the receiver after a kernel update.
+fn migrate_retired_dkms(probe: &RealSystemProbe, apply: bool) -> Result<(), String> {
+    let roots = MigrationRoots::default();
+    let plan = plan_migration(&roots, probe.snapshot().receiver_interface_drivers);
+    print!("{}", render_migration_preview(&plan));
+    if !apply {
+        return Ok(());
+    }
+    if rustix::process::geteuid().as_raw() != 0 {
+        return Err("applying the migration must run as root".to_owned());
+    }
+    let record = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|_| "the system clock is before 1970".to_owned())?
+        .as_secs()
+        .to_string();
+    let receipt = apply_migration(&plan, &roots, &RealMigrationHost, &record)
+        .map_err(|error| format!("migration stopped: {error}"))?;
+    if receipt.removed_registrations.is_empty() && receipt.moved_source_trees.is_empty() {
+        return Ok(());
+    }
+    println!(
+        "Migration complete. Record: {}. Reboot normally, then run hyperfluxctl doctor.",
+        receipt.record_directory.display()
+    );
+    Ok(())
+}
+
 fn run() -> Result<(), String> {
     let mut arguments = env::args().skip(1);
     let command = arguments.next().ok_or_else(|| usage().to_owned())?;
+    let flag = arguments.next();
     if arguments.next().is_some() {
         return Err(usage().to_owned());
     }
     let probe = RealSystemProbe::default();
-    match command.as_str() {
-        "activate-disconnected-driver" => activate_disconnected_driver(&probe),
-        "check-openrazer-driver" => check_openrazer_driver(&probe),
+    match (command.as_str(), flag.as_deref()) {
+        ("activate-disconnected-driver", None) => activate_disconnected_driver(&probe),
+        ("check-openrazer-driver", None) => check_openrazer_driver(&probe),
+        ("migrate-retired-dkms", None) => migrate_retired_dkms(&probe, false),
+        ("migrate-retired-dkms", Some("--apply")) => migrate_retired_dkms(&probe, true),
         _ => Err(usage().to_owned()),
     }
 }

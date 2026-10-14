@@ -69,7 +69,10 @@
     "dkms_name": "hid-hyperflux-next",
     "device_prefix": "hyperflux-next",
     "source_directory": "/usr/src/hid-hyperflux-next-2.0.0",
-    "control_transfer_timeout_ms": 1000
+    "control_transfer_timeout_ms": 1000,
+    "retired_drivers": [
+      {"name": "hid-razer-hyperflux-v2", "versions": ["0.1.0", "0.1.1", "0.1.2"]}
+    ]
   },
   "operations": {
     "cli_path": "/usr/bin/hyperfluxctl",
