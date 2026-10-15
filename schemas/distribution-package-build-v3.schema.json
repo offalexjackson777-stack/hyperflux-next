@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/distribution-package-build-v3.json",
+  "title": "HyperFlux four-output Arch package build manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "source",
+    "distribution",
+    "architecture",
+    "packages"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://hyperflux.dev/schemas/distribution-package-build-v3.json"
+    },
+    "schema": {
+      "const": "hyperflux-distribution-package-build-v3"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revision",
+        "source_date_epoch",
+        "distribution_catalog_sha256",
+        "arch_split_sha256",
+        "artifact_manifest_sha256"
+      ],
+      "properties": {
+        "revision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "source_date_epoch": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4102444800
+        },
+        "distribution_catalog_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "arch_split_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "artifact_manifest_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "distribution": {
+      "const": "arch"
+    },
+    "architecture": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]{1,31}$"
+    },
+    "packages": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "$ref": "#/$defs/package"
+      }
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "output",
+        "distribution_component",
+        "name",
+        "version",
+        "release",
+        "file",
+        "sha256",
+        "size",
+        "payload_sha256",
+        "payload_files"
+      ],
+      "properties": {
+        "output": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$"
+        },
+        "distribution_component": {
+          "enum": [
+            "linux",
+            "full"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9+_.-]{0,63}$"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "release": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "file": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9+_.~-]{0,191}$"
+        },
+        "sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483648
+        },
+        "payload_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "payload_files": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        }
+      }
+    }
+  }
+}
