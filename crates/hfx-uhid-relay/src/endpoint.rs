@@ -27,8 +27,10 @@ pub enum EndpointError {
 pub(crate) enum BatteryExchangeDiagnostic {
     Matched {
         transaction_id: u8,
+        reply_transaction_id: u8,
         status: u8,
         raw_value: u8,
+        accepted: bool,
         attempts: u8,
     },
     NotSent {
@@ -44,15 +46,6 @@ pub(crate) enum BatteryExchangeDiagnostic {
 const RAZER_STATUS_BUSY: u8 = 0x01;
 const RAZER_STATUS_SUCCESS: u8 = 0x02;
 pub(crate) const RAZER_STATUS_TIMEOUT: u8 = 0x04;
-
-// A retained receiver route can outlive a powered-off child. Keep only the
-// exact last successful battery read so its in-flight notifier call can finish
-// before the endpoint is withdrawn; serials and writes are never cached.
-#[derive(Clone, Copy)]
-struct ConfirmedBatteryRead {
-    request: [u8; FEATURE_REPORT_BYTES],
-    response: [u8; FEATURE_REPORT_BYTES],
-}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum RetainedRouteDeparture {
@@ -84,7 +77,6 @@ pub struct FeatureEndpoint<B> {
     state: FeatureEndpointState,
     pending_response: Option<[u8; FEATURE_REPORT_BYTES]>,
     pending_battery_diagnostic: Option<BatteryExchangeDiagnostic>,
-    confirmed_battery_read: Option<ConfirmedBatteryRead>,
     retained_route_departure: RetainedRouteDeparture,
     virtual_device_mode: [u8; 2],
 }
@@ -98,7 +90,6 @@ impl<B: BridgeExchange> FeatureEndpoint<B> {
             state: FeatureEndpointState::Created,
             pending_response: None,
             pending_battery_diagnostic: None,
-            confirmed_battery_read: None,
             retained_route_departure: RetainedRouteDeparture::None,
             virtual_device_mode: [0, 0],
         }
@@ -137,7 +128,6 @@ impl<B: BridgeExchange> FeatureEndpoint<B> {
         self.state = FeatureEndpointState::Stopped;
         self.pending_response = None;
         self.pending_battery_diagnostic = None;
-        self.confirmed_battery_read = None;
         self.retained_route_departure = RetainedRouteDeparture::None;
         self.virtual_device_mode = [0, 0];
     }
@@ -207,8 +197,10 @@ impl<B: BridgeExchange> FeatureEndpoint<B> {
                     BridgeExchangeResult::MatchedResponse(response) => {
                         BatteryExchangeDiagnostic::Matched {
                             transaction_id: report[1],
+                            reply_transaction_id: response[1],
                             status: response[0],
                             raw_value: response[9],
+                            accepted: battery_reply_accepted(&report, &response),
                             attempts,
                         }
                     }
@@ -225,31 +217,24 @@ impl<B: BridgeExchange> FeatureEndpoint<B> {
                 });
             }
             match result {
-                BridgeExchangeResult::MatchedResponse(response)
-                    if is_battery_request(&report) && response[0] == RAZER_STATUS_BUSY =>
-                {
-                    encode_transport_envelope(TransportEnvelopeKind::MayHaveBeenSent)
-                }
-                BridgeExchangeResult::MatchedResponse(response)
-                    if is_battery_request(&report) && response[0] == RAZER_STATUS_SUCCESS =>
-                {
-                    self.confirmed_battery_read = Some(ConfirmedBatteryRead {
-                        request: report,
-                        response,
-                    });
-                    response
+                BridgeExchangeResult::MatchedResponse(response) if is_battery_request(&report) => {
+                    // A retained receiver route can outlive a powered-off
+                    // child. Its in-flight battery read still completes, but
+                    // as unknown: no earlier value is replayed as current.
+                    if response[0] == RAZER_STATUS_TIMEOUT {
+                        self.retained_route_departure = RetainedRouteDeparture::AwaitingGet;
+                    }
+                    if battery_reply_accepted(&report, &response) {
+                        response
+                    } else {
+                        encode_transport_envelope(TransportEnvelopeKind::MayHaveBeenSent)
+                    }
                 }
                 BridgeExchangeResult::MatchedResponse(response)
                     if response[0] == RAZER_STATUS_TIMEOUT =>
                 {
                     self.retained_route_departure = RetainedRouteDeparture::AwaitingGet;
-                    if is_battery_request(&report) {
-                        self.confirmed_battery_read
-                            .filter(|confirmed| confirmed.request == report)
-                            .map_or(response, |confirmed| confirmed.response)
-                    } else {
-                        response
-                    }
+                    response
                 }
                 BridgeExchangeResult::MatchedResponse(response) => response,
                 BridgeExchangeResult::NotSent(_) => {
@@ -276,6 +261,7 @@ impl<B: BridgeExchange> FeatureEndpoint<B> {
                 result,
                 BridgeExchangeResult::MatchedResponse(response)
                     if response[0] == RAZER_STATUS_BUSY
+                        || !reply_identity_matches(&report, &response)
             ) && attempt < maximum_attempts
             {
                 continue;
@@ -325,6 +311,23 @@ impl<B: BridgeExchange> FeatureEndpoint<B> {
 
 const fn is_battery_request(report: &[u8; FEATURE_REPORT_BYTES]) -> bool {
     report[5] == 2 && report[6] == 0x07 && report[7] == 0x80 && report[8] == 0 && report[9] == 0
+}
+
+// `OpenRazer` checks a reply's command class and ID but not its transaction
+// ID, so a late reply for another lane on the shared receiver would otherwise
+// be read as this device's battery level.
+const fn reply_identity_matches(
+    request: &[u8; FEATURE_REPORT_BYTES],
+    response: &[u8; FEATURE_REPORT_BYTES],
+) -> bool {
+    response[1] == request[1] && response[6] == request[6] && response[7] == request[7]
+}
+
+const fn battery_reply_accepted(
+    request: &[u8; FEATURE_REPORT_BYTES],
+    response: &[u8; FEATURE_REPORT_BYTES],
+) -> bool {
+    response[0] == RAZER_STATUS_SUCCESS && reply_identity_matches(request, response)
 }
 
 #[cfg(test)]

@@ -156,7 +156,7 @@ class ProfileCompilerTests(unittest.TestCase):
                     "result_offset": 88,
                 },
                 "trailer": {"offset": 89, "value": 0},
-                "transaction_id": {"offset": 1, "match_mask": 0},
+                "transaction_id": {"offset": 1, "match_mask": 255},
             },
         )
         self.assertEqual(

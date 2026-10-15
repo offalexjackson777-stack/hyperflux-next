@@ -93,7 +93,7 @@ int main()
     static_assert(receiver_matches[0].native_trailer_offset == 89);
     static_assert(receiver_matches[0].native_trailer_value == 0);
     static_assert(receiver_matches[0].native_transaction_id_offset == 1);
-    static_assert(receiver_matches[0].native_transaction_id_match_mask == 0);
+    static_assert(receiver_matches[0].native_transaction_id_match_mask == 0xff);
     static_assert(receiver_matches[0].native_route_selector_kind == 1);
     static_assert(receiver_matches[0].native_pointer_route_selector == 0x1f);
     static_assert(receiver_matches[0].native_keyboard_route_selector == 0x9f);

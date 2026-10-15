@@ -12628,7 +12628,7 @@
     }
   ],
   "schema": "hyperflux-compiled-device-knowledge-v1",
-  "source_sha256": "8f3af8e1f58aa530847c3aab1deb12a53dfb2cf157ae69ff73922a1d580a308e",
+  "source_sha256": "5dd7cef53f85626ab0900e8dca573348d3ee22256e1cce75904d64a5121b2558",
   "upstreams": [
     {
       "commit": "1ef8a91712906a89fd332a2ed62bbd105315d6d1",

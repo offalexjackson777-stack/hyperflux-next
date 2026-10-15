@@ -2,7 +2,7 @@
   "$schema": "../../schemas/hardware-profile.schema.json",
   "schema": "hyperflux-hardware-profile-v1",
   "profile_id": "receiver.razer.hyperflux-v2.1532-00cf",
-  "revision": 4,
+  "revision": 5,
   "kind": "receiver",
   "device_kind": "receiver",
   "identity": {"manufacturer": "Razer", "model_name": "Razer HyperFlux V2 Receiver", "authority": "usb", "vendor_id": 5426, "product_id": 207},
@@ -29,7 +29,7 @@
         "data_size": {"offset": 5, "maximum": 80},
         "checksum": {"algorithm": "xor8", "start_offset": 2, "end_offset_exclusive": 88, "result_offset": 88},
         "trailer": {"offset": 89, "value": 0},
-        "transaction_id": {"offset": 1, "match_mask": 0}
+        "transaction_id": {"offset": 1, "match_mask": 255}
       },
       "route_selector": {
         "field": "transaction-id",

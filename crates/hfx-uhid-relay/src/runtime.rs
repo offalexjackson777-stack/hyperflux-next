@@ -251,23 +251,28 @@ impl<B: crate::BridgeExchange> RunningEndpoint<B> {
         match diagnostic {
             BatteryExchangeDiagnostic::Matched {
                 transaction_id,
+                reply_transaction_id,
                 status,
                 raw_value,
+                accepted,
                 attempts,
-            } => eprintln!(
-                "HFX-OPENRAZER-RELAY-BATTERY tx={transaction_id:02x} certainty=matched status={status:02x} raw={raw_value} attempts={attempts}"
-            ),
+            } => {
+                let outcome = if accepted { "value" } else { "unknown" };
+                eprintln!(
+                    "HFX-OPENRAZER-RELAY-BATTERY tx={transaction_id:02x} reply_tx={reply_transaction_id:02x} certainty=matched status={status:02x} raw={raw_value} outcome={outcome} attempts={attempts}"
+                );
+            }
             BatteryExchangeDiagnostic::NotSent {
                 transaction_id,
                 attempts,
             } => eprintln!(
-                "HFX-OPENRAZER-RELAY-BATTERY tx={transaction_id:02x} certainty=not-sent status=none raw=none attempts={attempts}"
+                "HFX-OPENRAZER-RELAY-BATTERY tx={transaction_id:02x} reply_tx=none certainty=not-sent status=none raw=none outcome=unknown attempts={attempts}"
             ),
             BatteryExchangeDiagnostic::MayHaveBeenSent {
                 transaction_id,
                 attempts,
             } => eprintln!(
-                "HFX-OPENRAZER-RELAY-BATTERY tx={transaction_id:02x} certainty=may-have-been-sent status=none raw=none attempts={attempts}"
+                "HFX-OPENRAZER-RELAY-BATTERY tx={transaction_id:02x} reply_tx=none certainty=may-have-been-sent status=none raw=none outcome=unknown attempts={attempts}"
             ),
         }
     }
