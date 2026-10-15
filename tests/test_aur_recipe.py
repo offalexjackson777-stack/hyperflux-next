@@ -41,7 +41,7 @@ from hfxdev.openrazer_native_route import load_native_transform as openrazer_tra
 from hfxdev.openrgb_native_route import load_native_transform as openrgb_transform
 
 
-TAG = "v2.0.1-2"
+TAG = "v2.1.0-1"
 GIT_IDENTITY = {
     "GIT_AUTHOR_NAME": "HyperFlux Test",
     "GIT_AUTHOR_EMAIL": "test@example.invalid",
@@ -54,7 +54,7 @@ GIT_IDENTITY = {
 }
 LOCAL_PATH_MARKERS = (str(ROOT), "/home/", "/tmp/", "/root/")
 ALIGNED = ProviderAlignment(
-    candidate="2.0.1-2", provided=(), transformed_commit="", official_versions=(), problems=()
+    candidate="2.1.0-1", provided=(), transformed_commit="", official_versions=(), problems=()
 )
 
 
@@ -252,14 +252,14 @@ class QualificationRecipeContracts(unittest.TestCase):
         recipe = self.recipe
         self.assertEqual(QUALIFICATION, recipe.mode)
         self.assertEqual(set(RECIPE_FILES), set(recipe.files))
-        self.assertEqual("2.0.1-2", recipe.version)
+        self.assertEqual("2.1.0-1", recipe.version)
         self.assertEqual(
             "(" + " ".join(f"'{output.package_name}'" for output in self.split.outputs) + ")",
             _variable(self.pkgbuild, "pkgname"),
         )
         self.assertEqual("('x86_64')", _variable(self.pkgbuild, "arch"))
-        self.assertEqual("2.0.1", _variable(self.pkgbuild, "pkgver"))
-        self.assertEqual("2", _variable(self.pkgbuild, "pkgrel"))
+        self.assertEqual("2.1.0", _variable(self.pkgbuild, "pkgver"))
+        self.assertEqual("1", _variable(self.pkgbuild, "pkgrel"))
         self.assertEqual(f"'{self.commit}'", _variable(self.pkgbuild, "_commit"))
         self.assertNotIn("validpgpkeys", self.pkgbuild)
         self.assertIn("# Qualification only: source", self.pkgbuild)

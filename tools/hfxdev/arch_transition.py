@@ -226,13 +226,32 @@ def _closure(names: set[str], depends: dict[str, set[str]]) -> set[str]:
     return seen
 
 
-def _relocate(path: str, old: str, new: str) -> str:
-    """Map a versioned DKMS source directory of the old release to the new one."""
+def _relocate(path: str, old: str, split: ArchSplit) -> str:
+    """Map a versioned DKMS source directory of the old release to the new one.
+
+    The new directory is the one the split itself installs under the same
+    name, so the mapping follows the install manifest rather than a version
+    string that could name a different release.
+    """
 
     parts = PurePosixPath(path).parts
     if len(parts) > 3 and parts[1:3] == ("usr", "src") and parts[3].endswith(f"-{old}"):
-        renamed = parts[3][: -len(old)] + new
-        return str(PurePosixPath(*parts[:3], renamed, *parts[4:]))
+        prefix = parts[3][: -len(old)]
+        installed = (
+            PurePosixPath(destination).parts
+            for output in split.outputs
+            for destination in (*output.tree_destinations, *output.file_destinations)
+        )
+        targets = {
+            item[3]
+            for item in installed
+            if len(item) > 3
+            and item[1:3] == ("usr", "src")
+            and item[3].startswith(prefix)
+            and item[3][len(prefix):][:1].isdigit()
+        }
+        if len(targets) == 1:
+            return str(PurePosixPath(*parts[:3], targets.pop(), *parts[4:]))
     return path
 
 
@@ -289,7 +308,7 @@ def analyse_transition(split: ArchSplit, prior: PriorTopology) -> TransitionRepo
             package = prior.package(name)
             paths = [*package.files, *(f"{tree}/dkms.conf" for tree in package.trees)]
             for path in paths:
-                current = _relocate(path, old_upstream, split.version)
+                current = _relocate(path, old_upstream, split)
                 try:
                     owner = split.output(split.owner_of(current)).package_name
                 except ModelError:

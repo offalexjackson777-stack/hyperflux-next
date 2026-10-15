@@ -109,7 +109,7 @@ class InPlaceUpgradeContracts(unittest.TestCase):
     def test_both_prior_releases_upgrade_in_place(self) -> None:
         for release, report in self._each_prior():
             self.assertEqual((), report.problems)
-            self.assertEqual("2.0.1-2", report.target_release)
+            self.assertEqual("2.1.0-1", report.target_release)
             self.assertEqual(release, report.source_release)
 
     def test_core_stays_core_and_full_becomes_all_four(self) -> None:
@@ -133,7 +133,7 @@ class InPlaceUpgradeContracts(unittest.TestCase):
         for release, report in self._each_prior():
             self.assertIn(
                 f"{release} hyperflux-next-full replaced openrazer-driver-dkms; "
-                "2.0.1-2 only conflicts with and provides it",
+                "2.1.0-1 only conflicts with and provides it",
                 report.disclosures,
             )
             for output in self.split.outputs:
@@ -175,8 +175,8 @@ class InPlaceUpgradeContracts(unittest.TestCase):
         self.assertIn("has no hyperflux-next-full to upgrade", self._problems(prior=missing))
 
     def test_a_target_that_does_not_upgrade_is_refused(self) -> None:
-        prior = dataclasses.replace(self.current, release="2.0.1-3")
-        self.assertIn("does not upgrade 2.0.1-3", self._problems(prior=prior))
+        prior = dataclasses.replace(self.current, release="2.1.0-3")
+        self.assertIn("does not upgrade 2.1.0-3", self._problems(prior=prior))
 
     def test_a_new_conflict_forcing_a_removal_is_refused(self) -> None:
         split = self._with_output("core", conflicts=(*self.split.output("core").conflicts, "dkms-extra"))
@@ -220,7 +220,7 @@ class InPlaceUpgradeContracts(unittest.TestCase):
         self.assertIn("/usr/share/hfx-gone", report.editions[0].dropped)
 
     def test_the_two_package_split_is_refused(self) -> None:
-        with self.assertRaisesRegex(ModelError, "starts at 2.0.1-2"):
+        with self.assertRaisesRegex(ModelError, "starts at 2.1.0-1"):
             analyse_transition(load_arch_split(ROOT), self.current)
 
 
@@ -398,7 +398,7 @@ class TransitionCliContracts(unittest.TestCase):
         )
 
     def test_check_reports_every_prior_release(self) -> None:
-        result = self._hfx("check", "--candidate-release", "2.0.1-2")
+        result = self._hfx("check", "--candidate-release", "2.1.0-1")
         expected = [release for release, prior in PRIORS.items() if _tag_available(prior)]
         if len(expected) != len(PRIORS):
             self.assertEqual(1, result.returncode)
@@ -413,13 +413,13 @@ class TransitionCliContracts(unittest.TestCase):
     def test_scripts_are_printed_and_the_two_package_release_is_refused(self) -> None:
         policy = load_arch_repository_policy(ROOT)
         split = candidate_split()
-        switch = self._hfx("switch-script", "--candidate-release", "2.0.1-2")
+        switch = self._hfx("switch-script", "--candidate-release", "2.1.0-1")
         self.assertEqual(switch_script(policy), switch.stdout)
-        rollback = self._hfx("rollback-script", "--candidate-release", "2.0.1-2")
+        rollback = self._hfx("rollback-script", "--candidate-release", "2.1.0-1")
         self.assertEqual(rollback_script(policy, split), rollback.stdout)
         refused = self._hfx("check")
         self.assertEqual(1, refused.returncode)
-        self.assertIn("starts at 2.0.1-2", refused.stderr)
+        self.assertIn("starts at 2.1.0-1", refused.stderr)
 
 
 if __name__ == "__main__":

@@ -145,7 +145,7 @@ class DossierContracts(unittest.TestCase):
             report = Path(directory, "parity.json")
             value = {
                 "schema": CHANNEL_SCHEMA,
-                "candidate": "2.0.1-2",
+                "candidate": "2.1.0-1",
                 "passed": True,
                 "compared_paths": 10,
                 "problems": [],
@@ -210,7 +210,7 @@ class DossierContracts(unittest.TestCase):
                     "package",
                     "aur-dossier",
                     "--candidate-release",
-                    "2.0.1-2",
+                    "2.1.0-1",
                     "--output",
                     str(output),
                     "--aur-recipe",

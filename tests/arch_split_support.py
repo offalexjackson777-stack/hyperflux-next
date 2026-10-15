@@ -24,7 +24,7 @@ from hfxdev.package_pipeline import StageResult  # noqa: E402
 from hfxdev.tree_metadata import normalize_tree  # noqa: E402
 
 
-CANDIDATE_RELEASE = ("2.0.1", 2)
+CANDIDATE_RELEASE = ("2.1.0", 1)
 EPOCH = 1_767_225_600
 AUTHORITY = ROOT / "packaging" / "arch-split.json"
 

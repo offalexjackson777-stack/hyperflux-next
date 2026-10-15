@@ -2,8 +2,8 @@
   "$schema": "../schemas/arch-split-packages.schema.json",
   "schema": "hyperflux-arch-split-packages-v1",
   "pkgbase": "hyperflux-next",
-  "first_release": "2.0.1-2",
-  "first_release_rule": "The four-output topology starts after the proven two-package 2.0.1-1 release. A packaging-only migration may use 2.0.1-2; any runtime byte change requires 2.0.2-1.",
+  "first_release": "2.1.0-1",
+  "first_release_rule": "The four-output topology starts with 2.1.0-1. Every 2.0.x release, including 2.0.2-1, keeps the proven two-package topology, and 2.1.0-1 ships only after the physical two-to-four transition test passes.",
   "architectures": [
     "x86_64"
   ],
@@ -163,7 +163,7 @@
       "output": "full",
       "relation": "hyperflux-next-openrgb=0.0.0_dev.1-2",
       "reason": "The pre-2.0 connector package owned the OpenRGB plugin path that Full now owns; the exact-version conflict and replace migrate hosts that still carry that one retired build.",
-      "expires_before_release": "2.1.0-1"
+      "expires_before_release": "2.2.0-1"
     }
   ]
 }

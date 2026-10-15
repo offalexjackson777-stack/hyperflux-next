@@ -118,7 +118,7 @@ class VersionOrderingContracts(unittest.TestCase):
         tool = shutil.which("vercmp")
         if tool is None:
             self.skipTest("vercmp is unavailable")
-        values = sorted({value for pair in self.PAIRS for value in pair[:2]} | {"2.0.1-2", "2.0.1-1", "0.0.0_dev.1-2"})
+        values = sorted({value for pair in self.PAIRS for value in pair[:2]} | {"2.1.0-1", "2.0.1-1", "0.0.0_dev.1-2"})
         for left in values:
             for right in values:
                 output = subprocess.run([tool, left, right], check=True, capture_output=True, text=True).stdout
@@ -153,7 +153,7 @@ class SnapshotImportContracts(unittest.TestCase):
             self.assertNotIn("packager", json.dumps(packages).lower())
 
             value = import_snapshot(
-                ROOT, {"extra": database}, candidate="2.0.1-2", split=candidate_split()
+                ROOT, {"extra": database}, candidate="2.1.0-1", split=candidate_split()
             )
             self.assertEqual(
                 ["observed", "unobserved", "unobserved"],
@@ -161,11 +161,11 @@ class SnapshotImportContracts(unittest.TestCase):
             )
             self.assertEqual(hashlib.sha256(database.read_bytes()).hexdigest(), value["repositories"][0]["database_sha256"])
             with self.assertRaisesRegex(ModelError, "not an official repository"):
-                import_snapshot(ROOT, {"community": database}, candidate="2.0.1-2", split=candidate_split())
+                import_snapshot(ROOT, {"community": database}, candidate="2.1.0-1", split=candidate_split())
 
     def test_committed_snapshot_is_valid_and_targets_the_candidate(self) -> None:
         value = load_snapshot(ROOT)
-        self.assertEqual("2.0.1-2", value["candidate"])
+        self.assertEqual("2.1.0-1", value["candidate"])
         self.assertEqual(list(watched_packages(candidate_split())), value["watched_packages"])
         self.assertEqual(list(REPOSITORIES), [item["name"] for item in value["repositories"]])
         self.assertTrue((ROOT / AUTHORITY).is_file())
@@ -206,7 +206,7 @@ class ProviderGateContracts(unittest.TestCase):
             name: sync_database(self.workspace / f"{name}.db", packages)
             for name, packages in families.items()
         }
-        value = import_snapshot(ROOT, databases, candidate="2.0.1-2", split=self.split)
+        value = import_snapshot(ROOT, databases, candidate="2.1.0-1", split=self.split)
         if receipts:
             value["app_behavior_receipts"] = [
                 _receipt(self.workspace, package, f"{VERSION}-1")

@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/arch-official-snapshot.schema.json",
   "schema": "hyperflux-arch-official-snapshot-v1",
-  "candidate": "2.0.1-2",
+  "candidate": "2.1.0-1",
   "rule": "Refresh at every candidate from the official extra, extra-testing and extra-staging sync databases; an unobserved repository fails the gate.",
   "watched_packages": [
     "openrazer-daemon",

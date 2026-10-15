@@ -69,7 +69,7 @@ class InstallPlanContracts(unittest.TestCase):
 
     def test_archive_names_follow_makepkg(self) -> None:
         self.assertEqual(
-            "hyperflux-next-dkms-2.0.1-2-x86_64.pkg.tar.zst",
+            "hyperflux-next-dkms-2.1.0-1-x86_64.pkg.tar.zst",
             package_file(self.split, "hyperflux-next-dkms", "x86_64", DEFAULT_PKGEXT),
         )
         with self.assertRaisesRegex(ModelError, "not an output"):
@@ -100,7 +100,7 @@ class InstallPlanContracts(unittest.TestCase):
     def test_cli_prints_the_plan_and_refuses_the_two_package_release(self) -> None:
         environment = {**os.environ, "LC_ALL": "C"}
         printed = subprocess.run(
-            [sys.executable, str(ROOT / "hfx"), "package", "aur-install", "--candidate-release", "2.0.1-2"],
+            [sys.executable, str(ROOT / "hfx"), "package", "aur-install", "--candidate-release", "2.1.0-1"],
             cwd=ROOT,
             check=True,
             capture_output=True,

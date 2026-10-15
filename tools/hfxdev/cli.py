@@ -283,7 +283,7 @@ def _parser() -> argparse.ArgumentParser:
     package_aur.add_argument(
         "--candidate-release",
         metavar="VERSION-RELEASE",
-        help="qualify a future split release such as 2.0.1-2 (commit recipes only)",
+        help="qualify a future split release such as 2.1.0-1 (commit recipes only)",
     )
 
     package_aur_install = package_commands.add_parser(
@@ -292,7 +292,7 @@ def _parser() -> argparse.ArgumentParser:
     package_aur_install.add_argument(
         "--candidate-release",
         metavar="VERSION-RELEASE",
-        help="print the plan for a future split release such as 2.0.1-2",
+        help="print the plan for a future split release such as 2.1.0-1",
     )
 
     package_compare = package_commands.add_parser(
@@ -306,7 +306,7 @@ def _parser() -> argparse.ArgumentParser:
     package_compare.add_argument(
         "--candidate-release",
         metavar="VERSION-RELEASE",
-        help="compare a future split release such as 2.0.1-2",
+        help="compare a future split release such as 2.1.0-1",
     )
 
     package_dossier = package_commands.add_parser(
@@ -319,7 +319,7 @@ def _parser() -> argparse.ArgumentParser:
     package_dossier.add_argument(
         "--candidate-release",
         metavar="VERSION-RELEASE",
-        help="the split release such as 2.0.1-2",
+        help="the split release such as 2.1.0-1",
     )
 
     arch_snapshot = commands.add_parser(
@@ -346,7 +346,7 @@ def _parser() -> argparse.ArgumentParser:
     arch_snapshot_check.add_argument(
         "--candidate-release",
         metavar="VERSION-RELEASE",
-        help="check a future split release such as 2.0.1-2",
+        help="check a future split release such as 2.1.0-1",
     )
 
     arch_transition = commands.add_parser(
@@ -364,7 +364,7 @@ def _parser() -> argparse.ArgumentParser:
         arch_transition_commands.add_parser(name, help=summary).add_argument(
             "--candidate-release",
             metavar="VERSION-RELEASE",
-            help="the split release such as 2.0.1-2",
+            help="the split release such as 2.1.0-1",
         )
 
     arch_repository = commands.add_parser(

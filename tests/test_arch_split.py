@@ -59,7 +59,7 @@ class ArchSplitTopologyTests(unittest.TestCase):
         )
         self.assertFalse(current.active, "2.0.1-1 must stay on two packages (PKG-001)")
         self.assertTrue(self.split.active)
-        self.assertEqual(self.split.first_release, "2.0.1-2")
+        self.assertEqual(self.split.first_release, "2.1.0-1")
 
     def test_four_outputs_with_the_edition_products_as_requests(self) -> None:
         self.assertEqual(tuple(item.package_name for item in self.split.outputs), PACKAGES)
@@ -109,7 +109,7 @@ class ArchSplitTopologyTests(unittest.TestCase):
 
     def test_sibling_dependencies_are_exact_versions(self) -> None:
         version = self.split.full_version
-        self.assertEqual(version, "2.0.1-2")
+        self.assertEqual(version, "2.1.0-1")
         siblings = {
             output.package_name: [
                 item for item in output.dependencies if relation_name(item) in PACKAGES
@@ -212,12 +212,12 @@ class ArchSplitRelationTests(unittest.TestCase):
         self.assertEqual(record.output, "full")
         self.assertEqual(record.relation, "hyperflux-next-openrgb=0.0.0_dev.1-2")
         self.assertTrue(record.reason)
-        self.assertEqual(record.expires_before_release, "2.1.0-1")
+        self.assertEqual(record.expires_before_release, "2.2.0-1")
 
     def test_retired_relation_expires(self) -> None:
-        with self.assertRaisesRegex(ModelError, "expired at 2.1.0-1"):
-            load_arch_split(ROOT, release=("2.1.0", 1))
-        load_arch_split(ROOT, release=("2.0.9", 3))
+        with self.assertRaisesRegex(ModelError, "expired at 2.2.0-1"):
+            load_arch_split(ROOT, release=("2.2.0", 1))
+        load_arch_split(ROOT, release=("2.1.9", 3))
 
     def test_mutations_fail_closed(self) -> None:
         def output(value: dict, output_id: str) -> dict:
@@ -327,8 +327,8 @@ class ArchSplitRepositoryBuildTests(unittest.TestCase):
             "'hyperflux-next-openrazer-driver-dkms' 'hyperflux-next-full')",
             recipe,
         )
-        self.assertIn("pkgver=2.0.1\n", recipe)
-        self.assertIn("pkgrel=2\n", recipe)
+        self.assertIn("pkgver=2.1.0\n", recipe)
+        self.assertIn("pkgrel=1\n", recipe)
         self.assertNotIn("install=", recipe)
         for output in self.split.outputs:
             self.assertIn(f"package_{output.package_name}() {{", recipe)

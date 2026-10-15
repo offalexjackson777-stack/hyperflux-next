@@ -176,7 +176,7 @@ class ChannelParityContracts(unittest.TestCase):
         output = directory / "packages"
         output.mkdir()
         for name, pkgdir in pkgdirs.items():
-            pack(pkgdir, pkginfo[name], output / f"{name}-2.0.1-2-x86_64.pkg.tar.gz", install=name == install)
+            pack(pkgdir, pkginfo[name], output / f"{name}-2.1.0-1-x86_64.pkg.tar.gz", install=name == install)
         return output
 
     def compare(self, aur: Path, **arguments):
@@ -225,7 +225,7 @@ class ChannelParityContracts(unittest.TestCase):
             shutil.move(source, target)
 
         def depend(_, pkginfo):
-            pkginfo[full] = pkginfo[full].replace(f"depend = {core}=2.0.1-2", f"depend = {core}")
+            pkginfo[full] = pkginfo[full].replace(f"depend = {core}=2.1.0-1", f"depend = {core}")
 
         def provide(_, pkginfo):
             pkginfo[dkms] += "provides = openrazer-driver-dkms=3.12.4\n"
@@ -258,10 +258,10 @@ class ChannelParityContracts(unittest.TestCase):
         stale = self.workspace / "stale-recipe"
         shutil.copytree(self.recipe, stale)
         pkgbuild = stale / "PKGBUILD"
-        pkgbuild.write_text(pkgbuild.read_text().replace("\npkgrel=2\n", "\npkgrel=1\n"))
-        self.assertEqual("2.0.1-1", recipe_source(stale)["version"])
+        pkgbuild.write_text(pkgbuild.read_text().replace("\npkgver=2.1.0\n", "\npkgver=2.0.2\n"))
+        self.assertEqual("2.0.2-1", recipe_source(stale)["version"])
         result = self.compare(aur, aur_recipe=stale)
-        self.assertTrue(any("AUR recipe builds 2.0.1-1" in item for item in result.problems))
+        self.assertTrue(any("AUR recipe builds 2.0.2-1" in item for item in result.problems))
         with self.assertRaisesRegex(ModelError, "full lowercase SHA-1"):
             self.compare(aur, repository_commit="HEAD")
 
@@ -269,7 +269,7 @@ class ChannelParityContracts(unittest.TestCase):
         printed = subprocess.run(
             [
                 sys.executable, str(ROOT / "hfx"), "package", "compare-channels",
-                "--candidate-release", "2.0.1-2",
+                "--candidate-release", "2.1.0-1",
                 "--repository", str(self.repository),
                 "--aur", str(self.aur_channel()),
                 "--aur-recipe", str(self.recipe),
