@@ -57,7 +57,7 @@ def recommended_package(
 **Full (`{full.package_name}`):** {full.description}.
 
 The Arch Linux x86_64 packages are published in
-[GitHub Release v2.0.0](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.0).
+[GitHub Release {repository.product_release_tag}]({repository.product_release_url}).
 The signed project-operated Pacman repository is a separate machine-managed
 channel, not an official Arch Linux repository.
 

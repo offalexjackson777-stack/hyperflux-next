@@ -19,6 +19,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
+from hfxdev.arch_repository import load_arch_repository_policy
 from hfxdev.atlas import load_repository_atlas
 from hfxdev.documentation import (
     DocumentCatalog,
@@ -102,7 +103,9 @@ class RepositoryExperienceContracts(unittest.TestCase):
         self.assertIn("sudo pacman -Syu hyperflux-next-linux", readme)
         self.assertIn("third-party", readme)
         self.assertIn("not an official Arch Linux repository", readme)
-        self.assertIn("releases/tag/v2.0.0", readme)
+        self.assertIn(
+            load_arch_repository_policy(ROOT).product_release_url, readme
+        )
         installation_guide = (ROOT / "docs/user/installation.md").read_text(
             encoding="utf-8"
         )
@@ -350,7 +353,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
         self.assertEqual(issues, (), "\n".join(str(issue) for issue in issues))
 
     def test_public_pages_do_not_contradict_the_published_release(self) -> None:
-        # 2.0.0 is published; no public page may claim otherwise (DOC-001).
+        # A release is published; no public page may claim otherwise (DOC-001).
         stale = (
             "is unreleased",
             "no supported product version",

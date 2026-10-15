@@ -21,6 +21,7 @@ from .model import ModelError, load_json, sha256_file
 
 _FINGERPRINT = re.compile(r"^[0-9A-F]{40}$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_PACKAGE_VERSION = re.compile(r"(?P<pkgver>[0-9]+\.[0-9]+\.[0-9]+)-[1-9][0-9]*")
 
 
 @dataclass(frozen=True)
@@ -139,9 +140,9 @@ def load_arch_repository_policy(root: Path) -> ArchRepositoryPolicy:
         "release_tag": "arch-repository",
         "product_release_url": (
             "https://github.com/offalexjackson777-stack/hyperflux-next/"
-            "releases/tag/v2.0.0"
+            f"releases/tag/{repository['product_release_tag']}"
         ),
-        "product_release_tag": "v2.0.0",
+        "product_release_tag": repository["product_release_tag"],
         "channel_purpose": "machine-managed-arch-repository",
         "github_release_prerelease": True,
         "human_facing_product_release": False,
@@ -213,8 +214,24 @@ def load_arch_repository_policy(root: Path) -> ArchRepositoryPolicy:
         raise ModelError("Arch repository package set is not exact Core and Full")
     if len({package.filename for package in packages}) != 2:
         raise ModelError("Arch repository package filenames must be unique")
-    if {package.version for package in packages} != {"2.0.0-1"}:
+    versions = {package.version for package in packages}
+    if len(versions) != 1:
         raise ModelError("Arch repository package versions must match the release")
+    (version,) = versions
+    match = _PACKAGE_VERSION.fullmatch(version)
+    if match is None:
+        raise ModelError("Arch repository package version is not pkgver-pkgrel")
+    if repository["product_release_tag"] != f"v{match['pkgver']}":
+        raise ModelError("Arch repository product release differs from its packages")
+    for package in packages:
+        expected_filename = (
+            f"{package.name}-{package.version}-{repository['architecture']}"
+            ".pkg.tar.zst"
+        )
+        if package.filename != expected_filename:
+            raise ModelError(
+                f"Arch repository package filename is not canonical: {package.filename}"
+            )
 
     assets = _exact_keys(
         value["assets"],
@@ -755,7 +772,7 @@ def verify_arch_repository(root: Path, repository: Path) -> dict[str, Any]:
             )
         if (
             package.name == "hyperflux-next-full"
-            and "hyperflux-next-linux=2.0.0-1" not in dependencies
+            and f"hyperflux-next-linux={package.version}" not in dependencies
         ):
             raise ModelError("Full no longer requires the exact Core version")
 

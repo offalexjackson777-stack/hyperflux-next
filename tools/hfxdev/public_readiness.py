@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .arch_repository import load_arch_repository_policy
+from .arch_repository import load_arch_repository_policy, published_arch_release
 from .atlas import load_repository_atlas
 from .knowledge import compiled_knowledge_catalog
 from .release import load_release_context
@@ -52,10 +52,16 @@ def public_readiness(root: Path) -> dict[str, Any]:
         ],
         "publication": {
             "state": "ready" if published else "locked",
-            "label": "Arch 2.0.0 release" if published else "Pre-release",
+            "label": (
+                f"Arch {arch_repository.product_release_tag[1:]} release"
+                if published
+                else "Pre-release"
+            ),
             "summary": (
-                "Arch Linux x86_64 Core and Full 2.0.0-1 packages are published "
-                "in the human-facing GitHub Release v2.0.0. The signed HyperFlux "
+                "Arch Linux x86_64 Core and Full "
+                f"{published_arch_release(arch_repository)} packages are published "
+                "in the human-facing GitHub Release "
+                f"{arch_repository.product_release_tag}. The signed HyperFlux "
                 "Next third-party Pacman repository is served separately through "
                 f"the fixed `{arch_repository.release_tag}` machine channel."
                 if published

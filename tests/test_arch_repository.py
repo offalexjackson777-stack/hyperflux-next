@@ -34,7 +34,8 @@ class ArchRepositoryTests(unittest.TestCase):
         self.assertEqual(policy.name, "hyperflux-next")
         self.assertFalse(policy.official_arch_repository)
         self.assertEqual(policy.release_tag, "arch-repository")
-        self.assertEqual(policy.product_release_tag, "v2.0.0")
+        (version,) = {package.version for package in policy.packages}
+        self.assertEqual(policy.product_release_tag, f"v{version.split('-')[0]}")
         self.assertEqual(policy.channel_purpose, "machine-managed-arch-repository")
         self.assertTrue(policy.github_release_prerelease)
         self.assertFalse(policy.human_facing_product_release)
@@ -42,10 +43,60 @@ class ArchRepositoryTests(unittest.TestCase):
             {package.name for package in policy.packages},
             {"hyperflux-next-linux", "hyperflux-next-full"},
         )
-        self.assertEqual({package.version for package in policy.packages}, {"2.0.0-1"})
+        self.assertEqual(
+            {package.filename for package in policy.packages},
+            {
+                f"{package.name}-{version}-x86_64.pkg.tar.zst"
+                for package in policy.packages
+            },
+        )
         self.assertTrue(policy.server_url.startswith("https://"))
         self.assertIn("/releases/download/arch-repository", policy.server_url)
         self.assertNotIn("/releases/latest/download", policy.server_url)
+
+    def test_policy_rejects_a_release_tag_or_filename_that_differs_from_packages(
+        self,
+    ) -> None:
+        source = json.loads(
+            (ROOT / "assurance" / "arch-repository.json").read_text(encoding="utf-8")
+        )
+        key = ROOT / "packaging" / "keys" / "hyperflux-next-arch-repository-key.asc"
+
+        def mutated_tag(value: dict) -> None:
+            value["repository"]["product_release_tag"] = "v0.0.1"
+            value["repository"]["product_release_url"] = (
+                "https://github.com/offalexjackson777-stack/hyperflux-next/"
+                "releases/tag/v0.0.1"
+            )
+
+        def mutated_url(value: dict) -> None:
+            value["repository"]["product_release_url"] += "x"
+
+        def mutated_filename(value: dict) -> None:
+            value["packages"][0]["filename"] = "hyperflux-next-linux.pkg.tar.zst"
+
+        def mutated_version(value: dict) -> None:
+            value["packages"][0]["version"] = "9.9.9-1"
+
+        cases = {
+            "product release differs": mutated_tag,
+            "identity differs": mutated_url,
+            "filename is not canonical": mutated_filename,
+            "versions must match": mutated_version,
+        }
+        for message, mutate in cases.items():
+            with self.subTest(message), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                value = json.loads(json.dumps(source))
+                mutate(value)
+                (root / "assurance").mkdir()
+                (root / "assurance" / "arch-repository.json").write_text(
+                    json.dumps(value), encoding="utf-8"
+                )
+                (root / "packaging" / "keys").mkdir(parents=True)
+                (root / "packaging" / "keys" / key.name).write_bytes(key.read_bytes())
+                with self.assertRaisesRegex(ModelError, message):
+                    load_arch_repository_policy(root)
 
     def test_configuration_requires_trusted_package_and_database_signatures(
         self,
