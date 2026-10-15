@@ -3,7 +3,7 @@
 HyperFlux Next 2.0 makes supported Razer devices paired through HyperFlux V2
 available to ordinary Linux applications without replacing those applications.
 
-[![Verification](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/verification.yml/badge.svg)](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/verification.yml)
+[![Full verification](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/full-verification.yml/badge.svg?branch=main)](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/full-verification.yml?query=branch%3Amain)
 [![CodeQL](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/codeql.yml/badge.svg)](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/codeql.yml)
 [![License: GPL-2.0-only](docs/assets/badge-license.svg)](LICENSE)
 

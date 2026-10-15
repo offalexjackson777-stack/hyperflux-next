@@ -88,6 +88,9 @@ class RepositoryExperienceContracts(unittest.TestCase):
         self.assertEqual(positions, sorted(positions))
         self.assertEqual(readme.count("\n- **"), 3)
         self.assertLessEqual(len(re.findall(r"!\[[^]]+\]\([^)]*\)", readme)), 3)
+        # GH-004: the status badge covers the complete graph, not the Fast lane.
+        self.assertIn("actions/workflows/full-verification.yml/badge.svg", readme)
+        self.assertNotIn("actions/workflows/verification.yml/badge.svg", readme)
         self.assertEqual(readme.count("> [!IMPORTANT]"), 1)
         distribution = load_distribution_catalog(ROOT).targets["arch"]
         product_pages = (
