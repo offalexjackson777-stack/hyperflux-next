@@ -613,6 +613,165 @@ fn identity_gate_enforces_stability_reset_and_exact_backoff() {
 }
 
 #[test]
+fn retained_departure_reprobes_at_most_every_two_seconds_inside_window() {
+    let start = Instant::now();
+    let (bridge, _) = publication_bridge(Vec::new());
+    let mut publication = PendingPublication::retrying_after_departure(bridge, start);
+    let window_end = start + RETAINED_DEPARTURE_FAST_WINDOW;
+    assert_eq!(publication.gate.fast_until, Some(window_end));
+    assert_eq!(publication.gate.state(), RelayPublicationState::BackingOff);
+
+    let mut delays = vec![publication.gate.next_delay];
+    let mut now = publication.gate.next_probe;
+    while now < window_end {
+        assert!(publication.gate.due(now));
+        assert_eq!(
+            publication.gate.observe(
+                Err(PublicationIdentityFailure::Status(RAZER_STATUS_TIMEOUT)),
+                now,
+            ),
+            None
+        );
+        assert!(publication.gate.next_delay <= RETAINED_DEPARTURE_PROBE_CAP);
+        assert!(publication.gate.next_retry_ms() <= 2_000);
+        delays.push(publication.gate.next_delay);
+        now = publication.gate.next_probe;
+    }
+    assert_eq!(
+        delays[..8]
+            .iter()
+            .map(Duration::as_millis)
+            .collect::<Vec<_>>(),
+        [100, 100, 100, 100, 100, 1_000, 2_000, 2_000],
+        "the fast attempts keep their schedule and only the long tail is capped"
+    );
+    assert!(
+        publication.gate.attempts > 11,
+        "the uncapped tier was reached"
+    );
+
+    publication.gate.fail(
+        PublicationIdentityFailure::Status(RAZER_STATUS_TIMEOUT),
+        now,
+    );
+    assert_eq!(publication.gate.next_delay, Duration::from_secs(30));
+    assert_eq!(publication.gate.next_retry_ms(), 30_000);
+}
+
+#[test]
+fn retained_departure_fast_window_covers_every_return_quiescence() {
+    let longest = hfx_profiles::RETURN_POLICIES
+        .iter()
+        .map(|policy| policy.quiescence_candidate_ms)
+        .max()
+        .expect("at least one return policy is generated");
+    assert!(RETAINED_DEPARTURE_FAST_WINDOW >= Duration::from_millis(longest));
+    assert!(RETAINED_DEPARTURE_PROBE_CAP < RETAINED_DEPARTURE_FAST_WINDOW);
+}
+
+#[test]
+fn retained_departure_window_keeps_blocked_failures_blocked() {
+    let start = Instant::now();
+    let (bridge, _) = publication_bridge(Vec::new());
+    let mut publication = PendingPublication::retrying_after_departure(bridge, start);
+    let now = publication.gate.next_probe;
+    assert_eq!(
+        publication
+            .gate
+            .observe(Err(PublicationIdentityFailure::EmptySerial), now),
+        None
+    );
+    assert!(publication.gate.blocked);
+    assert_eq!(publication.gate.state(), RelayPublicationState::Blocked);
+    assert!(!publication.gate.due(now + RETAINED_DEPARTURE_FAST_WINDOW));
+    publication.fresh_evidence(now);
+    assert!(!publication.gate.due(now + RETAINED_DEPARTURE_FAST_WINDOW));
+}
+
+#[test]
+fn fast_window_is_cleared_on_publication_and_not_used_by_kernel_binding_recovery() {
+    let first_path = temporary_uhid_file();
+    let second_path = temporary_uhid_file();
+    let catalog = NativeRouteCatalog::load().expect("native catalog loads");
+    let record = catalog
+        .profile("child.razer.deathstalker-v2-pro-tkl.0296")
+        .expect("keyboard route exists")
+        .clone();
+    let (device, policy) = fixture_from_record(&catalog, &record, "returning-keyboard");
+    let (bridge, _) = publication_bridge(vec![
+        ScriptOutcome::Serial(b"KEYBOARD-SERIAL"),
+        ScriptOutcome::Serial(b"KEYBOARD-SERIAL"),
+    ]);
+    let endpoint = RunningEndpoint::create(
+        &test_paths(first_path.clone()),
+        bridge,
+        device.clone(),
+        policy,
+        None,
+    )
+    .expect("published endpoint is created");
+
+    let (placeholder, _) = publication_bridge(Vec::new());
+    let first = PendingPublication::new(placeholder, Instant::now());
+    assert_eq!(
+        first.gate.fast_until, None,
+        "first publication is unchanged"
+    );
+
+    let mut publication = first;
+    let mut fingerprint = None;
+    let now = Instant::now();
+    recycle_retained_route(endpoint, &mut publication, &mut fingerprint, now);
+    assert_eq!(
+        publication.gate.fast_until,
+        Some(now + RETAINED_DEPARTURE_FAST_WINDOW)
+    );
+
+    publication.gate.next_probe = Instant::now();
+    publication.probe(&record);
+    publication.gate.next_probe = Instant::now();
+    publication.probe(&record);
+    assert!(publication.ready());
+    let mut returned_endpoint = None;
+    publication.complete(
+        &test_paths(second_path.clone()),
+        &DirectRouteSnapshot::default(),
+        &record,
+        &device,
+        &mut fingerprint,
+        &mut returned_endpoint,
+    );
+    assert_eq!(publication.gate.fast_until, None, "publication clears it");
+    let mut returned = returned_endpoint.expect("the returned child is published");
+    returned
+        .process_event(UhidEvent::Start { flags: 0 })
+        .expect("hid-generic starts the device");
+    returned
+        .process_event(UhidEvent::Stop)
+        .expect("re-probe stops the device");
+
+    let now = Instant::now();
+    recover_kernel_binding(returned, &mut publication, &mut fingerprint, now);
+    assert_eq!(
+        publication.gate.failure,
+        Some(PublicationIdentityFailure::KernelBinding)
+    );
+    assert_eq!(publication.gate.fast_until, None);
+    publication.gate.attempts = 10;
+    publication
+        .gate
+        .fail(PublicationIdentityFailure::KernelBinding, now);
+    assert_eq!(
+        publication.gate.next_delay,
+        Duration::from_secs(30),
+        "kernel-binding recovery keeps the normal backoff"
+    );
+
+    fs::remove_file(first_path).expect("first transcript is removed");
+    fs::remove_file(second_path).expect("second transcript is removed");
+}
+
+#[test]
 fn unknown_direct_state_never_means_absent_and_repeats_both_serial_reads() {
     let path = temporary_uhid_file();
     let paths = test_paths(path.clone());

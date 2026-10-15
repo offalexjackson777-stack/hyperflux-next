@@ -32,6 +32,12 @@ const ROUTE_IDENTITY_STABILITY_INTERVAL: Duration = Duration::from_millis(250);
 const ROUTE_IDENTITY_FAST_RETRY: Duration = Duration::from_millis(100);
 const ROUTE_IDENTITY_FAST_ATTEMPTS: u32 = 5;
 const MAX_ROUTE_IDENTITY_ATTEMPTS: u32 = u16::MAX as u32;
+/// After a retained route's child departs, a keypress cannot open a return
+/// epoch until the longest return quiescence has passed, so for that window
+/// the relay itself re-probes at least this often instead of backing off to
+/// 30 s; a child switched back on then reappears within a few seconds (#39).
+const RETAINED_DEPARTURE_PROBE_CAP: Duration = Duration::from_secs(2);
+const RETAINED_DEPARTURE_FAST_WINDOW: Duration = longest_return_quiescence();
 /// Bounded automatic recoveries from a kernel-binding failure per route, so a
 /// device never needs a power-cycle yet one that can never bind cannot churn.
 const MAX_KERNEL_BINDING_RECOVERIES: u8 = 3;
@@ -431,6 +437,7 @@ struct RoutePublicationGate {
     blocked: bool,
     next_probe: Instant,
     next_delay: Duration,
+    fast_until: Option<Instant>,
 }
 
 struct PendingPublication<B: crate::BridgeExchange> {
@@ -450,6 +457,7 @@ impl RoutePublicationGate {
             blocked: false,
             next_probe: now,
             next_delay: Duration::ZERO,
+            fast_until: None,
         }
     }
 
@@ -492,6 +500,9 @@ impl RoutePublicationGate {
         self.failure = Some(failure);
         self.blocked = failure.disposition() == PublicationFailureDisposition::Blocked;
         self.next_delay = retry_delay(self.attempts);
+        if self.fast_until.is_some_and(|until| now < until) {
+            self.next_delay = self.next_delay.min(RETAINED_DEPARTURE_PROBE_CAP);
+        }
         self.next_probe = now + self.next_delay;
     }
 
@@ -512,6 +523,7 @@ impl RoutePublicationGate {
         self.blocked = false;
         self.next_delay = Duration::ZERO;
         self.next_probe = Instant::now();
+        self.fast_until = None;
     }
 
     fn next_retry_ms(&self) -> u32 {
@@ -532,6 +544,19 @@ fn retry_delay(attempt: u32) -> Duration {
     }
 }
 
+const fn longest_return_quiescence() -> Duration {
+    let policies = hfx_profiles::RETURN_POLICIES;
+    let mut longest = 0;
+    let mut index = 0;
+    while index < policies.len() {
+        if policies[index].quiescence_candidate_ms > longest {
+            longest = policies[index].quiescence_candidate_ms;
+        }
+        index += 1;
+    }
+    Duration::from_millis(longest)
+}
+
 impl<B: crate::BridgeExchange> PendingPublication<B> {
     fn new(bridge: B, now: Instant) -> Self {
         Self {
@@ -546,6 +571,18 @@ impl<B: crate::BridgeExchange> PendingPublication<B> {
     fn retrying(bridge: B, failure: PublicationIdentityFailure, now: Instant) -> Self {
         let mut pending = Self::new(bridge, now);
         pending.gate.fail(failure, now);
+        pending
+    }
+
+    /// Re-arms a departed retained route with re-probes capped for the
+    /// return-quiescence window, so a child powered back on reappears quickly.
+    fn retrying_after_departure(bridge: B, now: Instant) -> Self {
+        let mut pending = Self::new(bridge, now);
+        pending.gate.fast_until = Some(now + RETAINED_DEPARTURE_FAST_WINDOW);
+        pending.gate.fail(
+            PublicationIdentityFailure::Status(RAZER_STATUS_TIMEOUT),
+            now,
+        );
         pending
     }
 
@@ -894,6 +931,8 @@ fn recover_kernel_binding<B: crate::BridgeExchange>(
         PendingPublication::retrying(bridge, PublicationIdentityFailure::KernelBinding, now);
 }
 
+/// Withdraws a virtual device whose retained route reported the child gone and
+/// re-arms its publication for a fresh two-read identity on the same bridge.
 fn recycle_retained_route<B: crate::BridgeExchange>(
     endpoint: RunningEndpoint<B>,
     publication: &mut PendingPublication<B>,
@@ -902,11 +941,7 @@ fn recycle_retained_route<B: crate::BridgeExchange>(
 ) {
     let bridge = endpoint.destroy_into_bridge();
     *serial_fingerprint = None;
-    *publication = PendingPublication::retrying(
-        bridge,
-        PublicationIdentityFailure::Status(RAZER_STATUS_TIMEOUT),
-        now,
-    );
+    *publication = PendingPublication::retrying_after_departure(bridge, now);
 }
 
 impl<B: crate::BridgeExchange> Drop for RunningEndpoint<B> {
