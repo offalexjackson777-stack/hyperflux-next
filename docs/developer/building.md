@@ -9,11 +9,11 @@ From the repository root:
 
 ```sh
 ./hfx generate
-./hfx verify --changed-from <commit>
+./hfx verify --fast --changed-from <commit>
 ```
 
-The first command refreshes derived files. The second selects the checks affected
-by the change and includes their dependency closure. Individual Rust, Python,
+The first command refreshes derived files. The second runs the fast lane for the
+checks affected by the change and their dependency closure. Individual Rust, Python,
 and C++ tests can run directly while iterating.
 
 ## Maintainer Builds

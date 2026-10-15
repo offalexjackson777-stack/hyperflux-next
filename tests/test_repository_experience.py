@@ -378,12 +378,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
             ]
         )
 
-        # docs/developer/building.md is owned by another change; shrink only.
-        pending = {
-            ("docs/developer/building.md", "stale claim: ./hfx verify requires --fast, --full, or --all"),
-        }
-        found = {(issue.path, issue.reason) for issue in stale_claim_issues(ROOT)}
-        self.assertLessEqual(found, pending)
+        self.assertEqual(stale_claim_issues(ROOT), ())
 
         canonical = load_document_catalog(ROOT).by_path["README.md"]
         base = "# HyperFlux Next\n\nText.\n"

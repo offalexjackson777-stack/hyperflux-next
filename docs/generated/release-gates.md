@@ -19,4 +19,4 @@ HyperFlux Next `2.0.2-1` has `10` verified technical gates. The Arch release and
 
 ## Publication Boundary
 
-Publication was separately authorized after the technical gates passed. The project-operated Arch repository signs packages and repository metadata; it is not an official Arch Linux repository.
+This release was published after the technical gates passed. The project-operated Arch repository signs packages and repository metadata; it is not an official Arch Linux repository.

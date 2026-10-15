@@ -37,7 +37,7 @@ def release_gates_markdown(context: ReleaseContext) -> str:
             "## Publication Boundary",
             "",
             (
-                "Publication was separately authorized after the technical gates passed. "
+                "This release was published after the technical gates passed. "
                 "The project-operated Arch repository signs packages and repository metadata; "
                 "it is not an official Arch Linux repository."
                 if published

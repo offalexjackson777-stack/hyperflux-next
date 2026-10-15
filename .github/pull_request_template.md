@@ -11,7 +11,7 @@
 ## Validation
 
 - Commands and results:
-- Hardware evidence, only when separately authorized:
+- Hardware evidence, if any:
 
 ## Compatibility And Risk
 
