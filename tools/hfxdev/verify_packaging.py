@@ -14,6 +14,7 @@ import time
 
 from .model import ModelError, load_foundation, load_json, require_unique, sha256_file
 from .assurance import load_design_coverage
+from .arch_split import load_arch_split
 from .arch_update_policy import verify_arch_openrazer_update_policy
 from .atlas import load_repository_atlas
 from .development import load_development_environment
@@ -608,6 +609,29 @@ def finalize_external_openrgb_qualification(
     return binding_path
 
 
+def _arch_full_edition_packages(root: Path, packages: tuple) -> tuple:
+    """Return the Full edition's Arch package and the siblings it depends on.
+
+    Before the four-output topology is active the build has one `linux` and
+    one `full` package. Once it is active, the Full edition maps to a split
+    output whose sibling dependencies come from `packaging/arch-split.json`.
+    """
+
+    split = load_arch_split(root)
+    if split.active:
+        full_id = split.edition_output("full").id
+        dependency_ids = tuple(item for item in split.closure(full_id) if item != full_id)
+    else:
+        full_id, dependency_ids = "full", ("linux",)
+    by_component = {package.component: package for package in packages}
+    missing = [item for item in (full_id, *dependency_ids) if item not in by_component]
+    if missing:
+        raise ModelError(
+            "Arch package build lacks the Full edition package set: " + ", ".join(missing)
+        )
+    return by_component[full_id], tuple(by_component[item] for item in dependency_ids)
+
+
 def _run_package_contracts(root: Path, node: TestNode) -> None:
     workspace = root / "build" / "package-contracts"
     if workspace.exists():
@@ -728,20 +752,11 @@ def _run_package_contracts(root: Path, node: TestNode) -> None:
         first_arch.manifest.read_bytes() != second_arch.manifest.read_bytes()
     ):
         raise ModelError("independent Arch package builds are not byte-for-byte reproducible")
-    full = next(
-        package
-        for package in first_arch.packages
-        if package.component == "full"
-    )
-    linux = next(
-        package
-        for package in first_arch.packages
-        if package.component == "linux"
-    )
+    full, dependencies = _arch_full_edition_packages(root, first_arch.packages)
     verify_arch_openrazer_update_policy(
         full.package,
         package_name=full.package_name,
-        dependency_packages=(linux.package,),
+        dependency_packages=tuple(package.package for package in dependencies),
         workspace=workspace / "openrazer-update-policy",
         timeout_seconds=node.timeout_seconds,
     )
