@@ -1,8 +1,8 @@
 {
   "$schema": "../schemas/documentation-screenshot-manifest.schema.json",
   "schema": "hyperflux-documentation-screenshot-manifest-v1",
-  "source_revision": "8b77b6c9b8e2665f41607ed4460eb6cd5d16dc3f",
-  "render_result_sha256": "df45078a39ade3b699ca2f5615817697780854701b8da2004722a48cdaadc6d0",
+  "source_revision": "212c10306128283c54376961ee5769c53e2c6ebb",
+  "render_result_sha256": "ed18bf7b6dede016a8812152beb81560d21d6a1b1a51160e484084f8cfeec852",
   "screenshots": [
     {
       "file": "screenshots/CONTRIBUTING--1280--dark.png",
@@ -388,7 +388,7 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "7814e184d2e18b04bef31c9dd4a2c1fa0a2c533cfef2ea7e863edd6d3b7c6411",
+      "sha256": "d9db861f677d8d9ff9e7f10e0a53844188627d38373b64eab9af1fdcd1c7f2ec",
       "bytes": 231527
     },
     {
@@ -397,7 +397,7 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "a4af54f0197057f26fcb9af335d4ee1351b8906282dcaefff0fcafbb65001b5d",
+      "sha256": "0353cb2c47d7f9245630bfc1c0d5ba90d061d961458a487f6b5ab657875710eb",
       "bytes": 228368
     },
     {
@@ -406,7 +406,7 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "7b9d34ab4065b11a090c321926562c11fb67ac6fb1222498147d5550b1f358de",
+      "sha256": "471c46e2ec4de9e4ba03fbf52ebb99cde3bff0a045e92e54e5bab3fe279a4d24",
       "bytes": 164848
     },
     {
@@ -415,7 +415,7 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "485b12bd8d2a869e3feff664e2c9e3c2789cfab469432f464f4b46478ddb35c7",
+      "sha256": "b45f546e9ddc05566ebc0e2e93b975e77c1853585c6bba8255a1cb1324418294",
       "bytes": 158390
     },
     {
@@ -424,7 +424,7 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "11dd78e408f49df4e91a12f35456a47c99f697ca4d8cecbe8061ed1ebc9fc4a9",
+      "sha256": "8d10b60dec314c4c5d146e213b958677bde74f4409e5b44e1af04032cc2c7e02",
       "bytes": 214943
     },
     {
@@ -433,7 +433,7 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "2b5ddaaf07dc3f21311f2c4d1cf34179f67a5e37718d6716113a1d0aafdbca36",
+      "sha256": "8e6e2a4c24d91af7b134647e53cebd3ddbdca802b32ef234cecb45267586a926",
       "bytes": 210768
     },
     {
@@ -442,7 +442,7 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "1a00e1ec892a117c412c1a3a49abbfb0f0f60b232a40e5a83f9e62b5729dd411",
+      "sha256": "701f464a6b7c555b5fba1d03f21090fd29c6dc4e29b2aea416051395edc16e3b",
       "bytes": 389470
     },
     {
@@ -451,7 +451,7 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "bfb1984b93013df3240ca20be297265a5d90597ca5354669a4696a693bf0a495",
+      "sha256": "e76c887972e33ca4b7274b6b2a28b85484088b2fb76ab7d331a7f3a7018ecac0",
       "bytes": 380293
     },
     {
@@ -460,7 +460,7 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "a3923a3d7989cd07ab06080743193118edda021b3fff793f05a38f53b072a605",
+      "sha256": "ee701dbec6d98d3026c2431e601f51ff5abb2b262032685ad83d5ac33f4301e9",
       "bytes": 356346
     },
     {
@@ -469,7 +469,7 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "06bc63d3df2ffc4073056b1f3467cbd9cc2e31eacf223b2aa012606a7e86a50d",
+      "sha256": "a13938ebd2088f7364a72d60b2a8ac985374a459b056e7f42129fcd05eec4134",
       "bytes": 347153
     },
     {
@@ -478,7 +478,7 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "f66e1a052d8988f725dbf15a50b6f1c313e1944adc633b07d3dc69aad661f953",
+      "sha256": "3966339d2072f769e6b2e38211958ef16acfdac22d5425967ba9984c9568fbc3",
       "bytes": 393474
     },
     {
@@ -487,7 +487,7 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "7f3b3e690aab2d9eb80f7cb6ae43fbb5b9710b7731aec7abd539a498cac08932",
+      "sha256": "835a260e9efd08ff1d7bb8344ab20db059cfdbf3c46b28a4e6e57f1c06c633bb",
       "bytes": 385061
     },
     {

@@ -1,17 +1,17 @@
 {
   "$schema": "../schemas/documentation-audit.schema.json",
   "schema": "hyperflux-documentation-audit-v2",
-  "source_revision": "8b77b6c9b8e2665f41607ed4460eb6cd5d16dc3f",
+  "source_revision": "212c10306128283c54376961ee5769c53e2c6ebb",
   "inputs": {
     "catalog_sha256": "433c022f0d5398ac2c1112c2852cbbf9db688628972e86bb97cded0a24bd9184",
     "policy_sha256": "afad995f01f447fdf79edea77682603abb26eeec123a00c74b134d3efdc413a2",
     "renderer_sha256": "065d95640162f64657854db2d4d5caccc005ee245f3a731a3b3d36f3e8397fe4",
     "journey_source_coverage_sha256": "7dc3e929079eb76fe8ce82b0b026c2a373af8dc4c829352f38374a6d6983495a",
-    "rendered_documents_sha256": "d28dc5837f41b34529adbf02f224a5b4f391b848471b5d8ff9415a9003cbf721"
+    "rendered_documents_sha256": "f437416cbc74b1c7fe7da92c6cd7604400aa8fb796f4164d28bd10020ff5d084"
   },
   "render": {
     "status": "passed",
-    "result_sha256": "df45078a39ade3b699ca2f5615817697780854701b8da2004722a48cdaadc6d0",
+    "result_sha256": "ed18bf7b6dede016a8812152beb81560d21d6a1b1a51160e484084f8cfeec852",
     "document_count": 64,
     "check_count": 384,
     "screenshot_count": 108,
@@ -27,7 +27,7 @@
       "light",
       "dark"
     ],
-    "screenshot_manifest_sha256": "6b87da26a84bfa12b23482e9bfae84e9689528537d1158ed725fd370f269435c",
+    "screenshot_manifest_sha256": "d5f1c932430cad38f57e3371db530d2c3f2e61a115eb2e8bb303c712c8a34f55",
     "capture_mode": "full-page",
     "max_page_height": 32768,
     "render_contract": "github-compatible-gfm-v2",
@@ -71,11 +71,11 @@
       },
       {
         "file": "screenshots/docs__generated__distributions--1280--dark.png",
-        "sha256": "7814e184d2e18b04bef31c9dd4a2c1fa0a2c533cfef2ea7e863edd6d3b7c6411"
+        "sha256": "d9db861f677d8d9ff9e7f10e0a53844188627d38373b64eab9af1fdcd1c7f2ec"
       },
       {
         "file": "screenshots/docs__generated__installation--375--dark.png",
-        "sha256": "a3923a3d7989cd07ab06080743193118edda021b3fff793f05a38f53b072a605"
+        "sha256": "ee701dbec6d98d3026c2431e601f51ff5abb2b262032685ad83d5ac33f4301e9"
       },
       {
         "file": "screenshots/docs__generated__repository__atlas--768--light.png",
