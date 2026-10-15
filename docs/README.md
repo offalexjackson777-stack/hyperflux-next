@@ -1,43 +1,51 @@
 # HyperFlux Next Documentation
 
-Pick the guide for what you want to do. User guides cover installing and using
-HyperFlux Next 2.0. Developer guides cover building it and changing it safely.
-Project pages cover status, plans, and history.
+Start with the door that fits what you want to do.
 
 <!-- HFX-GENERATED-BEGIN: release-summary -->
 **HyperFlux Next 2.0.1 is available for Arch Linux x86_64.** Read the
 [v2.0.1 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.1).
 <!-- HFX-GENERATED-END: release-summary -->
 
-## Use HyperFlux Next
+## Use HyperFlux
 
-- [Installation](user/installation.md)
-- [First run](user/first-run.md)
-- [Applications](user/applications.md)
-- [Hardware](user/hardware.md)
+For people who want their keyboard and mouse to work.
+
+- [Install HyperFlux Next](user/installation.md)
+- [First run](user/first-run.md): open your apps and check your devices.
+- [Applications](user/applications.md): what OpenRazer, Polychromatic, and
+  OpenRGB can do.
+- [Hardware](user/hardware.md): which devices work.
 - [Updates and removal](user/updates-removal.md)
 - [Troubleshooting](user/troubleshooting.md)
 - [Known limitations](user/limitations.md)
-- [Privacy](user/privacy.md)
+- [Privacy](user/privacy.md): what a support bundle contains.
+- [Get help](../SUPPORT.md)
 
-## Develop HyperFlux Next
+## How It Works And How It Was Built
 
-- [Architecture](developer/architecture.md)
+For people who want to understand HyperFlux.
+
+- [Architecture](developer/architecture.md): the parts and how they connect.
+- [Design book](architecture/design-book.md): the design in depth.
+- [Investigations](investigations/README.md): real problems and how they were
+  tracked down.
+- [Journey](project/journey.md): how the project got here.
+
+## Build And Contribute
+
+For people who want to change HyperFlux.
+
+- [Contributing](../CONTRIBUTING.md)
 - [Building](developer/building.md)
 - [SDK and connectors](developer/sdk-connectors.md)
 - [Device onboarding](developer/device-onboarding.md)
 - [Verification](developer/verification.md)
 - [Writing guide](developer/writing-guide.md)
 
-## Follow The Project
+## Reference
 
-- [Journey](project/journey.md)
-- [Roadmap](project/roadmap.md)
 - [Release status](project/release-status.md)
-
-## Factual References
-
-Generated references are collected under [`docs/generated/`](generated/).
-They are built from the project's data files and list exact details, such as
-package contents and supported devices. Start with the guides above; use the
-references when you need the exact detail.
+- [Roadmap](project/roadmap.md)
+- [Generated references](generated/README.md): exact details built from the
+  project's data, such as package contents and supported devices.

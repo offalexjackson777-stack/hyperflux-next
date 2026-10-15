@@ -61,7 +61,7 @@
       "path": "docs/README.md",
       "title": "HyperFlux Next Documentation",
       "audience": "mixed",
-      "purpose": "Routes users, developers, and project followers to concise reviewed guidance and factual generated references.",
+      "purpose": "Sends readers to the user guides, the explanations of how HyperFlux works and was built, the contributor guides, and the references.",
       "owner": "documentation",
       "navigation_group": "home",
       "mode": "hybrid",
