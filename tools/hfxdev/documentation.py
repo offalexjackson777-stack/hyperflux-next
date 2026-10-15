@@ -53,6 +53,8 @@ GENERATED_BLOCK_IDS = (
     "release-status",
     "recommended-package",
     "compatibility-summary",
+    "repository-setup",
+    "package-fallback",
 )
 BEGIN_RE = re.compile(r"^<!-- HFX-GENERATED-BEGIN: ([a-z][a-z0-9-]*) -->$")
 END_RE = re.compile(r"^<!-- HFX-GENERATED-END: ([a-z][a-z0-9-]*) -->$")

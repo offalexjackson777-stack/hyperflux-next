@@ -46,6 +46,10 @@ from .generators.readme import (
     release_status as readme_release_status,
     release_summary as readme_release_summary,
 )
+from .generators.installation import (
+    package_fallback as installation_package_fallback,
+    repository_setup as installation_repository_setup,
+)
 from .generators.social_preview import render_social_preview
 from .generators.supply_chain import spdx_json, supply_chain_markdown
 from .generators.domain import (
@@ -315,13 +319,15 @@ def rendered_files(root: Path) -> dict[Path, str]:
     licensing_policy = load_licensing_policy(root)
     readme_renderers = {
         "release-summary": lambda: readme_release_summary(readiness, arch_repository),
-        "release-status": lambda: readme_release_status(readiness),
+        "release-status": lambda: readme_release_status(readiness, arch_repository),
         "recommended-package": lambda: readme_recommended_package(
             distribution_catalog
         ),
         "compatibility-summary": lambda: readme_compatibility_summary(
             readiness, openrazer_native, source_validated_devices
         ),
+        "repository-setup": lambda: installation_repository_setup(arch_repository),
+        "package-fallback": lambda: installation_package_fallback(arch_repository),
     }
     hybrid_documents = {
         root / document.path: replace_generated_blocks(

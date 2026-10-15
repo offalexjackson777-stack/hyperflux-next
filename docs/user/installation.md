@@ -1,28 +1,41 @@
-# Installation
+# Install HyperFlux Next
 
-HyperFlux Next has two packages. Choose one.
+This guide installs HyperFlux Next so your Razer keyboard and mouse on a
+HyperFlux receiver work in OpenRazer, Polychromatic, and OpenRGB.
 
-- **Full (`hyperflux-next-full`):** Core plus the OpenRazer compatibility
-  transport and OpenRGB integration for optional stock applications.
-- **Core (`hyperflux-next-linux`):** HyperFlux receiver driver, bridge, SDK,
-  CLI, and base services.
+## What You Need
 
-Full is the normal desktop choice and pulls in Core by itself. Choose Core alone
-only when you need the receiver transport and SDK without application
-integration. Stock OpenRazer, Polychromatic, and OpenRGB are separate packages
-that you install yourself if you want them; HyperFlux does not install
-or replace them.
+- Arch Linux on an x86_64 computer.
+- The HyperFlux receiver, plugged in, with your keyboard and mouse paired to it.
+- A user account that can run `sudo`.
 
-## Availability
+## Choose A Package
 
-Arch Linux x86_64 packages are published in
-[GitHub Release v2.0.1](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.1).
-Pacman installs and updates them from the signed HyperFlux Next repository. It
-is a signed project-operated Arch repository, not an official Arch Linux
-repository. Pacman reads its database and signatures from a fixed
-`arch-repository` release; you never download those files yourself.
+HyperFlux Next comes in two packages. Choose one.
 
-## 1. Add the HyperFlux repository - one time only
+- **Full (`hyperflux-next-full`), recommended:** your keyboard and mouse work in
+  OpenRazer, Polychromatic, and OpenRGB. Full installs Core for you.
+- **Core (`hyperflux-next-linux`):** only the receiver driver, the background
+  service, the `hyperfluxctl` tool, and the SDK, without the app connections.
+
+If you are not sure, choose Full. The apps themselves are separate. The
+[first-run guide](first-run.md) shows how to install them.
+
+## 1. Add The HyperFlux Repository (One Time Only)
+
+<!-- HFX-GENERATED-BEGIN: repository-setup -->
+This step tells Pacman where to find HyperFlux and which key signs its packages.
+The command below downloads the HyperFlux key, checks its fingerprint, and then
+adds the key and the repository to Pacman. If the fingerprint does not match, or
+Pacman already has a HyperFlux entry, it stops without changing anything.
+
+The key's fingerprint is `8BF8 A266 E756 BD1C 24C9 3091 8B3F 3850 0071 59E8`.
+
+<details>
+<summary>Show the setup command</summary>
+
+Copy the whole block into a terminal. It asks for your password because it uses
+`sudo`.
 
 ```bash
 bash <<'HFX_REPOSITORY_SETUP'
@@ -79,36 +92,79 @@ fi
 HFX_REPOSITORY_SETUP
 ```
 
-## 2. Install Full - recommended
+Pacman prints a few lines while it adds and signs the key. The command also
+writes `/etc/pacman.d/hyperflux-next.conf` and adds one `Include` line to the
+end of `/etc/pacman.conf`. It downloads only the key and runs nothing else from
+the internet.
+
+</details>
+
+<details>
+<summary>Do the same steps by hand</summary>
+
+1. Download the key:
+
+   ```bash
+   curl --proto '=https' --tlsv1.2 --fail --location --remote-name -- \
+     https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository/hyperflux-next-arch-repository-key.asc
+   ```
+
+2. Show its fingerprints:
+
+   ```bash
+   gpg --show-keys --with-subkey-fingerprints hyperflux-next-arch-repository-key.asc
+   ```
+
+   You should see exactly these two fingerprints. If either one is different,
+   stop here and do not continue.
+
+   - Main key: `8BF8A266E756BD1C24C930918B3F3850007159E8`
+   - Signing subkey: `4C64CE4C855BC6844B4C1670C67DD9C42253ED27`
+
+3. Add the key to Pacman and trust it:
+
+   ```bash
+   sudo pacman-key --add hyperflux-next-arch-repository-key.asc
+   sudo pacman-key --lsign-key 8BF8A266E756BD1C24C930918B3F3850007159E8
+   ```
+
+4. Open `/etc/pacman.conf` as root, for example with
+   `sudoedit /etc/pacman.conf`, and add these lines at the end:
+
+   ```ini
+   [hyperflux-next]
+   SigLevel = Required DatabaseRequired TrustedOnly
+   Server = https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository
+   ```
+
+</details>
+<!-- HFX-GENERATED-END: repository-setup -->
+
+This is a signed project-operated Arch repository, not an official Arch Linux
+repository. After this step, your normal `sudo pacman -Syu` also installs
+HyperFlux updates.
+
+## 2. Install The Package
+
+Install Full:
 
 ```bash
 sudo pacman -Syu hyperflux-next-full
 ```
 
-Full pulls in the matching Core package. For an advanced Core-only
-installation, run this instead:
+To install Core instead, run `sudo pacman -Syu hyperflux-next-linux`.
 
-```bash
-sudo pacman -Syu hyperflux-next-linux
-```
+Pacman lists the packages it is about to install and asks
+`Proceed with installation? [Y/n]`. Press Enter to continue.
 
-After this, your normal `sudo pacman -Syu` also installs HyperFlux updates.
+If the stock `openrazer-driver-dkms` package is already installed, Pacman also
+asks whether to replace it with `hyperflux-next-full`. Answer `y`. Full takes
+over that role, so OpenRazer keeps working.
 
-## Security details
+## 3. Turn On HyperFlux And Restart
 
-The one-time block downloads only the public key. It requires exactly the full
-primary fingerprint `8BF8 A266 E756 BD1C 24C9 3091 8B3F 3850 0071 59E8` and
-signing subkey before changing trust or configuration. It writes the strict
-`Required DatabaseRequired TrustedOnly` repository locally and adds one
-idempotent include without replacing existing Pacman settings. It does not
-execute a remote script or install a downloaded configuration file.
-
-
-## 3. Enable the services and reboot
-
-Keep the receiver and its keyboard and mouse connected. Installing the
-packages does not start any service, so enable the bridge and your desktop
-socket, then reboot normally:
+Installing the package does not start anything. Turn on the HyperFlux service
+and your desktop connection to it, then restart:
 
 ```bash
 sudo systemctl enable hyperflux-next-bridge.service \
@@ -116,31 +172,59 @@ sudo systemctl enable hyperflux-next-bridge.service \
 sudo reboot
 ```
 
-## 4. Check the result
+`systemctl` prints one `Created symlink` line for each item it turns on.
 
-After you log in, run:
+> [!WARNING]
+> Keep the receiver, keyboard, and mouse connected while you install. Do not
+> unplug your only keyboard or mouse to finish the installation.
+
+## 4. Check That It Works
+
+After you log in again, run:
 
 ```bash
-hyperfluxctl status
 hyperfluxctl doctor
 ```
 
-Doctor prints `HyperFlux Next is ready.` when everything works. Otherwise it
-names the first problem and one thing to do about it. Continue with the
-[first-run guide](first-run.md) to open your applications.
+You should see:
 
-> [!WARNING]
-> Do not unplug the only keyboard or mouse to complete a normal installation.
-> Disconnected activation is an advanced recovery path and requires a built-in
-> keyboard and touchpad, a second input pair, or a working SSH session.
+```text
+HyperFlux Next is ready.
+```
 
-## Local package fallback
+The next line shows the driver, the background service, and the receiver.
+If you see `HyperFlux Next needs attention.` instead, do what the `Do:` line
+says, then run `hyperfluxctl doctor` again. The
+[troubleshooting guide](troubleshooting.md) covers the common cases.
 
-Use this only if you cannot add the repository. Without it, Pacman cannot
-fetch Core for Full, so this fallback downloads both package files from the
-v2.0.1 release and installs them in one transaction. Download the two packages
-and the checksum receipt, keep exactly those two receipt entries, then verify
-and install:
+Next, open your apps with the [first-run guide](first-run.md).
+
+## What Each Package Installs
+
+Pacman describes the two packages like this:
+
+- `hyperflux-next-linux` (Core): HyperFlux receiver driver, bridge, SDK, CLI,
+  and base services.
+- `hyperflux-next-full` (Full): Core plus the OpenRazer compatibility transport
+  and OpenRGB integration for optional stock applications.
+
+HyperFlux does not install or replace OpenRazer's background service,
+Polychromatic, or OpenRGB. The
+[distribution contract](../generated/distributions.md) and
+[installation contract](../generated/installation.md) list every file and
+setting in detail.
+
+## If You Cannot Add The Repository
+
+Use this only if you do not want to add the HyperFlux repository and its key to
+Pacman. Packages installed this way do not update with `sudo pacman -Syu`. Add
+the repository later to get updates.
+
+<!-- HFX-GENERATED-BEGIN: package-fallback -->
+This downloads the Core and Full package files from the release page,
+[v2.0.1](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.1),
+checks them against the release's checksum list, and installs both in one step.
+Full needs Core, and without the repository Pacman cannot fetch Core by itself.
 
 ```bash
 curl --proto '=https' --tlsv1.2 --fail --location --remote-name-all -- \
@@ -157,15 +241,9 @@ sudo pacman -U -- \
   ./hyperflux-next-full-2.0.1-1-x86_64.pkg.tar.zst
 ```
 
-Packages installed this way do not update with `pacman -Syu`. Add the
-repository later to receive updates. Then continue with step 3 above.
+`sha256sum` should print `OK` for both files. If it prints `FAILED`, delete the
+files and download them again.
+<!-- HFX-GENERATED-END: package-fallback -->
 
-The release's `arch-repository` channel carries detached signatures for both
-package archives and the repository database, plus the public key and its full
-fingerprint receipt. The private signing key is never published.
-
-## Package Details
-
-The generated [distribution contract](../generated/distributions.md) and
-[installation contract](../generated/installation.md) list exact package
-contents and lifecycle behavior.
+Then continue with
+[step 3](#3-turn-on-hyperflux-and-restart).

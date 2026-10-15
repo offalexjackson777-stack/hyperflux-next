@@ -104,7 +104,9 @@
               "release-summary",
               "release-status",
               "recommended-package",
-              "compatibility-summary"
+              "compatibility-summary",
+              "repository-setup",
+              "package-fallback"
             ]
           }
         }

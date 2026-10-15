@@ -1,7 +1,7 @@
 # HyperFlux Next
 
-HyperFlux Next 2.0 makes supported Razer devices paired through HyperFlux V2
-available to ordinary Linux applications without replacing those applications.
+Your Razer keyboard and mouse on a HyperFlux receiver, working in OpenRazer,
+Polychromatic, and OpenRGB on Linux.
 
 [![Full verification](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/full-verification.yml/badge.svg?branch=main)](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/full-verification.yml?query=branch%3Amain)
 [![CodeQL](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/codeql.yml/badge.svg)](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/codeql.yml)
@@ -12,42 +12,64 @@ available to ordinary Linux applications without replacing those applications.
 [v2.0.1 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.1).
 <!-- HFX-GENERATED-END: release-summary -->
 
-## What It Does
+With HyperFlux Next 2.0, a keyboard and mouse that share one HyperFlux
+receiver show up in your usual lighting and settings apps. You keep the same
+apps and use them the usual way.
 
-- **Discovers paired children naturally.** Capability-based routing needs no
-  serial, USB-port, or machine-specific binding.
-- **Preserves stock applications.** OpenRazer, Polychromatic, and OpenRGB keep
-  their public APIs, controls, and user experience.
-- **Fails closed.** Stale, unknown, or unavailable routes stay non-writable and
-  `hyperfluxctl doctor` reports the first missing boundary.
+## Does My Device Work?
 
-## Packages
+<!-- HFX-GENERATED-BEGIN: compatibility-summary -->
+Unless a device says otherwise, it works in OpenRazer, Polychromatic, and
+OpenRGB.
+
+**Tested on real hardware.** These work through the receiver:
+
+- Razer Basilisk V3 Pro 35K (mouse)
+- Razer DeathStalker V2 Pro Tenkeyless (keyboard)
+
+**Expected to work.** Nobody has tested these 8 devices with HyperFlux on real
+hardware yet, but they should work:
+
+- Razer Naga V2 Pro (mouse, OpenRGB only)
+- Razer Basilisk V3 Pro (mouse)
+- Razer Cobra Pro (mouse)
+- Razer BlackWidow V3 Pro (keyboard)
+- Razer DeathStalker V2 Pro (keyboard)
+- Razer BlackWidow V4 Mini HyperSpeed (keyboard, OpenRazer and Polychromatic only)
+- Razer BlackWidow V4 Low-profile Tenkeyless HyperSpeed (keyboard, OpenRGB only)
+- Razer BlackWidow V4 Tenkeyless HyperSpeed (keyboard)
+
+**Not usable yet.** 2 more devices are known, but they need support in OpenRazer
+or OpenRGB first: Razer Cobra HyperSpeed and Razer BlackWidow V4 Low-profile
+HyperSpeed.
+
+HyperFlux Next is tested with OpenRazer `3.12.4`.
+<!-- HFX-GENERATED-END: compatibility-summary -->
+
+The [hardware guide](docs/user/hardware.md) explains what each group means and
+how to check a device that is not listed. The
+[known limitations](docs/user/limitations.md) list what does not work yet.
+
+## Install
 
 <!-- HFX-GENERATED-BEGIN: recommended-package -->
-Choose one edition. Full is recommended for desktops; Core is an advanced choice.
+You need Arch Linux on an x86_64 computer and the receiver, with your keyboard
+and mouse paired to it.
 
-- **Full (`hyperflux-next-full`):** Core plus the OpenRazer compatibility
-  transport and OpenRGB integration for optional stock applications.
-- **Core (`hyperflux-next-linux`):** HyperFlux receiver driver, bridge, SDK,
-  CLI, and base services.
-
-Stock OpenRGB, OpenRazer, and Polychromatic are separate Arch packages. Install
-the ones you want to use; HyperFlux does not install or replace them.
-
-### Install
-
-1. Add the signed HyperFlux Pacman repository once. Follow the
-   [one-time setup](docs/user/installation.md#1-add-the-hyperflux-repository---one-time-only).
-   It is a signed project-operated Arch repository, not an official Arch Linux repository.
-2. Install Full:
+1. **Add the HyperFlux package repository.** You do this once. Follow
+   [step 1 of the installation guide](docs/user/installation.md#1-add-the-hyperflux-repository-one-time-only).
+   It is a signed project-operated Arch repository,
+   not an official Arch Linux repository.
+2. **Install HyperFlux Next.**
 
    ```bash
    sudo pacman -Syu hyperflux-next-full
    ```
 
-   Full pulls in the matching Core package. To install Core alone instead, run
-   `sudo pacman -Syu hyperflux-next-linux`.
-3. Enable the services and reboot. Keep the receiver plugged in.
+   This installs Full, the recommended package. It brings Core with it. If you
+   only want the receiver driver and the SDK, without the app connections,
+   install Core instead: `sudo pacman -Syu hyperflux-next-linux`.
+3. **Turn on HyperFlux and restart.** Keep the receiver plugged in.
 
    ```bash
    sudo systemctl enable hyperflux-next-bridge.service \
@@ -55,42 +77,33 @@ the ones you want to use; HyperFlux does not install or replace them.
    sudo reboot
    ```
 
-4. After you log in, check the result:
+4. **Check that it works.** After you log in again, run:
 
    ```bash
-   hyperfluxctl status
    hyperfluxctl doctor
    ```
 
-   Doctor prints `HyperFlux Next is ready.` when everything works. Otherwise it
-   names the first problem and one thing to do about it.
+   You should see `HyperFlux Next is ready.` If you see
+   `HyperFlux Next needs attention.` instead, do what its `Do:` line says.
 
-Later updates arrive with your normal `sudo pacman -Syu`. The
-[first-run guide](docs/user/first-run.md) shows how to open your applications,
-and the [installation guide](docs/user/installation.md) covers key checks and
-the offline package fallback.
+Later updates arrive with your normal `sudo pacman -Syu`.
 <!-- HFX-GENERATED-END: recommended-package -->
 
-## Hardware And Applications
+The [installation guide](docs/user/installation.md) explains each step and the
+choice between Full and Core.
 
-<!-- HFX-GENERATED-BEGIN: compatibility-summary -->
-- Stock OpenRazer `3.12.4` userspace,
-  stock Polychromatic, and stock OpenRGB remain application owners.
-- 2 devices are physically proven,
-  8 are source-qualified operational
-  candidates, and 2 are blocked or
-  research-only. The physical fixtures are not an allowlist.
-- Restoration ships disabled.
-<!-- HFX-GENERATED-END: compatibility-summary -->
+## Next Steps
 
-See the [hardware tiers](docs/user/hardware.md) and
-[application guide](docs/user/applications.md) for the exact support boundary.
+- [First run](docs/user/first-run.md): open your apps and check your devices.
+- [Applications](docs/user/applications.md): what OpenRazer, Polychromatic, and
+  OpenRGB can do with HyperFlux.
+- [Troubleshooting](docs/user/troubleshooting.md): fix a missing device or a
+  failed check.
+- [Updates and removal](docs/user/updates-removal.md): update, go back, or
+  remove HyperFlux.
+- [Documentation hub](docs/README.md): every guide, plus how HyperFlux works and
+  how it was built.
 
-## Start Here
-
-Use the [documentation hub](docs/README.md),
-[installation guide](docs/user/installation.md),
-[first-run guide](docs/user/first-run.md), and
-[troubleshooting guide](docs/user/troubleshooting.md).
-Project links: [Support](SUPPORT.md), [Contributing](CONTRIBUTING.md),
-[Journey](docs/project/journey.md), [Security](SECURITY.md), and [License](LICENSE).
+[Get help](SUPPORT.md) · [Contribute](CONTRIBUTING.md) ·
+[Project journey](docs/project/journey.md) · [Security](SECURITY.md) ·
+[License](LICENSE)

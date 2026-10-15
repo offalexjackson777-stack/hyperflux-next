@@ -13,6 +13,7 @@ from ..source_validated_catalog import (
     PHYSICALLY_PROVEN,
     SOURCE_QUALIFIED_OPERATIONAL,
     UPSTREAM_BLOCKED_OR_RESEARCH_ONLY,
+    public_support_tier,
     public_support_tier_counts,
 )
 
@@ -41,19 +42,6 @@ def license_badge() -> str:
     return _badge("license", "GPL-2.0-only", "#287d6c")
 
 
-def _wrapped_bullet(text: str) -> str:
-    return "\n".join(
-        textwrap.wrap(
-            text,
-            width=80,
-            initial_indent="- ",
-            subsequent_indent="  ",
-            break_long_words=False,
-            break_on_hyphens=False,
-        )
-    )
-
-
 def release_summary(readiness: dict[str, Any], repository: ArchRepositoryPolicy) -> str:
     """One plain sentence for landing pages; Release Status keeps the detail."""
     if readiness["publication"]["state"] != "ready":
@@ -66,44 +54,47 @@ def release_summary(readiness: dict[str, Any], repository: ArchRepositoryPolicy)
 [{repository.product_release_tag} release notes]({repository.product_release_url})."""
 
 
-def release_status(readiness: dict[str, Any]) -> str:
+def release_status(
+    readiness: dict[str, Any], repository: ArchRepositoryPolicy
+) -> str:
     publication = readiness["publication"]
-    paragraph = f"**{publication['label']}.** {publication['summary']}"
-    lines = textwrap.wrap(
-        paragraph,
-        width=78,
-        break_long_words=False,
-        break_on_hyphens=False,
-    )
-    return "\n".join(["> [!IMPORTANT]", *(f"> {line}" for line in lines)])
+    if publication["state"] != "ready":
+        paragraph = f"**{publication['label']}.** {publication['summary']}"
+        lines = textwrap.wrap(
+            paragraph,
+            width=78,
+            break_long_words=False,
+            break_on_hyphens=False,
+        )
+        return "\n".join(["> [!IMPORTANT]", *(f"> {line}" for line in lines)])
+    version = repository.product_release_tag.removeprefix("v")
+    return f"""> [!IMPORTANT]
+> **HyperFlux Next {version} is the current release.** It is available for Arch
+> Linux x86_64 from the signed HyperFlux package repository.
+> Read the [{repository.product_release_tag} release notes]({repository.product_release_url})."""
 
 
 def recommended_package(catalog: DistributionCatalog) -> str:
     arch = catalog.targets["arch"]
     core = arch.components["linux"]
     full = arch.components["full"]
-    return f"""Choose one edition. Full is recommended for desktops; Core is an advanced choice.
+    return f"""You need Arch Linux on an x86_64 computer and the receiver, with your keyboard
+and mouse paired to it.
 
-{_wrapped_bullet(f"**Full (`{full.package_name}`):** {full.description}.")}
-{_wrapped_bullet(f"**Core (`{core.package_name}`):** {core.description}.")}
-
-Stock OpenRGB, OpenRazer, and Polychromatic are separate Arch packages. Install
-the ones you want to use; HyperFlux does not install or replace them.
-
-### Install
-
-1. Add the signed HyperFlux Pacman repository once. Follow the
-   [one-time setup](docs/user/installation.md#1-add-the-hyperflux-repository---one-time-only).
-   It is a signed project-operated Arch repository, not an official Arch Linux repository.
-2. Install Full:
+1. **Add the HyperFlux package repository.** You do this once. Follow
+   [step 1 of the installation guide](docs/user/installation.md#1-add-the-hyperflux-repository-one-time-only).
+   It is a signed project-operated Arch repository,
+   not an official Arch Linux repository.
+2. **Install HyperFlux Next.**
 
    ```bash
-   sudo pacman -Syu hyperflux-next-full
+   sudo pacman -Syu {full.package_name}
    ```
 
-   Full pulls in the matching Core package. To install Core alone instead, run
-   `sudo pacman -Syu hyperflux-next-linux`.
-3. Enable the services and reboot. Keep the receiver plugged in.
+   This installs Full, the recommended package. It brings Core with it. If you
+   only want the receiver driver and the SDK, without the app connections,
+   install Core instead: `sudo pacman -Syu {core.package_name}`.
+3. **Turn on HyperFlux and restart.** Keep the receiver plugged in.
 
    ```bash
    sudo systemctl enable hyperflux-next-bridge.service \\
@@ -111,20 +102,52 @@ the ones you want to use; HyperFlux does not install or replace them.
    sudo reboot
    ```
 
-4. After you log in, check the result:
+4. **Check that it works.** After you log in again, run:
 
    ```bash
-   hyperfluxctl status
    hyperfluxctl doctor
    ```
 
-   Doctor prints `HyperFlux Next is ready.` when everything works. Otherwise it
-   names the first problem and one thing to do about it.
+   You should see `HyperFlux Next is ready.` If you see
+   `HyperFlux Next needs attention.` instead, do what its `Do:` line says.
 
-Later updates arrive with your normal `sudo pacman -Syu`. The
-[first-run guide](docs/user/first-run.md) shows how to open your applications,
-and the [installation guide](docs/user/installation.md) covers key checks and
-the offline package fallback."""
+Later updates arrive with your normal `sudo pacman -Syu`."""
+
+
+def _wrapped(text: str) -> str:
+    return "\n".join(
+        textwrap.wrap(
+            text,
+            width=80,
+            break_long_words=False,
+            break_on_hyphens=False,
+        )
+    )
+
+
+_APPLICATION_LABELS = {
+    ("openrazer", "openrgb"): None,
+    ("openrazer",): "OpenRazer and Polychromatic only",
+    ("openrgb",): "OpenRGB only",
+}
+
+
+def _device_label(device: dict[str, Any]) -> str:
+    kind = device["identity"]["device_kind"]
+    working = tuple(
+        name
+        for name in ("openrazer", "openrgb")
+        if device["integrations"][name]["state"] == "source-validated"
+    )
+    note = _APPLICATION_LABELS.get(working)
+    detail = kind if note is None else f"{kind}, {note}"
+    return f"{device['model_name']} ({detail})"
+
+
+def _series(items: list[str]) -> str:
+    if len(items) <= 2:
+        return " and ".join(items)
+    return ", ".join(items[:-1]) + f", and {items[-1]}"
 
 
 def compatibility_summary(
@@ -134,10 +157,45 @@ def compatibility_summary(
 ) -> str:
     devices = source_validated_devices["devices"]
     counts = public_support_tier_counts(devices)
-    return f"""- Stock OpenRazer `{openrazer.compatibility.verified_upstream_version}` userspace,
-  stock Polychromatic, and stock OpenRGB remain application owners.
-- {counts[PHYSICALLY_PROVEN]} devices are physically proven,
-  {counts[SOURCE_QUALIFIED_OPERATIONAL]} are source-qualified operational
-  candidates, and {counts[UPSTREAM_BLOCKED_OR_RESEARCH_ONLY]} are blocked or
-  research-only. The physical fixtures are not an allowlist.
-- Restoration ships disabled."""
+    grouped = {
+        tier: [device for device in devices if public_support_tier(device) == tier]
+        for tier in (
+            PHYSICALLY_PROVEN,
+            SOURCE_QUALIFIED_OPERATIONAL,
+            UPSTREAM_BLOCKED_OR_RESEARCH_ONLY,
+        )
+    }
+    tested = "\n".join(
+        f"- {_device_label(device)}" for device in grouped[PHYSICALLY_PROVEN]
+    )
+    expected = "\n".join(
+        f"- {_device_label(device)}"
+        for device in grouped[SOURCE_QUALIFIED_OPERATIONAL]
+    )
+    waiting = _wrapped(
+        f"**Not usable yet.** {counts[UPSTREAM_BLOCKED_OR_RESEARCH_ONLY]} more "
+        "devices are known, but they need support in OpenRazer or OpenRGB first: "
+        + _series(
+            [device["model_name"] for device in grouped[UPSTREAM_BLOCKED_OR_RESEARCH_ONLY]]
+        )
+        + "."
+    )
+    expected_intro = _wrapped(
+        f"**Expected to work.** Nobody has tested these "
+        f"{counts[SOURCE_QUALIFIED_OPERATIONAL]} devices with HyperFlux on real "
+        "hardware yet, but they should work:"
+    )
+    return f"""Unless a device says otherwise, it works in OpenRazer, Polychromatic, and
+OpenRGB.
+
+**Tested on real hardware.** These work through the receiver:
+
+{tested}
+
+{expected_intro}
+
+{expected}
+
+{waiting}
+
+HyperFlux Next is tested with OpenRazer `{openrazer.compatibility.verified_upstream_version}`."""

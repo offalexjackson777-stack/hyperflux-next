@@ -28,12 +28,12 @@
       "path": "README.md",
       "title": "HyperFlux Next",
       "audience": "mixed",
-      "purpose": "Introduces the product, installation path, first-run result, compatibility boundary, and project navigation.",
+      "purpose": "Says what HyperFlux Next does, which devices work, how to install it, and where to go next.",
       "owner": "documentation",
       "navigation_group": "home",
       "mode": "hybrid",
       "canonical_sources": ["generated/public-readiness.json", "assurance/arch-repository.json", "packaging/distributions.json", "integrations/native-route/source-validated.json"],
-      "generated_block_ids": ["release-summary", "recommended-package", "compatibility-summary"]
+      "generated_block_ids": ["release-summary", "compatibility-summary", "recommended-package"]
     },
     {
       "path": "SECURITY.md",
@@ -917,14 +917,14 @@
     },
     {
       "path": "docs/user/installation.md",
-      "title": "Installation",
+      "title": "Install HyperFlux Next",
       "audience": "users",
-      "purpose": "Explains Core and Full package choice, publication state, and activation safety.",
+      "purpose": "Walks a new user through adding the repository, choosing Full or Core, turning HyperFlux on, and checking that it works.",
       "owner": "documentation",
       "navigation_group": "user",
-      "mode": "human",
-      "canonical_sources": ["docs/user/installation.md"],
-      "generated_block_ids": []
+      "mode": "hybrid",
+      "canonical_sources": ["assurance/arch-repository.json"],
+      "generated_block_ids": ["repository-setup", "package-fallback"]
     },
     {
       "path": "docs/user/limitations.md",

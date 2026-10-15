@@ -66,23 +66,26 @@ class RepositoryExperienceContracts(unittest.TestCase):
         self.assertEqual(record.mode, "hybrid")
         readme_blocks = (
             "release-summary",
-            "recommended-package",
             "compatibility-summary",
+            "recommended-package",
         )
         self.assertEqual(record.generated_block_ids, readme_blocks)
         self.assertEqual(generated_markers(readme), readme_blocks)
         rendered_views = rendered_files(ROOT)
         rendered = rendered_views[ROOT / "README.md"]
         self.assertEqual(protected_prose(rendered), protected_prose(readme))
-        # DOC-003: landing pages carry one short sentence; the full channel
-        # explanation lives only on Release Status.
+        # DOC-003: landing pages carry one short sentence. Release Status names
+        # the current release and its notes in plain words, without the
+        # repository's internal channel wording.
+        repository = load_arch_repository_policy(ROOT)
         release_status = rendered_views[ROOT / "docs/project/release-status.md"]
-        self.assertIn(
-            readiness["publication"]["summary"],
-            " ".join(release_status.replace("\n> ", "\n").split()),
-        )
+        flat_status = " ".join(release_status.replace("\n> ", "\n").split())
+        version = repository.product_release_tag.removeprefix("v")
+        self.assertIn(f"HyperFlux Next {version} is the current release.", flat_status)
+        self.assertIn(repository.product_release_url, flat_status)
         self.assertNotIn(readiness["publication"]["summary"], " ".join(rendered.split()))
         self.assertNotIn("machine channel", rendered)
+        self.assertNotIn("machine channel", release_status)
         self.assertNotIn(readiness["software"]["summary"], readme)
         self.assertNotIn("release gates", readme)
         self.assertEqual(readiness["hardware"]["physically_proven"], 2)
@@ -95,17 +98,51 @@ class RepositoryExperienceContracts(unittest.TestCase):
         self.assertNotIn("```mermaid", readme)
         self.assertNotIn("## Repository Map", readme)
         self.assertNotIn("## Verify A Change", readme)
+        # The front door answers three questions in order: does my device
+        # work, how do I install it, and where do I go next.
         headings = (
             "# HyperFlux Next",
-            "## What It Does",
-            "## Packages",
-            "## Hardware And Applications",
-            "## Start Here",
+            "## Does My Device Work?",
+            "## Install",
+            "## Next Steps",
         )
         positions = [readme.index(heading) for heading in headings]
         self.assertEqual(positions, sorted(positions))
-        # Three feature bullets plus the Full and Core package bullets.
-        self.assertEqual(readme.count("\n- **"), 5)
+        self.assertIn(
+            "Your Razer keyboard and mouse on a HyperFlux receiver, working in "
+            "OpenRazer, Polychromatic, and OpenRGB on Linux.",
+            " ".join(readme.split()),
+        )
+        source_validated = load_json(
+            ROOT / "integrations/native-route/source-validated.json"
+        )
+        compatibility = readme[
+            readme.index("## Does My Device Work?") : readme.index("## Install")
+        ]
+        for device in source_validated["devices"]:
+            self.assertIn(device["model_name"], " ".join(compatibility.split()))
+        self.assertIn("**Tested on real hardware.**", compatibility)
+        self.assertIn(
+            "**Expected to work.** Nobody has tested these 8 devices",
+            " ".join(compatibility.split()),
+        )
+        # Four numbered install steps, the first linking to the one-time setup.
+        install = readme[readme.index("## Install") : readme.index("## Next Steps")]
+        for step in ("\n1. **", "\n2. **", "\n3. **", "\n4. **"):
+            self.assertEqual(install.count(step), 1, step)
+        self.assertNotIn("\n5. ", install)
+        # Product jargon belongs on the engineering pages, not the front door.
+        for jargon in (
+            "capability-based routing",
+            "Fails closed",
+            "fail closed",
+            "boundary",
+            "source-qualified",
+            "fixture",
+            "allowlist",
+            "restoration ships disabled",
+        ):
+            self.assertNotIn(jargon, readme)
         self.assertLessEqual(len(re.findall(r"!\[[^]]+\]\([^)]*\)", readme)), 3)
         # GH-004: the status badge covers the complete graph, not the Fast lane.
         self.assertIn("actions/workflows/full-verification.yml/badge.svg", readme)
@@ -115,18 +152,19 @@ class RepositoryExperienceContracts(unittest.TestCase):
         for command in (
             "sudo systemctl enable hyperflux-next-bridge.service",
             "sudo reboot",
-            "hyperfluxctl status",
             "hyperfluxctl doctor",
+            "HyperFlux Next is ready.",
         ):
             self.assertIn(command, readme)
         self.assertNotIn("pacman-key", readme)
         self.assertIn(
-            "docs/user/installation.md#1-add-the-hyperflux-repository---one-time-only",
+            "docs/user/installation.md#1-add-the-hyperflux-repository-one-time-only",
             readme,
         )
+        # The exact package descriptions stay on the installation guide and
+        # the journey; the README describes Full and Core in plain words.
         distribution = load_distribution_catalog(ROOT).targets["arch"]
         product_pages = (
-            readme,
             (ROOT / "docs/user/installation.md").read_text(),
             (ROOT / "docs/project/journey.md").read_text(),
         )
@@ -143,6 +181,31 @@ class RepositoryExperienceContracts(unittest.TestCase):
         )
         installation_guide = (ROOT / "docs/user/installation.md").read_text(
             encoding="utf-8"
+        )
+        installation_record = catalog.by_path["docs/user/installation.md"]
+        self.assertEqual(installation_record.mode, "hybrid")
+        self.assertEqual(
+            installation_record.generated_block_ids,
+            ("repository-setup", "package-fallback"),
+        )
+        self.assertEqual(
+            protected_prose(rendered_views[ROOT / "docs/user/installation.md"]),
+            protected_prose(installation_guide),
+        )
+        # The manual route uses the same key, fingerprint, and Pacman lines as
+        # the checked setup command.
+        for manual in (
+            "gpg --show-keys --with-subkey-fingerprints",
+            f"sudo pacman-key --add {repository.public_key_asset}",
+            f"sudo pacman-key --lsign-key {repository.primary_fingerprint}",
+            repository.signing_subkey_fingerprint,
+            f"SigLevel = {repository.signature_level}",
+            f"Server = {repository.server_url}",
+        ):
+            self.assertIn(manual, installation_guide)
+        self.assertLess(
+            installation_guide.index("<summary>Show the setup command</summary>"),
+            installation_guide.index("bash <<'HFX_REPOSITORY_SETUP'"),
         )
         self.assertIn("sudo pacman -Syu hyperflux-next-full", installation_guide)
         self.assertIn("sudo pacman -Syu hyperflux-next-linux", installation_guide)
@@ -1101,7 +1164,7 @@ class UserDocumentationContracts(unittest.TestCase):
         self.assertIn("Choose one.", installation)
         self.assertNotIn("Install Core and Full together", installation)
         self.assertEqual(installation.count("sudo pacman -U"), 1)
-        fallback = installation.index("## Local package fallback")
+        fallback = installation.index("## If You Cannot Add The Repository")
         self.assertGreater(installation.index("sudo pacman -U"), fallback)
         for command in (
             "sudo systemctl enable hyperflux-next-bridge.service",
