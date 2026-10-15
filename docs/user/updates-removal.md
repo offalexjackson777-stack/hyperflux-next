@@ -57,21 +57,25 @@ back.
 
 ## Remove Full And Keep Core
 
-1. Remove Full:
+Full includes its own copy of the OpenRazer driver. If you use OpenRazer or
+Polychromatic, swap that copy for the stock driver in one step:
 
-   ```sh
-   sudo pacman -R hyperflux-next-full
-   ```
+```sh
+sudo pacman -S openrazer-driver-dkms
+```
 
-   Core and its services keep working, but your apps can no longer reach devices
-   paired to the receiver.
+Pacman says that `openrazer-driver-dkms` and `hyperflux-next-full` are in
+conflict and asks whether to remove `hyperflux-next-full`. Type `y` and press
+Enter.
 
-2. If you want stock OpenRazer for devices plugged in by cable, install its
-   driver again:
+If you don't use OpenRazer at all, remove Full directly:
 
-   ```sh
-   sudo pacman -S openrazer-driver-dkms
-   ```
+```sh
+sudo pacman -R hyperflux-next-full
+```
+
+Either way, Core and its services keep working, but your apps can no longer
+reach devices paired to the receiver.
 
 While the HyperFlux repository is still set up, a later `sudo pacman -Syu` may
 ask:
@@ -98,6 +102,11 @@ each time.
    ```sh
    sudo pacman -R hyperflux-next-full hyperflux-next-linux
    ```
+
+   If Pacman says that `openrazer-daemon` needs `openrazer-driver-dkms`, first
+   swap in the stock driver as described in
+   [Remove Full And Keep Core](#remove-full-and-keep-core), then remove
+   `hyperflux-next-linux`.
 
    If you changed `/etc/hyperflux-next/bridge.json`, Pacman keeps your copy as
    `/etc/hyperflux-next/bridge.json.pacsave`. To remove that copy too, use
