@@ -5,7 +5,7 @@
   "generated_at": "2026-07-22T12:00:00Z",
   "companion": {
     "state": "ready",
-    "version": "2.0.1",
+    "version": "2.0.2",
     "bridge_protocol": 5,
     "endpoint": "http://127.0.0.1:47821",
     "simulation": false,
@@ -13,8 +13,8 @@
     "hardware_write_executed": false
   },
   "system": {
-    "driver_version": "2.0.1",
-    "bridge_version": "2.0.1",
+    "driver_version": "2.0.2",
+    "bridge_version": "2.0.2",
     "profile_catalog_digest": "81abe092071f46953bd1f1c40878de97d710ccd197c3ca036c3555e29627ea12"
   },
   "receivers": [

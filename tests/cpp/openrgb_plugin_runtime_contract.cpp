@@ -41,7 +41,7 @@ int main()
            config.client_id,
            std::regex("openrgb-runtime-[0-9a-f]{64}"))
        || config.client_name.empty()
-       || build_config::component_version != "2.0.1"
+       || build_config::component_version != "2.0.2"
        || build_config::source_revision.empty())
     {
         return failure(__LINE__);
