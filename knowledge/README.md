@@ -16,11 +16,13 @@ Records provenance-bound candidate facts, semantic capabilities, upstream record
 ## Boundaries
 
 **Owns**
+
 - Reviewed device facts
 - Candidate relationships
 - Normalized upstream catalogs
 
 **Does not own**
+
 - Receiver write authority
 - Live device values
 - Undated compatibility claims

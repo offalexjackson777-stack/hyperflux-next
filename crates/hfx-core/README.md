@@ -16,11 +16,13 @@ Owns receiver generations, qualified native routes, child-local arbitration, bou
 ## Boundaries
 
 **Owns**
+
 - Core state machines
 - NativeControl and transaction policy
 - Retained restoration intent
 
 **Does not own**
+
 - Socket framing
 - Kernel I/O
 - Application presentation

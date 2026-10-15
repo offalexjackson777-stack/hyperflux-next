@@ -17,11 +17,13 @@ Provides typed Python bridge access and generated contracts for scripting and Py
 ## Boundaries
 
 **Owns**
+
 - Python client API
 - Python lighting and recovery
 - Generated Python bindings
 
 **Does not own**
+
 - Application-specific policy
 - Raw receiver transport
 - Independent schema truth

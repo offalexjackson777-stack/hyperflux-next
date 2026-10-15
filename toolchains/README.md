@@ -16,11 +16,13 @@ Pins compiler, interpreter, upstream checkout, and development-container identit
 ## Boundaries
 
 **Owns**
+
 - Toolchain versions
 - Development environment pins
 - Capability discovery inputs
 
 **Does not own**
+
 - Runtime dependencies
 - Automatic remote mutation
 - Unpinned downloads

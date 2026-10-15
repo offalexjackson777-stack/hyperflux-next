@@ -24,11 +24,13 @@ Defines product invariants, subsystem direction, ownership boundaries, and the c
 ## Boundaries
 
 **Owns**
+
 - Architecture invariants
 - Responsibility direction
 - Repository subsystem graph
 
 **Does not own**
+
 - Runtime state
 - Hardware observations
 - Generated implementation bindings

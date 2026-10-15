@@ -16,11 +16,13 @@ Adapts the generated kernel UAPI into bounded Rust observation, routing, envelop
 ## Boundaries
 
 **Owns**
+
 - Kernel device I/O
 - UAPI encoding
 - Receiver route adaptation
 
 **Does not own**
+
 - Qualification policy
 - Application identity
 - Unbounded or unqualified raw reports

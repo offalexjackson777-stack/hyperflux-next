@@ -16,11 +16,13 @@ Defines typed verification nodes, dependencies, lanes, capabilities, side effect
 ## Boundaries
 
 **Owns**
+
 - Verification node catalog
 - Lane dependency graph
 - Evidence declarations
 
 **Does not own**
+
 - Production policy
 - Implicit retries
 - Implicit hardware writes

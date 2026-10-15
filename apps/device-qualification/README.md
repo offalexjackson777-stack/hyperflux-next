@@ -24,11 +24,13 @@ Run this from the repository root and open the printed loopback URL. This is a f
 ## Boundaries
 
 **Owns**
+
 - Local qualification browser workflow
 - Versioned browser contract validation
 - Evidence-stage presentation
 
 **Does not own**
+
 - Driver or receiver access
 - Hardware support decisions
 - Remote inventory or upload

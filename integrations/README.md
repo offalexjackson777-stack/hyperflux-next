@@ -16,11 +16,13 @@ Defines application-neutral adapter identities, upstream pins, coexistence rules
 ## Boundaries
 
 **Owns**
+
 - Integration catalog
 - Exact upstream revisions
 - Adapter capability declarations
 
 **Does not own**
+
 - Receiver transport
 - Profile qualification
 - Raw HID or USB access

@@ -16,11 +16,13 @@ Runs pinned upstream Razer controllers over qualified HyperFlux Feature routes w
 ## Boundaries
 
 **Owns**
+
 - OpenRGB Feature transport adaptation
 - Native controller lifecycle
 - Serial-proven direct-route precedence
 
 **Does not own**
+
 - OpenRGB device semantics
 - Receiver qualification
 - Direct hidapi transport

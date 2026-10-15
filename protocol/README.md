@@ -16,11 +16,13 @@ Defines bounded request, response, event, negotiation, and compatibility contrac
 ## Boundaries
 
 **Owns**
+
 - Protocol registry
 - Versioned wire schemas
 - Compatibility window
 
 **Does not own**
+
 - Application widgets
 - Kernel HID payloads
 - Unbounded messages

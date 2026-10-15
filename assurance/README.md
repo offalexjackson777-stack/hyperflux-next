@@ -20,12 +20,14 @@ Owns explicit design coverage, bounded formal models, performance budgets, depen
 ## Boundaries
 
 **Owns**
+
 - Design coverage
 - Journey source coverage and privacy review
 - Release-gate definitions
 - Dependency, coverage, quality, formal, and performance assurance
 
 **Does not own**
+
 - Release decisions
 - Unreviewed physical claims
 - Application behavior

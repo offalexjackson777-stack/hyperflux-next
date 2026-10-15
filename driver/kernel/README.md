@@ -16,12 +16,14 @@ Binds the receiver, preserves generic input, records passive observations, perfo
 ## Boundaries
 
 **Owns**
+
 - HID binding
 - Passive receiver observations
 - Exclusive session enforcement
 - UAPI-v2 native exchange execution
 
 **Does not own**
+
 - Retail names
 - Profiles and effects
 - Package repair

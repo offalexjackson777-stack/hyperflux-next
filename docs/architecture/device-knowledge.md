@@ -17,7 +17,7 @@ flowchart LR
     RGB["Pinned OpenRGB source"] --> J["Bounded C++ initializer importer"]
     I --> S["Normalized source catalogs"]
     J --> S
-    C["Official mat candidate snapshot"] --> L["Reviewed candidate links"]
+    C["Official compatibility snapshot"] --> L["Reviewed candidate links"]
     S --> L
     L --> K["Compiled device knowledge"]
     P["Physically qualified HyperFlux profiles"] --> K
@@ -50,7 +50,7 @@ A normalized source record may document:
 This is **source-reviewed knowledge**. It is useful for planning, upstream
 presentation bindings, native-route qualification, simulator scenarios, and
 capability-gap analysis. It is not proof that the same command or packet works
-through the HyperFlux mat.
+through the HyperFlux receiver.
 
 ## What Qualifies A Native Route
 
@@ -93,14 +93,15 @@ two-slot Logo/Numpad presentation. OpenRazer describes a three-slot matrix. The
 compiler reports that topology disagreement rather than choosing whichever
 source is convenient.
 
-Today the official mat snapshot can therefore say a Naga V2 Pro is a reviewed
-candidate with extensive public device knowledge. It cannot expose a writable
-native route until an exact receiver-backed identity is observed, its standard
-report family is bound declaratively, and that transport receives physical
-evidence. Once qualified, OpenRGB and OpenRazer continue to generate the
-model-specific commands they already own; HyperFlux carries those commands and
-only declarative receiver addressing without copying Naga packet logic into its
-kernel, bridge, SDK, relay, or application adapters.
+The official compatibility snapshot `catalog.razer.hyperflux-v2.2026-07-21` lists
+the Naga V2 Pro, and compiled knowledge carries the source facts above. That
+knowledge alone does not make a route writable. In release 2.0.1 the Naga V2 Pro
+is a source-qualified operational candidate through OpenRGB, as listed in
+[Supported Hardware](../generated/supported-hardware.md). It has not been
+physically tested. OpenRGB and OpenRazer generate the model-specific commands
+they already own; HyperFlux carries those commands and only declarative receiver
+addressing, without copying Naga packet logic into its kernel, bridge, SDK,
+relay, or application adapters.
 
 ## Update Workflow
 

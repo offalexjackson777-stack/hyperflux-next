@@ -410,6 +410,17 @@
       "generated_block_ids": []
     },
     {
+      "path": "docs/generated/README.md",
+      "title": "Generated Reference",
+      "audience": "developers",
+      "purpose": "Indexes the generated reference pages and defines the hardware terms they share.",
+      "owner": "documentation",
+      "navigation_group": "generated",
+      "mode": "generated",
+      "canonical_sources": ["docs/catalog.json", "profiles/candidates/razer-hyperflux-v2-2026-07-21.json", "profiles/surfaces/razer-hyperflux-v2-hard-edition.json"],
+      "generated_block_ids": []
+    },
+    {
       "path": "docs/generated/architecture.md",
       "title": "Architecture Constitution",
       "audience": "developers",

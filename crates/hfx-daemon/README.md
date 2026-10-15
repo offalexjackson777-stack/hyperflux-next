@@ -16,11 +16,13 @@ Composes production discovery, configuration, native-route authority, service li
 ## Boundaries
 
 **Owns**
+
 - Production composition root
 - Service lifecycle
 - Privilege and socket setup
 
 **Does not own**
+
 - Core state-machine policy
 - Application UI
 - Raw application commands

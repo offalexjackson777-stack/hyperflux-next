@@ -16,12 +16,14 @@ Owns bounded local system inspection, Full-component detection, root-only receip
 ## Boundaries
 
 **Owns**
+
 - Bounded command and filesystem probes
 - Typed system snapshots
 - Root-only non-overwriting receipts
 - Disconnected-driver activation proof
 
 **Does not own**
+
 - Qualification policy
 - Application presentation
 - Hardware support decisions

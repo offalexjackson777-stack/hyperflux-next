@@ -19,12 +19,14 @@ Defines repository ownership, immutable automation, public collaboration, remote
 ## Boundaries
 
 **Owns**
+
 - GitHub governance policy
 - Required-check plan
 - Generated community files
 - Path-to-license policy
 
 **Does not own**
+
 - Product release decisions
 - Hardware writes
 - Unreviewed external-app installation

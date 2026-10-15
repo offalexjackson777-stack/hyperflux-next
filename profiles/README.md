@@ -16,11 +16,13 @@ Composes receiver, surface, and child identities with evidence-bound capabilitie
 ## Boundaries
 
 **Owns**
+
 - Identity predicates
 - Qualified capabilities
 - Evidence references
 
 **Does not own**
+
 - Live observations
 - Desired lighting state
 - Guessed commands

@@ -16,11 +16,13 @@ Holds language-specific, cross-language, fixture, lifecycle, repository-navigati
 ## Boundaries
 
 **Owns**
+
 - Focused contract tests
 - Sanitized fixtures
 - Cross-language smoke programs
 
 **Does not own**
+
 - Production policy
 - Canonical facts
 - Physical evidence claims

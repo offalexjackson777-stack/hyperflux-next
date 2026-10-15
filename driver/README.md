@@ -16,11 +16,13 @@ Defines additive generated userspace ABIs and the strict boundary around the in-
 ## Boundaries
 
 **Owns**
+
 - Kernel UAPI authority
 - Driver source boundary
 - Session-device contract
 
 **Does not own**
+
 - Retail presentation
 - Effects
 - Application ownership

@@ -16,11 +16,13 @@ Coordinates the Rust dependency graph and compile-time ownership boundaries acro
 ## Boundaries
 
 **Owns**
+
 - Workspace membership
 - Shared dependency versions
 - Rust build graph
 
 **Does not own**
+
 - Crate-specific policy
 - Generated domain authority
 - Hardware qualification

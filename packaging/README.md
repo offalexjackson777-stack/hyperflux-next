@@ -16,12 +16,14 @@ Builds reproducible distribution artifacts, a canonical installed root, and sign
 ## Boundaries
 
 **Owns**
+
 - Install manifest
 - Distribution projections
 - Reproducible package inventory
 - Published package-signing public key
 
 **Does not own**
+
 - Runtime naming duplicates
 - Hidden post-install writes
 - Release decisions

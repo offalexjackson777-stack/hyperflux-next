@@ -15,11 +15,13 @@ Exercises generations, failures, persistence, restoration, and replay without ha
 ## Boundaries
 
 **Owns**
+
 - Virtual receiver
 - Deterministic replay
 - Failure injection
 
 **Does not own**
+
 - Production policy forks
 - Hardware claims
 - Unbounded time

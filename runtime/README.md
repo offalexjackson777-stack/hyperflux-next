@@ -16,12 +16,14 @@ Defines package version, service identities, filesystem paths, permissions, acti
 ## Boundaries
 
 **Owns**
+
 - Linux runtime names
 - Service and path constants
 - Activation policy
 - Local companion contract
 
 **Does not own**
+
 - Package-format commands
 - Hardware qualification
 - Application effects

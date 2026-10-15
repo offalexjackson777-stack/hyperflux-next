@@ -16,11 +16,13 @@ Provides the typed Rust client contract for qualified route discovery, bounded n
 ## Boundaries
 
 **Owns**
+
 - Rust client API
 - Native route and channel adaptation
 - Typed SDK errors
 
 **Does not own**
+
 - Application presentation
 - Device command semantics
 - Receiver carrier frames

@@ -16,12 +16,14 @@ Adapts the core to protocol-v7 native routes and exchanges plus retained protoco
 ## Boundaries
 
 **Owns**
+
 - Bridge actors
 - Session registry
 - Native-route scheduling
 - Persistence and RPC adaptation
 
 **Does not own**
+
 - Core policy duplication
 - Kernel report encoding
 - Application-specific effects

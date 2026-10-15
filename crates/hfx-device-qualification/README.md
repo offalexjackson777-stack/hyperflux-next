@@ -19,12 +19,14 @@ Coordinates the source-only local qualification projection, lifecycle, evidence,
 ## Boundaries
 
 **Owns**
+
 - Qualification projection and state
 - Generation-bound qualification lifecycle
 - Source-only loopback console server
 - Privacy-safe maintainer onboarding
 
 **Does not own**
+
 - Installed operations commands
 - Profile promotion authority
 - Relay transport qualification

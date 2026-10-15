@@ -16,11 +16,13 @@ Extends pinned OpenRazer with trusted feature-only HyperFlux routes while preser
 ## Boundaries
 
 **Owns**
+
 - Feature-only UHID route contract
 - Pinned OpenRazer source transform
 - Serial-proven direct-route precedence metadata
 
 **Does not own**
+
 - OpenRazer device semantics
 - Official daemon identity
 - Direct USB transport

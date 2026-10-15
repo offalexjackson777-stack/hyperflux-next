@@ -16,11 +16,13 @@ Defines stable typed error identities, user-safe messages, remediation, and cros
 ## Boundaries
 
 **Owns**
+
 - Error identifiers
 - User remediation text
 - Error severity and domain
 
 **Does not own**
+
 - Ad hoc application-only errors
 - Private diagnostics
 - Transport policy

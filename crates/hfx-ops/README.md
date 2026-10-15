@@ -16,12 +16,14 @@ Provides the installed bounded status, Doctor, support-bundle, and explicit driv
 ## Boundaries
 
 **Owns**
+
 - Installed command-line workflows
 - System assessment presentation
 - Privacy-safe support bundles
 - Source-compatible workspace re-exports
 
 **Does not own**
+
 - Qualification policy
 - Profile promotion authority
 - Raw receiver reports

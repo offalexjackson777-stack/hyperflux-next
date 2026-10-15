@@ -16,11 +16,13 @@ Defines strict machine-readable shapes for every shared repository fact and gene
 ## Boundaries
 
 **Owns**
+
 - JSON Schema contracts
 - Cross-language domain catalog
 - Fail-closed data shapes
 
 **Does not own**
+
 - Runtime policy
 - Duplicated application presentation
 - Physical qualification claims

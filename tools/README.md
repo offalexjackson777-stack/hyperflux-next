@@ -16,11 +16,13 @@ Provides the single developer CLI, canonical loaders, deterministic generators, 
 ## Boundaries
 
 **Owns**
+
 - Developer command surface
 - Canonical data loaders
 - Deterministic generation
 
 **Does not own**
+
 - Duplicate domain facts
 - Implicit hardware writes
 - Hidden network access

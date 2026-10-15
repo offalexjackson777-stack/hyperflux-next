@@ -16,11 +16,13 @@ Provides typed C++ bridge access for qualified native routes, exact Feature exch
 ## Boundaries
 
 **Owns**
+
 - C++ client API
 - C++ native-route channel and recovery
 - Generated C++ bindings
 
 **Does not own**
+
 - OpenRGB widgets or device commands
 - Receiver carrier transport
 - Independent schema truth
