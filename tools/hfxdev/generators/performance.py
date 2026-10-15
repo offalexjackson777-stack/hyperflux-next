@@ -15,6 +15,7 @@ def performance_budgets_markdown(metrics: tuple[PerformanceMetric, ...]) -> str:
         "",
         f"Software-enforced metrics: `{software}`. Physical qualification metrics: `{physical}`.",
         "A declared physical budget remains blocked until measured on an exact installed candidate.",
+        "No measurement history is stored; each check compares the current value with its maximum.",
         "",
         "| Metric | Maximum | Measurement | Status | Release block |",
         "| --- | ---: | --- | --- | --- |",

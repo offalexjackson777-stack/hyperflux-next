@@ -4,6 +4,7 @@
 
 Software-enforced metrics: `10`. Physical qualification metrics: `5`.
 A declared physical budget remains blocked until measured on an exact installed candidate.
+No measurement history is stored; each check compares the current value with its maximum.
 
 | Metric | Maximum | Measurement | Status | Release block |
 | --- | ---: | --- | --- | --- |

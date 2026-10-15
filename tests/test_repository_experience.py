@@ -462,6 +462,35 @@ class RepositoryExperienceContracts(unittest.TestCase):
         entry = next(item for item in catalog["documents"] if item["path"] == path.relative_to(ROOT).as_posix())
         self.assertEqual(entry["title"], "Repository Documentation And Local Hardware Authority")
 
+    def test_performance_claims_point_to_checks_or_retained_measurements(self) -> None:
+        # Software budgets name their executable checks, physical budgets say
+        # nothing is retained, and no trend analysis is claimed (ARCH-007).
+        from hfxdev.performance import load_performance_budgets
+
+        metrics = load_performance_budgets(ROOT)
+        software = [metric for metric in metrics if metric.status == "enforced-software"]
+        physical = [metric for metric in metrics if metric.status != "enforced-software"]
+        self.assertEqual({metric.status for metric in physical}, {"blocked-by-physical-evidence"})
+        words = {10: "Ten", 5: "Five"}
+        chapter = (ROOT / "docs/architecture/design-book/10-updates-packaging-and-operations.md").read_text(
+            encoding="utf-8"
+        )
+        section = " ".join(chapter.split("## 57. ", 1)[1].split("\n---\n", 1)[0].split())
+        self.assertIn(f"{words[len(software)]} software budgets are checked by executable contracts.", section)
+        self.assertIn(f"{words[len(physical)]} physical budgets", section)
+        self.assertIn("`assurance-contracts`", section)
+        self.assertIn("`package-contracts`", section)
+        self.assertIn("No measurement is retained in the repository yet", section)
+        self.assertIn("stores no benchmark history", section)
+        for overclaim in ("Rainbow Wave", "Historical benchmark trends", "distinguish noise"):
+            self.assertNotIn(overclaim, section)
+        repository = (ROOT / "tools/hfxdev/verify_repository.py").read_text(encoding="utf-8")
+        packaging = (ROOT / "tools/hfxdev/verify_packaging.py").read_text(encoding="utf-8")
+        self.assertIn("verify_static_performance_budgets(root, metrics)", repository)
+        self.assertIn("verify_package_performance_budgets(", packaging.split("def _run_package_contracts", 1)[1])
+        page = (ROOT / "docs/generated/performance-budgets.md").read_text(encoding="utf-8")
+        self.assertIn("No measurement history is stored", page)
+
     def test_design_book_claims_match_verification_and_application_boundaries(self) -> None:
         # The runner rejects hardware nodes and reruns every selected node, and
         # effects, persistence, and settings stay upstream (AUTH-008, AUTH-009).

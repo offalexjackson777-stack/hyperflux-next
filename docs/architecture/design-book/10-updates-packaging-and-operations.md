@@ -47,12 +47,24 @@ upstream change cannot silently alter supported devices.
 
 ## 57. Performance Budgets
 
-Performance becomes a tested contract. The repository defines acceptable bridge
-startup time, transaction latency, effect-frame delay, reconnect recovery, queue
-depth, CPU use, memory use, binary growth, and package size. A change that
-technically passes but makes Rainbow Wave visibly stutter is not considered
-successful. Historical benchmark trends help distinguish noise from meaningful
-regression.
+Performance budgets are declared in
+[`assurance/performance-budgets.json`](../../../assurance/performance-budgets.json)
+and listed on the [performance budgets](../../generated/performance-budgets.md)
+page. They fall into two groups.
+
+Ten software budgets are checked by executable contracts. The bridge timeout,
+queue, event, and message limits are checked by `assurance-contracts` in the
+fast and full lanes. Installed binary and payload sizes are checked by
+`package-contracts` in the full lane.
+
+Five physical budgets cover visible effect-frame delay, reconnect recovery,
+bridge readiness after service start, steady CPU use, and steady memory use.
+They need measurement on an installed candidate with real hardware. No
+measurement is retained in the repository yet, so these budgets stay blocked by
+physical evidence.
+
+The repository stores no benchmark history, so it cannot yet tell noise from a
+gradual regression. Trend analysis needs retained measurements first.
 
 ---
 
