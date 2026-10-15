@@ -291,7 +291,7 @@ def supply_chain_markdown(inventory: DependencyInventory) -> str:
         "## Generated SBOM",
             "",
             "The canonical SPDX 2.3 source inventory is [`assurance/generated/hyperflux-next.spdx.json`](../../assurance/generated/hyperflux-next.spdx.json).",
-            "It describes source and build dependencies; a future authorized release must additionally bind this inventory to exact distributed artifact digests.",
+            "It describes source and build dependencies; it does not record the digests of distributed package files.",
             "",
         ]
     )

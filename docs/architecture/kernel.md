@@ -162,5 +162,5 @@ provide an explicit matrix with `HFX_KERNEL_BUILD_DIRS`, using colon-separated
 absolute header directories.
 
 These are software-only checks. Building the module does not load it, bind a
-receiver, issue a query, or write hardware. Any future live qualification still
-requires its own explicit authorization and evidence stage.
+receiver, issue a query, or write hardware. Live qualification is a separate
+physical evidence step on a real receiver.

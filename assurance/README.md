@@ -18,7 +18,7 @@ Owns explicit design coverage, bounded formal models, performance budgets, depen
 - Dependency, coverage, quality, formal, and performance assurance
 
 **Does not own**
-- Publication authorization
+- Release decisions
 - Unreviewed physical claims
 - Application behavior
 

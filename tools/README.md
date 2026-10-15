@@ -18,7 +18,7 @@ Provides the single developer CLI, canonical loaders, deterministic generators, 
 
 **Does not own**
 - Duplicate domain facts
-- Implicit hardware authorization
+- Implicit hardware writes
 - Hidden network access
 
 ## Key Files

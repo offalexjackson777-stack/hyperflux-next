@@ -88,5 +88,5 @@ Inspect why each stage runs, its dependencies, timeout, isolation, and hardware 
 ```
 
 The current graph is software-only and cannot write hardware. Physical
-qualification remains a separate, explicitly authorized stage for claims a
-simulator cannot establish.
+qualification is a separate step on real hardware for claims a simulator cannot
+establish.

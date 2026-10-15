@@ -20,17 +20,19 @@ remains read-only; two implementations never compete for the writer session.
 Changes reduce uncertainty before touching hardware. Boundaries, schemas, and
 simulation come first, then the native exchange core and the upstream routes,
 and physical qualification comes last, only for claims that software cannot
-establish. The [verification guide](../../developer/verification.md#safe-change-order)
-gives the full order.
+establish. The
+[verification guide](../../developer/verification.md#safe-change-order) gives
+the full order.
 
 ## 65. Release Channels
 
-Development builds may contain incomplete migrations. Nightly builds require
-complete software verification. Release candidates require installation,
-upgrade, lifecycle, application, and selected physical evidence. Stable releases
-require approved evidence, reproducible artifacts, documentation, known-limit
-declarations, and no unresolved release-blocking findings. A successful compile
-is never treated as publication authorization.
+Work on a branch may be incomplete until it merges. Every pull request runs the
+fast and full software lanes, and the full lane also runs weekly. A release
+requires every software gate, candidate-bound physical evidence for each
+promoted writable capability, maintainer review, and packages signed into the
+project-operated Arch repository. The
+[release gates](../../generated/release-gates.md) list each criterion. A
+successful build alone never makes a release.
 
 ## 66. Limits And Epistemic Honesty
 

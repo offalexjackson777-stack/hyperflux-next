@@ -42,9 +42,9 @@ lighting, settings, and pairing resources for that child only. Siblings, other
 receivers, and newer generations remain independent.
 
 Protocol v6, UAPI v1, semantic carrier encoding, stable-state persistence, and
-restoration remain installed as a noncompeting compatibility fallback. They are not
-the target architecture and cannot be removed before physical parity, rollback,
-and a separate retirement approval.
+restoration remain installed as a noncompeting compatibility fallback. They are
+not the target architecture and cannot be removed before physical parity,
+rollback, and maintainer review of the retirement.
 
 ## Distinct Safety Bindings
 

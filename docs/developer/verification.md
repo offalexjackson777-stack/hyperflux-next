@@ -31,8 +31,8 @@ flowchart LR
 
 An upstream adapter advances only after the native exchange core and its
 application-specific transport boundary pass software contracts. Physical
-qualification is reserved for claims that software cannot establish, and package
-publication remains separately authorized.
+qualification is reserved for claims that software cannot establish, and a
+release also needs maintainer review and signed packages.
 
 ## Status Badges
 

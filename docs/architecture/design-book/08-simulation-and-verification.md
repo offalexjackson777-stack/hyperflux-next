@@ -61,10 +61,10 @@ documentation or widget-layout change does not call for a physical run.
 
 ## 42. Watched-Test Application
 
-**Future work:** any reusable physical coordinator must present visible
-checkpoints and validate source, artifacts, module state, receiver generation,
-configuration, and explicit authorization before a write. Mission-specific
-laboratory tooling is not shipped as runtime product machinery.
+**Future work:** any reusable physical test coordinator must show visible
+checkpoints and check the source, artifacts, module state, receiver generation,
+configuration, and operator confirmation before a write. One-off bench tooling
+is not shipped in the product.
 
 ## 43. Typed Test Metadata
 

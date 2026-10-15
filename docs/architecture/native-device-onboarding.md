@@ -75,8 +75,8 @@ candidates remain non-writable.
 
 Native upstream feature reports make a HyperFlux-specific LED carrier map
 unnecessary for this route. Existing qualified rollback maps remain in place
-until native physical parity passes and their removal receives separate
-approval.
+until native physical parity passes and maintainer review confirms that removing
+them is safe.
 
 ## Verification
 
@@ -90,4 +90,4 @@ python -m unittest tests.test_native_onboarding -v
 The focused contract proves private artifact modes, exact source binding,
 explicit conflict handling, backend detection, tamper resistance, and a
 synthetic second same-protocol device that reaches only a profile-only candidate
-state. Physical qualification and publication remain separate gates.
+state. Physical qualification and release are separate steps.

@@ -35,7 +35,7 @@ The Arch package channel publishes package and repository signatures. This sourc
 ## Generated SBOM
 
 The canonical SPDX 2.3 source inventory is [`assurance/generated/hyperflux-next.spdx.json`](../../assurance/generated/hyperflux-next.spdx.json).
-It describes source and build dependencies; a future authorized release must additionally bind this inventory to exact distributed artifact digests.
+It describes source and build dependencies; it does not record the digests of distributed package files.
 
 ## Workflow Actions
 

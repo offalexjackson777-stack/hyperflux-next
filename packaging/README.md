@@ -20,7 +20,7 @@ Builds reproducible distribution artifacts, a canonical installed root, and sign
 **Does not own**
 - Runtime naming duplicates
 - Hidden post-install writes
-- Publication authorization
+- Release decisions
 
 ## Key Files
 

@@ -19,7 +19,7 @@ Defines typed verification nodes, dependencies, lanes, capabilities, side effect
 **Does not own**
 - Production policy
 - Implicit retries
-- Hardware authorization
+- Implicit hardware writes
 
 ## Key Files
 

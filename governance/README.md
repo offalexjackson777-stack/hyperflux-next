@@ -21,8 +21,8 @@ Defines repository ownership, immutable automation, public collaboration, remote
 - Path-to-license policy
 
 **Does not own**
-- Product release approval
-- Hardware-write authorization
+- Product release decisions
+- Hardware writes
 - Unreviewed external-app installation
 
 ## Key Files

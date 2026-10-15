@@ -410,6 +410,39 @@ class RepositoryExperienceContracts(unittest.TestCase):
                 with self.subTest(page=relative, line=number):
                     self.assertRegex(line, link_only)
 
+    def test_architecture_prose_states_technical_entry_criteria_not_task_control(self) -> None:
+        # Public architecture describes design and technical entry criteria,
+        # not private approval steps, while protocol authorization terms stay
+        # (ARCH-003).
+        private_voice = re.compile(
+            r"separately authori[sz]ed|explicit(?:ly)? authori[sz]|separate(?: retirement)? approval"
+            r"|\bmission\b|publication authori[sz]ation|publication decision|future authorized release"
+            r"|nightly builds|release authorization|does not authorize a product release",
+            re.IGNORECASE,
+        )
+        sources = sorted(
+            [
+                *(ROOT / "docs/architecture").rglob("*.md"),
+                *(ROOT / "docs/assurance").rglob("*.md"),
+                ROOT / "docs/developer/verification.md",
+                ROOT / "docs/generated/design-coverage.md",
+                ROOT / "docs/generated/supply-chain.md",
+                ROOT / "architecture/repository-atlas.json",
+            ]
+        )
+        for source in sources:
+            text = " ".join(source.read_text(encoding="utf-8").split())
+            with self.subTest(source=source.relative_to(ROOT).as_posix()):
+                self.assertEqual(private_voice.findall(text), [])
+        bridge = " ".join((ROOT / "docs/architecture/bridge-core.md").read_text(encoding="utf-8").split())
+        self.assertIn("authorization epoch", bridge)
+        self.assertIn("a token does not replace local socket authorization", bridge)
+        release = " ".join(
+            (ROOT / "docs/architecture/design-book/12-release-boundaries.md").read_text(encoding="utf-8").split()
+        )
+        self.assertIn("candidate-bound physical evidence", release)
+        self.assertIn("packages signed into the project-operated Arch repository", release)
+
     def test_design_book_claims_match_verification_and_application_boundaries(self) -> None:
         # The runner rejects hardware nodes and reruns every selected node, and
         # effects, persistence, and settings stay upstream (AUTH-008, AUTH-009).
