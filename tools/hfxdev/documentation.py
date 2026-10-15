@@ -5,10 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import re
-import subprocess
 from typing import Callable
 
-from .model import ModelError, load_json, require_unique
+from .model import ModelError, load_json, repository_files, require_unique
 
 
 CATALOG_KEYS = {"$schema", "schema", "documents", "classified_markdown"}
@@ -258,42 +257,13 @@ def protected_prose(text: str) -> str:
 
 
 def _tracked_markdown_paths(root: Path) -> tuple[str, ...]:
-    result = subprocess.run(
-        [
-            "git",
-            "-C",
-            str(root),
-            "ls-files",
-            "-z",
-            "--cached",
-            "--others",
-            "--exclude-standard",
-            "--",
-            "*.md",
-        ],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    if result.returncode == 0:
-        return tuple(
-            sorted(
-                path
-                for path in result.stdout.decode("utf-8").split("\0")
-                if path and (root / path).is_file()
-            )
-        )
-    ignored = {".git", ".hfx", ".venv", "build", "dist", "target", "__pycache__"}
     return tuple(
         sorted(
             path.relative_to(root).as_posix()
-            for path in root.rglob("*.md")
-            if path.is_file()
-            and not path.is_symlink()
-            and not any(part in ignored for part in path.relative_to(root).parts)
+            for path in repository_files(root)
+            if path.suffix == ".md"
         )
     )
-
 
 def load_document_catalog(root: Path) -> DocumentCatalog:
     root = root.resolve()

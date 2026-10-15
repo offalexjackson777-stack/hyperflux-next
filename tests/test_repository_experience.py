@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -40,11 +41,11 @@ from hfxdev.licensing import (
     verify_licensing_policy,
 )
 from hfxdev.local_companion import load_local_companion
-from hfxdev.model import ModelError, load_json
+from hfxdev.model import ModelError, load_json, repository_files
 from hfxdev.openrazer_native_route import load_native_deployment
 from hfxdev.public_readiness import public_readiness
 from hfxdev.render import rendered_files
-from hfxdev.repository_docs import repository_link_issues
+from hfxdev.repository_docs import markdown_files, repository_link_issues
 
 
 class RepositoryExperienceContracts(unittest.TestCase):
@@ -492,10 +493,77 @@ class RepositoryExperienceContracts(unittest.TestCase):
                 raise AssertionError(f"generated roots were traversed: {generated}")
             yield str(source.parent), [], [source.name]
 
-        with patch("hfxdev.licensing.os.walk", guarded_walk):
+        with (
+            patch("hfxdev.model._git_repository_files", return_value=None),
+            patch("hfxdev.model.os.walk", guarded_walk),
+        ):
             result = verify_licensing_policy(ROOT)
 
         self.assertEqual(result["checked_spdx_files"], 1)
+
+    @staticmethod
+    def _license_fixture(root: Path) -> None:
+        (root / "governance").mkdir()
+        shutil.copy2(ROOT / "governance" / "licensing.json", root / "governance")
+        shutil.copy2(ROOT / "LICENSE", root / "LICENSE")
+        shutil.copytree(ROOT / "LICENSES", root / "LICENSES")
+
+    @staticmethod
+    def _nested_worktree(root: Path) -> Path:
+        # A mismatching vendored header inside a nested checkout copy, as a
+        # Claude Code worktree at .claude/worktrees/<name>/ would carry it.
+        nested = root / ".claude" / "worktrees" / "stray"
+        header = nested / "sdk" / "cpp" / "vendor" / "include" / "nlohmann" / "json.hpp"
+        header.parent.mkdir(parents=True)
+        header.write_text("// SPDX-License-Identifier: MIT\n", encoding="utf-8")
+        (nested / "README.md").write_text("# Stray\n", encoding="utf-8")
+        return header
+
+    @unittest.skipUnless(shutil.which("git"), "git is required for the git-backed scan")
+    def test_license_scan_skips_nested_directories_git_ignores(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self._license_fixture(root)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            (root / ".git" / "info").mkdir(parents=True, exist_ok=True)
+            (root / ".git" / "info" / "exclude").write_text(
+                ".claude/worktrees/\n", encoding="utf-8"
+            )
+            header = self._nested_worktree(root)
+            (root / "README.md").write_text("# Fixture\n", encoding="utf-8")
+
+            verify_licensing_policy(root)
+            self.assertNotIn(header, repository_files(root))
+            self.assertEqual(markdown_files(root), (root.resolve() / "README.md",))
+
+            # Untracked files git does not ignore still count.
+            source = root / "tools" / "real.py"
+            source.parent.mkdir()
+            source.write_text("# SPDX-License-Identifier: Apache-2.0\n", encoding="utf-8")
+            with self.assertRaisesRegex(ModelError, "tools/real.py"):
+                verify_licensing_policy(root)
+
+    def test_license_scan_fallback_skips_nested_checkouts(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self._license_fixture(root)
+            # A linked worktree mounted without its common git directory, as in
+            # the verification container: git refuses, so the walk stands in.
+            (root / ".git").write_text("gitdir: /nonexistent/worktrees/root\n", encoding="utf-8")
+            header = self._nested_worktree(root)
+            (header.parents[4] / ".git").write_text(
+                "gitdir: /nonexistent/worktrees/stray\n", encoding="utf-8"
+            )
+
+            verify_licensing_policy(root)
+            self.assertNotIn(header, repository_files(root))
+
+            source = root / "tools" / "real.py"
+            source.parent.mkdir()
+            source.write_text("# SPDX-License-Identifier: Apache-2.0\n", encoding="utf-8")
+            self.assertIn(source, repository_files(root))
+            with self.assertRaisesRegex(ModelError, "tools/real.py"):
+                verify_licensing_policy(root)
 
     def test_license_scan_ignores_untracked_build_and_environment_directories(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -89,15 +89,6 @@ ALLOWED_DISPOSITIONS = {
     "REJECT",
 }
 ALLOWED_STATUSES = {"PENDING_REVIEW", "IN_PROGRESS", "ACCEPTED", "REJECTED"}
-IGNORED_PATH_PARTS = {
-    ".git",
-    ".hfx",
-    ".venv",
-    "__pycache__",
-    "build",
-    "dist",
-    "target",
-}
 FUTURE_MTIME_TOLERANCE_SECONDS = 5.0
 INSTALLED_SCHEMA_ROOT = Path("/usr/share/hyperflux-next/schemas")
 EXTERNAL_OPENRGB_QUALIFICATION_BINDING = (
