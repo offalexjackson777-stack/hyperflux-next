@@ -8,7 +8,7 @@ Holds local tools that are only available from source and are left out of the Co
 
 | Area | Purpose |
 | --- | --- |
-| [Device qualification console](device-qualification/README.md) | Provides a source-only browser surface for bounded qualification projections without remote data or direct browser hardware access. |
+| [Device qualification console](device-qualification/README.md) | A local browser page, run only from a source checkout, for testing a new device. It never contacts the internet and never touches hardware directly. |
 
 ## Who Owns These Files
 

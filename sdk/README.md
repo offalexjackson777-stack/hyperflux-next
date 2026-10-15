@@ -8,8 +8,8 @@ Holds the SDKs, one per language, that apps use to talk to the HyperFlux backgro
 
 | Area | Purpose |
 | --- | --- |
-| [C++ SDK](cpp/README.md) | Provides typed C++ bridge access for qualified native routes, exact Feature exchanges, and generated adapter contracts. |
-| [Python SDK](python/README.md) | Provides typed Python bridge access and generated contracts for scripting and Python application adapters. |
+| [C++ SDK](cpp/README.md) | The C++ library apps use to talk to the HyperFlux background service. |
+| [Python SDK](python/README.md) | The Python library scripts and apps use to talk to the HyperFlux background service. |
 
 ## Who Owns These Files
 
