@@ -13,7 +13,7 @@ import sys
 import tempfile
 import threading
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,8 +37,13 @@ from tests.openrgb_packaged_plugin_sdk_qualification import (
 )
 from hfxdev.model import ModelError
 from hfxdev.verify_packaging import (
+    EXTERNAL_OPENRGB_QUALIFICATION_BINDING,
     OPENRGB_QUALIFICATION_REQUEST_SCHEMA,
+    PACKAGE_BUILD_REUSE_NAME,
+    _clean_source_identity,
     _consume_external_openrgb_qualification,
+    _record_package_build_reuse,
+    _reusable_package_build,
     finalize_external_openrgb_qualification,
 )
 
@@ -322,6 +327,54 @@ class OpenRgbPackagedQualificationTests(unittest.TestCase):
                 self.assertEqual(bridge.socket_owner_uid, None)
             finally:
                 bridge.stop()
+
+    def test_package_contracts_reuse_only_the_exact_qualified_build(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+
+            def git(*arguments: str) -> None:
+                subprocess.run(
+                    ["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid", *arguments],
+                    cwd=root,
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+
+            git("init", "-q")
+            (root / ".gitignore").write_text("build/\n", encoding="utf-8")
+            git("add", ".gitignore")
+            git("commit", "-q", "-m", "source")
+            workspace = root / "build" / "package-contracts"
+            manifest = workspace / "artifacts" / "package-build-manifest.json"
+            manifest.parent.mkdir(parents=True)
+            manifest.write_text("{}\n", encoding="utf-8")
+            (workspace / "openrgb-sdk-harness").mkdir()
+            (workspace / "external-full-root").mkdir()
+            binding = {EXTERNAL_OPENRGB_QUALIFICATION_BINDING: "build/binding.json"}
+
+            with patch.dict(os.environ, binding):
+                self.assertIsNone(_reusable_package_build(root, workspace))
+            _record_package_build_reuse(root, workspace, None)
+            self.assertFalse((workspace / PACKAGE_BUILD_REUSE_NAME).exists())
+
+            _record_package_build_reuse(root, workspace, _clean_source_identity(root))
+            with patch.dict(os.environ, {}, clear=True):
+                self.assertIsNone(_reusable_package_build(root, workspace))
+            with patch.dict(os.environ, binding):
+                self.assertEqual(_reusable_package_build(root, workspace), manifest)
+            self.assertEqual(
+                sorted(entry.name for entry in workspace.iterdir()),
+                ["artifacts", "openrgb-sdk-harness", PACKAGE_BUILD_REUSE_NAME],
+            )
+
+            (root / "local-change.txt").write_text("drift\n", encoding="utf-8")
+            with patch.dict(os.environ, binding):
+                self.assertIsNone(_reusable_package_build(root, workspace))
+            git("add", "local-change.txt")
+            git("commit", "-q", "-m", "next")
+            with patch.dict(os.environ, binding):
+                self.assertIsNone(_reusable_package_build(root, workspace))
 
 
 if __name__ == "__main__":
