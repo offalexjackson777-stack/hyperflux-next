@@ -177,14 +177,38 @@ same protocol, UAPI, capability model, and stock-application boundary. Version
 
 ### Technical source map
 
-| Era | Public authorities | Representative tests |
-| --- | --- | --- |
-| Receiver problem | [constitution](../../architecture/constitution.json), [candidate inventory](../../profiles/candidates/razer-hyperflux-v2-2026-07-21.json) | [profiles](../../tests/test_profiles.py), [universality](../../tests/test_source_validated_universality.py) |
-| Learning the transport | [protocol registry](../../protocol/registry.json), [UAPI registry](../../uapi/registry.json) | [protocol](../../tests/test_protocol.py), [kernel UAPI](../../tests/test_kernel_uapi.py) |
-| Bridge foundation | [protected behavior](../../assurance/protected-behavior.json), [runtime authority](../../runtime/linux.json) | [restoration](../../crates/hfx-core/tests/restoration.rs), [generations](../../crates/hfx-bridge/tests/generation_orchestration.rs) |
-| Application ownership | [integration catalog](../../integrations/catalog.json), [package authority](../../packaging/distributions.json) | [stock applications](../../tests/stock_application_compatibility.py), [packaged OpenRGB](../../tests/openrgb_packaged_plugin_sdk_qualification.py) |
-| Evidence and recovery | [protected behavior](../../assurance/protected-behavior.json), [performance budgets](../../assurance/performance-budgets.json) | [native parity](../../tests/test_native_parity.py), [release qualifiers](../../tests/test_bridge_only_release_qualifiers.py) |
-| Building 2.0 | [package authority](../../packaging/distributions.json), [quality audit](../../assurance/quality-audit.json) | [package pipeline](../../tests/test_package_pipeline.py), [quality](../../tests/test_quality.py) |
+Each era lists its main data files and representative tests.
+
+- **Receiver problem**
+  - Data: [constitution](../../architecture/constitution.json)
+  - Data: [candidate inventory](../../profiles/candidates/razer-hyperflux-v2-2026-07-21.json)
+  - Test: [profiles](../../tests/test_profiles.py)
+  - Test: [universality](../../tests/test_source_validated_universality.py)
+- **Learning the transport**
+  - Data: [protocol registry](../../protocol/registry.json)
+  - Data: [UAPI registry](../../uapi/registry.json)
+  - Test: [protocol](../../tests/test_protocol.py)
+  - Test: [kernel UAPI](../../tests/test_kernel_uapi.py)
+- **Bridge foundation**
+  - Data: [protected behavior](../../assurance/protected-behavior.json)
+  - Data: [runtime authority](../../runtime/linux.json)
+  - Test: [restoration](../../crates/hfx-core/tests/restoration.rs)
+  - Test: [generations](../../crates/hfx-bridge/tests/generation_orchestration.rs)
+- **Application ownership**
+  - Data: [integration catalog](../../integrations/catalog.json)
+  - Data: [package authority](../../packaging/distributions.json)
+  - Test: [stock applications](../../tests/stock_application_compatibility.py)
+  - Test: [packaged OpenRGB](../../tests/openrgb_packaged_plugin_sdk_qualification.py)
+- **Evidence and recovery**
+  - Data: [protected behavior](../../assurance/protected-behavior.json)
+  - Data: [performance budgets](../../assurance/performance-budgets.json)
+  - Test: [native parity](../../tests/test_native_parity.py)
+  - Test: [release qualifiers](../../tests/test_bridge_only_release_qualifiers.py)
+- **Building 2.0**
+  - Data: [package authority](../../packaging/distributions.json)
+  - Data: [quality audit](../../assurance/quality-audit.json)
+  - Test: [package pipeline](../../tests/test_package_pipeline.py)
+  - Test: [quality](../../tests/test_quality.py)
 
 The machine-readable [journey source map](../../assurance/journey-source-coverage.json)
 checks that every era is grounded in public repository authorities and tests.

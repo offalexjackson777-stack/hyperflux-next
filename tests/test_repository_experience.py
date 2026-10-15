@@ -1190,5 +1190,13 @@ class UserDocumentationContracts(unittest.TestCase):
         for word in ("qualification", "rollback inputs", "restoration"):
             self.assertNotIn(word, page)
 
+    def test_journey_source_map_is_a_readable_list(self) -> None:
+        journey = _page("docs/project/journey.md")
+        source_map = journey.split("### Technical source map", 1)[1].split("\n### ", 1)[0]
+        self.assertNotIn("| Era |", source_map)
+        self.assertEqual(source_map.count("\n- **"), 6)
+        for line in source_map.splitlines():
+            self.assertLessEqual(len(line), 100, line)
+
 if __name__ == "__main__":
     unittest.main()
