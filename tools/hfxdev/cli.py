@@ -336,6 +336,24 @@ def _parser() -> argparse.ArgumentParser:
         help="check a future split release such as 2.0.1-2",
     )
 
+    arch_transition = commands.add_parser(
+        "arch-transition",
+        help="prove the two-to-four output upgrade and render the optional AUR switch",
+    )
+    arch_transition_commands = arch_transition.add_subparsers(
+        dest="arch_transition_command", required=True
+    )
+    for name, summary in (
+        ("check", "fail unless every prior release upgrades in place to the split"),
+        ("switch-script", "print the script that disables the repository for the AUR"),
+        ("rollback-script", "print the script that re-enables the repository"),
+    ):
+        arch_transition_commands.add_parser(name, help=summary).add_argument(
+            "--candidate-release",
+            metavar="VERSION-RELEASE",
+            help="the split release such as 2.0.1-2",
+        )
+
     arch_repository = commands.add_parser(
         "arch-repository",
         help="build or verify the signed third-party Arch repository",
@@ -372,6 +390,46 @@ def _candidate_split(root: Path, value: str | None):
     if not separator or not version or not release.isdecimal():
         raise ModelError("candidate release must be VERSION-RELEASE")
     return load_arch_split(root, release=(version, int(release)))
+
+
+def _arch_transition(root: Path, args: argparse.Namespace) -> int:
+    from .arch_repository import load_arch_repository_policy
+    from .arch_transition import (
+        PRIOR_RELEASES,
+        SCHEMA,
+        analyse_transition,
+        check_pacman_safety,
+        load_prior_topology,
+        payload_items,
+        rollback_script,
+        switch_script,
+    )
+
+    split = _candidate_split(root, args.candidate_release)
+    if not split.active:
+        raise ModelError(f"the four-output topology starts at {split.first_release}")
+    policy = load_arch_repository_policy(root)
+    if args.arch_transition_command == "switch-script":
+        print(switch_script(policy), end="")
+        return 0
+    if args.arch_transition_command == "rollback-script":
+        print(rollback_script(policy, split), end="")
+        return 0
+    reports = [
+        analyse_transition(split, load_prior_topology(root, prior)).as_json()
+        for prior in PRIOR_RELEASES
+    ]
+    safety = check_pacman_safety(payload_items(root))
+    passed = all(report["passed"] for report in reports) and not safety
+    value = {
+        "schema": SCHEMA,
+        "candidate": split.full_version,
+        "passed": passed,
+        "transitions": reports,
+        "pacman_safety_problems": list(safety),
+    }
+    print(json.dumps(value, indent=2, sort_keys=True))
+    return 0 if passed else 1
 
 
 def _arch_snapshot(root: Path, args: argparse.Namespace) -> int:
@@ -808,6 +866,8 @@ def main(arguments: list[str] | None = None) -> int:
             return 0
         if args.command == "arch-snapshot":
             return _arch_snapshot(root, args)
+        if args.command == "arch-transition":
+            return _arch_transition(root, args)
         if args.command == "arch-repository":
             if args.arch_repository_command == "build":
                 manifest = build_arch_repository(
