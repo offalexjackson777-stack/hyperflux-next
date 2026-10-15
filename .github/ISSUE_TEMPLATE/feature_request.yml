@@ -8,35 +8,35 @@ body:
 - type: dropdown
   id: area
   attributes:
-    label: Primary area
+    label: What is it about?
     options:
-    - Applications and integrations
-    - Device knowledge and qualification
-    - Kernel, bridge, or SDK
-    - Packaging and lifecycle
-    - Documentation and diagnostics
-    - Governance and tooling
+    - Apps (OpenRazer, Polychromatic, OpenRGB)
+    - Device support
+    - Kernel driver, background service, or SDK
+    - Installing, upgrading, or removing
+    - Documentation and troubleshooting
+    - Project tooling
   validations:
     required: true
 - type: textarea
   id: workflow
   attributes:
-    label: User workflow
-    description: What should a normal user be able to accomplish?
+    label: What do you want to do?
+    description: 'Describe it from your side: what you would click, type, or see.'
   validations:
     required: true
 - type: textarea
   id: gap
   attributes:
-    label: Current gap
-    description: What is missing or confusing today?
+    label: What stops you today?
+    description: What is missing or confusing right now?
   validations:
     required: true
 - type: textarea
   id: similar-workflows
   attributes:
     label: Other devices or setups, if any
-    description: Optional. Would other devices, receivers, or applications need the same thing?
+    description: Optional. Would other devices, receivers, or apps need the same thing?
 - type: textarea
   id: evidence-boundary
   attributes:

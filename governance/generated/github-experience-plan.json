@@ -2,25 +2,25 @@
   "discussions": {
     "categories": [
       {
-        "description": "Maintainer updates, verified milestones, and release-boundary changes.",
+        "description": "Release news and other updates from the maintainer.",
         "format": "announcement",
         "id": "announcements",
         "name": "Announcements"
       },
       {
-        "description": "Public planning around candidate devices and bounded evidence needs.",
+        "description": "Planning tests for devices that are expected to work but have not been tested on real hardware.",
         "format": "discussion",
         "id": "hardware-qualification",
         "name": "Hardware qualification"
       },
       {
-        "description": "User questions after running Doctor and reviewing privacy-safe diagnostics.",
+        "description": "Questions about installing or using HyperFlux. Running `hyperfluxctl doctor` first often helps.",
         "format": "q-and-a",
         "id": "help",
         "name": "Help"
       },
       {
-        "description": "Universal workflows and architecture proposals before issue commitment.",
+        "description": "Early ideas and design proposals, before they become a feature request.",
         "format": "discussion",
         "id": "ideas",
         "name": "Ideas"
@@ -44,7 +44,7 @@
   "remote_state": "public-released",
   "repository": "offalexjackson777-stack/hyperflux-next",
   "repository_metadata": {
-    "description": "Linux support for Razer devices paired through HyperFlux V2, with OpenRazer, Polychromatic, and OpenRGB integration.",
+    "description": "Linux driver that makes Razer devices on a HyperFlux V2 wireless receiver work with OpenRazer, Polychromatic, and OpenRGB.",
     "homepage": "",
     "social_preview_asset": "docs/assets/social-preview.png",
     "topics": [

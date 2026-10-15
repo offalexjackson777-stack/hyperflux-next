@@ -7,7 +7,7 @@
     "default_branch": "main",
     "remote_state": "public-released",
     "visibility": "public",
-    "description": "Linux support for Razer devices paired through HyperFlux V2, with OpenRazer, Polychromatic, and OpenRGB integration.",
+    "description": "Linux driver that makes Razer devices on a HyperFlux V2 wireless receiver work with OpenRazer, Polychromatic, and OpenRGB.",
     "homepage": "",
     "social_preview_asset": "docs/assets/social-preview.png",
     "topics": ["device-driver", "hid", "hyperflux", "linux", "openrazer", "openrgb", "polychromatic", "razer", "rgb-lighting"],
@@ -25,10 +25,10 @@
     "discussions": {
       "enabled": true,
       "categories": [
-        {"id": "announcements", "name": "Announcements", "format": "announcement", "description": "Maintainer updates, verified milestones, and release-boundary changes."},
-        {"id": "hardware-qualification", "name": "Hardware qualification", "format": "discussion", "description": "Public planning around candidate devices and bounded evidence needs."},
-        {"id": "help", "name": "Help", "format": "q-and-a", "description": "User questions after running Doctor and reviewing privacy-safe diagnostics."},
-        {"id": "ideas", "name": "Ideas", "format": "discussion", "description": "Universal workflows and architecture proposals before issue commitment."}
+        {"id": "announcements", "name": "Announcements", "format": "announcement", "description": "Release news and other updates from the maintainer."},
+        {"id": "hardware-qualification", "name": "Hardware qualification", "format": "discussion", "description": "Planning tests for devices that are expected to work but have not been tested on real hardware."},
+        {"id": "help", "name": "Help", "format": "q-and-a", "description": "Questions about installing or using HyperFlux. Running `hyperfluxctl doctor` first often helps."},
+        {"id": "ideas", "name": "Ideas", "format": "discussion", "description": "Early ideas and design proposals, before they become a feature request."}
       ]
     },
     "project": {"enabled": false}
@@ -109,18 +109,18 @@
     ]
   },
   "labels": [
-    {"name": "area: documentation", "color": "1d76db", "description": "Documentation, navigation, and user guidance"},
-    {"name": "area: integration", "color": "5319e7", "description": "Application adapter or SDK integration"},
-    {"name": "area: kernel", "color": "b60205", "description": "Kernel transport, UAPI, or lifecycle"},
-    {"name": "area: packaging", "color": "006b75", "description": "Installation, distribution, or package lifecycle"},
-    {"name": "area: runtime", "color": "008672", "description": "Bridge runtime, operations, restoration, or diagnostics"},
-    {"name": "area: security", "color": "d93f0b", "description": "Security, privacy, provenance, or governance"},
-    {"name": "kind: bug", "color": "d73a4a", "description": "Confirmed or suspected incorrect behavior"},
-    {"name": "kind: device-support", "color": "ffd33d", "description": "Device support research or capability qualification"},
-    {"name": "kind: documentation", "color": "0075ca", "description": "Documentation content, navigation, or generated-view issue"},
-    {"name": "kind: feature", "color": "a2eeef", "description": "New capability or workflow proposal"},
-    {"name": "kind: limitation", "color": "fef2c0", "description": "Known limitation that needs clear user-facing treatment"},
-    {"name": "skip-changelog", "color": "ededed", "description": "Exclude this change from generated release notes"}
+    {"name": "area: documentation", "color": "1d76db", "description": "Guides, reference pages, and links"},
+    {"name": "area: integration", "color": "5319e7", "description": "OpenRazer, Polychromatic, OpenRGB, or the SDK"},
+    {"name": "area: kernel", "color": "b60205", "description": "The kernel driver and its interface"},
+    {"name": "area: packaging", "color": "006b75", "description": "Installing, upgrading, or removing packages"},
+    {"name": "area: runtime", "color": "008672", "description": "The background service, hyperfluxctl, diagnostics, or restoring lighting"},
+    {"name": "area: security", "color": "d93f0b", "description": "Security, privacy, release integrity, or project rules"},
+    {"name": "kind: bug", "color": "d73a4a", "description": "Something does not work the way it should"},
+    {"name": "kind: device-support", "color": "ffd33d", "description": "Support for a new or untested device"},
+    {"name": "kind: documentation", "color": "0075ca", "description": "A page is wrong, unclear, out of date, or hard to find"},
+    {"name": "kind: feature", "color": "a2eeef", "description": "Something new people want to be able to do"},
+    {"name": "kind: limitation", "color": "fef2c0", "description": "A known limitation that users need explained"},
+    {"name": "skip-changelog", "color": "ededed", "description": "Leave this change out of the release notes"}
   ],
   "automation": {
     "runner": "ubuntu-24.04",

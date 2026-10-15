@@ -787,10 +787,10 @@ class GitHubGovernanceTests(unittest.TestCase):
         feature = feature_request(self.governance)
         self.assertIn("support-bundle --preview", bug)
         self.assertIn("Never attach hardware serials", bug)
-        self.assertIn("does not claim qualification", hardware)
-        self.assertIn("I removed serials, stable host identifiers", hardware)
+        self.assertIn("does not mean the device is supported yet", hardware)
+        self.assertIn("I removed serial numbers, machine and user names", hardware)
         self.assertIn("support-bundle --preview", hardware)
-        self.assertIn("Doctor reference", hardware)
+        self.assertIn("Output of `hyperfluxctl doctor`", hardware)
         # Reporters describe what they saw; maintainers classify it (FORM-001…004).
         self.assertIn("2.0.x", bug)
         self.assertNotIn("; 0.x;", bug)
