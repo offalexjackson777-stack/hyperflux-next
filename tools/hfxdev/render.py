@@ -188,13 +188,16 @@ def architecture_markdown(
     source_validated: dict[str, Any],
 ) -> str:
     lines = [
-        "# Architecture Constitution",
+        "# Architecture Rules",
         "",
         GENERATED_NOTICE.rstrip(),
         "",
+        "This page lists which part of HyperFlux owns what and which way the parts may "
+        "depend on each other, for contributors who change how the pieces fit together.",
+        "",
         f"Product state: **{constitution['phase']}**",
         "",
-        "## Direction Of Responsibility",
+        "## Which Part Depends On Which",
         "",
         "```mermaid",
         "flowchart TB",
@@ -226,7 +229,7 @@ def architecture_markdown(
         [
             "```",
             "",
-            "## Receiver Authority Boundary",
+            "## Which Devices HyperFlux Talks To",
             "",
             f"The generated receiver authority is exact "
             f"`{official['vendor_id']:04X}:{official['receiver_product_id']:04X}` plus "
@@ -238,13 +241,13 @@ def architecture_markdown(
             "",
             "Direct USB participates only in exact serial-fingerprint precedence. Bluetooth and unrelated USB devices remain outside HyperFlux authority. The complete per-device result is generated in [Supported Hardware](supported-hardware.md).",
             "",
-            "## Invariants",
+            "## Rules That Always Hold",
             "",
         ]
     )
     for invariant in constitution["invariants"]:
         lines.append(f"- `{invariant['id']}` {invariant['statement']}")
-    lines.extend(["", "## Component Ownership", ""])
+    lines.extend(["", "## What Each Part Owns", ""])
     for component in constitution["components"]:
         owns = ", ".join(component["owns"])
         forbidden = ", ".join(component["must_not_own"])
@@ -261,7 +264,7 @@ def architecture_markdown(
     interlock = constitution["publication_interlock"]
     lines.extend(
         [
-            "## Publication Gates",
+            "## Release Checks",
             "",
             f"Public repository created: **{str(interlock['remote_repository_created']).lower()}**",
             "",

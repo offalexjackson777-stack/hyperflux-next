@@ -6,7 +6,7 @@ Builds reproducible distribution artifacts, a canonical installed root, and sign
 
 ## Start Here
 
-- [Installation Contract](../docs/generated/installation.md)
+- [Package Installation](../docs/generated/installation.md)
 - [Distribution Packages](../docs/generated/distributions.md)
 
 ## Limitations

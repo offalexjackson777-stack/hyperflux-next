@@ -6,7 +6,7 @@ Pins compiler, interpreter, upstream checkout, and development-container identit
 
 ## Start Here
 
-- [Reproducible Development Environment](../docs/generated/development-environment.md)
+- [Development Environment](../docs/generated/development-environment.md)
 - [Contributing](../CONTRIBUTING.md)
 
 ## Limitations

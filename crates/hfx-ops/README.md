@@ -7,7 +7,7 @@ Provides the installed bounded status, Doctor, support-bundle, and explicit driv
 ## Start Here
 
 - [Troubleshooting](../../docs/user/troubleshooting.md)
-- [Linux Runtime Authority](../../docs/generated/linux-runtime.md)
+- [Linux Runtime](../../docs/generated/linux-runtime.md)
 
 ## Limitations
 

@@ -6,7 +6,7 @@ Defines typed verification nodes, dependencies, lanes, capabilities, side effect
 
 ## Start Here
 
-- [Verification Graph](../docs/generated/verification.md)
+- [Software Checks](../docs/generated/verification.md)
 - [Contributing](../CONTRIBUTING.md)
 
 ## Limitations

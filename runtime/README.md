@@ -6,8 +6,8 @@ Defines package version, service identities, filesystem paths, permissions, acti
 
 ## Start Here
 
-- [Linux Runtime Authority](../docs/generated/linux-runtime.md)
-- [Installation Contract](../docs/generated/installation.md)
+- [Linux Runtime](../docs/generated/linux-runtime.md)
+- [Package Installation](../docs/generated/installation.md)
 
 ## Limitations
 

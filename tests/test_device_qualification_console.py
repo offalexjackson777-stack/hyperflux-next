@@ -98,7 +98,7 @@ class DeviceQualificationConsoleTests(unittest.TestCase):
             self.assertNotIn("hyperfluxctl qualification serve", value)
             self.assertIn("tests/qualification_console_fixture_server.py", value)
         self.assertIn("Fixture data is not live qualification", application)
-        self.assertIn("fixture-only UI preview", readme)
+        self.assertIn("only previews the interface with sample data", readme)
 
     def test_contract_and_rust_fixture_share_the_versioned_schema(self) -> None:
         schema = json.loads(

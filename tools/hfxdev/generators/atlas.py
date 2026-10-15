@@ -111,7 +111,7 @@ def folder_readme(
                 "python3 tests/qualification_console_fixture_server.py --port 47821",
                 "```",
                 "",
-                "Run this from the repository root and open the printed loopback URL. This is a fixture-only UI preview: it does not read the installed stack, qualify hardware, or add an installed `hyperfluxctl qualification` command.",
+                "Run this from the repository root and open the local address it prints. It only previews the interface with sample data: it does not read your installed HyperFlux, test hardware, or add a `hyperfluxctl qualification` command.",
                 "",
             ]
         )
@@ -159,11 +159,11 @@ COLLECTION_TITLES = {
 }
 
 COLLECTION_PURPOSES = {
-    ".devcontainer": "Pins the network-disabled development and release toolchain used by local and hosted verification.",
-    "apps": "Contains source-only local tools that are deliberately excluded from Core and Full package payloads.",
-    "generated": "Holds derived catalogs consumed by builds, SDKs, and verification.",
-    "sdk": "Groups the language SDKs that expose the versioned bridge protocol to integrations.",
-    "uapi": "Groups userspace ABI authorities shared with the kernel transport.",
+    ".devcontainer": "Pins the offline development and release tools used for checks on your machine and in CI.",
+    "apps": "Holds local tools that are only available from source and are left out of the Core and Full packages on purpose.",
+    "generated": "Holds catalogs generated from the project's data files and used by builds, SDKs, and checks.",
+    "sdk": "Holds the SDKs, one per language, that apps use to talk to the HyperFlux background service.",
+    "uapi": "Holds the definition of the interface between the kernel driver and user space.",
 }
 
 
@@ -188,14 +188,14 @@ def collection_readme(atlas: RepositoryAtlas, path: str) -> str:
         "",
         COLLECTION_PURPOSES.get(
             path,
-            "This collection groups related repository authorities and generated outputs.",
+            "This folder groups related source files and the files generated from them.",
         ),
         "",
     ]
     if children:
         lines.extend(
             [
-                "## Subsystems",
+                "## What Is Inside",
                 "",
                 "| Area | Purpose |",
                 "| --- | --- |",
@@ -209,9 +209,9 @@ def collection_readme(atlas: RepositoryAtlas, path: str) -> str:
     if owners:
         lines.extend(
             [
-                "## Authorities",
+                "## Who Owns These Files",
                 "",
-                "| Owner | Canonical inputs | Generated outputs |",
+                "| Owner | Source files | Generated files |",
                 "| --- | ---: | ---: |",
             ]
         )
@@ -225,10 +225,10 @@ def collection_readme(atlas: RepositoryAtlas, path: str) -> str:
         [
             "## Change Workflow",
             "",
-            "1. Open the owning subsystem above.",
-            "2. Change its declared canonical source, not a generated projection.",
+            "1. Open the area that owns the file, listed above.",
+            "2. Change its source file, not a generated file.",
             "3. Run `./hfx generate` from the repository root.",
-            "4. Run the verification named by that subsystem.",
+            "4. Run the checks listed in that area's README.",
         ]
     )
     return "\n".join(lines) + "\n"
@@ -241,17 +241,17 @@ def markdown(atlas: RepositoryAtlas) -> str:
         "",
         GENERATED_NOTICE,
         "",
-        "Maintainer reference for repository ownership. It lists every subsystem with its status, purpose, and dependencies. To learn the system, start with the [architecture overview](../developer/architecture.md) instead.",
+        "Maintainer reference for repository ownership. It lists every part of the repository with its status, purpose, and what it depends on, for maintainers who need to know who owns a file. To learn how HyperFlux works, start with the [architecture overview](../developer/architecture.md) instead.",
         "",
-        "File-level contracts live in [`architecture/repository-atlas.json`](../../architecture/repository-atlas.json).",
+        "The full list of files each part owns is in [`architecture/repository-atlas.json`](../../architecture/repository-atlas.json).",
         "",
-        f"- **Subsystems:** {len(atlas.nodes)}",
+        f"- **Parts:** {len(atlas.nodes)}",
         f"- **Categories:** {len(categories)}",
-        f"- **Publication state:** `{atlas.publication_state}`",
+        f"- **Release state:** `{atlas.publication_state}`",
         "",
         "## Browse By Area",
         "",
-        "| Area | Subsystems |",
+        "| Area | Parts |",
         "| --- | --- |",
     ]
     for category in categories:
@@ -264,9 +264,9 @@ def markdown(atlas: RepositoryAtlas) -> str:
     lines.extend(
         [
             "",
-            "## Subsystem Index",
+            "## All Parts",
             "",
-            "| Subsystem | Status | Purpose |",
+            "| Part | Status | Purpose |",
             "| --- | --- | --- |",
         ]
     )
@@ -290,7 +290,7 @@ def markdown(atlas: RepositoryAtlas) -> str:
     lines.extend(
         [
             "",
-            "Each linked folder README names the subsystem's boundaries, key files, limitations, and verification. Update the JSON authority and run `./hfx generate` when ownership changes.",
+            "Each linked folder README lists what that part owns, its key files, its limitations, and the checks to run. When ownership changes, update `architecture/repository-atlas.json` and run `./hfx generate`.",
         ]
     )
     return "\n".join(lines) + "\n"

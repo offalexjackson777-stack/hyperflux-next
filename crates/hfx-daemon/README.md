@@ -7,7 +7,7 @@ Composes production discovery, configuration, native-route authority, service li
 ## Start Here
 
 - [Bridge Core Boundaries](../../docs/architecture/bridge-core.md)
-- [Linux Runtime Authority](../../docs/generated/linux-runtime.md)
+- [Linux Runtime](../../docs/generated/linux-runtime.md)
 
 ## Limitations
 

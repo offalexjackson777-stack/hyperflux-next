@@ -6,7 +6,7 @@ Coordinates the source-only local qualification projection, lifecycle, evidence,
 
 ## Start Here
 
-- [Local Companion Contract](../../docs/generated/local-companion.md)
+- [Local Companion](../../docs/generated/local-companion.md)
 
 ## Decision Records
 

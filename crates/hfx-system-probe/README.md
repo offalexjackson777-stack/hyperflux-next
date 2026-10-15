@@ -7,7 +7,7 @@ Owns bounded local system inspection, Full-component detection, root-only receip
 ## Start Here
 
 - [Troubleshooting](../../docs/user/troubleshooting.md)
-- [Linux Runtime Authority](../../docs/generated/linux-runtime.md)
+- [Linux Runtime](../../docs/generated/linux-runtime.md)
 
 ## Limitations
 

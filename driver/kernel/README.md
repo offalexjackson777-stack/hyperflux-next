@@ -7,7 +7,7 @@ Binds the receiver, preserves generic input, records passive observations, perfo
 ## Start Here
 
 - [Kernel Boundary](../../docs/architecture/kernel.md)
-- [Linux Runtime Authority](../../docs/generated/linux-runtime.md)
+- [Linux Runtime](../../docs/generated/linux-runtime.md)
 
 ## Limitations
 

@@ -7,7 +7,7 @@ Provides the single developer CLI, canonical loaders, deterministic generators, 
 ## Start Here
 
 - [Contributing](../CONTRIBUTING.md)
-- [Verification Graph](../docs/generated/verification.md)
+- [Software Checks](../docs/generated/verification.md)
 
 ## Limitations
 

@@ -9,7 +9,7 @@ Defines product invariants, subsystem direction, ownership boundaries, and the c
 - [Architecture](../docs/developer/architecture.md)
 - [HyperFlux Next Design Book](../docs/architecture/design-book.md)
 - [Verification](../docs/developer/verification.md)
-- [Architecture Constitution](../docs/generated/architecture.md)
+- [Architecture Rules](../docs/generated/architecture.md)
 
 ## Decision Records
 

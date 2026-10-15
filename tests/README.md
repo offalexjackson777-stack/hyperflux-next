@@ -6,7 +6,7 @@ Holds language-specific, cross-language, fixture, lifecycle, repository-navigati
 
 ## Start Here
 
-- [Verification Graph](../docs/generated/verification.md)
+- [Software Checks](../docs/generated/verification.md)
 - [Virtual Receiver And Replay](../docs/assurance/simulator.md)
 
 ## Limitations

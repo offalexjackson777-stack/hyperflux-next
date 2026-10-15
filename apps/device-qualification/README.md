@@ -15,7 +15,7 @@ Provides a source-only browser surface for bounded qualification projections wit
 python3 tests/qualification_console_fixture_server.py --port 47821
 ```
 
-Run this from the repository root and open the printed loopback URL. This is a fixture-only UI preview: it does not read the installed stack, qualify hardware, or add an installed `hyperfluxctl qualification` command.
+Run this from the repository root and open the local address it prints. It only previews the interface with sample data: it does not read your installed HyperFlux, test hardware, or add a `hyperfluxctl qualification` command.
 
 ## Limitations
 

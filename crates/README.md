@@ -7,7 +7,7 @@ Coordinates the Rust dependency graph and compile-time ownership boundaries acro
 ## Start Here
 
 - [Bridge Core Boundaries](../docs/architecture/bridge-core.md)
-- [Reproducible Development Environment](../docs/generated/development-environment.md)
+- [Development Environment](../docs/generated/development-environment.md)
 
 ## Limitations
 
