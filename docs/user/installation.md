@@ -1,23 +1,26 @@
 # Installation
 
-HyperFlux Next has exactly two user-facing packages.
+HyperFlux Next has two packages. Choose one.
 
-- **Core (`hyperflux-next-linux`):** HyperFlux receiver driver, bridge, SDK, CLI, and base services.
-- **Full (`hyperflux-next-full`):** Core plus the OpenRazer compatibility transport and OpenRGB integration for optional stock applications.
+- **Full (`hyperflux-next-full`):** Core plus the OpenRazer compatibility
+  transport and OpenRGB integration for optional stock applications.
+- **Core (`hyperflux-next-linux`):** HyperFlux receiver driver, bridge, SDK,
+  CLI, and base services.
 
-Full is the ordinary desktop choice. Core is useful when only the receiver
-transport and SDK are needed. Stock OpenRazer userspace, Polychromatic, and
-OpenRGB remain separate, optional distribution packages.
+Full is the normal desktop choice and pulls in Core by itself. Choose Core alone
+only when you need the receiver transport and SDK without application
+integration. Stock OpenRazer, Polychromatic, and OpenRGB are separate Arch
+packages that you install yourself if you want them; HyperFlux does not install
+or replace them.
 
 ## Availability
 
-Arch Linux x86_64 Core and Full packages are published in
-[GitHub Release v2.0.2](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.2).
-The HyperFlux Next project operates a signed third-party Pacman repository. It
-is not an official Arch Linux repository. Pacman's machine-consumed files live
-in a separate fixed `arch-repository` channel so the v2.0.2 release remains a
-clear, human-facing product page. Users do not manually download or choose the
-repository databases and signatures.
+Arch Linux x86_64 packages are published in
+[GitHub Release v2.0.1](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.1).
+Pacman installs and updates them from the signed HyperFlux Next repository. It
+is a third-party repository run by this project, not an official Arch Linux
+repository. Pacman reads its database and signatures from a fixed
+`arch-repository` release; you never download those files yourself.
 
 ## 1. Add the HyperFlux repository - one time only
 
@@ -82,14 +85,14 @@ HFX_REPOSITORY_SETUP
 sudo pacman -Syu hyperflux-next-full
 ```
 
-Full resolves the exact Core package automatically. For an advanced Core-only
-installation:
+Full pulls in the matching Core package. For an advanced Core-only
+installation, run this instead:
 
 ```bash
 sudo pacman -Syu hyperflux-next-linux
 ```
 
-Thereafter, ordinary `sudo pacman -Syu` runs discover HyperFlux updates.
+After this, your normal `sudo pacman -Syu` also installs HyperFlux updates.
 
 ## Security details
 
@@ -100,54 +103,69 @@ signing subkey before changing trust or configuration. It writes the strict
 idempotent include without replacing existing Pacman settings. It does not
 execute a remote script or install a downloaded configuration file.
 
-Pacman consumes the separate machine channel automatically. Users never
-manually download its databases, signatures, manifest, or checksum receipt.
 
-## Local package fallback
+## 3. Enable the services and reboot
 
-The human-facing v2.0.2 release retains a local-file fallback. Download its two
-packages and checksum receipt, select exactly those two receipt entries, then
-verify and install them together:
+Keep the receiver and its keyboard and mouse connected. Installing the
+packages does not start any service, so enable the bridge and your desktop
+socket, then reboot normally:
 
 ```bash
-curl --proto '=https' --tlsv1.2 --fail --location --remote-name-all -- \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.2/hyperflux-next-linux-2.0.2-1-x86_64.pkg.tar.zst \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.2/hyperflux-next-full-2.0.2-1-x86_64.pkg.tar.zst \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.2/SHA256SUMS
-awk '$2 == "hyperflux-next-linux-2.0.2-1-x86_64.pkg.tar.zst" || \
-     $2 == "hyperflux-next-full-2.0.2-1-x86_64.pkg.tar.zst"' \
-  SHA256SUMS > SHA256SUMS-packages
-test "$(wc -l < SHA256SUMS-packages)" -eq 2
-sha256sum -c SHA256SUMS-packages
-sudo pacman -U -- \
-  ./hyperflux-next-linux-2.0.2-1-x86_64.pkg.tar.zst \
-  ./hyperflux-next-full-2.0.2-1-x86_64.pkg.tar.zst
+sudo systemctl enable hyperflux-next-bridge.service \
+  "hyperflux-next-client@$(id -u).socket"
+sudo reboot
 ```
 
-The machine channel carries detached signatures for both package archives and
-the repository database/files metadata, plus the public key and full
-fingerprint receipt. The private signing key is never published.
+## 4. Check the result
 
-## Safe Desktop Lifecycle
+After you log in, run:
 
-The normal receiver-only desktop path is:
+```bash
+hyperfluxctl status
+hyperfluxctl doctor
+```
 
-1. Keep the receiver and devices connected.
-2. Install Core and Full together with the command above.
-3. Enable the bridge and per-user socket services:
-   `sudo systemctl enable hyperflux-next-bridge.service "hyperflux-next-client@$(id -u).socket"`.
-4. Reboot normally.
-5. Run `hyperfluxctl status` and `hyperfluxctl doctor` after login.
-
-Package registration does not start services, change hardware bindings, or
-authorize a device write. Restoration ships disabled and remains independent
-of normal device discovery.
+Doctor prints `HyperFlux Next is ready.` when everything works. Otherwise it
+names the first problem and one thing to do about it. Continue with the
+[first-run guide](first-run.md) to open your applications.
 
 > [!WARNING]
 > Do not unplug the only keyboard or mouse to complete a normal installation.
 > Disconnected activation is an advanced recovery path and requires a built-in
 > keyboard and touchpad, a second input pair, or a working SSH session.
 
+## Local package fallback
+
+Use this only if you cannot add the repository. Without it, Pacman cannot
+fetch Core for Full, so this fallback downloads both package files from the
+v2.0.1 release and installs them in one transaction. Download the two packages
+and the checksum receipt, keep exactly those two receipt entries, then verify
+and install:
+
+```bash
+curl --proto '=https' --tlsv1.2 --fail --location --remote-name-all -- \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.1/hyperflux-next-linux-2.0.1-1-x86_64.pkg.tar.zst \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.1/hyperflux-next-full-2.0.1-1-x86_64.pkg.tar.zst \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.1/SHA256SUMS
+awk '$2 == "hyperflux-next-linux-2.0.1-1-x86_64.pkg.tar.zst" || \
+     $2 == "hyperflux-next-full-2.0.1-1-x86_64.pkg.tar.zst"' \
+  SHA256SUMS > SHA256SUMS-packages
+test "$(wc -l < SHA256SUMS-packages)" -eq 2
+sha256sum -c SHA256SUMS-packages
+sudo pacman -U -- \
+  ./hyperflux-next-linux-2.0.1-1-x86_64.pkg.tar.zst \
+  ./hyperflux-next-full-2.0.1-1-x86_64.pkg.tar.zst
+```
+
+Packages installed this way do not update with `pacman -Syu`. Add the
+repository later to receive updates. Then continue with step 3 above.
+
+The release's `arch-repository` channel carries detached signatures for both
+package archives and the repository database, plus the public key and its full
+fingerprint receipt. The private signing key is never published.
+
+## Package Details
+
 The generated [distribution contract](../generated/distributions.md) and
-[installation contract](../generated/installation.md) describe exact package
-ownership and lifecycle behavior for maintainers.
+[installation contract](../generated/installation.md) list exact package
+contents and lifecycle behavior.

@@ -424,13 +424,11 @@ class RepositoryExperienceContracts(unittest.TestCase):
                 self.assertEqual(len(stale_claim_issues(root, catalog)), 1)
 
     def test_hand_written_prose_lines_stay_readable_in_source(self) -> None:
-        # These pages are owned by another change; their counts may only shrink.
-        baseline = {"docs/user/installation.md": 1}
         counts: dict[str, int] = {}
         for issue in long_line_issues(ROOT):
             counts[issue.path] = counts.get(issue.path, 0) + 1
         for path, count in counts.items():
-            self.assertLessEqual(count, baseline.get(path, 0), path)
+            self.assertEqual(count, 0, path)
 
         canonical = load_document_catalog(ROOT).by_path["README.md"]
         long_words = " ".join(["word"] * 30)
@@ -1064,6 +1062,20 @@ class UserDocumentationContracts(unittest.TestCase):
         self.assertIn("(docs/user/installation.md)", support)
         self.assertIsNone(re.search(r"\bunreleased\b", support, re.IGNORECASE))
 
+
+    def test_installation_asks_for_one_edition_and_finishes_with_doctor(self) -> None:
+        installation = _page("docs/user/installation.md")
+        self.assertIn("Choose one.", installation)
+        self.assertNotIn("Install Core and Full together", installation)
+        self.assertEqual(installation.count("sudo pacman -U"), 1)
+        fallback = installation.index("## Local package fallback")
+        self.assertGreater(installation.index("sudo pacman -U"), fallback)
+        for command in (
+            "sudo systemctl enable hyperflux-next-bridge.service",
+            "sudo reboot",
+            "hyperfluxctl doctor",
+        ):
+            self.assertLess(installation.index(command), fallback, command)
 
 if __name__ == "__main__":
     unittest.main()
