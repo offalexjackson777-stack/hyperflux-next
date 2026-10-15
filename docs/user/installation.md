@@ -12,10 +12,10 @@ OpenRGB remain separate, optional distribution packages.
 ## Availability
 
 Arch Linux x86_64 Core and Full packages are published in
-[GitHub Release v2.0.1](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.1).
+[GitHub Release v2.0.2](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.2).
 The HyperFlux Next project operates a signed third-party Pacman repository. It
 is not an official Arch Linux repository. Pacman's machine-consumed files live
-in a separate fixed `arch-repository` channel so the v2.0.1 release remains a
+in a separate fixed `arch-repository` channel so the v2.0.2 release remains a
 clear, human-facing product page. Users do not manually download or choose the
 repository databases and signatures.
 
@@ -105,23 +105,23 @@ manually download its databases, signatures, manifest, or checksum receipt.
 
 ## Local package fallback
 
-The human-facing v2.0.1 release retains a local-file fallback. Download its two
+The human-facing v2.0.2 release retains a local-file fallback. Download its two
 packages and checksum receipt, select exactly those two receipt entries, then
 verify and install them together:
 
 ```bash
 curl --proto '=https' --tlsv1.2 --fail --location --remote-name-all -- \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.1/hyperflux-next-linux-2.0.1-1-x86_64.pkg.tar.zst \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.1/hyperflux-next-full-2.0.1-1-x86_64.pkg.tar.zst \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.1/SHA256SUMS
-awk '$2 == "hyperflux-next-linux-2.0.1-1-x86_64.pkg.tar.zst" || \
-     $2 == "hyperflux-next-full-2.0.1-1-x86_64.pkg.tar.zst"' \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.2/hyperflux-next-linux-2.0.2-1-x86_64.pkg.tar.zst \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.2/hyperflux-next-full-2.0.2-1-x86_64.pkg.tar.zst \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.2/SHA256SUMS
+awk '$2 == "hyperflux-next-linux-2.0.2-1-x86_64.pkg.tar.zst" || \
+     $2 == "hyperflux-next-full-2.0.2-1-x86_64.pkg.tar.zst"' \
   SHA256SUMS > SHA256SUMS-packages
 test "$(wc -l < SHA256SUMS-packages)" -eq 2
 sha256sum -c SHA256SUMS-packages
 sudo pacman -U -- \
-  ./hyperflux-next-linux-2.0.1-1-x86_64.pkg.tar.zst \
-  ./hyperflux-next-full-2.0.1-1-x86_64.pkg.tar.zst
+  ./hyperflux-next-linux-2.0.2-1-x86_64.pkg.tar.zst \
+  ./hyperflux-next-full-2.0.2-1-x86_64.pkg.tar.zst
 ```
 
 The machine channel carries detached signatures for both package archives and
