@@ -27,8 +27,8 @@ Never publish serials, stable host identifiers, private paths, raw transport
 payloads, captures, memory dumps, credentials, or arbitrary logs. Remove any
 such material before submitting a public report.
 
-## Boundaries
+## What You Will Not Be Asked To Do
 
-Public support channels do not authorize hardware writes, active receiver
-queries, suspend tests, or pairing changes. Maintainers will move a report to
-private handling when security or privacy requires it.
+You never need to change pairing, run hardware tests, or suspend the machine to
+ask for help. Maintainers move a report to private handling when security or
+privacy requires it.

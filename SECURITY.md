@@ -4,12 +4,13 @@
 
 | Version | Platform | Supported |
 | --- | --- | --- |
-| Latest 2.0.x release (currently 2.0.0) | Arch Linux x86_64 | Yes |
+| Latest 2.0.x release (currently 2.0.1) | Arch Linux x86_64 | Yes |
 | Earlier 2.0.x patch releases | Arch Linux x86_64 | No - update to the latest 2.0.x |
 | Development branches and unpublished builds | Any | No |
 
-Each 2.0.x patch release replaces the previous one. Other distributions are not
-supported yet.
+Each 2.0.x patch release replaces the previous one. Install updates with an
+ordinary `sudo pacman -Syu`. Other distributions are not supported yet; see the
+[roadmap](docs/project/roadmap.md).
 
 ## Report Privately
 
@@ -32,8 +33,7 @@ privacy-reviewed artifact after initial triage.
   permits.
 - Remediation and disclosure timing depend on severity, reproducibility, and
   whether the affected behavior exists in a published release.
-- Security-report handling does not imply that a package, tag, or hardware
-  qualification is ready.
+- A fix for a published release ships as a new 2.0.x package update.
 
 ## Security Boundaries
 

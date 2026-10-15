@@ -1017,5 +1017,25 @@ class RepositoryExperienceContracts(unittest.TestCase):
                 verify_licensing_policy(root)
 
 
+def _page(path: str) -> str:
+    return (ROOT / path).read_text(encoding="utf-8")
+
+
+class UserDocumentationContracts(unittest.TestCase):
+    """Keep the guides ordinary users follow truthful and actionable (#45)."""
+
+    def test_security_policy_names_the_published_release(self) -> None:
+        policy = load_arch_repository_policy(ROOT)
+        version = policy.product_release_tag.removeprefix("v")
+        self.assertIn(
+            f"Latest 2.0.x release (currently {version})", _page("SECURITY.md")
+        )
+
+    def test_support_sends_users_to_the_installation_guide(self) -> None:
+        support = _page("SUPPORT.md")
+        self.assertIn("(docs/user/installation.md)", support)
+        self.assertIsNone(re.search(r"\bunreleased\b", support, re.IGNORECASE))
+
+
 if __name__ == "__main__":
     unittest.main()
