@@ -68,6 +68,53 @@ PUBLIC_PROCESS_PATTERNS = (
     re.compile(r"\bsession extraction\b", re.IGNORECASE),
     re.compile(r"\binternal gate\b", re.IGNORECASE),
     re.compile(r"\bphase [0-9]+\b", re.IGNORECASE),
+    re.compile(r"\bseparately authori[sz]ed\b", re.IGNORECASE),
+    re.compile(r"\bexplicit(?:ly)? authori[sz]", re.IGNORECASE),
+    re.compile(r"\bseparate (?:retirement )?approval\b", re.IGNORECASE),
+    re.compile(r"\b(?:mission-specific|software-only mission)\b", re.IGNORECASE),
+)
+# Claims that contradict the code. Each entry names the fact the code
+# establishes, so a reintroduced claim reports what it contradicts.
+STALE_CLAIM_PATTERNS = (
+    (
+        re.compile(r"hfx verify --changed-from\b"),
+        "./hfx verify requires --fast, --full, or --all",
+    ),
+    (
+        re.compile(r"\bnightly (?:builds?|runs?|verification)\b", re.IGNORECASE),
+        "no workflow runs nightly",
+    ),
+    (
+        re.compile(r"\b(?:historical benchmarks?|benchmark trends?)\b", re.IGNORECASE),
+        "no benchmark history is stored",
+    ),
+    (
+        re.compile(
+            r"\binstalled (?:local |loopback )?(?:qualification )?console\b|\bpackage-matched\b",
+            re.IGNORECASE,
+        ),
+        "the qualification console is source-only",
+    ),
+    (re.compile(r"\bCycloneDX\b"), "the generated SBOM is SPDX only"),
+)
+STALE_CLAIM_CLASSIFICATIONS = {"generated-front-door", "repository-template"}
+LONG_LINE_LIMIT = 100
+LINK_ONLY_LINE_RE = re.compile(
+    r"^\s*(?:- |\d+\. |Next: |Previous: )?\[[^\]]+\]\([^)]+\)[.,;:]?$"
+)
+BADGE_LINE_RE = re.compile(r"^\s*(?:\[!\[[^\]]*\]\([^)]*\)\]\([^)]*\)\s*)+$")
+REVIEW_KEYS = {"$schema", "schema", "common_checks", "pages"}
+REVIEW_PAGE_KEYS = {"path", "checks", "authorities"}
+REVIEW_PAGES = (
+    "README.md",
+    "docs/user/installation.md",
+    "SUPPORT.md",
+    "SECURITY.md",
+    "docs/user/hardware.md",
+    "docs/user/first-run.md",
+    "docs/project/journey.md",
+    "docs/project/roadmap.md",
+    "docs/project/release-status.md",
 )
 
 
@@ -95,6 +142,19 @@ class MarkdownStructureIssue:
     path: str
     line: int
     reason: str
+
+
+@dataclass(frozen=True)
+class ReviewPage:
+    path: str
+    checks: tuple[str, ...]
+    authorities: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class DocumentationReview:
+    common_checks: tuple[str, ...]
+    pages: tuple[ReviewPage, ...]
 
 
 @dataclass(frozen=True)
@@ -528,3 +588,118 @@ def markdown_structure_issues(
             )
 
     return tuple(issues)
+
+
+def stale_claim_issues(
+    root: Path,
+    catalog: DocumentCatalog | None = None,
+) -> tuple[MarkdownStructureIssue, ...]:
+    """Find public Markdown lines that repeat a claim the code contradicts."""
+    root = root.resolve()
+    catalog = catalog or load_document_catalog(root)
+    paths = sorted(
+        [document.path for document in catalog.documents]
+        + [
+            item.path
+            for item in catalog.classified_markdown
+            if item.classification in STALE_CLAIM_CLASSIFICATIONS
+        ]
+    )
+    issues: list[MarkdownStructureIssue] = []
+    for path in paths:
+        lines = (root / path).read_text(encoding="utf-8").splitlines()
+        for line_number, line in enumerate(lines, start=1):
+            for pattern, fact in STALE_CLAIM_PATTERNS:
+                if pattern.search(line):
+                    issues.append(
+                        MarkdownStructureIssue(path, line_number, f"stale claim: {fact}")
+                    )
+    return tuple(issues)
+
+
+def long_line_issues(
+    root: Path,
+    catalog: DocumentCatalog | None = None,
+) -> tuple[MarkdownStructureIssue, ...]:
+    """Report hand-written prose lines too long to read comfortably in source."""
+    root = root.resolve()
+    catalog = catalog or load_document_catalog(root)
+    issues: list[MarkdownStructureIssue] = []
+    for document in catalog.documents:
+        if document.mode not in {"human", "hybrid"}:
+            continue
+        fence_character: str | None = None
+        fence_length = 0
+        lines = (root / document.path).read_text(encoding="utf-8").splitlines()
+        for line_number, line in enumerate(lines, start=1):
+            fence = FENCE_RE.fullmatch(line)
+            if fence is not None:
+                marker = fence.group(1)
+                if fence_character is None:
+                    fence_character = marker[0]
+                    fence_length = len(marker)
+                elif marker[0] == fence_character and len(marker) >= fence_length:
+                    fence_character = None
+                continue
+            if fence_character is not None or len(line) <= LONG_LINE_LIMIT:
+                continue
+            if line.lstrip().startswith(("|", ">", "<")):
+                continue
+            if LINK_ONLY_LINE_RE.match(line) or BADGE_LINE_RE.match(line):
+                continue
+            issues.append(
+                MarkdownStructureIssue(
+                    document.path,
+                    line_number,
+                    f"prose line exceeds {LONG_LINE_LIMIT} characters",
+                )
+            )
+    return tuple(issues)
+
+
+def load_documentation_review(
+    root: Path,
+    catalog: DocumentCatalog | None = None,
+) -> DocumentationReview:
+    """Load the manual review list for the pages readers rely on most."""
+    root = root.resolve()
+    catalog = catalog or load_document_catalog(root)
+    value = _exact(
+        load_json(root / "assurance" / "documentation-review.json"),
+        REVIEW_KEYS,
+        "documentation review",
+    )
+    if value["$schema"] != "../schemas/documentation-review.schema.json":
+        raise ModelError("documentation review has a non-canonical schema reference")
+    if value["schema"] != "hyperflux-documentation-review-v1":
+        raise ModelError("unsupported documentation review schema")
+    common_checks = _strings(value["common_checks"], "documentation review common checks", maximum=8)
+    if not common_checks:
+        raise ModelError("documentation review requires common checks")
+    raw_pages = value["pages"]
+    if not isinstance(raw_pages, list):
+        raise ModelError("documentation review pages must be a list")
+    by_path = catalog.by_path
+    pages: list[ReviewPage] = []
+    for index, raw in enumerate(raw_pages):
+        item = _exact(raw, REVIEW_PAGE_KEYS, f"documentation review page {index}")
+        path = _path(item["path"], f"documentation review page {index} path")
+        document = by_path.get(path)
+        if document is None or document.mode not in {"human", "hybrid"}:
+            raise ModelError(f"{path}: reviewed page must be a cataloged human or hybrid document")
+        checks = _strings(item["checks"], f"{path} review checks", maximum=6)
+        authorities = _strings(item["authorities"], f"{path} review authorities", maximum=6)
+        if not checks or not authorities:
+            raise ModelError(f"{path}: review requires checks and authorities")
+        for authority in authorities:
+            _path(authority, f"{path} review authority")
+            candidate = root / authority
+            if candidate.is_symlink() or not candidate.is_file():
+                raise ModelError(f"{path}: review authority {authority} is missing")
+        pages.append(ReviewPage(path, checks, authorities))
+    if tuple(page.path for page in pages) != REVIEW_PAGES:
+        raise ModelError(
+            "documentation review must list exactly, in order: " + ", ".join(REVIEW_PAGES)
+        )
+    return DocumentationReview(common_checks, tuple(pages))
+

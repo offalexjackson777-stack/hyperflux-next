@@ -24,11 +24,15 @@ from hfxdev.atlas import load_repository_atlas
 from hfxdev.documentation import (
     DocumentCatalog,
     GENERATED_BLOCK_IDS,
+    REVIEW_PAGES,
     generated_markers,
     load_document_catalog,
+    load_documentation_review,
+    long_line_issues,
     markdown_structure_issues,
     protected_prose,
     replace_generated_blocks,
+    stale_claim_issues,
 )
 from hfxdev.documentation_preview import (
     load_documentation_render_audit,
@@ -311,6 +315,169 @@ class RepositoryExperienceContracts(unittest.TestCase):
             )
             reasons = {issue.reason for issue in markdown_structure_issues(root, catalog)}
             self.assertIn("document title duplicates README.md", reasons)
+
+    def test_every_tracked_markdown_file_is_cataloged_or_classified(self) -> None:
+        tracked = subprocess.run(
+            ["git", "ls-files", "-z", "--", "*.md"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+        ).stdout.decode("utf-8")
+        tracked_paths = sorted(path for path in tracked.split("\0") if path)
+        catalog = load_document_catalog(ROOT)
+        self.assertEqual(sorted(catalog.covered_paths), tracked_paths)
+
+    def test_private_process_wording_fails_the_markdown_lint(self) -> None:
+        canonical = load_document_catalog(ROOT).by_path["README.md"]
+        base = "# HyperFlux Next\n\n## Good\n\nText.\n"
+        for sentence in (
+            "Packages ship only when separately authorized.",
+            "Writes need explicit authorization first.",
+            "Retiring a gate needs separate approval.",
+            "This is a software-only mission.",
+        ):
+            with self.subTest(sentence=sentence), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                (root / "README.md").write_text(base + "\n" + sentence + "\n", encoding="utf-8")
+                catalog = DocumentCatalog(
+                    documents=(replace(canonical, canonical_sources=()),),
+                    classified_markdown=(),
+                )
+                reasons = {issue.reason for issue in markdown_structure_issues(root, catalog)}
+                self.assertIn("public prose contains private process terminology", reasons)
+
+    def test_public_markdown_repeats_no_claim_the_code_contradicts(self) -> None:
+        # The facts each stale-claim pattern relies on must still hold.
+        verify = subprocess.run(
+            [str(ROOT / "hfx"), "verify", "--changed-from", "HEAD"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(verify.returncode, 2)
+        self.assertIn("--fast --full --all is required", verify.stderr)
+        for workflow in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
+            for line in workflow.read_text(encoding="utf-8").splitlines():
+                if "cron:" in line:
+                    fields = line.split("cron:", 1)[1].strip().strip("'\"").split()
+                    self.assertFalse(
+                        fields[2] == "*" and fields[4] == "*",
+                        f"{workflow.name} runs daily",
+                    )
+        packaging = "\n".join(
+            (ROOT / "packaging" / name).read_text(encoding="utf-8")
+            for name in ("install.json", "distributions.json")
+        )
+        self.assertNotIn("device-qualification", packaging)
+        self.assertTrue((ROOT / "assurance" / "generated" / "hyperflux-next.spdx.json").is_file())
+        self.assertFalse(
+            [
+                path
+                for path in repository_files(ROOT)
+                if "cyclonedx" in path.name.casefold() or ".cdx." in path.name.casefold()
+            ]
+        )
+
+        # docs/developer/building.md is owned by another change; shrink only.
+        pending = {
+            ("docs/developer/building.md", "stale claim: ./hfx verify requires --fast, --full, or --all"),
+        }
+        found = {(issue.path, issue.reason) for issue in stale_claim_issues(ROOT)}
+        self.assertLessEqual(found, pending)
+
+        canonical = load_document_catalog(ROOT).by_path["README.md"]
+        base = "# HyperFlux Next\n\nText.\n"
+        for sentence in (
+            "Run `./hfx verify --changed-from main` while iterating.",
+            "Nightly builds publish test packages.",
+            "Historical benchmarks show the trend.",
+            "Open the installed qualification console.",
+            "Each release ships a CycloneDX SBOM.",
+        ):
+            with self.subTest(sentence=sentence), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                (root / "README.md").write_text(base + sentence + "\n", encoding="utf-8")
+                catalog = DocumentCatalog(documents=(canonical,), classified_markdown=())
+                self.assertEqual(len(stale_claim_issues(root, catalog)), 1)
+
+    def test_hand_written_prose_lines_stay_readable_in_source(self) -> None:
+        # These pages are owned by another change; their counts may only shrink.
+        baseline = {"README.md": 2, "docs/user/installation.md": 1}
+        counts: dict[str, int] = {}
+        for issue in long_line_issues(ROOT):
+            counts[issue.path] = counts.get(issue.path, 0) + 1
+        for path, count in counts.items():
+            self.assertLessEqual(count, baseline.get(path, 0), path)
+
+        canonical = load_document_catalog(ROOT).by_path["README.md"]
+        long_words = " ".join(["word"] * 30)
+        allowed = "\n".join(
+            [
+                "# HyperFlux Next",
+                "",
+                "```sh",
+                long_words,
+                "```",
+                "",
+                f"| {long_words} |",
+                "",
+                f"- [{long_words}](https://example.invalid/{'a' * 40}).",
+                "",
+            ]
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            catalog = DocumentCatalog(documents=(canonical,), classified_markdown=())
+            (root / "README.md").write_text(allowed, encoding="utf-8")
+            self.assertEqual(long_line_issues(root, catalog), ())
+            (root / "README.md").write_text(allowed + long_words + "\n", encoding="utf-8")
+            self.assertEqual(
+                [issue.reason for issue in long_line_issues(root, catalog)],
+                ["prose line exceeds 100 characters"],
+            )
+
+    def test_critical_pages_have_a_manual_review_entry(self) -> None:
+        review = load_documentation_review(ROOT)
+        self.assertEqual(tuple(page.path for page in review.pages), REVIEW_PAGES)
+        self.assertTrue(
+            any("private" in check for check in review.common_checks),
+            "the review must check for private process wording",
+        )
+        source = load_json(ROOT / "assurance" / "documentation-review.json")
+        atlas = load_repository_atlas(ROOT)
+        owned = {path for node in atlas.nodes for path in node.canonical_files}
+        self.assertIn("assurance/documentation-review.json", owned)
+
+        def drop_page(value: dict) -> None:
+            value["pages"].pop()
+
+        def missing_authority(value: dict) -> None:
+            value["pages"][0]["authorities"] = ["missing/authority.json"]
+
+        def generated_page(value: dict) -> None:
+            value["pages"][0]["path"] = "docs/generated/verification.md"
+
+        def no_checks(value: dict) -> None:
+            value["pages"][0]["checks"] = []
+
+        for mutate in (drop_page, missing_authority, generated_page, no_checks):
+            with self.subTest(mutation=mutate.__name__), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                for page in source["pages"]:
+                    for authority in page["authorities"]:
+                        (root / authority).parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copyfile(ROOT / authority, root / authority)
+                value = copy.deepcopy(source)
+                (root / "assurance" / "documentation-review.json").write_text(
+                    json.dumps(value), encoding="utf-8"
+                )
+                load_documentation_review(root, load_document_catalog(ROOT))
+                mutate(value)
+                (root / "assurance" / "documentation-review.json").write_text(
+                    json.dumps(value), encoding="utf-8"
+                )
+                with self.assertRaises(ModelError):
+                    load_documentation_review(root, load_document_catalog(ROOT))
 
     def test_document_render_audit_binds_sources_visual_review_and_fast_gate(self) -> None:
         audit = load_documentation_render_audit(ROOT)

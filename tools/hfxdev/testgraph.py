@@ -423,7 +423,7 @@ def markdown(catalog: TestCatalog) -> str:
     lines.extend(
         [
             "",
-            "The runner computes dependency closure and topological order from the canonical catalog. Use `./hfx verify --changed-from <commit>` while iterating and the complete software lane for a release boundary.",
+            "The runner computes dependency closure and topological order from the canonical catalog. Use `./hfx verify --fast --changed-from <commit>` while iterating and the complete software lane for a release boundary.",
             "",
         ]
     )

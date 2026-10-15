@@ -5,8 +5,8 @@ documentation, device knowledge, packaging, integrations, or the bridge itself.
 
 ## Find The Right Starting Point
 
-- Start from the [structured issue form chooser](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new/choose)
-  when reporting a bug, proposing a feature, or contributing documentation.
+- To report a bug, propose a feature, or contribute documentation, use the
+  [issue forms](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new/choose).
 - Use [Device support](.github/ISSUE_TEMPLATE/device_support.yml) for public
   facts, capability questions, and support requests. An issue never authorizes
   a physical test.

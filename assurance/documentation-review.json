@@ -1,0 +1,84 @@
+{
+  "$schema": "../schemas/documentation-review.schema.json",
+  "schema": "hyperflux-documentation-review-v1",
+  "common_checks": [
+    "Every command runs as written on a current checkout or installed system.",
+    "Every claim matches the listed authorities; remove any claim they do not support.",
+    "The page uses no private delivery, approval, or session wording.",
+    "The page renders on GitHub with working links, anchors, and fenced code languages."
+  ],
+  "pages": [
+    {
+      "path": "README.md",
+      "checks": [
+        "Core and Full package names and contents match the distribution contract.",
+        "The release summary matches the public readiness record.",
+        "Compatibility claims stay within the source-validated native route."
+      ],
+      "authorities": ["packaging/distributions.json", "generated/public-readiness.json", "integrations/native-route/source-validated.json"]
+    },
+    {
+      "path": "docs/user/installation.md",
+      "checks": [
+        "Package choice and install commands match the distribution and install contracts.",
+        "Repository and signing statements match the Arch repository record."
+      ],
+      "authorities": ["packaging/distributions.json", "packaging/install.json", "assurance/arch-repository.json"]
+    },
+    {
+      "path": "SUPPORT.md",
+      "checks": [
+        "Each support route links to an issue form or channel that exists.",
+        "Requested diagnostics stay within the privacy guide."
+      ],
+      "authorities": ["governance/github.json", ".github/ISSUE_TEMPLATE/config.yml", "docs/user/privacy.md"]
+    },
+    {
+      "path": "SECURITY.md",
+      "checks": [
+        "Vulnerability reports go to private reporting, never to a public issue.",
+        "Requested evidence excludes serials, host identifiers, and private paths."
+      ],
+      "authorities": ["governance/github.json", "docs/user/privacy.md"]
+    },
+    {
+      "path": "docs/user/hardware.md",
+      "checks": [
+        "Support tiers and unknown-device behavior match the capability map.",
+        "Named devices match the generated supported-hardware page."
+      ],
+      "authorities": ["knowledge/capability-map.json", "knowledge/reviewed-facts.json", "docs/generated/supported-hardware.md"]
+    },
+    {
+      "path": "docs/user/first-run.md",
+      "checks": [
+        "Each hyperfluxctl command and its output fields exist in the command-line tool.",
+        "Service names match the install contract."
+      ],
+      "authorities": ["crates/hfx-ops/src/bin/hyperfluxctl.rs", "packaging/install.json"]
+    },
+    {
+      "path": "docs/project/journey.md",
+      "checks": [
+        "Each era maps to the public sources in the journey source map.",
+        "The page quotes no private material and makes no absolute novelty claim."
+      ],
+      "authorities": ["assurance/journey-source-coverage.json"]
+    },
+    {
+      "path": "docs/project/roadmap.md",
+      "checks": [
+        "Work described as shipped is present in the current release.",
+        "Future targets are not described as available."
+      ],
+      "authorities": ["generated/public-readiness.json", "assurance/design-coverage.json"]
+    },
+    {
+      "path": "docs/project/release-status.md",
+      "checks": [
+        "Release state, gates, and repository details match the release records."
+      ],
+      "authorities": ["generated/public-readiness.json", "assurance/release-gates.json", "assurance/arch-repository.json"]
+    }
+  ]
+}

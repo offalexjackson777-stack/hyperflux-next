@@ -36,6 +36,7 @@ Owns explicit design coverage, bounded formal models, performance budgets, depen
 - [`assurance/design-coverage.json`](design-coverage.json)
 - [`assurance/dependencies.json`](dependencies.json)
 - [`assurance/documentation-audit.json`](documentation-audit.json)
+- [`assurance/documentation-review.json`](documentation-review.json)
 - [`assurance/formal-model.json`](formal-model.json)
 - [`assurance/journey-source-coverage.json`](journey-source-coverage.json)
 - [`assurance/performance-budgets.json`](performance-budgets.json)

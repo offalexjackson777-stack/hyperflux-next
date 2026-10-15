@@ -44,4 +44,4 @@ Every current node is software-only and has zero hardware-write authority.
 | 35 | `package-contracts` | `packaging` | `full-software` | 900s |
 | 36 | `quality-contracts` | `assurance` | `full-software` | 60s |
 
-The runner computes dependency closure and topological order from the canonical catalog. Use `./hfx verify --changed-from <commit>` while iterating and the complete software lane for a release boundary.
+The runner computes dependency closure and topological order from the canonical catalog. Use `./hfx verify --fast --changed-from <commit>` while iterating and the complete software lane for a release boundary.

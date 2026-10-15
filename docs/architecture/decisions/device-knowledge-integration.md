@@ -26,7 +26,7 @@ The same canonical data has three deliberately different projections:
 | --- | --- | --- |
 | GitHub Markdown | Architecture, support state, and contribution guidance | None |
 | Repository Atlas | Ownership, dependencies, generated outputs, and change impact | None |
-| Installed qualification console | Exact local PID/profile/generation and guided evidence collection | Loopback companion only |
+| Source-only qualification console | Exact local PID/profile/generation and guided evidence collection | Loopback companion only |
 
 There is no separate documentation website or database. The browser never opens
 HID or USB devices directly, and completion in the local console does not publish
