@@ -102,9 +102,15 @@ class ProfileCompilerTests(unittest.TestCase):
     def test_supported_hardware_renders_three_truthful_support_tiers(self) -> None:
         source_validated = load_source_validated_catalog(ROOT)
         document = profile_markdown(compiled_catalog(ROOT), source_validated)
-        self.assertIn("**Physically proven:** 2", document)
-        self.assertIn("**Source-qualified operational candidates:** 8", document)
-        self.assertIn("**Upstream-blocked or research-only:** 2", document)
+        self.assertIn("**Tested on real hardware:** 2", document)
+        self.assertIn("**Expected to work:** 8", document)
+        self.assertIn("**Not supported yet:** 2", document)
+        for tier in (
+            "physically-proven",
+            "source-qualified-operational",
+            "upstream-blocked-or-research-only",
+        ):
+            self.assertIn(f"(`{tier}`)", document)
         self.assertEqual(document.count("| Razer "), 12)
         self.assertIn("`1532:00ab` / `1532:00aa`", document)
         self.assertIn("`1532:02d2` / `1532:02d4`", document)

@@ -1152,7 +1152,7 @@ class UserDocumentationContracts(unittest.TestCase):
     def test_hardware_page_names_the_tested_devices_from_the_generated_reference(self) -> None:
         hardware = _page("docs/user/hardware.md")
         reference = _page("docs/generated/supported-hardware.md")
-        proven = reference.split("## Physically Proven", 1)[1].split("\n## ", 1)[0]
+        proven = reference.split("## Tested On Real Hardware", 1)[1].split("\n## ", 1)[0]
         rows = [line for line in proven.splitlines() if line.startswith("| Razer")]
         self.assertEqual(len(rows), 2)
         for row in rows:

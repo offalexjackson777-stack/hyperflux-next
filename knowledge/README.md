@@ -7,7 +7,7 @@ Records provenance-bound candidate facts, semantic capabilities, upstream record
 ## Start Here
 
 - [Device Knowledge Without Transport Guessing](../docs/architecture/device-knowledge.md)
-- [Device Knowledge and Route Assurance](../docs/generated/device-knowledge.md)
+- [Device Knowledge](../docs/generated/device-knowledge.md)
 
 ## Limitations
 
