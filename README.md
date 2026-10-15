@@ -7,10 +7,10 @@ available to ordinary Linux applications without replacing those applications.
 [![CodeQL](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/codeql.yml/badge.svg)](https://github.com/offalexjackson777-stack/hyperflux-next/actions/workflows/codeql.yml)
 [![License: GPL-2.0-only](docs/assets/badge-license.svg)](LICENSE)
 
-<!-- HFX-GENERATED-BEGIN: release-status -->
-> [!IMPORTANT]
-> **Arch 2.0.2 release.** Arch Linux x86_64 Core and Full 2.0.2-1 packages are published in the human-facing GitHub Release v2.0.2. The signed HyperFlux Next third-party Pacman repository is served separately through the fixed `arch-repository` machine channel.
-<!-- HFX-GENERATED-END: release-status -->
+<!-- HFX-GENERATED-BEGIN: release-summary -->
+**HyperFlux Next 2.0.1 is available for Arch Linux x86_64.** Read the
+[v2.0.1 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.1).
+<!-- HFX-GENERATED-END: release-summary -->
 
 ## What It Does
 
@@ -24,92 +24,51 @@ available to ordinary Linux applications without replacing those applications.
 ## Packages
 
 <!-- HFX-GENERATED-BEGIN: recommended-package -->
-**Core (`hyperflux-next-linux`):** HyperFlux receiver driver, bridge, SDK, CLI, and base services.
+Choose one edition. Full is recommended for desktops; Core is an advanced choice.
 
-**Full (`hyperflux-next-full`):** Core plus the OpenRazer compatibility transport and OpenRGB integration for optional stock applications.
+- **Full (`hyperflux-next-full`):** Core plus the OpenRazer compatibility
+  transport and OpenRGB integration for optional stock applications.
+- **Core (`hyperflux-next-linux`):** HyperFlux receiver driver, bridge, SDK,
+  CLI, and base services.
 
-The Arch Linux x86_64 packages are published in
-[GitHub Release v2.0.2](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.2).
-The signed project-operated Pacman repository is a separate machine-managed
-channel, not an official Arch Linux repository.
+Stock OpenRGB, OpenRazer, and Polychromatic are separate Arch packages. Install
+the ones you want to use; HyperFlux does not install or replace them.
 
-### 1. Add the HyperFlux repository - one time only
+### Install
 
-```bash
-bash <<'HFX_REPOSITORY_SETUP'
-set -euo pipefail
+1. Add the signed HyperFlux Pacman repository once. Follow the
+   [one-time setup](docs/user/installation.md#1-add-the-hyperflux-repository---one-time-only).
+   It is a third-party repository, not an official Arch Linux repository.
+2. Install Full:
 
-expected_primary='8BF8A266E756BD1C24C930918B3F3850007159E8'
-expected_signing='4C64CE4C855BC6844B4C1670C67DD9C42253ED27'
-key_url='https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository/hyperflux-next-arch-repository-key.asc'
-key_dir="$(mktemp -d)"
-trap 'rm -rf "$key_dir"' EXIT
-key_file="$key_dir/hyperflux-next-arch-repository-key.asc"
+   ```bash
+   sudo pacman -Syu hyperflux-next-full
+   ```
 
-curl --disable --proto '=https' --tlsv1.2 --fail --location \
-  --silent --show-error --output "$key_file" -- "$key_url"
-mapfile -t fingerprints < <(
-  gpg --batch --with-colons --show-keys "$key_file" | \
-    awk -F: '$1 == "fpr" { print $10 }'
-)
-actual_primary="${fingerprints[0]-}"
-actual_signing="${fingerprints[1]-}"
-if [[ ${#fingerprints[@]} -ne 2 ||
-      "$actual_primary" != "$expected_primary" ||
-      "$actual_signing" != "$expected_signing" ]]; then
-  printf 'HyperFlux repository key fingerprint mismatch; no trust or config changed.\n' >&2
-  exit 1
-fi
+   Full pulls in the matching Core package. To install Core alone instead, run
+   `sudo pacman -Syu hyperflux-next-linux`.
+3. Enable the services and reboot. Keep the receiver plugged in.
 
-include_path='/etc/pacman.d/hyperflux-next.conf'
-include_line='Include = /etc/pacman.d/hyperflux-next.conf'
-include_count="$(sudo awk '
-  /^[[:space:]]*Include[[:space:]]*=[[:space:]]*\/etc\/pacman\.d\/hyperflux-next\.conf[[:space:]]*$/ { count++ }
-  END { print count + 0 }
-' /etc/pacman.conf)"
-section_count="$(sudo awk '
-  /^[[:space:]]*\[hyperflux-next\][[:space:]]*$/ { count++ }
-  END { print count + 0 }
-' /etc/pacman.conf)"
-if [[ "$include_count" -gt 1 || "$section_count" -gt 0 ]]; then
-  printf 'Existing HyperFlux Pacman entries conflict; no trust or config changed.\n' >&2
-  exit 1
-fi
+   ```bash
+   sudo systemctl enable hyperflux-next-bridge.service \
+     "hyperflux-next-client@$(id -u).socket"
+   sudo reboot
+   ```
 
-sudo pacman-key --add "$key_file"
-sudo pacman-key --lsign-key "$expected_primary"
-sudo install -d -m 0755 /etc/pacman.d
-sudo install -m 0644 /dev/stdin "$include_path" <<'EOF'
-[hyperflux-next]
-SigLevel = Required DatabaseRequired TrustedOnly
-Server = https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository
-EOF
-if [[ "$include_count" -eq 0 ]]; then
-  printf '\n%s\n' "$include_line" | sudo tee -a /etc/pacman.conf >/dev/null
-fi
-HFX_REPOSITORY_SETUP
-```
+4. After you log in, check the result:
 
-### 2. Install Full - recommended
+   ```bash
+   hyperfluxctl status
+   hyperfluxctl doctor
+   ```
 
-```bash
-sudo pacman -Syu hyperflux-next-full
-```
+   Doctor prints `HyperFlux Next is ready.` when everything works. Otherwise it
+   names the first problem and one thing to do about it.
 
-Full resolves its exact Core dependency automatically. Core alone is an
-advanced alternative:
-
-```bash
-sudo pacman -Syu hyperflux-next-linux
-```
-
-### Security details
-
-The setup block pins the complete primary and signing-subkey fingerprints,
-locally writes `Required DatabaseRequired TrustedOnly`, and adds one idempotent
-Pacman include. It never downloads a configuration or executes a remote script.
-Users never manually select machine-repository assets. See
-[installation](docs/user/installation.md) for details and the local-file fallback.
+Later updates arrive with your normal `sudo pacman -Syu`. The
+[first-run guide](docs/user/first-run.md) shows how to open your applications,
+and the [installation guide](docs/user/installation.md) covers key checks and
+the offline package fallback.
 <!-- HFX-GENERATED-END: recommended-package -->
 
 ## Hardware And Applications
@@ -129,7 +88,9 @@ See the [hardware tiers](docs/user/hardware.md) and
 
 ## Start Here
 
-Use the [documentation hub](docs/README.md), [installation guide](docs/user/installation.md),
-[first-run guide](docs/user/first-run.md), and [troubleshooting guide](docs/user/troubleshooting.md).
+Use the [documentation hub](docs/README.md),
+[installation guide](docs/user/installation.md),
+[first-run guide](docs/user/first-run.md), and
+[troubleshooting guide](docs/user/troubleshooting.md).
 Project links: [Support](SUPPORT.md), [Contributing](CONTRIBUTING.md),
 [Journey](docs/project/journey.md), [Security](SECURITY.md), and [License](LICENSE).

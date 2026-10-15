@@ -64,11 +64,25 @@ class RepositoryExperienceContracts(unittest.TestCase):
         catalog = load_document_catalog(ROOT)
         record = catalog.by_path["README.md"]
         self.assertEqual(record.mode, "hybrid")
-        self.assertEqual(record.generated_block_ids, GENERATED_BLOCK_IDS)
-        self.assertEqual(generated_markers(readme), GENERATED_BLOCK_IDS)
-        rendered = rendered_files(ROOT)[ROOT / "README.md"]
+        readme_blocks = (
+            "release-summary",
+            "recommended-package",
+            "compatibility-summary",
+        )
+        self.assertEqual(record.generated_block_ids, readme_blocks)
+        self.assertEqual(generated_markers(readme), readme_blocks)
+        rendered_views = rendered_files(ROOT)
+        rendered = rendered_views[ROOT / "README.md"]
         self.assertEqual(protected_prose(rendered), protected_prose(readme))
-        self.assertIn(readiness["publication"]["summary"], rendered)
+        # DOC-003: landing pages carry one short sentence; the full channel
+        # explanation lives only on Release Status.
+        release_status = rendered_views[ROOT / "docs/project/release-status.md"]
+        self.assertIn(
+            readiness["publication"]["summary"],
+            " ".join(release_status.replace("\n> ", "\n").split()),
+        )
+        self.assertNotIn(readiness["publication"]["summary"], " ".join(rendered.split()))
+        self.assertNotIn("machine channel", rendered)
         self.assertNotIn(readiness["software"]["summary"], readme)
         self.assertNotIn("release gates", readme)
         self.assertEqual(readiness["hardware"]["physically_proven"], 2)
@@ -90,12 +104,26 @@ class RepositoryExperienceContracts(unittest.TestCase):
         )
         positions = [readme.index(heading) for heading in headings]
         self.assertEqual(positions, sorted(positions))
-        self.assertEqual(readme.count("\n- **"), 3)
+        # Three feature bullets plus the Full and Core package bullets.
+        self.assertEqual(readme.count("\n- **"), 5)
         self.assertLessEqual(len(re.findall(r"!\[[^]]+\]\([^)]*\)", readme)), 3)
         # GH-004: the status badge covers the complete graph, not the Fast lane.
         self.assertIn("actions/workflows/full-verification.yml/badge.svg", readme)
         self.assertNotIn("actions/workflows/verification.yml/badge.svg", readme)
-        self.assertEqual(readme.count("> [!IMPORTANT]"), 1)
+        self.assertEqual(readme.count("> [!IMPORTANT]"), 0)
+        # DOC-002: the README shows the first-run sequence, not the key setup.
+        for command in (
+            "sudo systemctl enable hyperflux-next-bridge.service",
+            "sudo reboot",
+            "hyperfluxctl status",
+            "hyperfluxctl doctor",
+        ):
+            self.assertIn(command, readme)
+        self.assertNotIn("pacman-key", readme)
+        self.assertIn(
+            "docs/user/installation.md#1-add-the-hyperflux-repository---one-time-only",
+            readme,
+        )
         distribution = load_distribution_catalog(ROOT).targets["arch"]
         product_pages = (
             readme,
@@ -397,7 +425,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
 
     def test_hand_written_prose_lines_stay_readable_in_source(self) -> None:
         # These pages are owned by another change; their counts may only shrink.
-        baseline = {"README.md": 2, "docs/user/installation.md": 1}
+        baseline = {"docs/user/installation.md": 1}
         counts: dict[str, int] = {}
         for issue in long_line_issues(ROOT):
             counts[issue.path] = counts.get(issue.path, 0) + 1

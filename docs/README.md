@@ -4,10 +4,10 @@ Choose the shortest path for what you are doing with HyperFlux Next 2.0. User
 guides describe the product as installed; developer guides explain stable
 interfaces and safe changes; project pages record status and history.
 
-<!-- HFX-GENERATED-BEGIN: release-status -->
-> [!IMPORTANT]
-> **Arch 2.0.2 release.** Arch Linux x86_64 Core and Full 2.0.2-1 packages are published in the human-facing GitHub Release v2.0.2. The signed HyperFlux Next third-party Pacman repository is served separately through the fixed `arch-repository` machine channel.
-<!-- HFX-GENERATED-END: release-status -->
+<!-- HFX-GENERATED-BEGIN: release-summary -->
+**HyperFlux Next 2.0.1 is available for Arch Linux x86_64.** Read the
+[v2.0.1 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.1).
+<!-- HFX-GENERATED-END: release-summary -->
 
 ## Use HyperFlux Next
 

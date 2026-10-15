@@ -32,8 +32,8 @@
       "owner": "documentation",
       "navigation_group": "home",
       "mode": "hybrid",
-      "canonical_sources": ["generated/public-readiness.json", "packaging/distributions.json", "integrations/native-route/source-validated.json"],
-      "generated_block_ids": ["release-status", "recommended-package", "compatibility-summary"]
+      "canonical_sources": ["generated/public-readiness.json", "assurance/arch-repository.json", "packaging/distributions.json", "integrations/native-route/source-validated.json"],
+      "generated_block_ids": ["release-summary", "recommended-package", "compatibility-summary"]
     },
     {
       "path": "SECURITY.md",
@@ -65,8 +65,8 @@
       "owner": "documentation",
       "navigation_group": "home",
       "mode": "hybrid",
-      "canonical_sources": ["generated/public-readiness.json"],
-      "generated_block_ids": ["release-status"]
+      "canonical_sources": ["generated/public-readiness.json", "assurance/arch-repository.json"],
+      "generated_block_ids": ["release-summary"]
     },
     {
       "path": "docs/architecture/bridge-core.md",

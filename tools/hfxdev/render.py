@@ -44,6 +44,7 @@ from .generators.readme import (
     license_badge as readme_license_badge,
     recommended_package as readme_recommended_package,
     release_status as readme_release_status,
+    release_summary as readme_release_summary,
 )
 from .generators.social_preview import render_social_preview
 from .generators.supply_chain import spdx_json, supply_chain_markdown
@@ -279,9 +280,10 @@ def rendered_files(root: Path) -> dict[Path, str]:
     local_companion = load_local_companion(root)
     licensing_policy = load_licensing_policy(root)
     readme_renderers = {
+        "release-summary": lambda: readme_release_summary(readiness, arch_repository),
         "release-status": lambda: readme_release_status(readiness),
         "recommended-package": lambda: readme_recommended_package(
-            distribution_catalog, arch_repository
+            distribution_catalog
         ),
         "compatibility-summary": lambda: readme_compatibility_summary(
             readiness, openrazer_native, source_validated_devices

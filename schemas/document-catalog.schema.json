@@ -101,6 +101,7 @@
           "uniqueItems": true,
           "items": {
             "enum": [
+              "release-summary",
               "release-status",
               "recommended-package",
               "compatibility-summary"

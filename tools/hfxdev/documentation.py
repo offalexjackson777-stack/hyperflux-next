@@ -49,6 +49,7 @@ MARKDOWN_CLASSIFICATIONS = {
 }
 CLASSIFIED_MARKDOWN_KEYS = {"path", "classification"}
 GENERATED_BLOCK_IDS = (
+    "release-summary",
     "release-status",
     "recommended-package",
     "compatibility-summary",

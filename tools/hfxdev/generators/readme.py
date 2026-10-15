@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from html import escape
+import textwrap
 from typing import Any
 
-from ..arch_repository import ArchRepositoryPolicy, repository_setup_script
+from ..arch_repository import ArchRepositoryPolicy
 from ..distributions import DistributionCatalog
 from ..openrazer_native_route import OpenRazerNativeDeployment
 from ..source_validated_catalog import (
@@ -40,53 +41,90 @@ def license_badge() -> str:
     return _badge("license", "GPL-2.0-only", "#287d6c")
 
 
+def _wrapped_bullet(text: str) -> str:
+    return "\n".join(
+        textwrap.wrap(
+            text,
+            width=80,
+            initial_indent="- ",
+            subsequent_indent="  ",
+            break_long_words=False,
+            break_on_hyphens=False,
+        )
+    )
+
+
+def release_summary(readiness: dict[str, Any], repository: ArchRepositoryPolicy) -> str:
+    """One plain sentence for landing pages; Release Status keeps the detail."""
+    if readiness["publication"]["state"] != "ready":
+        return (
+            "**HyperFlux Next is not released yet.** The source is available for "
+            "review; there is no package to install."
+        )
+    version = repository.product_release_tag.removeprefix("v")
+    return f"""**HyperFlux Next {version} is available for Arch Linux x86_64.** Read the
+[{repository.product_release_tag} release notes]({repository.product_release_url})."""
+
+
 def release_status(readiness: dict[str, Any]) -> str:
     publication = readiness["publication"]
-    return f"> [!IMPORTANT]\n> **{publication['label']}.** {publication['summary']}"
+    paragraph = f"**{publication['label']}.** {publication['summary']}"
+    lines = textwrap.wrap(
+        paragraph,
+        width=78,
+        break_long_words=False,
+        break_on_hyphens=False,
+    )
+    return "\n".join(["> [!IMPORTANT]", *(f"> {line}" for line in lines)])
 
 
-def recommended_package(
-    catalog: DistributionCatalog,
-    repository: ArchRepositoryPolicy,
-) -> str:
+def recommended_package(catalog: DistributionCatalog) -> str:
     arch = catalog.targets["arch"]
     core = arch.components["linux"]
     full = arch.components["full"]
-    return f"""**Core (`{core.package_name}`):** {core.description}.
+    return f"""Choose one edition. Full is recommended for desktops; Core is an advanced choice.
 
-**Full (`{full.package_name}`):** {full.description}.
+{_wrapped_bullet(f"**Full (`{full.package_name}`):** {full.description}.")}
+{_wrapped_bullet(f"**Core (`{core.package_name}`):** {core.description}.")}
 
-The Arch Linux x86_64 packages are published in
-[GitHub Release {repository.product_release_tag}]({repository.product_release_url}).
-The signed project-operated Pacman repository is a separate machine-managed
-channel, not an official Arch Linux repository.
+Stock OpenRGB, OpenRazer, and Polychromatic are separate Arch packages. Install
+the ones you want to use; HyperFlux does not install or replace them.
 
-### 1. Add the HyperFlux repository - one time only
+### Install
 
-```bash
-{repository_setup_script(repository).rstrip()}
-```
+1. Add the signed HyperFlux Pacman repository once. Follow the
+   [one-time setup](docs/user/installation.md#1-add-the-hyperflux-repository---one-time-only).
+   It is a third-party repository, not an official Arch Linux repository.
+2. Install Full:
 
-### 2. Install Full - recommended
+   ```bash
+   sudo pacman -Syu hyperflux-next-full
+   ```
 
-```bash
-sudo pacman -Syu hyperflux-next-full
-```
+   Full pulls in the matching Core package. To install Core alone instead, run
+   `sudo pacman -Syu hyperflux-next-linux`.
+3. Enable the services and reboot. Keep the receiver plugged in.
 
-Full resolves its exact Core dependency automatically. Core alone is an
-advanced alternative:
+   ```bash
+   sudo systemctl enable hyperflux-next-bridge.service \\
+     "hyperflux-next-client@$(id -u).socket"
+   sudo reboot
+   ```
 
-```bash
-sudo pacman -Syu hyperflux-next-linux
-```
+4. After you log in, check the result:
 
-### Security details
+   ```bash
+   hyperfluxctl status
+   hyperfluxctl doctor
+   ```
 
-The setup block pins the complete primary and signing-subkey fingerprints,
-locally writes `Required DatabaseRequired TrustedOnly`, and adds one idempotent
-Pacman include. It never downloads a configuration or executes a remote script.
-Users never manually select machine-repository assets. See
-[installation](docs/user/installation.md) for details and the local-file fallback."""
+   Doctor prints `HyperFlux Next is ready.` when everything works. Otherwise it
+   names the first problem and one thing to do about it.
+
+Later updates arrive with your normal `sudo pacman -Syu`. The
+[first-run guide](docs/user/first-run.md) shows how to open your applications,
+and the [installation guide](docs/user/installation.md) covers key checks and
+the offline package fallback."""
 
 
 def compatibility_summary(

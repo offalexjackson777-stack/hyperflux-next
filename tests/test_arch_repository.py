@@ -138,9 +138,13 @@ class ArchRepositoryTests(unittest.TestCase):
         self.assertNotIn(f"{policy.server_url}/hyperflux-next.conf", script)
         self.assertLess(script.index("fingerprint mismatch"), script.index("sudo"))
         fenced = f"```bash\n{script}\n```"
-        for path in (ROOT / "README.md", ROOT / "docs" / "user" / "installation.md"):
+        # The README links to the guide; only the guide shows the setup block.
+        for path, blocks in (
+            (ROOT / "README.md", 0),
+            (ROOT / "docs" / "user" / "installation.md", 1),
+        ):
             document = path.read_text(encoding="utf-8")
-            self.assertEqual(document.count(fenced), 1, path)
+            self.assertEqual(document.count(fenced), blocks, path)
             self.assertEqual(
                 document.count("sudo pacman -Syu hyperflux-next-full"), 1, path
             )
