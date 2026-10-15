@@ -90,7 +90,7 @@
     {
       "id": "capability-discovery",
       "status": "enforced",
-      "evidence": ["docs/developer/connectors.md", "tests/test_connector_contract.py", "tests/test_source_validated_universality.py"],
+      "evidence": ["docs/developer/sdk-connectors.md", "tests/test_connector_contract.py", "tests/test_source_validated_universality.py"],
       "finding": "Runtime and connector authority remain capability- and source-derived with no serial, receiver, path, layout, colorway, or two-device binding.",
       "action": "Keep universality and connector tests release-blocking."
     }

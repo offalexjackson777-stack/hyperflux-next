@@ -416,7 +416,7 @@
       "verification": ["python-unit", "protocol-contracts"],
       "limitations": ["The Arch packages do not install it and the project publishes no Python package; use it from the source tree"],
       "safe_change_workflow": ["Change canonical schemas for shared types", "Regenerate modules", "Run Python SDK, adapter, and package contracts"],
-      "related_docs": ["docs/architecture/sdk.md", "docs/developer/connectors.md", "docs/generated/bridge-protocol.md"],
+      "related_docs": ["docs/architecture/sdk.md", "docs/developer/sdk-connectors.md", "docs/generated/bridge-protocol.md"],
       "depends_on": ["protocol", "profiles", "integrations", "errors"]
     },
     {

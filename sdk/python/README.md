@@ -7,7 +7,7 @@ Provides typed Python bridge access and generated contracts for scripting and Py
 ## Start Here
 
 - [SDK Boundary](../../docs/architecture/sdk.md)
-- [Connector Contract](../../docs/developer/connectors.md)
+- [SDK And Connectors](../../docs/developer/sdk-connectors.md)
 - [Bridge Protocol](../../docs/generated/bridge-protocol.md)
 
 ## Limitations

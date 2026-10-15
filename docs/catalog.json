@@ -366,17 +366,6 @@
       "generated_block_ids": []
     },
     {
-      "path": "docs/developer/connectors.md",
-      "title": "Connector Contract",
-      "audience": "developers",
-      "purpose": "Defines the stable connector API and the capabilities connectors may not assume.",
-      "owner": "integrations",
-      "navigation_group": "developer",
-      "mode": "human",
-      "canonical_sources": ["docs/developer/connectors.md"],
-      "generated_block_ids": []
-    },
-    {
       "path": "docs/developer/device-onboarding.md",
       "title": "Device Onboarding",
       "audience": "developers",
@@ -391,8 +380,8 @@
       "path": "docs/developer/sdk-connectors.md",
       "title": "SDK And Connectors",
       "audience": "developers",
-      "purpose": "Routes connector authors to the stable versioned SDK and protocol references.",
-      "owner": "documentation",
+      "purpose": "Defines what a connector may rely on through the SDK and the capabilities it may not assume.",
+      "owner": "integrations",
       "navigation_group": "developer",
       "mode": "human",
       "canonical_sources": ["docs/developer/sdk-connectors.md"],
