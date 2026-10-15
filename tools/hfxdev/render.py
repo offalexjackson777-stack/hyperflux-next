@@ -419,7 +419,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "protocol_types.py": protocol_python_types(protocol),
         root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "protocol_types.hpp": protocol_cpp_types(protocol),
         root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "protocol_json.hpp": protocol_cpp_json(protocol),
-        root / "docs" / "generated" / "error-catalog.md": error_markdown(errors),
+        root / "docs" / "generated" / "error-catalog.md": error_markdown(errors, repository_atlas),
         root / "crates" / "hfx-errors" / "src" / "generated.rs": error_rust_catalog(errors),
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "error_catalog.py": error_python_catalog(errors),
         root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "error_catalog.hpp": error_cpp_catalog(errors),

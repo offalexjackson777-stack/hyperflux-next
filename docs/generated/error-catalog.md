@@ -4,7 +4,17 @@
 
 Catalog source: `0030b8c548bf39a33ecacf4f074cc09ea98064600768ae33c974a0053b3eec15`
 
-This catalog is the single authority for Doctor, services, SDKs, integrations, package hooks, and support bundles. Safe details are an allowlist: raw payloads, serials, host identifiers, private paths, and arbitrary exception or log text are not accepted.
+This catalog is the single error authority. The Repository Atlas lists these consumers:
+
+- Bridge runtime (`crates/hfx-bridge`)
+- C++ SDK (`sdk/cpp`)
+- OpenRGB adapter (`integrations/openrgb`)
+- Operations CLI (`crates/hfx-ops`)
+- Production daemon (`crates/hfx-daemon`)
+- Python SDK (`sdk/python`)
+
+Safe details are an allowlist: raw payloads, serials, host identifiers, private paths,
+and arbitrary exception or log text are not accepted.
 
 ## Retry Semantics
 

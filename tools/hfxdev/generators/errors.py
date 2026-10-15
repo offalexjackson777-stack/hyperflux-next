@@ -7,7 +7,9 @@ import re
 
 from .domain import HEADER_CPP, HEADER_PYTHON, HEADER_RUST
 from ..errors import ERROR_CLASSES as MODEL_ERROR_CLASSES
+from ..atlas import RepositoryAtlas
 from ..errors import ErrorCatalog, ErrorSpec, SafeDetailFieldSpec
+from ..model import ModelError
 
 
 ERROR_CLASSES = tuple(sorted(MODEL_ERROR_CLASSES))
@@ -734,7 +736,21 @@ def _detail_bound(field: SafeDetailFieldSpec) -> str:
     return "boolean"
 
 
-def markdown(catalog: ErrorCatalog) -> str:
+def _consumer_lines(atlas: RepositoryAtlas) -> list[str]:
+    consumers = sorted(
+        (atlas.by_id[identifier] for identifier in atlas.used_by["errors"]),
+        key=lambda node: node.title,
+    )
+    if not consumers:
+        raise ModelError("the Repository Atlas names no error catalog consumer")
+    return [
+        "This catalog is the single error authority. The Repository Atlas lists these consumers:",
+        "",
+        *(f"- {node.title} (`{node.path}`)" for node in consumers),
+    ]
+
+
+def markdown(catalog: ErrorCatalog, atlas: RepositoryAtlas) -> str:
     lines = [
         "# Error Catalog",
         "",
@@ -742,7 +758,10 @@ def markdown(catalog: ErrorCatalog) -> str:
         "",
         f"Catalog source: `{catalog.source_sha256}`",
         "",
-        "This catalog is the single authority for Doctor, services, SDKs, integrations, package hooks, and support bundles. Safe details are an allowlist: raw payloads, serials, host identifiers, private paths, and arbitrary exception or log text are not accepted.",
+        *_consumer_lines(atlas),
+        "",
+        "Safe details are an allowlist: raw payloads, serials, host identifiers, private paths,",
+        "and arbitrary exception or log text are not accepted.",
         "",
         "## Retry Semantics",
         "",

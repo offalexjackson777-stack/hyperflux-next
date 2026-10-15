@@ -129,7 +129,7 @@
       "limitations": ["Physical OpenRGB behavior remains qualified only for the current public profiles"],
       "safe_change_workflow": ["Change only the Feature transport or route owner", "Compile against the exact upstream pin", "Run native-route, sanitizer, SDK, and package contracts"],
       "related_docs": ["docs/architecture/integrations.md", "docs/generated/integrations.md"],
-      "depends_on": ["integrations", "profiles", "sdk-cpp"]
+      "depends_on": ["integrations", "profiles", "sdk-cpp", "errors"]
     },
     {
       "id": "openrazer-adapter", "title": "OpenRazer native route", "path": "integrations/openrazer", "category": "applications", "status": "implemented",
@@ -241,7 +241,7 @@
       "limitations": ["Production process policy belongs to the daemon crate"],
       "safe_change_workflow": ["Change the relevant adapter module", "Exercise framing and persistence failure paths", "Run bridge, simulator, SDK, and daemon tests"],
       "related_docs": ["docs/architecture/bridge-core.md", "docs/architecture/persistence.md"],
-      "depends_on": ["core-runtime", "protocol"]
+      "depends_on": ["core-runtime", "protocol", "errors"]
     },
     {
       "id": "daemon", "title": "Production daemon", "path": "crates/hfx-daemon", "category": "runtime", "status": "implemented",
@@ -257,7 +257,7 @@
       "limitations": ["No remote control plane or network service is provided"],
       "safe_change_workflow": ["Change composition without moving domain policy", "Test startup and shutdown failure modes", "Run daemon, package, and lifecycle contracts"],
       "related_docs": ["docs/architecture/bridge-core.md", "docs/generated/linux-runtime.md"],
-      "depends_on": ["bridge-runtime", "kernel-transport", "runtime-config"]
+      "depends_on": ["bridge-runtime", "kernel-transport", "runtime-config", "errors"]
     },
     {
       "id": "rust-sdk", "title": "Rust SDK", "path": "crates/hfx-sdk", "category": "runtime", "status": "implemented",
@@ -289,7 +289,7 @@
       "limitations": ["Qualification and onboarding remain source-only workspace tools, not installed commands"],
       "safe_change_workflow": ["Keep each installed command on a typed local boundary", "Preserve exact CLI fixtures and source re-exports", "Run Rust, public API, and package contracts"],
       "related_docs": ["docs/user/troubleshooting.md", "docs/generated/linux-runtime.md"],
-      "depends_on": ["system-probe", "device-qualification-runtime", "bridge-runtime"]
+      "depends_on": ["system-probe", "device-qualification-runtime", "bridge-runtime", "errors"]
     },
     {
       "id": "kernel-transport", "title": "Kernel transport adapter", "path": "crates/hfx-kernel-transport", "category": "runtime", "status": "implemented",
@@ -401,7 +401,7 @@
       "limitations": ["The C++ library does not declare a stable binary interface"],
       "safe_change_workflow": ["Change canonical schemas for shared types", "Regenerate headers", "Run warning-fatal SDK and native adapter contracts"],
       "related_docs": ["docs/architecture/sdk.md", "docs/generated/bridge-protocol.md"],
-      "depends_on": ["protocol", "profiles", "integrations"]
+      "depends_on": ["protocol", "profiles", "integrations", "errors"]
     },
     {
       "id": "sdk-python", "title": "Python SDK", "path": "sdk/python", "category": "applications", "status": "implemented",
@@ -417,7 +417,7 @@
       "limitations": ["Package publication remains disabled"],
       "safe_change_workflow": ["Change canonical schemas for shared types", "Regenerate modules", "Run Python SDK, adapter, and package contracts"],
       "related_docs": ["docs/architecture/sdk.md", "docs/developer/connectors.md", "docs/generated/bridge-protocol.md"],
-      "depends_on": ["protocol", "profiles", "integrations"]
+      "depends_on": ["protocol", "profiles", "integrations", "errors"]
     },
     {
       "id": "tooling", "title": "Repository tooling", "path": "tools", "category": "tooling", "status": "implemented",

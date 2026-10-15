@@ -72,31 +72,31 @@ File-level contracts live in [`architecture/repository-atlas.json`](../../archit
 | [Composable hardware profiles](../../profiles/README.md) | Architecture authority, Schema contracts, Application integration catalog | Core policy engine, Device knowledge, Device qualification console, Device qualification runtime, Linux HID kernel module, OpenRazer native route, OpenRGB adapter, Rust SDK, C++ SDK, Python SDK, Deterministic simulator, System probe |
 | [Device knowledge](../../knowledge/README.md) | Composable hardware profiles, Application integration catalog | Documentation system |
 | [Versioned bridge protocol](../../protocol/README.md) | Schema contracts | Bridge runtime, Core policy engine, Linux HID kernel module, Kernel transport adapter, Rust SDK, C++ SDK, Python SDK |
-| [OpenRGB adapter](../../integrations/openrgb/README.md) | Application integration catalog, Composable hardware profiles, C++ SDK | Packaging and installation |
+| [OpenRGB adapter](../../integrations/openrgb/README.md) | Application integration catalog, Composable hardware profiles, C++ SDK, Error catalog | Packaging and installation |
 | [OpenRazer native route](../../integrations/openrazer/README.md) | Application integration catalog, Composable hardware profiles, Python SDK | Packaging and installation |
 | [Device qualification console](../../apps/device-qualification/README.md) | Device qualification runtime, Composable hardware profiles | None |
 | [Rust workspace](../../crates/README.md) | Architecture authority, Schema contracts, Pinned development toolchains | Core policy engine, Kernel transport adapter, Rust SDK, System probe, Contract tests |
 | [System probe](../../crates/hfx-system-probe/README.md) | Rust workspace, Rust SDK, Composable hardware profiles | Device qualification runtime, Operations CLI |
 | [Device qualification runtime](../../crates/hfx-device-qualification/README.md) | System probe, Composable hardware profiles, Bridge runtime | Device qualification console, Operations CLI |
 | [Core policy engine](../../crates/hfx-core/README.md) | Rust workspace, Composable hardware profiles, Versioned bridge protocol | Bridge runtime, Deterministic simulator |
-| [Bridge runtime](../../crates/hfx-bridge/README.md) | Core policy engine, Versioned bridge protocol | Production daemon, Device qualification runtime, Operations CLI |
-| [Production daemon](../../crates/hfx-daemon/README.md) | Bridge runtime, Kernel transport adapter, Linux runtime authority | Packaging and installation |
+| [Bridge runtime](../../crates/hfx-bridge/README.md) | Core policy engine, Versioned bridge protocol, Error catalog | Production daemon, Device qualification runtime, Operations CLI |
+| [Production daemon](../../crates/hfx-daemon/README.md) | Bridge runtime, Kernel transport adapter, Linux runtime authority, Error catalog | Packaging and installation |
 | [Rust SDK](../../crates/hfx-sdk/README.md) | Rust workspace, Versioned bridge protocol, Composable hardware profiles | System probe |
-| [Operations CLI](../../crates/hfx-ops/README.md) | System probe, Device qualification runtime, Bridge runtime | None |
+| [Operations CLI](../../crates/hfx-ops/README.md) | System probe, Device qualification runtime, Bridge runtime, Error catalog | None |
 | [Kernel transport adapter](../../crates/hfx-kernel-transport/README.md) | Rust workspace, Kernel driver contract, Versioned bridge protocol | Production daemon |
 | [Deterministic simulator](../../crates/hfx-sim/README.md) | Core policy engine, Composable hardware profiles | None |
 | [Kernel driver contract](../../driver/README.md) | Architecture authority, Schema contracts | Linux HID kernel module, Kernel transport adapter |
 | [Linux HID kernel module](../../driver/kernel/README.md) | Kernel driver contract, Composable hardware profiles, Versioned bridge protocol | Packaging and installation |
 | [Linux runtime authority](../../runtime/README.md) | Architecture authority, Schema contracts | Production daemon, Packaging and installation |
 | [Packaging and installation](../../packaging/README.md) | Production daemon, Linux HID kernel module, Linux runtime authority, OpenRGB adapter, OpenRazer native route | None |
-| [C++ SDK](../../sdk/cpp/README.md) | Versioned bridge protocol, Composable hardware profiles, Application integration catalog | OpenRGB adapter, Contract tests |
-| [Python SDK](../../sdk/python/README.md) | Versioned bridge protocol, Composable hardware profiles, Application integration catalog | OpenRazer native route, Contract tests |
+| [C++ SDK](../../sdk/cpp/README.md) | Versioned bridge protocol, Composable hardware profiles, Application integration catalog, Error catalog | OpenRGB adapter, Contract tests |
+| [Python SDK](../../sdk/python/README.md) | Versioned bridge protocol, Composable hardware profiles, Application integration catalog, Error catalog | OpenRazer native route, Contract tests |
 | [Repository tooling](../../tools/README.md) | Architecture authority, Schema contracts, Pinned development toolchains | Documentation system, Contract tests, Verification graph |
 | [Contract tests](../../tests/README.md) | Repository tooling, Rust workspace, C++ SDK, Python SDK | Verification graph |
 | [GitHub governance authority](../../governance/README.md) | Architecture authority, Assurance and release evidence, Verification graph | Documentation system |
 | [Documentation system](../../docs/README.md) | Architecture authority, Device knowledge, Verification graph, GitHub governance authority, Repository tooling | None |
 | [Verification graph](../../verification/README.md) | Architecture authority, Assurance and release evidence, Repository tooling, Contract tests | Documentation system, GitHub governance authority |
-| [Error catalog](../../errors/README.md) | Schema contracts | None |
+| [Error catalog](../../errors/README.md) | Schema contracts | Bridge runtime, Production daemon, OpenRGB adapter, Operations CLI, C++ SDK, Python SDK |
 | [Pinned development toolchains](../../toolchains/README.md) | Architecture authority | Rust workspace, Repository tooling |
 
 Each linked folder README names the subsystem's boundaries, key files, limitations, and verification. Update the JSON authority and run `./hfx generate` when ownership changes.
