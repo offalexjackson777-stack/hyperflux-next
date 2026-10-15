@@ -17,26 +17,11 @@ remains read-only; two implementations never compete for the writer session.
 
 ## 64. Safe Change Order
 
-Changes reduce uncertainty before touching hardware.
-
-```mermaid
-flowchart LR
-    Rules["Architecture boundaries"] --> Schemas["Schemas and domain types"]
-    Schemas --> Sim["Simulator and replay"]
-    Sim --> Core["Native exchange core"]
-    Core --> Razer["OpenRazer native route"]
-    Razer --> RGB["OpenRGB native route"]
-    RGB --> Own["Native control arbitration"]
-    Own --> Parity["Physical parity"]
-    Parity --> Package["Packaging and diagnostics"]
-    Package --> HW["Targeted hardware qualification"]
-    HW --> RC["Release candidate"]
-```
-
-An upstream adapter advances only after the native exchange core and its
-application-specific transport boundary pass software contracts. Physical
-qualification is reserved for claims that software cannot establish, and package
-publication remains separately authorized.
+Changes reduce uncertainty before touching hardware. Boundaries, schemas, and
+simulation come first, then the native exchange core and the upstream routes,
+and physical qualification comes last, only for claims that software cannot
+establish. The [verification guide](../../developer/verification.md#safe-change-order)
+gives the full order.
 
 ## 65. Release Channels
 

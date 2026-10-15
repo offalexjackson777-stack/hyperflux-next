@@ -381,6 +381,11 @@ class RepositoryExperienceContracts(unittest.TestCase):
             diagrams += text.count("```mermaid")
         self.assertEqual(subjects, list(range(1, 68)))
         self.assertGreaterEqual(diagrams, 3)
+        # The contributor change order lives in the verification guide.
+        guide = (ROOT / "docs/developer/verification.md").read_text(encoding="utf-8")
+        self.assertIn("## Safe Change Order\n", guide)
+        self.assertIn("```mermaid", guide)
+        self.assertIn("verification.md#safe-change-order", chapters[-1].read_text(encoding="utf-8"))
 
     def test_public_pages_do_not_contradict_the_published_release(self) -> None:
         # A release is published; no public page may claim otherwise (DOC-001).
