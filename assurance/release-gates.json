@@ -101,7 +101,7 @@
       "id": "HFX-GATE-PUBLICATION-DECISION",
       "title": "Explicit publication decision",
       "status": "verified",
-      "criteria": ["Every preceding release-blocking gate is satisfied.", "A human publication decision explicitly authorizes the chosen channel and artifacts.", "The published Arch channel is identified as a signed project-operated third-party repository rather than an official distribution repository."],
+      "criteria": ["Every preceding release-blocking gate is satisfied.", "A maintainer publication decision names the channel and artifacts.", "The published Arch channel is identified as a signed project-operated Arch repository, not an official Arch Linux repository."],
       "evidence": ["architecture/constitution.json", "assurance/release-gates.json", "assurance/arch-repository.json"],
       "remaining": [],
       "physical_evidence_required": true,

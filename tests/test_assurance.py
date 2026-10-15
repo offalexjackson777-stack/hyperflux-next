@@ -135,6 +135,22 @@ class AssuranceTests(unittest.TestCase):
         ):
             load_release_context(ROOT)
 
+    def test_release_pages_name_one_repository_phrase_and_no_lock(self) -> None:
+        phrase = "signed project-operated Arch repository, not an official Arch Linux repository"
+        page = (ROOT / "docs" / "generated" / "release-gates.md").read_text(encoding="utf-8")
+        self.assertEqual(page.count(phrase), 2)
+        self.assertNotIn("third-party", page)
+        self.assertNotIn("locked", page)
+        catalog = json.loads((ROOT / "docs" / "catalog.json").read_text(encoding="utf-8"))
+        purposes = {item["path"]: item["purpose"] for item in catalog["documents"]}
+        self.assertIn("publication decision", purposes["docs/generated/release-gates.md"])
+        self.assertNotIn("lock", purposes["docs/generated/release-gates.md"])
+        arch_pages = [text for text in purposes.values() if "third-party repository" in text]
+        self.assertEqual(arch_pages, [])
+        gates = (ROOT / "assurance" / "release-gates.json").read_text(encoding="utf-8")
+        self.assertIn(phrase, gates)
+        self.assertNotIn("authorizes", gates)
+
     def test_protected_behavior_freezes_claims_and_the_natural_wake_gap(self) -> None:
         baseline = load_protected_behavior(ROOT)
         self.assertEqual(

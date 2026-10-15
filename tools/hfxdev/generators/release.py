@@ -16,7 +16,8 @@ def release_gates_markdown(context: ReleaseContext) -> str:
         f"HyperFlux Next `{context.target.product_version}-{context.target.package_release}` "
         f"has `{verified}` verified technical gates. "
         + (
-            "The Arch release and its signed third-party repository are published."
+            "The Arch release is published through a signed project-operated Arch repository, "
+            "not an official Arch Linux repository."
             if published
             else f"This candidate is not published; `{context.published_release}` remains "
             "the published Arch release."
@@ -38,8 +39,9 @@ def release_gates_markdown(context: ReleaseContext) -> str:
             "",
             (
                 "This release was published after the technical gates passed. "
-                "The project-operated Arch repository signs packages and repository metadata; "
-                "it is not an official Arch Linux repository."
+                "It is served from a signed project-operated Arch repository, "
+                "not an official Arch Linux repository. "
+                "The repository signs packages and repository metadata."
                 if published
                 else "A passing build, test, package, or hardware check does not publish this "
                 "candidate. The published release, its version tag, and the signed repository "

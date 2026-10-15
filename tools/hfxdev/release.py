@@ -144,7 +144,7 @@ def load_release_context(root: Path) -> ReleaseContext:
         if status == "blocked-by-physical-evidence" and not physical:
             raise ModelError(f"release gate {gate_id}: physical block is not marked physical")
         if status == "publication-locked" and not publication:
-            raise ModelError(f"release gate {gate_id}: publication lock is not explicit")
+            raise ModelError(f"release gate {gate_id}: publication decision is not explicit")
         gates.append(
             ReleaseGate(
                 id=gate_id,
