@@ -385,6 +385,24 @@ def _payload_asset_names(policy: ArchRepositoryPolicy) -> tuple[str, ...]:
     return tuple(sorted(names))
 
 
+def signed_asset_names(policy: ArchRepositoryPolicy) -> tuple[str, ...]:
+    """Repository assets that carry a detached OpenPGP signature."""
+    names = set(_payload_asset_names(policy))
+    return tuple(sorted(name for name in names if f"{name}.sig" in names))
+
+
+def checksum_only_asset_names(policy: ArchRepositoryPolicy) -> tuple[str, ...]:
+    """Repository assets bound only by checksums, never signed."""
+    names = set(_payload_asset_names(policy))
+    signed = set(signed_asset_names(policy))
+    unsigned = {
+        name
+        for name in names
+        if not name.endswith(".sig") and name not in signed
+    }
+    return tuple(sorted(unsigned | {policy.manifest, policy.checksums}))
+
+
 def _sign(
     path: Path,
     *,

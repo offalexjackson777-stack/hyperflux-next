@@ -387,7 +387,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
             release_context
         ),
         root / "docs" / "generated" / "supply-chain.md": supply_chain_markdown(
-            dependency_inventory
+            dependency_inventory, arch_repository
         ),
         root / "assurance" / "generated" / "hyperflux-next.spdx.json": spdx_json(
             dependency_inventory

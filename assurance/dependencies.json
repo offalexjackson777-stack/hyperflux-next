@@ -71,5 +71,15 @@
     "locked_rust_dependencies": true,
     "isolated_python_dependency_resolution": false,
     "dirty_upstream_sources": "reject"
+  },
+  "artifact_integrity": {
+    "source_sbom_scope": "source-and-build-dependencies",
+    "human_release_checksum_asset": "SHA256SUMS",
+    "human_release_checksum_signed": false,
+    "release_tags_signed": false,
+    "release_commits_signed": false,
+    "sigstore_signatures": false,
+    "slsa_provenance": false,
+    "remote_build_attestation": false
   }
 }

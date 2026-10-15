@@ -699,11 +699,11 @@
       "path": "docs/generated/supply-chain.md",
       "title": "Supply Chain",
       "audience": "maintainers",
-      "purpose": "Projects pinned dependency inventory, licenses, and source identities.",
+      "purpose": "Projects pinned dependency inventory, licenses, source identities, and what protects each published artifact.",
       "owner": "assurance",
       "navigation_group": "generated",
       "mode": "generated",
-      "canonical_sources": ["assurance/dependencies.json"],
+      "canonical_sources": ["assurance/dependencies.json", "assurance/arch-repository.json"],
       "generated_block_ids": []
     },
     {

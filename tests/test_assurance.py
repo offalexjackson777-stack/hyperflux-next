@@ -15,7 +15,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.formal_model import load_formal_model, run_formal_model
-from hfxdev.generators.supply_chain import spdx_json
+from hfxdev.arch_repository import load_arch_repository_policy
+from hfxdev.generators.supply_chain import spdx_json, supply_chain_markdown
 from hfxdev.model import ModelError, load_json, sha256_file
 from hfxdev.performance import (
     load_performance_budgets,
@@ -62,6 +63,56 @@ class AssuranceTests(unittest.TestCase):
         self.assertTrue(
             document["documentNamespace"].endswith(self.inventory.authority_sha256)
         )
+
+    def test_supply_chain_page_names_what_is_signed_and_what_is_not(self) -> None:
+        repository = load_arch_repository_policy(ROOT)
+        page = supply_chain_markdown(self.inventory, repository)
+        rows = {
+            line.split(" | ", 1)[0]: line
+            for line in page.splitlines()
+            if line.startswith("| ")
+        }
+        signed_row = next(
+            line for line in page.splitlines() if "detached OpenPGP `.sig`" in line
+        )
+        for name in (
+            repository.database,
+            repository.database_archive,
+            repository.files,
+            repository.files_archive,
+            *(package.filename for package in repository.packages),
+        ):
+            self.assertIn(f"`{name}`", signed_row)
+        self.assertIn(repository.signing_subkey_fingerprint, signed_row)
+        unsigned_row = next(line for line in page.splitlines() if "| Not signed;" in line)
+        for name in (repository.manifest, repository.checksums):
+            self.assertIn(f"`{name}`", unsigned_row)
+            self.assertNotIn(f"`{name}`", signed_row)
+        self.assertIn("`SHA256SUMS` is not signed", rows["| Release [`v2.0.1`]("
+                      f"{repository.product_release_url})"])
+        self.assertIn("Tags are not signed; commits are not signed", page)
+        self.assertIn("None exist; they are future work", page)
+        self.assertIn("not an SBOM of package files", page)
+        self.assertNotIn("future release must bind", page)
+
+    def test_dependency_policy_rejects_unimplemented_attestation_claims(self) -> None:
+        value = load_json(ROOT / "assurance" / "dependencies.json")
+        for field in ("sigstore_signatures", "slsa_provenance", "remote_build_attestation"):
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as temporary:
+                changed = json.loads(json.dumps(value))
+                changed["artifact_integrity"][field] = True
+                policy = Path(temporary) / "dependencies.json"
+                policy.write_text(json.dumps(changed), encoding="utf-8")
+                original = load_json
+
+                def patched(path: Path, _policy: Path = policy):
+                    if Path(path) == ROOT / "assurance" / "dependencies.json":
+                        return original(_policy)
+                    return original(path)
+
+                with patch("hfxdev.supply_chain.load_json", patched):
+                    with self.assertRaisesRegex(ModelError, "remote attestations"):
+                        load_dependency_inventory(ROOT)
 
     def test_release_gates_match_constitution_and_record_publication(self) -> None:
         context = load_release_context(ROOT)
