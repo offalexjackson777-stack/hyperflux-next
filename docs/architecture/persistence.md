@@ -7,6 +7,12 @@
 > fallback remains available only for rollback until its explicit retirement
 > criteria are met.
 
+On the migration path the bridge itself sets stable lighting, so it has to remember that
+lighting across restarts in order to restore it. The saved file has to stay consistent if
+the bridge stops partway through a change, and other local users must not be able to read or
+replace it. This page describes what is saved, how the file is protected, and how changes
+are committed.
+
 The bridge persists only semantic stable-lighting intent, restoration policy,
 and durable per-device restoration claims. It does not persist sessions, leases,
 route observations, battery values, raw reports, effect phase, application

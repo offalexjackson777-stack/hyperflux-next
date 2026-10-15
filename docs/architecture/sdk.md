@@ -1,7 +1,20 @@
 # SDK Boundary
 
+A connector that built the bridge's local protocol frames itself could get versions,
+identities, or request IDs subtly wrong, and every connector would repeat that work. The SDK
+does it once, so a connector calls typed methods and never handles the wire format.
+
 Application integrations use the HyperFlux SDK. They do not construct local RPC
 frames, retain negotiation credentials, or import bridge implementation modules.
+
+## Terms Used Here
+
+- **Negotiation**: the handshake in which the SDK and the bridge agree on one protocol
+  version and set of features before any other request.
+- **Feature**: a named capability negotiated on top of a version, such as
+  `native-receiver-tunnel`.
+- **Route token**: an opaque value naming one device on one receiver generation. The SDK
+  passes it back to the bridge without reading it.
 
 ## Responsibilities
 

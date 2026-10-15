@@ -1,10 +1,26 @@
 # Bridge Core Boundaries
 
+Several applications may want the same receiver, and each could get the details wrong in its
+own way: write to a device that has gone, repeat a command that may already have run, or
+fight another application for the same device. The bridge solves this once for all of them.
+It runs as the `hyperflux-next-bridge` service, and every write to the receiver goes through
+it.
+
 The HyperFlux bridge is the sole userspace route, arbitration, and
 receiver-write authority between application SDKs and a generation-bound
 transport. Its primary protocol-v7 path carries qualified upstream Feature
 reports without owning device commands, settings, presentation, layouts,
 effects, persistence, or physical qualification claims.
+
+## Terms Used Here
+
+- **Route**: the bridge's handle for one device on one receiver generation. Applications see
+  it only as an opaque route token.
+- **Generation**: one physical connection of the receiver; a replug starts a new one.
+- **NativeControl lease**: permission for one application to send native exchanges to one
+  device. It is held per device, so sibling devices stay free.
+- **Protocol v7**: the current version of the local protocol between the SDK and the bridge.
+- **Migration path**: the protocol-v6 semantic lighting path, kept for rollback.
 
 ## Dependency Direction
 

@@ -1,5 +1,10 @@
 # Device Knowledge Without Transport Guessing
 
+OpenRazer and OpenRGB describe many Razer models, and it is tempting to assume that a device
+they know will work through the receiver. It may not: the receiver path is a different
+transport from the direct one. This page describes how HyperFlux uses upstream records
+without guessing a transport for a device.
+
 HyperFlux Next keeps three different questions separate:
 
 1. What does a named Razer device document or expose on a direct route?

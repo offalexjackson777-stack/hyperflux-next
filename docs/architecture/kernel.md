@@ -1,9 +1,33 @@
 # Kernel Boundary
 
+The receiver is one USB device with several HID interfaces, and the keyboard and mouse
+behind it send their ordinary input through those interfaces. Kernel code that talks to the
+receiver can break typing and pointing for everything on it, and a command sent twice may
+change a device twice. This page describes the small kernel module that gives userspace one
+narrow way to exchange reports with the receiver while leaving input alone.
+
 The HyperFlux Next kernel module is a deliberately small Linux HID boundary. It
 binds only receiver identities generated from qualified receiver profiles. It
 does not contain child product names, device layouts, effects, application
 policy, support-list guesses, or active information queries.
+
+We kept in the kernel only the work that needs kernel access, so route, ownership, and
+diagnostic decisions can be tested as ordinary userspace code. The cost is that every
+exchange has to cross a fixed, versioned interface between the bridge and the module.
+
+## Terms Used Here
+
+- **Generation**: one physical connection of the receiver. Replugging the receiver starts a
+  new generation, and nothing carries over from the old one.
+- **Writer session**: the single open file allowed to send to one receiver generation. It
+  expires, and it is revoked on suspend, removal, and the other events listed under
+  Lifecycle.
+- **Native exchange**: one fixed-size Feature report built by OpenRazer or OpenRGB, sent to
+  a device, and its matching response.
+- **Certainty**: what the kernel can say about whether a report was sent: `not-sent`,
+  `may-have-been-sent`, or `matched-response`.
+- **Migration fallback**: the older version-1 path, in which HyperFlux encodes the receiver
+  frames itself. It is kept for rollback.
 
 ## Responsibilities
 

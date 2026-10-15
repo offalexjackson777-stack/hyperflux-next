@@ -1,5 +1,8 @@
 # Native Device Onboarding
 
+Supporting another device should not mean changing the kernel, the bridge, and every
+connector, and it must never mean sending commands to a device on a guess.
+
 HyperFlux Next can study another receiver-backed Razer device without adding its
 PID to the kernel, bridge, transport engine, or application adapters. The
 onboarding path combines a privacy-safe receiver observation with exact records
