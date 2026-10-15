@@ -1,8 +1,8 @@
 {
   "$schema": "../schemas/documentation-screenshot-manifest.schema.json",
   "schema": "hyperflux-documentation-screenshot-manifest-v1",
-  "source_revision": "941026ad787bd8c4aa40953d602c14fc5ef4f3e3",
-  "render_result_sha256": "2b8c74f54aafc6790947351c7d9050e8127d69e5650e9d27a556df0543fa1a2c",
+  "source_revision": "8b77b6c9b8e2665f41607ed4460eb6cd5d16dc3f",
+  "render_result_sha256": "df45078a39ade3b699ca2f5615817697780854701b8da2004722a48cdaadc6d0",
   "screenshots": [
     {
       "file": "screenshots/CONTRIBUTING--1280--dark.png",
@@ -928,7 +928,7 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "ac75a46cf7274568ff934b413e9a9e642b7f67a775d44d4034a94bdb488250f9",
+      "sha256": "450595d9351e4f2f0958ca6685789b9fd6ef2faf3cd1dd510efed66984586b21",
       "bytes": 216123
     },
     {
@@ -937,7 +937,7 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "3fec24a816b6876a8d80f08232d5674bc2c270bbd64f8fb085217e5350cb654a",
+      "sha256": "6c42d355c43fcf03fb4318755f11fcabc78153ff5da30039f48c99848422dd18",
       "bytes": 211759
     },
     {
@@ -946,7 +946,7 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "5199c65f1793a51f54ebc56bf25318ebf9a85c778ab5ebb12f285c29fde4e861",
+      "sha256": "cf171565d3eeddca6d77f436892c494bb9641629cb959eae656991f36104844c",
       "bytes": 195371
     },
     {
@@ -955,7 +955,7 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "417c778ae41d4c745652f429a388f6e120d599030a99c4869c4b33b2b5bcd6b1",
+      "sha256": "166ff212acee924c1dd0b67de7d4703ddc15bc428e01f1d56e50a163dfb9af90",
       "bytes": 191485
     },
     {
@@ -964,7 +964,7 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "8e7126e12156234b71a1be5e119f38c4cc5f398b816caed3fa242387c24d475e",
+      "sha256": "b7c7c34b4215a76fc04a393e3739e61cb892444a567c757c66708992b999723f",
       "bytes": 212689
     },
     {
@@ -973,7 +973,7 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "7f202af193d10969353cfe959fd439fa31923af482b055889d8c47430199da4f",
+      "sha256": "45e95c573bd19a050115ad59cef3d6b75ead1932ccd15c197871a73888bb56b4",
       "bytes": 208764
     }
   ]
