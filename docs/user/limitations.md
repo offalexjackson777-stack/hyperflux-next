@@ -16,13 +16,6 @@ HyperFlux comes from its own signed package repository, which you add once as
 shown in the [installation guide](installation.md). An AUR package is planned
 but not published yet.
 
-### Pacman Offers To Bring Full Back
-
-If you remove Full and install the stock `openrazer-driver-dkms` again while the
-HyperFlux repository is still set up, `sudo pacman -Syu` may offer to replace
-it with Full. Answer `n` to keep the stock driver. See
-[updates and removal](updates-removal.md#remove-full-and-keep-core).
-
 ## Applications
 
 Stock OpenRazer, Polychromatic, and OpenRGB are optional. They are separate

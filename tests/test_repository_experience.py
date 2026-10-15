@@ -1273,15 +1273,16 @@ class UserDocumentationContracts(unittest.TestCase):
             "sudo pacman -Syu",
             "hyperfluxctl doctor",
             "sudo pacman -U",
-            "sudo pacman -R hyperflux-next-full\n",
+            "sudo pacman -Rs hyperflux-next-full\n",
+            "sudo pacman -S openrazer-driver-dkms",
             "sudo systemctl disable --now hyperflux-next-bridge.service",
-            "sudo pacman -R hyperflux-next-full hyperflux-next-linux",
+            "sudo pacman -Rs hyperflux-next-full hyperflux-next-linux",
             "bridge.json.pacsave",
             "sudo pacman-key --delete 8BF8A266E756BD1C24C930918B3F3850007159E8",
         ):
             self.assertIn(command, page)
         disable = page.index("sudo systemctl disable --now")
-        self.assertLess(disable, page.index("sudo pacman -R hyperflux-next-full hyperflux-next-linux"))
+        self.assertLess(disable, page.index("sudo pacman -Rs hyperflux-next-full hyperflux-next-linux"))
         self.assertIn("are not removed", page)
         for word in ("qualification", "rollback inputs", "restoration"):
             self.assertNotIn(word, page)

@@ -157,9 +157,10 @@ To install Core instead, run `sudo pacman -Syu hyperflux-next-linux`.
 Pacman lists the packages it is about to install and asks
 `Proceed with installation? [Y/n]`. Press Enter to continue.
 
-If the stock `openrazer-driver-dkms` package is already installed, Pacman also
-asks whether to replace it with `hyperflux-next-full`. Answer `y`. Full takes
-over that role, so OpenRazer keeps working.
+If the stock `openrazer-driver-dkms` package is already installed, Pacman says
+it conflicts with `hyperflux-next-openrazer-driver-dkms` and asks whether to
+remove it. Type `y`. Full brings its own copy of that driver, so OpenRazer
+keeps working.
 
 ## 3. Turn On HyperFlux And Restart
 
