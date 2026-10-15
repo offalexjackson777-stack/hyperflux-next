@@ -32,6 +32,7 @@ from .arch_official_snapshot import ProviderAlignment, evaluate_provider_alignme
 from .arch_repository import load_arch_repository_policy
 from .arch_split import ArchSplit, SplitOutput, load_arch_split
 from .arch_split_package import package_function_metadata
+from .aur_install import pkgbuild_guidance
 from .distribution_package import _shell_array, _shell_word
 from .install import BuildSpec, InstallManifest, load_install_manifest
 from .model import ModelError, load_json, sha256_file
@@ -578,6 +579,7 @@ def render_pkgbuild(
         f"# Recipe mode: {mode}",
     ]
     lines.extend(f"# Qualification only: {item}" for item in disclosures)
+    lines.extend(pkgbuild_guidance(split, architecture))
     lines.extend(
         [
             "",

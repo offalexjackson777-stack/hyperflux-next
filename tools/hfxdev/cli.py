@@ -286,6 +286,15 @@ def _parser() -> argparse.ArgumentParser:
         help="qualify a future split release such as 2.0.1-2 (commit recipes only)",
     )
 
+    package_aur_install = package_commands.add_parser(
+        "aur-install", help="print the exact AUR install commands for Core and Full"
+    )
+    package_aur_install.add_argument(
+        "--candidate-release",
+        metavar="VERSION-RELEASE",
+        help="print the plan for a future split release such as 2.0.1-2",
+    )
+
     arch_snapshot = commands.add_parser(
         "arch-snapshot",
         help="import official Arch package state and check OpenRazer provider alignment",
@@ -754,6 +763,11 @@ def main(arguments: list[str] | None = None) -> int:
                 return 0
             if args.package_command == "aur":
                 return _package_aur(root, args)
+            if args.package_command == "aur-install":
+                from .aur_install import render_guide
+
+                print(render_guide(_candidate_split(root, args.candidate_release)), end="")
+                return 0
             result = build_distribution_package(
                 root,
                 args.build_manifest,

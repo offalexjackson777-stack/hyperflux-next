@@ -20,6 +20,7 @@ from arch_split_support import ROOT, candidate_split, makepkg_available
 from hfxdev.arch_official_snapshot import ProviderAlignment
 from hfxdev.arch_split import load_arch_split
 from hfxdev.arch_repository import load_arch_repository_policy
+from hfxdev.aur_install import DEFAULT_PKGEXT, install_plans
 from hfxdev.aur_recipe import (
     PUBLICATION,
     QUALIFICATION,
@@ -153,6 +154,12 @@ class GnuPG:
         )
 
 
+def _code(pkgbuild: str) -> str:
+    """The PKGBUILD without comment lines: what bash actually runs."""
+
+    return "\n".join(line for line in pkgbuild.splitlines() if not line.lstrip().startswith("#"))
+
+
 def _variable(pkgbuild: str, name: str) -> str:
     match = re.search(rf"^{name}=(.*)$", pkgbuild, re.MULTILINE)
     assert match is not None, name
@@ -232,9 +239,10 @@ class QualificationRecipeContracts(unittest.TestCase):
         for name, text in self.recipe.files.items():
             for marker in LOCAL_PATH_MARKERS:
                 self.assertNotIn(marker, text, f"{name} names local path {marker}")
-        self.assertNotRegex(self.pkgbuild, r"(?m)^\s*install=")
-        self.assertNotRegex(self.pkgbuild, r"\bdkms (add|build|install|remove|autoinstall)\b")
-        self.assertNotRegex(self.pkgbuild, r"\b(systemctl|modprobe|udevadm|pacman)\b")
+        code = _code(self.pkgbuild)
+        self.assertNotRegex(code, r"(?m)^\s*install=")
+        self.assertNotRegex(code, r"\bdkms (add|build|install|remove|autoinstall)\b")
+        self.assertNotRegex(code, r"\b(systemctl|modprobe|udevadm|pacman)\b")
         sources = _variable(self.pkgbuild, "source")
         self.assertNotRegex(sources, r"\.tar|\.zst|\.pkg|file://|https?://(?!github\.com/)")
         self.assertEqual(3, sources.count("::git+https://"))
@@ -307,6 +315,60 @@ class QualificationRecipeContracts(unittest.TestCase):
             line for line in printed.splitlines(keepends=True) if not line.startswith("#")
         )
         self.assertEqual(without_comments, self.recipe.files[".SRCINFO"])
+
+    def test_srcinfo_dependency_closure_keeps_core_out_of_full(self) -> None:
+        names = {output.package_name for output in self.split.outputs}
+        depends: dict[str, set[str]] = {}
+        current = None
+        for line in self.recipe.files[".SRCINFO"].splitlines():
+            key, _, value = line.strip().partition(" = ")
+            if key == "pkgname":
+                current = value
+                depends[current] = set()
+            elif key == "depends" and current is not None:
+                name = re.split(r"[<>=]", value, maxsplit=1)[0]
+                if name in names:
+                    depends[current].add(name)
+
+        def closure(request: str) -> set[str]:
+            seen, pending = set(), [request]
+            while pending:
+                item = pending.pop()
+                if item not in seen:
+                    seen.add(item)
+                    pending.extend(depends[item])
+            return seen
+
+        for plan in install_plans(self.split):
+            with self.subTest(edition=plan.edition):
+                self.assertEqual(set(plan.packages), closure(plan.request))
+
+    def test_pkgbuild_states_the_exact_edition_commands(self) -> None:
+        comments = [line for line in self.pkgbuild.splitlines() if line.startswith("#")]
+        for plan in install_plans(self.split):
+            with self.subTest(edition=plan.edition):
+                self.assertIn(f"# {plan.label} with an AUR helper: {plan.helper_command}", comments)
+                for command in plan.manual_commands:
+                    self.assertIn(f"#   {command}", comments)
+        self.assertNotRegex(_code(self.pkgbuild), r"makepkg")
+
+    def test_makepkg_package_list_matches_the_install_plans(self) -> None:
+        if not makepkg_available():
+            self.skipTest("makepkg is unavailable")
+        core, full = install_plans(self.split)
+        with tempfile.TemporaryDirectory() as directory:
+            Path(directory, "PKGBUILD").write_text(self.pkgbuild, encoding="utf-8")
+            printed = subprocess.run(
+                ["makepkg", "--packagelist"],
+                cwd=directory,
+                check=True,
+                capture_output=True,
+                text=True,
+                env={**os.environ, "LC_ALL": "C", "PKGDEST": directory, "PKGEXT": DEFAULT_PKGEXT},
+            ).stdout
+        listed = tuple(PurePosixPath(line).name for line in printed.splitlines() if line)
+        self.assertEqual(full.files, listed)
+        self.assertLess(set(core.files), set(listed))
 
     def test_packaging_sources_are_zero_bsd(self) -> None:
         self.assertIn("SPDX-License-Identifier: 0BSD", self.pkgbuild)
