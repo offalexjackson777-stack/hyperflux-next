@@ -22,8 +22,8 @@ readonly UPGRADE_STDERR="$OUTPUT/upgrade.stderr"
 readonly ROLLBACK_STDOUT="$OUTPUT/rollback.stdout"
 readonly ROLLBACK_STDERR="$OUTPUT/rollback.stderr"
 readonly BASELINE_HFX_DKMS_VERSION=0.0.0_dev.1
-readonly CANDIDATE_HFX_DKMS_VERSION=2.0.2
-readonly CANDIDATE_PACKAGE_VERSION=2.0.2-1
+readonly CANDIDATE_HFX_DKMS_VERSION=2.1.0
+readonly CANDIDATE_PACKAGE_VERSION=2.1.0-1
 
 capture_dkms_log() {
   local module=$1
@@ -442,7 +442,7 @@ cmp "$OUTPUT/kernel-makefile-before-upgrade.sha256" \
 "${PACMAN[@]}" -Q >"$OUTPUT/packages-after-upgrade.txt"
 find /usr/src -maxdepth 2 -type f -name dkms.conf -print | sort \
   >"$OUTPUT/dkms-sources-after-upgrade.txt"
-grep -Fx '/usr/src/hid-hyperflux-next-2.0.2/dkms.conf' \
+grep -Fx '/usr/src/hid-hyperflux-next-2.1.0/dkms.conf' \
   "$OUTPUT/dkms-sources-after-upgrade.txt" >/dev/null
 grep -Fx '/usr/src/openrazer-driver-3.12.4/dkms.conf' \
   "$OUTPUT/dkms-sources-after-upgrade.txt" >/dev/null
@@ -534,7 +534,7 @@ result = {
         'stock_polychromatic_installed': True,
         'stock_polychromatic_owns_takeover_paths': True,
         'obsolete_private_runtime_absent': True,
-        'dkms_modules_installed': ['hid-hyperflux-next/2.0.2', 'openrazer-driver/3.12.4'],
+        'dkms_modules_installed': ['hid-hyperflux-next/2.1.0', 'openrazer-driver/3.12.4'],
         'active_restoration_enabled_preserved': True,
         'safe_disabled_default_preserved_in_package': True,
         'unchanged_package_default_requires_no_pacnew': True,

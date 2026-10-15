@@ -23,7 +23,7 @@ import tempfile
 from typing import Callable
 import unittest
 
-from arch_split_support import EPOCH, ROOT, candidate_split, makepkg_available
+from arch_split_support import EPOCH, ROOT, candidate_split, two_package_split, makepkg_available
 from test_aur_recipe import fake_build_tree, source_repository
 
 from hfxdev.arch_split_package import build_split_packages
@@ -288,7 +288,7 @@ class ChannelParityRefusals(unittest.TestCase):
         from hfxdev.arch_split import load_arch_split
 
         with self.assertRaisesRegex(ModelError, "four-output split"):
-            compare_channels(load_arch_split(ROOT), repository=Path("/nonexistent"), aur=Path("/nonexistent"))
+            compare_channels(two_package_split(), repository=Path("/nonexistent"), aur=Path("/nonexistent"))
 
     def test_missing_channel_directory_is_refused(self) -> None:
         with self.assertRaisesRegex(ModelError, "channel directory does not exist"):

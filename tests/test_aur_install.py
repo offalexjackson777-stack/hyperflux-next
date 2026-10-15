@@ -10,7 +10,7 @@ import subprocess
 import sys
 import unittest
 
-from arch_split_support import ROOT, candidate_split
+from arch_split_support import ROOT, candidate_split, two_package_split
 
 from hfxdev.arch_split import load_arch_split
 from hfxdev.aur_install import (
@@ -79,7 +79,7 @@ class InstallPlanContracts(unittest.TestCase):
 
     def test_plans_refuse_unsafe_inputs(self) -> None:
         with self.assertRaisesRegex(ModelError, "two-package topology"):
-            install_plan(load_arch_split(ROOT), "linux")
+            install_plan(two_package_split(), "linux")
         with self.assertRaisesRegex(ModelError, "unknown edition"):
             install_plan(self.split, "minimal")
         with self.assertRaisesRegex(ModelError, "not a recipe architecture"):
@@ -109,7 +109,7 @@ class InstallPlanContracts(unittest.TestCase):
         ).stdout
         self.assertEqual(render_guide(self.split), printed)
         refused = subprocess.run(
-            [sys.executable, str(ROOT / "hfx"), "package", "aur-install"],
+            [sys.executable, str(ROOT / "hfx"), "package", "aur-install", "--candidate-release", "2.0.2-1"],
             cwd=ROOT,
             capture_output=True,
             text=True,

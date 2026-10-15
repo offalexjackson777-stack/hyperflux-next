@@ -25,12 +25,17 @@ from hfxdev.tree_metadata import normalize_tree  # noqa: E402
 
 
 CANDIDATE_RELEASE = ("2.1.0", 1)
+LAST_TWO_PACKAGE_RELEASE = ("2.0.2", 1)
 EPOCH = 1_767_225_600
 AUTHORITY = ROOT / "packaging" / "arch-split.json"
 
 
 def candidate_split() -> ArchSplit:
     return load_arch_split(ROOT, release=CANDIDATE_RELEASE)
+
+
+def two_package_split() -> ArchSplit:
+    return load_arch_split(ROOT, release=LAST_TWO_PACKAGE_RELEASE)
 
 
 def authority_value() -> dict[str, Any]:

@@ -16,6 +16,7 @@ from arch_split_support import (  # noqa: E402
     EPOCH,
     ROOT,
     candidate_split,
+    two_package_split,
     makepkg_available,
     mutated_authority,
     synthetic_edition_stages,
@@ -50,14 +51,16 @@ class ArchSplitTopologyTests(unittest.TestCase):
         cls.catalog = load_distribution_catalog(ROOT)
         cls.install = load_install_manifest(ROOT)
 
-    def test_current_release_keeps_the_two_package_topology(self) -> None:
+    def test_current_release_is_the_first_four_output_release(self) -> None:
         runtime = load_linux_runtime(ROOT)
         current = load_arch_split(ROOT)
         self.assertEqual(
             current.full_version,
             f"{runtime.product.version}-{runtime.product.package_release}",
         )
-        self.assertFalse(current.active, "2.0.1-1 must stay on two packages (PKG-001)")
+        self.assertTrue(current.active)
+        self.assertEqual(current.full_version, current.first_release)
+        self.assertFalse(two_package_split().active, "2.0.x stays on two packages (PKG-001)")
         self.assertTrue(self.split.active)
         self.assertEqual(self.split.first_release, "2.1.0-1")
 
@@ -398,7 +401,7 @@ class ArchSplitRepositoryBuildTests(unittest.TestCase):
                 repository_root=ROOT,
                 workspace_root=Path("/nonexistent"),
                 packages=Path("/nonexistent"),
-                split=load_arch_split(ROOT),
+                split=two_package_split(),
                 architecture="x86_64",
                 epoch=EPOCH,
                 stages={},

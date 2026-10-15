@@ -16,7 +16,7 @@ import sys
 import tempfile
 import unittest
 
-from arch_split_support import ROOT, candidate_split
+from arch_split_support import ROOT, candidate_split, two_package_split
 from test_aur_recipe import source_repository
 
 from hfxdev.arch_repository import (
@@ -61,11 +61,15 @@ class PriorReleaseContracts(unittest.TestCase):
 
     def test_the_prior_releases_are_the_two_package_releases(self) -> None:
         self.assertEqual(("2.0.0-1", "2.0.1-1", "2.0.2-1"), tuple(PRIORS))
-        self.assertFalse(load_arch_split(ROOT).active)
-        self.assertEqual("2.0.2-1", load_arch_split(ROOT).full_version)
+        self.assertTrue(all(prior.ref and prior.commit for prior in PRIORS.values()))
+        self.assertTrue(load_arch_split(ROOT).active)
+        self.assertEqual("2.1.0-1", load_arch_split(ROOT).full_version)
 
-    def test_working_tree_release_is_two_packages(self) -> None:
-        topology = load_prior_topology(ROOT, PRIORS["2.0.2-1"])
+    def test_the_last_prior_release_is_two_packages(self) -> None:
+        prior = PRIORS["2.0.2-1"]
+        if not _tag_available(prior):
+            self.skipTest(f"{prior.ref} is not available in this clone")
+        topology = load_prior_topology(ROOT, prior)
         self.assertEqual(
             ("hyperflux-next-linux", "hyperflux-next-full"),
             tuple(package.name for package in topology.packages),
@@ -97,6 +101,8 @@ class InPlaceUpgradeContracts(unittest.TestCase):
             for release, prior in PRIORS.items()
             if _tag_available(prior)
         }
+        if "2.0.2-1" not in cls.topologies:
+            raise unittest.SkipTest(f"{PRIORS['2.0.2-1'].ref} is not available in this clone")
         cls.current = cls.topologies["2.0.2-1"]
 
     def _each_prior(self):
@@ -221,7 +227,7 @@ class InPlaceUpgradeContracts(unittest.TestCase):
 
     def test_the_two_package_split_is_refused(self) -> None:
         with self.assertRaisesRegex(ModelError, "starts at 2.1.0-1"):
-            analyse_transition(load_arch_split(ROOT), self.current)
+            analyse_transition(two_package_split(), self.current)
 
 
 class PacmanSafetyContracts(unittest.TestCase):
@@ -417,7 +423,7 @@ class TransitionCliContracts(unittest.TestCase):
         self.assertEqual(switch_script(policy), switch.stdout)
         rollback = self._hfx("rollback-script", "--candidate-release", "2.1.0-1")
         self.assertEqual(rollback_script(policy, split), rollback.stdout)
-        refused = self._hfx("check")
+        refused = self._hfx("check", "--candidate-release", "2.0.2-1")
         self.assertEqual(1, refused.returncode)
         self.assertIn("starts at 2.1.0-1", refused.stderr)
 

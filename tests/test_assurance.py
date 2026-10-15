@@ -119,9 +119,9 @@ class AssuranceTests(unittest.TestCase):
         gates = context.gates
         self.assertEqual(load_release_gates(ROOT), gates)
         self.assertEqual(len(gates), 10)
-        self.assertEqual(context.target.product_version, "2.0.2")
+        self.assertEqual(context.target.product_version, "2.1.0")
         self.assertEqual(context.target.package_release, 1)
-        self.assertEqual(context.target.state, "published-arch-release")
+        self.assertEqual(context.target.state, "verified-candidate")
         self.assertEqual(context.published_release, "2.0.2-1")
         self.assertTrue(all(gate.status == "verified" for gate in gates))
         self.assertEqual(gates[-1].id, "HFX-GATE-PUBLICATION-DECISION")
@@ -130,7 +130,7 @@ class AssuranceTests(unittest.TestCase):
 
     def test_release_target_claims_publication_only_for_the_published_version(self) -> None:
         with (
-            patch("hfxdev.release.published_arch_release", return_value="2.0.1-1"),
+            patch("hfxdev.release.published_arch_release", return_value="2.1.0-1"),
             self.assertRaisesRegex(ModelError, "publication interlock"),
         ):
             load_release_context(ROOT)
@@ -138,7 +138,8 @@ class AssuranceTests(unittest.TestCase):
     def test_release_pages_name_one_repository_phrase_and_no_lock(self) -> None:
         phrase = "signed project-operated Arch repository, not an official Arch Linux repository"
         page = (ROOT / "docs" / "generated" / "release-gates.md").read_text(encoding="utf-8")
-        self.assertEqual(page.count(phrase), 2)
+        published = load_release_context(ROOT).target.state == "published-arch-release"
+        self.assertEqual(page.count(phrase), 2 if published else 0)
         self.assertNotIn("third-party", page)
         self.assertNotIn("locked", page)
         catalog = json.loads((ROOT / "docs" / "catalog.json").read_text(encoding="utf-8"))

@@ -81,7 +81,7 @@ class BridgeOnlyReleaseQualifierTests(unittest.TestCase):
         )
         self.assertIn('"${PACMAN[@]}" -Qd openrazer-daemon', source)
         self.assertIn('"${PACMAN[@]}" -Qd python-openrazer', source)
-        self.assertIn("CANDIDATE_PACKAGE_VERSION=2.0.2-1", source)
+        self.assertIn("CANDIDATE_PACKAGE_VERSION=2.1.0-1", source)
         self.assertIn("hyperflux-next-linux $CANDIDATE_PACKAGE_VERSION", source)
         self.assertIn("hyperflux-next-full $CANDIDATE_PACKAGE_VERSION", source)
         self.assertNotIn('"$INPUT/openrgb-plugin.pkg"', source)

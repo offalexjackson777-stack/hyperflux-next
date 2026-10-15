@@ -14,7 +14,7 @@ import sys
 import tempfile
 import unittest
 
-from arch_split_support import ROOT, candidate_split
+from arch_split_support import ROOT, candidate_split, two_package_split
 from test_aur_recipe import source_repository
 
 from hfxdev.arch_split import load_arch_split
@@ -184,7 +184,7 @@ class DossierContracts(unittest.TestCase):
 
     def test_the_two_package_release_is_refused(self) -> None:
         with self.assertRaisesRegex(ModelError, "starts with the four-output split"):
-            build_dossier(ROOT, load_arch_split(ROOT))
+            build_dossier(ROOT, two_package_split())
 
     def test_written_dossier_binds_receipts_by_digest(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

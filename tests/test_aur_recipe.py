@@ -15,7 +15,7 @@ import subprocess
 import tempfile
 import unittest
 
-from arch_split_support import ROOT, candidate_split, makepkg_available
+from arch_split_support import ROOT, candidate_split, two_package_split, makepkg_available
 
 from hfxdev.arch_official_snapshot import ProviderAlignment
 from hfxdev.arch_split import load_arch_split
@@ -740,7 +740,7 @@ class PublicationRecipeContracts(unittest.TestCase):
                 "evaluated for another release",
             ),
             "inactive split": (
-                lambda: self._generate(split=load_arch_split(ROOT)),
+                lambda: self._generate(split=two_package_split()),
                 "has no four-output AUR recipe",
             ),
         }
