@@ -4,10 +4,11 @@
   "title": "HyperFlux localhost companion contract",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "schema", "base_url", "transport", "snapshot", "write_capabilities", "privacy"],
+  "required": ["$schema", "schema", "delivery_state", "base_url", "transport", "snapshot", "write_capabilities", "privacy"],
   "properties": {
     "$schema": {"const": "../schemas/local-companion.schema.json"},
     "schema": {"const": "hyperflux-local-companion-v1"},
+    "delivery_state": {"const": "source-only"},
     "base_url": {"const": "http://127.0.0.1:47427"},
     "transport": {"const": "loopback-http-json"},
     "snapshot": {

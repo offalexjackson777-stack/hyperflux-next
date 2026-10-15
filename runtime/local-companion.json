@@ -1,6 +1,7 @@
 {
   "$schema": "../schemas/local-companion.schema.json",
   "schema": "hyperflux-local-companion-v1",
+  "delivery_state": "source-only",
   "base_url": "http://127.0.0.1:47427",
   "transport": "loopback-http-json",
   "snapshot": {

@@ -908,6 +908,8 @@ class RepositoryExperienceContracts(unittest.TestCase):
             ("persistent writes", lambda value: value["write_capabilities"].update(maximum_ttl_seconds=301)),
             ("direct USB", lambda value: value["privacy"].update(direct_usb_access=True)),
             ("non-loopback", lambda value: value.update(base_url="http://0.0.0.0:47427")),
+            ("installed claim", lambda value: value.update(delivery_state="installed")),
+            ("missing delivery", lambda value: value.pop("delivery_state")),
         )
         for label, mutate in mutations:
             with self.subTest(boundary=label), tempfile.TemporaryDirectory() as temporary:
@@ -920,6 +922,26 @@ class RepositoryExperienceContracts(unittest.TestCase):
                 )
                 with self.assertRaises(ModelError):
                     load_local_companion(root)
+
+    def test_qualification_console_and_companion_stay_out_of_packages(self) -> None:
+        contract = load_local_companion(ROOT)
+        self.assertEqual(contract["delivery_state"], "source-only")
+        manifest = load_json(ROOT / "packaging" / "install.json")
+        sources = [payload["source"] for payload in manifest["payloads"]]
+        destinations = [
+            entry["destination"] for entry in manifest["builds"] + manifest["payloads"]
+        ]
+        targets = [build.get("target") for build in manifest["builds"]]
+        packages = [build.get("package") for build in manifest["builds"]]
+        for source in sources:
+            self.assertFalse(source.startswith("apps/device-qualification"), source)
+        for destination in destinations:
+            self.assertNotIn("qualification", destination)
+        self.assertNotIn("hyperflux-next-device-qualification", targets)
+        self.assertNotIn("hfx-device-qualification", packages)
+        atlas = load_json(ROOT / "architecture" / "repository-atlas.json")
+        packaging = next(node for node in atlas["nodes"] if node["id"] == "packaging")
+        self.assertNotIn("device-qualification-console", packaging["depends_on"])
 
     def test_license_policy_covers_spdx_sources_and_one_root_license(self) -> None:
         result = verify_licensing_policy(ROOT)

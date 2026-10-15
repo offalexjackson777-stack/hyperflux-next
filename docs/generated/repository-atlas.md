@@ -74,7 +74,7 @@ File-level contracts live in [`architecture/repository-atlas.json`](../../archit
 | [Versioned bridge protocol](../../protocol/README.md) | Schema contracts | Bridge runtime, Core policy engine, Linux HID kernel module, Kernel transport adapter, Rust SDK, C++ SDK, Python SDK |
 | [OpenRGB adapter](../../integrations/openrgb/README.md) | Application integration catalog, Composable hardware profiles, C++ SDK | Packaging and installation |
 | [OpenRazer native route](../../integrations/openrazer/README.md) | Application integration catalog, Composable hardware profiles, Python SDK | Packaging and installation |
-| [Device qualification console](../../apps/device-qualification/README.md) | Device qualification runtime, Composable hardware profiles | Packaging and installation |
+| [Device qualification console](../../apps/device-qualification/README.md) | Device qualification runtime, Composable hardware profiles | None |
 | [Rust workspace](../../crates/README.md) | Architecture authority, Schema contracts, Pinned development toolchains | Core policy engine, Kernel transport adapter, Rust SDK, System probe, Contract tests |
 | [System probe](../../crates/hfx-system-probe/README.md) | Rust workspace, Rust SDK, Composable hardware profiles | Device qualification runtime, Operations CLI |
 | [Device qualification runtime](../../crates/hfx-device-qualification/README.md) | System probe, Composable hardware profiles, Bridge runtime | Device qualification console, Operations CLI |
@@ -88,7 +88,7 @@ File-level contracts live in [`architecture/repository-atlas.json`](../../archit
 | [Kernel driver contract](../../driver/README.md) | Architecture authority, Schema contracts | Linux HID kernel module, Kernel transport adapter |
 | [Linux HID kernel module](../../driver/kernel/README.md) | Kernel driver contract, Composable hardware profiles, Versioned bridge protocol | Packaging and installation |
 | [Linux runtime authority](../../runtime/README.md) | Architecture authority, Schema contracts | Production daemon, Packaging and installation |
-| [Packaging and installation](../../packaging/README.md) | Production daemon, Linux HID kernel module, Linux runtime authority, OpenRGB adapter, OpenRazer native route, Device qualification console | None |
+| [Packaging and installation](../../packaging/README.md) | Production daemon, Linux HID kernel module, Linux runtime authority, OpenRGB adapter, OpenRazer native route | None |
 | [C++ SDK](../../sdk/cpp/README.md) | Versioned bridge protocol, Composable hardware profiles, Application integration catalog | OpenRGB adapter, Contract tests |
 | [Python SDK](../../sdk/python/README.md) | Versioned bridge protocol, Composable hardware profiles, Application integration catalog | OpenRazer native route, Contract tests |
 | [Repository tooling](../../tools/README.md) | Architecture authority, Schema contracts, Pinned development toolchains | Documentation system, Contract tests, Verification graph |

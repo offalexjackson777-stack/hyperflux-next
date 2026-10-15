@@ -385,7 +385,7 @@
       "limitations": ["Private signing material remains outside the publishable repository and release assets"],
       "safe_change_workflow": ["Update canonical install or distribution data", "Regenerate the staged plan", "Run install, distribution, package, and release-impact contracts"],
       "related_docs": ["docs/generated/installation.md", "docs/generated/distributions.md"],
-      "depends_on": ["daemon", "kernel-module", "runtime-config", "openrgb-adapter", "openrazer-adapter", "device-qualification-console"]
+      "depends_on": ["daemon", "kernel-module", "runtime-config", "openrgb-adapter", "openrazer-adapter"]
     },
     {
       "id": "sdk-cpp", "title": "C++ SDK", "path": "sdk/cpp", "category": "applications", "status": "implemented",
