@@ -387,6 +387,29 @@ class RepositoryExperienceContracts(unittest.TestCase):
         self.assertIn("```mermaid", guide)
         self.assertIn("verification.md#safe-change-order", chapters[-1].read_text(encoding="utf-8"))
 
+    def test_architecture_and_assurance_prose_lines_stay_readable_in_source(self) -> None:
+        # Architecture and assurance prose wraps instead of running past 100
+        # columns; only fenced code, tables, and link-only lines may (ARCH-002).
+        link_only = re.compile(r"^\s*(- |\d+\. |Next: |Previous: )?\[[^\]]+\]\([^)]+\)[.,;:]?$")
+        pages = sorted(
+            [
+                *(ROOT / "docs/architecture").rglob("*.md"),
+                *(ROOT / "docs/assurance").rglob("*.md"),
+            ]
+        )
+        self.assertGreaterEqual(len(pages), 20)
+        for page in pages:
+            relative = page.relative_to(ROOT).as_posix()
+            fenced = False
+            for number, line in enumerate(page.read_text(encoding="utf-8").splitlines(), 1):
+                if line.lstrip().startswith("```"):
+                    fenced = not fenced
+                    continue
+                if fenced or line.lstrip().startswith("|") or len(line) <= 100:
+                    continue
+                with self.subTest(page=relative, line=number):
+                    self.assertRegex(line, link_only)
+
     def test_design_book_claims_match_verification_and_application_boundaries(self) -> None:
         # The runner rejects hardware nodes and reruns every selected node, and
         # effects, persistence, and settings stay upstream (AUTH-008, AUTH-009).

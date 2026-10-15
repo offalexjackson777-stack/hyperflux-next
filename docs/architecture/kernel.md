@@ -47,12 +47,12 @@ and emits bounded physical frames. That behavior remains available for rollback
 but is prevented from competing with a child-local NativeControl lease. Unknown
 children receive neither a native route nor semantic write authority.
 
-In the migration fallback, the qualified HW001 encoder preserves the observed two-pass receiver sequence,
-inter-frame timing, and mouse carrier correction. It also records which
-physical reports belong to each semantic device frame. Terminal kernel progress
-can therefore be projected conservatively into bridge-level delivery facts
-without confusing a partially delivered keyboard row sequence with a complete
-keyboard update.
+In the migration fallback, the qualified HW001 encoder preserves the observed
+two-pass receiver sequence, inter-frame timing, and mouse carrier correction. It
+also records which physical reports belong to each semantic device frame.
+Terminal kernel progress can therefore be projected conservatively into
+bridge-level delivery facts without confusing a partially delivered keyboard row
+sequence with a complete keyboard update.
 
 Native request digests bind the route, generation, endpoint, report, deadline,
 and dispatch identity. Legacy request digests continue to bind the complete
