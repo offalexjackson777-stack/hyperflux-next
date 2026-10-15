@@ -754,17 +754,6 @@ int main()
         return 6;
     }
 
-    registry.suspend_for_detection();
-    if(registry.registered_count() != 0 || !host.registered.empty())
-    {
-        return 7;
-    }
-    registry.resume_after_detection();
-    if(registry.registered_count() != 2 || host.registered.size() != 2)
-    {
-        return 8;
-    }
-
     auto next_mouse = mouse;
     next_mouse.generation_id = number<GenerationId>(5);
     next_mouse.route_token = text<NativeRouteToken>(std::string(64, 'c'));

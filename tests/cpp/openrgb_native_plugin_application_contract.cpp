@@ -510,8 +510,7 @@ int main(int argc, char** argv)
             current.insert(reinterpret_cast<std::uintptr_t>(controller));
         }
         if(!host_state->valid || current != replacement_identities
-           || host_state->register_calls != 4 || host_state->unregister_calls != 2
-           || plugin.status().coordinator.detection_suspended)
+           || host_state->register_calls != 4 || host_state->unregister_calls != 2)
         {
             return failure(__LINE__);
         }

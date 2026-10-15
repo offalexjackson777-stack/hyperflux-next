@@ -39,7 +39,6 @@ struct PluginCoordinatorStatus
     WorkerState worker_state = WorkerState::Created;
     bool started = false;
     bool stopped = false;
-    bool detection_suspended = false;
     std::size_t controllers = 0;
     std::size_t registered_controllers = 0;
     std::optional<sdk::Error> last_error;
@@ -49,7 +48,7 @@ struct PluginCoordinatorStatus
 ///
 /// The host and dispatcher must outlive the coordinator. Runtime callbacks use
 /// weak ownership, so queued work cannot resurrect or access an unloaded
-/// plugin. OpenRGB detection suspension remains synchronous by design.
+/// plugin.
 class PluginCoordinator final : public std::enable_shared_from_this<PluginCoordinator>
 {
 public:
@@ -66,7 +65,6 @@ public:
         PluginCoordinatorConfig config);
 
     [[nodiscard]] sdk::Result<void> start();
-    void detection_started() noexcept;
     void detection_finished() noexcept;
     void shutdown() noexcept;
 

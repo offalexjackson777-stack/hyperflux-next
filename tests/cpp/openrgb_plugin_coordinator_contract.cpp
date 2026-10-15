@@ -171,16 +171,9 @@ int main()
         return failure(__LINE__);
     }
 
-    coordinator->detection_started();
-    coordinator->detection_started();
-    if(host.size() != 0 || !coordinator->status().detection_suspended)
-    {
-        coordinator->shutdown();
-        return failure(__LINE__);
-    }
     coordinator->detection_finished();
     coordinator->detection_finished();
-    if(host.size() != 2 || coordinator->status().detection_suspended || !host.is_valid())
+    if(host.size() != 2 || !host.is_valid())
     {
         coordinator->shutdown();
         return failure(__LINE__);
@@ -209,7 +202,6 @@ int main()
     coordinator->shutdown();
     coordinator->shutdown();
     dispatcher.drain();
-    coordinator->detection_started();
     coordinator->detection_finished();
     const auto stopped = coordinator->status();
     if(!stopped.stopped || stopped.worker_state != WorkerState::Stopped || stopped.controllers != 0

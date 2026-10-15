@@ -356,11 +356,10 @@ int main()
     }
 
     TestController direct_mouse("Razer", "HID: /dev/hidraw-direct-mouse", "MOUSE-SERIAL-0001     ");
-    coordinator.value()->detection_started();
     host.direct = {&direct_mouse};
     coordinator.value()->detection_finished();
     auto suppressed = coordinator.value()->status();
-    if(suppressed.detection_suspended || suppressed.registered_controllers != 1
+    if(suppressed.registered_controllers != 1
        || suppressed.direct_suppressed_controllers != 1
        || host.registered.size() != 1
        || canonical_queried_serial(host.registered.front()->GetSerial())
@@ -369,7 +368,6 @@ int main()
         return 3;
     }
 
-    coordinator.value()->detection_started();
     host.direct.clear();
     coordinator.value()->detection_finished();
     auto restored = coordinator.value()->status();

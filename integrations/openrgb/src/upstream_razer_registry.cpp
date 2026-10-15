@@ -213,7 +213,7 @@ void UpstreamRazerControllerRegistry::reconcile_registration(
         suppress ? ++update.newly_suppressed : ++update.newly_restored;
         entry.direct_suppressed = suppress;
     }
-    const bool should_register = !suspended_ && !entry.direct_suppressed;
+    const bool should_register = !entry.direct_suppressed;
     if(should_register && !entry.registered)
     {
         host_->register_controller(entry.instance->controller());
@@ -336,39 +336,6 @@ UpstreamRegistryUpdate UpstreamRazerControllerRegistry::apply_direct_serials(
     return update;
 }
 
-void UpstreamRazerControllerRegistry::suspend_for_detection() noexcept
-{
-    if(stopped_ || suspended_)
-    {
-        return;
-    }
-    suspended_ = true;
-    for(auto& [id, entry] : entries_)
-    {
-        (void)id;
-        if(entry.registered)
-        {
-            host_->unregister_controller(entry.instance->controller());
-            entry.registered = false;
-        }
-    }
-}
-
-void UpstreamRazerControllerRegistry::resume_after_detection() noexcept
-{
-    if(stopped_ || !suspended_)
-    {
-        return;
-    }
-    suspended_ = false;
-    UpstreamRegistryUpdate update;
-    for(auto& [id, entry] : entries_)
-    {
-        (void)id;
-        reconcile_registration(entry, update);
-    }
-}
-
 void UpstreamRazerControllerRegistry::shutdown() noexcept
 {
     if(stopped_)
@@ -385,7 +352,6 @@ void UpstreamRazerControllerRegistry::shutdown() noexcept
     }
     entries_.clear();
     direct_serials_.clear();
-    suspended_ = false;
     stopped_ = true;
 }
 
@@ -413,11 +379,6 @@ std::size_t UpstreamRazerControllerRegistry::suppressed_count() const noexcept
         entries_.begin(),
         entries_.end(),
         [](const auto& item) { return item.second.direct_suppressed; }));
-}
-
-bool UpstreamRazerControllerRegistry::suspended() const noexcept
-{
-    return suspended_;
 }
 
 std::vector<std::string> UpstreamRazerControllerRegistry::serials() const

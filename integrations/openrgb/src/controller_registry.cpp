@@ -2,7 +2,6 @@
 
 #include <hyperflux/openrgb/controller_registry.hpp>
 
-#include <algorithm>
 #include <map>
 #include <mutex>
 #include <optional>
@@ -118,24 +117,16 @@ sdk::Result<RegistryUpdate> ControllerRegistry::apply(std::vector<ControllerMode
                 Entry entry {
                     *change.after,
                     std::move(prepared.at(change.stable_id)),
-                    false,
                 };
                 auto inserted = entries_.emplace(change.stable_id, std::move(entry)).first;
-                if(!suspended_)
-                {
-                    host_->register_controller(*inserted->second.controller);
-                    inserted->second.registered = true;
-                }
+                host_->register_controller(*inserted->second.controller);
                 ++update.added;
                 break;
             }
             case ReconcileKind::Removed:
             {
                 auto existing = entries_.find(change.stable_id);
-                if(existing->second.registered)
-                {
-                    host_->unregister_controller(*existing->second.controller);
-                }
+                host_->unregister_controller(*existing->second.controller);
                 entries_.erase(existing);
                 ++update.removed;
                 break;
@@ -152,42 +143,21 @@ sdk::Result<RegistryUpdate> ControllerRegistry::apply(std::vector<ControllerMode
             case ReconcileKind::PresentationReplaced:
             {
                 auto existing = entries_.find(change.stable_id);
-                if(existing->second.registered)
-                {
-                    host_->unregister_controller(*existing->second.controller);
-                }
+                host_->unregister_controller(*existing->second.controller);
                 entries_.erase(existing);
                 Entry entry {
                     *change.after,
                     std::move(prepared.at(change.stable_id)),
-                    false,
                 };
                 auto inserted = entries_.emplace(change.stable_id, std::move(entry)).first;
-                if(!suspended_)
-                {
-                    host_->register_controller(*inserted->second.controller);
-                    inserted->second.registered = true;
-                }
+                host_->register_controller(*inserted->second.controller);
                 ++update.presentation_replaced;
                 break;
             }
         }
     }
-    update.registered = registered_count_locked();
+    update.registered = entries_.size();
     return sdk::Result<RegistryUpdate>::success(update);
-}
-
-void ControllerRegistry::register_all_locked() noexcept
-{
-    for(auto& [stable_id, entry] : entries_)
-    {
-        (void)stable_id;
-        if(!entry.registered)
-        {
-            host_->register_controller(*entry.controller);
-            entry.registered = true;
-        }
-    }
 }
 
 void ControllerRegistry::unregister_all_locked() noexcept
@@ -195,34 +165,8 @@ void ControllerRegistry::unregister_all_locked() noexcept
     for(auto& [stable_id, entry] : entries_)
     {
         (void)stable_id;
-        if(entry.registered)
-        {
-            host_->unregister_controller(*entry.controller);
-            entry.registered = false;
-        }
+        host_->unregister_controller(*entry.controller);
     }
-}
-
-void ControllerRegistry::suspend_for_detection() noexcept
-{
-    std::lock_guard lock(mutex_);
-    if(stopped_ || suspended_)
-    {
-        return;
-    }
-    unregister_all_locked();
-    suspended_ = true;
-}
-
-void ControllerRegistry::resume_after_detection() noexcept
-{
-    std::lock_guard lock(mutex_);
-    if(stopped_ || !suspended_)
-    {
-        return;
-    }
-    suspended_ = false;
-    register_all_locked();
 }
 
 void ControllerRegistry::shutdown() noexcept
@@ -234,14 +178,7 @@ void ControllerRegistry::shutdown() noexcept
     }
     unregister_all_locked();
     entries_.clear();
-    suspended_ = false;
     stopped_ = true;
-}
-
-bool ControllerRegistry::suspended() const noexcept
-{
-    std::lock_guard lock(mutex_);
-    return suspended_;
 }
 
 bool ControllerRegistry::stopped() const noexcept
@@ -259,17 +196,7 @@ std::size_t ControllerRegistry::size() const noexcept
 std::size_t ControllerRegistry::registered_count() const noexcept
 {
     std::lock_guard lock(mutex_);
-    return registered_count_locked();
-}
-
-std::size_t ControllerRegistry::registered_count_locked() const noexcept
-{
-    return static_cast<std::size_t>(std::count_if(entries_.begin(),
-        entries_.end(),
-        [](const auto& item)
-        {
-            return item.second.registered;
-        }));
+    return entries_.size();
 }
 
 std::vector<ControllerModel> ControllerRegistry::models() const

@@ -38,7 +38,6 @@ struct UpstreamRazerCoordinatorStatus
     NativeRouteWorkerState worker_state = NativeRouteWorkerState::Created;
     bool started = false;
     bool stopped = false;
-    bool detection_suspended = false;
     std::size_t controllers = 0;
     std::size_t registered_controllers = 0;
     std::size_t direct_suppressed_controllers = 0;
@@ -63,7 +62,6 @@ public:
         UpstreamRazerCoordinatorConfig config = {});
 
     [[nodiscard]] sdk::Result<void> start();
-    void detection_started() noexcept;
     void detection_finished() noexcept;
     void shutdown() noexcept;
     void request_rescan() noexcept;
@@ -95,7 +93,6 @@ private:
     mutable std::mutex state_mutex_;
     bool started_ = false;
     bool stopped_ = false;
-    bool detection_suspended_ = false;
     std::size_t controller_count_ = 0;
     std::size_t registered_controller_count_ = 0;
     std::size_t direct_suppressed_controller_count_ = 0;

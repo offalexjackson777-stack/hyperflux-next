@@ -129,14 +129,11 @@ public:
         std::vector<v7::NativeRoute> routes);
     [[nodiscard]] UpstreamRegistryUpdate apply_direct_serials(
         std::vector<std::string> physically_queried_serials);
-    void suspend_for_detection() noexcept;
-    void resume_after_detection() noexcept;
     void shutdown() noexcept;
 
     [[nodiscard]] std::size_t size() const noexcept;
     [[nodiscard]] std::size_t registered_count() const noexcept;
     [[nodiscard]] std::size_t suppressed_count() const noexcept;
-    [[nodiscard]] bool suspended() const noexcept;
     [[nodiscard]] std::vector<std::string> serials() const;
     [[nodiscard]] std::vector<UpstreamRazerControllerSummary> summaries() const;
     [[nodiscard]] std::uintptr_t controller_identity(std::string_view stable_id) const noexcept;
@@ -158,7 +155,6 @@ private:
     UpstreamRazerControllerFactory* factory_;
     std::map<std::string, Entry, std::less<>> entries_;
     std::set<std::string, std::less<>> direct_serials_;
-    bool suspended_ = false;
     bool stopped_ = false;
 };
 
