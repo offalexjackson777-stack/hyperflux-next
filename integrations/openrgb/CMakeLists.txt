@@ -758,11 +758,20 @@ if(HFX_OPENRGB_SOURCE_DIR)
             add_executable(
                 openrgb-native-plugin-application-contract
                 "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_native_plugin_application_contract.cpp"
+                "${HFX_OPENRGB_CONTROLLER_SOURCE_DIR}/RGBController/RGBController_Virtual.cpp"
+            )
+            target_include_directories(
+                openrgb-native-plugin-application-contract
+                PRIVATE
+                    "${HFX_OPENRGB_SOURCE_DIR}"
+                    "${HFX_OPENRGB_SOURCE_DIR}/RGBController"
+                    "${HFX_OPENRGB_SOURCE_DIR}/dependencies/json"
             )
             target_link_libraries(
                 openrgb-native-plugin-application-contract
                 PRIVATE hyperflux_openrgb_qt_shell
             )
+            hfx_openrgb_enable_thread_sanitizer(openrgb-native-plugin-application-contract)
             if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
                 target_compile_options(
                     openrgb-native-plugin-application-contract

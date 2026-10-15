@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
+#include "support/openrgb_virtual_plugin_api.hpp"
+
 #include <hyperflux/openrgb/native_plugin_application.hpp>
 
 #include "RGBController.h"
@@ -563,6 +565,55 @@ int main(int argc, char** argv)
         {
             return failure(__LINE__);
         }
+    }
+
+    // OpenRGB 1.0 exit: the GUI stops following the device list before it
+    // unloads plugins, so its device pages release the controllers we
+    // presented only after Unload has returned.
+    {
+        hyperflux::test::OpenRgbVirtualPluginApi api;
+        if(!plugin.load(&api)
+           || !wait_until([&]
+           {
+               return plugin.status().coordinator.registered_controllers == 2;
+           }))
+        {
+            return failure(__LINE__);
+        }
+        std::vector<std::unique_ptr<hyperflux::test::OpenRgbDevicePage>> pages;
+        for(auto* controller : api.GetRGBControllers())
+        {
+            pages.push_back(std::make_unique<hyperflux::test::OpenRgbDevicePage>(*controller));
+        }
+        if(pages.size() != 2)
+        {
+            return failure(__LINE__);
+        }
+        plugin.unload();
+        if(!api.valid || !api.GetRGBControllers().empty())
+        {
+            return failure(__LINE__);
+        }
+        for(auto& page : pages)
+        {
+            if(!page->destroy(api))
+            {
+                return failure(__LINE__);
+            }
+        }
+
+        // Loading again frees what the exit path kept alive.
+        const unsigned int deletes = api.deletes;
+        if(!plugin.load(&api)
+           || !wait_until([&]
+           {
+               return plugin.status().coordinator.registered_controllers == 2;
+           })
+           || api.deletes != deletes + 2 || !api.valid)
+        {
+            return failure(__LINE__);
+        }
+        plugin.unload();
     }
 
     auto duplicate_host_state = std::make_shared<HostState>();

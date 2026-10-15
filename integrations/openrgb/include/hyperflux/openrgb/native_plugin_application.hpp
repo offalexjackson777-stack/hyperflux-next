@@ -20,6 +20,10 @@ class NativePluginHost : public UpstreamPluginHost
 {
 public:
     ~NativePluginHost() override = default;
+
+    /// Runs before Unload unregisters the controllers. OpenRGB can still
+    /// reference what the host presented after Unload returns.
+    virtual void begin_unload() noexcept {}
 };
 
 struct NativePluginApplicationStatus

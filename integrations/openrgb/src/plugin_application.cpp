@@ -47,6 +47,11 @@ public:
         mirrors_.remove(controller);
     }
 
+    void begin_unload() noexcept override
+    {
+        mirrors_.begin_unload();
+    }
+
 private:
     VirtualControllerMirrorSet mirrors_;
 };
@@ -207,6 +212,13 @@ void OpenRgbPluginApplication::unload() noexcept
         coordinator = std::move(coordinator_);
         dispatcher = std::move(dispatcher_);
         owned_host = std::move(host_);
+    }
+    if(owned_host != nullptr)
+    {
+        // On exit OpenRGB unloads plugins after its GUI stopped following
+        // the device list, and its device pages release the controllers we
+        // present only after Unload returns.
+        owned_host->begin_unload();
     }
     if(coordinator != nullptr)
     {

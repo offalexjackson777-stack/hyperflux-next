@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-#include "support/openrgb_plugin_api_stub.hpp"
+#include "support/openrgb_virtual_plugin_api.hpp"
 
 #include <hyperflux/openrgb/device_thread_barrier.hpp>
 #include <hyperflux/openrgb/virtual_controller_mirror.hpp>
 
 #include "RGBController.h"
-#include "RGBController_Virtual.h"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <cstdlib>
 #include <iostream>
 #include <mutex>
-#include <set>
+#include <optional>
 #include <vector>
 
 namespace
@@ -123,6 +123,11 @@ public:
         changed_.notify_all();
     }
 
+    void DeviceSaveMode() override
+    {
+        saves.fetch_add(1);
+    }
+
     void DeviceUpdateMode() override
     {
         if(barrier_.absorb_mode())
@@ -167,6 +172,8 @@ public:
         return mode_updates_;
     }
 
+    std::atomic_uint saves {0};
+
 private:
     DeviceThreadBarrier barrier_;
     std::mutex mutex_;
@@ -175,85 +182,7 @@ private:
     std::vector<ModeUpdate> mode_updates_;
 };
 
-/// Host side of API 5 backed by OpenRGB's own virtual controller.
-class PluginApi final : public hyperflux::test::OpenRgbPluginApiStub
-{
-public:
-    PluginApi() = default;
-    PluginApi(const PluginApi&) = delete;
-    PluginApi& operator=(const PluginApi&) = delete;
-    PluginApi(PluginApi&&) = delete;
-    PluginApi& operator=(PluginApi&&) = delete;
-
-    ~PluginApi()
-    {
-        for(auto* controller : created_)
-        {
-            destroy(controller);
-        }
-    }
-
-    RGBControllerInterface* CreateVirtualRGBController(RGBController_Setup* setup) override
-    {
-        auto* controller = new RGBController_Virtual(setup);
-        created_.insert(controller);
-        ++creates;
-        return controller;
-    }
-
-    void DeleteVirtualRGBController(RGBControllerInterface* controller) override
-    {
-        if(registered_.contains(controller) || created_.erase(controller) == 0)
-        {
-            valid = false;
-            return;
-        }
-        destroy(controller);
-        ++deletes;
-    }
-
-    void RegisterVirtualRGBController(RGBControllerInterface* controller) override
-    {
-        if(!created_.contains(controller) || !registered_.insert(controller).second)
-        {
-            valid = false;
-        }
-    }
-
-    void UnregisterVirtualRGBController(RGBControllerInterface* controller) override
-    {
-        if(registered_.erase(controller) == 0)
-        {
-            valid = false;
-        }
-    }
-
-    std::vector<RGBControllerInterface*> GetRGBControllers() override
-    {
-        return {registered_.begin(), registered_.end()};
-    }
-
-    [[nodiscard]] bool is_registered(RGBControllerInterface* controller) const
-    {
-        return registered_.contains(controller);
-    }
-
-    unsigned int creates = 0;
-    unsigned int deletes = 0;
-    bool valid = true;
-
-private:
-    // Same as OpenRGBPluginAPI::DeleteVirtualRGBController: the host deletes the
-    // virtual controller without calling Shutdown(), and the base destructor
-    // stops its device thread.
-    static void destroy(RGBControllerInterface* controller)
-    {
-        delete static_cast<RGBController*>(controller);
-    }
-
-    std::set<RGBControllerInterface*> created_;
-    std::set<RGBControllerInterface*> registered_;
-};
+using PluginApi = hyperflux::test::OpenRgbVirtualPluginApi;
 
 void set_all_colors(RGBControllerInterface& controller, RGBColor color)
 {
@@ -390,6 +319,55 @@ int main()
     if(api.creates != 4 || api.deletes != 4 || !api.valid)
     {
         return failure(__LINE__);
+    }
+
+    // OpenRGB's exit order: the GUI stops following the device list, Unload
+    // removes every controller, and only then are the device pages destroyed.
+    std::optional<hyperflux::test::OpenRgbDevicePage> page;
+    LocalController late_local;
+    {
+        VirtualControllerMirrorSet set(api);
+        set.add(local);
+        const auto presented = api.GetRGBControllers();
+        if(presented.size() != 1)
+        {
+            return failure(__LINE__);
+        }
+        page.emplace(*presented.front());
+        set.begin_unload();
+        // Nothing new is presented once unloading started.
+        set.add(late_local);
+        if(api.creates != 5 || api.GetRGBControllers().size() != 1)
+        {
+            return failure(__LINE__);
+        }
+    }
+    if(api.creates != 5 || api.deletes != 4 || !api.valid
+       || !api.GetRGBControllers().empty())
+    {
+        return failure(__LINE__);
+    }
+    // Retired: inert, and no hook reaches the local controller or the
+    // destroyed mirror.
+    RGBControllerInterface* const retired = page->controller();
+    const unsigned int saves = local.saves.load();
+    retired->SaveMode();
+    retired->SetActiveMode(kStatic);
+    if(local.saves.load() != saves || local.GetActiveMode() != kDirect)
+    {
+        return failure(__LINE__);
+    }
+    if(!page->destroy(api))
+    {
+        return failure(__LINE__);
+    }
+    // Loading again releases what the previous load retired.
+    {
+        VirtualControllerMirrorSet reloaded(api);
+        if(api.deletes != 5 || api.is_allocated(retired) || !api.valid)
+        {
+            return failure(__LINE__);
+        }
     }
     return EXIT_SUCCESS;
 }

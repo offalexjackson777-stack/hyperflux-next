@@ -6,8 +6,11 @@
 #include "RGBController.h"
 
 #include <algorithm>
+#include <mutex>
+#include <new>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace hyperflux::openrgb::native
 {
@@ -85,6 +88,81 @@ RGBController_Setup setup_from_local(RGBController& local)
     return setup;
 }
 
+/// Host controllers retired by an unloading set, keyed by the plugin API
+/// that created them. OpenRGB keeps one API object per plugin entry, so a
+/// reload of the same plugin presents the same key.
+class RetiredHostControllers
+{
+public:
+    void park(OpenRGBPluginAPIInterface* api, RGBControllerInterface* controller) noexcept
+    {
+        const std::lock_guard lock(mutex_);
+        try
+        {
+            entries_.push_back({ api, controller });
+        }
+        catch(...)
+        {
+            // Leaked: freeing it here is what this store exists to avoid.
+        }
+    }
+
+    [[nodiscard]] std::vector<RGBControllerInterface*> take(OpenRGBPluginAPIInterface* api) noexcept
+    {
+        std::vector<RGBControllerInterface*> taken;
+        const std::lock_guard lock(mutex_);
+        try
+        {
+            for(const Entry& entry : entries_)
+            {
+                if(entry.api == api)
+                {
+                    taken.push_back(entry.controller);
+                }
+            }
+        }
+        catch(...)
+        {
+            // Nothing is released; the entries stay parked.
+            return {};
+        }
+        std::erase_if(entries_, [api](const Entry& entry) { return entry.api == api; });
+        return taken;
+    }
+
+private:
+    struct Entry
+    {
+        OpenRGBPluginAPIInterface* api;
+        RGBControllerInterface* controller;
+    };
+
+    std::mutex mutex_;
+    std::vector<Entry> entries_;
+};
+
+/// Never destroyed: parked controllers must stay reachable until the plugin
+/// is loaded again, and are deliberately not freed at exit.
+RetiredHostControllers* retired_host_controllers() noexcept
+{
+    static auto* const store = new(std::nothrow) RetiredHostControllers;
+    return store;
+}
+
+void neutralize_hooks(RGBController_Setup& setup) noexcept
+{
+    setup.object_ptr = nullptr;
+    setup.DeviceConfigureZone = nullptr;
+    setup.DeviceUpdateLEDs = nullptr;
+    setup.DeviceUpdateZoneLEDs = nullptr;
+    setup.DeviceUpdateSingleLED = nullptr;
+    setup.DeviceUpdateMode = nullptr;
+    setup.DeviceUpdateZoneMode = nullptr;
+    setup.DeviceSaveMode = nullptr;
+    setup.DeviceUpdateDeviceSpecificConfiguration = nullptr;
+    setup.DeviceUpdateDeviceSpecificZoneConfiguration = nullptr;
+}
+
 } // namespace
 
 VirtualControllerMirror::VirtualControllerMirror(
@@ -160,6 +238,48 @@ VirtualControllerMirror::~VirtualControllerMirror()
 RGBControllerInterface* VirtualControllerMirror::host_controller() const noexcept
 {
     return host_controller_;
+}
+
+RGBControllerInterface* VirtualControllerMirror::retire() noexcept
+{
+    RGBControllerInterface* const host = std::exchange(host_controller_, nullptr);
+    if(host == nullptr)
+    {
+        return nullptr;
+    }
+    if(!callback_registered_)
+    {
+        // Never published, so nothing in OpenRGB can reference it.
+        api_->DeleteVirtualRGBController(host);
+        return nullptr;
+    }
+    api_->UnregisterVirtualRGBController(host);
+    host->UnregisterUpdateCallback(this);
+    // The hooks point into this mirror and the plugin library, both of which
+    // can be gone while OpenRGB still references the host controller.
+    // UpdateVirtualController swaps them under the exclusive AccessMutex, so
+    // no hook call starts afterwards.
+    try
+    {
+        RGBController_Setup setup = setup_from_local(*local_);
+        neutralize_hooks(setup);
+        api_->UpdateVirtualRGBController(host, &setup);
+    }
+    catch(...)
+    {
+        try
+        {
+            RGBController_Setup setup {};
+            neutralize_hooks(setup);
+            api_->UpdateVirtualRGBController(host, &setup);
+        }
+        catch(...)
+        {
+            // The hooks stay; nothing in OpenRGB calls them on a controller
+            // it no longer lists.
+        }
+    }
+    return host;
 }
 
 bool VirtualControllerMirror::copy_colors() noexcept
@@ -316,6 +436,16 @@ VirtualControllerMirrorSet::VirtualControllerMirrorSet(
     : api_(&api),
       options_(options)
 {
+    // A new set means the plugin is loading again. The GUI dropped its pages
+    // for the retired controllers while the previous set unregistered them,
+    // because OpenRGB only skips that update when it is exiting.
+    if(RetiredHostControllers* const retired = retired_host_controllers())
+    {
+        for(RGBControllerInterface* controller : retired->take(api_))
+        {
+            api_->DeleteVirtualRGBController(controller);
+        }
+    }
 }
 
 VirtualControllerMirrorSet::~VirtualControllerMirrorSet()
@@ -325,7 +455,7 @@ VirtualControllerMirrorSet::~VirtualControllerMirrorSet()
 
 void VirtualControllerMirrorSet::add(RGBController& controller) noexcept
 {
-    if(mirrors_.contains(&controller))
+    if(unloading_ || mirrors_.contains(&controller))
     {
         return;
     }
@@ -354,7 +484,7 @@ void VirtualControllerMirrorSet::remove(RGBController& controller) noexcept
     }
     auto mirror = std::move(found->second);
     mirrors_.erase(found);
-    mirror.reset();
+    release(std::move(mirror));
 }
 
 void VirtualControllerMirrorSet::clear() noexcept
@@ -363,8 +493,33 @@ void VirtualControllerMirrorSet::clear() noexcept
     {
         auto mirror = std::move(mirrors_.begin()->second);
         mirrors_.erase(mirrors_.begin());
-        mirror.reset();
+        release(std::move(mirror));
     }
+}
+
+void VirtualControllerMirrorSet::begin_unload() noexcept
+{
+    unloading_ = true;
+}
+
+void VirtualControllerMirrorSet::release(std::unique_ptr<VirtualControllerMirror> mirror) noexcept
+{
+    if(!unloading_)
+    {
+        mirror.reset();
+        return;
+    }
+    RGBControllerInterface* const host = mirror->retire();
+    mirror.reset();
+    if(host == nullptr)
+    {
+        return;
+    }
+    if(RetiredHostControllers* const retired = retired_host_controllers())
+    {
+        retired->park(api_, host);
+    }
+    // Without a store the controller is leaked, never freed under the GUI.
 }
 
 OpenRGBPluginAPIInterface& VirtualControllerMirrorSet::api() const noexcept

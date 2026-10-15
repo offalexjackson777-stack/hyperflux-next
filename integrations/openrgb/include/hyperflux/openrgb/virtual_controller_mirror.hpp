@@ -55,6 +55,11 @@ public:
 
     [[nodiscard]] RGBControllerInterface* host_controller() const noexcept;
 
+    /// Unregisters the host controller and stops forwarding like the
+    /// destructor, but leaves the host controller allocated and returns it.
+    /// Its hooks no longer reach this mirror or plugin code.
+    [[nodiscard]] RGBControllerInterface* retire() noexcept;
+
 private:
     VirtualControllerMirror(
         OpenRGBPluginAPIInterface& api,
@@ -81,6 +86,15 @@ private:
 ///
 /// Registering an already mirrored controller is a no-op, so a controller is
 /// never presented twice. Same threading contract as VirtualControllerMirror.
+///
+/// After begin_unload(), removals retire host controllers instead of deleting
+/// them. OpenRGB 1.0 stops its GUI device-list updates before it unloads
+/// plugins on exit, so its device pages still reference those controllers
+/// and use them in their destructors after Unload has returned. Retired
+/// controllers stay allocated until a later set is created for the same
+/// plugin API. That only happens on a reload, and the GUI has dropped the
+/// pages synchronously during the unregistration that preceded it. On exit
+/// they are never freed.
 class VirtualControllerMirrorSet final
 {
 public:
@@ -96,13 +110,18 @@ public:
     void add(RGBController& controller) noexcept;
     void remove(RGBController& controller) noexcept;
     void clear() noexcept;
+    /// Irreversible: later additions are ignored.
+    void begin_unload() noexcept;
 
     [[nodiscard]] OpenRGBPluginAPIInterface& api() const noexcept;
 
 private:
+    void release(std::unique_ptr<VirtualControllerMirror> mirror) noexcept;
+
     OpenRGBPluginAPIInterface* api_;
     VirtualControllerMirrorOptions options_;
     std::map<const RGBController*, std::unique_ptr<VirtualControllerMirror>> mirrors_;
+    bool unloading_ = false;
 };
 
 } // namespace hyperflux::openrgb::native
