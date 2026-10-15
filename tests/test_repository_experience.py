@@ -1094,5 +1094,16 @@ class UserDocumentationContracts(unittest.TestCase):
         for word in ("lease", "authority", "reviewed local artifact", "boundary"):
             self.assertNotIn(word, first_run)
 
+    def test_troubleshooting_gives_user_actions_for_a_missing_device(self) -> None:
+        troubleshooting = _page("docs/user/troubleshooting.md")
+        section = troubleshooting.split("## A Device Is Missing From An Application", 1)[1]
+        section = section.split("\n## ", 1)[0]
+        for action in ("Wake the device", "Close any other", "Reopen", "hyperfluxctl doctor"):
+            self.assertIn(action, section)
+        self.assertIn("hyperfluxctl support-bundle --preview", section)
+        for word in ("non-writable", "lease", "unqualified", "boundary"):
+            self.assertNotIn(word, troubleshooting)
+        self.assertIn("> [!WARNING]", troubleshooting)
+
 if __name__ == "__main__":
     unittest.main()

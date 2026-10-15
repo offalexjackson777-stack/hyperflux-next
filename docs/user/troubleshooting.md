@@ -1,24 +1,29 @@
 # Troubleshooting
 
-Start with the read-only checks:
+Start with these two checks. They only read state:
 
 ```sh
 hyperfluxctl status
 hyperfluxctl doctor
 ```
 
-Doctor reports the first missing boundary, one safe action, and how to verify
-the result. It does not write hardware or restart services.
+Doctor names the first problem it finds, one thing to do about it, and how to
+check that it worked. It does not change device settings or restart services.
 
 ## A Device Is Missing From An Application
 
-1. Confirm Doctor reports the driver, bridge, and expected route healthy.
-2. Close the other device-control application so it releases its lease.
-3. Refresh or reopen the affected stock application once.
-4. If the route is unknown, sleeping, stale, or unqualified, leave it
-   non-writable and include the Doctor summary in a support request.
+1. Wake the device: move the mouse or press a key. A sleeping device may not
+   answer until it wakes.
+2. Close any other lighting application, such as OpenRGB or Polychromatic.
+   Only one application should control the device while you check.
+3. Reopen the affected application, or refresh it once.
+4. Run `hyperfluxctl doctor` and do what it says.
+5. If the device is still missing, preview a support bundle with
+   `hyperfluxctl support-bundle --preview` and include the Doctor output in a
+   [support request](../../SUPPORT.md).
 
-Do not create a manual USB binding or register the receiver as a fake device.
+Do not bind the receiver to another driver by hand or add it as a custom device
+in an application. Neither makes a device appear.
 
 ### After Switching A Wireless Keyboard Off And On
 
