@@ -9,8 +9,8 @@ HyperFlux Next has two packages. Choose one.
 
 Full is the normal desktop choice and pulls in Core by itself. Choose Core alone
 only when you need the receiver transport and SDK without application
-integration. Stock OpenRazer, Polychromatic, and OpenRGB are separate Arch
-packages that you install yourself if you want them; HyperFlux does not install
+integration. Stock OpenRazer, Polychromatic, and OpenRGB are separate packages
+that you install yourself if you want them; HyperFlux does not install
 or replace them.
 
 ## Availability

@@ -1132,5 +1132,13 @@ class UserDocumentationContracts(unittest.TestCase):
         for word in ("authority", "non-writable", "unqualified", "route"):
             self.assertNotIn(word, hardware)
 
+    def test_applications_page_says_who_owns_the_stock_applications(self) -> None:
+        applications = _page("docs/user/applications.md")
+        self.assertIn("does not install, patch, or own them", applications)
+        self.assertIn("OpenRazer is the background service", applications)
+        self.assertIn("(limitations.md)", applications)
+        for word in ("qualified", "distribution application", "transports"):
+            self.assertNotIn(word, applications)
+
 if __name__ == "__main__":
     unittest.main()

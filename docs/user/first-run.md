@@ -57,8 +57,8 @@ Doctor again. Run `hyperfluxctl doctor --explain` for more detail, or see
 
 ## 6. Open Your Applications One At A Time
 
-Stock OpenRGB, OpenRazer, and Polychromatic are separate Arch packages. Install
-the ones you want with Pacman. Then:
+Stock OpenRGB, OpenRazer, and Polychromatic are separate packages. Install the
+ones you want, as described in [applications](applications.md). Then:
 
 1. Open OpenRGB. Check that your keyboard and mouse appear and change a colour.
    Close OpenRGB.

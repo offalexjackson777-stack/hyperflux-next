@@ -1,20 +1,31 @@
 # Applications
 
-HyperFlux transports qualified device exchanges while stock applications keep
-their existing device models, settings, effects, profiles, and persistence.
+With the Full package installed, stock OpenRGB and stock Polychromatic can
+control the keyboards and mice paired to your receiver, just as they control
+devices plugged in by cable. Polychromatic does this through the stock OpenRazer
+service. Your effects, profiles, and settings stay in those applications.
+
+These applications are optional and belong to their own projects. HyperFlux
+does not install, patch, or own them. Full lists them as optional packages:
+`openrgb`, `openrazer-daemon`, `python-openrazer`, and `polychromatic`. Install
+the ones you want.
+
+With Core alone, these applications cannot reach devices paired to the
+receiver.
 
 ## OpenRazer And Polychromatic
 
-Full provides the narrow driver and relay integration needed for stock
-OpenRazer to publish receiver-backed child devices through its ordinary public
-API. Polychromatic remains the distribution application and is neither bundled
-nor patched by HyperFlux.
+OpenRazer is the background service that talks to Razer devices.
+Polychromatic is the window you use to choose effects and brightness; it talks
+to OpenRazer. Full lets the stock OpenRazer service see each device paired to
+the receiver as its own device, so Polychromatic shows it by name. You do not
+need to change any OpenRazer or Polychromatic setting.
 
 ## OpenRGB
 
-Full packages a standalone HyperFlux plugin for the stock OpenRGB application.
-The plugin publishes qualified child controllers; it does not replace OpenRGB
-or write global OpenRGB configuration.
+Full adds a HyperFlux plugin to the stock OpenRGB application. Your paired
+keyboard and mouse then appear in OpenRGB by name. The plugin does not replace
+OpenRGB or change its own settings.
 
 ## Known Limitations
 
