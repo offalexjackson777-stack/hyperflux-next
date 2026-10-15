@@ -450,6 +450,39 @@ def _source_conflicts(link: dict[str, Any], records: dict[str, dict[str, Any]]) 
     return conflicts
 
 
+PHYSICALLY_PROVEN = "physically-proven"
+
+
+def _candidate_support_tiers(
+    root: Path, profile_inputs: Any
+) -> dict[str, tuple[str, str | None]]:
+    """Project the public support tier of each candidate from its native route.
+
+    The source-validated route catalog is the single authority for whether a
+    route is physically proven, source-qualified, or blocked; this keeps Device
+    Knowledge and Supported Hardware on the same tiers and counts.
+    """
+    from .source_validated import load_source_validated_catalog
+    from .source_validated_catalog import public_support_tier
+
+    scope = profile_inputs.official_receiver_scope
+    devices = {
+        (device["identity"]["product_id"], device["identity"]["device_kind"]): device
+        for device in load_source_validated_catalog(root)["devices"]
+    }
+    tiers: dict[str, tuple[str, str | None]] = {}
+    for entry in scope["entries"]:
+        device = devices.get((entry["wireless_product_id"], entry["device_kind"]))
+        if device is None:
+            raise ModelError(f"{entry['candidate_id']}: official route is missing")
+        tier = public_support_tier(device)
+        profile_id = device["hardware_assurance"]["profile_id"]
+        if (tier == PHYSICALLY_PROVEN) != (profile_id is not None):
+            raise ModelError(f"{entry['candidate_id']}: hardware assurance profile is invalid")
+        tiers[entry["candidate_id"]] = (tier, profile_id)
+    return tiers
+
+
 def compiled_knowledge_catalog(root: Path) -> dict[str, Any]:
     inputs = load_knowledge_inputs(root)
     profile_inputs = load_profile_inputs(root)
@@ -462,6 +495,7 @@ def compiled_knowledge_catalog(root: Path) -> dict[str, Any]:
         if candidate["snapshot_id"] == selected_snapshot
     }
     profile_index = {profile["profile_id"]: profile for profile in profile_inputs.profiles}
+    support_tiers = _candidate_support_tiers(root, profile_inputs)
     candidates: list[dict[str, Any]] = []
     for link in inputs.links:
         candidate = candidate_index[link["candidate_id"]]
@@ -555,7 +589,14 @@ def compiled_knowledge_catalog(root: Path) -> dict[str, Any]:
             knowledge_status = "single-source"
         else:
             knowledge_status = "missing"
-        hyperflux_support = "route-qualified" if linked_profiles else "candidate-only"
+        if candidate["id"] not in support_tiers:
+            raise ModelError(f"{candidate['id']}: no route in the source-validated catalog")
+        hyperflux_support, proven_profile = support_tiers[candidate["id"]]
+        expected_profiles = [] if proven_profile is None else [proven_profile]
+        if link["hyperflux_profile_ids"] != expected_profiles:
+            raise ModelError(
+                f"{candidate['id']}: physical route tier and linked child profiles disagree"
+            )
         reviewed_facts: list[dict[str, Any]] = []
         for fact in reviewed["facts"]:
             implementation_records = _implementation_records_for_fact(

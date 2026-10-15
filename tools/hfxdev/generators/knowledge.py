@@ -6,6 +6,13 @@ import json
 from typing import Any
 
 
+SUPPORT_TIERS = (
+    ("physically-proven", "Physically proven"),
+    ("source-qualified-operational", "Source-qualified operational candidates"),
+    ("upstream-blocked-or-research-only", "Upstream-blocked or research-only"),
+)
+
+
 def compiled_json(catalog: dict[str, Any]) -> str:
     return json.dumps(catalog, indent=2, sort_keys=True, ensure_ascii=True) + "\n"
 
@@ -52,6 +59,13 @@ def render_knowledge_markdown(catalog: dict[str, Any]) -> str:
         f"Reviewed on `{catalog['reviewed_on']}`. This catalog separates manufacturer product documentation, exact records in pinned Linux projects, HyperFlux route mapping, and physical qualification. Evidence in one layer never grants authority in another.",
         "",
         "Bluetooth, direct USB, a product's own 2.4 GHz receiver, and the HyperFlux V2 receiver are independent routes. Application matrix slots can include unlit holes and are not automatically physical LED counts.",
+        "",
+        "HyperFlux route tiers come from the same route catalog as Supported Hardware:",
+        "",
+        *(
+            f"- **{label}:** {sum(c['hyperflux_support'] == tier for c in catalog['candidates'])}"
+            for tier, label in SUPPORT_TIERS
+        ),
         "",
         "| Candidate | Product facts | Primary sources | Exact code records | HyperFlux route | Open gaps |",
         "| --- | ---: | ---: | ---: | --- | ---: |",
@@ -204,8 +218,12 @@ def render_knowledge_markdown(catalog: dict[str, Any]) -> str:
             "- `upstream-reported`: an upstream issue reports the fact; it is not manufacturer documentation.",
             "- `documented-and-implemented`: official documentation and an exact pinned Linux record intersect.",
             "- `physically-qualified`: an exact HyperFlux child profile maps the fact to a capability with public physical evidence.",
-            "- `candidate-only`: the official mat list names the model, but no HyperFlux child profile grants controls.",
-            "- `route-qualified`: an exact child profile grants only its explicitly evidenced capabilities.",
+            "",
+            "## Route Tier Vocabulary",
+            "",
+            "- `physically-proven`: an exact child profile grants only its explicitly evidenced capabilities after end-to-end hardware checks.",
+            "- `source-qualified-operational`: pinned upstream source and generated command policy validate a stock-application path; it has no physical check and no child-profile controls.",
+            "- `upstream-blocked-or-research-only`: no validated stock-application path exists in the pinned upstream sources.",
             "",
         ]
     )

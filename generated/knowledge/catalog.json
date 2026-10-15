@@ -30,7 +30,7 @@
       },
       "device_kind": "mouse",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "source-qualified-operational",
       "knowledge_gaps": [
         {
           "detail": "Official Bluetooth product support does not establish an exact Linux control path for this model. Bluetooth is outside the HyperFlux receiver route and remains unclaimed.",
@@ -1297,7 +1297,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "source-qualified-operational",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -1321,7 +1321,7 @@
       "hyperflux_profile_ids": [
         "child.razer.basilisk-v3-pro-35k.00cd"
       ],
-      "hyperflux_support": "route-qualified",
+      "hyperflux_support": "physically-proven",
       "knowledge_gaps": [
         {
           "detail": "The upstream report records a distinct Bluetooth HID identity and missing OpenRazer recognition. HyperFlux does not carry or authorize this direct Bluetooth route.",
@@ -2609,7 +2609,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "route-qualified",
+          "hyperflux_state": "physically-proven",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -2631,7 +2631,7 @@
       },
       "device_kind": "keyboard",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "source-qualified-operational",
       "knowledge_gaps": [
         {
           "detail": "The model is a manufacturer-listed candidate, but no exact receiver-backed child profile currently authorizes controls.",
@@ -3655,7 +3655,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "source-qualified-operational",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -3677,7 +3677,7 @@
       },
       "device_kind": "keyboard",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "upstream-blocked-or-research-only",
       "knowledge_gaps": [
         {
           "detail": "Neither pinned OpenRazer nor pinned OpenRGB contains an exact model record. Product documentation and a reviewed support report exist, but no setting implementation is promoted from that absence.",
@@ -4318,7 +4318,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "upstream-blocked-or-research-only",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -4340,7 +4340,7 @@
       },
       "device_kind": "keyboard",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "source-qualified-operational",
       "knowledge_gaps": [
         {
           "detail": "OpenRGB has exact wired and vendor-receiver presentation records, but no HyperFlux child profile authorizes this model.",
@@ -5166,7 +5166,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "source-qualified-operational",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -5188,7 +5188,7 @@
       },
       "device_kind": "keyboard",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "source-qualified-operational",
       "knowledge_gaps": [
         {
           "detail": "The official product page says a full charge takes just under five hours, while the linked official master guide says approximately two hours. No single duration is promoted.",
@@ -6356,7 +6356,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "source-qualified-operational",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -6378,7 +6378,7 @@
       },
       "device_kind": "keyboard",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "source-qualified-operational",
       "knowledge_gaps": [
         {
           "detail": "Exact OpenRazer and OpenRGB records document direct routes, but no receiver-backed HyperFlux profile authorizes this model.",
@@ -7389,7 +7389,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "source-qualified-operational",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -7411,7 +7411,7 @@
       },
       "device_kind": "mouse",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "upstream-blocked-or-research-only",
       "knowledge_gaps": [
         {
           "detail": "The official support introduction says nine customizable controls, while its technical specification says seven programmable buttons. The catalog preserves both statements and does not normalize them into one count.",
@@ -7914,7 +7914,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "upstream-blocked-or-research-only",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -7936,7 +7936,7 @@
       },
       "device_kind": "mouse",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "source-qualified-operational",
       "knowledge_gaps": [
         {
           "detail": "Direct-route Linux records are useful for presentation and planning, but no exact receiver-backed HyperFlux child profile authorizes this model.",
@@ -9034,7 +9034,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "source-qualified-operational",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -9056,7 +9056,7 @@
       },
       "device_kind": "keyboard",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "source-qualified-operational",
       "knowledge_gaps": [
         {
           "detail": "Exact Linux records describe the direct device, but no exact receiver-backed HyperFlux child profile authorizes this full-size model.",
@@ -9970,7 +9970,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "source-qualified-operational",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -9994,7 +9994,7 @@
       "hyperflux_profile_ids": [
         "child.razer.deathstalker-v2-pro-tkl.0296"
       ],
-      "hyperflux_support": "route-qualified",
+      "hyperflux_support": "physically-proven",
       "knowledge_gaps": [
         {
           "detail": "Per-key lighting and passive battery/identity telemetry are qualified. Polling, game mode, macros, remapping, and Bluetooth configuration remain product documentation rather than receiver controls.",
@@ -10954,7 +10954,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "route-qualified",
+          "hyperflux_state": "physically-proven",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -10976,7 +10976,7 @@
       },
       "device_kind": "mouse",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "source-qualified-operational",
       "knowledge_gaps": [
         {
           "detail": "Extensive direct-route control vocabulary exists, but no receiver-backed HyperFlux child profile authorizes this model.",
@@ -12156,7 +12156,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "source-qualified-operational",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",

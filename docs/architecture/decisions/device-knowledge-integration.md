@@ -35,8 +35,10 @@ support automatically.
 ## Evidence Boundary
 
 An official model name, OpenRazer method, OpenRGB registry entry, or candidate-list
-match can describe a device. None can authorize a receiver write. Unknown,
-conflicting, and candidate-only records remain visible and non-writable.
+match can describe a device. None can grant a receiver write. Unknown and
+conflicting records, and every route that is not `physically-proven`, remain
+visible without child-profile controls. Route tiers come from the source-validated
+route catalog, so Device Knowledge and Supported Hardware report the same counts.
 
 ## Consequences
 

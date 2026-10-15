@@ -6,29 +6,35 @@ Reviewed on `2026-07-21`. This catalog separates manufacturer product documentat
 
 Bluetooth, direct USB, a product's own 2.4 GHz receiver, and the HyperFlux V2 receiver are independent routes. Application matrix slots can include unlit holes and are not automatically physical LED counts.
 
+HyperFlux route tiers come from the same route catalog as Supported Hardware:
+
+- **Physically proven:** 2
+- **Source-qualified operational candidates:** 8
+- **Upstream-blocked or research-only:** 2
+
 | Candidate | Product facts | Primary sources | Exact code records | HyperFlux route | Open gaps |
 | --- | ---: | ---: | ---: | --- | ---: |
-| Razer Basilisk V3 Pro | 14 | 4 | 5 | `candidate-only` | 2 |
-| Razer Basilisk V3 Pro 35K | 16 | 6 | 4 | `route-qualified` | 2 |
-| Razer BlackWidow V3 Pro | 14 | 4 | 5 | `candidate-only` | 1 |
-| Razer BlackWidow V4 Low-profile HyperSpeed | 17 | 6 | 0 | `candidate-only` | 2 |
-| Razer BlackWidow V4 Low-profile Tenkeyless HyperSpeed | 19 | 6 | 2 | `candidate-only` | 3 |
-| Razer BlackWidow V4 Mini HyperSpeed | 22 | 5 | 2 | `candidate-only` | 4 |
-| Razer BlackWidow V4 Tenkeyless HyperSpeed | 17 | 5 | 4 | `candidate-only` | 1 |
-| Razer Cobra HyperSpeed | 13 | 4 | 0 | `candidate-only` | 3 |
-| Razer Cobra Pro | 14 | 4 | 4 | `candidate-only` | 1 |
-| Razer DeathStalker V2 Pro | 14 | 4 | 4 | `candidate-only` | 1 |
-| Razer DeathStalker V2 Pro Tenkeyless | 15 | 4 | 4 | `route-qualified` | 1 |
-| Razer Naga V2 Pro | 16 | 5 | 4 | `candidate-only` | 2 |
+| Razer Basilisk V3 Pro | 14 | 4 | 5 | `source-qualified-operational` | 2 |
+| Razer Basilisk V3 Pro 35K | 16 | 6 | 4 | `physically-proven` | 2 |
+| Razer BlackWidow V3 Pro | 14 | 4 | 5 | `source-qualified-operational` | 1 |
+| Razer BlackWidow V4 Low-profile HyperSpeed | 17 | 6 | 0 | `upstream-blocked-or-research-only` | 2 |
+| Razer BlackWidow V4 Low-profile Tenkeyless HyperSpeed | 19 | 6 | 2 | `source-qualified-operational` | 3 |
+| Razer BlackWidow V4 Mini HyperSpeed | 22 | 5 | 2 | `source-qualified-operational` | 4 |
+| Razer BlackWidow V4 Tenkeyless HyperSpeed | 17 | 5 | 4 | `source-qualified-operational` | 1 |
+| Razer Cobra HyperSpeed | 13 | 4 | 0 | `upstream-blocked-or-research-only` | 3 |
+| Razer Cobra Pro | 14 | 4 | 4 | `source-qualified-operational` | 1 |
+| Razer DeathStalker V2 Pro | 14 | 4 | 4 | `source-qualified-operational` | 1 |
+| Razer DeathStalker V2 Pro Tenkeyless | 15 | 4 | 4 | `physically-proven` | 1 |
+| Razer Naga V2 Pro | 16 | 5 | 4 | `source-qualified-operational` | 2 |
 
 ## Candidate Detail
 
 <details>
-<summary><strong>Razer Basilisk V3 Pro</strong> · candidate-only · 2 open gaps</summary>
+<summary><strong>Razer Basilisk V3 Pro</strong> · source-qualified-operational · 2 open gaps</summary>
 
 ### Razer Basilisk V3 Pro
 
-HyperFlux route: `candidate-only`. Pinned code status: `cross-referenced`.
+HyperFlux route: `source-qualified-operational`. Pinned code status: `cross-referenced`.
 
 #### Connection Routes
 
@@ -37,7 +43,7 @@ HyperFlux route: `candidate-only`. Pinned code status: `cross-referenced`.
 | USB cable | `documented` | 2 | `outside-hyperflux` |
 | Vendor 2.4 GHz receiver | `documented` | 2 | `outside-hyperflux` |
 | Bluetooth | `documented` | 1 | `outside-hyperflux` |
-| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `candidate-only` |
+| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `source-qualified-operational` |
 
 #### Reviewed Product Facts
 
@@ -136,11 +142,11 @@ Additional reviewed-link notes:
 </details>
 
 <details>
-<summary><strong>Razer Basilisk V3 Pro 35K</strong> · route-qualified · 2 open gaps</summary>
+<summary><strong>Razer Basilisk V3 Pro 35K</strong> · physically-proven · 2 open gaps</summary>
 
 ### Razer Basilisk V3 Pro 35K
 
-HyperFlux route: `route-qualified`. Pinned code status: `cross-referenced`.
+HyperFlux route: `physically-proven`. Pinned code status: `cross-referenced`.
 
 #### Connection Routes
 
@@ -149,7 +155,7 @@ HyperFlux route: `route-qualified`. Pinned code status: `cross-referenced`.
 | USB cable | `documented` | 2 | `outside-hyperflux` |
 | Vendor 2.4 GHz receiver | `documented` | 2 | `outside-hyperflux` |
 | Bluetooth | `documented` | 0 | `outside-hyperflux` |
-| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `route-qualified` |
+| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `physically-proven` |
 
 #### Reviewed Product Facts
 
@@ -251,11 +257,11 @@ Additional reviewed-link notes:
 </details>
 
 <details>
-<summary><strong>Razer BlackWidow V3 Pro</strong> · candidate-only · 1 open gaps</summary>
+<summary><strong>Razer BlackWidow V3 Pro</strong> · source-qualified-operational · 1 open gaps</summary>
 
 ### Razer BlackWidow V3 Pro
 
-HyperFlux route: `candidate-only`. Pinned code status: `cross-referenced`.
+HyperFlux route: `source-qualified-operational`. Pinned code status: `cross-referenced`.
 
 #### Connection Routes
 
@@ -264,7 +270,7 @@ HyperFlux route: `candidate-only`. Pinned code status: `cross-referenced`.
 | USB cable | `documented` | 2 | `outside-hyperflux` |
 | Vendor 2.4 GHz receiver | `documented` | 2 | `outside-hyperflux` |
 | Bluetooth | `documented` | 1 | `outside-hyperflux` |
-| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `candidate-only` |
+| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `source-qualified-operational` |
 
 #### Reviewed Product Facts
 
@@ -346,11 +352,11 @@ Additional reviewed-link notes:
 </details>
 
 <details>
-<summary><strong>Razer BlackWidow V4 Low-profile HyperSpeed</strong> · candidate-only · 2 open gaps</summary>
+<summary><strong>Razer BlackWidow V4 Low-profile HyperSpeed</strong> · upstream-blocked-or-research-only · 2 open gaps</summary>
 
 ### Razer BlackWidow V4 Low-profile HyperSpeed
 
-HyperFlux route: `candidate-only`. Pinned code status: `missing`.
+HyperFlux route: `upstream-blocked-or-research-only`. Pinned code status: `missing`.
 
 #### Connection Routes
 
@@ -359,7 +365,7 @@ HyperFlux route: `candidate-only`. Pinned code status: `missing`.
 | USB cable | `documented` | 0 | `outside-hyperflux` |
 | Vendor 2.4 GHz receiver | `documented` | 0 | `outside-hyperflux` |
 | Bluetooth | `documented` | 0 | `outside-hyperflux` |
-| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `candidate-only` |
+| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `upstream-blocked-or-research-only` |
 
 #### Reviewed Product Facts
 
@@ -408,11 +414,11 @@ Additional reviewed-link notes:
 </details>
 
 <details>
-<summary><strong>Razer BlackWidow V4 Low-profile Tenkeyless HyperSpeed</strong> · candidate-only · 3 open gaps</summary>
+<summary><strong>Razer BlackWidow V4 Low-profile Tenkeyless HyperSpeed</strong> · source-qualified-operational · 3 open gaps</summary>
 
 ### Razer BlackWidow V4 Low-profile Tenkeyless HyperSpeed
 
-HyperFlux route: `candidate-only`. Pinned code status: `single-source`.
+HyperFlux route: `source-qualified-operational`. Pinned code status: `single-source`.
 
 #### Connection Routes
 
@@ -421,7 +427,7 @@ HyperFlux route: `candidate-only`. Pinned code status: `single-source`.
 | USB cable | `documented` | 1 | `outside-hyperflux` |
 | Vendor 2.4 GHz receiver | `documented` | 1 | `outside-hyperflux` |
 | Bluetooth | `documented` | 0 | `outside-hyperflux` |
-| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `candidate-only` |
+| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `source-qualified-operational` |
 
 #### Reviewed Product Facts
 
@@ -480,11 +486,11 @@ Additional reviewed-link notes:
 </details>
 
 <details>
-<summary><strong>Razer BlackWidow V4 Mini HyperSpeed</strong> · candidate-only · 4 open gaps</summary>
+<summary><strong>Razer BlackWidow V4 Mini HyperSpeed</strong> · source-qualified-operational · 4 open gaps</summary>
 
 ### Razer BlackWidow V4 Mini HyperSpeed
 
-HyperFlux route: `candidate-only`. Pinned code status: `single-source`.
+HyperFlux route: `source-qualified-operational`. Pinned code status: `single-source`.
 
 #### Connection Routes
 
@@ -493,7 +499,7 @@ HyperFlux route: `candidate-only`. Pinned code status: `single-source`.
 | USB cable | `documented` | 1 | `outside-hyperflux` |
 | Vendor 2.4 GHz receiver | `documented` | 1 | `outside-hyperflux` |
 | Bluetooth | `documented` | 0 | `outside-hyperflux` |
-| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `candidate-only` |
+| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `source-qualified-operational` |
 
 #### Reviewed Product Facts
 
@@ -581,11 +587,11 @@ Additional reviewed-link notes:
 </details>
 
 <details>
-<summary><strong>Razer BlackWidow V4 Tenkeyless HyperSpeed</strong> · candidate-only · 1 open gaps</summary>
+<summary><strong>Razer BlackWidow V4 Tenkeyless HyperSpeed</strong> · source-qualified-operational · 1 open gaps</summary>
 
 ### Razer BlackWidow V4 Tenkeyless HyperSpeed
 
-HyperFlux route: `candidate-only`. Pinned code status: `cross-referenced`.
+HyperFlux route: `source-qualified-operational`. Pinned code status: `cross-referenced`.
 
 #### Connection Routes
 
@@ -594,7 +600,7 @@ HyperFlux route: `candidate-only`. Pinned code status: `cross-referenced`.
 | USB cable | `documented` | 2 | `outside-hyperflux` |
 | Vendor 2.4 GHz receiver | `documented` | 2 | `outside-hyperflux` |
 | Bluetooth | `documented` | 0 | `outside-hyperflux` |
-| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `candidate-only` |
+| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `source-qualified-operational` |
 
 #### Reviewed Product Facts
 
@@ -671,11 +677,11 @@ Additional reviewed-link notes:
 </details>
 
 <details>
-<summary><strong>Razer Cobra HyperSpeed</strong> · candidate-only · 3 open gaps</summary>
+<summary><strong>Razer Cobra HyperSpeed</strong> · upstream-blocked-or-research-only · 3 open gaps</summary>
 
 ### Razer Cobra HyperSpeed
 
-HyperFlux route: `candidate-only`. Pinned code status: `missing`.
+HyperFlux route: `upstream-blocked-or-research-only`. Pinned code status: `missing`.
 
 #### Connection Routes
 
@@ -684,7 +690,7 @@ HyperFlux route: `candidate-only`. Pinned code status: `missing`.
 | USB cable | `documented` | 0 | `outside-hyperflux` |
 | Vendor 2.4 GHz receiver | `documented` | 0 | `outside-hyperflux` |
 | Bluetooth | `documented` | 0 | `outside-hyperflux` |
-| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `candidate-only` |
+| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `upstream-blocked-or-research-only` |
 
 #### Reviewed Product Facts
 
@@ -728,11 +734,11 @@ Additional reviewed-link notes:
 </details>
 
 <details>
-<summary><strong>Razer Cobra Pro</strong> · candidate-only · 1 open gaps</summary>
+<summary><strong>Razer Cobra Pro</strong> · source-qualified-operational · 1 open gaps</summary>
 
 ### Razer Cobra Pro
 
-HyperFlux route: `candidate-only`. Pinned code status: `cross-referenced`.
+HyperFlux route: `source-qualified-operational`. Pinned code status: `cross-referenced`.
 
 #### Connection Routes
 
@@ -741,7 +747,7 @@ HyperFlux route: `candidate-only`. Pinned code status: `cross-referenced`.
 | USB cable | `documented` | 2 | `outside-hyperflux` |
 | Vendor 2.4 GHz receiver | `documented` | 2 | `outside-hyperflux` |
 | Bluetooth | `documented` | 0 | `outside-hyperflux` |
-| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `candidate-only` |
+| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `source-qualified-operational` |
 
 #### Reviewed Product Facts
 
@@ -831,11 +837,11 @@ Additional reviewed-link notes:
 </details>
 
 <details>
-<summary><strong>Razer DeathStalker V2 Pro</strong> · candidate-only · 1 open gaps</summary>
+<summary><strong>Razer DeathStalker V2 Pro</strong> · source-qualified-operational · 1 open gaps</summary>
 
 ### Razer DeathStalker V2 Pro
 
-HyperFlux route: `candidate-only`. Pinned code status: `cross-referenced`.
+HyperFlux route: `source-qualified-operational`. Pinned code status: `cross-referenced`.
 
 #### Connection Routes
 
@@ -844,7 +850,7 @@ HyperFlux route: `candidate-only`. Pinned code status: `cross-referenced`.
 | USB cable | `documented` | 2 | `outside-hyperflux` |
 | Vendor 2.4 GHz receiver | `documented` | 2 | `outside-hyperflux` |
 | Bluetooth | `documented` | 0 | `outside-hyperflux` |
-| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `candidate-only` |
+| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `source-qualified-operational` |
 
 #### Reviewed Product Facts
 
@@ -921,11 +927,11 @@ Additional reviewed-link notes:
 </details>
 
 <details>
-<summary><strong>Razer DeathStalker V2 Pro Tenkeyless</strong> · route-qualified · 1 open gaps</summary>
+<summary><strong>Razer DeathStalker V2 Pro Tenkeyless</strong> · physically-proven · 1 open gaps</summary>
 
 ### Razer DeathStalker V2 Pro Tenkeyless
 
-HyperFlux route: `route-qualified`. Pinned code status: `cross-referenced`.
+HyperFlux route: `physically-proven`. Pinned code status: `cross-referenced`.
 
 #### Connection Routes
 
@@ -934,7 +940,7 @@ HyperFlux route: `route-qualified`. Pinned code status: `cross-referenced`.
 | USB cable | `documented` | 2 | `outside-hyperflux` |
 | Vendor 2.4 GHz receiver | `documented` | 2 | `outside-hyperflux` |
 | Bluetooth | `documented` | 0 | `outside-hyperflux` |
-| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `route-qualified` |
+| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `physically-proven` |
 
 #### Reviewed Product Facts
 
@@ -1012,11 +1018,11 @@ Additional reviewed-link notes:
 </details>
 
 <details>
-<summary><strong>Razer Naga V2 Pro</strong> · candidate-only · 2 open gaps</summary>
+<summary><strong>Razer Naga V2 Pro</strong> · source-qualified-operational · 2 open gaps</summary>
 
 ### Razer Naga V2 Pro
 
-HyperFlux route: `candidate-only`. Pinned code status: `conflicted`.
+HyperFlux route: `source-qualified-operational`. Pinned code status: `conflicted`.
 
 #### Connection Routes
 
@@ -1025,7 +1031,7 @@ HyperFlux route: `candidate-only`. Pinned code status: `conflicted`.
 | USB cable | `documented` | 2 | `outside-hyperflux` |
 | Vendor 2.4 GHz receiver | `documented` | 2 | `outside-hyperflux` |
 | Bluetooth | `documented` | 0 | `outside-hyperflux` |
-| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `candidate-only` |
+| HyperFlux V2 receiver | `manufacturer-candidate` | 0 | `source-qualified-operational` |
 
 #### Reviewed Product Facts
 
@@ -1128,5 +1134,9 @@ Additional reviewed-link notes:
 - `upstream-reported`: an upstream issue reports the fact; it is not manufacturer documentation.
 - `documented-and-implemented`: official documentation and an exact pinned Linux record intersect.
 - `physically-qualified`: an exact HyperFlux child profile maps the fact to a capability with public physical evidence.
-- `candidate-only`: the official mat list names the model, but no HyperFlux child profile grants controls.
-- `route-qualified`: an exact child profile grants only its explicitly evidenced capabilities.
+
+## Route Tier Vocabulary
+
+- `physically-proven`: an exact child profile grants only its explicitly evidenced capabilities after end-to-end hardware checks.
+- `source-qualified-operational`: pinned upstream source and generated command policy validate a stock-application path; it has no physical check and no child-profile controls.
+- `upstream-blocked-or-research-only`: no validated stock-application path exists in the pinned upstream sources.

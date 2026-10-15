@@ -144,7 +144,9 @@
         "sources_present": {"type": "array", "uniqueItems": true, "items": {"enum": ["openrazer", "openrgb"]}},
         "source_records": {"type": "array", "maxItems": 32, "items": {"type": "object"}},
         "source_conflicts": {"type": "array", "maxItems": 32, "items": {"type": "object"}},
-        "hyperflux_support": {"enum": ["candidate-only", "route-qualified"]},
+        "hyperflux_support": {
+          "enum": ["physically-proven", "source-qualified-operational", "upstream-blocked-or-research-only"]
+        },
         "hyperflux_profile_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
         "qualified_hyperflux_capabilities": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
         "settings": {"type": "array", "maxItems": 256, "items": {"type": "object"}},
