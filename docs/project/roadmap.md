@@ -5,7 +5,7 @@ package while preserving stock OpenRazer, Polychromatic, and OpenRGB ownership.
 
 ## Current Release
 
-HyperFlux Next 2.0.0-1 is published for Arch Linux x86_64 as reproducible Core
+HyperFlux Next 2.0.1-1 is published for Arch Linux x86_64 as reproducible Core
 and Full packages. A signed project-operated third-party Pacman repository is
 the primary package channel, backed by stable GitHub Release assets.
 

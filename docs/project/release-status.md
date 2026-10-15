@@ -2,13 +2,13 @@
 
 <!-- HFX-GENERATED-BEGIN: release-status -->
 > [!IMPORTANT]
-> **Arch 2.0.0 release.** Arch Linux x86_64 Core and Full 2.0.0-1 packages are published in the human-facing GitHub Release v2.0.0. The signed HyperFlux Next third-party Pacman repository is served separately through the fixed `arch-repository` machine channel.
+> **Arch 2.0.1 release.** Arch Linux x86_64 Core and Full 2.0.1-1 packages are published in the human-facing GitHub Release v2.0.1. The signed HyperFlux Next third-party Pacman repository is served separately through the fixed `arch-repository` machine channel.
 <!-- HFX-GENERATED-END: release-status -->
 
 ## Release State
 
-HyperFlux Next 2.0.0-1 Core and Full packages for Arch Linux x86_64 are
-published through GitHub Release `v2.0.0`. The release remains bound to the
+HyperFlux Next 2.0.1-1 Core and Full packages for Arch Linux x86_64 are
+published through GitHub Release `v2.0.1`. The release remains bound to the
 verified source, package manifests, checksums, SBOM, and accepted physical
 evidence.
 

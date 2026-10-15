@@ -26,11 +26,13 @@ contract](../generated/distributions.md) for those procedures.
 ## Signed Arch Repository
 
 The release-side repository procedure wraps exact frozen package bytes; it does
-not rebuild or rewrite them. Release constants are deliberately checked in the
-policy, its JSON schema, and the fail-closed loader/tests. Update and review all
-of those together; editing only `assurance/arch-repository.json` is not a
-complete release update. Then use a fresh output path and a private GnuPG home
-containing the reviewed key:
+not rebuild or rewrite them. `assurance/arch-repository.json` is the single
+release record: the loader derives the product release tag, release URL, and
+package filenames from the package versions and rejects any disagreement. A
+release update changes the tag, URL, package versions and hashes, and signature
+timestamp together with the published-release pin in `tests/test_assurance.py`,
+then runs `./hfx generate`. Then use a fresh output path and a private GnuPG
+home containing the reviewed key:
 
 ```sh
 ./hfx arch-repository build \
