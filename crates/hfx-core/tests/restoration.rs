@@ -2572,3 +2572,35 @@ fn generation_retirement_rejects_active_generation_and_batch_conflict_is_atomic(
     assert_eq!(runtime.store.durable_snapshot(), durable_before);
     assert_eq!(runtime.sink.events.len(), events_before);
 }
+
+#[test]
+fn every_restoration_error_names_a_distinct_failure() {
+    let errors = [
+        RestorationError::RuntimeDisabled,
+        RestorationError::InvalidSchemaVersion,
+        RestorationError::StableEntryCapacity,
+        RestorationError::RestoreRecordCapacity,
+        RestorationError::ReceiverMismatch,
+        RestorationError::DuplicateDevice,
+        RestorationError::InvalidStableTransaction,
+        RestorationError::StableReplayConflict,
+        RestorationError::InvalidTrigger,
+        RestorationError::CaptureMismatch,
+        RestorationError::AuthorityDeadlineOverflow,
+        RestorationError::IntentDigestMismatch,
+        RestorationError::IntentMissing,
+        RestorationError::UnknownClaim,
+        RestorationError::PriorClaimUnresolved,
+        RestorationError::PriorOutcomeUncertain,
+        RestorationError::RecordIdentityConflict,
+        RestorationError::RevisionOverflow,
+        RestorationError::Identifier,
+        RestorationError::NonceOverflow,
+        RestorationError::Persistence(PersistenceOperation::LoadPolicy),
+        RestorationError::PersistenceConflict(PersistenceOperation::SaveRestore),
+    ];
+    let messages: std::collections::BTreeSet<String> =
+        errors.iter().map(ToString::to_string).collect();
+    assert!(messages.iter().all(|message| !message.is_empty()));
+    assert_eq!(messages.len(), errors.len(), "{messages:#?}");
+}

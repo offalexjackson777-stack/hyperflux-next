@@ -353,3 +353,82 @@ fn image_inspection_must_positively_prove_the_retired_driver_is_gone() {
     host.fail_program = Some("lsinitrd");
     assert!(apply_migration(&plan, &fixture.roots, &host, "record").is_err());
 }
+
+#[test]
+fn default_roots_are_the_real_system_locations() {
+    let roots = MigrationRoots::default();
+    assert_eq!(roots.dkms, Path::new("/var/lib/dkms"));
+    assert_eq!(roots.usr_src, Path::new("/usr/src"));
+    assert_eq!(roots.kernel_modules, Path::new("/usr/lib/modules"));
+    assert_eq!(roots.boot, Path::new("/boot"));
+    assert_eq!(
+        roots.dracut_hook_script,
+        Path::new("/usr/share/libalpm/scripts/dracut-install")
+    );
+    assert_eq!(roots.mkinitcpio_presets, Path::new("/etc/mkinitcpio.d"));
+    assert_eq!(
+        roots.records,
+        Path::new("/var/lib/hyperflux-next/migrations")
+    );
+    assert_eq!(MigrationError("stopped".to_owned()).to_string(), "stopped");
+}
+
+#[test]
+fn preview_names_unbound_interfaces_refusals_and_missing_tooling() {
+    let fixture = fixture("preview-refused");
+    add_retired(&fixture, "0.1.1");
+    fs::remove_file(&fixture.roots.dracut_hook_script).expect("remove hook");
+    let plan = plan_migration(&fixture.roots, vec![None]);
+    let preview = render_migration_preview(&plan);
+    assert!(
+        preview.contains("Receiver interfaces: unbound"),
+        "{preview}"
+    );
+    assert!(
+        preview.contains("No boot images would be rebuilt."),
+        "{preview}"
+    );
+    assert!(
+        preview.contains("Cannot apply: no supported boot-image tool"),
+        "{preview}"
+    );
+    assert!(!preview.contains("--apply"), "{preview}");
+
+    let detached = plan_migration(&fixture.roots, Vec::new());
+    assert!(render_migration_preview(&detached).contains("Receiver interfaces: none attached"));
+}
+
+#[test]
+fn real_host_runs_programs_without_a_shell_and_bounds_failures() {
+    let host = RealMigrationHost;
+    assert_eq!(
+        host.run(Path::new("cat"), &[], Some("piped input"))
+            .expect("cat echoes its input"),
+        "piped input"
+    );
+    assert_eq!(
+        host.run(Path::new("printf"), &["%s", "argument"], None)
+            .expect("printf runs"),
+        "argument"
+    );
+
+    let failed = host
+        .run(Path::new("false"), &[], None)
+        .expect_err("false fails");
+    assert!(failed.0.contains("false failed with"), "{failed}");
+
+    let missing = host
+        .run(Path::new("/nonexistent/hfx-migration-tool"), &[], None)
+        .expect_err("missing program");
+    assert!(missing.0.contains("cannot start"), "{missing}");
+
+    let bound = (MAX_COMMAND_OUTPUT_BYTES + 1).to_string();
+    let oversized = host
+        .run(
+            Path::new("head"),
+            &["-c", bound.as_str(), "/dev/zero"],
+            None,
+        )
+        .expect_err("oversized output");
+    assert!(oversized.0.contains("exceeded its bound"), "{oversized}");
+}

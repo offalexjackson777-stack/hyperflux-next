@@ -135,4 +135,19 @@ mod tests {
             .validate()
             .expect("qualified live restoration is valid");
     }
+
+    #[test]
+    fn every_config_error_names_a_distinct_failure() {
+        let errors = [
+            BridgeConfigError::UnsupportedSchema,
+            BridgeConfigError::InvalidSchemaPath,
+            BridgeConfigError::RestorationRequiresQualifiedLive,
+            BridgeConfigError::InvalidSocketGroup,
+            BridgeConfigError::InvalidSocketMode,
+        ];
+        let messages: std::collections::BTreeSet<String> =
+            errors.iter().map(ToString::to_string).collect();
+        assert!(messages.iter().all(|message| !message.is_empty()));
+        assert_eq!(messages.len(), errors.len());
+    }
 }

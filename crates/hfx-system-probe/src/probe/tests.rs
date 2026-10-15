@@ -1249,3 +1249,23 @@ fn hid_device_names_yield_only_usb_bus_identities() {
     assert_eq!(hid_device_usb_id("0003:ZZZZ:00CF.0008"), None);
     assert_eq!(hid_device_usb_id("not-a-device"), None);
 }
+
+#[test]
+fn default_probe_reads_the_real_system_locations() {
+    let probe = RealSystemProbe::default();
+    assert_eq!(probe.sys_module_root, Path::new("/sys/module"));
+    assert_eq!(probe.hid_drivers_root, Path::new(HID_DRIVERS_ROOT));
+    assert_eq!(probe.hid_devices_root, Path::new(HID_DEVICES_ROOT));
+    assert_eq!(probe.dkms_root, Path::new(DKMS_ROOT));
+    assert_eq!(probe.usb_devices_root, Path::new(USB_DEVICES_ROOT));
+    assert_eq!(
+        probe.openrazer_daemon_path,
+        Path::new(OPENRAZER_NATIVE_DAEMON_EXECUTABLE_PATH)
+    );
+    assert_eq!(
+        probe.full_component_descriptor_path,
+        Path::new(FULL_COMPONENT_DESCRIPTOR_PATH)
+    );
+    assert_eq!(probe.socket_path, Path::new(BRIDGE_SOCKET_PATH));
+    assert_eq!(probe.timeout, Duration::from_millis(STATUS_TIMEOUT_MS));
+}
