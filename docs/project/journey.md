@@ -201,15 +201,9 @@ default.
 
 ### Accepted limitations
 
-Stock OpenRazer still offers Ripple for keyboard models whose class supports it,
-and Polychromatic shows it. Over HyperFlux, choosing it gives no reactive
-lighting, because unchanged stock OpenRazer cannot associate its KeyWatcher with
-the receiver-routed physical event stream. HyperFlux does not create a duplicate
-input device or fork the application to hide that gap; choose another effect.
-
-OpenRGB may label the black keyboard color variant as Quartz. The same label was
-observed on a direct USB path, so HyperFlux does not override identity or colorway
-data for one machine. This is cosmetic and does not affect routing or controls.
+The limits users can see today, such as Ripple showing no reactive lighting and
+the Quartz label in OpenRGB, are listed with what to do about each in
+[known limitations](../user/limitations.md).
 
 ### Prior-art and novelty boundary
 

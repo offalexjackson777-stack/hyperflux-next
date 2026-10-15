@@ -23,7 +23,8 @@ check that it worked. It does not change device settings or restart services.
    [support request](../../SUPPORT.md).
 
 Do not bind the receiver to another driver by hand or add it as a custom device
-in an application. Neither makes a device appear.
+in an application. Neither makes a device appear. Some behaviour is a known
+limit rather than a fault; check [known limitations](limitations.md) first.
 
 ### After Switching A Wireless Keyboard Off And On
 

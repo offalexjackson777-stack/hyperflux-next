@@ -817,6 +817,17 @@
       "generated_block_ids": []
     },
     {
+      "path": "docs/user/limitations.md",
+      "title": "Known Limitations",
+      "audience": "users",
+      "purpose": "Lists what users will see that HyperFlux does not do today, and what to do about each.",
+      "owner": "documentation",
+      "navigation_group": "user",
+      "mode": "human",
+      "canonical_sources": ["docs/user/limitations.md"],
+      "generated_block_ids": []
+    },
+    {
       "path": "docs/user/privacy.md",
       "title": "Privacy And Support Evidence",
       "audience": "users",

@@ -39,7 +39,7 @@ intentional restoration timer. Whether OpenRGB reapplies a startup profile when
 a route returns still needs physical qualification. Applications do not read
 lighting back from the device, so device lighting can differ from what an
 application last set; the
-[accepted limitations](../../user/applications.md#accepted-limitations) describe
+[known limitations](../../user/limitations.md) describe
 the known cases.
 
 ## 21. OpenRazer Native Route
@@ -82,7 +82,7 @@ command translation per setting. A different report format is an explicit
 backend requirement rather than a guessed rewrite. Native-route parity for these
 settings still needs physical evidence, and known differences such as
 Polychromatic's Ripple effect showing no reactive lighting are listed in the
-[accepted limitations](../../user/applications.md#accepted-limitations).
+[known limitations](../../user/limitations.md).
 
 ---
 

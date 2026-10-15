@@ -706,7 +706,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
             "optional OpenRGB Effects Plugin",
             "HyperFlux does not bundle, recreate, or claim those effects",
             "only where the upstream application supports it for that exact model",
-            "applications.md#accepted-limitations",
+            "user/limitations.md",
         ):
             with self.subTest(statement=statement):
                 self.assertIn(statement, book)
@@ -756,21 +756,21 @@ class RepositoryExperienceContracts(unittest.TestCase):
             in " ".join(page.read_text(encoding="utf-8").lower().split())
         ]
         self.assertEqual(found, [])
-        applications = " ".join(
-            (ROOT / "docs/user/applications.md").read_text(encoding="utf-8").split()
-        )
-        self.assertIn("Polychromatic offers Ripple", applications)
-        self.assertIn("no reactive lighting", applications)
+        for path in ("docs/user/applications.md", "docs/user/limitations.md"):
+            page = " ".join((ROOT / path).read_text(encoding="utf-8").split())
+            self.assertIn("Polychromatic offers Ripple", page, path)
+            self.assertIn("no reactive lighting", page, path)
 
     def test_upstream_application_limitations_are_documented(self) -> None:
         # Firmware shortcuts, the OpenRGB variant label, and the Polychromatic
         # receiver entry come from stock behaviour (REL-006, REL-008, REL-018).
-        applications = " ".join(
-            (ROOT / "docs/user/applications.md").read_text(encoding="utf-8").split()
+        limitations = " ".join(
+            (ROOT / "docs/user/limitations.md").read_text(encoding="utf-8").split()
         )
-        self.assertIn("HyperFlux passes that reply through unchanged", applications)
-        self.assertIn("lighting inside the keyboard firmware", applications)
-        self.assertIn("unrecognised `1532:00CF` device", applications)
+        self.assertIn("HyperFlux passes that reply through unchanged", limitations)
+        self.assertIn("lighting inside the keyboard firmware", limitations)
+        self.assertIn("unrecognised `1532:00CF` device", limitations)
+        self.assertIn("never makes up a value", limitations)
 
     def test_repository_link_contract_rejects_missing_files_and_anchors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1104,6 +1104,17 @@ class UserDocumentationContracts(unittest.TestCase):
         for word in ("non-writable", "lease", "unqualified", "boundary"):
             self.assertNotIn(word, troubleshooting)
         self.assertIn("> [!WARNING]", troubleshooting)
+
+    def test_known_limitations_page_is_linked_from_user_pages(self) -> None:
+        limitations = _page("docs/user/limitations.md")
+        for topic in ("Ripple", "Quartz", "Fn", "1532:00CF", "F5", "brightness", "Arch Linux"):
+            self.assertIn(topic, limitations)
+        for path in (
+            "docs/user/applications.md",
+            "docs/user/troubleshooting.md",
+        ):
+            self.assertIn("(limitations.md)", _page(path), path)
+        self.assertIn("(../user/limitations.md)", _page("docs/project/journey.md"))
 
 if __name__ == "__main__":
     unittest.main()
