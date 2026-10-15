@@ -410,6 +410,17 @@
       "generated_block_ids": []
     },
     {
+      "path": "docs/developer/writing-guide.md",
+      "title": "Writing Guide",
+      "audience": "contributors",
+      "purpose": "Sets who each kind of page is written for and how guides, engineering pages, investigations, and release notes read.",
+      "owner": "documentation",
+      "navigation_group": "developer",
+      "mode": "human",
+      "canonical_sources": ["docs/developer/writing-guide.md"],
+      "generated_block_ids": []
+    },
+    {
       "path": "docs/generated/README.md",
       "title": "Generated Reference",
       "audience": "developers",

@@ -27,6 +27,7 @@ Project pages cover status, plans, and history.
 - [SDK and connectors](developer/sdk-connectors.md)
 - [Device onboarding](developer/device-onboarding.md)
 - [Verification](developer/verification.md)
+- [Writing guide](developer/writing-guide.md)
 
 ## Follow The Project
 
