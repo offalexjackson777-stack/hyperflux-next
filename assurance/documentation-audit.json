@@ -1,17 +1,17 @@
 {
   "$schema": "../schemas/documentation-audit.schema.json",
   "schema": "hyperflux-documentation-audit-v2",
-  "source_revision": "d6f8081679669e5958bda5db485fed98b7e369a0",
+  "source_revision": "941026ad787bd8c4aa40953d602c14fc5ef4f3e3",
   "inputs": {
     "catalog_sha256": "433c022f0d5398ac2c1112c2852cbbf9db688628972e86bb97cded0a24bd9184",
     "policy_sha256": "afad995f01f447fdf79edea77682603abb26eeec123a00c74b134d3efdc413a2",
     "renderer_sha256": "065d95640162f64657854db2d4d5caccc005ee245f3a731a3b3d36f3e8397fe4",
     "journey_source_coverage_sha256": "7dc3e929079eb76fe8ce82b0b026c2a373af8dc4c829352f38374a6d6983495a",
-    "rendered_documents_sha256": "2c5e36c745b3a3ea490a4379df9880df68061dab0d30563fc1cb1c3162684bed"
+    "rendered_documents_sha256": "8ab00411b2124fc7638bb1a51364ea1376d743be352ac7d581a9929290507444"
   },
   "render": {
     "status": "passed",
-    "result_sha256": "f9a51c509f6a3640ac9e805999be6f7ff77128bb714c1f0f066ffa601be2b647",
+    "result_sha256": "2b8c74f54aafc6790947351c7d9050e8127d69e5650e9d27a556df0543fa1a2c",
     "document_count": 64,
     "check_count": 384,
     "screenshot_count": 108,
@@ -27,7 +27,7 @@
       "light",
       "dark"
     ],
-    "screenshot_manifest_sha256": "f08c0ed3253a3e1088c95fba9dc0b07509df3dacce8b9155aada1a81dc0fcc61",
+    "screenshot_manifest_sha256": "5150386e7bb6b19362bc57b30a929ca506d09f05026fe4c925656f5c7e2b8726",
     "capture_mode": "full-page",
     "max_page_height": 32768,
     "render_contract": "github-compatible-gfm-v2",
@@ -47,7 +47,7 @@
       },
       {
         "file": "screenshots/README--1280--light.png",
-        "sha256": "22cee20f9c661f1e349f80fd35e79c663693b43f5d067dd413b66d986e17c390"
+        "sha256": "2dca44018220833c03b42bdd18ecd4e7941d09d40620d11a790a95c5bacf79a3"
       },
       {
         "file": "screenshots/SECURITY--768--dark.png",
@@ -59,7 +59,7 @@
       },
       {
         "file": "screenshots/docs__README--1280--dark.png",
-        "sha256": "8fe15ef099bdc79634cc254fab4d107390408236518504aa9cd7d6ce4a8bf434"
+        "sha256": "31727f4b48d140443fc6ce3fd0f3fa745aa096ddda07ea481691fb20537d0211"
       },
       {
         "file": "screenshots/docs__architecture__design__book--375--light.png",
@@ -91,11 +91,11 @@
       },
       {
         "file": "screenshots/docs__project__journey--1280--light.png",
-        "sha256": "ae8d30480e2aad2b97e34ca3673de0ec6cf1856e16172eb1d393b8461c582ee6"
+        "sha256": "1901b9ee4b6ab31c5d346f761f3b1d959d9a06cb0ea6eb6df695af61ac01d9ee"
       },
       {
         "file": "screenshots/docs__project__release__status--768--dark.png",
-        "sha256": "e24a21a52f24b88a312743d7c5c0f979fda17b74364b540cf4d509f956c89a29"
+        "sha256": "a5fedce52d44df6f762af3bd9164d9deccc915d0d4e26f5898d1aa0cc726b12a"
       },
       {
         "file": "screenshots/docs__user__first__run--375--light.png",
@@ -107,7 +107,7 @@
       },
       {
         "file": "screenshots/docs__user__installation--768--light.png",
-        "sha256": "eb058a1cc4097fba722e972f40b0ef58e75148d50dd57a5ca27880b45c4d4e28"
+        "sha256": "4516a472e341bdfb5fda20b0656bbed6f722a09d8b7f2cbcaa7a0f570f93ff2d"
       },
       {
         "file": "screenshots/docs__user__troubleshooting--375--dark.png",
