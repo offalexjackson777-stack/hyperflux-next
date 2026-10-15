@@ -6,17 +6,23 @@ Defines application-neutral adapter identities, upstream pins, coexistence rules
 
 ## Start Here
 
-- [`docs/architecture/integrations.md`](../docs/architecture/integrations.md)
-- [`docs/generated/integrations.md`](../docs/generated/integrations.md)
+- [Integration Boundary](../docs/architecture/integrations.md)
+- [Application Integrations](../docs/generated/integrations.md)
+
+## Limitations
+
+- Catalog inclusion describes an adapter contract, not hardware qualification
 
 ## Boundaries
 
 **Owns**
+
 - Integration catalog
 - Exact upstream revisions
 - Adapter capability declarations
 
 **Does not own**
+
 - Receiver transport
 - Profile qualification
 - Raw HID or USB access
@@ -27,15 +33,6 @@ Defines application-neutral adapter identities, upstream pins, coexistence rules
 
 ## Verify
 
-Run `integration-contracts` after changing this area.
+Run `integration-contracts` after changing this area, and run `./hfx generate` to refresh its 3 generated file(s).
 
-Review impact:
-
-- Regenerate 3 declared projection(s).
-- Run `integration-contracts`.
-- Review direct consumers: Device knowledge, OpenRazer native route, OpenRGB adapter, Composable hardware profiles, C++ SDK, Python SDK.
-
-## Related Areas
-
-- **Depends on:** [Architecture authority](../architecture/README.md), [Schema contracts](../schemas/README.md)
-- **Used by:** [Device knowledge](../knowledge/README.md), [OpenRazer native route](openrazer/README.md), [OpenRGB adapter](openrgb/README.md), [Composable hardware profiles](../profiles/README.md), [C++ SDK](../sdk/cpp/README.md), [Python SDK](../sdk/python/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

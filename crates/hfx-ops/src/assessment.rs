@@ -7,6 +7,7 @@ use crate::{
 use hfx_domain::{RouteKind, RouteState};
 use hfx_errors::{ErrorCode, error_by_code, remediation_by_id};
 use hfx_integration_model::{OPENRAZER_NATIVE_CAPABILITY_FIELD, SourceValidatedDeviceCatalog};
+use hfx_runtime::{KERNEL_MODULE_NAME, RETIRED_KERNEL_DRIVERS};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -77,6 +78,10 @@ pub struct Assessment {
     pub components: Vec<ComponentAssessment>,
     pub driver: DriverState,
     pub bridge_ready: bool,
+    /// Whether the bridge process answered at all. Not part of the JSON contract:
+    /// `bridge_ready` keeps its published meaning (bridge and child routes ready).
+    #[serde(skip)]
+    pub bridge_responding: bool,
     pub receiver_generations: usize,
     pub qualified_generations: usize,
     pub working: Vec<String>,
@@ -129,13 +134,80 @@ fn bridge_findings(snapshot: &SystemSnapshot) -> Vec<AssessmentFinding> {
         .collect()
 }
 
+const DRIVER_ACTIVE: &str = "the installed driver is active";
+
+/// The released driver must own every qualified receiver interface. A loaded
+/// module proves nothing on its own: a retired driver advertising the same
+/// modalias can bind the receiver first (REL-019).
+fn receiver_driver_conflict(snapshot: &SystemSnapshot) -> Option<AssessmentFinding> {
+    let actual = snapshot
+        .receiver_interface_drivers
+        .iter()
+        .find(|driver| driver.as_deref() != Some(KERNEL_MODULE_NAME))?;
+    let (actual_driver, owner_kind) = match actual.as_deref() {
+        None => ("unbound", "unbound"),
+        Some(name)
+            if RETIRED_KERNEL_DRIVERS
+                .iter()
+                .any(|(retired, _)| *retired == name) =>
+        {
+            (name, "retired-hyperflux")
+        }
+        Some(name) => (name, "unknown"),
+    };
+    Some(local_finding(
+        ErrorCode::HfxKernel003,
+        BTreeMap::from([
+            ("actual_driver".to_owned(), actual_driver.to_owned()),
+            ("owner_kind".to_owned(), owner_kind.to_owned()),
+        ]),
+    ))
+}
+
+/// Adds receiver driver-ownership findings and reports whether another
+/// driver (or none) owns a qualified receiver interface.
+fn assess_driver_ownership(
+    snapshot: &SystemSnapshot,
+    activation_pending: bool,
+    working: &mut Vec<String>,
+    findings: &mut Vec<AssessmentFinding>,
+) -> bool {
+    // Before activation the receiver is expected on a generic driver; that
+    // state is already reported as HFX-KERNEL-001.
+    let conflict = if activation_pending {
+        None
+    } else {
+        receiver_driver_conflict(snapshot)
+    };
+    let found = conflict.is_some();
+    if let Some(conflict) = conflict {
+        working.retain(|item| item != DRIVER_ACTIVE);
+        working.push(
+            "the installed driver is loaded but does not own every receiver interface".to_owned(),
+        );
+        findings.push(conflict);
+    }
+    findings.extend(
+        snapshot
+            .retired_driver_registrations
+            .iter()
+            .map(|registration| {
+                local_finding(
+                    ErrorCode::HfxKernel004,
+                    BTreeMap::from([("registration".to_owned(), registration.clone())]),
+                )
+            }),
+    );
+    found
+}
+
 fn classify_driver(snapshot: &SystemSnapshot, working: &mut Vec<String>) -> DriverState {
     match (
         snapshot.installed_module_identity.as_deref(),
         snapshot.loaded_module_identity.as_deref(),
     ) {
         (Some(installed), Some(loaded)) if installed == loaded => {
-            working.push("the installed driver is active".to_owned());
+            working.push(DRIVER_ACTIVE.to_owned());
             DriverState::Active
         }
         (Some(_), Some(_)) => DriverState::ActivationPending,
@@ -376,15 +448,52 @@ fn child_routes_ready(snapshot: &SystemSnapshot) -> bool {
     })
 }
 
-fn bridge_service_finding_value(snapshot: &SystemSnapshot, responding: bool) -> String {
-    if responding {
-        "active-unready".to_owned()
+/// Names the layer that is actually not ready. A responding bridge is never
+/// reported as a service failure: restarting it cannot create receiver or
+/// child-route evidence (Discussion #19).
+fn readiness_finding(snapshot: &SystemSnapshot, bridge_responding: bool) -> AssessmentFinding {
+    let receivers = snapshot
+        .bridge
+        .as_ref()
+        .filter(|_| bridge_responding)
+        .map(|bridge| &bridge.snapshot.receivers);
+    let Some(receivers) = receivers else {
+        return local_finding(
+            ErrorCode::HfxService001,
+            BTreeMap::from([(
+                "service_state".to_owned(),
+                snapshot
+                    .service_state
+                    .finding_value(snapshot.bridge.is_some())
+                    .to_owned(),
+            )]),
+        );
+    };
+    let receiver_state = if receivers.is_empty() {
+        Some("not-registered")
+    } else if receivers
+        .iter()
+        .any(|receiver| receiver.profile_id.is_none() || receiver.profile_digest.is_none())
+    {
+        Some("unqualified")
     } else {
-        snapshot
-            .service_state
-            .finding_value(snapshot.bridge.is_some())
-            .to_owned()
+        None
+    };
+    if let Some(receiver_state) = receiver_state {
+        return local_finding(
+            ErrorCode::HfxService002,
+            BTreeMap::from([("receiver_state".to_owned(), receiver_state.to_owned())]),
+        );
     }
+    let route_state = if receivers.iter().any(|receiver| receiver.devices.is_empty()) {
+        "no-paired-device"
+    } else {
+        "not-live"
+    };
+    local_finding(
+        ErrorCode::HfxService003,
+        BTreeMap::from([("route_state".to_owned(), route_state.to_owned())]),
+    )
 }
 
 fn assess_full_component(
@@ -491,6 +600,13 @@ pub fn assess_system(snapshot: &SystemSnapshot) -> Assessment {
         ));
     }
 
+    let activation_pending = matches!(
+        driver,
+        DriverState::ActivationPending | DriverState::Unavailable
+    );
+    let driver_conflict =
+        assess_driver_ownership(snapshot, activation_pending, &mut working, &mut findings);
+
     let bridge_responding =
         snapshot.service_state == ServiceState::Active && snapshot.bridge.is_some();
     if bridge_responding {
@@ -498,19 +614,10 @@ pub fn assess_system(snapshot: &SystemSnapshot) -> Assessment {
         findings.extend(bridge_findings(snapshot));
     }
     let bridge_ready = bridge_responding && child_routes_ready(snapshot);
-    if !bridge_ready
-        && !matches!(
-            driver,
-            DriverState::ActivationPending | DriverState::Unavailable
-        )
-    {
-        findings.push(local_finding(
-            ErrorCode::HfxService001,
-            BTreeMap::from([(
-                "service_state".to_owned(),
-                bridge_service_finding_value(snapshot, bridge_responding),
-            )]),
-        ));
+    // A driver conflict is the root cause; bridge and route readiness symptoms
+    // would only point users at the wrong layer.
+    if !bridge_ready && !activation_pending && !driver_conflict {
+        findings.push(readiness_finding(snapshot, bridge_responding));
     }
 
     let core_finding_count = findings.len();
@@ -545,6 +652,7 @@ pub fn assess_system(snapshot: &SystemSnapshot) -> Assessment {
         components,
         driver,
         bridge_ready,
+        bridge_responding,
         receiver_generations,
         qualified_generations,
         working,
@@ -610,7 +718,16 @@ pub fn render_status_text(assessment: &Assessment) -> String {
         DriverState::ActivationPending => "activation pending",
         DriverState::Unavailable => "unavailable",
     };
-    let bridge = if assessment.bridge_ready {
+    let conflict = assessment
+        .findings
+        .iter()
+        .find(|finding| finding.code == "HFX-KERNEL-003")
+        .and_then(|finding| finding.details.get("actual_driver"));
+    let driver = conflict.map_or_else(
+        || driver.to_owned(),
+        |actual| format!("conflict (receiver owned by {actual})"),
+    );
+    let bridge = if assessment.bridge_responding {
         "running"
     } else {
         "unavailable"
@@ -782,6 +899,8 @@ mod tests {
             bridge: Some(empty_bridge()),
             legacy_v2_stack_detected: false,
             supported_receiver_present: false,
+            receiver_interface_drivers: Vec::new(),
+            retired_driver_registrations: Vec::new(),
         }
     }
 
@@ -843,10 +962,11 @@ mod tests {
 
         assert_eq!(assessment.state, AssessmentState::NeedsAttention);
         assert!(!assessment.bridge_ready);
-        assert_eq!(assessment.findings[0].code, "HFX-SERVICE-001");
+        assert!(assessment.bridge_responding);
+        assert_eq!(assessment.findings[0].code, "HFX-SERVICE-002");
         assert_eq!(
-            assessment.findings[0].details["service_state"],
-            "active-unready"
+            assessment.findings[0].details["receiver_state"],
+            "not-registered"
         );
     }
 
@@ -943,7 +1063,189 @@ mod tests {
 
         assert_eq!(assessment.state, AssessmentState::NeedsAttention);
         assert!(!assessment.bridge_ready);
+        assert_eq!(assessment.findings[0].code, "HFX-SERVICE-003");
+        assert_eq!(assessment.findings[0].details["route_state"], "not-live");
+    }
+
+    #[test]
+    fn paired_mouse_without_a_live_route_is_not_a_bridge_failure() {
+        // Discussion #19: bridge running, receiver qualified, mouse paired but
+        // not live. Restarting the bridge cannot help, so it must not be advised.
+        let mut value = snapshot();
+        value.supported_receiver_present = true;
+        value.bridge = Some(bridge_with_child(RouteState::Unavailable));
+
+        let assessment = assess_system(&value);
+
+        assert_eq!(assessment.state, AssessmentState::NeedsAttention);
+        assert!(!assessment.bridge_ready);
+        assert!(assessment.bridge_responding);
+        assert_eq!(assessment.findings.len(), 1);
+        assert_eq!(assessment.findings[0].code, "HFX-SERVICE-003");
+        assert_eq!(assessment.findings[0].details["route_state"], "not-live");
+        assert!(
+            !assessment.next_action.contains("restart"),
+            "a responding bridge must not be restarted: {}",
+            assessment.next_action
+        );
+        let status = render_status_text(&assessment);
+        assert!(status.contains("Bridge: running\n"), "{status}");
+        assert!(
+            status.contains("Next: Move or click the paired device."),
+            "{status}"
+        );
+    }
+
+    #[test]
+    fn qualified_receiver_without_paired_devices_names_the_route_state() {
+        let mut value = snapshot();
+        value.supported_receiver_present = true;
+        let mut bridge = bridge_with_child(RouteState::Available);
+        bridge.snapshot.receivers[0].devices.clear();
+        value.bridge = Some(bridge);
+
+        let assessment = assess_system(&value);
+
+        assert_eq!(assessment.findings[0].code, "HFX-SERVICE-003");
+        assert_eq!(
+            assessment.findings[0].details["route_state"],
+            "no-paired-device"
+        );
+    }
+
+    #[test]
+    fn unqualified_receiver_is_named_without_blaming_the_bridge() {
+        let mut value = snapshot();
+        value.supported_receiver_present = true;
+        let mut bridge = bridge_with_child(RouteState::Available);
+        bridge.snapshot.receivers[0].profile_id = None;
+        value.bridge = Some(bridge);
+
+        let assessment = assess_system(&value);
+
+        assert!(assessment.bridge_responding);
+        assert_eq!(assessment.findings[0].code, "HFX-SERVICE-002");
+        assert_eq!(
+            assessment.findings[0].details["receiver_state"],
+            "unqualified"
+        );
+    }
+
+    #[test]
+    fn unreachable_bridge_still_reports_the_service_and_unavailable_status() {
+        let mut value = snapshot();
+        value.supported_receiver_present = true;
+        value.bridge = None;
+
+        let assessment = assess_system(&value);
+
+        assert!(!assessment.bridge_responding);
         assert_eq!(assessment.findings[0].code, "HFX-SERVICE-001");
+        assert!(render_status_text(&assessment).contains("Bridge: unavailable\n"));
+    }
+
+    #[test]
+    fn retired_driver_owning_the_receiver_is_named_instead_of_active() {
+        // REL-019 / 2026-08-11: the released module was loaded, so Doctor said
+        // "driver active", while a retired driver owned the receiver.
+        let mut value = snapshot();
+        value.supported_receiver_present = true;
+        value.receiver_interface_drivers = vec![
+            Some("hid-razer-hyperflux-v2".to_owned()),
+            Some(KERNEL_MODULE_NAME.to_owned()),
+        ];
+
+        let assessment = assess_system(&value);
+
+        assert_eq!(assessment.findings[0].code, "HFX-KERNEL-003");
+        assert_eq!(
+            assessment.findings[0].details["actual_driver"],
+            "hid-razer-hyperflux-v2"
+        );
+        assert_eq!(
+            assessment.findings[0].details["owner_kind"],
+            "retired-hyperflux"
+        );
+        assert!(
+            assessment
+                .findings
+                .iter()
+                .all(|finding| !finding.code.starts_with("HFX-SERVICE")),
+            "the root cause must not be buried under bridge symptoms"
+        );
+        assert!(!assessment.working.iter().any(|item| item == DRIVER_ACTIVE));
+        assert!(
+            render_status_text(&assessment)
+                .contains("Driver: conflict (receiver owned by hid-razer-hyperflux-v2)\n")
+        );
+    }
+
+    #[test]
+    fn unknown_or_missing_receiver_driver_is_classified() {
+        let mut value = snapshot();
+        value.supported_receiver_present = true;
+        value.receiver_interface_drivers = vec![Some("hid-generic".to_owned())];
+        let unknown = assess_system(&value);
+        assert_eq!(unknown.findings[0].code, "HFX-KERNEL-003");
+        assert_eq!(unknown.findings[0].details["owner_kind"], "unknown");
+
+        value.receiver_interface_drivers = vec![Some(KERNEL_MODULE_NAME.to_owned()), None];
+        let unbound = assess_system(&value);
+        assert_eq!(unbound.findings[0].code, "HFX-KERNEL-003");
+        assert_eq!(unbound.findings[0].details["actual_driver"], "unbound");
+        assert_eq!(unbound.findings[0].details["owner_kind"], "unbound");
+    }
+
+    #[test]
+    fn released_driver_on_every_interface_is_ready() {
+        let mut value = snapshot();
+        value.supported_receiver_present = true;
+        value.bridge = Some(bridge_with_child(RouteState::Available));
+        value.receiver_interface_drivers = vec![Some(KERNEL_MODULE_NAME.to_owned()); 5];
+
+        let assessment = assess_system(&value);
+
+        assert_eq!(assessment.state, AssessmentState::Ready);
+        assert!(assessment.findings.is_empty());
+        assert!(assessment.working.iter().any(|item| item == DRIVER_ACTIVE));
+    }
+
+    #[test]
+    fn retired_registration_is_a_warning_even_when_the_receiver_is_healthy() {
+        let mut value = snapshot();
+        value.supported_receiver_present = true;
+        value.bridge = Some(bridge_with_child(RouteState::Available));
+        value.receiver_interface_drivers = vec![Some(KERNEL_MODULE_NAME.to_owned()); 5];
+        value.retired_driver_registrations = vec!["hid-razer-hyperflux-v2/0.1.1".to_owned()];
+
+        let assessment = assess_system(&value);
+
+        assert_eq!(assessment.state, AssessmentState::NeedsAttention);
+        assert_eq!(assessment.findings.len(), 1);
+        assert_eq!(assessment.findings[0].code, "HFX-KERNEL-004");
+        assert_eq!(assessment.findings[0].severity, "warning");
+        assert_eq!(
+            assessment.findings[0].details["registration"],
+            "hid-razer-hyperflux-v2/0.1.1"
+        );
+    }
+
+    #[test]
+    fn activation_pending_is_not_reported_as_a_driver_conflict() {
+        let mut value = snapshot();
+        value.supported_receiver_present = true;
+        value.loaded_module_identity = None;
+        value.receiver_interface_drivers = vec![Some("hid-generic".to_owned())];
+
+        let assessment = assess_system(&value);
+
+        assert_eq!(assessment.findings[0].code, "HFX-KERNEL-001");
+        assert!(
+            assessment
+                .findings
+                .iter()
+                .all(|finding| finding.code != "HFX-KERNEL-003")
+        );
     }
 
     #[test]

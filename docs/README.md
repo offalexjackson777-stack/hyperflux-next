@@ -1,40 +1,51 @@
 # HyperFlux Next Documentation
 
-Choose the shortest path for what you are doing with HyperFlux Next 2.0. User
-guides describe the product as installed; developer guides explain stable
-interfaces and safe changes; project pages record status and history.
+Start with the door that fits what you want to do.
 
-<!-- HFX-GENERATED-BEGIN: release-status -->
-> [!IMPORTANT]
-> **Arch 2.0.0 release.** Arch Linux x86_64 Core and Full 2.0.0-1 packages are published in the human-facing GitHub Release v2.0.0. The signed HyperFlux Next third-party Pacman repository is served separately through the fixed `arch-repository` machine channel.
-<!-- HFX-GENERATED-END: release-status -->
+<!-- HFX-GENERATED-BEGIN: release-summary -->
+**HyperFlux Next 2.0.2 is available for Arch Linux x86_64.** Read the
+[v2.0.2 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.2).
+<!-- HFX-GENERATED-END: release-summary -->
 
-## Use HyperFlux Next
+## Use HyperFlux
 
-- [Installation](user/installation.md)
-- [First run](user/first-run.md)
-- [Applications](user/applications.md)
-- [Hardware](user/hardware.md)
+For people who want their keyboard and mouse to work.
+
+- [Install HyperFlux Next](user/installation.md)
+- [First run](user/first-run.md): open your apps and check your devices.
+- [Applications](user/applications.md): what OpenRazer, Polychromatic, and
+  OpenRGB can do.
+- [Hardware](user/hardware.md): which devices work.
 - [Updates and removal](user/updates-removal.md)
 - [Troubleshooting](user/troubleshooting.md)
-- [Privacy](user/privacy.md)
+- [Known limitations](user/limitations.md)
+- [Privacy](user/privacy.md): what a support bundle contains.
+- [Get help](../SUPPORT.md)
 
-## Develop HyperFlux Next
+## How It Works And How It Was Built
 
-- [Architecture](developer/architecture.md)
+For people who want to understand HyperFlux.
+
+- [Architecture](developer/architecture.md): the parts and how they connect.
+- [Design book](architecture/design-book.md): the design in depth.
+- [Investigations](investigations/README.md): real problems and how they were
+  tracked down.
+- [Journey](project/journey.md): how the project got here.
+
+## Build And Contribute
+
+For people who want to change HyperFlux.
+
+- [Contributing](../CONTRIBUTING.md)
 - [Building](developer/building.md)
 - [SDK and connectors](developer/sdk-connectors.md)
 - [Device onboarding](developer/device-onboarding.md)
 - [Verification](developer/verification.md)
+- [Writing guide](developer/writing-guide.md)
 
-## Follow The Project
+## Reference
 
-- [Journey](project/journey.md)
-- [Roadmap](project/roadmap.md)
 - [Release status](project/release-status.md)
-
-## Factual References
-
-Generated references are collected under [`docs/generated/`](generated/).
-They project canonical catalogs and evidence; they do not replace the reviewed
-guides above or authorize a release.
+- [Roadmap](project/roadmap.md)
+- [Generated references](generated/README.md): exact details built from the
+  project's data, such as package contents and supported devices.

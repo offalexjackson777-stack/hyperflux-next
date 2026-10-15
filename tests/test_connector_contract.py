@@ -8,7 +8,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DOCUMENT = ROOT / "docs" / "developer" / "connectors.md"
+DOCUMENT = ROOT / "docs" / "developer" / "sdk-connectors.md"
 EXAMPLE = ROOT / "sdk" / "python" / "examples" / "read_integration_view.py"
 
 

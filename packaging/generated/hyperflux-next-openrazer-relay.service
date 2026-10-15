@@ -5,6 +5,7 @@ Description=HyperFlux Next OpenRazer native-route relay
 PartOf=hyperflux-next-bridge.service
 Requires=hyperflux-next-bridge.service hyperflux-next-openrazer-driver-preflight.service
 After=hyperflux-next-bridge.service hyperflux-next-openrazer-driver-preflight.service systemd-udevd.service
+Before=systemd-user-sessions.service
 ConditionPathExists=/dev/uhid
 ConditionFileIsExecutable=/usr/bin/openrazer-daemon
 
@@ -47,3 +48,4 @@ DevicePolicy=closed
 DeviceAllow=/dev/uhid rw
 ReadOnlyPaths=/usr/lib/hyperflux-next /run/hyperflux-next
 ReadWritePaths=/dev/uhid /run/hyperflux-next-openrazer-relay
+ReadWritePaths=-/sys/bus/hid/drivers/razeraccessory/unbind -/sys/bus/hid/drivers/razerkbd/unbind -/sys/bus/hid/drivers/razerkraken/unbind -/sys/bus/hid/drivers/razermouse/unbind

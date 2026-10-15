@@ -115,6 +115,16 @@ fn battery_report(transaction_id: u8) -> [u8; FEATURE_REPORT_BYTES] {
     report
 }
 
+fn battery_response(transaction_id: u8, status: u8, raw_value: u8) -> [u8; FEATURE_REPORT_BYTES] {
+    let mut response = battery_report(transaction_id);
+    response[0] = status;
+    response[9] = raw_value;
+    response[88] = response[2..88]
+        .iter()
+        .fold(0_u8, |checksum, byte| checksum ^ byte);
+    response
+}
+
 fn brightness_write_report(
     transaction_id: u8,
     led_id: u8,
@@ -225,8 +235,10 @@ fn persistent_battery_busy_retries_the_source_bound_and_never_returns_zero() {
         endpoint.take_battery_diagnostic(),
         Some(BatteryExchangeDiagnostic::Matched {
             transaction_id: 0x9f,
+            reply_transaction_id: 0x9f,
             status: 0x01,
             raw_value: 0,
+            accepted: false,
             attempts: SOURCE_BUSY_RETRY_MAXIMUM_ATTEMPTS,
         })
     );
@@ -278,8 +290,10 @@ fn transient_battery_busy_retries_to_the_next_truthful_value() {
         endpoint.take_battery_diagnostic(),
         Some(BatteryExchangeDiagnostic::Matched {
             transaction_id: 0x9f,
+            reply_transaction_id: 0x9f,
             status: 0x02,
             raw_value: 253,
+            accepted: true,
             attempts: 2,
         })
     );
@@ -315,8 +329,10 @@ fn successful_battery_response_remains_byte_exact() {
         endpoint.take_battery_diagnostic(),
         Some(BatteryExchangeDiagnostic::Matched {
             transaction_id: 0x9f,
+            reply_transaction_id: 0x9f,
             status: 0x02,
             raw_value: 253,
+            accepted: true,
             attempts: 1,
         })
     );
@@ -332,20 +348,117 @@ fn successful_battery_response_remains_byte_exact() {
 }
 
 #[test]
-fn retained_route_timeout_completes_one_battery_read_from_confirmed_state() {
+fn battery_reply_for_another_lane_or_command_is_never_reported_as_a_value() {
     let request = battery_report(0x1f);
-    let mut confirmed = request;
-    confirmed[0] = 0x02;
-    confirmed[9] = 194;
-    confirmed[88] = confirmed[2..88]
-        .iter()
-        .fold(0_u8, |checksum, byte| checksum ^ byte);
-    let mut timeout = request;
-    timeout[0] = 0x04;
-    timeout[9] = 0;
-    timeout[88] = timeout[2..88]
-        .iter()
-        .fold(0_u8, |checksum, byte| checksum ^ byte);
+    let mut wrong_class = battery_response(0x1f, RAZER_STATUS_SUCCESS, 128);
+    wrong_class[6] = 0x0f;
+    let mut wrong_command = battery_response(0x1f, RAZER_STATUS_SUCCESS, 128);
+    wrong_command[7] = 0x84;
+    for reply in [
+        battery_response(0x9f, RAZER_STATUS_SUCCESS, 128),
+        battery_response(0xff, RAZER_STATUS_SUCCESS, 128),
+        wrong_class,
+        wrong_command,
+    ] {
+        let mut endpoint = endpoint(vec![
+            BridgeExchangeResult::MatchedResponse(reply);
+            usize::from(SOURCE_BUSY_RETRY_MAXIMUM_ATTEMPTS)
+        ]);
+
+        endpoint
+            .handle(set_report(1, request))
+            .expect("battery request is answered");
+        assert_eq!(
+            endpoint.take_battery_diagnostic(),
+            Some(BatteryExchangeDiagnostic::Matched {
+                transaction_id: 0x1f,
+                reply_transaction_id: reply[1],
+                status: RAZER_STATUS_SUCCESS,
+                raw_value: 128,
+                accepted: false,
+                attempts: SOURCE_BUSY_RETRY_MAXIMUM_ATTEMPTS,
+            })
+        );
+        assert_eq!(
+            endpoint.bridge_mut().requests,
+            vec![request; usize::from(SOURCE_BUSY_RETRY_MAXIMUM_ATTEMPTS)]
+        );
+        let Some(UhidReply::GetReport {
+            data: Some(actual), ..
+        }) = endpoint.handle(get(2)).expect("battery reply is returned")
+        else {
+            panic!("battery reply is present");
+        };
+        assert_eq!(
+            decode_transport_envelope(&actual),
+            Some(TransportEnvelopeKind::MayHaveBeenSent)
+        );
+        assert!(!endpoint.retained_route_departure_ready());
+    }
+}
+
+#[test]
+fn mismatched_battery_reply_retries_to_the_matching_value() {
+    let stale = battery_response(0x9f, RAZER_STATUS_SUCCESS, 100);
+    let current = battery_response(0x1f, RAZER_STATUS_SUCCESS, 54);
+    let mut endpoint = endpoint(vec![
+        BridgeExchangeResult::MatchedResponse(stale),
+        BridgeExchangeResult::MatchedResponse(current),
+    ]);
+
+    endpoint
+        .handle(set_report(1, battery_report(0x1f)))
+        .expect("battery request succeeds after one stale reply");
+    assert_eq!(
+        endpoint.take_battery_diagnostic(),
+        Some(BatteryExchangeDiagnostic::Matched {
+            transaction_id: 0x1f,
+            reply_transaction_id: 0x1f,
+            status: RAZER_STATUS_SUCCESS,
+            raw_value: 54,
+            accepted: true,
+            attempts: 2,
+        })
+    );
+    let Some(UhidReply::GetReport {
+        data: Some(actual), ..
+    }) = endpoint
+        .handle(get(2))
+        .expect("matching battery reply is returned")
+    else {
+        panic!("matching battery reply is present");
+    };
+    assert_eq!(actual, current);
+}
+
+#[test]
+fn battery_failure_statuses_are_reported_as_unknown_without_retry() {
+    for status in [0x00, 0x03, 0x05, 0x06] {
+        let reply = battery_response(0x1f, status, 77);
+        let mut endpoint = endpoint(vec![BridgeExchangeResult::MatchedResponse(reply)]);
+
+        endpoint
+            .handle(set_report(1, battery_report(0x1f)))
+            .expect("battery failure is answered");
+        assert_eq!(endpoint.bridge_mut().requests.len(), 1);
+        let Some(UhidReply::GetReport {
+            data: Some(actual), ..
+        }) = endpoint.handle(get(2)).expect("battery reply is returned")
+        else {
+            panic!("battery reply is present");
+        };
+        assert_eq!(
+            decode_transport_envelope(&actual),
+            Some(TransportEnvelopeKind::MayHaveBeenSent)
+        );
+    }
+}
+
+#[test]
+fn retained_route_timeout_completes_one_battery_read_as_unknown_not_stale() {
+    let request = battery_report(0x1f);
+    let confirmed = battery_response(0x1f, RAZER_STATUS_SUCCESS, 194);
+    let timeout = battery_response(0x1f, RAZER_STATUS_TIMEOUT, 0);
     let mut endpoint = endpoint(vec![
         BridgeExchangeResult::MatchedResponse(confirmed),
         BridgeExchangeResult::MatchedResponse(timeout),
@@ -372,8 +485,10 @@ fn retained_route_timeout_completes_one_battery_read_from_confirmed_state() {
         endpoint.take_battery_diagnostic(),
         Some(BatteryExchangeDiagnostic::Matched {
             transaction_id: 0x1f,
-            status: 0x04,
+            reply_transaction_id: 0x1f,
+            status: RAZER_STATUS_TIMEOUT,
             raw_value: 0,
+            accepted: false,
             attempts: 1,
         })
     );
@@ -385,18 +500,19 @@ fn retained_route_timeout_completes_one_battery_read_from_confirmed_state() {
     else {
         panic!("departing battery response is present");
     };
-    assert_eq!(actual, confirmed);
+    assert_ne!(actual, confirmed);
+    assert_eq!(
+        decode_transport_envelope(&actual),
+        Some(TransportEnvelopeKind::MayHaveBeenSent)
+    );
     assert!(endpoint.retained_route_departure_ready());
+    assert_eq!(endpoint.bridge_mut().requests, vec![request, request]);
 }
 
 #[test]
-fn timeout_without_confirmed_battery_state_remains_truthful_and_withdraws() {
+fn battery_timeout_reports_unknown_and_withdraws() {
     let request = battery_report(0x1f);
-    let mut timeout = request;
-    timeout[0] = 0x04;
-    timeout[88] = timeout[2..88]
-        .iter()
-        .fold(0_u8, |checksum, byte| checksum ^ byte);
+    let timeout = battery_response(0x1f, RAZER_STATUS_TIMEOUT, 0);
     let mut endpoint = endpoint(vec![BridgeExchangeResult::MatchedResponse(timeout)]);
 
     endpoint
@@ -411,7 +527,10 @@ fn timeout_without_confirmed_battery_state_remains_truthful_and_withdraws() {
     else {
         panic!("timeout response is present");
     };
-    assert_eq!(actual, timeout);
+    assert_eq!(
+        decode_transport_envelope(&actual),
+        Some(TransportEnvelopeKind::MayHaveBeenSent)
+    );
     assert!(endpoint.retained_route_departure_ready());
 }
 
@@ -440,50 +559,6 @@ fn write_timeout_is_never_replayed_and_still_withdraws_the_route() {
     assert_eq!(actual, timeout);
     assert!(endpoint.retained_route_departure_ready());
     assert_eq!(endpoint.bridge_mut().requests, vec![request]);
-}
-
-#[test]
-fn endpoint_withdrawal_discards_confirmed_battery_state() {
-    let request = battery_report(0x1f);
-    let mut confirmed = request;
-    confirmed[0] = 0x02;
-    confirmed[9] = 194;
-    confirmed[88] = confirmed[2..88]
-        .iter()
-        .fold(0_u8, |checksum, byte| checksum ^ byte);
-    let mut timeout = request;
-    timeout[0] = 0x04;
-    timeout[88] = timeout[2..88]
-        .iter()
-        .fold(0_u8, |checksum, byte| checksum ^ byte);
-    let mut endpoint = endpoint(vec![
-        BridgeExchangeResult::MatchedResponse(confirmed),
-        BridgeExchangeResult::MatchedResponse(timeout),
-    ]);
-
-    endpoint
-        .handle(set_report(1, request))
-        .expect("confirmed request succeeds");
-    endpoint
-        .handle(get(2))
-        .expect("confirmed response is consumed");
-    endpoint.prepare_withdrawal();
-    endpoint
-        .handle(UhidEvent::Start { flags: 0 })
-        .expect("endpoint restarts for the fixture");
-    endpoint
-        .handle(set_report(3, request))
-        .expect("timeout request is answered");
-    let Some(UhidReply::GetReport {
-        data: Some(actual), ..
-    }) = endpoint
-        .handle(get(4))
-        .expect("timeout response is returned")
-    else {
-        panic!("timeout response is present");
-    };
-    assert_eq!(actual, timeout);
-    assert!(endpoint.retained_route_departure_ready());
 }
 
 #[test]

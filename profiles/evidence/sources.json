@@ -30,7 +30,7 @@
       "id": "openrgb-source-catalog",
       "role": "pinned upstream OpenRGB source and plugin integration authority",
       "path": "integrations/catalog.json",
-      "sha256": "f5c6696b6dc8a7595f53689bebbcc94ca817f4ca5ac2e60cf28dabd95537ee96"
+      "sha256": "882915c90207796a0761374a8f0916cca1e865c2af95e27c2cf96248c9f1409f"
     },
     {
       "id": "physical-acceptance-summary",

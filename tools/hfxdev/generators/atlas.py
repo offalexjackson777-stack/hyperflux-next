@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import posixpath
+from collections.abc import Mapping
 
 from ..atlas import AtlasNode, RepositoryAtlas
 
@@ -44,31 +45,29 @@ def _node_links(
     ] or ["- None."]
 
 
-def impact_summary(atlas: RepositoryAtlas, node: AtlasNode) -> tuple[str, ...]:
-    consumers = atlas.used_by[node.id]
-    values = [
-        f"Regenerate {len(node.generated_files)} declared projection(s).",
-        f"Run {', '.join(f'`{item}`' for item in node.verification)}.",
-    ]
-    if consumers:
-        titles = ", ".join(atlas.by_id[item].title for item in consumers)
-        values.append(f"Review direct consumers: {titles}.")
-    else:
-        values.append("No direct subsystem consumer is declared; verify repository-facing outputs.")
-    return tuple(values)
+ATLAS_PAGE = "docs/generated/repository-atlas.md"
 
 
-def folder_readme(atlas: RepositoryAtlas, node: AtlasNode) -> str:
-    used_by = atlas.used_by[node.id]
+def _doc_bullets(
+    from_directory: str,
+    values: tuple[str, ...],
+    titles: Mapping[str, str],
+) -> list[str]:
+    return [
+        f"- {_link(from_directory, value, titles[value])}"
+        if value in titles
+        else f"- {_link(from_directory, value, f'`{value}`')}"
+        for value in values
+    ] or ["- None."]
+
+
+def folder_readme(
+    atlas: RepositoryAtlas,
+    node: AtlasNode,
+    titles: Mapping[str, str] | None = None,
+) -> str:
+    titles = titles or {}
     verification = " ".join(f"`{item}`" for item in node.verification)
-    dependencies = ", ".join(
-        _link(node.path, atlas.by_id[item].path + "/README.md", atlas.by_id[item].title)
-        for item in node.depends_on
-    ) or "None"
-    consumers = ", ".join(
-        _link(node.path, atlas.by_id[item].path + "/README.md", atlas.by_id[item].title)
-        for item in used_by
-    ) or "None"
     lines = [
         f"# {node.title}",
         "",
@@ -92,19 +91,17 @@ def folder_readme(atlas: RepositoryAtlas, node: AtlasNode) -> str:
                 "| Hardware | [Capability boundary](user/hardware.md) |",
                 "| Applications | [Stock application ownership](user/applications.md) |",
                 "| Readiness | [Release status](project/release-status.md) |",
-                "| Repository ownership | [Repository Atlas](generated/repository-atlas.md) |",
                 "",
             ]
         )
     else:
-        lines.extend(
-            [
-                "## Start Here",
-                "",
-                *_file_bullets(node.path, node.related_docs),
-                "",
-            ]
-        )
+        guides = tuple(item for item in node.related_docs if "/decisions/" not in item)
+        decisions = tuple(item for item in node.related_docs if "/decisions/" in item)
+        lines.extend(["## Start Here", "", *_doc_bullets(node.path, guides, titles), ""])
+        if decisions:
+            lines.extend(
+                ["## Decision Records", "", *_doc_bullets(node.path, decisions, titles), ""]
+            )
     if node.id == "device-qualification-console":
         lines.extend(
             [
@@ -114,18 +111,22 @@ def folder_readme(atlas: RepositoryAtlas, node: AtlasNode) -> str:
                 "python3 tests/qualification_console_fixture_server.py --port 47821",
                 "```",
                 "",
-                "Run this from the repository root and open the printed loopback URL. This is a fixture-only UI preview: it does not read the installed stack, qualify hardware, or add an installed `hyperfluxctl qualification` command.",
+                "Run this from the repository root and open the local address it prints. It only previews the interface with sample data: it does not read your installed HyperFlux, test hardware, or add a `hyperfluxctl qualification` command.",
                 "",
             ]
         )
+    if node.limitations:
+        lines.extend(["## Limitations", "", *_bullets(node.limitations), ""])
     lines.extend(
         [
         "## Boundaries",
         "",
         "**Owns**",
+        "",
         *_bullets(node.owns),
         "",
         "**Does not own**",
+        "",
         *_bullets(node.must_not_own),
         "",
         "## Key Files",
@@ -138,16 +139,11 @@ def folder_readme(atlas: RepositoryAtlas, node: AtlasNode) -> str:
         "",
         "## Verify",
         "",
-        f"Run {verification} after changing this area.",
+        f"Run {verification} after changing this area, and run `./hfx generate`"
+        f" to refresh its {len(node.generated_files)} generated file(s).",
         "",
-        "Review impact:",
-        "",
-        *_bullets(impact_summary(atlas, node)),
-        "",
-        "## Related Areas",
-        "",
-        f"- **Depends on:** {dependencies}",
-        f"- **Used by:** {consumers}",
+        "Maintainers can find the areas this one depends on and the areas that"
+        f" use it in the {_link(node.path, ATLAS_PAGE, 'Repository Atlas')}.",
         ]
     )
     return "\n".join(lines) + "\n"
@@ -156,18 +152,18 @@ def folder_readme(atlas: RepositoryAtlas, node: AtlasNode) -> str:
 COLLECTION_TITLES = {
     ".devcontainer": "Development Container",
     ".github": "GitHub Automation",
-    "apps": "Installed Applications",
+    "apps": "Source-Only Applications",
     "generated": "Generated Catalogs",
     "sdk": "Language SDKs",
     "uapi": "Userspace ABI",
 }
 
 COLLECTION_PURPOSES = {
-    ".devcontainer": "Pins the network-disabled development and release toolchain used by local and hosted verification.",
-    "apps": "Contains source-only local tools that are deliberately excluded from Core and Full package payloads.",
-    "generated": "Holds derived catalogs consumed by builds, SDKs, and verification.",
-    "sdk": "Groups the language SDKs that expose the versioned bridge protocol to integrations.",
-    "uapi": "Groups userspace ABI authorities shared with the kernel transport.",
+    ".devcontainer": "Pins the offline development and release tools used for checks on your machine and in CI.",
+    "apps": "Holds local tools that are only available from source and are left out of the Core and Full packages on purpose.",
+    "generated": "Holds catalogs generated from the project's data files and used by builds, SDKs, and checks.",
+    "sdk": "Holds the SDKs, one per language, that apps use to talk to the HyperFlux background service.",
+    "uapi": "Holds the definition of the interface between the kernel driver and user space.",
 }
 
 
@@ -192,14 +188,14 @@ def collection_readme(atlas: RepositoryAtlas, path: str) -> str:
         "",
         COLLECTION_PURPOSES.get(
             path,
-            "This collection groups related repository authorities and generated outputs.",
+            "This folder groups related source files and the files generated from them.",
         ),
         "",
     ]
     if children:
         lines.extend(
             [
-                "## Subsystems",
+                "## What Is Inside",
                 "",
                 "| Area | Purpose |",
                 "| --- | --- |",
@@ -213,9 +209,9 @@ def collection_readme(atlas: RepositoryAtlas, path: str) -> str:
     if owners:
         lines.extend(
             [
-                "## Authorities",
+                "## Who Owns These Files",
                 "",
-                "| Owner | Canonical inputs | Generated outputs |",
+                "| Owner | Source files | Generated files |",
                 "| --- | ---: | ---: |",
             ]
         )
@@ -229,10 +225,10 @@ def collection_readme(atlas: RepositoryAtlas, path: str) -> str:
         [
             "## Change Workflow",
             "",
-            "1. Open the owning subsystem above.",
-            "2. Change its declared canonical source, not a generated projection.",
+            "1. Open the area that owns the file, listed above.",
+            "2. Change its source file, not a generated file.",
             "3. Run `./hfx generate` from the repository root.",
-            "4. Run the verification named by that subsystem.",
+            "4. Run the checks listed in that area's README.",
         ]
     )
     return "\n".join(lines) + "\n"
@@ -245,15 +241,17 @@ def markdown(atlas: RepositoryAtlas) -> str:
         "",
         GENERATED_NOTICE,
         "",
-        "This is the compact public index for repository ownership. The complete dependency graph and file-level contracts remain in [`architecture/repository-atlas.json`](../../architecture/repository-atlas.json).",
+        "Maintainer reference for repository ownership. It lists every part of the repository with its status, purpose, and what it depends on, for maintainers who need to know who owns a file. To learn how HyperFlux works, start with the [architecture overview](../developer/architecture.md) instead.",
         "",
-        f"- **Subsystems:** {len(atlas.nodes)}",
+        "The full list of files each part owns is in [`architecture/repository-atlas.json`](../../architecture/repository-atlas.json).",
+        "",
+        f"- **Parts:** {len(atlas.nodes)}",
         f"- **Categories:** {len(categories)}",
-        f"- **Publication state:** `{atlas.publication_state}`",
+        f"- **Release state:** `{atlas.publication_state}`",
         "",
         "## Browse By Area",
         "",
-        "| Area | Subsystems |",
+        "| Area | Parts |",
         "| --- | --- |",
     ]
     for category in categories:
@@ -265,9 +263,10 @@ def markdown(atlas: RepositoryAtlas) -> str:
         lines.append(f"| {category.title()} | {links} |")
     lines.extend(
         [
-            "## Subsystem Index",
             "",
-            "| Subsystem | Status | Purpose |",
+            "## All Parts",
+            "",
+            "| Part | Status | Purpose |",
             "| --- | --- | --- |",
         ]
     )
@@ -278,7 +277,20 @@ def markdown(atlas: RepositoryAtlas) -> str:
     lines.extend(
         [
             "",
-            "Each linked front door names the subsystem's boundaries, key files, verification, and direct relationships. Update the JSON authority and run `./hfx generate` when ownership changes.",
+            "## Dependencies",
+            "",
+            "| Subsystem | Depends on | Used by |",
+            "| --- | --- | --- |",
+        ]
+    )
+    for node in atlas.nodes:
+        depends_on = ", ".join(atlas.by_id[item].title for item in node.depends_on) or "None"
+        used_by = ", ".join(atlas.by_id[item].title for item in atlas.used_by[node.id]) or "None"
+        lines.append(f"| [{node.title}](../../{node.path}/README.md) | {depends_on} | {used_by} |")
+    lines.extend(
+        [
+            "",
+            "Each linked folder README lists what that part owns, its key files, its limitations, and the checks to run. When ownership changes, update `architecture/repository-atlas.json` and run `./hfx generate`.",
         ]
     )
     return "\n".join(lines) + "\n"

@@ -6,17 +6,23 @@ Runs pinned upstream Razer controllers over qualified HyperFlux Feature routes w
 
 ## Start Here
 
-- [`docs/architecture/integrations.md`](../../docs/architecture/integrations.md)
-- [`docs/generated/integrations.md`](../../docs/generated/integrations.md)
+- [Integration Boundary](../../docs/architecture/integrations.md)
+- [Application Integrations](../../docs/generated/integrations.md)
+
+## Limitations
+
+- Physical OpenRGB behavior remains qualified only for the current public profiles
 
 ## Boundaries
 
 **Owns**
+
 - OpenRGB Feature transport adaptation
 - Native controller lifecycle
 - Serial-proven direct-route precedence
 
 **Does not own**
+
 - OpenRGB device semantics
 - Receiver qualification
 - Direct hidapi transport
@@ -32,15 +38,6 @@ Runs pinned upstream Razer controllers over qualified HyperFlux Feature routes w
 
 ## Verify
 
-Run `openrgb-native-route-contracts` `openrgb-thread-sanitizer` after changing this area.
+Run `openrgb-native-route-contracts` `openrgb-thread-sanitizer` after changing this area, and run `./hfx generate` to refresh its 1 generated file(s).
 
-Review impact:
-
-- Regenerate 1 declared projection(s).
-- Run `openrgb-native-route-contracts`, `openrgb-thread-sanitizer`.
-- Review direct consumers: Packaging and installation.
-
-## Related Areas
-
-- **Depends on:** [Application integration catalog](../README.md), [Composable hardware profiles](../../profiles/README.md), [C++ SDK](../../sdk/cpp/README.md)
-- **Used by:** [Packaging and installation](../../packaging/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../../docs/generated/repository-atlas.md).

@@ -5,7 +5,9 @@
 
 #include "qt_dispatcher.hpp"
 
-#include "ResourceManagerInterface.h"
+#include <hyperflux/openrgb/virtual_controller_mirror.hpp>
+
+#include "OpenRGBPluginInterface.h"
 
 #include <exception>
 #include <memory>
@@ -32,60 +34,36 @@ sdk::UnixChannelConfig native_channel_config()
     return default_production_native_channel_config();
 }
 
-class ResourceManagerNativePluginHost final : public NativePluginHost
+class OpenRgbApiNativePluginHost final : public NativePluginHost
 {
 public:
-    explicit ResourceManagerNativePluginHost(ResourceManagerInterface& manager) noexcept
-        : manager_(&manager)
+    explicit OpenRgbApiNativePluginHost(OpenRGBPluginAPIInterface& api) noexcept
+        : mirrors_(api, VirtualControllerMirrorOptions {.skip_initial_black_frame = true})
     {
     }
 
     void register_controller(RGBController& controller) noexcept override
     {
-        manager_->RegisterRGBController(&controller);
+        mirrors_.add(controller);
     }
 
     void unregister_controller(RGBController& controller) noexcept override
     {
-        manager_->UnregisterRGBController(&controller);
+        mirrors_.remove(controller);
     }
 
-    std::vector<RGBController*> controllers() const override
+    void begin_unload() noexcept override
     {
-        return manager_->GetRGBControllers();
+        mirrors_.begin_unload();
     }
 
-    void register_detection_start(
-        DetectionCallback callback, void* context) noexcept override
+    std::vector<RGBControllerInterface*> controllers() const override
     {
-        manager_->RegisterDetectionStartCallback(callback, context);
-    }
-
-    void register_detection_end(
-        DetectionCallback callback, void* context) noexcept override
-    {
-        manager_->RegisterDetectionEndCallback(callback, context);
-    }
-
-    void unregister_detection_start(
-        DetectionCallback callback, void* context) noexcept override
-    {
-        manager_->UnregisterDetectionStartCallback(callback, context);
-    }
-
-    void unregister_detection_end(
-        DetectionCallback callback, void* context) noexcept override
-    {
-        manager_->UnregisterDetectionEndCallback(callback, context);
-    }
-
-    void wait_for_detection() noexcept override
-    {
-        manager_->WaitForDeviceDetection();
+        return mirrors_.api().GetRGBControllers();
     }
 
 private:
-    ResourceManagerInterface* manager_;
+    VirtualControllerMirrorSet mirrors_;
 };
 
 } // namespace
@@ -127,14 +105,14 @@ OpenRgbNativePluginApplication::~OpenRgbNativePluginApplication()
     unload();
 }
 
-sdk::Result<void> OpenRgbNativePluginApplication::load(ResourceManagerInterface* manager)
+sdk::Result<void> OpenRgbNativePluginApplication::load(OpenRGBPluginAPIInterface* api)
 {
-    if(manager == nullptr)
+    if(api == nullptr)
     {
         return sdk::Result<void>::failure(
-            application_error("OpenRGB native plugin requires a resource manager"));
+            application_error("OpenRGB native plugin requires the plugin API"));
     }
-    return load(std::make_unique<ResourceManagerNativePluginHost>(*manager));
+    return load(std::make_unique<OpenRgbApiNativePluginHost>(*api));
 }
 
 sdk::Result<void> OpenRgbNativePluginApplication::load(
@@ -194,13 +172,6 @@ sdk::Result<void> OpenRgbNativePluginApplication::load(
         coordinator_ = std::move(coordinator).value();
         callbacks_enabled_ = true;
     }
-    host_->register_detection_start(&detection_started_callback, this);
-    host_->register_detection_end(&detection_finished_callback, this);
-    {
-        std::lock_guard lock(lifecycle_mutex_);
-        callbacks_registered_ = true;
-    }
-
     auto started = coordinator_->start();
     if(!started)
     {
@@ -217,8 +188,6 @@ sdk::Result<void> OpenRgbNativePluginApplication::load(
 
 void OpenRgbNativePluginApplication::unload() noexcept
 {
-    NativePluginHost* host = nullptr;
-    bool callbacks_registered = false;
     {
         std::lock_guard lock(lifecycle_mutex_);
         if(state_ == State::Unloaded || state_ == State::Unloading)
@@ -227,17 +196,6 @@ void OpenRgbNativePluginApplication::unload() noexcept
         }
         state_ = State::Unloading;
         callbacks_enabled_ = false;
-        host = host_.get();
-        callbacks_registered = callbacks_registered_;
-    }
-    if(host != nullptr)
-    {
-        host->wait_for_detection();
-        if(callbacks_registered)
-        {
-            host->unregister_detection_start(&detection_started_callback, this);
-            host->unregister_detection_end(&detection_finished_callback, this);
-        }
     }
 
     std::shared_ptr<UpstreamRazerPluginCoordinator> coordinator;
@@ -245,10 +203,16 @@ void OpenRgbNativePluginApplication::unload() noexcept
     std::unique_ptr<NativePluginHost> owned_host;
     {
         std::lock_guard lock(lifecycle_mutex_);
-        callbacks_registered_ = false;
         coordinator = std::move(coordinator_);
         dispatcher = std::move(dispatcher_);
         owned_host = std::move(host_);
+    }
+    if(owned_host != nullptr)
+    {
+        // On exit OpenRGB unloads plugins after its GUI stopped following
+        // the device list, and its device pages release the controllers we
+        // present only after Unload returns.
+        owned_host->begin_unload();
     }
     if(coordinator != nullptr)
     {
@@ -307,53 +271,31 @@ OpenRgbNativePluginApplication::controllers() const
                                   : coordinator->controllers();
 }
 
-void OpenRgbNativePluginApplication::detection_started_callback(void* context) noexcept
+void OpenRgbNativePluginApplication::detection_completed() noexcept
 {
-    if(context != nullptr)
-    {
-        static_cast<OpenRgbNativePluginApplication*>(context)->detection_started();
-    }
-}
-
-void OpenRgbNativePluginApplication::detection_finished_callback(void* context) noexcept
-{
-    if(context != nullptr)
-    {
-        static_cast<OpenRgbNativePluginApplication*>(context)->detection_finished();
-    }
-}
-
-void OpenRgbNativePluginApplication::detection_started() noexcept
-{
-    std::shared_ptr<UpstreamRazerPluginCoordinator> coordinator;
+    // Plugin controllers survive OpenRGB 1.0 rescans, so only the completed
+    // device list needs reconciling. Registration changes must run on the Qt
+    // application thread: OpenRGB refreshes its device list there and blocks
+    // any other registering thread until the refresh is done.
+    try
     {
         std::lock_guard lock(lifecycle_mutex_);
-        if(!callbacks_enabled_)
+        if(!callbacks_enabled_ || dispatcher_ == nullptr || coordinator_ == nullptr)
         {
             return;
         }
-        coordinator = coordinator_;
-    }
-    if(coordinator != nullptr)
-    {
-        coordinator->detection_started();
-    }
-}
-
-void OpenRgbNativePluginApplication::detection_finished() noexcept
-{
-    std::shared_ptr<UpstreamRazerPluginCoordinator> coordinator;
-    {
-        std::lock_guard lock(lifecycle_mutex_);
-        if(!callbacks_enabled_)
+        std::weak_ptr<UpstreamRazerPluginCoordinator> weak = coordinator_;
+        static_cast<void>(dispatcher_->post([weak]
         {
-            return;
-        }
-        coordinator = coordinator_;
+            if(auto coordinator = weak.lock())
+            {
+                coordinator->detection_finished();
+            }
+        }));
     }
-    if(coordinator != nullptr)
+    catch(...)
     {
-        coordinator->detection_finished();
+        return;
     }
 }
 

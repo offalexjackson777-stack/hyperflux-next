@@ -1,8 +1,19 @@
 # Integration Boundary
 
+OpenRazer and OpenRGB were written for devices they find and talk to directly. Behind a
+receiver, something else has to tell them which devices exist, which may be written, and
+when that changes. This page describes what an application adapter gets from the bridge, and
+what it must leave to the bridge.
+
 Application adapters consume exact, generation-bound routes through the SDK.
 They do not decide receiver qualification, infer routes from product names, or
 turn paired inventory into write authority on their own.
+
+## Terms Used Here
+
+- **Adapter**: the thin code that connects one application to HyperFlux through the SDK. The
+  developer pages also call it a connector.
+- **Generation**: one physical connection of the receiver; a replug starts a new one.
 
 ## Inventory And Native Routes
 

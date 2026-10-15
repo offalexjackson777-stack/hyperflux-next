@@ -143,6 +143,37 @@ class KernelDriverContracts(unittest.TestCase):
         self.assertIn("hfx_native_response_report_valid", matcher)
         self.assertIn("native_transaction_id_match_mask", matcher)
 
+    def test_native_exchange_keeps_polling_past_another_transactions_reply(self) -> None:
+        source = (ROOT / "driver/kernel/hyperflux-next-native.c").read_text(
+            encoding="utf-8"
+        )
+        match_start = source.index("static bool hfx_native_response_matches")
+        match_end = source.index("static int hfx_native_usb_set", match_start)
+        matcher = source[match_start:match_end]
+        self.assertRegex(
+            matcher,
+            r"request\[profile->native_transaction_id_offset\] \^\s*"
+            r"response\[profile->native_transaction_id_offset\];",
+        )
+        self.assertRegex(
+            matcher,
+            r"if \(transaction_difference &\s*"
+            r"profile->native_transaction_id_match_mask\)\s*return false;",
+        )
+
+        start = source.index("static int hfx_native_record_dispatch")
+        end = source.index("static int hfx_native_reserve", start)
+        response_loop = source[start:end][source[start:end].index("for (attempt"):]
+        matched = response_loop.index("hfx_native_response_matches(")
+        self.assertLess(matched, response_loop.index("hfx_native_restore_response("))
+        self.assertIn("ret = -ENOMSG;", response_loop[matched:])
+
+        table = (
+            ROOT / "driver/kernel/generated/hyperflux_receiver_profiles.inc"
+        ).read_text(encoding="utf-8")
+        self.assertIn(".native_transaction_id_match_mask = 255,", table)
+        self.assertNotIn(".native_transaction_id_match_mask = 0,", table)
+
     def test_native_route_selector_is_endpoint_declarative_and_response_repaired(self) -> None:
         source = (ROOT / "driver/kernel/hyperflux-next-native.c").read_text(
             encoding="utf-8"

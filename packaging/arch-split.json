@@ -1,0 +1,169 @@
+{
+  "$schema": "../schemas/arch-split-packages.schema.json",
+  "schema": "hyperflux-arch-split-packages-v1",
+  "pkgbase": "hyperflux-next",
+  "first_release": "2.1.0-1",
+  "first_release_rule": "The four-output topology starts with 2.1.0-1. Every 2.0.x release, including 2.0.2-1, keeps the proven two-package topology, and 2.1.0-1 ships only after the physical two-to-four transition test passes.",
+  "architectures": [
+    "x86_64"
+  ],
+  "editions": {
+    "linux": "core",
+    "full": "full"
+  },
+  "outputs": [
+    {
+      "id": "receiver-dkms",
+      "package_name": "hyperflux-next-dkms",
+      "edition": "linux",
+      "description": "HyperFlux receiver kernel driver sources for DKMS",
+      "licenses": [
+        "GPL-2.0-only"
+      ],
+      "builds": [],
+      "payloads": [
+        "kernel-source",
+        "dkms-configuration"
+      ],
+      "dependency_roles": [
+        "dkms"
+      ],
+      "sibling_dependencies": [],
+      "dependencies": [],
+      "optional_dependencies": "none",
+      "conflicts": [
+        "hyperflux-v2-linux-dkms"
+      ],
+      "provides": [],
+      "replaces": []
+    },
+    {
+      "id": "core",
+      "package_name": "hyperflux-next-linux",
+      "edition": "linux",
+      "description": "HyperFlux receiver driver, bridge, SDK, CLI, and base services",
+      "licenses": [
+        "GPL-2.0-only"
+      ],
+      "builds": [
+        "bridge-daemon",
+        "operations-cli",
+        "activation-utility"
+      ],
+      "payloads": [
+        "bridge-service",
+        "desktop-bridge-socket",
+        "desktop-bridge-proxy-service",
+        "system-users",
+        "runtime-directories",
+        "device-permissions",
+        "default-configuration",
+        "operator-troubleshooting",
+        "core-license"
+      ],
+      "dependency_roles": [
+        "c-runtime",
+        "compiler-runtime",
+        "service-manager",
+        "device-manager"
+      ],
+      "sibling_dependencies": [
+        "receiver-dkms"
+      ],
+      "dependencies": [],
+      "optional_dependencies": "edition",
+      "conflicts": [],
+      "provides": [],
+      "replaces": []
+    },
+    {
+      "id": "openrazer-driver",
+      "package_name": "hyperflux-next-openrazer-driver-dkms",
+      "edition": "full",
+      "description": "OpenRazer kernel driver sources with the HyperFlux native transport, for DKMS",
+      "licenses": [
+        "GPL-2.0-only",
+        "GPL-2.0-or-later"
+      ],
+      "builds": [
+        "openrazer-native-driver",
+        "openrazer-native-udev-rules",
+        "openrazer-native-mount-helper"
+      ],
+      "payloads": [
+        "openrazer-system-group"
+      ],
+      "dependency_roles": [
+        "dkms",
+        "device-manager"
+      ],
+      "sibling_dependencies": [
+        "receiver-dkms"
+      ],
+      "dependencies": [],
+      "optional_dependencies": "none",
+      "conflicts": [
+        "openrazer-driver-dkms"
+      ],
+      "provides": [
+        "openrazer-driver-dkms=@openrazer_driver_version@",
+        "hyperflux-openrazer-driver-abi=@openrazer_driver_version@"
+      ],
+      "replaces": []
+    },
+    {
+      "id": "full",
+      "package_name": "hyperflux-next-full",
+      "edition": "full",
+      "description": "Core plus the OpenRazer compatibility transport and OpenRGB integration for optional stock applications",
+      "licenses": [
+        "GPL-2.0-only",
+        "GPL-2.0-or-later",
+        "GPL-3.0-only"
+      ],
+      "builds": [
+        "openrazer-native-relay",
+        "openrgb-native"
+      ],
+      "payloads": [
+        "openrazer-native-relay-service",
+        "openrazer-native-driver-preflight-service",
+        "openrazer-native-modules-load",
+        "full-bridge-integration-drop-in",
+        "full-component-descriptor",
+        "openrgb-license"
+      ],
+      "dependency_roles": [
+        "c-runtime",
+        "compiler-runtime",
+        "service-manager",
+        "device-manager"
+      ],
+      "sibling_dependencies": [
+        "core",
+        "openrazer-driver"
+      ],
+      "dependencies": [
+        "qt6-base",
+        "hidapi",
+        "libstdc++"
+      ],
+      "optional_dependencies": "edition",
+      "conflicts": [
+        "hyperflux-next-openrgb=0.0.0_dev.1-2"
+      ],
+      "provides": [],
+      "replaces": [
+        "hyperflux-next-openrgb=0.0.0_dev.1-2"
+      ]
+    }
+  ],
+  "retired_relations": [
+    {
+      "output": "full",
+      "relation": "hyperflux-next-openrgb=0.0.0_dev.1-2",
+      "reason": "The pre-2.0 connector package owned the OpenRGB plugin path that Full now owns; the exact-version conflict and replace migrate hosts that still carry that one retired build.",
+      "expires_before_release": "2.2.0-1"
+    }
+  ]
+}

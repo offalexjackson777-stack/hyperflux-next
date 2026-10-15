@@ -26,7 +26,7 @@ The same canonical data has three deliberately different projections:
 | --- | --- | --- |
 | GitHub Markdown | Architecture, support state, and contribution guidance | None |
 | Repository Atlas | Ownership, dependencies, generated outputs, and change impact | None |
-| Installed qualification console | Exact local PID/profile/generation and guided evidence collection | Loopback companion only |
+| Source-only qualification console | Exact local PID/profile/generation and guided evidence collection | Loopback companion only |
 
 There is no separate documentation website or database. The browser never opens
 HID or USB devices directly, and completion in the local console does not publish
@@ -35,8 +35,10 @@ support automatically.
 ## Evidence Boundary
 
 An official model name, OpenRazer method, OpenRGB registry entry, or candidate-list
-match can describe a device. None can authorize a receiver write. Unknown,
-conflicting, and candidate-only records remain visible and non-writable.
+match can describe a device. None can grant a receiver write. Unknown and
+conflicting records, and every route that is not `physically-proven`, remain
+visible without child-profile controls. Route tiers come from the source-validated
+route catalog, so Device Knowledge and Supported Hardware report the same counts.
 
 ## Consequences
 

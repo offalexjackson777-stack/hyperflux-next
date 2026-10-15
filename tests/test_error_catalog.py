@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from copy import deepcopy
 import json
+import re
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -14,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 sys.path.insert(0, str(ROOT / "sdk" / "python"))
 
+from hfxdev.atlas import load_repository_atlas
 from hfxdev.errors import MAX_ERRORS, MAX_SAFE_DETAIL_FIELDS, load_error_catalog
 from hfxdev.generators.errors import cpp_catalog, markdown, python_catalog, rust_catalog
 from hfxdev.model import ModelError
@@ -56,11 +59,45 @@ class ErrorCatalogTests(unittest.TestCase):
             ROOT / "crates" / "hfx-errors" / "src" / "generated.rs": rust_catalog(first),
             ROOT / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "error_catalog.hpp": cpp_catalog(first),
             ROOT / "sdk" / "python" / "hyperflux_sdk" / "generated" / "error_catalog.py": python_catalog(first),
-            ROOT / "docs" / "generated" / "error-catalog.md": markdown(first),
+            ROOT / "docs" / "generated" / "error-catalog.md": markdown(
+                first, load_repository_atlas(ROOT)
+            ),
         }
         for path, expected in outputs.items():
             with self.subTest(path=path):
                 self.assertEqual(path.read_text(encoding="utf-8"), expected)
+
+    def test_atlas_consumers_match_source_that_emits_catalog_codes(self) -> None:
+        catalog = load_error_catalog(ROOT)
+        atlas = load_repository_atlas(ROOT)
+        codes = re.compile(
+            "|".join(re.escape(item.code) for item in catalog.errors)
+            + r"|generated[./]error_catalog|hfx_errors"
+        )
+        excluded = {"errors", "rust-workspace", "tests"}
+        paths = sorted((node.path, node.id) for node in atlas.nodes)
+        tracked = subprocess.run(
+            ["git", "ls-files", "-z"], cwd=ROOT, check=True, capture_output=True
+        ).stdout.decode("utf-8").split("\0")
+        emitting: set[str] = set()
+        for relative in tracked:
+            if not relative.endswith((".rs", ".py", ".cpp", ".hpp", ".h", ".c", ".sh")):
+                continue
+            if "/tests/" in f"/{relative}" or "/generated/" in relative:
+                continue
+            owners = [node for path, node in paths if relative.startswith(f"{path}/")]
+            if not owners:
+                continue
+            owner = max(owners, key=lambda node: len(atlas.by_id[node].path))
+            if owner in excluded:
+                continue
+            if codes.search((ROOT / relative).read_text(encoding="utf-8")):
+                emitting.add(owner)
+        self.assertEqual(set(atlas.used_by["errors"]), emitting)
+        page = (ROOT / "docs" / "generated" / "error-catalog.md").read_text(encoding="utf-8")
+        for identifier in atlas.used_by["errors"]:
+            with self.subTest(consumer=identifier):
+                self.assertIn(f"- {atlas.by_id[identifier].title} (`", page)
 
     def test_catalog_is_bounded_cross_referenced_and_privacy_safe(self) -> None:
         catalog = load_error_catalog(ROOT)

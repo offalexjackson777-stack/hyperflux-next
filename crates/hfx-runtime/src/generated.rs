@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 pub const LINUX_RUNTIME_SHA256: &str =
-    "4504eb56d427102ccb249a726a7d78224ab41abe589e45eccdf33ac8fd54e4fc";
+    "e228f8219ee80e0595e6d9f7ac1e121ce03d9e450ef2061e3bcc548197d506ea";
 pub const PRODUCT_DISPLAY_NAME: &str = "HyperFlux Next";
-pub const PRODUCT_VERSION: &str = "2.0.0";
+pub const PRODUCT_VERSION: &str = "2.1.0";
 pub const PACKAGE_NAME: &str = "hyperflux-next-linux";
 pub const BRIDGE_SERVICE_ACCOUNT: &str = "hyperflux-next";
 pub const BRIDGE_KERNEL_ACCESS_GROUP: &str = "hyperflux-next";
@@ -28,11 +28,17 @@ pub const DESKTOP_SOCKET_PROXY_PATH: &str = "/usr/lib/systemd/systemd-socket-pro
 pub const KERNEL_MODULE_NAME: &str = "hid-hyperflux-next";
 pub const KERNEL_DKMS_NAME: &str = "hid-hyperflux-next";
 pub const KERNEL_DEVICE_PREFIX: &str = "hyperflux-next";
-pub const KERNEL_SOURCE_DIRECTORY: &str = "/usr/src/hid-hyperflux-next-2.0.0";
+pub const KERNEL_SOURCE_DIRECTORY: &str = "/usr/src/hid-hyperflux-next-2.1.0";
 pub const OPERATIONS_CLI_PATH: &str = "/usr/bin/hyperfluxctl";
 pub const ACTIVATION_UTILITY_PATH: &str = "/usr/lib/hyperflux-next/hyperflux-next-activate";
 pub const FULL_COMPONENT_DESCRIPTOR_PATH: &str = "/usr/share/hyperflux-next/components/full.json";
 pub const SUPPORT_BUNDLE_PREFIX: &str = "hyperflux-next-support";
+/// Retired pre-release DKMS drivers, as `(name, version)` pairs.
+pub const RETIRED_KERNEL_DRIVERS: &[(&str, &str)] = &[
+    ("hid-razer-hyperflux-v2", "0.1.0"),
+    ("hid-razer-hyperflux-v2", "0.1.1"),
+    ("hid-razer-hyperflux-v2", "0.1.2"),
+];
 pub const PACKAGE_RELEASE: u16 = 1;
 pub const MAX_RECEIVER_GENERATIONS: usize = 16;
 pub const MAX_STRUCTURED_EVENTS: usize = 128;

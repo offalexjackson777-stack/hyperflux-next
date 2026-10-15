@@ -7,6 +7,13 @@
     "enable_service_on_install": false,
     "preserve_configuration": true
   },
+  "first_run_activation": {
+    "receiver_during_install": "connected",
+    "unit_enable": "enable-without-start",
+    "activation": "normal-reboot",
+    "disconnected_activation_command": "activate-disconnected-driver",
+    "disconnected_activation_precondition": "verified-alternate-input"
+  },
   "builds": [
     {
       "id": "bridge-daemon",
@@ -184,6 +191,16 @@
       "kind": "file",
       "source": "packaging/generated/openrazer.sysusers",
       "destination": "@openrazer_sysusers_path@",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "openrazer-native-modules-load",
+      "distribution_component": "full",
+      "kind": "file",
+      "source": "packaging/generated/hyperflux-next-openrazer.modules-load.conf",
+      "destination": "/usr/lib/modules-load.d/hyperflux-next-openrazer.conf",
       "mode": "0644",
       "preserve": false,
       "include": []

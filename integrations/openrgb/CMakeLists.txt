@@ -120,7 +120,30 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(hyperflux_openrgb_core PRIVATE -Wall -Wextra -Werror -pedantic)
 endif()
 
-set(HFX_OPENRGB_SOURCE_DIR "" CACHE PATH "Pinned OpenRGB 1.0rc3 source directory")
+file(READ "${HFX_REPOSITORY_ROOT}/integrations/catalog.json" HFX_INTEGRATION_CATALOG_JSON)
+string(JSON HFX_UPSTREAM_COUNT LENGTH "${HFX_INTEGRATION_CATALOG_JSON}" upstreams)
+math(EXPR HFX_UPSTREAM_LAST "${HFX_UPSTREAM_COUNT} - 1")
+foreach(HFX_UPSTREAM_INDEX RANGE ${HFX_UPSTREAM_LAST})
+    string(
+        JSON HFX_UPSTREAM_ID
+        GET "${HFX_INTEGRATION_CATALOG_JSON}" upstreams ${HFX_UPSTREAM_INDEX} id
+    )
+    if(HFX_UPSTREAM_ID STREQUAL "openrgb")
+        string(
+            JSON HFX_OPENRGB_PINNED_VERSION
+            GET "${HFX_INTEGRATION_CATALOG_JSON}" upstreams ${HFX_UPSTREAM_INDEX} version
+        )
+        string(
+            JSON HFX_OPENRGB_PINNED_COMMIT
+            GET "${HFX_INTEGRATION_CATALOG_JSON}" upstreams ${HFX_UPSTREAM_INDEX} commit
+        )
+    endif()
+endforeach()
+if(NOT HFX_OPENRGB_PINNED_VERSION OR NOT HFX_OPENRGB_PINNED_COMMIT)
+    message(FATAL_ERROR "integrations/catalog.json does not pin OpenRGB")
+endif()
+
+set(HFX_OPENRGB_SOURCE_DIR "" CACHE PATH "Pinned OpenRGB source directory")
 if(NOT HFX_OPENRGB_SOURCE_DIR AND DEFINED ENV{HFX_OPENRGB_SOURCE_DIR})
     set(HFX_OPENRGB_SOURCE_DIR "$ENV{HFX_OPENRGB_SOURCE_DIR}")
 endif()
@@ -134,7 +157,7 @@ if(NOT HFX_OPENRGB_NATIVE_SOURCE_DIR AND DEFINED ENV{HFX_OPENRGB_NATIVE_SOURCE_D
 endif()
 
 if(HFX_OPENRGB_SOURCE_DIR)
-    find_package(Qt5 5.15 REQUIRED COMPONENTS Core Gui Widgets)
+    find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Widgets)
 
     execute_process(
         COMMAND git rev-parse HEAD
@@ -146,7 +169,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
     if(NOT HFX_OPENRGB_GIT_RESULT EQUAL 0)
         message(FATAL_ERROR "HFX_OPENRGB_SOURCE_DIR is not a readable Git checkout")
     endif()
-    if(NOT HFX_OPENRGB_SOURCE_REVISION STREQUAL "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0")
+    if(NOT HFX_OPENRGB_SOURCE_REVISION STREQUAL HFX_OPENRGB_PINNED_COMMIT)
         message(FATAL_ERROR "OpenRGB source revision does not match the integration catalog")
     endif()
 
@@ -169,7 +192,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
             message(FATAL_ERROR "OpenRGB native source binding schema is invalid")
         endif()
         if(NOT HFX_OPENRGB_NATIVE_SOURCE_REVISION STREQUAL
-            "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0")
+            HFX_OPENRGB_PINNED_COMMIT)
             message(FATAL_ERROR "OpenRGB native source binding has the wrong revision")
         endif()
 
@@ -216,32 +239,6 @@ if(HFX_OPENRGB_SOURCE_DIR)
             HFX_HIDAPI_LIBRARY
             NAMES hidapi-hidraw hidapi-libusb
             REQUIRED
-        )
-        add_library(
-            hyperflux_openrgb_upstream_log
-            STATIC
-                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/LogManager.cpp"
-        )
-        set_target_properties(
-            hyperflux_openrgb_upstream_log
-            PROPERTIES
-                POSITION_INDEPENDENT_CODE ON
-                CXX_STANDARD 17
-                CXX_STANDARD_REQUIRED ON
-                CXX_EXTENSIONS OFF
-        )
-        target_include_directories(
-            hyperflux_openrgb_upstream_log
-            PUBLIC
-                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}"
-                "${HFX_OPENRGB_NATIVE_SOURCE_DIR}/dependencies/json"
-        )
-        target_compile_definitions(
-            hyperflux_openrgb_upstream_log
-            PRIVATE
-                VERSION_STRING="1.0rc3"
-                GIT_COMMIT_ID="6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0"
-                GIT_COMMIT_DATE="source-bound"
         )
         add_library(
             hyperflux_openrgb_upstream_device_guard
@@ -376,9 +373,11 @@ if(HFX_OPENRGB_SOURCE_DIR)
         hyperflux_openrgb_native_controller
         STATIC
             src/controller_registry.cpp
+            src/device_thread_barrier.cpp
             src/native_controller.cpp
             src/plugin_coordinator.cpp
             "${HFX_OPENRGB_CONTROLLER_SOURCE_DIR}/RGBController/RGBController.cpp"
+            "${HFX_OPENRGB_CONTROLLER_SOURCE_DIR}/StringUtils.cpp"
     )
     set_target_properties(
         hyperflux_openrgb_native_controller
@@ -396,12 +395,12 @@ if(HFX_OPENRGB_SOURCE_DIR)
         hyperflux_openrgb_native_controller
         PUBLIC hyperflux_openrgb_razer_registry
     )
-    if(HFX_OPENRGB_NATIVE_SOURCE_DIR)
-        target_compile_definitions(
-            hyperflux_openrgb_native_controller
-            PRIVATE HFX_OPENRGB_SAFE_DEVICE_THREAD_STOP=1
-        )
-    endif()
+    # Upstream source: diagnostics stay visible but cannot fail the build on
+    # toolchain-specific false positives (GCC 16 -Warray-bounds in nlohmann).
+    set_property(
+        SOURCE "${HFX_OPENRGB_CONTROLLER_SOURCE_DIR}/RGBController/RGBController.cpp"
+        APPEND PROPERTY COMPILE_OPTIONS "-Wno-error"
+    )
     hfx_openrgb_enable_thread_sanitizer(hyperflux_openrgb_native_controller)
     if(HFX_OPENRGB_THREAD_SANITIZER)
         # The pinned base starts a virtual worker in its constructor. Its
@@ -411,9 +410,9 @@ if(HFX_OPENRGB_SOURCE_DIR)
             hyperflux_openrgb_native_controller
             PRIVATE HFX_OPENRGB_TSAN_ANNOTATIONS=1
         )
-        set_source_files_properties(
-            "${HFX_OPENRGB_CONTROLLER_SOURCE_DIR}/RGBController/RGBController.cpp"
-            PROPERTIES COMPILE_OPTIONS "-fno-sanitize=thread"
+        set_property(
+            SOURCE "${HFX_OPENRGB_CONTROLLER_SOURCE_DIR}/RGBController/RGBController.cpp"
+            APPEND PROPERTY COMPILE_OPTIONS "-fno-sanitize=thread"
         )
     endif()
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -455,7 +454,6 @@ if(HFX_OPENRGB_SOURCE_DIR)
             PUBLIC
                 hyperflux_openrgb_native_razer_upstream
                 hyperflux_openrgb_native_controller
-                hyperflux_openrgb_upstream_log
         )
         hfx_openrgb_enable_thread_sanitizer(
             hyperflux_openrgb_upstream_razer_registry
@@ -480,6 +478,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
             src/plugin_application.cpp
             src/plugin_view_model.cpp
             src/qt_dispatcher.cpp
+            src/virtual_controller_mirror.cpp
     )
     if(TARGET hyperflux_openrgb_upstream_razer_registry)
         target_sources(
@@ -509,11 +508,11 @@ if(HFX_OPENRGB_SOURCE_DIR)
         PRIVATE
             "${HFX_OPENRGB_SOURCE_DIR}"
             "${HFX_OPENRGB_SOURCE_DIR}/RGBController"
-            "${HFX_OPENRGB_SOURCE_DIR}/i2c_smbus"
+            "${HFX_OPENRGB_SOURCE_DIR}/dependencies/json"
     )
     target_link_libraries(
         hyperflux_openrgb_qt_shell
-        PUBLIC hyperflux_openrgb_native_controller Qt5::Core
+        PUBLIC hyperflux_openrgb_native_controller Qt6::Core Qt6::Gui Qt6::Widgets
     )
     if(TARGET hyperflux_openrgb_upstream_razer_registry)
         target_link_libraries(
@@ -549,7 +548,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
     )
     target_link_libraries(
         hyperflux_openrgb_qt_widget
-        PUBLIC hyperflux_openrgb_qt_shell Qt5::Core Qt5::Gui Qt5::Widgets
+        PUBLIC hyperflux_openrgb_qt_shell Qt6::Core Qt6::Gui Qt6::Widgets
     )
     hfx_openrgb_enable_thread_sanitizer(hyperflux_openrgb_qt_widget)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -580,11 +579,11 @@ if(HFX_OPENRGB_SOURCE_DIR)
             "${HFX_OPENRGB_GENERATED_INCLUDE_DIR}"
             "${HFX_OPENRGB_SOURCE_DIR}"
             "${HFX_OPENRGB_SOURCE_DIR}/RGBController"
-            "${HFX_OPENRGB_SOURCE_DIR}/i2c_smbus"
+            "${HFX_OPENRGB_SOURCE_DIR}/dependencies/json"
     )
     target_link_libraries(
         hyperflux-next-openrgb
-        PRIVATE hyperflux_openrgb_qt_widget Qt5::Core Qt5::Gui Qt5::Widgets
+        PRIVATE hyperflux_openrgb_qt_widget Qt6::Core Qt6::Gui Qt6::Widgets
     )
     hfx_openrgb_enable_thread_sanitizer(hyperflux-next-openrgb)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -706,8 +705,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
                 PRIVATE
                     hyperflux_openrgb_native_razer_upstream
                     hyperflux_openrgb_native_controller
-                    hyperflux_openrgb_upstream_log
-            )
+                )
             if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
                 target_compile_options(
                     openrgb-native-razer-presentation-contract
@@ -760,11 +758,20 @@ if(HFX_OPENRGB_SOURCE_DIR)
             add_executable(
                 openrgb-native-plugin-application-contract
                 "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_native_plugin_application_contract.cpp"
+                "${HFX_OPENRGB_CONTROLLER_SOURCE_DIR}/RGBController/RGBController_Virtual.cpp"
+            )
+            target_include_directories(
+                openrgb-native-plugin-application-contract
+                PRIVATE
+                    "${HFX_OPENRGB_SOURCE_DIR}"
+                    "${HFX_OPENRGB_SOURCE_DIR}/RGBController"
+                    "${HFX_OPENRGB_SOURCE_DIR}/dependencies/json"
             )
             target_link_libraries(
                 openrgb-native-plugin-application-contract
                 PRIVATE hyperflux_openrgb_qt_shell
             )
+            hfx_openrgb_enable_thread_sanitizer(openrgb-native-plugin-application-contract)
             if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
                 target_compile_options(
                     openrgb-native-plugin-application-contract
@@ -880,7 +887,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
         )
         target_link_libraries(
             openrgb-plugin-application-contract
-            PRIVATE hyperflux_openrgb_qt_shell Qt5::Core
+            PRIVATE hyperflux_openrgb_qt_shell Qt6::Core
         )
         hfx_openrgb_enable_thread_sanitizer(openrgb-plugin-application-contract)
         if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -904,7 +911,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
         )
         target_link_libraries(
             openrgb-qt-dispatcher-contract
-            PRIVATE hyperflux_openrgb_qt_shell Qt5::Core Threads::Threads
+            PRIVATE hyperflux_openrgb_qt_shell Qt6::Core Threads::Threads
         )
         hfx_openrgb_enable_thread_sanitizer(openrgb-qt-dispatcher-contract)
         if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -975,11 +982,12 @@ if(HFX_OPENRGB_SOURCE_DIR)
             openrgb-plugin-loader-contract
             PRIVATE
                 "${HFX_OPENRGB_SOURCE_DIR}"
-                "${HFX_OPENRGB_SOURCE_DIR}/i2c_smbus"
+                "${HFX_OPENRGB_SOURCE_DIR}/RGBController"
+                "${HFX_OPENRGB_SOURCE_DIR}/dependencies/json"
         )
         target_link_libraries(
             openrgb-plugin-loader-contract
-            PRIVATE Qt5::Core Qt5::Gui Qt5::Widgets
+            PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets
         )
         hfx_openrgb_enable_thread_sanitizer(openrgb-plugin-loader-contract)
         if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -995,6 +1003,35 @@ if(HFX_OPENRGB_SOURCE_DIR)
         set_tests_properties(
             openrgb-plugin-loader-contract
             PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+        )
+
+        add_executable(
+            openrgb-virtual-controller-mirror-contract
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_virtual_controller_mirror_contract.cpp"
+            "${HFX_OPENRGB_CONTROLLER_SOURCE_DIR}/RGBController/RGBController_Virtual.cpp"
+        )
+        target_compile_features(openrgb-virtual-controller-mirror-contract PRIVATE cxx_std_20)
+        target_include_directories(
+            openrgb-virtual-controller-mirror-contract
+            PRIVATE
+                "${HFX_OPENRGB_SOURCE_DIR}"
+                "${HFX_OPENRGB_SOURCE_DIR}/RGBController"
+                "${HFX_OPENRGB_SOURCE_DIR}/dependencies/json"
+        )
+        target_link_libraries(
+            openrgb-virtual-controller-mirror-contract
+            PRIVATE hyperflux_openrgb_qt_shell
+        )
+        hfx_openrgb_enable_thread_sanitizer(openrgb-virtual-controller-mirror-contract)
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            target_compile_options(
+                openrgb-virtual-controller-mirror-contract
+                PRIVATE -Wall -Wextra -Werror -pedantic
+            )
+        endif()
+        add_test(
+            NAME openrgb-virtual-controller-mirror-contract
+            COMMAND openrgb-virtual-controller-mirror-contract
         )
     endif()
 else()

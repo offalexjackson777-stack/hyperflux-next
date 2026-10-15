@@ -5,45 +5,43 @@
     "owner": "offalexjackson777-stack",
     "name": "hyperflux-next",
     "default_branch": "main",
-    "remote_state": "public-pre-release",
+    "remote_state": "public-released",
     "visibility": "public",
-    "description": "Linux support for Razer devices paired through HyperFlux V2, with OpenRazer, Polychromatic, and OpenRGB integration.",
+    "description": "Linux driver that makes Razer devices on a HyperFlux V2 wireless receiver work with OpenRazer, Polychromatic, and OpenRGB.",
     "homepage": "",
     "social_preview_asset": "docs/assets/social-preview.png",
     "topics": ["device-driver", "hid", "hyperflux", "linux", "openrazer", "openrgb", "polychromatic", "razer", "rgb-lighting"],
     "pages_source": "disabled"
   },
-  "publication_interlock": {
-    "source_repository_authorized": true,
-    "pages_deployment_authorized": false,
-    "collaboration_features_authorized": true,
-    "product_publication_authorized": false,
-    "release_workflows_authorized": false,
-    "package_publication_authorized": false,
-    "tag_creation_authorized": false,
-    "hardware_ci_authorized": false
+  "publication_state": {
+    "source_repository": "public",
+    "product_release": "published",
+    "release_publication": "maintainer-operated",
+    "release_workflows": "none",
+    "pages": "disabled",
+    "hardware_ci": "none"
   },
   "collaboration": {
     "discussions": {
-      "apply_authorized": true,
+      "enabled": true,
       "categories": [
-        {"id": "announcements", "name": "Announcements", "format": "announcement", "description": "Maintainer updates, verified milestones, and release-boundary changes."},
-        {"id": "hardware-qualification", "name": "Hardware qualification", "format": "discussion", "description": "Public planning around candidate devices and bounded evidence needs."},
-        {"id": "help", "name": "Help", "format": "q-and-a", "description": "User questions after running Doctor and reviewing privacy-safe diagnostics."},
-        {"id": "ideas", "name": "Ideas", "format": "discussion", "description": "Universal workflows and architecture proposals before issue commitment."}
+        {"id": "announcements", "name": "Announcements", "format": "announcement", "description": "Release news and other updates from the maintainer."},
+        {"id": "hardware-qualification", "name": "Hardware qualification", "format": "discussion", "description": "Planning tests for devices that are expected to work but have not been tested on real hardware."},
+        {"id": "help", "name": "Help", "format": "q-and-a", "description": "Questions about installing or using HyperFlux. Running `hyperfluxctl doctor` first often helps."},
+        {"id": "ideas", "name": "Ideas", "format": "discussion", "description": "Early ideas and design proposals, before they become a feature request."}
       ]
     },
-    "project": {"apply_authorized": false}
+    "project": {"enabled": false}
   },
   "security_posture": {
-    "private_vulnerability_reporting": {"state": "required-enabled", "activation_boundary": "public-source-pre-release", "data_boundary": "GitHub private security advisories; never public issue intake"},
-    "dependency_graph": {"state": "required-enabled", "activation_boundary": "public-source-pre-release", "data_boundary": "Repository dependency metadata only"},
-    "dependabot_security_updates": {"state": "required-enabled", "activation_boundary": "public-source-pre-release", "data_boundary": "GitHub dependency alerts and update pull requests"},
-    "secret_scanning": {"state": "required-when-available", "activation_boundary": "public-source-pre-release", "data_boundary": "Repository content scanned by GitHub; no hardware diagnostics"},
-    "secret_scanning_push_protection": {"state": "required-when-available", "activation_boundary": "public-source-pre-release", "data_boundary": "Git pushes checked for supported secret patterns"},
-    "code_scanning": {"state": "required-enabled", "activation_boundary": "public-source-pre-release", "data_boundary": "Source analysis uploaded by the pinned CodeQL workflow"},
+    "private_vulnerability_reporting": {"state": "required-enabled", "activation_boundary": "public-repository", "data_boundary": "GitHub private security advisories; never public issue intake"},
+    "dependency_graph": {"state": "required-enabled", "activation_boundary": "public-repository", "data_boundary": "Repository dependency metadata only"},
+    "dependabot_security_updates": {"state": "required-enabled", "activation_boundary": "public-repository", "data_boundary": "GitHub dependency alerts and update pull requests"},
+    "secret_scanning": {"state": "required-when-available", "activation_boundary": "public-repository", "data_boundary": "Repository content scanned by GitHub; no hardware diagnostics"},
+    "secret_scanning_push_protection": {"state": "required-when-available", "activation_boundary": "public-repository", "data_boundary": "Git pushes checked for supported secret patterns"},
+    "code_scanning": {"state": "required-enabled", "activation_boundary": "public-repository", "data_boundary": "Source analysis uploaded by the pinned CodeQL workflow"},
     "source_sbom": {"state": "implemented", "activation_boundary": "current-generation", "data_boundary": "Generated SPDX inventory from reviewed manifests and workflow pins"},
-    "artifact_attestations": {"state": "deferred", "activation_boundary": "after-release-workflow-authorization", "data_boundary": "Release artifacts and provenance only; no hardware evidence or private diagnostics"}
+    "artifact_attestations": {"state": "deferred", "activation_boundary": "future-release-workflow", "data_boundary": "Release artifacts and provenance only; no hardware evidence or private diagnostics"}
   },
   "service_evaluations": [
     {
@@ -54,7 +52,7 @@
       "required_permissions": ["contents: read", "checks: write", "external coverage upload"],
       "privacy": "Would transmit source-derived coverage metadata to an external service.",
       "maintenance_cost": "medium",
-      "rationale": "Current verification is evidence-oriented rather than line-coverage gated; external upload is not justified before publication."
+      "rationale": "Local LLVM line coverage is already a gated contract in assurance/rust-coverage.json; a hosted upload service adds no gate and is not selected."
     },
     {
       "id": "dependabot",
@@ -89,28 +87,7 @@
   ],
   "ownership": {
     "default": ["@offalexjackson777-stack"],
-    "rules": [
-      {
-        "paths": ["/driver/**", "/uapi/**"],
-        "owners": ["@offalexjackson777-stack"]
-      },
-      {
-        "paths": ["/schemas/**", "/protocol/**", "/profiles/**"],
-        "owners": ["@offalexjackson777-stack"]
-      },
-      {
-        "paths": ["/assurance/**", "/governance/**", "/SECURITY.md", "/SUPPORT.md", "/CODE_OF_CONDUCT.md"],
-        "owners": ["@offalexjackson777-stack"]
-      },
-      {
-        "paths": ["/integrations/**", "/sdk/**"],
-        "owners": ["@offalexjackson777-stack"]
-      },
-      {
-        "paths": ["/packaging/**", "/docs/**", "/.github/**"],
-        "owners": ["@offalexjackson777-stack"]
-      }
-    ]
+    "rules": []
   },
   "protection": {
     "profile": "solo-maintainer",
@@ -132,18 +109,18 @@
     ]
   },
   "labels": [
-    {"name": "area: documentation", "color": "1d76db", "description": "Documentation, navigation, and user guidance"},
-    {"name": "area: integration", "color": "5319e7", "description": "Application adapter or SDK integration"},
-    {"name": "area: kernel", "color": "b60205", "description": "Kernel transport, UAPI, or lifecycle"},
-    {"name": "area: packaging", "color": "006b75", "description": "Installation, distribution, or package lifecycle"},
-    {"name": "area: runtime", "color": "008672", "description": "Bridge runtime, operations, restoration, or diagnostics"},
-    {"name": "area: security", "color": "d93f0b", "description": "Security, privacy, provenance, or governance"},
-    {"name": "kind: bug", "color": "d73a4a", "description": "Confirmed or suspected incorrect behavior"},
-    {"name": "kind: device-support", "color": "ffd33d", "description": "Device support research or capability qualification"},
-    {"name": "kind: documentation", "color": "0075ca", "description": "Documentation content, navigation, or generated-view issue"},
-    {"name": "kind: feature", "color": "a2eeef", "description": "New capability or workflow proposal"},
-    {"name": "kind: limitation", "color": "fef2c0", "description": "Known limitation that needs clear user-facing treatment"},
-    {"name": "skip-changelog", "color": "ededed", "description": "Exclude this change from generated release notes"}
+    {"name": "area: documentation", "color": "1d76db", "description": "Guides, reference pages, and links"},
+    {"name": "area: integration", "color": "5319e7", "description": "OpenRazer, Polychromatic, OpenRGB, or the SDK"},
+    {"name": "area: kernel", "color": "b60205", "description": "The kernel driver and its interface"},
+    {"name": "area: packaging", "color": "006b75", "description": "Installing, upgrading, or removing packages"},
+    {"name": "area: runtime", "color": "008672", "description": "The background service, hyperfluxctl, diagnostics, or restoring lighting"},
+    {"name": "area: security", "color": "d93f0b", "description": "Security, privacy, release integrity, or project rules"},
+    {"name": "kind: bug", "color": "d73a4a", "description": "Something does not work the way it should"},
+    {"name": "kind: device-support", "color": "ffd33d", "description": "Support for a new or untested device"},
+    {"name": "kind: documentation", "color": "0075ca", "description": "A page is wrong, unclear, out of date, or hard to find"},
+    {"name": "kind: feature", "color": "a2eeef", "description": "Something new people want to be able to do"},
+    {"name": "kind: limitation", "color": "fef2c0", "description": "A known limitation that users need explained"},
+    {"name": "skip-changelog", "color": "ededed", "description": "Leave this change out of the release notes"}
   ],
   "automation": {
     "runner": "ubuntu-24.04",
@@ -158,8 +135,8 @@
       {
         "id": "build-push",
         "repository": "docker/build-push-action",
-        "version": "v7.3.0",
-        "commit": "53b7df96c91f9c12dcc8a07bcb9ccacbed38856a",
+        "version": "v7.4.0",
+        "commit": "c3c9e263c25d99ce0380d002d59b67737d91b0dc",
         "license_expression": "Apache-2.0"
       },
       {
@@ -172,15 +149,15 @@
       {
         "id": "checkout",
         "repository": "actions/checkout",
-        "version": "v7.0.0",
-        "commit": "9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+        "version": "v7.0.1",
+        "commit": "3d3c42e5aac5ba805825da76410c181273ba90b1",
         "license_expression": "MIT"
       },
       {
         "id": "codeql",
         "repository": "github/codeql-action",
-        "version": "v4.37.1",
-        "commit": "7188fc363630916deb702c7fdcf4e481b751f97a",
+        "version": "v4.38.3",
+        "commit": "24c54180a607b1449ed407dd24f251e4e9147c8d",
         "license_expression": "MIT"
       },
       {
@@ -193,15 +170,15 @@
       {
         "id": "setup-buildx",
         "repository": "docker/setup-buildx-action",
-        "version": "v4.2.0",
-        "commit": "bb05f3f5519dd87d3ba754cc423b652a5edd6d2c",
+        "version": "v4.4.1",
+        "commit": "f87e5991a6d7451dcb8d9637bfbc97413f497069",
         "license_expression": "Apache-2.0"
       },
       {
         "id": "upload-artifact",
         "repository": "actions/upload-artifact",
-        "version": "v7.0.1",
-        "commit": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+        "version": "v7.0.2",
+        "commit": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
         "license_expression": "MIT"
       }
     ]

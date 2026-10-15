@@ -9,28 +9,22 @@
 #include <mutex>
 #include <vector>
 
-class ResourceManagerInterface;
+class OpenRGBPluginAPIInterface;
 
 namespace hyperflux::openrgb::native
 {
 
-using DetectionCallback = void (*)(void* context);
-
 /// Narrow host surface isolated from OpenRGB API churn.
+///
+/// Every host call happens on the Qt application thread.
 class PluginHost : public ControllerHost
 {
 public:
     ~PluginHost() override = default;
 
-    virtual void register_detection_start(
-        DetectionCallback callback, void* context) noexcept = 0;
-    virtual void register_detection_end(
-        DetectionCallback callback, void* context) noexcept = 0;
-    virtual void unregister_detection_start(
-        DetectionCallback callback, void* context) noexcept = 0;
-    virtual void unregister_detection_end(
-        DetectionCallback callback, void* context) noexcept = 0;
-    virtual void wait_for_detection() noexcept = 0;
+    /// Runs before Unload unregisters the controllers. OpenRGB can still
+    /// reference what the host presented after Unload returns.
+    virtual void begin_unload() noexcept {}
 };
 
 struct PluginApplicationStatus
@@ -57,9 +51,12 @@ public:
     OpenRgbPluginApplication& operator=(OpenRgbPluginApplication&&) = delete;
     ~OpenRgbPluginApplication();
 
-    [[nodiscard]] sdk::Result<void> load(ResourceManagerInterface* manager);
+    [[nodiscard]] sdk::Result<void> load(OpenRGBPluginAPIInterface* api);
     [[nodiscard]] sdk::Result<void> load(std::unique_ptr<PluginHost> host);
     void unload() noexcept;
+
+    /// Safe from any thread; reconciliation runs on the Qt application thread.
+    void detection_completed() noexcept;
 
     [[nodiscard]] PluginApplicationStatus status() const;
     [[nodiscard]] std::vector<ControllerModel> controllers() const;
@@ -74,10 +71,6 @@ private:
         Unloading,
     };
 
-    static void detection_started_callback(void* context) noexcept;
-    static void detection_finished_callback(void* context) noexcept;
-    void detection_started() noexcept;
-    void detection_finished() noexcept;
     void reset_loading_state() noexcept;
 
     RuntimeFactory runtime_factory_;
@@ -87,7 +80,6 @@ private:
     std::shared_ptr<PluginCoordinator> coordinator_;
     mutable std::mutex lifecycle_mutex_;
     State state_ = State::Unloaded;
-    bool callbacks_registered_ = false;
     bool callbacks_enabled_ = false;
 };
 

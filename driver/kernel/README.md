@@ -6,18 +6,24 @@ Binds the receiver, preserves generic input, records passive observations, perfo
 
 ## Start Here
 
-- [`docs/architecture/kernel.md`](../../docs/architecture/kernel.md)
-- [`docs/generated/linux-runtime.md`](../../docs/generated/linux-runtime.md)
+- [Kernel Boundary](../../docs/architecture/kernel.md)
+- [Linux Runtime](../../docs/generated/linux-runtime.md)
+
+## Limitations
+
+- Software compilation is not physical regression proof
 
 ## Boundaries
 
 **Owns**
+
 - HID binding
 - Passive receiver observations
 - Exclusive session enforcement
 - UAPI-v2 native exchange execution
 
 **Does not own**
+
 - Retail names
 - Profiles and effects
 - Package repair
@@ -31,15 +37,6 @@ Binds the receiver, preserves generic input, records passive observations, perfo
 
 ## Verify
 
-Run `kernel-profile-contracts` after changing this area.
+Run `kernel-profile-contracts` after changing this area, and run `./hfx generate` to refresh its 3 generated file(s).
 
-Review impact:
-
-- Regenerate 3 declared projection(s).
-- Run `kernel-profile-contracts`.
-- Review direct consumers: Packaging and installation.
-
-## Related Areas
-
-- **Depends on:** [Kernel driver contract](../README.md), [Composable hardware profiles](../../profiles/README.md), [Versioned bridge protocol](../../protocol/README.md)
-- **Used by:** [Packaging and installation](../../packaging/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../../docs/generated/repository-atlas.md).

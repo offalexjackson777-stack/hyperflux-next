@@ -10,25 +10,20 @@
 #include <mutex>
 #include <vector>
 
-class ResourceManagerInterface;
+class OpenRGBPluginAPIInterface;
 
 namespace hyperflux::openrgb::native
 {
 
+/// Every host call happens on the Qt application thread.
 class NativePluginHost : public UpstreamPluginHost
 {
 public:
     ~NativePluginHost() override = default;
 
-    virtual void register_detection_start(
-        DetectionCallback callback, void* context) noexcept = 0;
-    virtual void register_detection_end(
-        DetectionCallback callback, void* context) noexcept = 0;
-    virtual void unregister_detection_start(
-        DetectionCallback callback, void* context) noexcept = 0;
-    virtual void unregister_detection_end(
-        DetectionCallback callback, void* context) noexcept = 0;
-    virtual void wait_for_detection() noexcept = 0;
+    /// Runs before Unload unregisters the controllers. OpenRGB can still
+    /// reference what the host presented after Unload returns.
+    virtual void begin_unload() noexcept {}
 };
 
 struct NativePluginApplicationStatus
@@ -62,10 +57,13 @@ public:
     OpenRgbNativePluginApplication& operator=(const OpenRgbNativePluginApplication&) = delete;
     ~OpenRgbNativePluginApplication();
 
-    [[nodiscard]] sdk::Result<void> load(ResourceManagerInterface* manager);
+    [[nodiscard]] sdk::Result<void> load(OpenRGBPluginAPIInterface* api);
     [[nodiscard]] sdk::Result<void> load(std::unique_ptr<NativePluginHost> host);
     void unload() noexcept;
     void request_rescan() noexcept;
+
+    /// Safe from any thread; reconciliation runs on the Qt application thread.
+    void detection_completed() noexcept;
 
     [[nodiscard]] NativePluginApplicationStatus status() const;
     [[nodiscard]] std::vector<UpstreamRazerControllerSummary> controllers() const;
@@ -79,10 +77,6 @@ private:
         Unloading,
     };
 
-    static void detection_started_callback(void* context) noexcept;
-    static void detection_finished_callback(void* context) noexcept;
-    void detection_started() noexcept;
-    void detection_finished() noexcept;
     void reset_loading_state() noexcept;
 
     NativePluginRuntimeFactories factories_;
@@ -92,7 +86,6 @@ private:
     std::shared_ptr<UpstreamRazerPluginCoordinator> coordinator_;
     mutable std::mutex lifecycle_mutex_;
     State state_ = State::Unloaded;
-    bool callbacks_registered_ = false;
     bool callbacks_enabled_ = false;
 };
 

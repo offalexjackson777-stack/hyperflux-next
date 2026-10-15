@@ -21,6 +21,8 @@ class ErrorCode(str, Enum):
     HFX_INTERNAL_001 = "HFX-INTERNAL-001"
     HFX_KERNEL_001 = "HFX-KERNEL-001"
     HFX_KERNEL_002 = "HFX-KERNEL-002"
+    HFX_KERNEL_003 = "HFX-KERNEL-003"
+    HFX_KERNEL_004 = "HFX-KERNEL-004"
     HFX_OUTCOME_001 = "HFX-OUTCOME-001"
     HFX_OUTCOME_002 = "HFX-OUTCOME-002"
     HFX_OWNERSHIP_001 = "HFX-OWNERSHIP-001"
@@ -34,6 +36,8 @@ class ErrorCode(str, Enum):
     HFX_QUEUE_001 = "HFX-QUEUE-001"
     HFX_REQUEST_001 = "HFX-REQUEST-001"
     HFX_SERVICE_001 = "HFX-SERVICE-001"
+    HFX_SERVICE_002 = "HFX-SERVICE-002"
+    HFX_SERVICE_003 = "HFX-SERVICE-003"
     HFX_TRANSPORT_001 = "HFX-TRANSPORT-001"
     HFX_TRANSPORT_002 = "HFX-TRANSPORT-002"
     HFX_TRANSPORT_003 = "HFX-TRANSPORT-003"
@@ -49,8 +53,10 @@ class RemediationId(str, Enum):
     CREATE_OPENRAZER_ACCESS_GROUP = "create-openrazer-access-group"
     DISABLE_UNSUPPORTED_FEATURE = "disable-unsupported-feature"
     LOOKUP_TRANSACTION_OUTCOME = "lookup-transaction-outcome"
+    MIGRATE_RETIRED_DRIVER = "migrate-retired-driver"
     QUALIFY_DEVICE = "qualify-device"
     RECONCILE_TRANSACTION_STATE = "reconcile-transaction-state"
+    RECONNECT_RECEIVER = "reconnect-receiver"
     REFRESH_GENERATION = "refresh-generation"
     REINSTALL_FULL_COMPONENT = "reinstall-full-component"
     REINSTALL_OPENRAZER_ROUTE_DRIVER = "reinstall-openrazer-route-driver"
@@ -63,6 +69,7 @@ class RemediationId(str, Enum):
     UPDATE_INTEGRATION = "update-integration"
     UPDATE_PROTOCOL_PEER = "update-protocol-peer"
     VERIFY_PROFILE_CATALOG = "verify-profile-catalog"
+    WAKE_PAIRED_DEVICE = "wake-paired-device"
 
 
 class ErrorClass(str, Enum):
@@ -168,7 +175,7 @@ class ErrorDescriptor:
     docs_path: str
 
 
-ERROR_CATALOG_SHA256: Final = "d381e3c7d2309205505e80b652afaa2e746919eceb52820bff28bd45d46e5252"
+ERROR_CATALOG_SHA256: Final = "0030b8c548bf39a33ecacf4f074cc09ea98064600768ae33c974a0053b3eec15"
 MAX_ERROR_COUNT: Final = 256
 MAX_REMEDIATION_COUNT: Final = 128
 MAX_SAFE_DETAIL_FIELDS: Final = 12
@@ -239,6 +246,13 @@ REMEDIATIONS: Final = (
         automatic=False,
     ),
     RemediationDescriptor(
+        id=RemediationId.MIGRATE_RETIRED_DRIVER,
+        title="Migrate away from retired drivers",
+        safe_action="Run sudo hyperflux-next-activate migrate-retired-dkms to preview the fix, then run it again with --apply and reboot normally. It only removes known retired HyperFlux drivers; any other driver is reported and left untouched.",
+        verification="After rebooting, run Doctor and confirm every receiver interface uses the released HyperFlux driver and no retired driver is registered.",
+        automatic=False,
+    ),
+    RemediationDescriptor(
         id=RemediationId.QUALIFY_DEVICE,
         title="Use a qualified device capability",
         safe_action="Keep the device read-only until an evidence-backed profile qualifies the requested capability.",
@@ -250,6 +264,13 @@ REMEDIATIONS: Final = (
         title="Reconcile the current device state",
         safe_action="Do not repeat the old hardware operation automatically; refresh device state and submit only a new intentional request.",
         verification="Confirm the application has refreshed the active generation and is not replaying the unavailable transaction.",
+        automatic=False,
+    ),
+    RemediationDescriptor(
+        id=RemediationId.RECONNECT_RECEIVER,
+        title="Reconnect the receiver",
+        safe_action="Unplug the HyperFlux receiver, wait a few seconds, and plug it back in, or reboot. If Doctor still reports this, create a support bundle.",
+        verification="Run Doctor and confirm a profile-qualified receiver generation is registered.",
         automatic=False,
     ),
     RemediationDescriptor(
@@ -335,6 +356,13 @@ REMEDIATIONS: Final = (
         safe_action="Reload the generated profile catalog and retain read-only behavior until its digest matches.",
         verification="Confirm the active profile identifier, revision, and digest match the generated catalog.",
         automatic=True,
+    ),
+    RemediationDescriptor(
+        id=RemediationId.WAKE_PAIRED_DEVICE,
+        title="Wake the paired device",
+        safe_action="Move or click the paired device. If it does not appear within 30 seconds, switch it off and on. If it still does not appear, create a support bundle.",
+        verification="Run Doctor and confirm a paired device has a live route.",
+        automatic=False,
     ),
 )
 
@@ -583,6 +611,42 @@ DETAILS_10: Final = (
 
 DETAILS_11: Final = (
     SafeDetailFieldDescriptor(
+        name="actual_driver",
+        kind=SafeDetailKind.IDENTIFIER,
+        required=True,
+        maximum_length=64,
+        maximum_value=None,
+        allowed_values=(),
+        privacy=PrivacyClass.PUBLIC,
+        description="Kernel driver bound to the receiver interface, or unbound.",
+    ),
+    SafeDetailFieldDescriptor(
+        name="owner_kind",
+        kind=SafeDetailKind.ENUM,
+        required=True,
+        maximum_length=None,
+        maximum_value=None,
+        allowed_values=('retired-hyperflux', 'unbound', 'unknown'),
+        privacy=PrivacyClass.PUBLIC,
+        description="Whether the owner is a known retired HyperFlux driver, no driver, or an unknown driver.",
+    ),
+)
+
+DETAILS_12: Final = (
+    SafeDetailFieldDescriptor(
+        name="registration",
+        kind=SafeDetailKind.IDENTIFIER,
+        required=True,
+        maximum_length=64,
+        maximum_value=None,
+        allowed_values=(),
+        privacy=PrivacyClass.PUBLIC,
+        description="Retired DKMS registration as name/version.",
+    ),
+)
+
+DETAILS_13: Final = (
+    SafeDetailFieldDescriptor(
         name="transaction_id",
         kind=SafeDetailKind.IDENTIFIER,
         required=True,
@@ -594,7 +658,7 @@ DETAILS_11: Final = (
     ),
 )
 
-DETAILS_12: Final = (
+DETAILS_14: Final = (
     SafeDetailFieldDescriptor(
         name="history_capacity",
         kind=SafeDetailKind.U16,
@@ -617,7 +681,7 @@ DETAILS_12: Final = (
     ),
 )
 
-DETAILS_13: Final = (
+DETAILS_15: Final = (
     SafeDetailFieldDescriptor(
         name="owner_name",
         kind=SafeDetailKind.TEXT,
@@ -640,7 +704,7 @@ DETAILS_13: Final = (
     ),
 )
 
-DETAILS_14: Final = (
+DETAILS_16: Final = (
     SafeDetailFieldDescriptor(
         name="lease_id",
         kind=SafeDetailKind.IDENTIFIER,
@@ -663,7 +727,7 @@ DETAILS_14: Final = (
     ),
 )
 
-DETAILS_15: Final = (
+DETAILS_17: Final = (
     SafeDetailFieldDescriptor(
         name="operation",
         kind=SafeDetailKind.ENUM,
@@ -686,7 +750,7 @@ DETAILS_15: Final = (
     ),
 )
 
-DETAILS_16: Final = (
+DETAILS_18: Final = (
     SafeDetailFieldDescriptor(
         name="operation",
         kind=SafeDetailKind.ENUM,
@@ -709,7 +773,7 @@ DETAILS_16: Final = (
     ),
 )
 
-DETAILS_17: Final = (
+DETAILS_19: Final = (
     SafeDetailFieldDescriptor(
         name="capability",
         kind=SafeDetailKind.IDENTIFIER,
@@ -732,7 +796,7 @@ DETAILS_17: Final = (
     ),
 )
 
-DETAILS_18: Final = (
+DETAILS_20: Final = (
     SafeDetailFieldDescriptor(
         name="active_digest",
         kind=SafeDetailKind.IDENTIFIER,
@@ -765,7 +829,7 @@ DETAILS_18: Final = (
     ),
 )
 
-DETAILS_19: Final = (
+DETAILS_21: Final = (
     SafeDetailFieldDescriptor(
         name="client_max_version",
         kind=SafeDetailKind.U16,
@@ -808,7 +872,7 @@ DETAILS_19: Final = (
     ),
 )
 
-DETAILS_20: Final = (
+DETAILS_22: Final = (
     SafeDetailFieldDescriptor(
         name="feature",
         kind=SafeDetailKind.IDENTIFIER,
@@ -821,7 +885,7 @@ DETAILS_20: Final = (
     ),
 )
 
-DETAILS_21: Final = (
+DETAILS_23: Final = (
     SafeDetailFieldDescriptor(
         name="capacity",
         kind=SafeDetailKind.U16,
@@ -844,7 +908,7 @@ DETAILS_21: Final = (
     ),
 )
 
-DETAILS_22: Final = (
+DETAILS_24: Final = (
     SafeDetailFieldDescriptor(
         name="field",
         kind=SafeDetailKind.TEXT,
@@ -877,7 +941,7 @@ DETAILS_22: Final = (
     ),
 )
 
-DETAILS_23: Final = (
+DETAILS_25: Final = (
     SafeDetailFieldDescriptor(
         name="service_state",
         kind=SafeDetailKind.ENUM,
@@ -890,7 +954,33 @@ DETAILS_23: Final = (
     ),
 )
 
-DETAILS_24: Final = (
+DETAILS_26: Final = (
+    SafeDetailFieldDescriptor(
+        name="receiver_state",
+        kind=SafeDetailKind.ENUM,
+        required=True,
+        maximum_length=None,
+        maximum_value=None,
+        allowed_values=('not-registered', 'unqualified'),
+        privacy=PrivacyClass.PUBLIC,
+        description="Sanitized receiver registration state.",
+    ),
+)
+
+DETAILS_27: Final = (
+    SafeDetailFieldDescriptor(
+        name="route_state",
+        kind=SafeDetailKind.ENUM,
+        required=True,
+        maximum_length=None,
+        maximum_value=None,
+        allowed_values=('no-paired-device', 'not-live'),
+        privacy=PrivacyClass.PUBLIC,
+        description="Sanitized paired-device route state.",
+    ),
+)
+
+DETAILS_28: Final = (
     SafeDetailFieldDescriptor(
         name="reason",
         kind=SafeDetailKind.ENUM,
@@ -913,7 +1003,7 @@ DETAILS_24: Final = (
     ),
 )
 
-DETAILS_25: Final = (
+DETAILS_29: Final = (
     SafeDetailFieldDescriptor(
         name="transaction_id",
         kind=SafeDetailKind.IDENTIFIER,
@@ -926,7 +1016,7 @@ DETAILS_25: Final = (
     ),
 )
 
-DETAILS_26: Final = (
+DETAILS_30: Final = (
     SafeDetailFieldDescriptor(
         name="delivered_frames",
         kind=SafeDetailKind.U16,
@@ -1181,13 +1271,53 @@ ERRORS: Final = (
         docs_path="docs/generated/error-catalog.md#hfx-kernel-002",
     ),
     ErrorDescriptor(
+        code=ErrorCode.HFX_KERNEL_003,
+        error_class=ErrorClass.KERNEL,
+        severity=ErrorSeverity.ERROR,
+        retry_policy=RetryPolicy.AFTER_REMEDIATION,
+        side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
+        remediation_id=RemediationId.MIGRATE_RETIRED_DRIVER,
+        safe_detail_fields=DETAILS_11,
+        lifecycle=LifecycleDescriptor(
+            state=ErrorLifecycleState.ACTIVE,
+            introduced_in="2.0.1",
+            deprecated_in=None,
+            replacement_code=None,
+        ),
+        owner=ErrorOwner.PACKAGING,
+        technical_cause="A qualified receiver interface is bound to a driver other than the released HyperFlux driver, or to no driver at all.",
+        user_explanation="Another driver has taken the HyperFlux receiver.",
+        privacy=PrivacyClass.PUBLIC,
+        docs_path="docs/generated/error-catalog.md#hfx-kernel-003",
+    ),
+    ErrorDescriptor(
+        code=ErrorCode.HFX_KERNEL_004,
+        error_class=ErrorClass.KERNEL,
+        severity=ErrorSeverity.WARNING,
+        retry_policy=RetryPolicy.AFTER_REMEDIATION,
+        side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
+        remediation_id=RemediationId.MIGRATE_RETIRED_DRIVER,
+        safe_detail_fields=DETAILS_12,
+        lifecycle=LifecycleDescriptor(
+            state=ErrorLifecycleState.ACTIVE,
+            introduced_in="2.0.1",
+            deprecated_in=None,
+            replacement_code=None,
+        ),
+        owner=ErrorOwner.PACKAGING,
+        technical_cause="A retired HyperFlux DKMS driver is still registered; a kernel update rebuilds it and it can take the receiver at the next boot.",
+        user_explanation="An old HyperFlux driver is still installed and may take over after a kernel update.",
+        privacy=PrivacyClass.PUBLIC,
+        docs_path="docs/generated/error-catalog.md#hfx-kernel-004",
+    ),
+    ErrorDescriptor(
         code=ErrorCode.HFX_OUTCOME_001,
         error_class=ErrorClass.OUTCOME,
         severity=ErrorSeverity.WARNING,
         retry_policy=RetryPolicy.NEVER,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.RECONCILE_TRANSACTION_STATE,
-        safe_detail_fields=DETAILS_11,
+        safe_detail_fields=DETAILS_13,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1207,7 +1337,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.NEVER,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.RECONCILE_TRANSACTION_STATE,
-        safe_detail_fields=DETAILS_12,
+        safe_detail_fields=DETAILS_14,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1227,7 +1357,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.RELEASE_OWNER,
-        safe_detail_fields=DETAILS_13,
+        safe_detail_fields=DETAILS_15,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1247,7 +1377,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.ACQUIRE_NEW_LEASE,
-        safe_detail_fields=DETAILS_14,
+        safe_detail_fields=DETAILS_16,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1267,7 +1397,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.REPAIR_STATE_STORAGE,
-        safe_detail_fields=DETAILS_15,
+        safe_detail_fields=DETAILS_17,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1287,7 +1417,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.REPAIR_STATE_STORAGE,
-        safe_detail_fields=DETAILS_16,
+        safe_detail_fields=DETAILS_18,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1307,7 +1437,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.QUALIFY_DEVICE,
-        safe_detail_fields=DETAILS_17,
+        safe_detail_fields=DETAILS_19,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1327,7 +1457,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.VERIFY_PROFILE_CATALOG,
-        safe_detail_fields=DETAILS_18,
+        safe_detail_fields=DETAILS_20,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1347,7 +1477,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.UPDATE_PROTOCOL_PEER,
-        safe_detail_fields=DETAILS_19,
+        safe_detail_fields=DETAILS_21,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1367,7 +1497,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.DISABLE_UNSUPPORTED_FEATURE,
-        safe_detail_fields=DETAILS_20,
+        safe_detail_fields=DETAILS_22,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1387,7 +1517,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.BOUNDED_BACKOFF,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.RETRY_BOUNDED,
-        safe_detail_fields=DETAILS_21,
+        safe_detail_fields=DETAILS_23,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1407,7 +1537,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.NEVER,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.CORRECT_REQUEST,
-        safe_detail_fields=DETAILS_22,
+        safe_detail_fields=DETAILS_24,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1427,7 +1557,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.AFTER_REMEDIATION,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
         remediation_id=RemediationId.START_BRIDGE,
-        safe_detail_fields=DETAILS_23,
+        safe_detail_fields=DETAILS_25,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1441,13 +1571,53 @@ ERRORS: Final = (
         docs_path="docs/generated/error-catalog.md#hfx-service-001",
     ),
     ErrorDescriptor(
+        code=ErrorCode.HFX_SERVICE_002,
+        error_class=ErrorClass.SERVICE,
+        severity=ErrorSeverity.WARNING,
+        retry_policy=RetryPolicy.AFTER_REMEDIATION,
+        side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
+        remediation_id=RemediationId.RECONNECT_RECEIVER,
+        safe_detail_fields=DETAILS_26,
+        lifecycle=LifecycleDescriptor(
+            state=ErrorLifecycleState.ACTIVE,
+            introduced_in="2.0.1",
+            deprecated_in=None,
+            replacement_code=None,
+        ),
+        owner=ErrorOwner.BRIDGE,
+        technical_cause="The bridge is responding, but no profile-qualified receiver generation is registered for an attached supported receiver.",
+        user_explanation="HyperFlux is running, but the receiver is not ready yet.",
+        privacy=PrivacyClass.PUBLIC,
+        docs_path="docs/generated/error-catalog.md#hfx-service-002",
+    ),
+    ErrorDescriptor(
+        code=ErrorCode.HFX_SERVICE_003,
+        error_class=ErrorClass.SERVICE,
+        severity=ErrorSeverity.WARNING,
+        retry_policy=RetryPolicy.AFTER_REMEDIATION,
+        side_effect_certainty_policy=SideEffectCertaintyPolicy.NOT_APPLICABLE,
+        remediation_id=RemediationId.WAKE_PAIRED_DEVICE,
+        safe_detail_fields=DETAILS_27,
+        lifecycle=LifecycleDescriptor(
+            state=ErrorLifecycleState.ACTIVE,
+            introduced_in="2.0.1",
+            deprecated_in=None,
+            replacement_code=None,
+        ),
+        owner=ErrorOwner.BRIDGE,
+        technical_cause="The bridge and receiver are ready, but no paired device has a live qualified HyperFlux wireless route.",
+        user_explanation="HyperFlux is running, but no paired device is online yet.",
+        privacy=PrivacyClass.PUBLIC,
+        docs_path="docs/generated/error-catalog.md#hfx-service-003",
+    ),
+    ErrorDescriptor(
         code=ErrorCode.HFX_TRANSPORT_001,
         error_class=ErrorClass.TRANSPORT,
         severity=ErrorSeverity.WARNING,
         retry_policy=RetryPolicy.BOUNDED_BACKOFF,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.MUST_BE_NONE,
         remediation_id=RemediationId.RETRY_BOUNDED,
-        safe_detail_fields=DETAILS_24,
+        safe_detail_fields=DETAILS_28,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1467,7 +1637,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.OUTCOME_LOOKUP_ONLY,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.POSSIBLE,
         remediation_id=RemediationId.LOOKUP_TRANSACTION_OUTCOME,
-        safe_detail_fields=DETAILS_25,
+        safe_detail_fields=DETAILS_29,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",
@@ -1487,7 +1657,7 @@ ERRORS: Final = (
         retry_policy=RetryPolicy.OUTCOME_LOOKUP_ONLY,
         side_effect_certainty_policy=SideEffectCertaintyPolicy.PARTIAL,
         remediation_id=RemediationId.LOOKUP_TRANSACTION_OUTCOME,
-        safe_detail_fields=DETAILS_26,
+        safe_detail_fields=DETAILS_30,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
             introduced_in="0.0.0-dev.1",

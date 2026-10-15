@@ -6,17 +6,23 @@ Defines additive generated userspace ABIs and the strict boundary around the in-
 
 ## Start Here
 
-- [`docs/architecture/kernel.md`](../docs/architecture/kernel.md)
-- [`docs/generated/kernel-uapi.md`](../docs/generated/kernel-uapi.md)
+- [Kernel Boundary](../docs/architecture/kernel.md)
+- [Kernel UAPI](../docs/generated/kernel-uapi.md)
+
+## Limitations
+
+- Live loading and physical validation are outside software verification
 
 ## Boundaries
 
 **Owns**
+
 - Kernel UAPI authority
 - Driver source boundary
 - Session-device contract
 
 **Does not own**
+
 - Retail presentation
 - Effects
 - Application ownership
@@ -29,15 +35,6 @@ Defines additive generated userspace ABIs and the strict boundary around the in-
 
 ## Verify
 
-Run `kernel-profile-contracts` after changing this area.
+Run `kernel-profile-contracts` after changing this area, and run `./hfx generate` to refresh its 3 generated file(s).
 
-Review impact:
-
-- Regenerate 3 declared projection(s).
-- Run `kernel-profile-contracts`.
-- Review direct consumers: Linux HID kernel module, Kernel transport adapter.
-
-## Related Areas
-
-- **Depends on:** [Architecture authority](../architecture/README.md), [Schema contracts](../schemas/README.md)
-- **Used by:** [Linux HID kernel module](kernel/README.md), [Kernel transport adapter](../crates/hfx-kernel-transport/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

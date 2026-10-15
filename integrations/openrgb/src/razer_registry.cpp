@@ -140,20 +140,19 @@ sdk::Result<RazerPresentation> build_presentation(
                 source.layout->base_size,
                 source.layout->key_values);
             manager.ChangeKeys(*source.layout);
-            std::vector<unsigned int> native_map(slot_count);
-            manager.GetKeyMap(
-                native_map.data(),
+            const matrix_map_type key_map = manager.GetKeyMap(
                 KEYBOARD_MAP_FILL_TYPE_INDEX,
                 static_cast<std::uint8_t>(source_zone->rows),
                 static_cast<std::uint8_t>(source_zone->cols));
+            const std::vector<unsigned int>& native_map = key_map.map;
             zone.matrix_map.reserve(slot_count);
             for(std::uint32_t row = 0; row < source_zone->rows; ++row)
             {
                 for(std::uint32_t column = 0; column < source_zone->cols; ++column)
                 {
                     const auto offset = row * source_zone->cols + column;
-                    const bool present = native_map[offset]
-                        != std::numeric_limits<unsigned int>::max();
+                    const bool present = offset < native_map.size()
+                        && native_map[offset] != std::numeric_limits<unsigned int>::max();
                     zone.matrix_map.push_back(
                         present ? first_slot + offset : std::numeric_limits<unsigned int>::max());
                     result.leds.push_back({
@@ -225,18 +224,27 @@ sdk::Result<RazerPresentation> resolve_razer_presentation(
 // RazerDevices.cpp uses OpenRGB logging for registry initialization only. The
 // adapter links the registry without the direct HID controller, so logging is
 // intentionally local and side-effect free.
-const char* LogManager::log_codes[] = {
-    "FATAL:", "ERROR:", "Warning:", "Info:",
-    "Verbose:", "Debug:", "Trace:", "Dialog:",
+const char* LogManager::LOG_CODES[] = {
+    "Fatal", "Error", "Warning", "Info",
+    "Verbose", "Debug", "Trace", "Dialog",
 };
 
-LogManager::LogManager() : log_console_enabled(false), log_file_enabled(false) {}
+LogManager* LogManager::instance = nullptr;
+
+LogManager::LogManager()
+    : loglevel(LL_INFO),
+      verbosity(LL_WARNING),
+      log_console_enabled(false),
+      print_source(false)
+{
+}
+
 LogManager::~LogManager() = default;
 
 LogManager* LogManager::get()
 {
-    static LogManager instance;
-    return &instance;
+    static LogManager local_instance;
+    return &local_instance;
 }
 
-void LogManager::append(const char*, int, unsigned int, const char*, ...) {}
+void LogManager::LogEntry(const char*, int, unsigned int, const char*, ...) {}

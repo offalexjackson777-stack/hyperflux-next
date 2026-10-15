@@ -200,6 +200,8 @@ fn activation_probe<R: CommandRunner>(
         runner,
         sys_module_root,
         hid_drivers_root,
+        hid_devices_root: PathBuf::from("/missing-hid-devices"),
+        dkms_root: PathBuf::from("/missing-dkms"),
         usb_devices_root,
         openrazer_daemon_path: PathBuf::from("/missing-openrazer"),
         full_component_descriptor_path: PathBuf::from("/missing-full-component.json"),
@@ -1148,4 +1150,122 @@ fn concurrent_installed_module_change_is_identity_unstable() {
         Err(DriverActivationError::IdentityUnstable)
     );
     fs::remove_dir_all(root).expect("identity change fixture cleanup");
+}
+
+fn driver_inspection_probe(prefix: &str) -> (PathBuf, RealSystemProbe<FakeRunner>) {
+    let (root, sys_module_root, hid_drivers_root, usb_devices_root) =
+        temporary_activation_roots(prefix);
+    let mut probe = activation_probe(
+        FakeRunner::new(Vec::new()),
+        sys_module_root,
+        hid_drivers_root,
+        usb_devices_root,
+    );
+    probe.hid_devices_root = root.join("hid-devices");
+    probe.dkms_root = root.join("dkms");
+    fs::create_dir_all(&probe.hid_devices_root).expect("HID device root");
+    fs::create_dir_all(&probe.dkms_root).expect("DKMS root");
+    (root, probe)
+}
+
+fn hid_interface(
+    probe: &RealSystemProbe<FakeRunner>,
+    root: &Path,
+    name: &str,
+    driver: Option<&str>,
+) {
+    let device = probe.hid_devices_root.join(name);
+    fs::create_dir_all(&device).expect("HID device");
+    if let Some(driver) = driver {
+        let target = root.join("bus-drivers").join(driver);
+        fs::create_dir_all(&target).expect("driver directory");
+        symlink(&target, device.join("driver")).expect("driver link");
+    }
+}
+
+#[test]
+fn receiver_interface_drivers_report_the_actual_binding_in_stable_order() {
+    let (root, probe) = driver_inspection_probe("receiver-binding");
+    hid_interface(&probe, &root, "0003:1532:00CF.000A", None);
+    hid_interface(
+        &probe,
+        &root,
+        "0003:1532:00CF.0009",
+        Some(KERNEL_MODULE_NAME),
+    );
+    hid_interface(
+        &probe,
+        &root,
+        "0003:1532:00CF.0008",
+        Some("hid-razer-hyperflux-v2"),
+    );
+    hid_interface(&probe, &root, "0003:046D:C52B.0001", Some("hid-generic"));
+    hid_interface(&probe, &root, "0005:1532:00CF.0002", Some("hid-generic"));
+
+    assert_eq!(
+        probe.receiver_interface_drivers(),
+        vec![
+            Some("hid-razer-hyperflux-v2".to_owned()),
+            Some(KERNEL_MODULE_NAME.to_owned()),
+            None,
+        ]
+    );
+    fs::remove_dir_all(root).expect("cleanup");
+}
+
+#[test]
+fn missing_hid_device_root_reports_no_receiver_interfaces() {
+    let (root, mut probe) = driver_inspection_probe("receiver-binding-missing");
+    probe.hid_devices_root = root.join("absent");
+    assert!(probe.receiver_interface_drivers().is_empty());
+    fs::remove_dir_all(root).expect("cleanup");
+}
+
+#[test]
+fn only_exact_retired_driver_registrations_are_reported() {
+    let (root, probe) = driver_inspection_probe("retired-dkms");
+    fs::create_dir_all(probe.dkms_root.join("hid-razer-hyperflux-v2").join("0.1.1"))
+        .expect("retired registration");
+    fs::create_dir_all(probe.dkms_root.join("hid-razer-hyperflux-v2").join("9.9.9"))
+        .expect("unknown version");
+    fs::create_dir_all(probe.dkms_root.join(KERNEL_MODULE_NAME).join("2.0.0"))
+        .expect("released registration");
+
+    assert_eq!(
+        probe.retired_driver_registrations(),
+        vec!["hid-razer-hyperflux-v2/0.1.1".to_owned()]
+    );
+    fs::remove_dir_all(root).expect("cleanup");
+}
+
+#[test]
+fn hid_device_names_yield_only_usb_bus_identities() {
+    assert_eq!(
+        hid_device_usb_id("0003:1532:00CF.0008"),
+        Some((0x1532, 0x00cf))
+    );
+    assert_eq!(hid_device_usb_id("0005:1532:00CF.0008"), None);
+    assert_eq!(hid_device_usb_id("0003:1532:00CF"), None);
+    assert_eq!(hid_device_usb_id("0003:ZZZZ:00CF.0008"), None);
+    assert_eq!(hid_device_usb_id("not-a-device"), None);
+}
+
+#[test]
+fn default_probe_reads_the_real_system_locations() {
+    let probe = RealSystemProbe::default();
+    assert_eq!(probe.sys_module_root, Path::new("/sys/module"));
+    assert_eq!(probe.hid_drivers_root, Path::new(HID_DRIVERS_ROOT));
+    assert_eq!(probe.hid_devices_root, Path::new(HID_DEVICES_ROOT));
+    assert_eq!(probe.dkms_root, Path::new(DKMS_ROOT));
+    assert_eq!(probe.usb_devices_root, Path::new(USB_DEVICES_ROOT));
+    assert_eq!(
+        probe.openrazer_daemon_path,
+        Path::new(OPENRAZER_NATIVE_DAEMON_EXECUTABLE_PATH)
+    );
+    assert_eq!(
+        probe.full_component_descriptor_path,
+        Path::new(FULL_COMPONENT_DESCRIPTOR_PATH)
+    );
+    assert_eq!(probe.socket_path, Path::new(BRIDGE_SOCKET_PATH));
+    assert_eq!(probe.timeout, Duration::from_millis(STATUS_TIMEOUT_MS));
 }

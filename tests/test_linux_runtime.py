@@ -70,7 +70,7 @@ class LinuxRuntimeTests(unittest.TestCase):
             kernel.source_directory,
             f"/usr/src/{kernel.dkms_name}-{kernel.dkms_version}",
         )
-        self.assertEqual(kernel.dkms_version, "2.0.0")
+        self.assertEqual(kernel.dkms_version, "2.1.0")
 
     def test_dkms_identity_and_output_match_arch_hook_contract(self) -> None:
         kernel = self.runtime.kernel
@@ -178,6 +178,10 @@ class LinuxRuntimeTests(unittest.TestCase):
         self.assertIn("SocketMode=0600", desktop_socket)
         self.assertIn("SocketUser=%i", desktop_socket)
         self.assertIn("WantedBy=user-runtime-dir@%i.service", desktop_socket)
+        self.assertIn("DefaultDependencies=no", desktop_socket)
+        self.assertIn("Conflicts=shutdown.target", desktop_socket)
+        self.assertIn("Before=shutdown.target", desktop_socket)
+        self.assertNotIn("sockets.target", desktop_socket)
         self.assertNotIn("SocketGroup=", desktop_socket)
         self.assertIn("User=%i", desktop_proxy)
         self.assertIn(f"Group={self.runtime.bridge.client_group}", desktop_proxy)
@@ -316,11 +320,26 @@ class LinuxRuntimeTests(unittest.TestCase):
                 root = Path(directory)
                 (root / "runtime").mkdir()
                 shutil.copytree(ROOT / "uapi", root / "uapi")
+                shutil.copy2(ROOT / "Cargo.toml", root / "Cargo.toml")
                 (root / "runtime" / "linux.json").write_text(
                     __import__("json").dumps(value), encoding="utf-8"
                 )
                 with self.assertRaises(ModelError):
                     load_linux_runtime(root)
+
+    def test_cargo_workspace_version_mirrors_the_product_version(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shutil.copytree(ROOT / "runtime", root / "runtime")
+            shutil.copytree(ROOT / "uapi", root / "uapi")
+            manifest = (ROOT / "Cargo.toml").read_text(encoding="utf-8")
+            version = load_linux_runtime(ROOT).product.version
+            (root / "Cargo.toml").write_text(
+                manifest.replace(f'version = "{version}"', 'version = "0.0.0"', 1),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ModelError, "Cargo workspace version"):
+                load_linux_runtime(root)
 
     def test_actor_latency_bound_covers_one_maximum_kernel_dispatch(self) -> None:
         uapi = load_json(ROOT / "uapi" / "kernel-uapi.json")

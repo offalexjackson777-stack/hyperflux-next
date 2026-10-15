@@ -18,6 +18,7 @@
 #include <vector>
 
 class RGBController;
+class RGBControllerInterface;
 
 namespace hyperflux::openrgb::native
 {
@@ -32,6 +33,7 @@ public:
     [[nodiscard]] RGBController& controller() noexcept;
     [[nodiscard]] const RGBController& controller() const noexcept;
     [[nodiscard]] const v7::NativeRoute& route() const noexcept;
+    [[nodiscard]] std::string_view name() const noexcept;
     [[nodiscard]] std::string_view serial() const noexcept;
 
 private:
@@ -45,6 +47,8 @@ private:
     v7::NativeRoute route_;
     std::unique_ptr<NativeFeatureExchange> exchange_;
     std::unique_ptr<RGBController> controller_;
+    std::string name_;
+    std::string serial_;
 };
 
 using NativeFeatureExchangeFactory = std::function<
@@ -125,14 +129,11 @@ public:
         std::vector<v7::NativeRoute> routes);
     [[nodiscard]] UpstreamRegistryUpdate apply_direct_serials(
         std::vector<std::string> physically_queried_serials);
-    void suspend_for_detection() noexcept;
-    void resume_after_detection() noexcept;
     void shutdown() noexcept;
 
     [[nodiscard]] std::size_t size() const noexcept;
     [[nodiscard]] std::size_t registered_count() const noexcept;
     [[nodiscard]] std::size_t suppressed_count() const noexcept;
-    [[nodiscard]] bool suspended() const noexcept;
     [[nodiscard]] std::vector<std::string> serials() const;
     [[nodiscard]] std::vector<UpstreamRazerControllerSummary> summaries() const;
     [[nodiscard]] std::uintptr_t controller_identity(std::string_view stable_id) const noexcept;
@@ -154,13 +155,12 @@ private:
     UpstreamRazerControllerFactory* factory_;
     std::map<std::string, Entry, std::less<>> entries_;
     std::set<std::string, std::less<>> direct_serials_;
-    bool suspended_ = false;
     bool stopped_ = false;
 };
 
 [[nodiscard]] bool is_eligible_upstream_razer_route(const v7::NativeRoute& route) noexcept;
 [[nodiscard]] std::string canonical_queried_serial(std::string_view serial);
 [[nodiscard]] std::vector<std::string> collect_direct_razer_serials(
-    const std::vector<RGBController*>& controllers);
+    const std::vector<RGBControllerInterface*>& controllers);
 
 } // namespace hyperflux::openrgb::native

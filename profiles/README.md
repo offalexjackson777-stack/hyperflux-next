@@ -6,17 +6,23 @@ Composes receiver, surface, and child identities with evidence-bound capabilitie
 
 ## Start Here
 
-- [`docs/generated/supported-hardware.md`](../docs/generated/supported-hardware.md)
-- [`docs/architecture/device-knowledge.md`](../docs/architecture/device-knowledge.md)
+- [Supported Hardware](../docs/generated/supported-hardware.md)
+- [Device Knowledge Without Transport Guessing](../docs/architecture/device-knowledge.md)
+
+## Limitations
+
+- Only two child profiles currently carry physical qualification
 
 ## Boundaries
 
 **Owns**
+
 - Identity predicates
 - Qualified capabilities
 - Evidence references
 
 **Does not own**
+
 - Live observations
 - Desired lighting state
 - Guessed commands
@@ -35,15 +41,6 @@ Composes receiver, surface, and child identities with evidence-bound capabilitie
 
 ## Verify
 
-Run `profile-contracts` `native-onboarding-contracts` after changing this area.
+Run `profile-contracts` `native-onboarding-contracts` after changing this area, and run `./hfx generate` to refresh its 3 generated file(s).
 
-Review impact:
-
-- Regenerate 3 declared projection(s).
-- Run `profile-contracts`, `native-onboarding-contracts`.
-- Review direct consumers: Core policy engine, Device knowledge, Device qualification console, Device qualification runtime, Linux HID kernel module, OpenRazer native route, OpenRGB adapter, Rust SDK, C++ SDK, Python SDK, Deterministic simulator, System probe.
-
-## Related Areas
-
-- **Depends on:** [Architecture authority](../architecture/README.md), [Schema contracts](../schemas/README.md), [Application integration catalog](../integrations/README.md)
-- **Used by:** [Core policy engine](../crates/hfx-core/README.md), [Device knowledge](../knowledge/README.md), [Device qualification console](../apps/device-qualification/README.md), [Device qualification runtime](../crates/hfx-device-qualification/README.md), [Linux HID kernel module](../driver/kernel/README.md), [OpenRazer native route](../integrations/openrazer/README.md), [OpenRGB adapter](../integrations/openrgb/README.md), [Rust SDK](../crates/hfx-sdk/README.md), [C++ SDK](../sdk/cpp/README.md), [Python SDK](../sdk/python/README.md), [Deterministic simulator](../crates/hfx-sim/README.md), [System probe](../crates/hfx-system-probe/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

@@ -6,18 +6,24 @@ Owns bounded local system inspection, Full-component detection, root-only receip
 
 ## Start Here
 
-- [`docs/user/troubleshooting.md`](../../docs/user/troubleshooting.md)
-- [`docs/generated/linux-runtime.md`](../../docs/generated/linux-runtime.md)
+- [Troubleshooting](../../docs/user/troubleshooting.md)
+- [Linux Runtime](../../docs/generated/linux-runtime.md)
+
+## Limitations
+
+- The crate is workspace-only; its consumers decide how probe results are presented or acted upon
 
 ## Boundaries
 
 **Owns**
+
 - Bounded command and filesystem probes
 - Typed system snapshots
 - Root-only non-overwriting receipts
 - Disconnected-driver activation proof
 
 **Does not own**
+
 - Qualification policy
 - Application presentation
 - Hardware support decisions
@@ -33,15 +39,6 @@ Owns bounded local system inspection, Full-component detection, root-only receip
 
 ## Verify
 
-Run `rust-clippy` `rust-unit` `package-contracts` after changing this area.
+Run `rust-clippy` `rust-unit` `package-contracts` after changing this area, and run `./hfx generate` to refresh its 1 generated file(s).
 
-Review impact:
-
-- Regenerate 1 declared projection(s).
-- Run `rust-clippy`, `rust-unit`, `package-contracts`.
-- Review direct consumers: Device qualification runtime, Operations CLI.
-
-## Related Areas
-
-- **Depends on:** [Rust workspace](../README.md), [Rust SDK](../hfx-sdk/README.md), [Composable hardware profiles](../../profiles/README.md)
-- **Used by:** [Device qualification runtime](../hfx-device-qualification/README.md), [Operations CLI](../hfx-ops/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../../docs/generated/repository-atlas.md).

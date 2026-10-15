@@ -264,6 +264,108 @@ def _parser() -> argparse.ArgumentParser:
     package_distro.add_argument("--distribution", required=True, choices=["arch"])
     package_distro.add_argument("--build-manifest", required=True, type=Path)
     package_distro.add_argument("--output", required=True, type=Path)
+    package_aur = package_commands.add_parser(
+        "aur", help="render the source-built AUR recipe for one exact revision"
+    )
+    package_aur.add_argument("--output", required=True, type=Path)
+    aur_reference = package_aur.add_mutually_exclusive_group(required=True)
+    aur_reference.add_argument("--tag", help="signed annotated tag for a publication recipe")
+    aur_reference.add_argument(
+        "--commit", help="full commit for a local qualification recipe"
+    )
+    package_aur.add_argument(
+        "--upstream-checkout",
+        action="append",
+        default=[],
+        metavar="ID=PATH",
+        help="local Git checkout containing a pinned upstream commit (openrazer, openrgb)",
+    )
+    package_aur.add_argument(
+        "--candidate-release",
+        metavar="VERSION-RELEASE",
+        help="qualify a future split release such as 2.1.0-1 (commit recipes only)",
+    )
+
+    package_aur_install = package_commands.add_parser(
+        "aur-install", help="print the exact AUR install commands for Core and Full"
+    )
+    package_aur_install.add_argument(
+        "--candidate-release",
+        metavar="VERSION-RELEASE",
+        help="print the plan for a future split release such as 2.1.0-1",
+    )
+
+    package_compare = package_commands.add_parser(
+        "compare-channels",
+        help="compare signed-repository and AUR packages of one split release",
+    )
+    package_compare.add_argument("--repository", required=True, type=Path)
+    package_compare.add_argument("--aur", required=True, type=Path)
+    package_compare.add_argument("--aur-recipe", type=Path)
+    package_compare.add_argument("--repository-commit")
+    package_compare.add_argument(
+        "--candidate-release",
+        metavar="VERSION-RELEASE",
+        help="compare a future split release such as 2.1.0-1",
+    )
+
+    package_dossier = package_commands.add_parser(
+        "aur-dossier",
+        help="write the local official-Arch readiness dossier with its receipts",
+    )
+    package_dossier.add_argument("--output", required=True, type=Path)
+    package_dossier.add_argument("--aur-recipe", type=Path)
+    package_dossier.add_argument("--channel-parity", type=Path, metavar="REPORT")
+    package_dossier.add_argument(
+        "--candidate-release",
+        metavar="VERSION-RELEASE",
+        help="the split release such as 2.1.0-1",
+    )
+
+    arch_snapshot = commands.add_parser(
+        "arch-snapshot",
+        help="import official Arch package state and check OpenRazer provider alignment",
+    )
+    arch_snapshot_commands = arch_snapshot.add_subparsers(
+        dest="arch_snapshot_command", required=True
+    )
+    arch_snapshot_import = arch_snapshot_commands.add_parser(
+        "import", help="record official repositories from local pacman sync databases"
+    )
+    arch_snapshot_import.add_argument("--candidate", required=True, metavar="VERSION-RELEASE")
+    arch_snapshot_import.add_argument(
+        "--database",
+        action="append",
+        default=[],
+        metavar="REPOSITORY=PATH",
+        help="sync database of extra, extra-testing or extra-staging; omitted ones are unobserved",
+    )
+    arch_snapshot_check = arch_snapshot_commands.add_parser(
+        "check", help="fail unless the OpenRazer provider matches official Arch"
+    )
+    arch_snapshot_check.add_argument(
+        "--candidate-release",
+        metavar="VERSION-RELEASE",
+        help="check a future split release such as 2.1.0-1",
+    )
+
+    arch_transition = commands.add_parser(
+        "arch-transition",
+        help="prove the two-to-four output upgrade and render the optional AUR switch",
+    )
+    arch_transition_commands = arch_transition.add_subparsers(
+        dest="arch_transition_command", required=True
+    )
+    for name, summary in (
+        ("check", "fail unless every prior release upgrades in place to the split"),
+        ("switch-script", "print the script that disables the repository for the AUR"),
+        ("rollback-script", "print the script that re-enables the repository"),
+    ):
+        arch_transition_commands.add_parser(name, help=summary).add_argument(
+            "--candidate-release",
+            metavar="VERSION-RELEASE",
+            help="the split release such as 2.1.0-1",
+        )
 
     arch_repository = commands.add_parser(
         "arch-repository",
@@ -275,8 +377,14 @@ def _parser() -> argparse.ArgumentParser:
     arch_repository_build = arch_repository_commands.add_parser(
         "build", help="sign exact frozen packages and create repository metadata"
     )
-    arch_repository_build.add_argument("--core", required=True, type=Path)
-    arch_repository_build.add_argument("--full", required=True, type=Path)
+    arch_repository_build.add_argument(
+        "--package",
+        dest="packages",
+        action="append",
+        required=True,
+        type=Path,
+        help="one frozen release package; repeat for every package of the release",
+    )
     arch_repository_build.add_argument("--gnupg-home", required=True, type=Path)
     arch_repository_build.add_argument("--key-fingerprint", required=True)
     arch_repository_build.add_argument("--output", required=True, type=Path)
@@ -290,6 +398,113 @@ def _parser() -> argparse.ArgumentParser:
     )
     arch_repository_verify_public.add_argument("--output", required=True, type=Path)
     return parser
+
+
+def _candidate_split(root: Path, value: str | None):
+    from .arch_split import load_arch_split
+
+    if value is None:
+        return load_arch_split(root)
+    version, separator, release = value.rpartition("-")
+    if not separator or not version or not release.isdecimal():
+        raise ModelError("candidate release must be VERSION-RELEASE")
+    return load_arch_split(root, release=(version, int(release)))
+
+
+def _arch_transition(root: Path, args: argparse.Namespace) -> int:
+    from .arch_repository import load_arch_repository_policy
+    from .arch_transition import (
+        PRIOR_RELEASES,
+        SCHEMA,
+        analyse_transition,
+        check_pacman_safety,
+        load_prior_topology,
+        payload_items,
+        rollback_script,
+        switch_script,
+    )
+
+    split = _candidate_split(root, args.candidate_release)
+    if not split.active:
+        raise ModelError(f"the four-output topology starts at {split.first_release}")
+    policy = load_arch_repository_policy(root)
+    if args.arch_transition_command == "switch-script":
+        print(switch_script(policy), end="")
+        return 0
+    if args.arch_transition_command == "rollback-script":
+        print(rollback_script(policy, split), end="")
+        return 0
+    reports = [
+        analyse_transition(split, load_prior_topology(root, prior)).as_json()
+        for prior in PRIOR_RELEASES
+    ]
+    safety = check_pacman_safety(payload_items(root))
+    passed = all(report["passed"] for report in reports) and not safety
+    value = {
+        "schema": SCHEMA,
+        "candidate": split.full_version,
+        "passed": passed,
+        "transitions": reports,
+        "pacman_safety_problems": list(safety),
+    }
+    print(json.dumps(value, indent=2, sort_keys=True))
+    return 0 if passed else 1
+
+
+def _arch_snapshot(root: Path, args: argparse.Namespace) -> int:
+    from .arch_official_snapshot import (
+        evaluate_provider_alignment,
+        import_snapshot,
+        write_snapshot,
+    )
+
+    if args.arch_snapshot_command == "import":
+        databases: dict[str, Path] = {}
+        for item in args.database:
+            name, separator, value = item.partition("=")
+            if not separator or not value or name in databases:
+                raise ModelError("--database must be one unique REPOSITORY=PATH")
+            databases[name] = Path(value).expanduser().resolve()
+        split = _candidate_split(root, args.candidate)
+        value = import_snapshot(root, databases, candidate=args.candidate, split=split)
+        print(f"Official Arch snapshot: {write_snapshot(root, value)}")
+        for repository in value["repositories"]:
+            print(f"{repository['name']}: {repository['state']}")
+        return 0
+    alignment = evaluate_provider_alignment(
+        root, split=_candidate_split(root, args.candidate_release)
+    )
+    print(alignment.as_json(), end="")
+    return 0 if alignment.passed else 1
+
+
+def _package_aur(root: Path, args: argparse.Namespace) -> int:
+    from .aur_recipe import generate_aur_recipe, write_aur_recipe
+
+    checkouts: dict[str, Path] = {}
+    for item in args.upstream_checkout:
+        name, separator, value = item.partition("=")
+        if not separator or not value or name in checkouts:
+            raise ModelError("--upstream-checkout must be one unique ID=PATH")
+        checkouts[name] = Path(value).expanduser().resolve()
+    if args.candidate_release is not None and args.tag is not None:
+        raise ModelError("a publication recipe uses the current release, not a candidate")
+    split = _candidate_split(root, args.candidate_release)
+    recipe = generate_aur_recipe(
+        root,
+        tag=args.tag,
+        commit=args.commit,
+        upstream_checkouts=checkouts,
+        split=split,
+    )
+    for path in write_aur_recipe(recipe, args.output):
+        print(f"AUR recipe file: {path}")
+    print(f"Recipe mode: {recipe.mode}")
+    print(f"Package version: {recipe.version}")
+    print(f"Source commit: {recipe.source.commit}")
+    for disclosure in recipe.disclosures:
+        print(f"Qualification only: {disclosure}")
+    return 0
 
 
 def main(arguments: list[str] | None = None) -> int:
@@ -637,6 +852,39 @@ def main(arguments: list[str] | None = None) -> int:
                 print(f"Payload SHA-256: {result.payload_sha256}")
                 print(f"Inventory: {result.inventory}")
                 return 0
+            if args.package_command == "aur":
+                return _package_aur(root, args)
+            if args.package_command == "compare-channels":
+                from .channel_parity import compare_channels
+
+                comparison = compare_channels(
+                    _candidate_split(root, args.candidate_release),
+                    repository=args.repository.resolve(),
+                    aur=args.aur.resolve(),
+                    aur_recipe=args.aur_recipe.resolve() if args.aur_recipe else None,
+                    repository_commit=args.repository_commit,
+                )
+                print(comparison.as_json(), end="")
+                return 0 if comparison.passed else 1
+            if args.package_command == "aur-dossier":
+                from .aur_dossier import build_dossier, write_dossier
+
+                dossier = build_dossier(
+                    root,
+                    _candidate_split(root, args.candidate_release),
+                    recipe_dir=args.aur_recipe.resolve() if args.aur_recipe else None,
+                    channel_report=args.channel_parity.resolve() if args.channel_parity else None,
+                )
+                write_dossier(dossier, args.output.resolve())
+                print(f"Dossier: {args.output.resolve() / 'DOSSIER.md'}")
+                for status, count in dossier.summary().items():
+                    print(f"{status}: {count}")
+                return 0
+            if args.package_command == "aur-install":
+                from .aur_install import render_guide
+
+                print(render_guide(_candidate_split(root, args.candidate_release)), end="")
+                return 0
             result = build_distribution_package(
                 root,
                 args.build_manifest,
@@ -649,12 +897,15 @@ def main(arguments: list[str] | None = None) -> int:
                 )
             print(f"Build manifest: {result.manifest}")
             return 0
+        if args.command == "arch-snapshot":
+            return _arch_snapshot(root, args)
+        if args.command == "arch-transition":
+            return _arch_transition(root, args)
         if args.command == "arch-repository":
             if args.arch_repository_command == "build":
                 manifest = build_arch_repository(
                     root,
-                    core_package=args.core.resolve(),
-                    full_package=args.full.resolve(),
+                    packages=tuple(package.resolve() for package in args.packages),
                     gnupg_home=args.gnupg_home.resolve(),
                     key_fingerprint=args.key_fingerprint,
                     output=args.output.resolve(),

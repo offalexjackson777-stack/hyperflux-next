@@ -103,7 +103,7 @@ private:
     hyperflux::openrgb::native::NativeControllerFactory* delegate_;
 };
 
-bool concurrent_rescan_contract()
+bool concurrent_status_contract()
 {
     using namespace hyperflux;
     using namespace hyperflux::openrgb;
@@ -134,7 +134,7 @@ bool concurrent_rescan_contract()
 
     std::atomic<bool> start = false;
     std::atomic<bool> failed = false;
-    std::thread detection_thread(
+    std::thread status_thread(
         [&]
         {
             while(!start.load(std::memory_order_acquire))
@@ -143,8 +143,12 @@ bool concurrent_rescan_contract()
             }
             for(std::size_t index = 0; index < 250; ++index)
             {
-                registry.suspend_for_detection();
-                registry.resume_after_detection();
+                if(registry.size() != 2 || registry.registered_count() != 2
+                    || registry.models().size() != 2)
+                {
+                    failed.store(true, std::memory_order_relaxed);
+                    return;
+                }
             }
         });
     std::thread update_thread(
@@ -163,11 +167,10 @@ bool concurrent_rescan_contract()
                 }
             }
         });
-    detection_thread.join();
+    status_thread.join();
     update_thread.join();
 
-    registry.resume_after_detection();
-    const bool valid = !failed.load(std::memory_order_relaxed) && !registry.suspended()
+    const bool valid = !failed.load(std::memory_order_relaxed)
                        && registry.size() == 2 && registry.registered_count() == 2
                        && host.registered.size() == 2
                        && host.register_calls == host.unregister_calls + 2
@@ -236,22 +239,8 @@ int main()
         return failure(__LINE__);
     }
 
-    registry.suspend_for_detection();
-    registry.suspend_for_detection();
-    if(!registry.suspended() || registry.registered_count() != 0 || !host.registered.empty()
-        || host.unregister_calls != 2)
-    {
-        return failure(__LINE__);
-    }
-    auto suspended_update = registry.apply(state_changed);
-    if(!suspended_update || suspended_update.value().registered != 0 || host.register_calls != 2)
-    {
-        return failure(__LINE__);
-    }
-    registry.resume_after_detection();
-    registry.resume_after_detection();
-    if(registry.suspended() || registry.registered_count() != 2 || host.registered.size() != 2
-        || host.register_calls != 4 || !host.valid)
+    if(registry.registered_count() != 2 || host.registered.size() != 2
+        || host.register_calls != 2 || host.unregister_calls != 0 || !host.valid)
     {
         return failure(__LINE__);
     }
@@ -260,14 +249,14 @@ int main()
     auto removed = registry.apply(mouse_only);
     if(!removed || removed.value().removed != 1 || removed.value().retained != 1
         || registry.size() != 1 || registry.controller_identity(mouse.stable_id) != first_mouse
-        || host.unregister_calls != 3)
+        || host.unregister_calls != 1)
     {
         return failure(__LINE__);
     }
 
     auto added_back = registry.apply(both);
     if(!added_back || added_back.value().added != 1 || registry.size() != 2
-        || factory.create_calls != 3 || host.register_calls != 5)
+        || factory.create_calls != 3 || host.register_calls != 3)
     {
         return failure(__LINE__);
     }
@@ -284,7 +273,7 @@ int main()
     auto replaced = registry.apply(replacement);
     if(!replaced || replaced.value().presentation_replaced != 1
         || registry.controller_identity(keyboard.stable_id) == second_keyboard
-        || host.unregister_calls != 4 || host.register_calls != 6 || !host.valid)
+        || host.unregister_calls != 2 || host.register_calls != 4 || !host.valid)
     {
         return failure(__LINE__);
     }
@@ -313,11 +302,11 @@ int main()
     registry.shutdown();
     registry.shutdown();
     if(!registry.stopped() || registry.size() != 0 || !host.registered.empty()
-        || host.unregister_calls != 6 || !host.valid)
+        || host.unregister_calls != 4 || !host.valid)
     {
         return failure(__LINE__);
     }
-    if(!concurrent_rescan_contract())
+    if(!concurrent_status_contract())
     {
         return failure(__LINE__);
     }

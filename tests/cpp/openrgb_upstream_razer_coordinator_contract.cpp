@@ -227,12 +227,12 @@ private:
 class TestController final : public RGBController
 {
 public:
-    void SetupZones() override {}
-    void ResizeZone(int, int) override {}
-    void DeviceUpdateLEDs() override {}
-    void UpdateZoneLEDs(int) override {}
-    void UpdateSingleLED(int) override {}
-    void DeviceUpdateMode() override {}
+    TestController(std::string device_vendor, std::string device_location, std::string device_serial)
+    {
+        vendor = std::move(device_vendor);
+        location = std::move(device_location);
+        serial = std::move(device_serial);
+    }
 };
 
 class Host final : public hyperflux::openrgb::native::UpstreamPluginHost
@@ -253,9 +253,9 @@ public:
             registered.end());
     }
 
-    std::vector<RGBController*> controllers() const override
+    std::vector<RGBControllerInterface*> controllers() const override
     {
-        auto result = registered;
+        std::vector<RGBControllerInterface*> result(registered.begin(), registered.end());
         result.insert(result.end(), direct.begin(), direct.end());
         return result;
     }
@@ -355,24 +355,19 @@ int main()
         return 2;
     }
 
-    TestController direct_mouse;
-    direct_mouse.vendor = "Razer";
-    direct_mouse.location = "HID: /dev/hidraw-direct-mouse";
-    direct_mouse.serial = "MOUSE-SERIAL-0001     ";
-    coordinator.value()->detection_started();
+    TestController direct_mouse("Razer", "HID: /dev/hidraw-direct-mouse", "MOUSE-SERIAL-0001     ");
     host.direct = {&direct_mouse};
     coordinator.value()->detection_finished();
     auto suppressed = coordinator.value()->status();
-    if(suppressed.detection_suspended || suppressed.registered_controllers != 1
+    if(suppressed.registered_controllers != 1
        || suppressed.direct_suppressed_controllers != 1
        || host.registered.size() != 1
-       || canonical_queried_serial(host.registered.front()->serial)
+       || canonical_queried_serial(host.registered.front()->GetSerial())
               != "KEYBOARD-SERIAL-0001")
     {
         return 3;
     }
 
-    coordinator.value()->detection_started();
     host.direct.clear();
     coordinator.value()->detection_finished();
     auto restored = coordinator.value()->status();

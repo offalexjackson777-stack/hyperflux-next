@@ -4,7 +4,7 @@
   "title": "HyperFlux canonical installation manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "schema", "policy", "builds", "payloads"],
+  "required": ["$schema", "schema", "policy", "first_run_activation", "builds", "payloads"],
   "properties": {
     "$schema": {"const": "../schemas/install-manifest.schema.json"},
     "schema": {"const": "hyperflux-install-manifest-v2"},
@@ -22,6 +22,24 @@
         "start_service_on_install": {"const": false},
         "enable_service_on_install": {"const": false},
         "preserve_configuration": {"const": true}
+      }
+    },
+    "first_run_activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receiver_during_install",
+        "unit_enable",
+        "activation",
+        "disconnected_activation_command",
+        "disconnected_activation_precondition"
+      ],
+      "properties": {
+        "receiver_during_install": {"const": "connected"},
+        "unit_enable": {"const": "enable-without-start"},
+        "activation": {"const": "normal-reboot"},
+        "disconnected_activation_command": {"const": "activate-disconnected-driver"},
+        "disconnected_activation_precondition": {"const": "verified-alternate-input"}
       }
     },
     "builds": {

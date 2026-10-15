@@ -8,6 +8,7 @@ from typing import Any
 from .model import ModelError, load_json
 
 
+DELIVERY_STATE = "source-only"
 EVIDENCE_STATES = ("active", "sleeping", "disconnected", "unknown")
 WRITE_REQUIREMENTS = (
     "explicit-user-confirmation",
@@ -29,6 +30,7 @@ def load_local_companion(root: Path) -> dict[str, Any]:
         {
             "$schema",
             "schema",
+            "delivery_state",
             "base_url",
             "transport",
             "snapshot",
@@ -41,6 +43,10 @@ def load_local_companion(root: Path) -> dict[str, Any]:
         raise ModelError("local companion contract has a non-canonical schema reference")
     if value["schema"] != "hyperflux-local-companion-v1":
         raise ModelError("unsupported local companion contract")
+    if value["delivery_state"] != DELIVERY_STATE:
+        # No installed package provides the companion or the qualification
+        # console; a different state needs a real package first.
+        raise ModelError("local companion must remain source-only until a package ships it")
     if value["base_url"] != "http://127.0.0.1:47427":
         raise ModelError("local companion must bind the canonical loopback origin")
     if value["transport"] != "loopback-http-json":

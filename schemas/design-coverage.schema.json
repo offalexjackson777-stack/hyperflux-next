@@ -43,8 +43,7 @@
             "software-verified",
             "policy-defined",
             "partially-implemented",
-            "blocked-by-physical-evidence",
-            "publication-locked"
+            "blocked-by-physical-evidence"
           ]
         },
         "owner": {

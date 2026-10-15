@@ -8,8 +8,9 @@ from pathlib import Path
 import re
 from urllib.parse import unquote, urlsplit
 
+from .model import repository_files
 
-IGNORED_DIRECTORIES = {".git", ".hfx", "build", "target"}
+
 MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
 HTML_LINK = re.compile(r"(?:href|src)=[\"']([^\"']+)[\"']", re.IGNORECASE)
 EXPLICIT_ANCHOR = re.compile(
@@ -30,13 +31,8 @@ class LinkIssue:
 
 
 def markdown_files(root: Path) -> tuple[Path, ...]:
-    root = root.resolve()
     return tuple(
-        sorted(
-            path
-            for path in root.rglob("*.md")
-            if not IGNORED_DIRECTORIES.intersection(path.relative_to(root).parts)
-        )
+        path for path in repository_files(root.resolve()) if path.suffix == ".md"
     )
 
 

@@ -66,6 +66,13 @@
       "automatic": false
     },
     {
+      "id": "migrate-retired-driver",
+      "title": "Migrate away from retired drivers",
+      "safe_action": "Run sudo hyperflux-next-activate migrate-retired-dkms to preview the fix, then run it again with --apply and reboot normally. It only removes known retired HyperFlux drivers; any other driver is reported and left untouched.",
+      "verification": "After rebooting, run Doctor and confirm every receiver interface uses the released HyperFlux driver and no retired driver is registered.",
+      "automatic": false
+    },
+    {
       "id": "qualify-device",
       "title": "Use a qualified device capability",
       "safe_action": "Keep the device read-only until an evidence-backed profile qualifies the requested capability.",
@@ -77,6 +84,13 @@
       "title": "Reconcile the current device state",
       "safe_action": "Do not repeat the old hardware operation automatically; refresh device state and submit only a new intentional request.",
       "verification": "Confirm the application has refreshed the active generation and is not replaying the unavailable transaction.",
+      "automatic": false
+    },
+    {
+      "id": "reconnect-receiver",
+      "title": "Reconnect the receiver",
+      "safe_action": "Unplug the HyperFlux receiver, wait a few seconds, and plug it back in, or reboot. If Doctor still reports this, create a support bundle.",
+      "verification": "Run Doctor and confirm a profile-qualified receiver generation is registered.",
       "automatic": false
     },
     {
@@ -162,6 +176,13 @@
       "safe_action": "Reload the generated profile catalog and retain read-only behavior until its digest matches.",
       "verification": "Confirm the active profile identifier, revision, and digest match the generated catalog.",
       "automatic": true
+    },
+    {
+      "id": "wake-paired-device",
+      "title": "Wake the paired device",
+      "safe_action": "Move or click the paired device. If it does not appear within 30 seconds, switch it off and on. If it still does not appear, create a support bundle.",
+      "verification": "Run Doctor and confirm a paired device has a live route.",
+      "automatic": false
     }
   ],
   "errors": [
@@ -361,6 +382,41 @@
       "user_explanation": "The OpenRazer route driver is not ready yet.",
       "privacy": "public",
       "docs_path": "docs/generated/error-catalog.md#hfx-kernel-002"
+    },
+    {
+      "code": "HFX-KERNEL-003",
+      "class": "kernel",
+      "severity": "error",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "migrate-retired-driver",
+      "safe_detail_fields": [
+        {"name": "actual_driver", "type": "identifier", "required": true, "maximum_length": 64, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Kernel driver bound to the receiver interface, or unbound."},
+        {"name": "owner_kind", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["retired-hyperflux", "unbound", "unknown"], "privacy": "public", "description": "Whether the owner is a known retired HyperFlux driver, no driver, or an unknown driver."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "2.0.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "packaging",
+      "technical_cause": "A qualified receiver interface is bound to a driver other than the released HyperFlux driver, or to no driver at all.",
+      "user_explanation": "Another driver has taken the HyperFlux receiver.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-kernel-003"
+    },
+    {
+      "code": "HFX-KERNEL-004",
+      "class": "kernel",
+      "severity": "warning",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "migrate-retired-driver",
+      "safe_detail_fields": [
+        {"name": "registration", "type": "identifier", "required": true, "maximum_length": 64, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Retired DKMS registration as name/version."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "2.0.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "packaging",
+      "technical_cause": "A retired HyperFlux DKMS driver is still registered; a kernel update rebuilds it and it can take the receiver at the next boot.",
+      "user_explanation": "An old HyperFlux driver is still installed and may take over after a kernel update.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-kernel-004"
     },
     {
       "code": "HFX-OUTCOME-001",
@@ -596,6 +652,40 @@
       "user_explanation": "The HyperFlux service is not ready yet.",
       "privacy": "public",
       "docs_path": "docs/generated/error-catalog.md#hfx-service-001"
+    },
+    {
+      "code": "HFX-SERVICE-002",
+      "class": "service",
+      "severity": "warning",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "reconnect-receiver",
+      "safe_detail_fields": [
+        {"name": "receiver_state", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["not-registered", "unqualified"], "privacy": "public", "description": "Sanitized receiver registration state."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "2.0.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "The bridge is responding, but no profile-qualified receiver generation is registered for an attached supported receiver.",
+      "user_explanation": "HyperFlux is running, but the receiver is not ready yet.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-service-002"
+    },
+    {
+      "code": "HFX-SERVICE-003",
+      "class": "service",
+      "severity": "warning",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "wake-paired-device",
+      "safe_detail_fields": [
+        {"name": "route_state", "type": "enum", "required": true, "maximum_length": null, "maximum_value": null, "allowed_values": ["no-paired-device", "not-live"], "privacy": "public", "description": "Sanitized paired-device route state."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "2.0.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "bridge",
+      "technical_cause": "The bridge and receiver are ready, but no paired device has a live qualified HyperFlux wireless route.",
+      "user_explanation": "HyperFlux is running, but no paired device is online yet.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-service-003"
     },
     {
       "code": "HFX-TRANSPORT-001",

@@ -1,41 +1,58 @@
 # Building
 
-Builds use the pinned toolchain and reviewed upstream sources recorded under
-`toolchains/` and `integrations/`.
+This page covers the build tasks in the order you are likely to need them: checking an
+ordinary change, building the complete software graph, and publishing the signed Arch
+repository. Every build uses the pinned toolchain and the reviewed upstream sources recorded
+under `toolchains/` and `integrations/`, so two builds of the same commit see the same
+inputs.
 
-## Contributor Workflow
+## Check An Ordinary Change
 
 From the repository root:
 
 ```sh
 ./hfx generate
-./hfx verify --changed-from <commit>
+./hfx verify --fast --changed-from <commit>
 ```
 
-The first command refreshes derived files. The second selects the checks affected
-by the change and includes their dependency closure. Individual Rust, Python,
-and C++ tests can run directly while iterating.
+`./hfx generate` refreshes derived files. `./hfx verify --fast --changed-from` runs the fast
+lane for the checks affected by your change and everything they depend on. While you
+iterate, you can run individual Rust, Python, and C++ tests directly.
 
-## Maintainer Builds
+## Change A Generated File
 
-The complete software graph runs in the pinned, network-disabled environment.
-Release packages use independent A/B assemblies and require byte-identical
-results. See [verification](verification.md) and the generated [distribution
+Do not edit generated output. Change the canonical source it is built from and run
+`./hfx generate`. Hybrid documents are the one exception: inside their declared
+generated-block markers the text is generated, and the reviewed prose outside those markers
+is protected.
+
+## Build The Complete Software Graph
+
+Maintainers run the complete software graph, `./hfx verify --full`, in the pinned
+environment with networking disabled. Release packages are assembled twice, independently,
+as an A and a B build, and the two results must be byte-identical, which shows the build is
+reproducible. See [Verification](verification.md) and the generated [distribution
 contract](../generated/distributions.md) for those procedures.
 
-## Signed Arch Repository
+## Publish The Signed Arch Repository
 
-The release-side repository procedure wraps exact frozen package bytes; it does
-not rebuild or rewrite them. Release constants are deliberately checked in the
-policy, its JSON schema, and the fail-closed loader/tests. Update and review all
-of those together; editing only `assurance/arch-repository.json` is not a
-complete release update. Then use a fresh output path and a private GnuPG home
-containing the reviewed key:
+The signed Arch repository wraps package bytes that are already frozen; it does not rebuild
+or rewrite them.
+
+1. Update the release record. `assurance/arch-repository.json` is the single release
+   record: the loader derives the product release tag, release URL, and package filenames
+   from the package versions and rejects any disagreement. A release update changes the
+   tag, URL, package versions and hashes, and signature timestamp together, along with the
+   published-release pin in `tests/test_assurance.py`.
+2. Run `./hfx generate`.
+3. Build into a fresh output path, using a private GnuPG home that holds the reviewed key,
+   and verify the result. Pass `--package` once for every package of the release: Core and
+   Full before 2.1.0-1, and all four split packages from 2.1.0-1 on.
 
 ```sh
 ./hfx arch-repository build \
-  --core /path/to/hyperflux-next-linux.pkg.tar.zst \
-  --full /path/to/hyperflux-next-full.pkg.tar.zst \
+  --package /path/to/hyperflux-next-linux.pkg.tar.zst \
+  --package /path/to/hyperflux-next-full.pkg.tar.zst \
   --gnupg-home "$PRIVATE_GNUPG_HOME" \
   --key-fingerprint 8BF8A266E756BD1C24C930918B3F3850007159E8 \
   --output /path/to/fresh-repository-assets
@@ -43,20 +60,20 @@ containing the reviewed key:
   --repository /path/to/fresh-repository-assets
 ```
 
-The builder rejects package-byte or metadata drift, requires the exact signing
-subkey and a private owner-only GnuPG home, creates stable database/files aliases
-and their canonical archives, signs every package and metadata artifact, embeds
-package signatures in the database, and seals a checksum-bound manifest. It
-builds and verifies in a sibling temporary directory before atomically exposing
-the requested output. Publish that complete output only on the fixed
-`arch-repository` machine channel, marked as a prerelease so it does not replace
-the latest human-facing product release. Keep the private key and its verified
-backup outside the repository; publish only the tracked public key and full
-fingerprint. The user guide creates the three-line Pacman block locally rather
-than trusting a downloaded configuration asset.
+4. Publish the complete output only on the fixed `arch-repository` machine channel, marked
+   as a prerelease so it does not replace the latest human-facing product release.
 
-## Generated Files
+What the builder checks and produces:
 
-Change canonical authorities rather than generated output. Hybrid documents are
-the exception only inside declared generated-block markers; reviewed prose
-outside those markers is protected.
+- It rejects any drift in package bytes or metadata, and any package set other than the
+  one `packaging/arch-split.json` defines for the release version.
+- It requires the exact signing subkey and a private GnuPG home readable only by its owner.
+- It creates stable database and files aliases and their canonical archives, signs every
+  package and metadata file, embeds the package signatures in the database, and seals a
+  manifest bound to their checksums.
+- It builds and verifies in a sibling temporary directory, then exposes the requested
+  output in one atomic step.
+
+Keep the private key and its verified backup outside the repository; publish only the
+tracked public key and its full fingerprint. The user guide has users write the three-line
+Pacman block themselves rather than trust a downloaded configuration file.

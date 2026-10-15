@@ -6,17 +6,23 @@ Coordinates the Rust dependency graph and compile-time ownership boundaries acro
 
 ## Start Here
 
-- [`docs/architecture/bridge-core.md`](../docs/architecture/bridge-core.md)
-- [`docs/generated/development-environment.md`](../docs/generated/development-environment.md)
+- [Bridge Core Boundaries](../docs/architecture/bridge-core.md)
+- [Development Environment](../docs/generated/development-environment.md)
+
+## Limitations
+
+- Workspace success does not validate kernel or application adapters
 
 ## Boundaries
 
 **Owns**
+
 - Workspace membership
 - Shared dependency versions
 - Rust build graph
 
 **Does not own**
+
 - Crate-specific policy
 - Generated domain authority
 - Hardware qualification
@@ -28,15 +34,6 @@ Coordinates the Rust dependency graph and compile-time ownership boundaries acro
 
 ## Verify
 
-Run `rust-format` `rust-clippy` `rust-unit` after changing this area.
+Run `rust-format` `rust-clippy` `rust-unit` after changing this area, and run `./hfx generate` to refresh its 1 generated file(s).
 
-Review impact:
-
-- Regenerate 1 declared projection(s).
-- Run `rust-format`, `rust-clippy`, `rust-unit`.
-- Review direct consumers: Core policy engine, Kernel transport adapter, Rust SDK, System probe, Contract tests.
-
-## Related Areas
-
-- **Depends on:** [Architecture authority](../architecture/README.md), [Schema contracts](../schemas/README.md), [Pinned development toolchains](../toolchains/README.md)
-- **Used by:** [Core policy engine](hfx-core/README.md), [Kernel transport adapter](hfx-kernel-transport/README.md), [Rust SDK](hfx-sdk/README.md), [System probe](hfx-system-probe/README.md), [Contract tests](../tests/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

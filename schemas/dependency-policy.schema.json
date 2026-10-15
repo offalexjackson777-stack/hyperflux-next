@@ -17,7 +17,8 @@
     "python_external_packages",
     "vendored_manifests",
     "upstream_catalog",
-    "build_policy"
+    "build_policy",
+    "artifact_integrity"
   ],
   "properties": {
     "$schema": {"type": "string"},
@@ -88,6 +89,30 @@
       "items": {"$ref": "#/$defs/path"}
     },
     "upstream_catalog": {"$ref": "#/$defs/path"},
+    "artifact_integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_sbom_scope",
+        "human_release_checksum_asset",
+        "human_release_checksum_signed",
+        "release_tags_signed",
+        "release_commits_signed",
+        "sigstore_signatures",
+        "slsa_provenance",
+        "remote_build_attestation"
+      ],
+      "properties": {
+        "source_sbom_scope": {"const": "source-and-build-dependencies"},
+        "human_release_checksum_asset": {"const": "SHA256SUMS"},
+        "human_release_checksum_signed": {"type": "boolean"},
+        "release_tags_signed": {"type": "boolean"},
+        "release_commits_signed": {"type": "boolean"},
+        "sigstore_signatures": {"const": false},
+        "slsa_provenance": {"const": false},
+        "remote_build_attestation": {"const": false}
+      }
+    },
     "build_policy": {
       "type": "object",
       "additionalProperties": false,

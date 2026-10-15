@@ -1,0 +1,98 @@
+{
+  "$schema": "../schemas/arch-official-snapshot.schema.json",
+  "schema": "hyperflux-arch-official-snapshot-v1",
+  "candidate": "2.1.0-1",
+  "rule": "Refresh at every candidate from the official extra, extra-testing and extra-staging sync databases; an unobserved repository fails the gate.",
+  "watched_packages": [
+    "openrazer-daemon",
+    "openrazer-driver-dkms",
+    "openrgb",
+    "polychromatic",
+    "python-openrazer"
+  ],
+  "repositories": [
+    {
+      "name": "extra",
+      "state": "observed",
+      "database_sha256": "0b54d2dcfd1b387ae416e5124e8bcdf4af31b8ce1c82b93e1985bcaada66fa97",
+      "database_modified": "2026-10-14T12:46:15Z",
+      "packages": [
+        {
+          "base": "openrazer",
+          "build_date": 1786810889,
+          "conflicts": [],
+          "depends": [
+            "dbus-python",
+            "openrazer-driver-dkms",
+            "python-daemonize",
+            "python-gobject",
+            "python-pyudev",
+            "python-setproctitle",
+            "xautomation"
+          ],
+          "filename": "openrazer-daemon-3.12.4-1-any.pkg.tar.zst",
+          "name": "openrazer-daemon",
+          "provides": [],
+          "sha256": "b19b0f182c06d913a05249af0d9d20257241c8b779cbb7eca599ec6d2a355b06",
+          "version": "3.12.4-1"
+        },
+        {
+          "base": "openrazer",
+          "build_date": 1786810889,
+          "conflicts": [],
+          "depends": [
+            "dkms"
+          ],
+          "filename": "openrazer-driver-dkms-3.12.4-1-any.pkg.tar.zst",
+          "name": "openrazer-driver-dkms",
+          "provides": [],
+          "sha256": "c5c3468047fbd2da6b49c49ec549fa8c042095bd333fe138b53616d9c8459fb7",
+          "version": "3.12.4-1"
+        },
+        {
+          "base": "openrgb",
+          "build_date": 1789203567,
+          "conflicts": [],
+          "depends": [
+            "glibc",
+            "hicolor-icon-theme",
+            "hidapi",
+            "libgcc",
+            "libstdc++",
+            "libusb",
+            "mbedtls3",
+            "qt6-base"
+          ],
+          "filename": "openrgb-1.0-2-x86_64.pkg.tar.zst",
+          "name": "openrgb",
+          "provides": [],
+          "sha256": "9c30e4c499846a2b8c6a80399d20444079396d36fd574df52d52c75cc3e5acce",
+          "version": "1.0-2"
+        },
+        {
+          "base": "openrazer",
+          "build_date": 1786810889,
+          "conflicts": [],
+          "depends": [
+            "openrazer-daemon",
+            "python-numpy"
+          ],
+          "filename": "python-openrazer-3.12.4-1-any.pkg.tar.zst",
+          "name": "python-openrazer",
+          "provides": [],
+          "sha256": "e7ab73bb3ced40866351c0ef3b83b2f8f2fb026d54dad979bbfc7bc542af0fb2",
+          "version": "3.12.4-1"
+        }
+      ]
+    },
+    {
+      "name": "extra-testing",
+      "state": "unobserved"
+    },
+    {
+      "name": "extra-staging",
+      "state": "unobserved"
+    }
+  ],
+  "app_behavior_receipts": []
+}

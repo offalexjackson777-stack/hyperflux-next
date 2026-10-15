@@ -47,7 +47,7 @@
             "reviewed-no-change",
             "reviewed-no-unproven-removal",
             "unsupported-by-pinned-toolchain",
-            "blocked-by-physical-evidence"
+            "unmeasured-physical"
           ]
         },
         "evidence": {

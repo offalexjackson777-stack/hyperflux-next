@@ -10,13 +10,13 @@
       "must_not_own": ["Runtime state", "Hardware observations", "Generated implementation bindings"],
       "inputs": ["Reviewed product requirements", "Accepted architecture decisions"],
       "outputs": ["Machine-readable constitution", "Repository Atlas projections"],
-      "public_contracts": ["One-way application-to-receiver responsibility", "Publication interlock", "One canonical owner per shared fact"],
+      "public_contracts": ["One-way application-to-receiver responsibility", "Publication follows every release gate", "One canonical owner per shared fact"],
       "canonical_files": ["architecture/constitution.json", "architecture/repository-atlas.json"],
       "generated_files": ["architecture/README.md", "docs/generated/architecture.md", "docs/generated/repository-atlas.md", ".devcontainer/README.md", "apps/README.md", "generated/README.md", "sdk/README.md", "uapi/README.md"],
       "verification": ["foundation-contracts", "repository-atlas-contracts"],
       "limitations": ["Describes authority and boundaries; it does not prove physical behavior"],
       "safe_change_workflow": ["Update canonical architecture data", "Regenerate projections", "Run foundation and Atlas contracts"],
-      "related_docs": ["docs/architecture/design-book.md", "docs/generated/architecture.md"],
+      "related_docs": ["docs/developer/architecture.md", "docs/architecture/design-book.md", "docs/developer/verification.md", "docs/generated/architecture.md", "docs/architecture/decisions/declarative-route-selector.md", "docs/architecture/decisions/device-knowledge-integration.md", "docs/architecture/decisions/repository-documentation-and-local-hardware-authority.md"],
       "depends_on": []
     },
     {
@@ -27,7 +27,7 @@
       "inputs": ["Architecture invariants", "Canonical subsystem requirements"],
       "outputs": ["Validated canonical data", "Generator input contracts"],
       "public_contracts": ["Additional properties rejected", "Stable schema identifiers", "Safe repository-relative paths"],
-      "canonical_files": ["schemas/domain-catalog.json", "schemas/domain-catalog.schema.json", "schemas/repository-atlas.schema.json", "schemas/public-readiness.schema.json", "schemas/arch-repository.schema.json", "schemas/arch-repository-publication.schema.json", "schemas/distribution-component-descriptor.schema.json", "schemas/system-assessment.schema.json", "schemas/local-companion.schema.json", "schemas/local-snapshot.schema.json", "schemas/licensing-policy.schema.json", "schemas/lifecycle-policy-catalog.schema.json", "schemas/kernel-uapi-registry.schema.json", "schemas/kernel-uapi-native-exchange.schema.json", "schemas/native-route-observation.schema.json", "schemas/native-device-onboarding-draft.schema.json", "schemas/native-device-promotion-assessment.schema.json", "schemas/document-catalog.schema.json", "schemas/documentation-audit.schema.json", "schemas/documentation-render-policy.schema.json", "schemas/journey-source-coverage.schema.json", "schemas/publication-privacy.schema.json", "schemas/source-inventory-public-projection.schema.json"],
+      "canonical_files": ["schemas/domain-catalog.json", "schemas/domain-catalog.schema.json", "schemas/repository-atlas.schema.json", "schemas/public-readiness.schema.json", "schemas/arch-repository.schema.json", "schemas/arch-repository-publication.schema.json", "schemas/distribution-component-descriptor.schema.json", "schemas/system-assessment.schema.json", "schemas/local-companion.schema.json", "schemas/local-snapshot.schema.json", "schemas/licensing-policy.schema.json", "schemas/lifecycle-policy-catalog.schema.json", "schemas/kernel-uapi-registry.schema.json", "schemas/kernel-uapi-native-exchange.schema.json", "schemas/native-route-observation.schema.json", "schemas/native-device-onboarding-draft.schema.json", "schemas/native-device-promotion-assessment.schema.json", "schemas/document-catalog.schema.json", "schemas/documentation-audit.schema.json", "schemas/documentation-render-policy.schema.json", "schemas/documentation-review.schema.json", "schemas/journey-source-coverage.schema.json", "schemas/publication-privacy.schema.json", "schemas/source-inventory-public-projection.schema.json"],
       "generated_files": ["schemas/README.md", "docs/generated/domain-types.md"],
       "verification": ["schema-contracts", "repository-atlas-contracts"],
       "limitations": ["Schemas validate structure and bounded values, not real hardware behavior"],
@@ -39,16 +39,16 @@
       "id": "assurance", "title": "Assurance and release evidence", "path": "assurance", "category": "assurance", "status": "policy",
       "purpose": "Owns explicit design coverage, bounded formal models, performance budgets, dependency and coverage inventories, public journey source coverage, quality audits, and release gates.",
       "owns": ["Design coverage", "Journey source coverage and privacy review", "Release-gate definitions", "Dependency, coverage, quality, formal, and performance assurance"],
-      "must_not_own": ["Publication authorization", "Unreviewed physical claims", "Application behavior"],
+      "must_not_own": ["Release decisions", "Unreviewed physical claims", "Application behavior"],
       "inputs": ["Architecture invariants", "Verification evidence", "Dependency metadata"],
       "outputs": ["Release readiness assessment", "SBOM", "Coverage, quality, and model reports"],
-      "public_contracts": ["No test result grants publication", "Missing evidence remains a blocker", "All models are explicitly bounded"],
-      "canonical_files": ["assurance/arch-repository.json", "assurance/design-coverage.json", "assurance/dependencies.json", "assurance/documentation-audit.json", "assurance/formal-model.json", "assurance/journey-source-coverage.json", "assurance/performance-budgets.json", "assurance/protected-behavior.json", "assurance/publication-privacy.json", "assurance/quality-audit.json", "assurance/release-gates.json", "assurance/rust-coverage.json"],
+      "public_contracts": ["No test result alone makes a release", "Missing evidence is reported, never assumed", "All models are explicitly bounded"],
+      "canonical_files": ["assurance/arch-repository.json", "assurance/design-coverage.json", "assurance/dependencies.json", "assurance/documentation-audit.json", "assurance/documentation-review.json", "assurance/formal-model.json", "assurance/journey-source-coverage.json", "assurance/performance-budgets.json", "assurance/protected-behavior.json", "assurance/publication-privacy.json", "assurance/quality-audit.json", "assurance/release-gates.json", "assurance/rust-coverage.json"],
       "generated_files": ["assurance/README.md", "assurance/generated/hyperflux-next.spdx.json", "docs/generated/release-gates.md"],
       "verification": ["assurance-contracts", "dependency-security-contracts", "formal-model-contracts", "quality-contracts", "rust-coverage-contracts"],
-      "limitations": ["Software evidence cannot replace pending physical qualification"],
+      "limitations": ["Software evidence cannot replace physical qualification"],
       "safe_change_workflow": ["Update the narrow canonical authority", "Regenerate evidence views", "Run assurance, model, and release-impact checks"],
-      "related_docs": ["docs/generated/design-coverage.md", "docs/generated/release-gates.md"],
+      "related_docs": ["docs/developer/verification.md", "docs/generated/design-coverage.md", "docs/generated/release-gates.md", "docs/assurance/simulator.md", "docs/generated/performance-budgets.md", "docs/generated/supply-chain.md"],
       "depends_on": ["architecture", "schemas"]
     },
     {
@@ -110,7 +110,7 @@
       "canonical_files": ["protocol/registry.json", "protocol/v1/catalog.json", "protocol/v2/catalog.json", "protocol/v3/catalog.json", "protocol/v4/catalog.json", "protocol/v5/catalog.json"],
       "generated_files": ["protocol/README.md", "docs/generated/bridge-protocol.md", "crates/hfx-protocol/src/generated_versions.rs"],
       "verification": ["protocol-contracts", "cpp-sdk-contracts"],
-      "limitations": ["Wire compatibility does not authorize a hardware route"],
+      "limitations": ["Wire compatibility alone does not admit a hardware route"],
       "safe_change_workflow": ["Add a new version without rewriting history", "Regenerate all SDKs", "Run protocol, SDK, bridge, and package contracts"],
       "related_docs": ["docs/generated/bridge-protocol.md", "docs/architecture/sdk.md"],
       "depends_on": ["schemas"]
@@ -129,7 +129,7 @@
       "limitations": ["Physical OpenRGB behavior remains qualified only for the current public profiles"],
       "safe_change_workflow": ["Change only the Feature transport or route owner", "Compile against the exact upstream pin", "Run native-route, sanitizer, SDK, and package contracts"],
       "related_docs": ["docs/architecture/integrations.md", "docs/generated/integrations.md"],
-      "depends_on": ["integrations", "profiles", "sdk-cpp"]
+      "depends_on": ["integrations", "profiles", "sdk-cpp", "errors"]
     },
     {
       "id": "openrazer-adapter", "title": "OpenRazer native route", "path": "integrations/openrazer", "category": "applications", "status": "implemented",
@@ -142,7 +142,7 @@
       "canonical_files": ["integrations/openrazer/import.json", "integrations/openrazer/metadata.json", "integrations/openrazer/native-control-policy.json", "integrations/openrazer/native-method-inventory.json", "integrations/openrazer/native-probe-catalog.json", "integrations/openrazer/native-route/catalog.json", "integrations/openrazer/native-route/transform.json"],
       "generated_files": ["integrations/openrazer/README.md", "sdk/python/hyperflux_sdk/generated/openrazer_metadata.py"],
       "verification": ["openrazer-metadata-contracts", "openrazer-native-route-contracts", "openrazer-version-matrix-contracts"],
-      "limitations": ["Native-route physical method parity remains pending for stock OpenRazer and Polychromatic clients"],
+      "limitations": ["Read parity is recorded method by method for the two physically proven devices; their write parity rests on the physical acceptance summary"],
       "safe_change_workflow": ["Update the pinned source or declarative route contract", "Regenerate the source transform and relay metadata", "Run metadata, native-route, stock userspace, and package tests"],
       "related_docs": ["docs/architecture/integrations.md", "docs/generated/integrations.md"],
       "depends_on": ["integrations", "profiles", "sdk-python"]
@@ -206,7 +206,7 @@
       "canonical_files": ["crates/hfx-device-qualification/Cargo.toml", "crates/hfx-device-qualification/src/lib.rs", "crates/hfx-device-qualification/src/qualification.rs", "crates/hfx-device-qualification/src/qualification_lifecycle.rs", "crates/hfx-device-qualification/src/qualification_server.rs", "crates/hfx-device-qualification/src/bin/hyperflux-next-device-qualification.rs"],
       "generated_files": ["crates/hfx-device-qualification/README.md"],
       "verification": ["device-qualification-console-contracts", "native-onboarding-contracts", "rust-clippy", "rust-unit", "package-contracts"],
-      "limitations": ["The browser workflow is a maintainer tool and never grants release or publication authority"],
+      "limitations": ["The browser workflow is a maintainer tool and does not make a release"],
       "safe_change_workflow": ["Change one qualification owner", "Preserve profile and generation binding", "Run qualification, onboarding, Rust, public API, and package contracts"],
       "related_docs": ["docs/architecture/decisions/device-knowledge-integration.md", "docs/generated/local-companion.md"],
       "depends_on": ["system-probe", "profiles", "bridge-runtime"]
@@ -241,7 +241,7 @@
       "limitations": ["Production process policy belongs to the daemon crate"],
       "safe_change_workflow": ["Change the relevant adapter module", "Exercise framing and persistence failure paths", "Run bridge, simulator, SDK, and daemon tests"],
       "related_docs": ["docs/architecture/bridge-core.md", "docs/architecture/persistence.md"],
-      "depends_on": ["core-runtime", "protocol"]
+      "depends_on": ["core-runtime", "protocol", "errors"]
     },
     {
       "id": "daemon", "title": "Production daemon", "path": "crates/hfx-daemon", "category": "runtime", "status": "implemented",
@@ -257,7 +257,7 @@
       "limitations": ["No remote control plane or network service is provided"],
       "safe_change_workflow": ["Change composition without moving domain policy", "Test startup and shutdown failure modes", "Run daemon, package, and lifecycle contracts"],
       "related_docs": ["docs/architecture/bridge-core.md", "docs/generated/linux-runtime.md"],
-      "depends_on": ["bridge-runtime", "kernel-transport", "runtime-config"]
+      "depends_on": ["bridge-runtime", "kernel-transport", "runtime-config", "errors"]
     },
     {
       "id": "rust-sdk", "title": "Rust SDK", "path": "crates/hfx-sdk", "category": "runtime", "status": "implemented",
@@ -289,7 +289,7 @@
       "limitations": ["Qualification and onboarding remain source-only workspace tools, not installed commands"],
       "safe_change_workflow": ["Keep each installed command on a typed local boundary", "Preserve exact CLI fixtures and source re-exports", "Run Rust, public API, and package contracts"],
       "related_docs": ["docs/user/troubleshooting.md", "docs/generated/linux-runtime.md"],
-      "depends_on": ["system-probe", "device-qualification-runtime", "bridge-runtime"]
+      "depends_on": ["system-probe", "device-qualification-runtime", "bridge-runtime", "errors"]
     },
     {
       "id": "kernel-transport", "title": "Kernel transport adapter", "path": "crates/hfx-kernel-transport", "category": "runtime", "status": "implemented",
@@ -334,7 +334,7 @@
       "canonical_files": ["uapi/registry.json", "uapi/kernel-uapi.json", "uapi/native-exchange-v2.json"],
       "generated_files": ["driver/README.md", "driver/kernel/uapi/hyperflux_next.h", "docs/generated/kernel-uapi.md"],
       "verification": ["kernel-profile-contracts"],
-      "limitations": ["Live loading and physical validation are outside this software-only mission"],
+      "limitations": ["Live loading and physical validation are outside software verification"],
       "safe_change_workflow": ["Add a catalog without rewriting an existing ABI", "Regenerate kernel and Rust bindings", "Run ABI-freeze, kernel, SDK, and package contracts"],
       "related_docs": ["docs/architecture/kernel.md", "docs/generated/kernel-uapi.md"],
       "depends_on": ["architecture", "schemas"]
@@ -375,17 +375,17 @@
       "id": "packaging", "title": "Packaging and installation", "path": "packaging", "category": "delivery", "status": "implemented",
       "purpose": "Builds reproducible distribution artifacts, a canonical installed root, and signed public repository metadata from explicit manifests.",
       "owns": ["Install manifest", "Distribution projections", "Reproducible package inventory", "Published package-signing public key"],
-      "must_not_own": ["Runtime naming duplicates", "Hidden post-install writes", "Publication authorization"],
+      "must_not_own": ["Runtime naming duplicates", "Hidden post-install writes", "Release decisions"],
       "inputs": ["Runtime authority", "Built modules and adapters", "Distribution catalog"],
       "outputs": ["Install plan", "Distribution packages", "Signed repository metadata", "Installed-files evidence"],
       "public_contracts": ["Configuration preservation", "No hardware writes during install", "Reproducible staged payload", "Trusted package and repository signatures"],
-      "canonical_files": ["packaging/install.json", "packaging/distributions.json", "packaging/keys/hyperflux-next-arch-repository-key.asc"],
+      "canonical_files": ["packaging/install.json", "packaging/distributions.json", "packaging/arch-split.json", "packaging/aur.json", "packaging/arch-official-snapshot.json", "packaging/keys/hyperflux-next-arch-repository-key.asc"],
       "generated_files": ["packaging/README.md", "packaging/generated/full-component.json", "packaging/generated/hyperflux-next-bridge.service.d/50-full.conf", "packaging/generated/install-plan.json", "docs/generated/distributions.md"],
       "verification": ["package-contracts"],
       "limitations": ["Private signing material remains outside the publishable repository and release assets"],
       "safe_change_workflow": ["Update canonical install or distribution data", "Regenerate the staged plan", "Run install, distribution, package, and release-impact contracts"],
       "related_docs": ["docs/generated/installation.md", "docs/generated/distributions.md"],
-      "depends_on": ["daemon", "kernel-module", "runtime-config", "openrgb-adapter", "openrazer-adapter", "device-qualification-console"]
+      "depends_on": ["daemon", "kernel-module", "runtime-config", "openrgb-adapter", "openrazer-adapter"]
     },
     {
       "id": "sdk-cpp", "title": "C++ SDK", "path": "sdk/cpp", "category": "applications", "status": "implemented",
@@ -398,10 +398,10 @@
       "canonical_files": ["sdk/cpp/CMakeLists.txt", "sdk/cpp/include/hyperflux/sdk.hpp", "sdk/cpp/src/client.cpp"],
       "generated_files": ["sdk/cpp/README.md", "sdk/cpp/include/hyperflux/generated/domain_types.hpp", "sdk/cpp/include/hyperflux/generated/profile_catalog.hpp"],
       "verification": ["cpp-sdk-contracts"],
-      "limitations": ["ABI publication remains blocked until release authorization"],
+      "limitations": ["The C++ library does not declare a stable binary interface"],
       "safe_change_workflow": ["Change canonical schemas for shared types", "Regenerate headers", "Run warning-fatal SDK and native adapter contracts"],
       "related_docs": ["docs/architecture/sdk.md", "docs/generated/bridge-protocol.md"],
-      "depends_on": ["protocol", "profiles", "integrations"]
+      "depends_on": ["protocol", "profiles", "integrations", "errors"]
     },
     {
       "id": "sdk-python", "title": "Python SDK", "path": "sdk/python", "category": "applications", "status": "implemented",
@@ -414,16 +414,16 @@
       "canonical_files": ["sdk/python/pyproject.toml", "sdk/python/hyperflux_sdk/client.py", "sdk/python/hyperflux_sdk/lighting.py", "sdk/python/examples/read_integration_view.py"],
       "generated_files": ["sdk/python/README.md", "sdk/python/hyperflux_sdk/generated/domain_types.py", "sdk/python/hyperflux_sdk/generated/profile_catalog.py"],
       "verification": ["python-unit", "protocol-contracts"],
-      "limitations": ["Package publication remains disabled"],
+      "limitations": ["The Arch packages do not install it and the project publishes no Python package; use it from the source tree"],
       "safe_change_workflow": ["Change canonical schemas for shared types", "Regenerate modules", "Run Python SDK, adapter, and package contracts"],
-      "related_docs": ["docs/architecture/sdk.md", "docs/developer/connectors.md", "docs/generated/bridge-protocol.md"],
-      "depends_on": ["protocol", "profiles", "integrations"]
+      "related_docs": ["docs/architecture/sdk.md", "docs/developer/sdk-connectors.md", "docs/generated/bridge-protocol.md"],
+      "depends_on": ["protocol", "profiles", "integrations", "errors"]
     },
     {
       "id": "tooling", "title": "Repository tooling", "path": "tools", "category": "tooling", "status": "implemented",
       "purpose": "Provides the single developer CLI, canonical loaders, deterministic generators, and verification orchestration.",
       "owns": ["Developer command surface", "Canonical data loaders", "Deterministic generation"],
-      "must_not_own": ["Duplicate domain facts", "Implicit hardware authorization", "Hidden network access"],
+      "must_not_own": ["Duplicate domain facts", "Implicit hardware writes", "Hidden network access"],
       "inputs": ["Canonical repository data", "Pinned toolchains", "Typed verification graph"],
       "outputs": ["Generated source and docs", "Verification evidence", "Repository navigation projections"],
       "public_contracts": ["One command surface", "Idempotent generation", "Explicit side-effect boundaries"],
@@ -453,16 +453,16 @@
     },
     {
       "id": "governance", "title": "GitHub governance authority", "path": "governance", "category": "governance", "status": "policy",
-      "purpose": "Defines repository ownership, immutable automation, public collaboration, remote synchronization, dependency policy, and product-publication locks from one authority.",
+      "purpose": "Defines repository ownership, immutable automation, public collaboration, remote synchronization, dependency policy, and the public publication state from one authority.",
       "owns": ["GitHub governance policy", "Required-check plan", "Generated community files", "Path-to-license policy"],
-      "must_not_own": ["Product release approval", "Hardware-write authorization", "Unreviewed external-app installation"],
-      "inputs": ["Architecture publication interlock", "Verification graph", "Maintainer policy"],
+      "must_not_own": ["Product release decisions", "Hardware writes", "Unreviewed external-app installation"],
+      "inputs": ["Architecture release gates", "Verification graph", "Maintainer policy"],
       "outputs": ["Pinned workflows", "Issue forms", "Actions evidence summaries", "Public repository synchronization", "Protection, collaboration, security, and service-evaluation plans"],
-      "public_contracts": ["Actions are SHA pinned", "Verification summaries are source-bound", "Protected linear history is required", "Public source does not authorize a product release"],
+      "public_contracts": ["Actions are SHA pinned", "Verification summaries are source-bound", "Protected linear history is required", "Product releases are maintainer-operated, not published by workflows"],
       "canonical_files": ["governance/github.json", "governance/licensing.json", "CONTRIBUTING.md", "SUPPORT.md", "SECURITY.md", "CODE_OF_CONDUCT.md"],
       "generated_files": ["docs/assets/badge-state.svg", "docs/assets/badge-license.svg", "governance/README.md", "governance/generated/github-protection-plan.json", "governance/generated/github-labels.json", "governance/generated/github-experience-plan.json", "docs/generated/github-governance.md", "docs/legal/licensing.md", ".github/CODEOWNERS", ".github/pull_request_template.md", ".github/ISSUE_TEMPLATE/config.yml", ".github/ISSUE_TEMPLATE/bug_report.yml", ".github/ISSUE_TEMPLATE/device_support.yml", ".github/ISSUE_TEMPLATE/documentation.yml", ".github/ISSUE_TEMPLATE/feature_request.yml", ".github/dependabot.yml", ".github/release.yml", ".github/workflows/verification.yml", ".github/workflows/full-verification.yml", ".github/workflows/codeql.yml", ".github/workflows/dependency-review.yml"],
       "verification": ["governance-contracts"],
-      "limitations": ["Remote synchronization applies only reviewed public-source components and cannot grant product publication or hardware authority"],
+      "limitations": ["Remote synchronization applies only reviewed public-source components and does not publish packages or write hardware"],
       "safe_change_workflow": ["Update the relevant governance authority", "Regenerate every affected GitHub or licensing projection", "Run governance, licensing, generated-freshness, and workflow checks"],
       "related_docs": ["docs/generated/github-governance.md", "CONTRIBUTING.md", "SUPPORT.md", "SECURITY.md", "CODE_OF_CONDUCT.md"],
       "depends_on": ["architecture", "assurance", "verification"]
@@ -471,14 +471,14 @@
       "id": "documentation", "title": "Documentation system", "path": "docs", "category": "documentation", "status": "implemented",
       "purpose": "Organizes concise audience guidance and generated technical references for direct use inside GitHub.",
       "owns": ["Documentation information architecture", "Reviewed narrative documentation", "Generated technical references"],
-      "must_not_own": ["Duplicated canonical facts", "Live hardware claims", "Publication authorization"],
+      "must_not_own": ["Duplicated canonical facts", "Live hardware claims", "Release decisions"],
       "inputs": ["Generated technical Markdown", "Reviewed user and architecture guides", "Repository navigation requirements"],
       "outputs": ["GitHub-native documentation", "Repository Atlas", "Public readiness projection", "Canonical metadata assets"],
       "public_contracts": ["Stable repository-relative links", "Audience-specific entry points", "Generated facts identify their canonical source", "No duplicate documentation website"],
-      "canonical_files": ["README.md", "docs/README.md", "docs/catalog.json", "docs/render-preview.json", "docs/user/installation.md", "docs/user/first-run.md", "docs/user/applications.md", "docs/user/hardware.md", "docs/user/updates-removal.md", "docs/user/troubleshooting.md", "docs/user/privacy.md", "docs/developer/architecture.md", "docs/developer/building.md", "docs/developer/sdk-connectors.md", "docs/developer/device-onboarding.md", "docs/developer/verification.md", "docs/project/journey.md", "docs/project/roadmap.md", "docs/project/release-status.md", "docs/architecture/design-book.md", "docs/architecture/native-device-onboarding.md", "docs/architecture/decisions/github-native-documentation.md"],
-      "generated_files": ["docs/generated/repository-atlas.md", "generated/public-readiness.json"],
+      "canonical_files": ["README.md", "docs/README.md", "docs/catalog.json", "docs/render-preview.json", "docs/user/installation.md", "docs/user/first-run.md", "docs/user/applications.md", "docs/user/hardware.md", "docs/user/updates-removal.md", "docs/user/troubleshooting.md", "docs/user/privacy.md", "docs/developer/architecture.md", "docs/developer/building.md", "docs/developer/sdk-connectors.md", "docs/developer/device-onboarding.md", "docs/developer/verification.md", "docs/project/journey.md", "docs/project/roadmap.md", "docs/project/release-status.md", "docs/architecture/design-book.md", "docs/architecture/native-device-onboarding.md", "docs/architecture/decisions/repository-documentation-and-local-hardware-authority.md"],
+      "generated_files": ["docs/generated/README.md", "docs/generated/repository-atlas.md", "generated/public-readiness.json"],
       "verification": ["repository-documentation-contracts", "repository-atlas-contracts"],
-      "limitations": ["Repository documentation describes the published Arch release; later channel or support changes still require explicit authorization"],
+      "limitations": ["Repository documentation describes the published Arch release only"],
       "safe_change_workflow": ["Change reviewed source or canonical data", "Regenerate repository views", "Run navigation, link, freshness, and audience-entry contracts"],
       "related_docs": ["docs/README.md", "docs/user/installation.md", "docs/developer/architecture.md", "docs/project/release-status.md"],
       "depends_on": ["architecture", "device-knowledge", "verification", "governance", "tooling"]
@@ -487,14 +487,14 @@
       "id": "verification", "title": "Verification graph", "path": "verification", "category": "assurance", "status": "implemented",
       "purpose": "Defines typed verification nodes, dependencies, lanes, capabilities, side effects, evidence, timing, and change selection.",
       "owns": ["Verification node catalog", "Lane dependency graph", "Evidence declarations"],
-      "must_not_own": ["Production policy", "Implicit retries", "Hardware authorization"],
+      "must_not_own": ["Production policy", "Implicit retries", "Implicit hardware writes"],
       "inputs": ["Subsystem risk boundaries", "Runner capabilities", "Changed repository paths"],
       "outputs": ["Ordered test plan", "Source-bound evidence", "Release-gate impact"],
       "public_contracts": ["Required nodes cannot be skipped", "Unknown changes fail closed", "Hardware writes are explicit"],
       "canonical_files": ["verification/tests.json"],
       "generated_files": ["verification/README.md", "docs/generated/verification.md"],
       "verification": ["repository-atlas-contracts", "python-unit"],
-      "limitations": ["A green software lane does not satisfy physical or publication gates"],
+      "limitations": ["A green software lane is neither physical evidence nor a release"],
       "safe_change_workflow": ["Add or update the typed node", "Test dependency and changed-path selection", "Run the affected lane and preserve exact evidence"],
       "related_docs": ["docs/generated/verification.md", "CONTRIBUTING.md"],
       "depends_on": ["architecture", "assurance", "tooling", "tests"]

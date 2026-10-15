@@ -182,19 +182,6 @@ void PluginCoordinator::notify_state_changed() noexcept
     }
 }
 
-void PluginCoordinator::detection_started() noexcept
-{
-    {
-        std::lock_guard lock(state_mutex_);
-        if(stopped_)
-        {
-            return;
-        }
-    }
-    registry_->suspend_for_detection();
-    notify_state_changed();
-}
-
 void PluginCoordinator::detection_finished() noexcept
 {
     {
@@ -204,7 +191,6 @@ void PluginCoordinator::detection_finished() noexcept
             return;
         }
     }
-    registry_->resume_after_detection();
     auto requested = worker_->request_rescan();
     if(!requested)
     {
@@ -252,7 +238,6 @@ PluginCoordinatorStatus PluginCoordinator::status() const
     }
     if(registry_ != nullptr)
     {
-        result.detection_suspended = registry_->suspended();
         result.controllers = registry_->size();
         result.registered_controllers = registry_->registered_count();
     }

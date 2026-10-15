@@ -28,15 +28,10 @@ int failure(int line)
 struct HostState
 {
     std::mutex mutex;
-    hyperflux::openrgb::native::DetectionCallback start = nullptr;
-    hyperflux::openrgb::native::DetectionCallback end = nullptr;
-    void* start_context = nullptr;
-    void* end_context = nullptr;
     std::set<const hyperflux::openrgb::native::NativeController*> controllers;
     std::set<std::uintptr_t> original_identities;
     std::size_t register_calls = 0;
     std::size_t unregister_calls = 0;
-    std::size_t waits = 0;
     bool valid = true;
 };
 
@@ -68,56 +63,6 @@ public:
         ++state_->unregister_calls;
     }
 
-    void register_detection_start(
-        hyperflux::openrgb::native::DetectionCallback callback,
-        void* context) noexcept override
-    {
-        std::lock_guard lock(state_->mutex);
-        state_->start = callback;
-        state_->start_context = context;
-    }
-
-    void register_detection_end(
-        hyperflux::openrgb::native::DetectionCallback callback,
-        void* context) noexcept override
-    {
-        std::lock_guard lock(state_->mutex);
-        state_->end = callback;
-        state_->end_context = context;
-    }
-
-    void unregister_detection_start(
-        hyperflux::openrgb::native::DetectionCallback callback,
-        void* context) noexcept override
-    {
-        std::lock_guard lock(state_->mutex);
-        if(state_->start != callback || state_->start_context != context)
-        {
-            state_->valid = false;
-        }
-        state_->start = nullptr;
-        state_->start_context = nullptr;
-    }
-
-    void unregister_detection_end(
-        hyperflux::openrgb::native::DetectionCallback callback,
-        void* context) noexcept override
-    {
-        std::lock_guard lock(state_->mutex);
-        if(state_->end != callback || state_->end_context != context)
-        {
-            state_->valid = false;
-        }
-        state_->end = nullptr;
-        state_->end_context = nullptr;
-    }
-
-    void wait_for_detection() noexcept override
-    {
-        std::lock_guard lock(state_->mutex);
-        ++state_->waits;
-    }
-
 private:
     std::shared_ptr<HostState> state_;
 };
@@ -135,21 +80,6 @@ template<typename Predicate> bool wait_until(Predicate predicate)
     }
     QCoreApplication::processEvents();
     return predicate();
-}
-
-void detection(const std::shared_ptr<HostState>& state, bool start)
-{
-    hyperflux::openrgb::native::DetectionCallback callback = nullptr;
-    void* context = nullptr;
-    {
-        std::lock_guard lock(state->mutex);
-        callback = start ? state->start : state->end;
-        context = start ? state->start_context : state->end_context;
-    }
-    if(callback != nullptr)
-    {
-        callback(context);
-    }
 }
 
 } // namespace
@@ -202,21 +132,18 @@ int main(int argc, char** argv)
         original = state->original_identities;
     }
 
-    detection(state, true);
-    detection(state, true);
+    // OpenRGB 1.0 reports completed detection from its worker threads. Plugin
+    // controllers survive the rescan, so completion must not churn them.
+    const auto before = notifications.load(std::memory_order_relaxed);
+    std::thread detection_thread([&plugin]
     {
-        std::lock_guard lock(state->mutex);
-        if(!state->controllers.empty() || state->unregister_calls != 2)
-        {
-            return failure(__LINE__);
-        }
-    }
-    detection(state, false);
-    detection(state, false);
+        plugin.detection_completed();
+        plugin.detection_completed();
+    });
+    detection_thread.join();
     if(!wait_until([&]
        {
-           std::lock_guard lock(state->mutex);
-           return state->controllers.size() == 2;
+           return notifications.load(std::memory_order_relaxed) >= before + 2;
        }))
     {
         return failure(__LINE__);
@@ -228,7 +155,8 @@ int main(int argc, char** argv)
         {
             current.insert(reinterpret_cast<std::uintptr_t>(controller));
         }
-        if(!state->valid || current != original || state->register_calls != 4)
+        if(!state->valid || current != original || state->register_calls != 2
+           || state->unregister_calls != 0)
         {
             return failure(__LINE__);
         }
@@ -236,12 +164,12 @@ int main(int argc, char** argv)
 
     plugin.unload();
     plugin.unload();
+    // Completion after unload is ignored.
+    plugin.detection_completed();
     QCoreApplication::processEvents();
     {
         std::lock_guard lock(state->mutex);
-        if(!state->valid || !state->controllers.empty() || state->start != nullptr
-           || state->end != nullptr || state->waits != 1
-           || state->unregister_calls != 4)
+        if(!state->valid || !state->controllers.empty() || state->unregister_calls != 2)
         {
             return failure(__LINE__);
         }

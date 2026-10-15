@@ -23,7 +23,7 @@ readonly TRACE="$OUTPUT/matrix-registration-trace.txt"
 readonly LOG="$OUTPUT/matrix-transactions.log"
 readonly CASES=/matrix-cases.tsv
 readonly PAYLOAD_PATHS=/matrix-payload-paths.txt
-readonly CANDIDATE_VERSION=2.0.0-1
+readonly CANDIDATE_VERSION=2.1.0-1
 readonly RELEASE8_VERSION=0.0.0_dev.1-8
 readonly OLD_SPLIT_VERSION=0.0.0_dev.1-2
 : >"$TRACE"
@@ -359,7 +359,7 @@ assert_full_payload() {
   [[ $("${PACMAN[@]}" -Qoq /usr/lib/systemd/system/hyperflux-next-bridge.service) == \
     hyperflux-next-linux ]]
   jq -e \
-    --arg version 2.0.0 \
+    --arg version 2.1.0 \
     '.schema == "hyperflux-distribution-component-v1" and
      .component_id == "full" and .product_version == $version and
      .capabilities == ["openrazer-native-route", "openrgb-plugin"]' \

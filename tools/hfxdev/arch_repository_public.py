@@ -14,6 +14,7 @@ import tempfile
 from .arch_repository import (
     _payload_asset_names,
     load_arch_repository_policy,
+    published_arch_release,
     repository_configuration,
     verify_arch_repository,
 )
@@ -307,7 +308,7 @@ def verify_public_arch_repository(root: Path, output: Path) -> Path:
             label="query public Full package",
         )
         if "Name            : hyperflux-next-full" not in query.stdout or (
-            "Version         : 2.0.0-1" not in query.stdout
+            f"Version         : {published_arch_release(policy)}" not in query.stdout
         ):
             raise ModelError("public Pacman query returned the wrong Full package")
 

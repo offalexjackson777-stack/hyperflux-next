@@ -13,7 +13,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
-from hfxdev.install import load_install_manifest
+from hfxdev.install import _first_run_activation, load_install_manifest
 from hfxdev.linux_runtime import load_linux_runtime
 from hfxdev.model import ModelError, load_json
 
@@ -46,6 +46,48 @@ class InstallManifestTests(unittest.TestCase):
         self.assertEqual(
             str(preserved[0].destination), "/etc/hyperflux-next/bridge.json"
         )
+
+    def test_first_run_activation_enables_without_start_and_reboots(self) -> None:
+        runtime = load_linux_runtime(ROOT)
+        activation = self.manifest.first_run_activation
+        self.assertEqual(
+            activation.enable_command(runtime),
+            'sudo systemctl enable hyperflux-next-bridge.service '
+            '"hyperflux-next-client@$(id -u).socket"',
+        )
+        self.assertEqual(activation.activation_command(), "sudo reboot")
+        self.assertEqual(
+            activation.disconnected_command(runtime),
+            "sudo /usr/lib/hyperflux-next/hyperflux-next-activate "
+            "activate-disconnected-driver",
+        )
+        canonical = self.value["first_run_activation"]
+        for field, value in (
+            ("unit_enable", "enable-and-start"),
+            ("activation", "live-start"),
+            ("disconnected_activation_precondition", "none"),
+        ):
+            with self.subTest(field=field):
+                changed = dict(canonical, **{field: value})
+                with self.assertRaises(ModelError):
+                    _first_run_activation(changed)
+        with self.assertRaises(ModelError):
+            _first_run_activation(dict(canonical, live_start=True))
+
+    def test_no_document_starts_hyperflux_units_during_enable(self) -> None:
+        runtime = load_linux_runtime(ROOT)
+        units = (
+            runtime.bridge.service_unit.removesuffix(".service"),
+            runtime.desktop_access.socket_unit.split("@", 1)[0],
+        )
+        candidates = [ROOT / "README.md", *sorted((ROOT / "docs").rglob("*.md"))]
+        candidates.extend(sorted((ROOT / "packaging").rglob("*.install")))
+        for path in candidates:
+            text = path.read_text(encoding="utf-8")
+            for line in text.splitlines():
+                if "enable --now" in line or "--now enable" in line:
+                    with self.subTest(path=str(path.relative_to(ROOT))):
+                        self.assertFalse(any(unit in line for unit in units), line)
 
     def test_runtime_destinations_and_dkms_source_are_derived(self) -> None:
         self.assertEqual(
@@ -138,6 +180,7 @@ class InstallManifestTests(unittest.TestCase):
                 "openrazer-native-relay-service",
                 "openrazer-native-driver-preflight-service",
                 "openrazer-system-group",
+                "openrazer-native-modules-load",
                 "full-bridge-integration-drop-in",
                 "full-component-descriptor",
                 "openrgb-license",
@@ -149,6 +192,7 @@ class InstallManifestTests(unittest.TestCase):
                 "/usr/lib/systemd/system/hyperflux-next-openrazer-relay.service",
                 "/usr/lib/systemd/system/hyperflux-next-openrazer-driver-preflight.service",
                 "/usr/lib/sysusers.d/openrazer.conf",
+                "/usr/lib/modules-load.d/hyperflux-next-openrazer.conf",
                 "/usr/lib/systemd/system/hyperflux-next-bridge.service.d/50-full.conf",
                 "/usr/share/hyperflux-next/components/full.json",
                 "/usr/share/licenses/hyperflux-next-full/LICENSE",
@@ -191,7 +235,7 @@ class InstallManifestTests(unittest.TestCase):
                 "$schema": "https://hyperflux.dev/schemas/distribution-component-descriptor-v1.json",
                 "schema": "hyperflux-distribution-component-v1",
                 "component_id": "full",
-                "product_version": "2.0.0",
+                "product_version": "2.1.0",
                 "capabilities": ["openrazer-native-route", "openrgb-plugin"],
             },
         )

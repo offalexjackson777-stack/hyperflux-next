@@ -6,19 +6,25 @@ Provides the single developer CLI, canonical loaders, deterministic generators, 
 
 ## Start Here
 
-- [`CONTRIBUTING.md`](../CONTRIBUTING.md)
-- [`docs/generated/verification.md`](../docs/generated/verification.md)
+- [Contributing](../CONTRIBUTING.md)
+- [Software Checks](../docs/generated/verification.md)
+
+## Limitations
+
+- Tooling projects canonical truth; it is not an independent product authority
 
 ## Boundaries
 
 **Owns**
+
 - Developer command surface
 - Canonical data loaders
 - Deterministic generation
 
 **Does not own**
+
 - Duplicate domain facts
-- Implicit hardware authorization
+- Implicit hardware writes
 - Hidden network access
 
 ## Key Files
@@ -44,15 +50,6 @@ Provides the single developer CLI, canonical loaders, deterministic generators, 
 
 ## Verify
 
-Run `python-unit` `native-onboarding-contracts` `generated-freshness` after changing this area.
+Run `python-unit` `native-onboarding-contracts` `generated-freshness` after changing this area, and run `./hfx generate` to refresh its 1 generated file(s).
 
-Review impact:
-
-- Regenerate 1 declared projection(s).
-- Run `python-unit`, `native-onboarding-contracts`, `generated-freshness`.
-- Review direct consumers: Documentation system, Contract tests, Verification graph.
-
-## Related Areas
-
-- **Depends on:** [Architecture authority](../architecture/README.md), [Schema contracts](../schemas/README.md), [Pinned development toolchains](../toolchains/README.md)
-- **Used by:** [Documentation system](../docs/README.md), [Contract tests](../tests/README.md), [Verification graph](../verification/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

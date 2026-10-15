@@ -215,7 +215,7 @@ fn direct_device_key(
     })
 }
 
-fn parse_hid_identity(name: &str) -> Option<(u16, u16, u16)> {
+pub(crate) fn parse_hid_identity(name: &str) -> Option<(u16, u16, u16)> {
     let prefix = name.split_once('.')?.0;
     let mut fields = prefix.split(':');
     let bus = u16::from_str_radix(fields.next()?, 16).ok()?;

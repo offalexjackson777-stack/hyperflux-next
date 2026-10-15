@@ -67,9 +67,9 @@ struct RegistryUpdate
 
 /// Serialized owner of exactly the controllers created by HyperFlux.
 ///
-/// Detection suspension withdraws registrations before ResourceManager cleanup
-/// without destroying controller objects. Resume restores the same objects.
-/// The host and factory must outlive this registry.
+/// Every owned controller stays registered with the host until it is removed,
+/// replaced or the registry shuts down. The host and factory must outlive this
+/// registry.
 class ControllerRegistry
 {
 public:
@@ -81,11 +81,8 @@ public:
     ~ControllerRegistry();
 
     [[nodiscard]] sdk::Result<RegistryUpdate> apply(std::vector<ControllerModel> next);
-    void suspend_for_detection() noexcept;
-    void resume_after_detection() noexcept;
     void shutdown() noexcept;
 
-    [[nodiscard]] bool suspended() const noexcept;
     [[nodiscard]] bool stopped() const noexcept;
     [[nodiscard]] std::size_t size() const noexcept;
     [[nodiscard]] std::size_t registered_count() const noexcept;
@@ -97,19 +94,15 @@ private:
     {
         ControllerModel model;
         std::unique_ptr<NativeController> controller;
-        bool registered = false;
     };
 
-    void register_all_locked() noexcept;
     void unregister_all_locked() noexcept;
-    [[nodiscard]] std::size_t registered_count_locked() const noexcept;
     [[nodiscard]] std::vector<ControllerModel> models_locked() const;
 
     ControllerHost* host_;
     NativeControllerFactory* factory_;
     std::map<std::string, Entry, std::less<>> entries_;
     mutable std::mutex mutex_;
-    bool suspended_ = false;
     bool stopped_ = false;
 };
 

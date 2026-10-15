@@ -19,8 +19,8 @@
         "server_url": {"const": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository"},
         "release_url": {"const": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/arch-repository"},
         "release_tag": {"const": "arch-repository"},
-        "product_release_url": {"const": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.0"},
-        "product_release_tag": {"const": "v2.0.0"},
+        "product_release_url": {"type": "string", "pattern": "^https://github\\.com/offalexjackson777-stack/hyperflux-next/releases/tag/v[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "product_release_tag": {"type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$"},
         "channel_purpose": {"const": "machine-managed-arch-repository"},
         "github_release_prerelease": {"const": true},
         "human_facing_product_release": {"const": false},
@@ -44,15 +44,15 @@
     "packages": {
       "type": "array",
       "minItems": 2,
-      "maxItems": 2,
+      "maxItems": 4,
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": ["name", "version", "filename", "sha256"],
         "properties": {
-          "name": {"enum": ["hyperflux-next-linux", "hyperflux-next-full"]},
-          "version": {"const": "2.0.0-1"},
-          "filename": {"type": "string", "pattern": "^hyperflux-next-(linux|full)-2\\.0\\.0-1-x86_64\\.pkg\\.tar\\.zst$"},
+          "name": {"enum": ["hyperflux-next-dkms", "hyperflux-next-linux", "hyperflux-next-openrazer-driver-dkms", "hyperflux-next-full"]},
+          "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+-[1-9][0-9]*$"},
+          "filename": {"type": "string", "pattern": "^hyperflux-next-(dkms|linux|openrazer-driver-dkms|full)-[0-9]+\\.[0-9]+\\.[0-9]+-[1-9][0-9]*-x86_64\\.pkg\\.tar\\.zst$"},
           "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
         }
       }

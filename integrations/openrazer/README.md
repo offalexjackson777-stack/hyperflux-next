@@ -6,17 +6,23 @@ Extends pinned OpenRazer with trusted feature-only HyperFlux routes while preser
 
 ## Start Here
 
-- [`docs/architecture/integrations.md`](../../docs/architecture/integrations.md)
-- [`docs/generated/integrations.md`](../../docs/generated/integrations.md)
+- [Integration Boundary](../../docs/architecture/integrations.md)
+- [Application Integrations](../../docs/generated/integrations.md)
+
+## Limitations
+
+- Read parity is recorded method by method for the two physically proven devices; their write parity rests on the physical acceptance summary
 
 ## Boundaries
 
 **Owns**
+
 - Feature-only UHID route contract
 - Pinned OpenRazer source transform
 - Serial-proven direct-route precedence metadata
 
 **Does not own**
+
 - OpenRazer device semantics
 - Official daemon identity
 - Direct USB transport
@@ -33,15 +39,6 @@ Extends pinned OpenRazer with trusted feature-only HyperFlux routes while preser
 
 ## Verify
 
-Run `openrazer-metadata-contracts` `openrazer-native-route-contracts` `openrazer-version-matrix-contracts` after changing this area.
+Run `openrazer-metadata-contracts` `openrazer-native-route-contracts` `openrazer-version-matrix-contracts` after changing this area, and run `./hfx generate` to refresh its 2 generated file(s).
 
-Review impact:
-
-- Regenerate 2 declared projection(s).
-- Run `openrazer-metadata-contracts`, `openrazer-native-route-contracts`, `openrazer-version-matrix-contracts`.
-- Review direct consumers: Packaging and installation.
-
-## Related Areas
-
-- **Depends on:** [Application integration catalog](../README.md), [Composable hardware profiles](../../profiles/README.md), [Python SDK](../../sdk/python/README.md)
-- **Used by:** [Packaging and installation](../../packaging/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../../docs/generated/repository-atlas.md).

@@ -17,6 +17,7 @@ import subprocess
 import tarfile
 import tempfile
 
+from .arch_split import ArchSplit, load_arch_split
 from .distributions import (
     COMPONENT_IDS,
     DistributionCatalog,
@@ -675,6 +676,29 @@ def build_distribution_package(
             for component_id in COMPONENT_IDS
         }
         _assert_no_sibling_payload_overlap(stages)
+        split = load_arch_split(root)
+        if split.active:
+            from .arch_split_package import build_split_packages
+
+            return _write_split_result(
+                root=root,
+                output=output,
+                build_manifest=build_manifest,
+                catalog=catalog,
+                artifacts=artifacts,
+                architecture=architecture,
+                distribution=distribution,
+                split=split,
+                package_artifacts=build_split_packages(
+                    repository_root=root,
+                    workspace_root=workspace_root,
+                    packages=packages,
+                    split=split,
+                    architecture=architecture,
+                    epoch=artifacts.source_date_epoch,
+                    stages=stages,
+                ),
+            )
         package_artifacts = _build_arch_packages(
             repository_root=root,
             workspace_root=workspace_root,
@@ -703,6 +727,62 @@ def build_distribution_package(
                 "name": item.package_name,
                 "version": runtime.product.version,
                 "release": runtime.product.package_release,
+                "file": item.package.name,
+                "sha256": sha256_file(item.package),
+                "size": item.package.stat().st_size,
+                "payload_sha256": item.payload_sha256,
+                "payload_files": item.payload_file_count,
+            }
+            for item in sorted(package_artifacts, key=lambda value: value.package_name)
+        ],
+    }
+    manifest = output / BUILD_MANIFEST_NAME
+    manifest.write_text(
+        json.dumps(manifest_value, indent=2, ensure_ascii=True) + "\n",
+        encoding="utf-8",
+    )
+    manifest.chmod(0o644)
+    os.utime(manifest, (artifacts.source_date_epoch, artifacts.source_date_epoch))
+    return DistributionPackageResult(
+        packages=package_artifacts,
+        manifest=manifest,
+        distribution=distribution,
+        architecture=architecture,
+    )
+
+
+def _write_split_result(
+    *,
+    root: Path,
+    output: Path,
+    build_manifest: Path,
+    catalog: DistributionCatalog,
+    artifacts: ArtifactSet,
+    architecture: str,
+    distribution: str,
+    split: ArchSplit,
+    package_artifacts: tuple[DistributionPackageArtifact, ...],
+) -> DistributionPackageResult:
+    _ = root
+    manifest_value = {
+        "$schema": "https://hyperflux.dev/schemas/distribution-package-build-v3.json",
+        "schema": "hyperflux-distribution-package-build-v3",
+        "source": {
+            "revision": artifacts.revision,
+            "source_date_epoch": artifacts.source_date_epoch,
+            "distribution_catalog_sha256": catalog.source_sha256,
+            "arch_split_sha256": split.source_sha256,
+            "artifact_manifest_sha256": sha256_file(build_manifest),
+        },
+        "distribution": distribution,
+        "architecture": architecture,
+        "packages": [
+            {
+                "output": item.component,
+                "distribution_component": split.output(item.component).edition,
+                "name": item.package_name,
+                "version": split.version,
+                "release": split.package_release,
                 "file": item.package.name,
                 "sha256": sha256_file(item.package),
                 "size": item.package.stat().st_size,

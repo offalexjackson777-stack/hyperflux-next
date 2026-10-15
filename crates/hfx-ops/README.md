@@ -6,18 +6,24 @@ Provides the installed bounded status, Doctor, support-bundle, and explicit driv
 
 ## Start Here
 
-- [`docs/user/troubleshooting.md`](../../docs/user/troubleshooting.md)
-- [`docs/generated/linux-runtime.md`](../../docs/generated/linux-runtime.md)
+- [Troubleshooting](../../docs/user/troubleshooting.md)
+- [Linux Runtime](../../docs/generated/linux-runtime.md)
+
+## Limitations
+
+- Qualification and onboarding remain source-only workspace tools, not installed commands
 
 ## Boundaries
 
 **Owns**
+
 - Installed command-line workflows
 - System assessment presentation
 - Privacy-safe support bundles
 - Source-compatible workspace re-exports
 
 **Does not own**
+
 - Qualification policy
 - Profile promotion authority
 - Raw receiver reports
@@ -35,15 +41,6 @@ Provides the installed bounded status, Doctor, support-bundle, and explicit driv
 
 ## Verify
 
-Run `rust-clippy` `rust-unit` `package-contracts` after changing this area.
+Run `rust-clippy` `rust-unit` `package-contracts` after changing this area, and run `./hfx generate` to refresh its 1 generated file(s).
 
-Review impact:
-
-- Regenerate 1 declared projection(s).
-- Run `rust-clippy`, `rust-unit`, `package-contracts`.
-- No direct subsystem consumer is declared; verify repository-facing outputs.
-
-## Related Areas
-
-- **Depends on:** [System probe](../hfx-system-probe/README.md), [Device qualification runtime](../hfx-device-qualification/README.md), [Bridge runtime](../hfx-bridge/README.md)
-- **Used by:** None
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../../docs/generated/repository-atlas.md).

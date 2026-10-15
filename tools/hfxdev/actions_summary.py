@@ -140,7 +140,7 @@ def render_actions_summary(
             "## Performance budgets",
             "",
             f"- Software-enforced budgets: {performance_counts['enforced-software']}",
-            f"- Awaiting physical measurements: {performance_counts['blocked-by-physical-evidence']}",
+            f"- Physical budgets without a retained measurement: {performance_counts['unmeasured-physical']}",
             "- Canonical authority: `assurance/performance-budgets.json`",
         ]
     )

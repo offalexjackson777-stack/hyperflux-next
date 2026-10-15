@@ -1181,3 +1181,133 @@ fn legacy_versions_reject_native_leases_and_hide_native_snapshot_ownership() {
     };
     assert!(v6.result.receivers[0].ownership.is_empty());
 }
+
+fn assert_distinct_messages<E: std::fmt::Display>(errors: &[E]) {
+    let messages: std::collections::BTreeSet<String> =
+        errors.iter().map(ToString::to_string).collect();
+    assert!(messages.iter().all(|message| !message.is_empty()));
+    assert_eq!(messages.len(), errors.len(), "{messages:#?}");
+}
+
+#[test]
+fn every_validation_and_snapshot_error_names_a_distinct_failure() {
+    use hfx_protocol::{ProtocolValidationError, SnapshotValidationError};
+
+    assert_distinct_messages(&[
+        ProtocolValidationError::EmptyResources,
+        ProtocolValidationError::TooManyResources,
+        ProtocolValidationError::DuplicateResource,
+        ProtocolValidationError::ResourcesNotCanonical,
+        ProtocolValidationError::EmptyFrames,
+        ProtocolValidationError::TooManyFrames,
+        ProtocolValidationError::DuplicateFrameIndex,
+        ProtocolValidationError::DuplicateFrameTarget,
+        ProtocolValidationError::NonCanonicalFrameOrder,
+        ProtocolValidationError::EmptyProfileBindings,
+        ProtocolValidationError::TooManyProfileBindings,
+        ProtocolValidationError::DuplicateProfileBinding,
+        ProtocolValidationError::ProfileBindingsNotCanonical,
+        ProtocolValidationError::ZeroApplicationSlots,
+        ProtocolValidationError::FrameWithoutProfileBinding,
+        ProtocolValidationError::ProfileBindingWithoutFrame,
+        ProtocolValidationError::FrameColorCountMismatch,
+        ProtocolValidationError::TooManyStableIntents,
+        ProtocolValidationError::DuplicateStableIntent,
+        ProtocolValidationError::StableIntentsNotCanonical,
+        ProtocolValidationError::StableIntentWithoutFrame,
+        ProtocolValidationError::FrameWithoutStableIntent,
+        ProtocolValidationError::StableIntentOnNonStableTransaction,
+        ProtocolValidationError::OffIntentHasLitColor,
+        ProtocolValidationError::EmptyColors,
+        ProtocolValidationError::TooManyColors,
+        ProtocolValidationError::TooManyAggregateColors,
+        ProtocolValidationError::FrameWithoutLightingLease,
+        ProtocolValidationError::ResourceWithoutFrame,
+        ProtocolValidationError::ResourceOutsideTransactionGeneration,
+        ProtocolValidationError::UnsupportedTransactionClass,
+    ]);
+    assert_distinct_messages(&[
+        SnapshotValidationError::TooManyReceivers,
+        SnapshotValidationError::ReceiversNotCanonical,
+        SnapshotValidationError::TooManyDevices,
+        SnapshotValidationError::DevicesNotCanonical,
+        SnapshotValidationError::TooManyEndpoints,
+        SnapshotValidationError::EndpointsNotCanonical,
+        SnapshotValidationError::TooManyCapabilities,
+        SnapshotValidationError::CapabilitiesNotCanonical,
+        SnapshotValidationError::TooManyOwnershipRecords,
+        SnapshotValidationError::OwnershipNotCanonical,
+        SnapshotValidationError::OwnershipOutsideReceiverGeneration,
+        SnapshotValidationError::OwnershipTargetsUnknownDevice,
+        SnapshotValidationError::BatteryValueContradiction,
+        SnapshotValidationError::ReceiverProfileBindingContradiction,
+        SnapshotValidationError::DeviceProfileBindingContradiction,
+        SnapshotValidationError::PresenceContradiction,
+        SnapshotValidationError::ReturnEpochContradiction,
+    ]);
+}
+
+#[test]
+fn every_wire_negotiation_and_framing_error_names_a_distinct_failure() {
+    use hfx_protocol::{
+        FrameError, FrameIoStage, NegotiationError, ProtocolValidationError, ProtocolWireError,
+        SnapshotValidationError,
+    };
+    use std::io::ErrorKind;
+
+    assert_distinct_messages(&[
+        ProtocolWireError::MessageTooLarge,
+        ProtocolWireError::MalformedJson,
+        ProtocolWireError::RequestBoundExceeded,
+        ProtocolWireError::RequestNotCanonical,
+        ProtocolWireError::UnsupportedProtocolVersion,
+        ProtocolWireError::UnsupportedVersionMethod,
+        ProtocolWireError::VersionTranslation,
+        ProtocolWireError::InvalidRequest(ProtocolValidationError::EmptyFrames),
+        ProtocolWireError::InvalidSnapshot(SnapshotValidationError::TooManyDevices),
+        ProtocolWireError::InvalidResponse("result shape"),
+    ]);
+    assert_distinct_messages(&[
+        NegotiationError::InvalidClientRange,
+        NegotiationError::InvalidServerRange,
+        NegotiationError::IncompatibleVersion,
+        NegotiationError::TooManyFeatures,
+        NegotiationError::DuplicateFeature,
+        NegotiationError::UnsupportedRequiredFeatures(Vec::new()),
+        NegotiationError::InvalidBridgeContract,
+    ]);
+    assert_distinct_messages(&[
+        FrameError::Io {
+            stage: FrameIoStage::ReadLength,
+            kind: ErrorKind::UnexpectedEof,
+        },
+        FrameError::Io {
+            stage: FrameIoStage::ReadPayload,
+            kind: ErrorKind::UnexpectedEof,
+        },
+        FrameError::Io {
+            stage: FrameIoStage::WriteLength,
+            kind: ErrorKind::BrokenPipe,
+        },
+        FrameError::Io {
+            stage: FrameIoStage::WritePayload,
+            kind: ErrorKind::BrokenPipe,
+        },
+        FrameError::Io {
+            stage: FrameIoStage::Flush,
+            kind: ErrorKind::BrokenPipe,
+        },
+        FrameError::TruncatedLength { received: 2 },
+        FrameError::EmptyPayload,
+        FrameError::PayloadTooLarge {
+            declared: 9,
+            maximum: 8,
+        },
+        FrameError::TruncatedPayload {
+            declared: 9,
+            received: 3,
+        },
+        FrameError::InvalidRequest(ProtocolWireError::MalformedJson),
+        FrameError::InvalidResponse(ProtocolWireError::MalformedJson),
+    ]);
+}
