@@ -295,6 +295,20 @@ def _parser() -> argparse.ArgumentParser:
         help="print the plan for a future split release such as 2.0.1-2",
     )
 
+    package_compare = package_commands.add_parser(
+        "compare-channels",
+        help="compare signed-repository and AUR packages of one split release",
+    )
+    package_compare.add_argument("--repository", required=True, type=Path)
+    package_compare.add_argument("--aur", required=True, type=Path)
+    package_compare.add_argument("--aur-recipe", type=Path)
+    package_compare.add_argument("--repository-commit")
+    package_compare.add_argument(
+        "--candidate-release",
+        metavar="VERSION-RELEASE",
+        help="compare a future split release such as 2.0.1-2",
+    )
+
     arch_snapshot = commands.add_parser(
         "arch-snapshot",
         help="import official Arch package state and check OpenRazer provider alignment",
@@ -763,6 +777,18 @@ def main(arguments: list[str] | None = None) -> int:
                 return 0
             if args.package_command == "aur":
                 return _package_aur(root, args)
+            if args.package_command == "compare-channels":
+                from .channel_parity import compare_channels
+
+                comparison = compare_channels(
+                    _candidate_split(root, args.candidate_release),
+                    repository=args.repository.resolve(),
+                    aur=args.aur.resolve(),
+                    aur_recipe=args.aur_recipe.resolve() if args.aur_recipe else None,
+                    repository_commit=args.repository_commit,
+                )
+                print(comparison.as_json(), end="")
+                return 0 if comparison.passed else 1
             if args.package_command == "aur-install":
                 from .aur_install import render_guide
 

@@ -166,6 +166,39 @@ def _variable(pkgbuild: str, name: str) -> str:
     return match.group(1)
 
 
+def fake_build_tree(srcdir: Path, manifest) -> None:
+    """Lay out what prepare() and build() leave in srcdir, without building."""
+
+    for payload in manifest.files:
+        relative = payload.source.resolve().relative_to(ROOT)
+        target = srcdir / "hyperflux-next" / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(payload.source, target)
+    for build in manifest.builds:
+        if build.kind == "cargo-binary":
+            target = srcdir / "target" / build.cargo_profile / build.target
+        elif build.kind == "cmake-module":
+            target = srcdir / "build-openrgb-native" / build.output
+        elif build.kind == "source-transform-file":
+            target = srcdir / "openrazer-native" / build.source
+        else:
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"built {build.id}\n", encoding="utf-8")
+    native = srcdir / "openrazer-native"
+    for relative in (
+        "Makefile",
+        "LICENSE",
+        "install_files/dkms/dkms.conf",
+        "driver/Makefile",
+        *(f"driver/razer{n}.{ext}" for n in ("common", "kbd_driver", "mouse_driver") for ext in ("c", "h")),
+        "driver/razercommon.o",
+    ):
+        target = native / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"{relative}\n", encoding="utf-8")
+
+
 class AurAuthorityContracts(unittest.TestCase):
     def test_authority_requires_signed_tags_and_zero_bsd_packaging(self) -> None:
         authority = load_aur_authority(ROOT)
@@ -386,7 +419,7 @@ class QualificationRecipeContracts(unittest.TestCase):
         payload_modes = {str(item.destination): item for item in manifest.files}
         with tempfile.TemporaryDirectory() as directory:
             srcdir = Path(directory, "src")
-            self._fake_build_tree(srcdir, manifest)
+            fake_build_tree(srcdir, manifest)
             for output in self.split.outputs:
                 pkgdir = Path(directory, "pkg", output.package_name)
                 pkgdir.mkdir(parents=True)
@@ -447,36 +480,6 @@ class QualificationRecipeContracts(unittest.TestCase):
                 for destination, mode in output.directory_modes:
                     directory_path = pkgdir.joinpath(*PurePosixPath(destination).parts[1:])
                     self.assertEqual(mode, stat.S_IMODE(directory_path.stat().st_mode))
-
-    def _fake_build_tree(self, srcdir: Path, manifest) -> None:
-        for payload in manifest.files:
-            relative = payload.source.resolve().relative_to(ROOT)
-            target = srcdir / "hyperflux-next" / relative
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(payload.source, target)
-        for build in manifest.builds:
-            if build.kind == "cargo-binary":
-                target = srcdir / "target" / build.cargo_profile / build.target
-            elif build.kind == "cmake-module":
-                target = srcdir / "build-openrgb-native" / build.output
-            elif build.kind == "source-transform-file":
-                target = srcdir / "openrazer-native" / build.source
-            else:
-                continue
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(f"built {build.id}\n", encoding="utf-8")
-        native = srcdir / "openrazer-native"
-        for relative in (
-            "Makefile",
-            "LICENSE",
-            "install_files/dkms/dkms.conf",
-            "driver/Makefile",
-            *(f"driver/razer{n}.{ext}" for n in ("common", "kbd_driver", "mouse_driver") for ext in ("c", "h")),
-            "driver/razercommon.o",
-        ):
-            target = native / relative
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(f"{relative}\n", encoding="utf-8")
 
 
 class TransformHelperContracts(unittest.TestCase):
