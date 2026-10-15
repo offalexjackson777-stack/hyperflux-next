@@ -48,14 +48,14 @@ they stop before the relay removes its devices. We chose an ordering fix over a 
 timeout or a forced kill because the daemon then finishes its own teardown normally.
 There are no sleeps, timeout changes, or forced kills.
 
-[3a3a61d](https://github.com/offalexjackson777-stack/hyperflux-next/commit/3a3a61d856f463c1d5711edadf70657e66062901)
+[a34f7d9](https://github.com/offalexjackson777-stack/hyperflux-next/commit/a34f7d9407868a169ffaeca2301d88978855fcef)
 
 The socket unit now sets `DefaultDependencies=no` with explicit `Conflicts=shutdown.target`
 and `Before=shutdown.target`, so it no longer joins `sockets.target` at all. The socket
 path, owner, mode `0600`, `RemoveOnStop`, and the `user-runtime-dir` dependency are
 unchanged.
 
-[38588e1](https://github.com/offalexjackson777-stack/hyperflux-next/commit/38588e1aafa2e51d9be4f10350444cf2fb949b86)
+[e41657e](https://github.com/offalexjackson777-stack/hyperflux-next/commit/e41657e9a92c07c5b9c598ea06e7a6248f13a055)
 
 Both units are generated, so both changes were made in the unit generator under
 `tools/hfxdev/` and the files were regenerated with `./hfx generate`.

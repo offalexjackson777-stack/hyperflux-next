@@ -82,7 +82,7 @@ def _walked_repository_files(root: Path) -> tuple[str, ...]:
     ):
         current = Path(directory)
         # A nested .git entry marks another checkout or worktree (for example
-        # .claude/worktrees/<name>); its files belong to that checkout.
+        # an editor worktree); its files belong to that checkout.
         directories[:] = sorted(
             name
             for name in directories

@@ -46,7 +46,7 @@ Either one is enough to make the reported value jump.
 
 ## The Fix
 
-[1544dc7](https://github.com/offalexjackson777-stack/hyperflux-next/commit/1544dc73b6aa7d81638816e69fc5acf4e26549c9)
+[0642d7e](https://github.com/offalexjackson777-stack/hyperflux-next/commit/0642d7eca2c5d9a1bb539f0d96005b796f01a096)
 
 **Match the transaction ID in the kernel.** Receiver profile revision 5 sets the
 transaction-ID `match_mask` to `0xff`, so a reply for another transaction is not matched

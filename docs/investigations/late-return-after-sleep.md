@@ -65,7 +65,7 @@ supervisor classifies that refresh as fresh evidence instead of restarting the e
 and the relay resets a publication that is in retryable backoff, once, so the next tick
 probes.
 
-[bf0f7b8](https://github.com/offalexjackson777-stack/hyperflux-next/commit/bf0f7b8fd2c4cf5b8c69e612566606abef8565a3)
+[e86e124](https://github.com/offalexjackson777-stack/hyperflux-next/commit/e86e124b8d184d73f412bd7f1514010b41cebf22)
 
 Duplicate and older epochs, sibling devices, other generations, and unavailable routes are
 ignored. Healthy, blocked, and terminal publications are untouched, a failed retry goes
@@ -78,7 +78,7 @@ as the longest generated return quiescence, and within it retryable identity fai
 re-probed at least every 2 seconds. Blocked failures still block, publishing clears the
 window, and the first publication and kernel-binding recovery keep their usual schedule.
 
-[0a1a5fb](https://github.com/offalexjackson777-stack/hyperflux-next/commit/0a1a5fb24a0e6652ec6c28da1f93278e19d9163c)
+[fdf3635](https://github.com/offalexjackson777-stack/hyperflux-next/commit/fdf36352d8c31deed442d7119af3052c9daedcac)
 
 We chose a bounded window over a shorter backoff everywhere. The cost is one more relay
 state to reason about. The benefit is that a device that is really gone still settles into
@@ -87,7 +87,7 @@ the slow 30-second probe, so it does not keep the receiver busy.
 **Tell Polychromatic users to refresh (#39).** The user documentation now says to wait a
 few seconds after switching the keyboard on, then press F5 on Polychromatic's Devices tab.
 
-[8b77b6c](https://github.com/offalexjackson777-stack/hyperflux-next/commit/8b77b6c9b8e2665f41607ed4460eb6cd5d16dc3f)
+[d664c59](https://github.com/offalexjackson777-stack/hyperflux-next/commit/d664c599e63db85196e94ef78ca6df93cd34140a)
 
 ## How It Was Checked
 

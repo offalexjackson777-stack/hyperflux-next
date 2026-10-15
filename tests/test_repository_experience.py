@@ -566,7 +566,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
     def test_document_render_audit_binds_sources_visual_review_and_fast_gate(self) -> None:
         audit = load_documentation_render_audit(ROOT)
         policy = load_documentation_render_policy(ROOT)
-        self.assertEqual(audit.source_revision, "970957b28134bb2a240063d6fade4ce4555b6337")
+        self.assertEqual(audit.source_revision, "41c56533c2685f0fa38ac1a496964b53320fb2d7")
         self.assertEqual(audit.check_count, policy.check_count)
         self.assertEqual(audit.screenshot_count, policy.screenshot_count)
         self.assertEqual(audit.capture_mode, "full-page")
@@ -1050,9 +1050,9 @@ class RepositoryExperienceContracts(unittest.TestCase):
 
     @staticmethod
     def _nested_worktree(root: Path) -> Path:
-        # A mismatching vendored header inside a nested checkout copy, as a
-        # Claude Code worktree at .claude/worktrees/<name>/ would carry it.
-        nested = root / ".claude" / "worktrees" / "stray"
+        # A mismatching vendored header inside a nested checkout copy, as an
+        # editor's worktree at .cache/worktrees/<name>/ would carry it.
+        nested = root / ".cache" / "worktrees" / "stray"
         header = nested / "sdk" / "cpp" / "vendor" / "include" / "nlohmann" / "json.hpp"
         header.parent.mkdir(parents=True)
         header.write_text("// SPDX-License-Identifier: MIT\n", encoding="utf-8")
@@ -1067,7 +1067,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
             subprocess.run(["git", "init", "-q", str(root)], check=True)
             (root / ".git" / "info").mkdir(parents=True, exist_ok=True)
             (root / ".git" / "info" / "exclude").write_text(
-                ".claude/worktrees/\n", encoding="utf-8"
+                ".cache/worktrees/\n", encoding="utf-8"
             )
             header = self._nested_worktree(root)
             (root / "README.md").write_text("# Fixture\n", encoding="utf-8")

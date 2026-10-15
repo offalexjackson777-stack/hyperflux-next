@@ -51,8 +51,8 @@ class PriorRelease:
 
 PRIOR_RELEASES = (
     PriorRelease("2.0.0-1", "v2.0.0", "db75a075e56b1c571fb22fe4326ff6683a934d52"),
-    PriorRelease("2.0.1-1", "v2.0.1", "f269eb7018e460e2f1b4d80c959cf5da2adf97ac"),
-    PriorRelease("2.0.2-1", "v2.0.2", "598605cab2a50d86154021d6e30d13b2a2b28a95"),
+    PriorRelease("2.0.1-1", "v2.0.1", "5ec67194254ee268d75c03bc5a20716feda88cb6"),
+    PriorRelease("2.0.2-1", "v2.0.2", "c96b4ddc600a5b147ccc44f1e36dfb946056a433"),
 )
 
 _LOADER = r"""

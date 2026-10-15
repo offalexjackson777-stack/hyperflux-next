@@ -71,7 +71,7 @@ boot, before the bridge or relay can publish a virtual device. The list is gener
 the deployment model's driver module list, not from a list of products: these drivers claim
 any Razer device on the virtual bus.
 
-[a1e21b6](https://github.com/offalexjackson777-stack/hyperflux-next/commit/a1e21b68364213211514b81445be3d2910223049)
+[fc51a83](https://github.com/offalexjackson777-stack/hyperflux-next/commit/fc51a83d1ba6aa2993a7397f20eff73394735c5b)
 
 **Recover if a binding fails anyway.** A kernel-binding failure is now retryable. The relay
 withdraws the stopped virtual device, keeps the route's bridge connection, and tries again
@@ -80,7 +80,7 @@ three attempts per route lifetime so a device that can never bind cannot churn f
 Protocol, CRC, serial, and UHID I/O failures still block the route, because retrying them
 would hide a real fault.
 
-[8e99ee3](https://github.com/offalexjackson777-stack/hyperflux-next/commit/8e99ee38a665d7168d75f8f4ee7e3c70a9d4cbae)
+[93b7ec8](https://github.com/offalexjackson777-stack/hyperflux-next/commit/93b7ec87277b6413929ed5bb3716e62a91609ad1)
 
 The first change removes the race. The second is defence in depth, so that a later change
 in boot order cannot strand a device again.

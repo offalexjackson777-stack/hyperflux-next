@@ -35,7 +35,7 @@ in-flight requests finish.
 
 ## The Fix
 
-[5ce1dd6](https://github.com/offalexjackson777-stack/hyperflux-next/commit/5ce1dd61b54968e5dc4eb17d766b307752dab85a)
+[b7ce9a4](https://github.com/offalexjackson777-stack/hyperflux-next/commit/b7ce9a4e10a83c369803e8efbef5d54c3f83ed3e)
 
 Before `UHID_DESTROY`, the relay now detaches the OpenRazer driver from its own device:
 

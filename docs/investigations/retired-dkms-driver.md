@@ -34,7 +34,7 @@ the receiver, so it reported a healthy driver and pointed the user at the wrong 
 
 ## The Fix
 
-[88e3381](https://github.com/offalexjackson777-stack/hyperflux-next/commit/88e33817ea8f4756b8e1dea08753cb1458b7148a)
+[f41d9bb](https://github.com/offalexjackson777-stack/hyperflux-next/commit/f41d9bb4beb44821e9e1d8987f5191d99344d297)
 
 The fix has a read-only detection half and an opt-in migration half.
 

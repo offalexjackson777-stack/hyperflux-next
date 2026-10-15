@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/documentation-audit.schema.json",
   "schema": "hyperflux-documentation-audit-v2",
-  "source_revision": "970957b28134bb2a240063d6fade4ce4555b6337",
+  "source_revision": "41c56533c2685f0fa38ac1a496964b53320fb2d7",
   "inputs": {
     "catalog_sha256": "3647c56132ef4e87cee54b89b915ebb417dcaa2a84b5c3513b2116e23a35a12b",
     "policy_sha256": "dabb7014747af7749d0d7dd246ed3a52400124df4c448826f2c785068df57939",

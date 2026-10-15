@@ -48,7 +48,7 @@ device list, so its device pages survived. When the dialog was torn down later,
 
 **Port to OpenRGB 1.0 and plugin API 5.**
 
-[d93bbfa](https://github.com/offalexjackson777-stack/hyperflux-next/commit/d93bbfad2714bcbcfe7e5a9eae124fbad47d1bd9)
+[7059501](https://github.com/offalexjackson777-stack/hyperflux-next/commit/70595015d952fa2ba50601f172ede1dfa46ceb30)
 
 - OpenRGB is pinned to the 1.0 tag commit `81bbe18a`, the transport-seam patch is rebased,
   and the plugin builds against Qt 6.
@@ -70,7 +70,7 @@ so nothing else can be waiting on it. A contract test checks that `Shutdown()` s
 the lock held, so this is revisited if OpenRGB changes. The test's fake plugin host now
 deletes virtual controllers the same way the real host does.
 
-[e870c69](https://github.com/offalexjackson777-stack/hyperflux-next/commit/e870c69c460ad401fed00b48b515f68a84a82bc3)
+[b2c8c16](https://github.com/offalexjackson777-stack/hyperflux-next/commit/b2c8c16fc4042be50e3d2d55d8a485ba35b4f7a9)
 
 **Keep presented controllers alive past an exit-time unload.** Unloading now tells the host
 mirror to stop deleting controllers. From then on, each controller is unregistered, cut off
@@ -79,7 +79,7 @@ reload of the plugin frees the parked controllers once the live GUI has dropped 
 On exit they are never freed. Removing a device while the plugin is loaded still deletes its
 controller at once.
 
-[2f41a62](https://github.com/offalexjackson777-stack/hyperflux-next/commit/2f41a6233d5439a71db9e30ddab874686699e1a0)
+[c734712](https://github.com/offalexjackson777-stack/hyperflux-next/commit/c7347124aff6712f22de250b266b80d79104eb46)
 
 We rejected keeping the plugin mapped with `-z nodelete`. The freed object belongs to the
 host, not the plugin, and keeping the plugin mapped would keep its static state alive

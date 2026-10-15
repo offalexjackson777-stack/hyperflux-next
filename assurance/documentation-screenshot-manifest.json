@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/documentation-screenshot-manifest.schema.json",
   "schema": "hyperflux-documentation-screenshot-manifest-v1",
-  "source_revision": "970957b28134bb2a240063d6fade4ce4555b6337",
+  "source_revision": "41c56533c2685f0fa38ac1a496964b53320fb2d7",
   "render_result_sha256": "a5ee03ff8e2ee7f0417c7f705aaa413949de72dfd51145b6538ba19b901a8e7c",
   "screenshots": [
     {

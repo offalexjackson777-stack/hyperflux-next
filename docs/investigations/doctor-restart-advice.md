@@ -46,7 +46,7 @@ Only the first is a service problem.
 
 ## The Fix
 
-[8377862](https://github.com/offalexjackson777-stack/hyperflux-next/commit/8377862af3dc0079ec1ef4e48f61b3abaa568b43)
+[a43582c](https://github.com/offalexjackson777-stack/hyperflux-next/commit/a43582c809223d9f73ea930bb4ea8cc7630be20d)
 
 Doctor now reports one of three findings, each with remediation that matches its cause:
 
