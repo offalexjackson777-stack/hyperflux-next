@@ -264,6 +264,27 @@ def _parser() -> argparse.ArgumentParser:
     package_distro.add_argument("--distribution", required=True, choices=["arch"])
     package_distro.add_argument("--build-manifest", required=True, type=Path)
     package_distro.add_argument("--output", required=True, type=Path)
+    package_aur = package_commands.add_parser(
+        "aur", help="render the source-built AUR recipe for one exact revision"
+    )
+    package_aur.add_argument("--output", required=True, type=Path)
+    aur_reference = package_aur.add_mutually_exclusive_group(required=True)
+    aur_reference.add_argument("--tag", help="signed annotated tag for a publication recipe")
+    aur_reference.add_argument(
+        "--commit", help="full commit for a local qualification recipe"
+    )
+    package_aur.add_argument(
+        "--upstream-checkout",
+        action="append",
+        default=[],
+        metavar="ID=PATH",
+        help="local Git checkout containing a pinned upstream commit (openrazer, openrgb)",
+    )
+    package_aur.add_argument(
+        "--candidate-release",
+        metavar="VERSION-RELEASE",
+        help="qualify a future split release such as 2.0.1-2 (commit recipes only)",
+    )
 
     arch_repository = commands.add_parser(
         "arch-repository",
@@ -290,6 +311,41 @@ def _parser() -> argparse.ArgumentParser:
     )
     arch_repository_verify_public.add_argument("--output", required=True, type=Path)
     return parser
+
+
+def _package_aur(root: Path, args: argparse.Namespace) -> int:
+    from .arch_split import load_arch_split
+    from .aur_recipe import generate_aur_recipe, write_aur_recipe
+
+    checkouts: dict[str, Path] = {}
+    for item in args.upstream_checkout:
+        name, separator, value = item.partition("=")
+        if not separator or not value or name in checkouts:
+            raise ModelError("--upstream-checkout must be one unique ID=PATH")
+        checkouts[name] = Path(value).expanduser().resolve()
+    split = None
+    if args.candidate_release is not None:
+        if args.tag is not None:
+            raise ModelError("a publication recipe uses the current release, not a candidate")
+        version, separator, release = args.candidate_release.rpartition("-")
+        if not separator or not version or not release.isdecimal():
+            raise ModelError("--candidate-release must be VERSION-RELEASE")
+        split = load_arch_split(root, release=(version, int(release)))
+    recipe = generate_aur_recipe(
+        root,
+        tag=args.tag,
+        commit=args.commit,
+        upstream_checkouts=checkouts,
+        split=split,
+    )
+    for path in write_aur_recipe(recipe, args.output):
+        print(f"AUR recipe file: {path}")
+    print(f"Recipe mode: {recipe.mode}")
+    print(f"Package version: {recipe.version}")
+    print(f"Source commit: {recipe.source.commit}")
+    for disclosure in recipe.disclosures:
+        print(f"Qualification only: {disclosure}")
+    return 0
 
 
 def main(arguments: list[str] | None = None) -> int:
@@ -637,6 +693,8 @@ def main(arguments: list[str] | None = None) -> int:
                 print(f"Payload SHA-256: {result.payload_sha256}")
                 print(f"Inventory: {result.inventory}")
                 return 0
+            if args.package_command == "aur":
+                return _package_aur(root, args)
             result = build_distribution_package(
                 root,
                 args.build_manifest,

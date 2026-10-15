@@ -1,0 +1,30 @@
+{
+  "$schema": "../schemas/aur-recipe.schema.json",
+  "schema": "hyperflux-aur-recipe-v1",
+  "source": {
+    "name": "hyperflux-next",
+    "repository": "https://github.com/offalexjackson777-stack/hyperflux-next.git",
+    "publication_reference": "signed-tag",
+    "rule": "A published recipe fetches one signed annotated tag of this repository and verifies it against the project key in assurance/arch-repository.json; a commit reference is for local qualification only."
+  },
+  "packaging_license": {
+    "spdx": "0BSD",
+    "copyright": "HyperFlux Next contributors",
+    "rule": "The generated recipe files are 0BSD so they can move into official Arch packaging unchanged; the packaged software keeps the licenses each output declares."
+  },
+  "makedepends": [
+    "cargo",
+    "clang",
+    "cmake",
+    "git",
+    "hidapi",
+    "ninja",
+    "qt6-base"
+  ],
+  "options": [
+    "!strip",
+    "!debug",
+    "!lto"
+  ],
+  "options_rule": "The signed repository ships the same unstripped OpenRGB module and Cargo-stripped binaries without debug packages; link-time optimization stays off because the Cargo and Clang toolchains apply their own profiles."
+}

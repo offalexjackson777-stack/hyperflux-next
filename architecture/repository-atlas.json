@@ -379,7 +379,7 @@
       "inputs": ["Runtime authority", "Built modules and adapters", "Distribution catalog"],
       "outputs": ["Install plan", "Distribution packages", "Signed repository metadata", "Installed-files evidence"],
       "public_contracts": ["Configuration preservation", "No hardware writes during install", "Reproducible staged payload", "Trusted package and repository signatures"],
-      "canonical_files": ["packaging/install.json", "packaging/distributions.json", "packaging/arch-split.json", "packaging/keys/hyperflux-next-arch-repository-key.asc"],
+      "canonical_files": ["packaging/install.json", "packaging/distributions.json", "packaging/arch-split.json", "packaging/aur.json", "packaging/keys/hyperflux-next-arch-repository-key.asc"],
       "generated_files": ["packaging/README.md", "packaging/generated/full-component.json", "packaging/generated/hyperflux-next-bridge.service.d/50-full.conf", "packaging/generated/install-plan.json", "docs/generated/distributions.md"],
       "verification": ["package-contracts"],
       "limitations": ["Private signing material remains outside the publishable repository and release assets"],
