@@ -56,8 +56,8 @@ one limited file that you have checked for private data.
   HyperFlux refuses the action.
 - Every queue, message, log, set of frames, retry rule, and stored history has a
   fixed maximum size.
-- Support bundles leave out raw device traffic and anything that permanently
-  identifies a device or machine by default.
+- Support bundles always leave out raw device traffic, private file paths,
+  and anything that permanently identifies a device or machine.
 - Research and hardware-test tools are never part of what the installed product
   depends on.
 
