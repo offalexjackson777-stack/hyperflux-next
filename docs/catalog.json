@@ -102,6 +102,17 @@
       "generated_block_ids": []
     },
     {
+      "path": "docs/architecture/decisions/openrazer-patch-removal.md",
+      "title": "OpenRazer Patch Removal Routes",
+      "audience": "developers",
+      "purpose": "Compares USB/IP emulation and upstreaming as routes to removing the OpenRazer native transport patch.",
+      "owner": "architecture",
+      "navigation_group": "architecture",
+      "mode": "human",
+      "canonical_sources": ["docs/architecture/decisions/openrazer-patch-removal.md"],
+      "generated_block_ids": []
+    },
+    {
       "path": "docs/architecture/decisions/repository-documentation-and-local-hardware-authority.md",
       "title": "Repository Documentation And Local Hardware Authority",
       "audience": "contributors",
