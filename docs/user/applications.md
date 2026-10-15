@@ -1,37 +1,44 @@
 # Applications
 
-With the Full package installed, stock OpenRGB and stock Polychromatic can
-control the keyboards and mice paired to your receiver, just as they control
-devices plugged in by cable. Polychromatic does this through the stock OpenRazer
-service. Your effects, profiles, and settings stay in those applications.
+With the Full package, OpenRGB and Polychromatic control the keyboard and mouse
+paired to your receiver, just as they control a device plugged in by cable. Your
+effects, profiles, and settings stay in those apps.
 
-These applications are optional and belong to their own projects. HyperFlux
-does not install, patch, or own them. Full lists them as optional packages:
-`openrgb`, `openrazer-daemon`, `python-openrazer`, and `polychromatic`. Install
-the ones you want.
+The apps belong to their own projects.
+HyperFlux does not install, patch, or own them. Full lists them as optional
+packages: `openrgb`, `openrazer-daemon`, `python-openrazer`, and `polychromatic`.
+The [first-run guide](first-run.md) shows how to install them.
 
-With Core alone, these applications cannot reach devices paired to the
-receiver.
+With Core alone, these apps cannot reach devices paired to the receiver.
 
-## OpenRazer And Polychromatic
+## Use Polychromatic
 
-OpenRazer is the background service that talks to Razer devices.
-Polychromatic is the window you use to choose effects and brightness; it talks
-to OpenRazer. Full lets the stock OpenRazer service see each device paired to
-the receiver as its own device, so Polychromatic shows it by name. You do not
-need to change any OpenRazer or Polychromatic setting.
+OpenRazer is the background service that talks to Razer devices. Polychromatic
+is the window where you choose effects and brightness, and it talks to
+OpenRazer.
 
-## OpenRGB
+1. Open Polychromatic.
+2. Pick your keyboard or mouse from the list. Each paired device appears by its
+   own name.
+3. Choose an effect or a brightness.
 
-Full adds a HyperFlux plugin to the stock OpenRGB application. Your paired
-keyboard and mouse then appear in OpenRGB by name. The plugin does not replace
-OpenRGB or change its own settings.
+You do not need to change any OpenRazer or Polychromatic setting for HyperFlux.
 
-## Known Limitations
+## Use OpenRGB
+
+Full adds a HyperFlux plugin to OpenRGB. The plugin does not replace OpenRGB or
+change its settings.
+
+1. Open OpenRGB.
+2. Pick your keyboard or mouse from the device list. Each paired device appears
+   by its own name.
+3. Choose a colour or a mode.
+
+## What Does Not Work Yet
 
 - Polychromatic offers Ripple, but over HyperFlux it shows no reactive lighting.
 - OpenRGB may call a black keyboard Quartz. Only the description is wrong.
-- Fn lighting shortcuts change the keyboard without the applications noticing.
+- Fn lighting shortcuts change the keyboard without the apps noticing.
 - Polychromatic may list the receiver as an unrecognised `1532:00CF` device.
 - Polychromatic needs F5 after a device switches off and back on.
 - Some devices do not report their current brightness.

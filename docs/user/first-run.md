@@ -1,76 +1,90 @@
 # First Run
 
-This guide takes you from installed packages to working lighting in your
-applications. Keep the receiver plugged in and use the keyboard and mouse
-normally the whole time.
+This guide takes you from a fresh installation to working lighting in your
+apps. Keep the receiver plugged in and use the keyboard and mouse normally the
+whole time.
 
-## 1. Install
+## Make Sure HyperFlux Is Turned On
 
-Install Full, or Core alone, as shown in the [installation guide](installation.md).
-Installing the packages does not start any service.
+If you followed every step of the [installation guide](installation.md), skip to
+[the next section](#check-that-hyperflux-is-ready).
 
-## 2. Enable The Services
-
-Enable the bridge and the socket for your desktop user:
+Otherwise, turn on the HyperFlux service and your desktop connection to it:
 
 ```sh
 sudo systemctl enable hyperflux-next-bridge.service \
   "hyperflux-next-client@$(id -u).socket"
 ```
 
-With Full, the bridge also starts the OpenRazer relay for you. It does not
-replace or manage the stock OpenRazer daemon.
-
-## 3. Reboot
-
-Reboot normally so the driver and services start in the right order:
+Then restart, so everything starts in the right order:
 
 ```sh
 sudo reboot
 ```
 
-## 4. Check Status
+With Full, the HyperFlux service also starts the piece that connects it to
+OpenRazer. It does not replace or manage OpenRazer's own background service.
 
-After you log in, run:
+## Check That HyperFlux Is Ready
 
-```sh
-hyperfluxctl status
-```
+1. After you log in, run:
 
-Status shows the driver, the bridge, the receivers HyperFlux has found, and the
-next thing to do, if anything.
+   ```sh
+   hyperfluxctl status
+   ```
 
-## 5. Run Doctor
+   You should see the driver, the service, and your receiver, followed by a
+   `Next:` line. When nothing needs doing, it says `Next: no action required`.
 
-```sh
-hyperfluxctl doctor
-```
+2. Then run:
 
-When everything works, Doctor prints `HyperFlux Next is ready.` That means the
-driver is loaded, the bridge is running, and nothing needs fixing. With Full,
-Doctor also checks that stock applications can reach HyperFlux.
+   ```sh
+   hyperfluxctl doctor
+   ```
 
-If Doctor prints `HyperFlux Next needs attention.`, it names the first problem,
-why it matters, one thing to do, and how to check again. Do that, then run
-Doctor again. Run `hyperfluxctl doctor --explain` for more detail, or see
-[troubleshooting](troubleshooting.md).
+   You should see `HyperFlux Next is ready.` and `No action required.`
 
-## 6. Open Your Applications One At A Time
+If Doctor prints `HyperFlux Next needs attention.`, it names the problem, why it
+matters, one thing to do (`Do:`), and how to check again (`Verify:`). Do that,
+then run Doctor again. For more detail, run `hyperfluxctl doctor --explain` or
+see [troubleshooting](troubleshooting.md).
 
-Stock OpenRGB, OpenRazer, and Polychromatic are separate packages. Install the
-ones you want, as described in [applications](applications.md). Then:
+## Install Your Apps
 
-1. Open OpenRGB. Check that your keyboard and mouse appear and change a colour.
-   Close OpenRGB.
-2. Open Polychromatic. Check that your keyboard and mouse appear and apply an
-   effect. Close Polychromatic.
+The apps are separate projects. Install only the ones you want.
 
-Trying one application at a time makes it easy to see which one has a problem.
-After that, use them however you like. See [applications](applications.md)
-for what each one can do.
+- **OpenRGB** is in the official Arch repositories:
+
+  ```sh
+  sudo pacman -S openrgb
+  ```
+
+- **OpenRazer** is the background service that Polychromatic needs. It is in
+  the official Arch repositories:
+
+  ```sh
+  sudo pacman -S openrazer-daemon python-openrazer
+  ```
+
+- **Polychromatic** is not in the official Arch repositories. Install it from
+  the AUR or your usual source.
+
+## Try Each App, One At A Time
+
+1. Open OpenRGB. Your keyboard and mouse should appear by name. Change a colour
+   and check that the device changes. Close OpenRGB.
+2. Open Polychromatic. Your keyboard and mouse should appear by name. Apply an
+   effect and check that the device changes. Close Polychromatic.
+
+Trying one app at a time shows you which one has a problem, if any. After that,
+use them however you like. The [applications guide](applications.md) explains
+what each one can do.
+
+If a device is missing, see
+[a device is missing from an app](troubleshooting.md#a-device-is-missing-from-an-application).
 
 ## Saved Lighting
 
-HyperFlux's own lighting restore is off by default, and your applications keep
-their own settings. Leave it off. Turning it on does not make a missing device
-appear.
+Your apps keep their own lighting settings. HyperFlux also has its own lighting
+restore, which is off by default. Leave it off. Turning it on does not make a
+missing device appear.

@@ -1,9 +1,11 @@
 # Hardware
 
 HyperFlux Next works with a Razer HyperFlux V2 receiver and the keyboards and
-mice paired to it. A device works when HyperFlux knows exactly how to talk to it,
-not because its name looks similar to a known device. There is no fixed list of
-allowed devices on your machine.
+mice paired to it. This page tells you whether your device works and what to do
+if it is not listed.
+
+HyperFlux decides per device: a device works when HyperFlux knows exactly how to
+talk to it, not because its name looks like a known device.
 
 ## Tested On Real Hardware
 
@@ -30,10 +32,14 @@ applications.
 Two devices are known but cannot be used yet, because stock OpenRazer does not
 support them. HyperFlux leaves them alone until it does.
 
-The [supported-hardware reference](../generated/supported-hardware.md) lists
-every device in each group with its USB IDs and applications. If your device is
-expected to work but does not, or is not listed, please
-[ask for device support](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=device_support.yml).
+## Check Whether Your Device Is Listed
+
+1. Find your keyboard or mouse in the
+   [supported-hardware reference](../generated/supported-hardware.md). It lists
+   every device in each group with its USB IDs and the apps it works in.
+2. If it is expected to work but does not, or it is not listed at all,
+   [ask for device support](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=device_support.yml).
+   Include the output of `hyperfluxctl support-bundle --preview`.
 
 ## A Device Plugged In By Cable
 
@@ -44,8 +50,8 @@ that same device. Other devices on the receiver are not affected.
 ## Devices HyperFlux Does Not Recognise
 
 A paired device that HyperFlux does not recognise, or that is asleep or out of
-reach, stays read-only. No application can change it through HyperFlux, and it
-does not show up as a working device. `hyperfluxctl status` and Doctor may
+reach, stays read-only. No app can change it through HyperFlux, and it does not
+show up as a working device. `hyperfluxctl status` and Doctor may
 still mention it.
 
 See [known limitations](limitations.md) for what works differently from a

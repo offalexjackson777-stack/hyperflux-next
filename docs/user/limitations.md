@@ -3,10 +3,25 @@
 These are the limits of HyperFlux Next today. Each one says what you will see
 and what to do.
 
-## Platform
+## Platform And Packages
+
+### Arch Linux Only
 
 HyperFlux Next is published only for Arch Linux on x86_64. Other distributions
 are on the [roadmap](../project/roadmap.md), but no packages exist for them yet.
+
+### Not In The Official Arch Repositories Or The AUR
+
+HyperFlux comes from its own signed package repository, which you add once as
+shown in the [installation guide](installation.md). An AUR package is planned
+but not published yet.
+
+### Pacman Offers To Bring Full Back
+
+If you remove Full and install the stock `openrazer-driver-dkms` again while the
+HyperFlux repository is still set up, `sudo pacman -Syu` may offer to replace
+it with Full. Answer `n` to keep the stock driver. See
+[updates and removal](updates-removal.md#remove-full-and-keep-core).
 
 ## Applications
 
@@ -40,9 +55,10 @@ again.
 ### Polychromatic Lists The Receiver
 
 Polychromatic may list the receiver as an unrecognised `1532:00CF` device.
-Polychromatic lists every Razer USB device that OpenRazer does not manage, and
-the receiver itself is a transport, not a controllable device. Ignore that
-entry; the keyboard and mouse appear under their own names.
+Polychromatic lists every Razer USB device that OpenRazer does not manage. The
+receiver itself is not something you control there: it only carries the
+keyboard's and mouse's signals. Ignore that entry; the keyboard and mouse appear
+under their own names.
 
 ### Polychromatic Needs A Refresh After A Device Returns
 

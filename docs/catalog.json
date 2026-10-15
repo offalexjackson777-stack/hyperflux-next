@@ -939,7 +939,7 @@
     },
     {
       "path": "docs/user/privacy.md",
-      "title": "Privacy And Support Evidence",
+      "title": "Privacy And Support Bundles",
       "audience": "users",
       "purpose": "Explains bounded diagnostics, redaction, and support-bundle privacy.",
       "owner": "documentation",

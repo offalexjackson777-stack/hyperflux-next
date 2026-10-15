@@ -1,89 +1,123 @@
 # Updates And Removal
 
-## Update
+## Update HyperFlux
 
-HyperFlux updates arrive with your normal system update. Close OpenRGB and
-Polychromatic first, then run:
+HyperFlux updates arrive with your normal system update.
 
-```sh
-sudo pacman -Syu
-```
+1. Close OpenRGB and Polychromatic.
+2. Update your system:
 
-Pacman checks the HyperFlux repository and package signatures against the
-HyperFlux key you trusted during installation before it installs anything.
-Your settings in `/etc/hyperflux-next/bridge.json` are kept.
+   ```sh
+   sudo pacman -Syu
+   ```
 
-Then check the result:
+   If a HyperFlux update is available, Pacman lists `hyperflux-next-linux` and,
+   with Full, `hyperflux-next-full` among the packages to upgrade. Pacman checks
+   their signatures against the HyperFlux key you added during installation.
+   Your settings in `/etc/hyperflux-next/bridge.json` are kept.
 
-```sh
-hyperfluxctl doctor
-```
+3. Check the result:
 
-If Doctor asks you to reboot so the new driver becomes active, reboot normally
-with the receiver connected and run Doctor again. See
-[troubleshooting](troubleshooting.md) if it still needs attention.
+   ```sh
+   hyperfluxctl doctor
+   ```
+
+   You should see `HyperFlux Next is ready.` If Doctor asks you to reboot so
+   the new driver becomes active, reboot normally with the receiver connected
+   and run Doctor again.
+
+If Doctor still needs attention, see [troubleshooting](troubleshooting.md).
 
 ## Go Back To An Earlier Version
 
-Install an earlier Core and Full pair together, both from the same release,
-then reboot with the receiver connected. Pacman keeps the packages you
-installed before in its cache:
+Pacman keeps the packages you installed before in its cache.
 
-```sh
-sudo pacman -U \
-  /var/cache/pacman/pkg/hyperflux-next-linux-VERSION-x86_64.pkg.tar.zst \
-  /var/cache/pacman/pkg/hyperflux-next-full-VERSION-x86_64.pkg.tar.zst
-sudo reboot
-```
+1. See which versions you have:
 
-Replace `VERSION` with the same earlier version for both files; run
-`ls /var/cache/pacman/pkg/hyperflux-next-*` to see which versions you have. If
-the cache was cleaned, download both files from that version's GitHub release.
-If you use Core alone, install only the Core file. Do not mix in the stock
-`openrazer-driver-dkms` package while going back.
+   ```sh
+   ls /var/cache/pacman/pkg/hyperflux-next-*
+   ```
+
+2. Install the earlier Core and Full files together, both from the same
+   version, then reboot with the receiver connected:
+
+   ```sh
+   sudo pacman -U \
+     /var/cache/pacman/pkg/hyperflux-next-linux-VERSION-x86_64.pkg.tar.zst \
+     /var/cache/pacman/pkg/hyperflux-next-full-VERSION-x86_64.pkg.tar.zst
+   sudo reboot
+   ```
+
+   Replace `VERSION` with the same earlier version in both lines. If you use
+   Core alone, install only the Core file.
+
+If the cache was cleaned, download both files from that version's GitHub
+release. Do not install the stock `openrazer-driver-dkms` package while going
+back.
 
 ## Remove Full And Keep Core
 
-```sh
-sudo pacman -R hyperflux-next-full
-```
+1. Remove Full:
 
-Core and its services keep working, but stock applications can no longer reach
-devices paired to the receiver. To use stock OpenRazer with devices plugged in
-by cable again, install its driver:
+   ```sh
+   sudo pacman -R hyperflux-next-full
+   ```
 
-```sh
-sudo pacman -S openrazer-driver-dkms
-```
+   Core and its services keep working, but your apps can no longer reach devices
+   paired to the receiver.
+
+2. If you want stock OpenRazer for devices plugged in by cable, install its
+   driver again:
+
+   ```sh
+   sudo pacman -S openrazer-driver-dkms
+   ```
 
 While the HyperFlux repository is still set up, a later `sudo pacman -Syu` may
-offer to replace `openrazer-driver-dkms` with `hyperflux-next-full`. Answer no
-to keep the stock driver.
+ask:
+
+```text
+:: Replace openrazer-driver-dkms with hyperflux-next/hyperflux-next-full? [Y/n]
+```
+
+To keep the stock driver, type `n` and press Enter. Pressing Enter alone means
+yes and installs Full again. Pacman may ask again on later updates; answer `n`
+each time.
 
 ## Remove HyperFlux Next Completely
 
-Turn off the services first, then remove both packages:
+1. Turn off the HyperFlux services:
 
-```sh
-sudo systemctl disable --now hyperflux-next-bridge.service \
-  "hyperflux-next-client@$(id -u).socket"
-sudo pacman -R hyperflux-next-full hyperflux-next-linux
-```
+   ```sh
+   sudo systemctl disable --now hyperflux-next-bridge.service \
+     "hyperflux-next-client@$(id -u).socket"
+   ```
 
-If you changed `/etc/hyperflux-next/bridge.json`, Pacman keeps your copy as
-`/etc/hyperflux-next/bridge.json.pacsave`. To remove it too, use
-`sudo pacman -Rn` instead of `sudo pacman -R`.
+2. Remove both packages:
 
-Stock OpenRGB, OpenRazer, and Polychromatic are not removed. They belong to
-their own packages.
+   ```sh
+   sudo pacman -R hyperflux-next-full hyperflux-next-linux
+   ```
+
+   If you changed `/etc/hyperflux-next/bridge.json`, Pacman keeps your copy as
+   `/etc/hyperflux-next/bridge.json.pacsave`. To remove that copy too, use
+   `sudo pacman -Rn` instead of `sudo pacman -R`.
+
+OpenRGB, OpenRazer, and Polychromatic are not removed. They belong to their own
+packages.
 
 ## Remove The HyperFlux Repository
 
-Do this only after you have removed the packages. Delete the
-`Include = /etc/pacman.d/hyperflux-next.conf` line from `/etc/pacman.conf`,
-then remove the repository file and the HyperFlux key:
+Do this only after you have removed the packages.
 
-```sh
-sudo rm /etc/pacman.d/hyperflux-next.conf
-sudo pacman-key --delete 8BF8A266E756BD1C24C930918B3F3850007159E8
-```
+1. Open `/etc/pacman.conf` as root, for example with `sudoedit /etc/pacman.conf`.
+   - If you used the setup command, delete the
+     `Include = /etc/pacman.d/hyperflux-next.conf` line.
+   - If you added the repository by hand, delete the `[hyperflux-next]` line and
+     its `SigLevel` and `Server` lines.
+2. Remove the repository file, if it exists, and the HyperFlux key:
+
+   ```sh
+   sudo rm -f /etc/pacman.d/hyperflux-next.conf
+   sudo pacman-key --delete 8BF8A266E756BD1C24C930918B3F3850007159E8
+   ```
