@@ -1,8 +1,8 @@
 # HyperFlux Next Documentation
 
-Choose the shortest path for what you are doing with HyperFlux Next 2.0. User
-guides describe the product as installed; developer guides explain stable
-interfaces and safe changes; project pages record status and history.
+Pick the guide for what you want to do. User guides cover installing and using
+HyperFlux Next 2.0. Developer guides cover building it and changing it safely.
+Project pages cover status, plans, and history.
 
 <!-- HFX-GENERATED-BEGIN: release-summary -->
 **HyperFlux Next 2.0.1 is available for Arch Linux x86_64.** Read the
@@ -17,6 +17,7 @@ interfaces and safe changes; project pages record status and history.
 - [Hardware](user/hardware.md)
 - [Updates and removal](user/updates-removal.md)
 - [Troubleshooting](user/troubleshooting.md)
+- [Known limitations](user/limitations.md)
 - [Privacy](user/privacy.md)
 
 ## Develop HyperFlux Next
@@ -36,5 +37,6 @@ interfaces and safe changes; project pages record status and history.
 ## Factual References
 
 Generated references are collected under [`docs/generated/`](generated/).
-They project canonical catalogs and evidence; they do not replace the reviewed
-guides above or authorize a release.
+They are built from the project's data files and list exact details, such as
+package contents and supported devices. Start with the guides above; use the
+references when you need the exact detail.

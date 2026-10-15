@@ -1140,5 +1140,11 @@ class UserDocumentationContracts(unittest.TestCase):
         for word in ("qualified", "distribution application", "transports"):
             self.assertNotIn(word, applications)
 
+    def test_documentation_index_lists_limitations_without_process_words(self) -> None:
+        index = _page("docs/README.md")
+        self.assertIn("(user/limitations.md)", index)
+        for word in ("authorize", "canonical", "evidence"):
+            self.assertNotIn(word, index)
+
 if __name__ == "__main__":
     unittest.main()
