@@ -23,7 +23,21 @@ it, but over HyperFlux it shows no reactive lighting. Ripple needs a
 route-associated key-event source that is not yet available through this
 feature-only path. Choose another effect.
 
-OpenRGB may label a black keyboard as Quartz because its upstream information
-query has no trustworthy discriminator.
+OpenRGB may label a black keyboard as Quartz. OpenRGB reads the colour variant
+from a byte in the keyboard's own information reply, without checking the reply
+or whether the model has variants; HyperFlux passes that reply through
+unchanged. The device name is correct; only the description is affected.
+
+The keyboard's own lighting shortcuts, such as Fn brightness and effect keys,
+change lighting inside the keyboard firmware. Stock OpenRazer and Polychromatic
+keep their last known brightness and effect and do not notice the change, and
+HyperFlux does not react to it. To take control back, apply the effect again in
+OpenRGB, or in Polychromatic change the brightness and then apply the effect
+again.
+
+Polychromatic may list the receiver as an unrecognised `1532:00CF` device.
+Polychromatic lists every Razer USB device that OpenRazer does not manage, and
+the receiver itself is a transport, not a controllable device. Ignore that
+entry; the keyboard and mouse appear under their own names.
 
 These are visible limitations, not hidden compatibility claims.

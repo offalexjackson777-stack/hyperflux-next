@@ -387,6 +387,16 @@ class RepositoryExperienceContracts(unittest.TestCase):
         self.assertIn("Polychromatic offers Ripple", applications)
         self.assertIn("no reactive lighting", applications)
 
+    def test_upstream_application_limitations_are_documented(self) -> None:
+        # Firmware shortcuts, the OpenRGB variant label, and the Polychromatic
+        # receiver entry come from stock behaviour (REL-006, REL-008, REL-018).
+        applications = " ".join(
+            (ROOT / "docs/user/applications.md").read_text(encoding="utf-8").split()
+        )
+        self.assertIn("HyperFlux passes that reply through unchanged", applications)
+        self.assertIn("lighting inside the keyboard firmware", applications)
+        self.assertIn("unrecognised `1532:00CF` device", applications)
+
     def test_repository_link_contract_rejects_missing_files_and_anchors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
