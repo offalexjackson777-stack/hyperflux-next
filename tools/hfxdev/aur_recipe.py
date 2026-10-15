@@ -28,6 +28,7 @@ import re
 import subprocess
 from typing import Any, Mapping
 
+from .arch_official_snapshot import ProviderAlignment, evaluate_provider_alignment
 from .arch_repository import load_arch_repository_policy
 from .arch_split import ArchSplit, SplitOutput, load_arch_split
 from .arch_split_package import package_function_metadata
@@ -723,6 +724,7 @@ def generate_aur_recipe(
     signing_fingerprint: str | None = None,
     environment: Mapping[str, str] | None = None,
     architecture: str = "x86_64",
+    provider_alignment: ProviderAlignment | None = None,
 ) -> AurRecipe:
     """Render the AUR recipe for one exact HyperFlux revision.
 
@@ -742,6 +744,13 @@ def generate_aur_recipe(
         raise ModelError(
             f"Arch split starts at {split.first_release}; {split.full_version} "
             "has no four-output AUR recipe"
+        )
+    alignment = provider_alignment or evaluate_provider_alignment(root, split=split)
+    if alignment.candidate != split.full_version:
+        raise ModelError("OpenRazer provider alignment was evaluated for another release")
+    if mode == PUBLICATION and not alignment.passed:
+        raise ModelError(
+            "OpenRazer provider alignment gate failed: " + "; ".join(alignment.problems)
         )
     manifest = load_install_manifest(root)
     deployment = load_native_deployment(root)
@@ -783,6 +792,7 @@ def generate_aur_recipe(
             disclosures.append(
                 f"{split.full_version} precedes the four-output release {split.first_release}"
             )
+    disclosures.extend(f"provider gate: {problem}" for problem in alignment.problems)
     for pin in upstreams:
         if pin.checksum != SKIP:
             continue

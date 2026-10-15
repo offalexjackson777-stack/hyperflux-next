@@ -17,6 +17,7 @@ import unittest
 
 from arch_split_support import ROOT, candidate_split, makepkg_available
 
+from hfxdev.arch_official_snapshot import ProviderAlignment
 from hfxdev.arch_split import load_arch_split
 from hfxdev.arch_repository import load_arch_repository_policy
 from hfxdev.aur_recipe import (
@@ -51,6 +52,9 @@ GIT_IDENTITY = {
     "GIT_CONFIG_NOSYSTEM": "1",
 }
 LOCAL_PATH_MARKERS = (str(ROOT), "/home/", "/tmp/", "/root/")
+ALIGNED = ProviderAlignment(
+    candidate="2.0.1-2", provided=(), transformed_commit="", official_versions=(), problems=()
+)
 
 
 def _transforms() -> dict[str, dict]:
@@ -220,6 +224,9 @@ class QualificationRecipeContracts(unittest.TestCase):
         self.assertNotIn("validpgpkeys", self.pkgbuild)
         self.assertIn("# Qualification only: source", self.pkgbuild)
         self.assertIn("# Qualification only: openrazer", self.pkgbuild)
+        # The committed snapshot does not prove alignment yet, and the
+        # qualification recipe says so instead of claiming it.
+        self.assertIn("# Qualification only: provider gate: official extra-testing", self.pkgbuild)
 
     def test_recipe_has_no_install_scripts_dkms_calls_or_local_inputs(self) -> None:
         for name, text in self.recipe.files.items():
@@ -567,6 +574,7 @@ class PublicationRecipeContracts(unittest.TestCase):
             split=self.split,
             signing_fingerprint=self.fingerprint,
             environment=self.gnupg.environment,
+            provider_alignment=ALIGNED,
         )
         arguments.update(overrides)
         return generate_aur_recipe(ROOT, **arguments)
@@ -655,6 +663,16 @@ class PublicationRecipeContracts(unittest.TestCase):
             "upstream lacks pin": (
                 lambda: self._generate(transforms=pinned_transforms({**commits, "openrgb": "f" * 40})),
                 "does not contain the pinned commit",
+            ),
+            "provider gate": (
+                lambda: self._generate(provider_alignment=None),
+                "OpenRazer provider alignment gate failed: .*not observed",
+            ),
+            "stale provider gate": (
+                lambda: self._generate(
+                    provider_alignment=ProviderAlignment("2.0.1-1", (), "", (), ())
+                ),
+                "evaluated for another release",
             ),
             "inactive split": (
                 lambda: self._generate(split=load_arch_split(ROOT)),

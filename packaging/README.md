@@ -34,6 +34,7 @@ Builds reproducible distribution artifacts, a canonical installed root, and sign
 - [`packaging/distributions.json`](distributions.json)
 - [`packaging/arch-split.json`](arch-split.json)
 - [`packaging/aur.json`](aur.json)
+- [`packaging/arch-official-snapshot.json`](arch-official-snapshot.json)
 - [`packaging/keys/hyperflux-next-arch-repository-key.asc`](keys/hyperflux-next-arch-repository-key.asc)
 
 ## Verify

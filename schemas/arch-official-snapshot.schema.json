@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/arch-official-snapshot-v1.json",
+  "title": "HyperFlux official Arch package snapshot for one release candidate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "candidate",
+    "rule",
+    "watched_packages",
+    "repositories",
+    "app_behavior_receipts"
+  ],
+  "properties": {
+    "$schema": {"const": "../schemas/arch-official-snapshot.schema.json"},
+    "schema": {"const": "hyperflux-arch-official-snapshot-v1"},
+    "candidate": {"type": "string", "pattern": "^[0-9]+(\\.[0-9]+)*-[0-9]+$"},
+    "rule": {"type": "string", "minLength": 1},
+    "watched_packages": {"$ref": "#/$defs/names"},
+    "repositories": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        {"$ref": "#/$defs/repository", "properties": {"name": {"const": "extra"}}},
+        {"$ref": "#/$defs/repository", "properties": {"name": {"const": "extra-testing"}}},
+        {"$ref": "#/$defs/repository", "properties": {"name": {"const": "extra-staging"}}}
+      ]
+    },
+    "app_behavior_receipts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["package", "version", "path", "sha256"],
+        "properties": {
+          "package": {"$ref": "#/$defs/name"},
+          "version": {"type": "string"},
+          "path": {"type": "string", "pattern": "^[^/].*$"},
+          "sha256": {"$ref": "#/$defs/digest"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "name": {"type": "string", "pattern": "^[a-z0-9@_+][a-z0-9@._+-]{0,127}$"},
+    "names": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/name"}},
+    "relations": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "repository": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "state"],
+          "properties": {"name": {"type": "string"}, "state": {"const": "unobserved"}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "state", "database_sha256", "database_modified", "packages"],
+          "properties": {
+            "name": {"type": "string"},
+            "state": {"const": "observed"},
+            "database_sha256": {"$ref": "#/$defs/digest"},
+            "database_modified": {"type": "string", "format": "date-time"},
+            "packages": {"type": "array", "items": {"$ref": "#/$defs/package"}}
+          }
+        }
+      ]
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "base", "version", "filename", "sha256", "build_date", "depends", "provides", "conflicts"],
+      "properties": {
+        "name": {"$ref": "#/$defs/name"},
+        "base": {"$ref": "#/$defs/name"},
+        "version": {"type": "string", "pattern": "^([0-9]+:)?[A-Za-z0-9._+~]+-[0-9]+(\\.[0-9]+)?$"},
+        "filename": {"type": "string"},
+        "sha256": {"$ref": "#/$defs/digest"},
+        "build_date": {"type": "integer", "minimum": 0},
+        "depends": {"$ref": "#/$defs/relations"},
+        "provides": {"$ref": "#/$defs/relations"},
+        "conflicts": {"$ref": "#/$defs/relations"}
+      }
+    }
+  }
+}

@@ -286,6 +286,33 @@ def _parser() -> argparse.ArgumentParser:
         help="qualify a future split release such as 2.0.1-2 (commit recipes only)",
     )
 
+    arch_snapshot = commands.add_parser(
+        "arch-snapshot",
+        help="import official Arch package state and check OpenRazer provider alignment",
+    )
+    arch_snapshot_commands = arch_snapshot.add_subparsers(
+        dest="arch_snapshot_command", required=True
+    )
+    arch_snapshot_import = arch_snapshot_commands.add_parser(
+        "import", help="record official repositories from local pacman sync databases"
+    )
+    arch_snapshot_import.add_argument("--candidate", required=True, metavar="VERSION-RELEASE")
+    arch_snapshot_import.add_argument(
+        "--database",
+        action="append",
+        default=[],
+        metavar="REPOSITORY=PATH",
+        help="sync database of extra, extra-testing or extra-staging; omitted ones are unobserved",
+    )
+    arch_snapshot_check = arch_snapshot_commands.add_parser(
+        "check", help="fail unless the OpenRazer provider matches official Arch"
+    )
+    arch_snapshot_check.add_argument(
+        "--candidate-release",
+        metavar="VERSION-RELEASE",
+        help="check a future split release such as 2.0.1-2",
+    )
+
     arch_repository = commands.add_parser(
         "arch-repository",
         help="build or verify the signed third-party Arch repository",
@@ -313,8 +340,45 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _package_aur(root: Path, args: argparse.Namespace) -> int:
+def _candidate_split(root: Path, value: str | None):
     from .arch_split import load_arch_split
+
+    if value is None:
+        return load_arch_split(root)
+    version, separator, release = value.rpartition("-")
+    if not separator or not version or not release.isdecimal():
+        raise ModelError("candidate release must be VERSION-RELEASE")
+    return load_arch_split(root, release=(version, int(release)))
+
+
+def _arch_snapshot(root: Path, args: argparse.Namespace) -> int:
+    from .arch_official_snapshot import (
+        evaluate_provider_alignment,
+        import_snapshot,
+        write_snapshot,
+    )
+
+    if args.arch_snapshot_command == "import":
+        databases: dict[str, Path] = {}
+        for item in args.database:
+            name, separator, value = item.partition("=")
+            if not separator or not value or name in databases:
+                raise ModelError("--database must be one unique REPOSITORY=PATH")
+            databases[name] = Path(value).expanduser().resolve()
+        split = _candidate_split(root, args.candidate)
+        value = import_snapshot(root, databases, candidate=args.candidate, split=split)
+        print(f"Official Arch snapshot: {write_snapshot(root, value)}")
+        for repository in value["repositories"]:
+            print(f"{repository['name']}: {repository['state']}")
+        return 0
+    alignment = evaluate_provider_alignment(
+        root, split=_candidate_split(root, args.candidate_release)
+    )
+    print(alignment.as_json(), end="")
+    return 0 if alignment.passed else 1
+
+
+def _package_aur(root: Path, args: argparse.Namespace) -> int:
     from .aur_recipe import generate_aur_recipe, write_aur_recipe
 
     checkouts: dict[str, Path] = {}
@@ -323,14 +387,9 @@ def _package_aur(root: Path, args: argparse.Namespace) -> int:
         if not separator or not value or name in checkouts:
             raise ModelError("--upstream-checkout must be one unique ID=PATH")
         checkouts[name] = Path(value).expanduser().resolve()
-    split = None
-    if args.candidate_release is not None:
-        if args.tag is not None:
-            raise ModelError("a publication recipe uses the current release, not a candidate")
-        version, separator, release = args.candidate_release.rpartition("-")
-        if not separator or not version or not release.isdecimal():
-            raise ModelError("--candidate-release must be VERSION-RELEASE")
-        split = load_arch_split(root, release=(version, int(release)))
+    if args.candidate_release is not None and args.tag is not None:
+        raise ModelError("a publication recipe uses the current release, not a candidate")
+    split = _candidate_split(root, args.candidate_release)
     recipe = generate_aur_recipe(
         root,
         tag=args.tag,
@@ -707,6 +766,8 @@ def main(arguments: list[str] | None = None) -> int:
                 )
             print(f"Build manifest: {result.manifest}")
             return 0
+        if args.command == "arch-snapshot":
+            return _arch_snapshot(root, args)
         if args.command == "arch-repository":
             if args.arch_repository_command == "build":
                 manifest = build_arch_repository(
