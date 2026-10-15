@@ -102,14 +102,14 @@
       "generated_block_ids": []
     },
     {
-      "path": "docs/architecture/decisions/github-native-documentation.md",
-      "title": "GitHub-Native Documentation And Local Qualification",
+      "path": "docs/architecture/decisions/repository-documentation-and-local-hardware-authority.md",
+      "title": "Repository Documentation And Local Hardware Authority",
       "audience": "contributors",
-      "purpose": "Records the repository-native documentation and local qualification decision.",
+      "purpose": "Records why documentation lives in the repository and hardware facts come only from the local machine.",
       "owner": "documentation",
       "navigation_group": "architecture",
       "mode": "human",
-      "canonical_sources": ["docs/architecture/decisions/github-native-documentation.md"],
+      "canonical_sources": ["docs/architecture/decisions/repository-documentation-and-local-hardware-authority.md"],
       "generated_block_ids": []
     },
     {

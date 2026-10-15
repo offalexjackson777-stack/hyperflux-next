@@ -443,6 +443,25 @@ class RepositoryExperienceContracts(unittest.TestCase):
         self.assertIn("candidate-bound physical evidence", release)
         self.assertIn("packages signed into the project-operated Arch repository", release)
 
+    def test_documentation_decision_is_a_concise_public_adr(self) -> None:
+        # The documentation ADR states context, decision, consequences, and
+        # scope without delivery-process justification (ARCH-004).
+        decisions = ROOT / "docs/architecture/decisions"
+        self.assertFalse((decisions / "github-native-documentation.md").exists())
+        path = decisions / "repository-documentation-and-local-hardware-authority.md"
+        text = path.read_text(encoding="utf-8")
+        self.assertTrue(text.startswith("# Repository Documentation And Local Hardware Authority\n"))
+        headings = re.findall(r"(?m)^## (.+)$", text)
+        self.assertEqual(headings[:4], ["Context", "Decision", "Consequences", "Scope"])
+        self.assertLessEqual(len(text.splitlines()), 60)
+        flat = " ".join(text.split())
+        for phrase in ("authorize a release", "package-matched", "installed loopback console", "Pages portal"):
+            self.assertNotIn(phrase, flat)
+        self.assertIn("source-only, loopback-only console", flat)
+        catalog = load_json(ROOT / "docs/catalog.json")
+        entry = next(item for item in catalog["documents"] if item["path"] == path.relative_to(ROOT).as_posix())
+        self.assertEqual(entry["title"], "Repository Documentation And Local Hardware Authority")
+
     def test_design_book_claims_match_verification_and_application_boundaries(self) -> None:
         # The runner rejects hardware nodes and reruns every selected node, and
         # effects, persistence, and settings stay upstream (AUTH-008, AUTH-009).
