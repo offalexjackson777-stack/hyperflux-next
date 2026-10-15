@@ -51,9 +51,10 @@ class PriorRelease:
 
 PRIOR_RELEASES = (
     PriorRelease("2.0.0-1", "v2.0.0", "db75a075e56b1c571fb22fe4326ff6683a934d52"),
-    # The current tree's two-package release; once 2.0.1-1 is tagged this
-    # entry pins that tag like 2.0.0-1.
-    PriorRelease("2.0.1-1", None, None),
+    PriorRelease("2.0.1-1", "v2.0.1", "f269eb7018e460e2f1b4d80c959cf5da2adf97ac"),
+    # The current tree's two-package release; once 2.0.2-1 is tagged this
+    # entry pins that tag like the releases above.
+    PriorRelease("2.0.2-1", None, None),
 )
 
 _LOADER = r"""

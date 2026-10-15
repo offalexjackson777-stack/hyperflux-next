@@ -88,7 +88,7 @@ class AssuranceTests(unittest.TestCase):
         for name in (repository.manifest, repository.checksums):
             self.assertIn(f"`{name}`", unsigned_row)
             self.assertNotIn(f"`{name}`", signed_row)
-        self.assertIn("`SHA256SUMS` is not signed", rows["| Release [`v2.0.1`]("
+        self.assertIn("`SHA256SUMS` is not signed", rows[f"| Release [`{repository.product_release_tag}`]("
                       f"{repository.product_release_url})"])
         self.assertIn("Tags are not signed; commits are not signed", page)
         self.assertIn("None exist; they are future work", page)

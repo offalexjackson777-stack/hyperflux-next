@@ -9,7 +9,7 @@ The complete per-section record is in
 [`assurance/design-coverage.json`](../../assurance/design-coverage.json).
 Software tests never count as a hardware test.
 
-Release `2.0.1-1` is `published-arch-release`.
+Release `2.0.2-1` is `published-arch-release`.
 No section blocks it; the open items below are limitations or future work.
 
 ## Summary

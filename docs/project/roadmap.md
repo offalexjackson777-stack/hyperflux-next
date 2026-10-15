@@ -13,6 +13,9 @@ later. Nothing under Next or Later is available yet.
   are now detected, and Doctor explains how to move them aside. The OpenRazer
   drivers HyperFlux needs load at boot, and the OpenRGB plugin works with
   OpenRGB 1.0.
+- **2.0.2:** a reconnect update. A keyboard switched off and on comes back
+  within seconds, each device shows only its own battery level, and OpenRazer
+  no longer reports errors after the computer wakes from sleep.
 
 Install the current release from the signed HyperFlux Pacman repository, as
 shown in the [installation guide](../user/installation.md). See the
@@ -20,10 +23,6 @@ shown in the [installation guide](../user/installation.md). See the
 
 ## Next
 
-- **A 2.0.x update with reconnect fixes.** Devices that are switched off and on
-  come back faster, battery readings are matched to the right request, and
-  OpenRazer stops reporting errors when a device sleeps and returns. These fixes
-  are in the source code but not yet in a published package.
 - **2.1.0 with smaller packages.** Version 2.1.0 splits the two packages into
   four. It ships only after moving from two packages to four has been tested
   on real hardware.

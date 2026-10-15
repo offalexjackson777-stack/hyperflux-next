@@ -5,7 +5,7 @@
 This page lists the checks a HyperFlux release has to pass and where the proof for
 each one lives, for anyone who wants to know what was tested before a release.
 
-HyperFlux Next `2.0.1-1` has `10` verified technical gates. The Arch release is published through a signed project-operated Arch repository, not an official Arch Linux repository.
+HyperFlux Next `2.0.2-1` has `10` verified technical gates. The Arch release is published through a signed project-operated Arch repository, not an official Arch Linux repository.
 
 | Check | Result | Evidence |
 | --- | --- | --- |

@@ -1250,6 +1250,7 @@ class UserDocumentationContracts(unittest.TestCase):
         shipped = roadmap[positions[0] : positions[1]]
         self.assertIn("**2.0.0:**", shipped)
         self.assertIn("**2.0.1:**", shipped)
+        self.assertIn("**2.0.2:**", shipped)
         self.assertNotIn("AUR", shipped)
         later = roadmap[positions[1] :]
         self.assertIn("not published yet", later)

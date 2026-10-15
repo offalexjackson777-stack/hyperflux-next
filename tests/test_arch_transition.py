@@ -60,12 +60,12 @@ class PriorReleaseContracts(unittest.TestCase):
     """Each prior two-package release is read with its own pinned loaders."""
 
     def test_the_prior_releases_are_the_two_package_releases(self) -> None:
-        self.assertEqual(("2.0.0-1", "2.0.1-1"), tuple(PRIORS))
+        self.assertEqual(("2.0.0-1", "2.0.1-1", "2.0.2-1"), tuple(PRIORS))
         self.assertFalse(load_arch_split(ROOT).active)
-        self.assertEqual("2.0.1-1", load_arch_split(ROOT).full_version)
+        self.assertEqual("2.0.2-1", load_arch_split(ROOT).full_version)
 
     def test_working_tree_release_is_two_packages(self) -> None:
-        topology = load_prior_topology(ROOT, PRIORS["2.0.1-1"])
+        topology = load_prior_topology(ROOT, PRIORS["2.0.2-1"])
         self.assertEqual(
             ("hyperflux-next-linux", "hyperflux-next-full"),
             tuple(package.name for package in topology.packages),
@@ -97,7 +97,7 @@ class InPlaceUpgradeContracts(unittest.TestCase):
             for release, prior in PRIORS.items()
             if _tag_available(prior)
         }
-        cls.current = cls.topologies["2.0.1-1"]
+        cls.current = cls.topologies["2.0.2-1"]
 
     def _each_prior(self):
         for release in PRIORS:
@@ -106,7 +106,7 @@ class InPlaceUpgradeContracts(unittest.TestCase):
                     self.skipTest(f"{PRIORS[release].ref} is not available in this clone")
                 yield release, analyse_transition(self.split, self.topologies[release])
 
-    def test_both_prior_releases_upgrade_in_place(self) -> None:
+    def test_every_prior_release_upgrades_in_place(self) -> None:
         for release, report in self._each_prior():
             self.assertEqual((), report.problems)
             self.assertEqual("2.1.0-1", report.target_release)

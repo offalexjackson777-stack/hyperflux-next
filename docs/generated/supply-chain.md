@@ -13,18 +13,18 @@ Each published download is listed with exactly what protects it from tampering.
 | Download | Contents | Protection |
 | --- | --- | --- |
 | Source SBOM | SPDX 2.3 inventory of source and build dependencies | Generated from this repository; not signed, and not an SBOM of package files |
-| Release [`v2.0.1`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.1) | `hyperflux-next-linux-2.0.1-1-x86_64.pkg.tar.zst`, `hyperflux-next-full-2.0.1-1-x86_64.pkg.tar.zst` and `SHA256SUMS` | `SHA256SUMS` is not signed; it is a checksum list fetched over HTTPS |
-| Arch repository [`arch-repository`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/arch-repository) | `hyperflux-next-full-2.0.1-1-x86_64.pkg.tar.zst`, `hyperflux-next-linux-2.0.1-1-x86_64.pkg.tar.zst`, `hyperflux-next.db`, `hyperflux-next.db.tar.zst`, `hyperflux-next.files`, `hyperflux-next.files.tar.zst` | Each has a detached OpenPGP `.sig` from subkey `4C64CE4C855BC6844B4C1670C67DD9C42253ED27`; pacman requires `Required DatabaseRequired TrustedOnly` |
+| Release [`v2.0.2`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.2) | `hyperflux-next-linux-2.0.2-1-x86_64.pkg.tar.zst`, `hyperflux-next-full-2.0.2-1-x86_64.pkg.tar.zst` and `SHA256SUMS` | `SHA256SUMS` is not signed; it is a checksum list fetched over HTTPS |
+| Arch repository [`arch-repository`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/arch-repository) | `hyperflux-next-full-2.0.2-1-x86_64.pkg.tar.zst`, `hyperflux-next-linux-2.0.2-1-x86_64.pkg.tar.zst`, `hyperflux-next.db`, `hyperflux-next.db.tar.zst`, `hyperflux-next.files`, `hyperflux-next.files.tar.zst` | Each has a detached OpenPGP `.sig` from subkey `4C64CE4C855BC6844B4C1670C67DD9C42253ED27`; pacman requires `Required DatabaseRequired TrustedOnly` |
 | Arch repository [`arch-repository`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/arch-repository) | `SHA256SUMS-repository`, `hyperflux-next-arch-repository-fingerprint.txt`, `hyperflux-next-arch-repository-key.asc`, `hyperflux-next-arch-repository-manifest.json` | Not signed; the repository verifier recomputes or checks each one against `assurance/arch-repository.json` |
-| Git tags and commits | `v2.0.1` and its history | Tags are not signed; commits are not signed |
+| Git tags and commits | `v2.0.2` and its history | Tags are not signed; commits are not signed |
 | Remote build attestations | Sigstore signatures, SLSA provenance, hosted build attestations | None exist; they are future work |
 
-The signing subkey belongs to primary key `8BF8A266E756BD1C24C930918B3F3850007159E8`. The `arch-repository` GitHub release is a machine-managed prerelease that serves pacman; `v2.0.1` is the human-facing release.
+The signing subkey belongs to primary key `8BF8A266E756BD1C24C930918B3F3850007159E8`. The `arch-repository` GitHub release is a machine-managed prerelease that serves pacman; `v2.0.2` is the human-facing release.
 
 | Package | Version | SHA-256 |
 | --- | --- | --- |
-| `hyperflux-next-linux` | `2.0.1-1` | `70bb4e613159b489b2ac7ed316724bedd3d44010a86efbb9725b990ce6fd1559` |
-| `hyperflux-next-full` | `2.0.1-1` | `d7ab6a9f586e81aa09749df268eeeed09443a9cf37d0cfd2730480f1699472c3` |
+| `hyperflux-next-linux` | `2.0.2-1` | `7c78e8d210da6ac536df3fb3c7fb673b276f6dbc561d0c489e87da4a29cecda1` |
+| `hyperflux-next-full` | `2.0.2-1` | `697a8b30b34c89a74bb2754db7967283075c609c73ef52a88c4629192a74d5a1` |
 
 ## Dependencies
 
@@ -35,7 +35,7 @@ The signing subkey belongs to primary key `8BF8A266E756BD1C24C930918B3F385000715
 - Vendored source packages: 1
 - Pinned application upstreams: 3
 - Immutable workflow actions: 7
-- Dependency list SHA-256: `656c9e6719b473781e887a4dbb77524800729d0158b8659c05b951f7d2b571b6`
+- Dependency list SHA-256: `7e9c83807eca553b39e21f42eb459ffb9871f7a4fb20fdc9b797efdef839ef74`
 
 ## Allowed Licenses
 

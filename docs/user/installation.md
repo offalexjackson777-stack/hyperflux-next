@@ -223,23 +223,23 @@ the repository later to get updates.
 
 <!-- HFX-GENERATED-BEGIN: package-fallback -->
 This downloads the Core and Full package files from the release page,
-[v2.0.1](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.1),
+[v2.0.2](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.2),
 checks them against the release's checksum list, and installs both in one step.
 Full needs Core, and without the repository Pacman cannot fetch Core by itself.
 
 ```bash
 curl --proto '=https' --tlsv1.2 --fail --location --remote-name-all -- \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.1/hyperflux-next-linux-2.0.1-1-x86_64.pkg.tar.zst \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.1/hyperflux-next-full-2.0.1-1-x86_64.pkg.tar.zst \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.1/SHA256SUMS
-awk '$2 == "hyperflux-next-linux-2.0.1-1-x86_64.pkg.tar.zst" || \
-     $2 == "hyperflux-next-full-2.0.1-1-x86_64.pkg.tar.zst"' \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.2/hyperflux-next-linux-2.0.2-1-x86_64.pkg.tar.zst \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.2/hyperflux-next-full-2.0.2-1-x86_64.pkg.tar.zst \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.0.2/SHA256SUMS
+awk '$2 == "hyperflux-next-linux-2.0.2-1-x86_64.pkg.tar.zst" || \
+     $2 == "hyperflux-next-full-2.0.2-1-x86_64.pkg.tar.zst"' \
   SHA256SUMS > SHA256SUMS-packages
 test "$(wc -l < SHA256SUMS-packages)" -eq 2
 sha256sum -c SHA256SUMS-packages
 sudo pacman -U -- \
-  ./hyperflux-next-linux-2.0.1-1-x86_64.pkg.tar.zst \
-  ./hyperflux-next-full-2.0.1-1-x86_64.pkg.tar.zst
+  ./hyperflux-next-linux-2.0.2-1-x86_64.pkg.tar.zst \
+  ./hyperflux-next-full-2.0.2-1-x86_64.pkg.tar.zst
 ```
 
 `sha256sum` should print `OK` for both files. If it prints `FAILED`, delete the
