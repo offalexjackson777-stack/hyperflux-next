@@ -1160,5 +1160,16 @@ class UserDocumentationContracts(unittest.TestCase):
         for command in ("yay ", "paru ", "makepkg", "git clone"):
             self.assertNotIn(command, roadmap)
 
+    def test_contributing_starts_with_the_change_workflow(self) -> None:
+        contributing = _page("CONTRIBUTING.md")
+        first_section = contributing.split("\n## ", 2)[1]
+        self.assertTrue(first_section.startswith("Change Workflow"))
+        self.assertIn(
+            "https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=device_support.yml",
+            contributing,
+        )
+        self.assertNotIn("(.github/ISSUE_TEMPLATE/", contributing)
+        self.assertNotIn("authoriz", contributing)
+
 if __name__ == "__main__":
     unittest.main()
