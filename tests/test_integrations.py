@@ -68,6 +68,13 @@ from hfxdev.openrazer_native_route import load_native_deployment
 from hfxdev.profiles import load_profile_inputs
 
 
+def _build_directory() -> Path:
+    """Return the ignored build folder, created on a fresh checkout."""
+    directory = ROOT / "build"
+    directory.mkdir(exist_ok=True)
+    return directory
+
+
 class IntegrationCatalogTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -404,7 +411,7 @@ class IntegrationCatalogTests(unittest.TestCase):
         dpi["matcher"]["fields"][0]["bytes"] = [0]
         with TemporaryDirectory(
             prefix="test-openrazer-command-policy-",
-            dir=ROOT / "build",
+            dir=_build_directory(),
         ) as directory:
             source = Path(directory)
             driver = source / "driver"
@@ -439,7 +446,7 @@ class IntegrationCatalogTests(unittest.TestCase):
     def test_openrazer_probe_harness_uses_the_executable_build_root(self) -> None:
         with TemporaryDirectory(
             prefix="test-openrazer-probe-",
-            dir=ROOT / "build",
+            dir=_build_directory(),
         ) as directory:
             temporary_root = Path(directory)
             root = temporary_root / "repository"
