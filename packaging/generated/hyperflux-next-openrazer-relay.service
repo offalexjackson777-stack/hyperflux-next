@@ -48,3 +48,4 @@ DevicePolicy=closed
 DeviceAllow=/dev/uhid rw
 ReadOnlyPaths=/usr/lib/hyperflux-next /run/hyperflux-next
 ReadWritePaths=/dev/uhid /run/hyperflux-next-openrazer-relay
+ReadWritePaths=-/sys/bus/hid/drivers/razeraccessory/unbind -/sys/bus/hid/drivers/razerkbd/unbind -/sys/bus/hid/drivers/razerkraken/unbind -/sys/bus/hid/drivers/razermouse/unbind

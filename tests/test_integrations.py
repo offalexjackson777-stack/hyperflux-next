@@ -564,6 +564,25 @@ class IntegrationCatalogTests(unittest.TestCase):
             f"SupplementaryGroups={runtime.bridge.kernel_access_group}", service
         )
         self.assertIn("ProtectKernelModules=yes", service)
+        self.assertIn("ProtectKernelTunables=yes", service)
+        # REL-020: only each OpenRazer driver's unbind file is writable in /sys.
+        self.assertIn(
+            "ReadWritePaths="
+            + " ".join(
+                f"-/sys/bus/hid/drivers/{module}/unbind"
+                for module in deployment.driver.modules
+            ),
+            service,
+        )
+        sys_paths = [
+            path
+            for line in service.splitlines()
+            if line.startswith(("ReadWritePaths=", "ReadOnlyPaths="))
+            for path in line.partition("=")[2].split()
+            if "/sys/" in path
+        ]
+        self.assertTrue(sys_paths)
+        self.assertTrue(all(path.endswith("/unbind") for path in sys_paths))
         self.assertNotIn("ExecStartPre=", service)
         self.assertNotIn("ExecCondition=", service)
         self.assertNotIn("check-openrazer-driver", service)

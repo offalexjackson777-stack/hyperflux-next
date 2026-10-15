@@ -291,6 +291,7 @@ fn kernel_binding_stop_republishes_on_the_same_bridge_instead_of_blocking() {
         bridge,
         device.clone(),
         policy,
+        None,
     )
     .expect("published endpoint is created");
     endpoint
@@ -374,6 +375,7 @@ fn retained_route_timeout_withdraws_once_and_requires_fresh_serial_identity() {
         bridge,
         device.clone(),
         policy,
+        None,
     )
     .expect("published endpoint is created");
     endpoint
@@ -469,6 +471,7 @@ fn retained_route_requalification_leaves_the_sibling_endpoint_untouched() {
         mouse_bridge,
         mouse_device,
         mouse_policy,
+        None,
     )
     .expect("mouse endpoint is created");
     let mut keyboard = RunningEndpoint::create(
@@ -476,6 +479,7 @@ fn retained_route_requalification_leaves_the_sibling_endpoint_untouched() {
         keyboard_bridge,
         keyboard_device,
         keyboard_policy,
+        None,
     )
     .expect("keyboard endpoint is created");
     mouse
@@ -726,7 +730,7 @@ fn unexpected_session_drop_emits_one_destroy_after_one_create() {
     let path = temporary_uhid_file();
     let paths = test_paths(path.clone());
     let (device, policy) = fixture();
-    let endpoint = RunningEndpoint::create(&paths, NotSentBridge, device, policy)
+    let endpoint = RunningEndpoint::create(&paths, NotSentBridge, device, policy, None)
         .expect("endpoint is created");
 
     drop(endpoint);
@@ -749,11 +753,74 @@ fn unexpected_session_drop_emits_one_destroy_after_one_create() {
 }
 
 #[test]
+fn teardown_answers_an_in_flight_get_before_unbinding_and_destroying() {
+    let path = temporary_uhid_file();
+    let tree = teardown::tests::DriverTree::create();
+    let mut paths = test_paths(path.clone());
+    paths.hid_driver_root = tree.0.clone();
+    let catalog = NativeRouteCatalog::load().expect("native catalog loads");
+    let record = catalog
+        .profile("child.razer.basilisk-v3-pro-35k.00cd")
+        .expect("mouse route exists");
+    let (device, policy) = fixture_from_record(&catalog, record, "teardown-mouse");
+    tree.bind("0003:1532:00CD.0007", &device.phys);
+    let request = battery_report(0x1f);
+    let (bridge, calls) = publication_bridge(vec![ScriptOutcome::Status(0x02)]);
+    let mut endpoint =
+        RunningEndpoint::create(&paths, bridge, device, policy, Some(&record.driver_family))
+            .expect("endpoint is created");
+    endpoint
+        .process_event(UhidEvent::Start { flags: 0 })
+        .expect("kernel starts endpoint");
+    endpoint
+        .process_event(set_report(1, request))
+        .expect("battery SET is handled");
+    endpoint.flush().expect("SET reply flushes");
+
+    // The driver's GET is already queued when the route is withdrawn.
+    let mut get = vec![0_u8; UHID_EVENT_BYTES];
+    get[0..4].copy_from_slice(&9_u32.to_ne_bytes());
+    get[4..8].copy_from_slice(&2_u32.to_ne_bytes());
+    OpenOptions::new()
+        .append(true)
+        .open(&path)
+        .and_then(|mut file| file.write_all(&get))
+        .expect("in-flight GET is queued");
+    drop(endpoint);
+
+    let bytes = fs::read(&path).expect("UHID transcript reads");
+    fs::remove_file(&path).expect("temporary UHID file is removed");
+    let event_type = |index: usize| {
+        u32::from_ne_bytes(
+            bytes[UHID_EVENT_BYTES * index..UHID_EVENT_BYTES * index + 4]
+                .try_into()
+                .expect("event type"),
+        )
+    };
+    assert_eq!(bytes.len(), UHID_EVENT_BYTES * 5);
+    assert_eq!(
+        (0..5).map(event_type).collect::<Vec<_>>(),
+        vec![11, 14, 9, 10, 1]
+    );
+    let reply = UHID_EVENT_BYTES * 3;
+    assert_eq!(
+        u32::from_ne_bytes(bytes[reply + 4..reply + 8].try_into().expect("reply id")),
+        2
+    );
+    assert_eq!(
+        u16::from_ne_bytes(bytes[reply + 8..reply + 10].try_into().expect("reply err")),
+        0
+    );
+    assert_eq!(calls.borrow().as_slice(), &[request]);
+    assert_eq!(tree.unbind_request(), "0003:1532:00CD.0007");
+}
+
+#[test]
 fn missing_uhid_start_has_one_route_local_deadline() {
     let path = temporary_uhid_file();
     let paths = test_paths(path.clone());
     let (device, policy) = fixture();
-    let endpoint = RunningEndpoint::create(&paths, NotSentBridge, device, policy)
+    let endpoint = RunningEndpoint::create(&paths, NotSentBridge, device, policy, None)
         .expect("endpoint is created");
 
     let before_deadline = (endpoint.created_at + UHID_START_TIMEOUT)

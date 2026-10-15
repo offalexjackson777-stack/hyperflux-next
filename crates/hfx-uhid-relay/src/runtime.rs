@@ -40,6 +40,9 @@ const IDLE_INTERVAL: Duration = Duration::from_millis(10);
 const MAX_PENDING_REPLIES: usize = 8;
 const WATCH_BATCH_SIZE: u16 = 32;
 
+mod teardown;
+use teardown::{DRIVER_RELEASE_DEADLINE, DriverBinding, ReleaseOutcome};
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RelayPaths {
     pub bridge_socket: PathBuf,
@@ -155,6 +158,7 @@ pub(crate) struct RunningEndpoint<B: crate::BridgeExchange> {
     endpoint: Option<FeatureEndpoint<B>>,
     pending: VecDeque<PendingWrite>,
     last_battery_diagnostic: Option<BatteryExchangeDiagnostic>,
+    driver_binding: Option<DriverBinding>,
     destroyed: bool,
     created_at: Instant,
 }
@@ -171,7 +175,10 @@ impl<B: crate::BridgeExchange> RunningEndpoint<B> {
         bridge: B,
         device: VirtualDeviceSpec,
         command_policy: NativeCommandPolicy,
+        driver_family: Option<&str>,
     ) -> Result<Self, RelayRuntimeError> {
+        let driver_binding = driver_family
+            .and_then(|family| DriverBinding::new(&paths.hid_driver_root, family, &device.phys));
         let mut file = open_uhid(&paths.uhid_device)?;
         write_blocking(&mut file, &UhidReply::Create(device))?;
         let flags = fcntl_getfl(&file).map_err(|_| RelayRuntimeError::UhidOpen)?;
@@ -181,6 +188,7 @@ impl<B: crate::BridgeExchange> RunningEndpoint<B> {
             endpoint: Some(FeatureEndpoint::new(bridge, command_policy)),
             pending: VecDeque::new(),
             last_battery_diagnostic: None,
+            driver_binding,
             destroyed: false,
             created_at: Instant::now(),
         })
@@ -191,6 +199,16 @@ impl<B: crate::BridgeExchange> RunningEndpoint<B> {
         if self.departure_reply_flushed() {
             return Ok(RunningEndpointStep::RetainedRouteDeparture);
         }
+        self.read_events(true)?;
+        self.flush()?;
+        Ok(if self.departure_reply_flushed() {
+            RunningEndpointStep::RetainedRouteDeparture
+        } else {
+            RunningEndpointStep::Running
+        })
+    }
+
+    fn read_events(&mut self, stop_at_departure: bool) -> Result<(), RelayRuntimeError> {
         let mut bytes = [0_u8; UHID_EVENT_BYTES];
         loop {
             match self.file.read(&mut bytes) {
@@ -199,21 +217,15 @@ impl<B: crate::BridgeExchange> RunningEndpoint<B> {
                     let event = UhidEvent::decode(&bytes[..count])
                         .map_err(|_| RelayRuntimeError::UhidCodec)?;
                     self.process_event(event)?;
-                    if self.endpoint().retained_route_departure_ready() {
-                        break;
+                    if stop_at_departure && self.endpoint().retained_route_departure_ready() {
+                        return Ok(());
                     }
                 }
-                Err(error) if error.kind() == io::ErrorKind::WouldBlock => break,
+                Err(error) if error.kind() == io::ErrorKind::WouldBlock => return Ok(()),
                 Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
                 Err(_) => return Err(RelayRuntimeError::UhidRead),
             }
         }
-        self.flush()?;
-        Ok(if self.departure_reply_flushed() {
-            RunningEndpointStep::RetainedRouteDeparture
-        } else {
-            RunningEndpointStep::Running
-        })
     }
 
     fn process_event(&mut self, event: UhidEvent) -> Result<(), RelayRuntimeError> {
@@ -319,6 +331,7 @@ impl<B: crate::BridgeExchange> RunningEndpoint<B> {
             return;
         }
         self.destroyed = true;
+        self.release_kernel_driver();
         if let Some(endpoint) = self.endpoint.as_mut() {
             endpoint.prepare_withdrawal();
         }
@@ -327,6 +340,45 @@ impl<B: crate::BridgeExchange> RunningEndpoint<B> {
             let _ = fcntl_setfl(&self.file, flags & !OFlags::NONBLOCK);
         }
         let _ = write_blocking(&mut self.file, &UhidReply::Destroy);
+    }
+
+    /// Unbinds the `OpenRazer` driver from this exact virtual device while the
+    /// endpoint keeps answering, so a Feature request the kernel already sent
+    /// completes before `UHID_DESTROY` ends the device (REL-020). Without a
+    /// bound driver, or past the deadline, the destroy proceeds as before.
+    fn release_kernel_driver(&mut self) {
+        let Some(binding) = self.driver_binding.take() else {
+            return;
+        };
+        if self.endpoint.is_none() {
+            return;
+        }
+        let started = Instant::now();
+        let outcome = match binding.start_release(DRIVER_RELEASE_DEADLINE) {
+            Ok(mut release) => {
+                let mut serving = true;
+                loop {
+                    if serving {
+                        serving = self.flush().is_ok()
+                            && self.read_events(false).is_ok()
+                            && self.flush().is_ok();
+                    }
+                    if let Some(outcome) = release.poll(Instant::now()) {
+                        break outcome;
+                    }
+                    thread::sleep(IDLE_INTERVAL);
+                }
+            }
+            Err(outcome) => outcome,
+        };
+        if outcome != ReleaseOutcome::NotBound {
+            eprintln!(
+                "HFX-OPENRAZER-RELAY-TEARDOWN driver={} outcome={} elapsed_ms={}",
+                binding.driver_family(),
+                outcome.label(),
+                started.elapsed().as_millis()
+            );
+        }
     }
 
     fn endpoint(&self) -> &FeatureEndpoint<B> {
@@ -542,8 +594,13 @@ impl<B: crate::BridgeExchange> PendingPublication<B> {
             self.gate.mark_completed();
             return;
         }
-        match RunningEndpoint::create(paths, bridge, device.clone(), record.command_policy.clone())
-        {
+        match RunningEndpoint::create(
+            paths,
+            bridge,
+            device.clone(),
+            record.command_policy.clone(),
+            Some(&record.driver_family),
+        ) {
             Ok(running) => {
                 *endpoint = Some(running);
                 self.gate.mark_completed();
