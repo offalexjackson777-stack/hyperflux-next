@@ -370,6 +370,23 @@ class RepositoryExperienceContracts(unittest.TestCase):
         ]
         self.assertEqual(found, [], "\n".join(found))
 
+    def test_ripple_is_documented_as_offered_but_not_reactive(self) -> None:
+        # Stock OpenRazer advertises Ripple per keyboard model, so pages must
+        # not claim HyperFlux hides it (REL-007).
+        pages = sorted(ROOT.glob("*.md")) + sorted((ROOT / "docs").rglob("*.md"))
+        found = [
+            str(page.relative_to(ROOT))
+            for page in pages
+            if "not advertised over hyperflux"
+            in " ".join(page.read_text(encoding="utf-8").lower().split())
+        ]
+        self.assertEqual(found, [])
+        applications = " ".join(
+            (ROOT / "docs/user/applications.md").read_text(encoding="utf-8").split()
+        )
+        self.assertIn("Polychromatic offers Ripple", applications)
+        self.assertIn("no reactive lighting", applications)
+
     def test_repository_link_contract_rejects_missing_files_and_anchors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

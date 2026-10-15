@@ -201,10 +201,11 @@ default.
 
 ### Accepted limitations
 
-Input-reactive Ripple is not advertised over HyperFlux because unchanged stock
-OpenRazer cannot associate its KeyWatcher with the receiver-routed physical event
-stream. HyperFlux does not create a duplicate input device or fork the application
-to hide that gap.
+Stock OpenRazer still offers Ripple for keyboard models whose class supports it,
+and Polychromatic shows it. Over HyperFlux, choosing it gives no reactive
+lighting, because unchanged stock OpenRazer cannot associate its KeyWatcher with
+the receiver-routed physical event stream. HyperFlux does not create a duplicate
+input device or fork the application to hide that gap; choose another effect.
 
 OpenRGB may label the black keyboard color variant as Quartz. The same label was
 observed on a direct USB path, so HyperFlux does not override identity or colorway

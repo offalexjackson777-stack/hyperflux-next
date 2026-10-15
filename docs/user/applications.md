@@ -18,7 +18,12 @@ or write global OpenRGB configuration.
 
 ## Accepted Limitations
 
-OpenRazer Ripple needs a route-associated key-event source that is not yet
-available through this feature-only path. OpenRGB may label a black keyboard as
-Quartz because its upstream information query has no trustworthy discriminator.
-Both are visible limitations, not hidden compatibility claims.
+Polychromatic offers Ripple for keyboards whose stock OpenRazer model supports
+it, but over HyperFlux it shows no reactive lighting. Ripple needs a
+route-associated key-event source that is not yet available through this
+feature-only path. Choose another effect.
+
+OpenRGB may label a black keyboard as Quartz because its upstream information
+query has no trustworthy discriminator.
+
+These are visible limitations, not hidden compatibility claims.
