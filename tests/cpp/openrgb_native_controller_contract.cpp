@@ -11,6 +11,7 @@
 #include <iostream>
 #include <limits>
 #include <mutex>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -78,6 +79,52 @@ void set_all_colors(RGBController& controller, RGBColor color)
     }
 }
 
+/// ~NativeController releases AccessMutex after Shutdown() because OpenRGB
+/// 1.0 returns from Shutdown() with it exclusively locked. Fails once upstream
+/// releases it itself, since a second release would be undefined.
+class ShutdownProbe final : public RGBController
+{
+public:
+    ShutdownProbe() = default;
+    ShutdownProbe(const ShutdownProbe&) = delete;
+    ShutdownProbe& operator=(const ShutdownProbe&) = delete;
+    ShutdownProbe(ShutdownProbe&&) = delete;
+    ShutdownProbe& operator=(ShutdownProbe&&) = delete;
+
+    ~ShutdownProbe() override
+    {
+        if(!shut_down_)
+        {
+            static_cast<void>(shutdown_keeps_access_locked());
+        }
+    }
+
+    [[nodiscard]] bool shutdown_keeps_access_locked()
+    {
+        Shutdown();
+        shut_down_ = true;
+        bool available = false;
+        std::thread reader(
+            [&]
+            {
+                available = AccessMutex.try_lock_shared();
+                if(available)
+                {
+                    AccessMutex.unlock_shared();
+                }
+            });
+        reader.join();
+        if(!available)
+        {
+            AccessMutex.unlock();
+        }
+        return !available;
+    }
+
+private:
+    bool shut_down_ = false;
+};
+
 } // namespace
 
 int main()
@@ -86,6 +133,14 @@ int main()
     using namespace hyperflux::openrgb;
     using namespace hyperflux::openrgb::native;
     using namespace hyperflux::test;
+
+    {
+        ShutdownProbe probe;
+        if(!probe.shutdown_keeps_access_locked())
+        {
+            return failure(__LINE__);
+        }
+    }
 
     const auto mouse = native_controller_model(DeviceKind::Mouse);
     auto presentation = resolve_razer_presentation(mouse, KeyboardLayoutVariant::AnsiQwerty);

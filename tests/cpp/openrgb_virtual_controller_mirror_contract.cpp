@@ -105,7 +105,9 @@ public:
 
     ~LocalController() override
     {
+        // Same release as ~NativeController: Shutdown() keeps AccessMutex locked.
         Shutdown();
+        AccessMutex.unlock();
     }
 
     void DeviceUpdateLEDs() override
@@ -241,11 +243,12 @@ public:
     bool valid = true;
 
 private:
+    // Same as OpenRGBPluginAPI::DeleteVirtualRGBController: the host deletes the
+    // virtual controller without calling Shutdown(), and the base destructor
+    // stops its device thread.
     static void destroy(RGBControllerInterface* controller)
     {
-        auto* owned = static_cast<RGBController_Virtual*>(controller);
-        owned->Shutdown();
-        delete owned;
+        delete static_cast<RGBController*>(controller);
     }
 
     std::set<RGBControllerInterface*> created_;

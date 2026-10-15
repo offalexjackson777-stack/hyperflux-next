@@ -153,6 +153,13 @@ NativeController::NativeController(const ControllerModel& model,
 NativeController::~NativeController()
 {
     Shutdown();
+    // OpenRGB 1.0's Shutdown() returns with AccessMutex exclusively locked and
+    // never releases it. Destroying an owned shared_mutex is undefined, and
+    // ThreadSanitizer would keep the destroyed lock in this thread's held set,
+    // reporting a false lock-order inversion with any lock taken afterwards.
+    // The device thread is joined and the controller is unregistered, so no
+    // other thread can be waiting on the lock.
+    AccessMutex.unlock();
 }
 
 const std::string& NativeController::stable_id() const noexcept
