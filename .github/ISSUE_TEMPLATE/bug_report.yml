@@ -22,8 +22,8 @@ body:
   id: environment
   attributes:
     label: Environment
-    description: Distribution, kernel, package version, and application adapter.
-    placeholder: Arch Linux; 6.x; 0.x; OpenRGB
+    description: Distribution, kernel, installed HyperFlux version (`pacman -Q hyperflux-next-linux`), and application.
+    placeholder: Arch Linux; 6.x; 2.0.x; OpenRGB
   validations:
     required: true
 - type: input

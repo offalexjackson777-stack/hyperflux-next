@@ -776,8 +776,16 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertIn("I removed serials, stable host identifiers", hardware)
         self.assertIn("support-bundle --preview", hardware)
         self.assertIn("Doctor reference", hardware)
-        self.assertIn("generated technical reference", documentation.lower())
-        self.assertIn("universal", feature.lower())
+        # Reporters describe what they saw; maintainers classify it (FORM-001…004).
+        self.assertIn("2.0.x", bug)
+        self.assertNotIn("; 0.x;", bug)
+        self.assertNotIn("adapter", bug)
+        self.assertNotIn("generated", documentation.lower().split("\n", 1)[1])
+        self.assertNotIn("universal", feature.lower())
+        self.assertIn("USB cable", hardware)
+        product_id = hardware.split("id: pid", 1)[1].split("- type:", 1)[0]
+        self.assertNotIn("required: true", product_id)
+        self.assertNotIn("evidence-class", hardware)
 
     def test_collaboration_security_and_service_plans_are_complete_and_bounded(self) -> None:
         plan = json.loads(experience_plan(self.governance))

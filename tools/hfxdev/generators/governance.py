@@ -432,8 +432,8 @@ def bug_report(governance: GitHubGovernance) -> str:
                 "id": "environment",
                 "attributes": {
                     "label": "Environment",
-                    "description": "Distribution, kernel, package version, and application adapter.",
-                    "placeholder": "Arch Linux; 6.x; 0.x; OpenRGB",
+                    "description": "Distribution, kernel, installed HyperFlux version (`pacman -Q hyperflux-next-linux`), and application.",
+                    "placeholder": "Arch Linux; 6.x; 2.0.x; OpenRGB",
                 },
                 "validations": {"required": True},
             },
@@ -489,21 +489,28 @@ def device_support(governance: GitHubGovernance) -> str:
             {
                 "type": "input",
                 "id": "model",
-                "attributes": {"label": "Exact marketed model", "placeholder": "Vendor and model"},
+                "attributes": {
+                    "label": "Device model",
+                    "description": "The name the device is sold under.",
+                    "placeholder": "Vendor and model",
+                },
                 "validations": {"required": True},
             },
             {
                 "type": "input",
                 "id": "pid",
-                "attributes": {"label": "Public product ID", "placeholder": "0x0000"},
-                "validations": {"required": True},
+                "attributes": {
+                    "label": "Product ID, if known",
+                    "description": "Optional. With the device connected by cable, `lsusb` shows it as `1532:xxxx`; the part after the colon is the product ID.",
+                    "placeholder": "1532:0000",
+                },
             },
             {
                 "type": "dropdown",
                 "id": "route",
                 "attributes": {
-                    "label": "Connection route",
-                    "options": ["HyperFlux receiver", "Direct wireless", "Direct wired", "Unknown"],
+                    "label": "How is it connected?",
+                    "options": ["HyperFlux receiver", "USB cable", "Bluetooth", "Other or unknown"],
                 },
                 "validations": {"required": True},
             },
@@ -511,8 +518,8 @@ def device_support(governance: GitHubGovernance) -> str:
                 "type": "textarea",
                 "id": "capabilities",
                 "attributes": {
-                    "label": "Capabilities and current behavior",
-                    "description": "Describe public specifications, application support, observed controls, and anything that does not work.",
+                    "label": "What happened?",
+                    "description": "Describe what you tried, what works, and what does not. Mention any public page or project that already supports the device.",
                 },
                 "validations": {"required": True},
             },
@@ -533,15 +540,6 @@ def device_support(governance: GitHubGovernance) -> str:
                     "description": "Paste `hyperfluxctl support-bundle --preview`. This performs no upload or active receiver query.",
                     "render": "json",
                 },
-            },
-            {
-                "type": "dropdown",
-                "id": "evidence-class",
-                "attributes": {
-                    "label": "Available evidence",
-                    "options": ["Public upstream source", "Read-only observation", "Separately authorized physical result", "Request only"],
-                },
-                "validations": {"required": True},
             },
             {
                 "type": "checkboxes",
@@ -595,15 +593,6 @@ def documentation_report(governance: GitHubGovernance) -> str:
                 },
                 "validations": {"required": True},
             },
-            {
-                "type": "dropdown",
-                "id": "source-kind",
-                "attributes": {
-                    "label": "Content type",
-                    "options": ["Hand-written source", "Generated technical reference", "README navigation", "Unknown"],
-                },
-                "validations": {"required": True},
-            },
         ],
     )
 
@@ -612,7 +601,7 @@ def feature_request(governance: GitHubGovernance) -> str:
     return _issue_form(
         governance,
         name="Feature request",
-        description="Describe a universal user workflow or capability gap.",
+        description="Describe something you want to do that HyperFlux does not support yet.",
         title="[Feature]: ",
         labels=["kind: feature"],
         body=[
@@ -646,29 +635,24 @@ def feature_request(governance: GitHubGovernance) -> str:
                 "id": "gap",
                 "attributes": {
                     "label": "Current gap",
-                    "description": "What is missing, confusing, or unnecessarily device-specific today?",
+                    "description": "What is missing or confusing today?",
                 },
                 "validations": {"required": True},
             },
             {
-                "type": "checkboxes",
-                "id": "universality",
+                "type": "textarea",
+                "id": "similar-workflows",
                 "attributes": {
-                    "label": "Universality",
-                    "options": [
-                        {
-                            "label": "The proposal is not tied only to one host, serial, receiver generation, or private device state.",
-                            "required": True,
-                        }
-                    ],
+                    "label": "Other devices or setups, if any",
+                    "description": "Optional. Would other devices, receivers, or applications need the same thing?",
                 },
             },
             {
                 "type": "textarea",
                 "id": "evidence-boundary",
                 "attributes": {
-                    "label": "Evidence needed",
-                    "description": "Which software, lifecycle, or physical evidence would make this proposal safe to ship?",
+                    "label": "Anything else",
+                    "description": "Optional. Links, screenshots, or how you would check that it works.",
                 },
             },
         ],
@@ -687,7 +671,7 @@ def issue_config(governance: GitHubGovernance) -> str:
             {
                 "name": "Discuss an idea",
                 "url": f"https://github.com/{governance.owner}/{governance.repository}/discussions/categories/ideas",
-                "about": "Explore a universal workflow before committing it to an issue.",
+                "about": "Talk through an early idea with the community before opening a feature request.",
             },
             {
                 "name": "Report a security vulnerability privately",

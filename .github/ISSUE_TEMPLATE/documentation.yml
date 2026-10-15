@@ -33,14 +33,3 @@ body:
     description: Describe what you expected to learn or do and what was missing or confusing.
   validations:
     required: true
-- type: dropdown
-  id: source-kind
-  attributes:
-    label: Content type
-    options:
-    - Hand-written source
-    - Generated technical reference
-    - README navigation
-    - Unknown
-  validations:
-    required: true
