@@ -27,6 +27,10 @@ PIN_KEYS = {
     "ninja",
 }
 
+# Python packages the pinned development image provides. Builds run with
+# pip offline, so these move only with the toolchain snapshot.
+PYTHON_TOOLCHAIN_PACKAGES = ("pip", "setuptools", "wheel")
+
 
 @dataclass(frozen=True)
 class ToolchainPins:
