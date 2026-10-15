@@ -1,9 +1,27 @@
 # Virtual Receiver And Replay
 
-HyperFlux Next treats simulation as executable policy, not physical evidence.
-The virtual receiver uses the same generated domain types and composable
-hardware profiles as the production bridge will use, while retaining an explicit
-`test_fixture=true` and `hardware_claim_authority=false` boundary.
+Many of the problems that reached users happened when something changed underneath the
+bridge: a device slept, the receiver went away, or a process stopped halfway through its
+work (see [Investigations](../investigations/README.md)). Those moments are hard to
+reproduce on demand with a real receiver, and CI has no receiver at all. The virtual
+receiver lets tests create those moments and replay them exactly, so the bridge's rules can
+be checked in software.
+
+HyperFlux Next treats simulation as executable policy, not physical evidence. The virtual
+receiver uses the same generated domain types and composable hardware profiles as the
+production bridge, while keeping an explicit `test_fixture=true` and
+`hardware_claim_authority=false` marker, so a simulated result can never count as proof that
+real hardware behaves the same way.
+
+## Terms Used Here
+
+- **Child**: a device paired with the receiver, such as a keyboard or a mouse.
+- **Generation**: one physical connection of the receiver. A reconnect starts a strictly
+  newer one.
+- **Restoration**: the bridge reapplying saved lighting after a restart, on the retained
+  migration path.
+- **Replay fixture**: a recorded scenario that runs the same way every time and becomes a
+  permanent regression test.
 
 ## Model
 
@@ -75,16 +93,17 @@ fixture to become a permanent regression test.
 
 ## Verification
 
-Run the complete typed graph:
+Run the complete software graph, which includes the simulator and replay tests:
 
 ```console
-./hfx verify --all
+./hfx verify --full
 ```
 
-Inspect why each stage runs, its dependencies, timeout, isolation, and hardware authority:
+To see why each stage runs, with its dependencies, timeout, isolation, and whether it may
+touch hardware:
 
 ```console
-./hfx test plan --all
+./hfx test plan --full
 ```
 
 The current graph is software-only and cannot write hardware. Physical
