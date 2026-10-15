@@ -2,6 +2,11 @@
 
 This chapter is part of the [HyperFlux Next Design Book](../design-book.md).
 
+The problem this book answers is simple to state: Razer devices paired through a HyperFlux
+V2 receiver are invisible to the Linux applications that already support the same devices
+over USB. This chapter says what HyperFlux Next is, what it keeps from earlier
+implementations, and what it deliberately leaves behind.
+
 ## 1. Purpose
 
 HyperFlux Next is the Linux bridge for devices paired through HyperFlux V2. Core

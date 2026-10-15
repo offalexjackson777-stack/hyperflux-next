@@ -2,6 +2,10 @@
 
 This chapter is part of the [HyperFlux Next Design Book](../design-book.md).
 
+A release tells users what works, so it has to say exactly what was proven and how. This
+chapter covers how old compatibility paths are retired, how changes are compared and ordered
+before a release, which release channels exist, and what counts as success.
+
 ## 62. Compatibility Transitions
 
 Compatibility changes receive an explicit owner, rationale, destination test,

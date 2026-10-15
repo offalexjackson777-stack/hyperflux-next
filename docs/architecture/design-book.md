@@ -1,12 +1,15 @@
 # HyperFlux Next Design Book
 
-This book records the architecture shipped by HyperFlux Next 2.0. Each subject
-states a current boundary or invariant. Explicitly labeled future work is
-non-shipping direction, not a promise of support.
+A HyperFlux V2 receiver puts a Razer keyboard and mouse behind one USB dongle, and stock
+Linux applications cannot reach devices behind it. This book explains how HyperFlux Next
+2.0 closes that gap without taking over what OpenRazer and OpenRGB already do. Each
+numbered subject states one current boundary or rule, with the reason for it. Work labelled
+as future is direction only, not a promise of support.
 
-Each chapter is a separate page. Subject numbers are stable, and the
-[design coverage ledger](../generated/design-coverage.md) links every subject to
-its implementation evidence.
+Each chapter is a separate page and opens with the problem it addresses. Subject numbers
+are stable, and the [design coverage ledger](../generated/design-coverage.md) links every
+subject to its implementation evidence. Terms such as route, generation, and qualification
+are defined in [Architecture](../developer/architecture.md#words-you-will-meet).
 
 ## Chapter I: Product Foundations
 

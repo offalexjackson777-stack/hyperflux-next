@@ -2,6 +2,11 @@
 
 This chapter is part of the [HyperFlux Next Design Book](../design-book.md).
 
+A receiver remembers which devices are paired with it, but a paired device may be asleep,
+switched off, or plugged in by cable. If HyperFlux treated paired as ready, it would send
+writes that go nowhere and show devices that are not there. This chapter separates what is
+known about a device from whether it can be written to right now.
+
 ## 9. Inventory And Routes
 
 A paired inventory record and a currently authorized route are different

@@ -2,6 +2,13 @@
 
 This chapter is part of the [HyperFlux Next Design Book](../design-book.md).
 
+OpenRazer and OpenRGB know many Razer models, but knowing a model is not the same as knowing
+it behaves correctly through the receiver. This chapter explains how a device goes from
+known to supported, what happens to a device HyperFlux has never seen, and why another
+same-protocol device needs profile data rather than new code. Qualification means that an
+exact device matches a reviewed profile and that its route has been checked on physical
+hardware.
+
 ## 15. Support Levels
 
 Support must distinguish upstream model support from HyperFlux transport

@@ -2,6 +2,11 @@
 
 This chapter is part of the [HyperFlux Next Design Book](../design-book.md).
 
+Most of HyperFlux cannot be tried on a real receiver in CI, so a mistake has to be caught in
+software or it reaches a hardware check, or a user. This chapter describes how a simulated
+receiver, recorded replays, and one verification entry point catch mistakes in software, and
+what is left for hardware checks.
+
 ## 36. Virtual Receiver
 
 The simulator implements the same transport interface as the kernel-backed path.

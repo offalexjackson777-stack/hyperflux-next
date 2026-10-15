@@ -2,6 +2,11 @@
 
 This chapter is part of the [HyperFlux Next Design Book](../design-book.md).
 
+When something goes wrong, a user sees a missing device or a lighting change that did not
+happen, not the cause. This chapter describes how applications present bridge facts
+consistently, how each error gets a stable identifier, and how Doctor and support bundles
+help without exposing private data.
+
 ## 48. Declarative Application UI
 
 Application integrations consume tested view models rather than interpreting raw

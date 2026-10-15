@@ -2,6 +2,11 @@
 
 This chapter is part of the [HyperFlux Next Design Book](../design-book.md).
 
+An update touches the kernel module, the services, and saved configuration on a user's
+machine, and a mistake in any of them can break a setup that worked. This chapter covers how
+configuration, packages, and the kernel module are updated, how builds stay reproducible,
+and what the project does and does not check about its supply chain and performance.
+
 ## 52. Configuration Migrations
 
 Every persisted configuration carries a schema version. An upgrade computes a

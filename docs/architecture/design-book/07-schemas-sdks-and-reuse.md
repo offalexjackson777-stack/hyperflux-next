@@ -2,6 +2,11 @@
 
 This chapter is part of the [HyperFlux Next Design Book](../design-book.md).
 
+The bridge, the SDK, the connectors, and the tests are written in several languages, and all
+of them must agree on every message. Hand-written copies of the same message would drift
+apart. This chapter describes how versioned schemas, generated code, and explicit state
+machines keep them in step.
+
 ## 28. Schema-First Development
 
 Requests, responses, events, profiles, capabilities, errors, diagnostics,

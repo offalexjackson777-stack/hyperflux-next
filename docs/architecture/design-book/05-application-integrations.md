@@ -2,6 +2,11 @@
 
 This chapter is part of the [HyperFlux Next Design Book](../design-book.md).
 
+Users already have OpenRGB, OpenRazer, and Polychromatic, and those projects already hold
+the commands, layouts, and effects for each Razer model. Rewriting any of that inside
+HyperFlux would duplicate work and drift from upstream. This chapter describes how each
+application reaches the receiver while keeping its own behaviour.
+
 ## 18. OpenRGB Integration
 
 OpenRGB receives qualified native routes through a dedicated integration that

@@ -2,6 +2,11 @@
 
 This chapter is part of the [HyperFlux Next Design Book](../design-book.md).
 
+The project has more checks, generated files, and documentation than a contributor can keep
+track of by hand. This chapter describes how CI picks the checks a change affects, how
+dependencies are updated, and how the documentation and the GitHub repository are kept
+consistent with the code.
+
 ## 58. Change-Aware CI
 
 CI derives affected domains from a maintained dependency graph. Schema changes

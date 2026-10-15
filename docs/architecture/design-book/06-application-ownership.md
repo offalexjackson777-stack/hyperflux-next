@@ -2,6 +2,10 @@
 
 This chapter is part of the [HyperFlux Next Design Book](../design-book.md).
 
+Two applications writing to the same device at once can leave it in a state neither of them
+asked for. This chapter describes how the bridge gives one application control of one device
+at a time, how users see who is in control, and how each exchange stays whole.
+
 ## 25. Native Control Ownership
 
 Multiple applications must not send native and migration-path commands to the
