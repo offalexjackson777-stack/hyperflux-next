@@ -18,7 +18,17 @@ bridge itself.
 
 The [building](docs/developer/building.md) and
 [verification](docs/developer/verification.md) guides explain the tools in more
-detail.
+detail. If you are new to the code, start with the
+[architecture overview](docs/developer/architecture.md).
+
+## Change The Documentation
+
+Every page is written for one reader: someone setting up their devices, someone
+who wants to know how HyperFlux works, or someone looking up one fact. Before
+you write, read the [writing guide](docs/developer/writing-guide.md). It says
+which kind of page you are editing, how that page should sound, and which words
+to avoid. If you fixed a problem that reached users, add a page under
+[Investigations](docs/investigations/README.md).
 
 ## Find The Right Starting Point
 
