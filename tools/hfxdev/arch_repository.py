@@ -22,6 +22,10 @@ from .model import ModelError, load_json, sha256_file
 _FINGERPRINT = re.compile(r"^[0-9A-F]{40}$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _PACKAGE_VERSION = re.compile(r"(?P<pkgver>[0-9]+\.[0-9]+\.[0-9]+)-[1-9][0-9]*")
+_TWO_PACKAGE_SET = {
+    "hyperflux-next-linux": (),
+    "hyperflux-next-full": ("hyperflux-next-linux",),
+}
 
 
 @dataclass(frozen=True)
@@ -193,8 +197,8 @@ def load_arch_repository_policy(root: Path) -> ArchRepositoryPolicy:
             raise ModelError(f"Arch repository {field} is not a plain asset name")
 
     raw_packages = value["packages"]
-    if not isinstance(raw_packages, list) or len(raw_packages) != 2:
-        raise ModelError("Arch repository must contain exactly Core and Full")
+    if not isinstance(raw_packages, list) or not raw_packages:
+        raise ModelError("Arch repository must list its release packages")
     packages: list[RepositoryPackage] = []
     for index, raw in enumerate(raw_packages):
         package = _exact_keys(
@@ -207,12 +211,7 @@ def load_arch_repository_policy(root: Path) -> ArchRepositoryPolicy:
         ):
             raise ModelError(f"Arch repository package {index} has an invalid digest")
         packages.append(RepositoryPackage(**package))
-    if {package.name for package in packages} != {
-        "hyperflux-next-linux",
-        "hyperflux-next-full",
-    }:
-        raise ModelError("Arch repository package set is not exact Core and Full")
-    if len({package.filename for package in packages}) != 2:
+    if len({package.filename for package in packages}) != len(packages):
         raise ModelError("Arch repository package filenames must be unique")
     versions = {package.version for package in packages}
     if len(versions) != 1:
@@ -232,6 +231,12 @@ def load_arch_repository_policy(root: Path) -> ArchRepositoryPolicy:
             raise ModelError(
                 f"Arch repository package filename is not canonical: {package.filename}"
             )
+    if sorted(package.name for package in packages) != sorted(
+        repository_package_set(root, version)
+    ):
+        raise ModelError(
+            f"Arch repository package set is not the exact {version} package set"
+        )
 
     assets = _exact_keys(
         value["assets"],
@@ -275,6 +280,28 @@ def load_arch_repository_policy(root: Path) -> ArchRepositoryPolicy:
         packages=tuple(packages),
         **assets,
     )
+
+
+def repository_package_set(root: Path, version: str) -> dict[str, tuple[str, ...]]:
+    """Map each package a release publishes to the siblings it pins exactly.
+
+    Releases before the split's first release publish Core and Full; later
+    releases publish every split output.
+    """
+
+    from .arch_split import load_arch_split
+
+    pkgver, _, pkgrel = version.rpartition("-")
+    split = load_arch_split(root, release=(pkgver, int(pkgrel)))
+    if not split.active:
+        return dict(_TWO_PACKAGE_SET)
+    return {
+        output.package_name: tuple(
+            split.output(sibling).package_name
+            for sibling in output.sibling_dependencies
+        )
+        for output in split.outputs
+    }
 
 
 def published_arch_release(policy: ArchRepositoryPolicy) -> str:
@@ -652,8 +679,7 @@ def _publish_atomic_directory(
 def build_arch_repository(
     root: Path,
     *,
-    core_package: Path,
-    full_package: Path,
+    packages: tuple[Path, ...],
     gnupg_home: Path,
     key_fingerprint: str,
     output: Path,
@@ -665,8 +691,10 @@ def build_arch_repository(
         )
     _validate_private_gnupg_home(gnupg_home)
 
-    supplied = {core_package.name: core_package, full_package.name: full_package}
-    if set(supplied) != {package.filename for package in policy.packages}:
+    supplied = {package.name: package for package in packages}
+    if len(supplied) != len(packages) or set(supplied) != {
+        package.filename for package in policy.packages
+    }:
         raise ModelError("repository package filenames differ from the frozen release")
     for package in policy.packages:
         source = supplied[package.filename]
@@ -776,6 +804,7 @@ def verify_arch_repository(root: Path, repository: Path) -> dict[str, Any]:
                 f"Arch repository asset is not regular mode 0644: {path.name}"
             )
 
+    pinned_siblings = repository_package_set(root, published_arch_release(policy))
     for package in policy.packages:
         if sha256_file(repository / package.filename) != package.sha256:
             raise ModelError(f"Arch repository package changed: {package.filename}")
@@ -788,11 +817,11 @@ def verify_arch_repository(root: Path, repository: Path) -> dict[str, Any]:
             raise ModelError(
                 f"Arch repository package metadata changed: {package.filename}"
             )
-        if (
-            package.name == "hyperflux-next-full"
-            and f"hyperflux-next-linux={package.version}" not in dependencies
-        ):
-            raise ModelError("Full no longer requires the exact Core version")
+        for sibling in pinned_siblings[package.name]:
+            if f"{sibling}={package.version}" not in dependencies:
+                raise ModelError(
+                    f"{package.name} no longer requires the exact {sibling} version"
+                )
 
     if (repository / policy.database).read_bytes() != (
         repository / policy.database_archive
@@ -878,9 +907,9 @@ def verify_arch_repository(root: Path, repository: Path) -> dict[str, Any]:
         label="inspect Arch repository database",
     ).stdout.splitlines()
     descriptions = sorted(item for item in listing if item.endswith("/desc"))
-    if len(descriptions) != 2:
+    if len(descriptions) != len(policy.packages):
         raise ModelError(
-            "Arch repository database does not contain exactly two packages"
+            "Arch repository database does not contain exactly the release packages"
         )
     database_packages: set[tuple[str, str, str, str, str]] = set()
     for description in descriptions:

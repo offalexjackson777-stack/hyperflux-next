@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -21,13 +22,14 @@ from hfxdev.arch_repository import (
     fingerprint_receipt,
     load_arch_repository_policy,
     repository_configuration,
+    repository_package_set,
     repository_setup_script,
 )
 from hfxdev.model import ModelError
 
 
 class ArchRepositoryTests(unittest.TestCase):
-    def test_policy_binds_exact_two_package_release_and_third_party_channel(
+    def test_policy_binds_exact_release_package_set_and_third_party_channel(
         self,
     ) -> None:
         policy = load_arch_repository_policy(ROOT)
@@ -41,7 +43,7 @@ class ArchRepositoryTests(unittest.TestCase):
         self.assertFalse(policy.human_facing_product_release)
         self.assertEqual(
             {package.name for package in policy.packages},
-            {"hyperflux-next-linux", "hyperflux-next-full"},
+            set(repository_package_set(ROOT, version)),
         )
         self.assertEqual(
             {package.filename for package in policy.packages},
@@ -53,6 +55,27 @@ class ArchRepositoryTests(unittest.TestCase):
         self.assertTrue(policy.server_url.startswith("https://"))
         self.assertIn("/releases/download/arch-repository", policy.server_url)
         self.assertNotIn("/releases/latest/download", policy.server_url)
+
+    def test_release_package_set_follows_the_split_first_release(self) -> None:
+        self.assertEqual(
+            {
+                "hyperflux-next-linux": (),
+                "hyperflux-next-full": ("hyperflux-next-linux",),
+            },
+            repository_package_set(ROOT, "2.0.2-1"),
+        )
+        self.assertEqual(
+            {
+                "hyperflux-next-dkms": (),
+                "hyperflux-next-linux": ("hyperflux-next-dkms",),
+                "hyperflux-next-openrazer-driver-dkms": ("hyperflux-next-dkms",),
+                "hyperflux-next-full": (
+                    "hyperflux-next-linux",
+                    "hyperflux-next-openrazer-driver-dkms",
+                ),
+            },
+            repository_package_set(ROOT, "2.1.0-1"),
+        )
 
     def test_policy_rejects_a_release_tag_or_filename_that_differs_from_packages(
         self,
@@ -97,6 +120,16 @@ class ArchRepositoryTests(unittest.TestCase):
                 (root / "packaging" / "keys" / key.name).write_bytes(key.read_bytes())
                 with self.assertRaisesRegex(ModelError, message):
                     load_arch_repository_policy(root)
+
+    def test_policy_rejects_a_package_set_other_than_the_release_set(self) -> None:
+        source = json.loads(
+            (ROOT / "assurance" / "arch-repository.json").read_text(encoding="utf-8")
+        )
+        missing = json.loads(json.dumps(source))
+        missing["packages"] = missing["packages"][1:]
+        with patch("hfxdev.arch_repository.load_json", return_value=missing):
+            with self.assertRaisesRegex(ModelError, "not the exact .* package set"):
+                load_arch_repository_policy(ROOT)
 
     def test_configuration_requires_trusted_package_and_database_signatures(
         self,
@@ -225,8 +258,7 @@ class ArchRepositoryTests(unittest.TestCase):
             with self.assertRaisesRegex(ModelError, "package bytes differ"):
                 build_arch_repository(
                     ROOT,
-                    core_package=packages["hyperflux-next-linux"],
-                    full_package=packages["hyperflux-next-full"],
+                    packages=tuple(packages.values()),
                     gnupg_home=gnupg_home,
                     key_fingerprint=policy.primary_fingerprint,
                     output=output,
@@ -248,8 +280,7 @@ class ArchRepositoryTests(unittest.TestCase):
             with self.assertRaisesRegex(ModelError, "mode 0700"):
                 build_arch_repository(
                     ROOT,
-                    core_package=packages["hyperflux-next-linux"],
-                    full_package=packages["hyperflux-next-full"],
+                    packages=tuple(packages.values()),
                     gnupg_home=gnupg_home,
                     key_fingerprint=policy.primary_fingerprint,
                     output=output,

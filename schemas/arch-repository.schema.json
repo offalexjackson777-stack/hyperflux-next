@@ -44,15 +44,15 @@
     "packages": {
       "type": "array",
       "minItems": 2,
-      "maxItems": 2,
+      "maxItems": 4,
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": ["name", "version", "filename", "sha256"],
         "properties": {
-          "name": {"enum": ["hyperflux-next-linux", "hyperflux-next-full"]},
+          "name": {"enum": ["hyperflux-next-dkms", "hyperflux-next-linux", "hyperflux-next-openrazer-driver-dkms", "hyperflux-next-full"]},
           "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+-[1-9][0-9]*$"},
-          "filename": {"type": "string", "pattern": "^hyperflux-next-(linux|full)-[0-9]+\\.[0-9]+\\.[0-9]+-[1-9][0-9]*-x86_64\\.pkg\\.tar\\.zst$"},
+          "filename": {"type": "string", "pattern": "^hyperflux-next-(dkms|linux|openrazer-driver-dkms|full)-[0-9]+\\.[0-9]+\\.[0-9]+-[1-9][0-9]*-x86_64\\.pkg\\.tar\\.zst$"},
           "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
         }
       }

@@ -377,8 +377,14 @@ def _parser() -> argparse.ArgumentParser:
     arch_repository_build = arch_repository_commands.add_parser(
         "build", help="sign exact frozen packages and create repository metadata"
     )
-    arch_repository_build.add_argument("--core", required=True, type=Path)
-    arch_repository_build.add_argument("--full", required=True, type=Path)
+    arch_repository_build.add_argument(
+        "--package",
+        dest="packages",
+        action="append",
+        required=True,
+        type=Path,
+        help="one frozen release package; repeat for every package of the release",
+    )
     arch_repository_build.add_argument("--gnupg-home", required=True, type=Path)
     arch_repository_build.add_argument("--key-fingerprint", required=True)
     arch_repository_build.add_argument("--output", required=True, type=Path)
@@ -899,8 +905,7 @@ def main(arguments: list[str] | None = None) -> int:
             if args.arch_repository_command == "build":
                 manifest = build_arch_repository(
                     root,
-                    core_package=args.core.resolve(),
-                    full_package=args.full.resolve(),
+                    packages=tuple(package.resolve() for package in args.packages),
                     gnupg_home=args.gnupg_home.resolve(),
                     key_fingerprint=args.key_fingerprint,
                     output=args.output.resolve(),

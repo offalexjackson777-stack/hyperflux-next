@@ -46,12 +46,13 @@ or rewrite them.
    published-release pin in `tests/test_assurance.py`.
 2. Run `./hfx generate`.
 3. Build into a fresh output path, using a private GnuPG home that holds the reviewed key,
-   and verify the result:
+   and verify the result. Pass `--package` once for every package of the release: Core and
+   Full before 2.1.0-1, and all four split packages from 2.1.0-1 on.
 
 ```sh
 ./hfx arch-repository build \
-  --core /path/to/hyperflux-next-linux.pkg.tar.zst \
-  --full /path/to/hyperflux-next-full.pkg.tar.zst \
+  --package /path/to/hyperflux-next-linux.pkg.tar.zst \
+  --package /path/to/hyperflux-next-full.pkg.tar.zst \
   --gnupg-home "$PRIVATE_GNUPG_HOME" \
   --key-fingerprint 8BF8A266E756BD1C24C930918B3F3850007159E8 \
   --output /path/to/fresh-repository-assets
@@ -64,7 +65,8 @@ or rewrite them.
 
 What the builder checks and produces:
 
-- It rejects any drift in package bytes or metadata.
+- It rejects any drift in package bytes or metadata, and any package set other than the
+  one `packaging/arch-split.json` defines for the release version.
 - It requires the exact signing subkey and a private GnuPG home readable only by its owner.
 - It creates stable database and files aliases and their canonical archives, signs every
   package and metadata file, embeds the package signatures in the database, and seals a
