@@ -88,36 +88,49 @@ the internet.
 </details>"""
 
 
+_COUNT_WORDS = {3: "three", 4: "four", 5: "five", 6: "six"}
+
+
 def package_fallback(policy: ArchRepositoryPolicy) -> str:
     """Install the release's package files directly, without the repository."""
     release_tag = policy.product_release_tag
     download = policy.product_release_url.replace(
         f"/releases/tag/{release_tag}", f"/releases/download/{release_tag}"
     )
-    by_name = {package.name: package for package in policy.packages}
-    core = by_name["hyperflux-next-linux"].filename
-    full = by_name["hyperflux-next-full"].filename
-    return f"""This downloads the Core and Full package files from the release page,
+    files = [package.filename for package in policy.packages]
+    names = {package.name for package in policy.packages}
+    if names == {"hyperflux-next-linux", "hyperflux-next-full"}:
+        by_name = {package.name: package.filename for package in policy.packages}
+        files = [by_name["hyperflux-next-linux"], by_name["hyperflux-next-full"]]
+        introduction = f"""This downloads the Core and Full package files from the release page,
 [{release_tag}]({policy.product_release_url}),
 checks them against the release's checksum list, and installs both in one step.
-Full needs Core, and without the repository Pacman cannot fetch Core by itself.
+Full needs Core, and without the repository Pacman cannot fetch Core by itself."""
+        each = "both files"
+    else:
+        introduction = f"""This downloads the {_COUNT_WORDS.get(len(files), len(files))} package files of Full from the release page,
+[{release_tag}]({policy.product_release_url}),
+checks them against the release's checksum list, and installs them in one step.
+Full needs the other packages, and without the repository Pacman cannot fetch
+them by itself."""
+        each = "every file"
+    downloads = "".join(f"  {download}/{name} \\\n" for name in files)
+    selection = " || \\\n     ".join(f'$2 == "{name}"' for name in files)
+    installs = " \\\n".join(f"  ./{name}" for name in files)
+    return f"""{introduction}
 
 ```bash
 curl --proto '=https' --tlsv1.2 --fail --location --remote-name-all -- \\
-  {download}/{core} \\
-  {download}/{full} \\
-  {download}/SHA256SUMS
-awk '$2 == "{core}" || \\
-     $2 == "{full}"' \\
+{downloads}  {download}/SHA256SUMS
+awk '{selection}' \\
   SHA256SUMS > SHA256SUMS-packages
-test "$(wc -l < SHA256SUMS-packages)" -eq 2
+test "$(wc -l < SHA256SUMS-packages)" -eq {len(files)}
 sha256sum -c SHA256SUMS-packages
 sudo pacman -U -- \\
-  ./{core} \\
-  ./{full}
+{installs}
 ```
 
-`sha256sum` should print `OK` for both files. If it prints `FAILED`, delete the
+`sha256sum` should print `OK` for {each}. If it prints `FAILED`, delete the
 files and download them again."""
 
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 import subprocess
@@ -15,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.arch_repository import (
+    RepositoryPackage,
     _publish_atomic_directory,
     _payload_asset_names,
     _repository_manifest,
@@ -25,6 +27,7 @@ from hfxdev.arch_repository import (
     repository_package_set,
     repository_setup_script,
 )
+from hfxdev.generators.installation import package_fallback
 from hfxdev.model import ModelError
 
 
@@ -130,6 +133,34 @@ class ArchRepositoryTests(unittest.TestCase):
         with patch("hfxdev.arch_repository.load_json", return_value=missing):
             with self.assertRaisesRegex(ModelError, "not the exact .* package set"):
                 load_arch_repository_policy(ROOT)
+
+    def test_direct_install_names_every_package_of_a_split_release(self) -> None:
+        policy = load_arch_repository_policy(ROOT)
+        version = "2.1.0-1"
+        names = tuple(repository_package_set(ROOT, version))
+        split = dataclasses.replace(
+            policy,
+            product_release_tag="v2.1.0",
+            product_release_url=policy.product_release_url.replace(
+                policy.product_release_tag, "v2.1.0"
+            ),
+            packages=tuple(
+                RepositoryPackage(
+                    name, version, f"{name}-{version}-x86_64.pkg.tar.zst", "0" * 64
+                )
+                for name in names
+            ),
+        )
+        text = package_fallback(split)
+        script = text.split("```bash\n", 1)[1].split("```", 1)[0]
+        for package in split.packages:
+            self.assertEqual(script.count(package.filename), 3, package.name)
+        self.assertIn(f'test "$(wc -l < SHA256SUMS-packages)" -eq {len(names)}', script)
+        self.assertIn("installs them in one step", text)
+        syntax = subprocess.run(
+            ["bash", "-n"], input=script, text=True, capture_output=True, check=False
+        )
+        self.assertEqual(syntax.returncode, 0, syntax.stderr)
 
     def test_configuration_requires_trusted_package_and_database_signatures(
         self,
