@@ -13,19 +13,17 @@
     "topics": ["device-driver", "hid", "hyperflux", "linux", "openrazer", "openrgb", "polychromatic", "razer", "rgb-lighting"],
     "pages_source": "disabled"
   },
-  "publication_interlock": {
-    "source_repository_authorized": true,
-    "pages_deployment_authorized": false,
-    "collaboration_features_authorized": true,
-    "product_publication_authorized": false,
-    "release_workflows_authorized": false,
-    "package_publication_authorized": false,
-    "tag_creation_authorized": false,
-    "hardware_ci_authorized": false
+  "publication_state": {
+    "source_repository": "public",
+    "product_release": "published",
+    "release_publication": "maintainer-operated",
+    "release_workflows": "none",
+    "pages": "disabled",
+    "hardware_ci": "none"
   },
   "collaboration": {
     "discussions": {
-      "apply_authorized": true,
+      "enabled": true,
       "categories": [
         {"id": "announcements", "name": "Announcements", "format": "announcement", "description": "Maintainer updates, verified milestones, and release-boundary changes."},
         {"id": "hardware-qualification", "name": "Hardware qualification", "format": "discussion", "description": "Public planning around candidate devices and bounded evidence needs."},
@@ -33,17 +31,17 @@
         {"id": "ideas", "name": "Ideas", "format": "discussion", "description": "Universal workflows and architecture proposals before issue commitment."}
       ]
     },
-    "project": {"apply_authorized": false}
+    "project": {"enabled": false}
   },
   "security_posture": {
-    "private_vulnerability_reporting": {"state": "required-enabled", "activation_boundary": "public-source-pre-release", "data_boundary": "GitHub private security advisories; never public issue intake"},
-    "dependency_graph": {"state": "required-enabled", "activation_boundary": "public-source-pre-release", "data_boundary": "Repository dependency metadata only"},
-    "dependabot_security_updates": {"state": "required-enabled", "activation_boundary": "public-source-pre-release", "data_boundary": "GitHub dependency alerts and update pull requests"},
-    "secret_scanning": {"state": "required-when-available", "activation_boundary": "public-source-pre-release", "data_boundary": "Repository content scanned by GitHub; no hardware diagnostics"},
-    "secret_scanning_push_protection": {"state": "required-when-available", "activation_boundary": "public-source-pre-release", "data_boundary": "Git pushes checked for supported secret patterns"},
-    "code_scanning": {"state": "required-enabled", "activation_boundary": "public-source-pre-release", "data_boundary": "Source analysis uploaded by the pinned CodeQL workflow"},
+    "private_vulnerability_reporting": {"state": "required-enabled", "activation_boundary": "public-repository", "data_boundary": "GitHub private security advisories; never public issue intake"},
+    "dependency_graph": {"state": "required-enabled", "activation_boundary": "public-repository", "data_boundary": "Repository dependency metadata only"},
+    "dependabot_security_updates": {"state": "required-enabled", "activation_boundary": "public-repository", "data_boundary": "GitHub dependency alerts and update pull requests"},
+    "secret_scanning": {"state": "required-when-available", "activation_boundary": "public-repository", "data_boundary": "Repository content scanned by GitHub; no hardware diagnostics"},
+    "secret_scanning_push_protection": {"state": "required-when-available", "activation_boundary": "public-repository", "data_boundary": "Git pushes checked for supported secret patterns"},
+    "code_scanning": {"state": "required-enabled", "activation_boundary": "public-repository", "data_boundary": "Source analysis uploaded by the pinned CodeQL workflow"},
     "source_sbom": {"state": "implemented", "activation_boundary": "current-generation", "data_boundary": "Generated SPDX inventory from reviewed manifests and workflow pins"},
-    "artifact_attestations": {"state": "deferred", "activation_boundary": "after-release-workflow-authorization", "data_boundary": "Release artifacts and provenance only; no hardware evidence or private diagnostics"}
+    "artifact_attestations": {"state": "deferred", "activation_boundary": "future-release-workflow", "data_boundary": "Release artifacts and provenance only; no hardware evidence or private diagnostics"}
   },
   "service_evaluations": [
     {
@@ -54,7 +52,7 @@
       "required_permissions": ["contents: read", "checks: write", "external coverage upload"],
       "privacy": "Would transmit source-derived coverage metadata to an external service.",
       "maintenance_cost": "medium",
-      "rationale": "Current verification is evidence-oriented rather than line-coverage gated; external upload is not justified before publication."
+      "rationale": "Local LLVM line coverage is already a gated contract in assurance/rust-coverage.json; a hosted upload service adds no gate and is not selected."
     },
     {
       "id": "dependabot",

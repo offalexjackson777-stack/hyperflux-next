@@ -325,7 +325,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
             licensing_policy
         ),
         root / "docs" / "generated" / "github-governance.md": github_governance_markdown(
-            github_governance
+            github_governance, arch_repository
         ),
         root / ".github" / "CODEOWNERS": github_codeowners(github_governance),
         root / ".github" / "pull_request_template.md": github_pull_request_template(),

@@ -1,5 +1,4 @@
 {
-  "apply_authorized": true,
   "default_branch": "main",
   "excluded_components": [
     "package-publication",

@@ -104,7 +104,7 @@ class GitHubSyncTests(unittest.TestCase):
             {"repository", "labels", "security", "pages", "ruleset"},
         )
         serialized = result.as_json().lower()
-        self.assertIn('"product_publication_authorized": false', serialized)
+        self.assertNotIn("authorized", serialized)
         self.assertIn('"release_or_hardware_operation_available": false', serialized)
         for component in ("release", "tag", "package", "hardware"):
             with self.subTest(component=component), self.assertRaises(ModelError):

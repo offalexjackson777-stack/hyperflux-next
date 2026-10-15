@@ -84,23 +84,37 @@ class GitHubGovernanceTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.governance = load_github_governance(ROOT)
 
-    def test_public_source_is_authorized_while_product_publication_remains_locked(self) -> None:
+    def test_publication_state_describes_the_published_release(self) -> None:
         source = json.loads((ROOT / "governance" / "github.json").read_text(encoding="utf-8"))
         self.assertEqual(self.governance.remote_state, "public-released")
-        interlock = source["publication_interlock"]
-        self.assertTrue(interlock["source_repository_authorized"])
-        self.assertFalse(interlock["pages_deployment_authorized"])
-        self.assertTrue(interlock["collaboration_features_authorized"])
-        for key in (
-            "product_publication_authorized",
-            "release_workflows_authorized",
-            "package_publication_authorized",
-            "tag_creation_authorized",
-            "hardware_ci_authorized",
-        ):
-            self.assertFalse(interlock[key])
+        self.assertEqual(
+            source["publication_state"],
+            {
+                "source_repository": "public",
+                "product_release": "published",
+                "release_publication": "maintainer-operated",
+                "release_workflows": "none",
+                "pages": "disabled",
+                "hardware_ci": "none",
+            },
+        )
+        serialized = json.dumps(source)
+        for stale in ("_authorized", "publication_interlock", "pre-release"):
+            self.assertNotIn(stale, serialized)
+        authority = json.loads((ROOT / "governance" / "github.json").read_text())
+        stale = dict(authority)
+        stale["publication_interlock"] = {"product_publication_authorized": False}
+        drifted = json.loads(json.dumps(authority))
+        drifted["publication_state"]["product_release"] = "locked"
+        for candidate in (stale, drifted):
+            with (
+                self.subTest(keys=sorted(candidate["publication_state"].items())),
+                patch("hfxdev.governance.load_json", return_value=candidate),
+                self.assertRaises(ModelError),
+            ):
+                load_github_governance(ROOT)
         plan = json.loads(protection_plan(self.governance))
-        self.assertTrue(plan["apply_authorized"])
+        self.assertNotIn("apply_authorized", plan)
         self.assertEqual(plan["ruleset"]["bypass_actors"], [])
         self.assertEqual(
             set(plan["excluded_components"]),
@@ -807,16 +821,15 @@ class GitHubGovernanceTests(unittest.TestCase):
 
     def test_collaboration_security_and_service_plans_are_complete_and_bounded(self) -> None:
         plan = json.loads(experience_plan(self.governance))
-        self.assertTrue(plan["apply_authorized"])
-        self.assertTrue(plan["source_repository_authorized"])
-        self.assertFalse(plan["pages_deployment_authorized"])
-        self.assertFalse(plan["product_publication_authorized"])
+        self.assertEqual(plan["publication_state"]["product_release"], "published")
+        self.assertEqual(plan["publication_state"]["pages"], "disabled")
+        self.assertNotIn("source_repository_authorized", plan)
         self.assertEqual(plan["external_apps_installed"], [])
         self.assertEqual(
             {category["id"] for category in plan["discussions"]["categories"]},
             {"announcements", "hardware-qualification", "help", "ideas"},
         )
-        self.assertFalse(plan["project"]["apply_authorized"])
+        self.assertFalse(plan["project"]["enabled"])
         self.assertEqual(
             plan["project"]["operation"],
             "close-or-disable-existing-empty-project",

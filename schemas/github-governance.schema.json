@@ -8,7 +8,7 @@
     "$schema",
     "schema",
     "repository",
-    "publication_interlock",
+    "publication_state",
     "collaboration",
     "security_posture",
     "service_evaluations",
@@ -43,19 +43,17 @@
         "pages_source": {"const": "disabled"}
       }
     },
-    "publication_interlock": {
+    "publication_state": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["source_repository_authorized", "pages_deployment_authorized", "collaboration_features_authorized", "product_publication_authorized", "release_workflows_authorized", "package_publication_authorized", "tag_creation_authorized", "hardware_ci_authorized"],
+      "required": ["source_repository", "product_release", "release_publication", "release_workflows", "pages", "hardware_ci"],
       "properties": {
-        "source_repository_authorized": {"const": true},
-        "pages_deployment_authorized": {"const": false},
-        "collaboration_features_authorized": {"const": true},
-        "product_publication_authorized": {"const": false},
-        "release_workflows_authorized": {"const": false},
-        "package_publication_authorized": {"const": false},
-        "tag_creation_authorized": {"const": false},
-        "hardware_ci_authorized": {"const": false}
+        "source_repository": {"const": "public"},
+        "product_release": {"const": "published"},
+        "release_publication": {"const": "maintainer-operated"},
+        "release_workflows": {"const": "none"},
+        "pages": {"const": "disabled"},
+        "hardware_ci": {"const": "none"}
       }
     },
     "collaboration": {
@@ -66,9 +64,9 @@
         "discussions": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["apply_authorized", "categories"],
+          "required": ["enabled", "categories"],
           "properties": {
-            "apply_authorized": {"const": true},
+            "enabled": {"const": true},
             "categories": {
               "type": "array",
               "minItems": 4,
@@ -80,8 +78,8 @@
         "project": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["apply_authorized"],
-          "properties": {"apply_authorized": {"const": false}}
+          "required": ["enabled"],
+          "properties": {"enabled": {"const": false}}
         }
       }
     },
