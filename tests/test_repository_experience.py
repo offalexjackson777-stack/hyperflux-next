@@ -387,6 +387,42 @@ class RepositoryExperienceContracts(unittest.TestCase):
         self.assertIn("```mermaid", guide)
         self.assertIn("verification.md#safe-change-order", chapters[-1].read_text(encoding="utf-8"))
 
+    def test_design_book_claims_match_verification_and_application_boundaries(self) -> None:
+        # The runner rejects hardware nodes and reruns every selected node, and
+        # effects, persistence, and settings stay upstream (AUTH-008, AUTH-009).
+        book = " ".join(
+            " ".join(path.read_text(encoding="utf-8").split())
+            for path in sorted((ROOT / "docs/architecture/design-book").glob("*.md"))
+        )
+        for overclaim in (
+            "official effect engine",
+            "exactly as they are for direct devices",
+            "future model behavior",
+            "hardware stages",
+            "reuses its verified artifact",
+            "invalidated its cache",
+            "hardware generations where applicable",
+            "test planner compares",
+        ):
+            with self.subTest(overclaim=overclaim):
+                self.assertNotIn(overclaim, book)
+        for statement in (
+            "one software-verification entry point",
+            "refuses any node that needs hardware",
+            "does not reuse earlier results",
+            "not an artifact cache",
+            "optional OpenRGB Effects Plugin",
+            "HyperFlux does not bundle, recreate, or claim those effects",
+            "only where the upstream application supports it for that exact model",
+            "applications.md#accepted-limitations",
+        ):
+            with self.subTest(statement=statement):
+                self.assertIn(statement, book)
+        runner = (ROOT / "tools/hfxdev/verification_run.py").read_text(encoding="utf-8")
+        # Reusing results by resume policy would make the "does not reuse" claim stale.
+        self.assertNotIn("resume_policy", runner)
+        self.assertIn("software verification selected hardware-authorized nodes", runner)
+
     def test_public_pages_do_not_contradict_the_published_release(self) -> None:
         # A release is published; no public page may claim otherwise (DOC-001).
         stale = (

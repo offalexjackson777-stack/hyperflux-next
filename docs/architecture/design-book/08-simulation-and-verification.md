@@ -21,17 +21,21 @@ payloads are excluded so fixtures can safely live in the repository.
 
 ## 38. One Verification Entry Point
 
-Developers and CI use one entry point:
+Developers and CI use one software-verification entry point:
 
 ```bash
-./hfx verify --all
+./hfx verify --full
 ```
 
-This command invokes a typed dependency graph rather than one enormous script.
-It understands which tools, builds, schemas, fixtures, packages, applications,
-and hardware stages are relevant. A failed OpenRGB contract does not erase
-successful kernel results, and rerunning an unchanged stage reuses its verified
-artifact.
+This command runs a typed dependency graph of software checks rather than one
+enormous script. Each node declares the tools, builds, schemas, fixtures,
+packages, and applications it covers, and `--changed-from <revision>` selects
+only the nodes whose inputs changed; a changed path that no node owns selects
+the whole lane. The command refuses any node that needs hardware or writes to
+it, so physical qualification stays a separate step. A failed OpenRGB contract
+does not erase successful kernel results: only the nodes that depend on a failed
+node are blocked. Every selected node runs on each invocation. The run records a
+digest of each node's inputs, but it does not reuse earlier results.
 
 ## 39. Fast Verification
 
@@ -51,10 +55,9 @@ without claiming physical proof.
 
 Physical testing is reserved for claims software cannot prove: a new command’s
 visible effect, an unknown PID, LED ordering, sleep timing, battery meaning,
-charging behavior, or receiver-specific lifecycle behavior. The test planner
-compares changed source domains with capability evidence and selects only
-affected physical scenarios. A documentation or widget-layout change must never
-trigger a twenty-minute passive mouse proof.
+charging behavior, or receiver-specific lifecycle behavior. It runs outside
+`./hfx verify`, and each physical run is chosen for the claim it has to prove. A
+documentation or widget-layout change does not call for a physical run.
 
 ## 42. Watched-Test Application
 
@@ -68,18 +71,22 @@ laboratory tooling is not shipped as runtime product machinery.
 Every test declares its identity, owned domain, required capabilities, hardware
 requirement, whether it performs writes, expected duration, timeout,
 dependencies, isolation needs, cache inputs, produced evidence, and resume
-policy. The orchestrator can then answer why a test is running and what
-invalidated its cache. This replaces hard-coded test lists spread across
-workflows and shell scripts.
+policy. `./hfx test plan` lists the selected nodes in order with the selection
+mode, dependencies, and hardware requirement, and a changed-path run records the
+changed paths it was selected from. Cache inputs drive change selection; the
+resume policy is recorded metadata, not an artifact cache. This replaces
+hard-coded test lists spread across workflows and shell scripts.
 
 ## 44. Verification Outputs
 
-Each run produces a concise human report and structured machine artifacts: JSON
-results, JUnit, GitHub annotations, performance measurements, generated-file
-checks, package hashes, and an evidence manifest. The manifest binds results to
-source, schemas, profiles, dependencies, simulator fixtures, compiler versions,
-and hardware generations where applicable. A green badge then represents a
-specific reproducible candidate rather than an ambiguous workflow completion.
+Each run writes a short human summary and structured files: JSON results, JUnit,
+GitHub annotations, and an evidence manifest. The manifest binds the results to
+the source revision and working-tree state, digests of the schemas, profiles,
+dependency policy, lock file, and replay fixtures, the pinned toolchain
+versions, the upstream revisions, any package hashes, and the duration of each
+node. It also records that no hardware was queried or written. A green badge
+then represents a specific source candidate rather than an ambiguous workflow
+completion.
 
 ## 45. Advanced Testing Methods
 

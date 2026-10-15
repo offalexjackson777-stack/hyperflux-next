@@ -15,23 +15,32 @@ serial-proven direct USB takes precedence over only the matching receiver route.
 
 ## 19. OpenRGB Effects
 
-Spectrum Cycling, Rainbow Wave, Breathing, and the broader Effects catalog
-belong to OpenRGB’s official effect engine. HyperFlux does not recreate or claim
-those effects. It carries the same upstream-generated Feature reports through a
-bounded, fair native exchange and returns a matching application-form response
-after any declared receiver selector is restored. Tests verify animation
-continuity, sibling-device independence, rescan behavior, reconnect recovery,
-and transport latency rather than reimplementing effect mathematics.
+Software effects such as Spectrum Cycling, Rainbow Wave, and Breathing come from
+the optional OpenRGB Effects Plugin, a separate upstream plugin that users
+install alongside OpenRGB. HyperFlux does not bundle, recreate, or claim those
+effects. The plugin drives a device through Direct-mode frames, and HyperFlux
+carries the Feature reports that OpenRGB builds for each frame through a
+bounded, fair native exchange. It returns a matching application-form response
+after any declared receiver selector is restored. Software contract tests cover
+sibling-device independence, rescan, and reconnect recovery rather than effect
+mathematics; visible animation continuity and latency on real devices still need
+physical evidence.
 
 ## 20. Application-Owned Persistence
 
-Application lighting persistence belongs to OpenRGB. Stable colors, Off,
-hardware modes, and software-effect startup profiles are represented and resumed
-by the upstream application exactly as they are for direct devices. HyperFlux
-reports route loss and return without inventing sleep state, retaining colors,
-replaying wake frames, or promising a wake-color deadline. Its contract is that
-the first valid upstream transaction after a writable return is transported
-without an intentional restoration timer.
+Application lighting persistence belongs to the application. OpenRGB decides how
+stable colors, Off, hardware modes, and software-effect startup profiles are
+saved and reapplied, and HyperFlux does not change that behavior for receiver
+devices or promise that it matches direct devices. HyperFlux reports route loss
+and return without inventing sleep state, retaining colors, replaying wake
+frames, or promising a wake-color deadline. Its contract is that the first valid
+upstream transaction after a writable return is transported without an
+intentional restoration timer. Whether OpenRGB reapplies a startup profile when
+a route returns still needs physical qualification. Applications do not read
+lighting back from the device, so device lighting can differ from what an
+application last set; the
+[accepted limitations](../../user/applications.md#accepted-limitations) describe
+the known cases.
 
 ## 21. OpenRazer Native Route
 
@@ -61,14 +70,19 @@ application file.
 
 ## 24. Upstream Device Settings
 
-Lighting is only one part of the upstream experience. DPI stages, independent
-X/Y DPI, polling rate, acceleration, scroll behavior, Smart Reel, idle timeout,
-low-battery threshold, gaming mode, macros, brightness, charging state, pairing,
-and future model behavior remain owned by OpenRazer or OpenRGB. HyperFlux
+Lighting is only one part of the upstream experience. Settings such as DPI
+stages, independent X/Y DPI, polling rate, acceleration, scroll behavior, Smart
+Reel, idle timeout, low-battery threshold, gaming mode, macros, brightness,
+charging state, and pairing remain owned by OpenRazer or OpenRGB. Each one is
+available only where the upstream application supports it for that exact model,
+and HyperFlux does not add a setting that the upstream model lacks. HyperFlux
 qualifies whether application-owned command bytes, declarative receiver routing,
 and matching responses cross a route; it does not add one semantic SDK method or
 command translation per setting. A different report format is an explicit
-backend requirement rather than a guessed rewrite.
+backend requirement rather than a guessed rewrite. Native-route parity for these
+settings still needs physical evidence, and known differences such as
+Polychromatic's Ripple effect showing no reactive lighting are listed in the
+[accepted limitations](../../user/applications.md#accepted-limitations).
 
 ---
 
