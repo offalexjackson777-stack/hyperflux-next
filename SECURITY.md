@@ -7,11 +7,11 @@ privately as described below. Do not post it in a public issue.
 
 | Version | Platform | Supported |
 | --- | --- | --- |
-| Latest 2.0.x release (currently 2.0.2) | Arch Linux x86_64 | Yes |
-| Earlier 2.0.x patch releases | Arch Linux x86_64 | No - update to the latest 2.0.x |
+| Latest release (currently 2.1.0) | Arch Linux x86_64 | Yes |
+| Earlier releases, including 2.0.x | Arch Linux x86_64 | No - update to the latest release |
 | Development branches and unpublished builds | Any | No |
 
-Each 2.0.x patch release replaces the previous one. Install updates with an
+Each release replaces the previous one. Install updates with an
 ordinary `sudo pacman -Syu`. Other distributions are not supported yet; see the
 [roadmap](docs/project/roadmap.md).
 

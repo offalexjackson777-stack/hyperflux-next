@@ -9,15 +9,20 @@
 
 ## What Is Out Now
 
-The current release runs on Arch Linux on x86_64 computers. It has two
-packages:
+The current release runs on Arch Linux on x86_64 computers. It comes in two
+editions:
 
-- **Full (`hyperflux-next-full`):** the recommended package. Your keyboard and
+- **Full (`hyperflux-next-full`):** the recommended edition. Your keyboard and
   mouse work in OpenRazer, Polychromatic, and OpenRGB.
 - **Core (`hyperflux-next-linux`):** the receiver driver, background service,
   `hyperfluxctl`, and SDK on their own.
 
-The release notes page linked above also carries both package files, their
+Since 2.1.0 the kernel drivers ship in their own packages,
+`hyperflux-next-dkms` and, for Full, `hyperflux-next-openrazer-driver-dkms`.
+Pacman installs them for you. If you run 2.0.x, `sudo pacman -Syu` moves you to
+the new packages; there is nothing else to do.
+
+The release notes page linked above also carries every package file, their
 checksums, and a software bill of materials.
 
 ## Where Packages Come From
@@ -32,7 +37,4 @@ repository, and how to install the package files directly if you cannot.
 
 ## What Comes Next
 
-Every 2.0.x update, including 2.0.2, keeps the same two packages. Version 2.1.0
-will split them into four smaller packages. It ships only after moving from two
-packages to four has been tested on real hardware. The [roadmap](roadmap.md)
-lists the planned changes.
+The [roadmap](roadmap.md) lists the planned changes.

@@ -11,7 +11,8 @@ HyperFlux receiver work in OpenRazer, Polychromatic, and OpenRGB.
 
 ## Choose A Package
 
-HyperFlux Next comes in two packages. Choose one.
+HyperFlux Next comes in two editions. Choose one. Pacman then installs the
+packages that edition needs.
 
 - **Full (`hyperflux-next-full`), recommended:** your keyboard and mouse work in
   OpenRazer, Polychromatic, and OpenRGB. Full installs Core for you.
@@ -202,12 +203,21 @@ Next, open your apps with the [first-run guide](first-run.md).
 
 ## What Each Package Installs
 
-Pacman describes the two packages like this:
+Full installs four packages. Core installs the first two. Pacman describes
+them like this:
 
+- `hyperflux-next-dkms`: HyperFlux receiver kernel driver sources for DKMS.
 - `hyperflux-next-linux` (Core): HyperFlux receiver driver, bridge, SDK, CLI,
   and base services.
+- `hyperflux-next-openrazer-driver-dkms`: OpenRazer kernel driver sources with
+  the HyperFlux native transport, for DKMS.
 - `hyperflux-next-full` (Full): Core plus the OpenRazer compatibility transport
   and OpenRGB integration for optional stock applications.
+
+The two `-dkms` packages hold kernel driver sources. DKMS builds them again for
+each kernel you install, so a kernel update does not break the driver.
+`hyperflux-next-openrazer-driver-dkms` takes the place of Arch's
+`openrazer-driver-dkms`; if you have that package, Pacman asks to remove it.
 
 HyperFlux does not install or replace OpenRazer's background service,
 Polychromatic, or OpenRGB. The
