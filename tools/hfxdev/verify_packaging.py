@@ -150,6 +150,25 @@ def _git_object_id(root: Path, revision: str) -> str:
     return value
 
 
+def _source_date_epoch(root: Path) -> str:
+    try:
+        completed = subprocess.run(
+            ["git", "log", "-1", "--format=%ct", "HEAD"],
+            cwd=root,
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise ModelError(f"cannot resolve source date: {error}") from error
+    value = completed.stdout.strip()
+    if completed.returncode != 0 or re.fullmatch(r"[1-9][0-9]*", value) is None:
+        raise ModelError("source date is unavailable")
+    return value
+
+
 def _source_identity(root: Path) -> dict[str, str]:
     return {
         "revision": _git_object_id(root, "HEAD^{commit}"),
@@ -230,6 +249,9 @@ def _build_openrgb_qualification_harness(
         shutil.rmtree(build_directory)
     build_directory.mkdir()
     project = root / "tests" / "openrgb_plugin_manager_sdk_harness.pro"
+    # Upstream bakes the configure time into the binary unless
+    # SOURCE_DATE_EPOCH is set; the qualified and packaged builds must match.
+    environment = {"SOURCE_DATE_EPOCH": _source_date_epoch(root)}
     _run_command(
         root,
         [
@@ -241,12 +263,14 @@ def _build_openrgb_qualification_harness(
         ],
         "pinned OpenRGB PluginManager harness configure",
         timeout_seconds,
+        environment=environment,
     )
     _run_command(
         root,
         ["make", "-C", str(build_directory), "--jobs=4"],
         "pinned OpenRGB PluginManager harness build",
         timeout_seconds,
+        environment=environment,
     )
     harness = build_directory / "openrgb-plugin-manager-sdk-harness"
     if not harness.is_file() or harness.is_symlink():
