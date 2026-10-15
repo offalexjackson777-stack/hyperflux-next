@@ -309,6 +309,19 @@ def _parser() -> argparse.ArgumentParser:
         help="compare a future split release such as 2.0.1-2",
     )
 
+    package_dossier = package_commands.add_parser(
+        "aur-dossier",
+        help="write the local official-Arch readiness dossier with its receipts",
+    )
+    package_dossier.add_argument("--output", required=True, type=Path)
+    package_dossier.add_argument("--aur-recipe", type=Path)
+    package_dossier.add_argument("--channel-parity", type=Path, metavar="REPORT")
+    package_dossier.add_argument(
+        "--candidate-release",
+        metavar="VERSION-RELEASE",
+        help="the split release such as 2.0.1-2",
+    )
+
     arch_snapshot = commands.add_parser(
         "arch-snapshot",
         help="import official Arch package state and check OpenRazer provider alignment",
@@ -847,6 +860,20 @@ def main(arguments: list[str] | None = None) -> int:
                 )
                 print(comparison.as_json(), end="")
                 return 0 if comparison.passed else 1
+            if args.package_command == "aur-dossier":
+                from .aur_dossier import build_dossier, write_dossier
+
+                dossier = build_dossier(
+                    root,
+                    _candidate_split(root, args.candidate_release),
+                    recipe_dir=args.aur_recipe.resolve() if args.aur_recipe else None,
+                    channel_report=args.channel_parity.resolve() if args.channel_parity else None,
+                )
+                write_dossier(dossier, args.output.resolve())
+                print(f"Dossier: {args.output.resolve() / 'DOSSIER.md'}")
+                for status, count in dossier.summary().items():
+                    print(f"{status}: {count}")
+                return 0
             if args.package_command == "aur-install":
                 from .aur_install import render_guide
 
