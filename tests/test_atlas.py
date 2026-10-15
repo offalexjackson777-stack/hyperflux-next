@@ -128,6 +128,27 @@ class RepositoryAtlasTests(unittest.TestCase):
         for term in ("Receiver", "Child", "Mat", "Hard Edition", "Cloth Edition", "Route"):
             self.assertEqual(index.count(f"| {term} |"), 1)
 
+    def test_atlas_authority_describes_the_published_release(self) -> None:
+        text = (ROOT / "architecture" / "repository-atlas.json").read_text(encoding="utf-8")
+        for stale in (
+            "remains a blocker",
+            "remains pending",
+            "publication remains disabled",
+            "publication lock",
+            "publication interlock",
+            "software-only mission",
+            "not a product release",
+            "authorize",
+        ):
+            with self.subTest(stale=stale):
+                self.assertNotIn(stale, text.lower())
+        atlas = load_repository_atlas(ROOT)
+        self.assertEqual(atlas.publication_state, "public-arch-release")
+        self.assertIn(
+            "Product releases are maintainer-operated, not published by workflows",
+            atlas.by_id["governance"].public_contracts,
+        )
+
     def test_generation_and_change_impact_are_deterministic(self) -> None:
         atlas = load_repository_atlas(ROOT)
         self.assertEqual(markdown(atlas), markdown(load_repository_atlas(ROOT)))

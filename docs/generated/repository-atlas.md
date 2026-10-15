@@ -55,7 +55,7 @@ File-level contracts live in [`architecture/repository-atlas.json`](../../archit
 | [Python SDK](../../sdk/python/README.md) | `implemented` | Provides typed Python bridge access and generated contracts for scripting and Python application adapters. |
 | [Repository tooling](../../tools/README.md) | `implemented` | Provides the single developer CLI, canonical loaders, deterministic generators, and verification orchestration. |
 | [Contract tests](../../tests/README.md) | `implemented` | Holds language-specific, cross-language, fixture, lifecycle, repository-navigation, and change-impact tests. |
-| [GitHub governance authority](../../governance/README.md) | `policy` | Defines repository ownership, immutable automation, public collaboration, remote synchronization, dependency policy, and product-publication locks from one authority. |
+| [GitHub governance authority](../../governance/README.md) | `policy` | Defines repository ownership, immutable automation, public collaboration, remote synchronization, dependency policy, and the public publication state from one authority. |
 | [Documentation system](../../docs/README.md) | `implemented` | Organizes concise audience guidance and generated technical references for direct use inside GitHub. |
 | [Verification graph](../../verification/README.md) | `implemented` | Defines typed verification nodes, dependencies, lanes, capabilities, side effects, evidence, timing, and change selection. |
 | [Error catalog](../../errors/README.md) | `implemented` | Defines stable typed error identities, user-safe messages, remediation, and cross-language mappings. |

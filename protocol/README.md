@@ -11,7 +11,7 @@ Defines bounded request, response, event, negotiation, and compatibility contrac
 
 ## Limitations
 
-- Wire compatibility does not authorize a hardware route
+- Wire compatibility alone does not admit a hardware route
 
 ## Boundaries
 

@@ -11,7 +11,7 @@ Extends pinned OpenRazer with trusted feature-only HyperFlux routes while preser
 
 ## Limitations
 
-- Native-route physical method parity remains pending for stock OpenRazer and Polychromatic clients
+- Read parity is recorded method by method for the two physically proven devices; their write parity rests on the physical acceptance summary
 
 ## Boundaries
 

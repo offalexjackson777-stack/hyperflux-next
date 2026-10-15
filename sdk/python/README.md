@@ -12,7 +12,7 @@ Provides typed Python bridge access and generated contracts for scripting and Py
 
 ## Limitations
 
-- Package publication remains disabled
+- The Arch packages do not install it and the project publishes no Python package; use it from the source tree
 
 ## Boundaries
 
