@@ -40,4 +40,8 @@ Polychromatic lists every Razer USB device that OpenRazer does not manage, and
 the receiver itself is a transport, not a controllable device. Ignore that
 entry; the keyboard and mouse appear under their own names.
 
+Polychromatic does not follow devices that leave and return, such as a
+wireless keyboard switched off and on. Wait a few seconds after switching it
+on, then press F5 on the Devices tab.
+
 These are visible limitations, not hidden compatibility claims.

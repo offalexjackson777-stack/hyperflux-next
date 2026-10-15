@@ -20,6 +20,14 @@ the result. It does not write hardware or restart services.
 
 Do not create a manual USB binding or register the receiver as a fake device.
 
+### After Switching A Wireless Keyboard Off And On
+
+The keyboard can leave OpenRazer while it is off and come back after it is
+switched on. Polychromatic does not notice this by itself. Wait a few seconds
+after switching the keyboard on, then press F5 on Polychromatic's Devices tab.
+Retry on the device page or View → Force Refresh also works. If the keyboard
+is still missing, run `hyperfluxctl status` to check that its route is back.
+
 ## Installed Driver Does Not Match The Running Driver
 
 The normal recovery is a reboot with the receiver connected. This preserves
