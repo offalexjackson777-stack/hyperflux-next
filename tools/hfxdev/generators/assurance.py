@@ -3,8 +3,14 @@
 from __future__ import annotations
 
 from collections import Counter
+import re
 
 from ..assurance import DesignCoverageEntry
+
+
+def _anchor(entry: DesignCoverageEntry) -> str:
+    value = re.sub(r"[^\w\- ]", "", f"{entry.section}. {entry.title}".lower())
+    return value.replace(" ", "-")
 
 
 def design_coverage_markdown(entries: tuple[DesignCoverageEntry, ...]) -> str:
@@ -44,8 +50,8 @@ def design_coverage_markdown(entries: tuple[DesignCoverageEntry, ...]) -> str:
         if entry.physical_evidence_required:
             remaining += " Physical evidence is required."
         lines.append(
-            f"| {entry.section} | [{entry.title}](../architecture/design-book.md#"
-            f"{entry.section}-{entry.title.lower().replace(' ', '-')}) | `{entry.status}` | "
+            f"| {entry.section} | [{entry.title}](../{entry.chapter.removeprefix('docs/')}#"
+            f"{_anchor(entry)}) | `{entry.status}` | "
             f"`{entry.owner}` | {remaining} |"
         )
     lines.extend(

@@ -15,7 +15,7 @@
       "timeout_seconds": 10,
       "dependencies": [],
       "isolation": "shared",
-      "cache_inputs": ["architecture/*.json", "assurance/*.json", "profiles/evidence/sources.json"],
+      "cache_inputs": ["architecture/*.json", "assurance/*.json", "docs/architecture/design-book/*.md", "profiles/evidence/sources.json", "tools/hfxdev/assurance.py"],
       "produced_evidence": ["foundation-result"],
       "resume_policy": "reuse-verified"
     },

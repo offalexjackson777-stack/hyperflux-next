@@ -59,7 +59,7 @@
         "max_table_columns"
       ],
       "properties": {
-        "max_documents": {"type": "integer", "const": 64},
+        "max_documents": {"type": "integer", "const": 96},
         "max_markdown_bytes": {"type": "integer", "const": 1048576},
         "max_rendered_html_bytes": {"type": "integer", "const": 4194304},
         "max_issues": {"type": "integer", "const": 128},

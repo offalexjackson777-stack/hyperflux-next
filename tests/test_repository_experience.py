@@ -355,6 +355,33 @@ class RepositoryExperienceContracts(unittest.TestCase):
         issues = repository_link_issues(ROOT)
         self.assertEqual(issues, (), "\n".join(str(issue) for issue in issues))
 
+    def test_design_book_is_a_short_index_of_readable_chapters(self) -> None:
+        # The Design Book is an index plus one page per chapter (ARCH-001).
+        index = (ROOT / "docs/architecture/design-book.md").read_text(encoding="utf-8")
+        chapters = sorted((ROOT / "docs/architecture/design-book").glob("*.md"))
+        self.assertEqual(len(chapters), 12)
+        self.assertLessEqual(len(index.splitlines()), 120)
+        self.assertNotRegex(index, r"(?m)^#{2,3} \d+\. ")
+        self.assertEqual(len(re.findall(r"(?m)^## Chapter [IVX]+: ", index)), 12)
+        subjects: list[int] = []
+        diagrams = 0
+        for chapter in chapters:
+            text = chapter.read_text(encoding="utf-8")
+            relative = chapter.relative_to(ROOT / "docs/architecture").as_posix()
+            with self.subTest(chapter=chapter.name):
+                self.assertIn(f"]({relative}#", index)
+                self.assertIn("](../design-book.md)", text)
+                self.assertNotIn("\n\n\n", text)
+                for number, line in enumerate(text.splitlines(), 1):
+                    if line.startswith("#"):
+                        self.assertEqual(text.splitlines()[number - 2 : number - 1] or [""], [""])
+                    if len(line) > 100:
+                        self.assertRegex(line, r"^\s*(- |Next: |Previous: )?\[[^\]]+\]\([^)]+\)$")
+            subjects.extend(int(value) for value in re.findall(r"(?m)^## (\d+)\. ", text))
+            diagrams += text.count("```mermaid")
+        self.assertEqual(subjects, list(range(1, 68)))
+        self.assertGreaterEqual(diagrams, 3)
+
     def test_public_pages_do_not_contradict_the_published_release(self) -> None:
         # A release is published; no public page may claim otherwise (DOC-001).
         stale = (
