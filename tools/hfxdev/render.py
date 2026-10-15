@@ -558,7 +558,9 @@ def rendered_files(root: Path) -> dict[Path, str]:
         readme_path = f"{node.path}/README.md"
         if readme_path in node.generated_files:
             files[root / readme_path] = atlas_folder_readme(
-                repository_atlas, node
+                repository_atlas,
+                node,
+                {record.path: record.title for record in document_catalog.documents},
             )
     node_paths = {node.path for node in repository_atlas.nodes}
     architecture_node = repository_atlas.by_id["architecture"]

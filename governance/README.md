@@ -6,11 +6,15 @@ Defines repository ownership, immutable automation, public collaboration, remote
 
 ## Start Here
 
-- [`docs/generated/github-governance.md`](../docs/generated/github-governance.md)
-- [`CONTRIBUTING.md`](../CONTRIBUTING.md)
-- [`SUPPORT.md`](../SUPPORT.md)
-- [`SECURITY.md`](../SECURITY.md)
-- [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md)
+- [GitHub Governance](../docs/generated/github-governance.md)
+- [Contributing](../CONTRIBUTING.md)
+- [Support](../SUPPORT.md)
+- [Security Policy](../SECURITY.md)
+- [Code Of Conduct](../CODE_OF_CONDUCT.md)
+
+## Limitations
+
+- Remote synchronization applies only reviewed public-source components and does not publish packages or write hardware
 
 ## Boundaries
 
@@ -36,15 +40,6 @@ Defines repository ownership, immutable automation, public collaboration, remote
 
 ## Verify
 
-Run `governance-contracts` after changing this area.
+Run `governance-contracts` after changing this area, and run `./hfx generate` to refresh its 21 generated file(s).
 
-Review impact:
-
-- Regenerate 21 declared projection(s).
-- Run `governance-contracts`.
-- Review direct consumers: Documentation system.
-
-## Related Areas
-
-- **Depends on:** [Architecture authority](../architecture/README.md), [Assurance and release evidence](../assurance/README.md), [Verification graph](../verification/README.md)
-- **Used by:** [Documentation system](../docs/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

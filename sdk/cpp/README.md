@@ -6,8 +6,12 @@ Provides typed C++ bridge access for qualified native routes, exact Feature exch
 
 ## Start Here
 
-- [`docs/architecture/sdk.md`](../../docs/architecture/sdk.md)
-- [`docs/generated/bridge-protocol.md`](../../docs/generated/bridge-protocol.md)
+- [SDK Boundary](../../docs/architecture/sdk.md)
+- [Bridge Protocol](../../docs/generated/bridge-protocol.md)
+
+## Limitations
+
+- The C++ library does not declare a stable binary interface
 
 ## Boundaries
 
@@ -29,15 +33,6 @@ Provides typed C++ bridge access for qualified native routes, exact Feature exch
 
 ## Verify
 
-Run `cpp-sdk-contracts` after changing this area.
+Run `cpp-sdk-contracts` after changing this area, and run `./hfx generate` to refresh its 3 generated file(s).
 
-Review impact:
-
-- Regenerate 3 declared projection(s).
-- Run `cpp-sdk-contracts`.
-- Review direct consumers: OpenRGB adapter, Contract tests.
-
-## Related Areas
-
-- **Depends on:** [Versioned bridge protocol](../../protocol/README.md), [Composable hardware profiles](../../profiles/README.md), [Application integration catalog](../../integrations/README.md)
-- **Used by:** [OpenRGB adapter](../../integrations/openrgb/README.md), [Contract tests](../../tests/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../../docs/generated/repository-atlas.md).

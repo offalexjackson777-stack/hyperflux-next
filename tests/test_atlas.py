@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.atlas import load_repository_atlas
-from hfxdev.generators.atlas import folder_readme, impact_summary, markdown
+from hfxdev.generators.atlas import folder_readme, markdown
 from hfxdev.testgraph import load_test_catalog, select_tests
 
 
@@ -66,7 +66,6 @@ class RepositoryAtlasTests(unittest.TestCase):
         required = (
             "## Boundaries",
             "## Key Files",
-            "## Related Areas",
             "## Verify",
         )
         for node in atlas.nodes:
@@ -81,7 +80,7 @@ class RepositoryAtlasTests(unittest.TestCase):
         atlas = load_repository_atlas(ROOT)
         self.assertEqual(markdown(atlas), markdown(load_repository_atlas(ROOT)))
         for node in atlas.nodes:
-            self.assertEqual(impact_summary(atlas, node), impact_summary(atlas, node))
+            self.assertEqual(folder_readme(atlas, node), folder_readme(atlas, node))
 
     def test_atlas_source_change_selects_all_direct_contract_consumers(self) -> None:
         selection = select_tests(

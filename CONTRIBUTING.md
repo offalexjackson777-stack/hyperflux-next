@@ -17,11 +17,12 @@ documentation, device knowledge, packaging, integrations, or the bridge itself.
 ## Change Workflow
 
 1. Fork the repository and create a focused branch.
-2. Find the owning area in the [Repository Atlas](docs/generated/repository-atlas.md).
+2. Find the owning area: each top-level folder's README names what it owns,
+   its key files, and how to verify it.
 3. Change canonical data or source rather than a generated projection.
 4. Add focused tests for changed behavior or contracts.
 5. Run `./hfx generate` and confirm a second run produces no diff.
-6. Run `./hfx verify --changed-from <commit>` while iterating.
+6. Run `./hfx verify --fast --changed-from <commit>` while iterating.
 7. Open a pull request describing the reason, validation, compatibility, and risk.
 
 ## Generated Files

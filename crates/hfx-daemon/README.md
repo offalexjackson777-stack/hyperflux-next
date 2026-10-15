@@ -6,8 +6,12 @@ Composes production discovery, configuration, native-route authority, service li
 
 ## Start Here
 
-- [`docs/architecture/bridge-core.md`](../../docs/architecture/bridge-core.md)
-- [`docs/generated/linux-runtime.md`](../../docs/generated/linux-runtime.md)
+- [Bridge Core Boundaries](../../docs/architecture/bridge-core.md)
+- [Linux Runtime Authority](../../docs/generated/linux-runtime.md)
+
+## Limitations
+
+- No remote control plane or network service is provided
 
 ## Boundaries
 
@@ -29,15 +33,6 @@ Composes production discovery, configuration, native-route authority, service li
 
 ## Verify
 
-Run `rust-unit` `package-contracts` after changing this area.
+Run `rust-unit` `package-contracts` after changing this area, and run `./hfx generate` to refresh its 1 generated file(s).
 
-Review impact:
-
-- Regenerate 1 declared projection(s).
-- Run `rust-unit`, `package-contracts`.
-- Review direct consumers: Packaging and installation.
-
-## Related Areas
-
-- **Depends on:** [Bridge runtime](../hfx-bridge/README.md), [Kernel transport adapter](../hfx-kernel-transport/README.md), [Linux runtime authority](../../runtime/README.md)
-- **Used by:** [Packaging and installation](../../packaging/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../../docs/generated/repository-atlas.md).

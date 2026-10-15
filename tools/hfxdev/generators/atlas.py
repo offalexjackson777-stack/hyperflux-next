@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import posixpath
+from collections.abc import Mapping
 
 from ..atlas import AtlasNode, RepositoryAtlas
 
@@ -44,31 +45,29 @@ def _node_links(
     ] or ["- None."]
 
 
-def impact_summary(atlas: RepositoryAtlas, node: AtlasNode) -> tuple[str, ...]:
-    consumers = atlas.used_by[node.id]
-    values = [
-        f"Regenerate {len(node.generated_files)} declared projection(s).",
-        f"Run {', '.join(f'`{item}`' for item in node.verification)}.",
-    ]
-    if consumers:
-        titles = ", ".join(atlas.by_id[item].title for item in consumers)
-        values.append(f"Review direct consumers: {titles}.")
-    else:
-        values.append("No direct subsystem consumer is declared; verify repository-facing outputs.")
-    return tuple(values)
+ATLAS_PAGE = "docs/generated/repository-atlas.md"
 
 
-def folder_readme(atlas: RepositoryAtlas, node: AtlasNode) -> str:
-    used_by = atlas.used_by[node.id]
+def _doc_bullets(
+    from_directory: str,
+    values: tuple[str, ...],
+    titles: Mapping[str, str],
+) -> list[str]:
+    return [
+        f"- {_link(from_directory, value, titles[value])}"
+        if value in titles
+        else f"- {_link(from_directory, value, f'`{value}`')}"
+        for value in values
+    ] or ["- None."]
+
+
+def folder_readme(
+    atlas: RepositoryAtlas,
+    node: AtlasNode,
+    titles: Mapping[str, str] | None = None,
+) -> str:
+    titles = titles or {}
     verification = " ".join(f"`{item}`" for item in node.verification)
-    dependencies = ", ".join(
-        _link(node.path, atlas.by_id[item].path + "/README.md", atlas.by_id[item].title)
-        for item in node.depends_on
-    ) or "None"
-    consumers = ", ".join(
-        _link(node.path, atlas.by_id[item].path + "/README.md", atlas.by_id[item].title)
-        for item in used_by
-    ) or "None"
     lines = [
         f"# {node.title}",
         "",
@@ -92,19 +91,17 @@ def folder_readme(atlas: RepositoryAtlas, node: AtlasNode) -> str:
                 "| Hardware | [Capability boundary](user/hardware.md) |",
                 "| Applications | [Stock application ownership](user/applications.md) |",
                 "| Readiness | [Release status](project/release-status.md) |",
-                "| Repository ownership | [Repository Atlas](generated/repository-atlas.md) |",
                 "",
             ]
         )
     else:
-        lines.extend(
-            [
-                "## Start Here",
-                "",
-                *_file_bullets(node.path, node.related_docs),
-                "",
-            ]
-        )
+        guides = tuple(item for item in node.related_docs if "/decisions/" not in item)
+        decisions = tuple(item for item in node.related_docs if "/decisions/" in item)
+        lines.extend(["## Start Here", "", *_doc_bullets(node.path, guides, titles), ""])
+        if decisions:
+            lines.extend(
+                ["## Decision Records", "", *_doc_bullets(node.path, decisions, titles), ""]
+            )
     if node.id == "device-qualification-console":
         lines.extend(
             [
@@ -118,6 +115,8 @@ def folder_readme(atlas: RepositoryAtlas, node: AtlasNode) -> str:
                 "",
             ]
         )
+    if node.limitations:
+        lines.extend(["## Limitations", "", *_bullets(node.limitations), ""])
     lines.extend(
         [
         "## Boundaries",
@@ -138,16 +137,11 @@ def folder_readme(atlas: RepositoryAtlas, node: AtlasNode) -> str:
         "",
         "## Verify",
         "",
-        f"Run {verification} after changing this area.",
+        f"Run {verification} after changing this area, and run `./hfx generate`"
+        f" to refresh its {len(node.generated_files)} generated file(s).",
         "",
-        "Review impact:",
-        "",
-        *_bullets(impact_summary(atlas, node)),
-        "",
-        "## Related Areas",
-        "",
-        f"- **Depends on:** {dependencies}",
-        f"- **Used by:** {consumers}",
+        "Maintainers can find the areas this one depends on and the areas that"
+        f" use it in the {_link(node.path, ATLAS_PAGE, 'Repository Atlas')}.",
         ]
     )
     return "\n".join(lines) + "\n"
@@ -245,7 +239,9 @@ def markdown(atlas: RepositoryAtlas) -> str:
         "",
         GENERATED_NOTICE,
         "",
-        "This is the compact public index for repository ownership. The complete dependency graph and file-level contracts remain in [`architecture/repository-atlas.json`](../../architecture/repository-atlas.json).",
+        "Maintainer reference for repository ownership. It lists every subsystem with its status, purpose, and dependencies. To learn the system, start with the [architecture overview](../developer/architecture.md) instead.",
+        "",
+        "File-level contracts live in [`architecture/repository-atlas.json`](../../architecture/repository-atlas.json).",
         "",
         f"- **Subsystems:** {len(atlas.nodes)}",
         f"- **Categories:** {len(categories)}",
@@ -265,6 +261,7 @@ def markdown(atlas: RepositoryAtlas) -> str:
         lines.append(f"| {category.title()} | {links} |")
     lines.extend(
         [
+            "",
             "## Subsystem Index",
             "",
             "| Subsystem | Status | Purpose |",
@@ -278,7 +275,20 @@ def markdown(atlas: RepositoryAtlas) -> str:
     lines.extend(
         [
             "",
-            "Each linked front door names the subsystem's boundaries, key files, verification, and direct relationships. Update the JSON authority and run `./hfx generate` when ownership changes.",
+            "## Dependencies",
+            "",
+            "| Subsystem | Depends on | Used by |",
+            "| --- | --- | --- |",
+        ]
+    )
+    for node in atlas.nodes:
+        depends_on = ", ".join(atlas.by_id[item].title for item in node.depends_on) or "None"
+        used_by = ", ".join(atlas.by_id[item].title for item in atlas.used_by[node.id]) or "None"
+        lines.append(f"| [{node.title}](../../{node.path}/README.md) | {depends_on} | {used_by} |")
+    lines.extend(
+        [
+            "",
+            "Each linked folder README names the subsystem's boundaries, key files, limitations, and verification. Update the JSON authority and run `./hfx generate` when ownership changes.",
         ]
     )
     return "\n".join(lines) + "\n"

@@ -6,8 +6,12 @@ Defines stable typed error identities, user-safe messages, remediation, and cros
 
 ## Start Here
 
-- [`docs/generated/error-catalog.md`](../docs/generated/error-catalog.md)
-- [`docs/user/troubleshooting.md`](../docs/user/troubleshooting.md)
+- [Error Catalog](../docs/generated/error-catalog.md)
+- [Troubleshooting](../docs/user/troubleshooting.md)
+
+## Limitations
+
+- The catalog cannot replace structured subsystem diagnostics
 
 ## Boundaries
 
@@ -27,15 +31,6 @@ Defines stable typed error identities, user-safe messages, remediation, and cros
 
 ## Verify
 
-Run `error-contracts` after changing this area.
+Run `error-contracts` after changing this area, and run `./hfx generate` to refresh its 3 generated file(s).
 
-Review impact:
-
-- Regenerate 3 declared projection(s).
-- Run `error-contracts`.
-- No direct subsystem consumer is declared; verify repository-facing outputs.
-
-## Related Areas
-
-- **Depends on:** [Schema contracts](../schemas/README.md)
-- **Used by:** None
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

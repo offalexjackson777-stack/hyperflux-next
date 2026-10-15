@@ -6,8 +6,12 @@ Defines strict machine-readable shapes for every shared repository fact and gene
 
 ## Start Here
 
-- [`docs/architecture/design-book.md`](../docs/architecture/design-book.md)
-- [`docs/generated/domain-types.md`](../docs/generated/domain-types.md)
+- [HyperFlux Next Design Book](../docs/architecture/design-book.md)
+- [Domain Types](../docs/generated/domain-types.md)
+
+## Limitations
+
+- Schemas validate structure and bounded values, not real hardware behavior
 
 ## Boundaries
 
@@ -38,15 +42,6 @@ Defines strict machine-readable shapes for every shared repository fact and gene
 
 ## Verify
 
-Run `schema-contracts` `repository-atlas-contracts` after changing this area.
+Run `schema-contracts` `repository-atlas-contracts` after changing this area, and run `./hfx generate` to refresh its 2 generated file(s).
 
-Review impact:
-
-- Regenerate 2 declared projection(s).
-- Run `schema-contracts`, `repository-atlas-contracts`.
-- Review direct consumers: Assurance and release evidence, Kernel driver contract, Error catalog, Application integration catalog, Composable hardware profiles, Versioned bridge protocol, Linux runtime authority, Rust workspace, Repository tooling.
-
-## Related Areas
-
-- **Depends on:** [Architecture authority](../architecture/README.md)
-- **Used by:** [Assurance and release evidence](../assurance/README.md), [Kernel driver contract](../driver/README.md), [Error catalog](../errors/README.md), [Application integration catalog](../integrations/README.md), [Composable hardware profiles](../profiles/README.md), [Versioned bridge protocol](../protocol/README.md), [Linux runtime authority](../runtime/README.md), [Rust workspace](../crates/README.md), [Repository tooling](../tools/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

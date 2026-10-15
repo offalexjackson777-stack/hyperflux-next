@@ -6,8 +6,15 @@ Coordinates the source-only local qualification projection, lifecycle, evidence,
 
 ## Start Here
 
-- [`docs/architecture/decisions/device-knowledge-integration.md`](../../docs/architecture/decisions/device-knowledge-integration.md)
-- [`docs/generated/local-companion.md`](../../docs/generated/local-companion.md)
+- [Local Companion Contract](../../docs/generated/local-companion.md)
+
+## Decision Records
+
+- [Device-Knowledge Integration](../../docs/architecture/decisions/device-knowledge-integration.md)
+
+## Limitations
+
+- The browser workflow is a maintainer tool and does not make a release
 
 ## Boundaries
 
@@ -34,15 +41,6 @@ Coordinates the source-only local qualification projection, lifecycle, evidence,
 
 ## Verify
 
-Run `device-qualification-console-contracts` `native-onboarding-contracts` `rust-clippy` `rust-unit` `package-contracts` after changing this area.
+Run `device-qualification-console-contracts` `native-onboarding-contracts` `rust-clippy` `rust-unit` `package-contracts` after changing this area, and run `./hfx generate` to refresh its 1 generated file(s).
 
-Review impact:
-
-- Regenerate 1 declared projection(s).
-- Run `device-qualification-console-contracts`, `native-onboarding-contracts`, `rust-clippy`, `rust-unit`, `package-contracts`.
-- Review direct consumers: Device qualification console, Operations CLI.
-
-## Related Areas
-
-- **Depends on:** [System probe](../hfx-system-probe/README.md), [Composable hardware profiles](../../profiles/README.md), [Bridge runtime](../hfx-bridge/README.md)
-- **Used by:** [Device qualification console](../../apps/device-qualification/README.md), [Operations CLI](../hfx-ops/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../../docs/generated/repository-atlas.md).

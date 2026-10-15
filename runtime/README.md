@@ -6,8 +6,12 @@ Defines package version, service identities, filesystem paths, permissions, acti
 
 ## Start Here
 
-- [`docs/generated/linux-runtime.md`](../docs/generated/linux-runtime.md)
-- [`docs/generated/installation.md`](../docs/generated/installation.md)
+- [Linux Runtime Authority](../docs/generated/linux-runtime.md)
+- [Installation Contract](../docs/generated/installation.md)
+
+## Limitations
+
+- Distribution-specific packaging remains a separate projection
 
 ## Boundaries
 
@@ -29,15 +33,6 @@ Defines package version, service identities, filesystem paths, permissions, acti
 
 ## Verify
 
-Run `foundation-contracts` `package-contracts` after changing this area.
+Run `foundation-contracts` `package-contracts` after changing this area, and run `./hfx generate` to refresh its 4 generated file(s).
 
-Review impact:
-
-- Regenerate 4 declared projection(s).
-- Run `foundation-contracts`, `package-contracts`.
-- Review direct consumers: Production daemon, Packaging and installation.
-
-## Related Areas
-
-- **Depends on:** [Architecture authority](../architecture/README.md), [Schema contracts](../schemas/README.md)
-- **Used by:** [Production daemon](../crates/hfx-daemon/README.md), [Packaging and installation](../packaging/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

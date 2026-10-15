@@ -6,8 +6,12 @@ Adapts the generated kernel UAPI into bounded Rust observation, routing, envelop
 
 ## Start Here
 
-- [`docs/architecture/kernel.md`](../../docs/architecture/kernel.md)
-- [`docs/generated/kernel-uapi.md`](../../docs/generated/kernel-uapi.md)
+- [Kernel Boundary](../../docs/architecture/kernel.md)
+- [Kernel UAPI](../../docs/generated/kernel-uapi.md)
+
+## Limitations
+
+- Requires the matching installed kernel module for live operation
 
 ## Boundaries
 
@@ -29,15 +33,6 @@ Adapts the generated kernel UAPI into bounded Rust observation, routing, envelop
 
 ## Verify
 
-Run `rust-unit` `kernel-profile-contracts` after changing this area.
+Run `rust-unit` `kernel-profile-contracts` after changing this area, and run `./hfx generate` to refresh its 2 generated file(s).
 
-Review impact:
-
-- Regenerate 2 declared projection(s).
-- Run `rust-unit`, `kernel-profile-contracts`.
-- Review direct consumers: Production daemon.
-
-## Related Areas
-
-- **Depends on:** [Rust workspace](../README.md), [Kernel driver contract](../../driver/README.md), [Versioned bridge protocol](../../protocol/README.md)
-- **Used by:** [Production daemon](../hfx-daemon/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../../docs/generated/repository-atlas.md).

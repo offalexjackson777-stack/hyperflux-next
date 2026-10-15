@@ -6,8 +6,16 @@ Owns explicit design coverage, bounded formal models, performance budgets, depen
 
 ## Start Here
 
-- [`docs/generated/design-coverage.md`](../docs/generated/design-coverage.md)
-- [`docs/generated/release-gates.md`](../docs/generated/release-gates.md)
+- [Verification](../docs/developer/verification.md)
+- [Design Coverage](../docs/generated/design-coverage.md)
+- [Verification Summary](../docs/generated/release-gates.md)
+- [Virtual Receiver And Replay](../docs/assurance/simulator.md)
+- [Performance Budgets](../docs/generated/performance-budgets.md)
+- [Supply Chain](../docs/generated/supply-chain.md)
+
+## Limitations
+
+- Software evidence cannot replace physical qualification
 
 ## Boundaries
 
@@ -39,15 +47,6 @@ Owns explicit design coverage, bounded formal models, performance budgets, depen
 
 ## Verify
 
-Run `assurance-contracts` `dependency-security-contracts` `formal-model-contracts` `quality-contracts` `rust-coverage-contracts` after changing this area.
+Run `assurance-contracts` `dependency-security-contracts` `formal-model-contracts` `quality-contracts` `rust-coverage-contracts` after changing this area, and run `./hfx generate` to refresh its 3 generated file(s).
 
-Review impact:
-
-- Regenerate 3 declared projection(s).
-- Run `assurance-contracts`, `dependency-security-contracts`, `formal-model-contracts`, `quality-contracts`, `rust-coverage-contracts`.
-- Review direct consumers: GitHub governance authority, Verification graph.
-
-## Related Areas
-
-- **Depends on:** [Architecture authority](../architecture/README.md), [Schema contracts](../schemas/README.md)
-- **Used by:** [GitHub governance authority](../governance/README.md), [Verification graph](../verification/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

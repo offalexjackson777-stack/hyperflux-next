@@ -6,8 +6,12 @@ Defines typed verification nodes, dependencies, lanes, capabilities, side effect
 
 ## Start Here
 
-- [`docs/generated/verification.md`](../docs/generated/verification.md)
-- [`CONTRIBUTING.md`](../CONTRIBUTING.md)
+- [Verification Graph](../docs/generated/verification.md)
+- [Contributing](../CONTRIBUTING.md)
+
+## Limitations
+
+- A green software lane is neither physical evidence nor a release
 
 ## Boundaries
 
@@ -27,15 +31,6 @@ Defines typed verification nodes, dependencies, lanes, capabilities, side effect
 
 ## Verify
 
-Run `repository-atlas-contracts` `python-unit` after changing this area.
+Run `repository-atlas-contracts` `python-unit` after changing this area, and run `./hfx generate` to refresh its 2 generated file(s).
 
-Review impact:
-
-- Regenerate 2 declared projection(s).
-- Run `repository-atlas-contracts`, `python-unit`.
-- Review direct consumers: Documentation system, GitHub governance authority.
-
-## Related Areas
-
-- **Depends on:** [Architecture authority](../architecture/README.md), [Assurance and release evidence](../assurance/README.md), [Repository tooling](../tools/README.md), [Contract tests](../tests/README.md)
-- **Used by:** [Documentation system](../docs/README.md), [GitHub governance authority](../governance/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

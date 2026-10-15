@@ -6,8 +6,12 @@ Builds reproducible distribution artifacts, a canonical installed root, and sign
 
 ## Start Here
 
-- [`docs/generated/installation.md`](../docs/generated/installation.md)
-- [`docs/generated/distributions.md`](../docs/generated/distributions.md)
+- [Installation Contract](../docs/generated/installation.md)
+- [Distribution Packages](../docs/generated/distributions.md)
+
+## Limitations
+
+- Private signing material remains outside the publishable repository and release assets
 
 ## Boundaries
 
@@ -30,15 +34,6 @@ Builds reproducible distribution artifacts, a canonical installed root, and sign
 
 ## Verify
 
-Run `package-contracts` after changing this area.
+Run `package-contracts` after changing this area, and run `./hfx generate` to refresh its 5 generated file(s).
 
-Review impact:
-
-- Regenerate 5 declared projection(s).
-- Run `package-contracts`.
-- No direct subsystem consumer is declared; verify repository-facing outputs.
-
-## Related Areas
-
-- **Depends on:** [Production daemon](../crates/hfx-daemon/README.md), [Linux HID kernel module](../driver/kernel/README.md), [Linux runtime authority](../runtime/README.md), [OpenRGB adapter](../integrations/openrgb/README.md), [OpenRazer native route](../integrations/openrazer/README.md), [Device qualification console](../apps/device-qualification/README.md)
-- **Used by:** None
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

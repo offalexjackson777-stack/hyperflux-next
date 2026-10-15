@@ -6,8 +6,12 @@ Adapts the core to protocol-v7 native routes and exchanges plus retained protoco
 
 ## Start Here
 
-- [`docs/architecture/bridge-core.md`](../../docs/architecture/bridge-core.md)
-- [`docs/architecture/persistence.md`](../../docs/architecture/persistence.md)
+- [Bridge Core Boundaries](../../docs/architecture/bridge-core.md)
+- [Bridge Persistence](../../docs/architecture/persistence.md)
+
+## Limitations
+
+- Production process policy belongs to the daemon crate
 
 ## Boundaries
 
@@ -30,15 +34,6 @@ Adapts the core to protocol-v7 native routes and exchanges plus retained protoco
 
 ## Verify
 
-Run `rust-unit` `simulator-contracts` after changing this area.
+Run `rust-unit` `simulator-contracts` after changing this area, and run `./hfx generate` to refresh its 1 generated file(s).
 
-Review impact:
-
-- Regenerate 1 declared projection(s).
-- Run `rust-unit`, `simulator-contracts`.
-- Review direct consumers: Production daemon, Device qualification runtime, Operations CLI.
-
-## Related Areas
-
-- **Depends on:** [Core policy engine](../hfx-core/README.md), [Versioned bridge protocol](../../protocol/README.md)
-- **Used by:** [Production daemon](../hfx-daemon/README.md), [Device qualification runtime](../hfx-device-qualification/README.md), [Operations CLI](../hfx-ops/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../../docs/generated/repository-atlas.md).

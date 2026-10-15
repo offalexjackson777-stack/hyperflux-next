@@ -6,7 +6,11 @@ Exercises generations, failures, persistence, restoration, and replay without ha
 
 ## Start Here
 
-- [`docs/assurance/simulator.md`](../../docs/assurance/simulator.md)
+- [Virtual Receiver And Replay](../../docs/assurance/simulator.md)
+
+## Limitations
+
+- Simulation evidence is distinct from physical qualification
 
 ## Boundaries
 
@@ -28,15 +32,6 @@ Exercises generations, failures, persistence, restoration, and replay without ha
 
 ## Verify
 
-Run `simulator-contracts` after changing this area.
+Run `simulator-contracts` after changing this area, and run `./hfx generate` to refresh its 1 generated file(s).
 
-Review impact:
-
-- Regenerate 1 declared projection(s).
-- Run `simulator-contracts`.
-- No direct subsystem consumer is declared; verify repository-facing outputs.
-
-## Related Areas
-
-- **Depends on:** [Core policy engine](../hfx-core/README.md), [Composable hardware profiles](../../profiles/README.md)
-- **Used by:** None
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../../docs/generated/repository-atlas.md).

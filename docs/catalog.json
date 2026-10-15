@@ -676,8 +676,8 @@
     {
       "path": "docs/generated/repository-atlas.md",
       "title": "Repository Atlas",
-      "audience": "contributors",
-      "purpose": "Projects subsystem ownership, dependencies, outputs, and safe-change paths.",
+      "audience": "maintainers",
+      "purpose": "Maintainer reference for subsystem ownership, status, and the dependency graph.",
       "owner": "architecture",
       "navigation_group": "generated",
       "mode": "generated",

@@ -6,8 +6,12 @@ Pins compiler, interpreter, upstream checkout, and development-container identit
 
 ## Start Here
 
-- [`docs/generated/development-environment.md`](../docs/generated/development-environment.md)
-- [`CONTRIBUTING.md`](../CONTRIBUTING.md)
+- [Reproducible Development Environment](../docs/generated/development-environment.md)
+- [Contributing](../CONTRIBUTING.md)
+
+## Limitations
+
+- Preparing upstream checkouts may require network access outside offline verification
 
 ## Boundaries
 
@@ -28,15 +32,6 @@ Pins compiler, interpreter, upstream checkout, and development-container identit
 
 ## Verify
 
-Run `toolchain-contract` `development-environment-contracts` after changing this area.
+Run `toolchain-contract` `development-environment-contracts` after changing this area, and run `./hfx generate` to refresh its 3 generated file(s).
 
-Review impact:
-
-- Regenerate 3 declared projection(s).
-- Run `toolchain-contract`, `development-environment-contracts`.
-- Review direct consumers: Rust workspace, Repository tooling.
-
-## Related Areas
-
-- **Depends on:** [Architecture authority](../architecture/README.md)
-- **Used by:** [Rust workspace](../crates/README.md), [Repository tooling](../tools/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

@@ -586,6 +586,45 @@ class RepositoryExperienceContracts(unittest.TestCase):
                 self.assertIn("## Boundaries", text)
                 self.assertIn("## Verify", text)
 
+    def test_folder_front_doors_lead_with_guides_and_leave_the_graph_to_the_atlas(self) -> None:
+        # Folder READMEs open with purpose and useful pages; dependency graphs
+        # stay in the maintainer Repository Atlas (ARCH-005, ARCH-006).
+        atlas = load_repository_atlas(ROOT)
+        for node in atlas.nodes:
+            if f"{node.path}/README.md" not in node.generated_files:
+                continue
+            text = (ROOT / node.path / "README.md").read_text(encoding="utf-8")
+            with self.subTest(node=node.id):
+                headings = re.findall(r"(?m)^## (.+)$", text)
+                self.assertIn(headings[0], {"Start Here", "Browse By Need"})
+                self.assertNotIn("Used by", text)
+                self.assertNotIn("Review direct consumers", text)
+                self.assertLessEqual(max(len(line) for line in text.splitlines()), 300)
+                self.assertIn("docs/generated/repository-atlas.md)", text)
+        architecture = (ROOT / "architecture/README.md").read_text(encoding="utf-8")
+        start = architecture.split("## Start Here", 1)[1].split("\n## ", 1)[0]
+        for target in ("developer/architecture.md", "architecture/design-book.md", "developer/verification.md"):
+            self.assertIn(target, start)
+        self.assertIn("## Decision Records", architecture)
+        self.assertIn("## Limitations", architecture)
+        self.assertNotRegex(start, r"\[`docs/")
+        assurance = (ROOT / "assurance/README.md").read_text(encoding="utf-8")
+        start = assurance.split("## Start Here", 1)[1].split("\n## ", 1)[0]
+        for target in ("developer/verification.md", "generated/design-coverage.md", "assurance/simulator.md"):
+            self.assertIn(target, start)
+        self.assertIn("## Limitations", assurance)
+        page = (ROOT / "docs/generated/repository-atlas.md").read_text(encoding="utf-8")
+        self.assertIn("Maintainer reference for repository ownership.", page)
+        self.assertIn("## Dependencies", page)
+        self.assertIn("| Subsystem | Depends on | Used by |", page)
+        catalog = load_json(ROOT / "docs/catalog.json")
+        entry = next(item for item in catalog["documents"] if item["path"] == "docs/generated/repository-atlas.md")
+        self.assertEqual(entry["audience"], "maintainers")
+        contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+        workflow = contributing.split("## Change Workflow", 1)[1].split("\n## ", 1)[0]
+        self.assertNotIn("repository-atlas.md", workflow)
+        self.assertIn("./hfx verify --fast --changed-from", workflow)
+
     def test_visible_top_level_collections_have_generated_front_doors(self) -> None:
         expected = {
             ".devcontainer",

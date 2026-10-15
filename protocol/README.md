@@ -6,8 +6,12 @@ Defines bounded request, response, event, negotiation, and compatibility contrac
 
 ## Start Here
 
-- [`docs/generated/bridge-protocol.md`](../docs/generated/bridge-protocol.md)
-- [`docs/architecture/sdk.md`](../docs/architecture/sdk.md)
+- [Bridge Protocol](../docs/generated/bridge-protocol.md)
+- [SDK Boundary](../docs/architecture/sdk.md)
+
+## Limitations
+
+- Wire compatibility does not authorize a hardware route
 
 ## Boundaries
 
@@ -32,15 +36,6 @@ Defines bounded request, response, event, negotiation, and compatibility contrac
 
 ## Verify
 
-Run `protocol-contracts` `cpp-sdk-contracts` after changing this area.
+Run `protocol-contracts` `cpp-sdk-contracts` after changing this area, and run `./hfx generate` to refresh its 3 generated file(s).
 
-Review impact:
-
-- Regenerate 3 declared projection(s).
-- Run `protocol-contracts`, `cpp-sdk-contracts`.
-- Review direct consumers: Bridge runtime, Core policy engine, Linux HID kernel module, Kernel transport adapter, Rust SDK, C++ SDK, Python SDK.
-
-## Related Areas
-
-- **Depends on:** [Schema contracts](../schemas/README.md)
-- **Used by:** [Bridge runtime](../crates/hfx-bridge/README.md), [Core policy engine](../crates/hfx-core/README.md), [Linux HID kernel module](../driver/kernel/README.md), [Kernel transport adapter](../crates/hfx-kernel-transport/README.md), [Rust SDK](../crates/hfx-sdk/README.md), [C++ SDK](../sdk/cpp/README.md), [Python SDK](../sdk/python/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).
