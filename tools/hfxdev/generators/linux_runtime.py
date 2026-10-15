@@ -586,3 +586,16 @@ def markdown(runtime: LinuxRuntime) -> str:
             "",
         ]
     )
+
+
+def qualification_fixture(current: str, runtime: LinuxRuntime) -> str:
+    """Restate a qualification view fixture at the current product version.
+
+    The Rust projection reports the installed product version, so the fixtures
+    the projection tests compare against must follow every version change.
+    """
+    value = json.loads(current)
+    value["companion"]["version"] = runtime.product.version
+    value["system"]["driver_version"] = runtime.product.version
+    value["system"]["bridge_version"] = runtime.product.version
+    return json.dumps(value, indent=2, ensure_ascii=False) + "\n"

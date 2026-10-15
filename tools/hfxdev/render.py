@@ -93,6 +93,7 @@ from .generators.linux_runtime import (
     package_environment,
     python_constants as linux_runtime_python_constants,
     python_version_module,
+    qualification_fixture,
     rust_constants as linux_runtime_rust_constants,
     systemd_service,
     sysusers,
@@ -619,6 +620,14 @@ def rendered_files(root: Path) -> dict[Path, str]:
         collection = relative.removesuffix("/README.md")
         files[root / relative] = atlas_collection_readme(
             repository_atlas, collection
+        )
+    for fixture in sorted(
+        (root / "apps" / "device-qualification" / "tests" / "fixtures").glob(
+            "rust-qualified-*.json"
+        )
+    ):
+        files[fixture] = qualification_fixture(
+            fixture.read_text(encoding="utf-8"), linux_runtime
         )
     install_plan_path = root / "packaging" / "generated" / "install-plan.json"
     installation_document_path = root / "docs" / "generated" / "installation.md"
