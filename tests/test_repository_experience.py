@@ -376,7 +376,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
                     if line.startswith("#"):
                         self.assertEqual(text.splitlines()[number - 2 : number - 1] or [""], [""])
                     if len(line) > 100:
-                        self.assertRegex(line, r"^\s*(- |Next: |Previous: )?\[[^\]]+\]\([^)]+\)$")
+                        self.assertRegex(line, r"^\s*(- |Next: |Previous: )?\[[^\]]+\]\([^)]+\)[.,;:]?$")
             subjects.extend(int(value) for value in re.findall(r"(?m)^## (\d+)\. ", text))
             diagrams += text.count("```mermaid")
         self.assertEqual(subjects, list(range(1, 68)))
@@ -418,6 +418,18 @@ class RepositoryExperienceContracts(unittest.TestCase):
         ):
             with self.subTest(statement=statement):
                 self.assertIn(statement, book)
+        # Supply-chain and dependency subjects match the repository (ARCH-001).
+        for overclaim in (
+            "CycloneDX",
+            "Packages produce SPDX",
+            "Future releases can use signed tags",
+            "Renovate",
+            "Each update reports API compatibility",
+        ):
+            with self.subTest(overclaim=overclaim):
+                self.assertNotIn(overclaim, book)
+        self.assertIn("Arch packages and the package repository database are signed", book)
+        self.assertIn("Tags and commits are not signed", book)
         runner = (ROOT / "tools/hfxdev/verification_run.py").read_text(encoding="utf-8")
         # Reusing results by resume policy would make the "does not reuse" claim stale.
         self.assertNotIn("resume_policy", runner)

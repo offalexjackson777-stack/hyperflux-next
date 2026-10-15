@@ -34,12 +34,16 @@ independently of one workstation.
 
 ## 56. Supply-Chain Security
 
-Dependencies are reviewed, pinned, licensed, and scanned. Packages produce SPDX
-or CycloneDX software bills of materials. Build provenance records source and
-toolchain inputs. GitHub Actions are pinned by commit. Future releases can use
-signed tags, packages, Sigstore attestations, and SLSA provenance. Imported
-upstream catalogs record source hashes so an unnoticed upstream change cannot
-silently alter supported devices.
+Dependencies are reviewed, pinned, and license-checked, and CodeQL scans the
+code. The repository keeps an
+[SPDX inventory](../../../assurance/generated/hyperflux-next.spdx.json) of its
+source and build dependencies; packages do not yet ship their own SBOM.
+Verification evidence records the source revision, pinned toolchains, and
+upstream revisions behind each run. GitHub Actions are pinned by commit. Arch
+packages and the package repository database are signed with the project key.
+Tags and commits are not signed, and there are no Sigstore attestations or SLSA
+provenance yet. Imported upstream catalogs record source hashes so an unnoticed
+upstream change cannot silently alter supported devices.
 
 ## 57. Performance Budgets
 

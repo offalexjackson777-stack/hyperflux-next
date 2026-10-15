@@ -12,12 +12,12 @@ explicit.
 
 ## 59. Dependency Updates
 
-Renovate or Dependabot can group related updates and open reviewable pull
-requests. Each update reports API compatibility, schema changes, license
-changes, vulnerabilities, binary-size movement, performance impact, and selected
-tests. Automatic merging is reserved for narrowly defined low-risk updates with
-complete green evidence. Upstream OpenRGB or OpenRazer metadata changes generate
-a proposed diff rather than silently entering production.
+Dependabot opens weekly grouped pull requests for GitHub Actions, Rust crates,
+and the Python SDK, and Dependabot security updates are enabled. These pull
+requests run the same verification as any other change and are reviewed before
+they merge. OpenRGB, OpenRazer, and Polychromatic are pinned to exact upstream
+revisions, so their metadata changes only through a reviewed pin update rather
+than silently entering production.
 
 ## 60. Documentation Portal
 
