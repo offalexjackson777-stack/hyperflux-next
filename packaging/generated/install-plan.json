@@ -1,6 +1,6 @@
 {
   "schema": "hyperflux-compiled-install-plan-v2",
-  "install_manifest_sha256": "b3fe0b89c07ec4c3f00c489b68023e51645dfdb05a8af828567b82e3bd51f787",
+  "install_manifest_sha256": "dd2530b90f489df732800f7b6adb546a43510db3460b7c5e5eefe0f990c3a9cd",
   "product": {
     "name": "hyperflux-next-linux",
     "version": "2.0.2",

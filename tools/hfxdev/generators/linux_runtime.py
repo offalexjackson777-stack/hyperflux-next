@@ -539,8 +539,9 @@ def markdown(runtime: LinuxRuntime) -> str:
             "The service owns receiver access. Application integrations use only the SDK socket. "
             "The default configuration permits source-validated operations while stable lighting "
             "restoration remains disabled until the user enables it.",
-            "Installation never starts, stops, enables, or restarts this service. The bridge and "
-            "one intended per-UID desktop socket are enabled explicitly after package review.",
+            "Installation never starts, stops, enables, or restarts this service. On first run "
+            "the user enables the bridge and one per-UID desktop socket without starting them, "
+            "then reboots with the receiver connected.",
             "",
             "## Kernel Activation",
             "",
@@ -548,7 +549,8 @@ def markdown(runtime: LinuxRuntime) -> str:
             f"generation-scoped `{kernel.device_prefix}-*` misc devices for the bridge account.",
             "",
             "If the loaded kernel module differs from the installed module, activation requires a "
-            "reboot or the explicit receiver-disconnect activation command. Package hooks never "
+            "normal reboot, or the receiver-disconnect activation command on a system with "
+            "verified alternate input. Package hooks never "
             "perform module or service lifecycle actions. Doctor reports that condition as a "
             "driver activation finding, never as a service failure.",
             "",

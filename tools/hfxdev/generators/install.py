@@ -115,6 +115,7 @@ def markdown(
         "| Hardware writes during installation | Never |",
         "| Start bridge during installation | No |",
         "| Enable bridge during installation | No |",
+        "| First-run activation | Enable without start, then normal reboot |",
         "| Existing configuration | Preserve |",
         "",
         "Component-specific package hooks create only their own system users/directories "
@@ -182,9 +183,18 @@ def markdown(
             "",
             "## Verification And Rollback",
             "",
-            "Run the read-only `hyperfluxctl doctor` after the separately reviewed explicit "
-            "activation step. Installation itself leaves every HyperFlux service disabled "
-            "and inactive.",
+            "Installation leaves every HyperFlux service disabled and inactive. Keep the "
+            "receiver connected, enable the units without starting them, and reboot:",
+            "",
+            "```sh",
+            manifest.first_run_activation.enable_command(runtime),
+            manifest.first_run_activation.activation_command(),
+            "```",
+            "",
+            "After login, run the read-only `hyperfluxctl doctor`. Live activation without a "
+            "reboot requires disconnecting the receiver, so use "
+            f"`{manifest.first_run_activation.disconnected_command(runtime)}` only when "
+            "another keyboard, mouse, or verified SSH session can recover the machine.",
             "",
             "Rollback uses a complete prior source-bound Core/Full pair through the package "
             "manager. Do not copy files into `/usr/src`, overwrite DKMS trees, or mix an "

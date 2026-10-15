@@ -22,7 +22,8 @@ The Arch `pkgbase=hyperflux-next` emits two non-overlapping user-facing packages
 
 - Package hooks create system users/directories and reload systemd and udev registration only.
 - Installation does not start, stop, restart, enable, disable, or probe services or hardware.
-- Activation is a separate reviewed step: `systemctl enable --now hyperflux-next-bridge.service hyperflux-next-client@<uid>.socket`.
+- First run enables the units without starting them, then reboots with the receiver connected: `sudo systemctl enable hyperflux-next-bridge.service "hyperflux-next-client@$(id -u).socket"`, then `sudo reboot`.
+- Live activation without a reboot requires disconnecting the receiver, so it is only for systems with verified alternate input: `sudo /usr/lib/hyperflux-next/hyperflux-next-activate activate-disconnected-driver`.
 - Bridge restoration ships disabled in this package release.
 
 ## Architecture

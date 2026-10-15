@@ -136,7 +136,7 @@ from .generators.install import compiled_plan as compiled_install_plan
 from .generators.install import full_component_descriptor
 from .generators.install import markdown as install_markdown
 from .governance import load_github_governance
-from .install import load_install_manifest
+from .install import load_first_run_activation, load_install_manifest
 from .distributions import load_distribution_catalog
 from .documentation import load_document_catalog, replace_generated_blocks
 from .model import load_foundation, load_json
@@ -265,6 +265,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
     test_catalog = load_test_catalog(root)
     linux_runtime = load_linux_runtime(root)
     distribution_catalog = load_distribution_catalog(root)
+    first_run_activation = load_first_run_activation(root)
     design_coverage = load_design_coverage(root)
     dependency_inventory = load_dependency_inventory(root)
     release_context = load_release_context(root)
@@ -509,7 +510,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
             openrazer_command_catalog,
         ),
         root / "docs" / "generated" / "distributions.md": distribution_markdown(
-            distribution_catalog, linux_runtime
+            distribution_catalog, linux_runtime, first_run_activation
         ),
         root / "sdk" / "python" / "hyperflux_sdk" / "_version.py": python_version_module(
             linux_runtime, "GPL-2.0-or-later"

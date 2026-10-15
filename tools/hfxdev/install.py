@@ -12,7 +12,14 @@ from .model import ModelError, load_json, require_unique, sha256_file
 from .openrazer_native_route import load_native_deployment
 
 
-ROOT_KEYS = {"$schema", "schema", "policy", "builds", "payloads"}
+ROOT_KEYS = {"$schema", "schema", "policy", "first_run_activation", "builds", "payloads"}
+FIRST_RUN_ACTIVATION = {
+    "receiver_during_install": "connected",
+    "unit_enable": "enable-without-start",
+    "activation": "normal-reboot",
+    "disconnected_activation_command": "activate-disconnected-driver",
+    "disconnected_activation_precondition": "verified-alternate-input",
+}
 POLICY_KEYS = {
     "hardware_writes_on_install",
     "start_service_on_install",
@@ -79,6 +86,52 @@ class InstallPolicy:
 
 
 @dataclass(frozen=True)
+class FirstRunActivation:
+    """The one supported first-run path after a package transaction.
+
+    Packages install units but never enable or start them. The user enables the
+    bridge and one desktop socket without starting them, then reboots with the
+    receiver connected. Live activation is a separate path that needs verified
+    alternate input because it requires the receiver to be disconnected.
+    """
+
+    receiver_during_install: str
+    unit_enable: str
+    activation: str
+    disconnected_activation_command: str
+    disconnected_activation_precondition: str
+
+    def enable_command(self, runtime: LinuxRuntime) -> str:
+        socket = runtime.desktop_access.socket_unit.replace("@.", "@$(id -u).")
+        return f'sudo systemctl enable {runtime.bridge.service_unit} "{socket}"'
+
+    def activation_command(self) -> str:
+        return "sudo reboot"
+
+    def disconnected_command(self, runtime: LinuxRuntime) -> str:
+        return (
+            f"sudo {runtime.operations.activation_path} "
+            f"{self.disconnected_activation_command}"
+        )
+
+
+def _first_run_activation(value: Any) -> FirstRunActivation:
+    activation = _object(value, "first-run activation")
+    _exact(activation, set(FIRST_RUN_ACTIVATION), "first-run activation")
+    if activation != FIRST_RUN_ACTIVATION:
+        raise ModelError(
+            "first-run activation must enable units without starting them and activate "
+            "through a normal reboot, with live activation only after alternate input"
+        )
+    return FirstRunActivation(**activation)
+
+
+def load_first_run_activation(root: Path) -> FirstRunActivation:
+    value = _object(load_json(root / "packaging" / "install.json"), "install manifest")
+    return _first_run_activation(value.get("first_run_activation"))
+
+
+@dataclass(frozen=True)
 class BuildSpec:
     id: str
     distribution_component: str
@@ -122,6 +175,7 @@ class InstallManifest:
     root: Path
     source_sha256: str
     policy: InstallPolicy
+    first_run_activation: FirstRunActivation
     builds: tuple[BuildSpec, ...]
     payloads: tuple[PayloadSpec, ...]
     files: tuple[PayloadFile, ...]
@@ -750,6 +804,7 @@ def load_install_manifest(
     if not all(isinstance(policy_value[key], bool) for key in POLICY_KEYS):
         raise ModelError("install policy fields must be boolean")
     policy = InstallPolicy(**policy_value)
+    first_run_activation = _first_run_activation(value["first_run_activation"])
 
     runtime = load_linux_runtime(root)
     tokens = _tokens(root, runtime)
@@ -771,6 +826,7 @@ def load_install_manifest(
         root=root.resolve(),
         source_sha256=sha256_file(path),
         policy=policy,
+        first_run_activation=first_run_activation,
         builds=builds,
         payloads=payloads,
         files=files,

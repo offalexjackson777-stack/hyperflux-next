@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ..distributions import DistributionCatalog, DistributionComponent
+from ..install import FirstRunActivation
 from ..linux_runtime import LinuxRuntime
 
 
@@ -17,7 +18,11 @@ def _optional_items(component: DistributionComponent) -> str:
     ) or "none"
 
 
-def markdown(catalog: DistributionCatalog, runtime: LinuxRuntime) -> str:
+def markdown(
+    catalog: DistributionCatalog,
+    runtime: LinuxRuntime,
+    activation: FirstRunActivation,
+) -> str:
     arch = catalog.targets["arch"]
     lines = [
         "# Distribution Packages",
@@ -55,8 +60,12 @@ def markdown(catalog: DistributionCatalog, runtime: LinuxRuntime) -> str:
             "",
             "- Package hooks create system users/directories and reload systemd and udev registration only.",
             "- Installation does not start, stop, restart, enable, disable, or probe services or hardware.",
-            "- Activation is a separate reviewed step: `systemctl enable --now "
-            f"{runtime.bridge.service_unit} {runtime.desktop_access.socket_unit.replace('@.', '@<uid>.')}`.",
+            "- First run enables the units without starting them, then reboots with the "
+            f"receiver connected: `{activation.enable_command(runtime)}`, then "
+            f"`{activation.activation_command()}`.",
+            "- Live activation without a reboot requires disconnecting the receiver, so it "
+            "is only for systems with verified alternate input: "
+            f"`{activation.disconnected_command(runtime)}`.",
             "- Bridge restoration ships disabled in this package release.",
             "",
             "## Architecture",
