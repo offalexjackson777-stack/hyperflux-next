@@ -18,7 +18,7 @@ or replace them.
 Arch Linux x86_64 packages are published in
 [GitHub Release v2.0.1](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.1).
 Pacman installs and updates them from the signed HyperFlux Next repository. It
-is a third-party repository run by this project, not an official Arch Linux
+is a signed project-operated Arch repository, not an official Arch Linux
 repository. Pacman reads its database and signatures from a fixed
 `arch-repository` release; you never download those files yourself.
 

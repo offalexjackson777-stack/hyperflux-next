@@ -94,7 +94,7 @@ the ones you want to use; HyperFlux does not install or replace them.
 
 1. Add the signed HyperFlux Pacman repository once. Follow the
    [one-time setup](docs/user/installation.md#1-add-the-hyperflux-repository---one-time-only).
-   It is a third-party repository, not an official Arch Linux repository.
+   It is a signed project-operated Arch repository, not an official Arch Linux repository.
 2. Install Full:
 
    ```bash

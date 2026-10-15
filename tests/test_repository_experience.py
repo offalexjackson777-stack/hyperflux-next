@@ -136,7 +136,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
                 self.assertIn(expected, " ".join(page.split()))
         self.assertIn("sudo pacman -Syu hyperflux-next-full", readme)
         self.assertIn("sudo pacman -Syu hyperflux-next-linux", readme)
-        self.assertIn("third-party", readme)
+        self.assertIn("signed project-operated Arch repository", readme)
         self.assertIn("not an official Arch Linux repository", readme)
         self.assertIn(
             load_arch_repository_policy(ROOT).product_release_url, readme
