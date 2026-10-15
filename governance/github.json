@@ -89,28 +89,7 @@
   ],
   "ownership": {
     "default": ["@offalexjackson777-stack"],
-    "rules": [
-      {
-        "paths": ["/driver/**", "/uapi/**"],
-        "owners": ["@offalexjackson777-stack"]
-      },
-      {
-        "paths": ["/schemas/**", "/protocol/**", "/profiles/**"],
-        "owners": ["@offalexjackson777-stack"]
-      },
-      {
-        "paths": ["/assurance/**", "/governance/**", "/SECURITY.md", "/SUPPORT.md", "/CODE_OF_CONDUCT.md"],
-        "owners": ["@offalexjackson777-stack"]
-      },
-      {
-        "paths": ["/integrations/**", "/sdk/**"],
-        "owners": ["@offalexjackson777-stack"]
-      },
-      {
-        "paths": ["/packaging/**", "/docs/**", "/.github/**"],
-        "owners": ["@offalexjackson777-stack"]
-      }
-    ]
+    "rules": []
   },
   "protection": {
     "profile": "solo-maintainer",

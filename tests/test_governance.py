@@ -34,6 +34,7 @@ from hfxdev.ci_openrgb import openrgb_qualification_container_command
 from hfxdev.generators.governance import (
     EXACT_SOURCE_REVISION,
     bug_report,
+    codeowners,
     codeql_workflow,
     dependency_review_workflow,
     device_support,
@@ -786,6 +787,23 @@ class GitHubGovernanceTests(unittest.TestCase):
         product_id = hardware.split("id: pid", 1)[1].split("- type:", 1)[0]
         self.assertNotIn("required: true", product_id)
         self.assertNotIn("evidence-class", hardware)
+
+    def test_codeowners_routes_paths_only_to_different_owners(self) -> None:
+        # GH-007: one global rule until a path routes to someone else.
+        self.assertEqual(self.governance.ownership_rules, ())
+        self.assertEqual(
+            codeowners(self.governance).splitlines()[1:],
+            ["", "* @offalexjackson777-stack"],
+        )
+        authority = json.loads((ROOT / "governance" / "github.json").read_text())
+        authority["ownership"]["rules"] = [
+            {"paths": ["/docs/**"], "owners": authority["ownership"]["default"]}
+        ]
+        with (
+            patch("hfxdev.governance.load_json", return_value=authority),
+            self.assertRaisesRegex(ModelError, "repeats the default owners"),
+        ):
+            load_github_governance(ROOT)
 
     def test_collaboration_security_and_service_plans_are_complete_and_bounded(self) -> None:
         plan = json.loads(experience_plan(self.governance))

@@ -432,8 +432,8 @@ def load_github_governance(root: Path) -> GitHubGovernance:
     ownership = _exact(value["ownership"], {"default", "rules"}, "GitHub ownership")
     default_owners = _owners(ownership["default"], "default CODEOWNERS")
     raw_rules = ownership["rules"]
-    if not isinstance(raw_rules, list) or not raw_rules:
-        raise ModelError("GitHub ownership requires path rules")
+    if not isinstance(raw_rules, list):
+        raise ModelError("GitHub ownership rules must be a list")
     rules: list[OwnershipRule] = []
     paths_seen: list[str] = []
     for index, raw in enumerate(raw_rules):
@@ -443,7 +443,13 @@ def load_github_governance(root: Path) -> GitHubGovernance:
             for path in _strings(item["paths"], f"CODEOWNERS rule {index} paths")
         )
         paths_seen.extend(paths)
-        rules.append(OwnershipRule(paths, _owners(item["owners"], f"CODEOWNERS rule {index}")))
+        owners = _owners(item["owners"], f"CODEOWNERS rule {index}")
+        if set(owners) == set(default_owners):
+            raise ModelError(
+                f"CODEOWNERS rule {index} repeats the default owners; "
+                "path rules must route to different owners"
+            )
+        rules.append(OwnershipRule(paths, owners))
     require_unique(paths_seen, "CODEOWNERS path")
 
     protection = _exact(

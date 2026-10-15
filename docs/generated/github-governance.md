@@ -53,7 +53,7 @@ The solo profile avoids impossible self-approval while every required check rema
 
 ## Repository Experience
 
-- CODEOWNERS derives from component ownership boundaries.
+- CODEOWNERS names the global owner; path rules appear only where a path routes to different owners.
 - Issue forms request bounded, privacy-safe evidence and never imply hardware-write approval.
 - Pull requests surface canonical authority, schema, package, performance, privacy, and evidence impact.
 - Dependency updates are grouped by GitHub Actions, Cargo, and each Python integration root.
