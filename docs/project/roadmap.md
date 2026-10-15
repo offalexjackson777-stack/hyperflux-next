@@ -24,6 +24,10 @@ shown in the [installation guide](../user/installation.md). See the
   come back faster, battery readings are matched to the right request, and
   OpenRazer stops reporting errors when a device sleeps and returns. These fixes
   are in the source code but not yet in a published package.
+- **2.1.0 with smaller packages.** Version 2.1.0 splits the two packages into
+  four. It ships only after moving from two packages to four has been tested
+  on real hardware.
+  Every 2.0.x update keeps the two packages you have today.
 - **An AUR package.** Publishing HyperFlux Next on the Arch User Repository is
   planned. It is not published yet; until it is, use the
   [installation guide](../user/installation.md).
