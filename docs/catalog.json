@@ -751,6 +751,105 @@
       "generated_block_ids": []
     },
     {
+      "path": "docs/investigations/README.md",
+      "title": "Investigations",
+      "audience": "developers",
+      "purpose": "Indexes the problems that reached users, defines the terms the investigation pages use, and links related decisions.",
+      "owner": "documentation",
+      "navigation_group": "architecture",
+      "mode": "human",
+      "canonical_sources": ["docs/investigations/README.md"],
+      "generated_block_ids": []
+    },
+    {
+      "path": "docs/investigations/battery-readings-jump.md",
+      "title": "Battery Readings Jump",
+      "audience": "developers",
+      "purpose": "Explains why battery levels jumped between unrelated values and how replies are now matched to their request.",
+      "owner": "documentation",
+      "navigation_group": "architecture",
+      "mode": "human",
+      "canonical_sources": ["docs/investigations/battery-readings-jump.md", "crates/hfx-uhid-relay/src/endpoint.rs"],
+      "generated_block_ids": []
+    },
+    {
+      "path": "docs/investigations/doctor-restart-advice.md",
+      "title": "Doctor Blamed A Healthy Bridge",
+      "audience": "developers",
+      "purpose": "Explains why Doctor advised restarting a working bridge and how its findings now name the layer that is not ready.",
+      "owner": "documentation",
+      "navigation_group": "architecture",
+      "mode": "human",
+      "canonical_sources": ["docs/investigations/doctor-restart-advice.md", "crates/hfx-ops/src/assessment.rs", "errors/catalog.json"],
+      "generated_block_ids": []
+    },
+    {
+      "path": "docs/investigations/late-return-after-sleep.md",
+      "title": "Late Return After Sleep Or Power-Off",
+      "audience": "developers",
+      "purpose": "Explains why devices reappeared late after sleep or power-off and how fresh return evidence now resets the relay backoff.",
+      "owner": "documentation",
+      "navigation_group": "architecture",
+      "mode": "human",
+      "canonical_sources": ["docs/investigations/late-return-after-sleep.md", "crates/hfx-uhid-relay/src/runtime.rs", "crates/hfx-bridge/src/native_routes.rs"],
+      "generated_block_ids": []
+    },
+    {
+      "path": "docs/investigations/mouse-missing-after-boot.md",
+      "title": "Mouse Missing After Boot",
+      "audience": "developers",
+      "purpose": "Explains the driver race that hid a mouse already on at boot and the boot-time driver loading that fixes it.",
+      "owner": "documentation",
+      "navigation_group": "architecture",
+      "mode": "human",
+      "canonical_sources": ["docs/investigations/mouse-missing-after-boot.md", "packaging/install.json", "crates/hfx-uhid-relay/src/runtime.rs"],
+      "generated_block_ids": []
+    },
+    {
+      "path": "docs/investigations/openrgb-1-0-port.md",
+      "title": "OpenRGB 1.0 Port",
+      "audience": "developers",
+      "purpose": "Explains the OpenRGB 1.0 plugin port and the two controller lifetime bugs it exposed.",
+      "owner": "documentation",
+      "navigation_group": "architecture",
+      "mode": "human",
+      "canonical_sources": ["docs/investigations/openrgb-1-0-port.md", "integrations/openrgb/include/hyperflux/openrgb/virtual_controller_mirror.hpp"],
+      "generated_block_ids": []
+    },
+    {
+      "path": "docs/investigations/oserror-131-teardown.md",
+      "title": "OSError 131 Around Sleep And Wake",
+      "audience": "developers",
+      "purpose": "Explains why OpenRazer raised OSError 131 across sleep and how the relay now unbinds before destroying a virtual device.",
+      "owner": "documentation",
+      "navigation_group": "architecture",
+      "mode": "human",
+      "canonical_sources": ["docs/investigations/oserror-131-teardown.md", "crates/hfx-uhid-relay/src/runtime/teardown.rs"],
+      "generated_block_ids": []
+    },
+    {
+      "path": "docs/investigations/retired-dkms-driver.md",
+      "title": "Retired DKMS Driver Takes The Receiver",
+      "audience": "developers",
+      "purpose": "Explains how a retired pre-release DKMS driver took the receiver and how detection and migration handle it.",
+      "owner": "documentation",
+      "navigation_group": "architecture",
+      "mode": "human",
+      "canonical_sources": ["docs/investigations/retired-dkms-driver.md", "crates/hfx-system-probe/src/dkms_migration.rs", "runtime/linux.json"],
+      "generated_block_ids": []
+    },
+    {
+      "path": "docs/investigations/shutdown-hang.md",
+      "title": "Shutdown Hang With OpenRazer",
+      "audience": "developers",
+      "purpose": "Explains the two systemd ordering faults behind the shutdown hang and how the generated units now order shutdown.",
+      "owner": "documentation",
+      "navigation_group": "architecture",
+      "mode": "human",
+      "canonical_sources": ["docs/investigations/shutdown-hang.md", "tools/hfxdev/generators/openrazer_native.py", "tools/hfxdev/generators/linux_runtime.py"],
+      "generated_block_ids": []
+    },
+    {
       "path": "docs/legal/licensing.md",
       "title": "Licensing",
       "audience": "contributors",
