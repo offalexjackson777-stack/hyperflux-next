@@ -1146,5 +1146,19 @@ class UserDocumentationContracts(unittest.TestCase):
         for word in ("authorize", "canonical", "evidence"):
             self.assertNotIn(word, index)
 
+    def test_roadmap_separates_shipped_next_and_later(self) -> None:
+        roadmap = _page("docs/project/roadmap.md")
+        headings = ["## Shipped", "## Next", "## Later"]
+        positions = [roadmap.index(heading) for heading in headings]
+        self.assertEqual(positions, sorted(positions))
+        shipped = roadmap[positions[0] : positions[1]]
+        self.assertIn("**2.0.0:**", shipped)
+        self.assertIn("**2.0.1:**", shipped)
+        self.assertNotIn("AUR", shipped)
+        later = roadmap[positions[1] :]
+        self.assertIn("not published yet", later)
+        for command in ("yay ", "paru ", "makepkg", "git clone"):
+            self.assertNotIn(command, roadmap)
+
 if __name__ == "__main__":
     unittest.main()
