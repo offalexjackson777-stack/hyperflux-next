@@ -1,31 +1,52 @@
 # Hardware
 
-HyperFlux support is capability-based and plug-and-play. A route needs an exact
-source-qualified identity, report family, active generation, and transport
-authority. Similar names, broad vendor matches, serials, USB ports, and local
-machine bindings never grant support.
+HyperFlux Next works with a Razer HyperFlux V2 receiver and the keyboards and
+mice paired to it. A device works when HyperFlux knows exactly how to talk to it,
+not because its name looks similar to a known device. There is no fixed list of
+allowed devices on your machine.
 
-## Three Support Tiers
+## Tested On Real Hardware
 
-1. **Physically proven:** two devices completed end-to-end hardware,
-   application, and lifecycle checks.
-2. **Source-qualified operational candidates:** eight additional devices have
-   at least one validated stock-application path in pinned upstream source, but
-   not the same physical assurance.
-3. **Upstream-blocked or research-only:** two receiver-scope candidates have no
-   currently validated usable application path and are not operational claims.
+These two devices have been tested end to end on real hardware, through the
+receiver and with both stock applications:
 
-See the generated [supported-hardware reference](../generated/supported-hardware.md)
-for the device-by-device classification. The two physical fixtures prove the
-path; they are not a runtime allowlist.
+- **Razer Basilisk V3 Pro 35K** (mouse): `1532:00cd` through the receiver,
+  `1532:00cc` over a USB cable.
+- **Razer DeathStalker V2 Pro Tenkeyless** (keyboard): `1532:0296` through the
+  receiver, `1532:0298` over a USB cable.
 
-## Direct Devices
+They are the devices the project tests on. They are not the only devices that
+work.
 
-An exact matching direct USB device suppresses only its own receiver-backed
-duplicate. Unrelated devices and sibling routes remain independent.
+## Expected To Work
 
-## Unknown Devices
+Eight more devices are expected to work. Their support in stock OpenRazer or
+OpenRGB has been checked in the upstream source code, but they have not been
+tested on real hardware with HyperFlux. Some work in only one of the two
+applications.
 
-Pairing inventory is identity, not presence or write authority. Unknown,
-unqualified, stale, and unavailable children remain non-writable and may appear
-only in diagnostics that can describe them truthfully.
+## Waiting For Upstream Support
+
+Two devices are known but cannot be used yet, because stock OpenRazer does not
+support them. HyperFlux leaves them alone until it does.
+
+The [supported-hardware reference](../generated/supported-hardware.md) lists
+every device in each group with its USB IDs and applications. If your device is
+expected to work but does not, or is not listed, please
+[ask for device support](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=device_support.yml).
+
+## A Device Plugged In By Cable
+
+If you plug a device in with a USB cable while it is also paired to the
+receiver, applications use the cable connection and hide the receiver copy of
+that same device. Other devices on the receiver are not affected.
+
+## Devices HyperFlux Does Not Recognise
+
+A paired device that HyperFlux does not recognise, or that is asleep or out of
+reach, stays read-only. No application can change it through HyperFlux, and it
+does not show up as a working device. `hyperfluxctl status` and Doctor may
+still mention it.
+
+See [known limitations](limitations.md) for what works differently from a
+direct USB connection.

@@ -1116,5 +1116,21 @@ class UserDocumentationContracts(unittest.TestCase):
             self.assertIn("(limitations.md)", _page(path), path)
         self.assertIn("(../user/limitations.md)", _page("docs/project/journey.md"))
 
+    def test_hardware_page_names_the_tested_devices_from_the_generated_reference(self) -> None:
+        hardware = _page("docs/user/hardware.md")
+        reference = _page("docs/generated/supported-hardware.md")
+        proven = reference.split("## Physically Proven", 1)[1].split("\n## ", 1)[0]
+        rows = [line for line in proven.splitlines() if line.startswith("| Razer")]
+        self.assertEqual(len(rows), 2)
+        for row in rows:
+            cells = [cell.strip() for cell in row.strip("|").split("|")]
+            self.assertIn(f"**{cells[0]}**", hardware)
+            for identity in re.findall(r"`(1532:[0-9a-f]{4})`", cells[2]):
+                self.assertIn(identity, hardware)
+        self.assertIn("not the only devices", hardware)
+        self.assertIn("(limitations.md)", hardware)
+        for word in ("authority", "non-writable", "unqualified", "route"):
+            self.assertNotIn(word, hardware)
+
 if __name__ == "__main__":
     unittest.main()
