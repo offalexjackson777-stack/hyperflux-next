@@ -91,7 +91,7 @@
         "integrations/catalog.json",
         "packaging/install.json",
         "packaging/distributions.json",
-        "protocol/v5/catalog.json",
+        "protocol/**/*.json",
         "runtime/linux.json",
         "schemas/licensing-policy.schema.json",
         "sdk/cpp/vendor/manifest.json",
