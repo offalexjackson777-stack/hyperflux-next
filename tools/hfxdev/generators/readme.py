@@ -18,17 +18,39 @@ from ..source_validated_catalog import (
 )
 
 
+def _text_width(text: str) -> int:
+    """Approximate rendered width of 11px Verdana, as status badges use."""
+    narrow = set("fijlrt.,:;'|!()[] -")
+    wide = set("mwMW")
+    return round(sum(4.0 if c in narrow else 9.5 if c in wide else 7.0 for c in text))
+
+
 def _badge(label: str, value: str, color: str) -> str:
-    label_width = max(72, len(label) * 7 + 18)
-    value_width = max(92, len(value) * 7 + 18)
+    """A flat status badge drawn like the GitHub workflow badges beside it."""
+    label_width = _text_width(label) + 12
+    value_width = _text_width(value) + 12
     total = label_width + value_width
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total}" height="24" role="img" aria-label="{escape(label)}: {escape(value)}">
+    label_text = _text_width(label)
+    value_text = _text_width(value)
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total}" height="20" role="img" aria-label="{escape(label)}: {escape(value)}">
   <title>{escape(label)}: {escape(value)}</title>
-  <rect width="{label_width}" height="24" fill="#252d35"/>
-  <rect x="{label_width}" width="{value_width}" height="24" fill="{color}"/>
-  <g fill="#edf3f2" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="11" text-anchor="middle">
-    <text x="{label_width / 2:g}" y="16">{escape(label)}</text>
-    <text x="{label_width + value_width / 2:g}" y="16">{escape(value)}</text>
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#fff" stop-opacity=".15"/>
+    <stop offset="1" stop-opacity=".15"/>
+  </linearGradient>
+  <clipPath id="r">
+    <rect width="{total}" height="20" rx="3" fill="#fff"/>
+  </clipPath>
+  <g clip-path="url(#r)">
+    <rect width="{label_width}" height="20" fill="#24292e"/>
+    <rect x="{label_width}" width="{value_width}" height="20" fill="{color}"/>
+    <rect width="{total}" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
+    <text x="{label_width / 2:g}" y="15" fill="#010101" fill-opacity=".3" textLength="{label_text}">{escape(label)}</text>
+    <text x="{label_width / 2:g}" y="14" textLength="{label_text}">{escape(label)}</text>
+    <text x="{label_width + value_width / 2:g}" y="15" fill="#010101" fill-opacity=".3" textLength="{value_text}">{escape(value)}</text>
+    <text x="{label_width + value_width / 2:g}" y="14" textLength="{value_text}">{escape(value)}</text>
   </g>
 </svg>
 """
