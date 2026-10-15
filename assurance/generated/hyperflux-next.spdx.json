@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "HyperFlux Next source dependency inventory",
-  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/86b34ef4af3b66751ff7aa9282dc8af880a6a20bc5ae96e9169435c45042ed5a",
+  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/0b7f2ffaeec6b58e9caeffa5185ad42614d2bbf0254a114261189b740b8209e9",
   "creationInfo": {
     "created": "2026-07-20T00:00:00Z",
     "creators": [
@@ -760,9 +760,9 @@
       "comment": "Checksummed Cargo.lock registry dependency."
     },
     {
-      "SPDXID": "SPDXRef-Cargo-serde-json-1.0.152",
+      "SPDXID": "SPDXRef-Cargo-serde-json-1.0.154",
       "name": "serde_json",
-      "versionInfo": "1.0.152",
+      "versionInfo": "1.0.154",
       "downloadLocation": "https://crates.io/",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
@@ -771,22 +771,22 @@
       "checksums": [
         {
           "algorithm": "SHA256",
-          "checksumValue": "1741ab7a6cc54a03a89b5d563ed60075c277d9e3cfa73ad0c1f23f23974703c6"
+          "checksumValue": "e7e9cc8b1b85264074fbcc02a88680c4096b1e47df8f739dceb03bf482f04bd6"
         }
       ],
       "externalRefs": [
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:cargo/serde_json@1.0.152"
+          "referenceLocator": "pkg:cargo/serde_json@1.0.154"
         }
       ],
       "comment": "Checksummed Cargo.lock registry dependency."
     },
     {
-      "SPDXID": "SPDXRef-Cargo-sha2-0.11.0",
+      "SPDXID": "SPDXRef-Cargo-sha2-0.11.1",
       "name": "sha2",
-      "versionInfo": "0.11.0",
+      "versionInfo": "0.11.1",
       "downloadLocation": "https://crates.io/",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
@@ -795,14 +795,14 @@
       "checksums": [
         {
           "algorithm": "SHA256",
-          "checksumValue": "446ba717509524cb3f22f17ecc096f10f4822d76ab5c0b9822c5f9c284e825f4"
+          "checksumValue": "47d7069beb7d6ac7b9acd1039986e73443f24234f41074da099d6f994ac9ad19"
         }
       ],
       "externalRefs": [
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:cargo/sha2@0.11.0"
+          "referenceLocator": "pkg:cargo/sha2@0.11.1"
         }
       ],
       "comment": "Checksummed Cargo.lock registry dependency."
@@ -1251,12 +1251,12 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-bridge-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.154"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-bridge-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.1"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-core-2.1.0",
@@ -1276,12 +1276,12 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-core-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.154"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-core-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.1"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-daemon-2.1.0",
@@ -1331,12 +1331,12 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-daemon-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.154"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-daemon-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.1"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-daemon-2.1.0",
@@ -1386,12 +1386,12 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-device-qualification-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.154"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-device-qualification-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.1"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-domain-2.1.0",
@@ -1401,7 +1401,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-domain-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.154"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-errors-2.1.0",
@@ -1416,7 +1416,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-errors-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.154"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-integration-model-2.1.0",
@@ -1441,12 +1441,12 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-integration-model-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.154"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-integration-model-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.1"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-kernel-transport-2.1.0",
@@ -1476,12 +1476,12 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-kernel-transport-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.154"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-kernel-transport-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.1"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-ops-2.1.0",
@@ -1531,12 +1531,12 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-ops-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.154"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-ops-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.1"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-profiles-2.1.0",
@@ -1556,7 +1556,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-protocol-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.154"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-runtime-2.1.0",
@@ -1566,7 +1566,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-runtime-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.154"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-sdk-2.1.0",
@@ -1591,7 +1591,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-sdk-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.154"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-sim-2.1.0",
@@ -1621,12 +1621,12 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-sim-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.154"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-sim-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.1"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-system-probe-2.1.0",
@@ -1671,7 +1671,7 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-system-probe-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.154"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-2.1.0",
@@ -1731,12 +1731,12 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.154"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.1"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-uhid-relay-2.1.0",
@@ -1814,42 +1814,42 @@
       "relatedSpdxElement": "SPDXRef-Cargo-syn-3.0.2"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.152",
+      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.154",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-itoa-1.0.18"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.152",
+      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.154",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-memchr-2.8.3"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.152",
+      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.154",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-serde-1.0.229"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.152",
+      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.154",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-serde-core-1.0.229"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.152",
+      "spdxElementId": "SPDXRef-Cargo-serde-json-1.0.154",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-zmij-1.0.23"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-sha2-0.11.0",
+      "spdxElementId": "SPDXRef-Cargo-sha2-0.11.1",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-cfg-if-1.0.4"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-sha2-0.11.0",
+      "spdxElementId": "SPDXRef-Cargo-sha2-0.11.1",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-cpufeatures-0.3.0"
     },
     {
-      "spdxElementId": "SPDXRef-Cargo-sha2-0.11.0",
+      "spdxElementId": "SPDXRef-Cargo-sha2-0.11.1",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-digest-0.11.2"
     },
@@ -2121,12 +2121,12 @@
     {
       "spdxElementId": "SPDXRef-Package-hyperflux-next-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.152"
+      "relatedSpdxElement": "SPDXRef-Cargo-serde-json-1.0.154"
     },
     {
       "spdxElementId": "SPDXRef-Package-hyperflux-next-2.1.0",
       "relationshipType": "DEPENDS_ON",
-      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.0"
+      "relatedSpdxElement": "SPDXRef-Cargo-sha2-0.11.1"
     },
     {
       "spdxElementId": "SPDXRef-Package-hyperflux-next-2.1.0",
