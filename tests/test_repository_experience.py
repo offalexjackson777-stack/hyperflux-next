@@ -1077,5 +1077,22 @@ class UserDocumentationContracts(unittest.TestCase):
         ):
             self.assertLess(installation.index(command), fallback, command)
 
+    def test_first_run_follows_the_install_order_in_plain_words(self) -> None:
+        first_run = _page("docs/user/first-run.md")
+        order = [
+            "installation guide",
+            "sudo systemctl enable",
+            "sudo reboot",
+            "hyperfluxctl status",
+            "hyperfluxctl doctor",
+            "Open OpenRGB",
+            "Open Polychromatic",
+        ]
+        positions = [first_run.index(step) for step in order]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("HyperFlux Next is ready.", first_run)
+        for word in ("lease", "authority", "reviewed local artifact", "boundary"):
+            self.assertNotIn(word, first_run)
+
 if __name__ == "__main__":
     unittest.main()
