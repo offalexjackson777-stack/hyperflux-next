@@ -374,7 +374,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
             repository_atlas
         ),
         root / "docs" / "generated" / "design-coverage.md": design_coverage_markdown(
-            design_coverage
+            design_coverage, release_context.target
         ),
         root / "docs" / "generated" / "formal-model.md": formal_model_markdown(
             formal_model, formal_model_result

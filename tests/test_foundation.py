@@ -4,15 +4,17 @@ from __future__ import annotations
 
 from pathlib import Path
 import hashlib
+import json
 import sys
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.assurance import load_design_coverage
-from hfxdev.model import load_foundation
+from hfxdev.model import ModelError, load_foundation
 from hfxdev.render import rendered_binary_files, rendered_files
 from hfxdev.model import load_json
 from hfxdev.profiles import load_profile_inputs
@@ -38,9 +40,28 @@ class FoundationTests(unittest.TestCase):
                 if entry.status in {
                     "partially-implemented",
                     "blocked-by-physical-evidence",
-                    "publication-locked",
                 }:
                     self.assertTrue(entry.remaining)
+
+    def test_design_coverage_cannot_block_a_release_whose_gates_are_verified(self) -> None:
+        entries = load_design_coverage(ROOT)
+        self.assertFalse([entry.section for entry in entries if entry.release_blocking])
+        authority = json.loads(
+            (ROOT / "assurance" / "design-coverage.json").read_text(encoding="utf-8")
+        )
+        authority["entries"][17]["release_blocking"] = True
+        with (
+            patch("hfxdev.assurance.load_json", return_value=authority),
+            self.assertRaisesRegex(ModelError, "every release gate is verified"),
+        ):
+            load_design_coverage(ROOT)
+        authority["entries"][17]["release_blocking"] = False
+        authority["entries"][66]["status"] = "publication-locked"
+        with (
+            patch("hfxdev.assurance.load_json", return_value=authority),
+            self.assertRaisesRegex(ModelError, "unknown status"),
+        ):
+            load_design_coverage(ROOT)
 
     def test_direction_reaches_receiver_without_cycles(self) -> None:
         constitution = load_foundation(ROOT)
