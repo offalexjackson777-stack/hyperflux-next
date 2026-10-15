@@ -34,7 +34,6 @@ class SyncResult:
                 "repository": self.repository,
                 "components": list(self.components),
                 "operations": list(self.operations),
-                "product_publication_authorized": False,
                 "release_or_hardware_operation_available": False,
             },
             indent=2,
@@ -377,8 +376,8 @@ def apply(
 ) -> SyncResult:
     governance = load_github_governance(root)
     selected = _select_components(components)
-    if not governance.source_repository_authorized:
-        raise ModelError("GitHub source repository synchronization is not authorized")
+    if dict(governance.publication_state)["source_repository"] != "public":
+        raise ModelError("GitHub synchronization requires the public source repository")
     client = api or GhApi()
     operations: list[dict[str, Any]] = []
     handlers = {
@@ -389,8 +388,8 @@ def apply(
         "ruleset": _apply_ruleset,
     }
     for component in selected:
-        if component == "pages" and governance.pages_deployment_authorized:
-            raise ModelError("Pages disablement conflicts with an authorized deployment")
+        if component == "pages" and dict(governance.publication_state)["pages"] != "disabled":
+            raise ModelError("Pages disablement conflicts with the declared Pages state")
         operations.extend(handlers[component](client, governance))
     return SyncResult(
         mode="apply",

@@ -58,7 +58,11 @@ from hfxdev.openrazer_native_route import (
 )
 from hfxdev.generators.integrations import python_openrazer_metadata
 from hfxdev.generators.linux_runtime import systemd_service
-from hfxdev.generators.openrazer_native import driver_preflight_service, relay_service
+from hfxdev.generators.openrazer_native import (
+    driver_preflight_service,
+    modules_load,
+    relay_service,
+)
 from hfxdev.linux_runtime import load_linux_runtime
 from hfxdev.openrazer_native_route import load_native_deployment
 from hfxdev.profiles import load_profile_inputs
@@ -74,7 +78,7 @@ class IntegrationCatalogTests(unittest.TestCase):
         upstreams = {value["id"]: value for value in self.catalog["upstreams"]}
         self.assertEqual(
             upstreams["openrgb"]["commit"],
-            "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0",
+            "81bbe18a84c2e507006f19dd252e397e40a56bfe",
         )
         self.assertEqual(
             upstreams["openrazer"]["commit"],
@@ -544,6 +548,15 @@ class IntegrationCatalogTests(unittest.TestCase):
             f"{deployment.relay.preflight_service_unit} systemd-udevd.service",
             service,
         )
+        self.assertIn("Before=systemd-user-sessions.service", service)
+        # REL-003: the native drivers load at boot, so the first virtual Razer
+        # device is never bound by hid-generic and re-probed under the relay.
+        boot_modules = [
+            line for line in modules_load(deployment).splitlines() if line and not line.startswith("#")
+        ]
+        self.assertEqual(boot_modules, list(deployment.driver.modules))
+        self.assertIn("razerkbd", boot_modules)
+        self.assertIn("razermouse", boot_modules)
         self.assertIn(
             f"SupplementaryGroups={runtime.bridge.client_group}", service
         )
@@ -551,6 +564,25 @@ class IntegrationCatalogTests(unittest.TestCase):
             f"SupplementaryGroups={runtime.bridge.kernel_access_group}", service
         )
         self.assertIn("ProtectKernelModules=yes", service)
+        self.assertIn("ProtectKernelTunables=yes", service)
+        # REL-020: only each OpenRazer driver's unbind file is writable in /sys.
+        self.assertIn(
+            "ReadWritePaths="
+            + " ".join(
+                f"-/sys/bus/hid/drivers/{module}/unbind"
+                for module in deployment.driver.modules
+            ),
+            service,
+        )
+        sys_paths = [
+            path
+            for line in service.splitlines()
+            if line.startswith(("ReadWritePaths=", "ReadOnlyPaths="))
+            for path in line.partition("=")[2].split()
+            if "/sys/" in path
+        ]
+        self.assertTrue(sys_paths)
+        self.assertTrue(all(path.endswith("/unbind") for path in sys_paths))
         self.assertNotIn("ExecStartPre=", service)
         self.assertNotIn("ExecCondition=", service)
         self.assertNotIn("check-openrazer-driver", service)

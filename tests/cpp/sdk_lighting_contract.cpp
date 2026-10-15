@@ -76,7 +76,7 @@ hyperflux::v5::ControllerView controller(
         {
             text<UpstreamId>("openrgb"),
             text<UpstreamOwner>("OpenRGB"),
-            text<ComponentVersion>("1.0rc3"),
+            text<ComponentVersion>("1.0"),
             text<SourceRevision>(std::string(40, 'c')),
             text<PresentationKey>("test_device"),
             std::nullopt,

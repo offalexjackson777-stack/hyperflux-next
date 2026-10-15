@@ -4,22 +4,22 @@
   "source": {
     "upstream_id": "openrgb",
     "repository": "https://github.com/CalcProgrammer1/OpenRGB.git",
-    "version": "1.0rc3",
-    "commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0",
+    "version": "1.0",
+    "commit": "81bbe18a84c2e507006f19dd252e397e40a56bfe",
     "license_expression": "GPL-2.0-only",
     "extractor": "cpp-initializer-v1",
     "source_files": [
       {
         "path": "Controllers/RazerController/RazerControllerDetect.cpp",
-        "sha256": "11ce7a0485ceda8951d01f4cb9d50f89dffea348bf2c99333a7a6e3b23af0d9d"
+        "sha256": "36085f7af923c5b074142b79084c6ed0acad3e7a783da1503aeeb336e82b71bd"
       },
       {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "sha256": "e959c103c0a776b0143c8eeea405c36b55fffd1bad5361107e52af19f08b8a6b"
+        "sha256": "0018d5741583df069f83c13474b41c38904979f73e6680f48b9807ea4048bf0c"
       },
       {
         "path": "Controllers/RazerController/RazerDevices.h",
-        "sha256": "d3489af9b0548be24b2259a5858f7757897c0dff99c693feffac0a40a0f7a069"
+        "sha256": "a2c2e08691ad3b49fddc379a1e1337bf6d8160988677cc6921f59a2320f2b2c7"
       }
     ]
   },
@@ -56,7 +56,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 4426
+        "line": 4465
       }
     },
     {
@@ -91,7 +91,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 4461
+        "line": 4500
       }
     },
     {
@@ -132,7 +132,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 4508
+        "line": 4547
       }
     },
     {
@@ -167,7 +167,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 4543
+        "line": 4582
       }
     },
     {
@@ -220,7 +220,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 4614
+        "line": 4653
       }
     },
     {
@@ -273,7 +273,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 4685
+        "line": 4724
       }
     },
     {
@@ -314,7 +314,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 4732
+        "line": 4771
       }
     },
     {
@@ -361,7 +361,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 4850
+        "line": 4889
       }
     },
     {
@@ -408,7 +408,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 4791
+        "line": 4830
       }
     },
     {
@@ -449,7 +449,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5181
+        "line": 5220
       }
     },
     {
@@ -490,7 +490,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5117
+        "line": 5156
       }
     },
     {
@@ -531,7 +531,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5149
+        "line": 5188
       }
     },
     {
@@ -578,7 +578,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5026
+        "line": 5065
       }
     },
     {
@@ -625,7 +625,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5085
+        "line": 5124
       }
     },
     {
@@ -672,7 +672,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5240
+        "line": 5279
       }
     },
     {
@@ -719,7 +719,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 4909
+        "line": 4948
       }
     },
     {
@@ -766,7 +766,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 4968
+        "line": 5007
       }
     },
     {
@@ -801,7 +801,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5275
+        "line": 5314
       }
     },
     {
@@ -1747,7 +1747,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5310
+        "line": 5349
       }
     },
     {
@@ -1794,7 +1794,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5369
+        "line": 5408
       }
     },
     {
@@ -1841,7 +1841,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5428
+        "line": 5467
       }
     },
     {
@@ -1987,7 +1987,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5475
+        "line": 5514
       }
     },
     {
@@ -2028,7 +2028,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5522
+        "line": 5561
       }
     },
     {
@@ -2069,7 +2069,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5569
+        "line": 5608
       }
     },
     {
@@ -2110,7 +2110,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5616
+        "line": 5655
       }
     },
     {
@@ -2151,7 +2151,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5663
+        "line": 5702
       }
     },
     {
@@ -2192,7 +2192,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5710
+        "line": 5749
       }
     },
     {
@@ -2227,7 +2227,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5745
+        "line": 5784
       }
     },
     {
@@ -2262,7 +2262,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5780
+        "line": 5819
       }
     },
     {
@@ -2297,7 +2297,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5815
+        "line": 5854
       }
     },
     {
@@ -2554,7 +2554,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5874
+        "line": 5913
       }
     },
     {
@@ -2850,6 +2850,41 @@
       }
     },
     {
+      "record_id": "openrgb:huntsman_v3_he_magnetic_mini_device",
+      "source_device_key": "huntsman_v3_he_magnetic_mini_device",
+      "model_name": "Razer Huntsman V3 HE Magnetic Mini",
+      "device_kind": "keyboard",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 740
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 6,
+        "columns": 22,
+        "application_slot_count": 132,
+        "zones": [
+          {
+            "name": "ZONE_EN_KEYBOARD",
+            "type": "ZONE_TYPE_MATRIX",
+            "rows": 6,
+            "columns": 22
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 63
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 3163
+      }
+    },
+    {
       "record_id": "openrgb:huntsman_v3_pro_device",
       "source_device_key": "huntsman_v3_pro_device",
       "model_name": "Razer Huntsman V3 Pro",
@@ -2969,7 +3004,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 5945
+        "line": 5984
       }
     },
     {
@@ -3022,7 +3057,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 6016
+        "line": 6055
       }
     },
     {
@@ -3075,7 +3110,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 6087
+        "line": 6126
       }
     },
     {
@@ -3128,7 +3163,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 6158
+        "line": 6197
       }
     },
     {
@@ -3181,7 +3216,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 6229
+        "line": 6268
       }
     },
     {
@@ -3216,7 +3251,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 6334
+        "line": 6373
       }
     },
     {
@@ -3251,7 +3286,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 6369
+        "line": 6408
       }
     },
     {
@@ -3286,7 +3321,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 6404
+        "line": 6443
       }
     },
     {
@@ -3321,7 +3356,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 6439
+        "line": 6478
       }
     },
     {
@@ -3362,7 +3397,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 6486
+        "line": 6525
       }
     },
     {
@@ -3403,7 +3438,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 6534
+        "line": 6573
       }
     },
     {
@@ -3456,7 +3491,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 6606
+        "line": 6645
       }
     },
     {
@@ -3497,7 +3532,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 6725
+        "line": 6764
       }
     },
     {
@@ -3550,7 +3585,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 6677
+        "line": 6716
       }
     },
     {
@@ -3585,7 +3620,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 8854
+        "line": 8893
       }
     },
     {
@@ -3632,7 +3667,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 6784
+        "line": 6823
       }
     },
     {
@@ -3679,7 +3714,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 6843
+        "line": 6882
       }
     },
     {
@@ -3720,7 +3755,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 7388
+        "line": 7427
       }
     },
     {
@@ -3767,7 +3802,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 6902
+        "line": 6941
       }
     },
     {
@@ -3814,7 +3849,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 6961
+        "line": 7000
       }
     },
     {
@@ -3855,7 +3890,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 7146
+        "line": 7185
       }
     },
     {
@@ -3896,7 +3931,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 7166
+        "line": 7205
       }
     },
     {
@@ -3943,7 +3978,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 7079
+        "line": 7118
       }
     },
     {
@@ -3990,7 +4025,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 7099
+        "line": 7138
       }
     },
     {
@@ -4037,7 +4072,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 7020
+        "line": 7059
       }
     },
     {
@@ -4317,7 +4352,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 7201
+        "line": 7240
       }
     },
     {
@@ -4352,7 +4387,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 7341
+        "line": 7380
       }
     },
     {
@@ -4387,7 +4422,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 7236
+        "line": 7275
       }
     },
     {
@@ -4422,7 +4457,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 7271
+        "line": 7310
       }
     },
     {
@@ -4457,7 +4492,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 7306
+        "line": 7345
       }
     }
   ]

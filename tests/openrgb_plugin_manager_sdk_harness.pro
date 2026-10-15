@@ -10,6 +10,28 @@ SOURCES -= startup/main_FreeBSD_Linux_MacOS.cpp
 CONFIG -= lrelease embed_translations
 TRANSLATIONS =
 
+# The harness runs with no hardware visible, so upstream hardware detectors
+# can never find a device. They are most of the build, so leave them out.
+# Only the controllers that non-controller upstream code includes stay.
+HFX_KEPT_CONTROLLERS = NanoleafController
+HFX_KEPT_SOURCES =
+for(path, SOURCES) {
+    controller = $$section(path, /, 1, 1)
+    !contains(path, ^Controllers/.*)|contains(HFX_KEPT_CONTROLLERS, $$controller) {
+        HFX_KEPT_SOURCES += $$path
+    }
+}
+SOURCES = $$HFX_KEPT_SOURCES
+
+HFX_KEPT_HEADERS =
+for(path, HEADERS) {
+    controller = $$section(path, /, 1, 1)
+    !contains(path, ^Controllers/.*)|contains(HFX_KEPT_CONTROLLERS, $$controller) {
+        HFX_KEPT_HEADERS += $$path
+    }
+}
+HEADERS = $$HFX_KEPT_HEADERS
+
 HFX_REBASED_SOURCES =
 for(path, SOURCES) {
     HFX_REBASED_SOURCES += $$absolute_path($$path, $$HFX_OPENRGB_SOURCE_DIR)

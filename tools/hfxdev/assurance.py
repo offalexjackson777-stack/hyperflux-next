@@ -7,7 +7,8 @@ from pathlib import Path, PurePosixPath
 import re
 from typing import Any
 
-from .model import ModelError, load_foundation, load_json, require_unique
+from .model import ModelError, load_json, require_unique
+from .release import load_release_context
 
 
 STATUSES = {
@@ -15,7 +16,6 @@ STATUSES = {
     "policy-defined",
     "partially-implemented",
     "blocked-by-physical-evidence",
-    "publication-locked",
 }
 ENTRY_KEYS = {
     "section",
@@ -27,7 +27,8 @@ ENTRY_KEYS = {
     "physical_evidence_required",
     "release_blocking",
 }
-DESIGN_SECTION = re.compile(r"^### (\d+)\. (.+)$", re.MULTILINE)
+DESIGN_SECTION = re.compile(r"^## (\d+)\. (.+)$", re.MULTILINE)
+DESIGN_BOOK_CHAPTERS = PurePosixPath("docs/architecture/design-book")
 OWNER = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
 
 
@@ -41,15 +42,27 @@ class DesignCoverageEntry:
     remaining: tuple[str, ...]
     physical_evidence_required: bool
     release_blocking: bool
+    chapter: str
 
 
-def _design_sections(root: Path) -> dict[int, str]:
-    path = root / "docs" / "architecture" / "design-book.md"
+def _design_sections(root: Path) -> dict[int, tuple[str, str]]:
+    """Return each numbered subject's title and the chapter page that holds it."""
+    directory = root / DESIGN_BOOK_CHAPTERS
     try:
-        text = path.read_text(encoding="utf-8")
+        chapters = sorted(path for path in directory.iterdir() if path.suffix == ".md")
     except OSError as error:
-        raise ModelError(f"cannot read design book: {error}") from error
-    result = {int(number): title.strip() for number, title in DESIGN_SECTION.findall(text)}
+        raise ModelError(f"cannot read design book chapters: {error}") from error
+    result: dict[int, tuple[str, str]] = {}
+    for path in chapters:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError as error:
+            raise ModelError(f"cannot read design book chapter: {error}") from error
+        for number, title in DESIGN_SECTION.findall(text):
+            section = int(number)
+            if section in result:
+                raise ModelError(f"design book section {section} appears more than once")
+            result[section] = (title.strip(), str(DESIGN_BOOK_CHAPTERS / path.name))
     if sorted(result) != list(range(1, 68)):
         raise ModelError("design book must contain exactly numbered sections 1 through 67")
     return result
@@ -98,7 +111,7 @@ def load_design_coverage(root: Path) -> tuple[DesignCoverageEntry, ...]:
         if isinstance(section, bool) or not isinstance(section, int):
             raise ModelError(f"design coverage entry {index}: section must be an integer")
         title = raw["title"]
-        if section not in expected_titles or title != expected_titles[section]:
+        if section not in expected_titles or title != expected_titles[section][0]:
             raise ModelError(f"design coverage section {section}: title differs from the design book")
         status = raw["status"]
         if status not in STATUSES:
@@ -120,14 +133,19 @@ def load_design_coverage(root: Path) -> tuple[DesignCoverageEntry, ...]:
                 remaining=_remaining(raw["remaining"], f"design section {section}"),
                 physical_evidence_required=physical,
                 release_blocking=blocking,
+                chapter=expected_titles[section][1],
             )
         )
     if [entry.section for entry in entries] != list(range(1, 68)):
         raise ModelError("design coverage entries must be ordered sections 1 through 67")
-    published = load_foundation(root)["publication_interlock"]["publication_authorized"]
-    if published:
-        if entries[-1].status != "software-verified" or entries[-1].release_blocking:
-            raise ModelError("published final success must be verified and non-blocking")
-    elif entries[-1].status != "publication-locked" or not entries[-1].release_blocking:
-        raise ModelError("unpublished final success must remain publication-locked")
+    if entries[-1].status != "software-verified":
+        raise ModelError("final definition of success must be software-verified")
+    release = load_release_context(root)
+    if all(gate.status == "verified" for gate in release.gates):
+        blocking = [entry.section for entry in entries if entry.release_blocking]
+        if blocking:
+            raise ModelError(
+                "design coverage marks sections release-blocking although every release "
+                f"gate is verified for {release.target.product_version}: {blocking}"
+            )
     return tuple(entries)

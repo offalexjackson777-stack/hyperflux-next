@@ -3,9 +3,12 @@
 [Unit]
 Description=HyperFlux Next private desktop bridge socket for UID %i
 Documentation=man:hyperfluxctl(1)
+DefaultDependencies=no
 PartOf=user-runtime-dir@%i.service
 Requires=hyperflux-next-bridge.service
 After=user-runtime-dir@%i.service hyperflux-next-bridge.service
+Conflicts=shutdown.target
+Before=shutdown.target
 
 [Socket]
 ListenStream=/run/user/%i/hyperflux-next-bridge.sock

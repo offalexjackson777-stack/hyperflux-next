@@ -1,5 +1,4 @@
 {
-  "apply_authorized": true,
   "default_branch": "main",
   "excluded_components": [
     "package-publication",
@@ -7,7 +6,7 @@
     "release-publication",
     "hardware-ci"
   ],
-  "remote_state": "public-pre-release",
+  "remote_state": "public-released",
   "repository": "offalexjackson777-stack/hyperflux-next",
   "ruleset": {
     "bypass_actors": [],

@@ -53,7 +53,7 @@
     {"name": "python-setuptools", "version": "1:83.0.0-1"},
     {"name": "python-wheel", "version": "0.47.0-1"},
     {"name": "python-yaml", "version": "6.0.3-2"},
-    {"name": "qt5-base", "version": "5.15.19+kde+r96-1"},
+    {"name": "qt6-base", "version": "6.11.1-1"},
     {"name": "rpm-tools", "version": "6.0.1-2"},
     {"name": "rustup", "version": "1.29.0-2"},
     {"name": "sudo", "version": "1.9.17.p2-6"},

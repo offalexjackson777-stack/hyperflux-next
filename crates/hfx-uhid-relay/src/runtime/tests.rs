@@ -239,6 +239,121 @@ fn exactly_two_matching_source_serial_reads_publish_one_endpoint() {
 }
 
 #[test]
+fn fresh_evidence_resets_only_a_backing_off_publication_once() {
+    let now = Instant::now();
+
+    // Backing off after a retryable failure: fresh evidence probes next tick.
+    let (bridge, _) = publication_bridge(Vec::new());
+    let mut backing_off =
+        PendingPublication::retrying(bridge, PublicationIdentityFailure::Status(0x04), now);
+    assert_eq!(backing_off.gate.state(), RelayPublicationState::BackingOff);
+    let later = now + Duration::from_millis(5);
+    backing_off.fresh_evidence(later);
+    assert!(backing_off.gate.due(later), "the next tick probes");
+    assert_eq!(
+        backing_off.gate.attempts, 1,
+        "a later failure keeps normal backoff"
+    );
+
+    // Healthy (pending, no failure) and terminal publications are untouched.
+    let (bridge, _) = publication_bridge(Vec::new());
+    let mut healthy = PendingPublication::new(bridge, now);
+    let probe_before = healthy.gate.next_probe;
+    healthy.fresh_evidence(later);
+    assert_eq!(healthy.gate.next_probe, probe_before);
+
+    let (bridge, _) = publication_bridge(Vec::new());
+    let mut blocked = PendingPublication::new(bridge, now);
+    blocked.block(PublicationIdentityFailure::CrcMismatch);
+    blocked.fresh_evidence(later);
+    assert!(blocked.terminal_failure.is_some());
+    assert!(!blocked.ready());
+}
+
+#[test]
+fn kernel_binding_stop_republishes_on_the_same_bridge_instead_of_blocking() {
+    // REL-003: at boot hid-generic can bind the first virtual device and then be
+    // re-probed away by a late-loading OpenRazer module, stopping the device.
+    let first_path = temporary_uhid_file();
+    let second_path = temporary_uhid_file();
+    let catalog = NativeRouteCatalog::load().expect("native catalog loads");
+    let record = catalog
+        .profile("child.razer.deathstalker-v2-pro-tkl.0296")
+        .expect("keyboard route exists")
+        .clone();
+    let (device, policy) = fixture_from_record(&catalog, &record, "rebinding-keyboard");
+    let (bridge, calls) = publication_bridge(vec![
+        ScriptOutcome::Serial(b"KEYBOARD-SERIAL"),
+        ScriptOutcome::Serial(b"KEYBOARD-SERIAL"),
+    ]);
+    let mut endpoint = RunningEndpoint::create(
+        &test_paths(first_path.clone()),
+        bridge,
+        device.clone(),
+        policy,
+        None,
+    )
+    .expect("published endpoint is created");
+    endpoint
+        .process_event(UhidEvent::Start { flags: 0 })
+        .expect("hid-generic starts the device");
+    endpoint
+        .process_event(UhidEvent::Stop)
+        .expect("re-probe stops the device");
+    assert_eq!(endpoint.state(), FeatureEndpointState::Stopped);
+
+    assert_eq!(
+        PublicationIdentityFailure::KernelBinding.disposition(),
+        PublicationFailureDisposition::Retryable
+    );
+    let (placeholder, _) = publication_bridge(Vec::new());
+    let now = Instant::now();
+    let mut publication = PendingPublication::new(placeholder, now);
+    let mut fingerprint =
+        Some(crate::fingerprint_serial_bytes(b"KEYBOARD-SERIAL").expect("serial is valid"));
+    recover_kernel_binding(endpoint, &mut publication, &mut fingerprint, now);
+
+    assert_eq!(fingerprint, None);
+    assert_eq!(
+        publication.gate.failure,
+        Some(PublicationIdentityFailure::KernelBinding)
+    );
+    assert_eq!(publication.gate.state(), RelayPublicationState::BackingOff);
+    assert!(
+        publication.terminal_failure.is_none(),
+        "the route is not blocked"
+    );
+
+    publication.gate.next_probe = Instant::now();
+    publication.probe(&record);
+    publication.gate.next_probe = Instant::now();
+    publication.probe(&record);
+    assert!(
+        publication.ready(),
+        "the same bridge re-qualifies the device"
+    );
+    let mut returned_fingerprint = None;
+    let mut returned_endpoint = None;
+    publication.complete(
+        &test_paths(second_path.clone()),
+        &DirectRouteSnapshot::default(),
+        &record,
+        &device,
+        &mut returned_fingerprint,
+        &mut returned_endpoint,
+    );
+    assert!(
+        returned_endpoint.is_some(),
+        "a fresh virtual device is published"
+    );
+    assert_eq!(calls.borrow().len(), 2);
+
+    drop(returned_endpoint.take());
+    fs::remove_file(first_path).expect("first transcript is removed");
+    fs::remove_file(second_path).expect("second transcript is removed");
+}
+
+#[test]
 fn retained_route_timeout_withdraws_once_and_requires_fresh_serial_identity() {
     let first_path = temporary_uhid_file();
     let second_path = temporary_uhid_file();
@@ -260,6 +375,7 @@ fn retained_route_timeout_withdraws_once_and_requires_fresh_serial_identity() {
         bridge,
         device.clone(),
         policy,
+        None,
     )
     .expect("published endpoint is created");
     endpoint
@@ -355,6 +471,7 @@ fn retained_route_requalification_leaves_the_sibling_endpoint_untouched() {
         mouse_bridge,
         mouse_device,
         mouse_policy,
+        None,
     )
     .expect("mouse endpoint is created");
     let mut keyboard = RunningEndpoint::create(
@@ -362,6 +479,7 @@ fn retained_route_requalification_leaves_the_sibling_endpoint_untouched() {
         keyboard_bridge,
         keyboard_device,
         keyboard_policy,
+        None,
     )
     .expect("keyboard endpoint is created");
     mouse
@@ -495,6 +613,165 @@ fn identity_gate_enforces_stability_reset_and_exact_backoff() {
 }
 
 #[test]
+fn retained_departure_reprobes_at_most_every_two_seconds_inside_window() {
+    let start = Instant::now();
+    let (bridge, _) = publication_bridge(Vec::new());
+    let mut publication = PendingPublication::retrying_after_departure(bridge, start);
+    let window_end = start + RETAINED_DEPARTURE_FAST_WINDOW;
+    assert_eq!(publication.gate.fast_until, Some(window_end));
+    assert_eq!(publication.gate.state(), RelayPublicationState::BackingOff);
+
+    let mut delays = vec![publication.gate.next_delay];
+    let mut now = publication.gate.next_probe;
+    while now < window_end {
+        assert!(publication.gate.due(now));
+        assert_eq!(
+            publication.gate.observe(
+                Err(PublicationIdentityFailure::Status(RAZER_STATUS_TIMEOUT)),
+                now,
+            ),
+            None
+        );
+        assert!(publication.gate.next_delay <= RETAINED_DEPARTURE_PROBE_CAP);
+        assert!(publication.gate.next_retry_ms() <= 2_000);
+        delays.push(publication.gate.next_delay);
+        now = publication.gate.next_probe;
+    }
+    assert_eq!(
+        delays[..8]
+            .iter()
+            .map(Duration::as_millis)
+            .collect::<Vec<_>>(),
+        [100, 100, 100, 100, 100, 1_000, 2_000, 2_000],
+        "the fast attempts keep their schedule and only the long tail is capped"
+    );
+    assert!(
+        publication.gate.attempts > 11,
+        "the uncapped tier was reached"
+    );
+
+    publication.gate.fail(
+        PublicationIdentityFailure::Status(RAZER_STATUS_TIMEOUT),
+        now,
+    );
+    assert_eq!(publication.gate.next_delay, Duration::from_secs(30));
+    assert_eq!(publication.gate.next_retry_ms(), 30_000);
+}
+
+#[test]
+fn retained_departure_fast_window_covers_every_return_quiescence() {
+    let longest = hfx_profiles::RETURN_POLICIES
+        .iter()
+        .map(|policy| policy.quiescence_candidate_ms)
+        .max()
+        .expect("at least one return policy is generated");
+    assert!(RETAINED_DEPARTURE_FAST_WINDOW >= Duration::from_millis(longest));
+    assert!(RETAINED_DEPARTURE_PROBE_CAP < RETAINED_DEPARTURE_FAST_WINDOW);
+}
+
+#[test]
+fn retained_departure_window_keeps_blocked_failures_blocked() {
+    let start = Instant::now();
+    let (bridge, _) = publication_bridge(Vec::new());
+    let mut publication = PendingPublication::retrying_after_departure(bridge, start);
+    let now = publication.gate.next_probe;
+    assert_eq!(
+        publication
+            .gate
+            .observe(Err(PublicationIdentityFailure::EmptySerial), now),
+        None
+    );
+    assert!(publication.gate.blocked);
+    assert_eq!(publication.gate.state(), RelayPublicationState::Blocked);
+    assert!(!publication.gate.due(now + RETAINED_DEPARTURE_FAST_WINDOW));
+    publication.fresh_evidence(now);
+    assert!(!publication.gate.due(now + RETAINED_DEPARTURE_FAST_WINDOW));
+}
+
+#[test]
+fn fast_window_is_cleared_on_publication_and_not_used_by_kernel_binding_recovery() {
+    let first_path = temporary_uhid_file();
+    let second_path = temporary_uhid_file();
+    let catalog = NativeRouteCatalog::load().expect("native catalog loads");
+    let record = catalog
+        .profile("child.razer.deathstalker-v2-pro-tkl.0296")
+        .expect("keyboard route exists")
+        .clone();
+    let (device, policy) = fixture_from_record(&catalog, &record, "returning-keyboard");
+    let (bridge, _) = publication_bridge(vec![
+        ScriptOutcome::Serial(b"KEYBOARD-SERIAL"),
+        ScriptOutcome::Serial(b"KEYBOARD-SERIAL"),
+    ]);
+    let endpoint = RunningEndpoint::create(
+        &test_paths(first_path.clone()),
+        bridge,
+        device.clone(),
+        policy,
+        None,
+    )
+    .expect("published endpoint is created");
+
+    let (placeholder, _) = publication_bridge(Vec::new());
+    let first = PendingPublication::new(placeholder, Instant::now());
+    assert_eq!(
+        first.gate.fast_until, None,
+        "first publication is unchanged"
+    );
+
+    let mut publication = first;
+    let mut fingerprint = None;
+    let now = Instant::now();
+    recycle_retained_route(endpoint, &mut publication, &mut fingerprint, now);
+    assert_eq!(
+        publication.gate.fast_until,
+        Some(now + RETAINED_DEPARTURE_FAST_WINDOW)
+    );
+
+    publication.gate.next_probe = Instant::now();
+    publication.probe(&record);
+    publication.gate.next_probe = Instant::now();
+    publication.probe(&record);
+    assert!(publication.ready());
+    let mut returned_endpoint = None;
+    publication.complete(
+        &test_paths(second_path.clone()),
+        &DirectRouteSnapshot::default(),
+        &record,
+        &device,
+        &mut fingerprint,
+        &mut returned_endpoint,
+    );
+    assert_eq!(publication.gate.fast_until, None, "publication clears it");
+    let mut returned = returned_endpoint.expect("the returned child is published");
+    returned
+        .process_event(UhidEvent::Start { flags: 0 })
+        .expect("hid-generic starts the device");
+    returned
+        .process_event(UhidEvent::Stop)
+        .expect("re-probe stops the device");
+
+    let now = Instant::now();
+    recover_kernel_binding(returned, &mut publication, &mut fingerprint, now);
+    assert_eq!(
+        publication.gate.failure,
+        Some(PublicationIdentityFailure::KernelBinding)
+    );
+    assert_eq!(publication.gate.fast_until, None);
+    publication.gate.attempts = 10;
+    publication
+        .gate
+        .fail(PublicationIdentityFailure::KernelBinding, now);
+    assert_eq!(
+        publication.gate.next_delay,
+        Duration::from_secs(30),
+        "kernel-binding recovery keeps the normal backoff"
+    );
+
+    fs::remove_file(first_path).expect("first transcript is removed");
+    fs::remove_file(second_path).expect("second transcript is removed");
+}
+
+#[test]
 fn unknown_direct_state_never_means_absent_and_repeats_both_serial_reads() {
     let path = temporary_uhid_file();
     let paths = test_paths(path.clone());
@@ -612,7 +889,7 @@ fn unexpected_session_drop_emits_one_destroy_after_one_create() {
     let path = temporary_uhid_file();
     let paths = test_paths(path.clone());
     let (device, policy) = fixture();
-    let endpoint = RunningEndpoint::create(&paths, NotSentBridge, device, policy)
+    let endpoint = RunningEndpoint::create(&paths, NotSentBridge, device, policy, None)
         .expect("endpoint is created");
 
     drop(endpoint);
@@ -635,11 +912,74 @@ fn unexpected_session_drop_emits_one_destroy_after_one_create() {
 }
 
 #[test]
+fn teardown_answers_an_in_flight_get_before_unbinding_and_destroying() {
+    let path = temporary_uhid_file();
+    let tree = teardown::tests::DriverTree::create();
+    let mut paths = test_paths(path.clone());
+    paths.hid_driver_root = tree.0.clone();
+    let catalog = NativeRouteCatalog::load().expect("native catalog loads");
+    let record = catalog
+        .profile("child.razer.basilisk-v3-pro-35k.00cd")
+        .expect("mouse route exists");
+    let (device, policy) = fixture_from_record(&catalog, record, "teardown-mouse");
+    tree.bind("0003:1532:00CD.0007", &device.phys);
+    let request = battery_report(0x1f);
+    let (bridge, calls) = publication_bridge(vec![ScriptOutcome::Status(0x02)]);
+    let mut endpoint =
+        RunningEndpoint::create(&paths, bridge, device, policy, Some(&record.driver_family))
+            .expect("endpoint is created");
+    endpoint
+        .process_event(UhidEvent::Start { flags: 0 })
+        .expect("kernel starts endpoint");
+    endpoint
+        .process_event(set_report(1, request))
+        .expect("battery SET is handled");
+    endpoint.flush().expect("SET reply flushes");
+
+    // The driver's GET is already queued when the route is withdrawn.
+    let mut get = vec![0_u8; UHID_EVENT_BYTES];
+    get[0..4].copy_from_slice(&9_u32.to_ne_bytes());
+    get[4..8].copy_from_slice(&2_u32.to_ne_bytes());
+    OpenOptions::new()
+        .append(true)
+        .open(&path)
+        .and_then(|mut file| file.write_all(&get))
+        .expect("in-flight GET is queued");
+    drop(endpoint);
+
+    let bytes = fs::read(&path).expect("UHID transcript reads");
+    fs::remove_file(&path).expect("temporary UHID file is removed");
+    let event_type = |index: usize| {
+        u32::from_ne_bytes(
+            bytes[UHID_EVENT_BYTES * index..UHID_EVENT_BYTES * index + 4]
+                .try_into()
+                .expect("event type"),
+        )
+    };
+    assert_eq!(bytes.len(), UHID_EVENT_BYTES * 5);
+    assert_eq!(
+        (0..5).map(event_type).collect::<Vec<_>>(),
+        vec![11, 14, 9, 10, 1]
+    );
+    let reply = UHID_EVENT_BYTES * 3;
+    assert_eq!(
+        u32::from_ne_bytes(bytes[reply + 4..reply + 8].try_into().expect("reply id")),
+        2
+    );
+    assert_eq!(
+        u16::from_ne_bytes(bytes[reply + 8..reply + 10].try_into().expect("reply err")),
+        0
+    );
+    assert_eq!(calls.borrow().as_slice(), &[request]);
+    assert_eq!(tree.unbind_request(), "0003:1532:00CD.0007");
+}
+
+#[test]
 fn missing_uhid_start_has_one_route_local_deadline() {
     let path = temporary_uhid_file();
     let paths = test_paths(path.clone());
     let (device, policy) = fixture();
-    let endpoint = RunningEndpoint::create(&paths, NotSentBridge, device, policy)
+    let endpoint = RunningEndpoint::create(&paths, NotSentBridge, device, policy, None)
         .expect("endpoint is created");
 
     let before_deadline = (endpoint.created_at + UHID_START_TIMEOUT)

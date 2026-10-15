@@ -14,6 +14,7 @@ import time
 
 from .model import ModelError, load_foundation, load_json, require_unique, sha256_file
 from .assurance import load_design_coverage
+from .arch_split import load_arch_split
 from .arch_update_policy import verify_arch_openrazer_update_policy
 from .atlas import load_repository_atlas
 from .development import load_development_environment
@@ -89,15 +90,6 @@ ALLOWED_DISPOSITIONS = {
     "REJECT",
 }
 ALLOWED_STATUSES = {"PENDING_REVIEW", "IN_PROGRESS", "ACCEPTED", "REJECTED"}
-IGNORED_PATH_PARTS = {
-    ".git",
-    ".hfx",
-    ".venv",
-    "__pycache__",
-    "build",
-    "dist",
-    "target",
-}
 FUTURE_MTIME_TOLERANCE_SECONDS = 5.0
 INSTALLED_SCHEMA_ROOT = Path("/usr/share/hyperflux-next/schemas")
 EXTERNAL_OPENRGB_QUALIFICATION_BINDING = (
@@ -156,6 +148,25 @@ def _git_object_id(root: Path, revision: str) -> str:
     value = completed.stdout.strip()
     if completed.returncode != 0 or re.fullmatch(r"[0-9a-f]{40}", value) is None:
         raise ModelError(f"source identity is unavailable: {revision}")
+    return value
+
+
+def _source_date_epoch(root: Path) -> str:
+    try:
+        completed = subprocess.run(
+            ["git", "log", "-1", "--format=%ct", "HEAD"],
+            cwd=root,
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise ModelError(f"cannot resolve source date: {error}") from error
+    value = completed.stdout.strip()
+    if completed.returncode != 0 or re.fullmatch(r"[1-9][0-9]*", value) is None:
+        raise ModelError("source date is unavailable")
     return value
 
 
@@ -239,10 +250,13 @@ def _build_openrgb_qualification_harness(
         shutil.rmtree(build_directory)
     build_directory.mkdir()
     project = root / "tests" / "openrgb_plugin_manager_sdk_harness.pro"
+    # Upstream bakes the configure time into the binary unless
+    # SOURCE_DATE_EPOCH is set; the qualified and packaged builds must match.
+    environment = {"SOURCE_DATE_EPOCH": _source_date_epoch(root)}
     _run_command(
         root,
         [
-            "qmake",
+            "qmake6",
             "-o",
             str(build_directory / "Makefile"),
             str(project),
@@ -250,12 +264,14 @@ def _build_openrgb_qualification_harness(
         ],
         "pinned OpenRGB PluginManager harness configure",
         timeout_seconds,
+        environment=environment,
     )
     _run_command(
         root,
         ["make", "-C", str(build_directory), "--jobs=4"],
         "pinned OpenRGB PluginManager harness build",
         timeout_seconds,
+        environment=environment,
     )
     harness = build_directory / "openrgb-plugin-manager-sdk-harness"
     if not harness.is_file() or harness.is_symlink():
@@ -593,6 +609,29 @@ def finalize_external_openrgb_qualification(
     return binding_path
 
 
+def _arch_full_edition_packages(root: Path, packages: tuple) -> tuple:
+    """Return the Full edition's Arch package and the siblings it depends on.
+
+    Before the four-output topology is active the build has one `linux` and
+    one `full` package. Once it is active, the Full edition maps to a split
+    output whose sibling dependencies come from `packaging/arch-split.json`.
+    """
+
+    split = load_arch_split(root)
+    if split.active:
+        full_id = split.edition_output("full").id
+        dependency_ids = tuple(item for item in split.closure(full_id) if item != full_id)
+    else:
+        full_id, dependency_ids = "full", ("linux",)
+    by_component = {package.component: package for package in packages}
+    missing = [item for item in (full_id, *dependency_ids) if item not in by_component]
+    if missing:
+        raise ModelError(
+            "Arch package build lacks the Full edition package set: " + ", ".join(missing)
+        )
+    return by_component[full_id], tuple(by_component[item] for item in dependency_ids)
+
+
 def _run_package_contracts(root: Path, node: TestNode) -> None:
     workspace = root / "build" / "package-contracts"
     if workspace.exists():
@@ -713,20 +752,11 @@ def _run_package_contracts(root: Path, node: TestNode) -> None:
         first_arch.manifest.read_bytes() != second_arch.manifest.read_bytes()
     ):
         raise ModelError("independent Arch package builds are not byte-for-byte reproducible")
-    full = next(
-        package
-        for package in first_arch.packages
-        if package.component == "full"
-    )
-    linux = next(
-        package
-        for package in first_arch.packages
-        if package.component == "linux"
-    )
+    full, dependencies = _arch_full_edition_packages(root, first_arch.packages)
     verify_arch_openrazer_update_policy(
         full.package,
         package_name=full.package_name,
-        dependency_packages=(linux.package,),
+        dependency_packages=tuple(package.package for package in dependencies),
         workspace=workspace / "openrazer-update-policy",
         timeout_seconds=node.timeout_seconds,
     )

@@ -1,68 +1,67 @@
 {
-  "apply_authorized": true,
   "labels": [
     {
       "color": "1d76db",
-      "description": "Documentation, navigation, and user guidance",
+      "description": "Guides, reference pages, and links",
       "name": "area: documentation"
     },
     {
       "color": "5319e7",
-      "description": "Application adapter or SDK integration",
+      "description": "OpenRazer, Polychromatic, OpenRGB, or the SDK",
       "name": "area: integration"
     },
     {
       "color": "b60205",
-      "description": "Kernel transport, UAPI, or lifecycle",
+      "description": "The kernel driver and its interface",
       "name": "area: kernel"
     },
     {
       "color": "006b75",
-      "description": "Installation, distribution, or package lifecycle",
+      "description": "Installing, upgrading, or removing packages",
       "name": "area: packaging"
     },
     {
       "color": "008672",
-      "description": "Bridge runtime, operations, restoration, or diagnostics",
+      "description": "The background service, hyperfluxctl, diagnostics, or restoring lighting",
       "name": "area: runtime"
     },
     {
       "color": "d93f0b",
-      "description": "Security, privacy, provenance, or governance",
+      "description": "Security, privacy, release integrity, or project rules",
       "name": "area: security"
     },
     {
       "color": "d73a4a",
-      "description": "Confirmed or suspected incorrect behavior",
+      "description": "Something does not work the way it should",
       "name": "kind: bug"
     },
     {
       "color": "ffd33d",
-      "description": "Device support research or capability qualification",
+      "description": "Support for a new or untested device",
       "name": "kind: device-support"
     },
     {
       "color": "0075ca",
-      "description": "Documentation content, navigation, or generated-view issue",
+      "description": "A page is wrong, unclear, out of date, or hard to find",
       "name": "kind: documentation"
     },
     {
       "color": "a2eeef",
-      "description": "New capability or workflow proposal",
+      "description": "Something new people want to be able to do",
       "name": "kind: feature"
     },
     {
       "color": "fef2c0",
-      "description": "Known limitation that needs clear user-facing treatment",
+      "description": "A known limitation that users need explained",
       "name": "kind: limitation"
     },
     {
       "color": "ededed",
-      "description": "Exclude this change from generated release notes",
+      "description": "Leave this change out of the release notes",
       "name": "skip-changelog"
     }
   ],
-  "remote_state": "public-pre-release",
+  "remote_state": "public-released",
   "repository": "offalexjackson777-stack/hyperflux-next",
   "schema": "hyperflux-github-label-plan-v1"
 }

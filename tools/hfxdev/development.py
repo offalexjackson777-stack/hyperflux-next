@@ -78,7 +78,7 @@ REQUIRED_PACKAGES = {
     "python-setuptools",
     "python-wheel",
     "python-yaml",
-    "qt5-base",
+    "qt6-base",
     "rpm-tools",
     "rustup",
     "sudo",

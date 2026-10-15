@@ -257,40 +257,11 @@ void UpstreamRazerPluginCoordinator::refresh_registry_state()
     const auto count = registry_->size();
     const auto registered = registry_->registered_count();
     const auto suppressed = registry_->suppressed_count();
-    const auto suspended = registry_->suspended();
     std::lock_guard lock(state_mutex_);
     controllers_ = std::move(controllers);
     controller_count_ = count;
     registered_controller_count_ = registered;
     direct_suppressed_controller_count_ = suppressed;
-    detection_suspended_ = suspended;
-}
-
-void UpstreamRazerPluginCoordinator::detection_started() noexcept
-{
-    {
-        std::lock_guard lock(state_mutex_);
-        if(stopped_)
-        {
-            return;
-        }
-    }
-    try
-    {
-        registry_->suspend_for_detection();
-        refresh_registry_state();
-    }
-    catch(const std::exception& error)
-    {
-        record_exception("suspend native routes for OpenRGB detection", error);
-        return;
-    }
-    catch(...)
-    {
-        record_exception("suspend native routes for OpenRGB detection");
-        return;
-    }
-    notify_state_changed();
 }
 
 void UpstreamRazerPluginCoordinator::detection_finished() noexcept
@@ -306,7 +277,6 @@ void UpstreamRazerPluginCoordinator::detection_finished() noexcept
     {
         static_cast<void>(registry_->apply_direct_serials(
             collect_direct_razer_serials(host_->controllers())));
-        registry_->resume_after_detection();
         refresh_registry_state();
         worker_->request_rescan();
     }
@@ -351,7 +321,6 @@ void UpstreamRazerPluginCoordinator::shutdown() noexcept
     }
     {
         std::lock_guard lock(state_mutex_);
-        detection_suspended_ = false;
         controller_count_ = 0;
         registered_controller_count_ = 0;
         direct_suppressed_controller_count_ = 0;
@@ -370,7 +339,6 @@ UpstreamRazerCoordinatorStatus UpstreamRazerPluginCoordinator::status() const
         worker_state,
         started_,
         stopped_,
-        detection_suspended_,
         controller_count_,
         registered_controller_count_,
         direct_suppressed_controller_count_,

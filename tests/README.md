@@ -6,17 +6,23 @@ Holds language-specific, cross-language, fixture, lifecycle, repository-navigati
 
 ## Start Here
 
-- [`docs/generated/verification.md`](../docs/generated/verification.md)
-- [`docs/assurance/simulator.md`](../docs/assurance/simulator.md)
+- [Software Checks](../docs/generated/verification.md)
+- [Virtual Receiver And Replay](../docs/assurance/simulator.md)
+
+## Limitations
+
+- Tests demonstrate modeled behavior, not universal physical compatibility
 
 ## Boundaries
 
 **Owns**
+
 - Focused contract tests
 - Sanitized fixtures
 - Cross-language smoke programs
 
 **Does not own**
+
 - Production policy
 - Canonical facts
 - Physical evidence claims
@@ -33,15 +39,6 @@ Holds language-specific, cross-language, fixture, lifecycle, repository-navigati
 
 ## Verify
 
-Run `python-unit` `native-onboarding-contracts` `cpp-sdk-contracts` `rust-unit` after changing this area.
+Run `python-unit` `native-onboarding-contracts` `cpp-sdk-contracts` `rust-unit` after changing this area, and run `./hfx generate` to refresh its 2 generated file(s).
 
-Review impact:
-
-- Regenerate 2 declared projection(s).
-- Run `python-unit`, `native-onboarding-contracts`, `cpp-sdk-contracts`, `rust-unit`.
-- Review direct consumers: Verification graph.
-
-## Related Areas
-
-- **Depends on:** [Repository tooling](../tools/README.md), [Rust workspace](../crates/README.md), [C++ SDK](../sdk/cpp/README.md), [Python SDK](../sdk/python/README.md)
-- **Used by:** [Verification graph](../verification/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

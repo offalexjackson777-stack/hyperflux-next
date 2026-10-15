@@ -362,7 +362,7 @@ fn execute_qualification(
         hid_driver_root: PathBuf::new(),
         status_file: PathBuf::new(),
     };
-    let mut endpoint = RunningEndpoint::create(&relay_paths, bridge, device, command_policy)
+    let mut endpoint = RunningEndpoint::create(&relay_paths, bridge, device, command_policy, None)
         .map_err(|_| QualificationRuntimeError::Runtime)?;
     println!(
         "HFX_NATIVE_QUALIFIER_READY profile={} methods={}",

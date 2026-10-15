@@ -1,45 +1,50 @@
 {
-  "apply_authorized": true,
   "discussions": {
-    "apply_authorized": true,
     "categories": [
       {
-        "description": "Maintainer updates, verified milestones, and release-boundary changes.",
+        "description": "Release news and other updates from the maintainer.",
         "format": "announcement",
         "id": "announcements",
         "name": "Announcements"
       },
       {
-        "description": "Public planning around candidate devices and bounded evidence needs.",
+        "description": "Planning tests for devices that are expected to work but have not been tested on real hardware.",
         "format": "discussion",
         "id": "hardware-qualification",
         "name": "Hardware qualification"
       },
       {
-        "description": "User questions after running Doctor and reviewing privacy-safe diagnostics.",
+        "description": "Questions about installing or using HyperFlux. Running `hyperfluxctl doctor` first often helps.",
         "format": "q-and-a",
         "id": "help",
         "name": "Help"
       },
       {
-        "description": "Universal workflows and architecture proposals before issue commitment.",
+        "description": "Early ideas and design proposals, before they become a feature request.",
         "format": "discussion",
         "id": "ideas",
         "name": "Ideas"
       }
-    ]
+    ],
+    "enabled": true
   },
   "external_apps_installed": [],
-  "pages_deployment_authorized": false,
-  "product_publication_authorized": false,
   "project": {
-    "apply_authorized": false,
+    "enabled": false,
     "operation": "close-or-disable-existing-empty-project"
   },
-  "remote_state": "public-pre-release",
+  "publication_state": {
+    "hardware_ci": "none",
+    "pages": "disabled",
+    "product_release": "published",
+    "release_publication": "maintainer-operated",
+    "release_workflows": "none",
+    "source_repository": "public"
+  },
+  "remote_state": "public-released",
   "repository": "offalexjackson777-stack/hyperflux-next",
   "repository_metadata": {
-    "description": "Linux support for Razer devices paired through HyperFlux V2, with OpenRazer, Polychromatic, and OpenRGB integration.",
+    "description": "Linux driver that makes Razer devices on a HyperFlux V2 wireless receiver work with OpenRazer, Polychromatic, and OpenRGB.",
     "homepage": "",
     "social_preview_asset": "docs/assets/social-preview.png",
     "topics": [
@@ -58,37 +63,37 @@
   "schema": "hyperflux-github-experience-plan-v1",
   "security_posture": {
     "artifact_attestations": {
-      "activation_boundary": "after-release-workflow-authorization",
+      "activation_boundary": "future-release-workflow",
       "data_boundary": "Release artifacts and provenance only; no hardware evidence or private diagnostics",
       "state": "deferred"
     },
     "code_scanning": {
-      "activation_boundary": "public-source-pre-release",
+      "activation_boundary": "public-repository",
       "data_boundary": "Source analysis uploaded by the pinned CodeQL workflow",
       "state": "required-enabled"
     },
     "dependabot_security_updates": {
-      "activation_boundary": "public-source-pre-release",
+      "activation_boundary": "public-repository",
       "data_boundary": "GitHub dependency alerts and update pull requests",
       "state": "required-enabled"
     },
     "dependency_graph": {
-      "activation_boundary": "public-source-pre-release",
+      "activation_boundary": "public-repository",
       "data_boundary": "Repository dependency metadata only",
       "state": "required-enabled"
     },
     "private_vulnerability_reporting": {
-      "activation_boundary": "public-source-pre-release",
+      "activation_boundary": "public-repository",
       "data_boundary": "GitHub private security advisories; never public issue intake",
       "state": "required-enabled"
     },
     "secret_scanning": {
-      "activation_boundary": "public-source-pre-release",
+      "activation_boundary": "public-repository",
       "data_boundary": "Repository content scanned by GitHub; no hardware diagnostics",
       "state": "required-when-available"
     },
     "secret_scanning_push_protection": {
-      "activation_boundary": "public-source-pre-release",
+      "activation_boundary": "public-repository",
       "data_boundary": "Git pushes checked for supported secret patterns",
       "state": "required-when-available"
     },
@@ -107,7 +112,7 @@
       "id": "codecov",
       "maintenance_cost": "medium",
       "privacy": "Would transmit source-derived coverage metadata to an external service.",
-      "rationale": "Current verification is evidence-oriented rather than line-coverage gated; external upload is not justified before publication.",
+      "rationale": "Local LLVM line coverage is already a gated contract in assurance/rust-coverage.json; a hosted upload service adds no gate and is not selected.",
       "required_permissions": [
         "contents: read",
         "checks: write",
@@ -165,6 +170,5 @@
       ],
       "service": "Renovate"
     }
-  ],
-  "source_repository_authorized": true
+  ]
 }

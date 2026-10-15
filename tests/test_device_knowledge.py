@@ -20,6 +20,8 @@ from hfxdev.model import ModelError, load_json
 from hfxdev.openrazer import extract_openrazer_catalog as extract_openrazer
 from hfxdev.openrgb import extract_openrgb_catalog as extract_openrgb
 from hfxdev.profiles import load_profile_inputs
+from hfxdev.source_validated import load_source_validated_catalog
+from hfxdev.source_validated_catalog import public_support_tier, public_support_tier_counts
 
 
 class UpstreamImporterTests(unittest.TestCase):
@@ -195,7 +197,7 @@ class DeviceKnowledgeContractTests(unittest.TestCase):
             for candidate in self.catalog["candidates"]
             if candidate["candidate_id"] == "razer-blackwidow-v4-mini-hyperspeed"
         )
-        self.assertEqual(keyboard["hyperflux_support"], "candidate-only")
+        self.assertEqual(keyboard["hyperflux_support"], "source-qualified-operational")
         self.assertEqual(
             [record["record_id"] for record in keyboard["source_records"]],
             [
@@ -274,24 +276,24 @@ class DeviceKnowledgeContractTests(unittest.TestCase):
     def test_source_catalogs_match_exact_integration_pins(self) -> None:
         sources = {value["upstream_id"]: value for value in self.catalog["upstreams"]}
         self.assertEqual(sources["openrazer"]["record_count"], 232)
-        self.assertEqual(sources["openrgb"]["record_count"], 112)
+        self.assertEqual(sources["openrgb"]["record_count"], 113)
         self.assertEqual(
             sources["openrazer"]["commit"],
             "1ef8a91712906a89fd332a2ed62bbd105315d6d1",
         )
         self.assertEqual(
             sources["openrgb"]["commit"],
-            "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0",
+            "81bbe18a84c2e507006f19dd252e397e40a56bfe",
         )
         self.assertEqual(len(self.inputs.source_catalogs["openrazer"]["records"]), 232)
-        self.assertEqual(len(self.inputs.source_catalogs["openrgb"]["records"]), 112)
+        self.assertEqual(len(self.inputs.source_catalogs["openrgb"]["records"]), 113)
 
     def test_naga_knowledge_is_rich_but_fails_closed_without_route_profile(self) -> None:
         naga = next(
             value for value in self.catalog["candidates"] if value["candidate_id"] == "razer-naga-v2-pro"
         )
         self.assertEqual(naga["knowledge_status"], "conflicted")
-        self.assertEqual(naga["hyperflux_support"], "candidate-only")
+        self.assertEqual(naga["hyperflux_support"], "source-qualified-operational")
         self.assertEqual(len(naga["settings"]), 14)
         self.assertTrue(all(setting["control_state"] == "blocked" for setting in naga["settings"]))
         self.assertEqual(
@@ -351,7 +353,7 @@ class DeviceKnowledgeContractTests(unittest.TestCase):
             profile["profile_id"]: profile for profile in load_profile_inputs(ROOT).profiles
         }
         for candidate in self.catalog["candidates"]:
-            if candidate["hyperflux_support"] != "route-qualified":
+            if candidate["hyperflux_support"] != "physically-proven":
                 continue
             source_identities = {
                 (
@@ -369,6 +371,21 @@ class DeviceKnowledgeContractTests(unittest.TestCase):
                         for vendor_id, product_id in source_identities
                     )
                 )
+
+    def test_route_tiers_match_supported_hardware(self) -> None:
+        catalog = load_source_validated_catalog(ROOT)
+        expected = public_support_tier_counts(catalog["devices"])
+        actual = {tier: 0 for tier in expected}
+        for candidate in self.catalog["candidates"]:
+            actual[candidate["hyperflux_support"]] += 1
+        self.assertEqual(actual, expected)
+        self.assertEqual(sorted(actual.values()), [2, 2, 8])
+        by_name = {device["model_name"]: device for device in catalog["devices"]}
+        for candidate in self.catalog["candidates"]:
+            self.assertEqual(
+                candidate["hyperflux_support"],
+                public_support_tier(by_name[candidate["official_name"]]),
+            )
 
     def test_selected_methods_cannot_be_silently_double_mapped(self) -> None:
         mapping = load_json(ROOT / "knowledge" / "capability-map.json")

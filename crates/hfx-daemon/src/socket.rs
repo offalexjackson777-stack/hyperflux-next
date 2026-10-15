@@ -211,4 +211,21 @@ mod tests {
         );
         fs::remove_dir_all(directory).expect("temporary directory removes");
     }
+
+    #[test]
+    fn every_bind_error_names_a_distinct_failure() {
+        let errors = [
+            SocketBindError::InvalidParent,
+            SocketBindError::InvalidLock,
+            SocketBindError::AlreadyRunning,
+            SocketBindError::InvalidStaleEntry,
+            SocketBindError::Bind,
+            SocketBindError::Permission,
+            SocketBindError::GroupInheritance,
+        ];
+        let messages: std::collections::BTreeSet<String> =
+            errors.iter().map(ToString::to_string).collect();
+        assert!(messages.iter().all(|message| !message.is_empty()));
+        assert_eq!(messages.len(), errors.len());
+    }
 }

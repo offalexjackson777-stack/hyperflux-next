@@ -5,10 +5,13 @@
 #include <hyperflux/openrgb/native_controller.hpp>
 
 #include <algorithm>
+#include <chrono>
+#include <condition_variable>
 #include <cstdlib>
 #include <iostream>
-#include <iterator>
 #include <limits>
+#include <mutex>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -27,7 +30,11 @@ public:
     hyperflux::sdk::Result<hyperflux::openrgb::EnqueueDisposition> enqueue_effect(
         hyperflux::openrgb::QueuedLightingFrame frame) override
     {
-        effects.push_back(std::move(frame));
+        {
+            std::lock_guard lock(mutex);
+            effects.push_back(std::move(frame));
+        }
+        changed.notify_all();
         return hyperflux::sdk::Result<hyperflux::openrgb::EnqueueDisposition>::success(
             hyperflux::openrgb::EnqueueDisposition::Accepted);
     }
@@ -36,15 +43,86 @@ public:
         hyperflux::sdk::LightingIntent intent,
         std::vector<hyperflux::openrgb::QueuedLightingFrame> frames) override
     {
-        stable_intents.push_back(intent);
-        stable_frames.push_back(std::move(frames));
+        {
+            std::lock_guard lock(mutex);
+            stable_intents.push_back(intent);
+            stable_frames.push_back(std::move(frames));
+        }
+        changed.notify_all();
         return hyperflux::sdk::Result<hyperflux::openrgb::EnqueueDisposition>::success(
             hyperflux::openrgb::EnqueueDisposition::Accepted);
     }
 
+    /// OpenRGB 1.0 applies mode changes on the controller's device thread.
+    [[nodiscard]] bool wait_for_stable(std::size_t count)
+    {
+        std::unique_lock lock(mutex);
+        return changed.wait_for(lock, std::chrono::seconds(5),
+            [&]
+            {
+                return stable_intents.size() >= count;
+            });
+    }
+
+    std::mutex mutex;
+    std::condition_variable changed;
     std::vector<hyperflux::openrgb::QueuedLightingFrame> effects;
     std::vector<hyperflux::sdk::LightingIntent> stable_intents;
     std::vector<std::vector<hyperflux::openrgb::QueuedLightingFrame>> stable_frames;
+};
+
+void set_all_colors(RGBController& controller, RGBColor color)
+{
+    for(unsigned int led = 0; led < controller.GetLEDCount(); ++led)
+    {
+        controller.SetColor(led, color);
+    }
+}
+
+/// ~NativeController releases AccessMutex after Shutdown() because OpenRGB
+/// 1.0 returns from Shutdown() with it exclusively locked. Fails once upstream
+/// releases it itself, since a second release would be undefined.
+class ShutdownProbe final : public RGBController
+{
+public:
+    ShutdownProbe() = default;
+    ShutdownProbe(const ShutdownProbe&) = delete;
+    ShutdownProbe& operator=(const ShutdownProbe&) = delete;
+    ShutdownProbe(ShutdownProbe&&) = delete;
+    ShutdownProbe& operator=(ShutdownProbe&&) = delete;
+
+    ~ShutdownProbe() override
+    {
+        if(!shut_down_)
+        {
+            static_cast<void>(shutdown_keeps_access_locked());
+        }
+    }
+
+    [[nodiscard]] bool shutdown_keeps_access_locked()
+    {
+        Shutdown();
+        shut_down_ = true;
+        bool available = false;
+        std::thread reader(
+            [&]
+            {
+                available = AccessMutex.try_lock_shared();
+                if(available)
+                {
+                    AccessMutex.unlock_shared();
+                }
+            });
+        reader.join();
+        if(!available)
+        {
+            AccessMutex.unlock();
+        }
+        return !available;
+    }
+
+private:
+    bool shut_down_ = false;
 };
 
 } // namespace
@@ -55,6 +133,14 @@ int main()
     using namespace hyperflux::openrgb;
     using namespace hyperflux::openrgb::native;
     using namespace hyperflux::test;
+
+    {
+        ShutdownProbe probe;
+        if(!probe.shutdown_keeps_access_locked())
+        {
+            return failure(__LINE__);
+        }
+    }
 
     const auto mouse = native_controller_model(DeviceKind::Mouse);
     auto presentation = resolve_razer_presentation(mouse, KeyboardLayoutVariant::AnsiQwerty);
@@ -71,20 +157,20 @@ int main()
         return failure(__LINE__);
     }
     auto controller = std::move(created).value();
-    if(controller->name != "Razer Basilisk V3 Pro 35K (Wireless)"
-        || controller->type != DEVICE_TYPE_MOUSE || controller->modes.size() != 3
-        || controller->modes[0].name != "Direct" || controller->modes[1].name != "Off"
-        || controller->modes[2].name != "Static" || controller->zones.size() != 3
-        || controller->leds.size() != 13 || controller->colors.size() != 13
-        || controller->zones[0].name != "Scroll Wheel" || controller->zones[1].name != "Logo"
-        || controller->zones[2].name != "LED Strip")
+    if(controller->GetName() != "Razer Basilisk V3 Pro 35K (Wireless)"
+        || controller->GetDeviceType() != DEVICE_TYPE_MOUSE || controller->GetModeCount() != 3
+        || controller->GetModeName(0) != "Direct" || controller->GetModeName(1) != "Off"
+        || controller->GetModeName(2) != "Static" || controller->GetZoneCount() != 3
+        || controller->GetLEDCount() != 13
+        || controller->GetActiveMode() != static_cast<int>(ControllerMode::Direct)
+        || controller->GetZoneName(0) != "Scroll Wheel" || controller->GetZoneName(1) != "Logo"
+        || controller->GetZoneName(2) != "LED Strip")
     {
         return failure(__LINE__);
     }
 
-    controller->colors.assign(13, ToRGBColor(200, 100, 50));
-    controller->modes[0].brightness = 50;
-    controller->active_mode = static_cast<int>(ControllerMode::Direct);
+    set_all_colors(*controller, ToRGBColor(200, 100, 50));
+    controller->SetModeBrightness(0, 50);
     controller->DeviceUpdateLEDs();
     if(sink.effects.size() != 1 || sink.effects.front().colors.size() != 13
         || sink.effects.front().generation_id.value() != 1
@@ -104,12 +190,19 @@ int main()
         return failure(__LINE__);
     }
 
-    controller->active_mode = static_cast<int>(ControllerMode::Off);
-    controller->DeviceUpdateMode();
-    controller->active_mode = static_cast<int>(ControllerMode::Static);
-    controller->modes[2].colors.front() = ToRGBColor(120, 60, 30);
-    controller->modes[2].brightness = 25;
-    controller->DeviceUpdateMode();
+    controller->SetModeColor(2, 0, ToRGBColor(120, 60, 30));
+    controller->SetModeBrightness(2, 25);
+    controller->SetActiveMode(static_cast<int>(ControllerMode::Off));
+    if(!sink.wait_for_stable(1))
+    {
+        return failure(__LINE__);
+    }
+    controller->SetActiveMode(static_cast<int>(ControllerMode::Static));
+    if(!sink.wait_for_stable(2))
+    {
+        return failure(__LINE__);
+    }
+    std::unique_lock sink_lock(sink.mutex);
     if(sink.stable_intents
             != std::vector<sdk::LightingIntent> {sdk::LightingIntent::Off,
                 sdk::LightingIntent::Static}
@@ -121,6 +214,7 @@ int main()
     {
         return failure(__LINE__);
     }
+    sink_lock.unlock();
 
     const auto keyboard = native_controller_model(DeviceKind::Keyboard);
     auto keyboard_presentation =
@@ -138,38 +232,38 @@ int main()
         return failure(__LINE__);
     }
     auto keyboard_controller = std::move(keyboard_created).value();
-    if(keyboard_controller->name != "Razer DeathStalker V2 Pro TKL (Wireless)"
-        || keyboard_controller->type != DEVICE_TYPE_KEYBOARD
-        || keyboard_controller->zones.size() != 1
-        || keyboard_controller->zones.front().type != ZONE_TYPE_MATRIX
-        || keyboard_controller->zones.front().leds_count != 102
-        || keyboard_controller->zones.front().matrix_map == nullptr
-        || keyboard_controller->zones.front().matrix_map->height != 6
-        || keyboard_controller->zones.front().matrix_map->width != 17
-        || keyboard_controller->leds.size() != 102 || keyboard_controller->colors.size() != 102)
+    if(keyboard_controller->GetName() != "Razer DeathStalker V2 Pro TKL (Wireless)"
+        || keyboard_controller->GetDeviceType() != DEVICE_TYPE_KEYBOARD
+        || keyboard_controller->GetZoneCount() != 1
+        || keyboard_controller->GetZoneType(0) != ZONE_TYPE_MATRIX
+        || keyboard_controller->GetZoneLEDsCount(0) != 102
+        || keyboard_controller->GetZoneMatrixMapHeight(0) != 6
+        || keyboard_controller->GetZoneMatrixMapWidth(0) != 17
+        || keyboard_controller->GetZoneMatrixMap(0).map.size() != 102
+        || keyboard_controller->GetLEDCount() != 102)
     {
         return failure(__LINE__);
     }
 
-    const auto* matrix = keyboard_controller->zones.front().matrix_map->map;
+    const auto matrix = keyboard_controller->GetZoneMatrixMap(0).map;
     const auto missing_slots =
-        std::count(matrix, matrix + 102, std::numeric_limits<unsigned int>::max());
-    const auto zero = std::find_if(keyboard_controller->leds.begin(),
-        keyboard_controller->leds.end(),
-        [](const led& entry)
+        std::count(matrix.begin(), matrix.end(), std::numeric_limits<unsigned int>::max());
+    std::size_t zero_slot = keyboard_controller->GetLEDCount();
+    for(unsigned int led = 0; led < keyboard_controller->GetLEDCount(); ++led)
+    {
+        if(keyboard_controller->GetLEDName(led) == "Key: 0")
         {
-            return entry.name == "Key: 0";
-        });
-    if(missing_slots != 18 || zero == keyboard_controller->leds.end())
+            zero_slot = led;
+            break;
+        }
+    }
+    if(missing_slots != 18 || zero_slot == keyboard_controller->GetLEDCount())
     {
         return failure(__LINE__);
     }
 
-    keyboard_controller->colors.assign(102, ToRGBColor(0, 255, 0));
-    const auto zero_slot =
-        static_cast<std::size_t>(std::distance(keyboard_controller->leds.begin(), zero));
-    keyboard_controller->colors[zero_slot] = ToRGBColor(255, 0, 0);
-    keyboard_controller->active_mode = static_cast<int>(ControllerMode::Direct);
+    set_all_colors(*keyboard_controller, ToRGBColor(0, 255, 0));
+    keyboard_controller->SetColor(static_cast<unsigned int>(zero_slot), ToRGBColor(255, 0, 0));
     keyboard_controller->UpdateSingleLED(static_cast<int>(zero_slot));
     if(keyboard_sink.effects.size() != 1 || keyboard_sink.effects.front().colors.size() != 102
         || keyboard_sink.effects.front().colors[zero_slot].red.value() != 255
@@ -186,8 +280,12 @@ int main()
         return failure(__LINE__);
     }
 
-    keyboard_controller->active_mode = static_cast<int>(ControllerMode::Off);
-    keyboard_controller->DeviceUpdateLEDs();
+    keyboard_controller->SetActiveMode(static_cast<int>(ControllerMode::Off));
+    if(!keyboard_sink.wait_for_stable(1))
+    {
+        return failure(__LINE__);
+    }
+    std::lock_guard keyboard_lock(keyboard_sink.mutex);
     if(keyboard_sink.stable_intents != std::vector<sdk::LightingIntent> {sdk::LightingIntent::Off}
         || keyboard_sink.stable_frames.front().front().colors.size() != 102)
     {

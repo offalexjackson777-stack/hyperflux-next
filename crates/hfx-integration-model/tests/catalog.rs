@@ -5,8 +5,8 @@ use hfx_integration_model::{ADAPTERS, UPSTREAMS, adapter_by_id, upstream_by_id};
 #[test]
 fn generated_catalog_keeps_upstreams_exact_and_network_free() {
     let openrgb = upstream_by_id("openrgb").expect("OpenRGB pin exists");
-    assert_eq!(openrgb.version, "1.0rc3");
-    assert_eq!(openrgb.commit, "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0");
+    assert_eq!(openrgb.version, "1.0");
+    assert_eq!(openrgb.commit, "81bbe18a84c2e507006f19dd252e397e40a56bfe");
     assert_eq!(UPSTREAMS.len(), 3);
 }
 

@@ -39,6 +39,7 @@ FORBIDDEN_CORE_PREFIXES = (
 )
 FULL_REQUIRED_FILES = {
     "usr/lib/hyperflux-next/hyperflux-next-uhid-relay",
+    "usr/lib/modules-load.d/hyperflux-next-openrazer.conf",
     "usr/lib/openrgb/plugins/hyperflux-next-openrgb.so",
     "usr/lib/systemd/system/hyperflux-next-bridge.service.d/50-full.conf",
     "usr/lib/systemd/system/hyperflux-next-openrazer-driver-preflight.service",
@@ -183,7 +184,7 @@ def assert_no_application_relations(record: dict[str, Any]) -> None:
 
 
 def assert_component_contract(linux: dict[str, Any], full: dict[str, Any]) -> None:
-    if linux["name"] != "hyperflux-next-linux" or linux["version"] != "2.0.0-1":
+    if linux["name"] != "hyperflux-next-linux" or linux["version"] != "2.1.0-1":
         raise RuntimeError("core component identity differs from the release contract")
     if full["name"] != "hyperflux-next-full" or full["version"] != linux["version"]:
         raise RuntimeError("full component identity differs from the release contract")
@@ -201,7 +202,7 @@ def assert_component_contract(linux: dict[str, Any], full: dict[str, Any]) -> No
         "dkms",
         "libgcc",
         "libstdc++",
-        "qt5-base",
+        "qt6-base",
         "hidapi",
         "systemd",
         f"hyperflux-next-linux={linux['version']}",
@@ -209,7 +210,7 @@ def assert_component_contract(linux: dict[str, Any], full: dict[str, Any]) -> No
     if set(full["info"].get("depend", ())) != expected_full_dependencies:
         raise RuntimeError("full dependencies differ from the direct ELF audit")
     expected_optional_dependencies = {
-        "openrgb: Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0rc3/plugin API 4 verified",
+        "openrgb: Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified",
         "openrazer-daemon: Stock OpenRazer service for compatible application access",
         "python-openrazer: Official Python OpenRazer client API",
         "polychromatic: Stock graphical OpenRazer frontend",

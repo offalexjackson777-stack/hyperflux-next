@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import re
+import tomllib
 from typing import Any
 
 from .model import ModelError, load_json, sha256_file
@@ -83,6 +84,7 @@ KERNEL_KEYS = {
     "device_prefix",
     "source_directory",
     "control_transfer_timeout_ms",
+    "retired_drivers",
 }
 OPERATIONS_KEYS = {
     "cli_path",
@@ -215,6 +217,14 @@ class DesktopAccessRuntime:
 
 
 @dataclass(frozen=True)
+class RetiredKernelDriver:
+    """A pre-release HyperFlux driver that must never own the receiver."""
+
+    name: str
+    versions: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class KernelRuntime:
     module_name: str
     dkms_name: str
@@ -222,6 +232,7 @@ class KernelRuntime:
     device_prefix: str
     source_directory: str
     control_transfer_timeout_ms: int
+    retired_drivers: tuple[RetiredKernelDriver, ...]
 
 
 @dataclass(frozen=True)
@@ -259,6 +270,30 @@ def _object(value: Any, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ModelError(f"{label}: must be an object")
     return value
+
+
+def _retired_drivers(value: Any) -> tuple[RetiredKernelDriver, ...]:
+    if not isinstance(value, list) or len(value) > 8:
+        raise ModelError("retired kernel drivers must be a bounded list")
+    drivers = []
+    for index, item in enumerate(value):
+        entry = _object(item, f"retired kernel driver {index}")
+        _exact(entry, {"name", "versions"}, f"retired kernel driver {index}")
+        versions = entry["versions"]
+        if not isinstance(versions, list) or not 1 <= len(versions) <= 16:
+            raise ModelError("retired kernel driver versions must be a bounded non-empty list")
+        parsed = tuple(_string(version, "retired driver version", VERSION, 64) for version in versions)
+        if len(set(parsed)) != len(parsed):
+            raise ModelError("retired kernel driver versions must be unique")
+        drivers.append(
+            RetiredKernelDriver(
+                name=_string(entry["name"], "retired driver name", KERNEL_NAME, 64),
+                versions=parsed,
+            )
+        )
+    if len({driver.name for driver in drivers}) != len(drivers):
+        raise ModelError("retired kernel driver names must be unique")
+    return tuple(drivers)
 
 
 def _string(value: Any, label: str, pattern: re.Pattern[str], maximum: int = 192) -> str:
@@ -319,6 +354,15 @@ def _private_file_mode(value: Any, label: str) -> int:
     return mode
 
 
+def _cargo_workspace_version(root: Path) -> str:
+    with (root / "Cargo.toml").open("rb") as handle:
+        manifest = tomllib.load(handle)
+    version = manifest.get("workspace", {}).get("package", {}).get("version")
+    if not isinstance(version, str):
+        raise ModelError("Cargo workspace must declare one package version")
+    return version
+
+
 def load_linux_runtime(root: Path) -> LinuxRuntime:
     path = root / "runtime" / "linux.json"
     value = load_json(path)
@@ -341,6 +385,8 @@ def load_linux_runtime(root: Path) -> LinuxRuntime:
             product_value["package_release"], "Linux package release", 1, 65_535
         ),
     )
+    if _cargo_workspace_version(root) != product.version:
+        raise ModelError("Cargo workspace version must equal the Linux product version")
 
     bridge_value = _object(value["bridge"], "Linux bridge runtime")
     _exact(bridge_value, BRIDGE_KEYS, "Linux bridge runtime")
@@ -634,7 +680,11 @@ def load_linux_runtime(root: Path) -> LinuxRuntime:
             1,
             5_000,
         ),
+        retired_drivers=_retired_drivers(kernel_value["retired_drivers"]),
     )
+    for retired in kernel.retired_drivers:
+        if retired.name in (kernel.module_name, kernel.dkms_name):
+            raise ModelError("a retired kernel driver cannot be the released driver")
     for name in (kernel.module_name, kernel.dkms_name, kernel.device_prefix):
         if FORBIDDEN_KERNEL_PRESENTATION.search(name):
             raise ModelError("kernel names must not contain product presentation facts")

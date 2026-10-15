@@ -6,39 +6,39 @@ Builds reproducible distribution artifacts, a canonical installed root, and sign
 
 ## Start Here
 
-- [`docs/generated/installation.md`](../docs/generated/installation.md)
-- [`docs/generated/distributions.md`](../docs/generated/distributions.md)
+- [Package Installation](../docs/generated/installation.md)
+- [Distribution Packages](../docs/generated/distributions.md)
+
+## Limitations
+
+- Private signing material remains outside the publishable repository and release assets
 
 ## Boundaries
 
 **Owns**
+
 - Install manifest
 - Distribution projections
 - Reproducible package inventory
 - Published package-signing public key
 
 **Does not own**
+
 - Runtime naming duplicates
 - Hidden post-install writes
-- Publication authorization
+- Release decisions
 
 ## Key Files
 
 - [`packaging/install.json`](install.json)
 - [`packaging/distributions.json`](distributions.json)
+- [`packaging/arch-split.json`](arch-split.json)
+- [`packaging/aur.json`](aur.json)
+- [`packaging/arch-official-snapshot.json`](arch-official-snapshot.json)
 - [`packaging/keys/hyperflux-next-arch-repository-key.asc`](keys/hyperflux-next-arch-repository-key.asc)
 
 ## Verify
 
-Run `package-contracts` after changing this area.
+Run `package-contracts` after changing this area, and run `./hfx generate` to refresh its 5 generated file(s).
 
-Review impact:
-
-- Regenerate 5 declared projection(s).
-- Run `package-contracts`.
-- No direct subsystem consumer is declared; verify repository-facing outputs.
-
-## Related Areas
-
-- **Depends on:** [Production daemon](../crates/hfx-daemon/README.md), [Linux HID kernel module](../driver/kernel/README.md), [Linux runtime authority](../runtime/README.md), [OpenRGB adapter](../integrations/openrgb/README.md), [OpenRazer native route](../integrations/openrazer/README.md), [Device qualification console](../apps/device-qualification/README.md)
-- **Used by:** None
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

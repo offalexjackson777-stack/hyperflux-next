@@ -616,6 +616,60 @@ fn production_backend_enumerates_native_authority_only_for_an_exact_qualified_pr
 }
 
 #[test]
+fn return_epoch_refresh_republishes_an_enumerated_route_without_hardware() {
+    // REL-021: a device returning to an unchanged route is republished once
+    // per strictly newer epoch.
+    let mut backend = backend();
+    let mut sessions = SessionRegistry::new(
+        QueueCapacity::try_from(4_u16).expect("session capacity is canonical"),
+    );
+    let mut dispatcher = new_dispatcher();
+    let mut identities = DeterministicIdentities(1);
+    let hello = negotiate_native(
+        &mut dispatcher,
+        &mut identities,
+        &mut sessions,
+        &mut backend,
+    );
+    let response = dispatcher.dispatch(
+        RpcRequest::NativeEnumerate(SessionRequestEnvelope {
+            request_id: text("request-native-enumerate-epoch"),
+            protocol_session_id: hello.protocol_session_id,
+            negotiation_token: hello.negotiation_token,
+            params: EmptyRequest {},
+        }),
+        &mut identities,
+        &mut sessions,
+        &mut backend,
+    );
+    let RpcResponse::NativeEnumerateSuccess(envelope) = response else {
+        panic!("native enumeration must succeed: {response:?}");
+    };
+    let route = envelope.result.routes[0].clone();
+    let epoch = |value: u64| SequenceNumber::try_from(value).expect("epoch is canonical");
+
+    for value in [3, 3, 2, 4] {
+        backend
+            .refresh_native_routes_for_return_epoch(
+                &route.receiver_id,
+                route.generation_id,
+                &route.device_id,
+                epoch(value),
+            )
+            .expect("return epoch refresh is accepted");
+    }
+    backend
+        .refresh_native_routes_for_return_epoch(
+            &route.receiver_id,
+            route.generation_id,
+            &text("absent-device"),
+            epoch(9),
+        )
+        .expect("an unknown device is a no-op");
+    assert!(backend.transport().dispatches.is_empty());
+}
+
+#[test]
 fn effect_return_replay_reuses_live_owner_authority_and_disconnect_invalidates_it() {
     let mut backend = backend();
     let mut sessions = SessionRegistry::new(

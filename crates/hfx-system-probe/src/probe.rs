@@ -19,7 +19,7 @@ use hfx_protocol::{
 };
 use hfx_runtime::{
     BRIDGE_SERVICE_UNIT, BRIDGE_SOCKET_PATH, EVENT_CAPACITY, FULL_COMPONENT_DESCRIPTOR_PATH,
-    KERNEL_MODULE_NAME, PRODUCT_VERSION, STATUS_TIMEOUT_MS,
+    KERNEL_MODULE_NAME, PRODUCT_VERSION, RETIRED_KERNEL_DRIVERS, STATUS_TIMEOUT_MS,
 };
 use hfx_sdk::{EventSubscription, HyperFluxClient, KernelRequestIdentitySource, SdkClientConfig};
 use serde::{Deserialize, Serialize};
@@ -39,6 +39,9 @@ const MAX_USB_DEVICE_ENTRIES: usize = 256;
 const MAX_MODULE_HOLDERS: usize = 64;
 const MAX_DRIVER_BINDINGS: usize = 256;
 const USB_DEVICES_ROOT: &str = "/sys/bus/usb/devices";
+const HID_DEVICES_ROOT: &str = "/sys/bus/hid/devices";
+const DKMS_ROOT: &str = "/var/lib/dkms";
+const HID_BUS_USB: &str = "0003";
 const OPENRAZER_GROUP: &str = "openrazer";
 const OPENRAZER_SESSION_BUS_NAME: &str = "org.razer";
 const OPENRAZER_ROOT_OBJECT_PATH: &str = "/org/razer";
@@ -212,6 +215,11 @@ pub struct SystemSnapshot {
     pub bridge: Option<BridgeHealth>,
     pub legacy_v2_stack_detected: bool,
     pub supported_receiver_present: bool,
+    /// Kernel driver bound to each attached qualified receiver HID interface,
+    /// in stable interface order; `None` means the interface is unbound.
+    pub receiver_interface_drivers: Vec<Option<String>>,
+    /// Registered DKMS trees of retired `HyperFlux` drivers, as `name/version`.
+    pub retired_driver_registrations: Vec<String>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -352,6 +360,8 @@ pub struct RealSystemProbe<R = RealCommandRunner> {
     runner: R,
     sys_module_root: PathBuf,
     hid_drivers_root: PathBuf,
+    hid_devices_root: PathBuf,
+    dkms_root: PathBuf,
     usb_devices_root: PathBuf,
     openrazer_daemon_path: PathBuf,
     full_component_descriptor_path: PathBuf,
@@ -365,6 +375,8 @@ impl Default for RealSystemProbe<RealCommandRunner> {
             runner: RealCommandRunner,
             sys_module_root: PathBuf::from("/sys/module"),
             hid_drivers_root: PathBuf::from(HID_DRIVERS_ROOT),
+            hid_devices_root: PathBuf::from(HID_DEVICES_ROOT),
+            dkms_root: PathBuf::from(DKMS_ROOT),
             usb_devices_root: PathBuf::from(USB_DEVICES_ROOT),
             openrazer_daemon_path: PathBuf::from(OPENRAZER_NATIVE_DAEMON_EXECUTABLE_PATH),
             full_component_descriptor_path: PathBuf::from(FULL_COMPONENT_DESCRIPTOR_PATH),
@@ -404,6 +416,8 @@ impl<R: CommandRunner> RealSystemProbe<R> {
             runner,
             sys_module_root,
             hid_drivers_root: PathBuf::from(HID_DRIVERS_ROOT),
+            hid_devices_root: PathBuf::from(HID_DEVICES_ROOT),
+            dkms_root: PathBuf::from(DKMS_ROOT),
             usb_devices_root,
             openrazer_daemon_path,
             full_component_descriptor_path: PathBuf::from(FULL_COMPONENT_DESCRIPTOR_PATH),
@@ -833,6 +847,45 @@ impl<R: CommandRunner> RealSystemProbe<R> {
         output.success && output.stdout == "loaded"
     }
 
+    /// Reads which kernel driver actually owns each qualified receiver HID
+    /// interface. Module presence alone does not prove the released driver is
+    /// in use: a retired driver advertising the same modalias can bind first.
+    fn receiver_interface_drivers(&self) -> Vec<Option<String>> {
+        let Ok(entries) = fs::read_dir(&self.hid_devices_root) else {
+            return Vec::new();
+        };
+        let mut interfaces = entries
+            .filter_map(Result::ok)
+            .take(MAX_DRIVER_BINDINGS)
+            .filter_map(|entry| {
+                let name = entry.file_name().into_string().ok()?;
+                let (vendor_id, product_id) = hid_device_usb_id(&name)?;
+                receiver_profile_by_usb_id(vendor_id, product_id)?;
+                let driver = fs::read_link(entry.path().join("driver"))
+                    .ok()
+                    .and_then(|target| {
+                        target
+                            .file_name()
+                            .and_then(|value| value.to_str())
+                            .and_then(bounded_identity)
+                    });
+                Some((name, driver))
+            })
+            .collect::<Vec<_>>();
+        interfaces.sort();
+        interfaces.into_iter().map(|(_, driver)| driver).collect()
+    }
+
+    /// Lists DKMS registrations of known retired `HyperFlux` drivers. A kernel
+    /// update rebuilds every registered module, which can revive them.
+    fn retired_driver_registrations(&self) -> Vec<String> {
+        RETIRED_KERNEL_DRIVERS
+            .iter()
+            .filter(|(name, version)| self.dkms_root.join(name).join(version).is_dir())
+            .map(|(name, version)| format!("{name}/{version}"))
+            .collect()
+    }
+
     fn supported_receiver_present(&self) -> bool {
         let Ok(entries) = fs::read_dir(&self.usb_devices_root) else {
             return false;
@@ -1033,6 +1086,8 @@ impl<R: CommandRunner> SystemProbe for RealSystemProbe<R> {
             bridge,
             legacy_v2_stack_detected: self.legacy_v2_stack_detected(),
             supported_receiver_present: self.supported_receiver_present(),
+            receiver_interface_drivers: self.receiver_interface_drivers(),
+            retired_driver_registrations: self.retired_driver_registrations(),
         }
     }
 }
@@ -1292,6 +1347,19 @@ fn parse_openrazer_vid_pid(output: &str) -> Option<OpenRazerPublishedDevice> {
         vendor_id,
         product_id,
     })
+}
+
+/// Parses a HID device name such as `0003:1532:00CF.0008` (bus, vendor,
+/// product, instance) and returns the USB identity for USB-bus devices only.
+fn hid_device_usb_id(name: &str) -> Option<(u16, u16)> {
+    let mut parts = name.splitn(3, ':');
+    if parts.next()? != HID_BUS_USB {
+        return None;
+    }
+    let vendor_id = u16::from_str_radix(parts.next()?, 16).ok()?;
+    let (product, _instance) = parts.next()?.split_once('.')?;
+    let product_id = u16::from_str_radix(product, 16).ok()?;
+    Some((vendor_id, product_id))
 }
 
 fn read_usb_hex_id(path: &Path) -> Option<u16> {

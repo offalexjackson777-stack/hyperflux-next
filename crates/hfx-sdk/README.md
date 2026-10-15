@@ -6,17 +6,23 @@ Provides the typed Rust client contract for qualified route discovery, bounded n
 
 ## Start Here
 
-- [`docs/architecture/sdk.md`](../../docs/architecture/sdk.md)
-- [`docs/generated/bridge-protocol.md`](../../docs/generated/bridge-protocol.md)
+- [SDK Boundary](../../docs/architecture/sdk.md)
+- [Bridge Protocol](../../docs/generated/bridge-protocol.md)
+
+## Limitations
+
+- The Rust SDK is local-process infrastructure, not a network API
 
 ## Boundaries
 
 **Owns**
+
 - Rust client API
 - Native route and channel adaptation
 - Typed SDK errors
 
 **Does not own**
+
 - Application presentation
 - Device command semantics
 - Receiver carrier frames
@@ -30,15 +36,6 @@ Provides the typed Rust client contract for qualified route discovery, bounded n
 
 ## Verify
 
-Run `rust-unit` `protocol-contracts` after changing this area.
+Run `rust-unit` `protocol-contracts` after changing this area, and run `./hfx generate` to refresh its 1 generated file(s).
 
-Review impact:
-
-- Regenerate 1 declared projection(s).
-- Run `rust-unit`, `protocol-contracts`.
-- Review direct consumers: System probe.
-
-## Related Areas
-
-- **Depends on:** [Rust workspace](../README.md), [Versioned bridge protocol](../../protocol/README.md), [Composable hardware profiles](../../profiles/README.md)
-- **Used by:** [System probe](../hfx-system-probe/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../../docs/generated/repository-atlas.md).

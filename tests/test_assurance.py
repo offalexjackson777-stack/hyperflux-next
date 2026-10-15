@@ -8,13 +8,15 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.formal_model import load_formal_model, run_formal_model
-from hfxdev.generators.supply_chain import spdx_json
+from hfxdev.arch_repository import load_arch_repository_policy
+from hfxdev.generators.supply_chain import spdx_json, supply_chain_markdown
 from hfxdev.model import ModelError, load_json, sha256_file
 from hfxdev.performance import (
     load_performance_budgets,
@@ -62,18 +64,93 @@ class AssuranceTests(unittest.TestCase):
             document["documentNamespace"].endswith(self.inventory.authority_sha256)
         )
 
+    def test_supply_chain_page_names_what_is_signed_and_what_is_not(self) -> None:
+        repository = load_arch_repository_policy(ROOT)
+        page = supply_chain_markdown(self.inventory, repository)
+        rows = {
+            line.split(" | ", 1)[0]: line
+            for line in page.splitlines()
+            if line.startswith("| ")
+        }
+        signed_row = next(
+            line for line in page.splitlines() if "detached OpenPGP `.sig`" in line
+        )
+        for name in (
+            repository.database,
+            repository.database_archive,
+            repository.files,
+            repository.files_archive,
+            *(package.filename for package in repository.packages),
+        ):
+            self.assertIn(f"`{name}`", signed_row)
+        self.assertIn(repository.signing_subkey_fingerprint, signed_row)
+        unsigned_row = next(line for line in page.splitlines() if "| Not signed;" in line)
+        for name in (repository.manifest, repository.checksums):
+            self.assertIn(f"`{name}`", unsigned_row)
+            self.assertNotIn(f"`{name}`", signed_row)
+        self.assertIn("`SHA256SUMS` is not signed", rows[f"| Release [`{repository.product_release_tag}`]("
+                      f"{repository.product_release_url})"])
+        self.assertIn("Tags are not signed; commits are not signed", page)
+        self.assertIn("None exist; they are future work", page)
+        self.assertIn("not an SBOM of package files", page)
+        self.assertNotIn("future release must bind", page)
+
+    def test_dependency_policy_rejects_unimplemented_attestation_claims(self) -> None:
+        value = load_json(ROOT / "assurance" / "dependencies.json")
+        for field in ("sigstore_signatures", "slsa_provenance", "remote_build_attestation"):
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as temporary:
+                changed = json.loads(json.dumps(value))
+                changed["artifact_integrity"][field] = True
+                policy = Path(temporary) / "dependencies.json"
+                policy.write_text(json.dumps(changed), encoding="utf-8")
+                original = load_json
+
+                def patched(path: Path, _policy: Path = policy):
+                    if Path(path) == ROOT / "assurance" / "dependencies.json":
+                        return original(_policy)
+                    return original(path)
+
+                with patch("hfxdev.supply_chain.load_json", patched):
+                    with self.assertRaisesRegex(ModelError, "remote attestations"):
+                        load_dependency_inventory(ROOT)
+
     def test_release_gates_match_constitution_and_record_publication(self) -> None:
         context = load_release_context(ROOT)
         gates = context.gates
         self.assertEqual(load_release_gates(ROOT), gates)
         self.assertEqual(len(gates), 10)
-        self.assertEqual(context.target.product_version, "2.0.0")
+        self.assertEqual(context.target.product_version, "2.1.0")
         self.assertEqual(context.target.package_release, 1)
-        self.assertEqual(context.target.state, "published-arch-release")
+        self.assertEqual(context.target.state, "verified-candidate")
+        self.assertEqual(context.published_release, "2.0.2-1")
         self.assertTrue(all(gate.status == "verified" for gate in gates))
         self.assertEqual(gates[-1].id, "HFX-GATE-PUBLICATION-DECISION")
         self.assertEqual(gates[-1].status, "verified")
         self.assertTrue(gates[-1].publication_authorization_required)
+
+    def test_release_target_claims_publication_only_for_the_published_version(self) -> None:
+        with (
+            patch("hfxdev.release.published_arch_release", return_value="2.1.0-1"),
+            self.assertRaisesRegex(ModelError, "publication interlock"),
+        ):
+            load_release_context(ROOT)
+
+    def test_release_pages_name_one_repository_phrase_and_no_lock(self) -> None:
+        phrase = "signed project-operated Arch repository, not an official Arch Linux repository"
+        page = (ROOT / "docs" / "generated" / "release-gates.md").read_text(encoding="utf-8")
+        published = load_release_context(ROOT).target.state == "published-arch-release"
+        self.assertEqual(page.count(phrase), 2 if published else 0)
+        self.assertNotIn("third-party", page)
+        self.assertNotIn("locked", page)
+        catalog = json.loads((ROOT / "docs" / "catalog.json").read_text(encoding="utf-8"))
+        purposes = {item["path"]: item["purpose"] for item in catalog["documents"]}
+        self.assertIn("publication decision", purposes["docs/generated/release-gates.md"])
+        self.assertNotIn("lock", purposes["docs/generated/release-gates.md"])
+        arch_pages = [text for text in purposes.values() if "third-party repository" in text]
+        self.assertEqual(arch_pages, [])
+        gates = (ROOT / "assurance" / "release-gates.json").read_text(encoding="utf-8")
+        self.assertIn(phrase, gates)
+        self.assertNotIn("authorizes", gates)
 
     def test_protected_behavior_freezes_claims_and_the_natural_wake_gap(self) -> None:
         baseline = load_protected_behavior(ROOT)

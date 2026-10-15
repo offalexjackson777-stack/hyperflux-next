@@ -19,7 +19,6 @@ class OpenRgbNativeRouteTests(unittest.TestCase):
                 "Controllers/RazerController/RazerController/RazerController.cpp",
                 "Controllers/RazerController/RazerController/RazerController.h",
                 "RGBController/RGBController.cpp",
-                "RGBController/RGBController.h",
             ],
         )
 
@@ -30,7 +29,7 @@ class OpenRgbNativeRouteTests(unittest.TestCase):
         constructor = patch.index("RGBController::RGBController()")
         leds = patch.index("CallFlag_UpdateLEDs = false", constructor)
         mode = patch.index("CallFlag_UpdateMode = false", constructor)
-        thread = patch.index("DeviceCallThread = new std::thread", constructor)
+        thread = patch.index("= new std::thread(&RGBController::DeviceCallThreadFunction", constructor)
         self.assertLess(leds, thread)
         self.assertLess(mode, thread)
         self.assertIn("HFX_TSAN_RELEASE(this)", patch)
@@ -38,23 +37,24 @@ class OpenRgbNativeRouteTests(unittest.TestCase):
         worker = patch.index("void RGBController::DeviceCallThreadFunction()")
         self.assertIn("-    CallFlag_UpdateLEDs = false;", patch[worker:])
         self.assertIn("-    CallFlag_UpdateMode = false;", patch[worker:])
-        destructor = patch.index("RGBController::~RGBController()")
-        stop = patch.index("StopDeviceCallThread();", destructor)
-        delete_thread = patch.index("delete DeviceCallThread;", destructor)
-        self.assertLess(stop, delete_thread)
-        self.assertIn("void RGBController::StopDeviceCallThread()", patch)
+        # OpenRGB 1.0 joins the worker in Shutdown(); the transform no longer
+        # carries a private stop hook.
+        self.assertNotIn("StopDeviceCallThread", patch)
 
         upstream_registry = (
             ROOT / "integrations/openrgb/src/upstream_razer_registry.cpp"
         ).read_text(encoding="utf-8")
-        self.assertIn("~HyperFluxRazerController() override", upstream_registry)
-        self.assertIn("StopDeviceCallThread();", upstream_registry)
+        self.assertNotIn("StopDeviceCallThread", upstream_registry)
 
         native_controller = (
             ROOT / "integrations/openrgb/src/native_controller.cpp"
         ).read_text(encoding="utf-8")
-        self.assertIn("NativeController::~NativeController()", native_controller)
-        self.assertIn("HFX_OPENRGB_SAFE_DEVICE_THREAD_STOP", native_controller)
+        destructor = native_controller.index("NativeController::~NativeController()")
+        self.assertIn("Shutdown();", native_controller[destructor:])
+        self.assertIn("barrier_.await(", native_controller)
+        self.assertIn("barrier_.absorb_leds()", native_controller)
+        self.assertIn("barrier_.absorb_mode()", native_controller)
+        self.assertIn("CONTROLLER_FLAG_RESET_BEFORE_UPDATE", native_controller)
 
         cmake = (ROOT / "integrations/openrgb/CMakeLists.txt").read_text(
             encoding="utf-8"
@@ -64,11 +64,11 @@ class OpenRgbNativeRouteTests(unittest.TestCase):
             cmake,
         )
         self.assertIn(
-            'PROPERTIES COMPILE_OPTIONS "-fno-sanitize=thread"',
+            'APPEND PROPERTY COMPILE_OPTIONS "-fno-sanitize=thread"',
             cmake,
         )
         self.assertIn("PRIVATE HFX_OPENRGB_TSAN_ANNOTATIONS=1", cmake)
-        self.assertIn("PRIVATE HFX_OPENRGB_SAFE_DEVICE_THREAD_STOP=1", cmake)
+        self.assertNotIn("HFX_OPENRGB_SAFE_DEVICE_THREAD_STOP", cmake)
 
     def test_transform_does_not_expand_beyond_exact_base_and_razer_sources(self) -> None:
         self.assertEqual(

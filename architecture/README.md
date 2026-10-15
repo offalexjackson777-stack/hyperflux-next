@@ -6,17 +6,31 @@ Defines product invariants, subsystem direction, ownership boundaries, and the c
 
 ## Start Here
 
-- [`docs/architecture/design-book.md`](../docs/architecture/design-book.md)
-- [`docs/generated/architecture.md`](../docs/generated/architecture.md)
+- [Architecture](../docs/developer/architecture.md)
+- [HyperFlux Next Design Book](../docs/architecture/design-book.md)
+- [Verification](../docs/developer/verification.md)
+- [Architecture Rules](../docs/generated/architecture.md)
+
+## Decision Records
+
+- [Declarative Native Route Selector](../docs/architecture/decisions/declarative-route-selector.md)
+- [Device-Knowledge Integration](../docs/architecture/decisions/device-knowledge-integration.md)
+- [Repository Documentation And Local Hardware Authority](../docs/architecture/decisions/repository-documentation-and-local-hardware-authority.md)
+
+## Limitations
+
+- Describes authority and boundaries; it does not prove physical behavior
 
 ## Boundaries
 
 **Owns**
+
 - Architecture invariants
 - Responsibility direction
 - Repository subsystem graph
 
 **Does not own**
+
 - Runtime state
 - Hardware observations
 - Generated implementation bindings
@@ -28,15 +42,6 @@ Defines product invariants, subsystem direction, ownership boundaries, and the c
 
 ## Verify
 
-Run `foundation-contracts` `repository-atlas-contracts` after changing this area.
+Run `foundation-contracts` `repository-atlas-contracts` after changing this area, and run `./hfx generate` to refresh its 8 generated file(s).
 
-Review impact:
-
-- Regenerate 8 declared projection(s).
-- Run `foundation-contracts`, `repository-atlas-contracts`.
-- Review direct consumers: Assurance and release evidence, Documentation system, Kernel driver contract, GitHub governance authority, Application integration catalog, Composable hardware profiles, Linux runtime authority, Rust workspace, Schema contracts, Pinned development toolchains, Repository tooling, Verification graph.
-
-## Related Areas
-
-- **Depends on:** None
-- **Used by:** [Assurance and release evidence](../assurance/README.md), [Documentation system](../docs/README.md), [Kernel driver contract](../driver/README.md), [GitHub governance authority](../governance/README.md), [Application integration catalog](../integrations/README.md), [Composable hardware profiles](../profiles/README.md), [Linux runtime authority](../runtime/README.md), [Rust workspace](../crates/README.md), [Schema contracts](../schemas/README.md), [Pinned development toolchains](../toolchains/README.md), [Repository tooling](../tools/README.md), [Verification graph](../verification/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

@@ -33,7 +33,7 @@
     "max_page_height": 32768
   },
   "limits": {
-    "max_documents": 64,
+    "max_documents": 96,
     "max_markdown_bytes": 1048576,
     "max_rendered_html_bytes": 4194304,
     "max_issues": 128,

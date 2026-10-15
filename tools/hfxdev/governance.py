@@ -14,7 +14,7 @@ ROOT_KEYS = {
     "$schema",
     "schema",
     "repository",
-    "publication_interlock",
+    "publication_state",
     "collaboration",
     "security_posture",
     "service_evaluations",
@@ -135,14 +135,7 @@ class GitHubGovernance:
     social_preview_asset: str
     topics: tuple[str, ...]
     pages_source: str
-    source_repository_authorized: bool
-    pages_deployment_authorized: bool
-    collaboration_features_authorized: bool
-    product_publication_authorized: bool
-    release_workflows_authorized: bool
-    package_publication_authorized: bool
-    tag_creation_authorized: bool
-    hardware_ci_authorized: bool
+    publication_state: tuple[tuple[str, str], ...]
     discussions: tuple[DiscussionCategory, ...]
     project_enabled: bool
     security_posture: tuple[tuple[str, SecurityPlan], ...]
@@ -238,9 +231,9 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         "owner": "offalexjackson777-stack",
         "name": "hyperflux-next",
         "default_branch": "main",
-        "remote_state": "public-pre-release",
+        "remote_state": "public-released",
         "visibility": "public",
-        "description": "Linux support for Razer devices paired through HyperFlux V2, with OpenRazer, Polychromatic, and OpenRGB integration.",
+        "description": "Linux driver that makes Razer devices on a HyperFlux V2 wireless receiver work with OpenRazer, Polychromatic, and OpenRGB.",
         "homepage": "",
         "social_preview_asset": "docs/assets/social-preview.png",
         "topics": [
@@ -257,52 +250,37 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         "pages_source": "disabled",
     }
     if repository != expected_repository:
-        raise ModelError("GitHub repository identity or public pre-release metadata drifted")
+        raise ModelError("GitHub repository identity or public release metadata drifted")
     preview = root / repository["social_preview_asset"]
     if not preview.is_file() or preview.is_symlink():
         raise ModelError("GitHub social preview asset is unavailable")
 
-    interlock = _exact(
-        value["publication_interlock"],
-        {
-            "source_repository_authorized",
-            "pages_deployment_authorized",
-            "collaboration_features_authorized",
-            "product_publication_authorized",
-            "release_workflows_authorized",
-            "package_publication_authorized",
-            "tag_creation_authorized",
-            "hardware_ci_authorized",
-        },
-        "GitHub publication interlock",
+    expected_publication = {
+        "source_repository": "public",
+        "product_release": "published",
+        "release_publication": "maintainer-operated",
+        "release_workflows": "none",
+        "pages": "disabled",
+        "hardware_ci": "none",
+    }
+    publication = _exact(
+        value["publication_state"],
+        set(expected_publication),
+        "GitHub publication state",
     )
-    if (
-        interlock["source_repository_authorized"] is not True
-        or interlock["pages_deployment_authorized"] is not False
-        or interlock["collaboration_features_authorized"] is not True
-        or any(
-            interlock[key]
-            for key in (
-                "product_publication_authorized",
-                "release_workflows_authorized",
-                "package_publication_authorized",
-                "tag_creation_authorized",
-                "hardware_ci_authorized",
-            )
-        )
-    ):
-        raise ModelError("GitHub public-source authorization or product-release interlocks drifted")
+    if publication != expected_publication:
+        raise ModelError("GitHub publication state drifted from the published release")
 
     collaboration = _exact(
         value["collaboration"], {"discussions", "project"}, "GitHub collaboration"
     )
     discussions_value = _exact(
         collaboration["discussions"],
-        {"apply_authorized", "categories"},
+        {"enabled", "categories"},
         "GitHub Discussions plan",
     )
-    if discussions_value["apply_authorized"] is not True:
-        raise ModelError("GitHub Discussions application must remain authorized")
+    if discussions_value["enabled"] is not True:
+        raise ModelError("GitHub Discussions must remain enabled")
     raw_categories = discussions_value["categories"]
     if not isinstance(raw_categories, list):
         raise ModelError("GitHub Discussions categories must be an array")
@@ -332,9 +310,9 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         raise ModelError("GitHub Discussions category plan is incomplete")
 
     project = _exact(
-        collaboration["project"], {"apply_authorized"}, "GitHub Project plan"
+        collaboration["project"], {"enabled"}, "GitHub Project plan"
     )
-    if project["apply_authorized"] is not False:
+    if project["enabled"] is not False:
         raise ModelError("the empty public GitHub Project must remain disabled")
 
     security_value = _exact(
@@ -352,14 +330,14 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         "GitHub security posture",
     )
     expected_security = {
-        "private_vulnerability_reporting": ("required-enabled", "public-source-pre-release"),
-        "dependency_graph": ("required-enabled", "public-source-pre-release"),
-        "dependabot_security_updates": ("required-enabled", "public-source-pre-release"),
-        "secret_scanning": ("required-when-available", "public-source-pre-release"),
-        "secret_scanning_push_protection": ("required-when-available", "public-source-pre-release"),
-        "code_scanning": ("required-enabled", "public-source-pre-release"),
+        "private_vulnerability_reporting": ("required-enabled", "public-repository"),
+        "dependency_graph": ("required-enabled", "public-repository"),
+        "dependabot_security_updates": ("required-enabled", "public-repository"),
+        "secret_scanning": ("required-when-available", "public-repository"),
+        "secret_scanning_push_protection": ("required-when-available", "public-repository"),
+        "code_scanning": ("required-enabled", "public-repository"),
         "source_sbom": ("implemented", "current-generation"),
-        "artifact_attestations": ("deferred", "after-release-workflow-authorization"),
+        "artifact_attestations": ("deferred", "future-release-workflow"),
     }
     security_posture: list[tuple[str, SecurityPlan]] = []
     for identifier, (expected_state, expected_boundary) in expected_security.items():
@@ -432,8 +410,8 @@ def load_github_governance(root: Path) -> GitHubGovernance:
     ownership = _exact(value["ownership"], {"default", "rules"}, "GitHub ownership")
     default_owners = _owners(ownership["default"], "default CODEOWNERS")
     raw_rules = ownership["rules"]
-    if not isinstance(raw_rules, list) or not raw_rules:
-        raise ModelError("GitHub ownership requires path rules")
+    if not isinstance(raw_rules, list):
+        raise ModelError("GitHub ownership rules must be a list")
     rules: list[OwnershipRule] = []
     paths_seen: list[str] = []
     for index, raw in enumerate(raw_rules):
@@ -443,7 +421,13 @@ def load_github_governance(root: Path) -> GitHubGovernance:
             for path in _strings(item["paths"], f"CODEOWNERS rule {index} paths")
         )
         paths_seen.extend(paths)
-        rules.append(OwnershipRule(paths, _owners(item["owners"], f"CODEOWNERS rule {index}")))
+        owners = _owners(item["owners"], f"CODEOWNERS rule {index}")
+        if set(owners) == set(default_owners):
+            raise ModelError(
+                f"CODEOWNERS rule {index} repeats the default owners; "
+                "path rules must route to different owners"
+            )
+        rules.append(OwnershipRule(paths, owners))
     require_unique(paths_seen, "CODEOWNERS path")
 
     protection = _exact(
@@ -593,16 +577,9 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         social_preview_asset=repository["social_preview_asset"],
         topics=tuple(repository["topics"]),
         pages_source=repository["pages_source"],
-        source_repository_authorized=interlock["source_repository_authorized"],
-        pages_deployment_authorized=interlock["pages_deployment_authorized"],
-        collaboration_features_authorized=interlock[
-            "collaboration_features_authorized"
-        ],
-        product_publication_authorized=interlock["product_publication_authorized"],
-        release_workflows_authorized=interlock["release_workflows_authorized"],
-        package_publication_authorized=interlock["package_publication_authorized"],
-        tag_creation_authorized=interlock["tag_creation_authorized"],
-        hardware_ci_authorized=interlock["hardware_ci_authorized"],
+        publication_state=tuple(
+            (key, publication[key]) for key in expected_publication
+        ),
         discussions=tuple(discussions),
         project_enabled=False,
         security_posture=tuple(security_posture),

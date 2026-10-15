@@ -58,7 +58,7 @@ EXPECTED_SCREENSHOT_DOCUMENTS = (
     "docs/user/troubleshooting.md",
 )
 EXPECTED_LIMITS = {
-    "max_documents": 64,
+    "max_documents": 96,
     "max_markdown_bytes": 1_048_576,
     "max_rendered_html_bytes": 4_194_304,
     "max_issues": 128,

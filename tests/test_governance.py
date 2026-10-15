@@ -34,6 +34,7 @@ from hfxdev.ci_openrgb import openrgb_qualification_container_command
 from hfxdev.generators.governance import (
     EXACT_SOURCE_REVISION,
     bug_report,
+    codeowners,
     codeql_workflow,
     dependency_review_workflow,
     device_support,
@@ -83,23 +84,37 @@ class GitHubGovernanceTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.governance = load_github_governance(ROOT)
 
-    def test_public_source_is_authorized_while_product_publication_remains_locked(self) -> None:
+    def test_publication_state_describes_the_published_release(self) -> None:
         source = json.loads((ROOT / "governance" / "github.json").read_text(encoding="utf-8"))
-        self.assertEqual(self.governance.remote_state, "public-pre-release")
-        interlock = source["publication_interlock"]
-        self.assertTrue(interlock["source_repository_authorized"])
-        self.assertFalse(interlock["pages_deployment_authorized"])
-        self.assertTrue(interlock["collaboration_features_authorized"])
-        for key in (
-            "product_publication_authorized",
-            "release_workflows_authorized",
-            "package_publication_authorized",
-            "tag_creation_authorized",
-            "hardware_ci_authorized",
-        ):
-            self.assertFalse(interlock[key])
+        self.assertEqual(self.governance.remote_state, "public-released")
+        self.assertEqual(
+            source["publication_state"],
+            {
+                "source_repository": "public",
+                "product_release": "published",
+                "release_publication": "maintainer-operated",
+                "release_workflows": "none",
+                "pages": "disabled",
+                "hardware_ci": "none",
+            },
+        )
+        serialized = json.dumps(source)
+        for stale in ("_authorized", "publication_interlock", "pre-release"):
+            self.assertNotIn(stale, serialized)
+        authority = json.loads((ROOT / "governance" / "github.json").read_text())
+        stale = dict(authority)
+        stale["publication_interlock"] = {"product_publication_authorized": False}
+        drifted = json.loads(json.dumps(authority))
+        drifted["publication_state"]["product_release"] = "locked"
+        for candidate in (stale, drifted):
+            with (
+                self.subTest(keys=sorted(candidate["publication_state"].items())),
+                patch("hfxdev.governance.load_json", return_value=candidate),
+                self.assertRaises(ModelError),
+            ):
+                load_github_governance(ROOT)
         plan = json.loads(protection_plan(self.governance))
-        self.assertTrue(plan["apply_authorized"])
+        self.assertNotIn("apply_authorized", plan)
         self.assertEqual(plan["ruleset"]["bypass_actors"], [])
         self.assertEqual(
             set(plan["excluded_components"]),
@@ -175,6 +190,14 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertIn("./hfx ci qualify-openrgb", full_text)
         self.assertIn("--openrgb-qualification", full_text)
         self.assertIn("build/ci/full/result.json", full_text)
+        upload = next(
+            step
+            for step in full["jobs"]["full-software"]["steps"]
+            if step.get("name") == "Upload hyperflux-full-evidence"
+        )
+        self.assertEqual(upload["if"], "${{ always() }}")
+        self.assertIn("build/rust-coverage-current.lcov", upload["with"]["path"])
+        self.assertIn("build/rust-coverage-current.json", upload["with"]["path"])
         self.assertNotIn("release", fast["on"])
         self.assertNotIn("release", full["on"])
         self.assertIn("pull_request", full["on"])
@@ -764,25 +787,49 @@ class GitHubGovernanceTests(unittest.TestCase):
         feature = feature_request(self.governance)
         self.assertIn("support-bundle --preview", bug)
         self.assertIn("Never attach hardware serials", bug)
-        self.assertIn("does not claim qualification", hardware)
-        self.assertIn("I removed serials, stable host identifiers", hardware)
+        self.assertIn("does not mean the device is supported yet", hardware)
+        self.assertIn("I removed serial numbers, machine and user names", hardware)
         self.assertIn("support-bundle --preview", hardware)
-        self.assertIn("Doctor reference", hardware)
-        self.assertIn("generated technical reference", documentation.lower())
-        self.assertIn("universal", feature.lower())
+        self.assertIn("Output of `hyperfluxctl doctor`", hardware)
+        # Reporters describe what they saw; maintainers classify it (FORM-001…004).
+        self.assertIn("2.0.x", bug)
+        self.assertNotIn("; 0.x;", bug)
+        self.assertNotIn("adapter", bug)
+        self.assertNotIn("generated", documentation.lower().split("\n", 1)[1])
+        self.assertNotIn("universal", feature.lower())
+        self.assertIn("USB cable", hardware)
+        product_id = hardware.split("id: pid", 1)[1].split("- type:", 1)[0]
+        self.assertNotIn("required: true", product_id)
+        self.assertNotIn("evidence-class", hardware)
+
+    def test_codeowners_routes_paths_only_to_different_owners(self) -> None:
+        # GH-007: one global rule until a path routes to someone else.
+        self.assertEqual(self.governance.ownership_rules, ())
+        self.assertEqual(
+            codeowners(self.governance).splitlines()[1:],
+            ["", "* @offalexjackson777-stack"],
+        )
+        authority = json.loads((ROOT / "governance" / "github.json").read_text())
+        authority["ownership"]["rules"] = [
+            {"paths": ["/docs/**"], "owners": authority["ownership"]["default"]}
+        ]
+        with (
+            patch("hfxdev.governance.load_json", return_value=authority),
+            self.assertRaisesRegex(ModelError, "repeats the default owners"),
+        ):
+            load_github_governance(ROOT)
 
     def test_collaboration_security_and_service_plans_are_complete_and_bounded(self) -> None:
         plan = json.loads(experience_plan(self.governance))
-        self.assertTrue(plan["apply_authorized"])
-        self.assertTrue(plan["source_repository_authorized"])
-        self.assertFalse(plan["pages_deployment_authorized"])
-        self.assertFalse(plan["product_publication_authorized"])
+        self.assertEqual(plan["publication_state"]["product_release"], "published")
+        self.assertEqual(plan["publication_state"]["pages"], "disabled")
+        self.assertNotIn("source_repository_authorized", plan)
         self.assertEqual(plan["external_apps_installed"], [])
         self.assertEqual(
             {category["id"] for category in plan["discussions"]["categories"]},
             {"announcements", "hardware-qualification", "help", "ideas"},
         )
-        self.assertFalse(plan["project"]["apply_authorized"])
+        self.assertFalse(plan["project"]["enabled"])
         self.assertEqual(
             plan["project"]["operation"],
             "close-or-disable-existing-empty-project",

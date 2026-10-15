@@ -2,18 +2,21 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.arch_repository import (
+    RepositoryPackage,
     _publish_atomic_directory,
     _payload_asset_names,
     _repository_manifest,
@@ -21,31 +24,143 @@ from hfxdev.arch_repository import (
     fingerprint_receipt,
     load_arch_repository_policy,
     repository_configuration,
+    repository_package_set,
     repository_setup_script,
 )
+from hfxdev.generators.installation import package_fallback
 from hfxdev.model import ModelError
 
 
 class ArchRepositoryTests(unittest.TestCase):
-    def test_policy_binds_exact_two_package_release_and_third_party_channel(
+    def test_policy_binds_exact_release_package_set_and_third_party_channel(
         self,
     ) -> None:
         policy = load_arch_repository_policy(ROOT)
         self.assertEqual(policy.name, "hyperflux-next")
         self.assertFalse(policy.official_arch_repository)
         self.assertEqual(policy.release_tag, "arch-repository")
-        self.assertEqual(policy.product_release_tag, "v2.0.0")
+        (version,) = {package.version for package in policy.packages}
+        self.assertEqual(policy.product_release_tag, f"v{version.split('-')[0]}")
         self.assertEqual(policy.channel_purpose, "machine-managed-arch-repository")
         self.assertTrue(policy.github_release_prerelease)
         self.assertFalse(policy.human_facing_product_release)
         self.assertEqual(
             {package.name for package in policy.packages},
-            {"hyperflux-next-linux", "hyperflux-next-full"},
+            set(repository_package_set(ROOT, version)),
         )
-        self.assertEqual({package.version for package in policy.packages}, {"2.0.0-1"})
+        self.assertEqual(
+            {package.filename for package in policy.packages},
+            {
+                f"{package.name}-{version}-x86_64.pkg.tar.zst"
+                for package in policy.packages
+            },
+        )
         self.assertTrue(policy.server_url.startswith("https://"))
         self.assertIn("/releases/download/arch-repository", policy.server_url)
         self.assertNotIn("/releases/latest/download", policy.server_url)
+
+    def test_release_package_set_follows_the_split_first_release(self) -> None:
+        self.assertEqual(
+            {
+                "hyperflux-next-linux": (),
+                "hyperflux-next-full": ("hyperflux-next-linux",),
+            },
+            repository_package_set(ROOT, "2.0.2-1"),
+        )
+        self.assertEqual(
+            {
+                "hyperflux-next-dkms": (),
+                "hyperflux-next-linux": ("hyperflux-next-dkms",),
+                "hyperflux-next-openrazer-driver-dkms": ("hyperflux-next-dkms",),
+                "hyperflux-next-full": (
+                    "hyperflux-next-linux",
+                    "hyperflux-next-openrazer-driver-dkms",
+                ),
+            },
+            repository_package_set(ROOT, "2.1.0-1"),
+        )
+
+    def test_policy_rejects_a_release_tag_or_filename_that_differs_from_packages(
+        self,
+    ) -> None:
+        source = json.loads(
+            (ROOT / "assurance" / "arch-repository.json").read_text(encoding="utf-8")
+        )
+        key = ROOT / "packaging" / "keys" / "hyperflux-next-arch-repository-key.asc"
+
+        def mutated_tag(value: dict) -> None:
+            value["repository"]["product_release_tag"] = "v0.0.1"
+            value["repository"]["product_release_url"] = (
+                "https://github.com/offalexjackson777-stack/hyperflux-next/"
+                "releases/tag/v0.0.1"
+            )
+
+        def mutated_url(value: dict) -> None:
+            value["repository"]["product_release_url"] += "x"
+
+        def mutated_filename(value: dict) -> None:
+            value["packages"][0]["filename"] = "hyperflux-next-linux.pkg.tar.zst"
+
+        def mutated_version(value: dict) -> None:
+            value["packages"][0]["version"] = "9.9.9-1"
+
+        cases = {
+            "product release differs": mutated_tag,
+            "identity differs": mutated_url,
+            "filename is not canonical": mutated_filename,
+            "versions must match": mutated_version,
+        }
+        for message, mutate in cases.items():
+            with self.subTest(message), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                value = json.loads(json.dumps(source))
+                mutate(value)
+                (root / "assurance").mkdir()
+                (root / "assurance" / "arch-repository.json").write_text(
+                    json.dumps(value), encoding="utf-8"
+                )
+                (root / "packaging" / "keys").mkdir(parents=True)
+                (root / "packaging" / "keys" / key.name).write_bytes(key.read_bytes())
+                with self.assertRaisesRegex(ModelError, message):
+                    load_arch_repository_policy(root)
+
+    def test_policy_rejects_a_package_set_other_than_the_release_set(self) -> None:
+        source = json.loads(
+            (ROOT / "assurance" / "arch-repository.json").read_text(encoding="utf-8")
+        )
+        missing = json.loads(json.dumps(source))
+        missing["packages"] = missing["packages"][1:]
+        with patch("hfxdev.arch_repository.load_json", return_value=missing):
+            with self.assertRaisesRegex(ModelError, "not the exact .* package set"):
+                load_arch_repository_policy(ROOT)
+
+    def test_direct_install_names_every_package_of_a_split_release(self) -> None:
+        policy = load_arch_repository_policy(ROOT)
+        version = "2.1.0-1"
+        names = tuple(repository_package_set(ROOT, version))
+        split = dataclasses.replace(
+            policy,
+            product_release_tag="v2.1.0",
+            product_release_url=policy.product_release_url.replace(
+                policy.product_release_tag, "v2.1.0"
+            ),
+            packages=tuple(
+                RepositoryPackage(
+                    name, version, f"{name}-{version}-x86_64.pkg.tar.zst", "0" * 64
+                )
+                for name in names
+            ),
+        )
+        text = package_fallback(split)
+        script = text.split("```bash\n", 1)[1].split("```", 1)[0]
+        for package in split.packages:
+            self.assertEqual(script.count(package.filename), 3, package.name)
+        self.assertIn(f'test "$(wc -l < SHA256SUMS-packages)" -eq {len(names)}', script)
+        self.assertIn("installs them in one step", text)
+        syntax = subprocess.run(
+            ["bash", "-n"], input=script, text=True, capture_output=True, check=False
+        )
+        self.assertEqual(syntax.returncode, 0, syntax.stderr)
 
     def test_configuration_requires_trusted_package_and_database_signatures(
         self,
@@ -87,9 +202,13 @@ class ArchRepositoryTests(unittest.TestCase):
         self.assertNotIn(f"{policy.server_url}/hyperflux-next.conf", script)
         self.assertLess(script.index("fingerprint mismatch"), script.index("sudo"))
         fenced = f"```bash\n{script}\n```"
-        for path in (ROOT / "README.md", ROOT / "docs" / "user" / "installation.md"):
+        # The README links to the guide; only the guide shows the setup block.
+        for path, blocks in (
+            (ROOT / "README.md", 0),
+            (ROOT / "docs" / "user" / "installation.md", 1),
+        ):
             document = path.read_text(encoding="utf-8")
-            self.assertEqual(document.count(fenced), 1, path)
+            self.assertEqual(document.count(fenced), blocks, path)
             self.assertEqual(
                 document.count("sudo pacman -Syu hyperflux-next-full"), 1, path
             )
@@ -170,8 +289,7 @@ class ArchRepositoryTests(unittest.TestCase):
             with self.assertRaisesRegex(ModelError, "package bytes differ"):
                 build_arch_repository(
                     ROOT,
-                    core_package=packages["hyperflux-next-linux"],
-                    full_package=packages["hyperflux-next-full"],
+                    packages=tuple(packages.values()),
                     gnupg_home=gnupg_home,
                     key_fingerprint=policy.primary_fingerprint,
                     output=output,
@@ -193,8 +311,7 @@ class ArchRepositoryTests(unittest.TestCase):
             with self.assertRaisesRegex(ModelError, "mode 0700"):
                 build_arch_repository(
                     ROOT,
-                    core_package=packages["hyperflux-next-linux"],
-                    full_package=packages["hyperflux-next-full"],
+                    packages=tuple(packages.values()),
                     gnupg_home=gnupg_home,
                     key_fingerprint=policy.primary_fingerprint,
                     output=output,

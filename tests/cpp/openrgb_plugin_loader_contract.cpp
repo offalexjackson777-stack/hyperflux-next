@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
+#include "support/openrgb_plugin_api_stub.hpp"
+
 #include "OpenRGBPluginInterface.h"
+#include "ResourceManagerCallback.h"
 
 #include <QApplication>
 #include <QJsonObject>
 #include <QPluginLoader>
 #include <QWidget>
 
-#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <vector>
@@ -26,99 +28,40 @@ int failure(int line, const QString& detail = {})
     return EXIT_FAILURE;
 }
 
-class ResourceManager final : public ResourceManagerInterface
+class PluginApi final : public hyperflux::test::OpenRgbPluginApiStub
 {
 public:
-    std::vector<i2c_smbus_interface*>& GetI2CBusses() override { return busses_; }
-
-    void RegisterRGBController(RGBController* controller) override
+    RGBControllerInterface* CreateVirtualRGBController(RGBController_Setup* setup) override
     {
-        if(controller == nullptr
-           || std::find(controllers_.begin(), controllers_.end(), controller)
-               != controllers_.end())
-        {
-            valid_ = false;
-            return;
-        }
-        controllers_.push_back(controller);
-    }
-
-    void UnregisterRGBController(RGBController* controller) override
-    {
-        const auto entry = std::find(controllers_.begin(), controllers_.end(), controller);
-        if(entry == controllers_.end())
-        {
-            valid_ = false;
-            return;
-        }
-        controllers_.erase(entry);
-    }
-
-    void RegisterDeviceListChangeCallback(DeviceListChangeCallback, void*) override {}
-    void RegisterDetectionProgressCallback(DetectionProgressCallback, void*) override {}
-    void RegisterDetectionStartCallback(
-        DetectionStartCallback callback, void* context) override
-    {
-        start_ = callback;
-        start_context_ = context;
-    }
-    void RegisterDetectionEndCallback(
-        DetectionEndCallback callback, void* context) override
-    {
-        end_ = callback;
-        end_context_ = context;
-    }
-    void RegisterI2CBusListChangeCallback(I2CBusListChangeCallback, void*) override {}
-
-    void UnregisterDeviceListChangeCallback(DeviceListChangeCallback, void*) override {}
-    void UnregisterDetectionProgressCallback(DetectionProgressCallback, void*) override {}
-    void UnregisterDetectionStartCallback(
-        DetectionStartCallback callback, void* context) override
-    {
-        if(callback != start_ || context != start_context_)
+        // The container has no HyperFlux receiver, so the plugin must not
+        // present any controller; a host would own the returned object.
+        if(setup == nullptr)
         {
             valid_ = false;
         }
-        start_ = nullptr;
-        start_context_ = nullptr;
+        ++creates_;
+        return nullptr;
     }
-    void UnregisterDetectionEndCallback(
-        DetectionEndCallback callback, void* context) override
+    void DeleteVirtualRGBController(RGBControllerInterface*) override { valid_ = false; }
+    void RegisterVirtualRGBController(RGBControllerInterface*) override { valid_ = false; }
+    void RegisterVirtualRGBControllerInThread(RGBControllerInterface*) override
     {
-        if(callback != end_ || context != end_context_)
-        {
-            valid_ = false;
-        }
-        end_ = nullptr;
-        end_context_ = nullptr;
+        valid_ = false;
     }
-    void UnregisterI2CBusListChangeCallback(I2CBusListChangeCallback, void*) override {}
-
-    std::vector<RGBController*>& GetRGBControllers() override { return controllers_; }
-    unsigned int GetDetectionPercent() override { return 100; }
-    filesystem::path GetConfigurationDirectory() override { return {}; }
-    std::vector<NetworkClient*>& GetClients() override { return clients_; }
-    NetworkServer* GetServer() override { return nullptr; }
-    ProfileManager* GetProfileManager() override { return nullptr; }
-    SettingsManager* GetSettingsManager() override { return nullptr; }
-    void UpdateDeviceList() override {}
-    void WaitForDeviceDetection() override { ++waits_; }
-
-    [[nodiscard]] bool clean() const noexcept
+    void UnregisterVirtualRGBController(RGBControllerInterface*) override { valid_ = false; }
+    void UpdateVirtualRGBController(RGBControllerInterface*, RGBController_Setup*) override
     {
-        return valid_ && controllers_.empty() && start_ == nullptr && end_ == nullptr
-            && waits_ == 1;
+        valid_ = false;
     }
+    void UnregisterVirtualRGBControllerInThread(RGBControllerInterface*) override
+    {
+        valid_ = false;
+    }
+
+    [[nodiscard]] bool clean() const noexcept { return valid_ && creates_ == 0; }
 
 private:
-    std::vector<i2c_smbus_interface*> busses_;
-    std::vector<RGBController*> controllers_;
-    std::vector<NetworkClient*> clients_;
-    DetectionStartCallback start_ = nullptr;
-    DetectionEndCallback end_ = nullptr;
-    void* start_context_ = nullptr;
-    void* end_context_ = nullptr;
-    unsigned int waits_ = 0;
+    unsigned int creates_ = 0;
     bool valid_ = true;
 };
 
@@ -132,11 +75,14 @@ int main(int argc, char** argv)
     }
     QApplication application(argc, argv);
     QPluginLoader loader(QString::fromLocal8Bit(argv[1]));
+    // Bind every symbol at load time so an unresolved upstream dependency
+    // fails here instead of inside OpenRGB.
+    loader.setLoadHints(QLibrary::ResolveAllSymbolsHint);
     const auto root = loader.metaData();
     const auto metadata = root.value("MetaData").toObject();
     if(metadata.value("Id").toString() != "org.hyperflux.next.openrgb"
        || metadata.value("Name").toString() != "HyperFlux Next"
-       || metadata.value("OpenRGBPluginAPIVersion").toInt() != 4)
+       || metadata.value("OpenRGBPluginAPIVersion").toInt() != OPENRGB_PLUGIN_API_VERSION)
     {
         return failure(__LINE__, loader.errorString());
     }
@@ -146,21 +92,31 @@ int main(int argc, char** argv)
     }
     auto* instance = loader.instance();
     auto* plugin = qobject_cast<OpenRGBPluginInterface*>(instance);
-    if(plugin == nullptr || plugin->GetPluginAPIVersion() != 4)
+    if(plugin == nullptr || plugin->GetPluginAPIVersion() != OPENRGB_PLUGIN_API_VERSION)
     {
         return failure(__LINE__, loader.errorString());
     }
     const auto info = plugin->GetPluginInfo();
-    if(info.Name != "HyperFlux Next" || info.Version != "2.0.0"
+    if(info.Name != "HyperFlux Next" || info.Version != "2.1.0"
        || info.Commit.empty() || !info.URL.empty()
        || info.Location != OPENRGB_PLUGIN_LOCATION_INFORMATION
-       || info.Label != "HyperFlux Next")
+       || info.Label != "HyperFlux Next" || info.ProtocolVersion != 0)
     {
         return failure(__LINE__);
     }
-    ResourceManager manager;
-    plugin->Load(&manager);
+    PluginApi api;
+    plugin->Load(&api);
     QCoreApplication::processEvents();
+    // OpenRGB reports detection completion from its worker threads.
+    plugin->ResourceManagerUpdated(RESOURCEMANAGER_UPDATE_REASON_DETECTION_COMPLETE);
+    QCoreApplication::processEvents();
+    unsigned int packet_size = 1;
+    unsigned char packet = 0;
+    if(plugin->OnSDKCommand(0, &packet, &packet_size) != nullptr || packet_size != 0
+       || !plugin->OnProfileSave().is_null())
+    {
+        return failure(__LINE__);
+    }
     QWidget* widget = plugin->GetWidget();
     if(widget == nullptr || widget->objectName() != "hyperfluxNextInformation")
     {
@@ -169,7 +125,7 @@ int main(int argc, char** argv)
     delete widget;
     plugin->Unload();
     QCoreApplication::processEvents();
-    if(!manager.clean())
+    if(!api.clean())
     {
         return failure(__LINE__);
     }

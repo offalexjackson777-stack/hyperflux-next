@@ -13,9 +13,9 @@
       "additionalProperties": false,
       "required": ["product_version", "package_release", "state"],
       "properties": {
-        "product_version": {"const": "2.0.0"},
-        "package_release": {"const": 1},
-        "state": {"const": "published-arch-release"}
+        "product_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "package_release": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "state": {"enum": ["published-arch-release", "verified-candidate"]}
       }
     },
     "gates": {

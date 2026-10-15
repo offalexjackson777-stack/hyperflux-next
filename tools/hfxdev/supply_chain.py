@@ -29,6 +29,17 @@ ROOT_KEYS = {
     "vendored_manifests",
     "upstream_catalog",
     "build_policy",
+    "artifact_integrity",
+}
+ARTIFACT_INTEGRITY_KEYS = {
+    "source_sbom_scope",
+    "human_release_checksum_asset",
+    "human_release_checksum_signed",
+    "release_tags_signed",
+    "release_commits_signed",
+    "sigstore_signatures",
+    "slsa_provenance",
+    "remote_build_attestation",
 }
 RUST_KEYS = {"name", "version", "license_expression"}
 PYTHON_PROJECT_KEYS = {"path", "name", "license_expression"}
@@ -115,6 +126,20 @@ class RustSecurityPolicy:
 
 
 @dataclass(frozen=True)
+class ArtifactIntegrity:
+    """What protects each published artifact, stated without overclaiming."""
+
+    source_sbom_scope: str
+    human_release_checksum_asset: str
+    human_release_checksum_signed: bool
+    release_tags_signed: bool
+    release_commits_signed: bool
+    sigstore_signatures: bool
+    slsa_provenance: bool
+    remote_build_attestation: bool
+
+
+@dataclass(frozen=True)
 class DependencyInventory:
     inventory_created: str
     repository_license: str
@@ -128,6 +153,7 @@ class DependencyInventory:
     vendored_packages: tuple[VendoredPackage, ...]
     upstream_packages: tuple[UpstreamPackage, ...]
     workflow_actions: tuple[ActionPin, ...]
+    artifact_integrity: ArtifactIntegrity
     authority_sha256: str
 
 
@@ -488,6 +514,28 @@ def load_dependency_inventory(root: Path) -> DependencyInventory:
     }:
         raise ModelError("dependency build policy must remain offline, locked, and fail closed")
 
+    integrity = _exact(
+        value["artifact_integrity"], ARTIFACT_INTEGRITY_KEYS, "artifact integrity"
+    )
+    if (
+        integrity["source_sbom_scope"] != "source-and-build-dependencies"
+        or integrity["human_release_checksum_asset"] != "SHA256SUMS"
+        or any(
+            not isinstance(integrity[key], bool)
+            for key in ARTIFACT_INTEGRITY_KEYS
+            if key not in {"source_sbom_scope", "human_release_checksum_asset"}
+        )
+    ):
+        raise ModelError("artifact integrity fields are invalid")
+    if (
+        integrity["sigstore_signatures"]
+        or integrity["slsa_provenance"]
+        or integrity["remote_build_attestation"]
+    ):
+        # No workflow produces these; claiming them needs an implementation first.
+        raise ModelError("remote attestations cannot be claimed without an implementation")
+    artifact_integrity = ArtifactIntegrity(**integrity)
+
     rust_values = value["rust_registry_packages"]
     if not isinstance(rust_values, list) or not rust_values:
         raise ModelError("Rust dependency policy must contain registry packages")
@@ -590,5 +638,6 @@ def load_dependency_inventory(root: Path) -> DependencyInventory:
         vendored_packages=vendored,
         upstream_packages=upstreams,
         workflow_actions=governance.actions,
+        artifact_integrity=artifact_integrity,
         authority_sha256=authority_sha256,
     )

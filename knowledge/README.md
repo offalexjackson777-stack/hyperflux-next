@@ -6,17 +6,23 @@ Records provenance-bound candidate facts, semantic capabilities, upstream record
 
 ## Start Here
 
-- [`docs/architecture/device-knowledge.md`](../docs/architecture/device-knowledge.md)
-- [`docs/generated/device-knowledge.md`](../docs/generated/device-knowledge.md)
+- [Device Knowledge Without Transport Guessing](../docs/architecture/device-knowledge.md)
+- [Device Knowledge](../docs/generated/device-knowledge.md)
+
+## Limitations
+
+- Research candidates remain non-writable until separately qualified
 
 ## Boundaries
 
 **Owns**
+
 - Reviewed device facts
 - Candidate relationships
 - Normalized upstream catalogs
 
 **Does not own**
+
 - Receiver write authority
 - Live device values
 - Undated compatibility claims
@@ -31,15 +37,6 @@ Records provenance-bound candidate facts, semantic capabilities, upstream record
 
 ## Verify
 
-Run `device-knowledge-contracts` `native-onboarding-contracts` after changing this area.
+Run `device-knowledge-contracts` `native-onboarding-contracts` after changing this area, and run `./hfx generate` to refresh its 3 generated file(s).
 
-Review impact:
-
-- Regenerate 3 declared projection(s).
-- Run `device-knowledge-contracts`, `native-onboarding-contracts`.
-- Review direct consumers: Documentation system.
-
-## Related Areas
-
-- **Depends on:** [Composable hardware profiles](../profiles/README.md), [Application integration catalog](../integrations/README.md)
-- **Used by:** [Documentation system](../docs/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

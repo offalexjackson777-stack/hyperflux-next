@@ -5,6 +5,7 @@
 #include "PluginManager.h"
 #include "RGBController.h"
 #include "ResourceManager.h"
+#include "SettingsManager.h"
 
 #include <QApplication>
 #include <QSocketNotifier>
@@ -81,7 +82,7 @@ void write_snapshot(
                   << escape_json(controller->GetDescription())
                   << "\",\"serial\":\"" << escape_json(controller->GetSerial())
                   << "\",\"location\":\"" << escape_json(controller->GetLocation())
-                  << "\",\"type\":" << static_cast<unsigned int>(controller->type)
+                  << "\",\"type\":" << static_cast<unsigned int>(controller->GetDeviceType())
                   << '}';
     }
     std::cout << "]}" << std::endl;
@@ -94,8 +95,7 @@ void snapshot(ResourceManager& resources)
 
 void sdk_snapshot(unsigned short port)
 {
-    std::vector<RGBController*> remote_controllers;
-    NetworkClient client(remote_controllers);
+    NetworkClient client;
     client.SetIP("127.0.0.1");
     client.SetPort(port);
     client.SetName("HyperFlux isolated SDK qualifier");
@@ -114,10 +114,9 @@ void sdk_snapshot(unsigned short port)
         return;
     }
 
-    {
-        std::lock_guard lock(client.ControllerListMutex);
-        write_snapshot("sdk-snapshot", remote_controllers);
-    }
+    // OpenRGB 1.0 reports the client online only after every controller
+    // announced by the server has been received.
+    write_snapshot("sdk-snapshot", client.GetRGBControllers());
     client.StopClient();
 }
 
@@ -128,12 +127,12 @@ public:
         : resources_(&resources)
     {
         record();
-        resources_->RegisterDeviceListChangeCallback(&RegistryTrace::changed, this);
+        resources_->RegisterResourceManagerCallback(&RegistryTrace::changed, this);
     }
 
     ~RegistryTrace()
     {
-        resources_->UnregisterDeviceListChangeCallback(&RegistryTrace::changed, this);
+        resources_->UnregisterResourceManagerCallback(&RegistryTrace::changed, this);
     }
 
     void write() const
@@ -172,9 +171,12 @@ private:
         std::uint64_t elapsed_ms;
     };
 
-    static void changed(void* context)
+    static void changed(void* context, unsigned int reason)
     {
-        static_cast<RegistryTrace*>(context)->record();
+        if(reason == RESOURCEMANAGER_UPDATE_REASON_DEVICE_LIST_UPDATED)
+        {
+            static_cast<RegistryTrace*>(context)->record();
+        }
     }
 
     void record()
@@ -243,18 +245,29 @@ int main(int argc, char** argv)
 
     QApplication application(argc, argv);
     auto* resources = ResourceManager::get();
-    resources->GetServer()->SetHost("127.0.0.1");
-    resources->GetServer()->SetPort(port);
-    resources->Initialize(false, false, true, false);
+    // OpenRGB 1.0 serves only hardware controllers to SDK clients unless
+    // "Serve All Controllers" is enabled; plugin controllers need it.
+    auto* settings = resources->GetSettingsManager();
+    auto server_settings = settings->GetSettings("Server");
+    server_settings["all_controllers"] = true;
+    settings->SetSettings("Server", server_settings);
+    resources->SetDefaultServerHost("127.0.0.1");
+    resources->SetDefaultServerPort(port);
+
+    // ResourceManager only lists plugin controllers through the plugin
+    // manager it was given, as OpenRGBDialog does.
+    auto* plugin_manager = new PluginManager();
+    auto& plugins = *plugin_manager;
+    resources->SetPluginManager(plugin_manager);
+    resources->Initialize(false, false, true, false, false);
     resources->WaitForInitialization();
-    if(!resources->GetServer()->GetOnline())
+    if(resources->GetServer() == nullptr || !resources->GetServer()->GetOnline())
     {
         std::cerr << "OpenRGB SDK server failed to start\n";
         return EXIT_FAILURE;
     }
 
     RegistryTrace registry_trace(*resources);
-    PluginManager plugins;
     plugins.ScanAndLoadPlugins();
     std::cout << "{\"event\":\"ready\",\"port\":" << port
               << ",\"system_plugin_directory\":\""
@@ -289,7 +302,7 @@ int main(int argc, char** argv)
             else if(command == "rescan")
             {
                 resources->RescanDevices();
-                resources->WaitForDeviceDetection();
+                resources->WaitForDetection();
                 std::cout << "{\"event\":\"rescan-complete\"}" << std::endl;
             }
             else if(command == "unload")

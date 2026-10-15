@@ -65,7 +65,7 @@ int main()
        || model.summary != "2 paired devices; 2 controllers are exposed in OpenRGB."
        || model.devices.size() != 2
        || model.effects_authority.find("official OpenRGB Effects plugin") == std::string::npos
-       || model.build_identity.find("OpenRGB API 4") == std::string::npos)
+       || model.build_identity.find("OpenRGB API 5") == std::string::npos)
     {
         return failure(__LINE__);
     }

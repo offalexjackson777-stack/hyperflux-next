@@ -6,19 +6,29 @@ Owns explicit design coverage, bounded formal models, performance budgets, depen
 
 ## Start Here
 
-- [`docs/generated/design-coverage.md`](../docs/generated/design-coverage.md)
-- [`docs/generated/release-gates.md`](../docs/generated/release-gates.md)
+- [Verification](../docs/developer/verification.md)
+- [Design Coverage](../docs/generated/design-coverage.md)
+- [Verification Summary](../docs/generated/release-gates.md)
+- [Virtual Receiver And Replay](../docs/assurance/simulator.md)
+- [Performance Budgets](../docs/generated/performance-budgets.md)
+- [Supply Chain](../docs/generated/supply-chain.md)
+
+## Limitations
+
+- Software evidence cannot replace physical qualification
 
 ## Boundaries
 
 **Owns**
+
 - Design coverage
 - Journey source coverage and privacy review
 - Release-gate definitions
 - Dependency, coverage, quality, formal, and performance assurance
 
 **Does not own**
-- Publication authorization
+
+- Release decisions
 - Unreviewed physical claims
 - Application behavior
 
@@ -28,6 +38,7 @@ Owns explicit design coverage, bounded formal models, performance budgets, depen
 - [`assurance/design-coverage.json`](design-coverage.json)
 - [`assurance/dependencies.json`](dependencies.json)
 - [`assurance/documentation-audit.json`](documentation-audit.json)
+- [`assurance/documentation-review.json`](documentation-review.json)
 - [`assurance/formal-model.json`](formal-model.json)
 - [`assurance/journey-source-coverage.json`](journey-source-coverage.json)
 - [`assurance/performance-budgets.json`](performance-budgets.json)
@@ -39,15 +50,6 @@ Owns explicit design coverage, bounded formal models, performance budgets, depen
 
 ## Verify
 
-Run `assurance-contracts` `dependency-security-contracts` `formal-model-contracts` `quality-contracts` `rust-coverage-contracts` after changing this area.
+Run `assurance-contracts` `dependency-security-contracts` `formal-model-contracts` `quality-contracts` `rust-coverage-contracts` after changing this area, and run `./hfx generate` to refresh its 3 generated file(s).
 
-Review impact:
-
-- Regenerate 3 declared projection(s).
-- Run `assurance-contracts`, `dependency-security-contracts`, `formal-model-contracts`, `quality-contracts`, `rust-coverage-contracts`.
-- Review direct consumers: GitHub governance authority, Verification graph.
-
-## Related Areas
-
-- **Depends on:** [Architecture authority](../architecture/README.md), [Schema contracts](../schemas/README.md)
-- **Used by:** [GitHub governance authority](../governance/README.md), [Verification graph](../verification/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

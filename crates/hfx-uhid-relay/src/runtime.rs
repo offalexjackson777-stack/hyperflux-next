@@ -32,10 +32,22 @@ const ROUTE_IDENTITY_STABILITY_INTERVAL: Duration = Duration::from_millis(250);
 const ROUTE_IDENTITY_FAST_RETRY: Duration = Duration::from_millis(100);
 const ROUTE_IDENTITY_FAST_ATTEMPTS: u32 = 5;
 const MAX_ROUTE_IDENTITY_ATTEMPTS: u32 = u16::MAX as u32;
+/// After a retained route's child departs, a keypress cannot open a return
+/// epoch until the longest return quiescence has passed, so for that window
+/// the relay itself re-probes at least this often instead of backing off to
+/// 30 s; a child switched back on then reappears within a few seconds (#39).
+const RETAINED_DEPARTURE_PROBE_CAP: Duration = Duration::from_secs(2);
+const RETAINED_DEPARTURE_FAST_WINDOW: Duration = longest_return_quiescence();
+/// Bounded automatic recoveries from a kernel-binding failure per route, so a
+/// device never needs a power-cycle yet one that can never bind cannot churn.
+const MAX_KERNEL_BINDING_RECOVERIES: u8 = 3;
 const UHID_START_TIMEOUT: Duration = Duration::from_secs(10);
 const IDLE_INTERVAL: Duration = Duration::from_millis(10);
 const MAX_PENDING_REPLIES: usize = 8;
 const WATCH_BATCH_SIZE: u16 = 32;
+
+mod teardown;
+use teardown::{DRIVER_RELEASE_DEADLINE, DriverBinding, ReleaseOutcome};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RelayPaths {
@@ -152,6 +164,7 @@ pub(crate) struct RunningEndpoint<B: crate::BridgeExchange> {
     endpoint: Option<FeatureEndpoint<B>>,
     pending: VecDeque<PendingWrite>,
     last_battery_diagnostic: Option<BatteryExchangeDiagnostic>,
+    driver_binding: Option<DriverBinding>,
     destroyed: bool,
     created_at: Instant,
 }
@@ -168,7 +181,10 @@ impl<B: crate::BridgeExchange> RunningEndpoint<B> {
         bridge: B,
         device: VirtualDeviceSpec,
         command_policy: NativeCommandPolicy,
+        driver_family: Option<&str>,
     ) -> Result<Self, RelayRuntimeError> {
+        let driver_binding = driver_family
+            .and_then(|family| DriverBinding::new(&paths.hid_driver_root, family, &device.phys));
         let mut file = open_uhid(&paths.uhid_device)?;
         write_blocking(&mut file, &UhidReply::Create(device))?;
         let flags = fcntl_getfl(&file).map_err(|_| RelayRuntimeError::UhidOpen)?;
@@ -178,6 +194,7 @@ impl<B: crate::BridgeExchange> RunningEndpoint<B> {
             endpoint: Some(FeatureEndpoint::new(bridge, command_policy)),
             pending: VecDeque::new(),
             last_battery_diagnostic: None,
+            driver_binding,
             destroyed: false,
             created_at: Instant::now(),
         })
@@ -188,6 +205,16 @@ impl<B: crate::BridgeExchange> RunningEndpoint<B> {
         if self.departure_reply_flushed() {
             return Ok(RunningEndpointStep::RetainedRouteDeparture);
         }
+        self.read_events(true)?;
+        self.flush()?;
+        Ok(if self.departure_reply_flushed() {
+            RunningEndpointStep::RetainedRouteDeparture
+        } else {
+            RunningEndpointStep::Running
+        })
+    }
+
+    fn read_events(&mut self, stop_at_departure: bool) -> Result<(), RelayRuntimeError> {
         let mut bytes = [0_u8; UHID_EVENT_BYTES];
         loop {
             match self.file.read(&mut bytes) {
@@ -196,21 +223,15 @@ impl<B: crate::BridgeExchange> RunningEndpoint<B> {
                     let event = UhidEvent::decode(&bytes[..count])
                         .map_err(|_| RelayRuntimeError::UhidCodec)?;
                     self.process_event(event)?;
-                    if self.endpoint().retained_route_departure_ready() {
-                        break;
+                    if stop_at_departure && self.endpoint().retained_route_departure_ready() {
+                        return Ok(());
                     }
                 }
-                Err(error) if error.kind() == io::ErrorKind::WouldBlock => break,
+                Err(error) if error.kind() == io::ErrorKind::WouldBlock => return Ok(()),
                 Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
                 Err(_) => return Err(RelayRuntimeError::UhidRead),
             }
         }
-        self.flush()?;
-        Ok(if self.departure_reply_flushed() {
-            RunningEndpointStep::RetainedRouteDeparture
-        } else {
-            RunningEndpointStep::Running
-        })
     }
 
     fn process_event(&mut self, event: UhidEvent) -> Result<(), RelayRuntimeError> {
@@ -236,23 +257,28 @@ impl<B: crate::BridgeExchange> RunningEndpoint<B> {
         match diagnostic {
             BatteryExchangeDiagnostic::Matched {
                 transaction_id,
+                reply_transaction_id,
                 status,
                 raw_value,
+                accepted,
                 attempts,
-            } => eprintln!(
-                "HFX-OPENRAZER-RELAY-BATTERY tx={transaction_id:02x} certainty=matched status={status:02x} raw={raw_value} attempts={attempts}"
-            ),
+            } => {
+                let outcome = if accepted { "value" } else { "unknown" };
+                eprintln!(
+                    "HFX-OPENRAZER-RELAY-BATTERY tx={transaction_id:02x} reply_tx={reply_transaction_id:02x} certainty=matched status={status:02x} raw={raw_value} outcome={outcome} attempts={attempts}"
+                );
+            }
             BatteryExchangeDiagnostic::NotSent {
                 transaction_id,
                 attempts,
             } => eprintln!(
-                "HFX-OPENRAZER-RELAY-BATTERY tx={transaction_id:02x} certainty=not-sent status=none raw=none attempts={attempts}"
+                "HFX-OPENRAZER-RELAY-BATTERY tx={transaction_id:02x} reply_tx=none certainty=not-sent status=none raw=none outcome=unknown attempts={attempts}"
             ),
             BatteryExchangeDiagnostic::MayHaveBeenSent {
                 transaction_id,
                 attempts,
             } => eprintln!(
-                "HFX-OPENRAZER-RELAY-BATTERY tx={transaction_id:02x} certainty=may-have-been-sent status=none raw=none attempts={attempts}"
+                "HFX-OPENRAZER-RELAY-BATTERY tx={transaction_id:02x} reply_tx=none certainty=may-have-been-sent status=none raw=none outcome=unknown attempts={attempts}"
             ),
         }
     }
@@ -316,6 +342,7 @@ impl<B: crate::BridgeExchange> RunningEndpoint<B> {
             return;
         }
         self.destroyed = true;
+        self.release_kernel_driver();
         if let Some(endpoint) = self.endpoint.as_mut() {
             endpoint.prepare_withdrawal();
         }
@@ -324,6 +351,45 @@ impl<B: crate::BridgeExchange> RunningEndpoint<B> {
             let _ = fcntl_setfl(&self.file, flags & !OFlags::NONBLOCK);
         }
         let _ = write_blocking(&mut self.file, &UhidReply::Destroy);
+    }
+
+    /// Unbinds the `OpenRazer` driver from this exact virtual device while the
+    /// endpoint keeps answering, so a Feature request the kernel already sent
+    /// completes before `UHID_DESTROY` ends the device (REL-020). Without a
+    /// bound driver, or past the deadline, the destroy proceeds as before.
+    fn release_kernel_driver(&mut self) {
+        let Some(binding) = self.driver_binding.take() else {
+            return;
+        };
+        if self.endpoint.is_none() {
+            return;
+        }
+        let started = Instant::now();
+        let outcome = match binding.start_release(DRIVER_RELEASE_DEADLINE) {
+            Ok(mut release) => {
+                let mut serving = true;
+                loop {
+                    if serving {
+                        serving = self.flush().is_ok()
+                            && self.read_events(false).is_ok()
+                            && self.flush().is_ok();
+                    }
+                    if let Some(outcome) = release.poll(Instant::now()) {
+                        break outcome;
+                    }
+                    thread::sleep(IDLE_INTERVAL);
+                }
+            }
+            Err(outcome) => outcome,
+        };
+        if outcome != ReleaseOutcome::NotBound {
+            eprintln!(
+                "HFX-OPENRAZER-RELAY-TEARDOWN driver={} outcome={} elapsed_ms={}",
+                binding.driver_family(),
+                outcome.label(),
+                started.elapsed().as_millis()
+            );
+        }
     }
 
     fn endpoint(&self) -> &FeatureEndpoint<B> {
@@ -351,6 +417,7 @@ struct ManagedRoute {
     publication: PendingPublication<NativeBridge>,
     endpoint: Option<RunningEndpoint<NativeBridge>>,
     last_diagnostic: Option<DiagnosticKey>,
+    kernel_binding_recoveries: u8,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -370,6 +437,7 @@ struct RoutePublicationGate {
     blocked: bool,
     next_probe: Instant,
     next_delay: Duration,
+    fast_until: Option<Instant>,
 }
 
 struct PendingPublication<B: crate::BridgeExchange> {
@@ -389,6 +457,7 @@ impl RoutePublicationGate {
             blocked: false,
             next_probe: now,
             next_delay: Duration::ZERO,
+            fast_until: None,
         }
     }
 
@@ -431,6 +500,9 @@ impl RoutePublicationGate {
         self.failure = Some(failure);
         self.blocked = failure.disposition() == PublicationFailureDisposition::Blocked;
         self.next_delay = retry_delay(self.attempts);
+        if self.fast_until.is_some_and(|until| now < until) {
+            self.next_delay = self.next_delay.min(RETAINED_DEPARTURE_PROBE_CAP);
+        }
         self.next_probe = now + self.next_delay;
     }
 
@@ -451,6 +523,7 @@ impl RoutePublicationGate {
         self.blocked = false;
         self.next_delay = Duration::ZERO;
         self.next_probe = Instant::now();
+        self.fast_until = None;
     }
 
     fn next_retry_ms(&self) -> u32 {
@@ -471,6 +544,19 @@ fn retry_delay(attempt: u32) -> Duration {
     }
 }
 
+const fn longest_return_quiescence() -> Duration {
+    let policies = hfx_profiles::RETURN_POLICIES;
+    let mut longest = 0;
+    let mut index = 0;
+    while index < policies.len() {
+        if policies[index].quiescence_candidate_ms > longest {
+            longest = policies[index].quiescence_candidate_ms;
+        }
+        index += 1;
+    }
+    Duration::from_millis(longest)
+}
+
 impl<B: crate::BridgeExchange> PendingPublication<B> {
     fn new(bridge: B, now: Instant) -> Self {
         Self {
@@ -485,6 +571,18 @@ impl<B: crate::BridgeExchange> PendingPublication<B> {
     fn retrying(bridge: B, failure: PublicationIdentityFailure, now: Instant) -> Self {
         let mut pending = Self::new(bridge, now);
         pending.gate.fail(failure, now);
+        pending
+    }
+
+    /// Re-arms a departed retained route with re-probes capped for the
+    /// return-quiescence window, so a child powered back on reappears quickly.
+    fn retrying_after_departure(bridge: B, now: Instant) -> Self {
+        let mut pending = Self::new(bridge, now);
+        pending.gate.fast_until = Some(now + RETAINED_DEPARTURE_FAST_WINDOW);
+        pending.gate.fail(
+            PublicationIdentityFailure::Status(RAZER_STATUS_TIMEOUT),
+            now,
+        );
         pending
     }
 
@@ -538,13 +636,33 @@ impl<B: crate::BridgeExchange> PendingPublication<B> {
             self.gate.mark_completed();
             return;
         }
-        match RunningEndpoint::create(paths, bridge, device.clone(), record.command_policy.clone())
-        {
+        match RunningEndpoint::create(
+            paths,
+            bridge,
+            device.clone(),
+            record.command_policy.clone(),
+            Some(&record.driver_family),
+        ) {
             Ok(running) => {
                 *endpoint = Some(running);
                 self.gate.mark_completed();
             }
             Err(error) => self.terminal_failure = Some(endpoint_failure(&error)),
+        }
+    }
+
+    /// Fresh qualified evidence resets a retryable backoff once so the next
+    /// tick probes; healthy, pass-one, blocked, terminal, and direct-suppressed
+    /// publications are left exactly as they are (REL-021).
+    fn fresh_evidence(&mut self, now: Instant) {
+        if self.bridge.is_some()
+            && self.terminal_failure.is_none()
+            && !self.direct_suppressed
+            && self.ready_fingerprint.is_none()
+            && self.gate.state() == RelayPublicationState::BackingOff
+        {
+            self.gate.next_probe = now;
+            self.gate.next_delay = Duration::ZERO;
         }
     }
 
@@ -630,6 +748,7 @@ impl ManagedRoute {
             publication: PendingPublication::new(bridge, Instant::now()),
             endpoint: None,
             last_diagnostic: None,
+            kernel_binding_recoveries: 0,
         })
     }
 
@@ -663,10 +782,29 @@ impl ManagedRoute {
             return;
         }
         if let Some(failure) = failure {
+            if failure == PublicationIdentityFailure::KernelBinding
+                && self.kernel_binding_recoveries < MAX_KERNEL_BINDING_RECOVERIES
+                && let Some(endpoint) = self.endpoint.take()
+            {
+                self.kernel_binding_recoveries += 1;
+                recover_kernel_binding(
+                    endpoint,
+                    &mut self.publication,
+                    &mut self.serial_fingerprint,
+                    Instant::now(),
+                );
+                return;
+            }
             if let Some(endpoint) = self.endpoint.take() {
                 endpoint.destroy();
             }
             self.publication.block(failure);
+        }
+    }
+
+    fn fresh_evidence(&mut self, now: Instant) {
+        if self.endpoint.is_none() {
+            self.publication.fresh_evidence(now);
         }
     }
 
@@ -778,6 +916,23 @@ impl ManagedRoute {
     }
 }
 
+/// Withdraws a virtual device whose kernel binding failed and re-arms its
+/// publication on the same bridge connection with the normal backoff, instead
+/// of blocking the route until the device is power-cycled (REL-003).
+fn recover_kernel_binding<B: crate::BridgeExchange>(
+    endpoint: RunningEndpoint<B>,
+    publication: &mut PendingPublication<B>,
+    serial_fingerprint: &mut Option<SerialFingerprint>,
+    now: Instant,
+) {
+    let bridge = endpoint.destroy_into_bridge();
+    *serial_fingerprint = None;
+    *publication =
+        PendingPublication::retrying(bridge, PublicationIdentityFailure::KernelBinding, now);
+}
+
+/// Withdraws a virtual device whose retained route reported the child gone and
+/// re-arms its publication for a fresh two-read identity on the same bridge.
 fn recycle_retained_route<B: crate::BridgeExchange>(
     endpoint: RunningEndpoint<B>,
     publication: &mut PendingPublication<B>,
@@ -786,11 +941,7 @@ fn recycle_retained_route<B: crate::BridgeExchange>(
 ) {
     let bridge = endpoint.destroy_into_bridge();
     *serial_fingerprint = None;
-    *publication = PendingPublication::retrying(
-        bridge,
-        PublicationIdentityFailure::Status(RAZER_STATUS_TIMEOUT),
-        now,
-    );
+    *publication = PendingPublication::retrying_after_departure(bridge, now);
 }
 
 impl<B: crate::BridgeExchange> Drop for RunningEndpoint<B> {
@@ -1015,6 +1166,11 @@ fn apply_actions(
                         },
                     );
                     route.destroy();
+                }
+            }
+            RouteAction::FreshEvidence { identity } => {
+                if let Some(route) = routes.get_mut(&identity) {
+                    route.fresh_evidence(Instant::now());
                 }
             }
             RouteAction::Start {

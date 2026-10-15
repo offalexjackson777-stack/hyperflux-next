@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import fnmatch
-import os
 from pathlib import Path, PurePosixPath
 import re
 from typing import Any
 
-from .model import ModelError, load_json, require_unique
+from .model import ModelError, load_json, repository_files, require_unique
 
 
 SPDX = re.compile(r"SPDX-License-Identifier:\s*(?P<expression>[^*\n\r\"]+)")
@@ -101,36 +100,24 @@ def verify_licensing_policy(root: Path) -> dict[str, Any]:
         raise ModelError("root LICENSE does not match the declared GPL-2.0-only text")
     checked = 0
     mismatches: list[str] = []
-    ignored_roots = {".git", ".hfx", "build", "target", "LICENSES"}
-    for directory, directories, filenames in os.walk(
-        root, topdown=True, followlinks=False
-    ):
-        current = Path(directory)
-        directories[:] = sorted(
-            name
-            for name in directories
-            if not (current / name).is_symlink()
-            and (current != root or name not in ignored_roots)
-        )
-        for filename in sorted(filenames):
-            path = current / filename
-            if not path.is_file() or path.is_symlink():
-                continue
-            relative = path.relative_to(root)
-            try:
-                first_lines = "\n".join(
-                    path.read_text(encoding="utf-8").splitlines()[:10]
-                )
-            except (OSError, UnicodeError):
-                continue
-            match = SPDX.search(first_lines)
-            if match is None:
-                continue
-            checked += 1
-            actual = match.group("expression").strip()
-            expected = expression_for_path(policy, relative.as_posix())
-            if actual != expected:
-                mismatches.append(f"{relative}: expected {expected}, found {actual}")
+    for path in repository_files(root):
+        relative = path.relative_to(root)
+        if relative.parts[0] == "LICENSES":
+            continue
+        try:
+            first_lines = "\n".join(
+                path.read_text(encoding="utf-8").splitlines()[:10]
+            )
+        except (OSError, UnicodeError):
+            continue
+        match = SPDX.search(first_lines)
+        if match is None:
+            continue
+        checked += 1
+        actual = match.group("expression").strip()
+        expected = expression_for_path(policy, relative.as_posix())
+        if actual != expected:
+            mismatches.append(f"{relative}: expected {expected}, found {actual}")
     if mismatches:
         raise ModelError("license policy mismatch: " + "; ".join(mismatches[:8]))
     return {

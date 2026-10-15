@@ -1,6 +1,20 @@
 # SDK Boundary
 
-Application integrations use the HyperFlux SDK. They do not construct local RPC frames, retain negotiation credentials, or import bridge implementation modules.
+A connector that built the bridge's local protocol frames itself could get versions,
+identities, or request IDs subtly wrong, and every connector would repeat that work. The SDK
+does it once, so a connector calls typed methods and never handles the wire format.
+
+Application integrations use the HyperFlux SDK. They do not construct local RPC
+frames, retain negotiation credentials, or import bridge implementation modules.
+
+## Terms Used Here
+
+- **Negotiation**: the handshake in which the SDK and the bridge agree on one protocol
+  version and set of features before any other request.
+- **Feature**: a named capability negotiated on top of a version, such as
+  `native-receiver-tunnel`.
+- **Route token**: an opaque value naming one device on one receiver generation. The SDK
+  passes it back to the bridge without reading it.
 
 ## Responsibilities
 
@@ -68,8 +82,14 @@ cannot be represented by the selected protocol fails locally before any prefix
 or payload byte is written. A native result with `may-have-been-sent` is never
 automatically repeated by the SDK.
 
-Dropping or closing the connection does not transfer authority. The bridge revokes the internal session and then releases associated leases and queued work. Applications reconnect and negotiate new credentials rather than reusing old session values.
+Dropping or closing the connection does not transfer authority. The bridge
+revokes the internal session and then releases associated leases and queued
+work. Applications reconnect and negotiate new credentials rather than reusing
+old session values.
 
 ## Evolution
 
-The native channel and versioned protocol codec are shared implementation foundations. Generated C++ and future language bindings must reproduce the same public behavior and conformance vectors; they must not call Rust bridge internals or introduce a second protocol definition.
+The native channel and versioned protocol codec are shared implementation
+foundations. Generated C++ and future language bindings must reproduce the same
+public behavior and conformance vectors; they must not call Rust bridge
+internals or introduce a second protocol definition.

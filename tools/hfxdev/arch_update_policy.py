@@ -236,6 +236,8 @@ def _verify_scenario(
     hyperflux_package: Path,
     *,
     package_name: str,
+    dependency_packages: tuple[Path, ...],
+    dependency_names: tuple[str, ...],
     candidate_version: str,
     assumptions: tuple[str, ...],
     workspace: Path,
@@ -281,6 +283,7 @@ def _verify_scenario(
             "--nodeps",
             "--noscriptlet",
             str(hyperflux_package),
+            *(str(package) for package in dependency_packages),
             str(current_daemon),
         ],
         label="seed isolated HyperFlux and OpenRazer package database",
@@ -335,8 +338,8 @@ def _verify_scenario(
         if len(fields) != 2 or fields[0] in installed:
             raise ModelError("isolated package database contains malformed metadata")
         installed[fields[0]] = fields[1]
-    if package_name not in installed:
-        raise ModelError("isolated system upgrade replaced the HyperFlux package")
+    if any(name not in installed for name in (package_name, *dependency_names)):
+        raise ModelError("isolated system upgrade replaced a HyperFlux package")
     if installed.get("openrazer-daemon") != candidate_version:
         raise ModelError("isolated system upgrade did not update OpenRazer as expected")
     if "openrazer-driver-dkms" in installed:
@@ -370,6 +373,14 @@ def verify_arch_openrazer_update_policy(
         dependency_packages=dependency_packages,
         timeout_seconds=timeout_seconds,
     )
+    dependency_names = tuple(
+        _package_metadata(
+            package,
+            label="HyperFlux sibling Arch package",
+            timeout_seconds=timeout_seconds,
+        )[0]
+        for package in dependency_packages
+    )
     workspace = workspace.resolve()
     if workspace.exists():
         if not workspace.is_dir() or workspace.is_symlink():
@@ -384,6 +395,8 @@ def verify_arch_openrazer_update_policy(
             _verify_scenario(
                 hyperflux_package,
                 package_name=package_name,
+                dependency_packages=dependency_packages,
+                dependency_names=dependency_names,
                 candidate_version=candidate_version,
                 assumptions=assumptions,
                 workspace=root / f"scenario-{index}",

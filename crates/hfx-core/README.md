@@ -6,17 +6,23 @@ Owns receiver generations, qualified native routes, child-local arbitration, bou
 
 ## Start Here
 
-- [`docs/architecture/bridge-core.md`](../../docs/architecture/bridge-core.md)
-- [`docs/architecture/persistence.md`](../../docs/architecture/persistence.md)
+- [Bridge Core Boundaries](../../docs/architecture/bridge-core.md)
+- [Bridge Persistence](../../docs/architecture/persistence.md)
+
+## Limitations
+
+- The core never performs transport or filesystem I/O directly
 
 ## Boundaries
 
 **Owns**
+
 - Core state machines
 - NativeControl and transaction policy
 - Retained restoration intent
 
 **Does not own**
+
 - Socket framing
 - Kernel I/O
 - Application presentation
@@ -29,15 +35,6 @@ Owns receiver generations, qualified native routes, child-local arbitration, bou
 
 ## Verify
 
-Run `rust-unit` `formal-model-contracts` after changing this area.
+Run `rust-unit` `formal-model-contracts` after changing this area, and run `./hfx generate` to refresh its 1 generated file(s).
 
-Review impact:
-
-- Regenerate 1 declared projection(s).
-- Run `rust-unit`, `formal-model-contracts`.
-- Review direct consumers: Bridge runtime, Deterministic simulator.
-
-## Related Areas
-
-- **Depends on:** [Rust workspace](../README.md), [Composable hardware profiles](../../profiles/README.md), [Versioned bridge protocol](../../protocol/README.md)
-- **Used by:** [Bridge runtime](../hfx-bridge/README.md), [Deterministic simulator](../hfx-sim/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../../docs/generated/repository-atlas.md).

@@ -30,7 +30,7 @@
       },
       "device_kind": "mouse",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "source-qualified-operational",
       "knowledge_gaps": [
         {
           "detail": "Official Bluetooth product support does not establish an exact Linux control path for this model. Bluetooth is outside the HyperFlux receiver route and remains unclaimed.",
@@ -1155,11 +1155,11 @@
           "settings_methods": [],
           "source_device_key": "basilisk_v3_pro_bluetooth_device",
           "source_location": {
-            "line": 5240,
+            "line": 5279,
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "bluetooth",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L5240",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5279",
           "usb_identity": {
             "product_id": 172,
             "vendor_id": null
@@ -1203,11 +1203,11 @@
           "settings_methods": [],
           "source_device_key": "basilisk_v3_pro_wired_device",
           "source_location": {
-            "line": 4909,
+            "line": 4948,
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L4909",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L4948",
           "usb_identity": {
             "product_id": 170,
             "vendor_id": 5426
@@ -1251,11 +1251,11 @@
           "settings_methods": [],
           "source_device_key": "basilisk_v3_pro_wireless_device",
           "source_location": {
-            "line": 4968,
+            "line": 5007,
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L4968",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5007",
           "usb_identity": {
             "product_id": 171,
             "vendor_id": 5426
@@ -1297,7 +1297,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "source-qualified-operational",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -1321,7 +1321,7 @@
       "hyperflux_profile_ids": [
         "child.razer.basilisk-v3-pro-35k.00cd"
       ],
-      "hyperflux_support": "route-qualified",
+      "hyperflux_support": "physically-proven",
       "knowledge_gaps": [
         {
           "detail": "The upstream report records a distinct Bluetooth HID identity and missing OpenRazer recognition. HyperFlux does not carry or authorize this direct Bluetooth route.",
@@ -2517,11 +2517,11 @@
           "settings_methods": [],
           "source_device_key": "basilisk_v3_pro_35k_wired_device",
           "source_location": {
-            "line": 5026,
+            "line": 5065,
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L5026",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5065",
           "usb_identity": {
             "product_id": 204,
             "vendor_id": 5426
@@ -2565,11 +2565,11 @@
           "settings_methods": [],
           "source_device_key": "basilisk_v3_pro_35k_wireless_device",
           "source_location": {
-            "line": 5085,
+            "line": 5124,
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L5085",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5124",
           "usb_identity": {
             "product_id": 205,
             "vendor_id": 5426
@@ -2609,7 +2609,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "route-qualified",
+          "hyperflux_state": "physically-proven",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -2631,7 +2631,7 @@
       },
       "device_kind": "keyboard",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "source-qualified-operational",
       "knowledge_gaps": [
         {
           "detail": "The model is a manufacturer-listed candidate, but no exact receiver-backed child profile currently authorizes controls.",
@@ -3541,7 +3541,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "bluetooth",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L1578",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L1578",
           "usb_identity": {
             "product_id": 603,
             "vendor_id": null
@@ -3577,7 +3577,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L1543",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L1543",
           "usb_identity": {
             "product_id": 602,
             "vendor_id": 5426
@@ -3613,7 +3613,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L1613",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L1613",
           "usb_identity": {
             "product_id": 604,
             "vendor_id": 5426
@@ -3655,7 +3655,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "source-qualified-operational",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -3677,7 +3677,7 @@
       },
       "device_kind": "keyboard",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "upstream-blocked-or-research-only",
       "knowledge_gaps": [
         {
           "detail": "Neither pinned OpenRazer nor pinned OpenRGB contains an exact model record. Product documentation and a reviewed support report exist, but no setting implementation is promoted from that absence.",
@@ -4318,7 +4318,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "upstream-blocked-or-research-only",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -4340,7 +4340,7 @@
       },
       "device_kind": "keyboard",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "source-qualified-operational",
       "knowledge_gaps": [
         {
           "detail": "OpenRGB has exact wired and vendor-receiver presentation records, but no HyperFlux child profile authorizes this model.",
@@ -5093,7 +5093,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L2098",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2098",
           "usb_identity": {
             "product_id": 724,
             "vendor_id": 5426
@@ -5129,7 +5129,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L2133",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2133",
           "usb_identity": {
             "product_id": 722,
             "vendor_id": 5426
@@ -5166,7 +5166,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "source-qualified-operational",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -5188,7 +5188,7 @@
       },
       "device_kind": "keyboard",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "source-qualified-operational",
       "knowledge_gaps": [
         {
           "detail": "The official product page says a full charge takes just under five hours, while the linked official master guide says approximately two hours. No single duration is promoted.",
@@ -6356,7 +6356,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "source-qualified-operational",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -6378,7 +6378,7 @@
       },
       "device_kind": "keyboard",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "source-qualified-operational",
       "knowledge_gaps": [
         {
           "detail": "Exact OpenRazer and OpenRGB records document direct routes, but no receiver-backed HyperFlux profile authorizes this model.",
@@ -7313,7 +7313,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L2028",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2028",
           "usb_identity": {
             "product_id": 727,
             "vendor_id": 5426
@@ -7349,7 +7349,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L2063",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2063",
           "usb_identity": {
             "product_id": 725,
             "vendor_id": 5426
@@ -7389,7 +7389,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "source-qualified-operational",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -7411,7 +7411,7 @@
       },
       "device_kind": "mouse",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "upstream-blocked-or-research-only",
       "knowledge_gaps": [
         {
           "detail": "The official support introduction says nine customizable controls, while its technical specification says seven programmable buttons. The catalog preserves both statements and does not normalize them into one count.",
@@ -7914,7 +7914,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "upstream-blocked-or-research-only",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -7936,7 +7936,7 @@
       },
       "device_kind": "mouse",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "source-qualified-operational",
       "knowledge_gaps": [
         {
           "detail": "Direct-route Linux records are useful for presentation and planning, but no exact receiver-backed HyperFlux child profile authorizes this model.",
@@ -8942,11 +8942,11 @@
           "settings_methods": [],
           "source_device_key": "cobra_pro_wired_device",
           "source_location": {
-            "line": 5369,
+            "line": 5408,
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L5369",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5408",
           "usb_identity": {
             "product_id": 175,
             "vendor_id": 5426
@@ -8990,11 +8990,11 @@
           "settings_methods": [],
           "source_device_key": "cobra_pro_wireless_device",
           "source_location": {
-            "line": 5428,
+            "line": 5467,
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L5428",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5467",
           "usb_identity": {
             "product_id": 176,
             "vendor_id": 5426
@@ -9034,7 +9034,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "source-qualified-operational",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -9056,7 +9056,7 @@
       },
       "device_kind": "keyboard",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "source-qualified-operational",
       "knowledge_gaps": [
         {
           "detail": "Exact Linux records describe the direct device, but no exact receiver-backed HyperFlux child profile authorizes this full-size model.",
@@ -9894,7 +9894,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L2750",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2750",
           "usb_identity": {
             "product_id": 658,
             "vendor_id": 5426
@@ -9930,7 +9930,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L2715",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2715",
           "usb_identity": {
             "product_id": 656,
             "vendor_id": 5426
@@ -9970,7 +9970,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "source-qualified-operational",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -9994,7 +9994,7 @@
       "hyperflux_profile_ids": [
         "child.razer.deathstalker-v2-pro-tkl.0296"
       ],
-      "hyperflux_support": "route-qualified",
+      "hyperflux_support": "physically-proven",
       "knowledge_gaps": [
         {
           "detail": "Per-key lighting and passive battery/identity telemetry are qualified. Polling, game mode, macros, remapping, and Bluetooth configuration remain product documentation rather than receiver controls.",
@@ -10878,7 +10878,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L2660",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2660",
           "usb_identity": {
             "product_id": 664,
             "vendor_id": 5426
@@ -10914,7 +10914,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L2680",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2680",
           "usb_identity": {
             "product_id": 662,
             "vendor_id": 5426
@@ -10954,7 +10954,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "route-qualified",
+          "hyperflux_state": "physically-proven",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -10976,7 +10976,7 @@
       },
       "device_kind": "mouse",
       "hyperflux_profile_ids": [],
-      "hyperflux_support": "candidate-only",
+      "hyperflux_support": "source-qualified-operational",
       "knowledge_gaps": [
         {
           "detail": "Extensive direct-route control vocabulary exists, but no receiver-backed HyperFlux child profile authorizes this model.",
@@ -12070,11 +12070,11 @@
           "settings_methods": [],
           "source_device_key": "naga_pro_v2_wired_device",
           "source_location": {
-            "line": 7146,
+            "line": 7185,
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L7146",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L7185",
           "usb_identity": {
             "product_id": 167,
             "vendor_id": 5426
@@ -12112,11 +12112,11 @@
           "settings_methods": [],
           "source_device_key": "naga_pro_v2_wireless_device",
           "source_location": {
-            "line": 7166,
+            "line": 7205,
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0/Controllers/RazerController/RazerDevices.cpp#L7166",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L7205",
           "usb_identity": {
             "product_id": 168,
             "vendor_id": 5426
@@ -12156,7 +12156,7 @@
           "product_state": "documented"
         },
         {
-          "hyperflux_state": "candidate-only",
+          "hyperflux_state": "source-qualified-operational",
           "id": "hyperflux-receiver",
           "implementation_records": [],
           "label": "HyperFlux V2 receiver",
@@ -12628,7 +12628,7 @@
     }
   ],
   "schema": "hyperflux-compiled-device-knowledge-v1",
-  "source_sha256": "45b0e37471ee0a464309cf9edf85ab75372272068633bc8dd7b080f57d38162b",
+  "source_sha256": "5dd7cef53f85626ab0900e8dca573348d3ee22256e1cce75904d64a5121b2558",
   "upstreams": [
     {
       "commit": "1ef8a91712906a89fd332a2ed62bbd105315d6d1",
@@ -12654,27 +12654,27 @@
       "version": "3.12.4"
     },
     {
-      "commit": "6fbcf62d7694e7b92fd0a5884b40b92984fbd1b0",
+      "commit": "81bbe18a84c2e507006f19dd252e397e40a56bfe",
       "extractor": "cpp-initializer-v1",
       "license_expression": "GPL-2.0-only",
-      "record_count": 112,
+      "record_count": 113,
       "repository": "https://github.com/CalcProgrammer1/OpenRGB.git",
       "source_files": [
         {
           "path": "Controllers/RazerController/RazerControllerDetect.cpp",
-          "sha256": "11ce7a0485ceda8951d01f4cb9d50f89dffea348bf2c99333a7a6e3b23af0d9d"
+          "sha256": "36085f7af923c5b074142b79084c6ed0acad3e7a783da1503aeeb336e82b71bd"
         },
         {
           "path": "Controllers/RazerController/RazerDevices.cpp",
-          "sha256": "e959c103c0a776b0143c8eeea405c36b55fffd1bad5361107e52af19f08b8a6b"
+          "sha256": "0018d5741583df069f83c13474b41c38904979f73e6680f48b9807ea4048bf0c"
         },
         {
           "path": "Controllers/RazerController/RazerDevices.h",
-          "sha256": "d3489af9b0548be24b2259a5858f7757897c0dff99c693feffac0a40a0f7a069"
+          "sha256": "a2c2e08691ad3b49fddc379a1e1337bf6d8160988677cc6921f59a2320f2b2c7"
         }
       ],
       "upstream_id": "openrgb",
-      "version": "1.0rc3"
+      "version": "1.0"
     }
   ]
 }

@@ -993,3 +993,43 @@ fn explicit_session_invalidation_terminally_accounts_for_all_removed_work() {
     assert_eq!(coordinator.queued_len(), 0);
     assert_eq!(sink.attempted.len(), 2);
 }
+
+#[test]
+fn every_coordinator_and_lifecycle_error_names_a_distinct_failure() {
+    use hfx_core::{LifecycleError, TransactionCoordinatorError};
+    use hfx_domain::{ConnectionMode, DeviceKind, RouteKind};
+
+    let coordinator = [
+        TransactionCoordinatorError::InvalidCapacity,
+        TransactionCoordinatorError::RequestIdReused,
+        TransactionCoordinatorError::TransactionIdReused,
+        TransactionCoordinatorError::SessionRevoked,
+        TransactionCoordinatorError::OwnershipDenied,
+        TransactionCoordinatorError::StaleGeneration,
+        TransactionCoordinatorError::UnsupportedResource,
+        TransactionCoordinatorError::ProfileBindingChanged,
+        TransactionCoordinatorError::FrameCount,
+    ];
+    let lifecycle = [
+        LifecycleError::InvalidLimits,
+        LifecycleError::UnknownEvidenceConfidence,
+        LifecycleError::InvalidChildKind(DeviceKind::Receiver),
+        LifecycleError::DeviceCapacity,
+        LifecycleError::InvalidEndpointMode {
+            route_kind: RouteKind::DirectUsb,
+            connection_mode: ConnectionMode::Hyperflux24ghz,
+        },
+        LifecycleError::InvalidReturnPolicy,
+    ];
+    let messages: std::collections::BTreeSet<String> = coordinator
+        .iter()
+        .map(ToString::to_string)
+        .chain(lifecycle.iter().map(ToString::to_string))
+        .collect();
+    assert!(messages.iter().all(|message| !message.is_empty()));
+    assert_eq!(
+        messages.len(),
+        coordinator.len() + lifecycle.len(),
+        "{messages:#?}"
+    );
+}

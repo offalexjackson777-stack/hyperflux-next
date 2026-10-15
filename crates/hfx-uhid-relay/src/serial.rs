@@ -101,7 +101,10 @@ impl PublicationIdentityFailure {
             )
             | Self::Status(BUSY_STATUS | FAILURE_STATUS | TIMEOUT_STATUS)
             | Self::IdentityMismatch
-            | Self::DirectStateUnavailable => PublicationFailureDisposition::Retryable,
+            | Self::DirectStateUnavailable
+            // A driver hand-over (hid-generic re-probed by a late-loading
+            // OpenRazer module) stops the device; recreating it recovers.
+            | Self::KernelBinding => PublicationFailureDisposition::Retryable,
             Self::Bridge(
                 BridgeExchangeFailure::MissingRouteAuthority
                 | BridgeExchangeFailure::RequestEncoding
@@ -122,8 +125,7 @@ impl PublicationIdentityFailure {
             | Self::UhidRead
             | Self::UhidWrite
             | Self::UhidProtocol
-            | Self::UhidStartTimeout
-            | Self::KernelBinding => PublicationFailureDisposition::Blocked,
+            | Self::UhidStartTimeout => PublicationFailureDisposition::Blocked,
         }
     }
 

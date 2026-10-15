@@ -12,7 +12,14 @@ import subprocess
 import sys
 import time
 
-from .model import ModelError, load_foundation, load_json, require_unique, sha256_file
+from .model import (
+    ModelError,
+    load_foundation,
+    load_json,
+    repository_files,
+    require_unique,
+    sha256_file,
+)
 from .assurance import load_design_coverage
 from .coverage import load_rust_coverage_policy
 from .arch_update_policy import verify_arch_openrazer_update_policy
@@ -81,15 +88,6 @@ from .testgraph import TestNode, load_test_catalog
 from .toolchains import toolchain_environment, verify_current_toolchain
 
 
-IGNORED_PATH_PARTS = {
-    ".git",
-    ".hfx",
-    ".venv",
-    "__pycache__",
-    "build",
-    "dist",
-    "target",
-}
 FUTURE_MTIME_TOLERANCE_SECONDS = 5.0
 INSTALLED_SCHEMA_ROOT = Path("/usr/share/hyperflux-next/schemas")
 
@@ -127,9 +125,7 @@ def _check_generated(root: Path) -> None:
 def _check_repository_paths(root: Path) -> None:
     verify_publication_privacy(root)
     absolute_home = re.compile(r"/home/[A-Za-z0-9_.-]+/")
-    for path in sorted(root.rglob("*")):
-        if not path.is_file() or any(part in IGNORED_PATH_PARTS for part in path.parts):
-            continue
+    for path in repository_files(root):
         if path.suffix in {".pyc", ".png", ".jpg", ".zst"} or path.name == "LICENSE":
             continue
         try:
@@ -174,8 +170,8 @@ def _check_schema_contracts(root: Path) -> None:
         schema_ids.append(schema_id)
     require_unique(schema_ids, "JSON Schema id")
 
-    for path in sorted(root.rglob("*.json")):
-        if any(part in IGNORED_PATH_PARTS for part in path.parts):
+    for path in repository_files(root):
+        if path.suffix != ".json":
             continue
         value = load_json(path)
         schema_reference = value.get("$schema")

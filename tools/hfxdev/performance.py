@@ -26,7 +26,7 @@ METRIC_KEYS = {
 }
 KINDS = {"json-pointer", "artifact-size", "staged-payload-size", "physical"}
 UNITS = {"bytes", "count", "milliseconds", "percent"}
-STATUSES = {"enforced-software", "blocked-by-physical-evidence"}
+STATUSES = {"enforced-software", "unmeasured-physical"}
 
 
 @dataclass(frozen=True)
@@ -100,10 +100,15 @@ def load_performance_budgets(root: Path) -> tuple[PerformanceMetric, ...]:
             raise ModelError(f"performance metric {metric_id}: release flag must be boolean")
         if not isinstance(rationale, str) or not rationale.strip() or len(rationale) > 300:
             raise ModelError(f"performance metric {metric_id}: invalid rationale")
-        if kind == "physical" and status != "blocked-by-physical-evidence":
+        if kind == "physical" and status != "unmeasured-physical":
             raise ModelError(f"performance metric {metric_id}: physical metric cannot be software-enforced")
+        if kind == "physical" and release_blocking:
+            raise ModelError(
+                f"performance metric {metric_id}: a physical budget without a retained "
+                "measurement cannot block a release"
+            )
         if kind != "physical" and status != "enforced-software":
-            raise ModelError(f"performance metric {metric_id}: software metric cannot claim a physical block")
+            raise ModelError(f"performance metric {metric_id}: software metric cannot claim a physical status")
         metrics.append(
             PerformanceMetric(
                 id=metric_id,

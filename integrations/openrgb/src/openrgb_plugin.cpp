@@ -11,13 +11,14 @@
 #include "plugin_widget.hpp"
 
 #include "OpenRGBPluginInterface.h"
+#include "ResourceManagerCallback.h"
 
 #include <QDebug>
 #include <QWidget>
 
 #include <string>
 
-static_assert(OPENRGB_PLUGIN_API_VERSION == 4);
+static_assert(OPENRGB_PLUGIN_API_VERSION == 5);
 
 namespace hyperflux::openrgb::native
 {
@@ -59,6 +60,8 @@ public:
         info.Location = OPENRGB_PLUGIN_LOCATION_INFORMATION;
         info.Label = "HyperFlux Next";
         info.TabIconString = "";
+        // The plugin handles no SDK commands.
+        info.ProtocolVersion = 0;
         return info;
     }
 
@@ -67,9 +70,9 @@ public:
         return OPENRGB_PLUGIN_API_VERSION;
     }
 
-    void Load(ResourceManagerInterface* manager) override
+    void Load(OpenRGBPluginAPIInterface* api) override
     {
-        const auto loaded = application_.load(manager);
+        const auto loaded = application_.load(api);
         if(!loaded)
         {
             qWarning().noquote()
@@ -110,6 +113,48 @@ public:
     void Unload() override
     {
         application_.unload();
+    }
+
+    void OnProfileAboutToLoad() override
+    {
+    }
+
+    void OnProfileLoad(nlohmann::json /*profile_data*/) override
+    {
+    }
+
+    nlohmann::json OnProfileSave() override
+    {
+        return {};
+    }
+
+    unsigned char* OnSDKCommand(
+        unsigned int /*pkt_id*/,
+        unsigned char* /*pkt_data*/,
+        unsigned int* pkt_size) override
+    {
+        if(pkt_size != nullptr)
+        {
+            *pkt_size = 0;
+        }
+        return nullptr;
+    }
+
+    void ProfileManagerUpdated(unsigned int /*update_reason*/) override
+    {
+    }
+
+    void ResourceManagerUpdated(unsigned int update_reason) override
+    {
+        // Called from OpenRGB worker threads.
+        if(update_reason == RESOURCEMANAGER_UPDATE_REASON_DETECTION_COMPLETE)
+        {
+            application_.detection_completed();
+        }
+    }
+
+    void SettingsManagerUpdated(unsigned int /*update_reason*/) override
+    {
     }
 
 signals:

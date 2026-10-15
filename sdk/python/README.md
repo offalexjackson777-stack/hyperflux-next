@@ -6,18 +6,24 @@ Provides typed Python bridge access and generated contracts for scripting and Py
 
 ## Start Here
 
-- [`docs/architecture/sdk.md`](../../docs/architecture/sdk.md)
-- [`docs/developer/connectors.md`](../../docs/developer/connectors.md)
-- [`docs/generated/bridge-protocol.md`](../../docs/generated/bridge-protocol.md)
+- [SDK Boundary](../../docs/architecture/sdk.md)
+- [SDK And Connectors](../../docs/developer/sdk-connectors.md)
+- [Bridge Protocol](../../docs/generated/bridge-protocol.md)
+
+## Limitations
+
+- The Arch packages do not install it and the project publishes no Python package; use it from the source tree
 
 ## Boundaries
 
 **Owns**
+
 - Python client API
 - Python lighting and recovery
 - Generated Python bindings
 
 **Does not own**
+
 - Application-specific policy
 - Raw receiver transport
 - Independent schema truth
@@ -31,15 +37,6 @@ Provides typed Python bridge access and generated contracts for scripting and Py
 
 ## Verify
 
-Run `python-unit` `protocol-contracts` after changing this area.
+Run `python-unit` `protocol-contracts` after changing this area, and run `./hfx generate` to refresh its 3 generated file(s).
 
-Review impact:
-
-- Regenerate 3 declared projection(s).
-- Run `python-unit`, `protocol-contracts`.
-- Review direct consumers: OpenRazer native route, Contract tests.
-
-## Related Areas
-
-- **Depends on:** [Versioned bridge protocol](../../protocol/README.md), [Composable hardware profiles](../../profiles/README.md), [Application integration catalog](../../integrations/README.md)
-- **Used by:** [OpenRazer native route](../../integrations/openrazer/README.md), [Contract tests](../../tests/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../../docs/generated/repository-atlas.md).

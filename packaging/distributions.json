@@ -54,14 +54,14 @@
           ],
           "dependencies": [
             "hyperflux-next-linux=@sibling_version@",
-            "qt5-base",
+            "qt6-base",
             "hidapi",
             "libstdc++"
           ],
           "optional_dependencies": [
             {
               "package": "openrgb",
-              "purpose": "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0rc3/plugin API 4 verified"
+              "purpose": "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified"
             },
             {
               "package": "openrazer-daemon",

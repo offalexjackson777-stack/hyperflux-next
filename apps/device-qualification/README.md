@@ -6,8 +6,8 @@ Provides a source-only browser surface for bounded qualification projections wit
 
 ## Start Here
 
-- [`docs/user/hardware.md`](../../docs/user/hardware.md)
-- [`docs/architecture/design-book.md`](../../docs/architecture/design-book.md)
+- [Hardware](../../docs/user/hardware.md)
+- [HyperFlux Next Design Book](../../docs/architecture/design-book.md)
 
 ## Preview The Source Console
 
@@ -15,16 +15,22 @@ Provides a source-only browser surface for bounded qualification projections wit
 python3 tests/qualification_console_fixture_server.py --port 47821
 ```
 
-Run this from the repository root and open the printed loopback URL. This is a fixture-only UI preview: it does not read the installed stack, qualify hardware, or add an installed `hyperfluxctl qualification` command.
+Run this from the repository root and open the local address it prints. It only previews the interface with sample data: it does not read your installed HyperFlux, test hardware, or add a `hyperfluxctl qualification` command.
+
+## Limitations
+
+- No installed qualification command is exposed; the fixture server previews static source contracts only
 
 ## Boundaries
 
 **Owns**
+
 - Local qualification browser workflow
 - Versioned browser contract validation
 - Evidence-stage presentation
 
 **Does not own**
+
 - Driver or receiver access
 - Hardware support decisions
 - Remote inventory or upload
@@ -38,15 +44,6 @@ Run this from the repository root and open the printed loopback URL. This is a f
 
 ## Verify
 
-Run `device-qualification-console-contracts` `rust-unit` `package-contracts` after changing this area.
+Run `device-qualification-console-contracts` `rust-unit` `package-contracts` after changing this area, and run `./hfx generate` to refresh its 1 generated file(s).
 
-Review impact:
-
-- Regenerate 1 declared projection(s).
-- Run `device-qualification-console-contracts`, `rust-unit`, `package-contracts`.
-- Review direct consumers: Packaging and installation.
-
-## Related Areas
-
-- **Depends on:** [Device qualification runtime](../../crates/hfx-device-qualification/README.md), [Composable hardware profiles](../../profiles/README.md)
-- **Used by:** [Packaging and installation](../../packaging/README.md)
+Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../../docs/generated/repository-atlas.md).

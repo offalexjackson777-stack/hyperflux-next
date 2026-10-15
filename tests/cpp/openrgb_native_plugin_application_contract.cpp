@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
+#include "support/openrgb_virtual_plugin_api.hpp"
+
 #include <hyperflux/openrgb/native_plugin_application.hpp>
 
 #include "RGBController.h"
@@ -278,15 +280,10 @@ private:
 struct HostState
 {
     std::mutex mutex;
-    hyperflux::openrgb::native::DetectionCallback start = nullptr;
-    hyperflux::openrgb::native::DetectionCallback end = nullptr;
-    void* start_context = nullptr;
-    void* end_context = nullptr;
     std::set<RGBController*> controllers;
     std::set<std::uintptr_t> original_identities;
     std::size_t register_calls = 0;
     std::size_t unregister_calls = 0;
-    std::size_t waits = 0;
     bool valid = true;
 };
 
@@ -319,60 +316,10 @@ public:
         ++state_->unregister_calls;
     }
 
-    std::vector<RGBController*> controllers() const override
+    std::vector<RGBControllerInterface*> controllers() const override
     {
         std::lock_guard lock(state_->mutex);
         return {state_->controllers.begin(), state_->controllers.end()};
-    }
-
-    void register_detection_start(
-        hyperflux::openrgb::native::DetectionCallback callback,
-        void* context) noexcept override
-    {
-        std::lock_guard lock(state_->mutex);
-        state_->start = callback;
-        state_->start_context = context;
-    }
-
-    void register_detection_end(
-        hyperflux::openrgb::native::DetectionCallback callback,
-        void* context) noexcept override
-    {
-        std::lock_guard lock(state_->mutex);
-        state_->end = callback;
-        state_->end_context = context;
-    }
-
-    void unregister_detection_start(
-        hyperflux::openrgb::native::DetectionCallback callback,
-        void* context) noexcept override
-    {
-        std::lock_guard lock(state_->mutex);
-        if(state_->start != callback || state_->start_context != context)
-        {
-            state_->valid = false;
-        }
-        state_->start = nullptr;
-        state_->start_context = nullptr;
-    }
-
-    void unregister_detection_end(
-        hyperflux::openrgb::native::DetectionCallback callback,
-        void* context) noexcept override
-    {
-        std::lock_guard lock(state_->mutex);
-        if(state_->end != callback || state_->end_context != context)
-        {
-            state_->valid = false;
-        }
-        state_->end = nullptr;
-        state_->end_context = nullptr;
-    }
-
-    void wait_for_detection() noexcept override
-    {
-        std::lock_guard lock(state_->mutex);
-        ++state_->waits;
     }
 
 private:
@@ -393,21 +340,6 @@ bool wait_until(Predicate predicate)
     }
     QCoreApplication::processEvents();
     return predicate();
-}
-
-void detection(const std::shared_ptr<HostState>& state, bool start)
-{
-    hyperflux::openrgb::native::DetectionCallback callback = nullptr;
-    void* context = nullptr;
-    {
-        std::lock_guard lock(state->mutex);
-        callback = start ? state->start : state->end;
-        context = start ? state->start_context : state->end_context;
-    }
-    if(callback != nullptr)
-    {
-        callback(context);
-    }
 }
 
 } // namespace
@@ -512,10 +444,18 @@ int main(int argc, char** argv)
 
     discovery_state->generation.store(5);
     plugin.request_rescan();
+    // The old pair stays registered while its replacement is prepared, so
+    // the registered count alone does not show that the rescan finished.
     if(!wait_until([&]
        {
-           return discovery_state->enumerate_calls.load() >= 3
-               && plugin.status().coordinator.registered_controllers == 2;
+           if(discovery_state->enumerate_calls.load() < 3
+              || plugin.status().coordinator.registered_controllers != 2)
+           {
+               return false;
+           }
+           std::lock_guard lock(feature_clients->mutex);
+           return feature_clients->observed.size() >= 4
+               && feature_clients->active.size() == 2;
        }))
     {
         return failure(__LINE__);
@@ -548,22 +488,18 @@ int main(int argc, char** argv)
         }
     }
 
-    detection(host_state, true);
-    detection(host_state, true);
+    // OpenRGB 1.0 keeps plugin controllers across rescans and reports
+    // completion from its worker threads: reconcile without churn.
+    const auto enumerations = discovery_state->enumerate_calls.load();
+    std::thread detection_thread([&plugin]
     {
-        std::lock_guard lock(host_state->mutex);
-        if(!host_state->controllers.empty() || host_state->unregister_calls != 4
-           || !plugin.status().coordinator.detection_suspended)
-        {
-            return failure(__LINE__);
-        }
-    }
-    detection(host_state, false);
-    detection(host_state, false);
+        plugin.detection_completed();
+        plugin.detection_completed();
+    });
+    detection_thread.join();
     if(!wait_until([&]
        {
-           std::lock_guard lock(host_state->mutex);
-           return host_state->controllers.size() == 2;
+           return discovery_state->enumerate_calls.load() >= enumerations + 1;
        }))
     {
         return failure(__LINE__);
@@ -576,8 +512,7 @@ int main(int argc, char** argv)
             current.insert(reinterpret_cast<std::uintptr_t>(controller));
         }
         if(!host_state->valid || current != replacement_identities
-           || host_state->register_calls != 6
-           || plugin.status().coordinator.detection_suspended)
+           || host_state->register_calls != 4 || host_state->unregister_calls != 2)
         {
             return failure(__LINE__);
         }
@@ -585,12 +520,13 @@ int main(int argc, char** argv)
 
     plugin.unload();
     plugin.unload();
+    // Completion after unload is ignored.
+    plugin.detection_completed();
     QCoreApplication::processEvents();
     {
         std::lock_guard lock(host_state->mutex);
         if(!host_state->valid || !host_state->controllers.empty()
-           || host_state->start != nullptr || host_state->end != nullptr
-           || host_state->waits != 1 || host_state->unregister_calls != 6)
+           || host_state->unregister_calls != 4)
         {
             return failure(__LINE__);
         }
@@ -629,6 +565,55 @@ int main(int argc, char** argv)
         {
             return failure(__LINE__);
         }
+    }
+
+    // OpenRGB 1.0 exit: the GUI stops following the device list before it
+    // unloads plugins, so its device pages release the controllers we
+    // presented only after Unload has returned.
+    {
+        hyperflux::test::OpenRgbVirtualPluginApi api;
+        if(!plugin.load(&api)
+           || !wait_until([&]
+           {
+               return plugin.status().coordinator.registered_controllers == 2;
+           }))
+        {
+            return failure(__LINE__);
+        }
+        std::vector<std::unique_ptr<hyperflux::test::OpenRgbDevicePage>> pages;
+        for(auto* controller : api.GetRGBControllers())
+        {
+            pages.push_back(std::make_unique<hyperflux::test::OpenRgbDevicePage>(*controller));
+        }
+        if(pages.size() != 2)
+        {
+            return failure(__LINE__);
+        }
+        plugin.unload();
+        if(!api.valid || !api.GetRGBControllers().empty())
+        {
+            return failure(__LINE__);
+        }
+        for(auto& page : pages)
+        {
+            if(!page->destroy(api))
+            {
+                return failure(__LINE__);
+            }
+        }
+
+        // Loading again frees what the exit path kept alive.
+        const unsigned int deletes = api.deletes;
+        if(!plugin.load(&api)
+           || !wait_until([&]
+           {
+               return plugin.status().coordinator.registered_controllers == 2;
+           })
+           || api.deletes != deletes + 2 || !api.valid)
+        {
+            return failure(__LINE__);
+        }
+        plugin.unload();
     }
 
     auto duplicate_host_state = std::make_shared<HostState>();

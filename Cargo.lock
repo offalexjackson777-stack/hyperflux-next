@@ -70,7 +70,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-bridge"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "hfx-core",
  "hfx-domain",
@@ -86,7 +86,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-core"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "hfx-domain",
  "hfx-protocol",
@@ -97,7 +97,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-daemon"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "hfx-bridge",
  "hfx-core",
@@ -115,7 +115,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-device-qualification"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "hfx-domain",
  "hfx-profiles",
@@ -131,7 +131,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-domain"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -139,7 +139,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-errors"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "hfx-domain",
  "serde",
@@ -148,7 +148,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-integration-model"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "hfx-domain",
  "hfx-profiles",
@@ -160,7 +160,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-kernel-transport"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "hfx-core",
  "hfx-domain",
@@ -173,7 +173,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-ops"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "hfx-device-qualification",
  "hfx-domain",
@@ -190,14 +190,14 @@ dependencies = [
 
 [[package]]
 name = "hfx-profiles"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "hfx-domain",
 ]
 
 [[package]]
 name = "hfx-protocol"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "hfx-domain",
  "serde",
@@ -206,7 +206,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-runtime"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -214,7 +214,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-sdk"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "hfx-bridge",
  "hfx-domain",
@@ -225,7 +225,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-sim"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "hfx-core",
  "hfx-domain",
@@ -238,7 +238,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-system-probe"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "hfx-domain",
  "hfx-integration-model",
@@ -253,7 +253,7 @@ dependencies = [
 
 [[package]]
 name = "hfx-uhid-relay"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "hfx-bridge",
  "hfx-daemon",
@@ -324,9 +324,9 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "1.1.4"
+version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6fe4565b9518b83ef4f91bb47ce29620ca828bd32cb7e408f0062e9930ba190"
+checksum = "891efababe418670775f199f0d233d84843c227a0949a883ce15b37c78d6629d"
 dependencies = [
  "bitflags",
  "errno",
@@ -367,9 +367,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.150"
+version = "1.0.152"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8014e44b4736ed0538adeecded0fce2a272f22dc9578a7eb6b2d9993c74cfb9"
+checksum = "1741ab7a6cc54a03a89b5d563ed60075c277d9e3cfa73ad0c1f23f23974703c6"
 dependencies = [
  "itoa",
  "memchr",
@@ -391,9 +391,9 @@ dependencies = [
 
 [[package]]
 name = "signal-hook"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2a0c28ca5908dbdbcd52e6fdaa00358ab88637f8ab33e1f188dd510eb44b53d"
+checksum = "b29ffa27d3d59a049bb328258de100f8012848d1b08d444e08bbc02ac468435e"
 dependencies = [
  "libc",
  "signal-hook-registry",
