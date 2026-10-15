@@ -59,9 +59,9 @@ fast and full lanes. Installed binary and payload sizes are checked by
 
 Five physical budgets cover visible effect-frame delay, reconnect recovery,
 bridge readiness after service start, steady CPU use, and steady memory use.
-They need measurement on an installed candidate with real hardware. No
-measurement is retained in the repository yet, so these budgets stay blocked by
-physical evidence.
+They need measurement on an installed system with real hardware. No
+measurement is retained in the repository yet, so these budgets are declared
+but unmeasured, and they do not block a release.
 
 The repository stores no benchmark history, so it cannot yet tell noise from a
 gradual regression. Trend analysis needs retained measurements first.

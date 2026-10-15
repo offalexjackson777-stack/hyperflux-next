@@ -27,10 +27,10 @@ REVIEW_STATUSES = {
     "parsing-and-copies": "reviewed-no-change",
     "idle-wakeups-and-polling": "reviewed-bounded",
     "package-and-binary-size": "measured",
-    "startup-latency": "blocked-by-physical-evidence",
-    "reconnect-latency": "blocked-by-physical-evidence",
-    "publication-latency": "blocked-by-physical-evidence",
-    "command-latency": "blocked-by-physical-evidence",
+    "startup-latency": "unmeasured-physical",
+    "reconnect-latency": "unmeasured-physical",
+    "publication-latency": "unmeasured-physical",
+    "command-latency": "unmeasured-physical",
     "capability-discovery": "enforced",
 }
 ARTIFACT_IDS = (

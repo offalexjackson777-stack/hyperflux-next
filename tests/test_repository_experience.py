@@ -658,7 +658,18 @@ class RepositoryExperienceContracts(unittest.TestCase):
         metrics = load_performance_budgets(ROOT)
         software = [metric for metric in metrics if metric.status == "enforced-software"]
         physical = [metric for metric in metrics if metric.status != "enforced-software"]
-        self.assertEqual({metric.status for metric in physical}, {"blocked-by-physical-evidence"})
+        self.assertEqual({metric.status for metric in physical}, {"unmeasured-physical"})
+        self.assertFalse([metric.id for metric in physical if metric.release_blocking])
+        authority = load_json(ROOT / "assurance/performance-budgets.json")
+        blocking = next(
+            item for item in authority["metrics"] if item["measurement_kind"] == "physical"
+        )
+        blocking["release_blocking"] = True
+        with (
+            patch("hfxdev.performance.load_json", return_value=authority),
+            self.assertRaisesRegex(ModelError, "without a retained measurement"),
+        ):
+            load_performance_budgets(ROOT)
         words = {10: "Ten", 5: "Five"}
         chapter = (ROOT / "docs/architecture/design-book/10-updates-packaging-and-operations.md").read_text(
             encoding="utf-8"

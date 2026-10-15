@@ -56,36 +56,36 @@
       "id": "package-and-binary-size",
       "status": "measured",
       "evidence": ["assurance/performance-budgets.json", "packaging/install.json"],
-      "finding": "Phase 3 A/B artifacts measured 29,357,049 uncompressed payload bytes and every binary remained below its canonical budget.",
+      "finding": "Release-candidate artifacts measured 29,357,049 uncompressed payload bytes and every binary remained below its canonical budget.",
       "action": "Recompute and enforce the same budgets after every package-contracts run."
     },
     {
       "id": "startup-latency",
-      "status": "blocked-by-physical-evidence",
+      "status": "unmeasured-physical",
       "evidence": ["assurance/performance-budgets.json"],
       "finding": "Software tests cannot measure installed bridge readiness across kernel, permissions, profile loading, and socket startup.",
-      "action": "Measure at the separately authorized Phase 7 physical parity gate."
+      "action": "Not measured on hardware. Store an installed-system measurement before claiming a startup latency."
     },
     {
       "id": "reconnect-latency",
-      "status": "blocked-by-physical-evidence",
+      "status": "unmeasured-physical",
       "evidence": ["assurance/performance-budgets.json"],
       "finding": "Real USB enumeration and application republication remain physical measurements.",
-      "action": "Measure at the separately authorized Phase 7 physical parity gate."
+      "action": "Not measured on hardware. Store a receiver reconnect measurement before claiming a recovery time."
     },
     {
       "id": "publication-latency",
-      "status": "blocked-by-physical-evidence",
+      "status": "unmeasured-physical",
       "evidence": ["assurance/performance-budgets.json", "crates/hfx-uhid-relay/src/runtime.rs"],
       "finding": "Deterministic route tests prove bounded state transitions but not wall-clock UHID and stock-application publication on hardware.",
-      "action": "Measure route-to-application publication during Phase 7 parity."
+      "action": "Not measured on hardware. Store a route-to-application measurement before claiming a publication time."
     },
     {
       "id": "command-latency",
-      "status": "blocked-by-physical-evidence",
+      "status": "unmeasured-physical",
       "evidence": ["assurance/performance-budgets.json", "crates/hfx-kernel-transport/src/transport/native_exchange.rs"],
       "finding": "Software exchange deadlines do not prove visible device response latency.",
-      "action": "Measure reversible command and effect-frame latency during Phase 7 parity."
+      "action": "Not measured on hardware. Store command and effect-frame measurements before claiming a response time."
     },
     {
       "id": "capability-discovery",

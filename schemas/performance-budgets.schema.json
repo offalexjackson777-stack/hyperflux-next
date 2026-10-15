@@ -49,7 +49,7 @@
         "selector": {"type": "string", "minLength": 1, "maxLength": 256},
         "unit": {"enum": ["bytes", "count", "milliseconds", "percent"]},
         "maximum": {"type": "number", "exclusiveMinimum": 0},
-        "status": {"enum": ["enforced-software", "blocked-by-physical-evidence"]},
+        "status": {"enum": ["enforced-software", "unmeasured-physical"]},
         "sample_count": {"type": "integer", "minimum": 1, "maximum": 10000},
         "warmup_count": {"type": "integer", "minimum": 0, "maximum": 1000},
         "release_blocking": {"type": "boolean"},
