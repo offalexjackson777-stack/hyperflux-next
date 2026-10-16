@@ -1,6 +1,6 @@
 {
   "$schema": "../schemas/rust-coverage.schema.json",
-  "schema": "hyperflux-rust-coverage-v1",
+  "schema": "hyperflux-rust-coverage-v2",
   "tool": {
     "name": "cargo-llvm-cov",
     "version": "0.8.7",
@@ -26,6 +26,20 @@
     "report_sha256": "4054b352a6cc8d856de2fcb3d17da64b4237eab38ebec5808164fc342bea2c48",
     "report_format": "llvm.coverage.json.export-3.1.0"
   },
+  "tolerance": {
+    "lines": {
+      "tighten_margin": 5,
+      "stale_tolerance": 10
+    },
+    "functions": {
+      "tighten_margin": 0,
+      "stale_tolerance": 1
+    },
+    "regions": {
+      "tighten_margin": 5,
+      "stale_tolerance": 10
+    }
+  },
   "metrics": {
     "lines": {
       "baseline_count": 37599,
@@ -47,6 +61,20 @@
       "baseline_notcovered": 13836,
       "minimum_covered": 35767,
       "maximum_notcovered": 13836
+    }
+  },
+  "ratio_floor": {
+    "lines": {
+      "covered": 27391,
+      "count": 37599
+    },
+    "functions": {
+      "covered": 2691,
+      "count": 3802
+    },
+    "regions": {
+      "covered": 35767,
+      "count": 49603
     }
   }
 }

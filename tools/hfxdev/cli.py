@@ -86,6 +86,20 @@ def _parser() -> argparse.ArgumentParser:
     generate = commands.add_parser("generate", help="regenerate canonical derived files")
     generate.add_argument("--check", action="store_true", help="reserved for compatibility; verify performs the check")
 
+    coverage = commands.add_parser("coverage", help="maintain the Rust coverage ratchet")
+    coverage_commands = coverage.add_subparsers(dest="coverage_command", required=True)
+    coverage_tighten = coverage_commands.add_parser(
+        "tighten",
+        help="lower the committed not-covered limits to a measured llvm-cov summary",
+    )
+    coverage_tighten.add_argument(
+        "--report",
+        type=Path,
+        help=(
+            "llvm-cov JSON summary to read, for example from the "
+            "hyperflux-full-evidence CI artifact (default: build/rust-coverage-current.json)"
+        ),
+    )
     test = commands.add_parser("test", help="inspect typed verification metadata")
     test_commands = test.add_subparsers(dest="test_command", required=True)
     plan = test_commands.add_parser("plan", help="show the dependency-ordered verification plan")
@@ -596,6 +610,17 @@ def main(arguments: list[str] | None = None) -> int:
 
             write_generated(root)
             print("Generated repository views are current.")
+            return 0
+        if args.command == "coverage":
+            from .coverage import POLICY_PATH, tighten_rust_coverage_policy
+
+            report = None if args.report is None else args.report.expanduser().resolve()
+            result = tighten_rust_coverage_policy(root, report)
+            print(result.table())
+            if result.written:
+                print(f"Rust coverage limits tightened: commit {POLICY_PATH}")
+            else:
+                print("Rust coverage limits are already tight; nothing was written.")
             return 0
         if args.command == "test":
             lane = "fast" if args.fast else "full-software"
