@@ -297,8 +297,8 @@ fn qualified_mouse_charge_field_reads_in_the_context_of_its_report() {
 
     // (sequence, contact in the same report, charge field, decoded reading)
     let cases = [
-        // On the mat a not-charging value may be a charge limit holding the
-        // battery, which no capture has shown, so it stays unknown.
+        // Only byte 3 = 00 proves discharging; a not-charging value beside
+        // any other byte 3 value stays unknown.
         (6, Some(1), 0, ChildChargeReading::Unknown),
         (8, Some(1), 1, ChildChargeReading::Charging),
         (10, Some(0), 1, ChildChargeReading::Charging),
@@ -306,6 +306,11 @@ fn qualified_mouse_charge_field_reads_in_the_context_of_its_report() {
         (14, Some(9), 0, ChildChargeReading::Unknown),
         // The contact of the previous report was already consumed.
         (15, None, 0, ChildChargeReading::Unknown),
+        // Byte 3 read 06 on a USB cable: charging still reads charging, and
+        // not charging beside it is unknown.
+        (17, Some(6), 1, ChildChargeReading::Charging),
+        (19, Some(6), 0, ChildChargeReading::Unknown),
+        (21, Some(6), 7, ChildChargeReading::Unknown),
     ];
     for (sequence, contact, charge, expected) in cases {
         let translation = charge_after_contact(&mut translator, sequence, contact, charge);
@@ -320,16 +325,52 @@ fn qualified_mouse_charge_field_reads_in_the_context_of_its_report() {
     // another report and proves nothing about this one.
     translator
         .translate(raw(
-            16,
+            22,
             HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CONTACT_RAW,
             HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
             0,
         ))
         .expect("contact translates");
-    let gap = charge_after_contact(&mut translator, 18, None, 0);
+    let gap = charge_after_contact(&mut translator, 24, None, 0);
     assert_eq!(
         gap.charge,
         Some((ChildBatteryLane::Pointer, ChildChargeReading::Unknown))
+    );
+}
+
+#[test]
+fn the_observed_cable_plug_in_reads_discharging_then_charging() {
+    let mut translator = translator();
+    identify(
+        &mut translator,
+        1,
+        HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+        0x00cd,
+    );
+    // Each status report arrives as battery, byte 3 and charge fields with
+    // consecutive sequence numbers. On plug-in the first report still read
+    // byte 3 = 00 and charge 00; the next read byte 3 = 06 and charge 01.
+    let mut sequence = 2;
+    let mut report = |byte3, charge| {
+        translator
+            .translate(raw(
+                sequence,
+                HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW,
+                HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+                0xcd,
+            ))
+            .expect("battery translates");
+        let translation = charge_after_contact(&mut translator, sequence + 2, Some(byte3), charge);
+        sequence += 3;
+        translation.charge
+    };
+    assert_eq!(
+        report(0x00, 0x00),
+        Some((ChildBatteryLane::Pointer, ChildChargeReading::Discharging))
+    );
+    assert_eq!(
+        report(0x06, 0x01),
+        Some((ChildBatteryLane::Pointer, ChildChargeReading::Charging))
     );
 }
 

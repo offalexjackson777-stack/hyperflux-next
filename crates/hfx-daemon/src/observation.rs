@@ -176,8 +176,9 @@ struct LaneBinding {
     passive: Option<PassiveTelemetryRecord>,
     return_lifecycle: Option<EndpointReturnLifecycle>,
     last_route_state: Option<RouteState>,
-    /// The contact decoded from the latest report, kept only so the charge
-    /// field that follows it in the same report can be read in context.
+    /// Byte 3 of the latest report, decoded through the contact decoder and
+    /// kept only so the charge field that follows it in the same report can
+    /// be read in context.
     last_contact: Option<(SequenceNumber, ContactState)>,
 }
 
@@ -613,11 +614,12 @@ impl PassiveObservationTranslator {
     /// Decodes one charge field through the child profile's qualified charge
     /// decoder. A profile without that decoder keeps its charge unknown.
     ///
-    /// A not-charging value means discharging only when the contact field
-    /// of the same report, which the kernel appends just before the charge
-    /// field, says the mouse is off the mat. On the mat it may be a charge
-    /// limit holding the battery, which no capture has shown yet, so the
-    /// state stays unknown. A missing or older contact also stays unknown.
+    /// A charging value means charging whatever byte 3 of the same report
+    /// reads. A not-charging value means discharging only when byte 3, which
+    /// the kernel emits as the contact field just before the charge field,
+    /// reads its proven off-the-mat value. Byte 3 is not only a mat contact:
+    /// it read 06 on a USB cable, so every other byte 3 value, and a missing
+    /// or older one, leaves the state unknown.
     fn charge(&mut self, slot: u32, value: u32, stamp: &ObservationStamp) -> PassiveTranslation {
         let (Some(lane), Some(binding)) = (
             ChildBatteryLane::from_endpoint_slot(slot),
