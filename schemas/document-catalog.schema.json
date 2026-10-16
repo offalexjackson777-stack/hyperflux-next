@@ -97,7 +97,7 @@
         },
         "generated_block_ids": {
           "type": "array",
-          "maxItems": 3,
+          "maxItems": 11,
           "uniqueItems": true,
           "items": {
             "enum": [
@@ -106,7 +106,12 @@
               "recommended-package",
               "compatibility-summary",
               "repository-setup",
-              "package-fallback"
+              "package-fallback",
+              "install-table",
+              "ubuntu-repository-setup",
+              "debian-repository-setup",
+              "fedora-repository-setup",
+              "opensuse-repository-setup"
             ]
           }
         }

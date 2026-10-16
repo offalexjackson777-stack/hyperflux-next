@@ -281,6 +281,20 @@ class RepositoryExperienceContracts(unittest.TestCase):
                 with self.assertRaises(ModelError):
                     generated_markers(mutation)
 
+    def test_document_catalog_schema_declares_every_generated_block(self) -> None:
+        # The schema and the loader must accept the same block ids, and every
+        # repository guide target needs its setup block declared.
+        from hfxdev.generators.repository_guides import block_id
+        from hfxdev.package_repositories import SITE_TARGET_IDS
+
+        schema = load_json(ROOT / "schemas/document-catalog.schema.json")
+        blocks = schema["$defs"]["document"]["properties"]["generated_block_ids"]
+        self.assertEqual(tuple(blocks["items"]["enum"]), GENERATED_BLOCK_IDS)
+        self.assertEqual(blocks["maxItems"], len(GENERATED_BLOCK_IDS))
+        for target_id in SITE_TARGET_IDS:
+            with self.subTest(target=target_id):
+                self.assertIn(block_id(target_id), GENERATED_BLOCK_IDS)
+
     def test_human_document_experience_is_bounded_and_privacy_safe(self) -> None:
         catalog = load_document_catalog(ROOT)
         private_patterns = (
