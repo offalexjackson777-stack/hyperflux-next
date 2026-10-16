@@ -92,8 +92,10 @@ deleting code that has tests still passes as long as the share stays at or above
 
 The **Documentation render** check renders every document in Chromium at three widths, in
 light and dark themes, with no network. It runs on pull requests that change a document or
-a render input, and fails on any layout issue or outbound request. Its screenshots are
-uploaded as the `hyperflux-documentation-render` artifact.
+a render input, and fails on any layout issue or outbound request. Layout issues include
+content wider than the screen, a box that cuts its content off instead of scrolling, and a
+table column too narrow for one of its words. Its screenshots are uploaded as the
+`hyperflux-documentation-render` artifact.
 
 The committed render record, `assurance/documentation-audit.json`, describes the last
 release. Ordinary pull requests check only its structure, so a merged documentation change

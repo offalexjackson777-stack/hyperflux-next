@@ -332,6 +332,8 @@ class RepositoryExperienceContracts(unittest.TestCase):
             "page-horizontal-overflow",
             "element-outside-viewport",
             "clipped-text",
+            "clipped-horizontal-overflow",
+            "table-word-break",
             "broken-image",
             "missing-image-alt",
             "table-column-bound",
@@ -363,6 +365,60 @@ class RepositoryExperienceContracts(unittest.TestCase):
         for rule in re.findall(r"[^{}]+\{[^}]*overflow-wrap:anywhere[^}]*\}", style):
             selectors = rule.split("{", 1)[0]
             self.assertNotRegex(selectors, r"\b(?:article|table|th|td)\b", rule)
+
+    @unittest.skipIf(shutil.which("node") is None, "Node.js is not available")
+    def test_document_render_flags_clipped_boxes_and_squeezed_tables(self) -> None:
+        script = (
+            "const { layoutIssues } = require(process.argv[1]);"
+            "const input = JSON.parse(require('node:fs').readFileSync(0, 'utf8'));"
+            "process.stdout.write(JSON.stringify(input.map(layoutIssues)));"
+        )
+        box = {"tag": "pre", "scroll_width": 900, "client_width": 300}
+        word = {"table": 1, "cell": "th", "word": "Required", "lines": 8}
+        cases = [
+            # A wide box that scrolls is fine; one that hides or clips cuts content off.
+            {"overflowing": [{**box, "overflow_x": "auto"}], "broken_words": []},
+            {"overflowing": [{**box, "overflow_x": "scroll"}], "broken_words": []},
+            {"overflowing": [{**box, "overflow_x": "hidden"}], "broken_words": []},
+            {"overflowing": [{**box, "overflow_x": "clip"}], "broken_words": []},
+            # A word on one line is fine; a split word is reported once per table.
+            {"overflowing": [], "broken_words": [{**word, "lines": 1}]},
+            {
+                "overflowing": [],
+                "broken_words": [
+                    word,
+                    {**word, "cell": "td", "word": "yes", "lines": 3},
+                    {**word, "table": 2, "word": "Component", "lines": 2},
+                ],
+            },
+        ]
+        completed = subprocess.run(
+            [
+                shutil.which("node"),
+                "-e",
+                script,
+                str(ROOT / "tools" / "documentation_preview.cjs"),
+            ],
+            input=json.dumps(cases),
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=60,
+        )
+        self.assertEqual(
+            json.loads(completed.stdout),
+            [
+                [],
+                [],
+                [{"kind": "clipped-horizontal-overflow", "detail": "pre 900>300"}],
+                [{"kind": "clipped-horizontal-overflow", "detail": "pre 900>300"}],
+                [],
+                [
+                    {"kind": "table-word-break", "detail": "table 1 th Required"},
+                    {"kind": "table-word-break", "detail": "table 2 th Component"},
+                ],
+            ],
+        )
 
     def test_document_render_policy_rejects_missing_theme_or_unreviewed_screenshot(self) -> None:
         canonical = load_json(ROOT / "docs" / "render-preview.json")
