@@ -44,6 +44,7 @@ REQUIRED_PACKAGES = {
     "ca-certificates",
     "cargo-audit",
     "cargo-llvm-cov",
+    "chromium",
     "clang",
     "cmake",
     "curl",
@@ -61,6 +62,9 @@ REQUIRED_PACKAGES = {
     "make",
     "mbedtls",
     "ninja",
+    "nodejs",
+    "noto-fonts",
+    "npm",
     "patchelf",
     "pkgconf",
     "python",
@@ -84,6 +88,9 @@ REQUIRED_PACKAGES = {
     "sudo",
     "zstd",
 }
+DOCUMENTATION_RENDER_LOCK_DIRECTORY = "toolchains/documentation-render"
+DOCUMENTATION_RENDER_PACKAGE_PATH = ".hfx/documentation-render"
+DOCUMENTATION_RENDER_NODE_MODULES = f"{DOCUMENTATION_RENDER_PACKAGE_PATH}/node_modules"
 RUSTSEC_ADVISORY_REPOSITORY = "https://github.com/RustSec/advisory-db.git"
 RUSTSEC_ADVISORY_REVISION = "308808d74a1462ec8b09c1e76938471c53b55dcc"
 RUSTSEC_ADVISORY_DESTINATION = "/opt/rustsec-advisory-db"
@@ -93,6 +100,22 @@ def networked_software_prepare_command() -> str:
     upstream = shlex.join(UPSTREAM_PREPARE_COMMAND)
     rust = shlex.join(LOCKED_RUST_FETCH_COMMAND)
     return f"{upstream} && CARGO_NET_OFFLINE=false {rust}"
+
+
+def documentation_render_prepare_command() -> str:
+    """Install the locked documentation renderer packages with network access.
+
+    The lock pins every npm package and its integrity digest; install scripts are
+    disabled, and the render itself later runs without network.
+    """
+    lock = DOCUMENTATION_RENDER_LOCK_DIRECTORY
+    target = DOCUMENTATION_RENDER_PACKAGE_PATH
+    return (
+        f"install -d {target} && "
+        f"install -m 0644 {lock}/package.json {lock}/package-lock.json {target}/ && "
+        f"npm ci --prefix {target} --ignore-scripts --no-audit --no-fund "
+        "--no-update-notifier --cache /tmp/hfx-home/npm"
+    )
 
 
 @dataclass(frozen=True)
@@ -303,7 +326,11 @@ def load_development_environment(root: Path) -> DevelopmentEnvironment:
         "pinned-rust-toolchain",
     }:
         raise ModelError("container build network policy is incomplete")
-    if post_create_uses != ("pinned-upstream-checkouts", "locked-rust-crates"):
+    if post_create_uses != (
+        "pinned-upstream-checkouts",
+        "locked-rust-crates",
+        "locked-documentation-render-packages",
+    ):
         raise ModelError("post-create network policy is incomplete")
     if network["verification"] != "forbidden":
         raise ModelError("verification must remain network-free")

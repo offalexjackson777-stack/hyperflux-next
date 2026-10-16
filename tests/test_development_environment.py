@@ -61,7 +61,11 @@ class DevelopmentEnvironmentTests(unittest.TestCase):
         )
         self.assertEqual(
             environment.post_create_network_uses,
-            ("pinned-upstream-checkouts", "locked-rust-crates"),
+            (
+                "pinned-upstream-checkouts",
+                "locked-rust-crates",
+                "locked-documentation-render-packages",
+            ),
         )
         self.assertEqual(
             [package.name for package in environment.packages],

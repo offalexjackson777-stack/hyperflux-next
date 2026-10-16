@@ -523,7 +523,7 @@
       "inputs": ["Supported build matrix", "Exact upstream revisions", "Verification requirements"],
       "outputs": ["Reproducible environment contract", "Generated development container"],
       "public_contracts": ["Exact versions and digests", "Offline verification after preparation", "No floating build authority"],
-      "canonical_files": ["toolchains/pins.json", "toolchains/development-environment.json"],
+      "canonical_files": ["toolchains/pins.json", "toolchains/development-environment.json", "toolchains/documentation-render/package.json", "toolchains/documentation-render/package-lock.json"],
       "generated_files": ["toolchains/README.md", "docs/generated/development-environment.md", ".devcontainer/Containerfile"],
       "verification": ["toolchain-contract", "development-environment-contracts"],
       "limitations": ["Preparing upstream checkouts may require network access outside offline verification"],
