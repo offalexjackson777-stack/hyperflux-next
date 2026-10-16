@@ -52,6 +52,21 @@ how to check a device that is not listed. The
 
 ## Install
 
+<!-- HFX-GENERATED-BEGIN: install-table -->
+Choose the guide for your Linux distribution. Each one adds the signed
+HyperFlux repository and installs the package.
+
+| Distribution | Release | Guide | Packages |
+| --- | --- | --- | --- |
+| Arch Linux | rolling | [Install on Arch Linux](docs/user/installation.md) | Ready |
+| Ubuntu | 24.04 | [Install on Ubuntu](docs/user/install-ubuntu.md) | Not published yet |
+| Debian | 13 | [Install on Debian](docs/user/install-debian.md) | Not published yet |
+| Fedora | 44 | [Install on Fedora](docs/user/install-fedora.md) | Not published yet |
+| openSUSE | Tumbleweed | [Install on openSUSE](docs/user/install-opensuse.md) | Not published yet |
+
+The quick steps below are for Arch Linux.
+<!-- HFX-GENERATED-END: install-table -->
+
 <!-- HFX-GENERATED-BEGIN: recommended-package -->
 You need Arch Linux on an x86_64 computer and the receiver, with your keyboard
 and mouse paired to it.

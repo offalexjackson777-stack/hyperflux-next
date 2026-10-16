@@ -32,8 +32,8 @@
       "owner": "documentation",
       "navigation_group": "home",
       "mode": "hybrid",
-      "canonical_sources": ["generated/public-readiness.json", "assurance/arch-repository.json", "packaging/distributions.json", "integrations/native-route/source-validated.json"],
-      "generated_block_ids": ["release-summary", "compatibility-summary", "recommended-package"]
+      "canonical_sources": ["generated/public-readiness.json", "assurance/arch-repository.json", "packaging/distributions.json", "packaging/repository-site.json", "integrations/native-route/source-validated.json"],
+      "generated_block_ids": ["release-summary", "compatibility-summary", "install-table", "recommended-package"]
     },
     {
       "path": "SECURITY.md",
@@ -927,6 +927,50 @@
       "generated_block_ids": []
     },
     {
+      "path": "docs/user/install-debian.md",
+      "title": "Install HyperFlux Next on Debian",
+      "audience": "users",
+      "purpose": "Walks a Debian user through adding the signed HyperFlux repository, installing the package, turning HyperFlux on, and checking that it works.",
+      "owner": "documentation",
+      "navigation_group": "user",
+      "mode": "hybrid",
+      "canonical_sources": ["packaging/repository-site.json", "packaging/distributions.json", "assurance/arch-repository.json"],
+      "generated_block_ids": ["debian-repository-setup"]
+    },
+    {
+      "path": "docs/user/install-fedora.md",
+      "title": "Install HyperFlux Next on Fedora",
+      "audience": "users",
+      "purpose": "Walks a Fedora user through adding the signed HyperFlux repository, installing the package, turning HyperFlux on, and checking that it works.",
+      "owner": "documentation",
+      "navigation_group": "user",
+      "mode": "hybrid",
+      "canonical_sources": ["packaging/repository-site.json", "packaging/distributions.json", "assurance/arch-repository.json"],
+      "generated_block_ids": ["fedora-repository-setup"]
+    },
+    {
+      "path": "docs/user/install-opensuse.md",
+      "title": "Install HyperFlux Next on openSUSE",
+      "audience": "users",
+      "purpose": "Walks a openSUSE user through adding the signed HyperFlux repository, installing the package, turning HyperFlux on, and checking that it works.",
+      "owner": "documentation",
+      "navigation_group": "user",
+      "mode": "hybrid",
+      "canonical_sources": ["packaging/repository-site.json", "packaging/distributions.json", "assurance/arch-repository.json"],
+      "generated_block_ids": ["opensuse-repository-setup"]
+    },
+    {
+      "path": "docs/user/install-ubuntu.md",
+      "title": "Install HyperFlux Next on Ubuntu",
+      "audience": "users",
+      "purpose": "Walks a Ubuntu user through adding the signed HyperFlux repository, installing the package, turning HyperFlux on, and checking that it works.",
+      "owner": "documentation",
+      "navigation_group": "user",
+      "mode": "hybrid",
+      "canonical_sources": ["packaging/repository-site.json", "packaging/distributions.json", "assurance/arch-repository.json"],
+      "generated_block_ids": ["ubuntu-repository-setup"]
+    },
+    {
       "path": "docs/user/installation.md",
       "title": "Install HyperFlux Next",
       "audience": "users",
@@ -934,7 +978,7 @@
       "owner": "documentation",
       "navigation_group": "user",
       "mode": "hybrid",
-      "canonical_sources": ["assurance/arch-repository.json"],
+      "canonical_sources": ["assurance/arch-repository.json", "packaging/repository-site.json"],
       "generated_block_ids": ["repository-setup", "package-fallback"]
     },
     {

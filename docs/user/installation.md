@@ -5,7 +5,9 @@ HyperFlux receiver work in OpenRazer, Polychromatic, and OpenRGB.
 
 ## What You Need
 
-- Arch Linux on an x86_64 computer.
+- Arch Linux on an x86_64 computer. For other distributions, use the
+  [Ubuntu](install-ubuntu.md), [Debian](install-debian.md),
+  [Fedora](install-fedora.md), or [openSUSE](install-opensuse.md) guide.
 - The HyperFlux receiver, plugged in, with your keyboard and mouse paired to it.
 - A user account that can run `sudo`.
 

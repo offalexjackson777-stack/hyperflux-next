@@ -11,7 +11,9 @@ Start with the door that fits what you want to do.
 
 For people who want their keyboard and mouse to work.
 
-- [Install HyperFlux Next](user/installation.md)
+- [Install HyperFlux Next](user/installation.md) on Arch Linux, or on
+  [Ubuntu](user/install-ubuntu.md), [Debian](user/install-debian.md),
+  [Fedora](user/install-fedora.md), or [openSUSE](user/install-opensuse.md).
 - [First run](user/first-run.md): open your apps and check your devices.
 - [Applications](user/applications.md): what OpenRazer, Polychromatic, and
   OpenRGB can do.
