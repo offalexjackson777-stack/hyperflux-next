@@ -101,9 +101,10 @@ across reloads.
 
 ## What Is Still Open
 
-A host-load test still has to be run by hand, because starting OpenRGB touches real
-hardware: the HyperFlux Next plugin tab and the receiver's devices should appear in OpenRGB.
-It is listed in [#36](https://github.com/offalexjackson777-stack/hyperflux-next/issues/36).
+The host-load test, which has to be run by hand because starting OpenRGB touches real
+hardware, passed on 16 October 2026 with HyperFlux Next 2.1.0 and the Arch `openrgb 1.0-2`
+package: OpenRGB loaded the plugin, showed the receiver's devices, and changed their
+lighting.
 
 SDK clients, such as scripts using the OpenRGB SDK or a second OpenRGB instance, see the
 HyperFlux controllers only when **Settings → Server → Serve All Controllers** is on. Controls

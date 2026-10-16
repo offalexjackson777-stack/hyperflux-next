@@ -2,8 +2,8 @@
 
 Repeated battery reads through HyperFlux could jump between unrelated values, for example
 27%, then 50%, then 0%. A battery reply meant for the other device on the same receiver
-could be accepted, and an old reading could be replayed as current. The fix is on `dev` for
-2.0.2 and still needs a hardware check.
+could be accepted, and an old reading could be replayed as current. The fix shipped in
+2.0.2 and passed its hardware check.
 
 Issue: [#44](https://github.com/offalexjackson777-stack/hyperflux-next/issues/44).
 
@@ -84,11 +84,10 @@ accepted.
 
 ## What Is Still Open
 
-The fix ships in 2.0.2. #44 is done when repeated reads are stable or explicitly unknown,
-never a false value. That needs watching on hardware with both the keyboard and the mouse
-connected, as part of the 2.0.2 release checks, and the issue stays open until then. The
-new `reply_tx` field in the battery log line will show whether a reply for the other
-device was ever accepted.
+The fix shipped in 2.0.2. In the 2.0.2 hardware check, with the keyboard and the mouse
+connected to the same receiver, each kept its own battery level and no reading was
+borrowed from the other device, so #44 is closed. The `reply_tx` field in the battery log
+line shows whether a reply for the other device was ever accepted.
 
 Where the reported 0% came from is not proven. Whether a successful reply that carries 0%
 should count as a real level is a separate question: the
