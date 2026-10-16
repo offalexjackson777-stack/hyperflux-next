@@ -197,6 +197,7 @@ mod tests {
             ChildBatteryStatus::Unknown,
             "Razer DeathStalker V2 Pro Tenkeyless",
         );
+        assert!(state.is_present());
         let request = state
             .encode(ChildBatteryLane::Keyboard, generation(9))
             .expect("record encodes");
@@ -250,6 +251,7 @@ mod tests {
 
     #[test]
     fn absent_state_carries_no_value() {
+        assert!(!ChildBatteryState::Absent.is_present());
         let request = ChildBatteryState::Absent
             .encode(ChildBatteryLane::Pointer, generation(3))
             .expect("record encodes");
