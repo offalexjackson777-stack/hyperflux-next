@@ -10,10 +10,14 @@ const DIGEST = /^[a-f0-9]{64}$/;
 const DECIMAL_GENERATION_ID = /^[1-9][0-9]{0,19}$/;
 const MAX_GENERATION_ID = 18_446_744_073_709_551_615n;
 const LOCAL_ENDPOINT = /^http:\/\/(127\.0\.0\.1|localhost)(:[0-9]+)?$/;
+const VIEW_FIELDS = ["schema", "api_version", "view_revision", "generated_at", "companion", "system", "receivers", "plans", "actions"];
+const BRIDGE_REQUESTS = new Set(["snapshot", "diagnostics", "integration-view"]);
+const FINDING_SEVERITIES = new Set(["info", "warning", "error", "critical"]);
+const FINDING_ID = /^HFX-[A-Z0-9-]{1,60}$/;
 
 export function validateQualificationView(value) {
   object(value, "view");
-  exact(value, ["schema", "api_version", "view_revision", "generated_at", "companion", "system", "receivers", "plans", "actions"], "view");
+  exact(value, Object.hasOwn(value, "collection") ? [...VIEW_FIELDS, "collection"] : VIEW_FIELDS, "view");
   equal(value.schema, "hyperflux-local-qualification-v1", "view.schema");
   equal(value.api_version, 1, "view.api_version");
   integer(value.view_revision, "view.view_revision", 0);
@@ -27,6 +31,7 @@ export function validateQualificationView(value) {
   value.plans.forEach((item, index) => plan(item, `view.plans[${index}]`));
   array(value.actions, "view.actions", 256);
   value.actions.forEach((item, index) => action(item, `view.actions[${index}]`));
+  if (Object.hasOwn(value, "collection")) collection(value.collection);
 
   const receiverKeys = value.receivers.map((item) => receiverKey(item.receiver_id, item.generation_id));
   unique(receiverKeys, "receiver generation IDs");
@@ -224,6 +229,25 @@ function action(value, label) {
     string(value.confirmation.phrase, `${label}.confirmation.phrase`);
     string(value.confirmation.summary, `${label}.confirmation.summary`);
   }
+}
+// A report written by `hyperfluxctl qualification` declares what it read.
+function collection(value) {
+  object(value, "view.collection");
+  exact(value, ["producer", "bridge_requests", "active_device_query_executed", "firmware", "diagnostic_findings"], "view.collection");
+  equal(value.producer, "hyperfluxctl qualification", "view.collection.producer");
+  array(value.bridge_requests, "view.collection.bridge_requests", BRIDGE_REQUESTS.size);
+  value.bridge_requests.forEach((item, index) => enumeration(item, BRIDGE_REQUESTS, `view.collection.bridge_requests[${index}]`));
+  unique(value.bridge_requests, "bridge requests");
+  equal(value.active_device_query_executed, false, "view.collection.active_device_query_executed");
+  equal(value.firmware, "not-collected", "view.collection.firmware");
+  array(value.diagnostic_findings, "view.collection.diagnostic_findings", 32);
+  value.diagnostic_findings.forEach((item, index) => {
+    const label = `view.collection.diagnostic_findings[${index}]`;
+    object(item, label);
+    exact(item, ["finding_id", "severity"], label);
+    require(typeof item.finding_id === "string" && FINDING_ID.test(item.finding_id), `${label}.finding_id is not a catalog code`);
+    enumeration(item.severity, FINDING_SEVERITIES, `${label}.severity`);
+  });
 }
 
 function nullableProfile(value, label) {

@@ -738,3 +738,199 @@ fn utc_timestamp_formatter_handles_epoch_and_leap_day() {
         "2020-02-29T00:00:00Z"
     );
 }
+
+fn report_finding(
+    id: &str,
+    severity: hfx_domain::ErrorSeverity,
+    privacy: hfx_domain::PrivacyClass,
+) -> hfx_protocol::DiagnosticFinding {
+    hfx_protocol::DiagnosticFinding {
+        finding_id: hfx_domain::FindingId::try_from(id).expect("finding id is valid"),
+        severity,
+        cause: hfx_domain::HumanMessage::try_from("cause names /dev/hidraw7 on host-name")
+            .expect("cause is valid"),
+        explanation: hfx_domain::HumanMessage::try_from("explanation for user-name")
+            .expect("explanation is valid"),
+        safe_action: hfx_domain::HumanMessage::try_from("run hyperfluxctl doctor")
+            .expect("action is valid"),
+        privacy,
+        documentation: hfx_domain::DocumentationPath::try_from("docs/user/troubleshooting.md")
+            .expect("documentation path is valid"),
+    }
+}
+
+fn reporting_system() -> SystemSnapshot {
+    use hfx_domain::{ErrorSeverity, PrivacyClass};
+    let mut system = system();
+    system.bridge = Some(crate::BridgeHealth {
+        snapshot: hfx_protocol::BridgeSnapshot {
+            cursor: integration().view.cursor,
+            receivers: Vec::new(),
+        },
+        diagnostics: hfx_protocol::DiagnosticSnapshot {
+            sequence: SequenceNumber::try_from(1_u64).expect("sequence is valid"),
+            findings: vec![
+                report_finding(
+                    "HFX-SERVICE-002",
+                    ErrorSeverity::Warning,
+                    PrivacyClass::Public,
+                ),
+                report_finding(
+                    "HFX-KERNEL-001",
+                    ErrorSeverity::Error,
+                    PrivacyClass::Private,
+                ),
+                report_finding(
+                    "HFX-TRANSPORT-001",
+                    ErrorSeverity::Error,
+                    PrivacyClass::PublicSummary,
+                ),
+                report_finding(
+                    "HFX-UNKNOWN-999",
+                    ErrorSeverity::Info,
+                    PrivacyClass::Public,
+                ),
+                report_finding(
+                    "finding on host-name",
+                    ErrorSeverity::Info,
+                    PrivacyClass::Public,
+                ),
+            ],
+            event_buffer_capacity: hfx_domain::QueueCapacity::try_from(256_u16)
+                .expect("capacity is valid"),
+            transaction_queue_capacity: hfx_domain::QueueCapacity::try_from(32_u16)
+                .expect("capacity is valid"),
+        },
+    });
+    system
+}
+
+fn report_projection() -> IntegrationView {
+    paired_integration().view
+}
+
+fn report_fixture_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../apps/device-qualification/tests/fixtures/rust-qualified-report.json")
+}
+
+fn protocol_v7() -> ProtocolVersion {
+    ProtocolVersion::try_from(7_u16).expect("protocol is valid")
+}
+
+#[test]
+fn rust_report_fixture_matches_the_current_report() {
+    let projection = report_projection();
+    let view = crate::build_qualification_report(
+        &reporting_system(),
+        Some((protocol_v7(), &projection)),
+        &catalog(),
+        "2026-07-22T12:00:00Z".to_owned(),
+    );
+    let rendered = serde_json::to_string_pretty(&view).expect("report serializes") + "\n";
+    let fixture = report_fixture_path();
+    if std::env::var_os("HFX_UPDATE_QUALIFICATION_FIXTURE").is_some() {
+        std::fs::write(&fixture, &rendered).expect("fixture updates");
+    }
+    let expected = std::fs::read_to_string(&fixture).expect(
+        "qualification report fixture exists; set HFX_UPDATE_QUALIFICATION_FIXTURE=1 to create it",
+    );
+    assert_eq!(expected, rendered, "qualification report fixture is stale");
+}
+
+#[test]
+fn report_replaces_stable_identifiers_and_keeps_only_catalog_findings() {
+    let projection = report_projection();
+    let view = crate::build_qualification_report(
+        &reporting_system(),
+        Some((protocol_v7(), &projection)),
+        &catalog(),
+        "2026-07-22T12:00:00Z".to_owned(),
+    );
+    let rendered = serde_json::to_string(&view).expect("report serializes");
+    for private in [
+        "receiver-test",
+        "mouse-test",
+        "keyboard-test",
+        "hidraw",
+        "host-name",
+        "user-name",
+        "docs/user/troubleshooting.md",
+        "HFX-KERNEL-001",
+        "HFX-UNKNOWN-999",
+    ] {
+        assert!(!rendered.contains(private), "report leaked {private}");
+    }
+    assert_eq!(view.companion.state, CompanionState::Ready);
+    assert_eq!(view.receivers[0].receiver_id, "receiver-1");
+    assert_eq!(view.receivers[0].generation_id, 1);
+    assert!(
+        !rendered.contains("\"7\""),
+        "report kept the driver generation"
+    );
+    assert_eq!(view.receivers[0].devices.len(), 2);
+    assert!(view.actions.is_empty());
+    let collection = view.collection.expect("report declares its collection");
+    assert_eq!(collection.producer, crate::QUALIFICATION_REPORT_PRODUCER);
+    assert_eq!(
+        collection.bridge_requests,
+        [
+            crate::ReportBridgeRequest::Snapshot,
+            crate::ReportBridgeRequest::Diagnostics,
+            crate::ReportBridgeRequest::IntegrationView,
+        ]
+    );
+    assert!(!collection.active_device_query_executed);
+    assert_eq!(collection.firmware, crate::FirmwareCollection::NotCollected);
+    assert_eq!(
+        collection
+            .diagnostic_findings
+            .iter()
+            .map(|finding| finding.finding_id.as_str())
+            .collect::<Vec<_>>(),
+        ["HFX-SERVICE-002", "HFX-TRANSPORT-001"]
+    );
+}
+
+#[test]
+fn report_without_a_bridge_declares_no_bridge_requests() {
+    let view = crate::build_qualification_report(
+        &system(),
+        None,
+        &catalog(),
+        "2026-07-22T12:00:00Z".to_owned(),
+    );
+    assert_eq!(view.companion.state, CompanionState::BridgeUnavailable);
+    assert!(view.receivers.is_empty());
+    let collection = view.collection.expect("report declares its collection");
+    assert!(collection.bridge_requests.is_empty());
+    assert!(collection.diagnostic_findings.is_empty());
+}
+
+#[test]
+fn report_bounds_receivers_and_devices_to_the_console_contract() {
+    let mut projection = report_projection();
+    let device = projection.receivers[0].inventory[0].clone();
+    projection.receivers[0].inventory = vec![device; 20];
+    let receiver = projection.receivers[0].clone();
+    projection.receivers = vec![receiver; 10];
+    let view = crate::build_qualification_report(
+        &reporting_system(),
+        Some((protocol_v7(), &projection)),
+        &catalog(),
+        "2026-07-22T12:00:00Z".to_owned(),
+    );
+    assert_eq!(view.receivers.len(), 8);
+    assert!(
+        view.receivers
+            .iter()
+            .all(|receiver| receiver.devices.len() == 16)
+    );
+    assert_eq!(view.plans.len(), 32);
+    let receiver_ids = view
+        .receivers
+        .iter()
+        .map(|receiver| receiver.receiver_id.as_str())
+        .collect::<std::collections::BTreeSet<_>>();
+    assert_eq!(receiver_ids.len(), 8);
+}

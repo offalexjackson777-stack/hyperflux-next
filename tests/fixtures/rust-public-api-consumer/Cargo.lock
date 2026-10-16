@@ -117,6 +117,7 @@ name = "hfx-device-qualification"
 version = "2.1.0"
 dependencies = [
  "hfx-domain",
+ "hfx-errors",
  "hfx-profiles",
  "hfx-protocol",
  "hfx-runtime",
