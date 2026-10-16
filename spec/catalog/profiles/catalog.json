@@ -395,6 +395,16 @@
     },
     {
       "access": "read",
+      "id": "telemetry.charging-state",
+      "owner": "bridge",
+      "profile_kinds": [
+        "child"
+      ],
+      "resource": null,
+      "summary": "Expose charging, discharging, or full state with unknown semantics."
+    },
+    {
+      "access": "read",
       "id": "telemetry.connection-evidence",
       "owner": "bridge",
       "profile_kinds": [
@@ -511,6 +521,33 @@
         }
       ],
       "summary": "All sixteen required read-only OpenRazer semantics matched through the exact receiver-backed 90-byte Feature-report route."
+    },
+    {
+      "evidence_level": "hardware-observed",
+      "id": "claim.child.00cd.passive-charge-state",
+      "limitations": [
+        "Other values and stale, missing, or unpaired evidence remain unknown.",
+        "Full is inferred from charging at a 100 percent battery level; that combination was not observed.",
+        "A not-charging value on the mat, such as a vendor charge limit holding the battery, was not observed and remains unknown.",
+        "The charge value on a USB cable was not observed.",
+        "Charging does not identify the cable or mat that supplies power."
+      ],
+      "privacy": "public-summary",
+      "profile_ids": [
+        "child.razer.basilisk-v3-pro-35k.00cd"
+      ],
+      "qualifies_capabilities": [
+        "telemetry.charging-state"
+      ],
+      "source_refs": [
+        {
+          "paths": [
+            "evidence/physical-acceptance/basilisk-v3-pro-35k-00cd-passive-charge-20261017.md"
+          ],
+          "source_id": "passive-charge-basilisk-v3-pro-35k-00cd-20261017"
+        }
+      ],
+      "summary": "The charge field of the passive pointer status report reads 0 off the charging mat and 1 on it; the contact field of the same report gives it context."
     },
     {
       "evidence_level": "hardware-qualified",
@@ -1088,6 +1125,14 @@
         {
           "access": "read",
           "evidence_claims": [
+            "claim.child.00cd.passive-charge-state"
+          ],
+          "id": "telemetry.charging-state",
+          "support_level": "telemetry-qualified"
+        },
+        {
+          "access": "read",
+          "evidence_claims": [
             "claim.child.00cd.passive-identity-telemetry"
           ],
           "id": "telemetry.connection-evidence",
@@ -1115,6 +1160,7 @@
       "evidence_claims": [
         "claim.child.00cd.complete-led-map",
         "claim.child.00cd.native-feature-report-parity",
+        "claim.child.00cd.passive-charge-state",
         "claim.child.00cd.passive-identity-telemetry",
         "claim.children.complete-static-black",
         "claim.children.software-effect-frame-continuity",
@@ -1157,6 +1203,14 @@
           ]
         },
         {
+          "from_runtime_sha256": "9a7d3407360b3829aa5bfc5ce61a686f015703c9670c9a2fa1839cbdb7763d18",
+          "preserve_stage_roles": [
+            "lighting",
+            "map",
+            "telemetry"
+          ]
+        },
+        {
           "from_runtime_sha256": "f72d38a70e9f4f7fb56848937abafa4773902de64b9d07b22e11c12df6dbfe33",
           "preserve_stage_roles": [
             "lighting",
@@ -1170,10 +1224,11 @@
         "OpenRGB owns zone labels and geometry presentation.",
         "Contact, inactivity, darkness, and power-off remain distinct facts.",
         "A physical mouse power-off can retain the receiver route; watched qualification records that physical boundary without inventing a disconnect.",
-        "Native Feature-report authority is limited to the exact 90-byte report family and generated OpenRazer command policy."
+        "Native Feature-report authority is limited to the exact 90-byte report family and generated OpenRazer command policy.",
+        "Charging while the battery reads 100 percent is reported as full; not charging on the mat, as under a charge limit, stays unknown; the charge state on a USB cable is unverified."
       ],
-      "revision": 4,
-      "runtime_sha256": "9a7d3407360b3829aa5bfc5ce61a686f015703c9670c9a2fa1839cbdb7763d18",
+      "revision": 5,
+      "runtime_sha256": "031d1af5fdbc04b754e62119d88f77ef5a8c6e28bc16249b26093442138d8934",
       "schema": "hyperflux-hardware-profile-v1",
       "source_path": "profiles/children/razer-basilisk-v3-pro-35k-00cd.json",
       "transport": {
@@ -1212,6 +1267,14 @@
         },
         "passive": {
           "battery_encoding": "linear-255",
+          "charge": {
+            "charging": [
+              1
+            ],
+            "not_charging": [
+              0
+            ]
+          },
           "contact": {
             "off_mat": [
               0
@@ -1786,5 +1849,5 @@
     }
   ],
   "schema": "hyperflux-compiled-profile-catalog-v1",
-  "source_sha256": "81abe092071f46953bd1f1c40878de97d710ccd197c3ca036c3555e29627ea12"
+  "source_sha256": "eabb6b71e31a34cf3cc6b720597df985dc3da59256e7c8d4279ac0d846b900d0"
 }

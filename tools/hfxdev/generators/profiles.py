@@ -517,6 +517,8 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "    pub route_unavailable: &'static [u32],",
         "    pub route_indeterminate: &'static [u32],",
         "    pub report_implies_route_available: bool,",
+        "    pub charge_charging: &'static [u32],",
+        "    pub charge_not_charging: &'static [u32],",
         "}",
         "",
         "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
@@ -784,12 +786,15 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         passive = profile.get("transport", {}).get("passive")
         if passive:
             contact = passive["contact"] or {"off_mat": [], "on_mat": []}
+            charge = passive.get("charge") or {"charging": [], "not_charging": []}
             for suffix, values in (
                 ("CONTACT_OFF_MAT", contact["off_mat"]),
                 ("CONTACT_ON_MAT", contact["on_mat"]),
                 ("ROUTE_AVAILABLE", passive["route"]["available"]),
                 ("ROUTE_UNAVAILABLE", passive["route"]["unavailable"]),
                 ("ROUTE_INDETERMINATE", passive["route"].get("indeterminate", [])),
+                ("CHARGE_CHARGING", charge["charging"]),
+                ("CHARGE_NOT_CHARGING", charge["not_charging"]),
             ):
                 rendered = ", ".join(str(value) for value in values)
                 lines.append(f"const PASSIVE_{suffix}_{index}: &[u32] = &[{rendered}];")
@@ -911,6 +916,8 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                 f"            route_unavailable: PASSIVE_ROUTE_UNAVAILABLE_{index},",
                 f"            route_indeterminate: PASSIVE_ROUTE_INDETERMINATE_{index},",
                 f"            report_implies_route_available: {route_implied},",
+                f"            charge_charging: PASSIVE_CHARGE_CHARGING_{index},",
+                f"            charge_not_charging: PASSIVE_CHARGE_NOT_CHARGING_{index},",
                 "        }),",
             ]
         else:

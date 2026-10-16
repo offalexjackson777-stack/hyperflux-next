@@ -58,7 +58,7 @@ fn receiver_and_children_resolve_independently() {
         mouse_native.support_level,
         SupportLevel::ProductionQualified
     );
-    assert_eq!(mouse.qualification_migrations.len(), 3);
+    assert_eq!(mouse.qualification_migrations.len(), 4);
     assert_eq!(keyboard.device_kind, DeviceKind::Keyboard);
     let lifecycle = keyboard
         .lifecycle
@@ -107,6 +107,18 @@ fn receiver_and_children_resolve_independently() {
         .expect("the original map qualification remains available");
     assert_eq!(oldest_migration.preserve_stage_roles, &["lighting", "map"]);
     assert_ne!(mouse.id, keyboard.id);
+}
+
+#[test]
+fn only_the_exact_mouse_profile_decodes_the_charge_field() {
+    let mouse = child_profile_by_product_id(0x00cd).expect("mouse is qualified");
+    let keyboard = child_profile_by_product_id(0x0296).expect("keyboard is qualified");
+    let mouse_passive = mouse.passive.expect("mouse has a passive decoder");
+    assert_eq!(mouse_passive.charge_charging, &[1]);
+    assert_eq!(mouse_passive.charge_not_charging, &[0]);
+    let keyboard_passive = keyboard.passive.expect("keyboard has a passive decoder");
+    assert!(keyboard_passive.charge_charging.is_empty());
+    assert!(keyboard_passive.charge_not_charging.is_empty());
 }
 
 #[test]

@@ -33,6 +33,12 @@
       "sha256": "882915c90207796a0761374a8f0916cca1e865c2af95e27c2cf96248c9f1409f"
     },
     {
+      "id": "passive-charge-basilisk-v3-pro-35k-00cd-20261017",
+      "role": "privacy-safe passive charge-field mapping summary for the exact mouse profile",
+      "path": "evidence/physical-acceptance/basilisk-v3-pro-35k-00cd-passive-charge-20261017.md",
+      "sha256": "e57bf22bbe6f0752ec4190b6698186b6ea1fe3cf2f207b592b4273aa2ed88161"
+    },
+    {
       "id": "physical-acceptance-summary",
       "role": "privacy-safe physical acceptance summary for the two assurance fixtures",
       "path": "evidence/physical-acceptance/hyperflux-v2-fixtures.md",

@@ -72,6 +72,7 @@ PASSIVE_KEYS = {
     "route",
     "report_implies_route_available",
 }
+OPTIONAL_PASSIVE_KEYS = {"charge"}
 RECEIVER_TRANSPORT_KEYS = {
     "backend",
     "backend_id",
@@ -163,6 +164,7 @@ PASSIVE_TELEMETRY_CAPABILITIES = {
     "presence.passive-evidence",
     "route.hyperflux-wireless",
     "telemetry.battery-percent",
+    "telemetry.charging-state",
     "telemetry.connection-evidence",
     "telemetry.mouse-contact",
 }

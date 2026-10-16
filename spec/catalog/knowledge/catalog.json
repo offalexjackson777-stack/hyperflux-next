@@ -1362,6 +1362,7 @@
         "presence.passive-evidence",
         "route.hyperflux-wireless",
         "telemetry.battery-percent",
+        "telemetry.charging-state",
         "telemetry.connection-evidence",
         "telemetry.mouse-contact"
       ],
@@ -1939,12 +1940,10 @@
         },
         {
           "access": "read",
-          "control_state": "blocked",
+          "control_state": "enabled",
           "family": "telemetry",
           "id": "charging-state",
-          "missing_hyperflux_capabilities": [
-            "telemetry.charging-state"
-          ],
+          "missing_hyperflux_capabilities": [],
           "presentation": "status",
           "required_hyperflux_capabilities": [
             "telemetry.charging-state"
@@ -12628,7 +12627,7 @@
     }
   ],
   "schema": "hyperflux-compiled-device-knowledge-v1",
-  "source_sha256": "5dd7cef53f85626ab0900e8dca573348d3ee22256e1cce75904d64a5121b2558",
+  "source_sha256": "8c65661ed056dd503acfa629101c387300edbf80510dea5d79f61272903ea203",
   "upstreams": [
     {
       "commit": "1ef8a91712906a89fd332a2ed62bbd105315d6d1",

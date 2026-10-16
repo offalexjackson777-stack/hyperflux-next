@@ -43,6 +43,16 @@
       "limitations": ["Qualification is exact to PID 0x00cd, the reviewed 90-byte report family, and the generated command policy; reversible application writes and release readiness remain separate gates."]
     },
     {
+      "id": "claim.child.00cd.passive-charge-state",
+      "summary": "The charge field of the passive pointer status report reads 0 off the charging mat and 1 on it; the contact field of the same report gives it context.",
+      "evidence_level": "hardware-observed",
+      "privacy": "public-summary",
+      "profile_ids": ["child.razer.basilisk-v3-pro-35k.00cd"],
+      "qualifies_capabilities": ["telemetry.charging-state"],
+      "source_refs": [{"source_id": "passive-charge-basilisk-v3-pro-35k-00cd-20261017", "paths": ["evidence/physical-acceptance/basilisk-v3-pro-35k-00cd-passive-charge-20261017.md"]}],
+      "limitations": ["Other values and stale, missing, or unpaired evidence remain unknown.", "Full is inferred from charging at a 100 percent battery level; that combination was not observed.", "A not-charging value on the mat, such as a vendor charge limit holding the battery, was not observed and remains unknown.", "The charge value on a USB cable was not observed.", "Charging does not identify the cable or mat that supplies power."]
+    },
+    {
       "id": "claim.child.00cd.passive-identity-telemetry",
       "summary": "Generation-bound pairing inventory and passive reports provide mouse identity, contact, connection evidence, and bounded battery telemetry.",
       "evidence_level": "hardware-qualified",

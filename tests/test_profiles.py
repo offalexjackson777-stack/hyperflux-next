@@ -363,6 +363,65 @@ class ProfileCompilerTests(unittest.TestCase):
         with self.assertRaisesRegex(ModelError, "passive telemetry requires a decoder"):
             self.validate_profiles(profiles, capabilities, claims)
 
+    def test_charge_decoder_is_mouse_only_disjoint_and_capability_bound(self) -> None:
+        profiles, capabilities, claims = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        self.assertEqual(
+            mouse["transport"]["passive"]["charge"],
+            {"charging": [1], "not_charging": [0]},
+        )
+        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
+        self.assertNotIn("charge", keyboard["transport"]["passive"])
+        self.assertNotIn(
+            "telemetry.charging-state",
+            {item["id"] for item in keyboard["capabilities"]},
+        )
+
+        profiles, capabilities, claims = self.validation_copies()
+        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
+        keyboard["transport"]["passive"]["charge"] = {"charging": [1], "not_charging": [0]}
+        with self.assertRaisesRegex(ModelError, "only a mouse may declare a charge decoder"):
+            self.validate_profiles(profiles, capabilities, claims)
+
+        for charge, message in (
+            ({"charging": [1]}, "charge decoder is incomplete"),
+            ({"charging": [1], "not_charging": [1]}, "charge values must be nonempty and disjoint"),
+            ({"charging": [], "not_charging": [0]}, "charge values must be nonempty and disjoint"),
+        ):
+            profiles, capabilities, claims = self.validation_copies()
+            mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+            mouse["transport"]["passive"]["charge"] = charge
+            with self.assertRaisesRegex(ModelError, message):
+                self.validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        del mouse["transport"]["passive"]["charge"]
+        with self.assertRaisesRegex(ModelError, "charging state requires a charge decoder"):
+            self.validate_profiles(profiles, capabilities, claims)
+
+        profiles, capabilities, claims = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        mouse["capabilities"] = [
+            item for item in mouse["capabilities"] if item["id"] != "telemetry.charging-state"
+        ]
+        with self.assertRaisesRegex(ModelError, "requires the charging-state capability"):
+            self.validate_profiles(profiles, capabilities, claims)
+
+    def test_charge_decoder_participates_only_in_its_own_profile_digest(self) -> None:
+        profiles, capabilities, _ = self.validation_copies()
+        mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")
+        keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
+        before = self.runtime_profile_digest(mouse, capabilities)
+        sibling = self.runtime_profile_digest(keyboard, capabilities)
+        mouse["transport"]["passive"]["charge"]["charging"] = [2]
+        self.assertNotEqual(self.runtime_profile_digest(mouse, capabilities), before)
+        self.assertEqual(self.runtime_profile_digest(keyboard, capabilities), sibling)
+        self.assertEqual(
+            sibling,
+            "6a322a5f384bcc8d2ddf40ce9940173e9f4e0bda6e72277451f8c16ef34c02be",
+        )
+
     def test_passive_semantics_participate_in_runtime_profile_digest(self) -> None:
         profiles, capabilities, _ = self.validation_copies()
         mouse = next(profile for profile in profiles if profile["device_kind"] == "mouse")

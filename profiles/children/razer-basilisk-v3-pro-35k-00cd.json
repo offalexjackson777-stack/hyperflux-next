@@ -2,7 +2,7 @@
   "$schema": "../../schemas/hardware-profile.schema.json",
   "schema": "hyperflux-hardware-profile-v1",
   "profile_id": "child.razer.basilisk-v3-pro-35k.00cd",
-  "revision": 4,
+  "revision": 5,
   "kind": "child",
   "device_kind": "mouse",
   "identity": {"manufacturer": "Razer", "model_name": "Razer Basilisk V3 Pro 35K", "authority": "paired-product-id", "vendor_id": 5426, "product_id": 205},
@@ -14,7 +14,8 @@
       "battery_encoding": "linear-255",
       "contact": {"off_mat": [0], "on_mat": [1]},
       "route": {"available": [], "unavailable": []},
-      "report_implies_route_available": true
+      "report_implies_route_available": true,
+      "charge": {"charging": [1], "not_charging": [0]}
     },
     "lifecycle": {
       "power_off_departure_evidence": "watched-retained-route",
@@ -26,6 +27,7 @@
   "qualification_migrations": [
     {"from_runtime_sha256": "1a9dde39c257beb4d51dcd43e4e56c57ee782d59d9b49834557591eaea04dfcc", "preserve_stage_roles": ["lighting", "map", "telemetry"]},
     {"from_runtime_sha256": "62f114182069895ae0c72ebdd7165e1bb774d41eceeeead155eda449df69f8cf", "preserve_stage_roles": ["lighting", "map", "telemetry"]},
+    {"from_runtime_sha256": "9a7d3407360b3829aa5bfc5ce61a686f015703c9670c9a2fa1839cbdb7763d18", "preserve_stage_roles": ["lighting", "map", "telemetry"]},
     {"from_runtime_sha256": "f72d38a70e9f4f7fb56848937abafa4773902de64b9d07b22e11c12df6dbfe33", "preserve_stage_roles": ["lighting", "map", "telemetry"]}
   ],
   "presentation": {"upstream_id": "openrgb", "owner": "OpenRGB", "project_version": "1.0", "source_commit": "81bbe18a84c2e507006f19dd252e397e40a56bfe", "model_key": "basilisk_v3_pro_35k_wireless_device", "layout_key": null, "transport_variant": "wireless"},
@@ -43,9 +45,10 @@
     {"id": "presence.passive-evidence", "support_level": "telemetry-qualified", "evidence_claims": ["claim.child.00cd.passive-identity-telemetry"]},
     {"id": "route.hyperflux-wireless", "support_level": "read-only", "evidence_claims": ["claim.child.00cd.passive-identity-telemetry"]},
     {"id": "telemetry.battery-percent", "support_level": "telemetry-qualified", "evidence_claims": ["claim.child.00cd.passive-identity-telemetry"]},
+    {"id": "telemetry.charging-state", "support_level": "telemetry-qualified", "evidence_claims": ["claim.child.00cd.passive-charge-state"]},
     {"id": "telemetry.connection-evidence", "support_level": "telemetry-qualified", "evidence_claims": ["claim.child.00cd.passive-identity-telemetry"]},
     {"id": "telemetry.mouse-contact", "support_level": "telemetry-qualified", "evidence_claims": ["claim.child.00cd.passive-identity-telemetry"]}
   ],
-  "evidence_claims": ["claim.child.00cd.complete-led-map", "claim.child.00cd.native-feature-report-parity", "claim.child.00cd.passive-identity-telemetry", "claim.children.complete-static-black", "claim.children.software-effect-frame-continuity", "claim.children.static-off-brightness", "claim.presentation.openrgb-1.0-model-layouts"],
-  "restrictions": ["Another Basilisk name or PID inherits no map.", "OpenRGB owns zone labels and geometry presentation.", "Contact, inactivity, darkness, and power-off remain distinct facts.", "A physical mouse power-off can retain the receiver route; watched qualification records that physical boundary without inventing a disconnect.", "Native Feature-report authority is limited to the exact 90-byte report family and generated OpenRazer command policy."]
+  "evidence_claims": ["claim.child.00cd.complete-led-map", "claim.child.00cd.native-feature-report-parity", "claim.child.00cd.passive-charge-state", "claim.child.00cd.passive-identity-telemetry", "claim.children.complete-static-black", "claim.children.software-effect-frame-continuity", "claim.children.static-off-brightness", "claim.presentation.openrgb-1.0-model-layouts"],
+  "restrictions": ["Another Basilisk name or PID inherits no map.", "OpenRGB owns zone labels and geometry presentation.", "Contact, inactivity, darkness, and power-off remain distinct facts.", "A physical mouse power-off can retain the receiver route; watched qualification records that physical boundary without inventing a disconnect.", "Native Feature-report authority is limited to the exact 90-byte report family and generated OpenRazer command policy.", "Charging while the battery reads 100 percent is reported as full; not charging on the mat, as under a charge limit, stays unknown; the charge state on a USB cable is unverified."]
 }
