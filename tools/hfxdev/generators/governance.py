@@ -389,6 +389,8 @@ def kernel_canary_workflow(governance: GitHubGovernance, base_image: str) -> str
 
 
 DISTRIBUTION_PACKAGE_OUTPUT = "build/ci/distributions"
+REPOSITORY_SITE_OUTPUT = "build/ci/repositories/site"
+REPOSITORY_SITE_ARTIFACT = "hyperflux-package-repositories-unsigned"
 # Each release compiles the driver for its stock kernel and for the newer kernel
 # it offers, so a new kernel interface shows up before users meet it. A header
 # package written `name/repository` comes from that repository only.
@@ -609,6 +611,26 @@ def distribution_package_workflow(governance: GitHubGovernance) -> str:
                 ),
             }
         )
+    packages = " ".join(
+        f"--packages {target}={DISTRIBUTION_PACKAGE_OUTPUT}/{target}/packages"
+        for target, _ in governance.distribution_package_images
+    )
+    steps.append(
+        {
+            "name": "Assemble the unsigned package repository site",
+            "env": {"HFX_OCI_ENGINE": "docker"},
+            "run": f"./hfx repositories assemble {packages} --output {REPOSITORY_SITE_OUTPUT}",
+        }
+    )
+    site_upload = _upload(
+        governance,
+        name=REPOSITORY_SITE_ARTIFACT,
+        path=REPOSITORY_SITE_OUTPUT,
+        retention_days=14,
+    )
+    del site_upload["if"]
+    site_upload["with"]["include-hidden-files"] = True
+    steps.append(site_upload)
     steps.append(
         _upload(
             governance,

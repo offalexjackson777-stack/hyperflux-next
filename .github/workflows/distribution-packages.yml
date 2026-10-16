@@ -384,6 +384,18 @@ jobs:
             exit 1
           fi
       run: docker run --rm --security-opt no-new-privileges --env HFX_HOST_OWNER="$(id -u):$(id -g)" --env HFX_DISTRIBUTION --env HFX_RELEASE_NAME --env HFX_RELEASE_SOURCES --env HFX_RELEASE_HEADERS --env HFX_RELEASE_INSTALL --env HFX_RELEASE_REMOVE --env HFX_PACKAGE_CHECKS --volume "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" --workdir "$GITHUB_WORKSPACE" "$HFX_RELEASE_IMAGE" /bin/bash -c "$HFX_PACKAGE_CHECKS"
+    - name: Assemble the unsigned package repository site
+      env:
+        HFX_OCI_ENGINE: docker
+      run: ./hfx repositories assemble --packages ubuntu=build/ci/distributions/ubuntu/packages --packages debian=build/ci/distributions/debian/packages --packages fedora=build/ci/distributions/fedora/packages --packages opensuse=build/ci/distributions/opensuse/packages --output build/ci/repositories/site
+    - name: Upload hyperflux-package-repositories-unsigned
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: hyperflux-package-repositories-unsigned
+        path: build/ci/repositories/site
+        if-no-files-found: error
+        retention-days: 14
+        include-hidden-files: true
     - name: Upload hyperflux-distribution-packages
       if: ${{ always() }}
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

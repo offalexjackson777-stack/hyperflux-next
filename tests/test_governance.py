@@ -547,6 +547,27 @@ class GitHubGovernanceTests(unittest.TestCase):
             ):
                 load_github_governance(ROOT)
 
+    def test_distribution_packages_assemble_an_unsigned_repository_site(self) -> None:
+        job = yaml.safe_load(distribution_package_workflow(self.governance))["jobs"][
+            "distribution-packages"
+        ]
+        names = [step["name"] for step in job["steps"]]
+        assemble = job["steps"][names.index("Assemble the unsigned package repository site")]
+        self.assertEqual({"HFX_OCI_ENGINE": "docker"}, assemble["env"])
+        for target, _ in self.governance.distribution_package_images:
+            self.assertIn(
+                f"--packages {target}=build/ci/distributions/{target}/packages", assemble["run"]
+            )
+        self.assertIn("--output build/ci/repositories/site", assemble["run"])
+        self.assertNotIn("sign", assemble["run"])
+        upload = job["steps"][names.index("Upload hyperflux-package-repositories-unsigned")]
+        self.assertNotIn("if", upload)
+        self.assertEqual("build/ci/repositories/site", upload["with"]["path"])
+        self.assertTrue(upload["with"]["include-hidden-files"])
+        self.assertEqual("error", upload["with"]["if-no-files-found"])
+        checks = [index for index, name in enumerate(names) if name.startswith("Build, lint")]
+        self.assertGreater(names.index(assemble["name"]), max(checks))
+
     @patch("hfxdev.ci.shutil.which", return_value="/usr/bin/docker")
     def test_package_artifacts_build_offline_in_the_pinned_image(self, _which) -> None:
         invocation = container_invocation(
