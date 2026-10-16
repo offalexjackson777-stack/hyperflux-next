@@ -34,6 +34,7 @@ from .native_onboarding import (
 from .native_parity import build_offline_parity_evidence, write_parity_evidence
 from .native_probe import write_native_probe_catalog
 from .distribution_package import build_distribution_package
+from .distributions import TARGET_IDS as DISTRIBUTION_TARGET_IDS
 from .github_sync import COMPONENTS as GITHUB_COMPONENTS
 from .github_sync import apply as apply_github
 from .github_sync import plan as plan_github
@@ -196,6 +197,19 @@ def _parser() -> argparse.ArgumentParser:
         help="checkout root; defaults to .hfx/upstreams",
     )
 
+    kernel_canary = commands.add_parser(
+        "kernel-canary",
+        help="build the kernel drivers against newer kernel headers (never gates merges)",
+    )
+    kernel_canary.add_argument("--output", required=True, type=Path)
+    kernel_canary.add_argument(
+        "--header-dir",
+        action="append",
+        default=[],
+        type=Path,
+        help="prepared kernel build directory; repeat for each kernel",
+    )
+
     ci = commands.add_parser("ci", help="run bounded repository jobs in the pinned container")
     ci_commands = ci.add_subparsers(dest="ci_command", required=True)
     ci_prepare = ci_commands.add_parser(
@@ -220,6 +234,16 @@ def _parser() -> argparse.ArgumentParser:
         "openrgb-prepare", help=argparse.SUPPRESS
     )
     ci_openrgb_prepare.add_argument("--output", required=True, type=Path)
+    ci_package = ci_commands.add_parser(
+        "package",
+        help="build source-bound package artifacts offline in the pinned container",
+    )
+    ci_package.add_argument("--image", required=True)
+    ci_package.add_argument("--output", required=True, type=Path)
+    ci_package_artifacts = ci_commands.add_parser(
+        "package-artifacts", help=argparse.SUPPRESS
+    )
+    ci_package_artifacts.add_argument("--output", required=True, type=Path)
     ci_summary = ci_commands.add_parser(
         "summary", help="write a bounded GitHub Actions summary from structured evidence"
     )
@@ -261,7 +285,9 @@ def _parser() -> argparse.ArgumentParser:
     package_distro = package_commands.add_parser(
         "distro", help="build the native split package set from canonical roots"
     )
-    package_distro.add_argument("--distribution", required=True, choices=["arch"])
+    package_distro.add_argument(
+        "--distribution", required=True, choices=list(DISTRIBUTION_TARGET_IDS)
+    )
     package_distro.add_argument("--build-manifest", required=True, type=Path)
     package_distro.add_argument("--output", required=True, type=Path)
     package_aur = package_commands.add_parser(
@@ -762,6 +788,12 @@ def main(arguments: list[str] | None = None) -> int:
                 print(f"Verified existing {identifier} source cache.")
             print(f"Upstream lock: {prepared.manifest}")
             return 0
+        if args.command == "kernel-canary":
+            from .kernel_canary import run_kernel_canary
+
+            result = run_kernel_canary(root, args.output, args.header_dir)
+            print(f"Kernel canary: {'PASS' if result == 0 else 'FAIL'} ({args.output / 'summary.md'})")
+            return result
         if args.command == "ci":
             if args.ci_command == "summary":
                 write_actions_summary(
@@ -786,6 +818,28 @@ def main(arguments: list[str] | None = None) -> int:
                 request = prepare_external_openrgb_qualification(root, args.output)
                 print(f"OpenRGB qualification request: {request}")
                 return 0
+            elif args.ci_command == "package-artifacts":
+                if os.environ.get(PINNED_VERIFICATION_ENVIRONMENT) != "1":
+                    raise ModelError("CI package artifacts require the pinned container")
+                from .verify_integration import _openrazer_source, _openrgb_source
+
+                manifest = build_artifacts(
+                    root,
+                    args.output,
+                    capabilities={
+                        "openrazer-source": _openrazer_source(root),
+                        "openrgb-source": _openrgb_source(root),
+                    },
+                )
+                print(f"Package build manifest: {manifest}")
+                return 0
+            elif args.ci_command == "package":
+                invocation = container_invocation(
+                    root,
+                    image=args.image,
+                    operation="package-artifacts",
+                    output=args.output,
+                )
             elif args.ci_command == "qualify-openrgb":
                 result = run_external_openrgb_qualification(
                     root,

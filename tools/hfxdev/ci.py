@@ -200,6 +200,23 @@ def container_invocation(
             "--output",
             _relative_output(root, output, "OpenRGB qualification output"),
         ]
+    elif operation == "package-artifacts":
+        if (
+            output is None
+            or lane is not None
+            or revision is not None
+            or openrgb_qualification is not None
+        ):
+            raise ModelError("CI package artifacts require only an output")
+        network = "none"
+        qualification = None
+        hfx_command = [
+            "./hfx",
+            "ci",
+            "package-artifacts",
+            "--output",
+            _relative_output(root, output, "CI package artifact output"),
+        ]
     else:
         raise ModelError(f"unsupported CI operation: {operation}")
 
@@ -244,7 +261,7 @@ def container_invocation(
             f"{root}:{environment.workspace_path}:rw",
         ]
     )
-    if operation in {"verify", "openrgb-qualification-prepare"}:
+    if operation in {"verify", "openrgb-qualification-prepare", "package-artifacts"}:
         command.extend(("--env", f"{PINNED_VERIFICATION_ENVIRONMENT}=1"))
     if operation == "verify" and qualification is not None:
         command.extend(

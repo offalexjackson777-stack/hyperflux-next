@@ -42,6 +42,6 @@ Defines how the GitHub repository is run: who owns what, which automation may ru
 
 ## Verify
 
-Run `governance-contracts` after changing this area, and run `./hfx generate` to refresh its 21 generated file(s).
+Run `governance-contracts` after changing this area, and run `./hfx generate` to refresh its 23 generated file(s).
 
 Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

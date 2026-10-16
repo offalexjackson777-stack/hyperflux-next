@@ -6,7 +6,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .arch_repository import load_arch_repository_policy
+from .arch_repository import (
+    load_arch_repository_policy,
+    load_arch_repository_retention,
+)
+from .arch_split import load_arch_split
 from .assurance import load_design_coverage
 from .atlas import load_repository_atlas
 from .development import load_development_environment
@@ -29,11 +33,13 @@ from .generators.governance import (
     feature_request as github_feature_request,
     full_verification_workflow as github_full_verification_workflow,
     issue_config as github_issue_config,
+    kernel_canary_workflow as github_kernel_canary_workflow,
     labels_plan as github_labels_plan,
     markdown as github_governance_markdown,
     protection_plan as github_protection_plan,
     pull_request_template as github_pull_request_template,
     release_notes as github_release_notes,
+    ubuntu_package_workflow as github_ubuntu_package_workflow,
     verification_workflow as github_verification_workflow,
 )
 from .generators.performance import performance_budgets_markdown
@@ -396,6 +402,12 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / ".github" / "workflows" / "full-verification.yml": github_full_verification_workflow(
             github_governance
         ),
+        root / ".github" / "workflows" / "kernel-canary.yml": github_kernel_canary_workflow(
+            github_governance, development_environment.image
+        ),
+        root / ".github" / "workflows" / "ubuntu-packages.yml": github_ubuntu_package_workflow(
+            github_governance
+        ),
         root / ".github" / "workflows" / "codeql.yml": github_codeql_workflow(
             github_governance
         ),
@@ -433,7 +445,9 @@ def rendered_files(root: Path) -> dict[Path, str]:
             release_context
         ),
         root / "docs" / "generated" / "supply-chain.md": supply_chain_markdown(
-            dependency_inventory, arch_repository
+            dependency_inventory,
+            arch_repository,
+            load_arch_repository_retention(root, arch_repository),
         ),
         root / "assurance" / "generated" / "hyperflux-next.spdx.json": spdx_json(
             dependency_inventory
@@ -556,7 +570,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
             openrazer_command_catalog,
         ),
         root / "docs" / "generated" / "distributions.md": distribution_markdown(
-            distribution_catalog, linux_runtime, first_run_activation
+            distribution_catalog, linux_runtime, first_run_activation, load_arch_split(root)
         ),
         root / "sdk" / "python" / "hyperflux_sdk" / "_version.py": python_version_module(
             linux_runtime, "GPL-2.0-or-later"

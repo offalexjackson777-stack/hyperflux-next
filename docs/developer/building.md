@@ -43,7 +43,9 @@ or rewrite them.
    record: the loader derives the product release tag, release URL, and package filenames
    from the package versions and rejects any disagreement. A release update changes the
    tag, URL, package versions and hashes, and signature timestamp together, along with the
-   published-release pin in `tests/test_assurance.py`.
+   published-release pin in `tests/test_assurance.py`. In the same change, move the outgoing
+   `packages` entries into `assurance/arch-repository-retention.json`, which keeps exactly
+   one earlier release downloadable for downgrades.
 2. Run `./hfx generate`.
 3. Build into a fresh output path, using a private GnuPG home that holds the reviewed key,
    and verify the result. Pass `--package` once for every package of the release: Core and
@@ -62,6 +64,11 @@ or rewrite them.
 
 4. Publish the complete output only on the fixed `arch-repository` machine channel, marked
    as a prerelease so it does not replace the latest human-facing product release.
+5. Delete every earlier package and signature that the retention file does not list, then
+   run `./hfx arch-repository verify-public --output /path/to/receipt.json`. It accepts the
+   current repository plus exactly the retained packages and their signatures, checks
+   their digests and signatures, and rejects anything else on the channel. The repository
+   database lists only the current release.
 
 What the builder checks and produces:
 

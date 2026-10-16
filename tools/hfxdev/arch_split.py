@@ -76,6 +76,7 @@ class SplitOutput:
     licenses: tuple[str, ...]
     builds: tuple[str, ...]
     payloads: tuple[str, ...]
+    dependency_roles: tuple[str, ...]
     sibling_dependencies: tuple[str, ...]
     external_dependencies: tuple[str, ...]
     dependencies: tuple[str, ...]
@@ -575,6 +576,7 @@ def load_arch_split(
                 licenses=licenses,
                 builds=tuple(item["builds"]),
                 payloads=tuple(item["payloads"]),
+                dependency_roles=tuple(roles),
                 sibling_dependencies=tuple(item["sibling_dependencies"]),
                 external_dependencies=tuple(dict.fromkeys([*role_packages, *external])),
                 dependencies=dependencies,

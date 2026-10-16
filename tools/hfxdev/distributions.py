@@ -13,8 +13,13 @@ from .model import ModelError, load_json, require_unique, sha256_file
 from .openrazer_native_route import load_native_deployment
 
 
-TARGET_IDS = ("arch",)
+TARGET_IDS = ("arch", "ubuntu")
 COMPONENT_IDS = ("linux", "full")
+# Arch carries both editions. Debian-format targets carry Core only; Full and
+# its OpenRazer/OpenRGB integrations stay Arch-only.
+TARGET_COMPONENT_IDS = {"arch": COMPONENT_IDS, "ubuntu": ("linux",)}
+TARGET_PACKAGE_FORMATS = {"arch": "pacman", "ubuntu": "deb"}
+MATURITIES = ("ci-only", "published")
 DEPENDENCY_ROLES = {
     "dkms",
     "c-runtime",
@@ -24,6 +29,15 @@ DEPENDENCY_ROLES = {
 }
 PACKAGE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9+_.() >=~-]{0,95}$")
 ARCHITECTURE = re.compile(r"^[A-Za-z0-9_.-]{1,127}$")
+DEBIAN_RELATION = re.compile(
+    r"^(?P<name>[a-z0-9][a-z0-9+.-]{1,63})"
+    r"(?: \((?P<operator><<|<=|=|>=|>>) (?P<version>[0-9][A-Za-z0-9.+~-]{0,63})\))?$"
+)
+DEBIAN_UPSTREAM_VERSION = re.compile(r"^[0-9][A-Za-z0-9.+~]*$")
+RELEASE_VERSION = re.compile(r"^[0-9]{2}\.[0-9]{2}$")
+RELEASE_CODENAME = re.compile(r"^[a-z]{2,32}$")
+RELEASE_DISTRIBUTION = re.compile(r"^[A-Z][A-Za-z]{1,31}$")
+C_RUNTIME_VERSION = re.compile(r"^[0-9]+\.[0-9]+$")
 LICENSE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.+-]{0,63}$")
 CONTROL_CHARACTER = re.compile(r"[\x00-\x1f\x7f]")
 OPENRAZER_DRIVER_VERSION_TOKEN = "@openrazer_driver_version@"
@@ -56,11 +70,28 @@ class DistributionComponent:
 
 
 @dataclass(frozen=True)
+class DistributionRelease:
+    """The one distribution release a Debian-format target is built for."""
+
+    distribution: str
+    version: str
+    codename: str
+    c_runtime_version: str
+
+
+@dataclass(frozen=True)
 class DistributionTarget:
     id: str
+    package_format: str
+    maturity: str
+    release: DistributionRelease | None
     architectures: dict[str, str]
     dependency_roles: dict[str, str]
     components: dict[str, DistributionComponent]
+
+    @property
+    def published(self) -> bool:
+        return self.maturity == "published"
 
     def architecture_for(self, build_target: str) -> str:
         try:
@@ -122,6 +153,42 @@ def _relation_name(value: str) -> str:
     return re.split(r"[<>= ]", value, maxsplit=1)[0]
 
 
+def debian_version(version: str, release: int) -> str:
+    """Return the Debian `upstream-revision` for a product version.
+
+    A pre-release hyphen becomes `~` so `2.1.0-rc.1` sorts before `2.1.0`.
+    """
+
+    upstream = version.replace("-", "~")
+    if not DEBIAN_UPSTREAM_VERSION.fullmatch(upstream) or release < 1:
+        raise ModelError(f"product version {version}-{release} cannot be represented on Debian")
+    return f"{upstream}-{release}"
+
+
+def debian_exact(package_name: str, version: str) -> str:
+    """Debian relation that pins one sibling package to one exact version."""
+
+    relation = f"{package_name} (= {version})"
+    if not DEBIAN_RELATION.fullmatch(relation):
+        raise ModelError(f"invalid Debian relation {relation!r}")
+    return relation
+
+
+def version_key(value: str) -> tuple[int, ...]:
+    if not C_RUNTIME_VERSION.fullmatch(value):
+        raise ModelError(f"invalid runtime version {value!r}")
+    return tuple(int(part) for part in value.split("."))
+
+
+def c_runtime_floor(target: DistributionTarget) -> str:
+    """The minimum C runtime version a Debian-format target declares."""
+
+    match = DEBIAN_RELATION.fullmatch(target.dependency_roles["c-runtime"])
+    if match is None or match.group("operator") != ">=":
+        raise ModelError(f"distribution {target.id}: C runtime role has no lower bound")
+    return match.group("version")
+
+
 def _expand_package(
     value: Any,
     label: str,
@@ -172,6 +239,7 @@ def _component(
     *,
     openrazer_version: str,
     sibling_version: str,
+    debian: bool = False,
 ) -> DistributionComponent:
     label = f"distribution {target_id} component {component_id}"
     if not isinstance(value, dict):
@@ -263,6 +331,17 @@ def _component(
             f"{label}: application replacement relationships are forbidden: "
             f"{', '.join(sorted(forbidden))}"
         )
+    if debian:
+        for relation in (
+            package_name,
+            *direct,
+            *(item.package for item in optional),
+            *conflicts,
+            *provides,
+            *replaces,
+        ):
+            if not DEBIAN_RELATION.fullmatch(relation):
+                raise ModelError(f"{label}: {relation!r} is not a Debian relation")
     return DistributionComponent(
         id=component_id,
         package_name=package_name,
@@ -276,6 +355,28 @@ def _component(
     )
 
 
+def _release(target_id: str, value: Any) -> DistributionRelease:
+    label = f"distribution {target_id} release"
+    if not isinstance(value, dict):
+        raise ModelError(f"{label}: must be an object")
+    _exact(value, {"distribution", "version", "codename", "c_runtime_version"}, label)
+    checks = (
+        ("distribution", RELEASE_DISTRIBUTION),
+        ("version", RELEASE_VERSION),
+        ("codename", RELEASE_CODENAME),
+        ("c_runtime_version", C_RUNTIME_VERSION),
+    )
+    for field, pattern in checks:
+        if not isinstance(value[field], str) or not pattern.fullmatch(value[field]):
+            raise ModelError(f"{label}: invalid {field.replace('_', ' ')}")
+    return DistributionRelease(
+        distribution=value["distribution"],
+        version=value["version"],
+        codename=value["codename"],
+        c_runtime_version=value["c_runtime_version"],
+    )
+
+
 def _target(
     target_id: str,
     value: Any,
@@ -285,11 +386,22 @@ def _target(
 ) -> DistributionTarget:
     if not isinstance(value, dict):
         raise ModelError(f"distribution {target_id}: must be an object")
+    package_format = TARGET_PACKAGE_FORMATS[target_id]
+    debian = package_format == "deb"
+    fields = {"package_format", "maturity", "architectures", "dependency_roles", "components"}
     _exact(
         value,
-        {"architectures", "dependency_roles", "components"},
+        fields | {"release"} if debian else fields,
         f"distribution {target_id}",
     )
+    if value["package_format"] != package_format:
+        raise ModelError(f"distribution {target_id}: package format must be {package_format}")
+    maturity = value["maturity"]
+    if maturity not in MATURITIES:
+        raise ModelError(f"distribution {target_id}: unknown maturity")
+    if not debian and maturity != "published":
+        raise ModelError(f"distribution {target_id}: the Arch target is the published channel")
+    release = _release(target_id, value["release"]) if debian else None
     architectures = value["architectures"]
     if not isinstance(architectures, dict) or not 1 <= len(architectures) <= 8:
         raise ModelError(f"distribution {target_id}: invalid architecture map")
@@ -310,10 +422,13 @@ def _target(
         role: _package(package, f"distribution {target_id} role {role}")
         for role, package in role_values.items()
     }
+    if debian and any(not DEBIAN_RELATION.fullmatch(item) for item in roles.values()):
+        raise ModelError(f"distribution {target_id}: dependency roles must be Debian relations")
+    component_ids = TARGET_COMPONENT_IDS[target_id]
     components_value = value["components"]
-    if not isinstance(components_value, dict) or tuple(components_value) != COMPONENT_IDS:
+    if not isinstance(components_value, dict) or tuple(components_value) != component_ids:
         raise ModelError(
-            f"distribution {target_id}: components must be ordered linux, full"
+            f"distribution {target_id}: components must be ordered {', '.join(component_ids)}"
         )
     components = {
         component_id: _component(
@@ -323,8 +438,9 @@ def _target(
             roles,
             openrazer_version=openrazer_version,
             sibling_version=sibling_version,
+            debian=debian,
         )
-        for component_id in COMPONENT_IDS
+        for component_id in component_ids
     }
     require_unique(
         [component.package_name for component in components.values()],
@@ -332,6 +448,9 @@ def _target(
     )
     return DistributionTarget(
         id=target_id,
+        package_format=package_format,
+        maturity=maturity,
+        release=release,
         architectures=dict(sorted(architectures.items())),
         dependency_roles=roles,
         components=components,
@@ -386,6 +505,57 @@ def _check_arch_contract(target: DistributionTarget, sibling_version: str) -> No
         raise ModelError("full-package optional applications differ from the contract")
 
 
+UBUNTU_ROLES = {
+    "dkms": "dkms",
+    "compiler-runtime": "libgcc-s1",
+    "service-manager": "systemd",
+    "device-manager": "udev",
+}
+
+
+def _check_ubuntu_contract(target: DistributionTarget, arch: DistributionTarget) -> None:
+    """Hold the Ubuntu Core package to the Arch Core product contract."""
+
+    release = target.release
+    if release is None or (release.distribution, release.version, release.codename) != (
+        "Ubuntu",
+        "24.04",
+        "noble",
+    ):
+        raise ModelError("Ubuntu target must name exactly Ubuntu 24.04 noble")
+    if target.maturity != "ci-only":
+        raise ModelError("Ubuntu packages are CI-built only until a publication channel exists")
+    if target.architectures != {"x86_64-unknown-linux-gnu": "amd64"}:
+        raise ModelError("Ubuntu target is amd64 only")
+    roles = {key: value for key, value in target.dependency_roles.items() if key != "c-runtime"}
+    if roles != UBUNTU_ROLES:
+        raise ModelError("Ubuntu dependency roles differ from the noble package names")
+    floor = c_runtime_floor(target)
+    if _relation_name(target.dependency_roles["c-runtime"]) != "libc6":
+        raise ModelError("Ubuntu C runtime role must name libc6")
+    if version_key(floor) > version_key(release.c_runtime_version):
+        raise ModelError("Ubuntu C runtime floor exceeds the release C runtime")
+    linux = target.component("linux")
+    arch_linux = arch.component("linux")
+    if (linux.package_name, linux.description) != (
+        arch_linux.package_name,
+        arch_linux.description,
+    ):
+        raise ModelError("Ubuntu Core identity differs from the Arch Core package")
+    if linux.dependency_roles != arch_linux.dependency_roles:
+        raise ModelError("Ubuntu Core dependency roles differ from the Arch Core package")
+    if (linux.conflicts, linux.provides, linux.replaces) != (
+        arch_linux.conflicts,
+        arch_linux.provides,
+        arch_linux.replaces,
+    ):
+        raise ModelError("Ubuntu Core relations differ from the Arch Core package")
+    if linux.optional_dependencies or set(linux.dependencies) != set(
+        target.dependency_roles.values()
+    ):
+        raise ModelError("Ubuntu Core may depend only on its mapped dependency roles")
+
+
 def load_distribution_catalog(root: Path) -> DistributionCatalog:
     path = root / "packaging" / "distributions.json"
     value = load_json(path)
@@ -419,7 +589,7 @@ def load_distribution_catalog(root: Path) -> DistributionCatalog:
 
     targets_value = value["targets"]
     if not isinstance(targets_value, dict) or tuple(targets_value) != TARGET_IDS:
-        raise ModelError("distribution targets must contain only arch")
+        raise ModelError("distribution targets must be ordered arch, ubuntu")
     runtime = load_linux_runtime(root)
     version = runtime.product.version.replace("-", "_")
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.+_]*", version):
@@ -433,10 +603,19 @@ def load_distribution_catalog(root: Path) -> DistributionCatalog:
         sibling_version=sibling_version,
     )
     _check_arch_contract(target, sibling_version)
+    ubuntu = _target(
+        "ubuntu",
+        targets_value["ubuntu"],
+        openrazer_version=openrazer_version,
+        sibling_version=debian_version(
+            runtime.product.version, runtime.product.package_release
+        ),
+    )
+    _check_ubuntu_contract(ubuntu, target)
     return DistributionCatalog(
         source_sha256=sha256_file(path),
         description=description,
         homepage=homepage,
         licenses=licenses,
-        targets={"arch": target},
+        targets={"arch": target, "ubuntu": ubuntu},
     )

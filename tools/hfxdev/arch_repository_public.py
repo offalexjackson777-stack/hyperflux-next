@@ -14,9 +14,12 @@ import tempfile
 from .arch_repository import (
     _payload_asset_names,
     load_arch_repository_policy,
+    load_arch_repository_retention,
     published_arch_release,
     repository_configuration,
+    retained_asset_names,
     verify_arch_repository,
+    verify_retained_packages,
 )
 from .arch_update_policy import _package_metadata
 from .model import ModelError, sha256_file
@@ -160,6 +163,7 @@ def _write_receipt_atomic(output: Path, receipt: dict[str, object]) -> None:
 def verify_public_arch_repository(root: Path, output: Path) -> Path:
     _require_tools()
     policy = load_arch_repository_policy(root)
+    retained = load_arch_repository_retention(root, policy)
     if not policy.github_release_prerelease or policy.human_facing_product_release:
         raise ModelError("public Arch repository is not a separate machine channel")
     source_status = _run(
@@ -173,9 +177,13 @@ def verify_public_arch_repository(root: Path, output: Path) -> Path:
         workspace = Path(temporary)
         repository = workspace / "repository"
         repository.mkdir(mode=0o755)
+        retained_directory = workspace / "retained"
+        retained_directory.mkdir(mode=0o755)
         names = sorted(
             (*_payload_asset_names(policy), policy.manifest, policy.checksums)
         )
+        retained_names = retained_asset_names(retained)
+        published_names = sorted((*names, *retained_names))
         release_api_path = workspace / "machine-release.json"
         release_api_url = f"{_RELEASE_API_BASE}/tags/{policy.release_tag}"
         _fetch(release_api_url, release_api_path)
@@ -199,9 +207,14 @@ def verify_public_arch_repository(root: Path, output: Path) -> Path:
             for item in release_assets
             if isinstance(item, dict) and isinstance(item.get("name"), str)
         }
-        if set(remote_assets) != set(names):
-            raise ModelError("machine-channel release asset inventory differs")
-        for name in names:
+        if set(remote_assets) != set(published_names):
+            missing = sorted(set(published_names) - set(remote_assets))
+            extra = sorted(set(remote_assets) - set(published_names))
+            raise ModelError(
+                "machine-channel release asset inventory differs "
+                f"(missing={missing}, extra={extra})"
+            )
+        for name in published_names:
             if remote_assets[name].get("browser_download_url") != (
                 f"{policy.server_url}/{name}"
             ):
@@ -217,11 +230,12 @@ def verify_public_arch_repository(root: Path, output: Path) -> Path:
             raise ModelError("machine channel displaced the latest product release")
 
         fetches = []
-        for name in names:
+        for name in published_names:
+            directory = retained_directory if name in retained_names else repository
             request_url = f"{policy.server_url}/{name}"
-            effective_url = _fetch(request_url, repository / name)
-            digest = sha256_file(repository / name)
-            size = (repository / name).stat().st_size
+            effective_url = _fetch(request_url, directory / name)
+            digest = sha256_file(directory / name)
+            size = (directory / name).stat().st_size
             if remote_assets[name].get("digest") != f"sha256:{digest}" or (
                 remote_assets[name].get("size") != size
             ):
@@ -236,6 +250,12 @@ def verify_public_arch_repository(root: Path, output: Path) -> Path:
                 }
             )
         local_verification = verify_arch_repository(root, repository)
+        verify_retained_packages(
+            retained_directory,
+            policy=policy,
+            retained=retained,
+            public_key=repository / policy.public_key_asset,
+        )
 
         pacman = workspace / "pacman"
         for name in ("root", "database", "cache", "hooks", "gnupg"):
@@ -387,6 +407,14 @@ def verify_public_arch_repository(root: Path, output: Path) -> Path:
                 "manifest_sha256": local_verification["manifest_sha256"],
                 "checksums_sha256": local_verification["checksums_sha256"],
                 "anonymous_https_assets": fetches,
+                "retained_packages": [
+                    {
+                        "name": package.name,
+                        "version": package.version,
+                        "sha256": package.sha256,
+                    }
+                    for package in retained
+                ],
             },
             "pacman": {
                 "database_authenticated": True,

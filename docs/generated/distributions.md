@@ -4,7 +4,7 @@
 
 This page lists the HyperFlux packages, what each one depends on, and what each one replaces, for packagers and anyone choosing between Core and Full.
 
-Source digest: `b85fd605da9c403513846250534f7e8c9c711a8a5f116b759f9a5532616f6ec1`.
+Source digest: `d722f72c3c7b2fd4a537de1fe4872818c2436b6fcbf9e4ce7c94949a4442199c`.
 
 The Arch `pkgbase=hyperflux-next` builds two user-facing packages that never install the same file. Packages for other distributions are tested separately.
 
@@ -31,3 +31,60 @@ The Arch `pkgbase=hyperflux-next` builds two user-facing packages that never ins
 ## CPU Architectures
 
 `aarch64-unknown-linux-gnu` maps to `aarch64`, `x86_64-unknown-linux-gnu` maps to `x86_64`.
+
+## Ubuntu 24.04 (CI-built, not published yet)
+
+HyperFlux builds `.deb` packages for Ubuntu 24.04 (`noble`) every week in CI. They are not published, so there is nothing to install from yet. The packages carry only the Core edition; there is no Full edition for Ubuntu.
+
+| Package | Version | Architecture | Depends |
+| --- | --- | --- | --- |
+| `hyperflux-next-dkms` | `2.1.0-1` | `all` | `dkms` |
+| `hyperflux-next-linux` | `2.1.0-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-dkms (= 2.1.0-1)` |
+
+Dependency roles map to packages on each distribution:
+
+| Role | Arch | Ubuntu |
+| --- | --- | --- |
+| `dkms` | `dkms` | `dkms` |
+| `c-runtime` | `glibc` | `libc6 (>= 2.34)` |
+| `compiler-runtime` | `libgcc` | `libgcc-s1` |
+| `service-manager` | `systemd` | `systemd` |
+| `device-manager` | `systemd` | `udev` |
+
+- Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable or start a service.
+- `hyperflux-next-dkms` hands the driver source to DKMS when it is installed and removes every built copy when it is removed.
+- Programs must run on the glibc 2.39 that Ubuntu 24.04 ships.
+
+### Secure Boot
+
+If Secure Boot is on, Linux only loads drivers signed by a key it trusts. DKMS on Ubuntu signs the HyperFlux driver with a key made on your computer, so you need to tell the computer to trust that key once.
+
+1. Check whether Secure Boot is on:
+
+   ```sh
+   mokutil --sb-state
+   ```
+
+   If it says `SecureBoot disabled`, you can stop here.
+
+2. Ask to trust the key. Choose a one-time password when asked; you need it after the restart:
+
+   ```sh
+   sudo update-secureboot-policy --enroll-key
+   ```
+
+   If that command says there is no key to enroll, run this instead:
+
+   ```sh
+   sudo mokutil --import /var/lib/shim-signed/mok/MOK.der
+   ```
+
+3. Restart the computer. A blue MokManager screen appears. Choose **Enroll MOK**, then **Continue**, then **Yes**, type the password, and reboot.
+
+4. Check that the driver is signed:
+
+   ```sh
+   modinfo -F signer hid_hyperflux_next
+   ```
+
+   It prints the name of the key. An empty line means the driver is not signed.

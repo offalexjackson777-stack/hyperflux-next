@@ -93,8 +93,8 @@ FUTURE_MTIME_TOLERANCE_SECONDS = 5.0
 INSTALLED_SCHEMA_ROOT = Path("/usr/share/hyperflux-next/schemas")
 
 from .verify_compiled import (
+    _build_kernel_module_copy,
     _kernel_build_directories,
-    _remove_expected_kernel_source_link,
     _run_command,
 )
 
@@ -464,35 +464,14 @@ def _run_openrazer_native_route_contracts(root: Path, node: TestNode) -> None:
         shutil.rmtree(kernel_output_root)
     for build_directory in _kernel_build_directories():
         label = build_directory.resolve().parent.name
-        module_directory = kernel_output_root / label / "driver"
-        shutil.copytree(prepared_driver, module_directory, symlinks=True)
-        _run_command(
+        _build_kernel_module_copy(
             root,
-            [
-                "make",
-                "-C",
-                str(build_directory),
-                f"M={module_directory}",
-                "clean",
-            ],
-            f"OpenRazer native kernel verification copy cleanup ({label})",
-            node.timeout_seconds,
+            build_directory,
+            prepared_driver,
+            kernel_output_root / label / "driver",
+            label=f"OpenRazer native kernel module build ({label})",
+            timeout_seconds=node.timeout_seconds,
         )
-        _remove_expected_kernel_source_link(module_directory)
-        _run_command(
-            root,
-            [
-                "make",
-                "-C",
-                str(build_directory),
-                f"M={module_directory}",
-                "W=1",
-                "modules",
-            ],
-            f"OpenRazer native kernel module build ({label})",
-            node.timeout_seconds,
-        )
-        _remove_expected_kernel_source_link(module_directory)
         if prepared_source_link.exists() or prepared_source_link.is_symlink():
             raise ModelError("OpenRazer verification modified its prepared source tree")
 
