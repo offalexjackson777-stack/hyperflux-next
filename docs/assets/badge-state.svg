@@ -1,9 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="164" height="24" role="img" aria-label="state: Arch 2.0">
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="20" role="img" aria-label="state: Arch 2.0">
   <title>state: Arch 2.0</title>
-  <rect width="72" height="24" fill="#252d35"/>
-  <rect x="72" width="92" height="24" fill="#287d6c"/>
-  <g fill="#edf3f2" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="11" text-anchor="middle">
-    <text x="36" y="16">state</text>
-    <text x="118" y="16">Arch 2.0</text>
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#fff" stop-opacity=".15"/>
+    <stop offset="1" stop-opacity=".15"/>
+  </linearGradient>
+  <clipPath id="r">
+    <rect width="100" height="20" rx="3" fill="#fff"/>
+  </clipPath>
+  <g clip-path="url(#r)">
+    <rect width="41" height="20" fill="#24292e"/>
+    <rect x="41" width="59" height="20" fill="#287d6c"/>
+    <rect width="100" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
+    <text x="20.5" y="15" fill="#010101" fill-opacity=".3" textLength="29">state</text>
+    <text x="20.5" y="14" textLength="29">state</text>
+    <text x="70.5" y="15" fill="#010101" fill-opacity=".3" textLength="47">Arch 2.0</text>
+    <text x="70.5" y="14" textLength="47">Arch 2.0</text>
   </g>
 </svg>

@@ -16,7 +16,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.model import ModelError
 from hfxdev.testgraph import TestCatalog, TestNode
-from hfxdev.verification_run import _package_artifacts, run_verification
+from hfxdev.protocol import load_protocol_registry
+from hfxdev.verification_run import _material_sources, _package_artifacts, run_verification
 
 
 def node(node_id: str, runner: str, dependencies: tuple[str, ...] = ()) -> TestNode:
@@ -40,6 +41,21 @@ def node(node_id: str, runner: str, dependencies: tuple[str, ...] = ()) -> TestN
 
 
 class VerificationRunTests(unittest.TestCase):
+    def test_protocol_references_follow_the_current_version(self) -> None:
+        current = load_protocol_registry(ROOT).current_version
+        materials = {item[0]: item[1] for item in _material_sources(ROOT)}
+        self.assertEqual(materials["protocol-catalog"], f"protocol/v{current}/catalog.json")
+        catalog = json.loads((ROOT / "verification" / "tests.json").read_text(encoding="utf-8"))
+        pinned = sorted(
+            {
+                pattern
+                for test in catalog["tests"]
+                for pattern in test["cache_inputs"]
+                if pattern.startswith("protocol/v")
+            }
+        )
+        self.assertEqual(pinned, [])
+
     def test_package_evidence_binds_each_split_component_inventory(self) -> None:
         revision = "a" * 40
         package_node = replace(

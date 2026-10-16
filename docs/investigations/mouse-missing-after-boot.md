@@ -98,9 +98,7 @@ remove it after updating; the package now ships its own file.
 
 ## What Is Still Open
 
-A cold boot with the mouse already on still has to be confirmed on hardware. The 2.0.1
-checklist, [#36](https://github.com/offalexjackson777-stack/hyperflux-next/issues/36), asks
-for five normal reboots and one poweroff in which an already-awake mouse appears within 30
-seconds without being touched, and a sleeping mouse appears within 30 seconds of first
-movement, with no power-cycling, no ghost device, and no duplicate device. #32 stays open
-until then.
+Nothing. The mouse appeared without being power-cycled on eight boots in a row between
+14 and 16 October 2026, on 2.0.2 and 2.1.0. The last one was a full power-off with the
+mouse already on, followed by a sleep and wake in which both devices came back. There was
+no ghost or duplicate device, and #32 is closed.

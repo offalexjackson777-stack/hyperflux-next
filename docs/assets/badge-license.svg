@@ -1,9 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="174" height="24" role="img" aria-label="license: GPL-2.0-only">
+<svg xmlns="http://www.w3.org/2000/svg" width="139" height="20" role="img" aria-label="license: GPL-2.0-only">
   <title>license: GPL-2.0-only</title>
-  <rect width="72" height="24" fill="#252d35"/>
-  <rect x="72" width="102" height="24" fill="#287d6c"/>
-  <g fill="#edf3f2" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="11" text-anchor="middle">
-    <text x="36" y="16">license</text>
-    <text x="123" y="16">GPL-2.0-only</text>
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#fff" stop-opacity=".15"/>
+    <stop offset="1" stop-opacity=".15"/>
+  </linearGradient>
+  <clipPath id="r">
+    <rect width="139" height="20" rx="3" fill="#fff"/>
+  </clipPath>
+  <g clip-path="url(#r)">
+    <rect width="55" height="20" fill="#24292e"/>
+    <rect x="55" width="84" height="20" fill="#287d6c"/>
+    <rect width="139" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
+    <text x="27.5" y="15" fill="#010101" fill-opacity=".3" textLength="43">license</text>
+    <text x="27.5" y="14" textLength="43">license</text>
+    <text x="97" y="15" fill="#010101" fill-opacity=".3" textLength="72">GPL-2.0-only</text>
+    <text x="97" y="14" textLength="72">GPL-2.0-only</text>
   </g>
 </svg>

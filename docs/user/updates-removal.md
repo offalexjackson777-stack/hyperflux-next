@@ -11,9 +11,9 @@ HyperFlux updates arrive with your normal system update.
    sudo pacman -Syu
    ```
 
-   If a HyperFlux update is available, Pacman lists `hyperflux-next-linux` and,
-   with Full, `hyperflux-next-full` among the packages to upgrade. Pacman checks
-   their signatures against the HyperFlux key you added during installation.
+   If a HyperFlux update is available, Pacman lists the `hyperflux-next`
+   packages among the packages to upgrade. Pacman checks their signatures
+   against the HyperFlux key you added during installation.
    Your settings in `/etc/hyperflux-next/bridge.json` are kept.
 
 3. Check the result:
@@ -50,6 +50,17 @@ Pacman keeps the packages you installed before in its cache.
 
    Replace `VERSION` with the same earlier version in both lines. If you use
    Core alone, install only the Core file.
+
+   Going from 2.1.0 or later back to a 2.0.x version needs one extra step
+   first, because 2.0.x keeps its drivers inside the Core and Full packages.
+   Remove the separate driver packages, then run the `pacman -U` command above
+   straight away:
+
+   ```sh
+   sudo pacman -Rdd hyperflux-next-dkms hyperflux-next-openrazer-driver-dkms
+   ```
+
+   If you use Core alone, remove only `hyperflux-next-dkms`.
 
 If the cache was cleaned, download both files from that version's GitHub
 release. Do not install the stock `openrazer-driver-dkms` package while going

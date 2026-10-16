@@ -8,8 +8,8 @@
     "server_url": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository",
     "release_url": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/arch-repository",
     "release_tag": "arch-repository",
-    "product_release_url": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.2",
-    "product_release_tag": "v2.0.2",
+    "product_release_url": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.0",
+    "product_release_tag": "v2.1.0",
     "channel_purpose": "machine-managed-arch-repository",
     "github_release_prerelease": true,
     "human_facing_product_release": false,
@@ -21,21 +21,33 @@
     "public_key_path": "packaging/keys/hyperflux-next-arch-repository-key.asc",
     "public_key_asset": "hyperflux-next-arch-repository-key.asc",
     "fingerprint_asset": "hyperflux-next-arch-repository-fingerprint.txt",
-    "signature_timestamp": 1792081657,
+    "signature_timestamp": 1792134741,
     "expires_at": "2029-08-03T14:35:56Z"
   },
   "packages": [
     {
+      "name": "hyperflux-next-dkms",
+      "version": "2.1.0-1",
+      "filename": "hyperflux-next-dkms-2.1.0-1-x86_64.pkg.tar.zst",
+      "sha256": "fc1fea9b810234ba8f99ddb51e0b6e38d09abbf5f70b480d11e86b8c4c21ed84"
+    },
+    {
       "name": "hyperflux-next-linux",
-      "version": "2.0.2-1",
-      "filename": "hyperflux-next-linux-2.0.2-1-x86_64.pkg.tar.zst",
-      "sha256": "7c78e8d210da6ac536df3fb3c7fb673b276f6dbc561d0c489e87da4a29cecda1"
+      "version": "2.1.0-1",
+      "filename": "hyperflux-next-linux-2.1.0-1-x86_64.pkg.tar.zst",
+      "sha256": "c582698b2e6fe335d9ca54455b3207784273046fb54c8b258fb3382a3f2e42c7"
+    },
+    {
+      "name": "hyperflux-next-openrazer-driver-dkms",
+      "version": "2.1.0-1",
+      "filename": "hyperflux-next-openrazer-driver-dkms-2.1.0-1-x86_64.pkg.tar.zst",
+      "sha256": "d07439b9b163bef463932c7f66e7703324b9d0f779c0aeabdfc2c5e7e700a8c3"
     },
     {
       "name": "hyperflux-next-full",
-      "version": "2.0.2-1",
-      "filename": "hyperflux-next-full-2.0.2-1-x86_64.pkg.tar.zst",
-      "sha256": "697a8b30b34c89a74bb2754db7967283075c609c73ef52a88c4629192a74d5a1"
+      "version": "2.1.0-1",
+      "filename": "hyperflux-next-full-2.1.0-1-x86_64.pkg.tar.zst",
+      "sha256": "4431ff857f02fef1f9f02f463ecafa3bf37038a55e461a095f87d97381dfb3e5"
     }
   ],
   "assets": {

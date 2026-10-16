@@ -121,8 +121,8 @@ class AssuranceTests(unittest.TestCase):
         self.assertEqual(len(gates), 10)
         self.assertEqual(context.target.product_version, "2.1.0")
         self.assertEqual(context.target.package_release, 1)
-        self.assertEqual(context.target.state, "verified-candidate")
-        self.assertEqual(context.published_release, "2.0.2-1")
+        self.assertEqual(context.target.state, "published-arch-release")
+        self.assertEqual(context.published_release, "2.1.0-1")
         self.assertTrue(all(gate.status == "verified" for gate in gates))
         self.assertEqual(gates[-1].id, "HFX-GATE-PUBLICATION-DECISION")
         self.assertEqual(gates[-1].status, "verified")
@@ -130,7 +130,7 @@ class AssuranceTests(unittest.TestCase):
 
     def test_release_target_claims_publication_only_for_the_published_version(self) -> None:
         with (
-            patch("hfxdev.release.published_arch_release", return_value="2.1.0-1"),
+            patch("hfxdev.release.published_arch_release", return_value="2.0.2-1"),
             self.assertRaisesRegex(ModelError, "publication interlock"),
         ):
             load_release_context(ROOT)

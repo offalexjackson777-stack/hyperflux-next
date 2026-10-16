@@ -63,6 +63,13 @@ OFFICIAL_ROUTES = {
 }
 
 
+def _build_directory() -> Path:
+    """Return the ignored build folder, created on a fresh checkout."""
+    directory = ROOT / "build"
+    directory.mkdir(exist_ok=True)
+    return directory
+
+
 def _by_route(devices: list[dict[str, object]]) -> dict[str, dict[str, object]]:
     return {str(device["route_id"]): device for device in devices}
 
@@ -604,7 +611,7 @@ class SourceValidatedUniversalityTests(unittest.TestCase):
         self.assertEqual(before["razer.1532.02d2.keyboard"]["integrations"]["openrazer"]["state"], ABSENT)
         self.assertEqual(before["razer.1532.02ba.keyboard"]["integrations"]["openrgb"]["state"], ABSENT)
 
-        with TemporaryDirectory(prefix="official-future-", dir=ROOT / "build") as directory:
+        with TemporaryDirectory(prefix="official-future-", dir=_build_directory()) as directory:
             source = Path(directory) / "openrazer"
             shutil.copytree(
                 self.openrazer_source,
@@ -696,7 +703,7 @@ class SourceValidatedUniversalityTests(unittest.TestCase):
         )
 
     def test_unmodeled_upstream_write_isolated_to_exact_integration(self) -> None:
-        with TemporaryDirectory(prefix="unmodeled-write-", dir=ROOT / "build") as directory:
+        with TemporaryDirectory(prefix="unmodeled-write-", dir=_build_directory()) as directory:
             source = Path(directory) / "openrazer"
             shutil.copytree(
                 self.openrazer_source,

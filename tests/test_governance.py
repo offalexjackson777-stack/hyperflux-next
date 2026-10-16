@@ -36,6 +36,7 @@ from hfxdev.generators.governance import (
     bug_report,
     codeowners,
     codeql_workflow,
+    dependabot,
     dependency_review_workflow,
     device_support,
     documentation_report,
@@ -49,6 +50,7 @@ from hfxdev.generators.supply_chain import spdx_json
 from hfxdev.governance import load_github_governance
 from hfxdev.model import ModelError
 from hfxdev.supply_chain import load_dependency_inventory
+from hfxdev.toolchains import PYTHON_TOOLCHAIN_PACKAGES, load_toolchain_pins
 
 
 def _uses(value: object) -> list[str]:
@@ -83,6 +85,20 @@ class GitHubGovernanceTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.governance = load_github_governance(ROOT)
+
+    def test_dependabot_leaves_toolchain_python_packages_to_the_image(self) -> None:
+        pins = load_toolchain_pins(ROOT)
+        for name in PYTHON_TOOLCHAIN_PACKAGES:
+            self.assertTrue(getattr(pins, name))
+        value = yaml.safe_load(dependabot(self.governance, PYTHON_TOOLCHAIN_PACKAGES))
+        pip = [item for item in value["updates"] if item["package-ecosystem"] == "pip"]
+        self.assertTrue(pip)
+        for item in pip:
+            self.assertEqual(
+                [entry["dependency-name"] for entry in item["ignore"]],
+                list(PYTHON_TOOLCHAIN_PACKAGES),
+            )
+        self.assertNotIn("ignore", yaml.safe_load(dependabot(self.governance))["updates"][2])
 
     def test_publication_state_describes_the_published_release(self) -> None:
         source = json.loads((ROOT / "governance" / "github.json").read_text(encoding="utf-8"))

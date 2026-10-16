@@ -62,7 +62,13 @@ from .openrazer_version_matrix import (
 )
 from .openrgb import extract_openrgb_catalog
 from .openrgb_native_route import prepare_openrgb_native_source
-from .package_pipeline import StageResult, build_artifacts, load_artifact_set, stage_rootfs
+from .package_pipeline import (
+    MANIFEST_NAME,
+    StageResult,
+    build_artifacts,
+    load_artifact_set,
+    stage_rootfs,
+)
 from .distribution_package import build_distribution_package
 from .performance import (
     load_performance_budgets,
@@ -102,6 +108,13 @@ OPENRGB_QUALIFICATION_BINDING_SCHEMA = (
     "hyperflux-openrgb-external-qualification-binding-v1"
 )
 MAX_OPENRGB_QUALIFICATION_DOCUMENT_BYTES = 1_048_576
+PACKAGE_BUILD_REUSE_NAME = "package-build-reuse.json"
+PACKAGE_BUILD_REUSE_SCHEMA = "hyperflux-package-build-reuse-v1"
+# What the qualification step leaves in the package-contracts workspace for
+# the complete graph to reuse.
+PACKAGE_BUILD_REUSED_ENTRIES = frozenset(
+    {"artifacts", "openrgb-sdk-harness", PACKAGE_BUILD_REUSE_NAME}
+)
 
 from .verify_compiled import _run_command
 from .verify_integration import _openrazer_source, _openrgb_source
@@ -177,6 +190,79 @@ def _source_identity(root: Path) -> dict[str, str]:
     }
 
 
+def _clean_source_identity(root: Path) -> dict[str, str] | None:
+    """Return the source identity, or None when the checkout has local changes."""
+    try:
+        completed = subprocess.run(
+            ["git", "status", "--porcelain=v1", "--untracked-files=all"],
+            cwd=root,
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=60,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise ModelError(f"cannot inspect the checkout state: {error}") from error
+    if completed.returncode != 0:
+        raise ModelError("cannot inspect the checkout state")
+    if completed.stdout.strip():
+        return None
+    return _source_identity(root)
+
+
+def _record_package_build_reuse(
+    root: Path, workspace: Path, before: dict[str, str] | None
+) -> None:
+    """Let the complete graph reuse this build when it came from a clean checkout."""
+    if before is None or _clean_source_identity(root) != before:
+        return
+    record = {"schema": PACKAGE_BUILD_REUSE_SCHEMA, "source": before}
+    (workspace / PACKAGE_BUILD_REUSE_NAME).write_text(
+        json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+
+def _reusable_package_build(root: Path, workspace: Path) -> Path | None:
+    """Return the manifest of the qualified package build when it is still exact.
+
+    The external OpenRGB qualification builds the complete artifact set and
+    the PluginManager harness in this workspace. Package contracts reuse them
+    only when that qualification is bound to this run, and the build and this
+    run both saw the same clean commit. Anything else rebuilds from source.
+    The reused manifest is still checked against the checkout, the toolchain
+    pins and every artifact hash when it is loaded.
+    """
+
+    if not os.environ.get(EXTERNAL_OPENRGB_QUALIFICATION_BINDING):
+        return None
+    marker = workspace / PACKAGE_BUILD_REUSE_NAME
+    manifest = workspace / "artifacts" / MANIFEST_NAME
+    if (
+        workspace.is_symlink()
+        or not marker.is_file()
+        or marker.is_symlink()
+        or not manifest.is_file()
+        or manifest.is_symlink()
+    ):
+        return None
+    current = _clean_source_identity(root)
+    record = _bounded_json_document(marker, "package build reuse record")
+    if current is None or record != {
+        "schema": PACKAGE_BUILD_REUSE_SCHEMA,
+        "source": current,
+    }:
+        return None
+    for entry in workspace.iterdir():
+        if entry.name in PACKAGE_BUILD_REUSED_ENTRIES:
+            continue
+        if entry.is_dir() and not entry.is_symlink():
+            shutil.rmtree(entry)
+        else:
+            entry.unlink()
+    return manifest
+
+
 def _bounded_json_document(path: Path, label: str) -> dict[str, object]:
     if path.is_symlink() or not path.is_file():
         raise ModelError(f"{label} is not a regular non-symbolic-link file")
@@ -239,6 +325,14 @@ def _validate_openrgb_qualification_evidence(
     return result
 
 
+def _pinned_openrgb_commit(root: Path) -> str:
+    upstreams = {
+        upstream["id"]: upstream
+        for upstream in load_integration_catalog(root)["upstreams"]
+    }
+    return upstreams["openrgb"]["commit"]
+
+
 def _build_openrgb_qualification_harness(
     root: Path,
     workspace: Path,
@@ -276,13 +370,7 @@ def _build_openrgb_qualification_harness(
     harness = build_directory / "openrgb-plugin-manager-sdk-harness"
     if not harness.is_file() or harness.is_symlink():
         raise ModelError("pinned OpenRGB PluginManager harness was not produced")
-
-    upstreams = {
-        upstream["id"]: upstream
-        for upstream in load_integration_catalog(root)["upstreams"]
-    }
-    openrgb_commit = upstreams["openrgb"]["commit"]
-    return harness, openrgb_commit
+    return harness, _pinned_openrgb_commit(root)
 
 
 def _consume_external_openrgb_qualification(
@@ -379,10 +467,18 @@ def _qualify_staged_openrgb_plugin(
     node: TestNode,
     plugin: Path,
     workspace: Path,
+    *,
+    reuse_harness: bool = False,
 ) -> None:
-    harness, openrgb_commit = _build_openrgb_qualification_harness(
-        root, workspace, node.timeout_seconds
-    )
+    if reuse_harness:
+        harness = workspace / "openrgb-sdk-harness" / "openrgb-plugin-manager-sdk-harness"
+        if not harness.is_file() or harness.is_symlink():
+            raise ModelError("qualified OpenRGB PluginManager harness is unavailable")
+        openrgb_commit = _pinned_openrgb_commit(root)
+    else:
+        harness, openrgb_commit = _build_openrgb_qualification_harness(
+            root, workspace, node.timeout_seconds
+        )
     evidence = workspace / "openrgb-packaged-plugin-sdk-qualification.json"
     external_binding = os.environ.get(EXTERNAL_OPENRGB_QUALIFICATION_BINDING)
     if external_binding:
@@ -454,6 +550,7 @@ def prepare_external_openrgb_qualification(
     if workspace.exists():
         shutil.rmtree(workspace)
     workspace.mkdir(parents=True)
+    source = _clean_source_identity(root)
     manifest_path = build_artifacts(
         root,
         workspace / "artifacts",
@@ -480,6 +577,7 @@ def prepare_external_openrgb_qualification(
     qualified_plugin = inputs / "hyperflux-next-openrgb.so"
     shutil.copy2(harness, qualified_harness, follow_symlinks=False)
     shutil.copy2(plugin, qualified_plugin, follow_symlinks=False)
+    _record_package_build_reuse(root, workspace, source)
     harness = qualified_harness
     plugin = qualified_plugin
     request = {
@@ -634,17 +732,21 @@ def _arch_full_edition_packages(root: Path, packages: tuple) -> tuple:
 
 def _run_package_contracts(root: Path, node: TestNode) -> None:
     workspace = root / "build" / "package-contracts"
-    if workspace.exists():
-        shutil.rmtree(workspace)
-    workspace.mkdir(parents=True)
-    manifest_path = build_artifacts(
-        root,
-        workspace / "artifacts",
-        capabilities={
-            "openrgb-source": _openrgb_source(root),
-            "openrazer-source": _openrazer_source(root),
-        },
-    )
+    reused_manifest = _reusable_package_build(root, workspace)
+    if reused_manifest is not None:
+        manifest_path = reused_manifest
+    else:
+        if workspace.exists():
+            shutil.rmtree(workspace)
+        workspace.mkdir(parents=True)
+        manifest_path = build_artifacts(
+            root,
+            workspace / "artifacts",
+            capabilities={
+                "openrgb-source": _openrgb_source(root),
+                "openrazer-source": _openrazer_source(root),
+            },
+        )
     artifacts = load_artifact_set(root, manifest_path)
     if artifacts.omitted:
         raise ModelError("complete package contract unexpectedly omitted a build product")
@@ -714,7 +816,9 @@ def _run_package_contracts(root: Path, node: TestNode) -> None:
         raise ModelError(f"cannot inspect staged OpenRGB module: {error}") from error
     if dynamic.returncode != 0 or "(RPATH)" in dynamic.stdout or "(RUNPATH)" in dynamic.stdout:
         raise ModelError("staged OpenRGB module has an invalid dynamic-library contract")
-    _qualify_staged_openrgb_plugin(root, node, plugin, workspace)
+    _qualify_staged_openrgb_plugin(
+        root, node, plugin, workspace, reuse_harness=reused_manifest is not None
+    )
 
     staged_payload_size = sum(
         path.stat().st_size

@@ -5,7 +5,7 @@
   "nodes": [
     {
       "id": "architecture", "title": "Architecture authority", "path": "architecture", "category": "architecture", "status": "policy",
-      "purpose": "Defines product invariants, subsystem direction, ownership boundaries, and the canonical repository graph.",
+      "purpose": "Holds the rules every part of the project follows and the map of which directory is responsible for what.",
       "owns": ["Architecture invariants", "Responsibility direction", "Repository subsystem graph"],
       "must_not_own": ["Runtime state", "Hardware observations", "Generated implementation bindings"],
       "inputs": ["Reviewed product requirements", "Accepted architecture decisions"],
@@ -21,7 +21,7 @@
     },
     {
       "id": "schemas", "title": "Schema contracts", "path": "schemas", "category": "architecture", "status": "implemented",
-      "purpose": "Defines strict machine-readable shapes for every shared repository fact and generated contract.",
+      "purpose": "Holds the JSON Schemas that check every data file the repository shares between its tools.",
       "owns": ["JSON Schema contracts", "Cross-language domain catalog", "Fail-closed data shapes"],
       "must_not_own": ["Runtime policy", "Duplicated application presentation", "Physical qualification claims"],
       "inputs": ["Architecture invariants", "Canonical subsystem requirements"],
@@ -37,7 +37,7 @@
     },
     {
       "id": "assurance", "title": "Assurance and release evidence", "path": "assurance", "category": "assurance", "status": "policy",
-      "purpose": "Owns explicit design coverage, bounded formal models, performance budgets, dependency and coverage inventories, public journey source coverage, quality audits, and release gates.",
+      "purpose": "Records what the project has checked and how: design coverage, performance budgets, dependency and test-coverage lists, quality audits, and what each release must pass.",
       "owns": ["Design coverage", "Journey source coverage and privacy review", "Release-gate definitions", "Dependency, coverage, quality, formal, and performance assurance"],
       "must_not_own": ["Release decisions", "Unreviewed physical claims", "Application behavior"],
       "inputs": ["Architecture invariants", "Verification evidence", "Dependency metadata"],
@@ -53,7 +53,7 @@
     },
     {
       "id": "integrations", "title": "Application integration catalog", "path": "integrations", "category": "applications", "status": "implemented",
-      "purpose": "Defines application-neutral adapter identities, upstream pins, coexistence rules, and SDK-only transport boundaries.",
+      "purpose": "Lists the apps HyperFlux connects to, the exact upstream versions it builds against, and how each app shares the receiver with ordinary devices.",
       "owns": ["Integration catalog", "Exact upstream revisions", "Adapter capability declarations"],
       "must_not_own": ["Receiver transport", "Profile qualification", "Raw HID or USB access"],
       "inputs": ["Architecture boundaries", "Pinned upstream metadata", "SDK contracts"],
@@ -69,7 +69,7 @@
     },
     {
       "id": "profiles", "title": "Composable hardware profiles", "path": "profiles", "category": "architecture", "status": "implemented",
-      "purpose": "Composes receiver, surface, and child identities with evidence-bound capabilities and independent routes.",
+      "purpose": "Describes each supported receiver, keyboard and mouse: how they are identified, what they can do, and how HyperFlux talks to each one.",
       "owns": ["Identity predicates", "Qualified capabilities", "Evidence references"],
       "must_not_own": ["Live observations", "Desired lighting state", "Guessed commands"],
       "inputs": ["Reviewed evidence claims", "Canonical capability vocabulary", "Integration metadata references"],
@@ -85,7 +85,7 @@
     },
     {
       "id": "device-knowledge", "title": "Device knowledge", "path": "knowledge", "category": "assurance", "status": "research-boundary",
-      "purpose": "Records provenance-bound candidate facts, semantic capabilities, upstream records, disagreements, and explicit unknowns.",
+      "purpose": "Collects what is known about each device and where each fact came from, including facts that sources disagree on and facts that are still unknown.",
       "owns": ["Reviewed device facts", "Candidate relationships", "Normalized upstream catalogs"],
       "must_not_own": ["Receiver write authority", "Live device values", "Undated compatibility claims"],
       "inputs": ["Pinned OpenRazer source", "Pinned OpenRGB source", "Reviewed public and physical evidence"],
@@ -101,7 +101,7 @@
     },
     {
       "id": "protocol", "title": "Versioned bridge protocol", "path": "protocol", "category": "architecture", "status": "implemented",
-      "purpose": "Defines bounded request, response, event, negotiation, and compatibility contracts across protocol generations.",
+      "purpose": "Defines the messages apps and tools exchange with the HyperFlux background service, and how older and newer versions of those messages stay compatible.",
       "owns": ["Protocol registry", "Versioned wire schemas", "Compatibility window"],
       "must_not_own": ["Application widgets", "Kernel HID payloads", "Unbounded messages"],
       "inputs": ["Domain types", "Architecture bounds", "SDK compatibility requirements"],
@@ -117,7 +117,7 @@
     },
     {
       "id": "openrgb-adapter", "title": "OpenRGB adapter", "path": "integrations/openrgb", "category": "applications", "status": "implemented",
-      "purpose": "Runs pinned upstream Razer controllers over qualified HyperFlux Feature routes while preserving ordinary hidapi devices.",
+      "purpose": "Lets OpenRGB's own Razer support drive keyboards and mice on the HyperFlux receiver, while other USB devices keep working through OpenRGB as before.",
       "owns": ["OpenRGB Feature transport adaptation", "Native controller lifecycle", "Serial-proven direct-route precedence"],
       "must_not_own": ["OpenRGB device semantics", "Receiver qualification", "Direct hidapi transport"],
       "inputs": ["Protocol-v7 native routes", "Qualified profile metadata", "Pinned OpenRGB Razer registry"],
@@ -133,7 +133,7 @@
     },
     {
       "id": "openrazer-adapter", "title": "OpenRazer native route", "path": "integrations/openrazer", "category": "applications", "status": "implemented",
-      "purpose": "Extends pinned OpenRazer with trusted feature-only HyperFlux routes while preserving ordinary USB devices and the official daemon API.",
+      "purpose": "Lets OpenRazer, and apps built on it such as Polychromatic, reach devices on the HyperFlux receiver, while ordinary Razer USB devices and the OpenRazer daemon keep working as before.",
       "owns": ["Feature-only UHID route contract", "Pinned OpenRazer source transform", "Serial-proven direct-route precedence metadata"],
       "must_not_own": ["OpenRazer device semantics", "Official daemon identity", "Direct USB transport"],
       "inputs": ["Protocol-v7 native routes", "Pinned OpenRazer source", "Generated method and probe inventories"],
@@ -149,7 +149,7 @@
     },
     {
       "id": "device-qualification-console", "title": "Device qualification console", "path": "apps/device-qualification", "category": "applications", "status": "implemented",
-      "purpose": "Provides a source-only browser surface for bounded qualification projections without remote data or direct browser hardware access.",
+      "purpose": "A local browser page, run only from a source checkout, for testing a new device. It never contacts the internet and never touches hardware directly.",
       "owns": ["Local qualification browser workflow", "Versioned browser contract validation", "Evidence-stage presentation"],
       "must_not_own": ["Driver or receiver access", "Hardware support decisions", "Remote inventory or upload"],
       "inputs": ["Same-origin qualification projection", "Exact profile and generation bindings", "Companion-provided actions"],
@@ -165,7 +165,7 @@
     },
     {
       "id": "rust-workspace", "title": "Rust workspace", "path": "crates", "category": "runtime", "status": "implemented",
-      "purpose": "Coordinates the Rust dependency graph and compile-time ownership boundaries across production and simulation crates.",
+      "purpose": "Ties the Rust crates together and keeps each crate to its own job.",
       "owns": ["Workspace membership", "Shared dependency versions", "Rust build graph"],
       "must_not_own": ["Crate-specific policy", "Generated domain authority", "Hardware qualification"],
       "inputs": ["Canonical schemas", "Pinned toolchain", "Crate manifests"],
@@ -181,7 +181,7 @@
     },
     {
       "id": "system-probe", "title": "System probe", "path": "crates/hfx-system-probe", "category": "runtime", "status": "implemented",
-      "purpose": "Owns bounded local system inspection, Full-component detection, root-only receipt creation, and the explicit disconnected-driver activation boundary used by operator tools.",
+      "purpose": "Inspects the local system for the operator tools: which driver is loaded, whether Full is installed, and how to switch drivers safely while the receiver is disconnected.",
       "owns": ["Bounded command and filesystem probes", "Typed system snapshots", "Root-only non-overwriting receipts", "Disconnected-driver activation proof"],
       "must_not_own": ["Qualification policy", "Application presentation", "Hardware support decisions", "Installed command parsing"],
       "inputs": ["Local system state", "Typed SDK projection", "Generated runtime and integration identities"],
@@ -197,7 +197,7 @@
     },
     {
       "id": "device-qualification-runtime", "title": "Device qualification runtime", "path": "crates/hfx-device-qualification", "category": "assurance", "status": "implemented",
-      "purpose": "Coordinates the source-only local qualification projection, lifecycle, evidence, migration, runner, server, and maintainer onboarding workflow.",
+      "purpose": "Runs the device testing workflow behind the qualification console: the test steps, their records, and the guide for maintainers adding a device.",
       "owns": ["Qualification projection and state", "Generation-bound qualification lifecycle", "Source-only loopback console server", "Privacy-safe maintainer onboarding"],
       "must_not_own": ["Installed operations commands", "Profile promotion authority", "Relay transport qualification", "Core or Full payload files"],
       "inputs": ["System-probe snapshots", "Typed SDK state", "Canonical profiles", "Same-origin browser actions"],
@@ -213,7 +213,7 @@
     },
     {
       "id": "core-runtime", "title": "Core policy engine", "path": "crates/hfx-core", "category": "runtime", "status": "implemented",
-      "purpose": "Owns receiver generations, qualified native routes, child-local arbitration, bounded transactions, retained fallback restoration, and typed diagnostics.",
+      "purpose": "Decides what may be sent to each device and when. It keeps requests from different apps from clashing, sends each one as a single complete exchange, restores the device after a failure, and reports errors with a reason.",
       "owns": ["Core state machines", "NativeControl and transaction policy", "Retained restoration intent"],
       "must_not_own": ["Socket framing", "Kernel I/O", "Application presentation"],
       "inputs": ["Typed observations", "Qualified route profiles", "Clock and persistence ports"],
@@ -229,7 +229,7 @@
     },
     {
       "id": "bridge-runtime", "title": "Bridge runtime", "path": "crates/hfx-bridge", "category": "runtime", "status": "implemented",
-      "purpose": "Adapts the core to protocol-v7 native routes and exchanges plus retained protocol-v6 sessions, persistence, subscriptions, snapshots, and bounded RPC dispatch.",
+      "purpose": "Connects apps to the core: it accepts their requests over the current and the previous message protocol, remembers settings, sends updates to subscribers, and answers each request within set limits.",
       "owns": ["Bridge actors", "Session registry", "Native-route scheduling", "Persistence and RPC adaptation"],
       "must_not_own": ["Core policy duplication", "Kernel report encoding", "Application-specific effects"],
       "inputs": ["Core actions", "SDK protocol frames", "Kernel transport observations"],
@@ -245,7 +245,7 @@
     },
     {
       "id": "daemon", "title": "Production daemon", "path": "crates/hfx-daemon", "category": "runtime", "status": "implemented",
-      "purpose": "Composes production discovery, configuration, native-route authority, service lifecycle, logging, and the retained restoration fallback around the bridge.",
+      "purpose": "The HyperFlux background service. It finds the receiver, loads the configuration, runs the bridge, and logs what happens.",
       "owns": ["Production composition root", "Service lifecycle", "Privilege and socket setup"],
       "must_not_own": ["Core state-machine policy", "Application UI", "Raw application commands"],
       "inputs": ["Runtime configuration", "Kernel transport", "Bridge services"],
@@ -261,7 +261,7 @@
     },
     {
       "id": "rust-sdk", "title": "Rust SDK", "path": "crates/hfx-sdk", "category": "runtime", "status": "implemented",
-      "purpose": "Provides the typed Rust client contract for qualified route discovery, bounded native exchanges, and retained semantic consumers.",
+      "purpose": "The Rust library apps use to find HyperFlux devices and send them commands.",
       "owns": ["Rust client API", "Native route and channel adaptation", "Typed SDK errors"],
       "must_not_own": ["Application presentation", "Device command semantics", "Receiver carrier frames", "Bridge policy"],
       "inputs": ["Versioned protocol", "Domain and profile types", "Local bridge channel"],
@@ -277,7 +277,7 @@
     },
     {
       "id": "operations-cli", "title": "Operations CLI", "path": "crates/hfx-ops", "category": "applications", "status": "implemented",
-      "purpose": "Provides the installed bounded status, Doctor, support-bundle, and explicit driver-activation command surfaces while preserving historical hfx_ops source imports through re-exports.",
+      "purpose": "The `hyperfluxctl` command: status, Doctor, support bundles, and switching to the HyperFlux driver.",
       "owns": ["Installed command-line workflows", "System assessment presentation", "Privacy-safe support bundles", "Source-compatible workspace re-exports"],
       "must_not_own": ["Qualification policy", "Profile promotion authority", "Raw receiver reports", "Application presentation"],
       "inputs": ["Typed system-probe snapshots", "Canonical errors", "Local runtime configuration"],
@@ -293,7 +293,7 @@
     },
     {
       "id": "kernel-transport", "title": "Kernel transport adapter", "path": "crates/hfx-kernel-transport", "category": "runtime", "status": "implemented",
-      "purpose": "Adapts the generated kernel UAPI into bounded Rust observation, routing, envelope I/O, and qualified native exchanges.",
+      "purpose": "Lets the Rust code talk to the kernel driver: it reads what the driver reports and sends it fixed-size device messages.",
       "owns": ["Kernel device I/O", "UAPI encoding", "Receiver route adaptation"],
       "must_not_own": ["Qualification policy", "Application identity", "Unbounded or unqualified raw reports"],
       "inputs": ["Generated kernel UAPI", "Kernel session device", "Qualified bridge actions"],
@@ -309,7 +309,7 @@
     },
     {
       "id": "simulator", "title": "Deterministic simulator", "path": "crates/hfx-sim", "category": "assurance", "status": "implemented",
-      "purpose": "Exercises generations, failures, persistence, restoration, and replay without hardware.",
+      "purpose": "Simulates receivers and devices, including failures and reconnects, so the runtime can be tested without hardware.",
       "owns": ["Virtual receiver", "Deterministic replay", "Failure injection"],
       "must_not_own": ["Production policy forks", "Hardware claims", "Unbounded time"],
       "inputs": ["Core policy", "Sanitized fixtures", "Virtual clock"],
@@ -325,7 +325,7 @@
     },
     {
       "id": "driver-contract", "title": "Kernel driver contract", "path": "driver", "category": "runtime", "status": "implemented",
-      "purpose": "Defines additive generated userspace ABIs and the strict boundary around the in-kernel receiver transport.",
+      "purpose": "Defines the interface between the kernel driver and the programs that use it. New versions only add to it, so existing programs keep working.",
       "owns": ["Kernel UAPI authority", "Driver source boundary", "Session-device contract"],
       "must_not_own": ["Retail presentation", "Effects", "Application ownership"],
       "inputs": ["Architecture transport limits", "Profile-safe receiver identity", "Protocol envelope requirements"],
@@ -341,7 +341,7 @@
     },
     {
       "id": "kernel-module", "title": "Linux HID kernel module", "path": "driver/kernel", "category": "runtime", "status": "implemented",
-      "purpose": "Binds the receiver, preserves generic input, records passive observations, performs qualified fixed-size native exchanges, and retains bounded migration envelopes.",
+      "purpose": "The Linux kernel driver for the receiver. It keeps the keyboard and mouse working as normal input devices and carries lighting and battery messages between them and the background service.",
       "owns": ["HID binding", "Passive receiver observations", "Exclusive session enforcement", "UAPI-v2 native exchange execution"],
       "must_not_own": ["Retail names", "Profiles and effects", "Package repair"],
       "inputs": ["Generated receiver table", "Generated UAPI", "Kernel HID reports"],
@@ -357,7 +357,7 @@
     },
     {
       "id": "runtime-config", "title": "Linux runtime authority", "path": "runtime", "category": "delivery", "status": "implemented",
-      "purpose": "Defines package version, service identities, filesystem paths, permissions, activation, and runtime defaults once.",
+      "purpose": "Defines, in one place, the package version, service names, file paths, permissions and default settings the installed system uses.",
       "owns": ["Linux runtime names", "Service and path constants", "Activation policy", "Local companion contract"],
       "must_not_own": ["Package-format commands", "Hardware qualification", "Application effects"],
       "inputs": ["Architecture boundaries", "Install requirements", "Supported Linux conventions"],
@@ -373,7 +373,7 @@
     },
     {
       "id": "packaging", "title": "Packaging and installation", "path": "packaging", "category": "delivery", "status": "implemented",
-      "purpose": "Builds reproducible distribution artifacts, a canonical installed root, and signed public repository metadata from explicit manifests.",
+      "purpose": "Builds the Arch packages the same way every time, and the signed Pacman repository that serves them.",
       "owns": ["Install manifest", "Distribution projections", "Reproducible package inventory", "Published package-signing public key"],
       "must_not_own": ["Runtime naming duplicates", "Hidden post-install writes", "Release decisions"],
       "inputs": ["Runtime authority", "Built modules and adapters", "Distribution catalog"],
@@ -389,7 +389,7 @@
     },
     {
       "id": "sdk-cpp", "title": "C++ SDK", "path": "sdk/cpp", "category": "applications", "status": "implemented",
-      "purpose": "Provides typed C++ bridge access for qualified native routes, exact Feature exchanges, and generated adapter contracts.",
+      "purpose": "The C++ library apps use to talk to the HyperFlux background service.",
       "owns": ["C++ client API", "C++ native-route channel and recovery", "Generated C++ bindings"],
       "must_not_own": ["OpenRGB widgets or device commands", "Receiver carrier transport", "Independent schema truth"],
       "inputs": ["Domain, protocol, profile, and error catalogs", "Local bridge channel"],
@@ -405,7 +405,7 @@
     },
     {
       "id": "sdk-python", "title": "Python SDK", "path": "sdk/python", "category": "applications", "status": "implemented",
-      "purpose": "Provides typed Python bridge access and generated contracts for scripting and Python application adapters.",
+      "purpose": "The Python library scripts and apps use to talk to the HyperFlux background service.",
       "owns": ["Python client API", "Python lighting and recovery", "Generated Python bindings"],
       "must_not_own": ["Application-specific policy", "Raw receiver transport", "Independent schema truth"],
       "inputs": ["Domain, protocol, profile, and error catalogs", "Local bridge channel"],
@@ -421,7 +421,7 @@
     },
     {
       "id": "tooling", "title": "Repository tooling", "path": "tools", "category": "tooling", "status": "implemented",
-      "purpose": "Provides the single developer CLI, canonical loaders, deterministic generators, and verification orchestration.",
+      "purpose": "The `./hfx` developer command: it loads the repository's data files, generates documentation and code from them, and runs the checks.",
       "owns": ["Developer command surface", "Canonical data loaders", "Deterministic generation"],
       "must_not_own": ["Duplicate domain facts", "Implicit hardware writes", "Hidden network access"],
       "inputs": ["Canonical repository data", "Pinned toolchains", "Typed verification graph"],
@@ -437,7 +437,7 @@
     },
     {
       "id": "tests", "title": "Contract tests", "path": "tests", "category": "assurance", "status": "implemented",
-      "purpose": "Holds language-specific, cross-language, fixture, lifecycle, repository-navigation, and change-impact tests.",
+      "purpose": "The test suites: per-language tests, tests across languages, and checks that the repository's files and links stay consistent.",
       "owns": ["Focused contract tests", "Sanitized fixtures", "Cross-language smoke programs"],
       "must_not_own": ["Production policy", "Canonical facts", "Physical evidence claims"],
       "inputs": ["Public contracts", "Generated artifacts", "Sanitized scenarios"],
@@ -453,7 +453,7 @@
     },
     {
       "id": "governance", "title": "GitHub governance authority", "path": "governance", "category": "governance", "status": "policy",
-      "purpose": "Defines repository ownership, immutable automation, public collaboration, remote synchronization, dependency policy, and the public publication state from one authority.",
+      "purpose": "Defines how the GitHub repository is run: who owns what, which automation may run, how people contribute, and what is published.",
       "owns": ["GitHub governance policy", "Required-check plan", "Generated community files", "Path-to-license policy"],
       "must_not_own": ["Product release decisions", "Hardware writes", "Unreviewed external-app installation"],
       "inputs": ["Architecture release gates", "Verification graph", "Maintainer policy"],
@@ -469,7 +469,7 @@
     },
     {
       "id": "documentation", "title": "Documentation system", "path": "docs", "category": "documentation", "status": "implemented",
-      "purpose": "Organizes concise audience guidance and generated technical references for direct use inside GitHub.",
+      "purpose": "The guides for people using HyperFlux, the engineering pages that explain how it works, and the generated reference tables.",
       "owns": ["Documentation information architecture", "Reviewed narrative documentation", "Generated technical references"],
       "must_not_own": ["Duplicated canonical facts", "Live hardware claims", "Release decisions"],
       "inputs": ["Generated technical Markdown", "Reviewed user and architecture guides", "Repository navigation requirements"],
@@ -485,7 +485,7 @@
     },
     {
       "id": "verification", "title": "Verification graph", "path": "verification", "category": "assurance", "status": "implemented",
-      "purpose": "Defines typed verification nodes, dependencies, lanes, capabilities, side effects, evidence, timing, and change selection.",
+      "purpose": "Lists every check the project can run, what each one needs, and which checks to run for a given change.",
       "owns": ["Verification node catalog", "Lane dependency graph", "Evidence declarations"],
       "must_not_own": ["Production policy", "Implicit retries", "Implicit hardware writes"],
       "inputs": ["Subsystem risk boundaries", "Runner capabilities", "Changed repository paths"],
@@ -501,7 +501,7 @@
     },
     {
       "id": "errors", "title": "Error catalog", "path": "errors", "category": "architecture", "status": "implemented",
-      "purpose": "Defines stable typed error identities, user-safe messages, remediation, and cross-language mappings.",
+      "purpose": "Lists every error HyperFlux can report, the message users see, and what to do about it, in every language the project uses.",
       "owns": ["Error identifiers", "User remediation text", "Error severity and domain"],
       "must_not_own": ["Ad hoc application-only errors", "Private diagnostics", "Transport policy"],
       "inputs": ["Subsystem failure contracts", "Privacy requirements", "User recovery actions"],
@@ -517,7 +517,7 @@
     },
     {
       "id": "toolchains", "title": "Pinned development toolchains", "path": "toolchains", "category": "tooling", "status": "policy",
-      "purpose": "Pins compiler, interpreter, upstream checkout, and development-container identities for reproducible local verification.",
+      "purpose": "Pins the compiler, interpreter, upstream source and development container versions so every build and check is reproducible.",
       "owns": ["Toolchain versions", "Development environment pins", "Capability discovery inputs"],
       "must_not_own": ["Runtime dependencies", "Automatic remote mutation", "Unpinned downloads"],
       "inputs": ["Supported build matrix", "Exact upstream revisions", "Verification requirements"],

@@ -4,7 +4,7 @@ A keyboard or mouse that came back from sleep, or was switched off and on, could
 about 30 seconds to reappear in OpenRazer, and Polychromatic could keep showing a stale or
 empty device. Two gaps in how the relay waits before publishing a returning device caused
 the delay. One fix shipped in 2.0.1; the second, and a documentation fix for Polychromatic,
-are on `dev` for 2.0.2.
+shipped in 2.0.2.
 
 Issues:
 [#38](https://github.com/offalexjackson777-stack/hyperflux-next/issues/38) (return from
@@ -100,9 +100,9 @@ few seconds after switching the keyboard on, then press F5 on Polychromatic's De
 
 ## What Is Still Open
 
-- #38 shipped in 2.0.1. The issue is done when fresh return evidence bypasses a stale
-  backoff exactly once on hardware, with no retry storm.
-- #39 ships in 2.0.2. It stays open until a keyboard off and on cycle is checked on
-  hardware as part of the 2.0.2 release checks.
+- #38 shipped in 2.0.1 and is closed.
+- #39 shipped in 2.0.2. Its hardware check switched the keyboard off and on: it was back
+  in `hyperfluxctl status` within a few seconds, and Polychromatic showed it again after
+  F5 on the Devices tab. The issue is closed.
 - Polychromatic not following a returning device is upstream behaviour. It is listed in
   [Known limitations](../user/limitations.md).

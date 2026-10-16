@@ -566,7 +566,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
     def test_document_render_audit_binds_sources_visual_review_and_fast_gate(self) -> None:
         audit = load_documentation_render_audit(ROOT)
         policy = load_documentation_render_policy(ROOT)
-        self.assertEqual(audit.source_revision, "d6e7089268f62b386ad9b168ba474d2f3fff54e9")
+        self.assertEqual(audit.source_revision, "fc3f0867b5fce9142685346a95ebdda9488ae7d0")
         self.assertEqual(audit.check_count, policy.check_count)
         self.assertEqual(audit.screenshot_count, policy.screenshot_count)
         self.assertEqual(audit.capture_mode, "full-page")
@@ -1150,7 +1150,7 @@ class UserDocumentationContracts(unittest.TestCase):
         policy = load_arch_repository_policy(ROOT)
         version = policy.product_release_tag.removeprefix("v")
         self.assertIn(
-            f"Latest 2.0.x release (currently {version})", _page("SECURITY.md")
+            f"Latest release (currently {version})", _page("SECURITY.md")
         )
 
     def test_support_sends_users_to_the_installation_guide(self) -> None:

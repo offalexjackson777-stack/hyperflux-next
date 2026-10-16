@@ -309,7 +309,7 @@ def dependency_review_workflow(governance: GitHubGovernance) -> str:
     return _yaml(value, governance)
 
 
-def dependabot(governance: GitHubGovernance) -> str:
+def dependabot(governance: GitHubGovernance, toolchain_packages: tuple[str, ...] = ()) -> str:
     schedule = {"interval": "weekly", "day": governance.dependency_update_day}
     value = {
         "version": 2,
@@ -338,6 +338,11 @@ def dependabot(governance: GitHubGovernance) -> str:
                     "open-pull-requests-limit": 3,
                     "groups": {"python-dependencies": {"patterns": ["*"]}},
                     "labels": ["area: integration", "area: security"],
+                    **(
+                        {"ignore": [{"dependency-name": name} for name in toolchain_packages]}
+                        if toolchain_packages
+                        else {}
+                    ),
                 }
                 for directory in ("/sdk/python",)
             ],
