@@ -195,10 +195,12 @@
         "distribution_package_images": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["ubuntu", "debian"],
+          "required": ["ubuntu", "debian", "fedora", "opensuse"],
           "properties": {
             "ubuntu": {"type": "string", "pattern": "^docker\\.io/library/ubuntu@sha256:[0-9a-f]{64}$"},
-            "debian": {"type": "string", "pattern": "^docker\\.io/library/debian@sha256:[0-9a-f]{64}$"}
+            "debian": {"type": "string", "pattern": "^docker\\.io/library/debian@sha256:[0-9a-f]{64}$"},
+            "fedora": {"type": "string", "pattern": "^registry\\.fedoraproject\\.org/fedora@sha256:[0-9a-f]{64}$"},
+            "opensuse": {"type": "string", "pattern": "^registry\\.opensuse\\.org/opensuse/tumbleweed@sha256:[0-9a-f]{64}$"}
           }
         },
         "job_summary": {

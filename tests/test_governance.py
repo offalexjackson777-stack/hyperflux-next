@@ -298,9 +298,15 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertEqual(job["name"], DISTRIBUTION_PACKAGE_CHECK)
         self.assertNotIn(DISTRIBUTION_PACKAGE_CHECK, self.governance.required_checks)
         images = dict(self.governance.distribution_package_images)
-        self.assertEqual(tuple(images), ("ubuntu", "debian"))
+        self.assertEqual(tuple(images), ("ubuntu", "debian", "fedora", "opensuse"))
+        registries = {
+            "ubuntu": r"docker\.io/library/ubuntu",
+            "debian": r"docker\.io/library/debian",
+            "fedora": r"registry\.fedoraproject\.org/fedora",
+            "opensuse": r"registry\.opensuse\.org/opensuse/tumbleweed",
+        }
         for target, image in images.items():
-            self.assertRegex(image, rf"^docker\.io/library/{target}@sha256:[0-9a-f]{{64}}$")
+            self.assertRegex(image, rf"^{registries[target]}@sha256:[0-9a-f]{{64}}$")
         runs = [step.get("run", "") for step in job["steps"]]
         self.assertEqual(
             runs.count(
@@ -316,8 +322,44 @@ class GitHubGovernanceTests(unittest.TestCase):
         headers = {step["env"]["HFX_DISTRIBUTION"]: step["env"]["HFX_RELEASE_HEADERS"] for step in checks}
         self.assertIn("linux-headers-generic-hwe-24.04", headers["ubuntu"])
         self.assertIn("linux-headers-amd64/trixie-backports", headers["debian"])
-        script = checks[0]["env"]["HFX_PACKAGE_CHECKS"]
-        self.assertTrue(all(step["env"]["HFX_PACKAGE_CHECKS"] == script for step in checks))
+        self.assertEqual(headers["fedora"], "kernel-devel kernel-devel/fedora")
+        self.assertEqual(headers["opensuse"], "kernel-longterm-devel kernel-default-devel")
+        scripts = {step["env"]["HFX_DISTRIBUTION"]: step["env"]["HFX_PACKAGE_CHECKS"] for step in checks}
+        self.assertEqual(scripts["ubuntu"], scripts["debian"])
+        self.assertEqual(scripts["fedora"], scripts["opensuse"])
+        self.assertNotEqual(scripts["ubuntu"], scripts["fedora"])
+        for step in checks:
+            # The container receives exactly the variables the step defines.
+            passed = [name for name in step["env"] if name != "HFX_RELEASE_IMAGE"]
+            for name in passed:
+                self.assertIn(f"--env {name} ", step["run"])
+            self.assertEqual(step["run"].count("--env "), len(passed) + 1)
+            rpm = step["env"]["HFX_DISTRIBUTION"] in {"fedora", "opensuse"}
+            self.assertEqual("HFX_RELEASE_INSTALL" in step["env"], rpm)
+        self.assertTrue(checks[2]["env"]["HFX_RELEASE_INSTALL"].startswith("dnf install -y"))
+        self.assertIn("--allow-unsigned-rpm", checks[3]["env"]["HFX_RELEASE_INSTALL"])
+        rpm_script = scripts["fedora"]
+        for required in (
+            './hfx package distro --distribution "$HFX_DISTRIBUTION"',
+            "rpm -qpi",
+            "rpm -qplv",
+            'rpmlint --config "$rpms/rpmlint" "$packages"/*.rpm',
+            "checked; 0 errors,",
+            "$HFX_RELEASE_INSTALL",
+            "find /etc/systemd -name '*hyperflux*'",
+            "dkms build --force",
+            'ln -s "$directory" "/lib/modules/$kernel/build"',
+            "modinfo -F vermagic",
+            'test "$built" -ge 2',
+            "/var/lib/dkms/mok.pub",
+            "objdump -T",
+            "glibc >= ",
+            "$HFX_RELEASE_REMOVE hyperflux-next-linux hyperflux-next-dkms",
+        ):
+            self.assertIn(required, rpm_script)
+        self.assertNotRegex(rpm_script, r"-v [0-9]")
+        self.assertNotIn("dkms install", rpm_script)
+        script = scripts["ubuntu"]
         for required in (
             './hfx package distro --distribution "$HFX_DISTRIBUTION"',
             "dpkg-deb --info",
@@ -361,7 +403,31 @@ class GitHubGovernanceTests(unittest.TestCase):
         reordered["automation"]["distribution_package_images"] = dict(
             reversed(list(authority["automation"]["distribution_package_images"].items()))
         )
-        for candidate in (gated, daily, floating, swapped, reordered):
+        docker_fedora = json.loads(json.dumps(authority))
+        docker_fedora["automation"]["distribution_package_images"]["fedora"] = (
+            "docker.io/library/fedora@sha256:" + "0" * 64
+        )
+        floating_opensuse = json.loads(json.dumps(authority))
+        floating_opensuse["automation"]["distribution_package_images"]["opensuse"] = (
+            "registry.opensuse.org/opensuse/tumbleweed:latest"
+        )
+        missing_opensuse = json.loads(json.dumps(authority))
+        del missing_opensuse["automation"]["distribution_package_images"]["opensuse"]
+        swapped_rpm = json.loads(json.dumps(authority))
+        swapped_rpm["automation"]["distribution_package_images"]["opensuse"] = authority[
+            "automation"
+        ]["distribution_package_images"]["fedora"]
+        for candidate in (
+            gated,
+            daily,
+            floating,
+            swapped,
+            reordered,
+            docker_fedora,
+            floating_opensuse,
+            missing_opensuse,
+            swapped_rpm,
+        ):
             with (
                 patch("hfxdev.governance.load_json", return_value=candidate),
                 self.assertRaises(ModelError),

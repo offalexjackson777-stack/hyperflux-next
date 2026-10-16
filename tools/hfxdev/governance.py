@@ -48,7 +48,14 @@ LABEL_COLOR = re.compile(r"^[0-9a-f]{6}$")
 IDENTIFIER = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
 KERNEL_CANARY_CHECK = "Kernel canary"
 DISTRIBUTION_PACKAGE_CHECK = "Distribution packages"
-DISTRIBUTION_PACKAGE_TARGETS = ("ubuntu", "debian")
+DISTRIBUTION_PACKAGE_TARGETS = ("ubuntu", "debian", "fedora", "opensuse")
+# Each release image comes from its distribution's own registry.
+DISTRIBUTION_PACKAGE_REGISTRIES = {
+    "ubuntu": "docker.io/library/ubuntu",
+    "debian": "docker.io/library/debian",
+    "fedora": "registry.fedoraproject.org/fedora",
+    "opensuse": "registry.opensuse.org/opensuse/tumbleweed",
+}
 DISCUSSION_FORMATS = {
     "announcements": "announcement",
     "hardware-qualification": "discussion",
@@ -545,9 +552,12 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         raise ModelError("GitHub distribution package cadence drifted")
     images = automation["distribution_package_images"]
     if not isinstance(images, dict) or tuple(images) != DISTRIBUTION_PACKAGE_TARGETS:
-        raise ModelError("distribution package images must be ordered ubuntu, debian")
+        raise ModelError(
+            "distribution package images must be ordered "
+            + ", ".join(DISTRIBUTION_PACKAGE_TARGETS)
+        )
     for target, image in images.items():
-        pattern = rf"docker\.io/library/{target}@sha256:[0-9a-f]{{64}}"
+        pattern = re.escape(DISTRIBUTION_PACKAGE_REGISTRIES[target]) + "@sha256:[0-9a-f]{64}"
         if not isinstance(image, str) or re.fullmatch(pattern, image) is None:
             raise ModelError(f"the {target} package image must be pinned by digest")
     summary = _exact(

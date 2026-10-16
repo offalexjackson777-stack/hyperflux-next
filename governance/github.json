@@ -131,7 +131,9 @@
     "distribution_package_cron": "23 6 * * 3",
     "distribution_package_images": {
       "ubuntu": "docker.io/library/ubuntu@sha256:f610ab94648195aa356059f5b41d6085c9d4d903c072430cdd1af7bdb646106b",
-      "debian": "docker.io/library/debian@sha256:bcf83fd8af414eda0c0a99d25a4e61dedd88e7aac7f7bc519d04555ff0c40ec5"
+      "debian": "docker.io/library/debian@sha256:bcf83fd8af414eda0c0a99d25a4e61dedd88e7aac7f7bc519d04555ff0c40ec5",
+      "fedora": "registry.fedoraproject.org/fedora@sha256:923dd7d4362a78ef7edc1887cb599720e9f59ff8669a38c81062c6e2aaa83204",
+      "opensuse": "registry.opensuse.org/opensuse/tumbleweed@sha256:fe80b7a696238a86c273cb9efd798a5d56240567b0b7ab8ed3bf4606a2e117ac"
     },
     "job_summary": {
       "enabled": true,

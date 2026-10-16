@@ -317,21 +317,40 @@ def kernel_canary_workflow(governance: GitHubGovernance, base_image: str) -> str
 
 
 DISTRIBUTION_PACKAGE_OUTPUT = "build/ci/distributions"
-# Each Debian-format release compiles the driver for its stock kernel and for the
-# newer kernel it offers, so a new kernel interface shows up before users meet it.
+# Each release compiles the driver for its stock kernel and for the newer kernel
+# it offers, so a new kernel interface shows up before users meet it. A header
+# package written `name/repository` comes from that repository only.
 DISTRIBUTION_PACKAGE_RELEASES = {
     "ubuntu": {
+        "format": "deb",
         "name": "Ubuntu 24.04",
         "sources": "",
         "headers": "linux-headers-generic linux-headers-generic-hwe-24.04",
     },
     "debian": {
+        "format": "deb",
         "name": "Debian 13",
         "sources": "echo 'deb http://deb.debian.org/debian trixie-backports main' > /etc/apt/sources.list.d/backports.list",
         "headers": "linux-headers-amd64 linux-headers-amd64/trixie-backports",
     },
+    "fedora": {
+        "format": "rpm",
+        "name": "Fedora 44",
+        "sources": "",
+        "headers": "kernel-devel kernel-devel/fedora",
+        "install": "dnf install -y --setopt=install_weak_deps=False",
+        "remove": "dnf remove -y",
+    },
+    "opensuse": {
+        "format": "rpm",
+        "name": "openSUSE Tumbleweed",
+        "sources": "",
+        "headers": "kernel-longterm-devel kernel-default-devel",
+        "install": "zypper --non-interactive install --no-recommends --allow-unsigned-rpm",
+        "remove": "zypper --non-interactive remove",
+    },
 }
-DISTRIBUTION_PACKAGE_CHECKS = r"""set -eu
+DEBIAN_PACKAGE_CHECKS = r"""set -eu
 output=build/ci/distributions
 trap 'chown -R "$HFX_HOST_OWNER" "$output"' EXIT
 export DEBIAN_FRONTEND=noninteractive
@@ -384,6 +403,93 @@ for file in $(dpkg -L hyperflux-next-linux); do
 done
 apt-get purge -y hyperflux-next-linux hyperflux-next-dkms
 """
+RPM_PACKAGE_CHECKS = r"""set -eu
+output=build/ci/distributions
+trap 'chown -R "$HFX_HOST_OWNER" "$output"' EXIT
+eval "$HFX_RELEASE_SOURCES"
+# dkms --rpm_safe_upgrade reads the process list.
+$HFX_RELEASE_INSTALL binutils dkms git kmod openssl procps python3 rpm-build rpmlint
+# PACKAGE/REPOSITORY adds the version that repository ships next to the newest one,
+# while dependencies still resolve against every repository.
+for headers in $HFX_RELEASE_HEADERS; do
+  case $headers in
+    */*)
+      release=$(dnf repoquery --quiet --repo "${headers#*/}" --latest-limit 1 --queryformat '%{version}-%{release}' "${headers%/*}")
+      test -n "$release"
+      $HFX_RELEASE_INSTALL "${headers%/*}-$release"
+      ;;
+    *) $HFX_RELEASE_INSTALL "$headers" ;;
+  esac
+done
+git config --global --add safe.directory "$PWD"
+rpms=$output/$HFX_DISTRIBUTION
+./hfx package distro --distribution "$HFX_DISTRIBUTION" --build-manifest "$output/artifacts/package-build-manifest.json" --output "$rpms"
+packages=$rpms/packages
+for rpm in "$packages"/*.rpm; do
+  rpm -qpi --nosignature "$rpm"
+  rpm -qplv --nosignature "$rpm"
+  rpm -qp --nosignature --requires --scripts "$rpm"
+done
+# rpmlint reports warnings and fails on any error the generated configuration
+# does not accept by name; its exit status differs between releases, so read the summary.
+report=$(rpmlint --config "$rpms/rpmlint" "$packages"/*.rpm 2>&1) || :
+printf '%s\n' "$report"
+printf '%s\n' "$report" | grep -q 'checked; 0 errors,'
+$HFX_RELEASE_INSTALL "./$packages"/hyperflux-next-dkms-*.rpm "./$packages"/hyperflux-next-linux-*.rpm
+if find /etc/systemd -name '*hyperflux*' -print | grep -q .; then
+  echo "Installing the packages enabled a service." >&2
+  exit 1
+fi
+source=$(find /usr/src -maxdepth 1 -name 'hid-hyperflux-next-*' -print -quit)
+version=${source##*/hid-hyperflux-next-}
+test -n "$version"
+dkms status -m hid-hyperflux-next -v "$version" | grep -q .
+# Kernel development files live under /usr/src. An installed kernel links
+# /lib/modules/KERNEL/build to them, and dkms.conf builds there; the image has
+# no kernel, so the link is made here.
+seen=
+built=0
+for directory in /lib/modules/*/build /usr/src/kernels/* /usr/src/linux-*-obj/*/*; do
+  test -f "$directory/include/config/kernel.release" || continue
+  kernel=$(cat "$directory/include/config/kernel.release")
+  case " $seen " in *" $kernel "*) continue ;; esac
+  seen="$seen $kernel"
+  if [ ! -e "/lib/modules/$kernel/build" ]; then
+    mkdir -p "/lib/modules/$kernel"
+    ln -s "$directory" "/lib/modules/$kernel/build"
+  fi
+  dkms build --force -m hid-hyperflux-next -v "$version" -k "$kernel"
+  module=$(find "/var/lib/dkms/hid-hyperflux-next/$version/$kernel" -name 'hid[-_]hyperflux[-_]next.ko*' -print -quit)
+  test -n "$module"
+  modinfo "$module"
+  test "$(modinfo -F vermagic "$module" | cut -d' ' -f1)" = "$kernel"
+  built=$((built + 1))
+done
+test "$built" -ge 2
+# DKMS signs the driver with the key the Secure Boot guide enrolls.
+test -f /var/lib/dkms/mok.pub
+openssl x509 -inform DER -in /var/lib/dkms/mok.pub -noout -subject
+glibc=$(ldd --version | head -n 1 | awk '{print $NF}')
+floor=$(rpm -q --requires hyperflux-next-linux | sed -n 's/^glibc >= //p')
+test -n "$floor"
+newer() { test "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -n 1)" != "$2"; }
+for file in $(rpm -ql hyperflux-next-linux); do
+  test -f "$file" && test ! -L "$file" || continue
+  head -c 4 "$file" | grep -q 'ELF' || continue
+  needed=$(objdump -T "$file" | grep -o 'GLIBC_[0-9.]*' | sed 's/GLIBC_//' | sort -Vu | tail -n 1)
+  # Weak references may name a newer glibc; the program checks for them at run time.
+  strong=$(objdump -T "$file" | awk '$2 != "w"' | grep -o 'GLIBC_[0-9.]*' | sed 's/GLIBC_//' | sort -Vu | tail -n 1)
+  echo "$file needs glibc ${strong:-none} (${needed:-none} with weak references); the floor is $floor, $HFX_RELEASE_NAME has $glibc"
+  if [ -n "$needed" ] && newer "$needed" "$glibc"; then exit 1; fi
+  if [ -n "$strong" ] && newer "$strong" "$floor"; then exit 1; fi
+done
+$HFX_RELEASE_REMOVE hyperflux-next-linux hyperflux-next-dkms
+if dkms status -m hid-hyperflux-next | grep -q .; then
+  echo "Removing the packages left the driver registered with DKMS." >&2
+  exit 1
+fi
+"""
+DISTRIBUTION_PACKAGE_CHECKS = {"deb": DEBIAN_PACKAGE_CHECKS, "rpm": RPM_PACKAGE_CHECKS}
 
 
 def distribution_package_workflow(governance: GitHubGovernance) -> str:
@@ -399,22 +505,25 @@ def distribution_package_workflow(governance: GitHubGovernance) -> str:
     )
     for target, image in governance.distribution_package_images:
         release = DISTRIBUTION_PACKAGE_RELEASES[target]
+        environment = {
+            "HFX_RELEASE_IMAGE": image,
+            "HFX_DISTRIBUTION": target,
+            "HFX_RELEASE_NAME": release["name"],
+            "HFX_RELEASE_SOURCES": release["sources"],
+            "HFX_RELEASE_HEADERS": release["headers"],
+        }
+        if release["format"] == "rpm":
+            environment["HFX_RELEASE_INSTALL"] = release["install"]
+            environment["HFX_RELEASE_REMOVE"] = release["remove"]
+        environment["HFX_PACKAGE_CHECKS"] = DISTRIBUTION_PACKAGE_CHECKS[release["format"]]
+        passed = " ".join(f"--env {name}" for name in list(environment)[1:])
         steps.append(
             {
                 "name": f"Build, lint, install, and compile the {release['name']} packages",
-                "env": {
-                    "HFX_RELEASE_IMAGE": image,
-                    "HFX_DISTRIBUTION": target,
-                    "HFX_RELEASE_NAME": release["name"],
-                    "HFX_RELEASE_SOURCES": release["sources"],
-                    "HFX_RELEASE_HEADERS": release["headers"],
-                    "HFX_PACKAGE_CHECKS": DISTRIBUTION_PACKAGE_CHECKS,
-                },
+                "env": environment,
                 "run": (
                     'docker run --rm --security-opt no-new-privileges '
-                    '--env HFX_HOST_OWNER="$(id -u):$(id -g)" --env HFX_DISTRIBUTION '
-                    '--env HFX_RELEASE_NAME --env HFX_RELEASE_SOURCES --env HFX_RELEASE_HEADERS '
-                    '--env HFX_PACKAGE_CHECKS '
+                    f'--env HFX_HOST_OWNER="$(id -u):$(id -g)" {passed} '
                     '--volume "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" --workdir "$GITHUB_WORKSPACE" '
                     '"$HFX_RELEASE_IMAGE" /bin/bash -c "$HFX_PACKAGE_CHECKS"'
                 ),
@@ -1074,13 +1183,17 @@ def markdown(governance: GitHubGovernance, arch_repository: ArchRepositoryPolicy
         "| CodeQL | Pull requests, main, weekly | GitHub service only | None | C/C++ and Python analysis |",
         "| Dependency review | Pull requests | GitHub service only | None | Dependency policy decision |",
         "| Kernel canary | Weekly or manual | Arch mirrors, kernel.org, and the pinned app sources | None | Driver builds against coming kernels; never required for merging |",
-        "| Distribution packages | Weekly or manual | Ubuntu and Debian archives for the check tools | None | Ubuntu 24.04 and Debian 13 `.deb` files, checked and not published; never required for merging |",
+        "| Distribution packages | Weekly or manual | Ubuntu, Debian, Fedora and openSUSE archives for the check tools | None | Ubuntu 24.04 and Debian 13 `.deb` files and Fedora 44 and openSUSE Tumbleweed `.rpm` files, checked and not published; never required for merging |",
         "",
         "The development image may use the network only to fetch its pinned packages and tools while it is built. The pinned app sources are prepared before the checks start. Every check then runs in the pinned image with `--network none`, no devices, no privileges, no extra capabilities, and write access only to the checkout.",
         "",
         "The kernel canary is the one deliberate exception, because its purpose is to follow kernels that move after the image is pinned. It starts from the same digest-pinned Arch base image and installs this week's `linux-headers` and `linux-lts-headers`. It also stages the next Arch kernel from `core-testing`, when there is one, and the newest mainline tag from kernel.org prepared with `modules_prepare`. Then `./hfx kernel-canary` builds the HyperFlux driver and the patched OpenRazer driver against each kernel with `W=1`. It only compiles: nothing is loaded and no device is touched. Its result never gates a merge. A failure is an early warning that a kernel interface changes before it reaches users.",
         "",
-        "The distribution packages workflow is a second non-gating check. It builds the package artifacts once, offline in the pinned development image, exactly as the Arch packages are built. Then, for Ubuntu 24.04 and Debian 13 in turn, it starts that release's digest-pinned image without extra privileges and installs the check tools from the release's archive. In that container `./hfx package distro` turns the artifacts into `hyperflux-next-dkms` and `hyperflux-next-linux`. The workflow inspects both files with `dpkg-deb`, fails on any `lintian` error, and installs them with `apt-get` while `policy-rc.d` refuses every service start. Then `dkms build` compiles the driver against two kernels for each release: Ubuntu's generic and HWE kernels, and Debian's stock and backports kernels. `modinfo` checks each module, and every installed program is checked against the glibc that the release ships. Finally the packages are purged. The `.deb` files are kept as a workflow artifact for 14 days and are never published. Nothing is loaded and no device is touched.",
+        "The distribution packages workflow is a second non-gating check. It builds the package artifacts once, offline in the pinned development image, exactly as the Arch packages are built. Then, for Ubuntu 24.04, Debian 13, Fedora 44 and openSUSE Tumbleweed in turn, it starts that release's digest-pinned image without extra privileges and installs the check tools from the release's own archive. In that container `./hfx package distro` turns the artifacts into `hyperflux-next-dkms` and `hyperflux-next-linux`. "
+        "On Ubuntu and Debian the workflow inspects both `.deb` files with `dpkg-deb`, fails on any `lintian` error, and installs them with `apt-get` while `policy-rc.d` refuses every service start. "
+        "On Fedora and openSUSE `rpmbuild` builds both `.rpm` files from one generated spec inside the release image, so the host never needs RPM tools. The workflow prints each header, file list and scriptlet with `rpm`, fails on any `rpmlint` error except those the generated `rpmlint` configuration accepts by name and reason, and installs the files with `dnf` or `zypper`; the scriptlets only register and build the DKMS sources and never enable or start a unit, which the workflow checks under `/etc/systemd`. "
+        "Then `dkms build` compiles the driver against two kernels for each release: Ubuntu's generic and HWE kernels, Debian's stock and backports kernels, Fedora's release and updates kernels, and openSUSE's longterm and default kernels. `modinfo` checks each module's vermagic, and every installed program is checked against the glibc that the release ships; on Fedora and openSUSE strong symbol references must also stay within the declared glibc floor, and the DKMS signing certificate must exist at `/var/lib/dkms/mok.pub`. "
+        "Finally the packages are removed, and on Fedora and openSUSE DKMS must no longer list the driver. The package files are kept as a workflow artifact for 14 days and are never published. Nothing is loaded and no device is touched.",
         "",
         "## Checks Required Before Merging",
         "",
