@@ -13,12 +13,13 @@ from .model import ModelError, load_json, require_unique, sha256_file
 from .openrazer_native_route import load_native_deployment
 
 
-TARGET_IDS = ("arch", "ubuntu")
+TARGET_IDS = ("arch", "ubuntu", "debian")
+DEBIAN_FORMAT_TARGET_IDS = ("ubuntu", "debian")
 COMPONENT_IDS = ("linux", "full")
 # Arch carries both editions. Debian-format targets carry Core only; Full and
 # its OpenRazer/OpenRGB integrations stay Arch-only.
-TARGET_COMPONENT_IDS = {"arch": COMPONENT_IDS, "ubuntu": ("linux",)}
-TARGET_PACKAGE_FORMATS = {"arch": "pacman", "ubuntu": "deb"}
+TARGET_COMPONENT_IDS = {"arch": COMPONENT_IDS, "ubuntu": ("linux",), "debian": ("linux",)}
+TARGET_PACKAGE_FORMATS = {"arch": "pacman", "ubuntu": "deb", "debian": "deb"}
 MATURITIES = ("ci-only", "published")
 DEPENDENCY_ROLES = {
     "dkms",
@@ -34,7 +35,7 @@ DEBIAN_RELATION = re.compile(
     r"(?: \((?P<operator><<|<=|=|>=|>>) (?P<version>[0-9][A-Za-z0-9.+~-]{0,63})\))?$"
 )
 DEBIAN_UPSTREAM_VERSION = re.compile(r"^[0-9][A-Za-z0-9.+~]*$")
-RELEASE_VERSION = re.compile(r"^[0-9]{2}\.[0-9]{2}$")
+RELEASE_VERSION = re.compile(r"^[0-9]{1,2}(?:\.[0-9]{2})?$")
 RELEASE_CODENAME = re.compile(r"^[a-z]{2,32}$")
 RELEASE_DISTRIBUTION = re.compile(r"^[A-Z][A-Za-z]{1,31}$")
 C_RUNTIME_VERSION = re.compile(r"^[0-9]+\.[0-9]+$")
@@ -505,7 +506,13 @@ def _check_arch_contract(target: DistributionTarget, sibling_version: str) -> No
         raise ModelError("full-package optional applications differ from the contract")
 
 
-UBUNTU_ROLES = {
+# Each Debian-format target is held to one exact release. Both use the same
+# package names for their dependency roles.
+DEBIAN_FORMAT_RELEASES = {
+    "ubuntu": ("Ubuntu", "24.04", "noble"),
+    "debian": ("Debian", "13", "trixie"),
+}
+DEBIAN_FORMAT_ROLES = {
     "dkms": "dkms",
     "compiler-runtime": "libgcc-s1",
     "service-manager": "systemd",
@@ -513,47 +520,48 @@ UBUNTU_ROLES = {
 }
 
 
-def _check_ubuntu_contract(target: DistributionTarget, arch: DistributionTarget) -> None:
-    """Hold the Ubuntu Core package to the Arch Core product contract."""
+def _check_debian_format_contract(target: DistributionTarget, arch: DistributionTarget) -> None:
+    """Hold a Debian-format Core package to the Arch Core product contract."""
 
+    name, version, codename = DEBIAN_FORMAT_RELEASES[target.id]
     release = target.release
     if release is None or (release.distribution, release.version, release.codename) != (
-        "Ubuntu",
-        "24.04",
-        "noble",
+        name,
+        version,
+        codename,
     ):
-        raise ModelError("Ubuntu target must name exactly Ubuntu 24.04 noble")
+        raise ModelError(f"{name} target must name exactly {name} {version} {codename}")
     if target.maturity != "ci-only":
-        raise ModelError("Ubuntu packages are CI-built only until a publication channel exists")
+        raise ModelError(f"{name} packages are CI-built only until a publication channel exists")
     if target.architectures != {"x86_64-unknown-linux-gnu": "amd64"}:
-        raise ModelError("Ubuntu target is amd64 only")
+        raise ModelError(f"{name} target is amd64 only")
     roles = {key: value for key, value in target.dependency_roles.items() if key != "c-runtime"}
-    if roles != UBUNTU_ROLES:
-        raise ModelError("Ubuntu dependency roles differ from the noble package names")
+    if roles != DEBIAN_FORMAT_ROLES:
+        raise ModelError(f"{name} dependency roles differ from the {codename} package names")
     floor = c_runtime_floor(target)
     if _relation_name(target.dependency_roles["c-runtime"]) != "libc6":
-        raise ModelError("Ubuntu C runtime role must name libc6")
+        raise ModelError(f"{name} C runtime role must name libc6")
     if version_key(floor) > version_key(release.c_runtime_version):
-        raise ModelError("Ubuntu C runtime floor exceeds the release C runtime")
+        raise ModelError(f"{name} C runtime floor exceeds the release C runtime")
     linux = target.component("linux")
     arch_linux = arch.component("linux")
     if (linux.package_name, linux.description) != (
         arch_linux.package_name,
         arch_linux.description,
     ):
-        raise ModelError("Ubuntu Core identity differs from the Arch Core package")
+        raise ModelError(f"{name} Core identity differs from the Arch Core package")
     if linux.dependency_roles != arch_linux.dependency_roles:
-        raise ModelError("Ubuntu Core dependency roles differ from the Arch Core package")
+        raise ModelError(f"{name} Core dependency roles differ from the Arch Core package")
     if (linux.conflicts, linux.provides, linux.replaces) != (
         arch_linux.conflicts,
         arch_linux.provides,
         arch_linux.replaces,
     ):
-        raise ModelError("Ubuntu Core relations differ from the Arch Core package")
+        raise ModelError(f"{name} Core relations differ from the Arch Core package")
     if linux.optional_dependencies or set(linux.dependencies) != set(
         target.dependency_roles.values()
     ):
-        raise ModelError("Ubuntu Core may depend only on its mapped dependency roles")
+        raise ModelError(f"{name} Core may depend only on its mapped dependency roles")
 
 
 def load_distribution_catalog(root: Path) -> DistributionCatalog:
@@ -589,7 +597,7 @@ def load_distribution_catalog(root: Path) -> DistributionCatalog:
 
     targets_value = value["targets"]
     if not isinstance(targets_value, dict) or tuple(targets_value) != TARGET_IDS:
-        raise ModelError("distribution targets must be ordered arch, ubuntu")
+        raise ModelError("distribution targets must be ordered arch, ubuntu, debian")
     runtime = load_linux_runtime(root)
     version = runtime.product.version.replace("-", "_")
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.+_]*", version):
@@ -603,19 +611,21 @@ def load_distribution_catalog(root: Path) -> DistributionCatalog:
         sibling_version=sibling_version,
     )
     _check_arch_contract(target, sibling_version)
-    ubuntu = _target(
-        "ubuntu",
-        targets_value["ubuntu"],
-        openrazer_version=openrazer_version,
-        sibling_version=debian_version(
-            runtime.product.version, runtime.product.package_release
-        ),
-    )
-    _check_ubuntu_contract(ubuntu, target)
+    targets = {"arch": target}
+    for target_id in DEBIAN_FORMAT_TARGET_IDS:
+        targets[target_id] = _target(
+            target_id,
+            targets_value[target_id],
+            openrazer_version=openrazer_version,
+            sibling_version=debian_version(
+                runtime.product.version, runtime.product.package_release
+            ),
+        )
+        _check_debian_format_contract(targets[target_id], target)
     return DistributionCatalog(
         source_sha256=sha256_file(path),
         description=description,
         homepage=homepage,
         licenses=licenses,
-        targets={"arch": target, "ubuntu": ubuntu},
+        targets=targets,
     )

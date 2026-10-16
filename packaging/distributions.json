@@ -132,6 +132,46 @@
           "replaces": []
         }
       }
+    },
+    "debian": {
+      "package_format": "deb",
+      "maturity": "ci-only",
+      "release": {
+        "distribution": "Debian",
+        "version": "13",
+        "codename": "trixie",
+        "c_runtime_version": "2.41"
+      },
+      "architectures": {
+        "x86_64-unknown-linux-gnu": "amd64"
+      },
+      "dependency_roles": {
+        "dkms": "dkms",
+        "c-runtime": "libc6 (>= 2.34)",
+        "compiler-runtime": "libgcc-s1",
+        "service-manager": "systemd",
+        "device-manager": "udev"
+      },
+      "components": {
+        "linux": {
+          "package_name": "hyperflux-next-linux",
+          "description": "HyperFlux receiver driver, bridge, SDK, CLI, and base services",
+          "dependency_roles": [
+            "dkms",
+            "c-runtime",
+            "compiler-runtime",
+            "service-manager",
+            "device-manager"
+          ],
+          "dependencies": [],
+          "optional_dependencies": [],
+          "conflicts": [
+            "hyperflux-v2-linux-dkms"
+          ],
+          "provides": [],
+          "replaces": []
+        }
+      }
     }
   }
 }

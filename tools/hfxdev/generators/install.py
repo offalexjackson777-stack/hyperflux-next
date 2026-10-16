@@ -208,8 +208,9 @@ def markdown(
             "configuration remains preserved across supported package transitions.",
             "",
             "The Arch package base consumes independently staged `linux` and payload-bearing "
-            "`full` components. Ubuntu 24.04 `.deb` packages of the Core edition are "
-            "built and checked in CI but not published yet; Fedora output is deferred.",
+            "`full` components. Ubuntu 24.04 and Debian 13 `.deb` packages of the Core "
+            "edition are built and checked in CI but not published yet; Fedora and "
+            "openSUSE output is planned.",
             "",
         ]
     )

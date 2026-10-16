@@ -33,9 +33,10 @@ shown in the [installation guide](../user/installation.md). See the
 
 ## Later
 
-- **Other distributions.** Ubuntu, Debian, and Fedora packages are planned as
-  separate pieces of work. Each will be published only when it works on its own;
-  a delay on one does not hold back another.
+- **Other distributions.** Ubuntu 24.04 and Debian 13 packages are already
+  built and checked every week, but not published yet. Fedora and openSUSE
+  packages are planned next. Each will be published only when it works on its
+  own; a delay on one does not hold back another.
 - **Signing key rotation.** The repository signing key will be replaced before
   it expires, following the published fingerprint procedure.
 

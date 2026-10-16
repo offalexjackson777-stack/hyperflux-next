@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ..arch_split import ArchSplit
-from ..distributions import DistributionCatalog, DistributionComponent
+from ..distributions import DEBIAN_FORMAT_TARGET_IDS, DistributionCatalog, DistributionComponent
 from ..install import FirstRunActivation
 from ..linux_runtime import LinuxRuntime
 from ..model import ModelError
@@ -20,11 +20,30 @@ def _optional_items(component: DistributionComponent) -> str:
     ) or "none"
 
 
-def _ubuntu(catalog: DistributionCatalog, split: ArchSplit, runtime: LinuxRuntime) -> list[str]:
-    target = catalog.targets["ubuntu"]
+# How each release's DKMS signs the driver, and the key it asks the firmware to trust.
+SECURE_BOOT_ENROLLMENT = {
+    "ubuntu": (
+        "sudo update-secureboot-policy --enroll-key",
+        "sudo mokutil --import /var/lib/shim-signed/mok/MOK.der",
+    ),
+    "debian": (
+        "sudo mokutil --import /var/lib/dkms/mok.pub",
+        None,
+    ),
+}
+
+
+def _debian_format(
+    catalog: DistributionCatalog,
+    target_id: str,
+    split: ArchSplit,
+    runtime: LinuxRuntime,
+) -> list[str]:
+    target = catalog.targets[target_id]
     release = target.release
     if release is None or target.published:
-        raise ModelError("the Ubuntu target must be an unpublished release")
+        raise ModelError(f"the {target_id} target must be an unpublished release")
+    enroll, fallback = SECURE_BOOT_ENROLLMENT[target_id]
     arch_roles = catalog.targets["arch"].dependency_roles
     from ..distribution_debian import debian_plans
 
@@ -37,7 +56,7 @@ def _ubuntu(catalog: DistributionCatalog, split: ArchSplit, runtime: LinuxRuntim
         f"HyperFlux builds `.deb` packages for {release.distribution} {release.version} "
         f"(`{release.codename}`) every week in CI. They are not published, so there is "
         "nothing to install from yet. The packages carry only the Core edition; there "
-        "is no Full edition for Ubuntu.",
+        f"is no Full edition for {release.distribution}.",
         "",
         "| Package | Version | Architecture | Depends |",
         "| --- | --- | --- | --- |",
@@ -68,11 +87,11 @@ def _ubuntu(catalog: DistributionCatalog, split: ArchSplit, runtime: LinuxRuntim
             f"- Programs must run on the glibc {release.c_runtime_version} that "
             f"{release.distribution} {release.version} ships.",
             "",
-            "### Secure Boot",
+            f"### Secure Boot on {release.distribution}",
             "",
             "If Secure Boot is on, Linux only loads drivers signed by a key it trusts. "
-            "DKMS on Ubuntu signs the HyperFlux driver with a key made on your computer, "
-            "so you need to tell the computer to trust that key once.",
+            f"DKMS on {release.distribution} signs the HyperFlux driver with a key made on "
+            "your computer, so you need to tell the computer to trust that key once.",
             "",
             "1. Check whether Secure Boot is on:",
             "",
@@ -86,15 +105,21 @@ def _ubuntu(catalog: DistributionCatalog, split: ArchSplit, runtime: LinuxRuntim
             "after the restart:",
             "",
             "   ```sh",
-            "   sudo update-secureboot-policy --enroll-key",
+            f"   {enroll}",
             "   ```",
             "",
-            "   If that command says there is no key to enroll, run this instead:",
-            "",
-            "   ```sh",
-            "   sudo mokutil --import /var/lib/shim-signed/mok/MOK.der",
-            "   ```",
-            "",
+            *(
+                [
+                    "   If that command says there is no key to enroll, run this instead:",
+                    "",
+                    "   ```sh",
+                    f"   {fallback}",
+                    "   ```",
+                    "",
+                ]
+                if fallback
+                else []
+            ),
             "3. Restart the computer. A blue MokManager screen appears. Choose "
             "**Enroll MOK**, then **Continue**, then **Yes**, type the password, and reboot.",
             "",
@@ -171,7 +196,11 @@ def markdown(
                 for source, destination in arch.architectures.items()
             )
             + ".",
-            *_ubuntu(catalog, split, runtime),
+            *(
+                line
+                for target_id in DEBIAN_FORMAT_TARGET_IDS
+                for line in _debian_format(catalog, target_id, split, runtime)
+            ),
             "",
         ]
     )

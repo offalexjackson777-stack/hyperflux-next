@@ -184,15 +184,23 @@
     "automation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["runner", "development_image", "dependency_update_day", "full_verification_cron", "kernel_canary_cron", "ubuntu_package_cron", "ubuntu_package_image", "job_summary", "actions"],
+      "required": ["runner", "development_image", "dependency_update_day", "full_verification_cron", "kernel_canary_cron", "distribution_package_cron", "distribution_package_images", "job_summary", "actions"],
       "properties": {
         "runner": {"const": "ubuntu-24.04"},
         "development_image": {"const": "hyperflux-next-dev:ci"},
         "dependency_update_day": {"enum": ["monday", "tuesday", "wednesday", "thursday", "friday"]},
         "full_verification_cron": {"type": "string", "pattern": "^[0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+$"},
         "kernel_canary_cron": {"type": "string", "pattern": "^[0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+$"},
-        "ubuntu_package_cron": {"type": "string", "pattern": "^[0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+$"},
-        "ubuntu_package_image": {"type": "string", "pattern": "^docker\\.io/library/ubuntu@sha256:[0-9a-f]{64}$"},
+        "distribution_package_cron": {"type": "string", "pattern": "^[0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+$"},
+        "distribution_package_images": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ubuntu", "debian"],
+          "properties": {
+            "ubuntu": {"type": "string", "pattern": "^docker\\.io/library/ubuntu@sha256:[0-9a-f]{64}$"},
+            "debian": {"type": "string", "pattern": "^docker\\.io/library/debian@sha256:[0-9a-f]{64}$"}
+          }
+        },
         "job_summary": {
           "type": "object",
           "additionalProperties": false,

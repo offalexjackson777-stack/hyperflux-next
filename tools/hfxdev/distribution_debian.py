@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
-"""Debian-format packages for a Core-only target such as Ubuntu 24.04.
+"""Debian-format packages for the Core-only Ubuntu 24.04 and Debian 13 targets.
 
 The Arch split authority already partitions the Core edition into the
 outputs that own its files: the DKMS receiver sources and the bridge

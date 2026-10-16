@@ -30,7 +30,7 @@ class DistributionCatalogTests(unittest.TestCase):
         cls.catalog = load_distribution_catalog(ROOT)
 
     def test_arch_split_packages_match_the_bridge_only_contract(self) -> None:
-        self.assertEqual(tuple(self.catalog.targets), ("arch", "ubuntu"))
+        self.assertEqual(tuple(self.catalog.targets), ("arch", "ubuntu", "debian"))
         target = self.catalog.targets["arch"]
         self.assertEqual((target.package_format, target.maturity), ("pacman", "published"))
         self.assertIsNone(target.release)
@@ -121,6 +121,69 @@ class DistributionCatalogTests(unittest.TestCase):
             linux.dependencies,
             ("dkms", "libc6 (>= 2.34)", "libgcc-s1", "systemd", "udev"),
         )
+
+    def test_debian_target_mirrors_ubuntu_on_its_own_release(self) -> None:
+        ubuntu = self.catalog.targets["ubuntu"]
+        target = self.catalog.targets["debian"]
+        self.assertEqual((target.package_format, target.maturity), ("deb", "ci-only"))
+        self.assertFalse(target.published)
+        assert target.release is not None
+        self.assertEqual(
+            (
+                target.release.distribution,
+                target.release.version,
+                target.release.codename,
+                target.release.c_runtime_version,
+            ),
+            ("Debian", "13", "trixie", "2.41"),
+        )
+        self.assertEqual(tuple(target.components), ("linux",))
+        self.assertEqual(target.dependency_roles, ubuntu.dependency_roles)
+        self.assertEqual(target.component("linux"), ubuntu.component("linux"))
+
+    def test_debian_mutations_fail_closed(self) -> None:
+        def mutate(change):
+            candidate = copy.deepcopy(self.value)
+            change(candidate["targets"]["debian"], candidate)
+            return candidate
+
+        def set_release(key, value):
+            def change(target, _value):
+                target["release"][key] = value
+            return change
+
+        def drop_debian(_target, value):
+            del value["targets"]["debian"]
+
+        def reorder(_target, value):
+            targets = value["targets"]
+            value["targets"] = {
+                "arch": targets["arch"],
+                "debian": targets["debian"],
+                "ubuntu": targets["ubuntu"],
+            }
+
+        def runtime_above_release(target, _value):
+            target["dependency_roles"]["c-runtime"] = "libc6 (>= 2.42)"
+
+        def ubuntu_release(target, value):
+            target["release"] = copy.deepcopy(value["targets"]["ubuntu"]["release"])
+
+        cases = {
+            "missing target": drop_debian,
+            "reordered targets": reorder,
+            "other codename": set_release("codename", "bookworm"),
+            "other version": set_release("version", "12"),
+            "other distribution": set_release("distribution", "Devuan"),
+            "runtime above release": runtime_above_release,
+            "ubuntu release": ubuntu_release,
+        }
+        for name, change in cases.items():
+            with self.subTest(case=name), patch(
+                "hfxdev.distributions.load_json", return_value=mutate(change)
+            ):
+                with self.assertRaises(ModelError):
+                    load_distribution_catalog(ROOT)
 
     def test_debian_versions_and_relations(self) -> None:
         self.assertEqual(debian_version("2.1.0", 1), "2.1.0-1")
