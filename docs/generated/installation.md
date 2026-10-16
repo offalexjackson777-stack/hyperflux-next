@@ -37,11 +37,11 @@ The build plan contains `8` required and `0` optional build products.
 
 ## Installed Files
 
-The packages install `32` files. Every file goes under `/etc` or `/usr`, and no two files share a path.
+The packages install `34` files. Every file goes under `/etc` or `/usr`, and no two files share a path.
 
 | Payload | Distribution component | Files | Preserved destination |
 | --- | --- | ---: | --- |
-| `kernel-source` | `linux` | 15 | `-` |
+| `kernel-source` | `linux` | 17 | `-` |
 | `dkms-configuration` | `linux` | 1 | `-` |
 | `bridge-service` | `linux` | 1 | `-` |
 | `desktop-bridge-socket` | `linux` | 1 | `-` |

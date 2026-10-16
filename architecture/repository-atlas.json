@@ -347,7 +347,7 @@
       "inputs": ["Generated receiver table", "Generated UAPI", "Kernel HID reports"],
       "outputs": ["Generic input", "Generation state", "Bounded session device", "Correlated native exchange results"],
       "public_contracts": ["No input regression", "Passive unknown-device visibility", "One SET attempt per native exchange", "Generation invalidation on reconnect"],
-      "canonical_files": ["driver/kernel/Makefile", "driver/kernel/hyperflux-next-core.c", "driver/kernel/hyperflux-next-session.c", "driver/kernel/hyperflux-next-transport.c"],
+      "canonical_files": ["driver/kernel/Makefile", "driver/kernel/hyperflux-next-battery.c", "driver/kernel/hyperflux-next-core.c", "driver/kernel/hyperflux-next-session.c", "driver/kernel/hyperflux-next-transport.c"],
       "generated_files": ["driver/kernel/README.md", "driver/kernel/generated/hyperflux_receiver_profiles.inc", "driver/kernel/hyperflux-next-version.h"],
       "verification": ["kernel-profile-contracts"],
       "limitations": ["Software compilation is not physical regression proof"],

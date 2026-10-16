@@ -122,6 +122,22 @@
     {
       "component": "kernel-source",
       "distribution_component": "linux",
+      "source": "driver/kernel/hyperflux-next-battery.c",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-battery.c",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
+      "distribution_component": "linux",
+      "source": "driver/kernel/hyperflux-next-battery.h",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-battery.h",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
+      "distribution_component": "linux",
       "source": "driver/kernel/hyperflux-next-core.c",
       "destination": "/usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-core.c",
       "mode": "0644",
