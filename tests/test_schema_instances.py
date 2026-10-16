@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
-"""The report-only JSON Schema instance validation node.
+"""The JSON Schema instance validation node and its shrinking allow-list.
 
 The validator lives only in the pinned development image, so these tests run
 on the host without it: they use fake error objects and a fake validator, and
@@ -13,7 +13,9 @@ import builtins
 from dataclasses import dataclass, field
 import importlib.util
 import json
+import os
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 from typing import Any, Iterator
@@ -27,9 +29,17 @@ sys.path.insert(0, str(ROOT / "tools"))
 from hfxdev import schema_instances  # noqa: E402
 from hfxdev.model import ModelError  # noqa: E402
 from hfxdev.schema_instances import (  # noqa: E402
+    ALLOWLIST_PATH,
+    ALLOWLIST_SCHEMA_PATH,
     MISSING_VALIDATOR_MESSAGE,
     REPORT_PATH,
+    Allowlist,
+    AllowlistEntry,
+    allowlist_growth,
     build_report,
+    enforcement_failures,
+    load_allowlist,
+    parse_allowlist,
     is_date,
     is_date_time,
     is_uri,
@@ -186,6 +196,7 @@ class FormatCheckTests(unittest.TestCase):
 
 class ReportTests(unittest.TestCase):
     def test_report_counts_and_never_raises_on_violations(self) -> None:
+        # build_report only measures; the runner decides whether to fail.
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             files = [
@@ -215,7 +226,7 @@ class ReportTests(unittest.TestCase):
 
             report = build_report(root, recording, validator_version="test", files=files)
             summary = report["summary"]
-            self.assertEqual(report["mode"], "report-only")
+            self.assertEqual(report["mode"], "enforcing")
             self.assertEqual(summary["documents"], 4)
             self.assertEqual(summary["unresolved"], 1)
             self.assertEqual(summary["with_violations"], 2)
@@ -300,14 +311,212 @@ class TestGraphPlacementTests(unittest.TestCase):
         self.assertIn("schema-contracts", node.dependencies)
         self.assertIn(node.runner, RUNNERS)
 
-    def test_runner_reports_without_failing(self) -> None:
-        report = {"summary": {"with_violations": 3}}
+    def test_runner_delegates_to_the_enforcing_report(self) -> None:
         with mock.patch.object(
-            schema_instances, "run_schema_instance_report", return_value=report
+            schema_instances, "run_schema_instance_report", return_value={}
         ) as run:
             node = load_test_catalog(ROOT).by_id["schema-instances"]
             self.assertIsNone(RUNNERS[node.runner](ROOT, node))
         run.assert_called_once_with(ROOT)
+        with mock.patch.object(
+            schema_instances, "run_schema_instance_report", side_effect=ModelError("violations")
+        ):
+            node = load_test_catalog(ROOT).by_id["schema-instances"]
+            with self.assertRaises(ModelError):
+                RUNNERS[node.runner](ROOT, node)
+
+
+def _entry(**overrides: Any) -> dict[str, Any]:
+    entry = {
+        "document": "data/bad.json",
+        "path": "/name",
+        "keyword": "type",
+        "schema_path": "/properties/name/type",
+        "owner": "schemas",
+        "reason": "Known drift that the schemas owner is fixing next.",
+    }
+    entry.update(overrides)
+    return entry
+
+
+def _allowlist_document(entries: list[dict[str, Any]], ceiling: int | None = None) -> dict[str, Any]:
+    return {
+        "$schema": "../schemas/schema-instance-allowlist.schema.json",
+        "schema": "hyperflux-schema-instance-allowlist-v1",
+        "ceiling": len(entries) if ceiling is None else ceiling,
+        "entries": entries,
+    }
+
+
+ALLOWLIST_SCHEMA = json.loads((ROOT / ALLOWLIST_SCHEMA_PATH).read_text(encoding="utf-8"))
+OWNERS = ("schemas", "documentation")
+
+
+class AllowlistTests(unittest.TestCase):
+    def test_committed_allowlist_is_valid_and_its_ceiling_matches(self) -> None:
+        allowlist = load_allowlist(ROOT)
+        self.assertEqual(allowlist.ceiling, len(allowlist.entries))
+        committed = json.loads((ROOT / ALLOWLIST_PATH).read_text(encoding="utf-8"))
+        self.assertEqual(committed["$schema"], "../schemas/schema-instance-allowlist.schema.json")
+
+    def test_entries_need_owner_reason_and_matching_ceiling(self) -> None:
+        parsed = parse_allowlist(ALLOWLIST_SCHEMA, _allowlist_document([_entry()]), OWNERS)
+        self.assertEqual(parsed.ceiling, 1)
+        self.assertEqual(parsed.entries[0].owner, "schemas")
+        missing_reason = _entry()
+        del missing_reason["reason"]
+        invalid = {
+            "ceiling above the count": _allowlist_document([_entry()], ceiling=2),
+            "ceiling below the count": _allowlist_document([_entry()], ceiling=0),
+            "no reason": _allowlist_document([missing_reason]),
+            "short reason": _allowlist_document([_entry(reason="because")]),
+            "unknown owner": _allowlist_document([_entry(owner="nobody")]),
+            "unknown key": _allowlist_document([{**_entry(), "note": "x"}]),
+            "duplicate": _allowlist_document([_entry(), _entry()]),
+            "unsorted": _allowlist_document([_entry(path="/z"), _entry(path="/a")]),
+            "absolute document": _allowlist_document([_entry(document="/etc/x.json")]),
+        }
+        for label, document in invalid.items():
+            with self.subTest(label):
+                with self.assertRaises(ModelError):
+                    parse_allowlist(ALLOWLIST_SCHEMA, document, OWNERS)
+
+    def test_allowed_violations_pass_and_stale_entries_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            files = [
+                _write(root, "schemas/example.schema.json", SCHEMA),
+                _write(root, "data/bad.json", {"$schema": "../schemas/example.schema.json", "name": 1}),
+            ]
+            error = FakeError(
+                validator="type",
+                absolute_path=["name"],
+                absolute_schema_path=["properties", "name", "type"],
+            )
+
+            def failing(schema: dict[str, Any]) -> FakeValidator:
+                return FakeValidator([error] if schema.get("$id") else [])
+
+            unlisted = build_report(root, failing, validator_version="test", files=files)
+            failures = enforcement_failures(unlisted)
+            self.assertEqual(len(failures), 1)
+            self.assertIn("data/bad.json: type at /name", failures[0])
+            self.assertNotIn(PRIVATE_VALUE, "\n".join(failures))
+
+            allowlist = parse_allowlist(ALLOWLIST_SCHEMA, _allowlist_document([_entry()]), OWNERS)
+            allowed = build_report(root, failing, validator_version="test", files=files, allowlist=allowlist)
+            self.assertEqual(enforcement_failures(allowed), [])
+            self.assertEqual(allowed["summary"]["violations"], 0)
+            self.assertEqual(allowed["summary"]["allowed_violations"], 1)
+            statuses = {entry["path"]: entry["status"] for entry in allowed["documents"]}
+            self.assertEqual(statuses["data/bad.json"], "allowed")
+
+            fixed = build_report(
+                root, lambda _schema: FakeValidator([]), validator_version="test", files=files, allowlist=allowlist
+            )
+            stale = enforcement_failures(fixed)
+            self.assertEqual(len(stale), 1)
+            self.assertIn("matches no violation", stale[0])
+            self.assertEqual(fixed["summary"]["stale_allowlist_entries"], 1)
+
+    def test_unresolved_and_broken_documents_fail(self) -> None:
+        report = {
+            "documents": [
+                {"path": "a.json", "status": "unresolved"},
+                {"path": "b.json", "status": "unreadable"},
+                {"path": "c.json", "status": "validator-error"},
+                {"path": "d.json", "status": "clean"},
+            ]
+        }
+        self.assertEqual(
+            enforcement_failures(report),
+            ["a.json: unresolved", "b.json: unreadable", "c.json: validator-error"],
+        )
+
+    def test_runner_fails_on_violations_without_naming_values(self) -> None:
+        report = {
+            "summary": {
+                "documents": 1, "clean": 0, "with_violations": 1, "violations": 1,
+                "allowed_violations": 0, "unresolved": 0, "unreadable": 0,
+                "validator_errors": 0, "stale_allowlist_entries": 0,
+            },
+            "stale_allowlist_entries": [],
+            "documents": [
+                {
+                    "path": "data/bad.json",
+                    "status": "violations",
+                    "violation_count": 1,
+                    "violations": [{"path": "/*", "keyword": "additionalProperties", "schema_path": "/additionalProperties"}],
+                }
+            ],
+        }
+        with tempfile.TemporaryDirectory() as temporary, \
+                mock.patch.object(schema_instances, "load_allowlist", return_value=Allowlist(0, ())), \
+                mock.patch.object(schema_instances, "repository_files", return_value=()), \
+                mock.patch.object(
+                    schema_instances, "jsonschema_validator_factory", return_value=(lambda _s: FakeValidator([]), "t")
+                ), \
+                mock.patch.object(schema_instances, "build_report", return_value=report), \
+                mock.patch("builtins.print"):
+            with self.assertRaises(ModelError) as raised:
+                schema_instances.run_schema_instance_report(Path(temporary))
+            self.assertIn("data/bad.json: additionalProperties at /*", str(raised.exception))
+            report["documents"][0]["status"] = "clean"
+            report["documents"][0]["violations"] = []
+            report["documents"][0]["violation_count"] = 0
+            self.assertIs(schema_instances.run_schema_instance_report(Path(temporary)), report)
+
+    def test_growth_is_detected_against_an_earlier_copy(self) -> None:
+        entry = AllowlistEntry(**_entry())
+        base = _allowlist_document([_entry()])
+        self.assertEqual(allowlist_growth(base, Allowlist(1, (entry,))), [])
+        self.assertEqual(allowlist_growth(base, Allowlist(0, ())), [])
+        grown = allowlist_growth(_allowlist_document([]), Allowlist(1, (entry,)))
+        self.assertEqual(len(grown), 2)
+        swapped = AllowlistEntry(**_entry(path="/other"))
+        self.assertEqual(len(allowlist_growth(base, Allowlist(1, (swapped,)))), 1)
+        self.assertTrue(allowlist_growth([], Allowlist(0, ())))
+
+
+def _merge_base_allowlist() -> tuple[str, Any]:
+    """The allow-list at the merge base with the integration branch.
+
+    Returns ("unavailable", None) when git, the base ref or enough history is
+    missing (a shallow CI clone, an exported tree), ("absent", None) when the
+    base predates the file, and ("found", document) otherwise.
+    """
+    base_ref = os.environ.get("HFX_SCHEMA_ALLOWLIST_BASE", "origin/dev")
+    try:
+        merge_base = subprocess.run(
+            ["git", "-C", str(ROOT), "merge-base", "HEAD", base_ref],
+            check=True, capture_output=True, text=True, timeout=30,
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return "unavailable", None
+    if not merge_base:
+        return "unavailable", None
+    shown = subprocess.run(
+        ["git", "-C", str(ROOT), "show", f"{merge_base}:{ALLOWLIST_PATH.as_posix()}"],
+        capture_output=True, text=True, timeout=30,
+    )
+    if shown.returncode != 0:
+        return "absent", None
+    return "found", json.loads(shown.stdout)
+
+
+class AllowlistShrinkTests(unittest.TestCase):
+    def test_allowlist_never_grows_past_the_merge_base(self) -> None:
+        # The ceiling check above holds everywhere. This comparison needs the
+        # merge base, which shallow clones lack; then it is skipped and the
+        # full-history CI checkout catches growth instead.
+        state, base = _merge_base_allowlist()
+        if state == "unavailable":
+            self.skipTest("no merge base with the integration branch in this checkout")
+        current = load_allowlist(ROOT)
+        if state == "absent":
+            self.assertEqual(current.ceiling, 0, "a new allow-list must start empty")
+            return
+        self.assertEqual(allowlist_growth(base, current), [])
 
 
 @unittest.skipUnless(

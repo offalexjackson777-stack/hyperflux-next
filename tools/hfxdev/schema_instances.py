@@ -1,11 +1,14 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
-"""Report how every tracked JSON document fares against the schema it declares.
+"""Validate every tracked JSON document against the schema it declares.
 
-This is stage one of JSON Schema enforcement: it validates with the real
-`jsonschema` draft 2020-12 validator, writes a report and never fails on a
-violation. The validator lives only in the pinned development image, so the
-import is lazy and a missing module names the command that has it.
+The real `jsonschema` draft 2020-12 validator checks each document, a report
+is written below `build/`, and any violation that the committed allow-list
+(`verification/schema-instance-allowlist.json`) does not name fails the node.
+The allow-list may only shrink: its ceiling equals its entry count, and an
+entry that no longer matches a violation is itself a failure. The validator
+lives only in the pinned development image, so the import is lazy and a
+missing module names the command that has it.
 
 Report entries follow the privacy contract of `schema_subset`: a JSON path,
 the failed keyword and the schema path, never an instance value. A path
@@ -24,9 +27,13 @@ import re
 from typing import Any, Protocol
 
 from .model import ModelError, load_json, repository_files
+from .schema_subset import SchemaViolation, validate
 
 REPORT_PATH = PurePosixPath("build/schema-instances-report.json")
-REPORT_SCHEMA = "hyperflux-schema-instance-report-v1"
+REPORT_SCHEMA = "hyperflux-schema-instance-report-v2"
+ALLOWLIST_PATH = PurePosixPath("verification/schema-instance-allowlist.json")
+ALLOWLIST_SCHEMA_PATH = PurePosixPath("schemas/schema-instance-allowlist.schema.json")
+MAX_REPORTED_FAILURES = 20
 METASCHEMA_ID = "https://json-schema.org/draft/2020-12/schema"
 INSTALLED_SCHEMA_ROOT = PurePosixPath("/usr/share/hyperflux-next/schemas")
 CHECKED_FORMATS = ("date", "date-time", "uri")
@@ -58,6 +65,110 @@ class _Validator(Protocol):
 
 
 ValidatorFactory = Callable[[dict[str, Any]], _Validator]
+
+
+@dataclass(frozen=True)
+class AllowlistEntry:
+    """One tolerated violation, matched on the report's redacted fields."""
+
+    document: str
+    path: str
+    keyword: str
+    schema_path: str
+    owner: str
+    reason: str
+
+    @property
+    def key(self) -> tuple[str, str, str, str]:
+        return (self.document, self.path, self.keyword, self.schema_path)
+
+
+@dataclass(frozen=True)
+class Allowlist:
+    ceiling: int
+    entries: tuple[AllowlistEntry, ...]
+
+    @property
+    def keys(self) -> frozenset[tuple[str, str, str, str]]:
+        return frozenset(entry.key for entry in self.entries)
+
+
+EMPTY_ALLOWLIST = Allowlist(0, ())
+
+
+def parse_allowlist(schema: dict[str, Any], value: Any, owners: Iterable[str]) -> Allowlist:
+    """Check an allow-list document and return its entries.
+
+    Uses the stdlib subset validator, so the host can check the file without
+    the jsonschema module.
+    """
+    try:
+        validate(schema, value)
+    except SchemaViolation as error:
+        raise ModelError(f"{ALLOWLIST_PATH}: {error}") from error
+    known_owners = set(owners)
+    entries = tuple(
+        AllowlistEntry(
+            document=item["document"],
+            path=item["path"],
+            keyword=item["keyword"],
+            schema_path=item["schema_path"],
+            owner=item["owner"],
+            reason=item["reason"],
+        )
+        for item in value["entries"]
+    )
+    keys = [entry.key for entry in entries]
+    if len(set(keys)) != len(keys):
+        raise ModelError(f"{ALLOWLIST_PATH}: an entry is listed twice")
+    if keys != sorted(keys):
+        raise ModelError(f"{ALLOWLIST_PATH}: entries must be sorted by document, path, keyword and schema path")
+    for entry in entries:
+        if entry.owner not in known_owners:
+            raise ModelError(f"{ALLOWLIST_PATH}: entry for {entry.document} names an unknown owner")
+    if value["ceiling"] != len(entries):
+        raise ModelError(
+            f"{ALLOWLIST_PATH}: ceiling must equal the number of entries; "
+            "lower it when an entry is removed, never raise it"
+        )
+    return Allowlist(value["ceiling"], entries)
+
+
+def load_allowlist(root: Path) -> Allowlist:
+    from .atlas import load_repository_atlas
+
+    return parse_allowlist(
+        load_json(root / ALLOWLIST_SCHEMA_PATH),
+        load_json(root / ALLOWLIST_PATH),
+        load_repository_atlas(root).by_id,
+    )
+
+
+def allowlist_growth(base_value: Any, current: Allowlist) -> list[str]:
+    """How `current` grew compared with an earlier allow-list document.
+
+    The earlier copy usually comes from the merge base with the integration
+    branch. Only its ceiling and entry keys are read, so an older layout does
+    not need to pass today's owner checks.
+    """
+    issues: list[str] = []
+    if not isinstance(base_value, dict):
+        return ["the earlier allow-list is not a JSON object"]
+    base_ceiling = base_value.get("ceiling")
+    base_entries = base_value.get("entries")
+    if not isinstance(base_ceiling, int) or not isinstance(base_entries, list):
+        return ["the earlier allow-list has no ceiling or entries"]
+    if current.ceiling > base_ceiling:
+        issues.append(f"ceiling rose from {base_ceiling} to {current.ceiling}")
+    base_keys = {
+        (item.get("document"), item.get("path"), item.get("keyword"), item.get("schema_path"))
+        for item in base_entries
+        if isinstance(item, dict)
+    }
+    added = [entry for entry in current.entries if entry.key not in base_keys]
+    for entry in added:
+        issues.append(f"new entry for {entry.document} {entry.keyword} at {entry.path or '/'}")
+    return issues
 
 
 @dataclass(frozen=True)
@@ -190,12 +301,19 @@ def build_report(
     *,
     validator_version: str,
     files: Iterable[Path] | None = None,
+    allowlist: Allowlist = EMPTY_ALLOWLIST,
 ) -> dict[str, Any]:
-    """Validate every tracked JSON document that declares `$schema`."""
+    """Validate every tracked JSON document that declares `$schema`.
+
+    Violations the allow-list names are reported apart and do not count as
+    violations; allow-list entries that match nothing are listed as stale.
+    """
     candidates = sorted(
         path for path in (repository_files(root) if files is None else files) if path.suffix == ".json"
     )
     index = load_schema_index(root, candidates)
+    allowed_keys = allowlist.keys
+    matched_keys: set[tuple[str, str, str, str]] = set()
     documents: list[dict[str, Any]] = []
     for path in candidates:
         relative = path.relative_to(root).as_posix()
@@ -223,9 +341,20 @@ def build_report(
             documents.append(entry)
             continue
         violations.sort(key=lambda item: (item["path"], item["keyword"], item["schema_path"]))
-        entry["status"] = "violations" if violations else "clean"
-        entry["violation_count"] = len(violations)
-        entry["violations"] = violations[:MAX_RECORDED_VIOLATIONS]
+        allowed: list[dict[str, str]] = []
+        remaining: list[dict[str, str]] = []
+        for violation in violations:
+            key = (relative, violation["path"], violation["keyword"], violation["schema_path"])
+            if key in allowed_keys:
+                matched_keys.add(key)
+                allowed.append(violation)
+            else:
+                remaining.append(violation)
+        entry["status"] = "violations" if remaining else ("allowed" if allowed else "clean")
+        entry["violation_count"] = len(remaining)
+        entry["violations"] = remaining[:MAX_RECORDED_VIOLATIONS]
+        if allowed:
+            entry["allowed_count"] = len(allowed)
         documents.append(entry)
 
     statuses = [entry["status"] for entry in documents]
@@ -233,9 +362,14 @@ def build_report(
     for entry in documents:
         for violation in entry.get("violations", []):
             keywords[violation["keyword"]] = keywords.get(violation["keyword"], 0) + 1
+    stale = [
+        {"document": entry.document, "path": entry.path, "keyword": entry.keyword, "schema_path": entry.schema_path}
+        for entry in allowlist.entries
+        if entry.key not in matched_keys
+    ]
     return {
         "schema": REPORT_SCHEMA,
-        "mode": "report-only",
+        "mode": "enforcing",
         "validator": {
             "implementation": "jsonschema",
             "version": validator_version,
@@ -250,8 +384,12 @@ def build_report(
             "unreadable": statuses.count("unreadable"),
             "validator_errors": statuses.count("validator-error"),
             "violations": sum(entry.get("violation_count", 0) for entry in documents),
+            "allowed_violations": sum(entry.get("allowed_count", 0) for entry in documents),
+            "allowlist_entries": len(allowlist.entries),
+            "stale_allowlist_entries": len(stale),
             "recorded_violations_by_keyword": dict(sorted(keywords.items())),
         },
+        "stale_allowlist_entries": stale,
         "documents": documents,
     }
 
@@ -308,18 +446,51 @@ def write_report(root: Path, report: dict[str, Any]) -> Path:
 def summary_line(report: dict[str, Any]) -> str:
     summary = report["summary"]
     return (
-        f"schema instances (report only): {summary['documents']} documents, "
+        f"schema instances: {summary['documents']} documents, "
         f"{summary['clean']} clean, {summary['with_violations']} with violations "
-        f"({summary['violations']} violations), {summary['unresolved']} unresolved, "
-        f"{summary['validator_errors']} validator errors; report: {REPORT_PATH}"
+        f"({summary['violations']} violations, {summary['allowed_violations']} allow-listed), "
+        f"{summary['unresolved']} unresolved, {summary['unreadable']} unreadable, "
+        f"{summary['validator_errors']} validator errors, "
+        f"{summary['stale_allowlist_entries']} stale allow-list entries; report: {REPORT_PATH}"
     )
 
 
+def enforcement_failures(report: dict[str, Any]) -> list[str]:
+    """Lines naming what makes the report fail, using redacted fields only."""
+    failures: list[str] = []
+    for entry in report["documents"]:
+        status = entry["status"]
+        if status == "violations":
+            for violation in entry["violations"]:
+                failures.append(
+                    f"{entry['path']}: {violation['keyword']} at {violation['path'] or '/'} "
+                    f"(schema {violation['schema_path']})"
+                )
+            hidden = entry["violation_count"] - len(entry["violations"])
+            if hidden > 0:
+                failures.append(f"{entry['path']}: {hidden} more violations")
+        elif status in {"unresolved", "unreadable", "validator-error"}:
+            failures.append(f"{entry['path']}: {status}")
+    for stale in report.get("stale_allowlist_entries", []):
+        failures.append(
+            f"{ALLOWLIST_PATH}: entry for {stale['document']} {stale['keyword']} at "
+            f"{stale['path'] or '/'} matches no violation; remove it and lower the ceiling"
+        )
+    return failures
+
+
 def run_schema_instance_report(root: Path) -> dict[str, Any]:
-    """Write the report and return it. Violations never raise."""
+    """Write the report, then fail on any violation the allow-list does not name."""
+    allowlist = load_allowlist(root)
     files = repository_files(root)
     validator_for, version = jsonschema_validator_factory(root, files)
-    report = build_report(root, validator_for, validator_version=version, files=files)
+    report = build_report(root, validator_for, validator_version=version, files=files, allowlist=allowlist)
     write_report(root, report)
     print(summary_line(report), flush=True)
+    failures = enforcement_failures(report)
+    if failures:
+        shown = failures[:MAX_REPORTED_FAILURES]
+        if len(failures) > len(shown):
+            shown.append(f"... and {len(failures) - len(shown)} more; see {REPORT_PATH}")
+        raise ModelError("JSON Schema instance validation failed:\n  " + "\n  ".join(shown))
     return report

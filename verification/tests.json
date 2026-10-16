@@ -38,7 +38,7 @@
     },
     {
       "id": "schema-instances",
-      "title": "Report-only JSON Schema validation of every declared document",
+      "title": "JSON Schema validation of every declared document against a shrinking allow-list",
       "owned_domain": "schemas",
       "lanes": ["full-software"],
       "runner": "schema-instances",
@@ -49,7 +49,7 @@
       "timeout_seconds": 120,
       "dependencies": ["schema-contracts", "development-environment-contracts"],
       "isolation": "shared",
-      "cache_inputs": ["**/*.json", "tools/hfxdev/schema_instances.py", "tools/hfxdev/verify_repository.py"],
+      "cache_inputs": ["**/*.json", "tools/hfxdev/schema_instances.py", "tools/hfxdev/schema_subset.py", "tools/hfxdev/atlas.py", "tools/hfxdev/verify_repository.py"],
       "produced_evidence": ["schema-instance-report"],
       "resume_policy": "rerun"
     },

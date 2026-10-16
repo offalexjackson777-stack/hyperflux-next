@@ -428,10 +428,11 @@ def _run_schema_contracts(root: Path, _node: TestNode) -> None:
 
 
 def _run_schema_instances(root: Path, _node: TestNode) -> None:
-    """Report-only validation of every JSON document against its declared schema.
+    """Validate every JSON document against its declared schema and fail on violations.
 
-    Runs in the full-software lane, which `./hfx verify` and CI run inside the
-    pinned development image; the validator is imported only here.
+    Only violations named in the committed allow-list are tolerated. Runs in
+    the full-software lane, which `./hfx verify` and CI run inside the pinned
+    development image; the validator is imported only here.
     """
     from .schema_instances import run_schema_instance_report
 

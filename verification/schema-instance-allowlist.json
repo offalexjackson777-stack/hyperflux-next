@@ -1,0 +1,6 @@
+{
+  "$schema": "../schemas/schema-instance-allowlist.schema.json",
+  "schema": "hyperflux-schema-instance-allowlist-v1",
+  "ceiling": 0,
+  "entries": []
+}
