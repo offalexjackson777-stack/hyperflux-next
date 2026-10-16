@@ -163,6 +163,20 @@ SCHEMA_DECLARATION_EXEMPTIONS: dict[str, str] = {
     "toolchains/documentation-render/package.json": _FOREIGN_FORMAT,
 }
 
+_SHARED_PARTIAL = (
+    "shared partial: a $defs fragment merged through allOf; the object that "
+    "merges it is closed"
+)
+
+# Object schemas with `properties` that may stay open, keyed by schema file
+# and JSON pointer. Every other one must set additionalProperties: false or
+# unevaluatedProperties: false, or be an in-place branch or $ref refinement
+# of an object that does (see _check_schema_closure).
+SCHEMA_CLOSURE_EXEMPTIONS: dict[tuple[str, str], str] = {
+    ("schemas/public-readiness.schema.json", "/$defs/status"): _SHARED_PARTIAL,
+    ("schemas/source-inventory-public-projection.schema.json", "/$defs/base"): _SHARED_PARTIAL,
+}
+
 from .verify_compiled import _check_build_cache_clock, _run_command
 
 
@@ -248,13 +262,13 @@ def _check_schema_contracts(root: Path) -> None:
         if path.suffix == ".json"
     }
     _check_schema_declarations(documents)
-    _check_schema_references(
-        {
-            relative: value
-            for relative, value in documents.items()
-            if relative.endswith(".schema.json")
-        }
-    )
+    schemas = {
+        relative: value
+        for relative, value in documents.items()
+        if relative.endswith(".schema.json")
+    }
+    _check_schema_references(schemas)
+    _check_schema_closure(schemas)
     for relative, value in documents.items():
         schema_reference = value.get("$schema")
         if not isinstance(schema_reference, str) or schema_reference.startswith("https://"):
@@ -304,6 +318,157 @@ def _check_schema_declarations(
             "JSON files must declare $schema or carry a reasoned exemption in "
             f"SCHEMA_DECLARATION_EXEMPTIONS: {', '.join(undeclared)}"
         )
+
+
+_IN_PLACE_BRANCH_LISTS = ("allOf", "anyOf", "oneOf")
+_IN_PLACE_BRANCH_SINGLES = ("then", "else")
+# Conditions only test a value; closing them would change what they match.
+_CONDITION_KEYWORDS = ("if", "not")
+_CHILD_SCHEMA_MAPS = ("$defs", "definitions", "dependentSchemas", "patternProperties", "properties")
+_CHILD_SCHEMA_LISTS = ("prefixItems",)
+_CHILD_SCHEMA_SINGLES = (
+    "items",
+    "additionalItems",
+    "unevaluatedItems",
+    "contains",
+    "propertyNames",
+    "additionalProperties",
+    "unevaluatedProperties",
+)
+
+
+def _object_closure(node: dict) -> str | None:
+    if node.get("additionalProperties") is False:
+        return "additionalProperties"
+    if node.get("unevaluatedProperties") is False:
+        return "unevaluatedProperties"
+    return None
+
+
+def _local_reference_target(schema: dict, reference: object) -> dict | None:
+    if not isinstance(reference, str) or not reference.startswith("#"):
+        return None
+    node: Any = schema
+    fragment = reference[1:]
+    if fragment:
+        if not fragment.startswith("/"):
+            return None
+        for token in fragment[1:].split("/"):
+            token = token.replace("~1", "/").replace("~0", "~")
+            if not isinstance(node, dict) or token not in node:
+                return None
+            node = node[token]
+    return node if isinstance(node, dict) else None
+
+
+def _closing_objects(node: dict | None) -> list[dict]:
+    """The objects that close `node`: itself, or every oneOf/anyOf alternative."""
+    if node is None:
+        return []
+    if _object_closure(node) is not None:
+        return [node]
+    for keyword in ("oneOf", "anyOf"):
+        alternatives = node.get(keyword)
+        if (
+            "properties" not in node
+            and isinstance(alternatives, list)
+            and alternatives
+            and all(isinstance(item, dict) and _object_closure(item) for item in alternatives)
+        ):
+            return list(alternatives)
+    return []
+
+
+def _schema_closure_findings(relative: str, schema: dict) -> tuple[list[str], set[str]]:
+    """Errors and still-open object schemas (JSON pointers) in one schema file.
+
+    An object schema with `properties` is closed when it sets
+    additionalProperties: false or unevaluatedProperties: false. An in-place
+    branch (allOf, anyOf, oneOf, then, else) of a closed object, or a schema
+    that refines a closed local $ref target (or one whose oneOf/anyOf
+    alternatives are all closed), is closed through that object;
+    when the closing keyword is additionalProperties it only sees the keys
+    named next to it, so every key the branch names must be named there too.
+    Subschemas under if and not are conditions and are not checked.
+    """
+    errors: list[str] = []
+    open_pointers: set[str] = set()
+
+    def through(closer: dict, node: dict, pointer: str, how: str) -> None:
+        if _object_closure(closer) != "additionalProperties":
+            return
+        declared = closer.get("properties", {})
+        missing = sorted(name for name in node["properties"] if name not in declared)
+        if missing:
+            errors.append(
+                f"{relative}{pointer or '/'}: {how} names {', '.join(missing)}, which "
+                "additionalProperties: false on the closing object rejects; name them there"
+            )
+
+    def walk(node: Any, pointer: str, host: dict | None) -> None:
+        if not isinstance(node, dict):
+            return
+        if isinstance(node.get("properties"), dict) and _object_closure(node) is None:
+            targets = _closing_objects(_local_reference_target(schema, node.get("$ref")))
+            if host is not None and _object_closure(host) is not None:
+                through(host, node, pointer, "an in-place branch")
+            elif targets:
+                for target in targets:
+                    through(target, node, pointer, "a $ref refinement")
+            else:
+                open_pointers.add(pointer)
+        branch_host = node if (_object_closure(node) or "properties" in node) else host
+        for keyword in _IN_PLACE_BRANCH_LISTS:
+            branches = node.get(keyword)
+            if isinstance(branches, list):
+                for index, branch in enumerate(branches):
+                    walk(branch, f"{pointer}/{keyword}/{index}", branch_host)
+        for keyword in _IN_PLACE_BRANCH_SINGLES:
+            walk(node.get(keyword), f"{pointer}/{keyword}", branch_host)
+        for keyword in _CHILD_SCHEMA_MAPS:
+            children = node.get(keyword)
+            if isinstance(children, dict):
+                for name, child in children.items():
+                    walk(child, f"{pointer}/{keyword}/{_json_pointer_escape(name)}", None)
+        for keyword in _CHILD_SCHEMA_LISTS:
+            children = node.get(keyword)
+            if isinstance(children, list):
+                for index, child in enumerate(children):
+                    walk(child, f"{pointer}/{keyword}/{index}", None)
+        for keyword in _CHILD_SCHEMA_SINGLES:
+            walk(node.get(keyword), f"{pointer}/{keyword}", None)
+
+    walk(schema, "", None)
+    return errors, open_pointers
+
+
+def _check_schema_closure(
+    schemas: dict[str, dict],
+    exemptions: dict[tuple[str, str], str] = SCHEMA_CLOSURE_EXEMPTIONS,
+) -> None:
+    """No object schema accepts unknown keys by accident."""
+    errors: list[str] = []
+    open_nodes: set[tuple[str, str]] = set()
+    for relative, schema in sorted(schemas.items()):
+        found_errors, open_pointers = _schema_closure_findings(relative, schema)
+        errors.extend(found_errors)
+        open_nodes.update((relative, pointer) for pointer in open_pointers)
+    for (relative, pointer), reason in sorted(exemptions.items()):
+        if not reason.strip():
+            raise ModelError(f"{relative}{pointer}: schema closure exemption needs a reason")
+        if (relative, pointer) not in open_nodes:
+            raise ModelError(
+                f"{relative}{pointer or '/'}: is closed or gone; remove its schema closure exemption"
+            )
+    unexempted = sorted(node for node in open_nodes if node not in exemptions)
+    errors.extend(
+        f"{relative}{pointer or '/'}: object schema with properties must set "
+        "additionalProperties: false or unevaluatedProperties: false, or carry a "
+        "reasoned exemption in SCHEMA_CLOSURE_EXEMPTIONS"
+        for relative, pointer in unexempted
+    )
+    if errors:
+        raise ModelError("open JSON Schema objects:\n  " + "\n  ".join(errors))
 
 
 _SCHEMA_MAP_KEYWORDS = frozenset(

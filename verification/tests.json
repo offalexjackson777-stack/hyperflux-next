@@ -32,7 +32,7 @@
       "timeout_seconds": 10,
       "dependencies": ["foundation-contracts"],
       "isolation": "shared",
-      "cache_inputs": ["**/*.json", "runtime/local-companion.json", "schemas/*.json", "tools/hfxdev/local_companion.py", "verification/tests.json", "tests/fixtures/replay/*.json"],
+      "cache_inputs": ["**/*.json", "runtime/local-companion.json", "schemas/*.json", "tools/hfxdev/local_companion.py", "tools/hfxdev/verify_repository.py", "verification/tests.json", "tests/fixtures/replay/*.json"],
       "produced_evidence": ["schema-result"],
       "resume_policy": "reuse-verified"
     },
