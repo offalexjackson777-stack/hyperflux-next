@@ -197,7 +197,9 @@ def markdown(
             manifest.first_run_activation.activation_command(),
             "```",
             "",
-            "After login, run the read-only `hyperfluxctl doctor`. Live activation without a "
+            "After login, run the read-only `hyperfluxctl doctor`; the read-only "
+            "`hyperfluxctl qualification --json` report is what a hardware report asks for. "
+            "Live activation without a "
             "reboot requires disconnecting the receiver, so use "
             f"`{manifest.first_run_activation.disconnected_command(runtime)}` only when "
             "another keyboard, mouse, or verified SSH session can recover the machine.",

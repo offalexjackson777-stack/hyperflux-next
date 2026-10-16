@@ -79,7 +79,7 @@ sudo systemctl enable hyperflux-next-bridge.service "hyperflux-next-client@$(id 
 sudo reboot
 ```
 
-After login, run the read-only `hyperfluxctl doctor`. Live activation without a reboot requires disconnecting the receiver, so use `sudo /usr/lib/hyperflux-next/hyperflux-next-activate activate-disconnected-driver` only when another keyboard, mouse, or verified SSH session can recover the machine.
+After login, run the read-only `hyperfluxctl doctor`; the read-only `hyperfluxctl qualification --json` report is what a hardware report asks for. Live activation without a reboot requires disconnecting the receiver, so use `sudo /usr/lib/hyperflux-next/hyperflux-next-activate activate-disconnected-driver` only when another keyboard, mouse, or verified SSH session can recover the machine.
 
 Rollback uses a complete prior source-bound Core/Full pair through the package manager. Do not copy files into `/usr/src`, overwrite DKMS trees, or mix an upstream OpenRazer driver package with the HyperFlux-owned transform. Existing configuration remains preserved across supported package transitions.
 

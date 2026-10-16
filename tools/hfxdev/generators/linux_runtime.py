@@ -561,6 +561,17 @@ def markdown(runtime: LinuxRuntime) -> str:
             "load modules or start services. `hyperfluxctl doctor` reports this as a driver "
             "activation problem, not a service failure.",
             "",
+            "## Hardware Qualification Report",
+            "",
+            "`hyperfluxctl qualification` prints the console's `hyperflux-local-qualification-v1` "
+            "view of the installed system; `--json` prints it as JSON and `--output PATH` writes "
+            "it to a new owner-only file. It uses only the bridge's read-only `snapshot`, "
+            "`diagnostics`, and `integration-view` requests, sends no active device query, and "
+            "records firmware as not collected. Receiver, device, and generation identifiers are "
+            "replaced with ordinals, bridge findings keep only their catalog code and severity, "
+            "and serial numbers, file paths, raw HID data, journal text, and user or host names "
+            "are never included. It exits `0` when the companion state is ready and `2` otherwise.",
+            "",
             "## Limits",
             "",
             f"- Receiver generations in a support bundle: `{operations.max_receiver_generations}`",

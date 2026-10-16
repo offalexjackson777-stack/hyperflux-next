@@ -158,7 +158,7 @@
       "canonical_files": ["apps/device-qualification/index.html", "apps/device-qualification/assets/app.js", "apps/device-qualification/assets/contract.js", "apps/device-qualification/contracts/local-qualification-view.schema.json"],
       "generated_files": ["apps/device-qualification/README.md"],
       "verification": ["device-qualification-console-contracts", "rust-unit", "package-contracts"],
-      "limitations": ["No installed qualification command is exposed; the fixture server previews static source contracts only"],
+      "limitations": ["The console itself is not installed; the fixture server previews static source contracts only, and the installed read-only report of the same view is hyperfluxctl qualification"],
       "safe_change_workflow": ["Change the versioned Rust projection or static browser contract once", "Regenerate Rust-bound fixtures and repository views", "Run console, Rust, package, and browser checks"],
       "related_docs": ["docs/user/hardware.md", "docs/architecture/design-book.md"],
       "depends_on": ["device-qualification-runtime", "profiles"]
@@ -203,13 +203,13 @@
       "inputs": ["System-probe snapshots", "Typed SDK state", "Canonical profiles", "Same-origin browser actions"],
       "outputs": ["Versioned qualification views", "Root-only resumable receipts", "Source-only console endpoint", "Privacy-safe route observations"],
       "public_contracts": ["Never installed in Core or Full", "Unknown profiles remain read-only", "Completion does not publish support", "Source compatibility remains available through hfx_ops re-exports"],
-      "canonical_files": ["crates/hfx-device-qualification/Cargo.toml", "crates/hfx-device-qualification/src/lib.rs", "crates/hfx-device-qualification/src/qualification.rs", "crates/hfx-device-qualification/src/qualification_lifecycle.rs", "crates/hfx-device-qualification/src/qualification_server.rs", "crates/hfx-device-qualification/src/bin/hyperflux-next-device-qualification.rs"],
+      "canonical_files": ["crates/hfx-device-qualification/Cargo.toml", "crates/hfx-device-qualification/src/lib.rs", "crates/hfx-device-qualification/src/qualification.rs", "crates/hfx-device-qualification/src/qualification_report.rs", "crates/hfx-device-qualification/src/qualification_lifecycle.rs", "crates/hfx-device-qualification/src/qualification_server.rs", "crates/hfx-device-qualification/src/bin/hyperflux-next-device-qualification.rs"],
       "generated_files": ["crates/hfx-device-qualification/README.md"],
       "verification": ["device-qualification-console-contracts", "native-onboarding-contracts", "rust-clippy", "rust-unit", "package-contracts"],
       "limitations": ["The browser workflow is a maintainer tool and does not make a release"],
       "safe_change_workflow": ["Change one qualification owner", "Preserve profile and generation binding", "Run qualification, onboarding, Rust, public API, and package contracts"],
       "related_docs": ["docs/architecture/decisions/device-knowledge-integration.md", "docs/generated/local-companion.md"],
-      "depends_on": ["system-probe", "profiles", "bridge-runtime"]
+      "depends_on": ["system-probe", "profiles", "bridge-runtime", "errors"]
     },
     {
       "id": "core-runtime", "title": "Core policy engine", "path": "crates/hfx-core", "category": "runtime", "status": "implemented",
@@ -277,19 +277,19 @@
     },
     {
       "id": "operations-cli", "title": "Operations CLI", "path": "crates/hfx-ops", "category": "applications", "status": "implemented",
-      "purpose": "The `hyperfluxctl` command: status, Doctor, support bundles, and switching to the HyperFlux driver.",
-      "owns": ["Installed command-line workflows", "System assessment presentation", "Privacy-safe support bundles", "Source-compatible workspace re-exports"],
+      "purpose": "The `hyperfluxctl` command: status, Doctor, support bundles, the read-only qualification report, and switching to the HyperFlux driver.",
+      "owns": ["Installed command-line workflows", "System assessment presentation", "Privacy-safe support bundles", "Read-only qualification report presentation", "Source-compatible workspace re-exports"],
       "must_not_own": ["Qualification policy", "Profile promotion authority", "Raw receiver reports", "Application presentation"],
-      "inputs": ["Typed system-probe snapshots", "Canonical errors", "Local runtime configuration"],
-      "outputs": ["Human and JSON diagnostics", "Private bounded support bundles", "Explicit activation result"],
-      "public_contracts": ["Installed hyperfluxctl is limited to status, Doctor, and support", "No qualification console is installed", "Historical hfx_ops imports continue to compile"],
-      "canonical_files": ["crates/hfx-ops/Cargo.toml", "crates/hfx-ops/src/lib.rs", "crates/hfx-ops/src/bin/hyperfluxctl.rs", "crates/hfx-ops/src/bin/hyperflux-next-activate.rs", "crates/hfx-ops/src/assessment.rs", "crates/hfx-ops/src/support.rs", "crates/hfx-ops/src/configuration.rs"],
+      "inputs": ["Typed system-probe snapshots", "Read-only bridge integration view", "Canonical errors", "Local runtime configuration"],
+      "outputs": ["Human and JSON diagnostics", "Private bounded support bundles", "Privacy-bounded qualification report", "Explicit activation result"],
+      "public_contracts": ["Installed hyperfluxctl is limited to status, Doctor, support, read-only qualification reports, and activation", "hyperfluxctl qualification sends no active device query and collects no firmware", "No qualification console is installed", "Historical hfx_ops imports continue to compile"],
+      "canonical_files": ["crates/hfx-ops/Cargo.toml", "crates/hfx-ops/src/lib.rs", "crates/hfx-ops/src/bin/hyperfluxctl.rs", "crates/hfx-ops/src/bin/hyperflux-next-activate.rs", "crates/hfx-ops/src/assessment.rs", "crates/hfx-ops/src/support.rs", "crates/hfx-ops/src/qualification.rs", "crates/hfx-ops/src/configuration.rs"],
       "generated_files": ["crates/hfx-ops/README.md"],
       "verification": ["rust-clippy", "rust-unit", "package-contracts"],
-      "limitations": ["Qualification and onboarding remain source-only workspace tools, not installed commands"],
+      "limitations": ["Qualification runs and onboarding remain source-only workspace tools; the installed qualification command only reports"],
       "safe_change_workflow": ["Keep each installed command on a typed local boundary", "Preserve exact CLI fixtures and source re-exports", "Run Rust, public API, and package contracts"],
-      "related_docs": ["docs/user/troubleshooting.md", "docs/generated/linux-runtime.md"],
-      "depends_on": ["system-probe", "device-qualification-runtime", "bridge-runtime", "errors"]
+      "related_docs": ["docs/user/troubleshooting.md", "docs/user/hardware.md", "docs/generated/linux-runtime.md"],
+      "depends_on": ["system-probe", "device-qualification-runtime", "profiles", "bridge-runtime", "errors"]
     },
     {
       "id": "kernel-transport", "title": "Kernel transport adapter", "path": "crates/hfx-kernel-transport", "category": "runtime", "status": "implemented",

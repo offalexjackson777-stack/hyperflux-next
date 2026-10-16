@@ -86,6 +86,9 @@ and mouse paired to it.
    You should see `HyperFlux Next is ready.` If you see
    `HyperFlux Next needs attention.` instead, do what its `Do:` line says.
 
+   To report how your devices are detected, run `hyperfluxctl qualification`.
+   It only reads, and [Hardware](docs/user/hardware.md) shows how to share it.
+
 Later updates arrive with your normal `sudo pacman -Syu`.
 <!-- HFX-GENERATED-END: recommended-package -->
 

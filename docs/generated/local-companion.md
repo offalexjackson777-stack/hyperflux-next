@@ -13,7 +13,8 @@ USB, or write to hardware.
 
 - Delivery state: `source-only`.
 - No HyperFlux package installs the companion endpoint or the qualification console.
-- Installed `hyperfluxctl` exposes Status, Doctor, and Support Bundle only.
+- Installed `hyperfluxctl` exposes Status, Doctor, Support Bundle, and a read-only
+  `hyperfluxctl qualification` report built from the same view; it does not serve this endpoint.
 - The console runs from a source checkout against fixture data.
 
 ## What It Can Read
