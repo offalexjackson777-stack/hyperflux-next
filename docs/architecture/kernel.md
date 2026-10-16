@@ -151,9 +151,10 @@ Kernels built without `CONFIG_POWER_SUPPLY` reject the operation with
 `EOPNOTSUPP`.
 
 The forwarded status comes from the bridge, not the module. The bridge decodes
-the raw charge field only for a child profile that declares a qualified charge
-decoder; today that is the exact mouse profile `0x00cd`. Every other child
-forwards `Unknown`. A charging value becomes `Charging`, or `Full` when the
+a charge state only for a child profile that declares a qualified decoder;
+today those are the exact mouse profile `0x00cd` and the exact keyboard profile
+`0x0296`. Every other child forwards `Unknown`. For the mouse the bridge reads
+the raw charge field. A charging value becomes `Charging`, or `Full` when the
 level of the same lane reads 100 percent, whatever byte 3 of the report reads.
 A not-charging value becomes `Discharging` only when byte 3 of the same report,
 which the module emits as the contact field just before the charge field,
@@ -166,6 +167,21 @@ lane that has a forwarded level, and the bridge forgets it whenever that lane
 is forwarded absent, when the writer file is released, and with each new
 receiver generation, so an old charge value is never reused. The UAPI carries
 no not-charging status, and the bridge does not add one without evidence.
+
+The keyboard status report has no separate charge field. The module emits its
+battery level and then bytes 3 and 4 together as the raw route value, power
+source in the high byte and charge in the low byte, at the next sequence
+number. The bridge reads a route value as that report's charge state only when
+it arrives at the sequence right after the same lane's battery level. The
+keyboard identity report also emits a route value, but right after the product
+identity, so it never sets a charge state. The `0x0296` route charge decoder
+lists whole words. `0x0101` (on a USB cable) and `0x0001` (charge bit only,
+seen for about 2 seconds after plug-in and about 4 seconds after unplug)
+become `Charging`, or `Full` at a 100 percent level, and `0x0000` becomes
+`Discharging`. Every other word stays `Unknown`. That includes `0x0100`, the
+word a plugged-in keyboard might send with a full battery or at a charge
+limit; neither case has been captured. The route decoding of the same value
+is unchanged: `0x0101` stays indeterminate and `0x0001` unqualified.
 
 ## Transport And Outcomes
 

@@ -71,23 +71,30 @@ appears in your applications.
 ### Charging Status Is Partial
 
 The desktop battery widget shows a charging status for the Basilisk V3 Pro 35K
-mouse only. It shows charging while the mouse rests on the charging mat or is
-plugged in with a USB cable, and discharging when you lift the mouse off the
-mat. Keep these points in mind:
+mouse and the DeathStalker V2 Pro Tenkeyless keyboard.
+
+- The mouse shows charging while it rests on the charging mat or is plugged in
+  with a USB cable, and discharging when you lift it off the mat.
+- The keyboard shows charging while its USB cable is plugged in, and
+  discharging when the cable is unplugged.
+
+Keep these points in mind:
 
 - **Charge limit.** If a charge limit is set (for example in Razer Synapse),
   the mouse keeps reporting "Charging" while it holds at that limit, and the
-  desktop shows what the mouse reports.
-- **USB cable.** For about two seconds after you plug in the cable, the widget
-  may still show discharging. What the mouse reports after you unplug the
-  cable has not been tested yet.
-- **Full.** The mouse does not report full by itself. The widget shows full
-  when the mouse is charging and its level reads 100 percent.
-- **Unknown.** If the mouse reports something HyperFlux has not seen before,
+  desktop shows what the mouse reports. What the keyboard reports at a charge
+  limit has not been tested. If it reports something HyperFlux has not seen,
+  the widget shows unknown.
+- **USB cable.** For about two seconds after you plug in the mouse cable, the
+  widget may still show discharging. What the mouse reports after you unplug
+  its cable has not been tested yet. The keyboard keeps showing charging for
+  about four seconds after you unplug its cable.
+- **Full.** Neither device reports full by itself. The widget shows full when
+  the device is charging and its level reads 100 percent. What the keyboard
+  reports once its battery is full on the cable has not been tested. If it
+  reports something HyperFlux has not seen, the widget shows unknown.
+- **Unknown.** If a device reports something HyperFlux has not seen before,
   the widget shows unknown instead of a guess.
-- **Keyboard.** The keyboard also reports whether it is charging, but
-  HyperFlux does not read that yet, so the widget shows the keyboard's level
-  only.
 
 The battery level itself is not affected.
 

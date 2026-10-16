@@ -18,15 +18,16 @@ use hfx_bridge::LifecycleObservationKind;
 use hfx_domain::{LogicalDeviceId, PairingState, RouteState};
 use hfx_kernel_transport::{ChildBatteryLane, ChildBatteryState, ChildBatteryStatus};
 
-/// One decoded charge field, as the child profile's qualified charge decoder
-/// maps it in the context of its report. Anything the decoder cannot prove
-/// is `Unknown`.
+/// One decoded charge state, as the child profile's qualified charge or
+/// route charge decoder maps it in the context of its report. Anything the
+/// decoder cannot prove is `Unknown`.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum ChildChargeReading {
     #[default]
     Unknown,
     Charging,
-    /// Not charging while the same report says the mouse is off the mat.
+    /// Not charging while the same report proves the device is off its
+    /// charging mat or cable.
     Discharging,
 }
 
