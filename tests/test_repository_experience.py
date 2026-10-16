@@ -67,6 +67,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
         readme_blocks = (
             "release-summary",
             "compatibility-summary",
+            "install-table",
             "recommended-package",
         )
         self.assertEqual(record.generated_block_ids, readme_blocks)
