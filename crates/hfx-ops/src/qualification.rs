@@ -385,6 +385,12 @@ mod tests {
     }
 
     #[test]
+    fn values_without_a_text_form_render_as_unknown() {
+        assert_eq!(serde_text(&BatteryAvailability::Reported), "reported");
+        assert_eq!(serde_text(&7_u8), "unknown");
+    }
+
+    #[test]
     fn every_companion_state_names_a_plain_next_step() {
         let mut report = ready_report();
         for (state, label, next) in [

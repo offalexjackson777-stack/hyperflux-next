@@ -236,6 +236,32 @@ fn projection_uses_exact_profile_identity_and_no_simulation() {
 }
 
 #[test]
+fn bridge_reported_model_names_take_precedence_over_the_catalog() {
+    let mut integration = integration();
+    let receiver = &mut integration.view.receivers[0];
+    receiver.model_name =
+        Some(hfx_domain::ModelName::try_from("Bridge Receiver").expect("name is valid"));
+    receiver.inventory[0].model_name =
+        Some(hfx_domain::ModelName::try_from("Bridge Mouse").expect("name is valid"));
+    let view = build_qualification_view(
+        &system(),
+        Some(&integration),
+        &catalog(),
+        RunnerCapabilities::default(),
+        1,
+        "2026-07-22T12:00:00Z".to_owned(),
+    );
+    assert_eq!(
+        view.receivers[0].model_name.as_deref(),
+        Some("Bridge Receiver")
+    );
+    assert_eq!(
+        view.receivers[0].devices[0].model_name.as_deref(),
+        Some("Bridge Mouse")
+    );
+}
+
+#[test]
 fn generation_ids_use_exact_decimal_strings_across_the_browser_boundary() {
     let mut integration = integration();
     integration.view.receivers[0].generation_id =
