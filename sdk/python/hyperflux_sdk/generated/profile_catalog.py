@@ -4,7 +4,7 @@
 from types import MappingProxyType
 from typing import Final
 
-PROFILE_SOURCE_SHA256: Final = 'eabb6b71e31a34cf3cc6b720597df985dc3da59256e7c8d4279ac0d846b900d0'
+PROFILE_SOURCE_SHA256: Final = '4a772d088dd943bcd3306c4fc92aa5e3b2506b0530a747885a87791cca325466'
 PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                  'id': 'razer-basilisk-v3-pro',
                  'official_name': 'Razer Basilisk V3 Pro',
@@ -350,17 +350,18 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                       'limitations': ['Other values and stale, missing, or unpaired evidence remain unknown.',
                                       'Full is inferred from charging at a 100 percent battery level; that combination '
                                       'was not observed.',
-                                      'A not-charging value on the mat, such as a vendor charge limit holding the '
-                                      'battery, was not observed and remains unknown.',
-                                      'The charge value on a USB cable was not observed.',
+                                      'A not-charging value beside a nonzero byte 3 was not observed and remains '
+                                      'unknown; byte 3 read 6 on a USB cable, so it is not only a mat contact.',
+                                      'On a USB cable only the plug-in was observed; the unplug was not, and the first '
+                                      'report after plug-in still reads discharging.',
                                       'Charging does not identify the cable or mat that supplies power.'],
                       'privacy': 'public-summary',
                       'profile_ids': ['child.razer.basilisk-v3-pro-35k.00cd'],
                       'qualifies_capabilities': ['telemetry.charging-state'],
                       'source_refs': [{'paths': ['evidence/physical-acceptance/basilisk-v3-pro-35k-00cd-passive-charge-20261017.md'],
                                        'source_id': 'passive-charge-basilisk-v3-pro-35k-00cd-20261017'}],
-                      'summary': 'The charge field of the passive pointer status report reads 0 off the charging mat '
-                                 'and 1 on it; the contact field of the same report gives it context.'},
+                      'summary': 'The charge field of the passive pointer status report reads 1 on the charging mat or '
+                                 'a USB cable and 0 off the mat, where byte 3 of the same report reads 0.'},
                      {'evidence_level': 'hardware-qualified',
                       'id': 'claim.child.00cd.passive-identity-telemetry',
                       'limitations': ['Missing or stale evidence remains unknown; contact does not prove physical '
@@ -739,9 +740,9 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                                 'records that physical boundary without inventing a disconnect.',
                                 'Native Feature-report authority is limited to the exact 90-byte report family and '
                                 'generated OpenRazer command policy.',
-                                'Charging while the battery reads 100 percent is reported as full; not charging on the '
-                                'mat, as under a charge limit, stays unknown; the charge state on a USB cable is '
-                                'unverified.'],
+                                'Charging while the battery reads 100 percent is reported as full; not charging is '
+                                'discharging only beside byte 3 = 0 and is otherwise unknown; a charge limit is not '
+                                "inferred, so the mouse's own charging report is published."],
                'revision': 5,
                'runtime_sha256': '031d1af5fdbc04b754e62119d88f77ef5a8c6e28bc16249b26093442138d8934',
                'schema': 'hyperflux-hardware-profile-v1',
@@ -1085,7 +1086,7 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                'schema': 'hyperflux-hardware-profile-v1',
                'source_path': 'profiles/surfaces/razer-hyperflux-v2-hard-edition.json'}],
  'schema': 'hyperflux-compiled-profile-catalog-v1',
- 'source_sha256': 'eabb6b71e31a34cf3cc6b720597df985dc3da59256e7c8d4279ac0d846b900d0'}
+ 'source_sha256': '4a772d088dd943bcd3306c4fc92aa5e3b2506b0530a747885a87791cca325466'}
 PROFILES_BY_ID: Final = MappingProxyType({profile['profile_id']: profile for profile in PROFILE_CATALOG['profiles']})
 
 __all__ = ["PROFILE_CATALOG", "PROFILE_SOURCE_SHA256", "PROFILES_BY_ID"]
