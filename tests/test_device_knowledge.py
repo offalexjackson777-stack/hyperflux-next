@@ -322,6 +322,7 @@ class DeviceKnowledgeContractTests(unittest.TestCase):
                 "lighting.brightness",
                 "lighting.direct-frame",
                 "telemetry.battery-percent",
+                "telemetry.charging-state",
             },
         )
         self.assertNotIn("input.dpi-xy", enabled)
