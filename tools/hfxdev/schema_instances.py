@@ -234,6 +234,22 @@ def _schema_named_properties(schema_path: list[object]) -> set[str]:
     return names
 
 
+def redacted_path(error: _ValidationError) -> list[int | str | None]:
+    """The error's instance path with every name the schema does not declare as None.
+
+    Array indexes stay. An object key stays only when the schema names it
+    under `properties` on the way to the failed keyword; map keys and unknown
+    keys come from the document, so they are dropped.
+    """
+    named = _schema_named_properties(list(error.absolute_schema_path))
+    return [
+        segment
+        if isinstance(segment, int) and not isinstance(segment, bool)
+        else (str(segment) if str(segment) in named else None)
+        for segment in error.absolute_path
+    ]
+
+
 def violation_record(error: _ValidationError) -> dict[str, str]:
     """A privacy-preserving description of one validation error.
 
@@ -242,13 +258,7 @@ def violation_record(error: _ValidationError) -> dict[str, str]:
     or the names of unknown keys.
     """
     schema_path = list(error.absolute_schema_path)
-    named = _schema_named_properties(schema_path)
-    instance_path = [
-        segment
-        if isinstance(segment, int) and not isinstance(segment, bool)
-        else (str(segment) if str(segment) in named else REDACTED_SEGMENT)
-        for segment in error.absolute_path
-    ]
+    instance_path = [REDACTED_SEGMENT if segment is None else segment for segment in redacted_path(error)]
     keyword = error.validator if isinstance(error.validator, str) else "unknown"
     return {
         "path": _pointer(instance_path),
@@ -394,42 +404,71 @@ def build_report(
     }
 
 
-def jsonschema_validator_factory(root: Path, files: Iterable[Path] | None = None) -> tuple[ValidatorFactory, str]:
-    """Build a draft 2020-12 validator factory over the repository registry."""
+def import_jsonschema() -> Any:
+    """The jsonschema module, or a ModelError naming the command that has it."""
     try:
         import jsonschema
-        from jsonschema import Draft202012Validator, FormatChecker
-        from referencing import Registry, Resource
-        from jsonschema_specifications import REGISTRY as SPECIFICATIONS
-        from referencing.jsonschema import DRAFT202012
+        import jsonschema_specifications  # noqa: F401
+        import referencing  # noqa: F401
     except ImportError as error:
         raise ModelError(MISSING_VALIDATOR_MESSAGE) from error
+    return jsonschema
 
-    candidates = [
-        path for path in (repository_files(root) if files is None else files) if path.suffix == ".json"
-    ]
-    index = load_schema_index(root, candidates)
-    # The published draft 2020-12 meta-schemas come from the pinned
-    # jsonschema-specifications package; nothing is ever fetched.
-    registry = SPECIFICATIONS.combine(
-        Registry().with_resources(
-            (schema_id, Resource.from_contents(schema, default_specification=DRAFT202012))
-            for schema_id, schema in index.by_id.items()
-        )
-    )
-    format_checker = FormatChecker(formats=())
-    for name, check in FORMAT_CHECKS.items():
-        format_checker.checks(name)(check)
 
-    def validator_for(schema: dict[str, Any]) -> _Validator:
-        return Draft202012Validator(schema, registry=registry, format_checker=format_checker)
-
+def jsonschema_version() -> str:
+    jsonschema = import_jsonschema()
     version = getattr(jsonschema, "__version__", None)
     if not isinstance(version, str):
         from importlib.metadata import version as package_version
 
         version = package_version("jsonschema")
-    return validator_for, version
+    return version
+
+
+def schema_registry(index: SchemaIndex) -> Any:
+    """A `referencing` registry of the repository schemas by `$id`.
+
+    The published draft 2020-12 meta-schemas come from the pinned
+    jsonschema-specifications package; nothing is ever fetched.
+    """
+    import_jsonschema()
+    from jsonschema_specifications import REGISTRY as SPECIFICATIONS
+    from referencing import Registry, Resource
+    from referencing.jsonschema import DRAFT202012
+
+    return SPECIFICATIONS.combine(
+        Registry().with_resources(
+            (schema_id, Resource.from_contents(schema, default_specification=DRAFT202012))
+            for schema_id, schema in index.by_id.items()
+        )
+    )
+
+
+def format_checker() -> Any:
+    """A format checker for exactly the repository's checked formats."""
+    from jsonschema import FormatChecker
+
+    checker = FormatChecker(formats=())
+    for name, check in FORMAT_CHECKS.items():
+        checker.checks(name)(check)
+    return checker
+
+
+def jsonschema_validator_factory(root: Path, files: Iterable[Path] | None = None) -> tuple[ValidatorFactory, str]:
+    """Build a draft 2020-12 validator factory over the repository registry."""
+    import_jsonschema()
+    from jsonschema import Draft202012Validator
+
+    candidates = [
+        path for path in (repository_files(root) if files is None else files) if path.suffix == ".json"
+    ]
+    registry = schema_registry(load_schema_index(root, candidates))
+    checker = format_checker()
+
+    def validator_for(schema: dict[str, Any]) -> _Validator:
+        return Draft202012Validator(schema, registry=registry, format_checker=checker)
+
+    return validator_for, jsonschema_version()
 
 
 def write_report(root: Path, report: dict[str, Any]) -> Path:
