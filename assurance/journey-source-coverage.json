@@ -38,7 +38,7 @@
       "title": "Learning The Transport",
       "order": 2,
       "technical_sources": [
-        {"kind": "authority", "reference": "protocol/registry.json", "supports": "Protocol versions one through seven remain explicit compatibility surfaces."},
+        {"kind": "authority", "reference": "protocol/registry.json", "supports": "Served protocol versions five and seven remain explicit compatibility surfaces, and retired versions stay recorded."},
         {"kind": "authority", "reference": "uapi/registry.json", "supports": "Kernel operations and versions remain canonical and fixed-width."},
         {"kind": "test", "reference": "tests/test_protocol.py", "supports": "Wire compatibility and semantic validation are covered by generated and golden tests."},
         {"kind": "test", "reference": "tests/test_kernel_uapi.py", "supports": "The public kernel boundary remains bounded and versioned."}

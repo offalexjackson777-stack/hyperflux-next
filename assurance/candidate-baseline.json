@@ -72,7 +72,7 @@
     "approval_required": [
       "existing qualified map or decoder change",
       "kernel or UAPI change",
-      "protocol-v6 semantic change",
+      "retained protocol semantic change",
       "proven restoration behavior change"
     ]
   }

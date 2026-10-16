@@ -12,7 +12,7 @@ Defines the messages apps and tools exchange with the HyperFlux background servi
 ## Limitations
 
 - Wire compatibility alone does not admit a hardware route
-- Versions 1 to 4 and 6 are deprecated in 2.1 and will be removed in 2.2; negotiate version 5 or 7, and version 7 carries everything version 6 added
+- Versions 1 to 4 and 6 were retired in 2.2; negotiate version 5 or 7, and version 7 carries everything version 6 added
 
 ## Boundaries
 
