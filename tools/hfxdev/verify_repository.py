@@ -427,6 +427,17 @@ def _run_schema_contracts(root: Path, _node: TestNode) -> None:
     load_local_companion(root)
 
 
+def _run_schema_instances(root: Path, _node: TestNode) -> None:
+    """Report-only validation of every JSON document against its declared schema.
+
+    Runs in the full-software lane, which `./hfx verify` and CI run inside the
+    pinned development image; the validator is imported only here.
+    """
+    from .schema_instances import run_schema_instance_report
+
+    run_schema_instance_report(root)
+
+
 def _run_profile_contracts(root: Path, _node: TestNode) -> None:
     _check_profile_contract(root)
 

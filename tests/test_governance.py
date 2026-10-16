@@ -225,6 +225,7 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertEqual(upload["if"], "${{ always() }}")
         self.assertIn("build/rust-coverage-current.lcov", upload["with"]["path"])
         self.assertIn("build/rust-coverage-current.json", upload["with"]["path"])
+        self.assertIn("build/schema-instances-report.json", upload["with"]["path"])
         self.assertNotIn("release", fast["on"])
         self.assertNotIn("release", full["on"])
         self.assertIn("pull_request", full["on"])

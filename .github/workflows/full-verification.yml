@@ -74,5 +74,6 @@ jobs:
           build/ci/openrgb-qualification
           build/rust-coverage-current.json
           build/rust-coverage-current.lcov
+          build/schema-instances-report.json
         if-no-files-found: error
         retention-days: 30

@@ -37,6 +37,23 @@
       "resume_policy": "reuse-verified"
     },
     {
+      "id": "schema-instances",
+      "title": "Report-only JSON Schema validation of every declared document",
+      "owned_domain": "schemas",
+      "lanes": ["full-software"],
+      "runner": "schema-instances",
+      "required_capabilities": [],
+      "hardware_requirement": "none",
+      "writes_hardware": false,
+      "expected_duration_seconds": 5,
+      "timeout_seconds": 120,
+      "dependencies": ["schema-contracts", "development-environment-contracts"],
+      "isolation": "shared",
+      "cache_inputs": ["**/*.json", "tools/hfxdev/schema_instances.py", "tools/hfxdev/verify_repository.py"],
+      "produced_evidence": ["schema-instance-report"],
+      "resume_policy": "rerun"
+    },
+    {
       "id": "integration-contracts",
       "title": "Pinned application integration contracts",
       "owned_domain": "integrations",

@@ -270,7 +270,8 @@ def full_verification_workflow(governance: GitHubGovernance) -> str:
                 name="hyperflux-full-evidence",
                 path=(
                     "build/ci/full\nbuild/ci/openrgb-qualification\n"
-                    "build/rust-coverage-current.json\nbuild/rust-coverage-current.lcov"
+                    "build/rust-coverage-current.json\nbuild/rust-coverage-current.lcov\n"
+                    "build/schema-instances-report.json"
                 ),
                 retention_days=30,
             ),

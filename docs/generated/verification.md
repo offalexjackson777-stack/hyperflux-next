@@ -22,28 +22,29 @@ Every check runs in software only and is never allowed to write to hardware.
 | 11 | `assurance-contracts` | `assurance` | `fast`, `full-software` | 15s |
 | 12 | `profile-contracts` | `profiles` | `fast`, `full-software` | 10s |
 | 13 | `development-environment-contracts` | `toolchains` | `fast`, `full-software` | 20s |
-| 14 | `formal-model-contracts` | `verification` | `fast`, `full-software` | 15s |
-| 15 | `dependency-security-contracts` | `assurance` | `full-software` | 120s |
-| 16 | `openrazer-metadata-contracts` | `integrations` | `full-software` | 30s |
-| 17 | `device-knowledge-contracts` | `profiles` | `fast`, `full-software` | 30s |
-| 18 | `device-qualification-console-contracts` | `applications` | `fast`, `full-software` | 20s |
-| 19 | `native-onboarding-contracts` | `profiles` | `fast`, `full-software` | 180s |
-| 20 | `generated-freshness` | `generation` | `fast`, `full-software` | 15s |
-| 21 | `repository-documentation-contracts` | `documentation` | `fast`, `full-software` | 120s |
-| 22 | `python-unit` | `tooling` | `fast`, `full-software` | 180s |
-| 23 | `rust-clippy` | `rust` | `fast`, `full-software` | 180s |
-| 24 | `cpp-sdk-contracts` | `sdk` | `fast`, `full-software` | 60s |
-| 25 | `kernel-profile-contracts` | `kernel` | `fast`, `full-software` | 180s |
-| 26 | `rust-unit` | `rust` | `fast`, `full-software` | 180s |
-| 27 | `simulator-contracts` | `simulation` | `fast`, `full-software` | 180s |
-| 28 | `openrgb-adapter-contracts` | `integrations` | `full-software` | 300s |
-| 29 | `openrazer-native-route-contracts` | `integrations` | `full-software` | 180s |
-| 30 | `rust-property-contracts` | `assurance` | `full-software` | 180s |
-| 31 | `openrgb-native-route-contracts` | `integrations` | `full-software` | 360s |
-| 32 | `rust-coverage-contracts` | `assurance` | `full-software` | 900s |
-| 33 | `openrgb-thread-sanitizer` | `integrations` | `full-software` | 600s |
-| 34 | `openrazer-version-matrix-contracts` | `integrations` | `full-software` | 180s |
-| 35 | `package-contracts` | `packaging` | `full-software` | 900s |
-| 36 | `quality-contracts` | `assurance` | `full-software` | 60s |
+| 14 | `schema-instances` | `schemas` | `full-software` | 120s |
+| 15 | `formal-model-contracts` | `verification` | `fast`, `full-software` | 15s |
+| 16 | `dependency-security-contracts` | `assurance` | `full-software` | 120s |
+| 17 | `openrazer-metadata-contracts` | `integrations` | `full-software` | 30s |
+| 18 | `device-knowledge-contracts` | `profiles` | `fast`, `full-software` | 30s |
+| 19 | `device-qualification-console-contracts` | `applications` | `fast`, `full-software` | 20s |
+| 20 | `native-onboarding-contracts` | `profiles` | `fast`, `full-software` | 180s |
+| 21 | `generated-freshness` | `generation` | `fast`, `full-software` | 15s |
+| 22 | `repository-documentation-contracts` | `documentation` | `fast`, `full-software` | 120s |
+| 23 | `python-unit` | `tooling` | `fast`, `full-software` | 180s |
+| 24 | `rust-clippy` | `rust` | `fast`, `full-software` | 180s |
+| 25 | `cpp-sdk-contracts` | `sdk` | `fast`, `full-software` | 60s |
+| 26 | `kernel-profile-contracts` | `kernel` | `fast`, `full-software` | 180s |
+| 27 | `rust-unit` | `rust` | `fast`, `full-software` | 180s |
+| 28 | `simulator-contracts` | `simulation` | `fast`, `full-software` | 180s |
+| 29 | `openrgb-adapter-contracts` | `integrations` | `full-software` | 300s |
+| 30 | `openrazer-native-route-contracts` | `integrations` | `full-software` | 180s |
+| 31 | `rust-property-contracts` | `assurance` | `full-software` | 180s |
+| 32 | `openrgb-native-route-contracts` | `integrations` | `full-software` | 360s |
+| 33 | `rust-coverage-contracts` | `assurance` | `full-software` | 900s |
+| 34 | `openrgb-thread-sanitizer` | `integrations` | `full-software` | 600s |
+| 35 | `openrazer-version-matrix-contracts` | `integrations` | `full-software` | 180s |
+| 36 | `package-contracts` | `packaging` | `full-software` | 900s |
+| 37 | `quality-contracts` | `assurance` | `full-software` | 60s |
 
 `./hfx verify` runs each check after the checks it depends on. Use `./hfx verify --fast --changed-from <commit>` while you work and `./hfx verify --full` before a release.
