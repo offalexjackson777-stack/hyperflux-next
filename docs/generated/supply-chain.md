@@ -40,7 +40,7 @@ The signing subkey belongs to primary key `8BF8A266E756BD1C24C930918B3F385000715
 - Vendored source packages: 1
 - Pinned application upstreams: 3
 - Immutable workflow actions: 7
-- Dependency list SHA-256: `4c99926040c0ffbbe13898f0b3b4a77a6bada3aab3ec2181d3d13b15fd44aae7`
+- Dependency list SHA-256: `76db0a20859bca2cbdb14f1b0e22cae807af04764996d21854954e11282e1397`
 
 ## Allowed Licenses
 

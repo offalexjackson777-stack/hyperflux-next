@@ -38,6 +38,7 @@ from .generators.governance import (
     protection_plan as github_protection_plan,
     pull_request_template as github_pull_request_template,
     release_notes as github_release_notes,
+    ubuntu_package_workflow as github_ubuntu_package_workflow,
     verification_workflow as github_verification_workflow,
 )
 from .generators.performance import performance_budgets_markdown
@@ -402,6 +403,9 @@ def rendered_files(root: Path) -> dict[Path, str]:
         ),
         root / ".github" / "workflows" / "kernel-canary.yml": github_kernel_canary_workflow(
             github_governance, development_environment.image
+        ),
+        root / ".github" / "workflows" / "ubuntu-packages.yml": github_ubuntu_package_workflow(
+            github_governance
         ),
         root / ".github" / "workflows" / "codeql.yml": github_codeql_workflow(
             github_governance

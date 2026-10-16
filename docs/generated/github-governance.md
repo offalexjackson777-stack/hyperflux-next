@@ -31,10 +31,13 @@ packages, and no workflow writes to hardware.
 | CodeQL | Pull requests, main, weekly | GitHub service only | None | C/C++ and Python analysis |
 | Dependency review | Pull requests | GitHub service only | None | Dependency policy decision |
 | Kernel canary | Weekly or manual | Arch mirrors, kernel.org, and the pinned app sources | None | Driver builds against coming kernels; never required for merging |
+| Ubuntu packages | Weekly or manual | Ubuntu archive for the check tools | None | Ubuntu 24.04 `.deb` files, checked and not published; never required for merging |
 
 The development image may use the network only to fetch its pinned packages and tools while it is built. The pinned app sources are prepared before the checks start. Every check then runs in the pinned image with `--network none`, no devices, no privileges, no extra capabilities, and write access only to the checkout.
 
 The kernel canary is the one deliberate exception, because its purpose is to follow kernels that move after the image is pinned. It starts from the same digest-pinned Arch base image and installs this week's `linux-headers` and `linux-lts-headers`. It also stages the next Arch kernel from `core-testing`, when there is one, and the newest mainline tag from kernel.org prepared with `modules_prepare`. Then `./hfx kernel-canary` builds the HyperFlux driver and the patched OpenRazer driver against each kernel with `W=1`. It only compiles: nothing is loaded and no device is touched. Its result never gates a merge. A failure is an early warning that a kernel interface changes before it reaches users.
+
+The Ubuntu packages workflow is a second non-gating check. It builds the package artifacts offline in the pinned development image, exactly as the Arch packages are built. Then it starts the digest-pinned Ubuntu 24.04 image without extra privileges and installs the check tools from the Ubuntu archive. In that container `./hfx package distro --distribution ubuntu` turns the artifacts into `hyperflux-next-dkms` and `hyperflux-next-linux`. The workflow inspects both files with `dpkg-deb`, fails on any `lintian` error, and installs them with `apt-get` while `policy-rc.d` refuses every service start. Then `dkms build` compiles the driver against the generic and HWE kernel headers, `modinfo` checks each module, and every installed program is checked against the glibc that Ubuntu 24.04 ships. Finally the packages are purged. The `.deb` files are kept as a workflow artifact for 14 days and are never published. Nothing is loaded and no device is touched.
 
 ## Checks Required Before Merging
 

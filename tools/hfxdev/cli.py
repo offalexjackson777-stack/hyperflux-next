@@ -234,6 +234,16 @@ def _parser() -> argparse.ArgumentParser:
         "openrgb-prepare", help=argparse.SUPPRESS
     )
     ci_openrgb_prepare.add_argument("--output", required=True, type=Path)
+    ci_package = ci_commands.add_parser(
+        "package",
+        help="build source-bound package artifacts offline in the pinned container",
+    )
+    ci_package.add_argument("--image", required=True)
+    ci_package.add_argument("--output", required=True, type=Path)
+    ci_package_artifacts = ci_commands.add_parser(
+        "package-artifacts", help=argparse.SUPPRESS
+    )
+    ci_package_artifacts.add_argument("--output", required=True, type=Path)
     ci_summary = ci_commands.add_parser(
         "summary", help="write a bounded GitHub Actions summary from structured evidence"
     )
@@ -808,6 +818,28 @@ def main(arguments: list[str] | None = None) -> int:
                 request = prepare_external_openrgb_qualification(root, args.output)
                 print(f"OpenRGB qualification request: {request}")
                 return 0
+            elif args.ci_command == "package-artifacts":
+                if os.environ.get(PINNED_VERIFICATION_ENVIRONMENT) != "1":
+                    raise ModelError("CI package artifacts require the pinned container")
+                from .verify_integration import _openrazer_source, _openrgb_source
+
+                manifest = build_artifacts(
+                    root,
+                    args.output,
+                    capabilities={
+                        "openrazer-source": _openrazer_source(root),
+                        "openrgb-source": _openrgb_source(root),
+                    },
+                )
+                print(f"Package build manifest: {manifest}")
+                return 0
+            elif args.ci_command == "package":
+                invocation = container_invocation(
+                    root,
+                    image=args.image,
+                    operation="package-artifacts",
+                    output=args.output,
+                )
             elif args.ci_command == "qualify-openrgb":
                 result = run_external_openrgb_qualification(
                     root,
