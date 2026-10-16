@@ -785,11 +785,7 @@ fn reporting_system() -> SystemSnapshot {
                     ErrorSeverity::Error,
                     PrivacyClass::PublicSummary,
                 ),
-                report_finding(
-                    "HFX-UNKNOWN-999",
-                    ErrorSeverity::Info,
-                    PrivacyClass::Public,
-                ),
+                report_finding("HFX-UNKNOWN-999", ErrorSeverity::Info, PrivacyClass::Public),
                 report_finding(
                     "finding on host-name",
                     ErrorSeverity::Info,
