@@ -150,6 +150,20 @@ a per-receiver `battery_lock`, taken before `state_lock` and
 Kernels built without `CONFIG_POWER_SUPPLY` reject the operation with
 `EOPNOTSUPP`.
 
+The forwarded status comes from the bridge, not the module. The bridge decodes
+the raw charge field only for a child profile that declares a qualified charge
+decoder; today that is the exact mouse profile `0x00cd`. Every other child
+forwards `Unknown`. A charging value becomes `Charging`, or `Full` when the
+level of the same lane reads 100 percent. A not-charging value becomes
+`Discharging` only when the contact field of the same report says the mouse is
+off the mat. On the mat it may be a charge limit holding the battery, which no
+capture has shown yet, so it stays `Unknown`, as does any value the decoder does
+not list. The charge only annotates a lane that has a forwarded level, and the
+bridge forgets it whenever that lane is forwarded absent, when the writer file
+is released, and with each new receiver generation, so an old charge value is
+never reused. The UAPI carries no not-charging status, and the bridge does not
+add one without evidence.
+
 ## Transport And Outcomes
 
 ### Native Exchange V2

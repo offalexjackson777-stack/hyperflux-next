@@ -66,6 +66,27 @@ cable. HyperFlux passes the device's answer through unchanged and never makes up
 a value, so an application may show a default brightness. The device still
 appears in your applications.
 
+## Battery
+
+### Charging Status Is Partial
+
+The desktop battery widget shows a charging status for the Basilisk V3 Pro 35K
+mouse only. It shows charging while the mouse rests on the charging mat, and
+discharging when you lift the mouse off the mat. In these cases it shows
+unknown instead of a guess:
+
+- **Charge limit on the mat.** If you set a charge limit in Razer's software,
+  the mouse can stop charging while it sits on the mat. HyperFlux has not yet
+  seen what the mouse reports then, so the widget shows unknown.
+- **USB cable.** Charging over a USB cable has not been tested, so the status
+  there may be wrong or unknown.
+- **Full.** The mouse does not report full by itself. The widget shows full
+  when the mouse is charging and its level reads 100 percent.
+- **Keyboard.** The keyboard does not report whether it is charging, so it
+  shows its level only.
+
+The battery level itself is not affected.
+
 ## Hardware
 
 Two devices have been tested end to end on real hardware. Eight more are

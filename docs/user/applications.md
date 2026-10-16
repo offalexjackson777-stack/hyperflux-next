@@ -44,7 +44,11 @@ device appears under its own name. You do not need to set anything up.
   or switch the device on, this can take a few minutes.
 - A device that is switched off or out of range leaves the widget until it
   reports again.
-- The widget shows the level only, not whether the device is charging.
+- For the mouse, the widget also shows whether it is charging, discharging, or
+  full. Sometimes it shows the charging status as unknown instead; see
+  [Charging Status Is Partial](limitations.md#charging-status-is-partial).
+- For the keyboard, the widget shows the level only, not whether it is
+  charging.
 
 ## What Does Not Work Yet
 
