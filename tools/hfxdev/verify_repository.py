@@ -25,6 +25,11 @@ from .coverage import load_rust_coverage_policy
 from .arch_update_policy import verify_arch_openrazer_update_policy
 from .atlas import load_repository_atlas
 from .development import load_development_environment
+from .documentation_preview import (
+    RELEASE_EVIDENCE_ENVIRONMENT,
+    RELEASE_EVIDENCE_MODES,
+    load_documentation_render_audit,
+)
 from .errors import load_error_catalog
 from .formal_model import load_formal_model, run_formal_model
 from .governance import load_github_governance
@@ -268,7 +273,24 @@ def _run_governance_contracts(root: Path, _node: TestNode) -> None:
     load_github_governance(root)
 
 
+def release_evidence_mode() -> str:
+    """Return how strictly the committed documentation render record is checked.
+
+    Ordinary pull requests check its structure; release pull requests into the
+    default branch require it to describe the exact documents being released.
+    """
+    mode = os.environ.get(RELEASE_EVIDENCE_ENVIRONMENT, "structure")
+    if mode not in RELEASE_EVIDENCE_MODES:
+        raise ModelError(
+            f"{RELEASE_EVIDENCE_ENVIRONMENT} must be one of: "
+            + ", ".join(RELEASE_EVIDENCE_MODES)
+        )
+    return mode
+
+
 def _run_repository_documentation_contracts(root: Path, node: TestNode) -> None:
+    if release_evidence_mode() == "required":
+        load_documentation_render_audit(root, release_evidence=True)
     _run_command(
         root,
         [
@@ -276,6 +298,7 @@ def _run_repository_documentation_contracts(root: Path, node: TestNode) -> None:
             "-m",
             "unittest",
             "tests.test_repository_experience",
+            "tests.test_documentation_evidence",
             "tests.test_journey",
             "-v",
         ],

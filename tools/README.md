@@ -44,6 +44,7 @@ The `./hfx` developer command: it loads the repository's data files, generates d
 - [`tools/hfxdev/publication_privacy.py`](hfxdev/publication_privacy.py)
 - [`tools/hfxdev/documentation.py`](hfxdev/documentation.py)
 - [`tools/hfxdev/documentation_preview.py`](hfxdev/documentation_preview.py)
+- [`tools/hfxdev/documentation_evidence.py`](hfxdev/documentation_evidence.py)
 - [`tools/documentation_preview.cjs`](documentation_preview.cjs)
 - [`tools/hfxdev/generators/readme.py`](hfxdev/generators/readme.py)
 - [`tools/hfxdev/journey_coverage.py`](hfxdev/journey_coverage.py)

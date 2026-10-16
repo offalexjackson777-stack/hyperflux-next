@@ -15,8 +15,17 @@ from .arch_repository import build_arch_repository, verify_arch_repository
 from .arch_repository_public import verify_public_arch_repository
 from .ci import (
     PINNED_VERIFICATION_ENVIRONMENT,
+    RELEASE_EVIDENCE_MODES,
     container_invocation,
     run_container,
+)
+from .documentation_evidence import (
+    DEFAULT_CHROMIUM,
+    DEFAULT_RENDER_TIMEOUT_SECONDS,
+    bind as bind_documentation_render,
+    check_render as check_documentation_render,
+    review as review_documentation_render,
+    run_render as run_documentation_render,
 )
 from .ci_openrgb import run_external_openrgb_qualification
 from .governance import load_github_governance
@@ -52,6 +61,7 @@ from .source_validated import write_source_validated_catalog
 from .testgraph import format_plan, load_test_catalog
 from .upstreams import prepare_upstreams
 from .verification_run import git_changed_paths, run_verification
+from .documentation_preview import RELEASE_EVIDENCE_ENVIRONMENT
 
 
 def _root() -> Path:
@@ -81,6 +91,57 @@ def _parser() -> argparse.ArgumentParser:
         "--host-toolchain",
         action="store_true",
         help="require the host toolchain instead of selecting the pinned container",
+    )
+    verify.add_argument(
+        "--release-evidence",
+        choices=RELEASE_EVIDENCE_MODES,
+        help=(
+            "how to check the committed documentation render record: structure "
+            "(default, every pull request) or required (release pull requests, which "
+            "must carry a render of these exact documents)"
+        ),
+    )
+
+    docs = commands.add_parser(
+        "docs", help="render documentation and manage the release render record"
+    )
+    docs_commands = docs.add_subparsers(dest="docs_command", required=True)
+    docs_render = docs_commands.add_parser(
+        "render",
+        help="render every cataloged document offline and fail on any layout or network issue",
+    )
+    docs_render.add_argument("--output", required=True, type=Path, help="new directory")
+    docs_render.add_argument(
+        "--changed-from",
+        metavar="REVISION",
+        help="skip the render when no render input changed since this revision",
+    )
+    docs_render.add_argument("--chromium", default=DEFAULT_CHROMIUM)
+    docs_render.add_argument("--node-modules", type=Path)
+    docs_render.add_argument(
+        "--timeout", type=int, default=DEFAULT_RENDER_TIMEOUT_SECONDS, help="seconds"
+    )
+    docs_check = docs_commands.add_parser(
+        "check-render", help="prove a render matches this tree and found no issue"
+    )
+    docs_check.add_argument("--render", required=True, type=Path)
+    docs_bind = docs_commands.add_parser(
+        "bind",
+        help="record a checked render as this release's documentation render evidence",
+    )
+    docs_bind.add_argument("--render", required=True, type=Path)
+    docs_bind.add_argument("--revision", help="source revision (default: HEAD)")
+    docs_review = docs_commands.add_parser(
+        "review",
+        help="list changed critical screenshots and record the ones you have looked at",
+    )
+    docs_review.add_argument("--render", required=True, type=Path)
+    docs_review.add_argument(
+        "--confirm",
+        action="append",
+        default=[],
+        metavar="screenshots/FILE.png",
+        help="a screenshot you have looked at; repeat for each one",
     )
 
     generate = commands.add_parser("generate", help="regenerate canonical derived files")
@@ -238,6 +299,19 @@ def _parser() -> argparse.ArgumentParser:
     ci_verify.add_argument("--output", required=True, type=Path)
     ci_verify.add_argument("--changed-from")
     ci_verify.add_argument("--openrgb-qualification", type=Path)
+    ci_verify.add_argument("--release-evidence", choices=RELEASE_EVIDENCE_MODES)
+    ci_docs_prepare = ci_commands.add_parser(
+        "docs-prepare",
+        help="install the locked documentation renderer packages with bounded network access",
+    )
+    ci_docs_prepare.add_argument("--image", required=True)
+    ci_docs_render = ci_commands.add_parser(
+        "docs-render",
+        help="render the documentation offline in the pinned container",
+    )
+    ci_docs_render.add_argument("--image", required=True)
+    ci_docs_render.add_argument("--output", required=True, type=Path)
+    ci_docs_render.add_argument("--changed-from")
     ci_openrgb = ci_commands.add_parser(
         "qualify-openrgb",
         help="qualify exact packaged OpenRGB bytes in a dedicated OCI sandbox",
@@ -547,6 +621,55 @@ def _package_aur(root: Path, args: argparse.Namespace) -> int:
     return 0
 
 
+def _docs(root: Path, args: argparse.Namespace) -> int:
+    if args.docs_command == "render":
+        output = args.output if args.output.is_absolute() else Path.cwd() / args.output
+        run_documentation_render(
+            root,
+            output,
+            changed_from=args.changed_from,
+            chromium=args.chromium,
+            node_modules=args.node_modules.resolve() if args.node_modules else None,
+            timeout_seconds=args.timeout,
+        )
+        print((output / "summary.md").read_text(encoding="utf-8"), end="")
+        return 0
+    if args.docs_command == "check-render":
+        checked = check_documentation_render(root, args.render)
+        counts = checked.result["counts"]
+        print(
+            f"Documentation render: PASS ({counts['documents']} documents, "
+            f"{counts['checks']} checks, {counts['screenshots']} screenshots, 0 issues)"
+        )
+        return 0
+    if args.docs_command == "bind":
+        outcome = bind_documentation_render(root, args.render, args.revision)
+        render = args.render.resolve()
+        print(f"Bound {render} as the documentation render evidence.")
+        print(f"Screenshots that changed: {len(outcome.changed_screenshots)}")
+        for file in outcome.changed_screenshots:
+            print(f"  {file}")
+        return _report_pending_review(render, outcome.pending_review)
+    remaining = review_documentation_render(root, args.render, tuple(args.confirm))
+    if args.confirm:
+        print(f"Recorded review of {len(args.confirm)} screenshot(s).")
+    return _report_pending_review(args.render.resolve(), remaining)
+
+
+def _report_pending_review(render: Path, pending: tuple[str, ...]) -> int:
+    if not pending:
+        print("Visual review: complete; every critical screenshot matches its review.")
+        return 0
+    print(f"Visual review: {len(pending)} critical screenshot(s) changed and need a person to look:")
+    for file in pending:
+        print(f"  {render / file}")
+    print(
+        "Open each image, then record it with: ./hfx docs review --render "
+        f"{render} --confirm screenshots/NAME.png [--confirm ...]"
+    )
+    return 1
+
+
 def main(arguments: list[str] | None = None) -> int:
     args = _parser().parse_args(arguments)
     root = _root()
@@ -556,6 +679,8 @@ def main(arguments: list[str] | None = None) -> int:
             from .toolchains import verify_current_toolchain
 
             lane = "fast" if args.fast else "full-software"
+            if args.release_evidence is not None:
+                os.environ[RELEASE_EVIDENCE_ENVIRONMENT] = args.release_evidence
             running_pinned = os.environ.get(PINNED_VERIFICATION_ENVIRONMENT) == "1"
             if not args.host_toolchain and not running_pinned:
                 try:
@@ -583,6 +708,7 @@ def main(arguments: list[str] | None = None) -> int:
                         lane="fast" if args.fast else "full",
                         output=output,
                         changed_from=changed_from,
+                        release_evidence=args.release_evidence,
                     )
                     print(
                         "HyperFlux Next verification environment: pinned container "
@@ -605,6 +731,8 @@ def main(arguments: list[str] | None = None) -> int:
                 print(f"  FAIL  {node_id}")
             print(f"Evidence: {outcome.output / 'evidence.json'}")
             return 0 if outcome.status == "passed" else 1
+        if args.command == "docs":
+            return _docs(root, args)
         if args.command == "generate":
             from .render import write_generated
 
@@ -886,6 +1014,19 @@ def main(arguments: list[str] | None = None) -> int:
                     output=args.output,
                     changed_from=args.changed_from,
                     openrgb_qualification=args.openrgb_qualification,
+                    release_evidence=args.release_evidence,
+                )
+            elif args.ci_command == "docs-prepare":
+                invocation = container_invocation(
+                    root, image=args.image, operation="docs-prepare"
+                )
+            elif args.ci_command == "docs-render":
+                invocation = container_invocation(
+                    root,
+                    image=args.image,
+                    operation="docs-render",
+                    output=args.output,
+                    changed_from=args.changed_from,
                 )
             print(
                 f"HyperFlux CI: {invocation.operation} "

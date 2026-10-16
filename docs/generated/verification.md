@@ -29,7 +29,7 @@ Every check runs in software only and is never allowed to write to hardware.
 | 18 | `device-qualification-console-contracts` | `applications` | `fast`, `full-software` | 20s |
 | 19 | `native-onboarding-contracts` | `profiles` | `fast`, `full-software` | 180s |
 | 20 | `generated-freshness` | `generation` | `fast`, `full-software` | 15s |
-| 21 | `repository-documentation-contracts` | `documentation` | `fast`, `full-software` | 30s |
+| 21 | `repository-documentation-contracts` | `documentation` | `fast`, `full-software` | 120s |
 | 22 | `python-unit` | `tooling` | `fast`, `full-software` | 180s |
 | 23 | `rust-clippy` | `rust` | `fast`, `full-software` | 180s |
 | 24 | `cpp-sdk-contracts` | `sdk` | `fast`, `full-software` | 60s |
