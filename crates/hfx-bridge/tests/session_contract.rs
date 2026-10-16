@@ -67,8 +67,8 @@ fn negotiation(features: &[&str]) -> RpcRequest {
         params: ClientHello {
             client_id: id::<ClientId>("client-openrgb"),
             client_name: id::<ClientName>("OpenRGB test"),
-            minimum_version: ProtocolVersion::try_from(1).expect("version must be valid"),
-            maximum_version: ProtocolVersion::try_from(2).expect("version must be valid"),
+            minimum_version: ProtocolVersion::try_from(5).expect("version must be valid"),
+            maximum_version: ProtocolVersion::try_from(7).expect("version must be valid"),
             required_features: Vec::new(),
             optional_features: features
                 .iter()
@@ -192,7 +192,7 @@ fn session_methods_require_negotiation_and_exact_credentials() {
         .authorize_request(&valid)
         .expect("credential-bound snapshot must pass");
     assert_eq!(authorized.client_id.as_str(), "client-openrgb");
-    assert_eq!(authorized.selected_version.get(), 2);
+    assert_eq!(authorized.selected_version.get(), 7);
 }
 
 #[test]
