@@ -74,3 +74,13 @@ A hardware report leaves out:
 - raw HID or USB data and system journal text;
 - the wording of service problems, which can name local details. Only their
   codes and how serious they are remain.
+
+If you share a report to confirm that a device works, the project keeps only a
+short public summary of it next to your request: the device model and USB ID,
+the HyperFlux, driver, and service versions, the date, the problem codes, and
+what you ticked in the form. The rest of the report and anything else you wrote
+in the request are not copied. A report that holds anything looking private,
+such as a file path, a user or computer name, a network address, or a serial
+number, is turned down rather than cleaned up, and you are asked for a fresh
+one. The maintainer tool says where in the report it found such text, but never
+repeats the text itself.
