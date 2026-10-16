@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 mod authority;
+mod battery;
 mod configuration;
 mod discovery;
 mod entropy;

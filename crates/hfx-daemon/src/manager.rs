@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
+use crate::battery::ChildBatteryForwarder;
 use crate::{
     DeviceRestoreReadinessPhase, EndpointCandidate, EndpointDiscovery, EndpointDiscoveryError,
     PassiveDisposition, PassiveObservationTranslator, PassiveTranslation, PassiveTranslationError,
@@ -34,6 +35,7 @@ struct ActiveEndpoint {
     reader: KernelObservationReader<LinuxKernelIo>,
     receiver_id: ReceiverId,
     translator: PassiveObservationTranslator,
+    battery: ChildBatteryForwarder,
     cursor: u64,
     write_disqualified: bool,
     retirement_pending: bool,
@@ -47,6 +49,7 @@ pub struct RuntimeTickReport {
     pub observations: usize,
     pub dispatched: usize,
     pub writer_downgrades: usize,
+    pub battery_forwards: usize,
     pub restoration: RestorationTickReport,
 }
 
@@ -296,6 +299,7 @@ impl LinuxRuntimeManager {
                 info.generation_id,
                 self.catalog.clone(),
             ),
+            battery: ChildBatteryForwarder::default(),
             cursor: 0,
             write_disqualified: false,
             retirement_pending: false,
@@ -399,6 +403,7 @@ impl LinuxRuntimeManager {
                             &endpoint.receiver_id,
                             info.generation_id,
                             translation,
+                            (&endpoint.translator, &mut endpoint.battery),
                             backend,
                         )?;
                     }
@@ -422,7 +427,25 @@ impl LinuxRuntimeManager {
                 break;
             }
         }
+        report.battery_forwards += Self::forward_batteries(endpoint, info, backend);
         Ok(true)
+    }
+
+    /// Forwards changed child battery state through this endpoint's writer
+    /// file. Forwarding is best-effort: a rejection never fails the tick.
+    fn forward_batteries(
+        endpoint: &mut ActiveEndpoint,
+        info: KernelEndpointInfo,
+        backend: &ProductionBackend,
+    ) -> usize {
+        let transport = backend.transport();
+        if !transport.is_writable(&endpoint.receiver_id) {
+            return 0;
+        }
+        let receiver_id = &endpoint.receiver_id;
+        endpoint.battery.flush(|lane, state| {
+            transport.publish_child_battery(receiver_id, info.generation_id, lane, state)
+        })
     }
 
     fn apply_lifecycle_translation(
@@ -430,14 +453,17 @@ impl LinuxRuntimeManager {
         receiver_id: &ReceiverId,
         generation_id: hfx_domain::GenerationId,
         translation: PassiveTranslation,
+        (translator, battery): (&PassiveObservationTranslator, &mut ChildBatteryForwarder),
         backend: &mut ProductionBackend,
     ) -> Result<(), RuntimeTickError> {
         for observation in translation.observations {
             let sequence = observation.stamp.sequence();
+            let kind = observation.kind.clone();
             let outcome = backend
                 .observe_lifecycle(observation)
                 .map_err(RuntimeTickError::Observation)?;
             if let LifecycleObservationOutcome::Applied(applied) = outcome {
+                battery.record(&kind, |device_id| translator.battery_lane(device_id));
                 let was_suspended = matches!(
                     applied.receiver_before,
                     ReceiverLifecycleState::Suspended | ReceiverLifecycleState::PartiallySuspended
@@ -536,6 +562,7 @@ impl LinuxRuntimeManager {
                     .transport_mut()
                     .install_writable(endpoint.receiver_id.clone(), info.generation_id, writer)
                     .map_err(RuntimeTickError::Route)?;
+                endpoint.battery.writer_installed();
             }
             Err(error) if writer_failure_is_transient(error.kind()) => {}
             Err(_) => endpoint.write_disqualified = true,
@@ -558,6 +585,8 @@ impl LinuxRuntimeManager {
                 endpoint.reader.binding().generation_id,
             )
             .map_err(RuntimeTickError::Route)?;
+        // Dropping the writer file unregisters every battery it published.
+        endpoint.battery.writer_released();
         Ok(true)
     }
 

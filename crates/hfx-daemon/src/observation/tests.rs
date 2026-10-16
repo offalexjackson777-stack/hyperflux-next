@@ -941,3 +941,31 @@ fn activity_between_suspend_and_active_remains_the_one_readiness_signal() {
         SequenceNumber::try_from(4).unwrap()
     );
 }
+
+#[test]
+fn battery_lane_maps_only_identified_children_to_their_lane_and_model() {
+    let mut translator = translator();
+    let identity = identify(
+        &mut translator,
+        1,
+        HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+        0x00cd,
+    );
+    let LifecycleObservationKind::RegisterDevice(child) = &identity.observations[0].kind else {
+        panic!("identity registers the child");
+    };
+    let (lane, model_name) = translator
+        .battery_lane(child.device_id())
+        .expect("identified child has a battery lane");
+    assert_eq!(lane, ChildBatteryLane::Pointer);
+    assert_eq!(
+        Some(model_name),
+        translator
+            .catalog
+            .child(ProductId::try_from(0x00cd_u16).expect("product id is valid"))
+            .map(|profile| profile.model_name)
+    );
+
+    let other = LogicalDeviceId::try_from("paired-keyboard-0000").expect("device id is valid");
+    assert_eq!(translator.battery_lane(&other), None);
+}

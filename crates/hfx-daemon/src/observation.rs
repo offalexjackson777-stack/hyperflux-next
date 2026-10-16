@@ -12,7 +12,7 @@ use hfx_domain::{
     RouteKind, RouteState, SequenceNumber, SleepState,
 };
 use hfx_kernel_transport::{
-    HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+    ChildBatteryLane, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
     HFX_UAPI_OBSERVATION_CONFIDENCE_EXACT, HFX_UAPI_OBSERVATION_CONFIDENCE_OBSERVED,
     HFX_UAPI_OBSERVATION_CONFIDENCE_RAW, HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ACTIVITY,
     HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW, HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CONTACT_RAW,
@@ -227,6 +227,25 @@ impl PassiveObservationTranslator {
                 PassiveDisposition::IgnoredUnqualifiedSemantic,
             )),
         }
+    }
+
+    /// Returns the child lane and catalog model name bound to one logical
+    /// device, for forwarding its battery to the kernel.
+    #[must_use]
+    pub fn battery_lane(
+        &self,
+        device_id: &LogicalDeviceId,
+    ) -> Option<(ChildBatteryLane, &'static str)> {
+        let (slot, binding) = self
+            .lanes
+            .iter()
+            .find(|(_, binding)| binding.device_id == *device_id)?;
+        let lane = ChildBatteryLane::from_endpoint_slot(*slot)?;
+        let model_name = self
+            .catalog
+            .child(binding.product_id)
+            .map_or("", |profile| profile.model_name);
+        Some((lane, model_name))
     }
 
     fn stamp(
