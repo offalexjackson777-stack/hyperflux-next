@@ -351,6 +351,18 @@ fn clients_without_a_served_version_get_a_structured_protocol_rejection() {
 }
 
 #[test]
+fn retired_v1_and_v6_client_goldens_get_a_structured_protocol_rejection() {
+    for hello in [
+        include_bytes!("../../../tests/fixtures/protocol/retired/v1-negotiate-request.json")
+            .as_slice(),
+        include_bytes!("../../../tests/fixtures/protocol/retired/v6-negotiate-request.json")
+            .as_slice(),
+    ] {
+        assert_incompatible_hello_is_rejected_with_remediation(hello.trim_ascii_end());
+    }
+}
+
+#[test]
 fn framing_and_cleanup_failures_are_both_preserved() {
     let (mut client, server) = UnixStream::pair().expect("Unix stream pair creates");
     client

@@ -8,9 +8,8 @@ use hfx_domain::{
     NativeReportHex, NativeRouteAccess, NativeRouteEventKind, NativeRouteState, NativeRouteToken,
     PairingState, PowerState, PresenceState, ProductId, ProjectionRevision, ProtocolFeatureId,
     ProtocolVersion, ReceiverLifecycleState, ResourceKind, RestoreDeliveryState, RestoreState,
-    ReturnEvidence, ReturnPhase, RouteKind, RouteState, SequenceNumber, SleepState,
-    StableLightingMode, StreamEpoch, SupportLevel, TelemetryAvailability, TransactionClass,
-    VendorId,
+    ReturnEvidence, ReturnPhase, RouteKind, RouteState, SequenceNumber, SleepState, StreamEpoch,
+    SupportLevel, TelemetryAvailability, VendorId,
 };
 use hfx_protocol::{
     BatteryObservation, BridgeSnapshot, ClientHello, ControllerActions, ControllerOwnership,
@@ -253,9 +252,9 @@ fn integration_view() -> IntegrationView {
 
 fn framed_transaction_value() -> Value {
     let transaction: Value = serde_json::from_str(include_str!(
-        "../../../protocol/v2/fixtures/transaction-request-canonical.json"
+        "../../../protocol/v5/fixtures/transaction-request-canonical.json"
     ))
-    .expect("frozen v2 fixture is JSON");
+    .expect("frozen v5 fixture is JSON");
     json!({
         "method": "submit-transaction",
         "request": {
@@ -276,11 +275,7 @@ fn negotiation_request(version: u16, feature: &str) -> RpcRequest {
             minimum_version: number(version),
             maximum_version: number(version),
             required_features: vec![text(feature)],
-            optional_features: if version == 1 {
-                vec![text("atomic-transactions")]
-            } else {
-                Vec::new()
-            },
+            optional_features: Vec::new(),
         },
     })
 }
@@ -371,18 +366,16 @@ fn assert_wire_golden(relative: &str, bytes: &[u8]) {
     assert_eq!(fs::read(&path).expect("golden fixture reads"), expected);
 }
 
+const SERVED_VERSIONS: [(u16, &str); 2] = [
+    (5, "integration-view-projection"),
+    (7, "native-receiver-tunnel"),
+];
+
+const RETIRED_VERSIONS: [u16; 5] = [1, 2, 3, 4, 6];
+
 fn assert_version_wire_goldens() {
-    let features = [
-        "ownership-leases",
-        "profile-bound-transactions",
-        "semantic-stable-lighting",
-        "snapshot-profile-bindings",
-        "integration-view-projection",
-        "return-lifecycle-projection",
-        "native-receiver-tunnel",
-    ];
-    for version in 1_u16..=7 {
-        let request = negotiation_request(version, features[usize::from(version - 1)]);
+    for (version, feature) in SERVED_VERSIONS {
+        let request = negotiation_request(version, feature);
         assert_wire_golden(
             &format!("v{version}/negotiate-request.json"),
             &encode_rpc_request_for_version(&request, number(version))
@@ -396,31 +389,30 @@ fn assert_version_wire_goldens() {
     }
 }
 
-fn assert_transaction_wire_goldens() {
-    let v2 = decode_rpc_request_for_version(
-        &serde_json::to_vec(&framed_transaction_value()).expect("v2 request serializes"),
-        number(2),
-    )
-    .expect("v2 transaction normalizes");
-    assert_wire_golden(
-        "v2/static-transaction-request.json",
-        &encode_rpc_request_for_version(&v2, number(2)).expect("v2 transaction encodes"),
-    );
-
-    let mut off = v2;
-    let RpcRequest::SubmitTransaction(envelope) = &mut off else {
-        panic!("transaction request expected")
-    };
-    envelope.params.stable_intents[0].mode = StableLightingMode::Off;
-    envelope.params.frames[0].colors[0] = hfx_protocol::RgbColor {
-        red: ColorChannel::try_from(0_u8).expect("red is valid"),
-        green: ColorChannel::try_from(0_u8).expect("green is valid"),
-        blue: ColorChannel::try_from(0_u8).expect("blue is valid"),
-    };
-    assert_wire_golden(
-        "v3/off-transaction-request.json",
-        &encode_rpc_request_for_version(&off, number(3)).expect("v3 Off encodes"),
-    );
+fn assert_retired_versions_are_not_encoded_or_decoded() {
+    let request = negotiation_request(5, "integration-view-projection");
+    let request_bytes = serde_json::to_vec(&request).expect("request serializes");
+    let response = snapshot_response(false);
+    let response_bytes = serde_json::to_vec(&response).expect("response serializes");
+    for version in RETIRED_VERSIONS {
+        let version = number(version);
+        assert_eq!(
+            encode_rpc_request_for_version(&request, version),
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
+        );
+        assert_eq!(
+            decode_rpc_request_for_version(&request_bytes, version),
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
+        );
+        assert_eq!(
+            encode_rpc_response_for_version(&response, version),
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
+        );
+        assert_eq!(
+            decode_rpc_response_for_version(&response_bytes, version),
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
+        );
+    }
 }
 
 fn assert_integration_wire_goldens() {
@@ -493,28 +485,23 @@ fn assert_native_wire_goldens() {
 }
 
 #[test]
-fn retained_v1_through_v7_wire_surfaces_are_byte_golden() {
+fn served_v5_and_v7_wire_surfaces_are_byte_golden() {
     assert_version_wire_goldens();
-    assert_transaction_wire_goldens();
     assert_integration_wire_goldens();
     assert_native_wire_goldens();
 }
 
 #[test]
+fn retired_protocol_versions_are_neither_encoded_nor_decoded() {
+    assert_retired_versions_are_not_encoded_or_decoded();
+}
+
+#[test]
 fn seeded_framing_and_version_adapter_mutations_fail_closed() {
-    let features = [
-        "ownership-leases",
-        "profile-bound-transactions",
-        "semantic-stable-lighting",
-        "snapshot-profile-bindings",
-        "integration-view-projection",
-        "return-lifecycle-projection",
-        "native-receiver-tunnel",
-    ];
     let mut state = 0x6a09_e667_f3bc_c909_u64;
-    for version in 1_u16..=7 {
+    for (version, feature) in SERVED_VERSIONS {
         let protocol_version = number(version);
-        let request = negotiation_request(version, features[usize::from(version - 1)]);
+        let request = negotiation_request(version, feature);
         let canonical = encode_rpc_request_for_version(&request, protocol_version)
             .expect("canonical version request encodes");
         for iteration in 0..256_u16 {
@@ -583,8 +570,8 @@ fn decoded_request_collections_are_checked_against_protocol_bounds() {
         params: ClientHello {
             client_id: text::<ClientId>("client-1"),
             client_name: text::<ClientName>("test-client"),
-            minimum_version: number::<ProtocolVersion>(1),
-            maximum_version: number::<ProtocolVersion>(1),
+            minimum_version: number::<ProtocolVersion>(5),
+            maximum_version: number::<ProtocolVersion>(5),
             required_features,
             optional_features: Vec::new(),
         },
@@ -636,10 +623,10 @@ fn v5_integration_view_round_trips_and_cannot_downgrade() {
         decode_rpc_request_for_version(&encoded, number(5)),
         Ok(request.clone())
     );
-    for version in 1_u16..=4 {
+    for version in [1_u16, 2, 3, 4] {
         assert_eq!(
             encode_rpc_request_for_version(&request, number(version)),
-            Err(ProtocolWireError::UnsupportedVersionMethod)
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
         );
     }
 
@@ -654,10 +641,10 @@ fn v5_integration_view_round_trips_and_cannot_downgrade() {
         decode_rpc_response_for_version(&encoded, number(5)),
         Ok(response.clone())
     );
-    for version in 1_u16..=4 {
+    for version in [1_u16, 2, 3, 4] {
         assert_eq!(
             encode_rpc_response_for_version(&response, number(version)),
-            Err(ProtocolWireError::UnsupportedVersionMethod)
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
         );
     }
 }
@@ -679,34 +666,6 @@ fn integration_view_rejects_cross_generation_controller_claims() {
 }
 
 #[test]
-fn v4_preserves_profile_bindings_and_v3_downgrades_them_explicitly() {
-    let response = RpcResponse::SnapshotSuccess(SuccessEnvelope {
-        request_id: text("request-profile-snapshot"),
-        server_instance_id: text("bridge-instance-1"),
-        result: snapshot(battery(TelemetryAvailability::Reported, Some(73))),
-    });
-    let v4 = hfx_protocol::encode_rpc_response_for_version(&response, number(4))
-        .expect("v4 snapshot encodes");
-    assert_eq!(
-        decode_rpc_response_for_version(&v4, number(4)).expect("v4 snapshot decodes"),
-        response
-    );
-
-    let v3 = hfx_protocol::encode_rpc_response_for_version(&response, number(3))
-        .expect("v3 snapshot explicitly omits v4-only bindings");
-    let RpcResponse::SnapshotSuccess(legacy) =
-        decode_rpc_response_for_version(&v3, number(3)).expect("v3 snapshot decodes")
-    else {
-        panic!("snapshot response expected")
-    };
-    let receiver = &legacy.result.receivers[0];
-    assert!(receiver.profile_id.is_none());
-    assert!(receiver.profile_digest.is_none());
-    assert!(receiver.devices[0].profile_id.is_some());
-    assert!(receiver.devices[0].profile_digest.is_none());
-}
-
-#[test]
 fn unknown_rpc_methods_never_reach_dispatch() {
     let encoded = br#"{"method":"raw-hid","request":{}}"#;
     assert_eq!(
@@ -721,136 +680,50 @@ fn color_channel_type_remains_eight_bit_at_the_wire_boundary() {
 }
 
 #[test]
-fn frozen_v2_static_requests_normalize_to_conservative_static_semantics() {
-    let value = framed_transaction_value();
-    let encoded = serde_json::to_vec(&value).expect("request serializes");
-    let decoded = decode_rpc_request_for_version(&encoded, number(2))
-        .expect("frozen v2 Static request is safely normalized");
-    let RpcRequest::SubmitTransaction(envelope) = decoded else {
-        panic!("fixture must remain a transaction")
-    };
-    assert_eq!(
-        envelope.params.transaction_class,
-        TransactionClass::StaticLighting
-    );
-    assert_eq!(envelope.params.stable_intents.len(), 1);
-    assert_eq!(
-        envelope.params.stable_intents[0].mode,
-        StableLightingMode::Static
-    );
-
-    let mut effect = value;
-    effect["request"]["params"]["transaction_class"] = json!("effect-frame");
-    let effect = serde_json::to_vec(&effect).expect("effect request serializes");
-    let RpcRequest::SubmitTransaction(effect) =
-        decode_rpc_request_for_version(&effect, number(2)).expect("v2 effect is normalized")
-    else {
-        panic!("fixture must remain a transaction")
-    };
-    assert!(effect.params.stable_intents.is_empty());
-}
-
-#[test]
-fn frozen_v1_profileless_writes_fail_before_backend_dispatch() {
-    let mut value = framed_transaction_value();
-    let params = value["request"]["params"]
-        .as_object_mut()
-        .expect("transaction params are an object");
-    params.remove("receiver_profile_id");
-    params.remove("receiver_profile_digest");
-    params.remove("device_profiles");
-    let encoded = serde_json::to_vec(&value).expect("legacy request serializes");
-    assert_eq!(
-        decode_rpc_request_for_version(&encoded, number(1)),
-        Err(ProtocolWireError::UnsupportedVersionMethod)
-    );
-
-    let snapshot = json!({
-        "method": "snapshot",
-        "request": {
-            "request_id": "request-snapshot",
-            "protocol_session_id": "protocol-session-1",
-            "negotiation_token": "negotiation-1",
-            "params": {}
-        }
-    });
-    let snapshot = serde_json::to_vec(&snapshot).expect("snapshot serializes");
-    assert!(matches!(
-        decode_rpc_request_for_version(&snapshot, number(1)),
-        Ok(RpcRequest::Snapshot(_))
-    ));
-}
-
-#[test]
 fn versioned_decoders_reject_changed_or_unknown_wire_shapes_instead_of_guessing() {
-    let v2 = serde_json::to_vec(&framed_transaction_value()).expect("request serializes");
-    assert_eq!(
-        decode_rpc_request_for_version(&v2, number(3)),
-        Err(ProtocolWireError::MalformedJson)
-    );
+    let v5 = serde_json::to_vec(&framed_transaction_value()).expect("request serializes");
+    let decoded = decode_rpc_request_for_version(&v5, number(5)).expect("v5 request decodes");
+    assert_eq!(decode_rpc_request_for_version(&v5, number(7)), Ok(decoded));
+    for version in [1_u16, 2, 3, 4, 6, 8] {
+        assert_eq!(
+            decode_rpc_request_for_version(&v5, number(version)),
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
+        );
+    }
 
-    let normalized = decode_rpc_request_for_version(&v2, number(2)).expect("v2 request normalizes");
-    let v3 = serde_json::to_vec(&normalized).expect("normalized request serializes");
+    let native =
+        encode_rpc_request_for_version(&native_exchange_request(&"00".repeat(90)), number(7))
+            .expect("v7 native request encodes");
+    assert!(decode_rpc_request_for_version(&native, number(7)).is_ok());
     assert_eq!(
-        decode_rpc_request_for_version(&v3, number(2)),
+        decode_rpc_request_for_version(&native, number(5)),
         Err(ProtocolWireError::MalformedJson)
-    );
-    assert_eq!(
-        decode_rpc_request_for_version(&v3, number(4)),
-        Ok(normalized.clone())
-    );
-    assert_eq!(
-        decode_rpc_request_for_version(&v3, number(5)),
-        Ok(normalized.clone())
-    );
-    assert_eq!(
-        decode_rpc_request_for_version(&v3, number(6)),
-        Ok(normalized.clone())
-    );
-    assert_eq!(
-        decode_rpc_request_for_version(&v3, number(7)),
-        Ok(normalized)
-    );
-    assert_eq!(
-        decode_rpc_request_for_version(&v3, number(8)),
-        Err(ProtocolWireError::UnsupportedProtocolVersion)
     );
 }
 
 #[test]
 fn outbound_requests_downgrade_only_when_semantics_are_exactly_representable() {
-    let v2 = serde_json::to_vec(&framed_transaction_value()).expect("request serializes");
-    let mut current =
-        decode_rpc_request_for_version(&v2, number(2)).expect("v2 request normalizes");
+    let v5 = serde_json::to_vec(&framed_transaction_value()).expect("request serializes");
+    let current = decode_rpc_request_for_version(&v5, number(5)).expect("v5 request decodes");
+    for version in [5_u16, 7] {
+        let encoded = encode_rpc_request_for_version(&current, number(version))
+            .expect("transaction semantics are representable by every served version");
+        assert_eq!(
+            decode_rpc_request_for_version(&encoded, number(version)),
+            Ok(current.clone())
+        );
+    }
+    for version in RETIRED_VERSIONS {
+        assert_eq!(
+            encode_rpc_request_for_version(&current, number(version)),
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
+        );
+    }
 
-    let encoded_v2 = encode_rpc_request_for_version(&current, number(2))
-        .expect("Static semantics are representable by v2");
+    let native = native_exchange_request(&"00".repeat(90));
     assert_eq!(
-        decode_rpc_request_for_version(&encoded_v2, number(2)),
-        Ok(current.clone())
-    );
-    assert_eq!(
-        encode_rpc_request_for_version(&current, number(1)),
+        encode_rpc_request_for_version(&native, number(5)),
         Err(ProtocolWireError::UnsupportedVersionMethod)
-    );
-
-    let RpcRequest::SubmitTransaction(envelope) = &mut current else {
-        panic!("fixture must remain a transaction")
-    };
-    envelope.params.stable_intents[0].mode = StableLightingMode::Off;
-    envelope.params.frames[0].colors[0].red = ColorChannel::try_from(0_u8).expect("black red");
-    envelope.params.frames[0].colors[0].green = ColorChannel::try_from(0_u8).expect("black green");
-    envelope.params.frames[0].colors[0].blue = ColorChannel::try_from(0_u8).expect("black blue");
-    assert_eq!(
-        encode_rpc_request_for_version(&current, number(2)),
-        Err(ProtocolWireError::VersionTranslation)
-    );
-
-    let encoded_v3 =
-        encode_rpc_request_for_version(&current, number(3)).expect("v3 preserves explicit Off");
-    assert_eq!(
-        decode_rpc_request_for_version(&encoded_v3, number(3)),
-        Ok(current)
     );
 }
 
@@ -861,51 +734,27 @@ fn responses_are_checked_against_the_exact_negotiated_schema() {
         server_instance_id: text("bridge-instance-1"),
         result: snapshot(battery(TelemetryAvailability::Reported, Some(73))),
     });
-    for version in [1_u16, 2, 3] {
+    for version in [5_u16, 7] {
         let version = number(version);
         validate_rpc_response_for_version(&response, version)
-            .expect("current response is representable by every retained response schema");
-        let encoded = encode_rpc_response_for_version(&response, version)
-            .expect("response encodes in the frozen schema");
-        let RpcResponse::SnapshotSuccess(legacy) =
-            decode_rpc_response_for_version(&encoded, version).expect("legacy response decodes")
-        else {
-            panic!("snapshot response expected")
-        };
-        assert!(legacy.result.receivers[0].profile_id.is_none());
-        assert!(legacy.result.receivers[0].profile_digest.is_none());
-        assert!(
-            legacy.result.receivers[0].devices[0]
-                .profile_digest
-                .is_none()
+            .expect("served versions preserve complete bindings");
+        let encoded =
+            encode_rpc_response_for_version(&response, version).expect("response encodes");
+        assert_eq!(
+            decode_rpc_response_for_version(&encoded, version),
+            Ok(response.clone())
         );
     }
-    let v4 = number(4);
-    validate_rpc_response_for_version(&response, v4).expect("v4 preserves complete bindings");
-    let encoded = encode_rpc_response_for_version(&response, v4).expect("v4 response encodes");
-    assert_eq!(
-        decode_rpc_response_for_version(&encoded, v4),
-        Ok(response.clone())
-    );
-    let v5 = number(5);
-    validate_rpc_response_for_version(&response, v5).expect("v5 preserves complete bindings");
-    let encoded = encode_rpc_response_for_version(&response, v5).expect("v5 response encodes");
-    assert_eq!(decode_rpc_response_for_version(&encoded, v5), Ok(response));
-    assert_eq!(
-        validate_rpc_response_for_version(
-            &RpcResponse::SnapshotSuccess(SuccessEnvelope {
-                request_id: text("request-unsupported-version"),
-                server_instance_id: text("bridge-instance-1"),
-                result: snapshot(battery(TelemetryAvailability::Reported, Some(73))),
-            }),
-            number(8)
-        ),
-        Err(ProtocolWireError::UnsupportedProtocolVersion)
-    );
+    for version in [1_u16, 2, 3, 4, 6, 8] {
+        assert_eq!(
+            validate_rpc_response_for_version(&response, number(version)),
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
+        );
+    }
 }
 
 #[test]
-fn v6_projects_return_epochs_while_v5_omits_them_safely() {
+fn v7_projects_return_epochs_while_v5_omits_them_safely() {
     let mut current = snapshot(battery(TelemetryAvailability::Reported, Some(73)));
     current.receivers[0].devices[0].endpoints[0].return_epoch = Some(return_epoch());
     let response = RpcResponse::SnapshotSuccess(SuccessEnvelope {
@@ -914,11 +763,11 @@ fn v6_projects_return_epochs_while_v5_omits_them_safely() {
         result: current,
     });
 
-    let v6 = number(6);
-    let encoded = encode_rpc_response_for_version(&response, v6)
-        .expect("v6 preserves the return lifecycle projection");
+    let v7 = number(7);
+    let encoded = encode_rpc_response_for_version(&response, v7)
+        .expect("v7 preserves the return lifecycle projection");
     assert_eq!(
-        decode_rpc_response_for_version(&encoded, v6),
+        decode_rpc_response_for_version(&encoded, v7),
         Ok(response.clone())
     );
 
@@ -971,10 +820,14 @@ fn v7_native_exchange_round_trips_and_cannot_downgrade() {
         decode_rpc_request_for_version(&encoded, number(7)),
         Ok(request.clone())
     );
-    for version in 1_u16..=6 {
+    assert_eq!(
+        encode_rpc_request_for_version(&request, number(5)),
+        Err(ProtocolWireError::UnsupportedVersionMethod)
+    );
+    for version in RETIRED_VERSIONS {
         assert_eq!(
             encode_rpc_request_for_version(&request, number(version)),
-            Err(ProtocolWireError::UnsupportedVersionMethod)
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
         );
     }
 
@@ -995,10 +848,14 @@ fn v7_native_exchange_round_trips_and_cannot_downgrade() {
         decode_rpc_response_for_version(&encoded, number(7)),
         Ok(response.clone())
     );
-    for version in 1_u16..=6 {
+    assert_eq!(
+        encode_rpc_response_for_version(&response, number(5)),
+        Err(ProtocolWireError::UnsupportedVersionMethod)
+    );
+    for version in RETIRED_VERSIONS {
         assert_eq!(
             encode_rpc_response_for_version(&response, number(version)),
-            Err(ProtocolWireError::UnsupportedVersionMethod)
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
         );
     }
 }
@@ -1140,12 +997,12 @@ fn legacy_versions_reject_native_leases_and_hide_native_snapshot_ownership() {
     });
     encode_rpc_request_for_version(&request, number(7)).expect("v7 native lease request is valid");
     assert_eq!(
-        encode_rpc_request_for_version(&request, number(6)),
+        encode_rpc_request_for_version(&request, number(5)),
         Err(ProtocolWireError::UnsupportedVersionMethod)
     );
     let wire = serde_json::to_vec(&request).expect("request serializes");
     assert_eq!(
-        decode_rpc_request_for_version(&wire, number(6)),
+        decode_rpc_request_for_version(&wire, number(5)),
         Err(ProtocolWireError::UnsupportedVersionMethod)
     );
 
@@ -1172,14 +1029,14 @@ fn legacy_versions_reject_native_leases_and_hide_native_snapshot_ownership() {
     };
     assert_eq!(v7.result.receivers[0].ownership.len(), 1);
 
-    let v6 = encode_rpc_response_for_version(&response, number(6))
-        .expect("v6 snapshot safely omits native ownership");
-    let RpcResponse::SnapshotSuccess(v6) =
-        decode_rpc_response_for_version(&v6, number(6)).expect("v6 snapshot decodes")
+    let v5 = encode_rpc_response_for_version(&response, number(5))
+        .expect("v5 snapshot safely omits native ownership");
+    let RpcResponse::SnapshotSuccess(v5) =
+        decode_rpc_response_for_version(&v5, number(5)).expect("v5 snapshot decodes")
     else {
         panic!("snapshot response expected")
     };
-    assert!(v6.result.receivers[0].ownership.is_empty());
+    assert!(v5.result.receivers[0].ownership.is_empty());
 }
 
 fn assert_distinct_messages<E: std::fmt::Display>(errors: &[E]) {

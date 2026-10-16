@@ -28,76 +28,49 @@ class ProtocolCompilerTests(unittest.TestCase):
     def test_catalog_is_versioned_and_generated_deterministically(self) -> None:
         registry = load_protocol_registry(ROOT)
         self.assertEqual(registry.current_version, 7)
-        self.assertEqual([item.version for item in registry.versions], [1, 2, 3, 4, 5, 6, 7])
+        self.assertEqual([item.version for item in registry.versions], [5, 7])
         self.assertEqual(
-            registry.versions[0].source_sha256,
+            [(item.version, item.retired_in) for item in registry.retired],
+            [(1, "2.2.0"), (2, "2.2.0"), (3, "2.2.0"), (4, "2.2.0"), (6, "2.2.0")],
+        )
+        self.assertEqual(
+            registry.retired[0].source_sha256,
             "ed3df1f1627ca8a836f509ead3ab7dc7a4cbc6116f6da4accb2cc53e7500859f",
         )
         self.assertTrue(
             all(len(item.source_sha256) == 64 for item in registry.versions)
         )
-        v1_transaction = next(
-            record
-            for record in registry.versions[0].catalog.records
-            if record.name == "TransactionRequest"
+        v5 = registry.versions[0].catalog
+        v7 = registry.versions[1].catalog
+        v5_transaction = next(
+            record for record in v5.records if record.name == "TransactionRequest"
         )
-        v2_transaction = next(
-            record
-            for record in registry.versions[1].catalog.records
-            if record.name == "TransactionRequest"
-        )
-        v3_transaction = next(
-            record
-            for record in registry.versions[2].catalog.records
-            if record.name == "TransactionRequest"
-        )
-        v4_snapshot = next(
-            record
-            for record in registry.versions[3].catalog.records
-            if record.name == "ReceiverSnapshot"
-        )
-        v5 = registry.versions[4].catalog
-        v6 = registry.versions[5].catalog
-        v7 = registry.versions[6].catalog
-        self.assertNotIn(
-            "device_profiles", [field.name for field in v1_transaction.fields]
+        v5_snapshot = next(
+            record for record in v5.records if record.name == "ReceiverSnapshot"
         )
         self.assertIn(
-            "device_profiles", [field.name for field in v2_transaction.fields]
-        )
-        self.assertNotIn(
-            "stable_intents", [field.name for field in v2_transaction.fields]
+            "device_profiles", [field.name for field in v5_transaction.fields]
         )
         self.assertIn(
-            "stable_intents", [field.name for field in v3_transaction.fields]
+            "stable_intents", [field.name for field in v5_transaction.fields]
         )
-        self.assertNotIn(
-            "atomic-transactions", registry.versions[0].served_features
-        )
+        self.assertIn("profile_digest", [field.name for field in v5_snapshot.fields])
         self.assertIn(
-            "profile-bound-transactions", registry.versions[1].served_features
+            "integration-view-projection", registry.versions[0].served_features
         )
-        self.assertNotIn(
-            "semantic-stable-lighting", registry.versions[1].served_features
-        )
-        self.assertIn(
-            "semantic-stable-lighting", registry.versions[2].served_features
-        )
-        self.assertIn(
-            "snapshot-profile-bindings", registry.versions[3].served_features
-        )
-        self.assertIn("profile_digest", [field.name for field in v4_snapshot.fields])
-        self.assertIn("integration-view-projection", registry.versions[4].served_features)
         self.assertIn("ControllerOwnership", [union.name for union in v5.unions])
+        self.assertNotIn(
+            "return-lifecycle-projection", registry.versions[0].served_features
+        )
         self.assertIn(
-            "return-lifecycle-projection", registry.versions[5].served_features
+            "return-lifecycle-projection", registry.versions[1].served_features
         )
-        self.assertIn("ReturnEpoch", [record.name for record in v6.records])
-        v6_endpoint = next(
-            record for record in v6.records if record.name == "EndpointSnapshot"
+        self.assertIn("ReturnEpoch", [record.name for record in v7.records])
+        v7_endpoint = next(
+            record for record in v7.records if record.name == "EndpointSnapshot"
         )
-        self.assertIn("return_epoch", [field.name for field in v6_endpoint.fields])
-        self.assertIn("native-receiver-tunnel", registry.versions[6].served_features)
+        self.assertIn("return_epoch", [field.name for field in v7_endpoint.fields])
+        self.assertIn("native-receiver-tunnel", registry.versions[1].served_features)
         self.assertEqual(
             [
                 method.name

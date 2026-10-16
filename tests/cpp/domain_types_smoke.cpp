@@ -4,12 +4,7 @@
 #include <hyperflux/generated/error_catalog.hpp>
 #include <hyperflux/generated/profile_catalog.hpp>
 #include <hyperflux/generated/protocol_types.hpp>
-#include <hyperflux/generated/protocol_v1_types.hpp>
-#include <hyperflux/generated/protocol_v2_types.hpp>
-#include <hyperflux/generated/protocol_v3_types.hpp>
-#include <hyperflux/generated/protocol_v4_types.hpp>
 #include <hyperflux/generated/protocol_v5_types.hpp>
-#include <hyperflux/generated/protocol_v6_types.hpp>
 #include <hyperflux/generated/protocol_v7_types.hpp>
 
 #include <string_view>
@@ -41,18 +36,8 @@ int main()
     }
     static_assert(minimum_protocol_version == 7);
     static_assert(maximum_protocol_version == 7);
-    static_assert(v1::minimum_protocol_version == 1);
-    static_assert(v1::maximum_protocol_version == 1);
-    static_assert(v2::minimum_protocol_version == 2);
-    static_assert(v2::maximum_protocol_version == 2);
-    static_assert(v3::minimum_protocol_version == 3);
-    static_assert(v3::maximum_protocol_version == 3);
-    static_assert(v4::minimum_protocol_version == 4);
-    static_assert(v4::maximum_protocol_version == 4);
     static_assert(v5::minimum_protocol_version == 5);
     static_assert(v5::maximum_protocol_version == 5);
-    static_assert(v6::minimum_protocol_version == 6);
-    static_assert(v6::maximum_protocol_version == 6);
     static_assert(v7::minimum_protocol_version == 7);
     static_assert(v7::maximum_protocol_version == 7);
     if(methods[0].name != std::string_view{"negotiate"}
