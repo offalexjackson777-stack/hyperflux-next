@@ -32,9 +32,10 @@
     "targets": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["arch"],
+      "required": ["arch", "ubuntu"],
       "properties": {
-        "arch": {"$ref": "#/$defs/target"}
+        "arch": {"$ref": "#/$defs/target"},
+        "ubuntu": {"$ref": "#/$defs/debTarget"}
       }
     }
   },
@@ -48,6 +49,29 @@
     "packageExpression": {
       "type": "string",
       "pattern": "^[A-Za-z0-9][A-Za-z0-9+_.() >=~@-]{0,95}$"
+    },
+    "debianRelation": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9+.-]{1,63}( \\((<<|<=|=|>=|>>) [0-9][A-Za-z0-9.+~-]{0,63}\\))?$"
+    },
+    "dependencyRoles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dkms", "c-runtime", "compiler-runtime", "service-manager", "device-manager"],
+      "properties": {
+        "dkms": {"$ref": "#/$defs/packageExpression"},
+        "c-runtime": {"$ref": "#/$defs/packageExpression"},
+        "compiler-runtime": {"$ref": "#/$defs/packageExpression"},
+        "service-manager": {"$ref": "#/$defs/packageExpression"},
+        "device-manager": {"$ref": "#/$defs/packageExpression"}
+      }
+    },
+    "architectures": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 8,
+      "propertyNames": {"pattern": "^[A-Za-z0-9_.-]{1,127}$"},
+      "additionalProperties": {"type": "string", "pattern": "^[A-Za-z0-9_.-]{1,31}$"}
     },
     "relationList": {
       "type": "array",
@@ -104,27 +128,12 @@
     "target": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["architectures", "dependency_roles", "components"],
+      "required": ["package_format", "maturity", "architectures", "dependency_roles", "components"],
       "properties": {
-        "architectures": {
-          "type": "object",
-          "minProperties": 1,
-          "maxProperties": 8,
-          "propertyNames": {"pattern": "^[A-Za-z0-9_.-]{1,127}$"},
-          "additionalProperties": {"type": "string", "pattern": "^[A-Za-z0-9_.-]{1,31}$"}
-        },
-        "dependency_roles": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["dkms", "c-runtime", "compiler-runtime", "service-manager", "device-manager"],
-          "properties": {
-            "dkms": {"$ref": "#/$defs/packageExpression"},
-            "c-runtime": {"$ref": "#/$defs/packageExpression"},
-            "compiler-runtime": {"$ref": "#/$defs/packageExpression"},
-            "service-manager": {"$ref": "#/$defs/packageExpression"},
-            "device-manager": {"$ref": "#/$defs/packageExpression"}
-          }
-        },
+        "package_format": {"const": "pacman"},
+        "maturity": {"const": "published"},
+        "architectures": {"$ref": "#/$defs/architectures"},
+        "dependency_roles": {"$ref": "#/$defs/dependencyRoles"},
         "components": {
           "type": "object",
           "additionalProperties": false,
@@ -132,6 +141,48 @@
           "properties": {
             "linux": {"$ref": "#/$defs/component"},
             "full": {"$ref": "#/$defs/component"}
+          }
+        }
+      }
+    },
+    "debTarget": {
+      "description": "A Debian-format target. It carries only the Core edition; Full stays Arch-only.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package_format", "maturity", "release", "architectures", "dependency_roles", "components"],
+      "properties": {
+        "package_format": {"const": "deb"},
+        "maturity": {"enum": ["ci-only", "published"]},
+        "release": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["distribution", "version", "codename", "c_runtime_version"],
+          "properties": {
+            "distribution": {"type": "string", "pattern": "^[A-Z][A-Za-z]{1,31}$"},
+            "version": {"type": "string", "pattern": "^[0-9]{2}\\.[0-9]{2}$"},
+            "codename": {"type": "string", "pattern": "^[a-z]{2,32}$"},
+            "c_runtime_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+$"}
+          }
+        },
+        "architectures": {"$ref": "#/$defs/architectures"},
+        "dependency_roles": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dkms", "c-runtime", "compiler-runtime", "service-manager", "device-manager"],
+          "properties": {
+            "dkms": {"$ref": "#/$defs/debianRelation"},
+            "c-runtime": {"$ref": "#/$defs/debianRelation"},
+            "compiler-runtime": {"$ref": "#/$defs/debianRelation"},
+            "service-manager": {"$ref": "#/$defs/debianRelation"},
+            "device-manager": {"$ref": "#/$defs/debianRelation"}
+          }
+        },
+        "components": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["linux"],
+          "properties": {
+            "linux": {"$ref": "#/$defs/component"}
           }
         }
       }

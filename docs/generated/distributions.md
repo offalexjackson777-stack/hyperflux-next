@@ -4,7 +4,7 @@
 
 This page lists the HyperFlux packages, what each one depends on, and what each one replaces, for packagers and anyone choosing between Core and Full.
 
-Source digest: `b85fd605da9c403513846250534f7e8c9c711a8a5f116b759f9a5532616f6ec1`.
+Source digest: `d722f72c3c7b2fd4a537de1fe4872818c2436b6fcbf9e4ce7c94949a4442199c`.
 
 The Arch `pkgbase=hyperflux-next` builds two user-facing packages that never install the same file. Packages for other distributions are tested separately.
 
