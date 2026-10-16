@@ -22,8 +22,8 @@
     "--quiet"
   ],
   "baseline": {
-    "source_revision": "446c2c064444e98b0f89b5ef2ee7db5e8ce546a0",
-    "report_sha256": "4054b352a6cc8d856de2fcb3d17da64b4237eab38ebec5808164fc342bea2c48",
+    "source_revision": "1b2cf7785813198da0bb95c1a3edd6db558e2b90",
+    "report_sha256": "4c6d3da76264364cdfcf65453173c61d3a290ec1abfc0dade28a9b785920cd70",
     "report_format": "llvm.coverage.json.export-3.1.0"
   },
   "tolerance": {
@@ -42,25 +42,25 @@
   },
   "metrics": {
     "lines": {
-      "baseline_count": 37599,
-      "baseline_covered": 27391,
-      "baseline_notcovered": 10208,
+      "baseline_count": 39979,
+      "baseline_covered": 29904,
+      "baseline_notcovered": 10075,
       "minimum_covered": 27391,
-      "maximum_notcovered": 10208
+      "maximum_notcovered": 10075
     },
     "functions": {
-      "baseline_count": 3802,
-      "baseline_covered": 2691,
-      "baseline_notcovered": 1111,
+      "baseline_count": 4074,
+      "baseline_covered": 2965,
+      "baseline_notcovered": 1109,
       "minimum_covered": 2691,
-      "maximum_notcovered": 1111
+      "maximum_notcovered": 1109
     },
     "regions": {
-      "baseline_count": 49603,
-      "baseline_covered": 35767,
-      "baseline_notcovered": 13836,
+      "baseline_count": 53108,
+      "baseline_covered": 39412,
+      "baseline_notcovered": 13696,
       "minimum_covered": 35767,
-      "maximum_notcovered": 13836
+      "maximum_notcovered": 13696
     }
   },
   "ratio_floor": {
