@@ -246,6 +246,113 @@ class GitHubGovernanceTests(unittest.TestCase):
             self.assertNotIn(".hfx/upstreams", build["path"])
             self.assertEqual(build["restore-keys"], "hfx-build-${{ runner.os }}-\n")
 
+    def test_documentation_render_is_a_required_offline_check_on_every_pull_request(
+        self,
+    ) -> None:
+        fast = yaml.safe_load(verification_workflow(self.governance))
+        full = yaml.safe_load(full_verification_workflow(self.governance))
+        self.assertEqual(fast["on"]["pull_request"], {})
+        job = fast["jobs"]["documentation-render"]
+        self.assertEqual(job["name"], "Documentation render")
+        self.assertIn("Documentation render", self.governance.required_checks)
+        self.assertTrue(self.governance.strict_required_status_checks)
+        steps = {step["name"]: step for step in job["steps"]}
+        self.assertEqual(
+            steps["Install the locked documentation renderer"]["run"],
+            './hfx ci docs-prepare --image "$HFX_CI_IMAGE"',
+        )
+        render = steps["Render every document offline and fail on any issue"]
+        self.assertIn("./hfx ci docs-render", render["run"])
+        self.assertIn('--changed-from "$HFX_CHANGED_FROM"', render["run"])
+        self.assertNotIn("continue-on-error", render)
+        upload = steps["Upload hyperflux-documentation-render"]
+        self.assertEqual(upload["if"], "${{ always() }}")
+        self.assertEqual(upload["with"]["path"], "build/ci/documentation-render")
+
+        # Only pull requests into, and pushes to, the default branch are releases.
+        branch = self.governance.default_branch
+        expected = (
+            f"${{{{ (github.base_ref == '{branch}' || github.ref == 'refs/heads/{branch}') "
+            "&& 'required' || 'structure' }}"
+        )
+        for workflow, job_id in ((fast, "fast-software"), (full, "full-software")):
+            verify = next(
+                step
+                for step in workflow["jobs"][job_id]["steps"]
+                if "./hfx ci verify" in step.get("run", "")
+            )
+            with self.subTest(job=job_id):
+                self.assertEqual(verify["env"]["HFX_RELEASE_EVIDENCE"], expected)
+                self.assertIn('--release-evidence "$HFX_RELEASE_EVIDENCE"', verify["run"])
+
+    @patch("hfxdev.ci.shutil.which", return_value="/usr/bin/docker")
+    def test_documentation_render_fetches_locked_packages_then_renders_offline(
+        self, _which
+    ) -> None:
+        common = {
+            "image": self.governance.development_image,
+            "engine": "docker",
+            "uid": 1000,
+            "gid": 1000,
+        }
+        prepare = container_invocation(ROOT, operation="docs-prepare", **common)
+        render = container_invocation(
+            ROOT,
+            operation="docs-render",
+            output=Path("build/ci/documentation-render"),
+            changed_from="b" * 40,
+            **common,
+        )
+        self.assertEqual(prepare.network, "bridge")
+        prepare_command = " ".join(prepare.command)
+        self.assertIn("npm ci --prefix .hfx/documentation-render --ignore-scripts", prepare_command)
+        self.assertIn("toolchains/documentation-render/package-lock.json", prepare_command)
+        self.assertNotIn("HFX_PINNED_VERIFICATION_ENVIRONMENT", prepare_command)
+        self.assertEqual(render.network, "none")
+        render_command = " ".join(render.command)
+        self.assertIn("HFX_PINNED_VERIFICATION_ENVIRONMENT=1", render_command)
+        self.assertTrue(
+            render_command.endswith(
+                "./hfx docs render --output build/ci/documentation-render "
+                "--chromium /usr/bin/chromium "
+                "--node-modules .hfx/documentation-render/node_modules "
+                "--changed-from " + "b" * 40
+            )
+        )
+        for bad in (
+            {"operation": "docs-render"},
+            {"operation": "docs-render", "output": Path("/tmp/render")},
+            {"operation": "docs-render", "output": Path("build/x"), "lane": "fast"},
+            {"operation": "docs-prepare", "output": Path("build/x")},
+            {"operation": "docs-prepare", "changed_from": "b" * 40},
+            {
+                "operation": "package-artifacts",
+                "output": Path("build/x"),
+                "release_evidence": "required",
+            },
+            {
+                "operation": "verify",
+                "lane": "fast",
+                "output": Path("build/x"),
+                "release_evidence": "always",
+            },
+        ):
+            with self.subTest(arguments=bad), self.assertRaises(ModelError):
+                container_invocation(ROOT, **bad, **common)
+        verify = container_invocation(
+            ROOT,
+            operation="verify",
+            lane="full",
+            output=Path("build/ci/full"),
+            release_evidence="required",
+            **common,
+        )
+        self.assertTrue(
+            " ".join(verify.command).endswith(
+                "./hfx verify --full --output build/ci/full --release-evidence required"
+            )
+        )
+
     def test_kernel_canary_follows_new_kernels_without_gating_merges(self) -> None:
         image = load_development_environment(ROOT).image
         text = kernel_canary_workflow(self.governance, image)

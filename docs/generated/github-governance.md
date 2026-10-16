@@ -44,6 +44,7 @@ The distribution packages workflow is a second non-gating check. It builds the p
 - `Analyze (c-cpp)`
 - `Analyze (python)`
 - `Dependency review`
+- `Documentation render`
 - `Fast software`
 - `Full software`
 

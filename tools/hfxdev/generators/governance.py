@@ -136,6 +136,63 @@ def _verification_summary(output: str) -> dict[str, Any]:
     }
 
 
+CHANGED_FROM = "${{ github.event.pull_request.base.sha || github.event.before || '' }}"
+DOCUMENTATION_RENDER_OUTPUT = "build/ci/documentation-render"
+
+
+def _release_evidence(governance: GitHubGovernance) -> str:
+    """Pull requests into, and pushes to, the default branch are releases.
+
+    Only they must carry a documentation render of their exact documents; every
+    other pull request checks the committed render record's structure.
+    """
+    branch = governance.default_branch
+    return (
+        f"${{{{ (github.base_ref == '{branch}' || github.ref == 'refs/heads/{branch}') "
+        "&& 'required' || 'structure' }}"
+    )
+
+
+def _documentation_render_job(governance: GitHubGovernance) -> dict[str, Any]:
+    output = DOCUMENTATION_RENDER_OUTPUT
+    return {
+        "name": "Documentation render",
+        "runs-on": governance.runner,
+        "timeout-minutes": 75,
+        "steps": [
+            _checkout(governance),
+            *_build_environment(governance),
+            {
+                "name": "Install the locked documentation renderer",
+                "run": './hfx ci docs-prepare --image "$HFX_CI_IMAGE"',
+            },
+            {
+                "name": "Render every document offline and fail on any issue",
+                "env": {"HFX_CHANGED_FROM": CHANGED_FROM},
+                "run": (
+                    f'./hfx ci docs-render --image "$HFX_CI_IMAGE" --output {output} '
+                    '--changed-from "$HFX_CHANGED_FROM"'
+                ),
+            },
+            {
+                "name": "Publish documentation render summary",
+                "if": "${{ always() }}",
+                "run": (
+                    f'if [ -f {output}/summary.md ]; then '
+                    f'cat {output}/summary.md >> "$GITHUB_STEP_SUMMARY"; fi'
+                ),
+            },
+            _upload(
+                governance,
+                name="hyperflux-documentation-render",
+                path=output,
+                retention_days=30,
+                if_no_files_found="warn",
+            ),
+        ],
+    }
+
+
 def verification_workflow(governance: GitHubGovernance) -> str:
     steps = [_checkout(governance), *_caches(governance), *_build_environment(governance)]
     steps.extend(
@@ -147,9 +204,13 @@ def verification_workflow(governance: GitHubGovernance) -> str:
             {
                 "name": "Run fail-closed changed-path verification",
                 "env": {
-                    "HFX_CHANGED_FROM": "${{ github.event.pull_request.base.sha || github.event.before || '' }}"
+                    "HFX_CHANGED_FROM": CHANGED_FROM,
+                    "HFX_RELEASE_EVIDENCE": _release_evidence(governance),
                 },
-                "run": './hfx ci verify --image "$HFX_CI_IMAGE" --lane fast --output build/ci/fast --changed-from "$HFX_CHANGED_FROM"',
+                "run": (
+                    './hfx ci verify --image "$HFX_CI_IMAGE" --lane fast --output build/ci/fast '
+                    '--changed-from "$HFX_CHANGED_FROM" --release-evidence "$HFX_RELEASE_EVIDENCE"'
+                ),
             },
             _verification_summary("build/ci/fast"),
             _upload(
@@ -179,7 +240,8 @@ def verification_workflow(governance: GitHubGovernance) -> str:
                 "runs-on": governance.runner,
                 "timeout-minutes": 45,
                 "steps": steps,
-            }
+            },
+            "documentation-render": _documentation_render_job(governance),
         },
     }
     return _yaml(value, governance)
@@ -191,7 +253,15 @@ def full_verification_workflow(governance: GitHubGovernance) -> str:
         [
             {"name": "Prepare exact upstream sources", "run": './hfx ci prepare --image "$HFX_CI_IMAGE"'},
             {"name": "Qualify packaged OpenRGB isolation", "run": './hfx ci qualify-openrgb --image "$HFX_CI_IMAGE" --output build/ci/openrgb-qualification'},
-            {"name": "Run the complete software graph", "run": './hfx ci verify --image "$HFX_CI_IMAGE" --lane full --output build/ci/full --openrgb-qualification build/ci/openrgb-qualification/binding.json'},
+            {
+                "name": "Run the complete software graph",
+                "env": {"HFX_RELEASE_EVIDENCE": _release_evidence(governance)},
+                "run": (
+                    './hfx ci verify --image "$HFX_CI_IMAGE" --lane full --output build/ci/full '
+                    "--openrgb-qualification build/ci/openrgb-qualification/binding.json "
+                    '--release-evidence "$HFX_RELEASE_EVIDENCE"'
+                ),
+            },
             _verification_summary("build/ci/full"),
             _upload(
                 governance,
