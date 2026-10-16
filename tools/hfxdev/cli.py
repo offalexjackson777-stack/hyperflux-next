@@ -50,6 +50,8 @@ from .github_sync import plan as plan_github
 from .github_sync import verify as verify_github
 from .knowledge import import_upstream_catalogs
 from .openrazer import write_imported_metadata
+from .owner_reports import CONFIRMATION_LABELS as OWNER_CONFIRMATION_LABELS
+from .owner_reports import build_owner_record, write_owner_record
 from .openrazer_capability import write_userspace_capability_catalog
 from .openrazer_native_route import (
     prepare_openrazer_native_source,
@@ -260,6 +262,36 @@ def _parser() -> argparse.ArgumentParser:
     native_promote.add_argument("--draft", required=True, type=Path)
     native_promote.add_argument("--parity", required=True, type=Path)
     native_promote.add_argument("--output-dir", type=Path)
+
+    qualification = commands.add_parser(
+        "qualification", help="accept hardware reports from device owners"
+    )
+    qualification_commands = qualification.add_subparsers(
+        dest="qualification_command", required=True
+    )
+    qualification_ingest = qualification_commands.add_parser(
+        "ingest",
+        help="check one owner hardware report and write its public record",
+    )
+    qualification_ingest.add_argument(
+        "report",
+        type=Path,
+        help="saved device support issue body, or the raw report JSON; - reads standard input",
+    )
+    qualification_ingest.add_argument("--issue", required=True, type=int)
+    qualification_ingest.add_argument(
+        "--device", help="device-N from the report, when it shows more than one candidate"
+    )
+    qualification_ingest.add_argument(
+        "--confirmed",
+        action="append",
+        choices=sorted(OWNER_CONFIRMATION_LABELS),
+        help="what the owner checked by hand; only for a raw report, repeat as needed",
+    )
+    qualification_ingest.add_argument("--output-dir", type=Path)
+    qualification_ingest.add_argument(
+        "--check", action="store_true", help="check the report and print the record without writing it"
+    )
 
     upstream = commands.add_parser("upstream", help="manage immutable upstream checkouts")
     upstream_commands = upstream.add_subparsers(dest="upstream_command", required=True)
@@ -933,6 +965,31 @@ def main(arguments: list[str] | None = None) -> int:
                 print("Write authority: not granted automatically")
                 print(f"Privacy-safe assessment: {destination}")
                 return 0
+        if args.command == "qualification":
+            try:
+                submission = (
+                    sys.stdin.read()
+                    if str(args.report) == "-"
+                    else args.report.read_text(encoding="utf-8")
+                )
+            except (OSError, UnicodeDecodeError) as error:
+                raise ModelError(f"cannot read the report: {error}") from error
+            record = build_owner_record(
+                root,
+                submission,
+                issue=args.issue,
+                device_id=args.device,
+                confirmations=args.confirmed,
+            )
+            print(f"Owner report accepted: {record['model_name']} ({record['route_id']})")
+            print(f"Confirmed: {', '.join(record['confirmations'])}")
+            if args.check:
+                print(json.dumps(record, indent=2))
+                return 0
+            destination = write_owner_record(root, record, args.output_dir)
+            print(f"Public record: {destination}")
+            print("Run ./hfx generate to update the supported-hardware page.")
+            return 0
         if args.command == "upstream":
             prepared = prepare_upstreams(root, args.output)
             for identifier in prepared.fetched:

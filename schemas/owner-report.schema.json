@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/owner-report-v1.json",
+  "title": "HyperFlux owner report record",
+  "description": "One accepted hardware report from a device owner, written by ./hfx qualification ingest. Every value is copied from an allowlist or checked against a fixed pattern; nothing else from the report or the issue is kept.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "id", "summary", "evidence_level", "privacy", "route_id", "model_name", "source_refs", "report", "observed", "confirmations", "limitations"],
+  "properties": {
+    "$schema": {"const": "../../schemas/owner-report.schema.json"},
+    "schema": {"const": "hyperflux-owner-report-v1"},
+    "id": {"type": "string", "pattern": "^claim\\.owner-report\\.razer\\.1532\\.[0-9a-f]{4}\\.(mouse|keyboard)\\.issue-[1-9][0-9]{0,8}$"},
+    "summary": {"type": "string", "minLength": 1, "maxLength": 240},
+    "evidence_level": {"const": "hardware-observed"},
+    "privacy": {"const": "public-summary"},
+    "route_id": {"type": "string", "pattern": "^razer\\.1532\\.[0-9a-f]{4}\\.(mouse|keyboard)$"},
+    "model_name": {"type": "string", "minLength": 1, "maxLength": 120},
+    "source_refs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "issue"],
+        "properties": {
+          "kind": {"const": "github-issue"},
+          "issue": {"type": "integer", "minimum": 1, "maximum": 999999999}
+        }
+      }
+    },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "sha256", "generated_on", "hyperflux_version", "driver_version", "bridge_version", "bridge_protocol", "receiver_profile", "profile_catalog_digest", "finding_ids"],
+      "properties": {
+        "schema": {"const": "hyperflux-local-qualification-v1"},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "generated_on": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+        "hyperflux_version": {"type": "string", "pattern": "^[0-9]{1,4}\\.[0-9]{1,4}\\.[0-9]{1,4}$"},
+        "driver_version": {"type": "string", "pattern": "^[0-9]{1,4}\\.[0-9]{1,4}\\.[0-9]{1,4}$"},
+        "bridge_version": {"type": "string", "pattern": "^[0-9]{1,4}\\.[0-9]{1,4}\\.[0-9]{1,4}$"},
+        "bridge_protocol": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "receiver_profile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "digest"],
+          "properties": {
+            "id": {"type": "string", "pattern": "^receiver\\.[a-z0-9.-]{1,96}$"},
+            "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+          }
+        },
+        "profile_catalog_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "finding_ids": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"type": "string", "pattern": "^HFX-[A-Z0-9-]{1,60}$"}}
+      }
+    },
+    "observed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["presence", "support", "reported_kind", "battery"],
+      "properties": {
+        "presence": {"enum": ["active", "sleeping"]},
+        "support": {"enum": ["unknown", "identified"]},
+        "reported_kind": {"enum": ["mouse", "keyboard", "other"]},
+        "battery": {"enum": ["reported", "stale", "unavailable", "unknown"]}
+      }
+    },
+    "confirmations": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": {"enum": ["input", "openrazer-lighting", "openrgb-lighting"]}
+    },
+    "limitations": {"type": "array", "minItems": 1, "maxItems": 8, "items": {"type": "string", "minLength": 1, "maxLength": 240}}
+  }
+}

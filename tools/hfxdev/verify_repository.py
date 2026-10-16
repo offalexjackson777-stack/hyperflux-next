@@ -39,6 +39,7 @@ from .knowledge import compiled_knowledge_catalog, load_knowledge_inputs
 from .linux_runtime import load_linux_runtime
 from .licensing import verify_licensing_policy
 from .local_companion import load_local_companion
+from .owner_reports import load_owner_report_policy, load_owner_reports
 from .native_command import (
     load_native_command_catalog,
     load_native_command_policy,
@@ -331,6 +332,8 @@ def _run_assurance_contracts(root: Path, _node: TestNode) -> None:
     verify_static_performance_budgets(root, metrics)
     load_rust_coverage_policy(root)
     load_quality_audit(root)
+    load_owner_report_policy(root)
+    load_owner_reports(root)
 
 
 def _run_formal_model_contracts(root: Path, _node: TestNode) -> None:
