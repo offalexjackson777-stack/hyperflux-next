@@ -65,8 +65,9 @@ pub struct PassiveTranslation {
     /// bounded quiet interval, proves that its child route is ready for a
     /// restoration attempt. This is not a claim that the device was asleep.
     pub restore_ready: Option<DeviceRestoreReadiness>,
-    /// One charge field decoded by the child profile's qualified charge
-    /// decoder. It is daemon-local battery annotation, not a lifecycle fact.
+    /// One charge state decoded by the child profile's qualified charge or
+    /// route charge decoder. It is daemon-local battery annotation, not a
+    /// lifecycle fact.
     pub charge: Option<(ChildBatteryLane, ChildChargeReading)>,
 }
 
@@ -180,6 +181,10 @@ struct LaneBinding {
     /// kept only so the charge field that follows it in the same report can
     /// be read in context.
     last_contact: Option<(SequenceNumber, ContactState)>,
+    /// Sequence of the latest decoded battery level, kept only so a route
+    /// word that follows it in the same keyboard status report can be read
+    /// as that report's charge state.
+    last_battery: Option<SequenceNumber>,
 }
 
 pub struct PassiveObservationTranslator {
@@ -399,6 +404,7 @@ impl PassiveObservationTranslator {
             return_lifecycle,
             last_route_state,
             last_contact: None,
+            last_battery: None,
         };
         let child = ChildIdentity::new(device_id.clone(), device_kind, product_id)?;
         let endpoint = EndpointIdentity::new(
@@ -517,6 +523,7 @@ impl PassiveObservationTranslator {
                     .map_err(|_| PassiveTranslationError::InvalidObservationValue)?
             }
         };
+        binding.last_battery = Some(stamp.sequence());
         let observed_at_ms = stamp.observed_at_ms();
         let evidence = if passive.report_implies_route_available {
             route_evidence(binding, RouteState::Available).unwrap_or(ReturnEvidence::BatteryReport)
@@ -648,7 +655,59 @@ impl PassiveObservationTranslator {
         PassiveTranslation::charge(lane, reading)
     }
 
+    /// Decodes one route value. The keyboard status report also carries its
+    /// charge state in that value, so the route word is read a second time
+    /// through the route charge decoder without changing the route decoding.
     fn route(&mut self, slot: u32, value: u32, stamp: ObservationStamp) -> PassiveTranslation {
+        let charge = self.route_charge(slot, value, &stamp);
+        let mut translation = self.route_state(slot, value, stamp);
+        translation.charge = charge;
+        translation
+    }
+
+    /// Reads the charge state from a keyboard status-report route word.
+    ///
+    /// The kernel emits the battery level of that report and then its route
+    /// word, power source in the high byte and charge in the low byte, at the
+    /// next sequence number. The identity report also emits a route value,
+    /// but never right after a battery level, so only a route word at the
+    /// sequence after this lane's battery level counts. The decoder lists
+    /// whole route words; every other word reads as unknown.
+    fn route_charge(
+        &mut self,
+        slot: u32,
+        value: u32,
+        stamp: &ObservationStamp,
+    ) -> Option<(ChildBatteryLane, ChildChargeReading)> {
+        let lane = ChildBatteryLane::from_endpoint_slot(slot)?;
+        let binding = self.lanes.get_mut(&slot)?;
+        let same_report = binding
+            .last_battery
+            .take()
+            .is_some_and(|sequence| sequence.get().checked_add(1) == Some(stamp.sequence().get()));
+        let passive = binding.passive?;
+        if !same_report
+            || (passive.route_charge_charging.is_empty()
+                && passive.route_charge_discharging.is_empty())
+        {
+            return None;
+        }
+        let reading = if passive.route_charge_charging.contains(&value) {
+            ChildChargeReading::Charging
+        } else if passive.route_charge_discharging.contains(&value) {
+            ChildChargeReading::Discharging
+        } else {
+            ChildChargeReading::Unknown
+        };
+        Some((lane, reading))
+    }
+
+    fn route_state(
+        &mut self,
+        slot: u32,
+        value: u32,
+        stamp: ObservationStamp,
+    ) -> PassiveTranslation {
         let Some(binding) = self.lanes.get_mut(&slot) else {
             return PassiveTranslation::disposition(PassiveDisposition::IgnoredUnknownLane);
         };
