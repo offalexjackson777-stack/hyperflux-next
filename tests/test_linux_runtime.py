@@ -162,6 +162,9 @@ class LinuxRuntimeTests(unittest.TestCase):
         self.assertNotIn("SYSTEMD_WANTS", rules)
 
         users = sysusers(self.runtime)
+        account = next(line for line in users.splitlines() if line.startswith("u "))
+        self.assertTrue(account.endswith(f" {self.runtime.bridge.state_directory}"))
+        self.assertNotIn("nologin", users)
         self.assertIn(f"g {self.runtime.bridge.client_group} - -", users)
         self.assertIn(
             f"m {self.runtime.bridge.service_account} {self.runtime.bridge.client_group}",
