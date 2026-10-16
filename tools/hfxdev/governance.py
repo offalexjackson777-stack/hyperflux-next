@@ -46,6 +46,7 @@ VERSION = re.compile(r"^v[0-9]+(?:\.[0-9]+){0,2}$")
 OWNER = re.compile(r"^@[A-Za-z0-9][A-Za-z0-9-]{0,38}$")
 LABEL_COLOR = re.compile(r"^[0-9a-f]{6}$")
 IDENTIFIER = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
+KERNEL_CANARY_CHECK = "Kernel canary"
 DISCUSSION_FORMATS = {
     "announcements": "announcement",
     "hardware-qualification": "discussion",
@@ -153,6 +154,7 @@ class GitHubGovernance:
     development_image: str
     dependency_update_day: str
     full_verification_cron: str
+    kernel_canary_cron: str
     job_summary_sections: tuple[str, ...]
     actions: tuple[ActionPin, ...]
 
@@ -485,6 +487,8 @@ def load_github_governance(root: Path) -> GitHubGovernance:
     required_checks = _strings(protection["required_checks"], "required GitHub check")
     if tuple(sorted(required_checks)) != required_checks:
         raise ModelError("required GitHub checks must be sorted")
+    if KERNEL_CANARY_CHECK in required_checks:
+        raise ModelError("the kernel canary follows moving kernels and may never gate merges")
 
     raw_labels = value["labels"]
     if not isinstance(raw_labels, list) or not raw_labels:
@@ -513,6 +517,7 @@ def load_github_governance(root: Path) -> GitHubGovernance:
             "development_image",
             "dependency_update_day",
             "full_verification_cron",
+            "kernel_canary_cron",
             "job_summary",
             "actions",
         },
@@ -526,6 +531,8 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         raise ModelError("GitHub dependency update day is unsupported")
     if automation["full_verification_cron"] != "17 3 * * 1":
         raise ModelError("GitHub full-verification cadence drifted")
+    if automation["kernel_canary_cron"] != "41 5 * * 1":
+        raise ModelError("GitHub kernel canary cadence drifted")
     summary = _exact(
         automation["job_summary"], {"enabled", "sections"}, "GitHub Actions summary"
     )
@@ -597,6 +604,7 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         development_image=automation["development_image"],
         dependency_update_day=automation["dependency_update_day"],
         full_verification_cron=automation["full_verification_cron"],
+        kernel_canary_cron=automation["kernel_canary_cron"],
         job_summary_sections=JOB_SUMMARY_SECTIONS,
         actions=tuple(actions),
     )

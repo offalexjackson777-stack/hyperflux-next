@@ -196,6 +196,19 @@ def _parser() -> argparse.ArgumentParser:
         help="checkout root; defaults to .hfx/upstreams",
     )
 
+    kernel_canary = commands.add_parser(
+        "kernel-canary",
+        help="build the kernel drivers against newer kernel headers (never gates merges)",
+    )
+    kernel_canary.add_argument("--output", required=True, type=Path)
+    kernel_canary.add_argument(
+        "--header-dir",
+        action="append",
+        default=[],
+        type=Path,
+        help="prepared kernel build directory; repeat for each kernel",
+    )
+
     ci = commands.add_parser("ci", help="run bounded repository jobs in the pinned container")
     ci_commands = ci.add_subparsers(dest="ci_command", required=True)
     ci_prepare = ci_commands.add_parser(
@@ -762,6 +775,12 @@ def main(arguments: list[str] | None = None) -> int:
                 print(f"Verified existing {identifier} source cache.")
             print(f"Upstream lock: {prepared.manifest}")
             return 0
+        if args.command == "kernel-canary":
+            from .kernel_canary import run_kernel_canary
+
+            result = run_kernel_canary(root, args.output, args.header_dir)
+            print(f"Kernel canary: {'PASS' if result == 0 else 'FAIL'} ({args.output / 'summary.md'})")
+            return result
         if args.command == "ci":
             if args.ci_command == "summary":
                 write_actions_summary(

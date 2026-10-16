@@ -127,6 +127,7 @@
     "development_image": "hyperflux-next-dev:ci",
     "dependency_update_day": "monday",
     "full_verification_cron": "17 3 * * 1",
+    "kernel_canary_cron": "41 5 * * 1",
     "job_summary": {
       "enabled": true,
       "sections": ["source-revision", "affected-domains", "selection", "failures", "timings", "generated-freshness", "performance-budgets", "release-gate-impact"]

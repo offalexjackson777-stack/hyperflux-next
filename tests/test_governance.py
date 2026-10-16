@@ -43,11 +43,13 @@ from hfxdev.generators.governance import (
     experience_plan,
     feature_request,
     full_verification_workflow,
+    kernel_canary_workflow,
     protection_plan,
     verification_workflow,
 )
 from hfxdev.generators.supply_chain import spdx_json
-from hfxdev.governance import load_github_governance
+from hfxdev.development import load_development_environment
+from hfxdev.governance import KERNEL_CANARY_CHECK, load_github_governance
 from hfxdev.model import ModelError
 from hfxdev.supply_chain import load_dependency_inventory
 from hfxdev.toolchains import PYTHON_TOOLCHAIN_PACKAGES, load_toolchain_pins
@@ -148,6 +150,9 @@ class GitHubGovernanceTests(unittest.TestCase):
             "full": full_verification_workflow(self.governance),
             "codeql": codeql_workflow(self.governance),
             "dependency-review": dependency_review_workflow(self.governance),
+            "kernel-canary": kernel_canary_workflow(
+                self.governance, load_development_environment(ROOT).image
+            ),
         }
         allowed = {action.commit for action in self.governance.actions}
         observed: set[str] = set()
@@ -234,6 +239,42 @@ class GitHubGovernanceTests(unittest.TestCase):
             self.assertIn("integrations/catalog.json", upstream["key"])
             self.assertNotIn(".hfx/upstreams", build["path"])
             self.assertEqual(build["restore-keys"], "hfx-build-${{ runner.os }}-\n")
+
+    def test_kernel_canary_follows_new_kernels_without_gating_merges(self) -> None:
+        image = load_development_environment(ROOT).image
+        text = kernel_canary_workflow(self.governance, image)
+        document = yaml.safe_load(text)
+        self.assertEqual(set(document["on"]), {"workflow_dispatch", "schedule"})
+        self.assertEqual(
+            document["on"]["schedule"], [{"cron": self.governance.kernel_canary_cron}]
+        )
+        self.assertEqual(document["permissions"], {"contents": "read"})
+        job = document["jobs"]["kernel-canary"]
+        self.assertEqual(job["name"], KERNEL_CANARY_CHECK)
+        self.assertNotIn(KERNEL_CANARY_CHECK, self.governance.required_checks)
+        self.assertEqual(job["container"], {"image": image})
+        self.assertRegex(image, r"@sha256:[0-9a-f]{64}$")
+        for headers in ("linux-headers", "linux-lts-headers", "core-testing/linux-headers"):
+            self.assertIn(headers, text)
+        self.assertIn("modules_prepare", text)
+        self.assertIn("--disable WERROR", text)
+        self.assertIn("./hfx kernel-canary --output build/ci/kernel-canary", text)
+        for forbidden in ("insmod", "modprobe", "--device", "--privileged", "secrets.", "GITHUB_TOKEN"):
+            self.assertNotIn(forbidden, text)
+
+        authority = json.loads((ROOT / "governance" / "github.json").read_text())
+        gated = json.loads(json.dumps(authority))
+        gated["protection"]["required_checks"] = sorted(
+            [*authority["protection"]["required_checks"], KERNEL_CANARY_CHECK]
+        )
+        daily = json.loads(json.dumps(authority))
+        daily["automation"]["kernel_canary_cron"] = "41 5 * * *"
+        for candidate in (gated, daily):
+            with (
+                patch("hfxdev.governance.load_json", return_value=candidate),
+                self.assertRaises(ModelError),
+            ):
+                load_github_governance(ROOT)
 
     def test_required_checks_are_exact_generated_job_contexts(self) -> None:
         workflows = (

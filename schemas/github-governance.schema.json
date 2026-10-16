@@ -184,12 +184,13 @@
     "automation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["runner", "development_image", "dependency_update_day", "full_verification_cron", "job_summary", "actions"],
+      "required": ["runner", "development_image", "dependency_update_day", "full_verification_cron", "kernel_canary_cron", "job_summary", "actions"],
       "properties": {
         "runner": {"const": "ubuntu-24.04"},
         "development_image": {"const": "hyperflux-next-dev:ci"},
         "dependency_update_day": {"enum": ["monday", "tuesday", "wednesday", "thursday", "friday"]},
         "full_verification_cron": {"type": "string", "pattern": "^[0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+$"},
+        "kernel_canary_cron": {"type": "string", "pattern": "^[0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+$"},
         "job_summary": {
           "type": "object",
           "additionalProperties": false,

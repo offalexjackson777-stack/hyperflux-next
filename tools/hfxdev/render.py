@@ -32,6 +32,7 @@ from .generators.governance import (
     feature_request as github_feature_request,
     full_verification_workflow as github_full_verification_workflow,
     issue_config as github_issue_config,
+    kernel_canary_workflow as github_kernel_canary_workflow,
     labels_plan as github_labels_plan,
     markdown as github_governance_markdown,
     protection_plan as github_protection_plan,
@@ -398,6 +399,9 @@ def rendered_files(root: Path) -> dict[Path, str]:
         ),
         root / ".github" / "workflows" / "full-verification.yml": github_full_verification_workflow(
             github_governance
+        ),
+        root / ".github" / "workflows" / "kernel-canary.yml": github_kernel_canary_workflow(
+            github_governance, development_environment.image
         ),
         root / ".github" / "workflows" / "codeql.yml": github_codeql_workflow(
             github_governance
