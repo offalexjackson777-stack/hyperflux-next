@@ -23,6 +23,8 @@ CATALOG_KEYS = {
 }
 REGISTRY_KEYS = {"$schema", "schema", "current_version", "versions"}
 VERSION_KEYS = {"version", "catalog", "sha256", "served_features"}
+RETIRED_KEYS = {"version", "retired_in", "sha256"}
+RELEASE_VERSION = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 RECORD_KEYS = {"name", "description", "fields"}
 FIELD_KEYS = {"name", "type", "required", "many", "max_items", "description"}
 METHOD_KEYS = {"name", "request", "response", "required_feature", "description"}
@@ -169,9 +171,17 @@ class ProtocolVersion:
 
 
 @dataclass(frozen=True)
+class RetiredProtocolVersion:
+    version: int
+    retired_in: str
+    source_sha256: str
+
+
+@dataclass(frozen=True)
 class ProtocolRegistry:
     current_version: int
     versions: tuple[ProtocolVersion, ...]
+    retired: tuple[RetiredProtocolVersion, ...] = ()
 
     @property
     def current(self) -> ProtocolCatalog:
@@ -422,7 +432,13 @@ def _load_protocol_catalog(root: Path, path: Path) -> ProtocolCatalog:
 
 def load_protocol_registry(root: Path) -> ProtocolRegistry:
     value = load_json(root / "protocol" / "registry.json")
-    _exact(value, REGISTRY_KEYS, "protocol registry")
+    if not isinstance(value, dict):
+        raise ModelError("protocol registry must be an object")
+    _exact(
+        value,
+        REGISTRY_KEYS | ({"retired"} & value.keys()),
+        "protocol registry",
+    )
     if value["schema"] != "hyperflux-protocol-registry-v1":
         raise ModelError("unsupported protocol registry schema")
     current_version = value["current_version"]
@@ -494,7 +510,61 @@ def load_protocol_registry(root: Path) -> ProtocolRegistry:
         raise ModelError("protocol registry versions must be sorted")
     if current_version not in version_numbers:
         raise ModelError("protocol current version is not registered")
-    return ProtocolRegistry(current_version=current_version, versions=tuple(versions))
+    retired = _load_retired_versions(value.get("retired", []), version_numbers)
+    return ProtocolRegistry(
+        current_version=current_version,
+        versions=tuple(versions),
+        retired=retired,
+    )
+
+
+def _load_retired_versions(
+    raw_retired: Any, active_versions: list[int]
+) -> tuple[RetiredProtocolVersion, ...]:
+    """Validate retired version numbers so none can return with a new catalog."""
+    if not isinstance(raw_retired, list) or len(raw_retired) > 1024:
+        raise ModelError("protocol retired versions must be a bounded array")
+    retired: list[RetiredProtocolVersion] = []
+    for index, entry in enumerate(raw_retired):
+        label = f"protocol retired version {index}"
+        if not isinstance(entry, dict):
+            raise ModelError(f"{label}: must be an object")
+        _exact(entry, RETIRED_KEYS, label)
+        version = entry["version"]
+        if (
+            isinstance(version, bool)
+            or not isinstance(version, int)
+            or not 1 <= version <= 65_535
+        ):
+            raise ModelError(f"{label}: invalid version")
+        retired_in = entry["retired_in"]
+        if not isinstance(retired_in, str) or not RELEASE_VERSION.fullmatch(retired_in):
+            raise ModelError(f"{label}: retired_in must be a release version")
+        digest = entry["sha256"]
+        if (
+            not isinstance(digest, str)
+            or len(digest) != 64
+            or any(character not in "0123456789abcdef" for character in digest)
+        ):
+            raise ModelError(f"{label}: invalid source digest")
+        retired.append(
+            RetiredProtocolVersion(
+                version=version, retired_in=retired_in, source_sha256=digest
+            )
+        )
+    retired_numbers = [item.version for item in retired]
+    require_unique(
+        [str(item) for item in retired_numbers], "protocol retired version"
+    )
+    if retired_numbers != sorted(retired_numbers):
+        raise ModelError("protocol retired versions must be sorted")
+    reused = sorted(set(retired_numbers) & set(active_versions))
+    if reused:
+        raise ModelError(
+            "protocol retired versions cannot be served again: "
+            + ", ".join(str(item) for item in reused)
+        )
+    return tuple(retired)
 
 
 def load_protocol_catalog(root: Path) -> ProtocolCatalog:
