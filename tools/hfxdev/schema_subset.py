@@ -2,10 +2,13 @@
 
 """A small JSON Schema (draft 2020-12) checker for the keywords the repository uses.
 
-The repository has no third-party JSON Schema dependency, so the owner-report
-ingest checks reports with this subset. It refuses any keyword it does not know
-instead of silently ignoring it, and its messages name a JSON path and the rule
-that failed, never the offending value: a refused report may hold private text.
+The host has no third-party JSON Schema package, so `schema_validation` falls
+back to this subset there; the pinned development image uses the real
+validator, and a CI test keeps both verdicts in step. It refuses any keyword or
+schema form it does not know instead of silently skipping it, so it never
+accepts what the real validator refuses. Its messages name a JSON path and the
+rule that failed, never the offending value: a refused report may hold private
+text.
 """
 
 from __future__ import annotations
@@ -60,18 +63,27 @@ def validate(schema: dict[str, Any], value: Any) -> None:
 
 
 def _check_keywords(node: Any, location: str) -> None:
-    if isinstance(node, dict):
-        unknown = sorted(set(node) - SUPPORTED_KEYWORDS)
-        if unknown:
-            raise ModelError(f"schema {location} uses unsupported keywords: {', '.join(unknown)}")
-        for key in ("properties", "$defs"):
-            for name, child in node.get(key, {}).items():
-                _check_keywords(child, f"{location}/{key}/{name}")
-        if isinstance(node.get("items"), dict):
-            _check_keywords(node["items"], f"{location}/items")
-        if isinstance(node.get("additionalProperties"), dict):
-            _check_keywords(node["additionalProperties"], f"{location}/additionalProperties")
-        for index, child in enumerate(node.get("oneOf", [])):
+    # Every subschema must be an object: a boolean schema (`items: false`) or
+    # an array form would otherwise be skipped, and skipping a rule accepts.
+    if not isinstance(node, dict):
+        raise ModelError(f"schema {location} must be an object schema; boolean and array forms are not supported")
+    unknown = sorted(set(node) - SUPPORTED_KEYWORDS)
+    if unknown:
+        raise ModelError(f"schema {location} uses unsupported keywords: {', '.join(unknown)}")
+    for key in ("properties", "$defs"):
+        children = node.get(key, {})
+        if not isinstance(children, dict):
+            raise ModelError(f"schema {location}/{key} must be an object")
+        for name, child in children.items():
+            _check_keywords(child, f"{location}/{key}/{name}")
+    if "items" in node:
+        _check_keywords(node["items"], f"{location}/items")
+    if "additionalProperties" in node and not isinstance(node["additionalProperties"], bool):
+        _check_keywords(node["additionalProperties"], f"{location}/additionalProperties")
+    if "oneOf" in node:
+        if not isinstance(node["oneOf"], list):
+            raise ModelError(f"schema {location}/oneOf must be an array")
+        for index, child in enumerate(node["oneOf"]):
             _check_keywords(child, f"{location}/oneOf/{index}")
 
 
@@ -107,11 +119,15 @@ def _type_matches(expected: str, value: Any) -> bool:
 
 
 def _equal(left: Any, right: Any) -> bool:
-    # JSON equality: true is not 1, and 1 is 1.0.
+    # JSON equality at every depth: true is not 1, and 1 is 1.0.
     if isinstance(left, bool) or isinstance(right, bool):
         return isinstance(left, bool) and isinstance(right, bool) and left == right
     if isinstance(left, (int, float)) and isinstance(right, (int, float)):
         return left == right
+    if isinstance(left, list) and isinstance(right, list):
+        return len(left) == len(right) and all(_equal(a, b) for a, b in zip(left, right))
+    if isinstance(left, dict) and isinstance(right, dict):
+        return left.keys() == right.keys() and all(_equal(left[key], right[key]) for key in left)
     return type(left) is type(right) and left == right
 
 
