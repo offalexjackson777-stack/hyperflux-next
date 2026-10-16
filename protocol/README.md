@@ -31,11 +31,8 @@ Defines the messages apps and tools exchange with the HyperFlux background servi
 ## Key Files
 
 - [`protocol/registry.json`](registry.json)
-- [`protocol/v1/catalog.json`](v1/catalog.json)
-- [`protocol/v2/catalog.json`](v2/catalog.json)
-- [`protocol/v3/catalog.json`](v3/catalog.json)
-- [`protocol/v4/catalog.json`](v4/catalog.json)
 - [`protocol/v5/catalog.json`](v5/catalog.json)
+- [`protocol/v7/catalog.json`](v7/catalog.json)
 
 ## Verify
 

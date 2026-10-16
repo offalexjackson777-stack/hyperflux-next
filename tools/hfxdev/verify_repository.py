@@ -117,10 +117,7 @@ SCHEMA_DECLARATION_EXEMPTIONS: dict[str, str] = {
     "governance/generated/github-labels.json": _NO_SCHEMA_GENERATED,
     "governance/generated/github-protection-plan.json": _NO_SCHEMA_GENERATED,
     "packaging/generated/install-plan.json": _NO_SCHEMA_GENERATED,
-    **{
-        f"protocol/v{version}/fixtures/transaction-request-canonical.json": _BYTE_FROZEN_WIRE
-        for version in range(1, 7)
-    },
+    "protocol/v5/fixtures/transaction-request-canonical.json": _BYTE_FROZEN_WIRE,
     "sdk/cpp/vendor/manifest.json": "no repository schema yet for the vendored dependency manifest",
     "spec/catalog/integrations/catalog.json": (
         "generated output; the integration catalog schema covers the source, not this view"
@@ -132,23 +129,12 @@ SCHEMA_DECLARATION_EXEMPTIONS: dict[str, str] = {
     **{
         f"tests/fixtures/protocol/{name}.json": _BYTE_FROZEN_WIRE
         for name in (
-            "v1/lease-conflict-response",
-            "v1/negotiate-request",
-            "v1/snapshot-response",
-            "v2/negotiate-request",
-            "v2/snapshot-response",
-            "v2/static-transaction-request",
-            "v3/negotiate-request",
-            "v3/off-transaction-request",
-            "v3/snapshot-response",
-            "v4/negotiate-request",
-            "v4/snapshot-response",
+            "retired/v1-negotiate-request",
+            "retired/v6-negotiate-request",
             "v5/integration-view-request",
             "v5/integration-view-response",
             "v5/negotiate-request",
             "v5/snapshot-response",
-            "v6/negotiate-request",
-            "v6/snapshot-response",
             "v7/native-enumerate-request",
             "v7/native-enumerate-response",
             "v7/native-transact-request",

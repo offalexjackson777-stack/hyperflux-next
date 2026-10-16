@@ -1,1 +1,0 @@
-{"method":"negotiate","request":{"request_id":"request-1","params":{"client_id":"client-1","client_name":"OpenRGB","minimum_version":2,"maximum_version":2,"required_features":["profile-bound-transactions"],"optional_features":[]}}}
