@@ -1,8 +1,8 @@
 {
   "$schema": "../schemas/documentation-screenshot-manifest.schema.json",
   "schema": "hyperflux-documentation-screenshot-manifest-v1",
-  "source_revision": "673c35413653027548f8aa35f1ef313cdc6de64c",
-  "render_result_sha256": "fa2192c3d9162a4211877b00e02feeb92c234db3417ae9328763227282b96243",
+  "source_revision": "e401221306cd2945066305c3c5bf78ef0abdc2bd",
+  "render_result_sha256": "6a67427fbac215b6bf3c79c1dec2105873d14773176a181f2836eb005a6adffc",
   "screenshots": [
     {
       "file": "screenshots/CONTRIBUTING--1280--dark.png",
@@ -442,7 +442,7 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "6ffc48113a2395260cca5cf3b23931a92a45e8537fbbd37410a4bf5839b5c5b4",
+      "sha256": "738be931fa90ec870faf69e3f8d2c74883921b23a4b145a4f5dcf17fff501ed0",
       "bytes": 389470
     },
     {
@@ -451,7 +451,7 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "23d8cfd19f627b287097fb9cb59a19c4c67e649bdf030ad2da2a53433274030e",
+      "sha256": "7452f77dd180dafa953c2e10bc118b1c8f32825da8aaf76ab1bf615a23ca7b13",
       "bytes": 380293
     },
     {
@@ -460,7 +460,7 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "46d03328cfa3a2f75b083e3b67dcda65716fb586c6468e45c71bad11792b6dd5",
+      "sha256": "3e6e1fd89367fb2380f03a7912e0e2465a75fffbc768450f2a3631baca53ac66",
       "bytes": 356346
     },
     {
@@ -469,7 +469,7 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "b7fad147df9411a75042c67d3c51cc9afad7c817cf965cc684ddd8d0f2cd195f",
+      "sha256": "385af2293d4ae7e7c6074a12e69fc08391cccd9144edf72bcde2a1f5351ab060",
       "bytes": 347153
     },
     {
@@ -478,7 +478,7 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "9396a795a33e6b5a73ae68d7da05abe536692155e137fa0431ae417323f63cbb",
+      "sha256": "2bac88212d14427e3056f1218993c70774a7a6c952cd35a8a9044d3afa9e45f3",
       "bytes": 393474
     },
     {
@@ -487,7 +487,7 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "9951610465465d954f3799580b6cd1783fc3d367bd5a2020052c5dec513dd1af",
+      "sha256": "856afd212373099e80d26f9a155fff9f624fa15963a065c6ec873f79a5a43d33",
       "bytes": 385061
     },
     {
