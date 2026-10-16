@@ -816,7 +816,10 @@ def sign_site(
     manifest = _load_manifest(site)
     if manifest["signed"]:
         raise ModelError("site is already signed; sign the unsigned assembly instead")
-    verify_site(root, site, require_signatures=False)
+    # A downloaded CI artifact loses its file modes; the copy below restores them.
+    verify_site(
+        root, site, require_signatures=False, trusted_key=trusted_key, check_modes=False
+    )
     _validate_private_gnupg_home(identity.gnupg_home)
     _require_secret_key(identity)
     published_key = site / policy.public_key_asset
@@ -1193,6 +1196,7 @@ def verify_site(
     require_signatures: bool = True,
     trusted_key: Path | None = None,
     signer: tuple[str, str] | None = None,
+    check_modes: bool = True,
 ) -> dict[str, Any]:
     """Check the whole site; with signatures, check them against the trusted key."""
     policy = load_repository_site_policy(root)
@@ -1208,7 +1212,7 @@ def verify_site(
         if path.is_symlink() or not (path.is_dir() or path.is_file()):
             raise ModelError(f"site holds a link or special file: {path.relative_to(site)}")
         mode = stat.S_IMODE(path.stat().st_mode)
-        if mode != (0o755 if path.is_dir() else 0o644):
+        if check_modes and mode != (0o755 if path.is_dir() else 0o644):
             raise ModelError(f"site entry has the wrong mode: {path.relative_to(site)}")
     expected_top = {NO_JEKYLL, FRONT_PAGE, SITE_MANIFEST, policy.public_key_asset, *targets}
     if require_signatures:
