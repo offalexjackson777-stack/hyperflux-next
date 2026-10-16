@@ -79,13 +79,31 @@ def validate_with_jsonschema(schema: dict[str, Any], value: Any, *, root: Path |
 
 
 def jsonschema_validator(schema: dict[str, Any], *, root: Path | None = None) -> Any:
-    """A draft 2020-12 validator over the repository registry and checked formats."""
-    from jsonschema import Draft202012Validator
+    """A draft 2020-12 validator over the repository registry and checked formats.
 
+    One deliberate difference from the specification: `integer` means a JSON
+    number written without a fraction, as in the subset checker and in the
+    product's serde types. Draft 2020-12 would also take 7.0, which an owner
+    record would then copy as 7.0.
+    """
     from .schema_instances import format_checker
 
-    return Draft202012Validator(
+    return _strict_validator_class()(
         schema, registry=_registry((root or REPOSITORY_ROOT).resolve()), format_checker=format_checker()
+    )
+
+
+@lru_cache(maxsize=1)
+def _strict_validator_class() -> Any:
+    from jsonschema import Draft202012Validator
+    from jsonschema.validators import extend
+
+    def is_integer(_checker: Any, instance: Any) -> bool:
+        return isinstance(instance, int) and not isinstance(instance, bool)
+
+    return extend(
+        Draft202012Validator,
+        type_checker=Draft202012Validator.TYPE_CHECKER.redefine("integer", is_integer),
     )
 
 
