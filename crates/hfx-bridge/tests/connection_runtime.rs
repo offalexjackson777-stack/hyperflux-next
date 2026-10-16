@@ -9,13 +9,14 @@ use hfx_domain::{
     ClientId, ClientName, ComponentVersion, ProjectionRevision, ProtocolErrorKind, ProtocolVersion,
     QueueCapacity, RequestId, SequenceNumber, ServerInstanceId, StreamEpoch, StreamId,
 };
-use hfx_errors::{ErrorCode, error_by_code};
+use hfx_errors::{ErrorCode, SafeDetail, SafeDetailValue, error_by_code, validate_safe_details};
 use hfx_protocol::{
     BridgeSnapshot, ClientHello, DiagnosticSnapshot, EmptyRequest, EventBatch, EventCursor,
-    IntegrationView, LeaseRequest, LeaseResult, NegotiationRequestEnvelope, ReleaseLeaseRequest,
-    RenewLeaseRequest, RpcRequest, RpcResponse, SessionRequestEnvelope, SubscriptionRequest,
-    TransactionLookup, TransactionRequest, TransactionResult, read_rpc_response,
-    read_rpc_response_for_version, write_rpc_request, write_rpc_request_for_version,
+    GENERATED_CONTRACT, GENERATED_PROTOCOL_VERSIONS, IntegrationView, LeaseRequest, LeaseResult,
+    NegotiationRequestEnvelope, ReleaseLeaseRequest, RenewLeaseRequest, RpcRequest, RpcResponse,
+    SessionRequestEnvelope, SubscriptionRequest, TransactionLookup, TransactionRequest,
+    TransactionResult, read_rpc_response, read_rpc_response_for_version, write_rpc_request,
+    write_rpc_request_for_version,
 };
 use std::io::Write;
 use std::os::unix::net::UnixStream;
@@ -295,6 +296,43 @@ fn real_unix_stream_serves_exact_version_and_cleans_up_on_eof() {
     assert_eq!(remaining_sessions, 0);
 }
 
+fn protocol_rejection_details(served: &str) -> [SafeDetail<'_>; 5] {
+    let mut versions = GENERATED_CONTRACT.served_versions();
+    let minimum = versions.next().expect("bridge serves a version");
+    let maximum = versions.last().unwrap_or(minimum);
+    [
+        ("client_max_version", SafeDetailValue::Unsigned(6)),
+        ("client_min_version", SafeDetailValue::Unsigned(6)),
+        (
+            "server_max_version",
+            SafeDetailValue::Unsigned(maximum.into()),
+        ),
+        (
+            "server_min_version",
+            SafeDetailValue::Unsigned(minimum.into()),
+        ),
+        ("server_supported_versions", SafeDetailValue::Text(served)),
+    ]
+    .map(|(name, value)| SafeDetail { name, value })
+}
+
+#[test]
+fn protocol_rejection_details_stay_valid_with_and_without_the_served_list() {
+    let details = protocol_rejection_details("5,7");
+    validate_safe_details(ErrorCode::HfxProtocol001, &details).expect("full details are valid");
+    // Producers that only know the minimum and maximum remain valid.
+    validate_safe_details(ErrorCode::HfxProtocol001, &details[..4])
+        .expect("range-only details are valid");
+    assert!(
+        validate_safe_details(
+            ErrorCode::HfxProtocol001,
+            &protocol_rejection_details(&"7,".repeat(65))
+        )
+        .is_err(),
+        "the served list is bounded"
+    );
+}
+
 /// Sends one raw negotiate frame and asserts the bridge answers with the
 /// catalogued incompatible-version error instead of dropping the connection.
 fn assert_incompatible_hello_is_rejected_with_remediation(hello: &[u8]) {
@@ -323,8 +361,43 @@ fn assert_incompatible_hello_is_rejected_with_remediation(hello: &[u8]) {
     assert_eq!(envelope.error.request_id, envelope.request_id);
     assert_eq!(envelope.error.kind, ProtocolErrorKind::IncompatibleVersion);
     assert_eq!(envelope.error.finding_id.as_str(), "HFX-PROTOCOL-001");
-    assert_eq!(envelope.error.message.as_str(), descriptor.user_explanation);
     assert_eq!(descriptor.remediation_id.as_str(), "update-protocol-peer");
+
+    // The message names every served version explicitly, so a retired version
+    // between the lowest and highest served one never looks served.
+    let served_versions = GENERATED_PROTOCOL_VERSIONS
+        .iter()
+        .map(|version| version.version.to_string())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        envelope.error.message.as_str(),
+        format!(
+            "{} Supported protocol versions: {}.",
+            descriptor.user_explanation,
+            served_versions.join(", ")
+        )
+    );
+    let listed = envelope
+        .error
+        .message
+        .as_str()
+        .rsplit_once("Supported protocol versions: ")
+        .and_then(|(_, list)| list.strip_suffix('.'))
+        .expect("message ends with the served list")
+        .split(", ")
+        .collect::<Vec<_>>();
+    assert_eq!(listed, served_versions);
+    for retired in ["1", "2", "3", "4", "6"] {
+        assert!(
+            !listed.contains(&retired),
+            "retired version {retired} is listed"
+        );
+    }
+    validate_safe_details(
+        ErrorCode::HfxProtocol001,
+        &protocol_rejection_details(&GENERATED_CONTRACT.served_versions_list()),
+    )
+    .expect("served-version list is a valid HFX-PROTOCOL-001 detail");
 
     // The same connection still accepts a supported hello afterwards.
     let hello = negotiate(&mut client);

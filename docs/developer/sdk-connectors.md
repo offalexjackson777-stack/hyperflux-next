@@ -74,14 +74,19 @@ Release 2.2 retires protocol versions 1, 2, 3, 4 and 6. What this means for a co
   `HFX-PROTOCOL-001` incompatible-version error with the `update-protocol-peer`
   remediation. The connection stays open, so the client can send a new hello with a served
   version.
+- The error message ends with the exact list of served versions, for example
+  `Supported protocol versions: 5, 7.` Read that list, not a range: version 6 lies
+  between 5 and 7 but is not served. The error catalog also defines an optional
+  `server_supported_versions` detail (`5,7`) next to the existing minimum and maximum
+  fields, which keep their meaning (the lowest and highest served version).
 - Everything version 6 added (the return-lifecycle projection) is available in version 7.
 - Integrations pinned to version 4 or earlier must move to version 5 or later.
 - Code that vendored the SDK source and includes `protocol_v1` to `protocol_v4` or
   `protocol_v6` generated headers or Python modules directly must switch to the
   `protocol_v5` or `protocol_v7` ones; the retired files are no longer generated.
-- Known gap: the rejection reports the server's range as 5 to 7, which reads as if version 6
-  were served. It is not. Only 5 and 7 are accepted; the error catalog text is unchanged in
-  this release.
+- Limitation: the frozen version 5 and 7 error envelope has no detail fields, so the bridge
+  cannot send the served list as structured data without a new protocol version. The list
+  arrives only inside the message text. Do not parse that text; offer 5 or 7.
 
 An uncertain write result is never replayed automatically. A connector first queries the
 original transaction identity, or closes and reconnects as the SDK recovery contract
