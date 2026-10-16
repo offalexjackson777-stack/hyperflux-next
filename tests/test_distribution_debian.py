@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import gzip
 import io
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -23,7 +24,12 @@ from arch_split_support import (  # noqa: E402
     synthetic_edition_stages,
 )
 
+from unittest import mock  # noqa: E402
+
+from hfxdev import distribution_debian  # noqa: E402
 from hfxdev.arch_split_package import split_edition_stages  # noqa: E402
+from hfxdev.distribution_package import build_distribution_package  # noqa: E402
+from hfxdev.package_pipeline import ArtifactSet  # noqa: E402
 from hfxdev.distribution_debian import (  # noqa: E402
     build_debian_packages,
     changelog_bytes,
@@ -258,6 +264,81 @@ class DebianBuildTests(unittest.TestCase):
                 conffiles = archive.extractfile("./conffiles")
                 assert conffiles is not None
                 self.assertEqual(conffiles.read(), b"/etc/hyperflux-next/bridge.json\n")
+
+    def test_distro_command_writes_a_schema_shaped_manifest(self) -> None:
+        schema = json.loads(
+            (ROOT / "schemas" / "debian-package-build.schema.json").read_text(encoding="utf-8")
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            (workspace / "stages-root").mkdir()
+            stages = synthetic_edition_stages(self.split, workspace / "stages-root")
+            build_manifest = workspace / "artifacts.json"
+            build_manifest.write_text("{}\n", encoding="utf-8")
+            artifacts = ArtifactSet(
+                root=workspace,
+                revision="0" * 40,
+                source_date_epoch=EPOCH,
+                install_manifest_sha256="1" * 64,
+                linux_runtime_sha256="2" * 64,
+                python="3.14",
+                target="x86_64-unknown-linux-gnu",
+                artifacts=(),
+                omitted=(),
+            )
+
+            def stage(_root: Path, _manifest: Path, destination: Path, component: str):
+                self.assertEqual(component, "linux")
+                shutil.copytree(stages[component].root, destination)
+                return stages[component].__class__(
+                    root=destination,
+                    inventory=stages[component].inventory,
+                    distribution_component=component,
+                    payload_sha256=stages[component].payload_sha256,
+                    file_count=stages[component].file_count,
+                )
+
+            with (
+                mock.patch.object(distribution_debian, "load_artifact_set", return_value=artifacts),
+                mock.patch.object(distribution_debian, "stage_rootfs", side_effect=stage),
+                mock.patch.object(distribution_debian, "load_arch_split", return_value=self.split),
+            ):
+                result = build_distribution_package(
+                    ROOT, build_manifest, "ubuntu", workspace / "out"
+                )
+            self.assertEqual(result.distribution, "ubuntu")
+            self.assertEqual(result.architecture, "amd64")
+            manifest = json.loads(result.manifest.read_text(encoding="utf-8"))
+            self.assertEqual(set(manifest), set(schema["required"]))
+            self.assertEqual(manifest["schema"], schema["properties"]["schema"]["const"])
+            self.assertEqual(manifest["$schema"], schema["$id"])
+            self.assertEqual(manifest["release"]["codename"], "noble")
+            self.assertEqual(manifest["maturity"], "ci-only")
+            package_schema = schema["$defs"]["package"]
+            for package in manifest["packages"]:
+                self.assertEqual(set(package), set(package_schema["required"]))
+                for key, rule in package_schema["properties"].items():
+                    if "pattern" in rule:
+                        self.assertRegex(package[key], rule["pattern"])
+                for relation in package["depends"]:
+                    self.assertRegex(
+                        relation, package_schema["properties"]["depends"]["items"]["pattern"]
+                    )
+                path = result.manifest.parent / "packages" / package["file"]
+                self.assertTrue(path.is_file())
+            self.assertEqual(
+                [package["file"] for package in manifest["packages"]],
+                ["hyperflux-next-dkms_2.1.0-1_all.deb", "hyperflux-next-linux_2.1.0-1_amd64.deb"],
+            )
+
+
+class DistributionDispatchTests(unittest.TestCase):
+    def test_unknown_distribution_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            with self.assertRaisesRegex(ModelError, "only the Arch production package target"):
+                build_distribution_package(
+                    ROOT, Path(temporary) / "missing.json", "fedora", Path(temporary) / "out"
+                )
 
 
 if __name__ == "__main__":

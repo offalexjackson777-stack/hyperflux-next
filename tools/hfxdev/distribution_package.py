@@ -654,9 +654,22 @@ def build_distribution_package(
     output = _new_output_directory(output)
     runtime = load_linux_runtime(root)
     catalog = load_distribution_catalog(root)
-    if distribution != "arch" or distribution not in catalog.targets:
+    target = catalog.targets.get(distribution)
+    if target is not None and target.package_format == "deb":
+        # Imported here: the Debian backend builds on the Arch split modules,
+        # which import this module.
+        from .distribution_debian import build_debian_distribution
+
+        return build_debian_distribution(
+            root=root,
+            build_manifest=build_manifest,
+            output=output,
+            runtime=runtime,
+            catalog=catalog,
+            target=target,
+        )
+    if distribution != "arch" or target is None:
         raise ModelError("only the Arch production package target is active")
-    target = catalog.targets[distribution]
     artifacts = load_artifact_set(root, build_manifest)
     architecture = target.architecture_for(artifacts.target)
     packages = output / "packages"

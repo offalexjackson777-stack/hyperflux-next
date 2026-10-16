@@ -34,6 +34,7 @@ from .native_onboarding import (
 from .native_parity import build_offline_parity_evidence, write_parity_evidence
 from .native_probe import write_native_probe_catalog
 from .distribution_package import build_distribution_package
+from .distributions import TARGET_IDS as DISTRIBUTION_TARGET_IDS
 from .github_sync import COMPONENTS as GITHUB_COMPONENTS
 from .github_sync import apply as apply_github
 from .github_sync import plan as plan_github
@@ -274,7 +275,9 @@ def _parser() -> argparse.ArgumentParser:
     package_distro = package_commands.add_parser(
         "distro", help="build the native split package set from canonical roots"
     )
-    package_distro.add_argument("--distribution", required=True, choices=["arch"])
+    package_distro.add_argument(
+        "--distribution", required=True, choices=list(DISTRIBUTION_TARGET_IDS)
+    )
     package_distro.add_argument("--build-manifest", required=True, type=Path)
     package_distro.add_argument("--output", required=True, type=Path)
     package_aur = package_commands.add_parser(
