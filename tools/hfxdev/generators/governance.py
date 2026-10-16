@@ -650,6 +650,16 @@ _SUPPORT_PREVIEW_FIELD = {
     },
 }
 
+_QUALIFICATION_FIELD = {
+    "type": "textarea",
+    "id": "qualification-report",
+    "attributes": {
+        "label": "Output of `hyperfluxctl qualification --json`",
+        "description": "Run `hyperfluxctl qualification --json` with the device connected and paste what it prints. It only reads what the bridge already knows; it holds no serial numbers or file paths, and nothing is sent to the device or uploaded. Leave this blank if the command does not run.",
+        "render": "json",
+    },
+}
+
 _PRIVACY_FIELD = {
     "type": "checkboxes",
     "id": "privacy",
@@ -774,6 +784,7 @@ def device_support(governance: GitHubGovernance) -> str:
                 },
                 "validations": {"required": True},
             },
+            _QUALIFICATION_FIELD,
             _DOCTOR_FIELD,
             _SUPPORT_PREVIEW_FIELD,
             _PRIVACY_FIELD,
@@ -1098,7 +1109,7 @@ def markdown(governance: GitHubGovernance, arch_repository: ArchRepositoryPolicy
             "## Issues, Pull Requests, And Labels",
             "",
             "- CODEOWNERS names one owner for everything; a path gets its own rule only when someone else owns it.",
-            "- Issue forms ask for `hyperfluxctl doctor` output and the support bundle preview, ask people to remove private data first, and never suggest that anyone may send commands to their device.",
+            "- Issue forms ask for `hyperfluxctl doctor` output and the support bundle preview (the device support form also asks for `hyperfluxctl qualification --json`), ask people to remove private data first, and never suggest that anyone may send commands to their device.",
             "- The pull request template is a short checklist: generated files, checks, docs, changes to the protocol, kernel interface, packages, or install behaviour, and private data.",
             "- Dependency updates are grouped by GitHub Actions, Cargo, and each Python integration.",
             "- Labels and the branch rules for `main` are generated from this repository and checked against GitHub.",

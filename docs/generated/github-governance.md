@@ -66,7 +66,7 @@ With one maintainer, a required approval would be impossible, so none is require
 ## Issues, Pull Requests, And Labels
 
 - CODEOWNERS names one owner for everything; a path gets its own rule only when someone else owns it.
-- Issue forms ask for `hyperfluxctl doctor` output and the support bundle preview, ask people to remove private data first, and never suggest that anyone may send commands to their device.
+- Issue forms ask for `hyperfluxctl doctor` output and the support bundle preview (the device support form also asks for `hyperfluxctl qualification --json`), ask people to remove private data first, and never suggest that anyone may send commands to their device.
 - The pull request template is a short checklist: generated files, checks, docs, changes to the protocol, kernel interface, packages, or install behaviour, and private data.
 - Dependency updates are grouped by GitHub Actions, Cargo, and each Python integration.
 - Labels and the branch rules for `main` are generated from this repository and checked against GitHub.

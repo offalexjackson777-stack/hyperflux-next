@@ -979,6 +979,11 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertIn("I removed serial numbers, machine and user names", hardware)
         self.assertIn("support-bundle --preview", hardware)
         self.assertIn("Output of `hyperfluxctl doctor`", hardware)
+        qualification = hardware.split("id: qualification-report", 1)[1].split("- type:", 1)[0]
+        self.assertIn("Output of `hyperfluxctl qualification --json`", qualification)
+        self.assertIn("render: json", qualification)
+        self.assertNotIn("required: true", qualification)
+        self.assertNotIn("qualification-report", bug)
         # Reporters describe what they saw; maintainers classify it (FORM-001…004).
         self.assertIn("2.0.x", bug)
         self.assertNotIn("; 0.x;", bug)
