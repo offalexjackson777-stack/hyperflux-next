@@ -47,8 +47,8 @@ device appears under its own name. You do not need to set anything up.
 - For the mouse, the widget also shows whether it is charging, discharging, or
   full. Sometimes it shows the charging status as unknown instead; see
   [Charging Status Is Partial](limitations.md#charging-status-is-partial).
-- For the keyboard, the widget shows the level only, not whether it is
-  charging.
+- For the keyboard, the widget shows the level only. HyperFlux does not read
+  the keyboard's charging status yet.
 
 ## What Does Not Work Yet
 

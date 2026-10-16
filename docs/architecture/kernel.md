@@ -154,15 +154,18 @@ The forwarded status comes from the bridge, not the module. The bridge decodes
 the raw charge field only for a child profile that declares a qualified charge
 decoder; today that is the exact mouse profile `0x00cd`. Every other child
 forwards `Unknown`. A charging value becomes `Charging`, or `Full` when the
-level of the same lane reads 100 percent. A not-charging value becomes
-`Discharging` only when the contact field of the same report says the mouse is
-off the mat. On the mat it may be a charge limit holding the battery, which no
-capture has shown yet, so it stays `Unknown`, as does any value the decoder does
-not list. The charge only annotates a lane that has a forwarded level, and the
-bridge forgets it whenever that lane is forwarded absent, when the writer file
-is released, and with each new receiver generation, so an old charge value is
-never reused. The UAPI carries no not-charging status, and the bridge does not
-add one without evidence.
+level of the same lane reads 100 percent, whatever byte 3 of the report reads.
+A not-charging value becomes `Discharging` only when byte 3 of the same report,
+which the module emits as the contact field just before the charge field,
+reads its proven off-the-mat value `0`. Byte 3 is not only a mat contact: it
+read `6` on a USB cable. Every other byte 3 value, a missing or older one, and
+any charge value the decoder does not list stay `Unknown`. A vendor charge
+limit is not inferred; the mouse itself keeps reporting charging while it
+holds at its limit, and the bridge forwards that. The charge only annotates a
+lane that has a forwarded level, and the bridge forgets it whenever that lane
+is forwarded absent, when the writer file is released, and with each new
+receiver generation, so an old charge value is never reused. The UAPI carries
+no not-charging status, and the bridge does not add one without evidence.
 
 ## Transport And Outcomes
 
