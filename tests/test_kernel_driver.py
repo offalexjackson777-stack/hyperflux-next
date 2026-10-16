@@ -213,6 +213,9 @@ class KernelDriverContracts(unittest.TestCase):
         self.assertIn("if (!context->writer)", report)
         self.assertIn("receiver->writer_context == context", report)
         self.assertIn("-ESTALE", report)
+        self.assertIn(
+            "lane->owner = context;\n\t\tpower_supply_changed(lane->psy);", report
+        )
 
     def test_child_battery_is_torn_down_on_every_exit(self) -> None:
         core = (ROOT / "driver/kernel/hyperflux-next-core.c").read_text(encoding="utf-8")

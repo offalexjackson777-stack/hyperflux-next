@@ -210,10 +210,13 @@ long hfx_battery_report(struct hfx_receiver *receiver,
 		       sizeof(lane->model_name));
 	spin_unlock_irqrestore(&lane->value_lock, flags);
 
-	if (lane->psy)
+	if (lane->psy) {
+		/* A writer that replaced a revoked one takes the lane over. */
+		lane->owner = context;
 		power_supply_changed(lane->psy);
-	else
+	} else {
 		ret = hfx_battery_register_locked(receiver, lane, context);
+	}
 out:
 	mutex_unlock(&receiver->battery_lock);
 	return ret;
