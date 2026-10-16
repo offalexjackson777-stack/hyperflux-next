@@ -35,6 +35,19 @@ Arch Linux repository. Its key fingerprint is
 The [installation guide](../user/installation.md) shows how to add the
 repository, and how to install the package files directly if you cannot.
 
+## Planned Change In 2.2
+
+HyperFlux 2.2 will stop accepting old versions of its local SDK protocol.
+Versions 1 to 4 and 6 are deprecated in 2.1 and will be removed in 2.2. From
+2.2 the bridge will speak only versions 5 and 7. The SDK and the OpenRGB
+integration that ship with HyperFlux already use those versions, so nothing
+changes for you if you only use them.
+
+If you run your own program that talks to HyperFlux, make sure it offers
+version 5 or 7. Everything version 6 added is also in version 7. The
+[SDK connector guide](../developer/sdk-connectors.md#deprecated-protocol-versions)
+lists the details.
+
 ## What Comes Next
 
 The [roadmap](roadmap.md) lists the planned changes.

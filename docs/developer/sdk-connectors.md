@@ -63,6 +63,25 @@ only the features they need and fail locally when the selected version cannot re
 operation. New protocol versions use generated types and conformance fixtures; they do not
 revise old wire definitions.
 
+### Deprecated protocol versions
+
+Protocol versions 1, 2, 3, 4 and 6 are deprecated in 2.1 and will be removed in 2.2. What
+this means for a connector:
+
+- In 2.1 the bridge still serves every version from 1 to 7, so nothing breaks yet.
+- From 2.2 the bridge serves only versions 5 and 7. A client that offers only versions 1 to
+  4, or only version 6, will be refused with the `HFX-PROTOCOL-001` incompatible-version
+  error.
+- Negotiate version 5 or 7. Everything version 6 added (the return-lifecycle projection) is
+  also in version 7. Integrations pinned to version 4 or earlier must move to version 5 or
+  later.
+- The bundled Python, C++ and Rust SDK clients already use only versions 5 (lighting) and 7
+  (native tunnel), so the bundled OpenRGB integration is not affected.
+- Code that vendored the SDK source and includes the `protocol_v1` to `protocol_v4` or
+  `protocol_v6` generated headers or Python modules directly should switch to the
+  `protocol_v5` or `protocol_v7` ones; the deprecated files will no longer be generated in
+  2.2.
+
 An uncertain write result is never replayed automatically. A connector first queries the
 original transaction identity, or closes and reconnects as the SDK recovery contract
 describes. Clean EOF, malformed framing, peer mismatch, server error, and uncertain
