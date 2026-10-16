@@ -1,8 +1,8 @@
 {
   "$schema": "../schemas/documentation-screenshot-manifest.schema.json",
   "schema": "hyperflux-documentation-screenshot-manifest-v1",
-  "source_revision": "e401221306cd2945066305c3c5bf78ef0abdc2bd",
-  "render_result_sha256": "6a67427fbac215b6bf3c79c1dec2105873d14773176a181f2836eb005a6adffc",
+  "source_revision": "3432ad808c6ac2f317bb6568e10eec6c0f3ff105",
+  "render_result_sha256": "f4e94b691ab0c9bf85b3aa317f7c27ba49c9ba475c4d35c47f8323ce5418cb27",
   "screenshots": [
     {
       "file": "screenshots/CONTRIBUTING--1280--dark.png",
@@ -64,7 +64,7 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "3b016a675e438287923f6befda3be126127889bf0a7466e1fdaa9e5cf012635c",
+      "sha256": "6c3f138a0a28840812ffa54771ed9f4c4d1b2f8c76df7b3157a53991b5c7848b",
       "bytes": 429281
     },
     {
@@ -73,7 +73,7 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "fe1a1598e7c1ff36c43c1fb5aebd3be32837b53ce17312cc50a3ee1146e1aa10",
+      "sha256": "36931945785f94c0e2d15a7c046d594a9ed4c16582ec3f91106225b891a98387",
       "bytes": 424537
     },
     {
@@ -82,7 +82,7 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "1ee3cefc831bee90a454ccafef49516bd2e9fe960f154a9ed515ad2eb0a1febc",
+      "sha256": "aee3ffa075ceada5f554812b7f5c8a287fe757da27063537569858909dd1b27a",
       "bytes": 348708
     },
     {
@@ -91,7 +91,7 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "2a85bf3bd83fc93c467210fdda3750418287f3252ed98b06bc0fb4c9adb4ecbc",
+      "sha256": "ac93a742861ccc96651806acbf4cc2fd5855f7dce7e28b74916008711e360f08",
       "bytes": 342552
     },
     {
@@ -100,7 +100,7 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "b1f73d851a74bbae0f4f59ca2e513e6069ff941cb1a2509191d6abeb6a9a31e2",
+      "sha256": "9987c4e2f5964977a8cbba4ccbb76baa2f8999096efbe61dc85572e91a0f2242",
       "bytes": 422858
     },
     {
@@ -109,7 +109,7 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "32d96a297eb60da98009f19c6fc9214bad1f41f4011e408cd1118777d1fb7f44",
+      "sha256": "454fdc0513306589c27ec4e207a7860859eb4d4394596bc9aa4f5f2ada5f6d38",
       "bytes": 417627
     },
     {
@@ -172,7 +172,7 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "4ed411d054529333f2a80c10f60a623fe0d065bd18b79b00ed5e4bcda692d124",
+      "sha256": "2bf5035e56b6aa3ea5792214fbbb65e5a334f0f8690d97b5daeec31fd872ef6a",
       "bytes": 144096
     },
     {
@@ -181,7 +181,7 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "13c39536b4b221b004fda7cca89d7c8de83067ff6e8fabf43bc13b08e1500fb3",
+      "sha256": "94ca7dcf5b38367d47b38520aa490a152baa45755db90ef2c10bbbba193d588a",
       "bytes": 142601
     },
     {
@@ -190,7 +190,7 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "706650dc5fc596b7fd17318edc44a3b6ce9bcd403f1255df5cc45fc2a4ac6ea0",
+      "sha256": "c7224426c4d1f5458581f00c01b5eba941dd1f20fdf9dd4996efc2f9852a67f0",
       "bytes": 141850
     },
     {
@@ -199,7 +199,7 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "610bf532c92b7dda7c6309a207ab24b35de87a29df2ebfad231df13abb80e5e2",
+      "sha256": "c3f005690871db0a44f9314f4d428fdd276041d84913bcc593141eb7a3749df5",
       "bytes": 139860
     },
     {
@@ -208,7 +208,7 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "c913813b4c5d370459ea618c799a0b573801d91313fa046205ea7441237d9a36",
+      "sha256": "cf608a8f55983f545516695c05be85403b487bb147aeca70c1b2a598a5a4769f",
       "bytes": 144920
     },
     {
@@ -217,7 +217,7 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "8589aa5fe221991ae8f67b8952009518b472047e15b901d718faca13867526d4",
+      "sha256": "f7deb6a39d2de90a46b1a6bae9d338e1570fda8baea8476769677c22670ac5f4",
       "bytes": 143396
     },
     {
@@ -442,7 +442,7 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "738be931fa90ec870faf69e3f8d2c74883921b23a4b145a4f5dcf17fff501ed0",
+      "sha256": "ace586b9cd5de3bc5ae479755217066e5e3c65e49c35e4c403141b0ee9c3d22b",
       "bytes": 389470
     },
     {
@@ -451,7 +451,7 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "7452f77dd180dafa953c2e10bc118b1c8f32825da8aaf76ab1bf615a23ca7b13",
+      "sha256": "adeefe7c085d8c2a9ed08002a962de09926cb525bdb9088ee63cb44c6d4d3710",
       "bytes": 380293
     },
     {
@@ -460,7 +460,7 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "3e6e1fd89367fb2380f03a7912e0e2465a75fffbc768450f2a3631baca53ac66",
+      "sha256": "ed4b8084d55a476ac09c387764aeb9bfb355dd8dc554b1e3d1490974c9307294",
       "bytes": 356346
     },
     {
@@ -469,7 +469,7 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "385af2293d4ae7e7c6074a12e69fc08391cccd9144edf72bcde2a1f5351ab060",
+      "sha256": "2d4f6c88d96155ba8477c66ce2e0b602eee7f1d4f357136efb3c3ab276f8656d",
       "bytes": 347153
     },
     {
@@ -478,7 +478,7 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "2bac88212d14427e3056f1218993c70774a7a6c952cd35a8a9044d3afa9e45f3",
+      "sha256": "98a8663990e5fda0eba410fc8f7f2c299407229e0515a8d1be6d42619033d335",
       "bytes": 393474
     },
     {
@@ -487,7 +487,7 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "856afd212373099e80d26f9a155fff9f624fa15963a065c6ec873f79a5a43d33",
+      "sha256": "bb5bdea413be44807cfe50bc2f396727ebef48adde0aed027baaeda2042866e3",
       "bytes": 385061
     },
     {
@@ -496,7 +496,7 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "bf40613e2198d505d4bc1344872943693ab560f02ac980f6dbb64712d743c71a",
+      "sha256": "5938e06eacfc6de844f650110a60cc2f714938a5d9a39172dcfcc9b48e59acf8",
       "bytes": 710548
     },
     {
@@ -505,7 +505,7 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "c8728239212fc66f3e0dddc024816624be578fbce0cd3d40faea493fea0a361e",
+      "sha256": "829805241cea2d6a4a0e70f08945b0273fffb847ec99b4ca7573054570e5cf88",
       "bytes": 700796
     },
     {
@@ -514,7 +514,7 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "7f2a04cf486ad729ade72132340be69a8a315bc04dae514523f7ee4e69ea9ba5",
+      "sha256": "3b340a39a961dd6787e2bc487dfe66a1f2af059e8ea2b4336ad07f5d733f56e1",
       "bytes": 810525
     },
     {
@@ -523,7 +523,7 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "5f46338fdebbbd60b461d9fba0dbaaf63b8216fb600de2a0daa72a402cad938f",
+      "sha256": "38bad741c262b7edf1b79a72ca7da27baeb6811729dc715f785567d5fd8e3ba8",
       "bytes": 792586
     },
     {
@@ -532,7 +532,7 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "2ea9e198ae970a6b07324b23b13d9deefa960c58ce9952b0d080f55935bac6a8",
+      "sha256": "9e0894f80b62a7c14bcd6ff5ffaa7a6c9d559861d8af804e0fe55cc321bb621a",
       "bytes": 739977
     },
     {
@@ -541,7 +541,7 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "50e3debcb6347f9f78f0973d50f37db4a1bfa06ef602648d5da0102773bb5859",
+      "sha256": "80e953eaf28c230af4c15666bbadaef685a001b1d0cbdf41110d23fbcd581c59",
       "bytes": 729878
     },
     {
@@ -820,7 +820,7 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "331928eeaa4a72ad2c8554841e4efe7ca0c8839131eb6efa84c7d1735720f3f6",
+      "sha256": "d67b6ad710ec0cb754e9ca60750ec2a58fc1a6ebaa4b93d4fc7be393fb07fb36",
       "bytes": 120653
     },
     {
@@ -829,7 +829,7 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "7df200e4451b39af77405ae5bd711d017bede119e314a7ef4a467cca2c0b1993",
+      "sha256": "7ece217837060ce55389da89ca633115c863dea73190693f4853c3a783b8e010",
       "bytes": 119150
     },
     {
@@ -838,7 +838,7 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "cccd1fcda5a806d021039b4aed982774d653d6bf0724c3d35f5ac37690851aab",
+      "sha256": "bfaf4ce27759699ede73f94b5e25e5cae64a26dff49902042c8577002720eb7b",
       "bytes": 114657
     },
     {
@@ -847,7 +847,7 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "a3b436840781df5d80b98bc053983dfb7dcd9c29f2b91fbb74974287f7136a49",
+      "sha256": "4c0500d9643ff150903e1d92ef31f53570bbce4b893a75571b2aad24bbeb3193",
       "bytes": 112278
     },
     {
@@ -856,7 +856,7 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "a9ec4b6dcac16fe396df37d97c8265b2fd999b083986d6450e210ce6eb023f21",
+      "sha256": "d14a24a4217879e7fe8e8a9069b44ba84d875f4a9283b8a795006ea1b1329bf5",
       "bytes": 124252
     },
     {
@@ -865,7 +865,7 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "669399f8f3e617e990b8b54ee485a5884b199d3bba0088a21d8ee7d758cd7da2",
+      "sha256": "a94d33788cf8ae96af825dc285e9dc98e731d575837c4acaed0cbed7ea95498c",
       "bytes": 122667
     },
     {
@@ -928,7 +928,7 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "e42eb8e40e9a6f6c408f8744f57f19246aa691975642f40ab1356d1cb948a5d6",
+      "sha256": "ee244b08d9c293b3829c8438cf5ba021534970cc6440b17f962885bbfcc2191a",
       "bytes": 216123
     },
     {
@@ -937,7 +937,7 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "91466f656d79280ca429ab0be2336e28e6a36d2af2c240176d0d7ff70ecf7a8c",
+      "sha256": "8dfdf16e1d1b62230351132acfb719c6bc3a555b351af12acf73889f3e1e522e",
       "bytes": 211759
     },
     {
@@ -946,7 +946,7 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "5a5076281e4784119255f2c594a10403b3fe89b7511e6efd34177d49c66ffe95",
+      "sha256": "06f87d073fc40c3818efa395cc4e1ab87abb33f71fa07ba21a859087a48ef534",
       "bytes": 195371
     },
     {
@@ -955,7 +955,7 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "45e6648de05975d005190952f105f294a8eb29eb2b1fb7f875f9f74fc0e5d3bf",
+      "sha256": "831c86a1699d6b27d6d787771f18a279a9b31a84259294cb029e2c292fd9a01d",
       "bytes": 191485
     },
     {
@@ -964,7 +964,7 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "ee1343648150cb1721fde6bd8920135a027dfd76fe24c9b3fa23d2eb8bf65a9b",
+      "sha256": "6d28f29e852461426a6e4fa41327e6df5cf0c8705ed44df939ab0a7b8483b898",
       "bytes": 212689
     },
     {
@@ -973,7 +973,7 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "66a046100cade14cf3119b525e6b4208100bb496ea8d6449ede4a595bd2e2d45",
+      "sha256": "47fc2bf9b5df06af54aa56c4904421ba4eaeb7b84e166e83f58526b25a6c5fe1",
       "bytes": 208764
     }
   ]
