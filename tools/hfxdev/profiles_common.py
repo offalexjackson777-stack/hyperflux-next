@@ -72,7 +72,7 @@ PASSIVE_KEYS = {
     "route",
     "report_implies_route_available",
 }
-OPTIONAL_PASSIVE_KEYS = {"charge"}
+OPTIONAL_PASSIVE_KEYS = {"charge", "route_charge"}
 RECEIVER_TRANSPORT_KEYS = {
     "backend",
     "backend_id",

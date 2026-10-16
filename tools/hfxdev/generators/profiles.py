@@ -519,6 +519,8 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "    pub report_implies_route_available: bool,",
         "    pub charge_charging: &'static [u32],",
         "    pub charge_not_charging: &'static [u32],",
+        "    pub route_charge_charging: &'static [u32],",
+        "    pub route_charge_discharging: &'static [u32],",
         "}",
         "",
         "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
@@ -787,6 +789,7 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         if passive:
             contact = passive["contact"] or {"off_mat": [], "on_mat": []}
             charge = passive.get("charge") or {"charging": [], "not_charging": []}
+            route_charge = passive.get("route_charge") or {"charging": [], "discharging": []}
             for suffix, values in (
                 ("CONTACT_OFF_MAT", contact["off_mat"]),
                 ("CONTACT_ON_MAT", contact["on_mat"]),
@@ -795,6 +798,8 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                 ("ROUTE_INDETERMINATE", passive["route"].get("indeterminate", [])),
                 ("CHARGE_CHARGING", charge["charging"]),
                 ("CHARGE_NOT_CHARGING", charge["not_charging"]),
+                ("ROUTE_CHARGE_CHARGING", route_charge["charging"]),
+                ("ROUTE_CHARGE_DISCHARGING", route_charge["discharging"]),
             ):
                 rendered = ", ".join(str(value) for value in values)
                 lines.append(f"const PASSIVE_{suffix}_{index}: &[u32] = &[{rendered}];")
@@ -918,6 +923,8 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                 f"            report_implies_route_available: {route_implied},",
                 f"            charge_charging: PASSIVE_CHARGE_CHARGING_{index},",
                 f"            charge_not_charging: PASSIVE_CHARGE_NOT_CHARGING_{index},",
+                f"            route_charge_charging: PASSIVE_ROUTE_CHARGE_CHARGING_{index},",
+                f"            route_charge_discharging: PASSIVE_ROUTE_CHARGE_DISCHARGING_{index},",
                 "        }),",
             ]
         else:

@@ -345,11 +345,21 @@ def _validate_charge(
     profile: dict[str, Any], passive: dict[str, Any], capability_ids: set[str]
 ) -> None:
     charge = passive.get("charge")
+    route_charge = passive.get("route_charge")
     qualified = "telemetry.charging-state" in capability_ids
-    if charge is None:
+    if charge is None and route_charge is None:
         if qualified:
             raise ModelError(f"{profile['profile_id']}: charging state requires a charge decoder")
         return
+    if charge is not None:
+        _validate_mouse_charge(profile, charge)
+    if route_charge is not None:
+        _validate_route_charge(profile, route_charge)
+    if not qualified:
+        raise ModelError(f"{profile['profile_id']}: charge decoder requires the charging-state capability")
+
+
+def _validate_mouse_charge(profile: dict[str, Any], charge: Any) -> None:
     if profile["device_kind"] != "mouse":
         raise ModelError(f"{profile['profile_id']}: only a mouse may declare a charge decoder")
     if not isinstance(charge, dict) or set(charge) != {"charging", "not_charging"}:
@@ -360,5 +370,30 @@ def _validate_charge(
     )
     if not charging or not not_charging or set(charging) & set(not_charging):
         raise ModelError(f"{profile['profile_id']}: charge values must be nonempty and disjoint")
-    if not qualified:
-        raise ModelError(f"{profile['profile_id']}: charge decoder requires the charging-state capability")
+
+
+def _validate_route_charge(profile: dict[str, Any], route_charge: Any) -> None:
+    """The keyboard status report carries its charge in the route word.
+
+    The kernel packs bytes 3 and 4 of that report as one route value, power
+    source in the high byte and charge in the low byte. The decoder lists whole
+    route values, so a combination it does not name stays unknown.
+    """
+    if profile["device_kind"] != "keyboard":
+        raise ModelError(
+            f"{profile['profile_id']}: only a keyboard may declare a route charge decoder"
+        )
+    if not isinstance(route_charge, dict) or set(route_charge) != {"charging", "discharging"}:
+        raise ModelError(f"{profile['profile_id']}: route charge decoder is incomplete")
+    charging = _raw_values(
+        route_charge["charging"], f"{profile['profile_id']} route charging values"
+    )
+    discharging = _raw_values(
+        route_charge["discharging"], f"{profile['profile_id']} route discharging values"
+    )
+    if not charging or not discharging or set(charging) & set(discharging):
+        raise ModelError(
+            f"{profile['profile_id']}: route charge values must be nonempty and disjoint"
+        )
+    if any(value > 0xFFFF for value in (*charging, *discharging)):
+        raise ModelError(f"{profile['profile_id']}: route charge values exceed the route word")

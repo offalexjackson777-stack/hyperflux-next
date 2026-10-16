@@ -224,7 +224,8 @@
         },
         "route": {"$ref": "#/$defs/route-decoder"},
         "report_implies_route_available": {"type": "boolean"},
-        "charge": {"$ref": "#/$defs/charge-decoder"}
+        "charge": {"$ref": "#/$defs/charge-decoder"},
+        "route_charge": {"$ref": "#/$defs/route-charge-decoder"}
       }
     },
     "lifecycle-policy": {
@@ -280,6 +281,15 @@
         "not_charging": {"$ref": "#/$defs/raw-values"}
       }
     },
+    "route-charge-decoder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["charging", "discharging"],
+      "properties": {
+        "charging": {"$ref": "#/$defs/route-word-values"},
+        "discharging": {"$ref": "#/$defs/route-word-values"}
+      }
+    },
     "route-decoder": {
       "type": "object",
       "additionalProperties": false,
@@ -289,6 +299,12 @@
         "unavailable": {"$ref": "#/$defs/raw-values"},
         "indeterminate": {"$ref": "#/$defs/raw-values"}
       }
+    },
+    "route-word-values": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "integer", "minimum": 0, "maximum": 65535}
     },
     "raw-values": {
       "type": "array",

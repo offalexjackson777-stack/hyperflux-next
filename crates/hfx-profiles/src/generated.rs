@@ -44,6 +44,8 @@ pub struct PassiveTelemetryRecord {
     pub report_implies_route_available: bool,
     pub charge_charging: &'static [u32],
     pub charge_not_charging: &'static [u32],
+    pub route_charge_charging: &'static [u32],
+    pub route_charge_discharging: &'static [u32],
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -339,6 +341,8 @@ const PASSIVE_ROUTE_UNAVAILABLE_0: &[u32] = &[];
 const PASSIVE_ROUTE_INDETERMINATE_0: &[u32] = &[];
 const PASSIVE_CHARGE_CHARGING_0: &[u32] = &[1];
 const PASSIVE_CHARGE_NOT_CHARGING_0: &[u32] = &[0];
+const PASSIVE_ROUTE_CHARGE_CHARGING_0: &[u32] = &[];
+const PASSIVE_ROUTE_CHARGE_DISCHARGING_0: &[u32] = &[];
 
 const QUALIFICATION_MIGRATIONS_0: &[QualificationMigrationRecord] = &[
     QualificationMigrationRecord {
@@ -447,6 +451,8 @@ const PASSIVE_ROUTE_UNAVAILABLE_1: &[u32] = &[2];
 const PASSIVE_ROUTE_INDETERMINATE_1: &[u32] = &[257];
 const PASSIVE_CHARGE_CHARGING_1: &[u32] = &[];
 const PASSIVE_CHARGE_NOT_CHARGING_1: &[u32] = &[];
+const PASSIVE_ROUTE_CHARGE_CHARGING_1: &[u32] = &[];
+const PASSIVE_ROUTE_CHARGE_DISCHARGING_1: &[u32] = &[];
 
 const QUALIFICATION_MIGRATIONS_1: &[QualificationMigrationRecord] = &[
     QualificationMigrationRecord {
@@ -574,6 +580,8 @@ pub const PROFILES: &[ProfileRecord] = &[
             report_implies_route_available: true,
             charge_charging: PASSIVE_CHARGE_CHARGING_0,
             charge_not_charging: PASSIVE_CHARGE_NOT_CHARGING_0,
+            route_charge_charging: PASSIVE_ROUTE_CHARGE_CHARGING_0,
+            route_charge_discharging: PASSIVE_ROUTE_CHARGE_DISCHARGING_0,
         }),
         lifecycle: Some(LifecyclePolicyRecord {
             power_off_departure_evidence: PowerOffDepartureEvidence::WatchedRetainedRoute,
@@ -632,6 +640,8 @@ pub const PROFILES: &[ProfileRecord] = &[
             report_implies_route_available: false,
             charge_charging: PASSIVE_CHARGE_CHARGING_1,
             charge_not_charging: PASSIVE_CHARGE_NOT_CHARGING_1,
+            route_charge_charging: PASSIVE_ROUTE_CHARGE_CHARGING_1,
+            route_charge_discharging: PASSIVE_ROUTE_CHARGE_DISCHARGING_1,
         }),
         lifecycle: Some(LifecyclePolicyRecord {
             power_off_departure_evidence: PowerOffDepartureEvidence::ReceiverState,
