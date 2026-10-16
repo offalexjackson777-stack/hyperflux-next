@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-#include <hyperflux/generated/protocol_v4_json.hpp>
+#include <hyperflux/generated/protocol_v5_json.hpp>
 
 #include <cstdint>
 #include <stdexcept>
@@ -33,7 +33,7 @@ T number(std::uint64_t value)
     return *decoded;
 }
 
-hyperflux::v4::BridgeSnapshot snapshot()
+hyperflux::v5::BridgeSnapshot snapshot()
 {
     return {
         {
@@ -66,7 +66,7 @@ bool rejects_unknown_field()
     try
     {
         static_cast<void>(
-            hyperflux::json_codec::decode<hyperflux::v4::BridgeSnapshot>(encoded));
+            hyperflux::json_codec::decode<hyperflux::v5::BridgeSnapshot>(encoded));
     }
     catch(const hyperflux::json_codec::CodecError&)
     {
@@ -98,15 +98,15 @@ bool rejects_oversized_feature_offer()
     const auto value = nlohmann::json {
         {"client_id", "client"},
         {"client_name", "client name"},
-        {"minimum_version", 4},
-        {"maximum_version", 4},
+        {"minimum_version", 5},
+        {"maximum_version", 5},
         {"required_features", features},
         {"optional_features", nlohmann::json::array()},
     };
     try
     {
         static_cast<void>(
-            hyperflux::json_codec::decode<hyperflux::v4::ClientHello>(value));
+            hyperflux::json_codec::decode<hyperflux::v5::ClientHello>(value));
     }
     catch(const hyperflux::json_codec::CodecError&)
     {
@@ -123,34 +123,34 @@ int main()
     const auto original = snapshot();
     const auto encoded = json_codec::encode(original);
     if(encoded.at("receivers").at(0).at("generation_id") != "3"
-       || json_codec::decode<v4::BridgeSnapshot>(encoded) != original)
+       || json_codec::decode<v5::BridgeSnapshot>(encoded) != original)
     {
         return 1;
     }
 
     const auto request_id = text<RequestId>("request-1");
-    const v4::RpcRequest request = v4::RpcRequestNegotiate {
+    const v5::RpcRequest request = v5::RpcRequestNegotiate {
         {
             request_id,
             {
                 text<ClientId>("client-1"),
                 text<ClientName>("OpenRGB contract test"),
-                number<ProtocolVersion>(4),
-                number<ProtocolVersion>(4),
+                number<ProtocolVersion>(5),
+                number<ProtocolVersion>(5),
                 {text<ProtocolFeatureId>("snapshot-profile-bindings")},
                 {},
             },
         },
     };
     const auto request_wire = json_codec::encode(request);
-    const auto decoded_request = json_codec::decode<v4::RpcRequest>(request_wire);
+    const auto decoded_request = json_codec::decode<v5::RpcRequest>(request_wire);
     if(request_wire.at("method") != "negotiate"
-       || !std::holds_alternative<v4::RpcRequestNegotiate>(decoded_request))
+       || !std::holds_alternative<v5::RpcRequestNegotiate>(decoded_request))
     {
         return 2;
     }
 
-    const v4::RpcResponse response = v4::RpcResponseSnapshotSuccess {
+    const v5::RpcResponse response = v5::RpcResponseSnapshotSuccess {
         {
             request_id,
             text<ServerInstanceId>("server-1"),
@@ -158,9 +158,9 @@ int main()
         },
     };
     const auto response_wire = json_codec::encode(response);
-    const auto decoded_response = json_codec::decode<v4::RpcResponse>(response_wire);
+    const auto decoded_response = json_codec::decode<v5::RpcResponse>(response_wire);
     if(response_wire.at("type") != "snapshot-success"
-       || !std::holds_alternative<v4::RpcResponseSnapshotSuccess>(decoded_response))
+       || !std::holds_alternative<v5::RpcResponseSnapshotSuccess>(decoded_response))
     {
         return 3;
     }

@@ -185,8 +185,8 @@ fn negotiation_for(client_id: &str, request_id: &str) -> RpcRequest {
         params: ClientHello {
             client_id: id::<ClientId>(client_id),
             client_name: id::<ClientName>("Connection runtime test"),
-            minimum_version: ProtocolVersion::try_from(2).expect("version must be valid"),
-            maximum_version: ProtocolVersion::try_from(2).expect("version must be valid"),
+            minimum_version: ProtocolVersion::try_from(5).expect("version must be valid"),
+            maximum_version: ProtocolVersion::try_from(5).expect("version must be valid"),
             required_features: Vec::new(),
             optional_features: Vec::new(),
         },
@@ -265,7 +265,7 @@ fn real_unix_stream_serves_exact_version_and_cleans_up_on_eof() {
     let server = spawn_server(server, false);
 
     let hello = negotiate(&mut client);
-    assert_eq!(hello.selected_version.get(), 2);
+    assert_eq!(hello.selected_version.get(), 5);
     let snapshot = RpcRequest::Snapshot(SessionRequestEnvelope {
         request_id: id::<RequestId>("request-snapshot"),
         protocol_session_id: hello.protocol_session_id,

@@ -183,7 +183,7 @@ fn write_private(path: &Path, bytes: &[u8]) {
 
 fn completed_stable_transaction() -> CompletedTransaction {
     let mut request: TransactionRequest = serde_json::from_str(include_str!(
-        "../../../protocol/v3/fixtures/transaction-request-canonical.json"
+        "../../../protocol/v5/fixtures/transaction-request-canonical.json"
     ))
     .expect("canonical v3 transaction fixture");
 
