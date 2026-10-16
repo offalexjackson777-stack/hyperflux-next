@@ -367,6 +367,46 @@ mod tests {
     }
 
     #[test]
+    fn the_keyboard_charge_sets_only_the_keyboard_lane() {
+        const KEYBOARD_MODEL: &str = "Razer DeathStalker V2 Pro Tenkeyless";
+        let keyboard = device("paired-keyboard-0296");
+        let both = |device_id: &LogicalDeviceId| {
+            if *device_id == keyboard {
+                Some((ChildBatteryLane::Keyboard, KEYBOARD_MODEL))
+            } else {
+                lookup(device_id)
+            }
+        };
+        let keyboard_level = |percent| LifecycleObservationKind::BatteryReported {
+            device_id: keyboard.clone(),
+            percentage: BatteryPercent::try_from(percent).expect("percent is valid"),
+        };
+        let mut forwarder = ChildBatteryForwarder::default();
+        forwarder.record(&reported(80), both);
+        forwarder.record(&keyboard_level(99), both);
+        assert_eq!(sent(&mut forwarder).len(), 2);
+
+        forwarder.record_charge(ChildBatteryLane::Keyboard, ChildChargeReading::Charging);
+        let keyboard_charging =
+            ChildBatteryState::present(99, ChildBatteryStatus::Charging, KEYBOARD_MODEL);
+        assert_eq!(
+            sent(&mut forwarder),
+            [(ChildBatteryLane::Keyboard, keyboard_charging)]
+        );
+
+        // Charging at 100 percent is full; the pointer lane is untouched.
+        forwarder.record(&keyboard_level(100), both);
+        let keyboard_full =
+            ChildBatteryState::present(100, ChildBatteryStatus::Full, KEYBOARD_MODEL);
+        assert_eq!(
+            sent(&mut forwarder),
+            [(ChildBatteryLane::Keyboard, keyboard_full)]
+        );
+        forwarder.record(&reported(80), both);
+        assert!(sent(&mut forwarder).is_empty());
+    }
+
+    #[test]
     fn a_lane_without_a_reading_keeps_no_charge_for_later() {
         let mut forwarder = ChildBatteryForwarder::default();
         forwarder.record_charge(ChildBatteryLane::Pointer, ChildChargeReading::Charging);

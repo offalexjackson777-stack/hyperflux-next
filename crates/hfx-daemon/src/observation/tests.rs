@@ -625,6 +625,246 @@ fn externally_powered_keyboard_route_cannot_override_observed_activity() {
     assert!(route.observations.is_empty());
 }
 
+/// One keyboard status report: the kernel emits its battery level and then
+/// its route word, power source high and charge low, at consecutive
+/// sequence numbers.
+fn keyboard_status_report(
+    translator: &mut PassiveObservationTranslator,
+    sequence: u64,
+    word: u32,
+) -> PassiveTranslation {
+    translator
+        .translate(raw(
+            sequence,
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW,
+            HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+            0xe1,
+        ))
+        .expect("battery translates");
+    translator
+        .translate(raw(
+            sequence + 1,
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ROUTE_RAW,
+            HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+            word,
+        ))
+        .expect("route translates")
+}
+
+#[test]
+fn keyboard_status_route_word_reads_the_charge_state_without_changing_the_route() {
+    let mut translator = translator();
+    identify(
+        &mut translator,
+        1,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x0296,
+    );
+    // (route word, decoded charge, route disposition kept as before)
+    let cases = [
+        // On the cable; the route stays indeterminate.
+        (
+            0x0101,
+            ChildChargeReading::Charging,
+            PassiveDisposition::IgnoredIndeterminateSemantic,
+        ),
+        // Charge bit only, around plug-in and unplug; the route stays
+        // unqualified.
+        (
+            0x0001,
+            ChildChargeReading::Charging,
+            PassiveDisposition::IgnoredUnqualifiedSemantic,
+        ),
+        // Off the cable; the route still reads available.
+        (
+            0x0000,
+            ChildChargeReading::Discharging,
+            PassiveDisposition::Applied,
+        ),
+        // Power source without charging, as expected at a full battery or a
+        // charge limit, was never observed and stays unknown.
+        (
+            0x0100,
+            ChildChargeReading::Unknown,
+            PassiveDisposition::IgnoredUnqualifiedSemantic,
+        ),
+        (
+            0x0003,
+            ChildChargeReading::Unknown,
+            PassiveDisposition::Applied,
+        ),
+        (
+            0x0002,
+            ChildChargeReading::Unknown,
+            PassiveDisposition::Applied,
+        ),
+        (
+            0x0601,
+            ChildChargeReading::Unknown,
+            PassiveDisposition::IgnoredUnqualifiedSemantic,
+        ),
+    ];
+    let mut sequence = 2;
+    for (word, reading, disposition) in cases {
+        let translation = keyboard_status_report(&mut translator, sequence, word);
+        sequence += 2;
+        assert_eq!(
+            translation.charge,
+            Some((ChildBatteryLane::Keyboard, reading)),
+            "route word {word:#06x}"
+        );
+        assert_eq!(
+            translation.disposition, disposition,
+            "route word {word:#06x}"
+        );
+        assert_eq!(
+            translation.observations.is_empty(),
+            disposition != PassiveDisposition::Applied,
+            "route word {word:#06x}"
+        );
+    }
+}
+
+#[test]
+fn the_observed_cable_unplug_reads_charging_until_the_charge_bit_clears() {
+    let mut translator = translator();
+    identify(
+        &mut translator,
+        1,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x0296,
+    );
+    let mut sequence = 2;
+    let mut report = |word| {
+        let translation = keyboard_status_report(&mut translator, sequence, word);
+        sequence += 2;
+        translation.charge
+    };
+    for (word, reading) in [
+        (0x0101, ChildChargeReading::Charging),
+        (0x0001, ChildChargeReading::Charging),
+        (0x0000, ChildChargeReading::Discharging),
+    ] {
+        assert_eq!(report(word), Some((ChildBatteryLane::Keyboard, reading)));
+    }
+}
+
+#[test]
+fn only_a_route_word_right_after_its_battery_level_reads_a_charge() {
+    let mut translator = translator();
+    let route = |translator: &mut PassiveObservationTranslator, sequence, slot, word| {
+        translator
+            .translate(raw(
+                sequence,
+                HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ROUTE_RAW,
+                slot,
+                word,
+            ))
+            .expect("route translates")
+    };
+    let battery = |translator: &mut PassiveObservationTranslator, sequence, slot| {
+        translator
+            .translate(raw(
+                sequence,
+                HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW,
+                slot,
+                0xe1,
+            ))
+            .expect("battery translates");
+    };
+
+    let unbound = route(
+        &mut translator,
+        1,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x0101,
+    );
+    assert_eq!(unbound.disposition, PassiveDisposition::IgnoredUnknownLane);
+    assert_eq!(unbound.charge, None);
+
+    // The identity report emits its route value right after the product
+    // identity, never after a battery level.
+    identify(
+        &mut translator,
+        2,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x0296,
+    );
+    let identity_route = route(&mut translator, 3, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 0);
+    assert_eq!(identity_route.charge, None);
+
+    // A battery level followed by an identity report: the identity resets the
+    // lane, so its route value is still not a status-report word.
+    battery(&mut translator, 4, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE);
+    identify(
+        &mut translator,
+        5,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x0296,
+    );
+    let replayed = route(&mut translator, 6, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 0);
+    assert_eq!(replayed.charge, None);
+
+    // A gap means the route word belongs to another report.
+    battery(&mut translator, 7, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE);
+    let gap = route(&mut translator, 9, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 0);
+    assert_eq!(gap.charge, None);
+
+    // One battery level pairs with one route word only.
+    let paired = keyboard_status_report(&mut translator, 10, 0);
+    assert_eq!(
+        paired.charge,
+        Some((ChildBatteryLane::Keyboard, ChildChargeReading::Discharging))
+    );
+    let repeated = route(&mut translator, 12, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 0);
+    assert_eq!(repeated.charge, None);
+
+    // A sibling's battery level does not pair with the keyboard route word.
+    identify(
+        &mut translator,
+        13,
+        HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+        0x00cd,
+    );
+    battery(&mut translator, 14, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE);
+    let sibling = route(&mut translator, 15, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 0);
+    assert_eq!(sibling.charge, None);
+
+    // The mouse profile has no route charge decoder.
+    battery(&mut translator, 16, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE);
+    let mouse = route(&mut translator, 17, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE, 0);
+    assert_eq!(mouse.charge, None);
+
+    // A conflicting identity between the battery level and the route value
+    // keeps the lane but still breaks the pairing.
+    battery(&mut translator, 18, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE);
+    let conflict = identify(
+        &mut translator,
+        19,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x1234,
+    );
+    assert_eq!(conflict.disposition, PassiveDisposition::IdentityConflict);
+    let after_conflict = route(&mut translator, 20, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 0);
+    assert_eq!(after_conflict.charge, None);
+
+    // An unknown child inherits no decoder at all.
+    let mut translator = self::translator();
+    identify(
+        &mut translator,
+        1,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x1234,
+    );
+    battery(&mut translator, 2, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE);
+    let unknown = route(&mut translator, 3, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 0);
+    assert_eq!(
+        unknown.disposition,
+        PassiveDisposition::IgnoredUnqualifiedSemantic
+    );
+    assert_eq!(unknown.charge, None);
+}
+
 #[test]
 fn unknown_child_keeps_identity_and_activity_but_inherits_no_decoder() {
     let mut translator = translator();

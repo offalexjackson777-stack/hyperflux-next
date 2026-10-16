@@ -122,6 +122,22 @@ fn only_the_exact_mouse_profile_decodes_the_charge_field() {
 }
 
 #[test]
+fn only_the_exact_keyboard_profile_decodes_the_route_word_charge() {
+    let mouse = child_profile_by_product_id(0x00cd).expect("mouse is qualified");
+    let keyboard = child_profile_by_product_id(0x0296).expect("keyboard is qualified");
+    let keyboard_passive = keyboard.passive.expect("keyboard has a passive decoder");
+    assert_eq!(keyboard_passive.route_charge_charging, &[1, 257]);
+    assert_eq!(keyboard_passive.route_charge_discharging, &[0]);
+    // The route decoding itself is unchanged.
+    assert_eq!(keyboard_passive.route_available, &[0, 3]);
+    assert_eq!(keyboard_passive.route_unavailable, &[2]);
+    assert_eq!(keyboard_passive.route_indeterminate, &[257]);
+    let mouse_passive = mouse.passive.expect("mouse has a passive decoder");
+    assert!(mouse_passive.route_charge_charging.is_empty());
+    assert!(mouse_passive.route_charge_discharging.is_empty());
+}
+
+#[test]
 fn shared_return_policy_is_bounded_and_truthful() {
     let policy = return_policy_by_id("receiver-child.activity-assisted.v1")
         .expect("profile-selected return policy exists");
