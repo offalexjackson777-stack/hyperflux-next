@@ -16,7 +16,7 @@ from typing import Callable
 import xml.etree.ElementTree as ElementTree
 
 from .integrations import load_integration_catalog
-from .model import ModelError, load_json, sha256_file
+from .model import CATALOG_ROOT, ModelError, load_json, sha256_file
 from .protocol import load_protocol_registry
 from .testgraph import TestCatalog, TestNode, TestSelection, select_tests
 from .toolchains import load_toolchain_pins
@@ -42,7 +42,7 @@ MATERIALS = (
     ("design-coverage", "assurance/design-coverage.json", "file"),
     ("error-catalog", "errors/catalog.json", "file"),
     ("formal-model", "assurance/formal-model.json", "file"),
-    ("generated-profiles", "generated/profiles/catalog.json", "file"),
+    ("generated-profiles", (CATALOG_ROOT / "profiles" / "catalog.json").as_posix(), "file"),
     ("integration-catalog", "integrations/catalog.json", "file"),
     ("performance-budgets", "assurance/performance-budgets.json", "file"),
     ("protected-behavior", "assurance/protected-behavior.json", "file"),

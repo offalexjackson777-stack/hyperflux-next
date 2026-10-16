@@ -15,7 +15,7 @@ from typing import Any
 
 from .integrations import load_integration_catalog
 from .knowledge import load_knowledge_inputs
-from .model import ModelError, sha256_file
+from .model import CATALOG_ROOT, ModelError, sha256_file
 from .native_parity import validate_parity_evidence
 from .native_probe import load_native_probe_catalog
 from .openrazer_native_route import (
@@ -49,7 +49,7 @@ DRAFT_OBSERVATION_KEYS = {
 }
 ALLOWED_PROMOTION_DOMAINS = (
     "evidence/native-transport",
-    "generated/profile-projections",
+    (CATALOG_ROOT / "profile-projections").as_posix(),
     "integrations/openrazer/source-bindings",
     "integrations/openrgb/source-bindings",
     "profiles/children",

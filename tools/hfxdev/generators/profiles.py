@@ -7,6 +7,7 @@ from pprint import pformat
 import re
 from typing import Any
 
+from ..model import CATALOG_ROOT
 from ..source_validated_catalog import (
     OWNER_CONFIRMED,
     PHYSICALLY_PROVEN,
@@ -15,6 +16,8 @@ from ..source_validated_catalog import (
     documented_support_tier,
     documented_support_tier_counts,
 )
+
+PROFILE_CATALOG = (CATALOG_ROOT / "profiles" / "catalog.json").as_posix()
 
 
 def _symbol(value: str) -> str:
@@ -459,7 +462,7 @@ def markdown(
             "never enough.",
             "",
             "Maintainers can inspect the complete machine-readable profile catalog in "
-            "[`generated/profiles/catalog.json`](../../generated/profiles/catalog.json) "
+            f"[`{PROFILE_CATALOG}`](../../{PROFILE_CATALOG}) "
             "and the checked app paths in "
             "[`integrations/native-route/source-validated.json`](../../integrations/native-route/source-validated.json).",
             "",

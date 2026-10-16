@@ -23,7 +23,7 @@ from pathlib import Path
 import re
 from typing import Any, Iterable
 
-from .model import ModelError, load_json
+from .model import CATALOG_ROOT, ModelError, load_json
 from .schema_subset import SchemaViolation, validate
 from .source_validated import load_source_validated_catalog
 from .source_validated_catalog import (
@@ -38,7 +38,7 @@ RECORD_SCHEMA_PATH = Path("schemas") / "owner-report.schema.json"
 RECORDS_DIRECTORY = Path("evidence") / "owner-reports"
 RECORD_SCHEMA = "hyperflux-owner-report-v1"
 RECORD_SCHEMA_REFERENCE = "../../schemas/owner-report.schema.json"
-PROFILE_CATALOG_PATH = Path("generated") / "profiles" / "catalog.json"
+PROFILE_CATALOG_PATH = CATALOG_ROOT / "profiles" / "catalog.json"
 ERROR_CATALOG_PATH = Path("errors") / "catalog.json"
 
 # The issue form shows these exact words; the body parser matches them exactly.

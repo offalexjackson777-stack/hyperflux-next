@@ -162,7 +162,7 @@ from .governance import load_github_governance
 from .install import load_first_run_activation, load_install_manifest
 from .distributions import load_distribution_catalog
 from .documentation import load_document_catalog, replace_generated_blocks
-from .model import ModelError, load_foundation, load_json
+from .model import CATALOG_ROOT, ModelError, load_foundation, load_json
 from .linux_runtime import load_linux_runtime
 from .licensing import load_licensing_policy
 from .local_companion import load_local_companion
@@ -391,7 +391,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
     }
     files = {
         **hybrid_documents,
-        root / "generated" / "public-readiness.json": json.dumps(
+        root / CATALOG_ROOT / "public-readiness.json": json.dumps(
             readiness, indent=2, sort_keys=True
         )
         + "\n",
@@ -497,8 +497,8 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "domain_types.py": python_types(domain_catalog),
         root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "domain_types.hpp": cpp_types(domain_catalog),
         root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "domain_json.hpp": domain_cpp_json(domain_catalog),
-        root / "generated" / "profiles" / "catalog.json": profile_compiled_json(profiles),
-        root / "generated" / "knowledge" / "catalog.json": knowledge_compiled_json(
+        root / CATALOG_ROOT / "profiles" / "catalog.json": profile_compiled_json(profiles),
+        root / CATALOG_ROOT / "knowledge" / "catalog.json": knowledge_compiled_json(
             knowledge
         ),
         root / "tests" / "fixtures" / "generated" / "profile-compositions.json": profile_fixtures_json(profile_fixtures),
@@ -533,7 +533,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "driver" / "kernel" / "uapi" / "hyperflux_next.h": kernel_uapi_c_header(kernel_uapi),
         root / "crates" / "hfx-kernel-transport" / "src" / "generated.rs": kernel_uapi_rust_bindings(kernel_uapi),
         root / "docs" / "generated" / "kernel-uapi.md": kernel_uapi_markdown(kernel_uapi),
-        root / "generated" / "integrations" / "catalog.json": integration_compiled_json(integrations),
+        root / CATALOG_ROOT / "integrations" / "catalog.json": integration_compiled_json(integrations),
         root / "docs" / "generated" / "integrations.md": integration_markdown(integrations),
         root / "crates" / "hfx-integration-model" / "src" / "generated.rs": integration_rust_catalog(integrations),
         root

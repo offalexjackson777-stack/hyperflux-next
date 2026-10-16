@@ -16,6 +16,10 @@ REPOSITORY_SKIPPED_NAMES = frozenset(
     {".git", ".hfx", ".venv", "__pycache__", "build", "dist", "target"}
 )
 
+# Repository-relative root of the compiled catalogs (profiles, knowledge,
+# integrations, public readiness) that `./hfx generate` writes.
+CATALOG_ROOT = Path("generated")
+
 
 class ModelError(ValueError):
     """Raised when canonical repository data violates a foundation rule."""
