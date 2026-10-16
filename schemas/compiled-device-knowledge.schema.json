@@ -17,7 +17,7 @@
     "candidates"
   ],
   "properties": {
-    "$schema": {"const": "../../schemas/compiled-device-knowledge.schema.json"},
+    "$schema": {"const": "../../../schemas/compiled-device-knowledge.schema.json"},
     "schema": {"const": "hyperflux-compiled-device-knowledge-v1"},
     "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "candidate_snapshot_id": {"type": "string", "pattern": "^catalog\\.[a-z0-9.-]+$"},

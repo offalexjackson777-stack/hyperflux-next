@@ -49,4 +49,4 @@ No owner has confirmed a device yet. If you own one of the devices listed as exp
 
 A listed device still gets lighting changes only when the receiver as it is connected now, the report format, and the command rules all match. A similar name, a match on the vendor alone, a pairing record, or a local USB path is never enough.
 
-Maintainers can inspect the complete machine-readable profile catalog in [`generated/profiles/catalog.json`](../../generated/profiles/catalog.json) and the checked app paths in [`integrations/native-route/source-validated.json`](../../integrations/native-route/source-validated.json).
+Maintainers can inspect the complete machine-readable profile catalog in [`spec/catalog/profiles/catalog.json`](../../spec/catalog/profiles/catalog.json) and the checked app paths in [`integrations/native-route/source-validated.json`](../../integrations/native-route/source-validated.json).

@@ -57,7 +57,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
     def test_readme_is_a_human_owned_github_front_door(self) -> None:
         readiness = public_readiness(ROOT)
         self.assertEqual(
-            load_json(ROOT / "generated" / "public-readiness.json"), readiness
+            load_json(ROOT / "spec" / "catalog" / "public-readiness.json"), readiness
         )
         deployment = load_native_deployment(ROOT)
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -1004,8 +1004,9 @@ class RepositoryExperienceContracts(unittest.TestCase):
         expected = {
             ".devcontainer",
             "apps",
-            "generated",
             "sdk",
+            "spec",
+            "spec/catalog",
             "uapi",
         }
         for directory in expected:

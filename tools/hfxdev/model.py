@@ -18,7 +18,7 @@ REPOSITORY_SKIPPED_NAMES = frozenset(
 
 # Repository-relative root of the compiled catalogs (profiles, knowledge,
 # integrations, public readiness) that `./hfx generate` writes.
-CATALOG_ROOT = Path("generated")
+CATALOG_ROOT = Path("spec") / "catalog"
 
 
 class ModelError(ValueError):

@@ -1,5 +1,5 @@
 {
-  "$schema": "../../schemas/compiled-device-knowledge.schema.json",
+  "$schema": "../../../schemas/compiled-device-knowledge.schema.json",
   "candidate_snapshot_history": [
     {
       "candidate_count": 11,

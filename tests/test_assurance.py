@@ -225,7 +225,7 @@ class AssuranceTests(unittest.TestCase):
             },
         )
 
-        catalog = load_json(ROOT / "generated" / "profiles" / "catalog.json")
+        catalog = load_json(ROOT / "spec" / "catalog" / "profiles" / "catalog.json")
         current_profiles = {
             profile["profile_id"]: profile for profile in catalog["profiles"]
         }

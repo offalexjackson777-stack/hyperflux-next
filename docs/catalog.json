@@ -32,7 +32,7 @@
       "owner": "documentation",
       "navigation_group": "home",
       "mode": "hybrid",
-      "canonical_sources": ["generated/public-readiness.json", "assurance/arch-repository.json", "packaging/distributions.json", "packaging/repository-site.json", "integrations/native-route/source-validated.json"],
+      "canonical_sources": ["spec/catalog/public-readiness.json", "assurance/arch-repository.json", "packaging/distributions.json", "packaging/repository-site.json", "integrations/native-route/source-validated.json"],
       "generated_block_ids": ["release-summary", "compatibility-summary", "install-table", "recommended-package"]
     },
     {
@@ -65,7 +65,7 @@
       "owner": "documentation",
       "navigation_group": "home",
       "mode": "hybrid",
-      "canonical_sources": ["generated/public-readiness.json", "assurance/arch-repository.json"],
+      "canonical_sources": ["spec/catalog/public-readiness.json", "assurance/arch-repository.json"],
       "generated_block_ids": ["release-summary"]
     },
     {
@@ -879,7 +879,7 @@
       "owner": "documentation",
       "navigation_group": "project",
       "mode": "hybrid",
-      "canonical_sources": ["generated/public-readiness.json", "assurance/release-gates.json", "assurance/arch-repository.json"],
+      "canonical_sources": ["spec/catalog/public-readiness.json", "assurance/release-gates.json", "assurance/arch-repository.json"],
       "generated_block_ids": ["release-status"]
     },
     {
@@ -1049,7 +1049,6 @@
     {"path": "evidence/native-transport/basilisk-v3-pro-35k-00cd-read-parity-20260727.md", "classification": "evidence-record"},
     {"path": "evidence/native-transport/deathstalker-v2-pro-tkl-0296-read-parity-20260727.md", "classification": "evidence-record"},
     {"path": "evidence/physical-acceptance/hyperflux-v2-fixtures.md", "classification": "evidence-record"},
-    {"path": "generated/README.md", "classification": "generated-front-door"},
     {"path": "governance/README.md", "classification": "generated-front-door"},
     {"path": "integrations/README.md", "classification": "generated-front-door"},
     {"path": "integrations/openrazer/README.md", "classification": "generated-front-door"},
@@ -1064,6 +1063,8 @@
     {"path": "sdk/cpp/README.md", "classification": "generated-front-door"},
     {"path": "sdk/cpp/vendor/README.md", "classification": "vendored-component-note"},
     {"path": "sdk/python/README.md", "classification": "generated-front-door"},
+    {"path": "spec/README.md", "classification": "generated-front-door"},
+    {"path": "spec/catalog/README.md", "classification": "generated-front-door"},
     {"path": "tests/README.md", "classification": "generated-front-door"},
     {"path": "toolchains/README.md", "classification": "generated-front-door"},
     {"path": "tools/README.md", "classification": "generated-front-door"},

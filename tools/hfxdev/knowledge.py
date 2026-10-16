@@ -695,7 +695,7 @@ def compiled_knowledge_catalog(root: Path) -> dict[str, Any]:
             }
         )
     return {
-        "$schema": "../../schemas/compiled-device-knowledge.schema.json",
+        "$schema": "../../../schemas/compiled-device-knowledge.schema.json",
         "schema": "hyperflux-compiled-device-knowledge-v1",
         "source_sha256": inputs.source_sha256,
         "candidate_snapshot_id": selected_snapshot,

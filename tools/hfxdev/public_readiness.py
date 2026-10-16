@@ -42,7 +42,7 @@ def public_readiness(root: Path) -> dict[str, Any]:
     lifecycle_gate_label = "gate" if lifecycle_remaining == 1 else "gates"
     published = atlas.publication_state == "public-arch-release"
     return {
-        "$schema": "../schemas/public-readiness.schema.json",
+        "$schema": "../../schemas/public-readiness.schema.json",
         "schema": "hyperflux-public-readiness-v3",
         "generated_from": [
             "architecture/repository-atlas.json",

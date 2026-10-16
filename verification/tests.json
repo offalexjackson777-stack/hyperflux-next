@@ -98,7 +98,7 @@
         "apps/device-qualification/contracts/local-qualification-view.schema.json",
         "errors/catalog.json",
         "evidence/**/*",
-        "generated/profiles/catalog.json",
+        "spec/catalog/profiles/catalog.json",
         "integrations/native-route/source-validated.json",
         "sdk/cpp/vendor/manifest.json",
         "sdk/python/pyproject.toml",
@@ -389,7 +389,7 @@
       "timeout_seconds": 120,
       "dependencies": ["generated-freshness"],
       "isolation": "exclusive-process",
-      "cache_inputs": ["README.md", "CONTRIBUTING.md", "SUPPORT.md", "SECURITY.md", "assurance/documentation-audit.json", "assurance/documentation-review.json", "assurance/documentation-screenshot-manifest.json", "assurance/journey-source-coverage.json", "docs/**/*.md", "docs/catalog.json", "docs/render-preview.json", "schemas/document-catalog.schema.json", "schemas/documentation-audit.schema.json", "schemas/documentation-render-policy.schema.json", "schemas/documentation-review.schema.json", "schemas/documentation-screenshot-manifest.schema.json", "schemas/journey-source-coverage.schema.json", "apps/device-qualification/**/*", "crates/hfx-device-qualification/**/*", "crates/hfx-system-probe/**/*", "generated/public-readiness.json", "architecture/repository-atlas.json", "tools/documentation_preview.cjs", "tools/hfxdev/documentation.py", "tools/hfxdev/documentation_preview.py", "tools/hfxdev/documentation_evidence.py", "toolchains/documentation-render/package.json", "toolchains/documentation-render/package-lock.json", "tools/hfxdev/journey_coverage.py", "tools/hfxdev/generators/readme.py", "tools/hfxdev/generators/atlas.py", "tests/test_repository_experience.py", "tests/test_documentation_evidence.py", "tests/test_journey.py"],
+      "cache_inputs": ["README.md", "CONTRIBUTING.md", "SUPPORT.md", "SECURITY.md", "assurance/documentation-audit.json", "assurance/documentation-review.json", "assurance/documentation-screenshot-manifest.json", "assurance/journey-source-coverage.json", "docs/**/*.md", "docs/catalog.json", "docs/render-preview.json", "schemas/document-catalog.schema.json", "schemas/documentation-audit.schema.json", "schemas/documentation-render-policy.schema.json", "schemas/documentation-review.schema.json", "schemas/documentation-screenshot-manifest.schema.json", "schemas/journey-source-coverage.schema.json", "apps/device-qualification/**/*", "crates/hfx-device-qualification/**/*", "crates/hfx-system-probe/**/*", "spec/catalog/public-readiness.json", "architecture/repository-atlas.json", "tools/documentation_preview.cjs", "tools/hfxdev/documentation.py", "tools/hfxdev/documentation_preview.py", "tools/hfxdev/documentation_evidence.py", "toolchains/documentation-render/package.json", "toolchains/documentation-render/package-lock.json", "tools/hfxdev/journey_coverage.py", "tools/hfxdev/generators/readme.py", "tools/hfxdev/generators/atlas.py", "tests/test_repository_experience.py", "tests/test_documentation_evidence.py", "tests/test_journey.py"],
       "produced_evidence": ["repository-documentation-result", "documentation-link-result", "repository-atlas-result", "qualification-entry-point-result"],
       "resume_policy": "rerun"
     },

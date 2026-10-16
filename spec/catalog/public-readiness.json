@@ -1,5 +1,5 @@
 {
-  "$schema": "../schemas/public-readiness.schema.json",
+  "$schema": "../../schemas/public-readiness.schema.json",
   "evidence": {
     "hardware_gates": 0,
     "known_gaps": 23,
@@ -13,7 +13,7 @@
     "architecture/repository-atlas.json",
     "assurance/release-gates.json",
     "assurance/arch-repository.json",
-    "generated/knowledge/catalog.json",
+    "spec/catalog/knowledge/catalog.json",
     "integrations/native-route/source-validated.json"
   ],
   "hardware": {
