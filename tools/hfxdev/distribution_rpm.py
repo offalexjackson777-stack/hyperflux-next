@@ -232,6 +232,22 @@ def rpmlint_override_config() -> str:
     own packages, and a plain configuration can only add to that list. These
     packages are not part of openSUSE, every filter names one of them, and the
     distribution's own filters do not name those checks.
+
+    Why the whole list is cleared rather than only the four checks the filters
+    need today (permissions-directory-setuid-bit, permissions-missing-postin,
+    permissions-missing-requires and systemd-tmpfile-entry-unauthorized):
+    rpmlint 2.x merges configuration files in a fixed order (its defaults, the
+    system directories such as /etc/xdg/rpmlint, then --config) and has only
+    two list operations. A plain file appends the items it names, and a file
+    whose name contains ".override." replaces the list. Nothing removes one
+    item. `Filters` can therefore be extended without touching openSUSE's
+    own filters, which hyperflux-next.toml does, but `BlockedFilters` can only
+    grow or be replaced. Keeping openSUSE's other blocked checks would mean
+    copying its list of about sixty names into this file, and the copy would
+    silently go stale whenever openSUSE changes it. Clearing it lets only
+    configured `Filters` patterns hide those checks: openSUSE's own filters
+    do not name them, and every pattern here names a HyperFlux package and the
+    exact path it accepts.
     """
 
     return "\n".join(
