@@ -514,9 +514,18 @@ source=$(find /usr/src -maxdepth 1 -name 'hid-hyperflux-next-*' -print -quit)
 version=${source##*/hid-hyperflux-next-}
 test -n "$version"
 dkms status -m hid-hyperflux-next -v "$version" | grep -q .
+check_module() {
+  module=$(find "/var/lib/dkms/hid-hyperflux-next/$version/$1" -name 'hid[-_]hyperflux[-_]next.ko*' -print -quit)
+  test -n "$module"
+  modinfo "$module"
+  test "$(modinfo -F vermagic "$module" | cut -d' ' -f1)" = "$1"
+}
 # Kernel development files live under /usr/src. An installed kernel links
-# /lib/modules/KERNEL/build to them, and dkms.conf builds there; the image has
-# no kernel, so the link is made here.
+# /lib/modules/KERNEL/build to them; the image has no kernel, so the link is
+# missing. dkms.conf builds wherever DKMS finds the kernel sources, so the
+# driver is first built with only --kernelsourcedir naming them. DKMS looks for
+# the kernel's signing tool under /lib/modules/KERNEL/build alone, so the link
+# is then made and the driver built again, this time signed.
 seen=
 built=0
 for directory in /lib/modules/*/build /usr/src/kernels/* /usr/src/linux-*-obj/*/*; do
@@ -525,14 +534,13 @@ for directory in /lib/modules/*/build /usr/src/kernels/* /usr/src/linux-*-obj/*/
   case " $seen " in *" $kernel "*) continue ;; esac
   seen="$seen $kernel"
   if [ ! -e "/lib/modules/$kernel/build" ]; then
+    dkms build --force -m hid-hyperflux-next -v "$version" -k "$kernel" --kernelsourcedir "$directory"
+    check_module "$kernel"
     mkdir -p "/lib/modules/$kernel"
     ln -s "$directory" "/lib/modules/$kernel/build"
   fi
   dkms build --force -m hid-hyperflux-next -v "$version" -k "$kernel"
-  module=$(find "/var/lib/dkms/hid-hyperflux-next/$version/$kernel" -name 'hid[-_]hyperflux[-_]next.ko*' -print -quit)
-  test -n "$module"
-  modinfo "$module"
-  test "$(modinfo -F vermagic "$module" | cut -d' ' -f1)" = "$kernel"
+  check_module "$kernel"
   built=$((built + 1))
 done
 test "$built" -ge 2

@@ -466,6 +466,12 @@ class GitHubGovernanceTests(unittest.TestCase):
             self.assertIn(required, rpm_script)
         self.assertNotRegex(rpm_script, r"-v [0-9]")
         self.assertNotIn("dkms install", rpm_script)
+        # dkms.conf must follow the kernel sources DKMS chose, so the driver is
+        # built once before the /lib/modules link exists.
+        self.assertLess(
+            rpm_script.index('-k "$kernel" --kernelsourcedir "$directory"'),
+            rpm_script.index('ln -s "$directory" "/lib/modules/$kernel/build"'),
+        )
         script = scripts["ubuntu"]
         for required in (
             './hfx package distro --distribution "$HFX_DISTRIBUTION"',

@@ -82,7 +82,7 @@ class LinuxRuntimeTests(unittest.TestCase):
         self.assertIn(f'PACKAGE_NAME="{hook_name}"', config)
         self.assertIn(f'PACKAGE_VERSION="{hook_version}"', config)
         self.assertIn('BUILT_MODULE_LOCATION[0]="."', config)
-        self.assertIn('MAKE[0]="make KDIR=/lib/modules/${kernelver}/build dkms"', config)
+        self.assertIn('MAKE[0]="make KDIR=${kernel_source_dir} dkms"', config)
         self.assertNotIn("MO=", config)
         self.assertNotIn("CLEAN=", config)
 

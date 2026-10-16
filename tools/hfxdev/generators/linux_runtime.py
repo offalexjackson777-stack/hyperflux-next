@@ -262,7 +262,7 @@ def dkms_configuration(runtime: LinuxRuntime) -> str:
             f'BUILT_MODULE_NAME[0]="{kernel.module_name}"',
             'BUILT_MODULE_LOCATION[0]="."',
             'DEST_MODULE_LOCATION[0]="/updates/dkms"',
-            'MAKE[0]="make KDIR=/lib/modules/${kernelver}/build dkms"',
+            'MAKE[0]="make KDIR=${kernel_source_dir} dkms"',
             'AUTOINSTALL="yes"',
             "",
         ]
