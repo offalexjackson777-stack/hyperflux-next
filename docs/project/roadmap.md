@@ -35,7 +35,7 @@ shown in the [installation guide](../user/installation.md). See the
   [installation guide](../user/installation.md).
 
 - **Old SDK protocol versions removed in 2.2.** Versions 1 to 4 and 6 of the
-  local SDK protocol are deprecated in 2.1 and will be removed in 2.2. The
+  local SDK protocol are retired in 2.2, after their deprecation in 2.1. The
   bundled SDK and the OpenRGB integration already use the remaining versions,
   5 and 7. See [release status](release-status.md#planned-change-in-22).
 

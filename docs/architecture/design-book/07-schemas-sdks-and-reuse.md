@@ -22,7 +22,7 @@ Generated files identify their authority, and verification fails on drift.
 
 ## 30. Stable HyperFlux SDK
 
-The SDK is the supported contract for integrations. Protocol v6 preserves
+The SDK is the supported contract for integrations. Protocol v5 preserves
 logical-device discovery, semantic migration APIs, telemetry, ownership, and
 diagnostics. Protocol v7 adds qualified native-route enumeration, bounded
 availability events, NativeControl ownership, and exact fixed-size Feature

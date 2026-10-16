@@ -22,7 +22,8 @@ class ConnectorContractTests(unittest.TestCase):
             "## Minimal Example",
         ):
             self.assertIn(heading, text)
-        self.assertIn("Protocol versions 1 through 7", text)
+        self.assertIn("The bridge serves protocol versions 5 and 7", text)
+        self.assertIn("Retired protocol versions (2.2)", text)
         self.assertIn("never replayed automatically", text)
         self.assertIn("receive no write authority", text)
 
