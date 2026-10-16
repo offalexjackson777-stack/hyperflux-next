@@ -56,6 +56,16 @@ from .generators.installation import (
     package_fallback as installation_package_fallback,
     repository_setup as installation_repository_setup,
 )
+from .generators.repository_guides import (
+    block_id as repository_guide_block_id,
+    install_table as repository_install_table,
+    repository_setup as repository_guide_setup,
+)
+from .package_repositories import (
+    arch_policy_for_guides,
+    load_repository_site_policy,
+    site_targets,
+)
 from .generators.social_preview import render_social_preview
 from .generators.supply_chain import spdx_json, supply_chain_markdown
 from .generators.domain import (
@@ -334,6 +344,13 @@ def rendered_files(root: Path) -> dict[Path, str]:
     arch_repository = load_arch_repository_policy(root)
     local_companion = load_local_companion(root)
     licensing_policy = load_licensing_policy(root)
+    repository_site = load_repository_site_policy(root)
+    repository_targets = site_targets(root)
+    repository_maturities = {
+        target_id: distribution_catalog.targets[target_id].maturity
+        for target_id in repository_targets
+    }
+    guide_arch_repository = arch_policy_for_guides(arch_repository, repository_site)
     readme_renderers = {
         "release-summary": lambda: readme_release_summary(readiness, arch_repository),
         "release-status": lambda: readme_release_status(readiness, arch_repository),
@@ -343,8 +360,22 @@ def rendered_files(root: Path) -> dict[Path, str]:
         "compatibility-summary": lambda: readme_compatibility_summary(
             readiness, openrazer_native, source_validated_devices, owner_confirmed
         ),
-        "repository-setup": lambda: installation_repository_setup(arch_repository),
-        "package-fallback": lambda: installation_package_fallback(arch_repository),
+        "repository-setup": lambda: installation_repository_setup(guide_arch_repository),
+        "package-fallback": lambda: installation_package_fallback(guide_arch_repository),
+        "install-table": lambda: repository_install_table(
+            repository_site, repository_targets, repository_maturities
+        ),
+        **{
+            repository_guide_block_id(target_id): (
+                lambda target=target: repository_guide_setup(
+                    repository_site,
+                    arch_repository,
+                    target,
+                    repository_maturities[target.id],
+                )
+            )
+            for target_id, target in repository_targets.items()
+        },
     }
     hybrid_documents = {
         root / document.path: replace_generated_blocks(

@@ -55,6 +55,11 @@ GENERATED_BLOCK_IDS = (
     "compatibility-summary",
     "repository-setup",
     "package-fallback",
+    "install-table",
+    "ubuntu-repository-setup",
+    "debian-repository-setup",
+    "fedora-repository-setup",
+    "opensuse-repository-setup",
 )
 BEGIN_RE = re.compile(r"^<!-- HFX-GENERATED-BEGIN: ([a-z][a-z0-9-]*) -->$")
 END_RE = re.compile(r"^<!-- HFX-GENERATED-END: ([a-z][a-z0-9-]*) -->$")
