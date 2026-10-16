@@ -24,6 +24,7 @@ The Arch `pkgbase=hyperflux-next` builds two user-facing packages that never ins
 
 - Package hooks create system users/directories and reload systemd and udev registration only.
 - Installation does not start, stop, restart, enable, disable, or probe services or hardware.
+- Removal does not stop or disable services either. A running bridge keeps running until the computer restarts, so turn the services off before removing the packages: `sudo systemctl disable --now hyperflux-next-bridge.service "hyperflux-next-client@$(id -u).socket"`.
 - First run enables the units without starting them, then reboots with the receiver connected: `sudo systemctl enable hyperflux-next-bridge.service "hyperflux-next-client@$(id -u).socket"`, then `sudo reboot`.
 - Live activation without a reboot requires disconnecting the receiver, so it is only for systems with verified alternate input: `sudo /usr/lib/hyperflux-next/hyperflux-next-activate activate-disconnected-driver`.
 - Bridge restoration ships disabled in this package release.
@@ -51,7 +52,7 @@ Dependency roles map to packages on each distribution:
 | `service-manager` | `systemd` | `systemd` |
 | `device-manager` | `systemd` | `udev` |
 
-- Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable or start a service.
+- Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable, start or stop a service.
 - `hyperflux-next-dkms` hands the driver source to DKMS when it is installed and removes every built copy when it is removed.
 - Programs must run on the glibc 2.39 that Ubuntu 24.04 ships.
 
@@ -89,6 +90,24 @@ If Secure Boot is on, Linux only loads drivers signed by a key it trusts. DKMS o
 
    It prints the name of the key. An empty line means the driver is not signed.
 
+### Remove HyperFlux Next on Ubuntu
+
+Removing the packages does not stop the HyperFlux services, so turn them off first.
+
+1. Turn off the HyperFlux services:
+
+   ```sh
+   sudo systemctl disable --now hyperflux-next-bridge.service "hyperflux-next-client@$(id -u).socket"
+   ```
+
+2. Remove the packages:
+
+   ```sh
+   sudo apt remove hyperflux-next-dkms hyperflux-next-linux
+   ```
+
+   This also removes every built copy of the driver from DKMS.
+
 ## Debian 13 (CI-built, not published yet)
 
 HyperFlux builds `.deb` packages for Debian 13 (`trixie`) every week in CI. They are not published, so there is nothing to install from yet. The packages carry only the Core edition; there is no Full edition for Debian.
@@ -108,7 +127,7 @@ Dependency roles map to packages on each distribution:
 | `service-manager` | `systemd` | `systemd` |
 | `device-manager` | `systemd` | `udev` |
 
-- Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable or start a service.
+- Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable, start or stop a service.
 - `hyperflux-next-dkms` hands the driver source to DKMS when it is installed and removes every built copy when it is removed.
 - Programs must run on the glibc 2.41 that Debian 13 ships.
 
@@ -140,6 +159,24 @@ If Secure Boot is on, Linux only loads drivers signed by a key it trusts. DKMS o
 
    It prints the name of the key. An empty line means the driver is not signed.
 
+### Remove HyperFlux Next on Debian
+
+Removing the packages does not stop the HyperFlux services, so turn them off first.
+
+1. Turn off the HyperFlux services:
+
+   ```sh
+   sudo systemctl disable --now hyperflux-next-bridge.service "hyperflux-next-client@$(id -u).socket"
+   ```
+
+2. Remove the packages:
+
+   ```sh
+   sudo apt remove hyperflux-next-dkms hyperflux-next-linux
+   ```
+
+   This also removes every built copy of the driver from DKMS.
+
 ## Fedora 44 (CI-built, not published yet)
 
 HyperFlux builds `.rpm` packages for Fedora 44 every week in CI. They are not published, so there is nothing to install from yet. The packages carry only the Core edition; there is no Full edition for Fedora.
@@ -159,7 +196,7 @@ Dependency roles map to packages on each distribution:
 | `service-manager` | `systemd` | `systemd` |
 | `device-manager` | `systemd` | `systemd-udev` |
 
-- Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable or start a service.
+- Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable, start or stop a service.
 - `hyperflux-next-dkms` hands the driver source to DKMS and builds it for every kernel whose development files are installed. DKMS installs the built driver when the computer next starts, so installing the package never loads the driver. Removing the package removes every built copy.
 - Programs need glibc 2.34 or newer. CI checks them on the glibc 2.43 that Fedora 44 ships.
 
@@ -191,6 +228,24 @@ If Secure Boot is on, Linux only loads drivers signed by a key it trusts. DKMS o
 
    It prints the name of the key. An empty line means the driver is not signed.
 
+### Remove HyperFlux Next on Fedora
+
+Removing the packages does not stop the HyperFlux services, so turn them off first.
+
+1. Turn off the HyperFlux services:
+
+   ```sh
+   sudo systemctl disable --now hyperflux-next-bridge.service "hyperflux-next-client@$(id -u).socket"
+   ```
+
+2. Remove the packages:
+
+   ```sh
+   sudo dnf remove hyperflux-next-dkms hyperflux-next-linux
+   ```
+
+   This also removes every built copy of the driver from DKMS.
+
 ## openSUSE Tumbleweed (CI-built, not published yet)
 
 HyperFlux builds `.rpm` packages for openSUSE Tumbleweed every week in CI. They are not published, so there is nothing to install from yet. The packages carry only the Core edition; there is no Full edition for openSUSE.
@@ -210,7 +265,7 @@ Dependency roles map to packages on each distribution:
 | `service-manager` | `systemd` | `systemd` |
 | `device-manager` | `systemd` | `udev` |
 
-- Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable or start a service.
+- Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable, start or stop a service.
 - `hyperflux-next-dkms` hands the driver source to DKMS and builds it for every kernel whose development files are installed. DKMS installs the built driver when the computer next starts, so installing the package never loads the driver. Removing the package removes every built copy.
 - Programs need glibc 2.34 or newer. CI checks them on the glibc 2.44 that openSUSE Tumbleweed ships.
 
@@ -249,3 +304,21 @@ If Secure Boot is on, Linux only loads drivers signed by a key it trusts. DKMS o
    ```
 
    It prints the name of the key. An empty line means the driver is not signed.
+
+### Remove HyperFlux Next on openSUSE
+
+Removing the packages does not stop the HyperFlux services, so turn them off first.
+
+1. Turn off the HyperFlux services:
+
+   ```sh
+   sudo systemctl disable --now hyperflux-next-bridge.service "hyperflux-next-client@$(id -u).socket"
+   ```
+
+2. Remove the packages:
+
+   ```sh
+   sudo zypper remove hyperflux-next-dkms hyperflux-next-linux
+   ```
+
+   This also removes every built copy of the driver from DKMS.

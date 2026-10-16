@@ -347,7 +347,9 @@ def _scripts(output: SplitOutput, runtime: LinuxRuntime) -> tuple[tuple[str, str
         reload.append("  udevadm control --reload || :")
     if reload:
         # Only a running systemd can be reloaded. Units stay disabled and
-        # stopped: first run enables them explicitly, then reboots.
+        # stopped: first run enables them explicitly, then reboots. Removal
+        # never stops them either, as on Arch: the removal steps in the
+        # generated distribution page turn them off first.
         guarded = ["if [ -d /run/systemd/system ]; then", *reload, "fi"]
         post.extend(guarded)
         postun.extend(guarded)

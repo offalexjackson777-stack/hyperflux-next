@@ -52,6 +52,45 @@ SECURE_BOOT_ENROLLMENT = {
 # the built driver only when the next kernel is installed.
 DKMS_SERVICE_DISABLED = {"opensuse"}
 
+# The package manager command that removes packages on each release.
+REMOVE_COMMAND = {
+    "ubuntu": "sudo apt remove",
+    "debian": "sudo apt remove",
+    "fedora": "sudo dnf remove",
+    "opensuse": "sudo zypper remove",
+}
+
+
+def _removal(
+    target_id: str,
+    release: DistributionRelease,
+    package_names: list[str],
+    activation: FirstRunActivation,
+    runtime: LinuxRuntime,
+) -> list[str]:
+    if target_id not in REMOVE_COMMAND:
+        raise ModelError(f"the {target_id} target has no removal command")
+    return [
+        "",
+        f"### Remove HyperFlux Next on {release.distribution}",
+        "",
+        "Removing the packages does not stop the HyperFlux services, so turn them off first.",
+        "",
+        "1. Turn off the HyperFlux services:",
+        "",
+        "   ```sh",
+        f"   {activation.disable_command(runtime)}",
+        "   ```",
+        "",
+        "2. Remove the packages:",
+        "",
+        "   ```sh",
+        f"   {REMOVE_COMMAND[target_id]} {' '.join(package_names)}",
+        "   ```",
+        "",
+        "   This also removes every built copy of the driver from DKMS.",
+    ]
+
 
 def _secure_boot(target_id: str, release: DistributionRelease, module: str) -> list[str]:
     enroll, fallback = SECURE_BOOT_ENROLLMENT[target_id]
@@ -107,6 +146,7 @@ def _debian_format(
     target_id: str,
     split: ArchSplit,
     runtime: LinuxRuntime,
+    activation: FirstRunActivation,
 ) -> list[str]:
     target = catalog.targets[target_id]
     release = target.release
@@ -149,13 +189,17 @@ def _debian_format(
         [
             "",
             "- Package scripts mirror the Arch hooks: they create the system user and "
-            "directories and reload systemd and udev. They never enable or start a service.",
+            "directories and reload systemd and udev. They never enable, start or stop a "
+            "service.",
             f"- `{plans[0].package_name}` hands the driver source to DKMS when it is "
             "installed and removes every built copy when it is removed.",
             f"- Programs must run on the glibc {release.c_runtime_version} that "
             f"{release.distribution} {release.version} ships.",
             "",
             *_secure_boot(target_id, release, module),
+            *_removal(
+                target_id, release, [plan.package_name for plan in plans], activation, runtime
+            ),
         ]
     )
     return lines
@@ -166,6 +210,7 @@ def _rpm_format(
     target_id: str,
     split: ArchSplit,
     runtime: LinuxRuntime,
+    activation: FirstRunActivation,
 ) -> list[str]:
     target = catalog.targets[target_id]
     release = target.release
@@ -208,7 +253,8 @@ def _rpm_format(
         [
             "",
             "- Package scripts mirror the Arch hooks: they create the system user and "
-            "directories and reload systemd and udev. They never enable or start a service.",
+            "directories and reload systemd and udev. They never enable, start or stop a "
+            "service.",
             f"- `{plans[0].package_name}` hands the driver source to DKMS and builds it for "
             "every kernel whose development files are installed. DKMS installs the built "
             "driver when the computer next starts, so installing the package never loads "
@@ -233,6 +279,9 @@ def _rpm_format(
             ]
         )
     lines.extend(_secure_boot(target_id, release, module))
+    lines.extend(
+        _removal(target_id, release, [plan.package_name for plan in plans], activation, runtime)
+    )
     return lines
 
 
@@ -282,6 +331,9 @@ def markdown(
             "",
             "- Package hooks create system users/directories and reload systemd and udev registration only.",
             "- Installation does not start, stop, restart, enable, disable, or probe services or hardware.",
+            "- Removal does not stop or disable services either. A running bridge keeps "
+            "running until the computer restarts, so turn the services off before "
+            f"removing the packages: `{activation.disable_command(runtime)}`.",
             "- First run enables the units without starting them, then reboots with the "
             f"receiver connected: `{activation.enable_command(runtime)}`, then "
             f"`{activation.activation_command()}`.",
@@ -300,12 +352,12 @@ def markdown(
             *(
                 line
                 for target_id in DEBIAN_FORMAT_TARGET_IDS
-                for line in _debian_format(catalog, target_id, split, runtime)
+                for line in _debian_format(catalog, target_id, split, runtime, activation)
             ),
             *(
                 line
                 for target_id in RPM_FORMAT_TARGET_IDS
-                for line in _rpm_format(catalog, target_id, split, runtime)
+                for line in _rpm_format(catalog, target_id, split, runtime, activation)
             ),
             "",
         ]

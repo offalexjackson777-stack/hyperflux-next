@@ -55,6 +55,11 @@ class InstallManifestTests(unittest.TestCase):
             'sudo systemctl enable hyperflux-next-bridge.service '
             '"hyperflux-next-client@$(id -u).socket"',
         )
+        self.assertEqual(
+            activation.disable_command(runtime),
+            'sudo systemctl disable --now hyperflux-next-bridge.service '
+            '"hyperflux-next-client@$(id -u).socket"',
+        )
         self.assertEqual(activation.activation_command(), "sudo reboot")
         self.assertEqual(
             activation.disconnected_command(runtime),

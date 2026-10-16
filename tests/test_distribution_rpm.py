@@ -391,6 +391,40 @@ class RpmDocumentationTests(unittest.TestCase):
             opensuse.index("dkms.service"), opensuse.index("### Secure Boot on openSUSE")
         )
 
+    def test_every_release_turns_the_services_off_before_removal(self) -> None:
+        from hfxdev.generators.distributions import markdown
+        from hfxdev.install import load_first_run_activation
+
+        text = markdown(
+            load_distribution_catalog(ROOT),
+            load_linux_runtime(ROOT),
+            load_first_run_activation(ROOT),
+            candidate_split(),
+        )
+        disable = (
+            'sudo systemctl disable --now hyperflux-next-bridge.service '
+            '"hyperflux-next-client@$(id -u).socket"'
+        )
+        first_run = text[text.index("## Install And First Run") : text.index("## CPU Architectures")]
+        self.assertIn("Removal does not stop or disable services", first_run)
+        self.assertIn(disable, first_run)
+        for distribution, remove in (
+            ("Ubuntu", "sudo apt remove"),
+            ("Debian", "sudo apt remove"),
+            ("Fedora", "sudo dnf remove"),
+            ("openSUSE", "sudo zypper remove"),
+        ):
+            with self.subTest(distribution=distribution):
+                start = text.index(f"### Remove HyperFlux Next on {distribution}")
+                end = text.find("\n## ", start)
+                section = text[start : end if end != -1 else len(text)]
+                self.assertLess(
+                    section.index(disable),
+                    section.index(f"{remove} hyperflux-next-dkms hyperflux-next-linux"),
+                )
+        # Package scripts never stop a unit; the page must not claim otherwise.
+        self.assertEqual(text.count("They never enable, start or stop a service."), 4)
+
 
 @unittest.skipUnless(rpm_tools_available(), "rpmbuild, rpm, rpm2cpio and rpmkeys are required")
 class RpmBuildTests(unittest.TestCase):
