@@ -36,10 +36,10 @@ The `./hfx` developer command: it loads the repository's data files, generates d
 - [`tools/hfxdev/licensing.py`](hfxdev/licensing.py); [`tools/hfxdev/native_onboarding.py`](hfxdev/native_onboarding.py)
 - [`tools/hfxdev/private_artifact.py`](hfxdev/private_artifact.py); [`tools/hfxdev/openrazer_native_route.py`](hfxdev/openrazer_native_route.py)
 - [`tools/hfxdev/publication_privacy.py`](hfxdev/publication_privacy.py); [`tools/hfxdev/owner_reports.py`](hfxdev/owner_reports.py)
-- [`tools/hfxdev/schema_subset.py`](hfxdev/schema_subset.py); [`tools/hfxdev/documentation.py`](hfxdev/documentation.py)
-- [`tools/hfxdev/documentation_preview.py`](hfxdev/documentation_preview.py); [`tools/hfxdev/documentation_evidence.py`](hfxdev/documentation_evidence.py)
-- [`tools/documentation_preview.cjs`](documentation_preview.cjs); [`tools/hfxdev/generators/readme.py`](hfxdev/generators/readme.py)
-- [`tools/hfxdev/journey_coverage.py`](hfxdev/journey_coverage.py)
+- [`tools/hfxdev/schema_subset.py`](hfxdev/schema_subset.py); [`tools/hfxdev/schema_validation.py`](hfxdev/schema_validation.py)
+- [`tools/hfxdev/documentation.py`](hfxdev/documentation.py); [`tools/hfxdev/documentation_preview.py`](hfxdev/documentation_preview.py)
+- [`tools/hfxdev/documentation_evidence.py`](hfxdev/documentation_evidence.py); [`tools/documentation_preview.cjs`](documentation_preview.cjs)
+- [`tools/hfxdev/generators/readme.py`](hfxdev/generators/readme.py); [`tools/hfxdev/journey_coverage.py`](hfxdev/journey_coverage.py)
 
 ## Verify
 

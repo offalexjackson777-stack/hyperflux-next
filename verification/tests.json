@@ -126,6 +126,7 @@
         "tools/hfxdev/protected_behavior.py",
         "tools/hfxdev/release.py",
         "tools/hfxdev/schema_subset.py",
+        "tools/hfxdev/schema_validation.py",
         "tools/hfxdev/supply_chain.py"
       ],
       "produced_evidence": ["assurance-result", "license-policy-result", "performance-static-result", "compatibility-boundary-result"],
@@ -372,7 +373,7 @@
       "timeout_seconds": 15,
       "dependencies": ["profile-contracts", "device-knowledge-contracts", "protocol-contracts", "error-contracts", "integration-contracts", "assurance-contracts", "formal-model-contracts", "development-environment-contracts", "governance-contracts", "repository-atlas-contracts"],
       "isolation": "shared",
-      "cache_inputs": ["schemas/*.json", "profiles/**/*.json", "knowledge/**/*.json", "integrations/**/*.json", "protocol/**/*.json", "runtime/local-companion.json", "uapi/*.json", "errors/catalog.json", "packaging/install.json", "tools/hfxdev/generators/*.py", "tools/hfxdev/install.py", "tools/hfxdev/licensing.py", "tools/hfxdev/local_companion.py", "tools/hfxdev/owner_reports.py", "tools/hfxdev/public_readiness.py", "tools/hfxdev/render.py", "tools/hfxdev/schema_subset.py", "tools/hfxdev/source_validated_catalog.py", "assurance/owner-reports.json", "evidence/**/*", "verification/tests.json"],
+      "cache_inputs": ["schemas/*.json", "profiles/**/*.json", "knowledge/**/*.json", "integrations/**/*.json", "protocol/**/*.json", "runtime/local-companion.json", "uapi/*.json", "errors/catalog.json", "packaging/install.json", "tools/hfxdev/generators/*.py", "tools/hfxdev/install.py", "tools/hfxdev/licensing.py", "tools/hfxdev/local_companion.py", "tools/hfxdev/owner_reports.py", "tools/hfxdev/public_readiness.py", "tools/hfxdev/render.py", "tools/hfxdev/schema_subset.py", "tools/hfxdev/schema_validation.py", "tools/hfxdev/source_validated_catalog.py", "assurance/owner-reports.json", "evidence/**/*", "verification/tests.json"],
       "produced_evidence": ["generation-result"],
       "resume_policy": "reuse-verified"
     },

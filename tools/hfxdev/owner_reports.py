@@ -24,7 +24,7 @@ import re
 from typing import Any, Iterable
 
 from .model import CATALOG_ROOT, ModelError, load_json
-from .schema_subset import SchemaViolation, validate
+from .schema_validation import SchemaViolation, validate
 from .source_validated import load_source_validated_catalog
 from .source_validated_catalog import (
     PHYSICALLY_PROVEN,
@@ -109,7 +109,7 @@ def _parse_version(value: str) -> tuple[int, int, int] | None:
 def load_owner_report_policy(root: Path) -> dict[str, Any]:
     policy = load_json(root / POLICY_PATH)
     try:
-        validate(load_json(root / POLICY_SCHEMA_PATH), policy)
+        validate(load_json(root / POLICY_SCHEMA_PATH), policy, root=root)
     except SchemaViolation as error:
         raise ModelError(f"{POLICY_PATH}: {error}") from error
     if policy["$schema"] != "../schemas/owner-report-policy.schema.json":
@@ -468,7 +468,7 @@ def build_owner_record(
     chosen = ticked if ticked is not None else frozenset(confirmations or ())
     report = parse_report_text(text, policy["report"]["maximum_bytes"])
     try:
-        validate(load_json(root / policy["report"]["schema_path"]), report)
+        validate(load_json(root / policy["report"]["schema_path"]), report, root=root)
     except SchemaViolation as error:
         raise _refuse(str(error)) from None
     private = private_text_findings(report)
@@ -552,7 +552,7 @@ def write_owner_record(root: Path, record: dict[str, Any], output_dir: Path | No
 
 def _validate_record(root: Path, record: dict[str, Any], label: str) -> None:
     try:
-        validate(load_json(root / RECORD_SCHEMA_PATH), record)
+        validate(load_json(root / RECORD_SCHEMA_PATH), record, root=root)
     except SchemaViolation as error:
         raise ModelError(f"{label}: {error}") from error
     issue = record["source_refs"][0]["issue"]
