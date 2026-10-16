@@ -177,6 +177,7 @@ dependencies = [
  "hfx-domain",
  "hfx-errors",
  "hfx-integration-model",
+ "hfx-profiles",
  "hfx-protocol",
  "hfx-runtime",
  "hfx-system-probe",

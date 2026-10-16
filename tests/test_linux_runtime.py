@@ -248,7 +248,11 @@ class LinuxRuntimeTests(unittest.TestCase):
             ROOT / "crates" / "hfx-ops" / "src" / "bin" / "hyperfluxctl.rs"
         ).read_text().partition("#[cfg(test)]")[0]
         self.assertNotIn('"--repair"', source)
-        self.assertNotIn('"qualification" =>', source)
+        # The installed qualification command only reports; the console
+        # server and the evidence lifecycle stay source-only.
+        self.assertIn('"qualification" => qualification(rest)', source)
+        self.assertNotIn("serve_qualification_console", source)
+        self.assertNotIn("qualification_lifecycle", source)
         self.assertNotIn('"native" =>', source)
         self.assertNotIn("restart_bridge", source)
         self.assertNotIn("enable_qualification_configuration", source)

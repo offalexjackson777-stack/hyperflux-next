@@ -4,6 +4,7 @@
 
 mod assessment;
 mod configuration;
+mod qualification;
 mod support;
 
 pub use assessment::{
@@ -19,23 +20,29 @@ pub use configuration::{
 pub use hfx_device_qualification::{
     ActionConfirmation, BatteryAvailability, BatteryView, CapabilityAccess, CapabilityView,
     CompanionAction, CompanionState, CompanionView, DeviceView, EvidenceArtifactState,
-    EvidenceView, NativeObservationError, NativeObservationPrivacy, NativeRouteObservation,
-    ObservationChoice, ObservationPrompt, PresenceView, ProfileBindingView,
-    QUALIFICATION_API_VERSION, QUALIFICATION_ENDPOINT, QUALIFICATION_SCHEMA, QualificationGroup,
-    QualificationPlan, QualificationServerConfig, QualificationServerError, QualificationStage,
-    QualificationSystemView, QualificationView, ReceiverLifecycleView, ReceiverView, RiskLevel,
-    RunnerAvailability, RunnerCapabilities, StageKind, StageResult, StageStatus, SupportView,
-    VerdictState, build_native_route_observations, build_qualification_view,
+    EvidenceView, FirmwareCollection, NativeObservationError, NativeObservationPrivacy,
+    NativeRouteObservation, ObservationChoice, ObservationPrompt, PresenceView, ProfileBindingView,
+    QUALIFICATION_API_VERSION, QUALIFICATION_ENDPOINT, QUALIFICATION_REPORT_PRODUCER,
+    QUALIFICATION_SCHEMA, QualificationCollection, QualificationGroup, QualificationPlan,
+    QualificationServerConfig, QualificationServerError, QualificationStage,
+    QualificationSystemView, QualificationView, ReceiverLifecycleView, ReceiverView,
+    ReportBridgeRequest, ReportFinding, ReportFindingSeverity, RiskLevel, RunnerAvailability,
+    RunnerCapabilities, StageKind, StageResult, StageStatus, SupportView, VerdictState,
+    build_native_route_observations, build_qualification_report, build_qualification_view,
     default_native_observation_directory, qualification_generated_at, serve_qualification_console,
     write_native_route_observations,
 };
 pub use hfx_system_probe::{
     BridgeHealth, BridgeIntegration, CommandOutput, CommandRunner, DriverActivationController,
     DriverActivationError, DriverActivationReceipt, FullComponentSnapshot, FullComponentState,
-    KernelModuleIdentitySnapshot, OpenRazerAccessState, OpenRazerDriverProbe,
-    OpenRazerDriverSnapshot, OpenRazerDriverState, OpenRazerPublishedDevice,
+    IntegrationProjection, KernelModuleIdentitySnapshot, OpenRazerAccessState,
+    OpenRazerDriverProbe, OpenRazerDriverSnapshot, OpenRazerDriverState, OpenRazerPublishedDevice,
     OpenRazerRuntimeSnapshot, OpenRazerRuntimeState, ProbeError, RealCommandRunner,
     RealSystemProbe, ServiceState, SystemController, SystemProbe, SystemSnapshot,
+};
+pub use qualification::{
+    QualificationReportError, collect_qualification_report, qualification_report_json,
+    render_qualification_text, write_qualification_report,
 };
 pub use support::{
     SupportBundle, SupportBundleError, SupportBundlePreview, SupportOutputDeclaration,

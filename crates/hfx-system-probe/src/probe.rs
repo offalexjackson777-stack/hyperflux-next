@@ -201,6 +201,14 @@ pub struct BridgeIntegration {
     pub events: EventBatch,
 }
 
+/// The bridge's integration projection read without an event subscription.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct IntegrationProjection {
+    pub protocol_version: ProtocolVersion,
+    pub view: IntegrationView,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SystemSnapshot {
     pub package_version: String,
@@ -968,6 +976,31 @@ impl<R: CommandRunner> RealSystemProbe<R> {
             protocol_version,
             view,
             events,
+        })
+    }
+
+    /// Returns the bridge's integration projection for the installed
+    /// `hyperfluxctl qualification` report with one read-only
+    /// `integration-view` request: no event subscription, no active device
+    /// query, and no write.
+    ///
+    /// # Errors
+    ///
+    /// Returns a bounded bridge-unavailable error when the local socket cannot
+    /// be reached, negotiated, or queried.
+    pub fn integration_projection(&self) -> Result<IntegrationProjection, ProbeError> {
+        let mut client = self.bridge_client(
+            "hyperfluxctl",
+            "HyperFlux Qualification Report",
+            &[INTEGRATION_VIEW_FEATURE],
+        )?;
+        let protocol_version = client.server_hello().selected_version;
+        let view = client
+            .integration_view()
+            .map_err(|_| ProbeError::BridgeUnavailable)?;
+        Ok(IntegrationProjection {
+            protocol_version,
+            view,
         })
     }
 

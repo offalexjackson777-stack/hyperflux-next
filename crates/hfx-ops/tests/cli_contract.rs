@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_ops::{
-    Assessment, AssessmentFinding, AssessmentState, ComponentAssessment, ComponentId,
-    ComponentState, DriverState, render_doctor_text, render_status_text,
+    Assessment, AssessmentFinding, AssessmentState, CompanionState, ComponentAssessment,
+    ComponentId, ComponentState, DriverState, QualificationView, qualification_report_json,
+    render_doctor_text, render_qualification_text, render_status_text,
 };
 use std::collections::BTreeMap;
 
@@ -112,4 +113,44 @@ fn release_2_cli_text_and_json_surfaces_are_byte_golden() {
         serde_json::to_string_pretty(&attention).expect("assessment serializes") + "\n",
         include_str!("../../../tests/fixtures/cli/hyperfluxctl-needs-attention.json")
     );
+}
+
+fn frozen_qualification_report() -> QualificationView {
+    serde_json::from_str(include_str!(
+        "../../../apps/device-qualification/tests/fixtures/rust-qualified-report.json"
+    ))
+    .expect("qualification report fixture matches the view")
+}
+
+#[test]
+fn qualification_report_text_and_json_surfaces_are_byte_golden() {
+    let report = frozen_qualification_report();
+    assert_eq!(
+        render_qualification_text(&report),
+        include_str!("../../../tests/fixtures/cli/hyperfluxctl-qualification-ready.txt")
+    );
+    assert_eq!(
+        qualification_report_json(&report).expect("report serializes"),
+        include_str!(
+            "../../../apps/device-qualification/tests/fixtures/rust-qualified-report.json"
+        )
+    );
+}
+
+#[test]
+fn qualification_report_text_never_prints_private_or_firmware_values() {
+    let mut report = frozen_qualification_report();
+    let text = render_qualification_text(&report);
+    assert!(text.contains("Firmware: not collected"));
+    assert!(text.contains("No network upload, active device query, or hardware write was made."));
+    for private in ["/dev/", "/home/", "hidraw", "serial", "journal"] {
+        assert!(!text.contains(private), "report text printed {private}");
+    }
+    report.companion.state = CompanionState::BridgeUnavailable;
+    report.companion.bridge_protocol = None;
+    report.receivers.clear();
+    report.plans.clear();
+    let text = render_qualification_text(&report);
+    assert!(text.contains("Bridge protocol: not reachable"));
+    assert!(text.contains("Next: run `hyperfluxctl doctor --explain`."));
 }

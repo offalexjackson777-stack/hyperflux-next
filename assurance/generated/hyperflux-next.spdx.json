@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "HyperFlux Next source dependency inventory",
-  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/cf4ce830fac8867eee3d67476d3ca948b97c3bd76dc851246b33df9d6b5beea0",
+  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/6d4acf8e6fd3f205b96f66495dd51fb3688bd7cf5f60788a5052d34f58be6d81",
   "creationInfo": {
     "created": "2026-07-20T00:00:00Z",
     "creators": [
@@ -1351,6 +1351,11 @@
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-device-qualification-2.1.0",
       "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-errors-2.1.0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-device-qualification-2.1.0",
+      "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-hfx-profiles-2.1.0"
     },
     {
@@ -1502,6 +1507,11 @@
       "spdxElementId": "SPDXRef-Cargo-hfx-ops-2.1.0",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Cargo-hfx-integration-model-2.1.0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Cargo-hfx-ops-2.1.0",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Cargo-hfx-profiles-2.1.0"
     },
     {
       "spdxElementId": "SPDXRef-Cargo-hfx-ops-2.1.0",
