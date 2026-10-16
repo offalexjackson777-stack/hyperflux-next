@@ -8,6 +8,7 @@ from typing import Any
 
 from ..arch_repository import (
     ArchRepositoryPolicy,
+    RepositoryPackage,
     checksum_only_asset_names,
     signed_asset_names,
 )
@@ -271,7 +272,9 @@ def _signed(value: bool) -> str:
 
 
 def _artifact_integrity(
-    inventory: DependencyInventory, repository: ArchRepositoryPolicy
+    inventory: DependencyInventory,
+    repository: ArchRepositoryPolicy,
+    retained: tuple[RepositoryPackage, ...],
 ) -> list[str]:
     integrity = inventory.artifact_integrity
     signed = ", ".join(f"`{name}`" for name in signed_asset_names(repository))
@@ -303,6 +306,18 @@ def _artifact_integrity(
         f"| Arch repository [`{repository.release_tag}`]({repository.release_url}) | "
         f"{checksum_only} | Not signed; the repository verifier recomputes or checks each one "
         "against `assurance/arch-repository.json` |",
+        *(
+            [
+                f"| Arch repository [`{repository.release_tag}`]({repository.release_url}) | "
+                + ", ".join(f"`{package.filename}`" for package in retained)
+                + " | Kept from the previous release for downgrades; each has a detached "
+                "OpenPGP `.sig` from the same subkey, and its SHA-256 is pinned in "
+                "`assurance/arch-repository-retention.json`. The repository database does "
+                "not list them |"
+            ]
+            if retained
+            else []
+        ),
         f"| Git tags and commits | `{repository.product_release_tag}` and its history | "
         f"Tags are {_signed(integrity.release_tags_signed)}; commits are "
         f"{_signed(integrity.release_commits_signed)} |",
@@ -320,14 +335,16 @@ def _artifact_integrity(
     ]
     lines.extend(
         f"| `{package.name}` | `{package.version}` | `{package.sha256}` |"
-        for package in repository.packages
+        for package in (*repository.packages, *retained)
     )
     lines.append("")
     return lines
 
 
 def supply_chain_markdown(
-    inventory: DependencyInventory, repository: ArchRepositoryPolicy
+    inventory: DependencyInventory,
+    repository: ArchRepositoryPolicy,
+    retained: tuple[RepositoryPackage, ...] = (),
 ) -> str:
     lines = [
         "# Supply Chain",
@@ -338,7 +355,7 @@ def supply_chain_markdown(
         "",
         "The dependency list is built without network access. It covers `Cargo.lock`, the Python project files, vendored sources, the pinned app sources, and the GitHub workflow actions, each pinned to an exact commit.",
         "",
-        *_artifact_integrity(inventory, repository),
+        *_artifact_integrity(inventory, repository, retained),
         "## Dependencies",
         "",
         f"- Workspace crates: {len(inventory.workspace_packages)}",

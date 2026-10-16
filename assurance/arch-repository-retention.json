@@ -1,0 +1,19 @@
+{
+  "$schema": "../schemas/arch-repository-retention.schema.json",
+  "schema": "hyperflux-arch-repository-retention-v1",
+  "rule": "The machine channel keeps the signed packages of exactly one earlier release beside the current repository, so a user can downgrade with pacman -U; the repository database lists only the current release, and every other earlier package is removed from the channel.",
+  "packages": [
+    {
+      "name": "hyperflux-next-linux",
+      "version": "2.0.2-1",
+      "filename": "hyperflux-next-linux-2.0.2-1-x86_64.pkg.tar.zst",
+      "sha256": "7c78e8d210da6ac536df3fb3c7fb673b276f6dbc561d0c489e87da4a29cecda1"
+    },
+    {
+      "name": "hyperflux-next-full",
+      "version": "2.0.2-1",
+      "filename": "hyperflux-next-full-2.0.2-1-x86_64.pkg.tar.zst",
+      "sha256": "697a8b30b34c89a74bb2754db7967283075c609c73ef52a88c4629192a74d5a1"
+    }
+  ]
+}

@@ -27,7 +27,7 @@
     "repository": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "server_url", "primary_fingerprint", "signing_subkey_fingerprint", "manifest_sha256", "checksums_sha256", "anonymous_https_assets"],
+      "required": ["name", "server_url", "primary_fingerprint", "signing_subkey_fingerprint", "manifest_sha256", "checksums_sha256", "anonymous_https_assets", "retained_packages"],
       "properties": {
         "name": {"const": "hyperflux-next"},
         "server_url": {"const": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository"},
@@ -38,7 +38,7 @@
         "anonymous_https_assets": {
           "type": "array",
           "minItems": 16,
-          "maxItems": 16,
+          "maxItems": 28,
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -49,6 +49,20 @@
               "effective_url": {"type": "string", "format": "uri", "pattern": "^https://"},
               "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
               "size": {"type": "integer", "minimum": 1}
+            }
+          }
+        },
+        "retained_packages": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "version", "sha256"],
+            "properties": {
+              "name": {"enum": ["hyperflux-next-dkms", "hyperflux-next-linux", "hyperflux-next-openrazer-driver-dkms", "hyperflux-next-full"]},
+              "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+-[1-9][0-9]*$"},
+              "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
             }
           }
         }
@@ -65,13 +79,13 @@
         "planned_packages": {
           "type": "array",
           "minItems": 2,
-          "maxItems": 2,
+          "maxItems": 4,
           "items": {
             "type": "object",
             "additionalProperties": false,
             "required": ["name", "version", "url"],
             "properties": {
-              "name": {"enum": ["hyperflux-next-linux", "hyperflux-next-full"]},
+              "name": {"enum": ["hyperflux-next-dkms", "hyperflux-next-linux", "hyperflux-next-openrazer-driver-dkms", "hyperflux-next-full"]},
               "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+-[1-9][0-9]*$"},
               "url": {"type": "string", "format": "uri", "pattern": "^https://"}
             }
@@ -82,7 +96,7 @@
         "downloaded_package_sha256": {
           "type": "object",
           "minProperties": 2,
-          "maxProperties": 2,
+          "maxProperties": 4,
           "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
         }
       }

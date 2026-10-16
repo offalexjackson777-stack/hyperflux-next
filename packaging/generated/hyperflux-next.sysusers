@@ -2,5 +2,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
 g hyperflux-next - -
 g hyperflux - -
-u hyperflux-next - "HyperFlux Next bridge" /var/lib/hyperflux-next /usr/bin/nologin
+u hyperflux-next - "HyperFlux Next bridge" /var/lib/hyperflux-next
 m hyperflux-next hyperflux

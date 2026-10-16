@@ -23,10 +23,14 @@ from hfxdev.arch_repository import (
     build_arch_repository,
     fingerprint_receipt,
     load_arch_repository_policy,
+    load_arch_repository_retention,
     repository_configuration,
     repository_package_set,
     repository_setup_script,
+    retained_asset_names,
+    verify_retained_packages,
 )
+from hfxdev.arch_repository_public import verify_public_arch_repository
 from hfxdev.generators.installation import package_fallback
 from hfxdev.model import ModelError
 
@@ -344,6 +348,145 @@ class ArchRepositoryTests(unittest.TestCase):
                 (output / "complete").read_text(encoding="ascii"), "complete"
             )
 
+
+    def test_retention_keeps_exactly_one_earlier_release_package_set(self) -> None:
+        policy = load_arch_repository_policy(ROOT)
+        retained = load_arch_repository_retention(ROOT, policy)
+        self.assertTrue(retained)
+        (version,) = {package.version for package in retained}
+        current = {package.filename for package in policy.packages}
+        self.assertEqual(
+            sorted(package.name for package in retained),
+            sorted(repository_package_set(ROOT, version)),
+        )
+        self.assertFalse(current & {package.filename for package in retained})
+        self.assertEqual(
+            retained_asset_names(retained),
+            tuple(
+                sorted(
+                    name
+                    for package in retained
+                    for name in (package.filename, f"{package.filename}.sig")
+                )
+            ),
+        )
+        self.assertFalse(
+            set(retained_asset_names(retained)) & set(_payload_asset_names(policy))
+        )
+
+    def test_retention_rejects_anything_but_one_earlier_release_set(self) -> None:
+        policy = load_arch_repository_policy(ROOT)
+        source = json.loads(
+            (ROOT / "assurance" / "arch-repository-retention.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+        def mixed_versions(value: dict) -> None:
+            value["packages"][0]["version"] = "2.0.1-1"
+            value["packages"][0]["filename"] = (
+                f"{value['packages'][0]['name']}-2.0.1-1-x86_64.pkg.tar.zst"
+            )
+
+        def current_release(value: dict) -> None:
+            value["packages"] = [
+                dataclasses.asdict(package) for package in policy.packages
+            ]
+
+        def noncanonical_filename(value: dict) -> None:
+            value["packages"][0]["filename"] = "hyperflux-next-linux.pkg.tar.zst"
+
+        def partial_set(value: dict) -> None:
+            value["packages"] = value["packages"][:1]
+
+        def unknown_field(value: dict) -> None:
+            value["packages"][0]["signature"] = "x"
+
+        cases = {
+            "exactly one release": mixed_versions,
+            "not an earlier release": current_release,
+            "filename is not canonical": noncanonical_filename,
+            "not the exact .* package set": partial_set,
+            "missing or unknown fields": unknown_field,
+        }
+        for message, mutate in cases.items():
+            with self.subTest(message):
+                value = json.loads(json.dumps(source))
+                mutate(value)
+                with patch("hfxdev.arch_repository.load_json", return_value=value):
+                    with self.assertRaisesRegex(ModelError, message):
+                        load_arch_repository_retention(ROOT, policy)
+        empty = json.loads(json.dumps(source))
+        empty["packages"] = []
+        with patch("hfxdev.arch_repository.load_json", return_value=empty):
+            self.assertEqual((), load_arch_repository_retention(ROOT, policy))
+
+    def test_retained_packages_must_match_inventory_and_pinned_bytes(self) -> None:
+        policy = load_arch_repository_policy(ROOT)
+        retained = load_arch_repository_retention(ROOT, policy)
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            for name in retained_asset_names(retained):
+                (directory / name).write_bytes(b"not the pinned package")
+            (directory / "hyperflux-next-full-2.0.0-1-x86_64.pkg.tar.zst").write_bytes(
+                b"stale"
+            )
+            with self.assertRaisesRegex(ModelError, r"extra=\['hyperflux-next-full-2\.0\.0"):
+                verify_retained_packages(
+                    directory,
+                    policy=policy,
+                    retained=retained,
+                    public_key=ROOT / policy.public_key_path,
+                )
+            (directory / "hyperflux-next-full-2.0.0-1-x86_64.pkg.tar.zst").unlink()
+            with self.assertRaisesRegex(ModelError, "retained package changed"):
+                verify_retained_packages(
+                    directory,
+                    policy=policy,
+                    retained=retained,
+                    public_key=ROOT / policy.public_key_path,
+                )
+
+    def test_public_verifier_names_assets_outside_the_retention_rule(self) -> None:
+        policy = load_arch_repository_policy(ROOT)
+        retained = load_arch_repository_retention(ROOT, policy)
+        stale = "hyperflux-next-linux-2.0.0-1-x86_64.pkg.tar.zst"
+        published = [
+            *_payload_asset_names(policy),
+            policy.manifest,
+            policy.checksums,
+            *retained_asset_names(retained),
+            stale,
+        ]
+        release = {
+            "tag_name": policy.release_tag,
+            "html_url": policy.release_url,
+            "draft": False,
+            "prerelease": True,
+            "id": 1,
+            "assets": [
+                {"name": name, "browser_download_url": f"{policy.server_url}/{name}"}
+                for name in published
+            ],
+        }
+
+        def fetch(url: str, destination: Path) -> str:
+            destination.write_text(json.dumps(release), encoding="utf-8")
+            return url
+
+        with (
+            patch("hfxdev.arch_repository_public._require_tools"),
+            patch(
+                "hfxdev.arch_repository_public._run",
+                return_value=subprocess.CompletedProcess([], 0, stdout="", stderr=""),
+            ),
+            patch("hfxdev.arch_repository_public._fetch", side_effect=fetch),
+            tempfile.TemporaryDirectory() as temporary,
+        ):
+            with self.assertRaisesRegex(
+                ModelError, rf"inventory differs \(missing=\[\], extra=\['{stale}'\]\)"
+            ):
+                verify_public_arch_repository(ROOT, Path(temporary) / "receipt.json")
 
 if __name__ == "__main__":
     unittest.main()

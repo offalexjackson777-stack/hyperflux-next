@@ -127,6 +127,9 @@
     "development_image": "hyperflux-next-dev:ci",
     "dependency_update_day": "monday",
     "full_verification_cron": "17 3 * * 1",
+    "kernel_canary_cron": "41 5 * * 1",
+    "ubuntu_package_cron": "23 6 * * 3",
+    "ubuntu_package_image": "docker.io/library/ubuntu@sha256:f610ab94648195aa356059f5b41d6085c9d4d903c072430cdd1af7bdb646106b",
     "job_summary": {
       "enabled": true,
       "sections": ["source-revision", "affected-domains", "selection", "failures", "timings", "generated-freshness", "performance-budgets", "release-gate-impact"]

@@ -423,8 +423,10 @@ def sysusers(runtime: LinuxRuntime) -> str:
             "# SPDX-License-Identifier: GPL-2.0-only",
             f"g {bridge.kernel_access_group} - -",
             f"g {bridge.client_group} - -",
+            # No shell field: systemd-sysusers then uses its own nologin path,
+            # which is /usr/bin/nologin on Arch and /usr/sbin/nologin on Debian.
             f'u {bridge.service_account} - "{runtime.product.display_name} bridge" '
-            f"{bridge.state_directory} /usr/bin/nologin",
+            f"{bridge.state_directory}",
             f"m {bridge.service_account} {bridge.client_group}",
             "",
         ]

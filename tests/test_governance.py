@@ -43,11 +43,18 @@ from hfxdev.generators.governance import (
     experience_plan,
     feature_request,
     full_verification_workflow,
+    kernel_canary_workflow,
     protection_plan,
+    ubuntu_package_workflow,
     verification_workflow,
 )
 from hfxdev.generators.supply_chain import spdx_json
-from hfxdev.governance import load_github_governance
+from hfxdev.development import load_development_environment
+from hfxdev.governance import (
+    KERNEL_CANARY_CHECK,
+    UBUNTU_PACKAGE_CHECK,
+    load_github_governance,
+)
 from hfxdev.model import ModelError
 from hfxdev.supply_chain import load_dependency_inventory
 from hfxdev.toolchains import PYTHON_TOOLCHAIN_PACKAGES, load_toolchain_pins
@@ -148,6 +155,10 @@ class GitHubGovernanceTests(unittest.TestCase):
             "full": full_verification_workflow(self.governance),
             "codeql": codeql_workflow(self.governance),
             "dependency-review": dependency_review_workflow(self.governance),
+            "kernel-canary": kernel_canary_workflow(
+                self.governance, load_development_environment(ROOT).image
+            ),
+            "ubuntu-packages": ubuntu_package_workflow(self.governance),
         }
         allowed = {action.commit for action in self.governance.actions}
         observed: set[str] = set()
@@ -234,6 +245,149 @@ class GitHubGovernanceTests(unittest.TestCase):
             self.assertIn("integrations/catalog.json", upstream["key"])
             self.assertNotIn(".hfx/upstreams", build["path"])
             self.assertEqual(build["restore-keys"], "hfx-build-${{ runner.os }}-\n")
+
+    def test_kernel_canary_follows_new_kernels_without_gating_merges(self) -> None:
+        image = load_development_environment(ROOT).image
+        text = kernel_canary_workflow(self.governance, image)
+        document = yaml.safe_load(text)
+        self.assertEqual(set(document["on"]), {"workflow_dispatch", "schedule"})
+        self.assertEqual(
+            document["on"]["schedule"], [{"cron": self.governance.kernel_canary_cron}]
+        )
+        self.assertEqual(document["permissions"], {"contents": "read"})
+        job = document["jobs"]["kernel-canary"]
+        self.assertEqual(job["name"], KERNEL_CANARY_CHECK)
+        self.assertNotIn(KERNEL_CANARY_CHECK, self.governance.required_checks)
+        self.assertEqual(job["container"], {"image": image})
+        self.assertRegex(image, r"@sha256:[0-9a-f]{64}$")
+        for headers in ("linux-headers", "linux-lts-headers", "core-testing/linux-headers"):
+            self.assertIn(headers, text)
+        self.assertIn("modules_prepare", text)
+        self.assertIn("--disable WERROR", text)
+        self.assertIn("./hfx kernel-canary --output build/ci/kernel-canary", text)
+        for forbidden in ("insmod", "modprobe", "--device", "--privileged", "secrets.", "GITHUB_TOKEN"):
+            self.assertNotIn(forbidden, text)
+
+        authority = json.loads((ROOT / "governance" / "github.json").read_text())
+        gated = json.loads(json.dumps(authority))
+        gated["protection"]["required_checks"] = sorted(
+            [*authority["protection"]["required_checks"], KERNEL_CANARY_CHECK]
+        )
+        daily = json.loads(json.dumps(authority))
+        daily["automation"]["kernel_canary_cron"] = "41 5 * * *"
+        for candidate in (gated, daily):
+            with (
+                patch("hfxdev.governance.load_json", return_value=candidate),
+                self.assertRaises(ModelError),
+            ):
+                load_github_governance(ROOT)
+
+    def test_ubuntu_packages_are_checked_weekly_without_gating_merges(self) -> None:
+        text = ubuntu_package_workflow(self.governance)
+        document = yaml.safe_load(text)
+        self.assertEqual(set(document["on"]), {"workflow_dispatch", "schedule"})
+        self.assertEqual(
+            document["on"]["schedule"], [{"cron": self.governance.ubuntu_package_cron}]
+        )
+        self.assertNotIn(
+            self.governance.ubuntu_package_cron,
+            {self.governance.kernel_canary_cron, self.governance.full_verification_cron},
+        )
+        self.assertEqual(document["permissions"], {"contents": "read"})
+        job = document["jobs"]["ubuntu-packages"]
+        self.assertEqual(job["name"], UBUNTU_PACKAGE_CHECK)
+        self.assertNotIn(UBUNTU_PACKAGE_CHECK, self.governance.required_checks)
+        self.assertRegex(
+            self.governance.ubuntu_package_image,
+            r"^docker\.io/library/ubuntu@sha256:[0-9a-f]{64}$",
+        )
+        runs = [step.get("run", "") for step in job["steps"]]
+        self.assertIn(
+            './hfx ci package --image "$HFX_CI_IMAGE" --output build/ci/ubuntu/artifacts',
+            runs,
+        )
+        checks = next(step for step in job["steps"] if "HFX_UBUNTU_CHECKS" in step.get("env", {}))
+        self.assertEqual(checks["env"]["HFX_UBUNTU_IMAGE"], self.governance.ubuntu_package_image)
+        script = checks["env"]["HFX_UBUNTU_CHECKS"]
+        for required in (
+            "./hfx package distro --distribution ubuntu",
+            "dpkg-deb --info",
+            "dpkg-deb --contents",
+            "lintian --fail-on error",
+            "policy-rc.d",
+            "linux-headers-generic-hwe-24.04",
+            "dkms build",
+            "modinfo",
+            "objdump -T",
+            "apt-get purge",
+        ):
+            self.assertIn(required, script)
+        for forbidden in (
+            "insmod",
+            "modprobe",
+            "systemctl",
+            "--device",
+            "--privileged",
+            "--cap-add",
+            "secrets.",
+            "GITHUB_TOKEN",
+        ):
+            self.assertNotIn(forbidden, text)
+
+        authority = json.loads((ROOT / "governance" / "github.json").read_text())
+        gated = json.loads(json.dumps(authority))
+        gated["protection"]["required_checks"] = sorted(
+            [*authority["protection"]["required_checks"], UBUNTU_PACKAGE_CHECK]
+        )
+        daily = json.loads(json.dumps(authority))
+        daily["automation"]["ubuntu_package_cron"] = "23 6 * * *"
+        floating = json.loads(json.dumps(authority))
+        floating["automation"]["ubuntu_package_image"] = "docker.io/library/ubuntu:24.04"
+        for candidate in (gated, daily, floating):
+            with (
+                patch("hfxdev.governance.load_json", return_value=candidate),
+                self.assertRaises(ModelError),
+            ):
+                load_github_governance(ROOT)
+
+    @patch("hfxdev.ci.shutil.which", return_value="/usr/bin/docker")
+    def test_package_artifacts_build_offline_in_the_pinned_image(self, _which) -> None:
+        invocation = container_invocation(
+            ROOT,
+            image=self.governance.development_image,
+            operation="package-artifacts",
+            output=Path("build/ci/ubuntu/artifacts"),
+            engine="docker",
+            uid=1000,
+            gid=1000,
+        )
+        command = " ".join(invocation.command)
+        self.assertIn("--network none", command)
+        self.assertIn("--cap-drop ALL", command)
+        self.assertIn("HFX_PINNED_VERIFICATION_ENVIRONMENT=1", command)
+        self.assertTrue(
+            command.endswith("./hfx ci package-artifacts --output build/ci/ubuntu/artifacts")
+        )
+        for bad in ("/tmp/out", "build/../out"):
+            with self.assertRaises(ModelError):
+                container_invocation(
+                    ROOT,
+                    image=self.governance.development_image,
+                    operation="package-artifacts",
+                    output=Path(bad),
+                    engine="docker",
+                    uid=1000,
+                    gid=1000,
+                )
+        with self.assertRaises(ModelError):
+            container_invocation(
+                ROOT,
+                image=self.governance.development_image,
+                operation="package-artifacts",
+                engine="docker",
+                uid=1000,
+                gid=1000,
+            )
 
     def test_required_checks_are_exact_generated_job_contexts(self) -> None:
         workflows = (

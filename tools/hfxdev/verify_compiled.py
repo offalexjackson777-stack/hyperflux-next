@@ -434,37 +434,45 @@ def _run_kernel_profile_contracts(root: Path, node: TestNode) -> None:
         output_directory = root / "build" / "kernel" / label
         if output_directory.exists():
             shutil.rmtree(output_directory)
-        module_directory = output_directory / "source"
-        shutil.copytree(source_directory, module_directory, symlinks=True)
-        _run_command(
+        _build_kernel_module_copy(
             root,
-            [
-                "make",
-                "-C",
-                str(build_directory),
-                f"M={module_directory}",
-                "clean",
-            ],
-            f"kernel verification copy cleanup ({label})",
-            node.timeout_seconds,
+            build_directory,
+            source_directory,
+            output_directory / "source",
+            label=f"kernel module build ({label})",
+            timeout_seconds=node.timeout_seconds,
         )
-        _remove_expected_kernel_source_link(module_directory)
-        _run_command(
-            root,
-            [
-                "make",
-                "-C",
-                str(build_directory),
-                f"M={module_directory}",
-                "W=1",
-                "modules",
-            ],
-            f"kernel module build ({label})",
-            node.timeout_seconds,
-        )
-        _remove_expected_kernel_source_link(module_directory)
         if source_link.exists() or source_link.is_symlink():
             raise ModelError("kernel verification modified the canonical source tree")
+
+
+def _build_kernel_module_copy(
+    root: Path,
+    build_directory: Path,
+    source_directory: Path,
+    module_directory: Path,
+    *,
+    label: str,
+    timeout_seconds: int,
+    environment: dict[str, str] | None = None,
+) -> None:
+    shutil.copytree(source_directory, module_directory, symlinks=True)
+    _run_command(
+        root,
+        ["make", "-C", str(build_directory), f"M={module_directory}", "clean"],
+        f"{label} copy cleanup",
+        timeout_seconds,
+        environment=environment,
+    )
+    _remove_expected_kernel_source_link(module_directory)
+    _run_command(
+        root,
+        ["make", "-C", str(build_directory), f"M={module_directory}", "W=1", "modules"],
+        label,
+        timeout_seconds,
+        environment=environment,
+    )
+    _remove_expected_kernel_source_link(module_directory)
 
 
 def _check_build_cache_clock(root: Path, *, now: float | None = None) -> None:

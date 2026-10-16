@@ -282,6 +282,99 @@ def load_arch_repository_policy(root: Path) -> ArchRepositoryPolicy:
     )
 
 
+def _release_order(version: str) -> tuple[int, ...]:
+    pkgver, _, pkgrel = version.rpartition("-")
+    return (*(int(part) for part in pkgver.split(".")), int(pkgrel))
+
+
+def load_arch_repository_retention(
+    root: Path, policy: ArchRepositoryPolicy
+) -> tuple[RepositoryPackage, ...]:
+    """Earlier-release packages the machine channel keeps beside the repository.
+
+    They stay downloadable for a downgrade with ``pacman -U`` but are never listed
+    in the repository database. At most one earlier release is retained, and its
+    package set is exactly the one that release published.
+    """
+
+    value = load_json(root / "assurance" / "arch-repository-retention.json")
+    _exact_keys(
+        value,
+        {"$schema", "schema", "rule", "packages"},
+        "Arch repository retention policy",
+    )
+    if value["$schema"] != "../schemas/arch-repository-retention.schema.json":
+        raise ModelError("Arch repository retention policy has a non-canonical schema")
+    if value["schema"] != "hyperflux-arch-repository-retention-v1":
+        raise ModelError("unsupported Arch repository retention policy")
+    if not isinstance(value["rule"], str) or not value["rule"].strip():
+        raise ModelError("Arch repository retention policy must state its rule")
+    raw_packages = value["packages"]
+    if not isinstance(raw_packages, list):
+        raise ModelError("Arch repository retained packages must be a list")
+    packages: list[RepositoryPackage] = []
+    for index, raw in enumerate(raw_packages):
+        package = _exact_keys(
+            raw,
+            {"name", "version", "filename", "sha256"},
+            f"Arch repository retained package {index}",
+        )
+        if not isinstance(package["sha256"], str) or not _SHA256.fullmatch(
+            package["sha256"]
+        ):
+            raise ModelError(
+                f"Arch repository retained package {index} has an invalid digest"
+            )
+        if not isinstance(package["version"], str) or not _PACKAGE_VERSION.fullmatch(
+            package["version"]
+        ):
+            raise ModelError(
+                f"Arch repository retained package {index} version is not pkgver-pkgrel"
+            )
+        packages.append(RepositoryPackage(**package))
+    if not packages:
+        return ()
+    versions = {package.version for package in packages}
+    if len(versions) != 1:
+        raise ModelError("Arch repository retains packages of exactly one release")
+    (version,) = versions
+    if _release_order(version) >= _release_order(published_arch_release(policy)):
+        raise ModelError("Arch repository retained release is not an earlier release")
+    current = {package.filename for package in policy.packages}
+    for package in packages:
+        expected_filename = (
+            f"{package.name}-{package.version}-{policy.architecture}.pkg.tar.zst"
+        )
+        if package.filename != expected_filename:
+            raise ModelError(
+                "Arch repository retained package filename is not canonical: "
+                f"{package.filename}"
+            )
+        if package.filename in current:
+            raise ModelError(
+                f"Arch repository retains a current package: {package.filename}"
+            )
+    if len({package.filename for package in packages}) != len(packages):
+        raise ModelError("Arch repository retained package filenames must be unique")
+    if sorted(package.name for package in packages) != sorted(
+        repository_package_set(root, version)
+    ):
+        raise ModelError(
+            f"Arch repository retained packages are not the exact {version} package set"
+        )
+    return tuple(packages)
+
+
+def retained_asset_names(retained: tuple[RepositoryPackage, ...]) -> tuple[str, ...]:
+    return tuple(
+        sorted(
+            name
+            for package in retained
+            for name in (package.filename, f"{package.filename}.sig")
+        )
+    )
+
+
 def repository_package_set(root: Path, version: str) -> dict[str, tuple[str, ...]]:
     """Map each package a release publishes to the siblings it pins exactly.
 
@@ -780,6 +873,52 @@ def _verify_signature(
         or policy.primary_fingerprint not in valid[0]
     ):
         raise ModelError(f"{signature.name} is not signed by the canonical key")
+
+
+def verify_retained_packages(
+    directory: Path,
+    *,
+    policy: ArchRepositoryPolicy,
+    retained: tuple[RepositoryPackage, ...],
+    public_key: Path,
+) -> None:
+    """Check retained package bytes, metadata, and signatures by the canonical key."""
+
+    expected = set(retained_asset_names(retained))
+    actual = {path.name for path in directory.iterdir()}
+    if actual != expected:
+        raise ModelError(
+            "retained package inventory differs "
+            f"(missing={sorted(expected - actual)}, extra={sorted(actual - expected)})"
+        )
+    for package in retained:
+        path = directory / package.filename
+        if not path.is_file() or path.is_symlink():
+            raise ModelError(f"retained package is not a regular file: {package.filename}")
+        if sha256_file(path) != package.sha256:
+            raise ModelError(f"retained package changed: {package.filename}")
+        name, version, _ = _package_metadata(
+            path, label=package.name, timeout_seconds=30
+        )
+        if (name, version) != (package.name, package.version):
+            raise ModelError(f"retained package metadata changed: {package.filename}")
+    if not retained:
+        return
+    with tempfile.TemporaryDirectory(prefix="hfx-arch-retained-key-") as temporary:
+        key_home = Path(temporary)
+        key_home.chmod(0o700)
+        _run(
+            ["gpg", "--batch", "--homedir", str(key_home), "--import", str(public_key)],
+            label="import repository key for retained packages",
+        )
+        for package in retained:
+            payload = directory / package.filename
+            _verify_signature(
+                payload.with_name(payload.name + ".sig"),
+                payload,
+                gnupg_home=key_home,
+                policy=policy,
+            )
 
 
 def verify_arch_repository(root: Path, repository: Path) -> dict[str, Any]:
