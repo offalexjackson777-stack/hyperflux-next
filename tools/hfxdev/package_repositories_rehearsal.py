@@ -144,7 +144,7 @@ def dnf_script(key: str, repository_id: str, *, expect_success: bool) -> str:
             f"sed -i 's|^gpgkey=.*|gpgkey=file://{key}|' {repo}\n"
             # dnf5 reports a bad repomd.xml signature, drops the repository and
             # still exits 0 from makecache, so the proof is that install fails.
-            f"if dnf install -y -q --repo {repository_id} --setopt=install_weak_deps=False "
+            f"if dnf install -y --repo {repository_id} --setopt=install_weak_deps=False "
             f"{INSTALL_PACKAGE} >/tmp/dnf.log 2>&1; then cat /tmp/dnf.log; exit 1; fi\n"
             "cat /tmp/dnf.log\n"
             "grep -E 'repomd.xml GPG signature verification error' /tmp/dnf.log\n"
@@ -162,6 +162,9 @@ def zypper_script(key: str, repository_id: str, *, expect_success: bool) -> str:
     if expect_success:
         body = (
             f"zypper --non-interactive refresh --repo {repository_id}\n"
+            # The image's Tumbleweed update repository can be empty, and an
+            # install refreshes every repository, so leave only the ones needed.
+            "zypper --non-interactive modifyrepo --disable repo-update || true\n"
             f"zypper --non-interactive install --no-recommends {INSTALL_PACKAGE}\n"
             f"rpm -q {INSTALL_PACKAGE} hyperflux-next-dkms\n"
         )
