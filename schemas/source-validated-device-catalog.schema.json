@@ -59,6 +59,10 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["state", "profile_id"],
+      "properties": {
+        "state": {"enum": ["hardware-verified", "not-hardware-verified"]},
+        "profile_id": {"type": ["string", "null"]}
+      },
       "oneOf": [
         {
           "properties": {
@@ -152,6 +156,11 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["state", "reason", "record_id"],
+      "properties": {
+        "state": {"enum": ["absent", "backend-required"]},
+        "reason": {"type": ["string", "null"]},
+        "record_id": {"type": ["string", "null"]}
+      },
       "oneOf": [
         {
           "properties": {

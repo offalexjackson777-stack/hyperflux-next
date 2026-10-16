@@ -345,6 +345,32 @@ class RealValidatorTests(unittest.TestCase):
             self.assertNotIn(PRIVATE_VALUE, rendered)
             self.assertNotIn("yesterday", rendered)
 
+    def test_closed_branch_schemas_accept_their_own_keys_only(self) -> None:
+        # An object schema that closes itself with additionalProperties must
+        # name its keys beside that keyword; keys named only inside oneOf
+        # branches count as unknown. The source-validated catalog is the
+        # regression case.
+        catalog_path = ROOT / "integrations/native-route/source-validated.json"
+        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+        schema = json.loads(
+            (ROOT / "schemas/source-validated-device-catalog.schema.json").read_text(encoding="utf-8")
+        )
+        validator_for, _version = jsonschema_validator_factory(ROOT)
+        validator = validator_for(schema)
+        self.assertEqual(list(validator.iter_errors(catalog)), [])
+        unavailable = next(
+            index
+            for index, device in enumerate(catalog["devices"])
+            if device["integrations"]["openrazer"]["state"] != "source-validated"
+        )
+        for location in ("hardware_assurance", "openrazer"):
+            mutated = json.loads(json.dumps(catalog))
+            device = mutated["devices"][unavailable]
+            target = device["hardware_assurance"] if location == "hardware_assurance" else device["integrations"]["openrazer"]
+            target[PRIVATE_KEY] = True
+            with self.subTest(location=location):
+                self.assertNotEqual(list(validator.iter_errors(mutated)), [])
+
 
 if __name__ == "__main__":
     unittest.main()
