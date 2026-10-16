@@ -84,7 +84,8 @@ html[data-theme="dark"] { color-scheme: dark; --bg:#0d1117; --fg:#e6edf3; --mute
 html, body { margin:0; min-width:0; background:var(--bg); color:var(--fg); }
 body { font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; letter-spacing:0; }
 main { width:min(100% - 32px, 980px); margin:0 auto; padding:32px 0 64px; min-width:0; }
-article { min-width:0; overflow-wrap:anywhere; }
+/* Wrap like GitHub. overflow-wrap:anywhere would let table columns shrink to one letter instead of scrolling. */
+article { min-width:0; overflow-wrap:break-word; }
 h1,h2,h3,h4,h5,h6 { line-height:1.25; letter-spacing:0; margin:1.5em 0 .55em; overflow-wrap:anywhere; }
 h1 { font-size:2rem; padding-bottom:.3em; border-bottom:1px solid var(--line); margin-top:0; }
 h2 { font-size:1.5rem; padding-bottom:.25em; border-bottom:1px solid var(--line); }
@@ -103,6 +104,7 @@ pre { max-width:100%; overflow:auto; background:var(--soft); border:1px solid va
 pre code { padding:0; background:transparent; white-space:pre; }
 table { display:block; width:max-content; max-width:100%; overflow-x:auto; border-collapse:collapse; }
 th,td { border:1px solid var(--line); padding:6px 13px; min-width:0; }
+table th, table td, table th *, table td * { overflow-wrap:break-word; word-break:normal; }
 tr:nth-child(2n) { background:var(--soft); }
 img { max-width:100%; height:auto; }
 hr { height:1px; border:0; background:var(--line); margin:24px 0; }

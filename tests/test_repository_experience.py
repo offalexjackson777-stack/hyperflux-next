@@ -342,6 +342,28 @@ class RepositoryExperienceContracts(unittest.TestCase):
         ):
             self.assertIn(contract, renderer)
 
+    def test_document_render_wraps_like_github_so_wide_tables_scroll(self) -> None:
+        # overflow-wrap:anywhere lowers every cell's minimum width to one letter, so a
+        # wide table squeezes its columns instead of scrolling inside its own box.
+        renderer = (ROOT / "tools" / "documentation_preview.cjs").read_text(
+            encoding="utf-8"
+        )
+        style = renderer.split("<style>", 1)[1].split("</style>", 1)[0]
+        self.assertIn("article { min-width:0; overflow-wrap:break-word; }", style)
+        self.assertIn(
+            "table { display:block; width:max-content; max-width:100%; overflow-x:auto;",
+            style,
+        )
+        self.assertIn(
+            "table th, table td, table th *, table td * "
+            "{ overflow-wrap:break-word; word-break:normal; }",
+            style,
+        )
+        self.assertIn("pre { max-width:100%; overflow:auto;", style)
+        for rule in re.findall(r"[^{}]+\{[^}]*overflow-wrap:anywhere[^}]*\}", style):
+            selectors = rule.split("{", 1)[0]
+            self.assertNotRegex(selectors, r"\b(?:article|table|th|td)\b", rule)
+
     def test_document_render_policy_rejects_missing_theme_or_unreviewed_screenshot(self) -> None:
         canonical = load_json(ROOT / "docs" / "render-preview.json")
         mutations = (
