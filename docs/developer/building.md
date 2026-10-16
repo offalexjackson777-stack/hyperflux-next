@@ -84,3 +84,72 @@ What the builder checks and produces:
 Keep the private key and its verified backup outside the repository; publish only the
 tracked public key and its full fingerprint. The user guide has users write the three-line
 Pacman block themselves rather than trust a downloaded configuration file.
+
+## Publish The Package Repository Site
+
+One GitHub Pages site carries the package repositories for every distribution:
+`/arch/` (a Pacman database), `/ubuntu/` and `/debian/` (apt `dists` and `pool`, suites
+`noble` and `trixie`), `/fedora/` and `/opensuse/` (rpm-md, each with a `.repo` file that
+sets `gpgcheck=1` and `repo_gpgcheck=1`), the public key
+`hyperflux-next-repository-key.asc`, and a plain front page. Every repository is signed by
+the same Arch repository key. `packaging/repository-site.json` names the site, and its
+`state` stays `unpublished` until the site is live. While it does, the user guides say the
+packages are not published yet and the Arch guide keeps the release address.
+
+The work is split so the private key never reaches CI.
+
+1. The `distribution-packages` workflow builds every target's packages, then runs
+   `./hfx repositories assemble` and uploads the unsigned site as the
+   `hyperflux-package-repositories-unsigned` artifact. Assembly writes the apt and rpm-md
+   metadata with tools from the pinned distribution images, so nothing on the runner
+   decides the layout.
+2. On the signing machine, download that artifact into a fresh directory and sign it. The
+   Arch part is copied from a verified `./hfx arch-repository build` output, so the Pages
+   copy and the `arch-repository` release hold the same bytes.
+
+```sh
+gh run download RUN_ID --repo offalexjackson777-stack/hyperflux-next \
+  --name hyperflux-package-repositories-unsigned --dir /path/to/fresh-unsigned-site
+HFX_OCI_ENGINE=podman ./hfx repositories sign /path/to/fresh-unsigned-site \
+  --arch-repository /path/to/fresh-repository-assets \
+  --gnupg-home "$PRIVATE_GNUPG_HOME" \
+  --key-fingerprint 8BF8A266E756BD1C24C930918B3F3850007159E8 \
+  --output /path/to/fresh-signed-site
+./hfx repositories verify /path/to/fresh-signed-site
+```
+
+3. Read the plan, then publish. Without `--execute` the command only prints what it would
+   do.
+
+```sh
+./hfx repositories publish /path/to/fresh-signed-site
+./hfx repositories publish /path/to/fresh-signed-site --execute
+```
+
+What the signer checks and produces:
+
+- Before signing, it checks the unsigned site file by file against its manifest, so a
+  changed or extra file in the download stops the run.
+- It signs each apt `Release` file twice, as `InRelease` and `Release.gpg`, signs every rpm
+  with `rpmsign`, rebuilds the rpm-md metadata so it lists the signed packages, and signs
+  `repomd.xml` as `repomd.xml.asc`. It needs `gpg` and `rpmsign` on the signing machine
+  and a container engine for the metadata tools.
+- It accepts only the subkey of the tracked key. It then verifies the finished site in a
+  throwaway keyring that holds just the tracked public key: each signature must be exactly
+  one good signature by that subkey, and every package must match its recorded hash.
+
+What publishing does:
+
+- It commits the signed site as the only commit of `gh-pages` and force-pushes that
+  branch, so the branch never keeps old packages.
+- It uploads the Arch database, files, and their signatures to the `arch-repository`
+  release with `--clobber`, and adds package files the release does not have yet. It
+  refuses to replace a package file whose bytes differ from the one already there. The
+  release stays a mirror for systems set up before the site existed.
+
+`./hfx repositories rehearse` runs the whole chain in containers. It generates a throwaway
+key inside the signing container, on a memory-only mount, and never writes the secret key
+out. It signs a site with it, installs `hyperflux-next-linux` with apt on Ubuntu and Debian,
+dnf on Fedora, zypper on openSUSE, and pacman on Arch, and checks that each client refuses
+the same site under a different key. Turning Pages on and changing `state` to `published`
+are repository-settings changes for the maintainer.
