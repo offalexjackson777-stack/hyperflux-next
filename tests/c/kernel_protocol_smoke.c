@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include "hyperflux-next-battery.h"
 #include "hyperflux-next-pairing-inventory.h"
 #include "hyperflux-next-passive.h"
 #include "hyperflux-next-wire.h"
@@ -191,6 +192,78 @@ static struct hfx_uapi_frame mouse_frame(void)
 	return frame;
 }
 
+static struct hfx_uapi_child_battery present_battery(void)
+{
+	struct hfx_uapi_child_battery report;
+
+	memset(&report, 0, sizeof(report));
+	report.version = HFX_UAPI_POWER_SUPPLY_ABI_VERSION;
+	report.size = sizeof(report);
+	report.receiver_generation = 7;
+	report.endpoint_slot = HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE;
+	report.presence = HFX_UAPI_BATTERY_PRESENCE_PRESENT;
+	report.capacity = 62;
+	report.status = HFX_UAPI_BATTERY_STATUS_UNKNOWN;
+	memcpy(report.model_name, "Razer Viper Ultimate", 20);
+	return report;
+}
+
+static void test_child_battery(void)
+{
+	struct hfx_uapi_child_battery report = present_battery();
+
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALID);
+	assert(hfx_battery_lane_index(HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE) ==
+	       HFX_BATTERY_POINTER);
+	assert(hfx_battery_lane_index(HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE) ==
+	       HFX_BATTERY_KEYBOARD);
+	assert(hfx_battery_lane_index(HFX_UAPI_ENDPOINT_SLOT_RECEIVER) < 0);
+
+	report.capacity = HFX_UAPI_BATTERY_MAX_CAPACITY;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALID);
+	report.capacity = HFX_UAPI_BATTERY_MAX_CAPACITY + 1;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALUE);
+
+	report = present_battery();
+	report.status = HFX_UAPI_BATTERY_STATUS_FULL + 1;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALUE);
+	report = present_battery();
+	report.presence = 2;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALUE);
+	report = present_battery();
+	report.version = HFX_UAPI_POWER_SUPPLY_ABI_VERSION + 1;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_HEADER);
+	report = present_battery();
+	report.size = sizeof(report) - 1;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_HEADER);
+	report = present_battery();
+	report.endpoint_slot = HFX_UAPI_ENDPOINT_SLOT_RECEIVER;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_SLOT);
+
+	report = present_battery();
+	report.model_name[3] = '\n';
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_MODEL_NAME);
+	report = present_battery();
+	report.model_name[25] = 'X';
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_MODEL_NAME);
+	report = present_battery();
+	memset(report.model_name, 'A', sizeof(report.model_name));
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_MODEL_NAME);
+	report = present_battery();
+	memset(report.model_name, 0, sizeof(report.model_name));
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALID);
+
+	report = present_battery();
+	report.presence = HFX_UAPI_BATTERY_PRESENCE_ABSENT;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALUE);
+	report.capacity = 0;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_MODEL_NAME);
+	memset(report.model_name, 0, sizeof(report.model_name));
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALID);
+	report.status = HFX_UAPI_BATTERY_STATUS_DISCHARGING;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALUE);
+}
+
 int main(void)
 {
 	struct hfx_uapi_frame frame = mouse_frame();
@@ -257,5 +330,6 @@ int main(void)
 				  &activity_slot));
 
 	test_pairing_inventory();
+	test_child_battery();
 	return 0;
 }

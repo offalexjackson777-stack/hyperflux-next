@@ -190,5 +190,56 @@ class KernelDriverContracts(unittest.TestCase):
             self.assertNotIn(forbidden, routing.lower())
 
 
+    def test_child_battery_publication_never_queries_the_device(self) -> None:
+        source = (ROOT / "driver/kernel/hyperflux-next-battery.c").read_text(
+            encoding="utf-8"
+        )
+        for forbidden in (
+            "hid_hw_raw_request",
+            "hid_hw_request",
+            "hid_hw_output_report",
+            "usb_control_msg",
+            "usb_interrupt_msg",
+            "hfx_transport",
+            "schedule_delayed_work",
+        ):
+            self.assertNotIn(forbidden, source)
+        self.assertIn("POWER_SUPPLY_SCOPE_DEVICE", source)
+        self.assertIn('value->strval = "Razer";', source)
+        self.assertIn("power_supply_register(&lane->hdev->dev", source)
+        report_start = source.index("long hfx_battery_report(")
+        report_end = source.index("\n}\n", report_start)
+        report = source[report_start:report_end]
+        self.assertIn("if (!context->writer)", report)
+        self.assertIn("receiver->writer_context == context", report)
+        self.assertIn("-ESTALE", report)
+
+    def test_child_battery_is_torn_down_on_every_exit(self) -> None:
+        core = (ROOT / "driver/kernel/hyperflux-next-core.c").read_text(encoding="utf-8")
+        session = (ROOT / "driver/kernel/hyperflux-next-session.c").read_text(
+            encoding="utf-8"
+        )
+        put_start = core.index("static void hfx_receiver_put")
+        put = core[put_start : core.index("\n}\n", put_start)]
+        self.assertLess(
+            put.index("hfx_battery_teardown(receiver)"), put.index("misc_deregister")
+        )
+        remove_start = core.index("static void hfx_remove")
+        remove = core[remove_start : core.index("\n}\n", remove_start)]
+        self.assertLess(
+            remove.index("hfx_battery_detach_interface"), remove.index("hid_hw_stop")
+        )
+        release_start = session.index("static int hfx_session_release_file")
+        release = session[release_start : session.index("\n}\n", release_start)]
+        self.assertLess(
+            release.index("hfx_battery_release_owner(receiver, context)"),
+            release.index("kref_put"),
+        )
+        self.assertIn(
+            "case HFX_UAPI_IOCTL_REPORT_CHILD_BATTERY:\n"
+            "\t\treturn hfx_battery_report(receiver, context, user_arg);",
+            session,
+        )
+
 if __name__ == "__main__":
     unittest.main()
