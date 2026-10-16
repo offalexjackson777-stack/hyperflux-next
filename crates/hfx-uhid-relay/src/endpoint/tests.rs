@@ -804,3 +804,257 @@ fn unknown_commands_are_denied_before_transport_without_disabling_the_endpoint()
     assert_eq!(endpoint.bridge.requests, vec![allowed_report(0x21)]);
     assert_eq!(endpoint.state(), FeatureEndpointState::Started);
 }
+
+fn query_report(
+    transaction_id: u8,
+    command_class: u8,
+    command_id: u8,
+    arguments: &[u8],
+) -> [u8; FEATURE_REPORT_BYTES] {
+    let mut report = [0_u8; FEATURE_REPORT_BYTES];
+    report[1] = transaction_id;
+    report[5] = u8::try_from(arguments.len()).expect("argument count fits");
+    report[6] = command_class;
+    report[7] = command_id;
+    report[8..8 + arguments.len()].copy_from_slice(arguments);
+    report[88] = report[2..88]
+        .iter()
+        .fold(0_u8, |checksum, byte| checksum ^ byte);
+    report
+}
+
+fn charging_report(transaction_id: u8) -> [u8; FEATURE_REPORT_BYTES] {
+    query_report(transaction_id, 0x07, 0x84, &[0, 0])
+}
+
+fn query_reply(
+    request: [u8; FEATURE_REPORT_BYTES],
+    status: u8,
+    value: u8,
+) -> [u8; FEATURE_REPORT_BYTES] {
+    let mut reply = request;
+    reply[0] = status;
+    reply[9] = value;
+    reply[88] = reply[2..88]
+        .iter()
+        .fold(0_u8, |checksum, byte| checksum ^ byte);
+    reply
+}
+
+// Every forwarded query the stock Basilisk V3 Pro 35K policy allows, other
+// than battery, which has its own diagnostic tests above.
+fn forwarded_queries(transaction_id: u8) -> [[u8; FEATURE_REPORT_BYTES]; 3] {
+    [
+        charging_report(transaction_id),
+        query_report(transaction_id, 0x00, 0x81, &[0, 0]),
+        query_report(transaction_id, 0x0f, 0x84, &[1, 0, 0]),
+    ]
+}
+
+fn exchange_once(
+    endpoint: &mut FeatureEndpoint<FakeBridge>,
+    request: [u8; FEATURE_REPORT_BYTES],
+) -> Vec<u8> {
+    assert_eq!(
+        endpoint
+            .handle(set_report(1, request))
+            .expect("query is answered"),
+        Some(UhidReply::SetReport {
+            id: 1,
+            success: true,
+        })
+    );
+    let Some(UhidReply::GetReport {
+        data: Some(actual), ..
+    }) = endpoint.handle(get(2)).expect("query reply is returned")
+    else {
+        panic!("query reply is present");
+    };
+    actual
+}
+
+#[test]
+fn charging_query_success_remains_byte_exact_without_a_battery_diagnostic() {
+    let request = charging_report(0x1f);
+    let reply = query_reply(request, RAZER_STATUS_SUCCESS, 1);
+    let mut endpoint = endpoint(vec![BridgeExchangeResult::MatchedResponse(reply)]);
+
+    assert_eq!(exchange_once(&mut endpoint, request), reply);
+    assert_eq!(endpoint.bridge_mut().requests, vec![request]);
+    assert_eq!(endpoint.take_battery_diagnostic(), None);
+    assert!(!endpoint.retained_route_departure_ready());
+}
+
+#[test]
+fn busy_query_retries_to_the_next_successful_reply() {
+    for request in forwarded_queries(0x9f) {
+        let busy = query_reply(request, RAZER_STATUS_BUSY, 0);
+        let success = query_reply(request, RAZER_STATUS_SUCCESS, 1);
+        let mut endpoint = endpoint(vec![
+            BridgeExchangeResult::MatchedResponse(busy),
+            BridgeExchangeResult::MatchedResponse(success),
+        ]);
+
+        assert_eq!(exchange_once(&mut endpoint, request), success);
+        assert_eq!(endpoint.bridge_mut().requests, vec![request, request]);
+    }
+}
+
+#[test]
+fn persistent_busy_query_stops_at_the_source_bound_as_unknown() {
+    for request in forwarded_queries(0x9f) {
+        let busy = query_reply(request, RAZER_STATUS_BUSY, 1);
+        let mut endpoint = endpoint(vec![
+            BridgeExchangeResult::MatchedResponse(busy);
+            usize::from(SOURCE_BUSY_RETRY_MAXIMUM_ATTEMPTS)
+        ]);
+
+        let actual = exchange_once(&mut endpoint, request);
+        assert_eq!(
+            decode_transport_envelope(&actual),
+            Some(TransportEnvelopeKind::MayHaveBeenSent)
+        );
+        assert_eq!(
+            endpoint.bridge_mut().requests,
+            vec![request; usize::from(SOURCE_BUSY_RETRY_MAXIMUM_ATTEMPTS)]
+        );
+    }
+}
+
+#[test]
+fn query_failure_statuses_are_unknown_without_retry() {
+    for request in forwarded_queries(0x1f) {
+        for status in [0x00, 0x03, 0x05, 0x06, 0xff] {
+            let reply = query_reply(request, status, 1);
+            let mut endpoint = endpoint(vec![BridgeExchangeResult::MatchedResponse(reply)]);
+
+            let actual = exchange_once(&mut endpoint, request);
+            assert_eq!(
+                decode_transport_envelope(&actual),
+                Some(TransportEnvelopeKind::MayHaveBeenSent)
+            );
+            assert_eq!(endpoint.bridge_mut().requests, vec![request]);
+            assert!(!endpoint.retained_route_departure_ready());
+        }
+    }
+}
+
+#[test]
+fn query_reply_for_another_transaction_is_retried_then_unknown() {
+    for request in forwarded_queries(0x1f) {
+        for other_transaction in [0x9f, 0xff] {
+            let mut reply = request;
+            reply[1] = other_transaction;
+            let reply = query_reply(reply, RAZER_STATUS_SUCCESS, 1);
+            let mut endpoint = endpoint(vec![
+                BridgeExchangeResult::MatchedResponse(reply);
+                usize::from(SOURCE_BUSY_RETRY_MAXIMUM_ATTEMPTS)
+            ]);
+
+            let actual = exchange_once(&mut endpoint, request);
+            assert_eq!(
+                decode_transport_envelope(&actual),
+                Some(TransportEnvelopeKind::MayHaveBeenSent)
+            );
+            assert_eq!(
+                endpoint.bridge_mut().requests.len(),
+                usize::from(SOURCE_BUSY_RETRY_MAXIMUM_ATTEMPTS)
+            );
+        }
+
+        let mut stale = request;
+        stale[1] = 0x9f;
+        let stale = query_reply(stale, RAZER_STATUS_SUCCESS, 0);
+        let current = query_reply(request, RAZER_STATUS_SUCCESS, 1);
+        let mut endpoint = endpoint(vec![
+            BridgeExchangeResult::MatchedResponse(stale),
+            BridgeExchangeResult::MatchedResponse(current),
+        ]);
+        assert_eq!(exchange_once(&mut endpoint, request), current);
+        assert_eq!(endpoint.bridge_mut().requests, vec![request, request]);
+    }
+}
+
+#[test]
+fn query_reply_for_another_class_or_command_is_never_returned() {
+    for request in forwarded_queries(0x1f) {
+        let success = query_reply(request, RAZER_STATUS_SUCCESS, 1);
+        let mut wrong_class = success;
+        wrong_class[6] ^= 0x01;
+        let mut wrong_command = success;
+        wrong_command[7] ^= 0x01;
+        for reply in [wrong_class, wrong_command] {
+            let mut endpoint = endpoint(vec![
+                BridgeExchangeResult::MatchedResponse(reply);
+                usize::from(SOURCE_BUSY_RETRY_MAXIMUM_ATTEMPTS)
+            ]);
+
+            let actual = exchange_once(&mut endpoint, request);
+            assert_eq!(
+                decode_transport_envelope(&actual),
+                Some(TransportEnvelopeKind::MayHaveBeenSent)
+            );
+            assert_eq!(
+                endpoint.bridge_mut().requests.len(),
+                usize::from(SOURCE_BUSY_RETRY_MAXIMUM_ATTEMPTS)
+            );
+        }
+    }
+}
+
+#[test]
+fn charging_timeout_is_unknown_not_stale_and_withdraws() {
+    let request = charging_report(0x1f);
+    let confirmed = query_reply(request, RAZER_STATUS_SUCCESS, 1);
+    let timeout = query_reply(request, RAZER_STATUS_TIMEOUT, 0);
+    let mut endpoint = endpoint(vec![
+        BridgeExchangeResult::MatchedResponse(confirmed),
+        BridgeExchangeResult::MatchedResponse(timeout),
+    ]);
+
+    assert_eq!(exchange_once(&mut endpoint, request), confirmed);
+    endpoint
+        .handle(set_report(3, request))
+        .expect("retained-route timeout is answered");
+    assert!(!endpoint.retained_route_departure_ready());
+    let Some(UhidReply::GetReport {
+        data: Some(actual), ..
+    }) = endpoint
+        .handle(get(4))
+        .expect("departing charging read is completed")
+    else {
+        panic!("departing charging reply is present");
+    };
+    assert_ne!(actual, confirmed);
+    assert_eq!(
+        decode_transport_envelope(&actual),
+        Some(TransportEnvelopeKind::MayHaveBeenSent)
+    );
+    assert!(endpoint.retained_route_departure_ready());
+    assert_eq!(endpoint.bridge_mut().requests, vec![request, request]);
+}
+
+#[test]
+fn query_transport_failures_keep_their_certainty_without_retry() {
+    for request in forwarded_queries(0x1f) {
+        for (result, expected) in [
+            (
+                BridgeExchangeResult::NotSent(crate::BridgeExchangeFailure::TransportNotSent),
+                TransportEnvelopeKind::NotSent,
+            ),
+            (
+                BridgeExchangeResult::MayHaveBeenSent(
+                    crate::BridgeExchangeFailure::TransportMayHaveBeenSent,
+                ),
+                TransportEnvelopeKind::MayHaveBeenSent,
+            ),
+        ] {
+            let mut endpoint = endpoint(vec![result]);
+
+            let actual = exchange_once(&mut endpoint, request);
+            assert_eq!(decode_transport_envelope(&actual), Some(expected));
+            assert_eq!(endpoint.bridge_mut().requests, vec![request]);
+            assert!(!endpoint.retained_route_departure_ready());
+        }
+    }
+}
