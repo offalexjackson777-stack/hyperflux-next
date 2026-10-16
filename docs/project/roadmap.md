@@ -27,6 +27,9 @@ shown in the [installation guide](../user/installation.md). See the
 
 ## Next
 
+- **Battery level on the desktop.** The mouse and keyboard paired to the
+  receiver will show their battery level in the desktop battery widget, such
+  as the one in KDE Plasma.
 - **An AUR package.** Publishing HyperFlux Next on the Arch User Repository is
   planned. It is not published yet; until it is, use the
   [installation guide](../user/installation.md).

@@ -34,6 +34,18 @@ change its settings.
    by its own name.
 3. Choose a colour or a mode.
 
+## See Battery Level On Your Desktop
+
+While HyperFlux is running, your mouse and keyboard show their battery level in
+the desktop battery widget, for example the battery icon in KDE Plasma. Each
+device appears under its own name. You do not need to set anything up.
+
+- A device appears once it reports its battery. After you start the computer
+  or switch the device on, this can take a few minutes.
+- A device that is switched off or out of range leaves the widget until it
+  reports again.
+- The widget shows the level only, not whether the device is charging.
+
 ## What Does Not Work Yet
 
 - Polychromatic offers Ripple, but over HyperFlux it shows no reactive lighting.
