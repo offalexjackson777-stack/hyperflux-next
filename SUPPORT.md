@@ -29,6 +29,10 @@ anyway.
 1. The output of `hyperfluxctl doctor`.
 2. The output of `hyperfluxctl support-bundle --preview`. It uploads nothing and
    does not query your devices.
+3. For a device problem or a device support request, the output of
+   `hyperfluxctl qualification --json`. It only reads, and
+   [Hardware](docs/user/hardware.md#share-a-hardware-report) shows how to make
+   it.
 
 Never post serial numbers, anything that identifies your computer, private file
 paths, raw device data, captures, memory dumps, passwords, or full system logs.

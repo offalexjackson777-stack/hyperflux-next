@@ -1201,6 +1201,25 @@ class UserDocumentationContracts(unittest.TestCase):
             self.assertNotIn(word, troubleshooting)
         self.assertIn("> [!WARNING]", troubleshooting)
 
+    def test_hardware_page_shows_how_to_share_a_qualification_report(self) -> None:
+        hardware = _page("docs/user/hardware.md")
+        section = hardware.split("## Share A Hardware Report", 1)[1].split("\n## ", 1)[0]
+        order = [
+            "hyperfluxctl qualification\n",
+            "State: ready",
+            "hyperfluxctl qualification --json --output",
+            "template=device_support.yml",
+        ]
+        positions = [section.index(step) for step in order]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("does not include firmware versions", section)
+        privacy = _page("docs/user/privacy.md")
+        report = privacy.split("## Hardware Reports", 1)[1]
+        for excluded in ("serial numbers", "firmware versions", "file paths", "raw HID"):
+            self.assertIn(excluded, report.split("A hardware report leaves out:", 1)[1])
+        self.assertIn("hyperfluxctl qualification --json", _page("SUPPORT.md"))
+        self.assertIn("hyperfluxctl qualification --json", _page("docs/user/troubleshooting.md"))
+
     def test_known_limitations_page_is_linked_from_user_pages(self) -> None:
         limitations = _page("docs/user/limitations.md")
         for topic in ("Ripple", "Quartz", "Fn", "1532:00CF", "F5", "brightness", "Arch Linux"):

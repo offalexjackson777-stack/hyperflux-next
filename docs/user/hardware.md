@@ -39,7 +39,37 @@ support them. HyperFlux leaves them alone until it does.
    every device in each group with its USB IDs and the apps it works in.
 2. If it is expected to work but does not, or it is not listed at all,
    [ask for device support](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=device_support.yml).
-   Include the output of `hyperfluxctl support-bundle --preview`.
+   Include a [hardware report](#share-a-hardware-report) and the output of
+   `hyperfluxctl support-bundle --preview`.
+
+## Share A Hardware Report
+
+A hardware report tells the project which receiver and devices HyperFlux sees
+on your computer and how far each one is tested.
+
+1. Connect the receiver and wake your keyboard and mouse.
+2. Run:
+
+   ```sh
+   hyperfluxctl qualification
+   ```
+
+   You should see `State: ready` and a line for each device. If you see another
+   state, do what the `Next:` line says.
+3. Make the version you will share:
+
+   ```sh
+   hyperfluxctl qualification --json --output hyperflux-hardware.json
+   ```
+
+   Only you can read the file. Running `hyperfluxctl qualification --json`
+   prints the same report instead.
+4. Attach the file, or paste the printed report, in the
+   [device support form](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=device_support.yml).
+
+The report only reads what HyperFlux already knows. It sends nothing to your
+devices, uploads nothing, and does not include firmware versions. The
+[privacy guide](privacy.md#hardware-reports) lists what it contains.
 
 ## A Device Plugged In By Cable
 

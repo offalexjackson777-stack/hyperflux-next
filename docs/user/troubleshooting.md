@@ -100,8 +100,17 @@ See [updates and removal](updates-removal.md#go-back-to-an-earlier-version).
    The preview uploads nothing, does not query your devices, and changes
    nothing.
 
-2. Open a [support request](../../SUPPORT.md) and include the Doctor output and
-   the preview.
+2. If the problem is about a device, make a hardware report as well:
+
+   ```sh
+   hyperfluxctl qualification --json
+   ```
+
+   It only reads what HyperFlux already knows and sends nothing to your
+   devices.
+
+3. Open a [support request](../../SUPPORT.md) and include the Doctor output,
+   the preview, and any hardware report.
 
 Never post raw HID captures, hardware serial numbers, private file paths, or a
 full system journal in a public issue. The [privacy guide](privacy.md) lists
