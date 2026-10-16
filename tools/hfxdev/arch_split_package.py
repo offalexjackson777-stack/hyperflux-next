@@ -174,11 +174,22 @@ def split_edition_stages(
     stages: dict[str, StageResult],
     workspace: Path,
     epoch: int,
+    outputs: tuple[SplitOutput, ...] | None = None,
 ) -> dict[str, SplitStage]:
-    """Move every staged edition file into the output that owns it."""
+    """Move every staged edition file into the output that owns it.
 
+    `outputs` limits the split to the outputs of the staged editions, for a
+    target that carries only some editions. Every staged file must still
+    belong to one of them.
+    """
+
+    selected = split.outputs if outputs is None else outputs
+    if [output.id for output in selected] != [
+        output.id for output in split.outputs if output.edition in stages
+    ]:
+        raise ModelError("Arch split: selected outputs differ from the staged editions")
     roots: dict[str, Path] = {}
-    for output in split.outputs:
+    for output in selected:
         root = workspace / f"{output.id}-root"
         root.mkdir()
         roots[output.id] = root
@@ -197,7 +208,7 @@ def split_edition_stages(
             destination.chmod(stat.S_IMODE(path.stat().st_mode))
     expected_files = sum(stage.file_count for stage in stages.values())
     results: dict[str, SplitStage] = {}
-    for output in split.outputs:
+    for output in selected:
         root = roots[output.id]
         normalize_tree(root, epoch, output.directory_modes)
         verify_directory_modes(root, output.directory_modes, f"{output.package_name} payload")
