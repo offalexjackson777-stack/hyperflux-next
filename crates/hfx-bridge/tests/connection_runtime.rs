@@ -6,9 +6,10 @@ use hfx_bridge::{
     SessionIdentitySource, SessionRegistry, serve_actor_connection, serve_connection,
 };
 use hfx_domain::{
-    ClientId, ClientName, ComponentVersion, ProjectionRevision, ProtocolVersion, QueueCapacity,
-    RequestId, SequenceNumber, ServerInstanceId, StreamEpoch, StreamId,
+    ClientId, ClientName, ComponentVersion, ProjectionRevision, ProtocolErrorKind, ProtocolVersion,
+    QueueCapacity, RequestId, SequenceNumber, ServerInstanceId, StreamEpoch, StreamId,
 };
+use hfx_errors::{ErrorCode, error_by_code};
 use hfx_protocol::{
     BridgeSnapshot, ClientHello, DiagnosticSnapshot, EmptyRequest, EventBatch, EventCursor,
     IntegrationView, LeaseRequest, LeaseResult, NegotiationRequestEnvelope, ReleaseLeaseRequest,
@@ -292,6 +293,61 @@ fn real_unix_stream_serves_exact_version_and_cleans_up_on_eof() {
     assert_eq!(backend.snapshot_calls, 1);
     assert_eq!(backend.disconnect_calls, 1);
     assert_eq!(remaining_sessions, 0);
+}
+
+/// Sends one raw negotiate frame and asserts the bridge answers with the
+/// catalogued incompatible-version error instead of dropping the connection.
+fn assert_incompatible_hello_is_rejected_with_remediation(hello: &[u8]) {
+    let (mut client, server) = UnixStream::pair().expect("Unix stream pair creates");
+    client
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .expect("timeout config succeeds");
+    let server = spawn_server(server, false);
+
+    let length = u32::try_from(hello.len()).expect("hello fits in one frame");
+    client
+        .write_all(&length.to_be_bytes())
+        .expect("hello frame length writes");
+    client.write_all(hello).expect("hello frame payload writes");
+    let response = read_rpc_response(&mut client)
+        .expect("rejection frame reads")
+        .expect("bridge answers instead of closing");
+    let RpcResponse::Error(envelope) = response else {
+        panic!("incompatible hello must receive a structured error");
+    };
+    let descriptor = error_by_code(ErrorCode::HfxProtocol001);
+    assert_eq!(
+        envelope.request_id.as_ref().map(RequestId::as_str),
+        Some("request-1")
+    );
+    assert_eq!(envelope.error.request_id, envelope.request_id);
+    assert_eq!(envelope.error.kind, ProtocolErrorKind::IncompatibleVersion);
+    assert_eq!(envelope.error.finding_id.as_str(), "HFX-PROTOCOL-001");
+    assert_eq!(envelope.error.message.as_str(), descriptor.user_explanation);
+    assert_eq!(descriptor.remediation_id.as_str(), "update-protocol-peer");
+
+    // The same connection still accepts a supported hello afterwards.
+    let hello = negotiate(&mut client);
+    client
+        .shutdown(std::net::Shutdown::Write)
+        .expect("client write side closes");
+    let (result, backend, remaining_sessions) = server.join().expect("server thread joins");
+    assert_eq!(
+        result,
+        Ok(hfx_bridge::ConnectionServeReport {
+            requests_served: 2,
+            selected_version: Some(hello.selected_version),
+        })
+    );
+    assert_eq!(backend.disconnect_calls, 1);
+    assert_eq!(remaining_sessions, 0);
+}
+
+#[test]
+fn clients_without_a_served_version_get_a_structured_protocol_rejection() {
+    assert_incompatible_hello_is_rejected_with_remediation(
+        br#"{"method":"negotiate","request":{"request_id":"request-1","params":{"client_id":"client-1","client_name":"OpenRGB","minimum_version":8,"maximum_version":8,"required_features":[],"optional_features":[]}}}"#,
+    );
 }
 
 #[test]
