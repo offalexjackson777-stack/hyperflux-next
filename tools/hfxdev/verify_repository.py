@@ -11,6 +11,8 @@ import stat
 import subprocess
 import sys
 import time
+from typing import Any, Iterator
+from urllib.parse import unquote, urljoin
 
 from .model import (
     ModelError,
@@ -246,6 +248,13 @@ def _check_schema_contracts(root: Path) -> None:
         if path.suffix == ".json"
     }
     _check_schema_declarations(documents)
+    _check_schema_references(
+        {
+            relative: value
+            for relative, value in documents.items()
+            if relative.endswith(".schema.json")
+        }
+    )
     for relative, value in documents.items():
         schema_reference = value.get("$schema")
         if not isinstance(schema_reference, str) or schema_reference.startswith("https://"):
@@ -295,6 +304,95 @@ def _check_schema_declarations(
             "JSON files must declare $schema or carry a reasoned exemption in "
             f"SCHEMA_DECLARATION_EXEMPTIONS: {', '.join(undeclared)}"
         )
+
+
+_SCHEMA_MAP_KEYWORDS = frozenset(
+    {"$defs", "definitions", "dependentSchemas", "patternProperties", "properties"}
+)
+_LITERAL_KEYWORDS = frozenset({"const", "default", "enum", "examples"})
+
+
+def _check_schema_references(schemas: dict[str, dict]) -> None:
+    """Every $ref in every schema names a registered $id and an existing pointer.
+
+    References resolve against the referring schema's $id, as a standard
+    registry would, so a relative reference that lands on an unregistered
+    URL is refused here instead of failing later in a validator.
+    """
+    registry: dict[str, dict] = {}
+    for relative, schema in sorted(schemas.items()):
+        schema_id = schema.get("$id")
+        if not isinstance(schema_id, str):
+            continue
+        if schema_id in registry:
+            raise ModelError(f"{relative}: duplicate JSON Schema id {schema_id}")
+        registry[schema_id] = schema
+    for relative, schema in sorted(schemas.items()):
+        base = schema.get("$id")
+        for location, reference in _schema_references(schema, "#", top=True):
+            label = f"{relative} {location}"
+            if not isinstance(reference, str):
+                raise ModelError(f"{label}: $ref must be a string")
+            if reference.startswith("#"):
+                target, fragment = schema, reference[1:]
+            elif not isinstance(base, str):
+                raise ModelError(f"{label}: $ref {reference} needs a schema $id to resolve against")
+            else:
+                uri, _, fragment = urljoin(base, reference).partition("#")
+                if uri not in registry:
+                    raise ModelError(f"{label}: $ref {reference} names no registered schema $id")
+                target = registry[uri]
+            if not _json_pointer_resolves(target, fragment):
+                raise ModelError(f"{label}: $ref {reference} points at nothing")
+
+
+def _schema_references(
+    node: Any,
+    location: str,
+    *,
+    top: bool = False,
+) -> Iterator[tuple[str, Any]]:
+    if isinstance(node, list):
+        for index, item in enumerate(node):
+            yield from _schema_references(item, f"{location}/{index}")
+        return
+    if not isinstance(node, dict):
+        return
+    if "$id" in node and not top:
+        raise ModelError(f"{location}: nested $id is not supported")
+    for key, value in node.items():
+        child = f"{location}/{_json_pointer_escape(key)}"
+        if key == "$ref":
+            yield location, value
+        elif key in _LITERAL_KEYWORDS:
+            continue
+        elif key in _SCHEMA_MAP_KEYWORDS and isinstance(value, dict):
+            for name, subschema in value.items():
+                yield from _schema_references(subschema, f"{child}/{_json_pointer_escape(name)}")
+        else:
+            yield from _schema_references(value, child)
+
+
+def _json_pointer_escape(token: str) -> str:
+    return token.replace("~", "~0").replace("/", "~1")
+
+
+def _json_pointer_resolves(document: Any, fragment: str) -> bool:
+    if fragment == "":
+        return True
+    if not fragment.startswith("/"):
+        # Plain-name ($anchor) fragments are not used by any repository schema.
+        return False
+    node = document
+    for raw in unquote(fragment)[1:].split("/"):
+        token = raw.replace("~1", "/").replace("~0", "~")
+        if isinstance(node, dict) and token in node:
+            node = node[token]
+        elif isinstance(node, list) and token.isdigit() and int(token) < len(node):
+            node = node[int(token)]
+        else:
+            return False
+    return True
 
 
 def _resolve_schema_reference(

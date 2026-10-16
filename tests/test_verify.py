@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from tools.hfxdev.model import ModelError
+from tools.hfxdev.model import ModelError, load_json, repository_files
 from tools.hfxdev.verify import (
     _check_build_cache_clock,
     _kernel_build_directories,
@@ -23,6 +23,7 @@ from tools.hfxdev.verify import (
 from tools.hfxdev.verify_repository import (
     SCHEMA_DECLARATION_EXEMPTIONS,
     _check_schema_declarations,
+    _check_schema_references,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -56,6 +57,79 @@ class SchemaDeclarationTests(unittest.TestCase):
             with self.subTest(relative=relative):
                 self.assertTrue((ROOT / relative).is_file())
                 self.assertTrue(reason.strip())
+
+
+BASE = "https://hyperflux.dev/schemas/"
+
+
+def _policy_schema() -> dict:
+    return {
+        "$id": f"{BASE}example-policy-v1.json",
+        "$defs": {"matcher": {"type": "string"}, "a/b~c": {"type": "integer"}},
+        "type": "object",
+    }
+
+
+def _catalog_schema(reference: str) -> dict:
+    return {
+        "$id": f"{BASE}example-catalog-v1.json",
+        "$defs": {"name": {"type": "string"}},
+        "type": "object",
+        "properties": {
+            "name": {"$ref": "#/$defs/name"},
+            "matcher": {"$ref": reference},
+            "default": {"const": {"$ref": "not a reference"}},
+        },
+    }
+
+
+class SchemaReferenceTests(unittest.TestCase):
+    def check(self, reference: str) -> None:
+        _check_schema_references(
+            {
+                "schemas/example-policy.schema.json": _policy_schema(),
+                "schemas/example-catalog.schema.json": _catalog_schema(reference),
+            }
+        )
+
+    def test_references_to_registered_ids_and_local_pointers_resolve(self) -> None:
+        self.check(f"{BASE}example-policy-v1.json#/$defs/matcher")
+        self.check("example-policy-v1.json#/$defs/matcher")
+        self.check(f"{BASE}example-policy-v1.json#/$defs/a~1b~0c")
+        self.check(f"{BASE}example-policy-v1.json")
+        self.check("#/$defs/name")
+
+    def test_reference_to_an_unregistered_id_is_refused(self) -> None:
+        # The relative file name resolves against $id to a URL nobody registers.
+        with self.assertRaisesRegex(ModelError, "names no registered schema \\$id"):
+            self.check("example-policy.schema.json#/$defs/matcher")
+
+    def test_reference_to_a_missing_pointer_is_refused(self) -> None:
+        with self.assertRaisesRegex(ModelError, "#/properties/matcher: .*points at nothing"):
+            self.check(f"{BASE}example-policy-v1.json#/$defs/missing")
+        with self.assertRaisesRegex(ModelError, "points at nothing"):
+            self.check("#/$defs/missing")
+        with self.assertRaisesRegex(ModelError, "points at nothing"):
+            self.check("#anchor")
+
+    def test_nested_ids_and_duplicate_ids_are_refused(self) -> None:
+        nested = _catalog_schema("#/$defs/name")
+        nested["$defs"]["name"]["$id"] = f"{BASE}nested.json"
+        with self.assertRaisesRegex(ModelError, "nested \\$id"):
+            _check_schema_references({"schemas/a.schema.json": nested})
+        with self.assertRaisesRegex(ModelError, "duplicate JSON Schema id"):
+            _check_schema_references(
+                {"schemas/a.schema.json": _policy_schema(), "schemas/b.schema.json": _policy_schema()}
+            )
+
+    def test_repository_schemas_resolve_every_reference(self) -> None:
+        schemas = {
+            path.relative_to(ROOT).as_posix(): load_json(path)
+            for path in repository_files(ROOT)
+            if path.name.endswith(".schema.json")
+        }
+        self.assertIn("schemas/openrazer-native-command-catalog.schema.json", schemas)
+        _check_schema_references(schemas)
 
 
 class VerificationGuardTests(unittest.TestCase):
