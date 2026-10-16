@@ -969,3 +969,67 @@ fn battery_lane_maps_only_identified_children_to_their_lane_and_model() {
     let other = LogicalDeviceId::try_from("paired-keyboard-0000").expect("device id is valid");
     assert_eq!(translator.battery_lane(&other), None);
 }
+
+#[test]
+fn wired_child_pid_zero_identity_is_rejected_and_keeps_the_wireless_mouse() {
+    // A Basilisk on its USB cable makes the receiver send `05 3b 01 00 00`.
+    // The kernel drops that report; this pins the daemon's second safety net.
+    let mut translator = translator();
+    let identity = identify(
+        &mut translator,
+        1,
+        HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+        0x00cd,
+    );
+    let LifecycleObservationKind::RegisterDevice(child) = &identity.observations[0].kind else {
+        panic!("identity registers the child");
+    };
+    let mouse = child.device_id().clone();
+    assert_eq!(mouse.as_str(), "paired-mouse-00cd");
+
+    for (sequence, product_id) in [(2, 0x0000), (3, 0xffff)] {
+        let mut observation = raw(
+            sequence,
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_PRODUCT_ID,
+            HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            product_id,
+        );
+        observation.confidence = HFX_UAPI_OBSERVATION_CONFIDENCE_EXACT;
+        assert!(matches!(
+            translator.translate(observation),
+            Err(PassiveTranslationError::InvalidObservationValue)
+        ));
+        assert_eq!(
+            translator.battery_lane(&mouse).map(|(lane, _)| lane),
+            Some(ChildBatteryLane::Pointer)
+        );
+    }
+
+    // The same child keeps its lane: later pointer reports still name it and
+    // a repeated 00CD identity is not an identity conflict.
+    let contact = translator
+        .translate(raw(
+            4,
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CONTACT_RAW,
+            HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            1,
+        ))
+        .expect("contact translates");
+    assert_eq!(contact.disposition, PassiveDisposition::Applied);
+    assert!(matches!(
+        &contact.observations[0].kind,
+        LifecycleObservationKind::Contact { device_id, value: ContactState::OnMat, .. }
+            if *device_id == mouse
+    ));
+    let replay = identify(
+        &mut translator,
+        5,
+        HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+        0x00cd,
+    );
+    assert_eq!(replay.disposition, PassiveDisposition::Applied);
+    assert!(matches!(
+        &replay.observations[0].kind,
+        LifecycleObservationKind::RegisterDevice(child) if *child.device_id() == mouse
+    ));
+}
