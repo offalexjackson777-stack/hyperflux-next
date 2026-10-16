@@ -8,16 +8,34 @@
 //! carries are forwarded. The kernel drops every published battery when the
 //! writer file closes, so a released or newly installed writer starts from
 //! nothing published.
+//!
+//! The charge state rides on the battery reading of the same lane. It comes
+//! only from a profile's qualified charge decoder, annotates only a lane that
+//! currently has a reading, and is forgotten whenever that reading goes away
+//! or the writer session ends, so an old charge value is never reused.
 
 use hfx_bridge::LifecycleObservationKind;
 use hfx_domain::{LogicalDeviceId, PairingState, RouteState};
 use hfx_kernel_transport::{ChildBatteryLane, ChildBatteryState, ChildBatteryStatus};
+
+/// One decoded charge field, as the child profile's qualified charge decoder
+/// maps it in the context of its report. Anything the decoder cannot prove
+/// is `Unknown`.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum ChildChargeReading {
+    #[default]
+    Unknown,
+    Charging,
+    /// Not charging while the same report says the mouse is off the mat.
+    Discharging,
+}
 
 /// The published-state mirror for one receiver endpoint.
 #[derive(Debug, Default)]
 pub struct ChildBatteryForwarder {
     desired: [ChildBatteryState; 2],
     published: [ChildBatteryState; 2],
+    charge: [ChildChargeReading; 2],
 }
 
 impl ChildBatteryForwarder {
@@ -35,12 +53,30 @@ impl ChildBatteryForwarder {
         let Some((lane, model_name)) = lookup(device_id) else {
             return;
         };
-        self.desired[lane.index()] = match reading {
-            Some(capacity) => {
-                ChildBatteryState::present(capacity, ChildBatteryStatus::Unknown, model_name)
-            }
-            None => ChildBatteryState::Absent,
+        let index = lane.index();
+        if let Some(capacity) = reading {
+            let status = charge_status(capacity, self.charge[index]);
+            self.desired[index] = ChildBatteryState::present(capacity, status, model_name);
+        } else {
+            self.charge[index] = ChildChargeReading::Unknown;
+            self.desired[index] = ChildBatteryState::Absent;
+        }
+    }
+
+    /// Records one decoded charge field for a child lane. It only annotates
+    /// a lane that already has a reading: the kernel reports the battery
+    /// level before the charge field of the same report, and a lane without
+    /// a reading must not keep a charge value for later.
+    pub fn record_charge(&mut self, lane: ChildBatteryLane, reading: ChildChargeReading) {
+        let index = lane.index();
+        let ChildBatteryState::Present {
+            capacity, status, ..
+        } = &mut self.desired[index]
+        else {
+            return;
         };
+        self.charge[index] = reading;
+        *status = charge_status(*capacity, reading);
     }
 
     /// A new writer file starts with no published battery.
@@ -53,6 +89,7 @@ impl ChildBatteryForwarder {
     pub fn writer_released(&mut self) {
         self.published = Default::default();
         self.desired = Default::default();
+        self.charge = Default::default();
     }
 
     /// Forwards every lane whose desired state differs from the published
@@ -75,6 +112,17 @@ impl ChildBatteryForwarder {
             self.published[index] = self.desired[index].clone();
         }
         accepted
+    }
+}
+
+/// Maps a decoded charge field onto the published status. Full is inferred
+/// from charging at a 100 percent level; the device sends no full value.
+const fn charge_status(capacity: u8, reading: ChildChargeReading) -> ChildBatteryStatus {
+    match reading {
+        ChildChargeReading::Charging if capacity >= 100 => ChildBatteryStatus::Full,
+        ChildChargeReading::Charging => ChildBatteryStatus::Charging,
+        ChildChargeReading::Discharging => ChildBatteryStatus::Discharging,
+        ChildChargeReading::Unknown => ChildBatteryStatus::Unknown,
     }
 }
 
@@ -247,6 +295,127 @@ mod tests {
         assert_eq!(
             sent(&mut forwarder),
             [(ChildBatteryLane::Pointer, present(30))]
+        );
+    }
+
+    fn with_status(capacity: u8, status: ChildBatteryStatus) -> ChildBatteryState {
+        ChildBatteryState::present(capacity, status, MODEL)
+    }
+
+    #[test]
+    fn the_charge_field_sets_the_status_of_the_current_reading() {
+        let mut forwarder = ChildBatteryForwarder::default();
+        forwarder.record(&reported(80), lookup);
+        let cases = [
+            (ChildChargeReading::Charging, ChildBatteryStatus::Charging),
+            (
+                ChildChargeReading::Discharging,
+                ChildBatteryStatus::Discharging,
+            ),
+            (ChildChargeReading::Unknown, ChildBatteryStatus::Unknown),
+        ];
+        for (reading, status) in cases {
+            forwarder.record_charge(ChildBatteryLane::Pointer, reading);
+            assert_eq!(
+                sent(&mut forwarder),
+                [(ChildBatteryLane::Pointer, with_status(80, status))],
+                "{reading:?}"
+            );
+        }
+
+        // The status is merged with the level before the next flush, and the
+        // charge carries over to the next level of the same reading.
+        forwarder.record_charge(ChildBatteryLane::Pointer, ChildChargeReading::Charging);
+        forwarder.record(&reported(99), lookup);
+        assert_eq!(
+            sent(&mut forwarder),
+            [(
+                ChildBatteryLane::Pointer,
+                with_status(99, ChildBatteryStatus::Charging)
+            )]
+        );
+    }
+
+    #[test]
+    fn charging_at_a_full_level_is_published_as_full() {
+        let mut forwarder = ChildBatteryForwarder::default();
+        forwarder.record(&reported(100), lookup);
+        forwarder.record_charge(ChildBatteryLane::Pointer, ChildChargeReading::Charging);
+        assert_eq!(
+            sent(&mut forwarder),
+            [(
+                ChildBatteryLane::Pointer,
+                with_status(100, ChildBatteryStatus::Full)
+            )]
+        );
+        forwarder.record(&reported(99), lookup);
+        assert_eq!(
+            sent(&mut forwarder),
+            [(
+                ChildBatteryLane::Pointer,
+                with_status(99, ChildBatteryStatus::Charging)
+            )]
+        );
+        forwarder.record(&reported(100), lookup);
+        assert_eq!(
+            sent(&mut forwarder),
+            [(
+                ChildBatteryLane::Pointer,
+                with_status(100, ChildBatteryStatus::Full)
+            )]
+        );
+    }
+
+    #[test]
+    fn a_lane_without_a_reading_keeps_no_charge_for_later() {
+        let mut forwarder = ChildBatteryForwarder::default();
+        forwarder.record_charge(ChildBatteryLane::Pointer, ChildChargeReading::Charging);
+        assert!(sent(&mut forwarder).is_empty());
+        forwarder.record(&reported(50), lookup);
+        assert_eq!(
+            sent(&mut forwarder),
+            [(ChildBatteryLane::Pointer, present(50))]
+        );
+    }
+
+    #[test]
+    fn absence_and_writer_release_forget_the_charge() {
+        let mut forwarder = ChildBatteryForwarder::default();
+        forwarder.record(&reported(40), lookup);
+        forwarder.record_charge(ChildBatteryLane::Pointer, ChildChargeReading::Charging);
+        forwarder.record(
+            &LifecycleObservationKind::BatteryStale { device_id: mouse() },
+            lookup,
+        );
+        forwarder.record(&reported(41), lookup);
+        assert_eq!(
+            sent(&mut forwarder),
+            [(ChildBatteryLane::Pointer, present(41))]
+        );
+
+        forwarder.record_charge(ChildBatteryLane::Pointer, ChildChargeReading::Discharging);
+        forwarder.writer_released();
+        forwarder.record(&reported(42), lookup);
+        forwarder.writer_installed();
+        assert_eq!(
+            sent(&mut forwarder),
+            [(ChildBatteryLane::Pointer, present(42))]
+        );
+    }
+
+    #[test]
+    fn a_reinstalled_writer_receives_the_last_known_charge() {
+        let mut forwarder = ChildBatteryForwarder::default();
+        forwarder.record(&reported(30), lookup);
+        forwarder.record_charge(ChildBatteryLane::Pointer, ChildChargeReading::Discharging);
+        assert_eq!(sent(&mut forwarder).len(), 1);
+        forwarder.writer_installed();
+        assert_eq!(
+            sent(&mut forwarder),
+            [(
+                ChildBatteryLane::Pointer,
+                with_status(30, ChildBatteryStatus::Discharging)
+            )]
         );
     }
 

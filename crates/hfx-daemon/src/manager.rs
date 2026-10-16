@@ -488,6 +488,9 @@ impl LinuxRuntimeManager {
                 }
             }
         }
+        if let Some((lane, reading)) = translation.charge {
+            battery.record_charge(lane, reading);
+        }
         if let Some(readiness) = translation.restore_ready {
             if readiness.phase == DeviceRestoreReadinessPhase::EpochOpened {
                 // REL-021: let route consumers act on the newer epoch at once

@@ -20,6 +20,7 @@ mod socket;
 pub use authority::{
     DAEMON_NONCE_BYTES, WriterAuthorityError, derive_capability_digest, generate_daemon_nonce,
 };
+pub use battery::ChildChargeReading;
 pub use configuration::{ProductionConfigError, load_production_config};
 pub use discovery::{EndpointCandidate, EndpointDiscovery, EndpointDiscoveryError, EndpointName};
 pub use identity::{ReceiverIdentityAuthority, ReceiverIdentityError};

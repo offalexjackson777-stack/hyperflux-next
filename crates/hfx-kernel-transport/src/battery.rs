@@ -57,8 +57,9 @@ impl ChildBatteryLane {
     }
 }
 
-/// Charge status as the bridge knows it. Without a qualified charge
-/// decoder the bridge forwards `Unknown`.
+/// Charge status as the bridge knows it. Only a child profile with a
+/// qualified charge decoder yields a known status; every other child, and
+/// every value that decoder cannot prove, forwards `Unknown`.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum ChildBatteryStatus {
     #[default]
