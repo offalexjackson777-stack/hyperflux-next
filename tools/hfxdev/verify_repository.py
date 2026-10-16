@@ -97,6 +97,70 @@ from .toolchains import toolchain_environment, verify_current_toolchain
 FUTURE_MTIME_TOLERANCE_SECONDS = 5.0
 INSTALLED_SCHEMA_ROOT = Path("/usr/share/hyperflux-next/schemas")
 
+_BYTE_FROZEN_WIRE = "byte-frozen: canonical wire bytes compared by protocol tests"
+_BYTE_FROZEN_SERDE = "byte-frozen: golden of serde output compared byte for byte"
+_BYTE_FROZEN_VIEW = "byte-frozen: Rust qualification view golden; the view rejects unknown keys"
+_FOREIGN_FORMAT = "foreign format: read by an external tool that defines its own keys"
+_NO_SCHEMA_GENERATED = "generated output with no repository schema yet"
+
+# Tracked JSON files that may omit "$schema". Every other tracked JSON file
+# must declare one, so a new file cannot skip schema coverage silently.
+SCHEMA_DECLARATION_EXEMPTIONS: dict[str, str] = {
+    ".devcontainer/devcontainer.json": _FOREIGN_FORMAT,
+    "apps/device-qualification/tests/fixtures/rust-qualified-mouse.json": _BYTE_FROZEN_VIEW,
+    "apps/device-qualification/tests/fixtures/rust-qualified-pair.json": _BYTE_FROZEN_VIEW,
+    "apps/device-qualification/tests/fixtures/rust-qualified-report.json": _BYTE_FROZEN_VIEW,
+    "assurance/generated/hyperflux-next.spdx.json": _FOREIGN_FORMAT,
+    "governance/generated/github-experience-plan.json": _NO_SCHEMA_GENERATED,
+    "governance/generated/github-labels.json": _NO_SCHEMA_GENERATED,
+    "governance/generated/github-protection-plan.json": _NO_SCHEMA_GENERATED,
+    "packaging/generated/install-plan.json": _NO_SCHEMA_GENERATED,
+    **{
+        f"protocol/v{version}/fixtures/transaction-request-canonical.json": _BYTE_FROZEN_WIRE
+        for version in range(1, 7)
+    },
+    "sdk/cpp/vendor/manifest.json": "no repository schema yet for the vendored dependency manifest",
+    "spec/catalog/integrations/catalog.json": (
+        "generated output; the integration catalog schema covers the source, not this view"
+    ),
+    "spec/catalog/profiles/catalog.json": _NO_SCHEMA_GENERATED,
+    "tests/fixtures/cli/hyperfluxctl-needs-attention.json": _BYTE_FROZEN_SERDE,
+    "tests/fixtures/cli/hyperfluxctl-ready.json": _BYTE_FROZEN_SERDE,
+    "tests/fixtures/generated/profile-compositions.json": _NO_SCHEMA_GENERATED,
+    **{
+        f"tests/fixtures/protocol/{name}.json": _BYTE_FROZEN_WIRE
+        for name in (
+            "v1/lease-conflict-response",
+            "v1/negotiate-request",
+            "v1/snapshot-response",
+            "v2/negotiate-request",
+            "v2/snapshot-response",
+            "v2/static-transaction-request",
+            "v3/negotiate-request",
+            "v3/off-transaction-request",
+            "v3/snapshot-response",
+            "v4/negotiate-request",
+            "v4/snapshot-response",
+            "v5/integration-view-request",
+            "v5/integration-view-response",
+            "v5/negotiate-request",
+            "v5/snapshot-response",
+            "v6/negotiate-request",
+            "v6/snapshot-response",
+            "v7/native-enumerate-request",
+            "v7/native-enumerate-response",
+            "v7/native-transact-request",
+            "v7/native-transact-response",
+            "v7/native-watch-request",
+            "v7/native-watch-response",
+            "v7/negotiate-request",
+            "v7/snapshot-response",
+        )
+    },
+    "toolchains/documentation-render/package-lock.json": _FOREIGN_FORMAT,
+    "toolchains/documentation-render/package.json": _FOREIGN_FORMAT,
+}
+
 from .verify_compiled import _check_build_cache_clock, _run_command
 
 
@@ -176,16 +240,19 @@ def _check_schema_contracts(root: Path) -> None:
         schema_ids.append(schema_id)
     require_unique(schema_ids, "JSON Schema id")
 
-    for path in repository_files(root):
-        if path.suffix != ".json":
-            continue
-        value = load_json(path)
+    documents = {
+        path.relative_to(root).as_posix(): load_json(path)
+        for path in repository_files(root)
+        if path.suffix == ".json"
+    }
+    _check_schema_declarations(documents)
+    for relative, value in documents.items():
         schema_reference = value.get("$schema")
         if not isinstance(schema_reference, str) or schema_reference.startswith("https://"):
             continue
-        target = _resolve_schema_reference(root, path, schema_reference)
+        target = _resolve_schema_reference(root, root / relative, schema_reference)
         if target is None or not target.is_file():
-            raise ModelError(f"{path.relative_to(root)}: missing schema reference {schema_reference}")
+            raise ModelError(f"{relative}: missing schema reference {schema_reference}")
 
     scenario_schema = load_json(root / "schemas" / "simulator-scenario.schema.json")
     event_limit = scenario_schema["properties"]["events"]["maxItems"]
@@ -204,6 +271,30 @@ def _check_schema_contracts(root: Path) -> None:
     load_test_catalog(root)
     load_linux_runtime(root)
     load_install_manifest(root)
+
+
+def _check_schema_declarations(
+    documents: dict[str, dict],
+    exemptions: dict[str, str] = SCHEMA_DECLARATION_EXEMPTIONS,
+) -> None:
+    """Every JSON document declares $schema unless it is on the exemption list."""
+    for relative, reason in sorted(exemptions.items()):
+        if not reason.strip():
+            raise ModelError(f"{relative}: schema declaration exemption needs a reason")
+        if relative not in documents:
+            raise ModelError(f"{relative}: schema declaration exemption names no tracked JSON file")
+        if "$schema" in documents[relative]:
+            raise ModelError(f"{relative}: declares $schema; remove its schema declaration exemption")
+    undeclared = sorted(
+        relative
+        for relative, value in documents.items()
+        if "$schema" not in value and relative not in exemptions
+    )
+    if undeclared:
+        raise ModelError(
+            "JSON files must declare $schema or carry a reasoned exemption in "
+            f"SCHEMA_DECLARATION_EXEMPTIONS: {', '.join(undeclared)}"
+        )
 
 
 def _resolve_schema_reference(

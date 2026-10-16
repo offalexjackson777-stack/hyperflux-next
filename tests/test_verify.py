@@ -20,6 +20,42 @@ from tools.hfxdev.verify import (
     _run_openrgb_native_route_contracts,
     _run_openrgb_thread_sanitizer,
 )
+from tools.hfxdev.verify_repository import (
+    SCHEMA_DECLARATION_EXEMPTIONS,
+    _check_schema_declarations,
+)
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class SchemaDeclarationTests(unittest.TestCase):
+    def test_document_with_schema_needs_no_exemption(self) -> None:
+        _check_schema_declarations({"a.json": {"$schema": "x.schema.json"}}, {})
+
+    def test_document_without_schema_must_be_exempted(self) -> None:
+        documents = {"a.json": {"$schema": "x.schema.json"}, "new.json": {"value": 1}}
+        with self.assertRaisesRegex(ModelError, "new.json"):
+            _check_schema_declarations(documents, {})
+        _check_schema_declarations(documents, {"new.json": "byte-frozen: golden"})
+
+    def test_exemption_needs_a_reason(self) -> None:
+        with self.assertRaisesRegex(ModelError, "needs a reason"):
+            _check_schema_declarations({"a.json": {}}, {"a.json": " "})
+
+    def test_stale_exemptions_are_refused(self) -> None:
+        with self.assertRaisesRegex(ModelError, "names no tracked JSON file"):
+            _check_schema_declarations({}, {"gone.json": "byte-frozen: golden"})
+        with self.assertRaisesRegex(ModelError, "remove its schema declaration exemption"):
+            _check_schema_declarations(
+                {"a.json": {"$schema": "x.schema.json"}},
+                {"a.json": "byte-frozen: golden"},
+            )
+
+    def test_exempted_repository_files_exist_and_carry_reasons(self) -> None:
+        for relative, reason in SCHEMA_DECLARATION_EXEMPTIONS.items():
+            with self.subTest(relative=relative):
+                self.assertTrue((ROOT / relative).is_file())
+                self.assertTrue(reason.strip())
 
 
 class VerificationGuardTests(unittest.TestCase):
