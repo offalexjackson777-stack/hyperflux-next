@@ -102,6 +102,17 @@
       "generated_block_ids": []
     },
     {
+      "path": "docs/architecture/decisions/documentation-render-evidence.md",
+      "title": "Documentation Render Evidence",
+      "audience": "developers",
+      "purpose": "Records why the committed documentation render record describes a release while every pull request renders offline.",
+      "owner": "architecture",
+      "navigation_group": "architecture",
+      "mode": "human",
+      "canonical_sources": ["docs/architecture/decisions/documentation-render-evidence.md"],
+      "generated_block_ids": []
+    },
+    {
       "path": "docs/architecture/decisions/openrazer-patch-removal.md",
       "title": "OpenRazer Patch Removal Routes",
       "audience": "developers",

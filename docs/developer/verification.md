@@ -88,6 +88,27 @@ do not have to touch the file. The share of covered code is checked against a fi
 floor taken from the 2.0 release (`ratio_floor`), which `tighten` never changes, so
 deleting code that has tests still passes as long as the share stays at or above it.
 
+## Check The Documentation Render
+
+The **Documentation render** check renders every document in Chromium at three widths, in
+light and dark themes, with no network. It runs on pull requests that change a document or
+a render input, and fails on any layout issue or outbound request. Its screenshots are
+uploaded as the `hyperflux-documentation-render` artifact.
+
+The committed render record, `assurance/documentation-audit.json`, describes the last
+release. Ordinary pull requests check only its structure, so a merged documentation change
+never makes another pull request stale. A release pull request into `main` must refresh it:
+
+1. Render the release tree: `./hfx docs render --output build/docs-render-<n>`. In the CI
+   image, run `./hfx ci docs-prepare` and then `./hfx ci docs-render`.
+2. Bind the record to that render: `./hfx docs bind --render build/docs-render-<n>/render`.
+3. List the critical screenshots that changed: `./hfx docs review --render <same path>`.
+4. Look at each listed screenshot. Then record the review by naming each file:
+   `./hfx docs review --render <same path> --confirm <file> ...`.
+5. Check the result as release CI will: `./hfx verify --fast --release-evidence required`.
+
+`./hfx docs review` never marks a screenshot reviewed unless you name it.
+
 ## Look Up The Current Checks
 
 The generated [verification graph](../generated/verification.md),

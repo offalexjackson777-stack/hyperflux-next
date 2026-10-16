@@ -16,7 +16,7 @@
       "verification": ["foundation-contracts", "repository-atlas-contracts"],
       "limitations": ["Describes authority and boundaries; it does not prove physical behavior"],
       "safe_change_workflow": ["Update canonical architecture data", "Regenerate projections", "Run foundation and Atlas contracts"],
-      "related_docs": ["docs/developer/architecture.md", "docs/architecture/design-book.md", "docs/developer/verification.md", "docs/generated/architecture.md", "docs/architecture/decisions/declarative-route-selector.md", "docs/architecture/decisions/device-knowledge-integration.md", "docs/architecture/decisions/repository-documentation-and-local-hardware-authority.md"],
+      "related_docs": ["docs/developer/architecture.md", "docs/architecture/design-book.md", "docs/developer/verification.md", "docs/generated/architecture.md", "docs/architecture/decisions/declarative-route-selector.md", "docs/architecture/decisions/device-knowledge-integration.md", "docs/architecture/decisions/documentation-render-evidence.md", "docs/architecture/decisions/repository-documentation-and-local-hardware-authority.md"],
       "depends_on": []
     },
     {
@@ -475,7 +475,7 @@
       "inputs": ["Generated technical Markdown", "Reviewed user and architecture guides", "Repository navigation requirements"],
       "outputs": ["GitHub-native documentation", "Repository Atlas", "Public readiness projection", "Canonical metadata assets"],
       "public_contracts": ["Stable repository-relative links", "Audience-specific entry points", "Generated facts identify their canonical source", "No duplicate documentation website"],
-      "canonical_files": ["README.md", "docs/README.md", "docs/catalog.json", "docs/render-preview.json", "docs/user/installation.md", "docs/user/first-run.md", "docs/user/applications.md", "docs/user/hardware.md", "docs/user/updates-removal.md", "docs/user/troubleshooting.md", "docs/user/privacy.md", "docs/developer/architecture.md", "docs/developer/building.md", "docs/developer/sdk-connectors.md", "docs/developer/device-onboarding.md", "docs/developer/verification.md", "docs/project/journey.md", "docs/project/roadmap.md", "docs/project/release-status.md", "docs/architecture/design-book.md", "docs/architecture/native-device-onboarding.md", "docs/architecture/decisions/repository-documentation-and-local-hardware-authority.md"],
+      "canonical_files": ["README.md", "docs/README.md", "docs/catalog.json", "docs/render-preview.json", "docs/user/installation.md", "docs/user/first-run.md", "docs/user/applications.md", "docs/user/hardware.md", "docs/user/updates-removal.md", "docs/user/troubleshooting.md", "docs/user/privacy.md", "docs/developer/architecture.md", "docs/developer/building.md", "docs/developer/sdk-connectors.md", "docs/developer/device-onboarding.md", "docs/developer/verification.md", "docs/project/journey.md", "docs/project/roadmap.md", "docs/project/release-status.md", "docs/architecture/design-book.md", "docs/architecture/native-device-onboarding.md", "docs/architecture/decisions/repository-documentation-and-local-hardware-authority.md", "docs/architecture/decisions/documentation-render-evidence.md"],
       "generated_files": ["docs/generated/README.md", "docs/generated/repository-atlas.md", "generated/public-readiness.json"],
       "verification": ["repository-documentation-contracts", "repository-atlas-contracts"],
       "limitations": ["Repository documentation describes the published Arch release only"],

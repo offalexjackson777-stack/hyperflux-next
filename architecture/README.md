@@ -15,6 +15,7 @@ Holds the rules every part of the project follows and the map of which directory
 
 - [Declarative Native Route Selector](../docs/architecture/decisions/declarative-route-selector.md)
 - [Device-Knowledge Integration](../docs/architecture/decisions/device-knowledge-integration.md)
+- [Documentation Render Evidence](../docs/architecture/decisions/documentation-render-evidence.md)
 - [Repository Documentation And Local Hardware Authority](../docs/architecture/decisions/repository-documentation-and-local-hardware-authority.md)
 
 ## Limitations
