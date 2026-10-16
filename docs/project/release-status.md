@@ -2,9 +2,9 @@
 
 <!-- HFX-GENERATED-BEGIN: release-status -->
 > [!IMPORTANT]
-> **HyperFlux Next 2.0.2 is the current release.** It is available for Arch
+> **HyperFlux Next 2.1.0 is the current release.** It is available for Arch
 > Linux x86_64 from the signed HyperFlux package repository.
-> Read the [v2.0.2 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.0.2).
+> Read the [v2.1.0 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.0).
 <!-- HFX-GENERATED-END: release-status -->
 
 ## What Is Out Now
