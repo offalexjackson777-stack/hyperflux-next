@@ -543,7 +543,136 @@ def _parser() -> argparse.ArgumentParser:
         help="prove the anonymous HTTPS repository with an isolated Pacman state",
     )
     arch_repository_verify_public.add_argument("--output", required=True, type=Path)
+
+    repositories = commands.add_parser(
+        "repositories",
+        help="assemble, sign, verify, or publish the package repository site",
+    )
+    repositories_commands = repositories.add_subparsers(
+        dest="repositories_command", required=True
+    )
+    repositories_assemble = repositories_commands.add_parser(
+        "assemble", help="build the unsigned site from release packages"
+    )
+    repositories_assemble.add_argument(
+        "--packages",
+        dest="packages",
+        action="append",
+        required=True,
+        metavar="TARGET=DIRECTORY",
+        help="the release packages of one distribution; repeat for ubuntu, debian, fedora, opensuse",
+    )
+    repositories_assemble.add_argument("--output", required=True, type=Path)
+    repositories_assemble.add_argument(
+        "--site-url", help="override the published address (for local proofs)"
+    )
+    repositories_assemble.add_argument(
+        "--tools", choices=("container", "local"), default="container"
+    )
+    repositories_sign = repositories_commands.add_parser(
+        "sign", help="sign an assembled site with the repository key on this machine"
+    )
+    repositories_sign.add_argument("site", type=Path)
+    repositories_sign.add_argument("--arch-repository", required=True, type=Path)
+    repositories_sign.add_argument("--gnupg-home", required=True, type=Path)
+    repositories_sign.add_argument("--key-fingerprint", required=True)
+    repositories_sign.add_argument("--output", required=True, type=Path)
+    repositories_sign.add_argument(
+        "--tools", choices=("container", "local"), default="container"
+    )
+    repositories_verify = repositories_commands.add_parser(
+        "verify", help="check every file, hash, and signature of a site"
+    )
+    repositories_verify.add_argument("site", type=Path)
+    repositories_verify.add_argument(
+        "--unsigned", action="store_true", help="check an unsigned assembly"
+    )
+    repositories_publish = repositories_commands.add_parser(
+        "publish", help="push a signed site to gh-pages and refresh the Arch mirror"
+    )
+    repositories_publish.add_argument("site", type=Path)
+    repositories_publish.add_argument(
+        "--execute", action="store_true", help="run the commands instead of printing them"
+    )
+    repositories_publish.add_argument("--remote", help="git remote URL (default: origin)")
+    repositories_rehearse = repositories_commands.add_parser(
+        "rehearse",
+        help="sign with a throwaway key and install from the site in every pinned image",
+    )
+    repositories_rehearse.add_argument(
+        "--packages", dest="packages", action="append", required=True,
+        metavar="TARGET=DIRECTORY",
+    )
+    repositories_rehearse.add_argument("--arch-repository", required=True, type=Path)
+    repositories_rehearse.add_argument("--output", required=True, type=Path)
     return parser
+
+
+def _package_directories(values: list[str]) -> dict[str, Path]:
+    directories: dict[str, Path] = {}
+    for value in values:
+        target, separator, directory = value.partition("=")
+        if not separator or not target or not directory or target in directories:
+            raise ModelError("--packages takes TARGET=DIRECTORY once per distribution")
+        directories[target] = Path(directory).resolve()
+    return directories
+
+
+def _repositories(root: Path, args: argparse.Namespace) -> int:
+    from . import package_repositories as site
+
+    command = args.repositories_command
+    if command == "assemble":
+        manifest = site.assemble_site(
+            root,
+            packages=_package_directories(args.packages),
+            output=args.output.resolve(),
+            site_url=args.site_url,
+            tools=site.metadata_tools(args.tools),
+        )
+        print(f"Unsigned repository site: {manifest.parent}")
+        return 0
+    if command == "sign":
+        from .arch_repository import load_arch_repository_policy
+
+        arch = load_arch_repository_policy(root)
+        if args.key_fingerprint != arch.primary_fingerprint:
+            raise ModelError("--key-fingerprint must be the repository primary key")
+        manifest = site.sign_site(
+            root,
+            args.site.resolve(),
+            output=args.output.resolve(),
+            identity=site.SigningIdentity(
+                gnupg_home=args.gnupg_home.resolve(),
+                primary_fingerprint=arch.primary_fingerprint,
+                signing_subkey_fingerprint=arch.signing_subkey_fingerprint,
+            ),
+            arch_repository=args.arch_repository.resolve(),
+            tools=site.metadata_tools(args.tools),
+        )
+        print(f"Signed and verified repository site: {manifest.parent}")
+        return 0
+    if command == "verify":
+        report = site.verify_site(
+            root, args.site.resolve(), require_signatures=not args.unsigned
+        )
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 0
+    if command == "publish":
+        site.publish_site(
+            root, args.site.resolve(), execute=args.execute, remote=args.remote
+        )
+        return 0
+    from .package_repositories_rehearsal import rehearse
+
+    receipt = rehearse(
+        root,
+        packages=_package_directories(args.packages),
+        arch_repository=args.arch_repository.resolve(),
+        output=args.output.resolve(),
+    )
+    print(f"Repository rehearsal receipt: {receipt}")
+    return 0
 
 
 def _candidate_split(root: Path, value: str | None):
@@ -1196,6 +1325,8 @@ def main(arguments: list[str] | None = None) -> int:
             receipt = verify_public_arch_repository(root, args.output.resolve())
             print(f"Public Arch repository receipt: {receipt}")
             return 0
+        if args.command == "repositories":
+            return _repositories(root, args)
     except ModelError as error:
         print(f"hfx: {error}", file=sys.stderr)
         return 1
