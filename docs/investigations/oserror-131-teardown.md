@@ -2,7 +2,7 @@
 
 OpenRazer could raise `OSError 131` when a device went to sleep or came back. The relay was
 destroying a virtual device while a request to it had already been answered but not yet
-delivered. The fix is on `dev` for 2.0.2 and still needs a hardware check.
+delivered. The fix shipped in 2.0.2 and passed its hardware check.
 
 Issue: [#37](https://github.com/offalexjackson777-stack/hyperflux-next/issues/37).
 
@@ -67,6 +67,5 @@ The teardown lives in `crates/hfx-uhid-relay/src/runtime/teardown.rs`.
 
 ## What Is Still Open
 
-The fix ships in 2.0.2. #37 is done when an answered request always completes before its
-endpoint is destroyed across repeated sleep and return cycles. That hardware check is part
-of the 2.0.2 release checks, and the issue stays open until it is recorded.
+Nothing. The fix shipped in 2.0.2. Its hardware check ran three sleep and return cycles
+with no `OSError 131` from OpenRazer, and #37 is closed.

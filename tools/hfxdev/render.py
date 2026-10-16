@@ -127,6 +127,7 @@ from .generators.protocol import (
     rust_registry as protocol_rust_registry,
 )
 from .kernel_uapi import load_kernel_uapi_registry
+from .toolchains import PYTHON_TOOLCHAIN_PACKAGES
 from .knowledge import compiled_knowledge_catalog
 from .integrations import compiled_catalog as compiled_integration_catalog
 from .generators.integrations import (
@@ -385,7 +386,9 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / ".github" / "ISSUE_TEMPLATE" / "feature_request.yml": github_feature_request(
             github_governance
         ),
-        root / ".github" / "dependabot.yml": github_dependabot(github_governance),
+        root / ".github" / "dependabot.yml": github_dependabot(
+            github_governance, PYTHON_TOOLCHAIN_PACKAGES
+        ),
         root / ".github" / "release.yml": github_release_notes(github_governance),
         root / ".github" / "workflows" / "verification.yml": github_verification_workflow(
             github_governance

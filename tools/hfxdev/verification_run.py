@@ -17,6 +17,7 @@ import xml.etree.ElementTree as ElementTree
 
 from .integrations import load_integration_catalog
 from .model import ModelError, load_json, sha256_file
+from .protocol import load_protocol_registry
 from .testgraph import TestCatalog, TestNode, TestSelection, select_tests
 from .toolchains import load_toolchain_pins
 
@@ -45,7 +46,7 @@ MATERIALS = (
     ("integration-catalog", "integrations/catalog.json", "file"),
     ("performance-budgets", "assurance/performance-budgets.json", "file"),
     ("protected-behavior", "assurance/protected-behavior.json", "file"),
-    ("protocol-catalog", "protocol/v6/catalog.json", "file"),
+    ("protocol-registry", "protocol/registry.json", "file"),
     ("release-gates", "assurance/release-gates.json", "file"),
     ("replay-fixtures", "tests/fixtures/replay", "tree"),
     ("schema-tree", "schemas", "tree"),
@@ -53,6 +54,13 @@ MATERIALS = (
     ("test-catalog", "verification/tests.json", "file"),
     ("toolchain-pins", "toolchains/pins.json", "file"),
 )
+
+
+def _material_sources(root: Path) -> tuple[tuple[str, str, str], ...]:
+    """Return the recorded materials, with the protocol catalog the registry serves now."""
+    registry = load_protocol_registry(root)
+    current = next(item for item in registry.versions if item.version == registry.current_version)
+    return tuple(sorted((*MATERIALS, ("protocol-catalog", f"protocol/{current.catalog_path}", "file"))))
 
 
 @dataclass(frozen=True)
@@ -500,7 +508,7 @@ def run_verification(
     output = _prepare_output(root, output, run_id)
     materials = [
         _material(root, material_id, path, kind)
-        for material_id, path, kind in MATERIALS
+        for material_id, path, kind in _material_sources(root)
     ]
     nodes = [
         {

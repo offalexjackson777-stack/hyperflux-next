@@ -27,39 +27,39 @@ The full list of files each part owns is in [`architecture/repository-atlas.json
 
 | Part | Status | Purpose |
 | --- | --- | --- |
-| [Architecture authority](../../architecture/README.md) | `policy` | Defines product invariants, subsystem direction, ownership boundaries, and the canonical repository graph. |
-| [Schema contracts](../../schemas/README.md) | `implemented` | Defines strict machine-readable shapes for every shared repository fact and generated contract. |
-| [Assurance and release evidence](../../assurance/README.md) | `policy` | Owns explicit design coverage, bounded formal models, performance budgets, dependency and coverage inventories, public journey source coverage, quality audits, and release gates. |
-| [Application integration catalog](../../integrations/README.md) | `implemented` | Defines application-neutral adapter identities, upstream pins, coexistence rules, and SDK-only transport boundaries. |
-| [Composable hardware profiles](../../profiles/README.md) | `implemented` | Composes receiver, surface, and child identities with evidence-bound capabilities and independent routes. |
-| [Device knowledge](../../knowledge/README.md) | `research-boundary` | Records provenance-bound candidate facts, semantic capabilities, upstream records, disagreements, and explicit unknowns. |
-| [Versioned bridge protocol](../../protocol/README.md) | `implemented` | Defines bounded request, response, event, negotiation, and compatibility contracts across protocol generations. |
-| [OpenRGB adapter](../../integrations/openrgb/README.md) | `implemented` | Runs pinned upstream Razer controllers over qualified HyperFlux Feature routes while preserving ordinary hidapi devices. |
-| [OpenRazer native route](../../integrations/openrazer/README.md) | `implemented` | Extends pinned OpenRazer with trusted feature-only HyperFlux routes while preserving ordinary USB devices and the official daemon API. |
-| [Device qualification console](../../apps/device-qualification/README.md) | `implemented` | Provides a source-only browser surface for bounded qualification projections without remote data or direct browser hardware access. |
-| [Rust workspace](../../crates/README.md) | `implemented` | Coordinates the Rust dependency graph and compile-time ownership boundaries across production and simulation crates. |
-| [System probe](../../crates/hfx-system-probe/README.md) | `implemented` | Owns bounded local system inspection, Full-component detection, root-only receipt creation, and the explicit disconnected-driver activation boundary used by operator tools. |
-| [Device qualification runtime](../../crates/hfx-device-qualification/README.md) | `implemented` | Coordinates the source-only local qualification projection, lifecycle, evidence, migration, runner, server, and maintainer onboarding workflow. |
-| [Core policy engine](../../crates/hfx-core/README.md) | `implemented` | Owns receiver generations, qualified native routes, child-local arbitration, bounded transactions, retained fallback restoration, and typed diagnostics. |
-| [Bridge runtime](../../crates/hfx-bridge/README.md) | `implemented` | Adapts the core to protocol-v7 native routes and exchanges plus retained protocol-v6 sessions, persistence, subscriptions, snapshots, and bounded RPC dispatch. |
-| [Production daemon](../../crates/hfx-daemon/README.md) | `implemented` | Composes production discovery, configuration, native-route authority, service lifecycle, logging, and the retained restoration fallback around the bridge. |
-| [Rust SDK](../../crates/hfx-sdk/README.md) | `implemented` | Provides the typed Rust client contract for qualified route discovery, bounded native exchanges, and retained semantic consumers. |
-| [Operations CLI](../../crates/hfx-ops/README.md) | `implemented` | Provides the installed bounded status, Doctor, support-bundle, and explicit driver-activation command surfaces while preserving historical hfx_ops source imports through re-exports. |
-| [Kernel transport adapter](../../crates/hfx-kernel-transport/README.md) | `implemented` | Adapts the generated kernel UAPI into bounded Rust observation, routing, envelope I/O, and qualified native exchanges. |
-| [Deterministic simulator](../../crates/hfx-sim/README.md) | `implemented` | Exercises generations, failures, persistence, restoration, and replay without hardware. |
-| [Kernel driver contract](../../driver/README.md) | `implemented` | Defines additive generated userspace ABIs and the strict boundary around the in-kernel receiver transport. |
-| [Linux HID kernel module](../../driver/kernel/README.md) | `implemented` | Binds the receiver, preserves generic input, records passive observations, performs qualified fixed-size native exchanges, and retains bounded migration envelopes. |
-| [Linux runtime authority](../../runtime/README.md) | `implemented` | Defines package version, service identities, filesystem paths, permissions, activation, and runtime defaults once. |
-| [Packaging and installation](../../packaging/README.md) | `implemented` | Builds reproducible distribution artifacts, a canonical installed root, and signed public repository metadata from explicit manifests. |
-| [C++ SDK](../../sdk/cpp/README.md) | `implemented` | Provides typed C++ bridge access for qualified native routes, exact Feature exchanges, and generated adapter contracts. |
-| [Python SDK](../../sdk/python/README.md) | `implemented` | Provides typed Python bridge access and generated contracts for scripting and Python application adapters. |
-| [Repository tooling](../../tools/README.md) | `implemented` | Provides the single developer CLI, canonical loaders, deterministic generators, and verification orchestration. |
-| [Contract tests](../../tests/README.md) | `implemented` | Holds language-specific, cross-language, fixture, lifecycle, repository-navigation, and change-impact tests. |
-| [GitHub governance authority](../../governance/README.md) | `policy` | Defines repository ownership, immutable automation, public collaboration, remote synchronization, dependency policy, and the public publication state from one authority. |
-| [Documentation system](../../docs/README.md) | `implemented` | Organizes concise audience guidance and generated technical references for direct use inside GitHub. |
-| [Verification graph](../../verification/README.md) | `implemented` | Defines typed verification nodes, dependencies, lanes, capabilities, side effects, evidence, timing, and change selection. |
-| [Error catalog](../../errors/README.md) | `implemented` | Defines stable typed error identities, user-safe messages, remediation, and cross-language mappings. |
-| [Pinned development toolchains](../../toolchains/README.md) | `policy` | Pins compiler, interpreter, upstream checkout, and development-container identities for reproducible local verification. |
+| [Architecture authority](../../architecture/README.md) | `policy` | Holds the rules every part of the project follows and the map of which directory is responsible for what. |
+| [Schema contracts](../../schemas/README.md) | `implemented` | Holds the JSON Schemas that check every data file the repository shares between its tools. |
+| [Assurance and release evidence](../../assurance/README.md) | `policy` | Records what the project has checked and how: design coverage, performance budgets, dependency and test-coverage lists, quality audits, and what each release must pass. |
+| [Application integration catalog](../../integrations/README.md) | `implemented` | Lists the apps HyperFlux connects to, the exact upstream versions it builds against, and how each app shares the receiver with ordinary devices. |
+| [Composable hardware profiles](../../profiles/README.md) | `implemented` | Describes each supported receiver, keyboard and mouse: how they are identified, what they can do, and how HyperFlux talks to each one. |
+| [Device knowledge](../../knowledge/README.md) | `research-boundary` | Collects what is known about each device and where each fact came from, including facts that sources disagree on and facts that are still unknown. |
+| [Versioned bridge protocol](../../protocol/README.md) | `implemented` | Defines the messages apps and tools exchange with the HyperFlux background service, and how older and newer versions of those messages stay compatible. |
+| [OpenRGB adapter](../../integrations/openrgb/README.md) | `implemented` | Lets OpenRGB's own Razer support drive keyboards and mice on the HyperFlux receiver, while other USB devices keep working through OpenRGB as before. |
+| [OpenRazer native route](../../integrations/openrazer/README.md) | `implemented` | Lets OpenRazer, and apps built on it such as Polychromatic, reach devices on the HyperFlux receiver, while ordinary Razer USB devices and the OpenRazer daemon keep working as before. |
+| [Device qualification console](../../apps/device-qualification/README.md) | `implemented` | A local browser page, run only from a source checkout, for testing a new device. It never contacts the internet and never touches hardware directly. |
+| [Rust workspace](../../crates/README.md) | `implemented` | Ties the Rust crates together and keeps each crate to its own job. |
+| [System probe](../../crates/hfx-system-probe/README.md) | `implemented` | Inspects the local system for the operator tools: which driver is loaded, whether Full is installed, and how to switch drivers safely while the receiver is disconnected. |
+| [Device qualification runtime](../../crates/hfx-device-qualification/README.md) | `implemented` | Runs the device testing workflow behind the qualification console: the test steps, their records, and the guide for maintainers adding a device. |
+| [Core policy engine](../../crates/hfx-core/README.md) | `implemented` | Decides what may be sent to each device and when. It keeps requests from different apps from clashing, sends each one as a single complete exchange, restores the device after a failure, and reports errors with a reason. |
+| [Bridge runtime](../../crates/hfx-bridge/README.md) | `implemented` | Connects apps to the core: it accepts their requests over the current and the previous message protocol, remembers settings, sends updates to subscribers, and answers each request within set limits. |
+| [Production daemon](../../crates/hfx-daemon/README.md) | `implemented` | The HyperFlux background service. It finds the receiver, loads the configuration, runs the bridge, and logs what happens. |
+| [Rust SDK](../../crates/hfx-sdk/README.md) | `implemented` | The Rust library apps use to find HyperFlux devices and send them commands. |
+| [Operations CLI](../../crates/hfx-ops/README.md) | `implemented` | The `hyperfluxctl` command: status, Doctor, support bundles, and switching to the HyperFlux driver. |
+| [Kernel transport adapter](../../crates/hfx-kernel-transport/README.md) | `implemented` | Lets the Rust code talk to the kernel driver: it reads what the driver reports and sends it fixed-size device messages. |
+| [Deterministic simulator](../../crates/hfx-sim/README.md) | `implemented` | Simulates receivers and devices, including failures and reconnects, so the runtime can be tested without hardware. |
+| [Kernel driver contract](../../driver/README.md) | `implemented` | Defines the interface between the kernel driver and the programs that use it. New versions only add to it, so existing programs keep working. |
+| [Linux HID kernel module](../../driver/kernel/README.md) | `implemented` | The Linux kernel driver for the receiver. It keeps the keyboard and mouse working as normal input devices and carries lighting and battery messages between them and the background service. |
+| [Linux runtime authority](../../runtime/README.md) | `implemented` | Defines, in one place, the package version, service names, file paths, permissions and default settings the installed system uses. |
+| [Packaging and installation](../../packaging/README.md) | `implemented` | Builds the Arch packages the same way every time, and the signed Pacman repository that serves them. |
+| [C++ SDK](../../sdk/cpp/README.md) | `implemented` | The C++ library apps use to talk to the HyperFlux background service. |
+| [Python SDK](../../sdk/python/README.md) | `implemented` | The Python library scripts and apps use to talk to the HyperFlux background service. |
+| [Repository tooling](../../tools/README.md) | `implemented` | The `./hfx` developer command: it loads the repository's data files, generates documentation and code from them, and runs the checks. |
+| [Contract tests](../../tests/README.md) | `implemented` | The test suites: per-language tests, tests across languages, and checks that the repository's files and links stay consistent. |
+| [GitHub governance authority](../../governance/README.md) | `policy` | Defines how the GitHub repository is run: who owns what, which automation may run, how people contribute, and what is published. |
+| [Documentation system](../../docs/README.md) | `implemented` | The guides for people using HyperFlux, the engineering pages that explain how it works, and the generated reference tables. |
+| [Verification graph](../../verification/README.md) | `implemented` | Lists every check the project can run, what each one needs, and which checks to run for a given change. |
+| [Error catalog](../../errors/README.md) | `implemented` | Lists every error HyperFlux can report, the message users see, and what to do about it, in every language the project uses. |
+| [Pinned development toolchains](../../toolchains/README.md) | `policy` | Pins the compiler, interpreter, upstream source and development container versions so every build and check is reproducible. |
 
 ## Dependencies
 

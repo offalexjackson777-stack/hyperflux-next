@@ -38,3 +38,7 @@ updates:
   labels:
   - 'area: integration'
   - 'area: security'
+  ignore:
+  - dependency-name: pip
+  - dependency-name: setuptools
+  - dependency-name: wheel

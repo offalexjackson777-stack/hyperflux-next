@@ -33,17 +33,14 @@ The [design book](../architecture/design-book.md) explains these ideas in depth.
 
 | Problem | What people saw | Fixed in | Hardware proof |
 | --- | --- | --- | --- |
-| [Shutdown hang](shutdown-hang.md) | Shutdown waited about 90 seconds | 2.0.1 | Pending in [#36](https://github.com/offalexjackson777-stack/hyperflux-next/issues/36) |
-| [Retired DKMS driver](retired-dkms-driver.md) | After a kernel update, nothing worked but Doctor said "driver active" | 2.0.1 | Pending in [#36](https://github.com/offalexjackson777-stack/hyperflux-next/issues/36) |
-| [Mouse missing after boot](mouse-missing-after-boot.md) | A mouse already on at boot did not appear until power-cycled | 2.0.1 | Pending in [#36](https://github.com/offalexjackson777-stack/hyperflux-next/issues/36) |
-| [Doctor restart advice](doctor-restart-advice.md) | Doctor told people to restart a bridge that was working | 2.0.1 | Pending in [#36](https://github.com/offalexjackson777-stack/hyperflux-next/issues/36) |
-| [Late return after sleep or power-off](late-return-after-sleep.md) | A device came back up to 30 seconds late; Polychromatic stayed stale | 2.0.1 and 2.0.2 | Pending for 2.0.2 |
-| [OSError 131 after sleep](oserror-131-teardown.md) | OpenRazer raised OSError 131 around sleep and wake | 2.0.2 | Pending for 2.0.2 |
-| [Battery readings jump](battery-readings-jump.md) | Battery level jumped between unrelated values | 2.0.2 | Pending for 2.0.2 |
-| [OpenRGB 1.0 port](openrgb-1-0-port.md) | The OpenRGB plugin would not load on OpenRGB 1.0, then crashed OpenRGB on quit | 2.0.1 | Host-load test pending in [#36](https://github.com/offalexjackson777-stack/hyperflux-next/issues/36) |
-
-"Pending for 2.0.2" means the fix is merged on `dev` but not yet released, and its
-hardware check is part of the 2.0.2 release checks.
+| [Shutdown hang](shutdown-hang.md) | Shutdown waited about 90 seconds | 2.0.1 | Checked in [#36](https://github.com/offalexjackson777-stack/hyperflux-next/issues/36) |
+| [Retired DKMS driver](retired-dkms-driver.md) | After a kernel update, nothing worked but Doctor said "driver active" | 2.0.1 | Checked in [#36](https://github.com/offalexjackson777-stack/hyperflux-next/issues/36) |
+| [Mouse missing after boot](mouse-missing-after-boot.md) | A mouse already on at boot did not appear until power-cycled | 2.0.1 | Checked in [#32](https://github.com/offalexjackson777-stack/hyperflux-next/issues/32) |
+| [Doctor restart advice](doctor-restart-advice.md) | Doctor told people to restart a bridge that was working | 2.0.1 | Checked in [#36](https://github.com/offalexjackson777-stack/hyperflux-next/issues/36) |
+| [Late return after sleep or power-off](late-return-after-sleep.md) | A device came back up to 30 seconds late; Polychromatic stayed stale | 2.0.1 and 2.0.2 | Checked in [#38](https://github.com/offalexjackson777-stack/hyperflux-next/issues/38) and [#39](https://github.com/offalexjackson777-stack/hyperflux-next/issues/39) |
+| [OSError 131 after sleep](oserror-131-teardown.md) | OpenRazer raised OSError 131 around sleep and wake | 2.0.2 | Checked in [#37](https://github.com/offalexjackson777-stack/hyperflux-next/issues/37) |
+| [Battery readings jump](battery-readings-jump.md) | Battery level jumped between unrelated values | 2.0.2 | Checked in [#44](https://github.com/offalexjackson777-stack/hyperflux-next/issues/44) |
+| [OpenRGB 1.0 port](openrgb-1-0-port.md) | The OpenRGB plugin would not load on OpenRGB 1.0, then crashed OpenRGB on quit | 2.0.1 | Checked with 2.1.0 |
 
 ## Related Decisions
 

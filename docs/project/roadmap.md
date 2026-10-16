@@ -16,6 +16,10 @@ later. Nothing under Next or Later is available yet.
 - **2.0.2:** a reconnect update. A keyboard switched off and on comes back
   within seconds, each device shows only its own battery level, and OpenRazer
   no longer reports errors after the computer wakes from sleep.
+- **2.1.0:** smaller packages. The kernel drivers ship in their own DKMS
+  packages, so Full is now four packages and Core two. `sudo pacman -Syu` moves
+  a 2.0.x system to the new packages. The guides were rewritten to be shorter
+  and plainer.
 
 Install the current release from the signed HyperFlux Pacman repository, as
 shown in the [installation guide](../user/installation.md). See the
@@ -23,10 +27,6 @@ shown in the [installation guide](../user/installation.md). See the
 
 ## Next
 
-- **2.1.0 with smaller packages.** Version 2.1.0 splits the two packages into
-  four. It ships only after moving from two packages to four has been tested
-  on real hardware.
-  Every 2.0.x update keeps the two packages you have today.
 - **An AUR package.** Publishing HyperFlux Next on the Arch User Repository is
   planned. It is not published yet; until it is, use the
   [installation guide](../user/installation.md).
