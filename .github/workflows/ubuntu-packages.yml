@@ -66,15 +66,16 @@ jobs:
           git config --global --add safe.directory "$PWD"
           debs=build/ci/ubuntu/debs
           ./hfx package distro --distribution ubuntu --build-manifest build/ci/ubuntu/artifacts/package-build-manifest.json --output "$debs"
-          for deb in "$debs"/*.deb; do
+          packages=$debs/packages
+          for deb in "$packages"/*.deb; do
             dpkg-deb --info "$deb"
             dpkg-deb --contents "$deb"
           done
-          lintian --fail-on error --allow-root --display-level '>=warning' "$debs"/*.deb
+          lintian --fail-on error --allow-root --display-level '>=warning' "$packages"/*.deb
           # Refuse every service start a maintainer script might attempt.
           printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d
           chmod 0755 /usr/sbin/policy-rc.d
-          apt-get install -y --no-install-recommends "./$debs"/hyperflux-next-dkms_*.deb "./$debs"/hyperflux-next-linux_*.deb
+          apt-get install -y --no-install-recommends "./$packages"/hyperflux-next-dkms_*.deb "./$packages"/hyperflux-next-linux_*.deb
           if find /etc/systemd -name '*hyperflux*' -print | grep -q .; then
             echo "Installing the packages enabled a service." >&2
             exit 1
@@ -84,7 +85,7 @@ jobs:
             test -f "$directory/Makefile" || continue
             kernel=$(basename "$(dirname "$directory")")
             dkms build --force -m hid-hyperflux-next -v 2.1.0 -k "$kernel"
-            module=$(find "/var/lib/dkms/hid-hyperflux-next/2.1.0/$kernel" -name 'hid_hyperflux_next.ko*' -print -quit)
+            module=$(find "/var/lib/dkms/hid-hyperflux-next/2.1.0/$kernel" -name 'hid[-_]hyperflux[-_]next.ko*' -print -quit)
             test -n "$module"
             modinfo "$module"
             test "$(modinfo -F vermagic "$module" | cut -d' ' -f1)" = "$kernel"
