@@ -10,6 +10,7 @@ from .arch_repository import (
     load_arch_repository_policy,
     load_arch_repository_retention,
 )
+from .arch_split import load_arch_split
 from .assurance import load_design_coverage
 from .atlas import load_repository_atlas
 from .development import load_development_environment
@@ -569,7 +570,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
             openrazer_command_catalog,
         ),
         root / "docs" / "generated" / "distributions.md": distribution_markdown(
-            distribution_catalog, linux_runtime, first_run_activation
+            distribution_catalog, linux_runtime, first_run_activation, load_arch_split(root)
         ),
         root / "sdk" / "python" / "hyperflux_sdk" / "_version.py": python_version_module(
             linux_runtime, "GPL-2.0-or-later"

@@ -191,6 +191,31 @@ class DebianPlanTests(unittest.TestCase):
 
 
 @unittest.skipUnless(dpkg_deb_available(), "dpkg-deb is required")
+class DebianDocumentationTests(unittest.TestCase):
+    def test_ubuntu_section_is_unpublished_and_explains_secure_boot(self) -> None:
+        from hfxdev.generators.distributions import markdown
+        from hfxdev.install import load_first_run_activation
+
+        text = markdown(
+            load_distribution_catalog(ROOT),
+            load_linux_runtime(ROOT),
+            load_first_run_activation(ROOT),
+            candidate_split(),
+        )
+        ubuntu = text[text.index("## Ubuntu 24.04 (CI-built, not published yet)"):]
+        for expected in (
+            "| `hyperflux-next-dkms` | `2.1.0-1` | `all` | `dkms` |",
+            "`hyperflux-next-dkms (= 2.1.0-1)`",
+            "mokutil --sb-state",
+            "sudo update-secureboot-policy --enroll-key",
+            "sudo mokutil --import /var/lib/shim-signed/mok/MOK.der",
+            "MokManager",
+            "modinfo -F signer hid_hyperflux_next",
+        ):
+            self.assertIn(expected, ubuntu)
+        self.assertNotIn("hyperflux-next-full", ubuntu)
+
+
 class DebianBuildTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:

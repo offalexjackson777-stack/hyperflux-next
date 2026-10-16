@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from ..arch_split import ArchSplit
 from ..distributions import DistributionCatalog, DistributionComponent
 from ..install import FirstRunActivation
 from ..linux_runtime import LinuxRuntime
+from ..model import ModelError
 
 
 def _items(values: tuple[str, ...]) -> str:
@@ -18,10 +20,101 @@ def _optional_items(component: DistributionComponent) -> str:
     ) or "none"
 
 
+def _ubuntu(catalog: DistributionCatalog, split: ArchSplit, runtime: LinuxRuntime) -> list[str]:
+    target = catalog.targets["ubuntu"]
+    release = target.release
+    if release is None or target.published:
+        raise ModelError("the Ubuntu target must be an unpublished release")
+    arch_roles = catalog.targets["arch"].dependency_roles
+    from ..distribution_debian import debian_plans
+
+    plans = debian_plans(split, target, runtime, catalog)
+    module = runtime.kernel.module_name.replace("-", "_")
+    lines = [
+        "",
+        f"## {release.distribution} {release.version} (CI-built, not published yet)",
+        "",
+        f"HyperFlux builds `.deb` packages for {release.distribution} {release.version} "
+        f"(`{release.codename}`) every week in CI. They are not published, so there is "
+        "nothing to install from yet. The packages carry only the Core edition; there "
+        "is no Full edition for Ubuntu.",
+        "",
+        "| Package | Version | Architecture | Depends |",
+        "| --- | --- | --- | --- |",
+    ]
+    for plan in plans:
+        lines.append(
+            f"| `{plan.package_name}` | `{plan.version}` | `{plan.architecture}` | "
+            f"{_items(plan.depends)} |"
+        )
+    lines.extend(
+        [
+            "",
+            "Dependency roles map to packages on each distribution:",
+            "",
+            f"| Role | Arch | {release.distribution} |",
+            "| --- | --- | --- |",
+        ]
+    )
+    for role, package in target.dependency_roles.items():
+        lines.append(f"| `{role}` | `{arch_roles.get(role, '-')}` | `{package}` |")
+    lines.extend(
+        [
+            "",
+            "- Package scripts mirror the Arch hooks: they create the system user and "
+            "directories and reload systemd and udev. They never enable or start a service.",
+            f"- `{plans[0].package_name}` hands the driver source to DKMS when it is "
+            "installed and removes every built copy when it is removed.",
+            f"- Programs must run on the glibc {release.c_runtime_version} that "
+            f"{release.distribution} {release.version} ships.",
+            "",
+            "### Secure Boot",
+            "",
+            "If Secure Boot is on, Linux only loads drivers signed by a key it trusts. "
+            "DKMS on Ubuntu signs the HyperFlux driver with a key made on your computer, "
+            "so you need to tell the computer to trust that key once.",
+            "",
+            "1. Check whether Secure Boot is on:",
+            "",
+            "   ```sh",
+            "   mokutil --sb-state",
+            "   ```",
+            "",
+            "   If it says `SecureBoot disabled`, you can stop here.",
+            "",
+            "2. Ask to trust the key. Choose a one-time password when asked; you need it "
+            "after the restart:",
+            "",
+            "   ```sh",
+            "   sudo update-secureboot-policy --enroll-key",
+            "   ```",
+            "",
+            "   If that command says there is no key to enroll, run this instead:",
+            "",
+            "   ```sh",
+            "   sudo mokutil --import /var/lib/shim-signed/mok/MOK.der",
+            "   ```",
+            "",
+            "3. Restart the computer. A blue MokManager screen appears. Choose "
+            "**Enroll MOK**, then **Continue**, then **Yes**, type the password, and reboot.",
+            "",
+            "4. Check that the driver is signed:",
+            "",
+            "   ```sh",
+            f"   modinfo -F signer {module}",
+            "   ```",
+            "",
+            "   It prints the name of the key. An empty line means the driver is not signed.",
+        ]
+    )
+    return lines
+
+
 def markdown(
     catalog: DistributionCatalog,
     runtime: LinuxRuntime,
     activation: FirstRunActivation,
+    split: ArchSplit,
 ) -> str:
     arch = catalog.targets["arch"]
     lines = [
@@ -78,6 +171,7 @@ def markdown(
                 for source, destination in arch.architectures.items()
             )
             + ".",
+            *_ubuntu(catalog, split, runtime),
             "",
         ]
     )

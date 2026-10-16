@@ -83,4 +83,4 @@ After login, run the read-only `hyperfluxctl doctor`. Live activation without a 
 
 Rollback uses a complete prior source-bound Core/Full pair through the package manager. Do not copy files into `/usr/src`, overwrite DKMS trees, or mix an upstream OpenRazer driver package with the HyperFlux-owned transform. Existing configuration remains preserved across supported package transitions.
 
-The Arch package base consumes independently staged `linux` and payload-bearing `full` components. Debian and RPM production output is deferred.
+The Arch package base consumes independently staged `linux` and payload-bearing `full` components. Ubuntu 24.04 `.deb` packages of the Core edition are built and checked in CI but not published yet; Fedora output is deferred.
