@@ -346,7 +346,10 @@ revision.
 ## Protocol Evolution
 
 Clients offer a protocol range and optional feature identifiers. The bridge
-selects one exact version and emits that version's exact record shapes. Hardware
+selects one exact version and emits that version's exact record shapes. The
+served versions form a set that can have gaps, not a range, so a client range with
+no served version is rejected with `HFX-PROTOCOL-001` and a message that lists the
+served set. Hardware
 capability discovery is separate from protocol feature negotiation.
 
 Values that may exceed IEEE-754's exact integer range, including receiver

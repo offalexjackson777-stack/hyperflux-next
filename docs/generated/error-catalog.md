@@ -5,7 +5,7 @@
 This page lists every HyperFlux error code with what it means, what to do about it,
 and whether it is safe to retry, for anyone who saw an `HFX-` code and wants to look it up.
 
-Catalog source: `0030b8c548bf39a33ecacf4f074cc09ea98064600768ae33c974a0053b3eec15`
+Catalog source: `4921943f975604fe3d241adb9f44ed08edc5cead117627b332c4b1e2df2a6085`
 
 Every HyperFlux error code is defined here and nowhere else. These parts of the code use it:
 
@@ -102,7 +102,7 @@ machine identifiers, private paths, and free-form exception or log text are neve
 | `start-bridge` | Start or restart the compatible HyperFlux bridge service. | Run Doctor and confirm the bridge diagnostic endpoint is ready. | true |
 | `submit-before-deadline` | Create a new request with a deadline that has not elapsed; do not revive the expired request. | Confirm admission occurs before the new monotonic deadline. | false |
 | `update-integration` | Install an integration compatible with the negotiated HyperFlux SDK protocol. | Restart the application and confirm protocol negotiation succeeds. | false |
-| `update-protocol-peer` | Update either peer so their supported protocol version ranges overlap. | Repeat negotiation and confirm one common protocol version is selected. | false |
+| `update-protocol-peer` | Update either peer so the client offers at least one protocol version the bridge serves. | Repeat negotiation and confirm one common protocol version is selected. | false |
 | `verify-profile-catalog` | Reload the generated profile catalog and retain read-only behavior until its digest matches. | Confirm the active profile identifier, revision, and digest match the generated catalog. | true |
 | `wake-paired-device` | Move or click the paired device. If it does not appear within 30 seconds, switch it off and on. If it still does not appear, create a support bundle. | Run Doctor and confirm a paired device has a live route. | false |
 
@@ -633,7 +633,7 @@ HyperFlux paused writes because its hardware profile changed.
 
 The application and HyperFlux service are not protocol-compatible.
 
-**Technical cause:** The client and bridge protocol version ranges do not overlap.
+**Technical cause:** The client protocol version range contains no version the bridge serves; the bridge can serve a set with gaps, not a full range.
 
 **Class / severity:** `protocol` / `error`
 
@@ -643,7 +643,7 @@ The application and HyperFlux service are not protocol-compatible.
 
 **Lifecycle:** `active` since `0.0.0-dev.1`
 
-**Safe action (`update-protocol-peer`):** Update either peer so their supported protocol version ranges overlap.
+**Safe action (`update-protocol-peer`):** Update either peer so the client offers at least one protocol version the bridge serves.
 
 **Verify:** Repeat negotiation and confirm one common protocol version is selected.
 
@@ -655,6 +655,7 @@ The application and HyperFlux service are not protocol-compatible.
 | `client_min_version` | `u16` | true | 0 through 65535 (JSON number) | `public` |
 | `server_max_version` | `u16` | true | 0 through 65535 (JSON number) | `public` |
 | `server_min_version` | `u16` | true | 0 through 65535 (JSON number) | `public` |
+| `server_supported_versions` | `text` | false | max 128 characters | `public` |
 
 ## HFX-PROTOCOL-002
 

@@ -43,8 +43,9 @@ that ship with HyperFlux already use those versions, so nothing changes for you
 if you only use them.
 
 If you run your own program that talks to HyperFlux and it only offers
-versions 1 to 4 or 6, it will be refused with error `HFX-PROTOCOL-001`. Update
-it to version 5 or 7. The
+versions 1 to 4 or 6, it will be refused with error `HFX-PROTOCOL-001`. The
+error message ends with the versions HyperFlux accepts, for example
+`Supported protocol versions: 5, 7.` Update your program to version 5 or 7. The
 [SDK connector guide](../developer/sdk-connectors.md#retired-protocol-versions-22)
 lists the details.
 

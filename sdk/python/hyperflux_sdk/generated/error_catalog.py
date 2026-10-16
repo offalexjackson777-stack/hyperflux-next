@@ -175,7 +175,7 @@ class ErrorDescriptor:
     docs_path: str
 
 
-ERROR_CATALOG_SHA256: Final = "0030b8c548bf39a33ecacf4f074cc09ea98064600768ae33c974a0053b3eec15"
+ERROR_CATALOG_SHA256: Final = "4921943f975604fe3d241adb9f44ed08edc5cead117627b332c4b1e2df2a6085"
 MAX_ERROR_COUNT: Final = 256
 MAX_REMEDIATION_COUNT: Final = 128
 MAX_SAFE_DETAIL_FIELDS: Final = 12
@@ -346,7 +346,7 @@ REMEDIATIONS: Final = (
     RemediationDescriptor(
         id=RemediationId.UPDATE_PROTOCOL_PEER,
         title="Update the protocol peer",
-        safe_action="Update either peer so their supported protocol version ranges overlap.",
+        safe_action="Update either peer so the client offers at least one protocol version the bridge serves.",
         verification="Repeat negotiation and confirm one common protocol version is selected.",
         automatic=False,
     ),
@@ -858,7 +858,7 @@ DETAILS_21: Final = (
         maximum_value=65535,
         allowed_values=(),
         privacy=PrivacyClass.PUBLIC,
-        description="Highest protocol version supported by the bridge.",
+        description="Highest protocol version the bridge serves. Lower versions can be retired; see server_supported_versions.",
     ),
     SafeDetailFieldDescriptor(
         name="server_min_version",
@@ -868,7 +868,17 @@ DETAILS_21: Final = (
         maximum_value=65535,
         allowed_values=(),
         privacy=PrivacyClass.PUBLIC,
-        description="Lowest protocol version supported by the bridge.",
+        description="Lowest protocol version the bridge serves. Higher versions can be retired; see server_supported_versions.",
+    ),
+    SafeDetailFieldDescriptor(
+        name="server_supported_versions",
+        kind=SafeDetailKind.TEXT,
+        required=False,
+        maximum_length=128,
+        maximum_value=None,
+        allowed_values=(),
+        privacy=PrivacyClass.PUBLIC,
+        description="Every protocol version the bridge serves, ascending and comma-separated, such as 5,7.",
     ),
 )
 
@@ -1485,7 +1495,7 @@ ERRORS: Final = (
             replacement_code=None,
         ),
         owner=ErrorOwner.SDK,
-        technical_cause="The client and bridge protocol version ranges do not overlap.",
+        technical_cause="The client protocol version range contains no version the bridge serves; the bridge can serve a set with gaps, not a full range.",
         user_explanation="The application and HyperFlux service are not protocol-compatible.",
         privacy=PrivacyClass.PUBLIC,
         docs_path="docs/generated/error-catalog.md#hfx-protocol-001",

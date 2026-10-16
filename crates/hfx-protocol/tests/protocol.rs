@@ -5,11 +5,12 @@ use hfx_domain::{
     StableLightingMode, TransactionClass,
 };
 use hfx_protocol::{
-    ClientHello, DeviceProfileBinding, LeaseConflict, LeaseRequest, LeaseResult, LightingFrame,
-    NegotiationContext, NegotiationError, NegotiationRequestEnvelope, ProtocolContract,
-    ProtocolValidationError, ProtocolVersionDescriptor, ResourceKey, RgbColor, RpcRequest,
-    StableLightingIntent, TransactionRequest, negotiate, negotiate_with_contract,
-    validate_lease_request, validate_transaction,
+    ClientHello, DeviceProfileBinding, GENERATED_CONTRACT, GENERATED_PROTOCOL_VERSIONS,
+    LeaseConflict, LeaseRequest, LeaseResult, LightingFrame, NegotiationContext, NegotiationError,
+    NegotiationRequestEnvelope, ProtocolContract, ProtocolValidationError,
+    ProtocolVersionDescriptor, ResourceKey, RgbColor, RpcRequest, StableLightingIntent,
+    TransactionRequest, negotiate, negotiate_with_contract, validate_lease_request,
+    validate_transaction,
 };
 
 fn value<T: TryFrom<String>>(raw: &str) -> T
@@ -152,6 +153,45 @@ fn feature_negotiation_selects_intersection_and_rejects_incompatible_versions() 
             "version {retired} must not be served"
         );
     }
+}
+
+#[test]
+fn served_versions_list_the_exact_set_including_retirement_gaps() {
+    let registered = GENERATED_PROTOCOL_VERSIONS
+        .iter()
+        .map(|version| version.version)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        GENERATED_CONTRACT.served_versions().collect::<Vec<_>>(),
+        registered
+    );
+    assert_eq!(
+        GENERATED_CONTRACT.served_versions_list(),
+        registered
+            .iter()
+            .map(u16::to_string)
+            .collect::<Vec<_>>()
+            .join(",")
+    );
+
+    let versions = [5_u16, 7].map(|version| ProtocolVersionDescriptor {
+        version,
+        catalog_sha256: "test",
+        catalog_features: &[],
+        served_features: &[],
+    });
+    let gapped = ProtocolContract {
+        versions: &versions,
+    };
+    assert_eq!(gapped.served_versions().collect::<Vec<_>>(), vec![5, 7]);
+    assert_eq!(gapped.served_versions_list(), "5,7");
+    assert_eq!(
+        ProtocolContract {
+            versions: &versions[..1],
+        }
+        .served_versions_list(),
+        "5"
+    );
 }
 
 #[test]
