@@ -163,6 +163,11 @@ from .openrazer_native_route import (
     load_native_route_catalog,
 )
 from .source_validated import load_source_validated_catalog
+from .owner_reports import (
+    load_owner_report_policy,
+    load_owner_reports,
+    owner_confirmed_routes,
+)
 from .openrazer_version_matrix import load_openrazer_version_compatibility
 from .performance import load_performance_budgets
 from .profiles import compiled_catalog, composition_fixtures
@@ -307,6 +312,10 @@ def rendered_files(root: Path) -> dict[Path, str]:
     openrazer_native = load_native_deployment(root)
     openrazer_native_routes = load_native_route_catalog(root)
     source_validated_devices = load_source_validated_catalog(root)
+    owner_report_policy = load_owner_report_policy(root)
+    owner_confirmed = owner_confirmed_routes(
+        load_owner_reports(root), owner_report_policy
+    )
     test_catalog = load_test_catalog(root)
     linux_runtime = load_linux_runtime(root)
     distribution_catalog = load_distribution_catalog(root)
@@ -332,7 +341,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
             distribution_catalog
         ),
         "compatibility-summary": lambda: readme_compatibility_summary(
-            readiness, openrazer_native, source_validated_devices
+            readiness, openrazer_native, source_validated_devices, owner_confirmed
         ),
         "repository-setup": lambda: installation_repository_setup(arch_repository),
         "package-fallback": lambda: installation_package_fallback(arch_repository),
@@ -463,7 +472,14 @@ def rendered_files(root: Path) -> dict[Path, str]:
         ),
         root / "tests" / "fixtures" / "generated" / "profile-compositions.json": profile_fixtures_json(profile_fixtures),
         root / "docs" / "generated" / "supported-hardware.md": profile_markdown(
-            profiles, source_validated_devices
+            profiles,
+            source_validated_devices,
+            owner_confirmed,
+            issues_url=(
+                f"https://github.com/{github_governance.owner}/"
+                f"{github_governance.repository}/issues"
+            ),
+            minimum_owner_reports=owner_report_policy["minimum_reports"],
         ),
         root / "docs" / "generated" / "device-knowledge.md": render_knowledge_markdown(
             knowledge

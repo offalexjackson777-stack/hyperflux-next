@@ -10,11 +10,12 @@ from ..arch_repository import ArchRepositoryPolicy
 from ..distributions import DistributionCatalog
 from ..openrazer_native_route import OpenRazerNativeDeployment
 from ..source_validated_catalog import (
+    OWNER_CONFIRMED,
     PHYSICALLY_PROVEN,
     SOURCE_QUALIFIED_OPERATIONAL,
     UPSTREAM_BLOCKED_OR_RESEARCH_ONLY,
-    public_support_tier,
-    public_support_tier_counts,
+    documented_support_tier,
+    documented_support_tier_counts,
 )
 
 
@@ -179,17 +180,34 @@ def compatibility_summary(
     readiness: dict[str, Any],
     openrazer: OpenRazerNativeDeployment,
     source_validated_devices: dict[str, Any],
+    owner_confirmed: dict[str, tuple[int, ...]] | None = None,
 ) -> str:
+    owner_confirmed = owner_confirmed or {}
     devices = source_validated_devices["devices"]
-    counts = public_support_tier_counts(devices)
+    counts = documented_support_tier_counts(devices, owner_confirmed)
     grouped = {
-        tier: [device for device in devices if public_support_tier(device) == tier]
+        tier: [
+            device
+            for device in devices
+            if documented_support_tier(device, owner_confirmed) == tier
+        ]
         for tier in (
             PHYSICALLY_PROVEN,
+            OWNER_CONFIRMED,
             SOURCE_QUALIFIED_OPERATIONAL,
             UPSTREAM_BLOCKED_OR_RESEARCH_ONLY,
         )
     }
+    confirmed = ""
+    if grouped[OWNER_CONFIRMED]:
+        confirmed_list = "\n".join(
+            f"- {_device_label(device)}" for device in grouped[OWNER_CONFIRMED]
+        )
+        confirmed_intro = _wrapped(
+            "**Confirmed by owners.** People who own these devices checked that "
+            "they work through the receiver; the project has not tested them itself:"
+        )
+        confirmed = f"{confirmed_intro}\n\n{confirmed_list}\n\n"
     tested = "\n".join(
         f"- {_device_label(device)}" for device in grouped[PHYSICALLY_PROVEN]
     )
@@ -210,6 +228,7 @@ def compatibility_summary(
         f"{counts[SOURCE_QUALIFIED_OPERATIONAL]} devices with HyperFlux on real "
         "hardware yet, but they should work:"
     )
+    expected_block = f"{expected_intro}\n\n{expected}\n\n" if expected else ""
     return f"""Unless a device says otherwise, it works in OpenRazer, Polychromatic, and
 OpenRGB.
 
@@ -217,10 +236,6 @@ OpenRGB.
 
 {tested}
 
-{expected_intro}
-
-{expected}
-
-{waiting}
+{confirmed}{expected_block}{waiting}
 
 HyperFlux Next is tested with OpenRazer `{openrazer.compatibility.verified_upstream_version}`."""
