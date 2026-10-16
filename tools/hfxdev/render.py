@@ -6,7 +6,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .arch_repository import load_arch_repository_policy
+from .arch_repository import (
+    load_arch_repository_policy,
+    load_arch_repository_retention,
+)
 from .assurance import load_design_coverage
 from .atlas import load_repository_atlas
 from .development import load_development_environment
@@ -433,7 +436,9 @@ def rendered_files(root: Path) -> dict[Path, str]:
             release_context
         ),
         root / "docs" / "generated" / "supply-chain.md": supply_chain_markdown(
-            dependency_inventory, arch_repository
+            dependency_inventory,
+            arch_repository,
+            load_arch_repository_retention(root, arch_repository),
         ),
         root / "assurance" / "generated" / "hyperflux-next.spdx.json": spdx_json(
             dependency_inventory

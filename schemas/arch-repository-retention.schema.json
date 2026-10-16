@@ -1,0 +1,28 @@
+{
+  "$id": "https://hyperflux.dev/schemas/arch-repository-retention-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HyperFlux Next Arch repository retention policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "rule", "packages"],
+  "properties": {
+    "$schema": {"const": "../schemas/arch-repository-retention.schema.json"},
+    "schema": {"const": "hyperflux-arch-repository-retention-v1"},
+    "rule": {"type": "string", "minLength": 1},
+    "packages": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "version", "filename", "sha256"],
+        "properties": {
+          "name": {"enum": ["hyperflux-next-dkms", "hyperflux-next-linux", "hyperflux-next-openrazer-driver-dkms", "hyperflux-next-full"]},
+          "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+-[1-9][0-9]*$"},
+          "filename": {"type": "string", "pattern": "^hyperflux-next-(dkms|linux|openrazer-driver-dkms|full)-[0-9]+\\.[0-9]+\\.[0-9]+-[1-9][0-9]*-x86_64\\.pkg\\.tar\\.zst$"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    }
+  }
+}
