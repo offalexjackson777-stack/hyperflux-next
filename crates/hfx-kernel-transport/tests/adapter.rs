@@ -7,19 +7,22 @@ use hfx_domain::{
     SideEffectCertainty, TransactionId,
 };
 use hfx_kernel_transport::{
-    AlignedU64, HFX_UAPI_ABI_VERSION, HFX_UAPI_INFO_FLAG_SESSION_ACTIVE,
+    AlignedU64, ChildBatteryLane, ChildBatteryPublisher, ChildBatteryState, ChildBatteryStatus,
+    HFX_UAPI_ABI_VERSION, HFX_UAPI_BATTERY_PRESENCE_ABSENT, HFX_UAPI_BATTERY_PRESENCE_PRESENT,
+    HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE, HFX_UAPI_INFO_FLAG_SESSION_ACTIVE,
     HFX_UAPI_INFO_FLAG_SUSPENDED, HFX_UAPI_INFO_FLAG_WRITER_OPEN, HFX_UAPI_MAX_OBSERVATIONS,
     HFX_UAPI_NATIVE_ABI_VERSION, HFX_UAPI_NATIVE_EXCHANGE_CERTAINTY_MATCHED_RESPONSE,
     HFX_UAPI_NATIVE_EXCHANGE_CERTAINTY_MAY_HAVE_BEEN_SENT,
     HFX_UAPI_NATIVE_EXCHANGE_CERTAINTY_NOT_SENT, HFX_UAPI_NATIVE_REPORT_BYTES,
-    HFX_UAPI_RESULT_FLAG_AUTOMATIC_RETRY_SAFE, HFX_UAPI_RESULT_FLAG_WRITE_STARTED,
-    HFX_UAPI_TRANSPORT_STATUS_FAILED, HFX_UAPI_TRANSPORT_STATUS_NOT_OBSERVED,
-    HFX_UAPI_TRANSPORT_STATUS_SUCCEEDED, HFX_UAPI_TRANSPORT_STATUS_UNAVAILABLE,
-    HfxUapiBeginSession, HfxUapiEndSession, HfxUapiInfo, HfxUapiNativeExchangeResult,
-    HfxUapiNativeExchangeSubmit, HfxUapiObservation, HfxUapiReadObservations, HfxUapiSubmit,
-    HfxUapiTransactionResult, KernelIo, KernelIoError, KernelReceiverTransport,
-    KernelSessionMaterial, KernelTransportErrorKind, NativeEndpointLane, NativeExchangeCertainty,
-    NativeExchangeRequest, ReceiverFrameEncoderRegistry,
+    HFX_UAPI_POWER_SUPPLY_ABI_VERSION, HFX_UAPI_RESULT_FLAG_AUTOMATIC_RETRY_SAFE,
+    HFX_UAPI_RESULT_FLAG_WRITE_STARTED, HFX_UAPI_TRANSPORT_STATUS_FAILED,
+    HFX_UAPI_TRANSPORT_STATUS_NOT_OBSERVED, HFX_UAPI_TRANSPORT_STATUS_SUCCEEDED,
+    HFX_UAPI_TRANSPORT_STATUS_UNAVAILABLE, HfxUapiBeginSession, HfxUapiChildBattery,
+    HfxUapiEndSession, HfxUapiInfo, HfxUapiNativeExchangeResult, HfxUapiNativeExchangeSubmit,
+    HfxUapiObservation, HfxUapiReadObservations, HfxUapiSubmit, HfxUapiTransactionResult, KernelIo,
+    KernelIoError, KernelReceiverTransport, KernelSessionMaterial, KernelTransportErrorKind,
+    NativeEndpointLane, NativeExchangeCertainty, NativeExchangeRequest,
+    ReceiverFrameEncoderRegistry,
 };
 use hfx_profiles::RuntimeProfileCatalog;
 use hfx_protocol::{DeviceProfileBinding, LightingFrame, RgbColor};
@@ -56,6 +59,7 @@ struct FakeKernelState {
     next_sequence: u64,
     begin_calls: usize,
     end_calls: usize,
+    batteries: Vec<HfxUapiChildBattery>,
     submit_calls: usize,
     last_submit: Option<HfxUapiSubmit>,
     results: BTreeMap<(u64, u64), HfxUapiTransactionResult>,
@@ -81,6 +85,7 @@ impl FakeKernel {
                 next_sequence: 0,
                 begin_calls: 0,
                 end_calls: 0,
+                batteries: Vec::new(),
                 submit_calls: 0,
                 last_submit: None,
                 results: BTreeMap::new(),
@@ -444,6 +449,15 @@ impl KernelIo for FakeKernel {
         }
         Ok(())
     }
+
+    fn report_child_battery(&self, request: HfxUapiChildBattery) -> Result<(), KernelIoError> {
+        let mut state = self.state.lock().map_err(lock_error)?;
+        if request.receiver_generation.0 != state.generation {
+            return Err(fake_error());
+        }
+        state.batteries.push(request);
+        Ok(())
+    }
 }
 
 #[test]
@@ -746,6 +760,44 @@ fn suspended_receiver_retains_generation_identity_but_rejects_writes() {
         .expect_err("suspended receiver cannot admit a write");
     assert_eq!(error.kind(), KernelTransportErrorKind::OutcomeUnavailable);
     assert_eq!(fake.snapshot().submit_calls, 0);
+}
+
+#[test]
+fn child_battery_is_forwarded_without_a_device_write_or_session_use() {
+    let fake = FakeKernel::new();
+    let transport = transport(fake.clone());
+    let before = fake.snapshot();
+    transport
+        .publish_child_battery(
+            ChildBatteryLane::Pointer,
+            &ChildBatteryState::present(
+                73,
+                ChildBatteryStatus::Unknown,
+                "Razer Basilisk V3 Pro 35K",
+            ),
+        )
+        .expect("present state forwards");
+    fake.set_suspended(true);
+    transport
+        .publish_child_battery(ChildBatteryLane::Pointer, &ChildBatteryState::Absent)
+        .expect("absent state forwards while suspended");
+
+    let state = fake.snapshot();
+    assert_eq!(state.submit_calls, before.submit_calls);
+    assert_eq!(state.begin_calls, before.begin_calls);
+    assert_eq!(state.end_calls, before.end_calls);
+    assert_eq!(state.batteries.len(), 2);
+    let present = state.batteries[0];
+    assert_eq!(present.version, HFX_UAPI_POWER_SUPPLY_ABI_VERSION);
+    assert_eq!(present.receiver_generation.0, GENERATION);
+    assert_eq!(present.endpoint_slot, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE);
+    assert_eq!(present.presence, HFX_UAPI_BATTERY_PRESENCE_PRESENT);
+    assert_eq!(present.capacity, 73);
+    assert!(present.model_name.starts_with(b"Basilisk V3 Pro 35K\0"));
+    assert_eq!(
+        state.batteries[1].presence,
+        HFX_UAPI_BATTERY_PRESENCE_ABSENT
+    );
 }
 
 #[test]

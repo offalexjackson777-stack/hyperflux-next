@@ -12,10 +12,11 @@ pub use self::session::KernelSessionMaterial;
 use self::session::KernelSessionState;
 use crate::observation::decode_observations;
 use crate::{
-    AlignedU64, EncodedTransaction, HFX_UAPI_ABI_VERSION, HFX_UAPI_INFO_FLAG_DISCONNECTING,
-    HFX_UAPI_REVOKE_REASON_EXPLICIT, HFX_UAPI_REVOKE_REASON_SERVICE_LOSS, HfxUapiReadObservations,
-    KernelIo, KernelObservationBatch, KernelTransportError, KernelTransportErrorKind,
-    LinuxKernelIo, NativeExchangeRequest, ReceiverFrameEncoderRegistry,
+    AlignedU64, ChildBatteryLane, ChildBatteryPublisher, ChildBatteryState, EncodedTransaction,
+    HFX_UAPI_ABI_VERSION, HFX_UAPI_INFO_FLAG_DISCONNECTING, HFX_UAPI_REVOKE_REASON_EXPLICIT,
+    HFX_UAPI_REVOKE_REASON_SERVICE_LOSS, HfxUapiReadObservations, KernelIo, KernelObservationBatch,
+    KernelTransportError, KernelTransportErrorKind, LinuxKernelIo, NativeExchangeRequest,
+    ReceiverFrameEncoderRegistry,
 };
 use hfx_core::{
     NativeEndpointLane as CoreNativeEndpointLane, NativeTransportDispatch, NativeTransportOutcome,
@@ -286,6 +287,23 @@ impl<I: KernelIo> ReceiverTransport for KernelReceiverTransport<I> {
                 error.failure_facts().automatic_retry_safe,
             ),
         }
+    }
+}
+
+impl<I: KernelIo> ChildBatteryPublisher for KernelReceiverTransport<I> {
+    /// Forwards one lane's battery state through this writer file. It needs
+    /// no authorization session: the kernel accepts it from the exclusive
+    /// writer of the bound generation and publishes it without a device
+    /// query.
+    fn publish_child_battery(
+        &self,
+        lane: ChildBatteryLane,
+        state: &ChildBatteryState,
+    ) -> Result<(), KernelTransportError> {
+        let request = state.encode(lane, self.material.generation_id)?;
+        self.io
+            .report_child_battery(request)
+            .map_err(|_| KernelTransportError::safe(KernelTransportErrorKind::KernelRejected))
     }
 }
 

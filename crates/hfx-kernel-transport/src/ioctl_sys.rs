@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::{
-    HFX_UAPI_IOCTL_MAGIC, HfxUapiBeginSession, HfxUapiEndSession, HfxUapiInfo,
+    HFX_UAPI_IOCTL_MAGIC, HfxUapiBeginSession, HfxUapiChildBattery, HfxUapiEndSession, HfxUapiInfo,
     HfxUapiNativeExchangeResult, HfxUapiNativeExchangeSubmit, HfxUapiReadObservations,
     HfxUapiSubmit, HfxUapiTransactionResult,
 };
@@ -24,6 +24,8 @@ const SUBMIT_NATIVE_EXCHANGE: rustix::ioctl::Opcode =
     opcode::read_write::<HfxUapiNativeExchangeSubmit>(HFX_UAPI_IOCTL_MAGIC, 0x06);
 const GET_NATIVE_EXCHANGE_RESULT: rustix::ioctl::Opcode =
     opcode::read_write::<HfxUapiNativeExchangeResult>(HFX_UAPI_IOCTL_MAGIC, 0x07);
+const REPORT_CHILD_BATTERY: rustix::ioctl::Opcode =
+    opcode::write::<HfxUapiChildBattery>(HFX_UAPI_IOCTL_MAGIC, 0x08);
 
 pub fn get_info(fd: impl AsFd) -> io::Result<HfxUapiInfo> {
     // SAFETY: the opcode is generated from the canonical UAPI type and the
@@ -96,6 +98,16 @@ pub fn get_native_exchange_result(
         ioctl(
             fd,
             Updater::<GET_NATIVE_EXCHANGE_RESULT, HfxUapiNativeExchangeResult>::new(request),
+        )
+    }
+}
+
+pub fn report_child_battery(fd: impl AsFd, request: HfxUapiChildBattery) -> io::Result<()> {
+    // SAFETY: the write opcode and copied input type come from the same generated UAPI record.
+    unsafe {
+        ioctl(
+            fd,
+            Setter::<REPORT_CHILD_BATTERY, HfxUapiChildBattery>::new(request),
         )
     }
 }
