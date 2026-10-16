@@ -142,9 +142,13 @@ def dnf_script(key: str, repository_id: str, *, expect_success: bool) -> str:
     else:
         body = (
             f"sed -i 's|^gpgkey=.*|gpgkey=file://{key}|' {repo}\n"
-            f"if dnf makecache -y --repo {repository_id} >/tmp/dnf.log 2>&1; then cat /tmp/dnf.log; exit 1; fi\n"
+            # dnf5 reports a bad repomd.xml signature, drops the repository and
+            # still exits 0 from makecache, so the proof is that install fails.
+            f"if dnf install -y -q --repo {repository_id} --setopt=install_weak_deps=False "
+            f"{INSTALL_PACKAGE} >/tmp/dnf.log 2>&1; then cat /tmp/dnf.log; exit 1; fi\n"
             "cat /tmp/dnf.log\n"
-            "grep -iE 'signature|gpg|openpgp|key' /tmp/dnf.log\n"
+            "grep -E 'repomd.xml GPG signature verification error' /tmp/dnf.log\n"
+            f"if rpm -q {INSTALL_PACKAGE}; then exit 1; fi\n"
         )
     return (
         "set -euo pipefail\n"
