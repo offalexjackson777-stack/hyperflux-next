@@ -160,6 +160,32 @@ class RustCoverageTests(unittest.TestCase):
         with self.assertRaisesRegex(ModelError, "lines covered count regressed"):
             verify_rust_coverage_report(self.policy, covered)
 
+    def test_improvement_within_the_stale_tolerance_passes(self) -> None:
+        verify_rust_coverage_report(
+            self.policy, self.measured(lines=10, functions=1, regions=10)
+        )
+
+    def test_improvement_beyond_the_stale_tolerance_asks_for_tighten(self) -> None:
+        for name, distance in (("lines", 11), ("functions", 2), ("regions", 11)):
+            with self.subTest(metric=name):
+                measured = self.measured(**{name: distance})
+                limit = self.policy.metrics[name].maximum_notcovered
+                with self.assertRaises(ModelError) as raised:
+                    verify_rust_coverage_report(self.policy, measured)
+                message = str(raised.exception)
+                self.assertIn(
+                    f"{name}: {limit - distance} not covered, limit {limit}", message
+                )
+                self.assertIn("Run `./hfx coverage tighten`", message)
+                self.assertIn("commit assurance/rust-coverage.json", message)
+                self.assertIn("--report PATH", message)
+                verify_rust_coverage_report(self.policy, measured, require_tight=False)
+
+    def test_regression_is_reported_before_staleness(self) -> None:
+        measured = self.measured(lines=100, functions=-1)
+        with self.assertRaisesRegex(ModelError, "functions uncovered count regressed"):
+            verify_rust_coverage_report(self.policy, measured)
+
     def test_tighten_lowers_limits_to_the_measurement_plus_margin(self) -> None:
         measured = self.measured(lines=150, functions=4, regions=200)
         value = self.tightened(measured)

@@ -321,11 +321,50 @@ def _verify_no_regression(
             raise ModelError(f"Rust coverage {name} ratio regressed below its floor")
 
 
+def stale_rust_coverage_limits(
+    policy: RustCoveragePolicy,
+    measured: dict[str, CoverageMetric],
+) -> tuple[str, ...]:
+    """Name each metric whose not-covered limit trails the measurement too far."""
+
+    return tuple(
+        name
+        for name in METRIC_NAMES
+        if policy.metrics[name].maximum_notcovered - measured[name].notcovered
+        > policy.tolerance[name].stale_tolerance
+    )
+
+
 def verify_rust_coverage_report(
     policy: RustCoveragePolicy,
     measured: dict[str, CoverageMetric],
+    *,
+    require_tight: bool = True,
 ) -> None:
+    """Fail on any regression, then on not-covered limits left stale.
+
+    Only not-covered limits are ratcheted: a measurement that beats one by more
+    than its stale tolerance means a past gain is unprotected, so the developer
+    must commit tighter limits. Covered counts may rise freely.
+    """
+
     _verify_no_regression(policy, measured)
+    if not require_tight:
+        return
+    stale = stale_rust_coverage_limits(policy, measured)
+    if stale:
+        details = "; ".join(
+            f"{name}: {measured[name].notcovered} not covered, "
+            f"limit {policy.metrics[name].maximum_notcovered}, "
+            f"tolerance {policy.tolerance[name].stale_tolerance}"
+            for name in stale
+        )
+        raise ModelError(
+            f"Rust coverage improved beyond the committed limits ({details}). "
+            f"Run `{TIGHTEN_COMMAND}` and commit {POLICY_PATH}; "
+            f"pass `--report PATH` to use {policy.output_path} from the "
+            "hyperflux-full-evidence CI artifact instead of a local run"
+        )
 
 
 def tightened_rust_coverage_policy(
