@@ -31,7 +31,7 @@ exchange has to cross a fixed, versioned interface between the bridge and the mo
 
 ## Responsibilities
 
-The module owns six things that require kernel proximity:
+The module owns seven things that require kernel proximity:
 
 1. preserve ordinary HID input with `HID_CONNECT_DEFAULT` and never consume or
    rewrite input reports;
@@ -45,7 +45,9 @@ The module owns six things that require kernel proximity:
    SET attempt, bounded response acquisition, declarative matching, and exact
    certainty;
 6. retain the version-1 bounded receiver-frame transport and terminal journal
-   as an isolated migration fallback.
+   as an isolated migration fallback;
+7. publish bridge-forwarded child battery state in `power_supply`; never query
+   the device for it.
 
 For the native path, the bridge remains responsible for exact route identity,
 profile qualification, generation safety, NativeControl leases, bounded fair
@@ -114,6 +116,39 @@ identity change within one generation is terminally conflicting: the event is
 recorded, the writer is revoked, and no new session can begin for that
 generation. The module never sends an active query to fill missing identity or
 battery data.
+
+## Child Battery Publication
+
+The module publishes bridge-forwarded battery state in `power_supply`; never
+queries. The bridge decodes passive battery reports as before and forwards each
+changed lane state through `HFX_UAPI_IOCTL_REPORT_CHILD_BATTERY`, a write-only
+64-byte record defined by `uapi/power-supply-v3.json`. Only the current writer
+file may forward, and only for its exact receiver generation; no authorization
+session is needed, so a battery survives session expiry and suspend
+revocation. A record names one child lane (pointer or keyboard) and carries
+presence, capacity (0-100), status, and a printable, NUL-terminated model name
+of at most 31 bytes. Malformed headers fail with `EPROTO`, invalid values with
+`EINVAL`, another generation with `ESTALE`, and a lane whose HID interface is
+not bound with `EHOSTDOWN`.
+
+A present record registers one `power_supply` per lane named
+`<session-name>-mouse` or `<session-name>-keyboard`, parented to that lane's
+HID interface, with `SCOPE=Device`, `PRESENT`, `CAPACITY`, `STATUS`,
+`MODEL_NAME`, and `MANUFACTURER=Razer`. Every property is answered from the
+stored forwarded value under a per-lane spinlock; the kernel holds no model
+name table and never sends a report to the receiver for a property read. A
+changed model name re-registers the supply instead of rewriting a string a
+reader may hold.
+
+Each supply is unregistered when the bridge forwards an absent lane (child
+unpaired, gone, stale, or its battery unavailable), when the writer file that
+published it is released, when the lane's interface is removed (before
+`hid_hw_stop`), and when the receiver generation is destroyed (before its
+character device is deregistered). Registration and teardown are serialized by
+a per-receiver `battery_lock`, taken before `state_lock` and
+`authorization_lock` and never with `registry_lock` or `transport_lock` held.
+Kernels built without `CONFIG_POWER_SUPPLY` reject the operation with
+`EOPNOTSUPP`.
 
 ## Transport And Outcomes
 

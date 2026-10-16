@@ -44,8 +44,12 @@ receiver generations, exposing passive observations, enforcing one exclusive
 writer session, and transporting bounded generation-scoped exchanges. UAPI v2
 accepts exactly one qualified 90-byte Feature report, begins its SET at most
 once, acquires one bounded matching response, and reports transport certainty.
-Effects, product names, application ownership, profile migration, notifications,
-package repair, and artwork remain outside the kernel.
+It also publishes bridge-forwarded battery state in power_supply; never queries:
+the bridge's writer file forwards each child lane's decoded capacity, status,
+and bounded model name, and the kernel registers one device-scoped battery per
+lane until the bridge reports the child gone or the writer file closes.
+Effects, product name tables, application ownership, profile migration,
+notifications, package repair, and artwork remain outside the kernel.
 
 ## 7. Bridge Responsibility
 

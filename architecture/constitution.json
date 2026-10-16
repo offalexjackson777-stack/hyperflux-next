@@ -18,11 +18,11 @@
     },
     {
       "id": "HFX-INV-002",
-      "statement": "A qualified native integration may submit exactly one fixed upstream Feature report through an opaque route; no application may submit arbitrary USB setup packets, sysfs operations, or receiver carrier frames."
+      "statement": "A qualified native integration may submit exactly one fixed upstream Feature report through an opaque route; no application may submit arbitrary USB setup packets, sysfs operations, or receiver carrier frames. The writer file's only other operation forwards bridge-decoded child battery state, which the kernel publishes in power_supply and never sends to the device."
     },
     {
       "id": "HFX-INV-003",
-      "statement": "One bridge is the sole userspace authority for receiver writes and one renewable lease owns each writable resource."
+      "statement": "One bridge is the sole userspace authority for receiver writes and for child battery state, and one renewable lease owns each writable resource. The kernel publishes bridge-forwarded battery state in power_supply; never queries the device for it."
     },
     {
       "id": "HFX-INV-004",
@@ -84,7 +84,7 @@
     },
     {
       "id": "kernel",
-      "owns": ["HID binding", "input preservation", "receiver generations", "passive observations", "exclusive writer session", "qualified fixed-size native exchange", "bounded fallback envelopes"],
+      "owns": ["HID binding", "input preservation", "receiver generations", "passive observations", "exclusive writer session", "publishes bridge-forwarded battery state in power_supply; never queries", "qualified fixed-size native exchange", "bounded fallback envelopes"],
       "must_not_own": ["retail names", "effects", "profiles", "application ownership", "package repair"]
     },
     {
