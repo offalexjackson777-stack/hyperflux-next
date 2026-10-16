@@ -297,6 +297,20 @@ fn invalid_service_output_becomes_unavailable() {
 }
 
 #[test]
+fn integration_projection_fails_closed_without_the_bridge_socket() {
+    let probe = RealSystemProbe::with_paths(
+        FakeRunner::new(Vec::new()),
+        PathBuf::from("/missing"),
+        PathBuf::from("/missing.sock"),
+        Duration::from_millis(10),
+    );
+    assert_eq!(
+        probe.integration_projection().err(),
+        Some(ProbeError::BridgeUnavailable)
+    );
+}
+
+#[test]
 fn identities_are_ascii_and_bounded() {
     assert_eq!(bounded_identity("ABC123"), Some("ABC123".to_owned()));
     assert_eq!(bounded_identity(""), None);

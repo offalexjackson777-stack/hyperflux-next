@@ -13,7 +13,7 @@ use hfx_device_qualification::{
     build_qualification_report, qualification_generated_at,
 };
 use hfx_profiles::RuntimeProfileCatalog;
-use hfx_system_probe::{RealSystemProbe, SystemProbe, write_private_file};
+use hfx_system_probe::{CommandRunner, RealSystemProbe, SystemProbe, write_private_file};
 use std::fmt::Write as _;
 use std::path::Path;
 
@@ -54,8 +54,8 @@ impl From<std::io::Error> for QualificationReportError {
 /// # Errors
 ///
 /// Returns a bounded failure when the compiled profile catalog is invalid.
-pub fn collect_qualification_report(
-    probe: &RealSystemProbe,
+pub fn collect_qualification_report<R: CommandRunner>(
+    probe: &RealSystemProbe<R>,
 ) -> Result<QualificationView, QualificationReportError> {
     let catalog =
         RuntimeProfileCatalog::load().map_err(|_| QualificationReportError::CatalogInvalid)?;
@@ -283,5 +283,205 @@ const fn severity_text(severity: ReportFindingSeverity) -> &'static str {
         ReportFindingSeverity::Warning => "warning",
         ReportFindingSeverity::Error => "error",
         ReportFindingSeverity::Critical => "critical",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hfx_device_qualification::{BatteryView, ReportFinding};
+    use hfx_system_probe::{CommandOutput, ProbeError};
+    use std::fs;
+    use std::os::unix::fs::PermissionsExt as _;
+    use std::path::PathBuf;
+    use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+    struct UnavailableRunner;
+
+    impl CommandRunner for UnavailableRunner {
+        fn run(
+            &self,
+            _program: &str,
+            _arguments: &[&str],
+            _timeout: Duration,
+        ) -> Result<CommandOutput, ProbeError> {
+            Err(ProbeError::CommandUnavailable)
+        }
+    }
+
+    fn ready_report() -> QualificationView {
+        serde_json::from_str(include_str!(
+            "../../../apps/device-qualification/tests/fixtures/rust-qualified-report.json"
+        ))
+        .expect("qualification report fixture matches the view")
+    }
+
+    fn unique_path(prefix: &str) -> PathBuf {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        std::env::temp_dir().join(format!("{prefix}-{unique}"))
+    }
+
+    #[test]
+    fn report_errors_describe_the_failure_without_private_values() {
+        assert_eq!(
+            QualificationReportError::CatalogInvalid.to_string(),
+            "the installed profile catalog is invalid"
+        );
+        assert_eq!(
+            QualificationReportError::Serialization.to_string(),
+            "the report could not be serialized"
+        );
+        assert_eq!(
+            QualificationReportError::SizeBoundExceeded.to_string(),
+            "the report exceeded its size bound"
+        );
+        let error = QualificationReportError::from(std::io::Error::new(
+            std::io::ErrorKind::AlreadyExists,
+            "already exists",
+        ));
+        assert!(matches!(error, QualificationReportError::Io(_)));
+        assert_eq!(error.to_string(), "already exists");
+    }
+
+    #[test]
+    fn report_file_is_private_and_never_overwrites() {
+        let path = unique_path("hfx-qualification").with_extension("json");
+        let report = ready_report();
+        write_qualification_report(&path, &report).expect("write");
+        assert_eq!(
+            fs::metadata(&path).expect("metadata").permissions().mode() & 0o777,
+            0o600
+        );
+        assert_eq!(
+            fs::read_to_string(&path).expect("read"),
+            qualification_report_json(&report).expect("serialize")
+        );
+        assert!(matches!(
+            write_qualification_report(&path, &report),
+            Err(QualificationReportError::Io(_))
+        ));
+        fs::remove_file(path).expect("cleanup");
+    }
+
+    #[test]
+    fn unreachable_bridge_collects_a_report_that_is_not_ready() {
+        let probe = RealSystemProbe::with_paths(
+            UnavailableRunner,
+            unique_path("hfx-missing-modules"),
+            unique_path("hfx-missing-bridge").with_extension("sock"),
+            Duration::from_millis(10),
+        );
+        let report = collect_qualification_report(&probe).expect("catalog is valid");
+        assert_ne!(report.companion.state, CompanionState::Ready);
+        assert_eq!(report.companion.bridge_protocol, None);
+        let collection = report.collection.as_ref().expect("collection");
+        assert!(!collection.active_device_query_executed);
+        let text = render_qualification_text(&report);
+        assert!(text.contains("Bridge protocol: not reachable"));
+        assert!(text.contains("Firmware: not collected"));
+    }
+
+    #[test]
+    fn every_companion_state_names_a_plain_next_step() {
+        let mut report = ready_report();
+        for (state, label, next) in [
+            (CompanionState::Ready, "ready", "attach the output"),
+            (
+                CompanionState::LifecycleTransition,
+                "receiver is changing state",
+                "wait a few seconds",
+            ),
+            (
+                CompanionState::DriverPending,
+                "the installed driver is not loaded yet",
+                "run `hyperfluxctl doctor --explain`.",
+            ),
+            (
+                CompanionState::LegacyV2Detected,
+                "an older HyperFlux installation is active",
+                "run `hyperfluxctl doctor --explain`.",
+            ),
+            (
+                CompanionState::BridgeUnavailable,
+                "the bridge is not ready",
+                "run `hyperfluxctl doctor --explain`.",
+            ),
+            (
+                CompanionState::NoReceiver,
+                "no receiver found",
+                "plug in the receiver",
+            ),
+        ] {
+            report.companion.state = state;
+            let text = render_qualification_text(&report);
+            assert!(text.contains(&format!("State: {label}\n")), "{text}");
+            assert!(text.contains(&format!("Next: {next}")), "{text}");
+        }
+    }
+
+    #[test]
+    fn partial_identities_and_stale_values_render_plainly() {
+        let mut report = ready_report();
+        let receiver = &mut report.receivers[0];
+        receiver.model_name = None;
+        receiver.vendor_id = None;
+        receiver.product_id = Some(0x00cf);
+        receiver.lifecycle = ReceiverLifecycleView::Recovering;
+        let device = &mut receiver.devices[0];
+        device.model_name = None;
+        device.vendor_id = None;
+        device.profile = None;
+        device.support = SupportView::Unknown;
+        device.battery = BatteryView {
+            availability: BatteryAvailability::Stale,
+            percentage: Some(41),
+        };
+        let device = &mut receiver.devices[1];
+        device.support = SupportView::Identified;
+        device.battery = BatteryView {
+            availability: BatteryAvailability::Unavailable,
+            percentage: None,
+        };
+        let mut empty = receiver.clone();
+        empty.receiver_id = "receiver-2".to_owned();
+        empty.model_name = Some("Receiver".to_owned());
+        empty.vendor_id = None;
+        empty.product_id = None;
+        empty.lifecycle = ReceiverLifecycleView::Unavailable;
+        empty.devices.clear();
+        report.receivers.push(empty);
+        if let Some(collection) = report.collection.as_mut() {
+            collection.diagnostic_findings = vec![
+                ReportFinding {
+                    finding_id: "HFX-SERVICE-002".to_owned(),
+                    severity: ReportFindingSeverity::Info,
+                },
+                ReportFinding {
+                    finding_id: "HFX-TRANSPORT-001".to_owned(),
+                    severity: ReportFindingSeverity::Critical,
+                },
+            ];
+        }
+        let text = render_qualification_text(&report);
+        for expected in [
+            "receiver-1: unknown receiver (product 00cf), recovering",
+            "(unknown model) (product 00cd)",
+            "Support: unknown; presence: active; battery: 41% (stale)",
+            "Profile: none (this device is not tested yet)",
+            "Support: identified; presence: active; battery: unavailable",
+            "receiver-2: Receiver, unavailable",
+            "  No paired devices reported.",
+            "Bridge findings: HFX-SERVICE-002 (info), HFX-TRANSPORT-001 (critical)",
+        ] {
+            assert!(text.contains(expected), "missing {expected:?} in {text}");
+        }
+        report.receivers[0].devices[0].support = SupportView::ProfileQualified;
+        report.collection = None;
+        let text = render_qualification_text(&report);
+        assert!(text.contains("Support: profile-qualified;"));
+        assert!(text.contains("Bridge findings: none\n"));
     }
 }
