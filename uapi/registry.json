@@ -17,6 +17,14 @@
       "schema_ref": "../schemas/kernel-uapi-native-exchange.schema.json",
       "version_macro": "native_abi_version",
       "role": "native_exchange"
+    },
+    {
+      "abi_version": 3,
+      "catalog": "power-supply-v3.json",
+      "schema": "hyperflux-kernel-uapi-power-supply-v3",
+      "schema_ref": "../schemas/kernel-uapi-power-supply.schema.json",
+      "version_macro": "power_supply_abi_version",
+      "role": "power_supply"
     }
   ]
 }

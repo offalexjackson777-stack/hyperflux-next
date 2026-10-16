@@ -36,11 +36,12 @@ Holds the JSON Schemas that check every data file the repository shares between 
 - [`schemas/local-companion.schema.json`](local-companion.schema.json); [`schemas/local-snapshot.schema.json`](local-snapshot.schema.json)
 - [`schemas/licensing-policy.schema.json`](licensing-policy.schema.json); [`schemas/lifecycle-policy-catalog.schema.json`](lifecycle-policy-catalog.schema.json)
 - [`schemas/kernel-uapi-registry.schema.json`](kernel-uapi-registry.schema.json); [`schemas/kernel-uapi-native-exchange.schema.json`](kernel-uapi-native-exchange.schema.json)
-- [`schemas/native-route-observation.schema.json`](native-route-observation.schema.json); [`schemas/native-device-onboarding-draft.schema.json`](native-device-onboarding-draft.schema.json)
-- [`schemas/native-device-promotion-assessment.schema.json`](native-device-promotion-assessment.schema.json); [`schemas/document-catalog.schema.json`](document-catalog.schema.json)
-- [`schemas/documentation-audit.schema.json`](documentation-audit.schema.json); [`schemas/documentation-render-policy.schema.json`](documentation-render-policy.schema.json)
-- [`schemas/documentation-review.schema.json`](documentation-review.schema.json); [`schemas/journey-source-coverage.schema.json`](journey-source-coverage.schema.json)
-- [`schemas/publication-privacy.schema.json`](publication-privacy.schema.json); [`schemas/source-inventory-public-projection.schema.json`](source-inventory-public-projection.schema.json)
+- [`schemas/kernel-uapi-power-supply.schema.json`](kernel-uapi-power-supply.schema.json); [`schemas/native-route-observation.schema.json`](native-route-observation.schema.json)
+- [`schemas/native-device-onboarding-draft.schema.json`](native-device-onboarding-draft.schema.json); [`schemas/native-device-promotion-assessment.schema.json`](native-device-promotion-assessment.schema.json)
+- [`schemas/document-catalog.schema.json`](document-catalog.schema.json); [`schemas/documentation-audit.schema.json`](documentation-audit.schema.json)
+- [`schemas/documentation-render-policy.schema.json`](documentation-render-policy.schema.json); [`schemas/documentation-review.schema.json`](documentation-review.schema.json)
+- [`schemas/journey-source-coverage.schema.json`](journey-source-coverage.schema.json); [`schemas/publication-privacy.schema.json`](publication-privacy.schema.json)
+- [`schemas/source-inventory-public-projection.schema.json`](source-inventory-public-projection.schema.json)
 
 ## Verify
 

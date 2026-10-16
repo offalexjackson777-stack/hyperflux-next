@@ -4,7 +4,7 @@
 
 This page lists every structure and ioctl the HyperFlux kernel driver offers to user space, for developers who work on the driver or the background service that talks to it.
 
-ABI versions: `1` (baseline), `2` (native_exchange).
+ABI versions: `1` (baseline), `2` (native_exchange), `3` (power_supply).
 
 The interface uses only fixed-size values and no pointers. It carries no app-facing or product names.
 
@@ -22,6 +22,7 @@ The interface uses only fixed-size values and no pointers. It carries no app-fac
 | `hfx_uapi_read_observations` | 1328 | `read_observations` (baseline) |
 | `hfx_uapi_native_exchange_submit` | 216 | `submit_native_exchange` (native_exchange) |
 | `hfx_uapi_native_exchange_result` | 216 | `get_native_exchange_result` (native_exchange) |
+| `hfx_uapi_child_battery` | 64 | `report_child_battery` (power_supply) |
 
 ## Ioctls
 
@@ -35,7 +36,8 @@ The interface uses only fixed-size values and no pointers. It carries no app-fac
 | `read_observations` | `0x05` | `read_write` | `hfx_uapi_read_observations` |
 | `submit_native_exchange` | `0x06` | `read_write` | `hfx_uapi_native_exchange_submit` |
 | `get_native_exchange_result` | `0x07` | `read_write` | `hfx_uapi_native_exchange_result` |
+| `report_child_battery` | `0x08` | `write` | `hfx_uapi_child_battery` |
 
 ## Who Owns What
 
-The kernel owns receiver generations, passive observation sequencing, one writer file, session expiry, revocation, bounded legacy envelopes, and qualified fixed-size native exchanges. The bridge owns route qualification, generation-safe NativeControl arbitration, bounded admission, and outcome projection. OpenRazer and OpenRGB own device commands, capabilities, layouts, effects, and persistence.
+The kernel owns receiver generations, passive observation sequencing, one writer file, session expiry, revocation, bounded legacy envelopes, qualified fixed-size native exchanges, and publication of bridge-forwarded child battery state in the power_supply class without ever querying the device for it. The bridge owns route qualification, generation-safe NativeControl arbitration, bounded admission, outcome projection, and the battery state it forwards. OpenRazer and OpenRGB own device commands, capabilities, layouts, effects, and persistence.

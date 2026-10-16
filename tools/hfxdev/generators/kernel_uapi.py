@@ -309,7 +309,7 @@ def markdown(source: KernelUapiSource) -> str:
             "",
             "## Who Owns What",
             "",
-            "The kernel owns receiver generations, passive observation sequencing, one writer file, session expiry, revocation, bounded legacy envelopes, and qualified fixed-size native exchanges. The bridge owns route qualification, generation-safe NativeControl arbitration, bounded admission, and outcome projection. OpenRazer and OpenRGB own device commands, capabilities, layouts, effects, and persistence.",
+            "The kernel owns receiver generations, passive observation sequencing, one writer file, session expiry, revocation, bounded legacy envelopes, qualified fixed-size native exchanges, and publication of bridge-forwarded child battery state in the power_supply class without ever querying the device for it. The bridge owns route qualification, generation-safe NativeControl arbitration, bounded admission, outcome projection, and the battery state it forwards. OpenRazer and OpenRGB own device commands, capabilities, layouts, effects, and persistence.",
             "",
         ]
     )
