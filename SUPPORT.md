@@ -2,7 +2,7 @@
 
 Find the right place for your question or report below. To install or update
 HyperFlux Next, follow the [installation guide](docs/user/installation.md). Only
-the latest 2.0.x release is supported; see
+the latest release is supported; see
 [SECURITY.md](SECURITY.md#supported-versions).
 
 Before you ask, try the [troubleshooting guide](docs/user/troubleshooting.md)

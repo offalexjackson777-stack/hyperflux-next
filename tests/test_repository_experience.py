@@ -1150,7 +1150,7 @@ class UserDocumentationContracts(unittest.TestCase):
         policy = load_arch_repository_policy(ROOT)
         version = policy.product_release_tag.removeprefix("v")
         self.assertIn(
-            f"Latest 2.0.x release (currently {version})", _page("SECURITY.md")
+            f"Latest release (currently {version})", _page("SECURITY.md")
         )
 
     def test_support_sends_users_to_the_installation_guide(self) -> None:

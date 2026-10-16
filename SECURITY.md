@@ -43,7 +43,7 @@ one limited file that you have checked for private data.
 - Receipt should be acknowledged within 7 days when the maintainer is available.
 - When a fix ships and the problem is disclosed depends on how serious it is,
   whether it can be reproduced, and whether a published release is affected.
-- A fix for a published release ships as a new 2.0.x package update.
+- A fix ships as a new package update, installed with `sudo pacman -Syu`.
 
 ## How HyperFlux Limits Damage
 
