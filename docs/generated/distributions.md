@@ -4,7 +4,7 @@
 
 This page lists the HyperFlux packages, what each one depends on, and what each one replaces, for packagers and anyone choosing between Core and Full.
 
-Source digest: `f0ee46ec3d081465a319c3b27532f1e03bd5bde920602b672a587e0f02ff51d5`.
+Source digest: `524fb2612923f638b0a65fd06a2753eb74f4ab5632f9bbdd77baa07d9c467312`.
 
 The Arch `pkgbase=hyperflux-next` builds two user-facing packages that never install the same file. Packages for other distributions are tested separately.
 
@@ -115,6 +115,116 @@ Dependency roles map to packages on each distribution:
 ### Secure Boot on Debian
 
 If Secure Boot is on, Linux only loads drivers signed by a key it trusts. DKMS on Debian signs the HyperFlux driver with a key made on your computer, so you need to tell the computer to trust that key once.
+
+1. Check whether Secure Boot is on:
+
+   ```sh
+   mokutil --sb-state
+   ```
+
+   If it says `SecureBoot disabled`, you can stop here.
+
+2. Ask to trust the key. Choose a one-time password when asked; you need it after the restart:
+
+   ```sh
+   sudo mokutil --import /var/lib/dkms/mok.pub
+   ```
+
+3. Restart the computer. A blue MokManager screen appears. Choose **Enroll MOK**, then **Continue**, then **Yes**, type the password, and reboot.
+
+4. Check that the driver is signed:
+
+   ```sh
+   modinfo -F signer hid_hyperflux_next
+   ```
+
+   It prints the name of the key. An empty line means the driver is not signed.
+
+## Fedora 44 (CI-built, not published yet)
+
+HyperFlux builds `.rpm` packages for Fedora 44 every week in CI. They are not published, so there is nothing to install from yet. The packages carry only the Core edition; there is no Full edition for Fedora.
+
+| Package | Version | Architecture | Requires |
+| --- | --- | --- | --- |
+| `hyperflux-next-dkms` | `2.1.0-1` | `noarch` | `dkms` |
+| `hyperflux-next-linux` | `2.1.0-1` | `x86_64` | `glibc >= 2.34`, `libgcc`, `systemd`, `systemd-udev`, `hyperflux-next-dkms = 2.1.0-1` |
+
+Dependency roles map to packages on each distribution:
+
+| Role | Arch | Fedora |
+| --- | --- | --- |
+| `dkms` | `dkms` | `dkms` |
+| `c-runtime` | `glibc` | `glibc >= 2.34` |
+| `compiler-runtime` | `libgcc` | `libgcc` |
+| `service-manager` | `systemd` | `systemd` |
+| `device-manager` | `systemd` | `systemd-udev` |
+
+- Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable or start a service.
+- `hyperflux-next-dkms` hands the driver source to DKMS and builds it for every kernel whose development files are installed. DKMS installs the built driver when the computer next starts, so installing the package never loads the driver. Removing the package removes every built copy.
+- Programs need glibc 2.34 or newer. CI checks them on the glibc 2.43 that Fedora 44 ships.
+
+### Secure Boot on Fedora
+
+If Secure Boot is on, Linux only loads drivers signed by a key it trusts. DKMS on Fedora signs the HyperFlux driver with a key made on your computer, so you need to tell the computer to trust that key once.
+
+1. Check whether Secure Boot is on:
+
+   ```sh
+   mokutil --sb-state
+   ```
+
+   If it says `SecureBoot disabled`, you can stop here.
+
+2. Ask to trust the key. Choose a one-time password when asked; you need it after the restart:
+
+   ```sh
+   sudo mokutil --import /var/lib/dkms/mok.pub
+   ```
+
+3. Restart the computer. A blue MokManager screen appears. Choose **Enroll MOK**, then **Continue**, then **Yes**, type the password, and reboot.
+
+4. Check that the driver is signed:
+
+   ```sh
+   modinfo -F signer hid_hyperflux_next
+   ```
+
+   It prints the name of the key. An empty line means the driver is not signed.
+
+## openSUSE Tumbleweed (CI-built, not published yet)
+
+HyperFlux builds `.rpm` packages for openSUSE Tumbleweed every week in CI. They are not published, so there is nothing to install from yet. The packages carry only the Core edition; there is no Full edition for openSUSE.
+
+| Package | Version | Architecture | Requires |
+| --- | --- | --- | --- |
+| `hyperflux-next-dkms` | `2.1.0-1` | `noarch` | `dkms` |
+| `hyperflux-next-linux` | `2.1.0-1` | `x86_64` | `glibc >= 2.34`, `libgcc_s1`, `systemd`, `udev`, `hyperflux-next-dkms = 2.1.0-1` |
+
+Dependency roles map to packages on each distribution:
+
+| Role | Arch | openSUSE |
+| --- | --- | --- |
+| `dkms` | `dkms` | `dkms` |
+| `c-runtime` | `glibc` | `glibc >= 2.34` |
+| `compiler-runtime` | `libgcc` | `libgcc_s1` |
+| `service-manager` | `systemd` | `systemd` |
+| `device-manager` | `systemd` | `udev` |
+
+- Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable or start a service.
+- `hyperflux-next-dkms` hands the driver source to DKMS and builds it for every kernel whose development files are installed. DKMS installs the built driver when the computer next starts, so installing the package never loads the driver. Removing the package removes every built copy.
+- Programs need glibc 2.34 or newer. CI checks them on the glibc 2.44 that openSUSE Tumbleweed ships.
+
+### Turn on DKMS at startup on openSUSE
+
+openSUSE ships the DKMS startup service turned off. Turn it on once, so DKMS installs the HyperFlux driver when the computer starts:
+
+```sh
+sudo systemctl enable dkms.service
+```
+
+### Secure Boot on openSUSE
+
+If Secure Boot is on, Linux only loads drivers signed by a key it trusts. DKMS on openSUSE signs the HyperFlux driver with a key made on your computer, so you need to tell the computer to trust that key once.
 
 1. Check whether Secure Boot is on:
 

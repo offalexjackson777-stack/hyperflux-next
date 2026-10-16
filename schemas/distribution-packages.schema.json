@@ -32,11 +32,13 @@
     "targets": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["arch", "ubuntu", "debian"],
+      "required": ["arch", "ubuntu", "debian", "fedora", "opensuse"],
       "properties": {
         "arch": {"$ref": "#/$defs/target"},
         "ubuntu": {"$ref": "#/$defs/debTarget"},
-        "debian": {"$ref": "#/$defs/debTarget"}
+        "debian": {"$ref": "#/$defs/debTarget"},
+        "fedora": {"$ref": "#/$defs/rpmTarget"},
+        "opensuse": {"$ref": "#/$defs/rpmTarget"}
       }
     }
   },
@@ -54,6 +56,10 @@
     "debianRelation": {
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9+.-]{1,63}( \\((<<|<=|=|>=|>>) [0-9][A-Za-z0-9.+~-]{0,63}\\))?$"
+    },
+    "rpmRelation": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_+.-]{1,63}( (<=|>=|=|<|>) [0-9][A-Za-z0-9.+~^_]{0,63}(-[0-9][A-Za-z0-9.+~^_]{0,31})?)?$"
     },
     "dependencyRoles": {
       "type": "object",
@@ -176,6 +182,47 @@
             "compiler-runtime": {"$ref": "#/$defs/debianRelation"},
             "service-manager": {"$ref": "#/$defs/debianRelation"},
             "device-manager": {"$ref": "#/$defs/debianRelation"}
+          }
+        },
+        "components": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["linux"],
+          "properties": {
+            "linux": {"$ref": "#/$defs/component"}
+          }
+        }
+      }
+    },
+    "rpmTarget": {
+      "description": "An RPM-format target. It carries only the Core edition; Full stays Arch-only.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package_format", "maturity", "release", "architectures", "dependency_roles", "components"],
+      "properties": {
+        "package_format": {"const": "rpm"},
+        "maturity": {"enum": ["ci-only", "published"]},
+        "release": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["distribution", "version", "c_runtime_version"],
+          "properties": {
+            "distribution": {"type": "string", "pattern": "^[A-Za-z][A-Za-z]{1,31}$"},
+            "version": {"type": "string", "pattern": "^([0-9]{1,2}(\\.[0-9]{1,2})?|[A-Z][a-z]{2,31})$"},
+            "c_runtime_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+$"}
+          }
+        },
+        "architectures": {"$ref": "#/$defs/architectures"},
+        "dependency_roles": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dkms", "c-runtime", "compiler-runtime", "service-manager", "device-manager"],
+          "properties": {
+            "dkms": {"$ref": "#/$defs/rpmRelation"},
+            "c-runtime": {"$ref": "#/$defs/rpmRelation"},
+            "compiler-runtime": {"$ref": "#/$defs/rpmRelation"},
+            "service-manager": {"$ref": "#/$defs/rpmRelation"},
+            "device-manager": {"$ref": "#/$defs/rpmRelation"}
           }
         },
         "components": {

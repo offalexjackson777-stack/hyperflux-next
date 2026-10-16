@@ -395,7 +395,7 @@ class DistributionDispatchTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             with self.assertRaisesRegex(ModelError, "only the Arch production package target"):
                 build_distribution_package(
-                    ROOT, Path(temporary) / "missing.json", "fedora", Path(temporary) / "out"
+                    ROOT, Path(temporary) / "missing.json", "gentoo", Path(temporary) / "out"
                 )
 
 

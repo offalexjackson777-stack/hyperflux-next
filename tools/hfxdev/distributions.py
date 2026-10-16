@@ -13,13 +13,26 @@ from .model import ModelError, load_json, require_unique, sha256_file
 from .openrazer_native_route import load_native_deployment
 
 
-TARGET_IDS = ("arch", "ubuntu", "debian")
+TARGET_IDS = ("arch", "ubuntu", "debian", "fedora", "opensuse")
 DEBIAN_FORMAT_TARGET_IDS = ("ubuntu", "debian")
+RPM_FORMAT_TARGET_IDS = ("fedora", "opensuse")
 COMPONENT_IDS = ("linux", "full")
-# Arch carries both editions. Debian-format targets carry Core only; Full and
-# its OpenRazer/OpenRGB integrations stay Arch-only.
-TARGET_COMPONENT_IDS = {"arch": COMPONENT_IDS, "ubuntu": ("linux",), "debian": ("linux",)}
-TARGET_PACKAGE_FORMATS = {"arch": "pacman", "ubuntu": "deb", "debian": "deb"}
+# Arch carries both editions. Debian- and RPM-format targets carry Core only;
+# Full and its OpenRazer/OpenRGB integrations stay Arch-only.
+TARGET_COMPONENT_IDS = {
+    "arch": COMPONENT_IDS,
+    "ubuntu": ("linux",),
+    "debian": ("linux",),
+    "fedora": ("linux",),
+    "opensuse": ("linux",),
+}
+TARGET_PACKAGE_FORMATS = {
+    "arch": "pacman",
+    "ubuntu": "deb",
+    "debian": "deb",
+    "fedora": "rpm",
+    "opensuse": "rpm",
+}
 MATURITIES = ("ci-only", "published")
 DEPENDENCY_ROLES = {
     "dkms",
@@ -35,9 +48,23 @@ DEBIAN_RELATION = re.compile(
     r"(?: \((?P<operator><<|<=|=|>=|>>) (?P<version>[0-9][A-Za-z0-9.+~-]{0,63})\))?$"
 )
 DEBIAN_UPSTREAM_VERSION = re.compile(r"^[0-9][A-Za-z0-9.+~]*$")
+# An RPM relation separates name, operator and EVR with single spaces. The
+# version may carry one release after a hyphen.
+RPM_RELATION = re.compile(
+    r"^(?P<name>[A-Za-z0-9][A-Za-z0-9_+.-]{1,63})"
+    r"(?: (?P<operator><=|>=|=|<|>) (?P<version>[0-9][A-Za-z0-9.+~^_]{0,63}(?:-[0-9][A-Za-z0-9.+~^_]{0,31})?))?$"
+)
+RPM_UPSTREAM_VERSION = re.compile(r"^[0-9][A-Za-z0-9.+~^_]*$")
 RELEASE_VERSION = re.compile(r"^[0-9]{1,2}(?:\.[0-9]{2})?$")
 RELEASE_CODENAME = re.compile(r"^[a-z]{2,32}$")
 RELEASE_DISTRIBUTION = re.compile(r"^[A-Z][A-Za-z]{1,31}$")
+# RPM releases are a numbered release (`44`, `16.0`) or a rolling one named by
+# its flavor (`Tumbleweed`). Distribution names may start in lower case
+# (`openSUSE`).
+RPM_RELEASE_VERSION = re.compile(r"^(?:[0-9]{1,2}(?:\.[0-9]{1,2})?|[A-Z][a-z]{2,31})$")
+RPM_RELEASE_DISTRIBUTION = re.compile(r"^[A-Za-z][A-Za-z]{1,31}$")
+RELATIONS = {"deb": DEBIAN_RELATION, "rpm": RPM_RELATION}
+RELATION_LABELS = {"deb": "a Debian", "rpm": "an RPM"}
 C_RUNTIME_VERSION = re.compile(r"^[0-9]+\.[0-9]+$")
 LICENSE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.+-]{0,63}$")
 CONTROL_CHARACTER = re.compile(r"[\x00-\x1f\x7f]")
@@ -72,11 +99,14 @@ class DistributionComponent:
 
 @dataclass(frozen=True)
 class DistributionRelease:
-    """The one distribution release a Debian-format target is built for."""
+    """The one distribution release a Debian- or RPM-format target is built for.
+
+    Debian-format releases carry a codename; RPM-format releases have none.
+    """
 
     distribution: str
     version: str
-    codename: str
+    codename: str | None
     c_runtime_version: str
 
 
@@ -175,6 +205,28 @@ def debian_exact(package_name: str, version: str) -> str:
     return relation
 
 
+def rpm_version(version: str, release: int) -> str:
+    """Return the RPM `version-release` for a product version.
+
+    RPM forbids a hyphen inside the version, so a pre-release hyphen becomes
+    `~`, which sorts `2.1.0~rc.1` before `2.1.0` as on Debian.
+    """
+
+    upstream = version.replace("-", "~")
+    if not RPM_UPSTREAM_VERSION.fullmatch(upstream) or release < 1:
+        raise ModelError(f"product version {version}-{release} cannot be represented in RPM")
+    return f"{upstream}-{release}"
+
+
+def rpm_exact(package_name: str, version: str) -> str:
+    """RPM relation that pins one sibling package to one exact version-release."""
+
+    relation = f"{package_name} = {version}"
+    if not RPM_RELATION.fullmatch(relation):
+        raise ModelError(f"invalid RPM relation {relation!r}")
+    return relation
+
+
 def version_key(value: str) -> tuple[int, ...]:
     if not C_RUNTIME_VERSION.fullmatch(value):
         raise ModelError(f"invalid runtime version {value!r}")
@@ -182,9 +234,12 @@ def version_key(value: str) -> tuple[int, ...]:
 
 
 def c_runtime_floor(target: DistributionTarget) -> str:
-    """The minimum C runtime version a Debian-format target declares."""
+    """The minimum C runtime version a Debian- or RPM-format target declares."""
 
-    match = DEBIAN_RELATION.fullmatch(target.dependency_roles["c-runtime"])
+    pattern = RELATIONS.get(target.package_format)
+    if pattern is None:
+        raise ModelError(f"distribution {target.id}: no C runtime floor for its package format")
+    match = pattern.fullmatch(target.dependency_roles["c-runtime"])
     if match is None or match.group("operator") != ">=":
         raise ModelError(f"distribution {target.id}: C runtime role has no lower bound")
     return match.group("version")
@@ -240,7 +295,7 @@ def _component(
     *,
     openrazer_version: str,
     sibling_version: str,
-    debian: bool = False,
+    package_format: str = "pacman",
 ) -> DistributionComponent:
     label = f"distribution {target_id} component {component_id}"
     if not isinstance(value, dict):
@@ -332,7 +387,8 @@ def _component(
             f"{label}: application replacement relationships are forbidden: "
             f"{', '.join(sorted(forbidden))}"
         )
-    if debian:
+    relation_pattern = RELATIONS.get(package_format)
+    if relation_pattern is not None:
         for relation in (
             package_name,
             *direct,
@@ -341,8 +397,10 @@ def _component(
             *provides,
             *replaces,
         ):
-            if not DEBIAN_RELATION.fullmatch(relation):
-                raise ModelError(f"{label}: {relation!r} is not a Debian relation")
+            if not relation_pattern.fullmatch(relation):
+                raise ModelError(
+                    f"{label}: {relation!r} is not {RELATION_LABELS[package_format]} relation"
+                )
     return DistributionComponent(
         id=component_id,
         package_name=package_name,
@@ -356,24 +414,31 @@ def _component(
     )
 
 
-def _release(target_id: str, value: Any) -> DistributionRelease:
+def _release(target_id: str, value: Any, package_format: str) -> DistributionRelease:
     label = f"distribution {target_id} release"
     if not isinstance(value, dict):
         raise ModelError(f"{label}: must be an object")
-    _exact(value, {"distribution", "version", "codename", "c_runtime_version"}, label)
-    checks = (
-        ("distribution", RELEASE_DISTRIBUTION),
-        ("version", RELEASE_VERSION),
-        ("codename", RELEASE_CODENAME),
-        ("c_runtime_version", C_RUNTIME_VERSION),
-    )
+    if package_format == "deb":
+        checks: tuple[tuple[str, re.Pattern[str]], ...] = (
+            ("distribution", RELEASE_DISTRIBUTION),
+            ("version", RELEASE_VERSION),
+            ("codename", RELEASE_CODENAME),
+            ("c_runtime_version", C_RUNTIME_VERSION),
+        )
+    else:
+        checks = (
+            ("distribution", RPM_RELEASE_DISTRIBUTION),
+            ("version", RPM_RELEASE_VERSION),
+            ("c_runtime_version", C_RUNTIME_VERSION),
+        )
+    _exact(value, {field for field, _ in checks}, label)
     for field, pattern in checks:
         if not isinstance(value[field], str) or not pattern.fullmatch(value[field]):
             raise ModelError(f"{label}: invalid {field.replace('_', ' ')}")
     return DistributionRelease(
         distribution=value["distribution"],
         version=value["version"],
-        codename=value["codename"],
+        codename=value.get("codename"),
         c_runtime_version=value["c_runtime_version"],
     )
 
@@ -388,11 +453,12 @@ def _target(
     if not isinstance(value, dict):
         raise ModelError(f"distribution {target_id}: must be an object")
     package_format = TARGET_PACKAGE_FORMATS[target_id]
-    debian = package_format == "deb"
+    # Every format other than pacman is built for one named release.
+    released = package_format in RELATIONS
     fields = {"package_format", "maturity", "architectures", "dependency_roles", "components"}
     _exact(
         value,
-        fields | {"release"} if debian else fields,
+        fields | {"release"} if released else fields,
         f"distribution {target_id}",
     )
     if value["package_format"] != package_format:
@@ -400,9 +466,9 @@ def _target(
     maturity = value["maturity"]
     if maturity not in MATURITIES:
         raise ModelError(f"distribution {target_id}: unknown maturity")
-    if not debian and maturity != "published":
+    if not released and maturity != "published":
         raise ModelError(f"distribution {target_id}: the Arch target is the published channel")
-    release = _release(target_id, value["release"]) if debian else None
+    release = _release(target_id, value["release"], package_format) if released else None
     architectures = value["architectures"]
     if not isinstance(architectures, dict) or not 1 <= len(architectures) <= 8:
         raise ModelError(f"distribution {target_id}: invalid architecture map")
@@ -423,8 +489,13 @@ def _target(
         role: _package(package, f"distribution {target_id} role {role}")
         for role, package in role_values.items()
     }
-    if debian and any(not DEBIAN_RELATION.fullmatch(item) for item in roles.values()):
-        raise ModelError(f"distribution {target_id}: dependency roles must be Debian relations")
+    if released and any(
+        not RELATIONS[package_format].fullmatch(item) for item in roles.values()
+    ):
+        raise ModelError(
+            f"distribution {target_id}: dependency roles must be "
+            f"{RELATION_LABELS[package_format].split(' ', 1)[1]} relations"
+        )
     component_ids = TARGET_COMPONENT_IDS[target_id]
     components_value = value["components"]
     if not isinstance(components_value, dict) or tuple(components_value) != component_ids:
@@ -439,7 +510,7 @@ def _target(
             roles,
             openrazer_version=openrazer_version,
             sibling_version=sibling_version,
-            debian=debian,
+            package_format=package_format,
         )
         for component_id in component_ids
     }
@@ -538,9 +609,23 @@ def _check_debian_format_contract(target: DistributionTarget, arch: Distribution
     roles = {key: value for key, value in target.dependency_roles.items() if key != "c-runtime"}
     if roles != DEBIAN_FORMAT_ROLES:
         raise ModelError(f"{name} dependency roles differ from the {codename} package names")
+    _check_core_contract(target, arch, name, "libc6")
+
+
+def _check_core_contract(
+    target: DistributionTarget,
+    arch: DistributionTarget,
+    name: str,
+    c_runtime: str,
+) -> None:
+    """Hold a Core-only target's C runtime and Core package to the Arch Core contract."""
+
+    release = target.release
+    if release is None:
+        raise ModelError(f"{name} target must name its release")
     floor = c_runtime_floor(target)
-    if _relation_name(target.dependency_roles["c-runtime"]) != "libc6":
-        raise ModelError(f"{name} C runtime role must name libc6")
+    if _relation_name(target.dependency_roles["c-runtime"]) != c_runtime:
+        raise ModelError(f"{name} C runtime role must name {c_runtime}")
     if version_key(floor) > version_key(release.c_runtime_version):
         raise ModelError(f"{name} C runtime floor exceeds the release C runtime")
     linux = target.component("linux")
@@ -562,6 +647,50 @@ def _check_debian_format_contract(target: DistributionTarget, arch: Distribution
         target.dependency_roles.values()
     ):
         raise ModelError(f"{name} Core may depend only on its mapped dependency roles")
+
+
+# Each RPM-format target is held to one exact release and to the package names
+# that release gives each dependency role. Fedora takes DKMS from Fedora
+# proper; openSUSE Tumbleweed carries it in its main OSS repository.
+RPM_FORMAT_RELEASES = {
+    "fedora": ("Fedora", "44"),
+    "opensuse": ("openSUSE", "Tumbleweed"),
+}
+RPM_FORMAT_ROLES = {
+    "fedora": {
+        "dkms": "dkms",
+        "compiler-runtime": "libgcc",
+        "service-manager": "systemd",
+        "device-manager": "systemd-udev",
+    },
+    "opensuse": {
+        "dkms": "dkms",
+        "compiler-runtime": "libgcc_s1",
+        "service-manager": "systemd",
+        "device-manager": "udev",
+    },
+}
+
+
+def _check_rpm_format_contract(target: DistributionTarget, arch: DistributionTarget) -> None:
+    """Hold an RPM-format Core package to the Arch Core product contract."""
+
+    name, version = RPM_FORMAT_RELEASES[target.id]
+    release = target.release
+    if release is None or (release.distribution, release.version, release.codename) != (
+        name,
+        version,
+        None,
+    ):
+        raise ModelError(f"{name} target must name exactly {name} {version}")
+    if target.maturity != "ci-only":
+        raise ModelError(f"{name} packages are CI-built only until a publication channel exists")
+    if target.architectures != {"x86_64-unknown-linux-gnu": "x86_64"}:
+        raise ModelError(f"{name} target is x86_64 only")
+    roles = {key: value for key, value in target.dependency_roles.items() if key != "c-runtime"}
+    if roles != RPM_FORMAT_ROLES[target.id]:
+        raise ModelError(f"{name} dependency roles differ from the {name} {version} package names")
+    _check_core_contract(target, arch, name, "glibc")
 
 
 def load_distribution_catalog(root: Path) -> DistributionCatalog:
@@ -597,7 +726,7 @@ def load_distribution_catalog(root: Path) -> DistributionCatalog:
 
     targets_value = value["targets"]
     if not isinstance(targets_value, dict) or tuple(targets_value) != TARGET_IDS:
-        raise ModelError("distribution targets must be ordered arch, ubuntu, debian")
+        raise ModelError(f"distribution targets must be ordered {', '.join(TARGET_IDS)}")
     runtime = load_linux_runtime(root)
     version = runtime.product.version.replace("-", "_")
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.+_]*", version):
@@ -622,6 +751,14 @@ def load_distribution_catalog(root: Path) -> DistributionCatalog:
             ),
         )
         _check_debian_format_contract(targets[target_id], target)
+    for target_id in RPM_FORMAT_TARGET_IDS:
+        targets[target_id] = _target(
+            target_id,
+            targets_value[target_id],
+            openrazer_version=openrazer_version,
+            sibling_version=rpm_version(runtime.product.version, runtime.product.package_release),
+        )
+        _check_rpm_format_contract(targets[target_id], target)
     return DistributionCatalog(
         source_sha256=sha256_file(path),
         description=description,
