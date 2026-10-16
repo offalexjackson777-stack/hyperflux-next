@@ -36,7 +36,13 @@
       "id": "passive-charge-basilisk-v3-pro-35k-00cd-20261017",
       "role": "privacy-safe passive charge-field mapping summary for the exact mouse profile",
       "path": "evidence/physical-acceptance/basilisk-v3-pro-35k-00cd-passive-charge-20261017.md",
-      "sha256": "ebc4c6919d4d23d321788960e1f146b05298c78a94ee1ea00b85f59a5961632e"
+      "sha256": "ce5016e60a7c7af899198f69508ca0aa913aad396a8c7682d95b6c0239b59ea3"
+    },
+    {
+      "id": "passive-charge-deathstalker-v2-pro-tkl-0296-20261017",
+      "role": "privacy-safe passive route-word charge mapping summary for the exact keyboard profile",
+      "path": "evidence/physical-acceptance/deathstalker-v2-pro-tkl-0296-passive-charge-20261017.md",
+      "sha256": "3f255a354b332f615a20cf0e719f81409101cc39d496d8b628f46d4def9173df"
     },
     {
       "id": "physical-acceptance-summary",

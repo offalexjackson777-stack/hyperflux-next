@@ -1049,6 +1049,7 @@
     {"path": "evidence/native-transport/basilisk-v3-pro-35k-00cd-read-parity-20260727.md", "classification": "evidence-record"},
     {"path": "evidence/native-transport/deathstalker-v2-pro-tkl-0296-read-parity-20260727.md", "classification": "evidence-record"},
     {"path": "evidence/physical-acceptance/basilisk-v3-pro-35k-00cd-passive-charge-20261017.md", "classification": "evidence-record"},
+    {"path": "evidence/physical-acceptance/deathstalker-v2-pro-tkl-0296-passive-charge-20261017.md", "classification": "evidence-record"},
     {"path": "evidence/physical-acceptance/hyperflux-v2-fixtures.md", "classification": "evidence-record"},
     {"path": "governance/README.md", "classification": "generated-front-door"},
     {"path": "integrations/README.md", "classification": "generated-front-door"},

@@ -372,9 +372,10 @@ class ProfileCompilerTests(unittest.TestCase):
         )
         keyboard = next(profile for profile in profiles if profile["device_kind"] == "keyboard")
         self.assertNotIn("charge", keyboard["transport"]["passive"])
-        self.assertNotIn(
-            "telemetry.charging-state",
-            {item["id"] for item in keyboard["capabilities"]},
+        self.assertNotIn("route_charge", mouse["transport"]["passive"])
+        self.assertEqual(
+            keyboard["transport"]["passive"]["route_charge"],
+            {"charging": [1, 257], "discharging": [0]},
         )
 
         profiles, capabilities, claims = self.validation_copies()
@@ -419,7 +420,7 @@ class ProfileCompilerTests(unittest.TestCase):
         self.assertEqual(self.runtime_profile_digest(keyboard, capabilities), sibling)
         self.assertEqual(
             sibling,
-            "6a322a5f384bcc8d2ddf40ce9940173e9f4e0bda6e72277451f8c16ef34c02be",
+            "c235f7b917b81f39189edbd1ee4bfbd2ace1238e6abd50e99f674cb971e5c867",
         )
 
     def test_passive_semantics_participate_in_runtime_profile_digest(self) -> None:

@@ -45,9 +45,9 @@ what the mouse reports rather than guessing a limit.
 This observation qualifies the exact PID `0x00cd` profile and its passive
 pointer report. It qualifies no other PID and no other report. A later
 capture showed that the keyboard status report carries power-source and charge
-bytes in the same positions, but no keyboard profile qualifies them yet, so the
-keyboard charge state stays unknown. No raw capture, serial number, or host
-path was retained.
+bytes in the same positions; the keyboard has its own record in
+`deathstalker-v2-pro-tkl-0296-passive-charge-20261017.md`. No raw capture,
+serial number, or host path was retained.
 
 ## Limits
 

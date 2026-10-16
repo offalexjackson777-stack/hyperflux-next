@@ -15,7 +15,7 @@
   "system": {
     "driver_version": "2.1.0",
     "bridge_version": "2.1.0",
-    "profile_catalog_digest": "4a772d088dd943bcd3306c4fc92aa5e3b2506b0530a747885a87791cca325466"
+    "profile_catalog_digest": "4712398520bf3677e988bd0372346fc3c1910b63832a756077c5950234daa448"
   },
   "receivers": [
     {
@@ -137,7 +137,7 @@
           "product_id": 662,
           "profile": {
             "id": "child.razer.deathstalker-v2-pro-tkl.0296",
-            "digest": "6a322a5f384bcc8d2ddf40ce9940173e9f4e0bda6e72277451f8c16ef34c02be"
+            "digest": "c235f7b917b81f39189edbd1ee4bfbd2ace1238e6abd50e99f674cb971e5c867"
           },
           "presence": "active",
           "support": "production-qualified",
@@ -208,6 +208,11 @@
             },
             {
               "id": "telemetry.battery-percent",
+              "access": "read",
+              "support_level": "telemetry-qualified"
+            },
+            {
+              "id": "telemetry.charging-state",
               "access": "read",
               "support_level": "telemetry-qualified"
             },
@@ -459,7 +464,7 @@
       "device_id": "keyboard-test",
       "profile_binding": {
         "id": "child.razer.deathstalker-v2-pro-tkl.0296",
-        "digest": "6a322a5f384bcc8d2ddf40ce9940173e9f4e0bda6e72277451f8c16ef34c02be"
+        "digest": "c235f7b917b81f39189edbd1ee4bfbd2ace1238e6abd50e99f674cb971e5c867"
       },
       "verdict": "not-run",
       "summary": "5 evidence checks for this exact profile and receiver generation.",

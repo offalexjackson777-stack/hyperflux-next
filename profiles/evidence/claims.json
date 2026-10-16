@@ -83,6 +83,16 @@
       "limitations": ["Qualification is exact to receiver child PID 0x0296, the reviewed 90-byte report family, and the generated command policy; reversible application writes and release readiness remain separate gates."]
     },
     {
+      "id": "claim.child.0296.passive-charge-state",
+      "summary": "The route word after the battery level in the keyboard status report reads 0x0101 on a USB cable, 0x0001 briefly around plug-in and unplug, and 0x0000 off the cable.",
+      "evidence_level": "hardware-observed",
+      "privacy": "public-summary",
+      "profile_ids": ["child.razer.deathstalker-v2-pro-tkl.0296"],
+      "qualifies_capabilities": ["telemetry.charging-state"],
+      "source_refs": [{"source_id": "passive-charge-deathstalker-v2-pro-tkl-0296-20261017", "paths": ["evidence/physical-acceptance/deathstalker-v2-pro-tkl-0296-passive-charge-20261017.md"]}],
+      "limitations": ["Other route words, identity-report route values, and stale, missing, or unpaired evidence remain unknown.", "The route word at a full battery and while a charge limit holds the battery was not observed; a word other than 0x0001, 0x0101, or 0x0000 there remains unknown.", "For about 4 seconds after unplug the keyboard still reports charging.", "Charging does not identify the cable that supplies power."]
+    },
+    {
       "id": "claim.child.0296.passive-identity-telemetry",
       "summary": "Generation-bound pairing inventory and passive reports provide keyboard identity, connection evidence, and bounded battery telemetry.",
       "evidence_level": "hardware-qualified",

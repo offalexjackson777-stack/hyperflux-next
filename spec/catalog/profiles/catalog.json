@@ -626,6 +626,32 @@
       "summary": "All nine required read-only OpenRazer semantics matched through the exact receiver-backed 90-byte Feature-report route."
     },
     {
+      "evidence_level": "hardware-observed",
+      "id": "claim.child.0296.passive-charge-state",
+      "limitations": [
+        "Other route words, identity-report route values, and stale, missing, or unpaired evidence remain unknown.",
+        "The route word at a full battery and while a charge limit holds the battery was not observed; a word other than 0x0001, 0x0101, or 0x0000 there remains unknown.",
+        "For about 4 seconds after unplug the keyboard still reports charging.",
+        "Charging does not identify the cable that supplies power."
+      ],
+      "privacy": "public-summary",
+      "profile_ids": [
+        "child.razer.deathstalker-v2-pro-tkl.0296"
+      ],
+      "qualifies_capabilities": [
+        "telemetry.charging-state"
+      ],
+      "source_refs": [
+        {
+          "paths": [
+            "evidence/physical-acceptance/deathstalker-v2-pro-tkl-0296-passive-charge-20261017.md"
+          ],
+          "source_id": "passive-charge-deathstalker-v2-pro-tkl-0296-20261017"
+        }
+      ],
+      "summary": "The route word after the battery level in the keyboard status report reads 0x0101 on a USB cable, 0x0001 briefly around plug-in and unplug, and 0x0000 off the cable."
+    },
+    {
       "evidence_level": "hardware-qualified",
       "id": "claim.child.0296.passive-identity-telemetry",
       "limitations": [
@@ -1401,6 +1427,14 @@
         {
           "access": "read",
           "evidence_claims": [
+            "claim.child.0296.passive-charge-state"
+          ],
+          "id": "telemetry.charging-state",
+          "support_level": "telemetry-qualified"
+        },
+        {
+          "access": "read",
+          "evidence_claims": [
             "claim.child.0296.passive-identity-telemetry"
           ],
           "id": "telemetry.connection-evidence",
@@ -1420,6 +1454,7 @@
       "evidence_claims": [
         "claim.child.0296.complete-keyboard-map",
         "claim.child.0296.native-feature-report-parity",
+        "claim.child.0296.passive-charge-state",
         "claim.child.0296.passive-identity-telemetry",
         "claim.children.complete-static-black",
         "claim.children.software-effect-frame-continuity",
@@ -1470,6 +1505,14 @@
           ]
         },
         {
+          "from_runtime_sha256": "6a322a5f384bcc8d2ddf40ce9940173e9f4e0bda6e72277451f8c16ef34c02be",
+          "preserve_stage_roles": [
+            "lighting",
+            "map",
+            "telemetry"
+          ]
+        },
+        {
           "from_runtime_sha256": "88e5b7d79e5434f141f5767b07dcc707b13a5d0e0c1fbe0ebc894f57638e7e1c",
           "preserve_stage_roles": [
             "lighting",
@@ -1496,12 +1539,13 @@
       "restrictions": [
         "Another DeathStalker name, PID, or physical layout inherits no map.",
         "OpenRGB owns key names, geometry, and ANSI or ISO presentation.",
-        "External power does not establish a direct USB data route or charging state.",
+        "External power does not establish a direct USB data route.",
+        "Only the status-report route words 0x0001 and 0x0101 read as charging and 0x0000 as discharging; every other word, and any route word not paired with the battery level before it, leaves the charge state unknown.",
         "Receiver route value 0x0101 is indeterminate and cannot override observed keyboard activity.",
         "Native Feature-report authority is limited to receiver child PID 0x0296, the exact 90-byte report family, and generated OpenRazer command policy."
       ],
-      "revision": 7,
-      "runtime_sha256": "6a322a5f384bcc8d2ddf40ce9940173e9f4e0bda6e72277451f8c16ef34c02be",
+      "revision": 8,
+      "runtime_sha256": "c235f7b917b81f39189edbd1ee4bfbd2ace1238e6abd50e99f674cb971e5c867",
       "schema": "hyperflux-hardware-profile-v1",
       "source_path": "profiles/children/razer-deathstalker-v2-pro-tkl-0296.json",
       "transport": {
@@ -1644,6 +1688,15 @@
             ],
             "unavailable": [
               2
+            ]
+          },
+          "route_charge": {
+            "charging": [
+              1,
+              257
+            ],
+            "discharging": [
+              0
             ]
           }
         }
@@ -1849,5 +1902,5 @@
     }
   ],
   "schema": "hyperflux-compiled-profile-catalog-v1",
-  "source_sha256": "4a772d088dd943bcd3306c4fc92aa5e3b2506b0530a747885a87791cca325466"
+  "source_sha256": "4712398520bf3677e988bd0372346fc3c1910b63832a756077c5950234daa448"
 }

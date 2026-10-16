@@ -84,13 +84,13 @@ fn receiver_and_children_resolve_independently() {
         keyboard_native.support_level,
         SupportLevel::ProductionQualified
     );
-    assert_eq!(keyboard.qualification_migrations.len(), 6);
+    assert_eq!(keyboard.qualification_migrations.len(), 7);
     let current_migration = keyboard
         .qualification_migrations
         .iter()
         .find(|migration| {
             migration.from_runtime_sha256
-                == "46703d44d594392e0cb289f6151a7c6b3b200805503a4cf036747d3c347f0d63"
+                == "6a322a5f384bcc8d2ddf40ce9940173e9f4e0bda6e72277451f8c16ef34c02be"
         })
         .expect("the immediately preceding keyboard profile remains qualified");
     assert_eq!(
