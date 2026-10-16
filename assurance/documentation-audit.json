@@ -1,17 +1,17 @@
 {
   "$schema": "../schemas/documentation-audit.schema.json",
-  "schema": "hyperflux-documentation-audit-v2",
-  "source_revision": "5ce448806e13e92de264f81e9e83619a05e7f20d",
+  "schema": "hyperflux-documentation-audit-v3",
+  "source_revision": "3432ad808c6ac2f317bb6568e10eec6c0f3ff105",
   "inputs": {
     "catalog_sha256": "3647c56132ef4e87cee54b89b915ebb417dcaa2a84b5c3513b2116e23a35a12b",
     "policy_sha256": "dabb7014747af7749d0d7dd246ed3a52400124df4c448826f2c785068df57939",
     "renderer_sha256": "065d95640162f64657854db2d4d5caccc005ee245f3a731a3b3d36f3e8397fe4",
     "journey_source_coverage_sha256": "7dc3e929079eb76fe8ce82b0b026c2a373af8dc4c829352f38374a6d6983495a",
-    "rendered_documents_sha256": "f8ae41ae327ff7999ac691c9b0f7120f99508507b81cc59441aa7ec73f50dd77"
+    "rendered_documents_sha256": "7000469a1781951210fc4621b27e094dd98417e91e747e86d62895942007fc1b"
   },
   "render": {
     "status": "passed",
-    "result_sha256": "5220013f7d527bdb809ad85fbf4f6f43511f7636919cf955fee05c71978dc344",
+    "result_sha256": "f4e94b691ab0c9bf85b3aa317f7c27ba49c9ba475c4d35c47f8323ce5418cb27",
     "document_count": 88,
     "check_count": 528,
     "screenshot_count": 108,
@@ -27,7 +27,7 @@
       "light",
       "dark"
     ],
-    "screenshot_manifest_sha256": "36c14d5d023fef80db9906f8b53100959f10d4b4e57371cb035cd7037b3c168c",
+    "screenshot_manifest_sha256": "8f1145173585c1e48633f1c6d19df080292315a56a562dfa614e4e554872c829",
     "capture_mode": "full-page",
     "max_page_height": 32768,
     "render_contract": "github-compatible-gfm-v2",
@@ -71,11 +71,11 @@
       },
       {
         "file": "screenshots/docs__generated__distributions--1280--dark.png",
-        "sha256": "21b8231128515ae8c30eef1950dc183b5b239295da89b2af7ff9aa861a6ad5ed"
+        "sha256": "18d59adcbcbe2c92a6d93ce5c221e4ba3c4b0e841d77a2dd27b3d41879b21b18"
       },
       {
         "file": "screenshots/docs__generated__installation--375--dark.png",
-        "sha256": "e97672d6c2a2eb0b3f729f376e60e48e4a6fb54d430a513bd266d312a2c3e13b"
+        "sha256": "ed4b8084d55a476ac09c387764aeb9bfb355dd8dc554b1e3d1490974c9307294"
       },
       {
         "file": "screenshots/docs__generated__repository__atlas--768--light.png",
@@ -115,17 +115,7 @@
       }
     ]
   },
-  "verification": {
-    "fast_run_id": "hfxv-591106dafead36b83b77",
-    "fast_evidence_sha256": "960d36c17255f31eb2a1642e2e0c7d0ac17ac17da691d0fe29a12a5bc3364d3a",
-    "fast_result_sha256": "244a508ee60519e05f3bc6a9e1cfa848ba1ecff684616dc1787eb02b6f3f371e",
-    "full_run_id": "hfxv-9d9fe8246a443a155051",
-    "full_source_revision": "446c2c064444e98b0f89b5ef2ee7db5e8ce546a0",
-    "full_evidence_sha256": "619b9294eebac27ced7220625d7d0ca8ddc32bb179df64c173f2124d38589ed2",
-    "full_result_sha256": "b8e248e772b7afacf6aa216639eaca5d0473fd22354a9ebfc3daad9afa1903b8",
-    "second_generation_identical": true,
-    "links": "passed",
-    "privacy": "passed",
+  "publication": {
     "release_gate_changes": [
       "HFX-GATE-PUBLICATION-DECISION"
     ]

@@ -563,26 +563,24 @@ class RepositoryExperienceContracts(unittest.TestCase):
                 with self.assertRaises(ModelError):
                     load_documentation_review(root, load_document_catalog(ROOT))
 
-    def test_document_render_audit_binds_sources_visual_review_and_fast_gate(self) -> None:
+    def test_document_render_audit_binds_manifest_visual_review_and_publication(self) -> None:
+        # Every pull request checks the release record's structure; it is not tied to
+        # any commit literal, so landing another pull request cannot make this stale.
         audit = load_documentation_render_audit(ROOT)
         policy = load_documentation_render_policy(ROOT)
-        self.assertEqual(audit.source_revision, "5ce448806e13e92de264f81e9e83619a05e7f20d")
-        self.assertEqual(audit.check_count, policy.check_count)
+        manifest = load_json(ROOT / "assurance" / "documentation-screenshot-manifest.json")
+        self.assertEqual(audit.source_revision, manifest["source_revision"])
+        self.assertEqual(audit.result_sha256, manifest["render_result_sha256"])
         self.assertEqual(audit.screenshot_count, policy.screenshot_count)
         self.assertEqual(audit.capture_mode, "full-page")
-        self.assertEqual(audit.fast_run_id, "hfxv-591106dafead36b83b77")
-        self.assertEqual(audit.full_run_id, "hfxv-9d9fe8246a443a155051")
-        self.assertEqual(
-            audit.full_source_revision,
-            "446c2c064444e98b0f89b5ef2ee7db5e8ce546a0",
-        )
+        self.assertNotIn(manifest["source_revision"], Path(__file__).read_text(encoding="utf-8"))
 
         canonical = load_json(ROOT / "assurance" / "documentation-audit.json")
         mutations = (
             lambda value: value["render"].update(issue_count=1),
-            lambda value: value["verification"].update(
-                release_gate_changes=[]
-            ),
+            lambda value: value["render"].update(outbound_network_requests=1),
+            lambda value: value["render"].update(screenshot_manifest_sha256="0" * 64),
+            lambda value: value["publication"].update(release_gate_changes=[]),
             lambda value: value["visual_review"]["reviewed_screenshots"].__setitem__(
                 0,
                 value["visual_review"]["reviewed_screenshots"][1],
@@ -590,17 +588,24 @@ class RepositoryExperienceContracts(unittest.TestCase):
             lambda value: value["visual_review"]["reviewed_screenshots"][0].update(
                 sha256="0" * 64
             ),
+            lambda value: value.update(verification={}),
         )
         for mutate in mutations:
             value = copy.deepcopy(canonical)
             mutate(value)
             with self.subTest(mutation=mutate), self.assertRaises(ModelError):
                 validate_documentation_render_audit(ROOT, value)
+
+        # Edited documents leave the structure valid; only release mode needs a new render.
+        # The tree's own digests are replaced so this holds between releases too.
+        edited_tree = {**canonical["inputs"], "rendered_documents_sha256": "0" * 64}
         with patch(
-            "hfxdev.documentation_preview.rendered_documents_sha256",
-            return_value="0" * 64,
-        ), self.assertRaisesRegex(ModelError, "rendered_documents_sha256 is stale"):
+            "hfxdev.documentation_preview.documentation_render_inputs",
+            return_value=edited_tree,
+        ):
             validate_documentation_render_audit(ROOT, canonical)
+            with self.assertRaisesRegex(ModelError, "rendered_documents_sha256 is stale"):
+                validate_documentation_render_audit(ROOT, canonical, release_evidence=True)
 
     def test_all_repository_markdown_links_and_anchors_resolve(self) -> None:
         issues = repository_link_issues(ROOT)
