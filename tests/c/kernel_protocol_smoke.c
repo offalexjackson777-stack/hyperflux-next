@@ -264,6 +264,42 @@ static void test_child_battery(void)
 	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALUE);
 }
 
+static void test_pointer_identity_without_product(void)
+{
+	/* A wired Basilisk makes the receiver send 05 3b 01 00 00. */
+	const __u8 valid_identity[] = { 0x05, 0x3b, 0x01, 0x00, 0xcd };
+	const __u8 zero_identity[] = { 0x05, 0x3b, 0x01, 0x00, 0x00 };
+	const __u8 erased_identity[] = { 0x05, 0x3b, 0x06, 0xff, 0xff };
+	struct hfx_passive_report report;
+
+	assert(hfx_passive_parse(HFX_PASSIVE_REPORT_INTERFACE, valid_identity,
+				 sizeof(valid_identity), &report) ==
+	       HFX_PASSIVE_POINTER_IDENTITY);
+	assert(report.product_id == 0x00cd);
+
+	/*
+	 * The whole report is invalid: no product ID and no contact byte
+	 * survive, so hfx_observe_passive() returns before the ring or the
+	 * cached pointer identity is touched.
+	 */
+	assert(hfx_passive_parse(HFX_PASSIVE_REPORT_INTERFACE, zero_identity,
+				 sizeof(zero_identity), &report) ==
+	       HFX_PASSIVE_INVALID);
+	assert(report.kind == HFX_PASSIVE_NONE);
+	assert(report.product_id == 0);
+	assert(report.contact_raw == 0);
+
+	assert(hfx_passive_parse(HFX_PASSIVE_REPORT_INTERFACE, erased_identity,
+				 sizeof(erased_identity), &report) ==
+	       HFX_PASSIVE_INVALID);
+	assert(report.kind == HFX_PASSIVE_NONE);
+	assert(report.product_id == 0);
+	assert(report.contact_raw == 0);
+
+	assert(hfx_passive_parse(4, zero_identity, sizeof(zero_identity),
+				 &report) == HFX_PASSIVE_NONE);
+}
+
 int main(void)
 {
 	struct hfx_uapi_frame frame = mouse_frame();
@@ -331,5 +367,6 @@ int main(void)
 
 	test_pairing_inventory();
 	test_child_battery();
+	test_pointer_identity_without_product();
 	return 0;
 }
