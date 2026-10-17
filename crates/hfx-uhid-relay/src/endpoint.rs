@@ -123,6 +123,10 @@ impl<B: BridgeExchange> FeatureEndpoint<B> {
         self.pending_battery_diagnostic.take()
     }
 
+    pub(crate) const fn bridge(&self) -> &B {
+        &self.bridge
+    }
+
     pub(crate) fn bridge_mut(&mut self) -> &mut B {
         &mut self.bridge
     }

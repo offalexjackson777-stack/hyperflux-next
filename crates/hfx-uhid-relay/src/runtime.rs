@@ -351,6 +351,18 @@ impl<B: crate::BridgeExchange> RunningEndpoint<B> {
         self.endpoint_mut().bridge_mut()
     }
 
+    fn lease_release_deadline(&self) -> Option<Instant> {
+        self.endpoint
+            .as_ref()
+            .and_then(|endpoint| endpoint.bridge().lease_release_deadline())
+    }
+
+    fn release_idle_lease(&mut self, now: Instant) {
+        if let Some(endpoint) = self.endpoint.as_mut() {
+            endpoint.bridge_mut().release_idle_lease(now);
+        }
+    }
+
     pub(crate) fn state(&self) -> FeatureEndpointState {
         self.endpoint().state()
     }
@@ -368,6 +380,9 @@ impl<B: crate::BridgeExchange> RunningEndpoint<B> {
         self.release_kernel_driver();
         if let Some(endpoint) = self.endpoint.as_mut() {
             endpoint.prepare_withdrawal();
+            // The driver is gone and no further exchange will run, so the
+            // lease goes back now instead of after the idle bound.
+            endpoint.bridge_mut().release_lease();
         }
         let _ = self.flush();
         if let Ok(flags) = fcntl_getfl(&self.file) {
@@ -630,6 +645,18 @@ impl<B: crate::BridgeExchange> PendingPublication<B> {
         self.ready_fingerprint = Some(fingerprint);
     }
 
+    fn lease_release_deadline(&self) -> Option<Instant> {
+        self.bridge
+            .as_ref()
+            .and_then(crate::BridgeExchange::lease_release_deadline)
+    }
+
+    fn release_idle_lease(&mut self, now: Instant) {
+        if let Some(bridge) = self.bridge.as_mut() {
+            bridge.release_idle_lease(now);
+        }
+    }
+
     fn ready(&self) -> bool {
         self.ready_fingerprint.is_some()
             && self.bridge.is_some()
@@ -841,6 +868,24 @@ impl ManagedRoute {
         }
     }
 
+    /// The earliest idle-release deadline of the lease held by this route's
+    /// bridge, wherever the bridge currently lives.
+    fn lease_release_deadline(&self) -> Option<Instant> {
+        self.endpoint
+            .as_ref()
+            .and_then(RunningEndpoint::lease_release_deadline)
+            .into_iter()
+            .chain(self.publication.lease_release_deadline())
+            .min()
+    }
+
+    fn release_idle_lease(&mut self, now: Instant) {
+        if let Some(endpoint) = self.endpoint.as_mut() {
+            endpoint.release_idle_lease(now);
+        }
+        self.publication.release_idle_lease(now);
+    }
+
     fn publication_ready(&self) -> bool {
         self.endpoint.is_none() && self.publication.ready()
     }
@@ -982,8 +1027,10 @@ impl<B: crate::BridgeExchange> Drop for RunningEndpoint<B> {
 /// # Errors
 ///
 /// Fails closed on bridge, catalog, supervisor, or UHID errors. Dropping the
-/// session destroys every virtual endpoint. Route leases exist only around an
-/// individual native Feature exchange.
+/// session destroys every virtual endpoint and releases its lease. A route
+/// keeps its lease across one burst of native Feature exchanges and this loop
+/// releases it once the route has been idle for the bridge's
+/// `LEASE_IDLE_RELEASE`; the poll below wakes in time for that deadline.
 pub fn run_relay(paths: &RelayPaths, termination: &AtomicBool) -> Result<(), RelayRuntimeError> {
     let catalog = NativeRouteCatalog::load().map_err(|_| RelayRuntimeError::Catalog)?;
     let mut direct_scanner = DirectRouteScanner::new(paths.hid_driver_root.clone());
@@ -1073,14 +1120,42 @@ pub fn run_relay(paths: &RelayPaths, termination: &AtomicBool) -> Result<(), Rel
             cursor = Some(authoritative_cursor);
             next_watch = Instant::now() + WATCH_INTERVAL;
         }
+        release_idle_leases(&mut routes, Instant::now());
         publish_status(&mut status_writer, &mut routes)?;
-        wait_for_endpoints(
-            routes.values().filter_map(ManagedRoute::poll_fd).collect(),
-            IDLE_INTERVAL,
-        );
+        wait_for_routes(&routes);
     }
     destroy_all(&mut routes);
     Ok(())
+}
+
+fn release_idle_leases(routes: &mut BTreeMap<RouteIdentity, ManagedRoute>, now: Instant) {
+    for route in routes.values_mut() {
+        route.release_idle_lease(now);
+    }
+}
+
+/// Waits for any endpoint to become ready, for at most the idle interval and
+/// never past the earliest lease idle-release deadline.
+fn wait_for_routes(routes: &BTreeMap<RouteIdentity, ManagedRoute>) {
+    let wait = idle_wait(
+        Instant::now(),
+        routes
+            .values()
+            .filter_map(ManagedRoute::lease_release_deadline)
+            .min(),
+    );
+    wait_for_endpoints(
+        routes.values().filter_map(ManagedRoute::poll_fd).collect(),
+        wait,
+    );
+}
+
+/// The loop's wait: the idle interval, cut short so the loop wakes when the
+/// earliest held lease becomes due for idle release.
+fn idle_wait(now: Instant, lease_release_deadline: Option<Instant>) -> Duration {
+    lease_release_deadline.map_or(IDLE_INTERVAL, |deadline| {
+        deadline.saturating_duration_since(now).min(IDLE_INTERVAL)
+    })
 }
 
 /// Sleeps at most `timeout`, returning early once any endpoint is ready, so

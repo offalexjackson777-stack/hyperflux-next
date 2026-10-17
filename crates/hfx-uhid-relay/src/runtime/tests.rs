@@ -1252,101 +1252,6 @@ fn wired_test_id() -> u64 {
     WIRED_TEST_ID.fetch_add(1, Ordering::Relaxed)
 }
 
-struct RefusingBridgeBackend;
-
-impl hfx_bridge::BridgeRpcBackend for RefusingBridgeBackend {
-    fn snapshot(
-        &mut self,
-        _context: hfx_bridge::BackendRequestContext<'_>,
-    ) -> Result<hfx_protocol::BridgeSnapshot, hfx_bridge::RpcFailure> {
-        Err(hfx_bridge::RpcFailure::internal())
-    }
-
-    fn integration_view(
-        &mut self,
-        _context: hfx_bridge::BackendRequestContext<'_>,
-    ) -> Result<hfx_protocol::IntegrationView, hfx_bridge::RpcFailure> {
-        Err(hfx_bridge::RpcFailure::internal())
-    }
-
-    fn acquire_lease(
-        &mut self,
-        _context: hfx_bridge::BackendRequestContext<'_>,
-        _request: hfx_protocol::LeaseRequest,
-    ) -> Result<hfx_protocol::LeaseResult, hfx_bridge::RpcFailure> {
-        Err(hfx_bridge::RpcFailure::internal())
-    }
-
-    fn renew_lease(
-        &mut self,
-        _context: hfx_bridge::BackendRequestContext<'_>,
-        _request: hfx_protocol::RenewLeaseRequest,
-    ) -> Result<hfx_protocol::LeaseResult, hfx_bridge::RpcFailure> {
-        Err(hfx_bridge::RpcFailure::internal())
-    }
-
-    fn release_lease(
-        &mut self,
-        _context: hfx_bridge::BackendRequestContext<'_>,
-        _request: hfx_protocol::ReleaseLeaseRequest,
-    ) -> Result<hfx_protocol::LeaseResult, hfx_bridge::RpcFailure> {
-        Err(hfx_bridge::RpcFailure::internal())
-    }
-
-    fn submit_transaction(
-        &mut self,
-        _context: hfx_bridge::BackendRequestContext<'_>,
-        _request: hfx_protocol::TransactionRequest,
-    ) -> Result<hfx_protocol::TransactionResult, hfx_bridge::RpcFailure> {
-        Err(hfx_bridge::RpcFailure::internal())
-    }
-
-    fn transaction_outcome(
-        &mut self,
-        _context: hfx_bridge::BackendRequestContext<'_>,
-        _request: hfx_protocol::TransactionLookup,
-    ) -> Result<hfx_protocol::TransactionResult, hfx_bridge::RpcFailure> {
-        Err(hfx_bridge::RpcFailure::internal())
-    }
-
-    fn subscribe(
-        &mut self,
-        _context: hfx_bridge::BackendRequestContext<'_>,
-        _request: hfx_protocol::SubscriptionRequest,
-    ) -> Result<hfx_protocol::EventBatch, hfx_bridge::RpcFailure> {
-        Err(hfx_bridge::RpcFailure::internal())
-    }
-
-    fn diagnostics(
-        &mut self,
-        _context: hfx_bridge::BackendRequestContext<'_>,
-    ) -> Result<hfx_protocol::DiagnosticSnapshot, hfx_bridge::RpcFailure> {
-        Err(hfx_bridge::RpcFailure::internal())
-    }
-
-    fn disconnect(
-        &mut self,
-        _session: &hfx_bridge::AuthorizedSession,
-    ) -> Result<(), hfx_bridge::RpcFailure> {
-        Ok(())
-    }
-}
-
-struct CountingSessionIdentities(u8);
-
-impl hfx_bridge::SessionIdentitySource for CountingSessionIdentities {
-    fn fill_bytes(
-        &mut self,
-        destination: &mut [u8],
-    ) -> Result<(), hfx_bridge::SessionIdentityError> {
-        for byte in destination {
-            *byte = self.0;
-            self.0 = self.0.wrapping_add(1);
-        }
-        Ok(())
-    }
-}
-
 /// An in-process bridge on a temporary socket. It only negotiates, which is
 /// all a relay route needs to connect; serial reads are not served here.
 struct NegotiatingBridge {
@@ -1378,29 +1283,10 @@ impl NegotiatingBridge {
                     };
                     let number = connections.fetch_add(1, Ordering::SeqCst) + 1;
                     thread::spawn(move || {
-                        let config = hfx_bridge::BridgeSessionConfig {
-                            server_instance_id: hfx_domain::ServerInstanceId::try_from(
-                                "relay-wired-precedence".to_owned(),
-                            )
-                            .expect("server instance is valid"),
-                            bridge_version: hfx_domain::ComponentVersion::try_from(
-                                "0.0.0-test".to_owned(),
-                            )
-                            .expect("bridge version is valid"),
-                            event_buffer_capacity: hfx_domain::QueueCapacity::try_from(8)
-                                .expect("capacity is valid"),
-                        };
-                        let mut sessions = hfx_bridge::SessionRegistry::new(
-                            hfx_domain::QueueCapacity::try_from(4).expect("capacity is valid"),
-                        );
-                        let _ = hfx_bridge::serve_connection(
+                        crate::bridge::test_server::serve(
                             &mut stream,
-                            config,
-                            &mut CountingSessionIdentities(
-                                u8::try_from(number % 16).unwrap_or(1).wrapping_mul(16),
-                            ),
-                            &mut sessions,
-                            &mut RefusingBridgeBackend,
+                            number,
+                            &mut crate::bridge::test_server::LeasingBackend::refusing(),
                         );
                     });
                 }
@@ -1741,4 +1627,207 @@ fn wired_basilisk_without_a_readable_matching_serial_hides_nothing() {
     assert_eq!(uhid_event_types(&late_uhid), vec![CREATE, DESTROY]);
     fs::remove_file(uhid).expect("transcript is removed");
     fs::remove_file(late_uhid).expect("transcript is removed");
+}
+
+/// Holds a lease that is due for idle release at `deadline`, like a
+/// `NativeBridge` after a matched exchange, and records how it is given back.
+struct LeaseRecordingBridge {
+    deadline: Option<Instant>,
+    releases: Rc<RefCell<Vec<&'static str>>>,
+}
+
+impl crate::BridgeExchange for LeaseRecordingBridge {
+    fn exchange(
+        &mut self,
+        _report: [u8; crate::FEATURE_REPORT_BYTES],
+    ) -> crate::BridgeExchangeResult {
+        crate::BridgeExchangeResult::NotSent(crate::BridgeExchangeFailure::TransportNotSent)
+    }
+
+    fn lease_release_deadline(&self) -> Option<Instant> {
+        self.deadline
+    }
+
+    fn release_idle_lease(&mut self, now: Instant) {
+        if self.deadline.is_some_and(|deadline| now >= deadline) {
+            self.deadline = None;
+            self.releases.borrow_mut().push("idle");
+        }
+    }
+
+    fn release_lease(&mut self) {
+        if self.deadline.take().is_some() {
+            self.releases.borrow_mut().push("teardown");
+        }
+    }
+}
+
+fn leased_bridge(deadline: Instant) -> (LeaseRecordingBridge, Rc<RefCell<Vec<&'static str>>>) {
+    let releases = Rc::new(RefCell::new(Vec::new()));
+    (
+        LeaseRecordingBridge {
+            deadline: Some(deadline),
+            releases: Rc::clone(&releases),
+        },
+        releases,
+    )
+}
+
+#[test]
+fn endpoint_destroy_and_drop_release_the_held_lease() {
+    let (device, policy) = fixture();
+    let destroyed_path = temporary_uhid_file();
+    let (bridge, destroyed) = leased_bridge(Instant::now() + Duration::from_mins(1));
+    RunningEndpoint::create(
+        &test_paths(destroyed_path.clone()),
+        bridge,
+        device.clone(),
+        policy.clone(),
+        None,
+    )
+    .expect("endpoint is created")
+    .destroy();
+    assert_eq!(destroyed.borrow().as_slice(), &["teardown"]);
+
+    let dropped_path = temporary_uhid_file();
+    let (bridge, dropped) = leased_bridge(Instant::now() + Duration::from_mins(1));
+    drop(
+        RunningEndpoint::create(
+            &test_paths(dropped_path.clone()),
+            bridge,
+            device,
+            policy,
+            None,
+        )
+        .expect("endpoint is created"),
+    );
+    assert_eq!(dropped.borrow().as_slice(), &["teardown"]);
+    assert_single_uhid_lifecycle(&destroyed_path, 2);
+    assert_single_uhid_lifecycle(&dropped_path, 2);
+    fs::remove_file(destroyed_path).expect("temporary UHID file is removed");
+    fs::remove_file(dropped_path).expect("temporary UHID file is removed");
+}
+
+#[test]
+fn recycled_and_recovered_routes_release_before_publishing_again() {
+    let (device, policy) = fixture();
+    let now = Instant::now();
+    let mut fingerprint = None;
+    let path = temporary_uhid_file();
+    let (bridge, recycled) = leased_bridge(now + Duration::from_mins(1));
+    let endpoint = RunningEndpoint::create(
+        &test_paths(path.clone()),
+        bridge,
+        device.clone(),
+        policy.clone(),
+        None,
+    )
+    .expect("endpoint is created");
+    let (placeholder, _) = leased_bridge(now);
+    let mut publication = PendingPublication::new(placeholder, now);
+    recycle_retained_route(endpoint, &mut publication, &mut fingerprint, now);
+    assert_eq!(recycled.borrow().as_slice(), &["teardown"]);
+    assert_eq!(publication.lease_release_deadline(), None);
+    fs::remove_file(path).expect("temporary UHID file is removed");
+
+    let path = temporary_uhid_file();
+    let (bridge, recovered) = leased_bridge(now + Duration::from_mins(1));
+    let endpoint = RunningEndpoint::create(&test_paths(path.clone()), bridge, device, policy, None)
+        .expect("endpoint is created");
+    recover_kernel_binding(endpoint, &mut publication, &mut fingerprint, now);
+    assert_eq!(recovered.borrow().as_slice(), &["teardown"]);
+    fs::remove_file(path).expect("temporary UHID file is removed");
+}
+
+#[test]
+fn the_idle_lease_is_released_at_its_deadline_wherever_the_bridge_lives() {
+    let (device, policy) = fixture();
+    let deadline = Instant::now() + Duration::from_mins(1);
+    let path = temporary_uhid_file();
+    let (bridge, endpoint_releases) = leased_bridge(deadline);
+    let mut endpoint =
+        RunningEndpoint::create(&test_paths(path.clone()), bridge, device, policy, None)
+            .expect("endpoint is created");
+    assert_eq!(endpoint.lease_release_deadline(), Some(deadline));
+    endpoint.release_idle_lease(just_before(deadline));
+    assert!(endpoint_releases.borrow().is_empty());
+    endpoint.release_idle_lease(deadline);
+    assert_eq!(endpoint.lease_release_deadline(), None);
+    endpoint.destroy();
+    assert_eq!(endpoint_releases.borrow().as_slice(), &["idle"]);
+    fs::remove_file(path).expect("temporary UHID file is removed");
+
+    let (bridge, publication_releases) = leased_bridge(deadline);
+    let mut publication = PendingPublication::new(bridge, Instant::now());
+    assert_eq!(publication.lease_release_deadline(), Some(deadline));
+    publication.release_idle_lease(just_before(deadline));
+    publication.release_idle_lease(deadline);
+    assert_eq!(publication.lease_release_deadline(), None);
+    assert_eq!(publication_releases.borrow().as_slice(), &["idle"]);
+}
+
+#[test]
+fn the_loop_wait_wakes_for_the_earliest_lease_deadline() {
+    let now = Instant::now();
+    assert_eq!(idle_wait(now, None), IDLE_INTERVAL);
+    assert_eq!(
+        idle_wait(now, Some(now + Duration::from_millis(3))),
+        Duration::from_millis(3)
+    );
+    assert_eq!(
+        idle_wait(now, Some(now + crate::bridge::LEASE_IDLE_RELEASE)),
+        IDLE_INTERVAL
+    );
+    assert_eq!(idle_wait(now + IDLE_INTERVAL, Some(now)), Duration::ZERO);
+}
+
+#[test]
+fn the_relay_loop_releases_idle_route_leases_and_shutdown_releases_the_rest() {
+    let bridge = crate::bridge::test_server::LeasingBridge::start();
+    let paths = RelayPaths {
+        bridge_socket: bridge.socket().to_path_buf(),
+        uhid_device: PathBuf::from("/unused/uhid"),
+        hid_driver_root: PathBuf::from("/unused/hid/drivers"),
+        status_file: PathBuf::from("/unused/status.json"),
+    };
+    let route = start_basilisk_route(&paths, "lease-route");
+    let identity = RouteIdentity::from(&route.route);
+    let mut routes = BTreeMap::from([(identity.clone(), route)]);
+    let report = battery_report(0x1f);
+    let exchange = |routes: &mut BTreeMap<RouteIdentity, ManagedRoute>| {
+        crate::BridgeExchange::exchange(
+            routes
+                .get_mut(&identity)
+                .and_then(|route| route.publication.bridge.as_mut())
+                .expect("publication holds the bridge"),
+            report,
+        )
+    };
+    assert_eq!(
+        exchange(&mut routes),
+        crate::BridgeExchangeResult::MatchedResponse(report)
+    );
+    let deadline = routes[&identity]
+        .lease_release_deadline()
+        .expect("the route holds its lease after the exchange");
+    release_idle_leases(&mut routes, just_before(deadline));
+    assert_eq!(bridge.ledger().releases, 0);
+    let waited = Instant::now();
+    wait_for_routes(&routes);
+    assert!(waited.elapsed() < crate::bridge::LEASE_IDLE_RELEASE * 4);
+    release_idle_leases(&mut routes, deadline);
+    assert_eq!(bridge.ledger().releases, 1);
+    assert_eq!(routes[&identity].lease_release_deadline(), None);
+
+    exchange(&mut routes);
+    destroy_all(&mut routes);
+    let ledger = bridge.ledger();
+    assert_eq!((ledger.acquires, ledger.releases), (2, 2));
+    assert!(ledger.owner.is_none());
+}
+
+fn just_before(deadline: Instant) -> Instant {
+    deadline
+        .checked_sub(Duration::from_millis(1))
+        .expect("the deadline is past the clock origin")
 }
