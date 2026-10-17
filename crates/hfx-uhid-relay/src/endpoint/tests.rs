@@ -700,6 +700,50 @@ fn unapproved_device_mode_is_rejected_before_virtualization_or_transport() {
 }
 
 #[test]
+fn admitted_set_is_acknowledged_before_its_exchange_and_answered_by_the_get() {
+    let expected = [0xa5; FEATURE_REPORT_BYTES];
+    let mut endpoint = endpoint(vec![BridgeExchangeResult::MatchedResponse(expected)]);
+    assert_eq!(
+        endpoint.admit(set(10, 0x42)).expect("set is admitted"),
+        Admission::Set {
+            reply: UhidReply::SetReport {
+                id: 10,
+                success: true
+            },
+            report: allowed_report(0x42),
+        }
+    );
+    assert!(endpoint.bridge.requests.is_empty());
+    assert!(!endpoint.has_pending_response());
+
+    endpoint.complete_set(allowed_report(0x42));
+    assert_eq!(endpoint.bridge.requests, vec![allowed_report(0x42)]);
+    assert_eq!(
+        endpoint.admit(get(11)).expect("get is admitted"),
+        Admission::Reply(Some(UhidReply::GetReport {
+            id: 11,
+            data: Some(expected.to_vec())
+        }))
+    );
+}
+
+#[test]
+fn rejected_set_is_final_at_admission() {
+    let mut endpoint = endpoint(vec![BridgeExchangeResult::NotSent(
+        crate::BridgeExchangeFailure::TransportNotSent,
+    )]);
+    endpoint.handle(set(1, 0x11)).expect("first set succeeds");
+    assert_eq!(
+        endpoint.admit(set(2, 0x22)).expect("overlap is admitted"),
+        Admission::Reply(Some(UhidReply::SetReport {
+            id: 2,
+            success: false
+        }))
+    );
+    assert_eq!(endpoint.bridge.requests, vec![allowed_report(0x11)]);
+}
+
+#[test]
 fn invalid_and_overlapping_requests_never_reach_the_bridge() {
     let mut endpoint = endpoint(vec![BridgeExchangeResult::NotSent(
         crate::BridgeExchangeFailure::TransportNotSent,
