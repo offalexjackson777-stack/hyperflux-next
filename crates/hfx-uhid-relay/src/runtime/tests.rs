@@ -974,6 +974,170 @@ fn teardown_answers_an_in_flight_get_before_unbinding_and_destroying() {
     assert_eq!(tree.unbind_request(), "0003:1532:00CD.0007");
 }
 
+struct TranscriptLengthBridge {
+    path: PathBuf,
+    lengths: Rc<RefCell<Vec<usize>>>,
+}
+
+impl crate::BridgeExchange for TranscriptLengthBridge {
+    fn exchange(
+        &mut self,
+        report: [u8; crate::FEATURE_REPORT_BYTES],
+    ) -> crate::BridgeExchangeResult {
+        let length = fs::metadata(&self.path).map_or(0, |metadata| metadata.len());
+        self.lengths
+            .borrow_mut()
+            .push(usize::try_from(length).expect("transcript length fits usize"));
+        let mut response = report;
+        response[0] = 0x02;
+        crate::BridgeExchangeResult::MatchedResponse(response)
+    }
+}
+
+#[test]
+fn set_reply_is_written_before_the_exchange_runs() {
+    let path = temporary_uhid_file();
+    let paths = test_paths(path.clone());
+    let catalog = NativeRouteCatalog::load().expect("native catalog loads");
+    let record = catalog
+        .profile("child.razer.basilisk-v3-pro-35k.00cd")
+        .expect("mouse route exists");
+    let (device, policy) = fixture_from_record(&catalog, record, "early-set-reply");
+    let lengths = Rc::new(RefCell::new(Vec::new()));
+    let bridge = TranscriptLengthBridge {
+        path: path.clone(),
+        lengths: Rc::clone(&lengths),
+    };
+    let mut endpoint =
+        RunningEndpoint::create(&paths, bridge, device, policy, None).expect("endpoint is created");
+    endpoint
+        .process_event(UhidEvent::Start { flags: 0 })
+        .expect("kernel starts endpoint");
+    endpoint
+        .process_event(set_report(1, battery_report(0x1f)))
+        .expect("battery SET is handled");
+    endpoint
+        .process_event(get_report(2))
+        .expect("battery GET is handled");
+    endpoint.flush().expect("GET reply flushes");
+    drop(endpoint);
+
+    let bytes = fs::read(&path).expect("UHID transcript reads");
+    fs::remove_file(&path).expect("temporary UHID file is removed");
+    // CREATE2 and the SET reply were written before the bridge was asked.
+    assert_eq!(lengths.borrow().as_slice(), &[UHID_EVENT_BYTES * 2]);
+    let event_type = |index: usize| {
+        u32::from_ne_bytes(
+            bytes[UHID_EVENT_BYTES * index..UHID_EVENT_BYTES * index + 4]
+                .try_into()
+                .expect("event type"),
+        )
+    };
+    assert_eq!(
+        (0..4).map(event_type).collect::<Vec<_>>(),
+        vec![11, 14, 10, 1]
+    );
+}
+
+#[test]
+fn endpoint_waits_for_write_room_only_while_replies_are_queued() {
+    let path = temporary_uhid_file();
+    let paths = test_paths(path.clone());
+    let (device, policy) = fixture();
+    let mut endpoint = RunningEndpoint::create(&paths, NotSentBridge, device, policy, None)
+        .expect("endpoint is created");
+    // The test endpoint is a regular file, which is always readable and
+    // writable, so the returned events are exactly the requested ones.
+    let ready = |endpoint: &RunningEndpoint<NotSentBridge>| {
+        let mut fds = [endpoint.poll_fd()];
+        poll(&mut fds, Some(&Timespec::default())).expect("endpoint polls");
+        fds[0].revents()
+    };
+    assert_eq!(ready(&endpoint), PollFlags::IN);
+
+    endpoint
+        .process_event(UhidEvent::Start { flags: 0 })
+        .expect("kernel starts endpoint");
+    endpoint
+        .process_event(get_report(1))
+        .expect("unsolicited GET is answered");
+    assert!(!endpoint.pending.is_empty());
+    assert_eq!(ready(&endpoint), PollFlags::IN | PollFlags::OUT);
+
+    endpoint.flush().expect("queued reply flushes");
+    assert_eq!(ready(&endpoint), PollFlags::IN);
+    drop(endpoint);
+    fs::remove_file(path).expect("temporary UHID file is removed");
+}
+
+#[test]
+fn idle_wait_returns_as_soon_as_an_endpoint_is_ready() {
+    let (mut writer, reader) =
+        std::os::unix::net::UnixStream::pair().expect("socket pair is created");
+    let started = Instant::now();
+    wait_for_endpoints(
+        vec![PollFd::new(&reader, PollFlags::IN)],
+        Duration::from_millis(20),
+    );
+    assert!(started.elapsed() >= Duration::from_millis(20));
+
+    writer.write_all(&[1]).expect("readiness byte is written");
+    let started = Instant::now();
+    wait_for_endpoints(
+        vec![PollFd::new(&reader, PollFlags::IN)],
+        Duration::from_secs(5),
+    );
+    assert!(started.elapsed() < Duration::from_secs(1));
+}
+
+#[test]
+fn every_relay_failure_names_what_failed_and_only_bridge_failures_have_a_cause() {
+    use std::error::Error as _;
+
+    let operations = [
+        (RelayBridgeOperation::MonitorConnect, "monitor connection"),
+        (RelayBridgeOperation::Enumerate, "route enumeration"),
+        (RelayBridgeOperation::Watch, "route watch"),
+        (
+            RelayBridgeOperation::RouteConnect,
+            "device-route connection",
+        ),
+    ];
+    for (operation, name) in operations {
+        let error = bridge_error(operation, NativeBridgeError::SocketUnavailable);
+        assert_eq!(
+            error.to_string(),
+            format!("HyperFlux native-route {name} failed: HyperFlux bridge socket is unavailable")
+        );
+        assert!(error.source().is_some());
+    }
+
+    let local = [
+        RelayRuntimeError::Catalog,
+        RelayRuntimeError::Supervisor,
+        RelayRuntimeError::UhidOpen,
+        RelayRuntimeError::UhidRead,
+        RelayRuntimeError::UhidWrite,
+        RelayRuntimeError::UhidCodec,
+        RelayRuntimeError::Endpoint,
+        RelayRuntimeError::ReplyQueue,
+        RelayRuntimeError::InvalidBatchLimit,
+        RelayRuntimeError::InstanceExhausted,
+        RelayRuntimeError::Status,
+    ];
+    let messages: std::collections::BTreeSet<String> =
+        local.iter().map(ToString::to_string).collect();
+    assert_eq!(messages.len(), local.len(), "messages are distinct");
+    assert!(local.iter().all(|error| error.source().is_none()));
+}
+
+#[test]
+fn idle_wait_without_endpoints_sleeps_the_whole_interval() {
+    let started = Instant::now();
+    wait_for_endpoints(Vec::new(), Duration::from_millis(20));
+    assert!(started.elapsed() >= Duration::from_millis(20));
+}
+
 #[test]
 fn missing_uhid_start_has_one_route_local_deadline() {
     let path = temporary_uhid_file();
@@ -1385,11 +1549,14 @@ fn wired_basilisk_with_matching_serial_hides_then_restores_the_virtual_device() 
     let mut next_instance = 2;
     let mut route = start_basilisk_route(&paths, "wired-precedence");
     assert_eq!(bridge.connections(), 1);
+    // The idle wait watches only routes that have a published endpoint.
+    assert!(route.poll_fd().is_none());
 
     // Wireless only: the virtual 00CD device is published.
     pass_serial_gate(&mut route, BASILISK_SERIAL);
     route.complete_publication(&paths, &scanner.scan(&catalog).expect("scan succeeds"));
     assert!(route.endpoint.is_some());
+    assert!(route.poll_fd().is_some());
     assert_eq!(route.status().state, RelayPublicationState::CreateSent);
     assert_eq!(uhid_event_types(&uhid), vec![CREATE]);
 

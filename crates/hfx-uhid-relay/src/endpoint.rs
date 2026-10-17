@@ -47,6 +47,20 @@ const RAZER_STATUS_BUSY: u8 = 0x01;
 const RAZER_STATUS_SUCCESS: u8 = 0x02;
 pub(crate) const RAZER_STATUS_TIMEOUT: u8 = 0x04;
 
+/// One decoded UHID event, admitted but not yet exchanged.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) enum Admission {
+    /// Fully handled: the optional reply is final.
+    Reply(Option<UhidReply>),
+    /// An accepted SET. Its success reply carries no exchange outcome (the
+    /// GET does), so it may be written before [`FeatureEndpoint::complete_set`]
+    /// runs the exchange, which must follow before the next event.
+    Set {
+        reply: UhidReply,
+        report: [u8; FEATURE_REPORT_BYTES],
+    },
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum RetainedRouteDeparture {
     None,
@@ -139,55 +153,75 @@ impl<B: BridgeExchange> FeatureEndpoint<B> {
     /// Returns a typed local error for invalid sequencing. Rejected GET/SET
     /// requests still receive an EIO reply and never reach the bridge.
     pub fn handle(&mut self, event: UhidEvent) -> Result<Option<UhidReply>, EndpointError> {
-        match event {
+        Ok(match self.admit(event)? {
+            Admission::Reply(reply) => reply,
+            Admission::Set { reply, report } => {
+                self.complete_set(report);
+                Some(reply)
+            }
+        })
+    }
+
+    /// Admits a decoded UHID event, deferring an accepted SET's exchange to
+    /// [`Self::complete_set`].
+    ///
+    /// # Errors
+    ///
+    /// Returns the same typed sequencing errors as [`Self::handle`].
+    pub(crate) fn admit(&mut self, event: UhidEvent) -> Result<Admission, EndpointError> {
+        Ok(match event {
             UhidEvent::Start { flags } => {
                 if flags & 0x04 != 0 {
                     return Err(EndpointError::InvalidFeatureRequest);
                 }
                 self.state = FeatureEndpointState::Started;
-                Ok(None)
+                Admission::Reply(None)
             }
             UhidEvent::Stop => {
                 self.prepare_withdrawal();
-                Ok(None)
+                Admission::Reply(None)
             }
             UhidEvent::Open | UhidEvent::Close | UhidEvent::Output | UhidEvent::Unknown { .. } => {
-                Ok(None)
+                Admission::Reply(None)
             }
             UhidEvent::SetReport {
                 id,
                 report_number,
                 report_type,
                 data,
-            } => Ok(Some(self.handle_set(id, report_number, report_type, &data))),
+            } => self.admit_set(id, report_number, report_type, &data),
             UhidEvent::GetReport {
                 id,
                 report_number,
                 report_type,
-            } => Ok(Some(self.handle_get(id, report_number, report_type))),
-        }
+            } => Admission::Reply(Some(self.handle_get(id, report_number, report_type))),
+        })
     }
 
-    fn handle_set(
-        &mut self,
-        id: u32,
-        report_number: u8,
-        report_type: u8,
-        data: &[u8],
-    ) -> UhidReply {
+    fn admit_set(&self, id: u32, report_number: u8, report_type: u8, data: &[u8]) -> Admission {
+        let rejected = Admission::Reply(Some(UhidReply::SetReport { id, success: false }));
         if self.state != FeatureEndpointState::Started
             || !is_feature_request(report_number, report_type)
             || data.len() != FEATURE_REPORT_BYTES
             || self.pending_response.is_some()
             || self.retained_route_departure != RetainedRouteDeparture::None
         {
-            return UhidReply::SetReport { id, success: false };
+            return rejected;
         }
         let mut report = [0_u8; FEATURE_REPORT_BYTES];
         report.copy_from_slice(data);
         if !self.command_policy.allows(&report) {
-            return UhidReply::SetReport { id, success: false };
+            return rejected;
         }
+        Admission::Set {
+            reply: UhidReply::SetReport { id, success: true },
+            report,
+        }
+    }
+
+    /// Runs the exchange for a SET that [`Self::admit`] accepted and holds
+    /// its response, or its transport-failure envelope, for the next GET.
+    pub(crate) fn complete_set(&mut self, report: [u8; FEATURE_REPORT_BYTES]) {
         let response = if let Some(response) = self.virtualized_response(&report) {
             response
         } else {
@@ -240,7 +274,6 @@ impl<B: BridgeExchange> FeatureEndpoint<B> {
             }
         };
         self.pending_response = Some(response);
-        UhidReply::SetReport { id, success: true }
     }
 
     fn exchange(&mut self, report: [u8; FEATURE_REPORT_BYTES]) -> (BridgeExchangeResult, u8) {
