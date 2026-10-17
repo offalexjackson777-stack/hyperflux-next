@@ -51,7 +51,7 @@ class ArchSplitTopologyTests(unittest.TestCase):
         cls.catalog = load_distribution_catalog(ROOT)
         cls.install = load_install_manifest(ROOT)
 
-    def test_current_release_is_the_first_four_output_release(self) -> None:
+    def test_current_release_uses_the_four_output_topology(self) -> None:
         runtime = load_linux_runtime(ROOT)
         current = load_arch_split(ROOT)
         self.assertEqual(
@@ -59,7 +59,7 @@ class ArchSplitTopologyTests(unittest.TestCase):
             f"{runtime.product.version}-{runtime.product.package_release}",
         )
         self.assertTrue(current.active)
-        self.assertEqual(current.full_version, current.first_release)
+        self.assertEqual(current.first_release, "2.1.0-1")
         self.assertFalse(two_package_split().active, "2.0.x stays on two packages (PKG-001)")
         self.assertTrue(self.split.active)
         self.assertEqual(self.split.first_release, "2.1.0-1")

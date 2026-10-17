@@ -8,10 +8,10 @@ Holds catalogs generated from the project's data files and used by builds, SDKs,
 
 | Owner | Source files | Generated files |
 | --- | ---: | ---: |
-| [Device knowledge](../knowledge/README.md) | 0 | 1 |
-| [Documentation system](../docs/README.md) | 0 | 1 |
-| [Application integration catalog](../integrations/README.md) | 0 | 1 |
-| [Composable hardware profiles](../profiles/README.md) | 0 | 1 |
+| [Device knowledge](../../knowledge/README.md) | 0 | 1 |
+| [Documentation system](../../docs/README.md) | 0 | 1 |
+| [Application integration catalog](../../integrations/README.md) | 0 | 1 |
+| [Composable hardware profiles](../../profiles/README.md) | 0 | 1 |
 
 ## Change Workflow
 

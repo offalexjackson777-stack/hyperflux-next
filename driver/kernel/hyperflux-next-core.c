@@ -11,7 +11,11 @@
 #include "hyperflux-next-passive.h"
 #include "hyperflux-next-version.h"
 
-/* Lock order: registry, transport, state, authorization, observation. */
+/*
+ * Lock order: registry, transport, state, authorization, observation.
+ * battery_lock is taken before state and authorization and never while
+ * registry or transport is held.
+ */
 static LIST_HEAD(hfx_receivers);
 static DEFINE_MUTEX(hfx_registry_lock);
 static atomic64_t hfx_next_generation = ATOMIC64_INIT(0);
@@ -114,6 +118,7 @@ hfx_receiver_candidate(struct usb_device *udev,
 	mutex_init(&candidate->transport_lock);
 	spin_lock_init(&candidate->authorization_lock);
 	spin_lock_init(&candidate->observation_lock);
+	hfx_battery_init(candidate);
 	kref_init(&candidate->refcount);
 	candidate->udev = usb_get_dev(udev);
 	candidate->backend_id = profile->backend_id;
@@ -239,6 +244,7 @@ static void hfx_receiver_put(struct hfx_interface *interface)
 		HFX_UAPI_OBSERVATION_SOURCE_POWER_MANAGEMENT,
 		HFX_UAPI_OBSERVATION_CONFIDENCE_EXACT, 0,
 		receiver->backend_id);
+	hfx_battery_teardown(receiver);
 	if (receiver->session_registered) {
 		misc_deregister(&receiver->session_device);
 		receiver->session_registered = false;
@@ -398,6 +404,8 @@ static int hfx_probe(struct hid_device *hdev, const struct hid_device_id *id)
 	if (ret)
 		goto err_receiver;
 	interface->started = true;
+	hfx_battery_attach_interface(interface->receiver, interface_number,
+				     hdev);
 	hfx_pairing_inventory_bootstrap(interface, profile);
 	hid_info(hdev, "HyperFlux Next bound interface %d, generation %llu\n",
 		 interface_number, interface->receiver->generation);
@@ -416,6 +424,9 @@ static void hfx_remove(struct hid_device *hdev)
 
 	if (!interface)
 		return;
+	if (interface->receiver)
+		hfx_battery_detach_interface(interface->receiver,
+					     interface->interface_number);
 	if (interface->started) {
 		hid_hw_stop(hdev);
 		interface->started = false;

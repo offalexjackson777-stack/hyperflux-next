@@ -27,15 +27,24 @@ shown in the [installation guide](../user/installation.md). See the
 
 ## Next
 
+- **Battery level on the desktop.** The mouse and keyboard paired to the
+  receiver will show their battery level in the desktop battery widget, such
+  as the one in KDE Plasma.
 - **An AUR package.** Publishing HyperFlux Next on the Arch User Repository is
   planned. It is not published yet; until it is, use the
   [installation guide](../user/installation.md).
 
+- **Old SDK protocol versions removed in 2.2.** Versions 1 to 4 and 6 of the
+  local SDK protocol are deprecated in 2.1 and will be removed in 2.2. The
+  bundled SDK and the OpenRGB integration already use the remaining versions,
+  5 and 7. See [release status](release-status.md#planned-change-in-22).
+
 ## Later
 
-- **Other distributions.** Ubuntu, Debian, and Fedora packages are planned as
-  separate pieces of work. Each will be published only when it works on its own;
-  a delay on one does not hold back another.
+- **Other distributions.** Ubuntu 24.04, Debian 13, Fedora 44 and openSUSE
+  Tumbleweed packages are already built and checked every week, but not
+  published yet. Each will be published only when it works on its own; a delay
+  on one does not hold back another.
 - **Signing key rotation.** The repository signing key will be replaced before
   it expires, following the published fingerprint procedure.
 

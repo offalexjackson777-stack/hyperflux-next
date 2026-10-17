@@ -44,7 +44,7 @@ The full list of files each part owns is in [`architecture/repository-atlas.json
 | [Bridge runtime](../../crates/hfx-bridge/README.md) | `implemented` | Connects apps to the core: it accepts their requests over the current and the previous message protocol, remembers settings, sends updates to subscribers, and answers each request within set limits. |
 | [Production daemon](../../crates/hfx-daemon/README.md) | `implemented` | The HyperFlux background service. It finds the receiver, loads the configuration, runs the bridge, and logs what happens. |
 | [Rust SDK](../../crates/hfx-sdk/README.md) | `implemented` | The Rust library apps use to find HyperFlux devices and send them commands. |
-| [Operations CLI](../../crates/hfx-ops/README.md) | `implemented` | The `hyperfluxctl` command: status, Doctor, support bundles, and switching to the HyperFlux driver. |
+| [Operations CLI](../../crates/hfx-ops/README.md) | `implemented` | The `hyperfluxctl` command: status, Doctor, support bundles, the read-only qualification report, and switching to the HyperFlux driver. |
 | [Kernel transport adapter](../../crates/hfx-kernel-transport/README.md) | `implemented` | Lets the Rust code talk to the kernel driver: it reads what the driver reports and sends it fixed-size device messages. |
 | [Deterministic simulator](../../crates/hfx-sim/README.md) | `implemented` | Simulates receivers and devices, including failures and reconnects, so the runtime can be tested without hardware. |
 | [Kernel driver contract](../../driver/README.md) | `implemented` | Defines the interface between the kernel driver and the programs that use it. New versions only add to it, so existing programs keep working. |
@@ -69,7 +69,7 @@ The full list of files each part owns is in [`architecture/repository-atlas.json
 | [Schema contracts](../../schemas/README.md) | Architecture authority | Assurance and release evidence, Kernel driver contract, Error catalog, Application integration catalog, Composable hardware profiles, Versioned bridge protocol, Linux runtime authority, Rust workspace, Repository tooling |
 | [Assurance and release evidence](../../assurance/README.md) | Architecture authority, Schema contracts | GitHub governance authority, Verification graph |
 | [Application integration catalog](../../integrations/README.md) | Architecture authority, Schema contracts | Device knowledge, OpenRazer native route, OpenRGB adapter, Composable hardware profiles, C++ SDK, Python SDK |
-| [Composable hardware profiles](../../profiles/README.md) | Architecture authority, Schema contracts, Application integration catalog | Core policy engine, Device knowledge, Device qualification console, Device qualification runtime, Linux HID kernel module, OpenRazer native route, OpenRGB adapter, Rust SDK, C++ SDK, Python SDK, Deterministic simulator, System probe |
+| [Composable hardware profiles](../../profiles/README.md) | Architecture authority, Schema contracts, Application integration catalog | Core policy engine, Device knowledge, Device qualification console, Device qualification runtime, Linux HID kernel module, OpenRazer native route, OpenRGB adapter, Operations CLI, Rust SDK, C++ SDK, Python SDK, Deterministic simulator, System probe |
 | [Device knowledge](../../knowledge/README.md) | Composable hardware profiles, Application integration catalog | Documentation system |
 | [Versioned bridge protocol](../../protocol/README.md) | Schema contracts | Bridge runtime, Core policy engine, Linux HID kernel module, Kernel transport adapter, Rust SDK, C++ SDK, Python SDK |
 | [OpenRGB adapter](../../integrations/openrgb/README.md) | Application integration catalog, Composable hardware profiles, C++ SDK, Error catalog | Packaging and installation |
@@ -77,12 +77,12 @@ The full list of files each part owns is in [`architecture/repository-atlas.json
 | [Device qualification console](../../apps/device-qualification/README.md) | Device qualification runtime, Composable hardware profiles | None |
 | [Rust workspace](../../crates/README.md) | Architecture authority, Schema contracts, Pinned development toolchains | Core policy engine, Kernel transport adapter, Rust SDK, System probe, Contract tests |
 | [System probe](../../crates/hfx-system-probe/README.md) | Rust workspace, Rust SDK, Composable hardware profiles | Device qualification runtime, Operations CLI |
-| [Device qualification runtime](../../crates/hfx-device-qualification/README.md) | System probe, Composable hardware profiles, Bridge runtime | Device qualification console, Operations CLI |
+| [Device qualification runtime](../../crates/hfx-device-qualification/README.md) | System probe, Composable hardware profiles, Bridge runtime, Error catalog | Device qualification console, Operations CLI |
 | [Core policy engine](../../crates/hfx-core/README.md) | Rust workspace, Composable hardware profiles, Versioned bridge protocol | Bridge runtime, Deterministic simulator |
 | [Bridge runtime](../../crates/hfx-bridge/README.md) | Core policy engine, Versioned bridge protocol, Error catalog | Production daemon, Device qualification runtime, Operations CLI |
 | [Production daemon](../../crates/hfx-daemon/README.md) | Bridge runtime, Kernel transport adapter, Linux runtime authority, Error catalog | Packaging and installation |
 | [Rust SDK](../../crates/hfx-sdk/README.md) | Rust workspace, Versioned bridge protocol, Composable hardware profiles | System probe |
-| [Operations CLI](../../crates/hfx-ops/README.md) | System probe, Device qualification runtime, Bridge runtime, Error catalog | None |
+| [Operations CLI](../../crates/hfx-ops/README.md) | System probe, Device qualification runtime, Composable hardware profiles, Bridge runtime, Error catalog | None |
 | [Kernel transport adapter](../../crates/hfx-kernel-transport/README.md) | Rust workspace, Kernel driver contract, Versioned bridge protocol | Production daemon |
 | [Deterministic simulator](../../crates/hfx-sim/README.md) | Core policy engine, Composable hardware profiles | None |
 | [Kernel driver contract](../../driver/README.md) | Architecture authority, Schema contracts | Linux HID kernel module, Kernel transport adapter |
@@ -96,7 +96,7 @@ The full list of files each part owns is in [`architecture/repository-atlas.json
 | [GitHub governance authority](../../governance/README.md) | Architecture authority, Assurance and release evidence, Verification graph | Documentation system |
 | [Documentation system](../../docs/README.md) | Architecture authority, Device knowledge, Verification graph, GitHub governance authority, Repository tooling | None |
 | [Verification graph](../../verification/README.md) | Architecture authority, Assurance and release evidence, Repository tooling, Contract tests | Documentation system, GitHub governance authority |
-| [Error catalog](../../errors/README.md) | Schema contracts | Bridge runtime, Production daemon, OpenRGB adapter, Operations CLI, C++ SDK, Python SDK |
+| [Error catalog](../../errors/README.md) | Schema contracts | Bridge runtime, Production daemon, Device qualification runtime, OpenRGB adapter, Operations CLI, C++ SDK, Python SDK |
 | [Pinned development toolchains](../../toolchains/README.md) | Architecture authority | Rust workspace, Repository tooling |
 
 Each linked folder README lists what that part owns, its key files, its limitations, and the checks to run. When ownership changes, update `architecture/repository-atlas.json` and run `./hfx generate`.

@@ -14,9 +14,10 @@ pub use dkms_migration::{
     RealMigrationHost, apply_migration, plan_migration, render_migration_preview,
 };
 pub use probe::{
-    BridgeHealth, BridgeIntegration, CommandOutput, CommandRunner, KernelModuleIdentitySnapshot,
-    OpenRazerAccessState, OpenRazerDriverProbe, OpenRazerDriverSnapshot, OpenRazerDriverState,
-    OpenRazerPublishedDevice, OpenRazerRuntimeSnapshot, OpenRazerRuntimeState, ProbeError,
-    RealCommandRunner, RealSystemProbe, ServiceState, SystemController, SystemProbe,
-    SystemSnapshot, write_private_file,
+    BridgeHealth, BridgeIntegration, CommandOutput, CommandRunner, IntegrationProjection,
+    KernelModuleIdentitySnapshot, OpenRazerAccessState, OpenRazerDriverProbe,
+    OpenRazerDriverSnapshot, OpenRazerDriverState, OpenRazerPublishedDevice,
+    OpenRazerRuntimeSnapshot, OpenRazerRuntimeState, ProbeError, RealCommandRunner,
+    RealSystemProbe, ServiceState, SystemController, SystemProbe, SystemSnapshot,
+    write_private_file,
 };

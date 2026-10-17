@@ -98,9 +98,9 @@ class DebianPlanTests(unittest.TestCase):
         self.assertEqual([name for name, _ in core.scripts], ["postinst", "postrm"])
         postinst = dict(dkms.scripts)["postinst"]
         self.assertIn(
-            '/usr/lib/dkms/common.postinst hid-hyperflux-next 2.1.0 "" "" "${2:-}"', postinst
+            '/usr/lib/dkms/common.postinst hid-hyperflux-next 2.1.1 "" "" "${2:-}"', postinst
         )
-        self.assertIn("dkms remove -m hid-hyperflux-next -v 2.1.0 --all", dict(dkms.scripts)["prerm"])
+        self.assertIn("dkms remove -m hid-hyperflux-next -v 2.1.1 --all", dict(dkms.scripts)["prerm"])
         core_postinst = dict(core.scripts)["postinst"]
         self.assertIn("systemd-sysusers hyperflux-next.conf", core_postinst)
         self.assertIn("systemd-tmpfiles --create hyperflux-next.conf", core_postinst)
@@ -215,6 +215,34 @@ class DebianDocumentationTests(unittest.TestCase):
             self.assertIn(expected, ubuntu)
         self.assertNotIn("hyperflux-next-full", ubuntu)
 
+    def test_debian_section_uses_the_dkms_signing_key(self) -> None:
+        from hfxdev.generators.distributions import markdown
+        from hfxdev.install import load_first_run_activation
+
+        text = markdown(
+            load_distribution_catalog(ROOT),
+            load_linux_runtime(ROOT),
+            load_first_run_activation(ROOT),
+            candidate_split(),
+        )
+        start = text.index("## Ubuntu 24.04 (CI-built, not published yet)")
+        debian_start = text.index("## Debian 13 (CI-built, not published yet)")
+        self.assertLess(start, debian_start)
+        ubuntu = text[start:debian_start]
+        debian = text[debian_start:]
+        self.assertIn("no Full edition for Ubuntu.", ubuntu)
+        for expected in (
+            "(`trixie`)",
+            "no Full edition for Debian.",
+            "### Secure Boot on Debian",
+            "sudo mokutil --import /var/lib/dkms/mok.pub",
+            "glibc 2.41 that Debian 13 ships",
+            "modinfo -F signer hid_hyperflux_next",
+        ):
+            self.assertIn(expected, debian)
+        self.assertNotIn("update-secureboot-policy", debian)
+        self.assertNotIn("hyperflux-next-full", debian)
+
 
 class DebianBuildTests(unittest.TestCase):
     @classmethod
@@ -291,6 +319,11 @@ class DebianBuildTests(unittest.TestCase):
                 self.assertEqual(conffiles.read(), b"/etc/hyperflux-next/bridge.json\n")
 
     def test_distro_command_writes_a_schema_shaped_manifest(self) -> None:
+        for distribution, codename in (("ubuntu", "noble"), ("debian", "trixie")):
+            with self.subTest(distribution=distribution):
+                self._distro_command(distribution, codename)
+
+    def _distro_command(self, distribution: str, codename: str) -> None:
         schema = json.loads(
             (ROOT / "schemas" / "debian-package-build.schema.json").read_text(encoding="utf-8")
         )
@@ -329,15 +362,15 @@ class DebianBuildTests(unittest.TestCase):
                 mock.patch.object(distribution_debian, "load_arch_split", return_value=self.split),
             ):
                 result = build_distribution_package(
-                    ROOT, build_manifest, "ubuntu", workspace / "out"
+                    ROOT, build_manifest, distribution, workspace / "out"
                 )
-            self.assertEqual(result.distribution, "ubuntu")
+            self.assertEqual(result.distribution, distribution)
             self.assertEqual(result.architecture, "amd64")
             manifest = json.loads(result.manifest.read_text(encoding="utf-8"))
             self.assertEqual(set(manifest), set(schema["required"]))
             self.assertEqual(manifest["schema"], schema["properties"]["schema"]["const"])
             self.assertEqual(manifest["$schema"], schema["$id"])
-            self.assertEqual(manifest["release"]["codename"], "noble")
+            self.assertEqual(manifest["release"]["codename"], codename)
             self.assertEqual(manifest["maturity"], "ci-only")
             package_schema = schema["$defs"]["package"]
             for package in manifest["packages"]:
@@ -362,7 +395,7 @@ class DistributionDispatchTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             with self.assertRaisesRegex(ModelError, "only the Arch production package target"):
                 build_distribution_package(
-                    ROOT, Path(temporary) / "missing.json", "fedora", Path(temporary) / "out"
+                    ROOT, Path(temporary) / "missing.json", "gentoo", Path(temporary) / "out"
                 )
 
 

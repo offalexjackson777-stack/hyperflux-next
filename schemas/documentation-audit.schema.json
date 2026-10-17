@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://hyperflux.dev/schemas/documentation-audit-v2.json",
+  "$id": "https://hyperflux.dev/schemas/documentation-audit-v3.json",
   "title": "HyperFlux documentation and render audit",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "schema", "source_revision", "inputs", "render", "visual_review", "verification"],
+  "required": ["$schema", "schema", "source_revision", "inputs", "render", "visual_review", "publication"],
   "properties": {
     "$schema": {"const": "../schemas/documentation-audit.schema.json"},
-    "schema": {"const": "hyperflux-documentation-audit-v2"},
+    "schema": {"const": "hyperflux-documentation-audit-v3"},
     "source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
     "inputs": {
       "type": "object",
@@ -28,12 +28,12 @@
       "properties": {
         "status": {"const": "passed"},
         "result_sha256": {"$ref": "#/$defs/digest"},
-        "document_count": {"type": "integer", "minimum": 1, "maximum": 64},
-        "check_count": {"type": "integer", "minimum": 6, "maximum": 384},
+        "document_count": {"type": "integer", "minimum": 1, "maximum": 96},
+        "check_count": {"type": "integer", "minimum": 6, "maximum": 576},
         "screenshot_count": {"const": 108},
         "issue_count": {"const": 0},
         "outbound_network_requests": {"const": 0},
-        "external_image_placeholders": {"type": "integer", "minimum": 0, "maximum": 64},
+        "external_image_placeholders": {"type": "integer", "minimum": 1, "maximum": 64},
         "viewport_widths": {"const": [375, 768, 1280]},
         "themes": {"const": ["light", "dark"]},
         "screenshot_manifest_sha256": {"$ref": "#/$defs/digest"},
@@ -67,22 +67,16 @@
         }
       }
     },
-    "verification": {
+    "publication": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["fast_run_id", "fast_evidence_sha256", "fast_result_sha256", "full_run_id", "full_source_revision", "full_evidence_sha256", "full_result_sha256", "second_generation_identical", "links", "privacy", "release_gate_changes"],
+      "required": ["release_gate_changes"],
       "properties": {
-        "fast_run_id": {"type": "string", "pattern": "^hfxv-[0-9a-f]{20}$"},
-        "fast_evidence_sha256": {"$ref": "#/$defs/digest"},
-        "fast_result_sha256": {"$ref": "#/$defs/digest"},
-        "full_run_id": {"type": "string", "pattern": "^hfxv-[0-9a-f]{20}$"},
-        "full_source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
-        "full_evidence_sha256": {"$ref": "#/$defs/digest"},
-        "full_result_sha256": {"$ref": "#/$defs/digest"},
-        "second_generation_identical": {"const": true},
-        "links": {"const": "passed"},
-        "privacy": {"const": "passed"},
-        "release_gate_changes": {"const": []}
+        "release_gate_changes": {
+          "type": "array",
+          "maxItems": 1,
+          "items": {"const": "HFX-GATE-PUBLICATION-DECISION"}
+        }
       }
     }
   },

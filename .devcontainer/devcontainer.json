@@ -16,7 +16,7 @@
     "storage": "24gb"
   },
   "name": "HyperFlux Next",
-  "postCreateCommand": "./hfx upstream prepare --output .hfx/upstreams && CARGO_NET_OFFLINE=false cargo fetch --locked",
+  "postCreateCommand": "./hfx upstream prepare --output .hfx/upstreams && CARGO_NET_OFFLINE=false cargo fetch --locked && install -d .hfx/documentation-render && install -m 0644 toolchains/documentation-render/package.json toolchains/documentation-render/package-lock.json .hfx/documentation-render/ && npm ci --prefix .hfx/documentation-render --ignore-scripts --no-audit --no-fund --no-update-notifier --cache /tmp/hfx-home/npm",
   "remoteUser": "hyperflux",
   "updateRemoteUserUID": true,
   "workspaceFolder": "/workspaces/hyperflux-next"

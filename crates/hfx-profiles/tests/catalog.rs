@@ -58,7 +58,7 @@ fn receiver_and_children_resolve_independently() {
         mouse_native.support_level,
         SupportLevel::ProductionQualified
     );
-    assert_eq!(mouse.qualification_migrations.len(), 3);
+    assert_eq!(mouse.qualification_migrations.len(), 4);
     assert_eq!(keyboard.device_kind, DeviceKind::Keyboard);
     let lifecycle = keyboard
         .lifecycle
@@ -84,13 +84,13 @@ fn receiver_and_children_resolve_independently() {
         keyboard_native.support_level,
         SupportLevel::ProductionQualified
     );
-    assert_eq!(keyboard.qualification_migrations.len(), 6);
+    assert_eq!(keyboard.qualification_migrations.len(), 7);
     let current_migration = keyboard
         .qualification_migrations
         .iter()
         .find(|migration| {
             migration.from_runtime_sha256
-                == "46703d44d594392e0cb289f6151a7c6b3b200805503a4cf036747d3c347f0d63"
+                == "6a322a5f384bcc8d2ddf40ce9940173e9f4e0bda6e72277451f8c16ef34c02be"
         })
         .expect("the immediately preceding keyboard profile remains qualified");
     assert_eq!(
@@ -107,6 +107,34 @@ fn receiver_and_children_resolve_independently() {
         .expect("the original map qualification remains available");
     assert_eq!(oldest_migration.preserve_stage_roles, &["lighting", "map"]);
     assert_ne!(mouse.id, keyboard.id);
+}
+
+#[test]
+fn only_the_exact_mouse_profile_decodes_the_charge_field() {
+    let mouse = child_profile_by_product_id(0x00cd).expect("mouse is qualified");
+    let keyboard = child_profile_by_product_id(0x0296).expect("keyboard is qualified");
+    let mouse_passive = mouse.passive.expect("mouse has a passive decoder");
+    assert_eq!(mouse_passive.charge_charging, &[1]);
+    assert_eq!(mouse_passive.charge_not_charging, &[0]);
+    let keyboard_passive = keyboard.passive.expect("keyboard has a passive decoder");
+    assert!(keyboard_passive.charge_charging.is_empty());
+    assert!(keyboard_passive.charge_not_charging.is_empty());
+}
+
+#[test]
+fn only_the_exact_keyboard_profile_decodes_the_route_word_charge() {
+    let mouse = child_profile_by_product_id(0x00cd).expect("mouse is qualified");
+    let keyboard = child_profile_by_product_id(0x0296).expect("keyboard is qualified");
+    let keyboard_passive = keyboard.passive.expect("keyboard has a passive decoder");
+    assert_eq!(keyboard_passive.route_charge_charging, &[1, 257]);
+    assert_eq!(keyboard_passive.route_charge_discharging, &[0]);
+    // The route decoding itself is unchanged.
+    assert_eq!(keyboard_passive.route_available, &[0, 3]);
+    assert_eq!(keyboard_passive.route_unavailable, &[2]);
+    assert_eq!(keyboard_passive.route_indeterminate, &[257]);
+    let mouse_passive = mouse.passive.expect("mouse has a passive decoder");
+    assert!(mouse_passive.route_charge_charging.is_empty());
+    assert!(mouse_passive.route_charge_discharging.is_empty());
 }
 
 #[test]

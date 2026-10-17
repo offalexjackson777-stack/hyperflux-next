@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
-"""Debian-format packages for a Core-only target such as Ubuntu 24.04.
+"""Debian-format packages for the Core-only Ubuntu 24.04 and Debian 13 targets.
 
 The Arch split authority already partitions the Core edition into the
 outputs that own its files: the DKMS receiver sources and the bridge
@@ -163,6 +163,12 @@ def target_outputs(split: ArchSplit, target: DistributionTarget) -> tuple[SplitO
 
     if target.package_format != "deb":
         raise ModelError(f"distribution {target.id} is not a Debian-format target")
+    return edition_outputs(split, target)
+
+
+def edition_outputs(split: ArchSplit, target: DistributionTarget) -> tuple[SplitOutput, ...]:
+    """The split outputs of the editions a target carries, in split order."""
+
     outputs = tuple(output for output in split.outputs if output.edition in target.components)
     if {output.edition for output in outputs} != set(target.components):
         raise ModelError(f"distribution {target.id}: an edition has no split outputs")
@@ -219,7 +225,9 @@ def _scripts(output: SplitOutput, runtime: LinuxRuntime) -> tuple[tuple[str, str
         reload.append("  udevadm control --reload || true")
     if reload:
         # Only a running systemd can be reloaded. Units stay disabled and
-        # stopped: first run enables them explicitly, then reboots.
+        # stopped: first run enables them explicitly, then reboots. Removal
+        # never stops them either, as on Arch: the removal steps in the
+        # generated distribution page turn them off first.
         guarded = ["if [ -d /run/systemd/system ]; then", *reload, "fi"]
         configure.extend(guarded)
         after_remove.extend(guarded)
@@ -330,15 +338,21 @@ def debian_plans(
                 codename=release.codename,
             )
         )
-    _check_edition_contract(plans, outputs, target)
+    check_edition_contract(plans, outputs, target)
     return tuple(plans)
 
 
-def _check_edition_contract(
-    plans: list[DebianPlan],
+def check_edition_contract(
+    plans: list,
     outputs: tuple[SplitOutput, ...],
     target: DistributionTarget,
 ) -> None:
+    """Fail unless each edition's packages declare exactly its catalog contract.
+
+    Plans of either package format expose `package_name`, `depends`,
+    `conflicts`, `provides` and `replaces` in the target's own relation syntax.
+    """
+
     names = {plan.package_name for plan in plans}
     for edition, component in target.components.items():
         members = [

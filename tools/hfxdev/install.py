@@ -105,6 +105,12 @@ class FirstRunActivation:
         socket = runtime.desktop_access.socket_unit.replace("@.", "@$(id -u).")
         return f'sudo systemctl enable {runtime.bridge.service_unit} "{socket}"'
 
+    def disable_command(self, runtime: LinuxRuntime) -> str:
+        """Turn the units off before removal; packages never stop them."""
+
+        socket = runtime.desktop_access.socket_unit.replace("@.", "@$(id -u).")
+        return f'sudo systemctl disable --now {runtime.bridge.service_unit} "{socket}"'
+
     def activation_command(self) -> str:
         return "sudo reboot"
 

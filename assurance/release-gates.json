@@ -2,7 +2,7 @@
   "$schema": "../schemas/release-gates.schema.json",
   "schema": "hyperflux-release-gates-v3",
   "target": {
-    "product_version": "2.1.0",
+    "product_version": "2.1.1",
     "package_release": 1,
     "state": "published-arch-release"
   },

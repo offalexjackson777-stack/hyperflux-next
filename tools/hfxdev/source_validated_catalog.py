@@ -31,6 +31,16 @@ PUBLIC_SUPPORT_TIERS = (
     SOURCE_QUALIFIED_OPERATIONAL,
     UPSTREAM_BLOCKED_OR_RESEARCH_ONLY,
 )
+# A documentation-only refinement of SOURCE_QUALIFIED_OPERATIONAL: device owners
+# sent hardware reports that passed ./hfx qualification ingest. It never changes
+# runtime behaviour and never stands in for PHYSICALLY_PROVEN.
+OWNER_CONFIRMED = "owner-confirmed"
+DOCUMENTED_SUPPORT_TIERS = (
+    PHYSICALLY_PROVEN,
+    OWNER_CONFIRMED,
+    SOURCE_QUALIFIED_OPERATIONAL,
+    UPSTREAM_BLOCKED_OR_RESEARCH_ONLY,
+)
 
 
 def public_support_tier(device: dict[str, Any]) -> str:
@@ -46,6 +56,25 @@ def public_support_tier(device: dict[str, Any]) -> str:
     if operational:
         return SOURCE_QUALIFIED_OPERATIONAL
     return UPSTREAM_BLOCKED_OR_RESEARCH_ONLY
+
+
+def documented_support_tier(
+    device: dict[str, Any], owner_confirmed: dict[str, tuple[int, ...]]
+) -> str:
+    """The tier the public pages show, with owner reports layered on top."""
+    tier = public_support_tier(device)
+    if tier == SOURCE_QUALIFIED_OPERATIONAL and device["route_id"] in owner_confirmed:
+        return OWNER_CONFIRMED
+    return tier
+
+
+def documented_support_tier_counts(
+    devices: list[dict[str, Any]], owner_confirmed: dict[str, tuple[int, ...]]
+) -> dict[str, int]:
+    counts = {tier: 0 for tier in DOCUMENTED_SUPPORT_TIERS}
+    for device in devices:
+        counts[documented_support_tier(device, owner_confirmed)] += 1
+    return counts
 
 
 def public_support_tier_counts(devices: list[dict[str, Any]]) -> dict[str, int]:

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use crate::{
-    HfxUapiBeginSession, HfxUapiEndSession, HfxUapiInfo, HfxUapiNativeExchangeResult,
-    HfxUapiNativeExchangeSubmit, HfxUapiReadObservations, HfxUapiSubmit, HfxUapiTransactionResult,
-    ioctl_sys,
+    HfxUapiBeginSession, HfxUapiChildBattery, HfxUapiEndSession, HfxUapiInfo,
+    HfxUapiNativeExchangeResult, HfxUapiNativeExchangeSubmit, HfxUapiReadObservations,
+    HfxUapiSubmit, HfxUapiTransactionResult, ioctl_sys,
 };
 use rustix::fs::{Mode, OFlags, open};
 use rustix::time::{ClockId, clock_gettime};
@@ -115,6 +115,14 @@ pub trait KernelIo {
     /// Returns an error when the passive read cannot complete.
     fn read_observations(&self, request: &mut HfxUapiReadObservations)
     -> Result<(), KernelIoError>;
+    /// Forwards one bridge-decoded child battery state for publication.
+    ///
+    /// The kernel publishes exactly this state and never queries the device.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the kernel rejects the state or the writer file.
+    fn report_child_battery(&self, request: HfxUapiChildBattery) -> Result<(), KernelIoError>;
 }
 
 #[derive(Debug)]
@@ -209,5 +217,9 @@ impl KernelIo for LinuxKernelIo {
         request: &mut HfxUapiReadObservations,
     ) -> Result<(), KernelIoError> {
         ioctl_sys::read_observations(&self.file, request).map_err(KernelIoError::from_rustix)
+    }
+
+    fn report_child_battery(&self, request: HfxUapiChildBattery) -> Result<(), KernelIoError> {
+        ioctl_sys::report_child_battery(&self.file, request).map_err(KernelIoError::from_rustix)
     }
 }

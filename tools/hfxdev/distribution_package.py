@@ -668,6 +668,17 @@ def build_distribution_package(
             catalog=catalog,
             target=target,
         )
+    if target is not None and target.package_format == "rpm":
+        from .distribution_rpm import build_rpm_distribution
+
+        return build_rpm_distribution(
+            root=root,
+            build_manifest=build_manifest,
+            output=output,
+            runtime=runtime,
+            catalog=catalog,
+            target=target,
+        )
     if distribution != "arch" or target is None:
         raise ModelError("only the Arch production package target is active")
     artifacts = load_artifact_set(root, build_manifest)

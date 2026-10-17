@@ -15,9 +15,12 @@ import time
 
 from .development import (
     CARGO_CACHE_PATH,
+    DOCUMENTATION_RENDER_NODE_MODULES,
+    documentation_render_prepare_command,
     load_development_environment,
     networked_software_prepare_command,
 )
+from .documentation_preview import RELEASE_EVIDENCE_MODES
 from .model import ModelError
 
 
@@ -32,6 +35,7 @@ MAX_IMAGE_ID_OUTPUT_BYTES = 1_024
 MAX_IMAGE_IDENTITY_FILE_BYTES = 262_144
 IMAGE_INSPECTION_TIMEOUT_SECONDS = 20
 IMAGE_CLEANUP_TIMEOUT_SECONDS = 10
+DOCUMENTATION_RENDER_CHROMIUM = "/usr/bin/chromium"
 
 
 @dataclass(frozen=True)
@@ -136,12 +140,20 @@ def container_invocation(
     uid: int | None = None,
     gid: int | None = None,
     openrgb_qualification: Path | None = None,
+    release_evidence: str | None = None,
 ) -> ContainerInvocation:
     root = root.resolve()
     environment = load_development_environment(root)
     engine_path = _engine(engine)
     image = _image(image)
     revision = _changed_revision(changed_from)
+    if release_evidence is not None and (
+        operation != "verify" or release_evidence not in RELEASE_EVIDENCE_MODES
+    ):
+        raise ModelError(
+            "release evidence mode applies only to CI verify and must be "
+            + " or ".join(RELEASE_EVIDENCE_MODES)
+        )
     if operation == "prepare":
         if (
             output is not None
@@ -170,6 +182,8 @@ def container_invocation(
         ]
         if revision is not None:
             hfx_command.extend(["--changed-from", revision])
+        if release_evidence is not None:
+            hfx_command.extend(["--release-evidence", release_evidence])
         if openrgb_qualification is not None:
             if lane != "full":
                 raise ModelError(
@@ -217,6 +231,43 @@ def container_invocation(
             "--output",
             _relative_output(root, output, "CI package artifact output"),
         ]
+    elif operation == "docs-prepare":
+        if (
+            output is not None
+            or lane is not None
+            or revision is not None
+            or openrgb_qualification is not None
+        ):
+            raise ModelError(
+                "documentation render preparation accepts no lane, output, or changed revision"
+            )
+        network = "bridge"
+        qualification = None
+        hfx_command = [
+            "/bin/bash",
+            "-lc",
+            'install -d -m 0700 "$HOME" && ' + documentation_render_prepare_command(),
+        ]
+    elif operation == "docs-render":
+        if output is None or lane is not None or openrgb_qualification is not None:
+            raise ModelError(
+                "documentation render requires an output and accepts only a changed revision"
+            )
+        network = "none"
+        qualification = None
+        hfx_command = [
+            "./hfx",
+            "docs",
+            "render",
+            "--output",
+            _relative_output(root, output, "documentation render output"),
+            "--chromium",
+            DOCUMENTATION_RENDER_CHROMIUM,
+            "--node-modules",
+            DOCUMENTATION_RENDER_NODE_MODULES,
+        ]
+        if revision is not None:
+            hfx_command.extend(["--changed-from", revision])
     else:
         raise ModelError(f"unsupported CI operation: {operation}")
 
@@ -261,7 +312,12 @@ def container_invocation(
             f"{root}:{environment.workspace_path}:rw",
         ]
     )
-    if operation in {"verify", "openrgb-qualification-prepare", "package-artifacts"}:
+    if operation in {
+        "verify",
+        "openrgb-qualification-prepare",
+        "package-artifacts",
+        "docs-render",
+    }:
         command.extend(("--env", f"{PINNED_VERIFICATION_ENVIRONMENT}=1"))
     if operation == "verify" and qualification is not None:
         command.extend(

@@ -1,0 +1,37 @@
+{
+  "$schema": "../schemas/owner-report-policy.schema.json",
+  "schema": "hyperflux-owner-report-policy-v1",
+  "report": {
+    "schema": "hyperflux-local-qualification-v1",
+    "schema_path": "apps/device-qualification/contracts/local-qualification-view.schema.json",
+    "producer": "hyperfluxctl qualification",
+    "companion_endpoint": "http://127.0.0.1:47821",
+    "companion_states": ["ready"],
+    "minimum_version": "2.1.0",
+    "maximum_bytes": 4194304,
+    "refused_finding_severities": ["error", "critical"]
+  },
+  "receiver": {
+    "profile_kind": "receiver",
+    "lifecycles": ["active"],
+    "require_current_profile_digest": true
+  },
+  "device": {
+    "eligible_tier": "source-qualified-operational",
+    "presence": ["active", "sleeping"],
+    "support": ["unknown", "identified"]
+  },
+  "confirmations": {
+    "required": ["input"],
+    "lighting": [
+      {"id": "openrazer-lighting", "integration": "openrazer"},
+      {"id": "openrgb-lighting", "integration": "openrgb"}
+    ]
+  },
+  "minimum_reports": 1,
+  "limitations": [
+    "The owner's confirmations are their own account; no maintainer watched the device.",
+    "The report only reads what the HyperFlux service already knows. It does not send lighting changes or read firmware.",
+    "This does not make the device tested on real hardware. That still needs a device profile and the maintainer's real-hardware checks."
+  ]
+}

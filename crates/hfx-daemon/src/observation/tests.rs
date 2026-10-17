@@ -242,6 +242,188 @@ fn qualified_mouse_decoder_projects_identity_contact_route_and_battery() {
     assert_eq!(battery.restore_ready, None);
 }
 
+fn charge_after_contact(
+    translator: &mut PassiveObservationTranslator,
+    sequence: u64,
+    contact: Option<u32>,
+    charge: u32,
+) -> PassiveTranslation {
+    if let Some(contact) = contact {
+        translator
+            .translate(raw(
+                sequence - 1,
+                HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CONTACT_RAW,
+                HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+                contact,
+            ))
+            .expect("contact translates");
+    }
+    translator
+        .translate(raw(
+            sequence,
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CHARGE_RAW,
+            HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            charge,
+        ))
+        .expect("charge translates")
+}
+
+#[test]
+fn qualified_mouse_charge_field_reads_in_the_context_of_its_report() {
+    let mut translator = translator();
+    identify(
+        &mut translator,
+        1,
+        HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+        0x00cd,
+    );
+    translator
+        .translate(raw(
+            2,
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW,
+            HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            200,
+        ))
+        .expect("battery translates");
+
+    let off_mat = charge_after_contact(&mut translator, 4, Some(0), 0);
+    assert_eq!(off_mat.disposition, PassiveDisposition::Applied);
+    assert!(off_mat.observations.is_empty());
+    assert_eq!(off_mat.restore_ready, None);
+    assert_eq!(
+        off_mat.charge,
+        Some((ChildBatteryLane::Pointer, ChildChargeReading::Discharging))
+    );
+
+    // (sequence, contact in the same report, charge field, decoded reading)
+    let cases = [
+        // Only byte 3 = 00 proves discharging; a not-charging value beside
+        // any other byte 3 value stays unknown.
+        (6, Some(1), 0, ChildChargeReading::Unknown),
+        (8, Some(1), 1, ChildChargeReading::Charging),
+        (10, Some(0), 1, ChildChargeReading::Charging),
+        (12, Some(0), 7, ChildChargeReading::Unknown),
+        (14, Some(9), 0, ChildChargeReading::Unknown),
+        // The contact of the previous report was already consumed.
+        (15, None, 0, ChildChargeReading::Unknown),
+        // Byte 3 read 06 on a USB cable: charging still reads charging, and
+        // not charging beside it is unknown.
+        (17, Some(6), 1, ChildChargeReading::Charging),
+        (19, Some(6), 0, ChildChargeReading::Unknown),
+        (21, Some(6), 7, ChildChargeReading::Unknown),
+    ];
+    for (sequence, contact, charge, expected) in cases {
+        let translation = charge_after_contact(&mut translator, sequence, contact, charge);
+        assert_eq!(
+            translation.charge,
+            Some((ChildBatteryLane::Pointer, expected)),
+            "contact {contact:?} with charge {charge}"
+        );
+    }
+
+    // A contact that is not immediately before the charge field belongs to
+    // another report and proves nothing about this one.
+    translator
+        .translate(raw(
+            22,
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CONTACT_RAW,
+            HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            0,
+        ))
+        .expect("contact translates");
+    let gap = charge_after_contact(&mut translator, 24, None, 0);
+    assert_eq!(
+        gap.charge,
+        Some((ChildBatteryLane::Pointer, ChildChargeReading::Unknown))
+    );
+}
+
+#[test]
+fn the_observed_cable_plug_in_reads_discharging_then_charging() {
+    let mut translator = translator();
+    identify(
+        &mut translator,
+        1,
+        HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+        0x00cd,
+    );
+    // Each status report arrives as battery, byte 3 and charge fields with
+    // consecutive sequence numbers. On plug-in the first report still read
+    // byte 3 = 00 and charge 00; the next read byte 3 = 06 and charge 01.
+    let mut sequence = 2;
+    let mut report = |byte3, charge| {
+        translator
+            .translate(raw(
+                sequence,
+                HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW,
+                HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+                0xcd,
+            ))
+            .expect("battery translates");
+        let translation = charge_after_contact(&mut translator, sequence + 2, Some(byte3), charge);
+        sequence += 3;
+        translation.charge
+    };
+    assert_eq!(
+        report(0x00, 0x00),
+        Some((ChildBatteryLane::Pointer, ChildChargeReading::Discharging))
+    );
+    assert_eq!(
+        report(0x06, 0x01),
+        Some((ChildBatteryLane::Pointer, ChildChargeReading::Charging))
+    );
+}
+
+#[test]
+fn charge_without_a_qualified_decoder_or_lane_is_ignored() {
+    let mut translator = translator();
+    let charge = |translator: &mut PassiveObservationTranslator, sequence, slot| {
+        translator
+            .translate(raw(
+                sequence,
+                HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CHARGE_RAW,
+                slot,
+                1,
+            ))
+            .expect("charge translates")
+    };
+
+    for slot in [
+        HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+        HFX_UAPI_ENDPOINT_SLOT_RECEIVER,
+    ] {
+        let unbound = charge(&mut translator, 1, slot);
+        assert_eq!(unbound.disposition, PassiveDisposition::IgnoredUnknownLane);
+        assert_eq!(unbound.charge, None);
+    }
+
+    identify(
+        &mut translator,
+        2,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x0296,
+    );
+    let keyboard = charge(&mut translator, 3, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE);
+    assert_eq!(
+        keyboard.disposition,
+        PassiveDisposition::IgnoredUnqualifiedSemantic
+    );
+    assert_eq!(keyboard.charge, None);
+
+    identify(
+        &mut translator,
+        4,
+        HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+        0x1234,
+    );
+    let unknown = charge(&mut translator, 5, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE);
+    assert_eq!(
+        unknown.disposition,
+        PassiveDisposition::IgnoredUnqualifiedSemantic
+    );
+    assert_eq!(unknown.charge, None);
+}
+
 #[test]
 fn qualified_keyboard_route_decoder_preserves_available_and_unavailable() {
     let mut translator = translator();
@@ -441,6 +623,246 @@ fn externally_powered_keyboard_route_cannot_override_observed_activity() {
         PassiveDisposition::IgnoredIndeterminateSemantic
     );
     assert!(route.observations.is_empty());
+}
+
+/// One keyboard status report: the kernel emits its battery level and then
+/// its route word, power source high and charge low, at consecutive
+/// sequence numbers.
+fn keyboard_status_report(
+    translator: &mut PassiveObservationTranslator,
+    sequence: u64,
+    word: u32,
+) -> PassiveTranslation {
+    translator
+        .translate(raw(
+            sequence,
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW,
+            HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+            0xe1,
+        ))
+        .expect("battery translates");
+    translator
+        .translate(raw(
+            sequence + 1,
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ROUTE_RAW,
+            HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+            word,
+        ))
+        .expect("route translates")
+}
+
+#[test]
+fn keyboard_status_route_word_reads_the_charge_state_without_changing_the_route() {
+    let mut translator = translator();
+    identify(
+        &mut translator,
+        1,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x0296,
+    );
+    // (route word, decoded charge, route disposition kept as before)
+    let cases = [
+        // On the cable; the route stays indeterminate.
+        (
+            0x0101,
+            ChildChargeReading::Charging,
+            PassiveDisposition::IgnoredIndeterminateSemantic,
+        ),
+        // Charge bit only, around plug-in and unplug; the route stays
+        // unqualified.
+        (
+            0x0001,
+            ChildChargeReading::Charging,
+            PassiveDisposition::IgnoredUnqualifiedSemantic,
+        ),
+        // Off the cable; the route still reads available.
+        (
+            0x0000,
+            ChildChargeReading::Discharging,
+            PassiveDisposition::Applied,
+        ),
+        // Power source without charging, as expected at a full battery or a
+        // charge limit, was never observed and stays unknown.
+        (
+            0x0100,
+            ChildChargeReading::Unknown,
+            PassiveDisposition::IgnoredUnqualifiedSemantic,
+        ),
+        (
+            0x0003,
+            ChildChargeReading::Unknown,
+            PassiveDisposition::Applied,
+        ),
+        (
+            0x0002,
+            ChildChargeReading::Unknown,
+            PassiveDisposition::Applied,
+        ),
+        (
+            0x0601,
+            ChildChargeReading::Unknown,
+            PassiveDisposition::IgnoredUnqualifiedSemantic,
+        ),
+    ];
+    let mut sequence = 2;
+    for (word, reading, disposition) in cases {
+        let translation = keyboard_status_report(&mut translator, sequence, word);
+        sequence += 2;
+        assert_eq!(
+            translation.charge,
+            Some((ChildBatteryLane::Keyboard, reading)),
+            "route word {word:#06x}"
+        );
+        assert_eq!(
+            translation.disposition, disposition,
+            "route word {word:#06x}"
+        );
+        assert_eq!(
+            translation.observations.is_empty(),
+            disposition != PassiveDisposition::Applied,
+            "route word {word:#06x}"
+        );
+    }
+}
+
+#[test]
+fn the_observed_cable_unplug_reads_charging_until_the_charge_bit_clears() {
+    let mut translator = translator();
+    identify(
+        &mut translator,
+        1,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x0296,
+    );
+    let mut sequence = 2;
+    let mut report = |word| {
+        let translation = keyboard_status_report(&mut translator, sequence, word);
+        sequence += 2;
+        translation.charge
+    };
+    for (word, reading) in [
+        (0x0101, ChildChargeReading::Charging),
+        (0x0001, ChildChargeReading::Charging),
+        (0x0000, ChildChargeReading::Discharging),
+    ] {
+        assert_eq!(report(word), Some((ChildBatteryLane::Keyboard, reading)));
+    }
+}
+
+#[test]
+fn only_a_route_word_right_after_its_battery_level_reads_a_charge() {
+    let mut translator = translator();
+    let route = |translator: &mut PassiveObservationTranslator, sequence, slot, word| {
+        translator
+            .translate(raw(
+                sequence,
+                HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ROUTE_RAW,
+                slot,
+                word,
+            ))
+            .expect("route translates")
+    };
+    let battery = |translator: &mut PassiveObservationTranslator, sequence, slot| {
+        translator
+            .translate(raw(
+                sequence,
+                HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW,
+                slot,
+                0xe1,
+            ))
+            .expect("battery translates");
+    };
+
+    let unbound = route(
+        &mut translator,
+        1,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x0101,
+    );
+    assert_eq!(unbound.disposition, PassiveDisposition::IgnoredUnknownLane);
+    assert_eq!(unbound.charge, None);
+
+    // The identity report emits its route value right after the product
+    // identity, never after a battery level.
+    identify(
+        &mut translator,
+        2,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x0296,
+    );
+    let identity_route = route(&mut translator, 3, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 0);
+    assert_eq!(identity_route.charge, None);
+
+    // A battery level followed by an identity report: the identity resets the
+    // lane, so its route value is still not a status-report word.
+    battery(&mut translator, 4, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE);
+    identify(
+        &mut translator,
+        5,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x0296,
+    );
+    let replayed = route(&mut translator, 6, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 0);
+    assert_eq!(replayed.charge, None);
+
+    // A gap means the route word belongs to another report.
+    battery(&mut translator, 7, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE);
+    let gap = route(&mut translator, 9, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 0);
+    assert_eq!(gap.charge, None);
+
+    // One battery level pairs with one route word only.
+    let paired = keyboard_status_report(&mut translator, 10, 0);
+    assert_eq!(
+        paired.charge,
+        Some((ChildBatteryLane::Keyboard, ChildChargeReading::Discharging))
+    );
+    let repeated = route(&mut translator, 12, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 0);
+    assert_eq!(repeated.charge, None);
+
+    // A sibling's battery level does not pair with the keyboard route word.
+    identify(
+        &mut translator,
+        13,
+        HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+        0x00cd,
+    );
+    battery(&mut translator, 14, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE);
+    let sibling = route(&mut translator, 15, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 0);
+    assert_eq!(sibling.charge, None);
+
+    // The mouse profile has no route charge decoder.
+    battery(&mut translator, 16, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE);
+    let mouse = route(&mut translator, 17, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE, 0);
+    assert_eq!(mouse.charge, None);
+
+    // A conflicting identity between the battery level and the route value
+    // keeps the lane but still breaks the pairing.
+    battery(&mut translator, 18, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE);
+    let conflict = identify(
+        &mut translator,
+        19,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x1234,
+    );
+    assert_eq!(conflict.disposition, PassiveDisposition::IdentityConflict);
+    let after_conflict = route(&mut translator, 20, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 0);
+    assert_eq!(after_conflict.charge, None);
+
+    // An unknown child inherits no decoder at all.
+    let mut translator = self::translator();
+    identify(
+        &mut translator,
+        1,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x1234,
+    );
+    battery(&mut translator, 2, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE);
+    let unknown = route(&mut translator, 3, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 0);
+    assert_eq!(
+        unknown.disposition,
+        PassiveDisposition::IgnoredUnqualifiedSemantic
+    );
+    assert_eq!(unknown.charge, None);
 }
 
 #[test]
@@ -940,4 +1362,96 @@ fn activity_between_suspend_and_active_remains_the_one_readiness_signal() {
         continuous.epoch_sequence,
         SequenceNumber::try_from(4).unwrap()
     );
+}
+
+#[test]
+fn battery_lane_maps_only_identified_children_to_their_lane_and_model() {
+    let mut translator = translator();
+    let identity = identify(
+        &mut translator,
+        1,
+        HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+        0x00cd,
+    );
+    let LifecycleObservationKind::RegisterDevice(child) = &identity.observations[0].kind else {
+        panic!("identity registers the child");
+    };
+    let (lane, model_name) = translator
+        .battery_lane(child.device_id())
+        .expect("identified child has a battery lane");
+    assert_eq!(lane, ChildBatteryLane::Pointer);
+    assert_eq!(
+        Some(model_name),
+        translator
+            .catalog
+            .child(ProductId::try_from(0x00cd_u16).expect("product id is valid"))
+            .map(|profile| profile.model_name)
+    );
+
+    let other = LogicalDeviceId::try_from("paired-keyboard-0000").expect("device id is valid");
+    assert_eq!(translator.battery_lane(&other), None);
+}
+
+#[test]
+fn wired_child_pid_zero_identity_is_rejected_and_keeps_the_wireless_mouse() {
+    // A Basilisk on its USB cable makes the receiver send `05 3b 01 00 00`.
+    // The kernel drops that report; this pins the daemon's second safety net.
+    let mut translator = translator();
+    let identity = identify(
+        &mut translator,
+        1,
+        HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+        0x00cd,
+    );
+    let LifecycleObservationKind::RegisterDevice(child) = &identity.observations[0].kind else {
+        panic!("identity registers the child");
+    };
+    let mouse = child.device_id().clone();
+    assert_eq!(mouse.as_str(), "paired-mouse-00cd");
+
+    for (sequence, product_id) in [(2, 0x0000), (3, 0xffff)] {
+        let mut observation = raw(
+            sequence,
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_PRODUCT_ID,
+            HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            product_id,
+        );
+        observation.confidence = HFX_UAPI_OBSERVATION_CONFIDENCE_EXACT;
+        assert!(matches!(
+            translator.translate(observation),
+            Err(PassiveTranslationError::InvalidObservationValue)
+        ));
+        assert_eq!(
+            translator.battery_lane(&mouse).map(|(lane, _)| lane),
+            Some(ChildBatteryLane::Pointer)
+        );
+    }
+
+    // The same child keeps its lane: later pointer reports still name it and
+    // a repeated 00CD identity is not an identity conflict.
+    let contact = translator
+        .translate(raw(
+            4,
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CONTACT_RAW,
+            HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+            1,
+        ))
+        .expect("contact translates");
+    assert_eq!(contact.disposition, PassiveDisposition::Applied);
+    assert!(matches!(
+        &contact.observations[0].kind,
+        LifecycleObservationKind::Contact { device_id, value: ContactState::OnMat, .. }
+            if *device_id == mouse
+    ));
+    let replay = identify(
+        &mut translator,
+        5,
+        HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+        0x00cd,
+    );
+    assert_eq!(replay.disposition, PassiveDisposition::Applied);
+    assert!(matches!(
+        &replay.observations[0].kind,
+        LifecycleObservationKind::RegisterDevice(child) if *child.device_id() == mouse
+    ));
 }

@@ -1,0 +1,51 @@
+{
+  "$schema": "../schemas/kernel-uapi-power-supply.schema.json",
+  "schema": "hyperflux-kernel-uapi-power-supply-v3",
+  "abi_version": 3,
+  "ioctl_magic": 183,
+  "limits": {
+    "battery_model_name_bytes": 32,
+    "battery_max_capacity": 100
+  },
+  "enums": [
+    {
+      "name": "battery_presence",
+      "values": [
+        {"name": "absent", "value": 0},
+        {"name": "present", "value": 1}
+      ]
+    },
+    {
+      "name": "battery_status",
+      "values": [
+        {"name": "unknown", "value": 0},
+        {"name": "discharging", "value": 1},
+        {"name": "charging", "value": 2},
+        {"name": "full", "value": 3}
+      ]
+    }
+  ],
+  "structs": [
+    {
+      "name": "child_battery",
+      "fields": [
+        {"name": "version", "type": "u32"},
+        {"name": "size", "type": "u32"},
+        {"name": "receiver_generation", "type": "u64"},
+        {"name": "endpoint_slot", "type": "u32"},
+        {"name": "presence", "type": "u32"},
+        {"name": "capacity", "type": "u32"},
+        {"name": "status", "type": "u32"},
+        {"name": "model_name", "type": "u8", "count": "battery_model_name_bytes"}
+      ]
+    }
+  ],
+  "ioctls": [
+    {
+      "name": "report_child_battery",
+      "number": 8,
+      "direction": "write",
+      "struct": "child_battery"
+    }
+  ]
+}

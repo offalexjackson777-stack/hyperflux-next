@@ -1,0 +1,20 @@
+{
+  "$id": "https://hyperflux.dev/schemas/repository-site-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HyperFlux Next package repository site",
+  "description": "The one GitHub Pages site that carries the Arch, Ubuntu, Debian, Fedora, and openSUSE package repositories. The guides point new installs at it only once state is published.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "state", "site_url", "publication_branch", "repository_id", "label", "public_key_asset", "apt_component"],
+  "properties": {
+    "$schema": {"const": "../schemas/repository-site.schema.json"},
+    "schema": {"const": "hyperflux-repository-site-v1"},
+    "state": {"enum": ["unpublished", "published"]},
+    "site_url": {"type": "string", "pattern": "^https://[a-z0-9.-]+\\.github\\.io/[A-Za-z0-9._-]+$"},
+    "publication_branch": {"const": "gh-pages"},
+    "repository_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$"},
+    "label": {"type": "string", "minLength": 1, "maxLength": 64},
+    "public_key_asset": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{1,95}\\.asc$"},
+    "apt_component": {"const": "main"}
+  }
+}

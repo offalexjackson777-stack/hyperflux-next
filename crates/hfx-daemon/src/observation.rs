@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
+use crate::battery::ChildChargeReading;
 use hfx_bridge::{LifecycleObservation, LifecycleObservationKind};
 use hfx_core::{
     ChildIdentity, EndpointIdentity, EndpointReturnLifecycle, EndpointReturnPolicy, LifecycleError,
@@ -12,15 +13,16 @@ use hfx_domain::{
     RouteKind, RouteState, SequenceNumber, SleepState,
 };
 use hfx_kernel_transport::{
-    HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+    ChildBatteryLane, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
     HFX_UAPI_OBSERVATION_CONFIDENCE_EXACT, HFX_UAPI_OBSERVATION_CONFIDENCE_OBSERVED,
     HFX_UAPI_OBSERVATION_CONFIDENCE_RAW, HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ACTIVITY,
-    HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW, HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CONTACT_RAW,
-    HFX_UAPI_OBSERVATION_KIND_ENDPOINT_PRODUCT_ID, HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ROUTE_RAW,
-    HFX_UAPI_OBSERVATION_KIND_IDENTITY_CONFLICT, HFX_UAPI_OBSERVATION_KIND_RECEIVER_AVAILABLE,
-    HFX_UAPI_OBSERVATION_KIND_RECEIVER_SUSPENDED, HFX_UAPI_OBSERVATION_SOURCE_HID_FEATURE,
-    HFX_UAPI_OBSERVATION_SOURCE_HID_INPUT, HFX_UAPI_OBSERVATION_SOURCE_HID_PASSIVE,
-    HFX_UAPI_OBSERVATION_SOURCE_POWER_MANAGEMENT, RawKernelObservation,
+    HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW, HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CHARGE_RAW,
+    HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CONTACT_RAW, HFX_UAPI_OBSERVATION_KIND_ENDPOINT_PRODUCT_ID,
+    HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ROUTE_RAW, HFX_UAPI_OBSERVATION_KIND_IDENTITY_CONFLICT,
+    HFX_UAPI_OBSERVATION_KIND_RECEIVER_AVAILABLE, HFX_UAPI_OBSERVATION_KIND_RECEIVER_SUSPENDED,
+    HFX_UAPI_OBSERVATION_SOURCE_HID_FEATURE, HFX_UAPI_OBSERVATION_SOURCE_HID_INPUT,
+    HFX_UAPI_OBSERVATION_SOURCE_HID_PASSIVE, HFX_UAPI_OBSERVATION_SOURCE_POWER_MANAGEMENT,
+    RawKernelObservation,
 };
 use hfx_profiles::{
     LifecyclePolicyRecord, PassiveBatteryEncoding, PassiveEndpointLane, PassiveTelemetryRecord,
@@ -63,6 +65,10 @@ pub struct PassiveTranslation {
     /// bounded quiet interval, proves that its child route is ready for a
     /// restoration attempt. This is not a claim that the device was asleep.
     pub restore_ready: Option<DeviceRestoreReadiness>,
+    /// One charge state decoded by the child profile's qualified charge or
+    /// route charge decoder. It is daemon-local battery annotation, not a
+    /// lifecycle fact.
+    pub charge: Option<(ChildBatteryLane, ChildChargeReading)>,
 }
 
 impl PassiveTranslation {
@@ -71,6 +77,7 @@ impl PassiveTranslation {
             disposition: PassiveDisposition::Applied,
             observations,
             restore_ready: None,
+            charge: None,
         }
     }
 
@@ -94,6 +101,7 @@ impl PassiveTranslation {
                 retry_offsets_ms,
                 phase,
             }),
+            charge: None,
         }
     }
 
@@ -102,6 +110,16 @@ impl PassiveTranslation {
             disposition,
             observations: Vec::new(),
             restore_ready: None,
+            charge: None,
+        }
+    }
+
+    fn charge(lane: ChildBatteryLane, reading: ChildChargeReading) -> Self {
+        Self {
+            disposition: PassiveDisposition::Applied,
+            observations: Vec::new(),
+            restore_ready: None,
+            charge: Some((lane, reading)),
         }
     }
 }
@@ -159,6 +177,14 @@ struct LaneBinding {
     passive: Option<PassiveTelemetryRecord>,
     return_lifecycle: Option<EndpointReturnLifecycle>,
     last_route_state: Option<RouteState>,
+    /// Byte 3 of the latest report, decoded through the contact decoder and
+    /// kept only so the charge field that follows it in the same report can
+    /// be read in context.
+    last_contact: Option<(SequenceNumber, ContactState)>,
+    /// Sequence of the latest decoded battery level, kept only so a route
+    /// word that follows it in the same keyboard status report can be read
+    /// as that report's charge state.
+    last_battery: Option<SequenceNumber>,
 }
 
 pub struct PassiveObservationTranslator {
@@ -220,6 +246,9 @@ impl PassiveObservationTranslator {
             HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ROUTE_RAW => {
                 Ok(self.route(raw.endpoint_slot, raw.value, stamp))
             }
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CHARGE_RAW => {
+                Ok(self.charge(raw.endpoint_slot, raw.value, &stamp))
+            }
             HFX_UAPI_OBSERVATION_KIND_IDENTITY_CONFLICT => Ok(PassiveTranslation::disposition(
                 PassiveDisposition::IdentityConflict,
             )),
@@ -227,6 +256,25 @@ impl PassiveObservationTranslator {
                 PassiveDisposition::IgnoredUnqualifiedSemantic,
             )),
         }
+    }
+
+    /// Returns the child lane and catalog model name bound to one logical
+    /// device, for forwarding its battery to the kernel.
+    #[must_use]
+    pub fn battery_lane(
+        &self,
+        device_id: &LogicalDeviceId,
+    ) -> Option<(ChildBatteryLane, &'static str)> {
+        let (slot, binding) = self
+            .lanes
+            .iter()
+            .find(|(_, binding)| binding.device_id == *device_id)?;
+        let lane = ChildBatteryLane::from_endpoint_slot(*slot)?;
+        let model_name = self
+            .catalog
+            .child(binding.product_id)
+            .map_or("", |profile| profile.model_name);
+        Some((lane, model_name))
     }
 
     fn stamp(
@@ -355,6 +403,8 @@ impl PassiveObservationTranslator {
             passive: profile.and_then(|profile| profile.passive),
             return_lifecycle,
             last_route_state,
+            last_contact: None,
+            last_battery: None,
         };
         let child = ChildIdentity::new(device_id.clone(), device_kind, product_id)?;
         let endpoint = EndpointIdentity::new(
@@ -473,6 +523,7 @@ impl PassiveObservationTranslator {
                     .map_err(|_| PassiveTranslationError::InvalidObservationValue)?
             }
         };
+        binding.last_battery = Some(stamp.sequence());
         let observed_at_ms = stamp.observed_at_ms();
         let evidence = if passive.report_implies_route_available {
             route_evidence(binding, RouteState::Available).unwrap_or(ReturnEvidence::BatteryReport)
@@ -529,6 +580,7 @@ impl PassiveObservationTranslator {
         } else {
             ContactState::Unknown
         };
+        binding.last_contact = Some((stamp.sequence(), state));
         let observed_at_ms = stamp.observed_at_ms();
         let evidence = if passive.report_implies_route_available {
             route_evidence(binding, RouteState::Available).unwrap_or(ReturnEvidence::ContactReport)
@@ -566,7 +618,96 @@ impl PassiveObservationTranslator {
         }
     }
 
+    /// Decodes one charge field through the child profile's qualified charge
+    /// decoder. A profile without that decoder keeps its charge unknown.
+    ///
+    /// A charging value means charging whatever byte 3 of the same report
+    /// reads. A not-charging value means discharging only when byte 3, which
+    /// the kernel emits as the contact field just before the charge field,
+    /// reads its proven off-the-mat value. Byte 3 is not only a mat contact:
+    /// it read 06 on a USB cable, so every other byte 3 value, and a missing
+    /// or older one, leaves the state unknown.
+    fn charge(&mut self, slot: u32, value: u32, stamp: &ObservationStamp) -> PassiveTranslation {
+        let (Some(lane), Some(binding)) = (
+            ChildBatteryLane::from_endpoint_slot(slot),
+            self.lanes.get_mut(&slot),
+        ) else {
+            return PassiveTranslation::disposition(PassiveDisposition::IgnoredUnknownLane);
+        };
+        let Some(passive) = binding.passive else {
+            return PassiveTranslation::disposition(PassiveDisposition::IgnoredUnqualifiedSemantic);
+        };
+        if passive.charge_charging.is_empty() && passive.charge_not_charging.is_empty() {
+            return PassiveTranslation::disposition(PassiveDisposition::IgnoredUnqualifiedSemantic);
+        }
+        let same_report_contact = binding.last_contact.take().and_then(|(sequence, state)| {
+            (sequence.get().checked_add(1) == Some(stamp.sequence().get())).then_some(state)
+        });
+        let reading = if passive.charge_charging.contains(&value) {
+            ChildChargeReading::Charging
+        } else if passive.charge_not_charging.contains(&value)
+            && same_report_contact == Some(ContactState::OffMat)
+        {
+            ChildChargeReading::Discharging
+        } else {
+            ChildChargeReading::Unknown
+        };
+        PassiveTranslation::charge(lane, reading)
+    }
+
+    /// Decodes one route value. The keyboard status report also carries its
+    /// charge state in that value, so the route word is read a second time
+    /// through the route charge decoder without changing the route decoding.
     fn route(&mut self, slot: u32, value: u32, stamp: ObservationStamp) -> PassiveTranslation {
+        let charge = self.route_charge(slot, value, &stamp);
+        let mut translation = self.route_state(slot, value, stamp);
+        translation.charge = charge;
+        translation
+    }
+
+    /// Reads the charge state from a keyboard status-report route word.
+    ///
+    /// The kernel emits the battery level of that report and then its route
+    /// word, power source in the high byte and charge in the low byte, at the
+    /// next sequence number. The identity report also emits a route value,
+    /// but never right after a battery level, so only a route word at the
+    /// sequence after this lane's battery level counts. The decoder lists
+    /// whole route words; every other word reads as unknown.
+    fn route_charge(
+        &mut self,
+        slot: u32,
+        value: u32,
+        stamp: &ObservationStamp,
+    ) -> Option<(ChildBatteryLane, ChildChargeReading)> {
+        let lane = ChildBatteryLane::from_endpoint_slot(slot)?;
+        let binding = self.lanes.get_mut(&slot)?;
+        let same_report = binding
+            .last_battery
+            .take()
+            .is_some_and(|sequence| sequence.get().checked_add(1) == Some(stamp.sequence().get()));
+        let passive = binding.passive?;
+        if !same_report
+            || (passive.route_charge_charging.is_empty()
+                && passive.route_charge_discharging.is_empty())
+        {
+            return None;
+        }
+        let reading = if passive.route_charge_charging.contains(&value) {
+            ChildChargeReading::Charging
+        } else if passive.route_charge_discharging.contains(&value) {
+            ChildChargeReading::Discharging
+        } else {
+            ChildChargeReading::Unknown
+        };
+        Some((lane, reading))
+    }
+
+    fn route_state(
+        &mut self,
+        slot: u32,
+        value: u32,
+        stamp: ObservationStamp,
+    ) -> PassiveTranslation {
         let Some(binding) = self.lanes.get_mut(&slot) else {
             return PassiveTranslation::disposition(PassiveDisposition::IgnoredUnknownLane);
         };

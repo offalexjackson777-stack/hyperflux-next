@@ -47,7 +47,9 @@ to snapshots. This lets an integration construct a profile-bound transaction
 from bridge authority instead of assuming a receiver model from its local
 catalog. Versions 1 through 3 remain frozen; their snapshots normalize without
 invented profile digests, so integrations that require writable controllers
-negotiate the `snapshot-profile-bindings` feature.
+negotiate the `snapshot-profile-bindings` feature. Versions 1 through 4 and 6
+are deprecated in 2.1 and will be removed in 2.2; integrations should negotiate
+version 5 or 7, and version 7 carries everything version 6 added.
 
 Protocol version 7 preserves every version-6 semantic migration method and adds
 the `native-receiver-tunnel` feature independently. Native applications submit

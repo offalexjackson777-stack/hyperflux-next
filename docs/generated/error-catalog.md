@@ -11,6 +11,7 @@ Every HyperFlux error code is defined here and nowhere else. These parts of the 
 
 - Bridge runtime (`crates/hfx-bridge`)
 - C++ SDK (`sdk/cpp`)
+- Device qualification runtime (`crates/hfx-device-qualification`)
 - OpenRGB adapter (`integrations/openrgb`)
 - Operations CLI (`crates/hfx-ops`)
 - Production daemon (`crates/hfx-daemon`)

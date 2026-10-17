@@ -160,6 +160,7 @@ from .verify_repository import (
     _run_protocol_contracts,
     _run_repository_documentation_contracts,
     _run_schema_contracts,
+    _run_schema_instances,
     _run_toolchain_contract,
 )
 
@@ -375,6 +376,7 @@ def _run_quality_contracts(root: Path, _node: TestNode) -> None:
 RUNNERS = {
     "foundation-contracts": _run_foundation_contracts,
     "schema-contracts": _run_schema_contracts,
+    "schema-instances": _run_schema_instances,
     "profile-contracts": _run_profile_contracts,
     "integration-contracts": _run_integration_contracts,
     "device-knowledge-contracts": _run_device_knowledge_contracts,

@@ -31,6 +31,7 @@ The Linux kernel driver for the receiver. It keeps the keyboard and mouse workin
 ## Key Files
 
 - [`driver/kernel/Makefile`](Makefile)
+- [`driver/kernel/hyperflux-next-battery.c`](hyperflux-next-battery.c)
 - [`driver/kernel/hyperflux-next-core.c`](hyperflux-next-core.c)
 - [`driver/kernel/hyperflux-next-session.c`](hyperflux-next-session.c)
 - [`driver/kernel/hyperflux-next-transport.c`](hyperflux-next-transport.c)

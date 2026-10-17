@@ -37,6 +37,7 @@ KNOWN_RUNNERS = {
     "dependency-security-contracts",
     "foundation-contracts",
     "schema-contracts",
+    "schema-instances",
     "integration-contracts",
     "profile-contracts",
     "device-knowledge-contracts",

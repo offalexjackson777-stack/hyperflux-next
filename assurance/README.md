@@ -47,6 +47,7 @@ Records what the project has checked and how: design coverage, performance budge
 - [`assurance/quality-audit.json`](quality-audit.json)
 - [`assurance/release-gates.json`](release-gates.json)
 - [`assurance/rust-coverage.json`](rust-coverage.json)
+- [`assurance/owner-reports.json`](owner-reports.json)
 
 ## Verify
 

@@ -7,13 +7,17 @@ from pprint import pformat
 import re
 from typing import Any
 
+from ..model import CATALOG_ROOT
 from ..source_validated_catalog import (
+    OWNER_CONFIRMED,
     PHYSICALLY_PROVEN,
     SOURCE_QUALIFIED_OPERATIONAL,
     UPSTREAM_BLOCKED_OR_RESEARCH_ONLY,
-    public_support_tier,
-    public_support_tier_counts,
+    documented_support_tier,
+    documented_support_tier_counts,
 )
+
+PROFILE_CATALOG = (CATALOG_ROOT / "profiles" / "catalog.json").as_posix()
 
 
 def _symbol(value: str) -> str:
@@ -310,17 +314,44 @@ def _blocked_reason(device: dict[str, Any], entry: dict[str, Any]) -> str:
     return "No validated stock-application path in the pinned upstream sources"
 
 
-def markdown(catalog: dict[str, Any], source_validated: dict[str, Any]) -> str:
+def _device_row(device: dict[str, Any], entry: dict[str, Any], last: str) -> str:
+    identity = device["identity"]
+    return (
+        f"| {device['model_name']} | {identity['device_kind']} | "
+        f"`1532:{identity['product_id']:04x}` / "
+        f"`1532:{entry['direct_usb_product_id']:04x}` | {last} |"
+    )
+
+
+def markdown(
+    catalog: dict[str, Any],
+    source_validated: dict[str, Any],
+    owner_confirmed: dict[str, tuple[int, ...]] | None = None,
+    *,
+    issues_url: str = "https://github.com/offalexjackson777-stack/hyperflux-next/issues",
+    minimum_owner_reports: int = 1,
+) -> str:
+    owner_confirmed = owner_confirmed or {}
     devices = source_validated["devices"]
-    counts = public_support_tier_counts(devices)
+    counts = documented_support_tier_counts(devices, owner_confirmed)
     entries = {
         (entry["wireless_product_id"], entry["device_kind"]): entry
         for entry in catalog["official_receiver_scope"]["entries"]
     }
+
+    def entry_for(device: dict[str, Any]) -> dict[str, Any]:
+        identity = device["identity"]
+        return entries[(identity["product_id"], identity["device_kind"])]
+
     grouped = {
-        tier: [device for device in devices if public_support_tier(device) == tier]
+        tier: [
+            device
+            for device in devices
+            if documented_support_tier(device, owner_confirmed) == tier
+        ]
         for tier in (
             PHYSICALLY_PROVEN,
+            OWNER_CONFIRMED,
             SOURCE_QUALIFIED_OPERATIONAL,
             UPSTREAM_BLOCKED_OR_RESEARCH_ONLY,
         )
@@ -335,6 +366,7 @@ def markdown(catalog: dict[str, Any], source_validated: dict[str, Any]) -> str:
         "whether their keyboard or mouse will work.",
         "",
         f"- **Tested on real hardware:** {counts[PHYSICALLY_PROVEN]}",
+        f"- **Confirmed by owners:** {counts[OWNER_CONFIRMED]}",
         f"- **Expected to work:** {counts[SOURCE_QUALIFIED_OPERATIONAL]}",
         f"- **Not supported yet:** {counts[UPSTREAM_BLOCKED_OR_RESEARCH_ONLY]}",
         "",
@@ -344,12 +376,35 @@ def markdown(catalog: dict[str, Any], source_validated: dict[str, Any]) -> str:
         "| --- | --- | --- | --- |",
     ]
     for device in grouped[PHYSICALLY_PROVEN]:
-        identity = device["identity"]
-        entry = entries[(identity["product_id"], identity["device_kind"])]
+        lines.append(_device_row(device, entry_for(device), _application_paths(device)))
+    lines.extend(["", "## Confirmed By Owners", ""])
+    if grouped[OWNER_CONFIRMED]:
+        lines.extend(
+            [
+                "People who own these devices sent a hardware report and checked by hand "
+                "that the device and its lighting work through the receiver. The project "
+                "has not tested them itself.",
+                "",
+                "| Device | Type | Wireless / USB cable ID | Works with | Reports |",
+                "| --- | --- | --- | --- | --- |",
+            ]
+        )
+        for device in grouped[OWNER_CONFIRMED]:
+            reports = ", ".join(
+                f"[#{issue}]({issues_url}/{issue})"
+                for issue in owner_confirmed[device["route_id"]]
+            )
+            lines.append(
+                _device_row(
+                    device,
+                    entry_for(device),
+                    f"{_application_paths(device)} | {reports}",
+                )
+            )
+    else:
         lines.append(
-            f"| {device['model_name']} | {identity['device_kind']} | "
-            f"`1532:{identity['product_id']:04x}` / "
-            f"`1532:{entry['direct_usb_product_id']:04x}` | {_application_paths(device)} |"
+            "No owner has confirmed a device yet. If you own one of the devices listed "
+            "as expected to work below, you can [confirm that it works](../user/hardware.md#confirm-that-your-device-works)."
         )
     lines.extend(
         [
@@ -361,13 +416,7 @@ def markdown(catalog: dict[str, Any], source_validated: dict[str, Any]) -> str:
         ]
     )
     for device in grouped[SOURCE_QUALIFIED_OPERATIONAL]:
-        identity = device["identity"]
-        entry = entries[(identity["product_id"], identity["device_kind"])]
-        lines.append(
-            f"| {device['model_name']} | {identity['device_kind']} | "
-            f"`1532:{identity['product_id']:04x}` / "
-            f"`1532:{entry['direct_usb_product_id']:04x}` | {_application_paths(device)} |"
-        )
+        lines.append(_device_row(device, entry_for(device), _application_paths(device)))
     lines.extend(
         [
             "",
@@ -378,14 +427,8 @@ def markdown(catalog: dict[str, Any], source_validated: dict[str, Any]) -> str:
         ]
     )
     for device in grouped[UPSTREAM_BLOCKED_OR_RESEARCH_ONLY]:
-        identity = device["identity"]
-        entry = entries[(identity["product_id"], identity["device_kind"])]
-        lines.append(
-            f"| {device['model_name']} | {identity['device_kind']} | "
-            f"`1532:{identity['product_id']:04x}` / "
-            f"`1532:{entry['direct_usb_product_id']:04x}` | "
-            f"{_blocked_reason(device, entry)} |"
-        )
+        entry = entry_for(device)
+        lines.append(_device_row(device, entry, _blocked_reason(device, entry)))
     lines.extend(
         [
             "",
@@ -396,6 +439,14 @@ def markdown(catalog: dict[str, Any], source_validated: dict[str, Any]) -> str:
             "lifecycle on real hardware. These devices are test references, "
             "not a runtime allowlist: HyperFlux decides what to do from what a device "
             "can do, so other devices on this page can work too.",
+            f"- **Confirmed by owners** (`{OWNER_CONFIRMED}`): an expected-to-work "
+            f"device for which at least {minimum_owner_reports} owner "
+            f"{'report has' if minimum_owner_reports == 1 else 'reports have'} passed "
+            "the checks in "
+            "[owner reports](../developer/device-onboarding.md#owner-reports). "
+            "The owner ticked what they checked by hand; nobody from the project "
+            "watched. HyperFlux treats the device exactly as before: this changes "
+            "this page, not what HyperFlux does.",
             f"- **Expected to work** (`{SOURCE_QUALIFIED_OPERATIONAL}`): the pinned "
             "source code of at least one unmodified app, checked against HyperFlux's "
             "generated command rules, shows a working path to the device. Nobody has run "
@@ -411,7 +462,7 @@ def markdown(catalog: dict[str, Any], source_validated: dict[str, Any]) -> str:
             "never enough.",
             "",
             "Maintainers can inspect the complete machine-readable profile catalog in "
-            "[`generated/profiles/catalog.json`](../../generated/profiles/catalog.json) "
+            f"[`{PROFILE_CATALOG}`](../../{PROFILE_CATALOG}) "
             "and the checked app paths in "
             "[`integrations/native-route/source-validated.json`](../../integrations/native-route/source-validated.json).",
             "",
@@ -466,6 +517,10 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         "    pub route_unavailable: &'static [u32],",
         "    pub route_indeterminate: &'static [u32],",
         "    pub report_implies_route_available: bool,",
+        "    pub charge_charging: &'static [u32],",
+        "    pub charge_not_charging: &'static [u32],",
+        "    pub route_charge_charging: &'static [u32],",
+        "    pub route_charge_discharging: &'static [u32],",
         "}",
         "",
         "#[derive(Clone, Copy, Debug, Eq, PartialEq)]",
@@ -733,12 +788,18 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
         passive = profile.get("transport", {}).get("passive")
         if passive:
             contact = passive["contact"] or {"off_mat": [], "on_mat": []}
+            charge = passive.get("charge") or {"charging": [], "not_charging": []}
+            route_charge = passive.get("route_charge") or {"charging": [], "discharging": []}
             for suffix, values in (
                 ("CONTACT_OFF_MAT", contact["off_mat"]),
                 ("CONTACT_ON_MAT", contact["on_mat"]),
                 ("ROUTE_AVAILABLE", passive["route"]["available"]),
                 ("ROUTE_UNAVAILABLE", passive["route"]["unavailable"]),
                 ("ROUTE_INDETERMINATE", passive["route"].get("indeterminate", [])),
+                ("CHARGE_CHARGING", charge["charging"]),
+                ("CHARGE_NOT_CHARGING", charge["not_charging"]),
+                ("ROUTE_CHARGE_CHARGING", route_charge["charging"]),
+                ("ROUTE_CHARGE_DISCHARGING", route_charge["discharging"]),
             ):
                 rendered = ", ".join(str(value) for value in values)
                 lines.append(f"const PASSIVE_{suffix}_{index}: &[u32] = &[{rendered}];")
@@ -860,6 +921,10 @@ def rust_catalog(catalog: dict[str, Any]) -> str:
                 f"            route_unavailable: PASSIVE_ROUTE_UNAVAILABLE_{index},",
                 f"            route_indeterminate: PASSIVE_ROUTE_INDETERMINATE_{index},",
                 f"            report_implies_route_available: {route_implied},",
+                f"            charge_charging: PASSIVE_CHARGE_CHARGING_{index},",
+                f"            charge_not_charging: PASSIVE_CHARGE_NOT_CHARGING_{index},",
+                f"            route_charge_charging: PASSIVE_ROUTE_CHARGE_CHARGING_{index},",
+                f"            route_charge_discharging: PASSIVE_ROUTE_CHARGE_DISCHARGING_{index},",
                 "        }),",
             ]
         else:

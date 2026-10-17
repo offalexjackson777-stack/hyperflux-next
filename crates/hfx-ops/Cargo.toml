@@ -11,6 +11,7 @@ hfx-device-qualification = { path = "../hfx-device-qualification" }
 hfx-domain = { path = "../hfx-domain" }
 hfx-errors = { path = "../hfx-errors" }
 hfx-integration-model = { path = "../hfx-integration-model" }
+hfx-profiles = { path = "../hfx-profiles" }
 hfx-protocol = { path = "../hfx-protocol" }
 hfx-runtime = { path = "../hfx-runtime" }
 hfx-system-probe = { path = "../hfx-system-probe" }

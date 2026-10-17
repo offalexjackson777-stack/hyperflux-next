@@ -1,0 +1,19 @@
+HyperFlux Next qualification report
+State: ready
+Bridge protocol: v7
+Receivers: 1
+
+receiver-1: Razer HyperFlux V2 Receiver (1532:00cf), active
+  device-1: mouse Razer Basilisk V3 Pro 35K (1532:00cd)
+    Support: production-qualified; presence: active; battery: 80%
+    Profile: child.razer.basilisk-v3-pro-35k.00cd
+    Evidence checks: 5
+  device-2: keyboard Razer DeathStalker V2 Pro Tenkeyless (1532:0296)
+    Support: production-qualified; presence: active; battery: 67%
+    Profile: child.razer.deathstalker-v2-pro-tkl.0296
+    Evidence checks: 5
+
+Firmware: not collected (reading it needs an active device query)
+Bridge findings: HFX-SERVICE-002 (warning), HFX-TRANSPORT-001 (error)
+No network upload, active device query, or hardware write was made.
+Next: attach the output of `hyperfluxctl qualification --json` to your hardware report.

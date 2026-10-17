@@ -5,6 +5,7 @@
 This page lists every Razer device on the HyperFlux V2 receiver's official compatibility list and how far HyperFlux supports it, for anyone checking whether their keyboard or mouse will work.
 
 - **Tested on real hardware:** 2
+- **Confirmed by owners:** 0
 - **Expected to work:** 8
 - **Not supported yet:** 2
 
@@ -14,6 +15,10 @@ This page lists every Razer device on the HyperFlux V2 receiver's official compa
 | --- | --- | --- | --- |
 | Razer Basilisk V3 Pro 35K | mouse | `1532:00cd` / `1532:00cc` | OpenRazer / Polychromatic, OpenRGB |
 | Razer DeathStalker V2 Pro Tenkeyless | keyboard | `1532:0296` / `1532:0298` | OpenRazer / Polychromatic, OpenRGB |
+
+## Confirmed By Owners
+
+No owner has confirmed a device yet. If you own one of the devices listed as expected to work below, you can [confirm that it works](../user/hardware.md#confirm-that-your-device-works).
 
 ## Expected To Work
 
@@ -38,9 +43,10 @@ This page lists every Razer device on the HyperFlux V2 receiver's official compa
 ## What The Tiers Mean
 
 - **Tested on real hardware** (`physically-proven`): the device passed end-to-end checks of the hardware, the apps, and the device lifecycle on real hardware. These devices are test references, not a runtime allowlist: HyperFlux decides what to do from what a device can do, so other devices on this page can work too.
+- **Confirmed by owners** (`owner-confirmed`): an expected-to-work device for which at least 1 owner report has passed the checks in [owner reports](../developer/device-onboarding.md#owner-reports). The owner ticked what they checked by hand; nobody from the project watched. HyperFlux treats the device exactly as before: this changes this page, not what HyperFlux does.
 - **Expected to work** (`source-qualified-operational`): the pinned source code of at least one unmodified app, checked against HyperFlux's generated command rules, shows a working path to the device. Nobody has run the real-hardware checks on it yet.
 - **Not supported yet** (`upstream-blocked-or-research-only`): the device is on the receiver's compatibility list, but no app's pinned source code has a working path to it yet. HyperFlux will not send lighting changes to it.
 
 A listed device still gets lighting changes only when the receiver as it is connected now, the report format, and the command rules all match. A similar name, a match on the vendor alone, a pairing record, or a local USB path is never enough.
 
-Maintainers can inspect the complete machine-readable profile catalog in [`generated/profiles/catalog.json`](../../generated/profiles/catalog.json) and the checked app paths in [`integrations/native-route/source-validated.json`](../../integrations/native-route/source-validated.json).
+Maintainers can inspect the complete machine-readable profile catalog in [`spec/catalog/profiles/catalog.json`](../../spec/catalog/profiles/catalog.json) and the checked app paths in [`integrations/native-route/source-validated.json`](../../integrations/native-route/source-validated.json).

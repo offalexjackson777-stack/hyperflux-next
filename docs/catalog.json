@@ -32,8 +32,8 @@
       "owner": "documentation",
       "navigation_group": "home",
       "mode": "hybrid",
-      "canonical_sources": ["generated/public-readiness.json", "assurance/arch-repository.json", "packaging/distributions.json", "integrations/native-route/source-validated.json"],
-      "generated_block_ids": ["release-summary", "compatibility-summary", "recommended-package"]
+      "canonical_sources": ["spec/catalog/public-readiness.json", "assurance/arch-repository.json", "packaging/distributions.json", "packaging/repository-site.json", "integrations/native-route/source-validated.json"],
+      "generated_block_ids": ["release-summary", "compatibility-summary", "install-table", "recommended-package"]
     },
     {
       "path": "SECURITY.md",
@@ -65,7 +65,7 @@
       "owner": "documentation",
       "navigation_group": "home",
       "mode": "hybrid",
-      "canonical_sources": ["generated/public-readiness.json", "assurance/arch-repository.json"],
+      "canonical_sources": ["spec/catalog/public-readiness.json", "assurance/arch-repository.json"],
       "generated_block_ids": ["release-summary"]
     },
     {
@@ -99,6 +99,17 @@
       "navigation_group": "architecture",
       "mode": "human",
       "canonical_sources": ["docs/architecture/decisions/device-knowledge-integration.md"],
+      "generated_block_ids": []
+    },
+    {
+      "path": "docs/architecture/decisions/documentation-render-evidence.md",
+      "title": "Documentation Render Evidence",
+      "audience": "developers",
+      "purpose": "Records why the committed documentation render record describes a release while every pull request renders offline.",
+      "owner": "architecture",
+      "navigation_group": "architecture",
+      "mode": "human",
+      "canonical_sources": ["docs/architecture/decisions/documentation-render-evidence.md"],
       "generated_block_ids": []
     },
     {
@@ -369,11 +380,11 @@
       "path": "docs/developer/device-onboarding.md",
       "title": "Device Onboarding",
       "audience": "developers",
-      "purpose": "Provides the concise source-first workflow for adding capability-based device support.",
+      "purpose": "Provides the concise source-first workflow for adding capability-based device support, and how owner reports confirm devices expected to work.",
       "owner": "documentation",
       "navigation_group": "developer",
       "mode": "human",
-      "canonical_sources": ["docs/developer/device-onboarding.md"],
+      "canonical_sources": ["docs/developer/device-onboarding.md", "assurance/owner-reports.json"],
       "generated_block_ids": []
     },
     {
@@ -721,11 +732,11 @@
       "path": "docs/generated/supported-hardware.md",
       "title": "Supported Hardware",
       "audience": "users",
-      "purpose": "Every device on the receiver's compatibility list and whether it is tested on real hardware, expected to work, or not supported yet.",
+      "purpose": "Every device on the receiver's compatibility list and whether it is tested on real hardware, confirmed by owners, expected to work, or not supported yet.",
       "owner": "profiles",
       "navigation_group": "generated",
       "mode": "generated",
-      "canonical_sources": ["integrations/native-route/source-validated.json", "profiles/candidates/razer-hyperflux-v2-2026-07-21.json"],
+      "canonical_sources": ["integrations/native-route/source-validated.json", "profiles/candidates/razer-hyperflux-v2-2026-07-21.json", "assurance/owner-reports.json"],
       "generated_block_ids": []
     },
     {
@@ -868,7 +879,7 @@
       "owner": "documentation",
       "navigation_group": "project",
       "mode": "hybrid",
-      "canonical_sources": ["generated/public-readiness.json", "assurance/release-gates.json", "assurance/arch-repository.json"],
+      "canonical_sources": ["spec/catalog/public-readiness.json", "assurance/release-gates.json", "assurance/arch-repository.json"],
       "generated_block_ids": ["release-status"]
     },
     {
@@ -916,6 +927,50 @@
       "generated_block_ids": []
     },
     {
+      "path": "docs/user/install-debian.md",
+      "title": "Install HyperFlux Next on Debian",
+      "audience": "users",
+      "purpose": "Walks a Debian user through adding the signed HyperFlux repository, installing the package, turning HyperFlux on, and checking that it works.",
+      "owner": "documentation",
+      "navigation_group": "user",
+      "mode": "hybrid",
+      "canonical_sources": ["packaging/repository-site.json", "packaging/distributions.json", "assurance/arch-repository.json"],
+      "generated_block_ids": ["debian-repository-setup"]
+    },
+    {
+      "path": "docs/user/install-fedora.md",
+      "title": "Install HyperFlux Next on Fedora",
+      "audience": "users",
+      "purpose": "Walks a Fedora user through adding the signed HyperFlux repository, installing the package, turning HyperFlux on, and checking that it works.",
+      "owner": "documentation",
+      "navigation_group": "user",
+      "mode": "hybrid",
+      "canonical_sources": ["packaging/repository-site.json", "packaging/distributions.json", "assurance/arch-repository.json"],
+      "generated_block_ids": ["fedora-repository-setup"]
+    },
+    {
+      "path": "docs/user/install-opensuse.md",
+      "title": "Install HyperFlux Next on openSUSE",
+      "audience": "users",
+      "purpose": "Walks a openSUSE user through adding the signed HyperFlux repository, installing the package, turning HyperFlux on, and checking that it works.",
+      "owner": "documentation",
+      "navigation_group": "user",
+      "mode": "hybrid",
+      "canonical_sources": ["packaging/repository-site.json", "packaging/distributions.json", "assurance/arch-repository.json"],
+      "generated_block_ids": ["opensuse-repository-setup"]
+    },
+    {
+      "path": "docs/user/install-ubuntu.md",
+      "title": "Install HyperFlux Next on Ubuntu",
+      "audience": "users",
+      "purpose": "Walks a Ubuntu user through adding the signed HyperFlux repository, installing the package, turning HyperFlux on, and checking that it works.",
+      "owner": "documentation",
+      "navigation_group": "user",
+      "mode": "hybrid",
+      "canonical_sources": ["packaging/repository-site.json", "packaging/distributions.json", "assurance/arch-repository.json"],
+      "generated_block_ids": ["ubuntu-repository-setup"]
+    },
+    {
       "path": "docs/user/installation.md",
       "title": "Install HyperFlux Next",
       "audience": "users",
@@ -923,7 +978,7 @@
       "owner": "documentation",
       "navigation_group": "user",
       "mode": "hybrid",
-      "canonical_sources": ["assurance/arch-repository.json"],
+      "canonical_sources": ["assurance/arch-repository.json", "packaging/repository-site.json"],
       "generated_block_ids": ["repository-setup", "package-fallback"]
     },
     {
@@ -993,8 +1048,9 @@
     {"path": "errors/README.md", "classification": "generated-front-door"},
     {"path": "evidence/native-transport/basilisk-v3-pro-35k-00cd-read-parity-20260727.md", "classification": "evidence-record"},
     {"path": "evidence/native-transport/deathstalker-v2-pro-tkl-0296-read-parity-20260727.md", "classification": "evidence-record"},
+    {"path": "evidence/physical-acceptance/basilisk-v3-pro-35k-00cd-passive-charge-20261017.md", "classification": "evidence-record"},
+    {"path": "evidence/physical-acceptance/deathstalker-v2-pro-tkl-0296-passive-charge-20261017.md", "classification": "evidence-record"},
     {"path": "evidence/physical-acceptance/hyperflux-v2-fixtures.md", "classification": "evidence-record"},
-    {"path": "generated/README.md", "classification": "generated-front-door"},
     {"path": "governance/README.md", "classification": "generated-front-door"},
     {"path": "integrations/README.md", "classification": "generated-front-door"},
     {"path": "integrations/openrazer/README.md", "classification": "generated-front-door"},
@@ -1009,6 +1065,8 @@
     {"path": "sdk/cpp/README.md", "classification": "generated-front-door"},
     {"path": "sdk/cpp/vendor/README.md", "classification": "vendored-component-note"},
     {"path": "sdk/python/README.md", "classification": "generated-front-door"},
+    {"path": "spec/README.md", "classification": "generated-front-door"},
+    {"path": "spec/catalog/README.md", "classification": "generated-front-door"},
     {"path": "tests/README.md", "classification": "generated-front-door"},
     {"path": "toolchains/README.md", "classification": "generated-front-door"},
     {"path": "tools/README.md", "classification": "generated-front-door"},

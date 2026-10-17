@@ -3,3 +3,4 @@ Usage:
   hyperfluxctl doctor [--explain] [--json]
   hyperfluxctl support-bundle --preview
   hyperfluxctl support-bundle --output PATH
+  hyperfluxctl qualification [--json] [--output PATH]

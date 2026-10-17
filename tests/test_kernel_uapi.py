@@ -81,6 +81,7 @@ class KernelUapiTests(unittest.TestCase):
             [
                 (1, "baseline", "abi_version"),
                 (2, "native_exchange", "native_abi_version"),
+                (3, "power_supply", "power_supply_abi_version"),
             ],
         )
         native = registry.entries[1].catalog
@@ -101,6 +102,45 @@ class KernelUapiTests(unittest.TestCase):
         self.assertEqual(
             [(item.name, item.value) for item in certainty.values],
             [("not_sent", 1), ("may_have_been_sent", 2), ("matched_response", 3)],
+        )
+
+    def test_child_battery_forwarding_is_one_write_only_v3_operation(self) -> None:
+        registry = load_kernel_uapi_registry(ROOT)
+        power_supply = registry.entries[2].catalog
+        self.assertEqual(power_supply.abi_version, 3)
+        self.assertEqual(power_supply.ioctl_magic, registry.baseline.ioctl_magic)
+        self.assertEqual(
+            [
+                (item.name, item.number, item.direction, item.struct_name)
+                for item in power_supply.ioctls
+            ],
+            [("report_child_battery", 0x08, "write", "child_battery")],
+        )
+        battery = next(item for item in power_supply.structs if item.name == "child_battery")
+        self.assertEqual(battery.size, 64)
+        self.assertEqual(
+            [field.name for field in battery.fields],
+            [
+                "version",
+                "size",
+                "receiver_generation",
+                "endpoint_slot",
+                "presence",
+                "capacity",
+                "status",
+                "model_name",
+            ],
+        )
+        self.assertEqual(power_supply.limits["battery_model_name_bytes"], 32)
+        self.assertEqual(power_supply.limits["battery_max_capacity"], 100)
+        enums = {
+            item.name: [(value.name, value.value) for value in item.values]
+            for item in power_supply.enums
+        }
+        self.assertEqual(enums["battery_presence"], [("absent", 0), ("present", 1)])
+        self.assertEqual(
+            enums["battery_status"],
+            [("unknown", 0), ("discharging", 1), ("charging", 2), ("full", 3)],
         )
 
     def test_boundary_has_no_pointer_or_product_presentation_fields(self) -> None:

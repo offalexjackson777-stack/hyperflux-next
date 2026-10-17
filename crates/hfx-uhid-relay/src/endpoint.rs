@@ -200,7 +200,7 @@ impl<B: BridgeExchange> FeatureEndpoint<B> {
                             reply_transaction_id: response[1],
                             status: response[0],
                             raw_value: response[9],
-                            accepted: battery_reply_accepted(&report, &response),
+                            accepted: query_reply_accepted(&report, &response),
                             attempts,
                         }
                     }
@@ -217,26 +217,20 @@ impl<B: BridgeExchange> FeatureEndpoint<B> {
                 });
             }
             match result {
-                BridgeExchangeResult::MatchedResponse(response) if is_battery_request(&report) => {
+                BridgeExchangeResult::MatchedResponse(response) => {
                     // A retained receiver route can outlive a powered-off
-                    // child. Its in-flight battery read still completes, but
-                    // as unknown: no earlier value is replayed as current.
+                    // child. Its in-flight exchange still completes, and a
+                    // query completes as unknown: no earlier reply is
+                    // replayed as current.
                     if response[0] == RAZER_STATUS_TIMEOUT {
                         self.retained_route_departure = RetainedRouteDeparture::AwaitingGet;
                     }
-                    if battery_reply_accepted(&report, &response) {
+                    if !is_query_request(&report) || query_reply_accepted(&report, &response) {
                         response
                     } else {
                         encode_transport_envelope(TransportEnvelopeKind::MayHaveBeenSent)
                     }
                 }
-                BridgeExchangeResult::MatchedResponse(response)
-                    if response[0] == RAZER_STATUS_TIMEOUT =>
-                {
-                    self.retained_route_departure = RetainedRouteDeparture::AwaitingGet;
-                    response
-                }
-                BridgeExchangeResult::MatchedResponse(response) => response,
                 BridgeExchangeResult::NotSent(_) => {
                     encode_transport_envelope(TransportEnvelopeKind::NotSent)
                 }
@@ -250,7 +244,7 @@ impl<B: BridgeExchange> FeatureEndpoint<B> {
     }
 
     fn exchange(&mut self, report: [u8; FEATURE_REPORT_BYTES]) -> (BridgeExchangeResult, u8) {
-        let maximum_attempts = if is_battery_request(&report) {
+        let maximum_attempts = if is_query_request(&report) {
             SOURCE_BUSY_RETRY_MAXIMUM_ATTEMPTS
         } else {
             1
@@ -313,9 +307,17 @@ const fn is_battery_request(report: &[u8; FEATURE_REPORT_BYTES]) -> bool {
     report[5] == 2 && report[6] == 0x07 && report[7] == 0x80 && report[8] == 0 && report[9] == 0
 }
 
+// Razer command IDs with the high bit set read device state. The source-bound
+// command catalog rejects any rule whose direction disagrees with this bit, so
+// every forwarded read, battery level and charging state alike, is a query.
+// Writes are not retried or rewritten: their replies stay byte-exact.
+const fn is_query_request(report: &[u8; FEATURE_REPORT_BYTES]) -> bool {
+    report[7] & 0x80 != 0
+}
+
 // `OpenRazer` checks a reply's command class and ID but not its transaction
 // ID, so a late reply for another lane on the shared receiver would otherwise
-// be read as this device's battery level.
+// be read as this device's state.
 const fn reply_identity_matches(
     request: &[u8; FEATURE_REPORT_BYTES],
     response: &[u8; FEATURE_REPORT_BYTES],
@@ -323,7 +325,10 @@ const fn reply_identity_matches(
     response[1] == request[1] && response[6] == request[6] && response[7] == request[7]
 }
 
-const fn battery_reply_accepted(
+// Stock `OpenRazer` treats BUSY as success and formats whatever a failed
+// read leaves in the buffer, so a query reply reaches it only when it is the
+// successful reply to this exact request.
+const fn query_reply_accepted(
     request: &[u8; FEATURE_REPORT_BYTES],
     response: &[u8; FEATURE_REPORT_BYTES],
 ) -> bool {

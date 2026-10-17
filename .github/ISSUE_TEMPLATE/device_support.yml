@@ -41,6 +41,21 @@ body:
   validations:
     required: true
 - type: textarea
+  id: qualification-report
+  attributes:
+    label: Output of `hyperfluxctl qualification --json`
+    description: Run `hyperfluxctl qualification --json` with the device connected and paste what it prints, unchanged. It only reads what the bridge already knows; it holds no serial numbers or file paths, and nothing is sent to the device or uploaded. Leave this blank if the command does not run.
+    render: json
+- type: checkboxes
+  id: owner-check
+  attributes:
+    label: If your device is listed as expected to work, what did you check?
+    description: Only tick what you saw yourself. A maintainer uses these with your report to mark the device as confirmed by owners.
+    options:
+    - label: 'While it was connected through the receiver, it worked normally: the pointer moved and the buttons clicked, or the keys typed.'
+    - label: I changed its lighting in Polychromatic or another OpenRazer app, and the device changed.
+    - label: I changed its lighting in OpenRGB, and the device changed.
+- type: textarea
   id: doctor-reference
   attributes:
     label: Output of `hyperfluxctl doctor`

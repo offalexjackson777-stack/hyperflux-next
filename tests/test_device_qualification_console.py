@@ -51,6 +51,7 @@ class DeviceQualificationConsoleTests(unittest.TestCase):
             "index.html",
             "tests/fixtures/rust-qualified-mouse.json",
             "tests/fixtures/rust-qualified-pair.json",
+            "tests/fixtures/rust-qualified-report.json",
         }
         observed = {
             path.relative_to(APP).as_posix()
@@ -148,6 +149,60 @@ class DeviceQualificationConsoleTests(unittest.TestCase):
             "legacy-v2-detected",
             schema["properties"]["companion"]["properties"]["state"]["enum"],
         )
+
+    def test_installed_report_declares_its_read_only_collection(self) -> None:
+        schema = json.loads(
+            (APP / "contracts" / "local-qualification-view.schema.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        contract = (APP / "assets" / "contract.js").read_text(encoding="utf-8")
+        report = json.loads(
+            (APP / "tests" / "fixtures" / "rust-qualified-report.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        definition = schema["$defs"]["collection"]
+        self.assertNotIn("collection", schema["required"])
+        self.assertEqual(set(report), set(schema["required"]) | {"collection"})
+        self.assertEqual(set(report["collection"]), set(definition["required"]))
+        self.assertFalse(definition["additionalProperties"])
+        self.assertEqual(
+            report["collection"]["producer"], definition["properties"]["producer"]["const"]
+        )
+        self.assertEqual(
+            report["collection"]["bridge_requests"],
+            ["snapshot", "diagnostics", "integration-view"],
+        )
+        self.assertFalse(report["collection"]["active_device_query_executed"])
+        self.assertEqual(report["collection"]["firmware"], "not-collected")
+        finding_id = re.compile(
+            definition["properties"]["diagnostic_findings"]["items"]["properties"]["finding_id"][
+                "pattern"
+            ]
+        )
+        self.assertTrue(
+            all(
+                finding_id.fullmatch(finding["finding_id"])
+                and set(finding) == {"finding_id", "severity"}
+                for finding in report["collection"]["diagnostic_findings"]
+            )
+        )
+        self.assertEqual(report["actions"], [])
+        self.assertFalse(report["companion"]["hardware_write_executed"])
+        self.assertEqual(
+            [receiver["receiver_id"] for receiver in report["receivers"]], ["receiver-1"]
+        )
+        self.assertEqual(
+            [device["device_id"] for device in report["receivers"][0]["devices"]],
+            ["device-1", "device-2"],
+        )
+        rendered = json.dumps(report)
+        for private in ("serial", "/dev/", "/home/", "hidraw", "journal", "hostname"):
+            self.assertNotIn(private, rendered)
+        self.assertIn('"collection"', contract)
+        self.assertIn('"not-collected"', contract)
+        self.assertIn("active_device_query_executed", contract)
 
     def test_console_explains_a_v2_installation_without_calling_next_broken(self) -> None:
         application = (APP / "assets" / "app.js").read_text(encoding="utf-8")

@@ -11,7 +11,7 @@ the signed Arch repository are published by the maintainer, not by a GitHub work
 
 - Repository: `offalexjackson777-stack/hyperflux-next` (`public`)
 - Remote state: `public-released`
-- Current release: [`v2.1.0`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.0)
+- Current release: [`v2.1.1`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.1)
 - Signed Arch repository: [`arch-repository`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/arch-repository)
 - Release, tag, and package publication: `maintainer-operated`
 - Release workflows: `none`
@@ -31,19 +31,20 @@ packages, and no workflow writes to hardware.
 | CodeQL | Pull requests, main, weekly | GitHub service only | None | C/C++ and Python analysis |
 | Dependency review | Pull requests | GitHub service only | None | Dependency policy decision |
 | Kernel canary | Weekly or manual | Arch mirrors, kernel.org, and the pinned app sources | None | Driver builds against coming kernels; never required for merging |
-| Ubuntu packages | Weekly or manual | Ubuntu archive for the check tools | None | Ubuntu 24.04 `.deb` files, checked and not published; never required for merging |
+| Distribution packages | Weekly or manual | Ubuntu, Debian, Fedora and openSUSE archives for the check tools | None | Ubuntu 24.04 and Debian 13 `.deb` files and Fedora 44 and openSUSE Tumbleweed `.rpm` files, checked and not published; never required for merging |
 
 The development image may use the network only to fetch its pinned packages and tools while it is built. The pinned app sources are prepared before the checks start. Every check then runs in the pinned image with `--network none`, no devices, no privileges, no extra capabilities, and write access only to the checkout.
 
 The kernel canary is the one deliberate exception, because its purpose is to follow kernels that move after the image is pinned. It starts from the same digest-pinned Arch base image and installs this week's `linux-headers` and `linux-lts-headers`. It also stages the next Arch kernel from `core-testing`, when there is one, and the newest mainline tag from kernel.org prepared with `modules_prepare`. Then `./hfx kernel-canary` builds the HyperFlux driver and the patched OpenRazer driver against each kernel with `W=1`. It only compiles: nothing is loaded and no device is touched. Its result never gates a merge. A failure is an early warning that a kernel interface changes before it reaches users.
 
-The Ubuntu packages workflow is a second non-gating check. It builds the package artifacts offline in the pinned development image, exactly as the Arch packages are built. Then it starts the digest-pinned Ubuntu 24.04 image without extra privileges and installs the check tools from the Ubuntu archive. In that container `./hfx package distro --distribution ubuntu` turns the artifacts into `hyperflux-next-dkms` and `hyperflux-next-linux`. The workflow inspects both files with `dpkg-deb`, fails on any `lintian` error, and installs them with `apt-get` while `policy-rc.d` refuses every service start. Then `dkms build` compiles the driver against the generic and HWE kernel headers, `modinfo` checks each module, and every installed program is checked against the glibc that Ubuntu 24.04 ships. Finally the packages are purged. The `.deb` files are kept as a workflow artifact for 14 days and are never published. Nothing is loaded and no device is touched.
+The distribution packages workflow is a second non-gating check. It builds the package artifacts once, offline in the pinned development image, exactly as the Arch packages are built. Then, for Ubuntu 24.04, Debian 13, Fedora 44 and openSUSE Tumbleweed in turn, it starts that release's digest-pinned image without extra privileges and installs the check tools from the release's own archive. In that container `./hfx package distro` turns the artifacts into `hyperflux-next-dkms` and `hyperflux-next-linux`. On Ubuntu and Debian the workflow inspects both `.deb` files with `dpkg-deb`, fails on any `lintian` error, and installs them with `apt-get` while `policy-rc.d` refuses every service start. On Fedora and openSUSE `rpmbuild` builds both `.rpm` files from one generated spec inside the release image, so the host never needs RPM tools. The workflow prints each header, file list and scriptlet with `rpm`, fails on any `rpmlint` error except those the generated `rpmlint` configuration accepts by name and reason, and installs the files with `dnf` or `zypper`; the scriptlets only register and build the DKMS sources and never enable or start a unit, which the workflow checks under `/etc/systemd`. Then `dkms build` compiles the driver against two kernels for each release: Ubuntu's generic and HWE kernels, Debian's stock and backports kernels, Fedora's release and updates kernels, and openSUSE's longterm and default kernels. `modinfo` checks each module's vermagic, and every installed program is checked against the glibc that the release ships; on Fedora and openSUSE strong symbol references must also stay within the declared glibc floor, and the DKMS signing certificate must exist at `/var/lib/dkms/mok.pub`. Finally the packages are removed, and on Fedora and openSUSE DKMS must no longer list the driver. The package files are kept as a workflow artifact for 14 days and are never published. Nothing is loaded and no device is touched.
 
 ## Checks Required Before Merging
 
 - `Analyze (c-cpp)`
 - `Analyze (python)`
 - `Dependency review`
+- `Documentation render`
 - `Fast software`
 - `Full software`
 
@@ -66,7 +67,7 @@ With one maintainer, a required approval would be impossible, so none is require
 ## Issues, Pull Requests, And Labels
 
 - CODEOWNERS names one owner for everything; a path gets its own rule only when someone else owns it.
-- Issue forms ask for `hyperfluxctl doctor` output and the support bundle preview, ask people to remove private data first, and never suggest that anyone may send commands to their device.
+- Issue forms ask for `hyperfluxctl doctor` output and the support bundle preview (the device support form also asks for `hyperfluxctl qualification --json`), ask people to remove private data first, and never suggest that anyone may send commands to their device.
 - The pull request template is a short checklist: generated files, checks, docs, changes to the protocol, kernel interface, packages, or install behaviour, and private data.
 - Dependency updates are grouped by GitHub Actions, Cargo, and each Python integration.
 - Labels and the branch rules for `main` are generated from this repository and checked against GitHub.

@@ -1,0 +1,11 @@
+{
+  "name": "hyperflux-documentation-render",
+  "version": "1.0.0",
+  "private": true,
+  "license": "GPL-2.0-only",
+  "description": "Locked packages for tools/documentation_preview.cjs; installed by the development container post-create step.",
+  "dependencies": {
+    "marked": "17.0.5",
+    "playwright": "1.62.0"
+  }
+}

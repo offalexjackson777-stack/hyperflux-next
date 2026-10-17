@@ -166,7 +166,7 @@ fn io_error(_: crate::KernelIoError) -> KernelTransportError {
 mod tests {
     use super::*;
     use crate::{
-        HfxUapiBeginSession, HfxUapiEndSession, HfxUapiNativeExchangeResult,
+        HfxUapiBeginSession, HfxUapiChildBattery, HfxUapiEndSession, HfxUapiNativeExchangeResult,
         HfxUapiNativeExchangeSubmit, HfxUapiSubmit, HfxUapiTransactionResult, KernelIoError,
     };
     use std::cell::Cell;
@@ -234,6 +234,10 @@ mod tests {
         }
 
         fn read_observations(&self, _: &mut HfxUapiReadObservations) -> Result<(), KernelIoError> {
+            Err(KernelIoError::from_raw_os_error(1))
+        }
+
+        fn report_child_battery(&self, _: HfxUapiChildBattery) -> Result<(), KernelIoError> {
             Err(KernelIoError::from_raw_os_error(1))
         }
     }

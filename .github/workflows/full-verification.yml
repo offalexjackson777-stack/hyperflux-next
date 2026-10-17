@@ -56,7 +56,9 @@ jobs:
     - name: Qualify packaged OpenRGB isolation
       run: ./hfx ci qualify-openrgb --image "$HFX_CI_IMAGE" --output build/ci/openrgb-qualification
     - name: Run the complete software graph
-      run: ./hfx ci verify --image "$HFX_CI_IMAGE" --lane full --output build/ci/full --openrgb-qualification build/ci/openrgb-qualification/binding.json
+      env:
+        HFX_RELEASE_EVIDENCE: ${{ (github.base_ref == 'main' || github.ref == 'refs/heads/main') && 'required' || 'structure' }}
+      run: ./hfx ci verify --image "$HFX_CI_IMAGE" --lane full --output build/ci/full --openrgb-qualification build/ci/openrgb-qualification/binding.json --release-evidence "$HFX_RELEASE_EVIDENCE"
     - name: Publish bounded verification summary
       if: ${{ always() }}
       env:
@@ -72,5 +74,6 @@ jobs:
           build/ci/openrgb-qualification
           build/rust-coverage-current.json
           build/rust-coverage-current.lcov
+          build/schema-instances-report.json
         if-no-files-found: error
         retention-days: 30

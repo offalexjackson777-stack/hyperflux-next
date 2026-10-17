@@ -57,7 +57,8 @@ jobs:
     - name: Run fail-closed changed-path verification
       env:
         HFX_CHANGED_FROM: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
-      run: ./hfx ci verify --image "$HFX_CI_IMAGE" --lane fast --output build/ci/fast --changed-from "$HFX_CHANGED_FROM"
+        HFX_RELEASE_EVIDENCE: ${{ (github.base_ref == 'main' || github.ref == 'refs/heads/main') && 'required' || 'structure' }}
+      run: ./hfx ci verify --image "$HFX_CI_IMAGE" --lane fast --output build/ci/fast --changed-from "$HFX_CHANGED_FROM" --release-evidence "$HFX_RELEASE_EVIDENCE"
     - name: Publish bounded verification summary
       if: ${{ always() }}
       env:
@@ -71,3 +72,43 @@ jobs:
         path: build/ci/fast
         if-no-files-found: error
         retention-days: 14
+  documentation-render:
+    name: Documentation render
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+    - name: Check out exact source
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        fetch-depth: 0
+        persist-credentials: false
+    - name: Set up Buildx
+      uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+    - name: Build the pinned development environment
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      with:
+        context: .
+        file: .devcontainer/Containerfile
+        load: true
+        push: false
+        tags: ${{ env.HFX_CI_IMAGE }}
+        cache-from: type=gha,scope=hyperflux-next-development
+        cache-to: type=gha,mode=max,scope=hyperflux-next-development,ignore-error=true
+    - name: Install the locked documentation renderer
+      run: ./hfx ci docs-prepare --image "$HFX_CI_IMAGE"
+    - name: Render every document offline and fail on any issue
+      env:
+        HFX_CHANGED_FROM: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+      run: ./hfx ci docs-render --image "$HFX_CI_IMAGE" --output build/ci/documentation-render --changed-from "$HFX_CHANGED_FROM"
+    - name: Publish documentation render summary
+      if: ${{ always() }}
+      run: if [ -f build/ci/documentation-render/summary.md ]; then cat build/ci/documentation-render/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+    - name: Upload hyperflux-documentation-render
+      if: ${{ always() }}
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: hyperflux-documentation-render
+        path: build/ci/documentation-render
+        if-no-files-found: warn
+        retention-days: 30

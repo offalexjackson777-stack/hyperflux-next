@@ -35,8 +35,8 @@ Direct USB participates only in exact serial-fingerprint precedence. Bluetooth a
 ## Rules That Always Hold
 
 - `HFX-INV-001` Generic mouse and keyboard input remains independent of optional device-control applications.
-- `HFX-INV-002` A qualified native integration may submit exactly one fixed upstream Feature report through an opaque route; no application may submit arbitrary USB setup packets, sysfs operations, or receiver carrier frames.
-- `HFX-INV-003` One bridge is the sole userspace authority for receiver writes and one renewable lease owns each writable resource.
+- `HFX-INV-002` A qualified native integration may submit exactly one fixed upstream Feature report through an opaque route; no application may submit arbitrary USB setup packets, sysfs operations, or receiver carrier frames. The writer file's only other operation forwards bridge-decoded child battery state, which the kernel publishes in power_supply and never sends to the device.
+- `HFX-INV-003` One bridge is the sole userspace authority for receiver writes and for child battery state, and one renewable lease owns each writable resource. The kernel publishes bridge-forwarded battery state in power_supply; never queries the device for it.
 - `HFX-INV-004` Every native exchange is bound to a live receiver generation, qualified opaque route, declarative report profile, NativeControl owner, deadline, and transaction identity.
 - `HFX-INV-005` Native availability is only available, temporarily-unavailable, or withdrawn; pairing, silence, and retail sleep or power labels never grant route authority. Only generation-bound explicit route evidence or endpoint-local traffic qualified by the receiver profile may produce available.
 - `HFX-INV-006` Unknown devices expose safe identity and passive observations but inherit no writable capability.
@@ -75,7 +75,7 @@ Must not own: device commands or settings, application presentation, effects, pr
 
 ### Kernel
 
-Owns: HID binding, input preservation, receiver generations, passive observations, exclusive writer session, qualified fixed-size native exchange, bounded fallback envelopes.
+Owns: HID binding, input preservation, receiver generations, passive observations, exclusive writer session, publishes bridge-forwarded battery state in power_supply; never queries, qualified fixed-size native exchange, bounded fallback envelopes.
 
 Must not own: retail names, effects, profiles, application ownership, package repair.
 

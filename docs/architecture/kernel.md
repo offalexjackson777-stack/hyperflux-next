@@ -31,7 +31,7 @@ exchange has to cross a fixed, versioned interface between the bridge and the mo
 
 ## Responsibilities
 
-The module owns six things that require kernel proximity:
+The module owns seven things that require kernel proximity:
 
 1. preserve ordinary HID input with `HID_CONNECT_DEFAULT` and never consume or
    rewrite input reports;
@@ -45,7 +45,9 @@ The module owns six things that require kernel proximity:
    SET attempt, bounded response acquisition, declarative matching, and exact
    certainty;
 6. retain the version-1 bounded receiver-frame transport and terminal journal
-   as an isolated migration fallback.
+   as an isolated migration fallback;
+7. publish bridge-forwarded child battery state in `power_supply`; never query
+   the device for it.
 
 For the native path, the bridge remains responsible for exact route identity,
 profile qualification, generation safety, NativeControl leases, bounded fair
@@ -114,6 +116,72 @@ identity change within one generation is terminally conflicting: the event is
 recorded, the writer is revoked, and no new session can begin for that
 generation. The module never sends an active query to fill missing identity or
 battery data.
+
+## Child Battery Publication
+
+The module publishes bridge-forwarded battery state in `power_supply`; never
+queries. The bridge decodes passive battery reports as before and forwards each
+changed lane state through `HFX_UAPI_IOCTL_REPORT_CHILD_BATTERY`, a write-only
+64-byte record defined by `uapi/power-supply-v3.json`. Only the current writer
+file may forward, and only for its exact receiver generation; no authorization
+session is needed, so a battery survives session expiry and suspend
+revocation. A record names one child lane (pointer or keyboard) and carries
+presence, capacity (0-100), status, and a printable, NUL-terminated model name
+of at most 31 bytes. Malformed headers fail with `EPROTO`, invalid values with
+`EINVAL`, another generation with `ESTALE`, and a lane whose HID interface is
+not bound with `EHOSTDOWN`.
+
+A present record registers one `power_supply` per lane named
+`<session-name>-mouse` or `<session-name>-keyboard`, parented to that lane's
+HID interface, with `SCOPE=Device`, `PRESENT`, `CAPACITY`, `STATUS`,
+`MODEL_NAME`, and `MANUFACTURER=Razer`. Every property is answered from the
+stored forwarded value under a per-lane spinlock; the kernel holds no model
+name table and never sends a report to the receiver for a property read. A
+changed model name re-registers the supply instead of rewriting a string a
+reader may hold.
+
+Each supply is unregistered when the bridge forwards an absent lane (child
+unpaired, gone, stale, or its battery unavailable), when the writer file that
+published it is released, when the lane's interface is removed (before
+`hid_hw_stop`), and when the receiver generation is destroyed (before its
+character device is deregistered). Registration and teardown are serialized by
+a per-receiver `battery_lock`, taken before `state_lock` and
+`authorization_lock` and never with `registry_lock` or `transport_lock` held.
+Kernels built without `CONFIG_POWER_SUPPLY` reject the operation with
+`EOPNOTSUPP`.
+
+The forwarded status comes from the bridge, not the module. The bridge decodes
+a charge state only for a child profile that declares a qualified decoder;
+today those are the exact mouse profile `0x00cd` and the exact keyboard profile
+`0x0296`. Every other child forwards `Unknown`. For the mouse the bridge reads
+the raw charge field. A charging value becomes `Charging`, or `Full` when the
+level of the same lane reads 100 percent, whatever byte 3 of the report reads.
+A not-charging value becomes `Discharging` only when byte 3 of the same report,
+which the module emits as the contact field just before the charge field,
+reads its proven off-the-mat value `0`. Byte 3 is not only a mat contact: it
+read `6` on a USB cable. Every other byte 3 value, a missing or older one, and
+any charge value the decoder does not list stay `Unknown`. A vendor charge
+limit is not inferred; the mouse itself keeps reporting charging while it
+holds at its limit, and the bridge forwards that. The charge only annotates a
+lane that has a forwarded level, and the bridge forgets it whenever that lane
+is forwarded absent, when the writer file is released, and with each new
+receiver generation, so an old charge value is never reused. The UAPI carries
+no not-charging status, and the bridge does not add one without evidence.
+
+The keyboard status report has no separate charge field. The module emits its
+battery level and then bytes 3 and 4 together as the raw route value, power
+source in the high byte and charge in the low byte, at the next sequence
+number. The bridge reads a route value as that report's charge state only when
+it arrives at the sequence right after the same lane's battery level. The
+keyboard identity report also emits a route value, but right after the product
+identity, so it never sets a charge state. The `0x0296` route charge decoder
+lists whole words. `0x0101` (on a USB cable) and `0x0001` (charge bit only,
+seen for about 2 seconds after plug-in and about 4 seconds after unplug)
+become `Charging`, or `Full` at a 100 percent level, and `0x0000` becomes
+`Discharging`. Every other word stays `Unknown`. That includes `0x0100`, the
+word a plugged-in keyboard might send with a full battery or at a charge
+limit; neither case has been captured. The route decoding of the same value
+is unchanged: `0x0101` stays indeterminate and `0x0001` unqualified.
 
 ## Transport And Outcomes
 

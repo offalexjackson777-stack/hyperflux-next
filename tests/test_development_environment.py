@@ -61,7 +61,11 @@ class DevelopmentEnvironmentTests(unittest.TestCase):
         )
         self.assertEqual(
             environment.post_create_network_uses,
-            ("pinned-upstream-checkouts", "locked-rust-crates"),
+            (
+                "pinned-upstream-checkouts",
+                "locked-rust-crates",
+                "locked-documentation-render-packages",
+            ),
         )
         self.assertEqual(
             [package.name for package in environment.packages],
@@ -277,6 +281,80 @@ class UpstreamPreparationTests(unittest.TestCase):
             link.symlink_to(target, target_is_directory=True)
             with self.assertRaisesRegex(ModelError, "symbolic link"):
                 prepare_upstreams(root, link)
+
+
+SCHEMA_VALIDATOR_PACKAGES = (
+    "python-attrs",
+    "python-jsonschema",
+    "python-jsonschema-specifications",
+    "python-referencing",
+    "python-rpds-py",
+)
+# Distribution names differ (python3-jsonschema, python3-rpds-py, ...), so the
+# product check looks for these fragments in every declared relation.
+SCHEMA_VALIDATOR_FRAGMENTS = ("jsonschema", "referencing", "rpds", "-attrs")
+
+
+class SchemaValidatorBoundaryTests(unittest.TestCase):
+    """The JSON Schema validator is a development-image tool, never a product dependency."""
+
+    def test_development_image_pins_the_validator_and_its_dependencies(self) -> None:
+        environment = load_development_environment(ROOT)
+        pins = {package.name: package.version for package in environment.packages}
+        rendered = containerfile(environment)
+        for name in SCHEMA_VALIDATOR_PACKAGES:
+            with self.subTest(package=name):
+                self.assertIn(name, pins)
+                self.assertIn(f"{name}={pins[name]} \\", rendered)
+
+    def _assert_free_of_validator(self, label: str, relations: list[str]) -> None:
+        for relation in relations:
+            lowered = relation.lower()
+            for fragment in SCHEMA_VALIDATOR_FRAGMENTS:
+                with self.subTest(source=label, relation=relation):
+                    self.assertNotIn(fragment, lowered)
+
+    def test_product_packaging_never_depends_on_the_validator(self) -> None:
+        from hfxdev.arch_split import load_arch_split
+        from hfxdev.arch_split_package import render_repository_pkgbuild
+        from hfxdev.aur_recipe import load_aur_authority
+        from hfxdev.distribution_debian import debian_plans
+        from hfxdev.distribution_rpm import rpm_plans
+        from hfxdev.distributions import load_distribution_catalog
+        from hfxdev.linux_runtime import load_linux_runtime
+
+        for path in (
+            "packaging/install.json",
+            "packaging/arch-split.json",
+            "packaging/aur.json",
+            "packaging/distributions.json",
+        ):
+            with self.subTest(path=path):
+                self.assertNotIn("jsonschema", (ROOT / path).read_text(encoding="utf-8").lower())
+
+        split = load_arch_split(ROOT)
+        for output in split.outputs:
+            self._assert_free_of_validator(
+                f"arch {output.package_name}",
+                [
+                    *output.dependencies,
+                    *output.external_dependencies,
+                    *(item.package for item in output.optional_dependencies),
+                ],
+            )
+        digests = {output.id: "0" * 64 for output in split.outputs}
+        pkgbuild = render_repository_pkgbuild(split, "x86_64", digests)
+        self.assertNotIn("jsonschema", pkgbuild.lower())
+        self._assert_free_of_validator("aur makedepends", list(load_aur_authority(ROOT).makedepends))
+
+        catalog = load_distribution_catalog(ROOT)
+        runtime = load_linux_runtime(ROOT)
+        for target_id in ("ubuntu", "debian"):
+            for plan in debian_plans(split, catalog.targets[target_id], runtime, catalog):
+                self._assert_free_of_validator(f"{target_id} {plan.package_name}", list(plan.depends))
+        for target_id in ("fedora", "opensuse"):
+            for plan in rpm_plans(split, catalog.targets[target_id], runtime, catalog):
+                self._assert_free_of_validator(f"{target_id} {plan.package_name}", list(plan.depends))
 
 
 if __name__ == "__main__":

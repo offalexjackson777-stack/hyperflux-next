@@ -3,7 +3,7 @@
   "install_manifest_sha256": "dd2530b90f489df732800f7b6adb546a43510db3460b7c5e5eefe0f990c3a9cd",
   "product": {
     "name": "hyperflux-next-linux",
-    "version": "2.1.0",
+    "version": "2.1.1",
     "release": 1
   },
   "policy": {
@@ -107,7 +107,7 @@
       "component": "kernel-source",
       "distribution_component": "linux",
       "source": "driver/kernel/Makefile",
-      "destination": "/usr/src/hid-hyperflux-next-2.1.0/Makefile",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/Makefile",
       "mode": "0644",
       "preserve": false
     },
@@ -115,7 +115,23 @@
       "component": "kernel-source",
       "distribution_component": "linux",
       "source": "driver/kernel/generated/hyperflux_receiver_profiles.inc",
-      "destination": "/usr/src/hid-hyperflux-next-2.1.0/generated/hyperflux_receiver_profiles.inc",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/generated/hyperflux_receiver_profiles.inc",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
+      "distribution_component": "linux",
+      "source": "driver/kernel/hyperflux-next-battery.c",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/hyperflux-next-battery.c",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "kernel-source",
+      "distribution_component": "linux",
+      "source": "driver/kernel/hyperflux-next-battery.h",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/hyperflux-next-battery.h",
       "mode": "0644",
       "preserve": false
     },
@@ -123,7 +139,7 @@
       "component": "kernel-source",
       "distribution_component": "linux",
       "source": "driver/kernel/hyperflux-next-core.c",
-      "destination": "/usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-core.c",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/hyperflux-next-core.c",
       "mode": "0644",
       "preserve": false
     },
@@ -131,7 +147,7 @@
       "component": "kernel-source",
       "distribution_component": "linux",
       "source": "driver/kernel/hyperflux-next-internal.h",
-      "destination": "/usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-internal.h",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/hyperflux-next-internal.h",
       "mode": "0644",
       "preserve": false
     },
@@ -139,7 +155,7 @@
       "component": "kernel-source",
       "distribution_component": "linux",
       "source": "driver/kernel/hyperflux-next-native.c",
-      "destination": "/usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-native.c",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/hyperflux-next-native.c",
       "mode": "0644",
       "preserve": false
     },
@@ -147,7 +163,7 @@
       "component": "kernel-source",
       "distribution_component": "linux",
       "source": "driver/kernel/hyperflux-next-observation.c",
-      "destination": "/usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-observation.c",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/hyperflux-next-observation.c",
       "mode": "0644",
       "preserve": false
     },
@@ -155,7 +171,7 @@
       "component": "kernel-source",
       "distribution_component": "linux",
       "source": "driver/kernel/hyperflux-next-pairing-inventory.h",
-      "destination": "/usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-pairing-inventory.h",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/hyperflux-next-pairing-inventory.h",
       "mode": "0644",
       "preserve": false
     },
@@ -163,7 +179,7 @@
       "component": "kernel-source",
       "distribution_component": "linux",
       "source": "driver/kernel/hyperflux-next-passive.h",
-      "destination": "/usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-passive.h",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/hyperflux-next-passive.h",
       "mode": "0644",
       "preserve": false
     },
@@ -171,7 +187,7 @@
       "component": "kernel-source",
       "distribution_component": "linux",
       "source": "driver/kernel/hyperflux-next-profile.c",
-      "destination": "/usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-profile.c",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/hyperflux-next-profile.c",
       "mode": "0644",
       "preserve": false
     },
@@ -179,7 +195,7 @@
       "component": "kernel-source",
       "distribution_component": "linux",
       "source": "driver/kernel/hyperflux-next-profile.h",
-      "destination": "/usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-profile.h",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/hyperflux-next-profile.h",
       "mode": "0644",
       "preserve": false
     },
@@ -187,7 +203,7 @@
       "component": "kernel-source",
       "distribution_component": "linux",
       "source": "driver/kernel/hyperflux-next-session.c",
-      "destination": "/usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-session.c",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/hyperflux-next-session.c",
       "mode": "0644",
       "preserve": false
     },
@@ -195,7 +211,7 @@
       "component": "kernel-source",
       "distribution_component": "linux",
       "source": "driver/kernel/hyperflux-next-transport.c",
-      "destination": "/usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-transport.c",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/hyperflux-next-transport.c",
       "mode": "0644",
       "preserve": false
     },
@@ -203,7 +219,7 @@
       "component": "kernel-source",
       "distribution_component": "linux",
       "source": "driver/kernel/hyperflux-next-version.h",
-      "destination": "/usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-version.h",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/hyperflux-next-version.h",
       "mode": "0644",
       "preserve": false
     },
@@ -211,7 +227,7 @@
       "component": "kernel-source",
       "distribution_component": "linux",
       "source": "driver/kernel/hyperflux-next-wire.h",
-      "destination": "/usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-wire.h",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/hyperflux-next-wire.h",
       "mode": "0644",
       "preserve": false
     },
@@ -219,7 +235,7 @@
       "component": "kernel-source",
       "distribution_component": "linux",
       "source": "driver/kernel/uapi/hyperflux_next.h",
-      "destination": "/usr/src/hid-hyperflux-next-2.1.0/uapi/hyperflux_next.h",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/uapi/hyperflux_next.h",
       "mode": "0644",
       "preserve": false
     },
@@ -227,7 +243,7 @@
       "component": "dkms-configuration",
       "distribution_component": "linux",
       "source": "packaging/generated/dkms.conf",
-      "destination": "/usr/src/hid-hyperflux-next-2.1.0/dkms.conf",
+      "destination": "/usr/src/hid-hyperflux-next-2.1.1/dkms.conf",
       "mode": "0644",
       "preserve": false
     },

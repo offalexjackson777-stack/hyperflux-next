@@ -1,5 +1,5 @@
 {
-  "$schema": "../../schemas/compiled-device-knowledge.schema.json",
+  "$schema": "../../../schemas/compiled-device-knowledge.schema.json",
   "candidate_snapshot_history": [
     {
       "candidate_count": 11,
@@ -1362,6 +1362,7 @@
         "presence.passive-evidence",
         "route.hyperflux-wireless",
         "telemetry.battery-percent",
+        "telemetry.charging-state",
         "telemetry.connection-evidence",
         "telemetry.mouse-contact"
       ],
@@ -1939,12 +1940,10 @@
         },
         {
           "access": "read",
-          "control_state": "blocked",
+          "control_state": "enabled",
           "family": "telemetry",
           "id": "charging-state",
-          "missing_hyperflux_capabilities": [
-            "telemetry.charging-state"
-          ],
+          "missing_hyperflux_capabilities": [],
           "presentation": "status",
           "required_hyperflux_capabilities": [
             "telemetry.charging-state"
@@ -10025,6 +10024,7 @@
         "presence.passive-evidence",
         "route.hyperflux-wireless",
         "telemetry.battery-percent",
+        "telemetry.charging-state",
         "telemetry.connection-evidence"
       ],
       "reviewed_facts": [
@@ -10547,12 +10547,10 @@
         },
         {
           "access": "read",
-          "control_state": "blocked",
+          "control_state": "enabled",
           "family": "telemetry",
           "id": "charging-state",
-          "missing_hyperflux_capabilities": [
-            "telemetry.charging-state"
-          ],
+          "missing_hyperflux_capabilities": [],
           "presentation": "status",
           "required_hyperflux_capabilities": [
             "telemetry.charging-state"
@@ -12628,7 +12626,7 @@
     }
   ],
   "schema": "hyperflux-compiled-device-knowledge-v1",
-  "source_sha256": "5dd7cef53f85626ab0900e8dca573348d3ee22256e1cce75904d64a5121b2558",
+  "source_sha256": "6f7c8c9adc64a01b1b7e0d674870124f0e582d0fff02e353c6b78f2831846c66",
   "upstreams": [
     {
       "commit": "1ef8a91712906a89fd332a2ed62bbd105315d6d1",

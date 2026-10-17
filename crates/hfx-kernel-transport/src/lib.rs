@@ -2,6 +2,7 @@
 
 #![deny(unsafe_code)]
 
+mod battery;
 mod encoder;
 mod error;
 mod generated;
@@ -14,6 +15,7 @@ mod reader;
 mod router;
 mod transport;
 
+pub use battery::{ChildBatteryLane, ChildBatteryPublisher, ChildBatteryState, ChildBatteryStatus};
 pub use encoder::{EncodedTransaction, ReceiverFrameEncoderRegistry};
 pub use error::{KernelTransportError, KernelTransportErrorKind};
 pub use generated::*;
@@ -46,6 +48,7 @@ mod tests {
         assert_eq!(size_of::<HfxUapiReadObservations>(), 1_328);
         assert_eq!(size_of::<HfxUapiNativeExchangeSubmit>(), 216);
         assert_eq!(size_of::<HfxUapiNativeExchangeResult>(), 216);
+        assert_eq!(size_of::<HfxUapiChildBattery>(), 64);
     }
 
     #[test]
@@ -59,6 +62,7 @@ mod tests {
             HFX_UAPI_IOCTL_READ_OBSERVATIONS,
             HFX_UAPI_IOCTL_SUBMIT_NATIVE_EXCHANGE,
             HFX_UAPI_IOCTL_GET_NATIVE_EXCHANGE_RESULT,
+            HFX_UAPI_IOCTL_REPORT_CHILD_BATTERY,
         ];
         assert!(
             descriptors
@@ -68,5 +72,11 @@ mod tests {
         assert_eq!(HFX_UAPI_IOCTL_MAGIC, 0xb7);
         assert_eq!(HFX_UAPI_ABI_VERSION, 1);
         assert_eq!(HFX_UAPI_NATIVE_ABI_VERSION, 2);
+        assert_eq!(HFX_UAPI_POWER_SUPPLY_ABI_VERSION, 3);
+        assert_eq!(HFX_UAPI_IOCTL_REPORT_CHILD_BATTERY.number, 0x08);
+        assert_eq!(
+            HFX_UAPI_IOCTL_REPORT_CHILD_BATTERY.direction,
+            IoctlDirection::Write
+        );
     }
 }

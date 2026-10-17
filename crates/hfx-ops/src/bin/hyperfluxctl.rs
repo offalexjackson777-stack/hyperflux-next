@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_ops::{
-    AssessmentState, RealSystemProbe, SystemProbe, assess_system, build_support_bundle,
-    preview_support_bundle, render_doctor_text, render_status_text, suggested_support_name,
-    write_support_bundle,
+    AssessmentState, CompanionState, RealSystemProbe, SystemProbe, assess_system,
+    build_support_bundle, collect_qualification_report, preview_support_bundle,
+    qualification_report_json, render_doctor_text, render_qualification_text, render_status_text,
+    suggested_support_name, write_qualification_report, write_support_bundle,
 };
 use std::env;
 use std::path::PathBuf;
 
 fn usage() -> &'static str {
-    "Usage:\n  hyperfluxctl status [--json]\n  hyperfluxctl doctor [--explain] [--json]\n  hyperfluxctl support-bundle --preview\n  hyperfluxctl support-bundle --output PATH\n"
+    "Usage:\n  hyperfluxctl status [--json]\n  hyperfluxctl doctor [--explain] [--json]\n  hyperfluxctl support-bundle --preview\n  hyperfluxctl support-bundle --output PATH\n  hyperfluxctl qualification [--json] [--output PATH]\n"
 }
 
 fn json<T: serde::Serialize>(value: &T) -> Result<String, String> {
@@ -79,6 +80,57 @@ fn support_bundle(arguments: &[String]) -> Result<i32, String> {
     }
 }
 
+struct QualificationArguments {
+    as_json: bool,
+    output: Option<PathBuf>,
+}
+
+fn qualification_arguments(arguments: &[String]) -> Option<QualificationArguments> {
+    let mut parsed = QualificationArguments {
+        as_json: false,
+        output: None,
+    };
+    let mut remaining = arguments.iter();
+    while let Some(argument) = remaining.next() {
+        match argument.as_str() {
+            "--json" if !parsed.as_json => parsed.as_json = true,
+            "--output" if parsed.output.is_none() => {
+                let path = remaining.next().filter(|path| !path.starts_with("--"))?;
+                parsed.output = Some(PathBuf::from(path));
+            }
+            _ => return None,
+        }
+    }
+    Some(parsed)
+}
+
+fn qualification(arguments: &[String]) -> Result<i32, String> {
+    let arguments = qualification_arguments(arguments).ok_or_else(|| usage().to_owned())?;
+    let report = collect_qualification_report(&RealSystemProbe::default())
+        .map_err(|error| format!("qualification report failed: {error}"))?;
+    if let Some(destination) = &arguments.output {
+        write_qualification_report(destination, &report)
+            .map_err(|error| format!("qualification report failed: {error}"))?;
+    }
+    if arguments.as_json {
+        print!(
+            "{}",
+            qualification_report_json(&report)
+                .map_err(|error| format!("qualification report failed: {error}"))?
+        );
+    } else {
+        print!("{}", render_qualification_text(&report));
+        if let Some(destination) = &arguments.output {
+            println!("Report written: {}", destination.display());
+        }
+    }
+    Ok(if report.companion.state == CompanionState::Ready {
+        0
+    } else {
+        2
+    })
+}
+
 fn run_arguments(arguments: &[String]) -> Result<i32, String> {
     let Some((command, rest)) = arguments.split_first() else {
         return Err(usage().to_owned());
@@ -87,6 +139,7 @@ fn run_arguments(arguments: &[String]) -> Result<i32, String> {
         "doctor" => doctor(rest),
         "status" => status(rest),
         "support-bundle" => support_bundle(rest),
+        "qualification" => qualification(rest),
         "--help" | "-h" | "help" => {
             print!("{}", usage());
             Ok(0)
@@ -120,12 +173,13 @@ mod tests {
             value,
             include_str!("../../../../tests/fixtures/cli/hyperfluxctl-usage.txt")
         );
-        for command in ["status", "doctor", "support-bundle"] {
+        for command in ["status", "doctor", "support-bundle", "qualification"] {
             assert!(value.contains(command));
         }
         for forbidden in [
             "--repair",
-            "qualification",
+            "qualification serve",
+            "qualification view",
             "native observe",
             "activate-disconnected-driver",
         ] {
@@ -138,6 +192,11 @@ mod tests {
         for arguments in [
             &["doctor", "--repair"][..],
             &["qualification", "view", "--json"][..],
+            &["qualification", "serve"][..],
+            &["qualification", "--output"][..],
+            &["qualification", "--output", "--json"][..],
+            &["qualification", "--json", "--json"][..],
+            &["qualification", "--output", "a.json", "--output", "b.json"][..],
             &["native", "observe"][..],
         ] {
             let arguments = arguments
@@ -145,6 +204,33 @@ mod tests {
                 .map(|argument| (*argument).to_owned())
                 .collect::<Vec<_>>();
             assert_eq!(run_arguments(&arguments), Err(usage().to_owned()));
+        }
+    }
+
+    #[test]
+    fn qualification_accepts_json_and_output_in_either_order() {
+        for (arguments, as_json, output) in [
+            (&[][..], false, None),
+            (&["--json"][..], true, None),
+            (&["--output", "report.json"][..], false, Some("report.json")),
+            (
+                &["--json", "--output", "report.json"][..],
+                true,
+                Some("report.json"),
+            ),
+            (
+                &["--output", "report.json", "--json"][..],
+                true,
+                Some("report.json"),
+            ),
+        ] {
+            let arguments = arguments
+                .iter()
+                .map(|argument| (*argument).to_owned())
+                .collect::<Vec<_>>();
+            let parsed = qualification_arguments(&arguments).expect("arguments are valid");
+            assert_eq!(parsed.as_json, as_json);
+            assert_eq!(parsed.output, output.map(PathBuf::from));
         }
     }
 }

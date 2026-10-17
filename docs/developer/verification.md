@@ -57,6 +57,60 @@ The README shows at most three badges:
 The changed-path fast lane gates ordinary pull requests but has no badge, because it does
 not cover the whole graph.
 
+## Keep Rust Coverage From Slipping
+
+The full lane measures Rust coverage with `cargo llvm-cov` and compares the number of lines,
+functions and regions that no test reaches with the limits in
+[`assurance/rust-coverage.json`](../../assurance/rust-coverage.json). The check fails in two
+cases:
+
+- **`uncovered count regressed`**: your change added code that no test reaches. Add tests
+  for it. Raising a limit is a manual edit that needs a reason in review.
+- **`improved beyond the committed limits`**: your change made more code tested, and the
+  limits no longer protect that gain. Run `./hfx coverage tighten` and commit
+  `assurance/rust-coverage.json`.
+
+`./hfx coverage tighten` reads `build/rust-coverage-current.json` from your last full run.
+To skip the local run, download the `hyperflux-full-evidence` artifact from the pull
+request's Full verification run and pass the file with
+`./hfx coverage tighten --report PATH`. The command prints the old and new limits for the
+commit message. It only ever lowers limits, and it refuses a report that is worse than
+them.
+
+Measurements vary a little between machines: CI counts about 3 more lines and regions as
+not covered than a fast local machine, because one relay test loop runs a different number
+of times. So `tighten` writes each limit a margin above the measurement (5 lines, 5 regions,
+0 functions), and the check only asks for tightening when a result beats a limit by more
+than 10 lines, 10 regions or 1 function. A limit written on either machine passes on the
+other. Only the not-covered limits work this way: `tighten` never changes the minimum
+covered counts, and covered counts can rise freely, so pull requests that add tested code
+do not have to touch the file. The share of covered code is checked against a fixed
+floor taken from the 2.0 release (`ratio_floor`), which `tighten` never changes, so
+deleting code that has tests still passes as long as the share stays at or above it.
+
+## Check The Documentation Render
+
+The **Documentation render** check renders every document in Chromium at three widths, in
+light and dark themes, with no network. It runs on pull requests that change a document or
+a render input, and fails on any layout issue or outbound request. Layout issues include
+content wider than the screen, a box that cuts its content off instead of scrolling, and a
+table column too narrow for one of its words. Its screenshots are uploaded as the
+`hyperflux-documentation-render` artifact.
+
+The committed render record, `assurance/documentation-audit.json`, describes the last
+release. Ordinary pull requests check only its structure, so a merged documentation change
+never makes another pull request stale. A release pull request into `main` must refresh it:
+
+1. Render the release tree: `./hfx docs render --output build/docs-render-<n>`. In the CI
+   image, run `./hfx ci docs-prepare` and then `./hfx ci docs-render`.
+2. Bind the record to that render: `./hfx docs bind --render build/docs-render-<n>/render`.
+3. List the critical screenshots that changed: `./hfx docs review --render <same path>`.
+4. Look at each listed screenshot. Then record the review by naming each file:
+   `./hfx docs review --render <same path> --confirm <file> ...`.
+5. Check the result as release CI will: `./hfx verify --fast --release-evidence required`.
+
+`./hfx docs review` never marks a screenshot reviewed unless you name it.
+
 ## Look Up The Current Checks
 
 The generated [verification graph](../generated/verification.md),

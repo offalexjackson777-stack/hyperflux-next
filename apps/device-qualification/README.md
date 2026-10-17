@@ -15,11 +15,11 @@ A local browser page, run only from a source checkout, for testing a new device.
 python3 tests/qualification_console_fixture_server.py --port 47821
 ```
 
-Run this from the repository root and open the local address it prints. It only previews the interface with sample data: it does not read your installed HyperFlux, test hardware, or add a `hyperfluxctl qualification` command.
+Run this from the repository root and open the local address it prints. It only previews the interface with sample data: it does not read your installed HyperFlux or test hardware. The installed, read-only report of the same view is `hyperfluxctl qualification`.
 
 ## Limitations
 
-- No installed qualification command is exposed; the fixture server previews static source contracts only
+- The console itself is not installed; the fixture server previews static source contracts only, and the installed read-only report of the same view is hyperfluxctl qualification
 
 ## Boundaries
 

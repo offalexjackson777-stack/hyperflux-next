@@ -10,6 +10,7 @@ from ..development import (
     DevelopmentEnvironment,
     LOCKED_RUST_FETCH_COMMAND,
     UPSTREAM_PREPARE_COMMAND,
+    documentation_render_prepare_command,
     networked_software_prepare_command,
 )
 
@@ -87,7 +88,9 @@ def devcontainer(environment: DevelopmentEnvironment) -> str:
         "remoteUser": environment.workspace_user,
         "updateRemoteUserUID": True,
         "workspaceFolder": environment.workspace_path,
-        "postCreateCommand": networked_software_prepare_command(),
+        "postCreateCommand": networked_software_prepare_command()
+        + " && "
+        + documentation_render_prepare_command(),
         "hostRequirements": {
             "cpus": 4,
             "memory": "8gb",
@@ -133,11 +136,15 @@ def markdown(environment: DevelopmentEnvironment, upstreams: list[dict[str, Any]
         "```sh",
         " ".join(UPSTREAM_PREPARE_COMMAND),
         "CARGO_NET_OFFLINE=false " + " ".join(LOCKED_RUST_FETCH_COMMAND),
+        documentation_render_prepare_command(),
         "```",
         "",
         "This is the only ordinary setup step that uses the network. It creates clean, detached "
-        "upstream checkouts and fetches the exact `Cargo.lock` dependency set into the "
-        f"workspace-local `{CARGO_CACHE_PATH}/` cache. The reviewed upstream commits are:",
+        "upstream checkouts, fetches the exact `Cargo.lock` dependency set into the "
+        f"workspace-local `{CARGO_CACHE_PATH}/` cache, and installs the locked documentation "
+        "renderer packages (Playwright and marked, from "
+        "`toolchains/documentation-render/package-lock.json`) into "
+        "`.hfx/documentation-render/`. The reviewed upstream commits are:",
         "",
         "| Upstream | Commit | Contract |",
         "| --- | --- | --- |",
@@ -165,8 +172,10 @@ def markdown(environment: DevelopmentEnvironment, upstreams: list[dict[str, Any]
             "",
             "Container construction may read the immutable Arch snapshot, install the exact "
             "Rust toolchain, and fetch the exact RustSec advisory database commit. Post-create "
-            "preparation may fetch only cataloged repositories and "
-            "locked Rust crates. Verification reuses those workspace-local inputs without network "
+            "preparation may fetch only cataloged repositories, "
+            "locked Rust crates, and the locked documentation renderer packages. The "
+            "documentation render (`./hfx docs render`) then uses the image's own Node.js, "
+            "Chromium and Noto fonts without network access. Verification reuses those workspace-local inputs without network "
             "access; missing, dirty, or mismatched inputs fail with a remediation command.",
             "",
             f"Archive package retrieval permits up to {environment.archive_download_attempts} "

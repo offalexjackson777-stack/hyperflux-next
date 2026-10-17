@@ -205,12 +205,27 @@ def load_documentation_render_policy(root: Path) -> DocumentationRenderPolicy:
 class DocumentationRenderAudit:
     source_revision: str
     result_sha256: str
+    document_count: int
     check_count: int
     screenshot_count: int
     capture_mode: str
-    fast_run_id: str
-    full_run_id: str
-    full_source_revision: str
+    release_gate_changes: tuple[str, ...]
+
+
+RELEASE_EVIDENCE_ENVIRONMENT = "HFX_RELEASE_EVIDENCE"
+RELEASE_EVIDENCE_MODES = ("structure", "required")
+AUDIT_SCHEMA = "hyperflux-documentation-audit-v3"
+AUDIT_PATH = "assurance/documentation-audit.json"
+SCREENSHOT_MANIFEST_PATH = "assurance/documentation-screenshot-manifest.json"
+RENDER_CONTRACT = "github-compatible-gfm-v2"
+PUBLICATION_GATE = "HFX-GATE-PUBLICATION-DECISION"
+# Files the audit binds by digest, in addition to the rendered documents.
+RENDER_INPUT_FILES = {
+    "catalog_sha256": "docs/catalog.json",
+    "policy_sha256": "docs/render-preview.json",
+    "renderer_sha256": "tools/documentation_preview.cjs",
+    "journey_source_coverage_sha256": "assurance/journey-source-coverage.json",
+}
 
 
 def rendered_documents_sha256(root: Path, policy: DocumentationRenderPolicy) -> str:
@@ -257,7 +272,7 @@ def _documentation_screenshot_manifest(
     policy: DocumentationRenderPolicy,
 ) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     value = _exact(
-        load_json(root / "assurance" / "documentation-screenshot-manifest.json"),
+        load_json(root / SCREENSHOT_MANIFEST_PATH),
         SCREENSHOT_MANIFEST_KEYS,
         "documentation screenshot manifest",
     )
@@ -299,10 +314,36 @@ def _documentation_screenshot_manifest(
     return value, records
 
 
+def documentation_render_inputs(
+    root: Path, policy: DocumentationRenderPolicy
+) -> dict[str, str]:
+    """Return the input digests a render of this tree would be bound to."""
+    inputs = {
+        key: sha256_file(root / relative) for key, relative in RENDER_INPUT_FILES.items()
+    }
+    inputs["rendered_documents_sha256"] = rendered_documents_sha256(root, policy)
+    return inputs
+
+
+def expected_release_gate_changes(root: Path) -> list[str]:
+    authorized = load_json(root / "architecture" / "constitution.json")[
+        "publication_interlock"
+    ]["publication_authorized"]
+    return [PUBLICATION_GATE] if authorized else []
+
+
 def validate_documentation_render_audit(
     root: Path,
     value: Any,
+    *,
+    release_evidence: bool = False,
 ) -> DocumentationRenderAudit:
+    """Validate the committed render record.
+
+    The record is made once per release. Every pull request checks its structure, its
+    binding to the screenshot manifest, the visual review and the publication interlock.
+    Only release mode also requires it to describe the documents in this exact tree.
+    """
     root = root.resolve()
     audit = _exact(
         value,
@@ -313,13 +354,13 @@ def validate_documentation_render_audit(
             "inputs",
             "render",
             "visual_review",
-            "verification",
+            "publication",
         },
         "documentation audit",
     )
     if audit["$schema"] != "../schemas/documentation-audit.schema.json":
         raise ModelError("documentation audit has a non-canonical schema reference")
-    if audit["schema"] != "hyperflux-documentation-audit-v2":
+    if audit["schema"] != AUDIT_SCHEMA:
         raise ModelError("unsupported documentation audit schema")
     revision = audit["source_revision"]
     if not isinstance(revision, str) or REVISION.fullmatch(revision) is None:
@@ -331,27 +372,18 @@ def validate_documentation_render_audit(
     )
     inputs = _exact(
         audit["inputs"],
-        {
-            "catalog_sha256",
-            "policy_sha256",
-            "renderer_sha256",
-            "journey_source_coverage_sha256",
-            "rendered_documents_sha256",
-        },
+        {*RENDER_INPUT_FILES, "rendered_documents_sha256"},
         "documentation audit inputs",
     )
-    expected_inputs = {
-        "catalog_sha256": sha256_file(root / "docs" / "catalog.json"),
-        "policy_sha256": sha256_file(root / "docs" / "render-preview.json"),
-        "renderer_sha256": sha256_file(root / "tools" / "documentation_preview.cjs"),
-        "journey_source_coverage_sha256": sha256_file(
-            root / "assurance" / "journey-source-coverage.json"
-        ),
-        "rendered_documents_sha256": rendered_documents_sha256(root, policy),
-    }
-    for key, expected in expected_inputs.items():
-        if _digest(inputs[key], key) != expected:
-            raise ModelError(f"documentation audit {key} is stale")
+    for key, digest in inputs.items():
+        _digest(digest, key)
+    if release_evidence:
+        for key, expected in documentation_render_inputs(root, policy).items():
+            if inputs[key] != expected:
+                raise ModelError(
+                    f"documentation audit {key} is stale; render the documentation "
+                    "and run ./hfx docs bind for this release"
+                )
 
     render = _exact(
         audit["render"],
@@ -376,10 +408,18 @@ def validate_documentation_render_audit(
     )
     if render["status"] != "passed":
         raise ModelError("documentation render audit did not pass")
-    if render["document_count"] != len(policy.render_paths):
-        raise ModelError("documentation render document count drifted")
-    if render["check_count"] != policy.check_count:
-        raise ModelError("documentation render check count drifted")
+    document_count = _positive_integer(
+        render["document_count"], "document count", policy.limits["max_documents"]
+    )
+    if render["check_count"] != document_count * len(policy.viewports) * len(
+        policy.themes
+    ):
+        raise ModelError("documentation render check count does not cover every document")
+    if release_evidence and (
+        document_count != len(policy.render_paths)
+        or render["check_count"] != policy.check_count
+    ):
+        raise ModelError("documentation render document count is stale for this release")
     if render["screenshot_count"] != policy.screenshot_count:
         raise ModelError("documentation render screenshot count drifted")
     if (
@@ -387,7 +427,7 @@ def validate_documentation_render_audit(
         or render["max_page_height"] != policy.max_page_height
     ):
         raise ModelError("documentation render capture coverage drifted")
-    if render["render_contract"] != "github-compatible-gfm-v2":
+    if render["render_contract"] != RENDER_CONTRACT:
         raise ModelError("documentation render compatibility contract drifted")
     for field in ("issue_count", "outbound_network_requests"):
         if render[field] != 0:
@@ -400,7 +440,7 @@ def validate_documentation_render_audit(
     _digest(render["result_sha256"], "result")
     if _digest(
         render["screenshot_manifest_sha256"], "screenshot manifest"
-    ) != sha256_file(root / "assurance" / "documentation-screenshot-manifest.json"):
+    ) != sha256_file(root / SCREENSHOT_MANIFEST_PATH):
         raise ModelError("documentation audit screenshot manifest is stale")
     if (
         screenshot_manifest["source_revision"] != revision
@@ -450,7 +490,10 @@ def validate_documentation_render_audit(
         if _digest(
             record["sha256"], f"reviewed screenshot {file}"
         ) != screenshot_records[file]["sha256"]:
-            raise ModelError("documentation visual review screenshot digest drifted")
+            raise ModelError(
+                f"documentation visual review of {file} does not match the screenshot "
+                "manifest; look at the new screenshot and run ./hfx docs review"
+            )
     if (
         reviewed_documents != set(policy.screenshot_documents)
         or reviewed_widths != {width for width, _height in policy.viewports}
@@ -458,67 +501,27 @@ def validate_documentation_render_audit(
     ):
         raise ModelError("documentation visual review coverage drifted")
 
-    verification = _exact(
-        audit["verification"],
-        {
-            "fast_run_id",
-            "fast_evidence_sha256",
-            "fast_result_sha256",
-            "full_run_id",
-            "full_source_revision",
-            "full_evidence_sha256",
-            "full_result_sha256",
-            "second_generation_identical",
-            "links",
-            "privacy",
-            "release_gate_changes",
-        },
-        "documentation audit verification",
+    publication = _exact(
+        audit["publication"], {"release_gate_changes"}, "documentation audit publication"
     )
-    run_id = verification["fast_run_id"]
-    if not isinstance(run_id, str) or re.fullmatch(r"hfxv-[0-9a-f]{20}", run_id) is None:
-        raise ModelError("documentation audit Fast run id is invalid")
-    _digest(verification["fast_evidence_sha256"], "Fast evidence")
-    _digest(verification["fast_result_sha256"], "Fast result")
-    full_run_id = verification["full_run_id"]
-    full_revision = verification["full_source_revision"]
-    if (
-        not isinstance(full_run_id, str)
-        or re.fullmatch(r"hfxv-[0-9a-f]{20}", full_run_id) is None
-        or not isinstance(full_revision, str)
-        or REVISION.fullmatch(full_revision) is None
-    ):
-        raise ModelError("documentation audit Full run identity is invalid")
-    _digest(verification["full_evidence_sha256"], "Full evidence")
-    _digest(verification["full_result_sha256"], "Full result")
-    if (
-        verification["second_generation_identical"] is not True
-        or verification["links"] != "passed"
-        or verification["privacy"] != "passed"
-        or verification["release_gate_changes"]
-        != (
-            ["HFX-GATE-PUBLICATION-DECISION"]
-            if load_json(root / "architecture" / "constitution.json")[
-                "publication_interlock"
-            ]["publication_authorized"]
-            else []
-        )
-    ):
-        raise ModelError("documentation audit verification boundary drifted")
+    if publication["release_gate_changes"] != expected_release_gate_changes(root):
+        raise ModelError("documentation audit publication boundary drifted")
     return DocumentationRenderAudit(
         source_revision=revision,
         result_sha256=render["result_sha256"],
+        document_count=document_count,
         check_count=render["check_count"],
         screenshot_count=render["screenshot_count"],
         capture_mode=render["capture_mode"],
-        fast_run_id=run_id,
-        full_run_id=full_run_id,
-        full_source_revision=full_revision,
+        release_gate_changes=tuple(publication["release_gate_changes"]),
     )
 
 
-def load_documentation_render_audit(root: Path) -> DocumentationRenderAudit:
+def load_documentation_render_audit(
+    root: Path, *, release_evidence: bool = False
+) -> DocumentationRenderAudit:
     return validate_documentation_render_audit(
         root,
-        load_json(root / "assurance" / "documentation-audit.json"),
+        load_json(root / AUDIT_PATH),
+        release_evidence=release_evidence,
     )
