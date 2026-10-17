@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use crate::endpoint::RAZER_STATUS_TIMEOUT;
+use crate::endpoint::{Admission, RAZER_STATUS_TIMEOUT};
 use crate::status::{
     RelayPublicationState, RelayRouteStatus, RelayRouteStatusIdentity, RelayStatusWriter,
 };
@@ -14,6 +14,7 @@ use crate::{
 use hfx_domain::EventBatchLimit;
 use hfx_protocol::{EventCursor, NativeRoute};
 use hfx_sdk::EventSubscription;
+use rustix::event::{PollFd, PollFlags, Timespec, poll};
 use rustix::fs::{OFlags, fcntl_getfl, fcntl_setfl};
 use std::collections::{BTreeMap, VecDeque};
 use std::fmt;
@@ -235,15 +236,37 @@ impl<B: crate::BridgeExchange> RunningEndpoint<B> {
     }
 
     fn process_event(&mut self, event: UhidEvent) -> Result<(), RelayRuntimeError> {
-        if let Some(reply) = self
+        match self
             .endpoint_mut()
-            .handle(event)
+            .admit(event)
             .map_err(|_| RelayRuntimeError::Endpoint)?
         {
-            self.enqueue(&reply)?;
+            Admission::Reply(reply) => {
+                if let Some(reply) = reply {
+                    self.enqueue(&reply)?;
+                }
+            }
+            Admission::Set { reply, report } => {
+                // OpenRazer waits a few milliseconds between its SET and GET.
+                // Answering the SET first lets that wait overlap the exchange;
+                // its outcome still reaches OpenRazer only through the GET.
+                let queued = self.enqueue(&reply).and_then(|()| self.flush());
+                self.endpoint_mut().complete_set(report);
+                queued?;
+            }
         }
         self.report_battery_diagnostic();
         Ok(())
+    }
+
+    /// Wakes the idle wait for a UHID event, or for room to write a queued
+    /// reply.
+    fn poll_fd(&self) -> PollFd<'_> {
+        let mut flags = PollFlags::IN;
+        if !self.pending.is_empty() {
+            flags |= PollFlags::OUT;
+        }
+        PollFd::new(&self.file, flags)
     }
 
     fn report_battery_diagnostic(&mut self) {
@@ -808,6 +831,10 @@ impl ManagedRoute {
         }
     }
 
+    fn poll_fd(&self) -> Option<PollFd<'_>> {
+        self.endpoint.as_ref().map(RunningEndpoint::poll_fd)
+    }
+
     fn probe_publication(&mut self) {
         if self.endpoint.is_none() {
             self.publication.probe(&self.record);
@@ -1047,10 +1074,34 @@ pub fn run_relay(paths: &RelayPaths, termination: &AtomicBool) -> Result<(), Rel
             next_watch = Instant::now() + WATCH_INTERVAL;
         }
         publish_status(&mut status_writer, &mut routes)?;
-        thread::sleep(IDLE_INTERVAL);
+        wait_for_endpoints(
+            routes.values().filter_map(ManagedRoute::poll_fd).collect(),
+            IDLE_INTERVAL,
+        );
     }
     destroy_all(&mut routes);
     Ok(())
+}
+
+/// Sleeps at most `timeout`, returning early once any endpoint is ready, so
+/// each SET and GET of a multi-report `OpenRazer` write (one per lighting row)
+/// is answered at once instead of after the rest of the idle interval.
+fn wait_for_endpoints(mut fds: Vec<PollFd<'_>>, timeout: Duration) {
+    let limit = Timespec {
+        tv_sec: timeout.as_secs().try_into().unwrap_or(i64::MAX),
+        tv_nsec: timeout.subsec_nanos().into(),
+    };
+    // A signal ends the wait early like readiness does. Without endpoints, or
+    // when poll fails otherwise, the plain idle sleep keeps the loop from
+    // spinning.
+    let waited = !fds.is_empty()
+        && matches!(
+            poll(&mut fds, Some(&limit)),
+            Ok(_) | Err(rustix::io::Errno::INTR)
+        );
+    if !waited {
+        thread::sleep(timeout);
+    }
 }
 
 fn complete_ready_publications(
