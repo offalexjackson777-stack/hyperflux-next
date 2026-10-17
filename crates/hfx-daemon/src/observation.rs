@@ -237,9 +237,12 @@ impl PassiveObservationTranslator {
             HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ACTIVITY => {
                 self.activity(raw.endpoint_slot, raw.value, stamp)
             }
-            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW => {
-                self.battery(raw.endpoint_slot, raw.value, stamp)
-            }
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW => self.battery(
+                raw.endpoint_slot,
+                raw.value,
+                raw.source == HFX_UAPI_OBSERVATION_SOURCE_HID_PASSIVE,
+                stamp,
+            ),
             HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CONTACT_RAW => {
                 Ok(self.contact(raw.endpoint_slot, raw.value, stamp))
             }
@@ -499,10 +502,16 @@ impl PassiveObservationTranslator {
         })
     }
 
+    /// Decodes one battery level. A passive status report carries it, and so
+    /// does the kernel's copy of a matched battery-level query reply, which
+    /// uses the same 0-255 scale. Only a passive level can be followed by the
+    /// route word of the same report, so only a passive level arms the
+    /// keyboard charge decoder.
     fn battery(
         &mut self,
         slot: u32,
         value: u32,
+        passive_report: bool,
         stamp: ObservationStamp,
     ) -> Result<PassiveTranslation, PassiveTranslationError> {
         let Some(binding) = self.lanes.get_mut(&slot) else {
@@ -523,7 +532,7 @@ impl PassiveObservationTranslator {
                     .map_err(|_| PassiveTranslationError::InvalidObservationValue)?
             }
         };
-        binding.last_battery = Some(stamp.sequence());
+        binding.last_battery = passive_report.then(|| stamp.sequence());
         let observed_at_ms = stamp.observed_at_ms();
         let evidence = if passive.report_implies_route_available {
             route_evidence(binding, RouteState::Available).unwrap_or(ReturnEvidence::BatteryReport)

@@ -1455,3 +1455,69 @@ fn wired_child_pid_zero_identity_is_rejected_and_keeps_the_wireless_mouse() {
         LifecycleObservationKind::RegisterDevice(child) if *child.device_id() == mouse
     ));
 }
+
+#[test]
+fn a_queried_battery_level_reads_like_a_passive_one_but_reads_no_charge() {
+    let feature_battery = |sequence, slot, level| {
+        let mut observation = raw(
+            sequence,
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW,
+            slot,
+            level,
+        );
+        observation.source = HFX_UAPI_OBSERVATION_SOURCE_HID_FEATURE;
+        observation
+    };
+    let percentage = |translation: &PassiveTranslation| match &translation.observations[0].kind {
+        LifecycleObservationKind::BatteryReported { percentage, .. } => percentage.get(),
+        other => panic!("expected a battery level, got {other:?}"),
+    };
+    let mut translator = translator();
+
+    // The mouse's own status report can be minutes away; the answer to a
+    // host application's battery query is published at once.
+    identify(
+        &mut translator,
+        1,
+        HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+        0x00cd,
+    );
+    let mouse = translator
+        .translate(feature_battery(2, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE, 202))
+        .expect("queried mouse battery translates");
+    assert_eq!(mouse.disposition, PassiveDisposition::Applied);
+    assert_eq!(percentage(&mouse), 79);
+
+    // A queried level is not part of a keyboard status report, so the route
+    // word that happens to follow it is not read as a charge state.
+    identify(
+        &mut translator,
+        3,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x0296,
+    );
+    let keyboard = translator
+        .translate(feature_battery(
+            4,
+            HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+            187,
+        ))
+        .expect("queried keyboard battery translates");
+    assert_eq!(percentage(&keyboard), 73);
+    let route = translator
+        .translate(raw(
+            5,
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ROUTE_RAW,
+            HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+            0,
+        ))
+        .expect("route translates");
+    assert_eq!(route.charge, None);
+
+    // The passive status report still pairs its level with its route word.
+    let paired = keyboard_status_report(&mut translator, 6, 0);
+    assert_eq!(
+        paired.charge,
+        Some((ChildBatteryLane::Keyboard, ChildChargeReading::Discharging))
+    );
+}

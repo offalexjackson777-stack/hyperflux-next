@@ -555,6 +555,9 @@ static int hfx_native_record_dispatch(
 				HFX_UAPI_NATIVE_REPORT_BYTES;
 			memcpy(record->result.response, response,
 			       sizeof(record->result.response));
+			hfx_observe_feature_battery(
+				receiver, record->result.endpoint_slot,
+				record->request, response);
 			ret = 0;
 			goto put_interface;
 		}

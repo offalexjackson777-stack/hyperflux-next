@@ -158,6 +158,9 @@ void hfx_observe_activity(struct hfx_receiver *receiver, int interface_number,
 			  unsigned int report_id, int size);
 void hfx_observe_passive(struct hfx_receiver *receiver, int interface_number,
 			 const u8 *data, int size);
+void hfx_observe_feature_battery(struct hfx_receiver *receiver,
+				 u32 endpoint_slot, const u8 *request,
+				 const u8 *response);
 bool hfx_observation_identity_complete(struct hfx_receiver *receiver);
 bool hfx_observe_pairing_inventory(struct hfx_receiver *receiver,
 				   const struct hfx_pairing_inventory *inventory);

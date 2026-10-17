@@ -41,8 +41,10 @@ the desktop battery widget, for example the battery icon in KDE Plasma. Each
 device appears under its own name, such as Basilisk V3 Pro 35K. You do not
 need to set anything up.
 
-- A device appears once it reports its battery. After you start the computer
-  or switch the device on, this can take a few minutes.
+- A device appears once its battery level is known. With Full installed,
+  the OpenRazer service asks for it about half a minute after you start the
+  computer, and then about every ten minutes. Without Full, the device has to
+  send its level by itself, which can take a few minutes.
 - A device that is switched off or out of range leaves the widget until it
   reports again.
 - The widget also shows whether each device is charging, discharging, or
