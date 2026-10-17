@@ -73,7 +73,7 @@ def release_summary(readiness: dict[str, Any], repository: ArchRepositoryPolicy)
             "review; there is no package to install."
         )
     version = repository.product_release_tag.removeprefix("v")
-    return f"""**HyperFlux Next {version} is available for Arch Linux x86_64.** Read the
+    return f"""**HyperFlux Next {version} is the current release.** Read the
 [{repository.product_release_tag} release notes]({repository.product_release_url})."""
 
 
@@ -98,25 +98,39 @@ def release_status(
 
 
 def recommended_package(catalog: DistributionCatalog) -> str:
+    """The four steps every install guide shares, with Arch's commands named as Arch's."""
     arch = catalog.targets["arch"]
     core = arch.components["linux"]
     full = arch.components["full"]
-    return f"""You need Arch Linux on an x86_64 computer and the receiver, with your keyboard
-and mouse paired to it.
+    core_only = any(
+        "full" not in target.components
+        for target_id, target in catalog.targets.items()
+        if target_id != "arch"
+    )
+    other_distributions = (
+        "\n   The other distributions get Core only for now, without the app\n"
+        "   connections; their guides give the `apt`, `dnf`, or `zypper` command."
+        if core_only
+        else ""
+    )
+    return f"""Every guide has the same four steps. You need an x86_64 computer and the
+receiver, with your keyboard and mouse paired to it.
 
-1. **Add the HyperFlux package repository.** You do this once. Follow
-   [step 1 of the installation guide](docs/user/installation.md#1-add-the-hyperflux-repository-one-time-only).
-   It is a signed project-operated Arch repository,
-   not an official Arch Linux repository.
-2. **Install HyperFlux Next.**
+1. **Add the HyperFlux package repository.** You do this once, as your guide
+   shows. On Arch Linux, follow
+   [step 1 of the Arch Linux guide](docs/user/installation.md#1-add-the-hyperflux-repository-one-time-only).
+   It is a signed repository run by the HyperFlux project, not an official
+   repository of your distribution.
+2. **Install HyperFlux Next.** On Arch Linux, install Full, the recommended
+   package:
 
    ```bash
    sudo pacman -Syu {full.package_name}
    ```
 
-   This installs Full, the recommended package. It brings Core with it. If you
-   only want the receiver driver and the SDK, without the app connections,
-   install Core instead: `sudo pacman -Syu {core.package_name}`.
+   Full adds the connections to OpenRazer, Polychromatic, and OpenRGB, and
+   brings Core with it. Core alone is the receiver driver and the SDK:
+   `sudo pacman -Syu {core.package_name}`.{other_distributions}
 3. **Turn on HyperFlux and restart.** Keep the receiver plugged in.
 
    ```bash
@@ -137,7 +151,7 @@ and mouse paired to it.
    To report how your devices are detected, run `hyperfluxctl qualification`.
    It only reads, and [Hardware](docs/user/hardware.md) shows how to share it.
 
-Later updates arrive with your normal `sudo pacman -Syu`."""
+Later updates arrive with your normal system update."""
 
 
 def _wrapped(text: str) -> str:
