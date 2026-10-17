@@ -51,11 +51,20 @@ admission, and response correlation. It treats the report's device command and
 status as upstream-owned opaque data.
 
 OpenRGB may hold NativeControl for an explicit controller session. The
-feature-only OpenRazer UHID relay acquires the same child-local resource for one
-Feature exchange and releases it afterward, so an idle virtual endpoint cannot
-exclude another application. NativeControl conflicts with the retained semantic
-lighting, settings, and pairing resources for that child only. Siblings, other
-receivers, and newer generations remain independent.
+feature-only OpenRazer UHID relay acquires the same child-local resource when a
+burst of Feature exchanges starts and keeps it while the exchanges keep
+matching. OpenRazer writes one lighting frame as several back-to-back
+exchanges, one per row, so acquiring and releasing around every exchange would
+add two bridge round trips to each of them. The relay gives the lease back 25
+ms after the last matched exchange, and at once when an exchange is not sent,
+may have been sent, or cannot be decoded; the next exchange then acquires a
+fresh lease. It never repeats an exchange to recover a lease. A lease held for
+half its 30-second duration is renewed before the next exchange uses it.
+Teardown, route recycling, kernel-binding recovery, and relay shutdown release
+the lease explicitly, so an idle virtual endpoint cannot exclude another
+application for longer than one burst plus 25 ms. NativeControl conflicts with
+the retained semantic lighting, settings, and pairing resources for that child
+only. Siblings, other receivers, and newer generations remain independent.
 
 Protocol v6, UAPI v1, semantic carrier encoding, stable-state persistence, and
 restoration remain installed as a noncompeting compatibility fallback. They are

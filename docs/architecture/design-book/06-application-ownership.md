@@ -39,6 +39,12 @@ claiming that a particular device setting is controlled. Adapter disconnect,
 route withdrawal, generation replacement, or an explicit release ends the lease;
 forced takeover is prohibited.
 
+The OpenRazer relay holds a lease only while it is writing. It keeps one lease
+across a burst of Feature exchanges, such as the rows of one lighting frame,
+and releases it 25 ms after the last exchange. Another application therefore
+waits at most one burst plus 25 ms, and between animation frames the device is
+free for it.
+
 ## 27. Atomic Native Exchanges
 
 Each native exchange is atomic at the route boundary: one SET begins at most
