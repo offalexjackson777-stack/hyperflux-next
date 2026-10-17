@@ -16,6 +16,7 @@ fn frozen_ready_assessment() -> Assessment {
         driver: DriverState::Active,
         bridge_ready: true,
         bridge_responding: true,
+        full_without_openrgb_plugin: false,
         receiver_generations: 1,
         qualified_generations: 1,
         working: vec![
@@ -51,6 +52,7 @@ fn frozen_needs_attention_assessment() -> Assessment {
         driver: DriverState::Active,
         bridge_ready: false,
         bridge_responding: false,
+        full_without_openrgb_plugin: false,
         receiver_generations: 0,
         qualified_generations: 0,
         working: vec!["the installed driver is active".to_owned()],
