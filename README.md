@@ -8,8 +8,8 @@ Polychromatic, and OpenRGB on Linux.
 [![License: GPL-2.0-only](docs/assets/badge-license.svg)](LICENSE)
 
 <!-- HFX-GENERATED-BEGIN: release-summary -->
-**HyperFlux Next 2.1.0 is available for Arch Linux x86_64.** Read the
-[v2.1.0 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.0).
+**HyperFlux Next 2.1.1 is available for Arch Linux x86_64.** Read the
+[v2.1.1 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.1).
 <!-- HFX-GENERATED-END: release-summary -->
 
 With HyperFlux Next 2.0, a keyboard and mouse that share one HyperFlux

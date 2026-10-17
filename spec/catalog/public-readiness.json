@@ -25,9 +25,9 @@
     "upstream_blocked_or_research_only": 2
   },
   "publication": {
-    "label": "Arch 2.1.0 release",
+    "label": "Arch 2.1.1 release",
     "state": "ready",
-    "summary": "Arch Linux x86_64 Core and Full 2.1.0-1 packages are published in the human-facing GitHub Release v2.1.0. The signed HyperFlux Next third-party Pacman repository is served separately through the fixed `arch-repository` machine channel."
+    "summary": "Arch Linux x86_64 Core and Full 2.1.1-1 packages are published in the human-facing GitHub Release v2.1.1. The signed HyperFlux Next third-party Pacman repository is served separately through the fixed `arch-repository` machine channel."
   },
   "qualification_console_access": "loopback-only",
   "repository": {
