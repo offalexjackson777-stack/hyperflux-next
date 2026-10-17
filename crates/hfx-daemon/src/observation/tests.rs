@@ -1497,7 +1497,11 @@ fn a_queried_battery_level_reads_like_a_passive_one_but_reads_no_charge() {
         0x0296,
     );
     let keyboard = translator
-        .translate(feature_battery(4, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 187))
+        .translate(feature_battery(
+            4,
+            HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+            187,
+        ))
         .expect("queried keyboard battery translates");
     assert_eq!(percentage(&keyboard), 73);
     let route = translator
