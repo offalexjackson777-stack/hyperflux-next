@@ -1087,17 +1087,20 @@ pub fn run_relay(paths: &RelayPaths, termination: &AtomicBool) -> Result<(), Rel
 /// each SET and GET of a multi-report `OpenRazer` write (one per lighting row)
 /// is answered at once instead of after the rest of the idle interval.
 fn wait_for_endpoints(mut fds: Vec<PollFd<'_>>, timeout: Duration) {
-    if fds.is_empty() {
-        thread::sleep(timeout);
-        return;
-    }
-    let Ok(limit) = Timespec::try_from(timeout) else {
-        thread::sleep(timeout);
-        return;
+    let limit = Timespec {
+        tv_sec: timeout.as_secs().try_into().unwrap_or(i64::MAX),
+        tv_nsec: timeout.subsec_nanos().into(),
     };
-    match poll(&mut fds, Some(&limit)) {
-        Ok(_) | Err(rustix::io::Errno::INTR) => {}
-        Err(_) => thread::sleep(timeout),
+    // A signal ends the wait early like readiness does. Without endpoints, or
+    // when poll fails otherwise, the plain idle sleep keeps the loop from
+    // spinning.
+    let waited = !fds.is_empty()
+        && matches!(
+            poll(&mut fds, Some(&limit)),
+            Ok(_) | Err(rustix::io::Errno::INTR)
+        );
+    if !waited {
+        thread::sleep(timeout);
     }
 }
 
