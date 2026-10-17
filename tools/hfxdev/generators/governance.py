@@ -468,15 +468,45 @@ for directory in /lib/modules/*/build; do
   built=$((built + 1))
 done
 test "$built" -ge 2
+# Full: the OpenRazer driver package stands in for the release's own one, so
+# the release's stock OpenRazer service and Python client install on top of it.
+apt-get install -y --no-install-recommends "./$packages"/hyperflux-next-openrazer-driver-dkms_*.deb "./$packages"/hyperflux-next-full_*.deb
+apt-get install -y --no-install-recommends openrazer-daemon python3-openrazer
+if dpkg -s openrazer-driver-dkms >/dev/null 2>&1; then
+  echo "The release's own OpenRazer driver package was installed next to Full." >&2
+  exit 1
+fi
+if find /etc/systemd -name '*hyperflux*' -print | grep -q .; then
+  echo "Installing Full enabled a service." >&2
+  exit 1
+fi
+source=$(find /usr/src -maxdepth 1 -name 'openrazer-driver-*' -print -quit)
+openrazer=${source##*/openrazer-driver-}
+test -n "$openrazer"
+built=0
+for directory in /lib/modules/*/build; do
+  test -f "$directory/Makefile" || continue
+  kernel=$(basename "$(dirname "$directory")")
+  dkms build --force -m openrazer-driver -v "$openrazer" -k "$kernel"
+  module=$(find "/var/lib/dkms/openrazer-driver/$openrazer/$kernel" -name 'razerkbd.ko*' -print -quit)
+  test -n "$module"
+  test "$(modinfo -F vermagic "$module" | cut -d' ' -f1)" = "$kernel"
+  built=$((built + 1))
+done
+test "$built" -ge 2
 glibc=$(ldd --version | head -n 1 | awk '{print $NF}')
-for file in $(dpkg -L hyperflux-next-linux); do
+for file in $(dpkg -L hyperflux-next-linux hyperflux-next-full); do
   test -f "$file" && test ! -L "$file" || continue
   head -c 4 "$file" | grep -q 'ELF' || continue
   needed=$(objdump -T "$file" | grep -o 'GLIBC_[0-9.]*' | sed 's/GLIBC_//' | sort -Vu | tail -n 1)
   echo "$file needs glibc ${needed:-none}; $HFX_RELEASE_NAME has $glibc"
   if [ -n "$needed" ] && dpkg --compare-versions "$needed" gt "$glibc"; then exit 1; fi
 done
-apt-get purge -y hyperflux-next-linux hyperflux-next-dkms
+apt-get purge -y openrazer-daemon python3-openrazer hyperflux-next-full hyperflux-next-openrazer-driver-dkms hyperflux-next-linux hyperflux-next-dkms
+if dkms status | grep -q .; then
+  echo "Removing the packages left a driver registered with DKMS." >&2
+  exit 1
+fi
 """
 RPM_PACKAGE_CHECKS = r"""set -eu
 output=build/ci/distributions
@@ -552,11 +582,32 @@ test "$built" -ge 2
 # DKMS signs the driver with the key the Secure Boot guide enrolls.
 test -f /var/lib/dkms/mok.pub
 openssl x509 -inform DER -in /var/lib/dkms/mok.pub -noout -subject
+# Full: the OpenRazer driver package stands in for OpenRazer's own one from
+# the openSUSE Build Service, which the release itself does not ship.
+$HFX_RELEASE_INSTALL "./$packages"/hyperflux-next-openrazer-driver-dkms-*.rpm "./$packages"/hyperflux-next-full-*.rpm
+rpm -q --whatprovides openrazer-kernel-modules-dkms | grep -q '^hyperflux-next-openrazer-driver-dkms-'
+if find /etc/systemd -name '*hyperflux*' -print | grep -q .; then
+  echo "Installing Full enabled a service." >&2
+  exit 1
+fi
+source=$(find /usr/src -maxdepth 1 -name 'openrazer-driver-*' -print -quit)
+openrazer=${source##*/openrazer-driver-}
+test -n "$openrazer"
+dkms status -m openrazer-driver -v "$openrazer" | grep -q .
+built=0
+for kernel in $seen; do
+  dkms build --force -m openrazer-driver -v "$openrazer" -k "$kernel"
+  module=$(find "/var/lib/dkms/openrazer-driver/$openrazer/$kernel" -name 'razerkbd.ko*' -print -quit)
+  test -n "$module"
+  test "$(modinfo -F vermagic "$module" | cut -d' ' -f1)" = "$kernel"
+  built=$((built + 1))
+done
+test "$built" -ge 2
 glibc=$(ldd --version | head -n 1 | awk '{print $NF}')
 floor=$(rpm -q --requires hyperflux-next-linux | sed -n 's/^glibc >= //p')
 test -n "$floor"
 newer() { test "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -n 1)" != "$2"; }
-for file in $(rpm -ql hyperflux-next-linux); do
+for file in $(rpm -ql hyperflux-next-linux hyperflux-next-full); do
   test -f "$file" && test ! -L "$file" || continue
   head -c 4 "$file" | grep -q 'ELF' || continue
   needed=$(objdump -T "$file" | grep -o 'GLIBC_[0-9.]*' | sed 's/GLIBC_//' | sort -Vu | tail -n 1)
@@ -566,9 +617,9 @@ for file in $(rpm -ql hyperflux-next-linux); do
   if [ -n "$needed" ] && newer "$needed" "$glibc"; then exit 1; fi
   if [ -n "$strong" ] && newer "$strong" "$floor"; then exit 1; fi
 done
-$HFX_RELEASE_REMOVE hyperflux-next-linux hyperflux-next-dkms
-if dkms status -m hid-hyperflux-next | grep -q .; then
-  echo "Removing the packages left the driver registered with DKMS." >&2
+$HFX_RELEASE_REMOVE hyperflux-next-full hyperflux-next-openrazer-driver-dkms hyperflux-next-linux hyperflux-next-dkms
+if dkms status | grep -q .; then
+  echo "Removing the packages left a driver registered with DKMS." >&2
   exit 1
 fi
 """
@@ -1319,11 +1370,11 @@ def markdown(governance: GitHubGovernance, arch_repository: ArchRepositoryPolicy
         "",
         "The kernel canary is the one deliberate exception, because its purpose is to follow kernels that move after the image is pinned. It starts from the same digest-pinned Arch base image and installs this week's `linux-headers` and `linux-lts-headers`. It also stages the next Arch kernel from `core-testing`, when there is one, and the newest mainline tag from kernel.org prepared with `modules_prepare`. Then `./hfx kernel-canary` builds the HyperFlux driver and the patched OpenRazer driver against each kernel with `W=1`. It only compiles: nothing is loaded and no device is touched. Its result never gates a merge. A failure is an early warning that a kernel interface changes before it reaches users.",
         "",
-        "The distribution packages workflow is a second non-gating check. It builds the package artifacts once, offline in the pinned development image, exactly as the Arch packages are built. Then, for Ubuntu 24.04, Debian 13, Fedora 44 and openSUSE Tumbleweed in turn, it starts that release's digest-pinned image without extra privileges and installs the check tools from the release's own archive. In that container `./hfx package distro` turns the artifacts into `hyperflux-next-dkms` and `hyperflux-next-linux`. "
-        "On Ubuntu and Debian the workflow inspects both `.deb` files with `dpkg-deb`, fails on any `lintian` error, and installs them with `apt-get` while `policy-rc.d` refuses every service start. "
-        "On Fedora and openSUSE `rpmbuild` builds both `.rpm` files from one generated spec inside the release image, so the host never needs RPM tools. The workflow prints each header, file list and scriptlet with `rpm`, fails on any `rpmlint` error except those the generated `rpmlint` configuration accepts by name and reason, and installs the files with `dnf` or `zypper`; the scriptlets only register and build the DKMS sources and never enable or start a unit, which the workflow checks under `/etc/systemd`. "
-        "Then `dkms build` compiles the driver against two kernels for each release: Ubuntu's generic and HWE kernels, Debian's stock and backports kernels, Fedora's release and updates kernels, and openSUSE's longterm and default kernels. `modinfo` checks each module's vermagic, and every installed program is checked against the glibc that the release ships; on Fedora and openSUSE strong symbol references must also stay within the declared glibc floor, and the DKMS signing certificate must exist at `/var/lib/dkms/mok.pub`. "
-        "Finally the packages are removed, and on Fedora and openSUSE DKMS must no longer list the driver. The package files are kept as a workflow artifact for 14 days and are never published. Nothing is loaded and no device is touched.",
+        "The distribution packages workflow is a second non-gating check. It builds the package artifacts once, offline in the pinned development image, exactly as the Arch packages are built. Then, for Ubuntu 24.04, Debian 13, Fedora 44 and openSUSE Tumbleweed in turn, it starts that release's digest-pinned image without extra privileges and installs the check tools from the release's own archive. In that container `./hfx package distro` turns the artifacts into the Core packages `hyperflux-next-dkms` and `hyperflux-next-linux` and the Full packages `hyperflux-next-openrazer-driver-dkms` and `hyperflux-next-full`, which leave out the OpenRGB plugin because no OpenRGB those releases ship can load it. "
+        "On Ubuntu and Debian the workflow inspects every `.deb` file with `dpkg-deb`, fails on any `lintian` error, and installs Core and then Full with `apt-get` while `policy-rc.d` refuses every service start. With Full installed it adds the release's own `openrazer-daemon` and `python3-openrazer`, and fails if apt pulls in the release's OpenRazer driver package instead of the HyperFlux one. "
+        "On Fedora and openSUSE `rpmbuild` builds every `.rpm` file from one generated spec inside the release image, so the host never needs RPM tools. The workflow prints each header, file list and scriptlet with `rpm`, fails on any `rpmlint` error except those the generated `rpmlint` configuration accepts by name and reason, and installs Core and then Full with `dnf` or `zypper`; the stock OpenRazer service is not added there because those releases do not ship it. The scriptlets only register and build the DKMS sources and never enable or start a unit, which the workflow checks under `/etc/systemd`. "
+        "Then `dkms build` compiles the HyperFlux driver and the Full OpenRazer driver against two kernels for each release: Ubuntu's generic and HWE kernels, Debian's stock and backports kernels, Fedora's release and updates kernels, and openSUSE's longterm and default kernels. `modinfo` checks each module's vermagic, and every installed program is checked against the glibc that the release ships; on Fedora and openSUSE strong symbol references must also stay within the declared glibc floor, and the DKMS signing certificate must exist at `/var/lib/dkms/mok.pub`. "
+        "Finally the packages are removed, and DKMS must no longer list either driver. The package files are kept as a workflow artifact for 14 days and are never published. Nothing is loaded and no device is touched.",
         "",
         "## Checks Required Before Merging",
         "",

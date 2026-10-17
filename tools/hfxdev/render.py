@@ -574,6 +574,12 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root
         / "packaging"
         / "generated"
+        / "full-component-route-only.json": full_component_descriptor(
+            linux_runtime, openrgb_plugin=False
+        ),
+        root
+        / "packaging"
+        / "generated"
         / linux_runtime.desktop_access.socket_unit: desktop_bridge_socket(linux_runtime),
         root
         / "packaging"

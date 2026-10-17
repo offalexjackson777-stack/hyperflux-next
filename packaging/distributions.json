@@ -130,6 +130,43 @@
           ],
           "provides": [],
           "replaces": []
+        },
+        "full": {
+          "package_name": "hyperflux-next-full",
+          "description": "Core plus the OpenRazer compatibility transport for optional stock applications",
+          "dependency_roles": [
+            "dkms",
+            "c-runtime",
+            "compiler-runtime",
+            "service-manager",
+            "device-manager"
+          ],
+          "dependencies": [],
+          "optional_dependencies": [
+            {
+              "package": "openrazer-daemon",
+              "purpose": "Stock OpenRazer service for compatible application access"
+            },
+            {
+              "package": "python3-openrazer",
+              "purpose": "Official Python OpenRazer client API"
+            }
+          ],
+          "conflicts": [
+            "openrazer-driver-dkms",
+            "openrazer-kernel-modules-dkms"
+          ],
+          "provides": [
+            "openrazer-driver-dkms (= 3.7.0+dfsg-1)",
+            "openrazer-driver-dkms (= 3.7.0+dfsg-1ubuntu0.3)",
+            "openrazer-driver-dkms (= 3.12.4~ubuntu24.04.1)",
+            "openrazer-kernel-modules-dkms",
+            "hyperflux-openrazer-driver-abi (= @openrazer_driver_version@)"
+          ],
+          "replaces": [
+            "openrazer-driver-dkms",
+            "openrazer-kernel-modules-dkms"
+          ]
         }
       }
     },
@@ -170,6 +207,41 @@
           ],
           "provides": [],
           "replaces": []
+        },
+        "full": {
+          "package_name": "hyperflux-next-full",
+          "description": "Core plus the OpenRazer compatibility transport for optional stock applications",
+          "dependency_roles": [
+            "dkms",
+            "c-runtime",
+            "compiler-runtime",
+            "service-manager",
+            "device-manager"
+          ],
+          "dependencies": [],
+          "optional_dependencies": [
+            {
+              "package": "openrazer-daemon",
+              "purpose": "Stock OpenRazer service for compatible application access"
+            },
+            {
+              "package": "python3-openrazer",
+              "purpose": "Official Python OpenRazer client API"
+            }
+          ],
+          "conflicts": [
+            "openrazer-driver-dkms",
+            "openrazer-kernel-modules-dkms"
+          ],
+          "provides": [
+            "openrazer-driver-dkms (= 3.10.2+dfsg-1)",
+            "openrazer-kernel-modules-dkms",
+            "hyperflux-openrazer-driver-abi (= @openrazer_driver_version@)"
+          ],
+          "replaces": [
+            "openrazer-driver-dkms",
+            "openrazer-kernel-modules-dkms"
+          ]
         }
       }
     },
@@ -209,6 +281,40 @@
           ],
           "provides": [],
           "replaces": []
+        },
+        "full": {
+          "package_name": "hyperflux-next-full",
+          "description": "Core plus the OpenRazer compatibility transport for optional stock applications",
+          "dependency_roles": [
+            "dkms",
+            "c-runtime",
+            "compiler-runtime",
+            "service-manager",
+            "device-manager"
+          ],
+          "dependencies": [],
+          "optional_dependencies": [
+            {
+              "package": "openrazer-daemon",
+              "purpose": "Stock OpenRazer service for compatible application access"
+            },
+            {
+              "package": "python3-openrazer",
+              "purpose": "Official Python OpenRazer client API"
+            },
+            {
+              "package": "polychromatic",
+              "purpose": "Stock graphical OpenRazer frontend"
+            }
+          ],
+          "conflicts": [
+            "openrazer-kernel-modules-dkms"
+          ],
+          "provides": [
+            "openrazer-kernel-modules-dkms = @openrazer_driver_version@",
+            "hyperflux-openrazer-driver-abi = @openrazer_driver_version@"
+          ],
+          "replaces": []
         }
       }
     },
@@ -247,6 +353,40 @@
             "hyperflux-v2-linux-dkms"
           ],
           "provides": [],
+          "replaces": []
+        },
+        "full": {
+          "package_name": "hyperflux-next-full",
+          "description": "Core plus the OpenRazer compatibility transport for optional stock applications",
+          "dependency_roles": [
+            "dkms",
+            "c-runtime",
+            "compiler-runtime",
+            "service-manager",
+            "device-manager"
+          ],
+          "dependencies": [],
+          "optional_dependencies": [
+            {
+              "package": "openrazer-daemon",
+              "purpose": "Stock OpenRazer service for compatible application access"
+            },
+            {
+              "package": "python3-openrazer",
+              "purpose": "Official Python OpenRazer client API"
+            },
+            {
+              "package": "polychromatic",
+              "purpose": "Stock graphical OpenRazer frontend"
+            }
+          ],
+          "conflicts": [
+            "openrazer-kernel-modules-dkms"
+          ],
+          "provides": [
+            "openrazer-kernel-modules-dkms = @openrazer_driver_version@",
+            "hyperflux-openrazer-driver-abi = @openrazer_driver_version@"
+          ],
           "replaces": []
         }
       }

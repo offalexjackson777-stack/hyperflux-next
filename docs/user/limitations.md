@@ -9,9 +9,29 @@ and what to do.
 
 HyperFlux Next is published only for Arch Linux on x86_64. Packages for Ubuntu,
 Debian, Fedora, and openSUSE are built and tested every week, but they are not
-published yet, so there is nothing to install from yet. When they are
-published, they will carry Core only, without the app connections. The
-[roadmap](../project/roadmap.md) shows what comes next.
+published yet, so there is nothing to install from yet. They carry both
+editions, Core and Full. The [roadmap](../project/roadmap.md) shows what comes
+next.
+
+### No OpenRGB Plugin Outside Arch Linux
+
+Full on Ubuntu, Debian, Fedora, and openSUSE comes without the OpenRGB plugin.
+This is not a HyperFlux limit. It is what those distributions package:
+
+- Ubuntu 24.04 and Debian 13 do not package OpenRGB at all.
+- Fedora 44 and openSUSE Tumbleweed package an OpenRGB 1.0 release candidate.
+  It loads only plugins built for plugin interface 4.
+
+The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, and
+OpenRGB refuses a plugin built for another interface. Arch Linux packages
+OpenRGB 1.0 final, so Full there includes the plugin. OpenRazer apps and
+Polychromatic still work with Full everywhere, and `hyperfluxctl doctor`
+reports Full as ready without the plugin. When a distribution packages
+OpenRGB 1.0 final, its Full packages can include the plugin too.
+
+On Ubuntu 24.04, the stock OpenRazer service is version 3.7.0. It does not
+know devices released after it, such as the Basilisk V3 Pro 35K. For those,
+add OpenRazer's own PPA (`ppa:openrazer/stable`) before you install it.
 
 ### Not In The Official Arch Repositories Or The AUR
 

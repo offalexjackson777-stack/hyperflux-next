@@ -183,27 +183,43 @@ def _component_directory_modes(
     )
 
 
+# A Full package without the OpenRGB plugin leaves out the plugin build and
+# installs the descriptor that names the OpenRazer route alone.
+OPENRGB_PLUGIN_BUILD = "openrgb-native"
+FULL_COMPONENT_DESCRIPTOR = "full-component-descriptor"
+FULL_COMPONENT_ROUTE_ONLY_SOURCE = "packaging/generated/full-component-route-only.json"
+
+
 def stage_rootfs(
     root: Path,
     manifest_path: Path,
     stage_root: Path,
     distribution_component: str = "linux",
+    *,
+    openrgb_plugin: bool = True,
 ) -> StageResult:
     root = root.resolve()
     install = load_install_manifest(root)
     if distribution_component not in {"linux", "full"}:
         raise ModelError("package staging: unsupported distribution component")
+    if not openrgb_plugin and distribution_component != "full":
+        raise ModelError("package staging: only Full carries the OpenRGB plugin")
     artifacts = load_artifact_set(root, manifest_path)
     stage_root = _new_output_directory(stage_root, "package staging")
 
     for file in install.files_for(distribution_component):
+        source = file.source
+        if not openrgb_plugin and file.component == FULL_COMPONENT_DESCRIPTOR:
+            source = root / FULL_COMPONENT_ROUTE_ONLY_SOURCE
         _copy_to_stage(
-            file.source,
+            source,
             _stage_path(stage_root, file.destination),
             file.mode,
         )
     for artifact in artifacts.artifacts:
         if artifact.distribution_component != distribution_component:
+            continue
+        if not openrgb_plugin and artifact.build_id == OPENRGB_PLUGIN_BUILD:
             continue
         if artifact.kind == "source-tree":
             _install_source_tree(stage_root, artifact)
@@ -232,6 +248,7 @@ def stage_rootfs(
     inventory_value = {
         "schema": "hyperflux-staged-files-v2",
         "distribution_component": distribution_component,
+        "openrgb_plugin": openrgb_plugin,
         "source_revision": artifacts.revision,
         "source_date_epoch": artifacts.source_date_epoch,
         "install_manifest_sha256": install.source_sha256,

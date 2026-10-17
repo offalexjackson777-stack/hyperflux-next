@@ -39,6 +39,7 @@ import tempfile
 from typing import Any, Callable, Protocol
 import xml.etree.ElementTree as ElementTree
 
+from .arch_split import load_arch_split
 from .arch_repository import (
     ArchRepositoryPolicy,
     _publish_atomic_directory,
@@ -51,6 +52,7 @@ from .distributions import (
     RPM_FORMAT_TARGET_IDS,
     load_distribution_catalog,
 )
+from .distribution_debian import edition_outputs
 from .governance import load_github_governance
 from .model import ModelError, load_json, sha256_file
 
@@ -241,6 +243,7 @@ def load_repository_site_policy(root: Path) -> RepositorySitePolicy:
 
 def site_targets(root: Path) -> dict[str, SiteTarget]:
     catalog = load_distribution_catalog(root)
+    split = load_arch_split(root)
     images = dict(load_github_governance(root).distribution_package_images)
     targets: dict[str, SiteTarget] = {}
     for target_id in SITE_TARGET_IDS:
@@ -256,12 +259,10 @@ def site_targets(root: Path) -> dict[str, SiteTarget]:
             raise ModelError(f"distribution {target_id} names no suite")
         if target_id not in images:
             raise ModelError(f"distribution {target_id} has no pinned image")
-        required = tuple(
-            sorted(
-                {DKMS_PACKAGE}
-                | {component.package_name for component in target.components.values()}
-            )
-        )
+        # Every split output of the editions the release carries is one package.
+        required = tuple(sorted(output.package_name for output in edition_outputs(split, target)))
+        if DKMS_PACKAGE not in required:
+            raise ModelError(f"distribution {target_id} does not carry {DKMS_PACKAGE}")
         targets[target_id] = SiteTarget(
             id=target_id,
             package_format=target.package_format,

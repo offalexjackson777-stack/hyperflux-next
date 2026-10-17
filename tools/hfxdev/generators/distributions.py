@@ -53,6 +53,43 @@ SECURE_BOOT_ENROLLMENT = {
 # the built driver only when the next kernel is installed.
 DKMS_SERVICE_DISABLED = {"opensuse"}
 
+# Why Full on each release leaves out the OpenRGB plugin. The plugin needs
+# OpenRGB 1.0 final, plugin interface 5. Checked 17 October 2026.
+OPENRGB_PLUGIN_ABSENT = {
+    "ubuntu": "Ubuntu 24.04 does not package OpenRGB at all.",
+    "debian": "Debian 13 does not package OpenRGB at all.",
+    "fedora": (
+        "Fedora 44 packages an OpenRGB 1.0 release candidate, which loads plugins "
+        "built for plugin interface 4 only."
+    ),
+    "opensuse": (
+        "openSUSE Tumbleweed packages an OpenRGB 1.0 release candidate, which loads "
+        "plugins built for plugin interface 4 only."
+    ),
+}
+
+# Where each release's stock OpenRazer service comes from, for Full users who
+# want the stock OpenRazer applications.
+OPENRAZER_SOURCE = {
+    "ubuntu": (
+        "Ubuntu 24.04 packages OpenRazer 3.7.0 as `openrazer-daemon`. That version "
+        "does not know devices released after it, such as the Basilisk V3 Pro 35K. "
+        "For those, add OpenRazer's own PPA (`ppa:openrazer/stable`) before you "
+        "install the stock service."
+    ),
+    "debian": "Debian 13 packages OpenRazer 3.10.2 as `openrazer-daemon`.",
+    "fedora": (
+        "Fedora does not package OpenRazer. OpenRazer's own repository on the "
+        "openSUSE Build Service provides the stock service and Polychromatic; follow "
+        "OpenRazer's Fedora instructions to add it."
+    ),
+    "opensuse": (
+        "openSUSE does not package OpenRazer. OpenRazer's own repository on the "
+        "openSUSE Build Service provides the stock service and Polychromatic; follow "
+        "OpenRazer's openSUSE instructions to add it."
+    ),
+}
+
 # The package manager command that removes packages on each release.
 REMOVE_COMMAND = {
     "ubuntu": "sudo apt remove",
@@ -90,6 +127,42 @@ def _removal(
         "   ```",
         "",
         "   This also removes every built copy of the driver from DKMS.",
+    ]
+
+
+def _full_edition(target: DistributionTarget, plans: list) -> list[str]:
+    release = target.release
+    if release is None or target.openrgb_plugin:
+        raise ModelError(f"the {target.id} target must be a release without the OpenRGB plugin")
+    full = target.component("full")
+    linux = target.component("linux")
+    driver = [plan for plan in plans if plan.provides]
+    if len(driver) != 1:
+        raise ModelError(f"the {target.id} Full edition must have one package that provides")
+    name = f"{release.distribution} {release.version}"
+    return [
+        "",
+        f"### Core and Full on {release.distribution}",
+        "",
+        f"Core is `{linux.package_name}`. Full is `{full.package_name}`: Core plus the "
+        "OpenRazer compatibility transport, so stock OpenRazer applications can use "
+        "your devices too.",
+        "",
+        f"- `{driver[0].package_name}` replaces the OpenRazer driver package of "
+        f"{release.distribution} ({_items(full.conflicts)}) and stands in for it, so "
+        "the stock OpenRazer service still installs.",
+        f"- {OPENRAZER_SOURCE[target.id]}",
+        f"- Optional stock applications: {_optional_items(full)}.",
+        "- To use the stock OpenRazer service, add yourself to the `openrazer` group, then "
+        "log out and back in: `sudo gpasswd -a \"$USER\" openrazer`.",
+        "",
+        f"**Full on {release.distribution} has no OpenRGB plugin.** That is a limit of "
+        f"what {name} packages, not of HyperFlux: {OPENRGB_PLUGIN_ABSENT[target.id]} "
+        "The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, and "
+        "OpenRGB refuses a plugin built for another interface. Doctor reports Full as "
+        "ready without it. Arch Linux packages OpenRGB 1.0 final, so Full there "
+        f"includes the plugin. When {release.distribution} packages OpenRGB 1.0 final, "
+        "its Full packages can include the plugin too.",
     ]
 
 
@@ -164,8 +237,7 @@ def _debian_format(
         "",
         f"HyperFlux builds `.deb` packages for {release.distribution} {release.version} "
         f"(`{release.codename}`) every week in CI. They are not published, so there is "
-        "nothing to install from yet. The packages carry only the Core edition; there "
-        f"is no Full edition for {release.distribution}.",
+        "nothing to install from yet. They carry both editions, Core and Full.",
         "",
         "| Package | Version | Architecture | Depends |",
         "| --- | --- | --- | --- |",
@@ -186,14 +258,16 @@ def _debian_format(
     )
     for role, package in target.dependency_roles.items():
         lines.append(f"| `{role}` | `{arch_roles.get(role, '-')}` | `{package}` |")
+    lines.extend(_full_edition(target, plans))
     lines.extend(
         [
             "",
             "- Package scripts mirror the Arch hooks: they create the system user and "
             "directories and reload systemd and udev. They never enable, start or stop a "
             "service.",
-            f"- `{plans[0].package_name}` hands the driver source to DKMS when it is "
-            "installed and removes every built copy when it is removed.",
+            f"- `{plans[0].package_name}` and the Full OpenRazer driver package hand their "
+            "driver sources to DKMS when they are installed and remove every built copy "
+            "when they are removed.",
             f"- Programs must run on the glibc {release.c_runtime_version} that "
             f"{release.distribution} {release.version} ships.",
             "",
@@ -228,8 +302,8 @@ def _rpm_format(
         f"## {name} (CI-built, not published yet)",
         "",
         f"HyperFlux builds `.rpm` packages for {name} every week in CI. They are not "
-        "published, so there is nothing to install from yet. The packages carry only the "
-        f"Core edition; there is no Full edition for {release.distribution}.",
+        "published, so there is nothing to install from yet. They carry both editions, "
+        "Core and Full.",
         "",
         "| Package | Version | Architecture | Requires |",
         "| --- | --- | --- | --- |",
@@ -250,14 +324,16 @@ def _rpm_format(
     )
     for role, package in target.dependency_roles.items():
         lines.append(f"| `{role}` | `{arch_roles.get(role, '-')}` | `{package}` |")
+    lines.extend(_full_edition(target, plans))
     lines.extend(
         [
             "",
             "- Package scripts mirror the Arch hooks: they create the system user and "
             "directories and reload systemd and udev. They never enable, start or stop a "
             "service.",
-            f"- `{plans[0].package_name}` hands the driver source to DKMS and builds it for "
-            "every kernel whose development files are installed. DKMS installs the built "
+            f"- `{plans[0].package_name}` and the Full OpenRazer driver package hand their "
+            "driver sources to DKMS and build them for every kernel whose development "
+            "files are installed. DKMS installs the built "
             "driver when the computer next starts, so installing the package never loads "
             "the driver. Removing the package removes every built copy.",
             f"- Programs need glibc {c_runtime_floor(target)} or newer. CI checks them on "
