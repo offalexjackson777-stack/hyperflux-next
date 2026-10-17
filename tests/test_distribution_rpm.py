@@ -57,7 +57,7 @@ EXPECTED_FILES = [
     "hyperflux-next-dkms-2.1.0-1.noarch.rpm",
     "hyperflux-next-full-2.1.0-1.x86_64.rpm",
     "hyperflux-next-linux-2.1.0-1.x86_64.rpm",
-    "hyperflux-next-openrazer-driver-dkms-2.1.0-1.x86_64.rpm",
+    "hyperflux-next-openrazer-driver-dkms-2.1.0-1.noarch.rpm",
 ]
 
 
@@ -322,6 +322,12 @@ class RpmLintTests(unittest.TestCase):
         "hyperflux-next-linux.x86_64: E: permissions-directory-setuid-bit (Badness: 10) /etc/hyperflux-next is packaged with setuid/setgid bits (02751)",
         "hyperflux-next-dkms.noarch: E: filelist-forbidden-fhs23 /usr/src/hid-hyperflux-next-2.1.0",
         "hyperflux-next-dkms.noarch: E: devel-file-in-non-devel-package (Badness: 50) /usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-core.c",
+        "hyperflux-next-full.x86_64: E: incorrect-fsf-address /usr/share/licenses/hyperflux-next-full/LICENSE",
+        "hyperflux-next-full.x86_64: E: explicit-lib-dependency libgcc",
+        "hyperflux-next-full.x86_64: E: systemd-service-without-service_add_post hyperflux-next-openrazer-relay.service",
+        "hyperflux-next-openrazer-driver-dkms.noarch: E: incorrect-fsf-address /usr/src/openrazer-driver-3.12.4/LICENSES/GPL-2.0-or-later.txt",
+        "hyperflux-next-openrazer-driver-dkms.noarch: E: devel-file-in-non-devel-package (Badness: 50) /usr/src/openrazer-driver-3.12.4/driver/razerkbd_driver.c",
+        "hyperflux-next-openrazer-driver-dkms.noarch: E: filelist-forbidden-fhs23 /usr/src/openrazer-driver-3.12.4",
     )
     # Neighbouring findings that must stay errors.
     REJECTED = (
@@ -337,6 +343,12 @@ class RpmLintTests(unittest.TestCase):
         "hyperflux-next-linux.x86_64: E: setuid-binary /usr/bin/hyperfluxctl root 04755",
         "other-package.x86_64: E: non-standard-dir-perm /etc/hyperflux-next 2751",
         "hyperflux-next-linux.x86_64: W: non-standard-dir-perm /etc/hyperflux-next 2751",
+        "hyperflux-next-linux.x86_64: E: incorrect-fsf-address /usr/share/licenses/hyperflux-next-full/LICENSE",
+        "hyperflux-next-full.x86_64: E: explicit-lib-dependency libssl3",
+        "hyperflux-next-openrazer-driver-dkms.x86_64: E: no-binary",
+        "hyperflux-next-openrazer-driver-dkms.noarch: E: incorrect-fsf-address /usr/share/doc/README",
+        "hyperflux-next-openrazer-driver-dkms.noarch: E: devel-file-in-non-devel-package /usr/include/razer.h",
+        "hyperflux-next-full.x86_64: E: systemd-service-without-service_add_post other.service",
     )
 
     def setUp(self) -> None:
@@ -362,7 +374,10 @@ class RpmLintTests(unittest.TestCase):
             self.assertIn(f"# {reason}", text)
             for pattern in patterns:
                 # Each filter names one of these packages and only accepts errors.
-                self.assertRegex(pattern, r"^hyperflux-next-(dkms|linux|\(dkms\|linux\))\\\.")
+                self.assertRegex(
+                    pattern,
+                    r"^hyperflux-next-(dkms|linux|openrazer-driver-dkms|\(dkms\|linux\)|\(linux\|full\))\\\.",
+                )
                 self.assertIn(": E: ", pattern)
 
     def test_override_only_unblocks_the_named_filters(self) -> None:

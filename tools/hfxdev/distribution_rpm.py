@@ -124,27 +124,30 @@ RPMLINT_FILTERS: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        "The license file is the verbatim GPL-2.0 text, which carries an older FSF address.",
+        "The license files are the verbatim GPL-2.0 texts, which carry an older FSF address.",
         (
-            r"hyperflux-next-linux\.[^:]+: E: incorrect-fsf-address /usr/share/licenses/hyperflux-next-linux/LICENSE",
+            r"hyperflux-next-(linux|full)\.[^:]+: E: incorrect-fsf-address /usr/share/licenses/hyperflux-next-\1/LICENSE",
+            r"hyperflux-next-openrazer-driver-dkms\.noarch: E: incorrect-fsf-address /usr/src/openrazer-driver-[^/]+/LICENSES/GPL-2\.0-or-later\.txt",
         ),
     ),
     (
         "Automatic requirements are off; the catalog names the C runtime package itself.",
-        (r"hyperflux-next-linux\.[^:]+: E: explicit-lib-dependency libgcc(_s1)?$",),
+        (r"hyperflux-next-(linux|full)\.[^:]+: E: explicit-lib-dependency libgcc(_s1)?$",),
     ),
     (
         "DKMS builds the driver from its sources under /usr/src.",
         (
             r"hyperflux-next-dkms\.noarch: E: devel-file-in-non-devel-package .*/usr/src/hid-hyperflux-next-",
             r"hyperflux-next-dkms\.noarch: E: filelist-forbidden-fhs23 /usr/src/hid-hyperflux-next-",
+            r"hyperflux-next-openrazer-driver-dkms\.noarch: E: devel-file-in-non-devel-package .*/usr/src/openrazer-driver-",
+            r"hyperflux-next-openrazer-driver-dkms\.noarch: E: filelist-forbidden-fhs23 /usr/src/openrazer-driver-",
         ),
     ),
     (
         "The packages never enable, start or stop a unit; the first run enables them and the "
         "computer restarts.",
         (
-            r"hyperflux-next-linux\.[^:]+: E: systemd-service-without-service_(add|del)_(pre|post|preun|postun) hyperflux-next-",
+            r"hyperflux-next-(linux|full)\.[^:]+: E: systemd-service-without-service_(add|del)_(pre|post|preun|postun) hyperflux-next-",
         ),
     ),
     (
@@ -427,8 +430,8 @@ def rpm_plans(
                 package_name=output.package_name,
                 version=version,
                 release=package_release,
-                # Outputs without builds carry only sources and data.
-                architecture="noarch" if not output.builds else architecture,
+                # Outputs that compile nothing carry only sources, scripts and data.
+                architecture="noarch" if not output.compiled else architecture,
                 summary=summary,
                 description=description,
                 licenses=output.licenses,

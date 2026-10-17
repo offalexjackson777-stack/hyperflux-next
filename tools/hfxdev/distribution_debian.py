@@ -426,8 +426,8 @@ def debian_plans(
                 output=output.id,
                 package_name=output.package_name,
                 version=version,
-                # Outputs without builds carry only sources and data.
-                architecture="all" if not output.builds else architecture,
+                # Outputs that compile nothing carry only sources, scripts and data.
+                architecture="all" if not output.compiled else architecture,
                 section="kernel" if "dkms" in output.dependency_roles else "admin",
                 homepage=catalog.homepage,
                 synopsis=summary,

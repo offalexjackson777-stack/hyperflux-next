@@ -50,7 +50,7 @@ EXPECTED_FILES = [
     "hyperflux-next-dkms_2.1.0-1_all.deb",
     "hyperflux-next-full_2.1.0-1_amd64.deb",
     "hyperflux-next-linux_2.1.0-1_amd64.deb",
-    "hyperflux-next-openrazer-driver-dkms_2.1.0-1_amd64.deb",
+    "hyperflux-next-openrazer-driver-dkms_2.1.0-1_all.deb",
 ]
 
 

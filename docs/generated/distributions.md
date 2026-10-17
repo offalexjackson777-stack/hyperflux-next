@@ -44,7 +44,7 @@ HyperFlux builds `.deb` packages for Ubuntu 24.04 (`noble`) every week in CI. Th
 | --- | --- | --- | --- |
 | `hyperflux-next-dkms` | `2.1.1-1` | `all` | `dkms` |
 | `hyperflux-next-linux` | `2.1.1-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-dkms (= 2.1.1-1)` |
-| `hyperflux-next-openrazer-driver-dkms` | `2.1.1-1` | `amd64` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms (= 2.1.1-1)` |
+| `hyperflux-next-openrazer-driver-dkms` | `2.1.1-1` | `all` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms (= 2.1.1-1)` |
 | `hyperflux-next-full` | `2.1.1-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-linux (= 2.1.1-1)`, `hyperflux-next-openrazer-driver-dkms (= 2.1.1-1)` |
 
 Dependency roles map to packages on each distribution:
@@ -132,7 +132,7 @@ HyperFlux builds `.deb` packages for Debian 13 (`trixie`) every week in CI. They
 | --- | --- | --- | --- |
 | `hyperflux-next-dkms` | `2.1.1-1` | `all` | `dkms` |
 | `hyperflux-next-linux` | `2.1.1-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-dkms (= 2.1.1-1)` |
-| `hyperflux-next-openrazer-driver-dkms` | `2.1.1-1` | `amd64` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms (= 2.1.1-1)` |
+| `hyperflux-next-openrazer-driver-dkms` | `2.1.1-1` | `all` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms (= 2.1.1-1)` |
 | `hyperflux-next-full` | `2.1.1-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-linux (= 2.1.1-1)`, `hyperflux-next-openrazer-driver-dkms (= 2.1.1-1)` |
 
 Dependency roles map to packages on each distribution:
@@ -214,7 +214,7 @@ HyperFlux builds `.rpm` packages for Fedora 44 every week in CI. They are not pu
 | --- | --- | --- | --- |
 | `hyperflux-next-dkms` | `2.1.1-1` | `noarch` | `dkms` |
 | `hyperflux-next-linux` | `2.1.1-1` | `x86_64` | `glibc >= 2.34`, `libgcc`, `systemd`, `systemd-udev`, `hyperflux-next-dkms = 2.1.1-1` |
-| `hyperflux-next-openrazer-driver-dkms` | `2.1.1-1` | `x86_64` | `dkms`, `systemd-udev`, `systemd`, `hyperflux-next-dkms = 2.1.1-1` |
+| `hyperflux-next-openrazer-driver-dkms` | `2.1.1-1` | `noarch` | `dkms`, `systemd-udev`, `systemd`, `hyperflux-next-dkms = 2.1.1-1` |
 | `hyperflux-next-full` | `2.1.1-1` | `x86_64` | `glibc >= 2.34`, `libgcc`, `systemd`, `systemd-udev`, `hyperflux-next-linux = 2.1.1-1`, `hyperflux-next-openrazer-driver-dkms = 2.1.1-1` |
 
 Dependency roles map to packages on each distribution:
@@ -296,7 +296,7 @@ HyperFlux builds `.rpm` packages for openSUSE Tumbleweed every week in CI. They 
 | --- | --- | --- | --- |
 | `hyperflux-next-dkms` | `2.1.1-1` | `noarch` | `dkms` |
 | `hyperflux-next-linux` | `2.1.1-1` | `x86_64` | `glibc >= 2.34`, `libgcc_s1`, `systemd`, `udev`, `hyperflux-next-dkms = 2.1.1-1` |
-| `hyperflux-next-openrazer-driver-dkms` | `2.1.1-1` | `x86_64` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms = 2.1.1-1` |
+| `hyperflux-next-openrazer-driver-dkms` | `2.1.1-1` | `noarch` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms = 2.1.1-1` |
 | `hyperflux-next-full` | `2.1.1-1` | `x86_64` | `glibc >= 2.34`, `libgcc_s1`, `systemd`, `udev`, `hyperflux-next-linux = 2.1.1-1`, `hyperflux-next-openrazer-driver-dkms = 2.1.1-1` |
 
 Dependency roles map to packages on each distribution:
