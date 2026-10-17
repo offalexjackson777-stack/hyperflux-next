@@ -30,7 +30,11 @@ from hfxdev.arch_repository import (
     retained_asset_names,
     verify_retained_packages,
 )
-from hfxdev.arch_repository_public import verify_public_arch_repository
+from hfxdev.arch_repository_public import (
+    _require_tools,
+    _run,
+    verify_public_arch_repository,
+)
 from hfxdev.generators.installation import package_fallback
 from hfxdev.model import ModelError
 
@@ -487,6 +491,18 @@ class ArchRepositoryTests(unittest.TestCase):
                 ModelError, rf"inventory differs \(missing=\[\], extra=\['{stale}'\]\)"
             ):
                 verify_public_arch_repository(ROOT, Path(temporary) / "receipt.json")
+
+    def test_public_verifier_needs_no_root_only_keyring_tool(self) -> None:
+        # pacman-key refuses to run without root, so the proof must not need it.
+        with patch("hfxdev.arch_repository_public.shutil.which", return_value=None):
+            with self.assertRaisesRegex(
+                ModelError, r"lacks tools: \['curl', 'fakeroot', 'gpg', 'pacman'\]"
+            ):
+                _require_tools()
+
+    def test_public_verifier_commands_can_read_standard_input(self) -> None:
+        result = _run(["cat"], label="echo trust line", input_text="FPR:6:\n")
+        self.assertEqual(result.stdout, "FPR:6:\n")
 
 if __name__ == "__main__":
     unittest.main()
