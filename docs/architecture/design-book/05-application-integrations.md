@@ -86,7 +86,7 @@ and matching responses cross a route; it does not add one semantic SDK method or
 command translation per setting. A different report format is an explicit
 backend requirement rather than a guessed rewrite. Native-route parity for these
 settings still needs physical evidence, and known differences such as
-Polychromatic's Ripple effect showing no reactive lighting are listed in the
+Ripple reacting on only one keyboard when two receivers are connected are listed in the
 [known limitations](../../user/limitations.md).
 
 ---

@@ -177,7 +177,7 @@ class ErrorDescriptor:
     docs_path: str
 
 
-ERROR_CATALOG_SHA256: Final = "b668ff7340405a67ed1cc96d4b7d3ef169dc9f406a952d5157d933f5f625e5d7"
+ERROR_CATALOG_SHA256: Final = "e3b88ffc730fbc5cbf26176bf112477051348f637adb73f7ed5ca81a6c5459b2"
 MAX_ERROR_COUNT: Final = 256
 MAX_REMEDIATION_COUNT: Final = 128
 MAX_SAFE_DETAIL_FIELDS: Final = 12
@@ -1242,7 +1242,7 @@ ERRORS: Final = (
         safe_detail_fields=DETAILS_8,
         lifecycle=LifecycleDescriptor(
             state=ErrorLifecycleState.ACTIVE,
-            introduced_in="2.1.1",
+            introduced_in="2.1.2",
             deprecated_in=None,
             replacement_code=None,
         ),

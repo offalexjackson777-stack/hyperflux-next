@@ -204,6 +204,7 @@ fn activation_probe<R: CommandRunner>(
         dkms_root: PathBuf::from("/missing-dkms"),
         usb_devices_root,
         input_by_id_root: PathBuf::from("/missing-input-by-id"),
+        udev_rules_override_root: PathBuf::from("/missing-udev-rules"),
         openrazer_daemon_path: PathBuf::from("/missing-openrazer"),
         full_component_descriptor_path: PathBuf::from("/missing-full-component.json"),
         socket_path: PathBuf::from("/missing.sock"),
@@ -1275,6 +1276,19 @@ fn key_event_link_is_reported_only_while_its_receiver_is_attached_and_unresolved
     fs::write(root.join("event7"), "").expect("event node");
     fs::remove_file(&link).expect("remove dangling link");
     symlink(root.join("event7"), &link).expect("resolving link");
+    assert!(probe.missing_openrazer_key_event_links().is_empty());
+
+    fs::remove_file(&link).expect("remove resolving link");
+    assert_eq!(probe.missing_openrazer_key_event_links(), expected);
+    probe.udev_rules_override_root = root.join("etc-udev-rules");
+    fs::create_dir_all(&probe.udev_rules_override_root).expect("override root");
+    symlink(
+        "/dev/null",
+        probe
+            .udev_rules_override_root
+            .join("70-hyperflux-next-openrazer-keys.rules"),
+    )
+    .expect("masking rule");
     assert!(probe.missing_openrazer_key_event_links().is_empty());
     fs::remove_dir_all(root).expect("cleanup");
 }

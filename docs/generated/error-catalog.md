@@ -5,7 +5,7 @@
 This page lists every HyperFlux error code with what it means, what to do about it,
 and whether it is safe to retry, for anyone who saw an `HFX-` code and wants to look it up.
 
-Catalog source: `b668ff7340405a67ed1cc96d4b7d3ef169dc9f406a952d5157d933f5f625e5d7`
+Catalog source: `e3b88ffc730fbc5cbf26176bf112477051348f637adb73f7ed5ca81a6c5459b2`
 
 Every HyperFlux error code is defined here and nowhere else. These parts of the code use it:
 
@@ -318,7 +318,7 @@ Ripple and other lighting effects that react to key presses stay still, because 
 
 **Owner / privacy:** `integration` / `public`
 
-**Lifecycle:** `active` since `2.1.1`
+**Lifecycle:** `active` since `2.1.2`
 
 **Safe action (`restore-openrazer-key-link`):** Restart the computer so the HyperFlux Full rules add the link and OpenRazer finds it when it adds the keyboard. If Doctor still reports it after the restart, reinstall the HyperFlux Full package.
 

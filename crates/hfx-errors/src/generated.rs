@@ -231,7 +231,7 @@ pub struct ErrorDescriptor {
 }
 
 pub const ERROR_CATALOG_SHA256: &str =
-    "b668ff7340405a67ed1cc96d4b7d3ef169dc9f406a952d5157d933f5f625e5d7";
+    "e3b88ffc730fbc5cbf26176bf112477051348f637adb73f7ed5ca81a6c5459b2";
 pub const MAX_ERROR_COUNT: usize = 256;
 pub const MAX_REMEDIATION_COUNT: usize = 128;
 pub const MAX_SAFE_DETAIL_FIELDS: usize = 12;
@@ -1347,7 +1347,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         safe_detail_fields: DETAILS_8,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
-            introduced_in: "2.1.1",
+            introduced_in: "2.1.2",
             deprecated_in: None,
             replacement_code: None,
         },

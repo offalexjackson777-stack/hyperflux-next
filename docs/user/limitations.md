@@ -25,11 +25,39 @@ OpenRazer, Polychromatic, and OpenRGB are optional. They are separate
 projects with their own packages, settings, and bugs. HyperFlux does not install,
 patch, or own them. It lets them reach the devices paired to your receiver.
 
-### Ripple Shows No Reactive Lighting
+### Ripple And Other Effects That React To Keys
 
-Polychromatic offers Ripple for keyboards that OpenRazer supports, but over
-HyperFlux it shows no reactive lighting. Ripple needs to see your key presses
-through the receiver, and OpenRazer cannot do that yet. Choose another effect.
+Ripple, and any other effect that lights up the keys you press, needs to see
+your key presses. With the Full package, OpenRazer sees them through the
+receiver. Keep these points in mind:
+
+- **Restart once.** OpenRazer looks for the key presses only when it first
+  finds the keyboard. After you install Full, restart the computer once. If
+  Ripple stays still, run `hyperfluxctl doctor`; it tells you when a restart
+  is needed.
+- **One keyboard.** With two receivers connected, only one of the two
+  keyboards reacts to key presses.
+- **The ring looks like two lines.** Ripple draws a ring that grows from the
+  key you press. OpenRazer treats the keyboard as just six rows of lights, so
+  the ring often looks like two short vertical lines moving apart. This is how OpenRazer
+  draws Ripple; it is not a fault.
+- **Who can read your key presses.** To make this work, Full lets your user
+  account read the keyboard's key presses from the receiver while you are
+  logged in at the computer. That means any program you run can read them
+  too. Other user accounts on the computer cannot.
+
+If you do not want this, turn it off. Ripple then stays still, and Doctor
+does not warn about it:
+
+```sh
+sudo ln -s /dev/null /etc/udev/rules.d/70-hyperflux-next-openrazer-keys.rules
+```
+
+Then restart the computer. To turn it back on, delete that file and restart:
+
+```sh
+sudo rm /etc/udev/rules.d/70-hyperflux-next-openrazer-keys.rules
+```
 
 ### OpenRGB May Call A Black Keyboard Quartz
 

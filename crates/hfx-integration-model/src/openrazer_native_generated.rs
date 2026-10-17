@@ -20,6 +20,10 @@ pub const OPENRAZER_NATIVE_DRIVER_PREFLIGHT_SERVICE_UNIT: &str =
 /// `/dev/input/by-id` names the Full component's udev rules add so
 /// `OpenRazer` reads a keyboard's key presses, as receiver USB vendor ID,
 /// receiver USB product ID and link name.
+/// Full udev rules file that adds the key-event links. A file of the same
+/// name in `/etc/udev/rules.d` replaces it, which turns the links off.
+pub const OPENRAZER_NATIVE_KEY_EVENT_UDEV_RULES_PATH: &str =
+    "/usr/lib/udev/rules.d/70-hyperflux-next-openrazer-keys.rules";
 pub const OPENRAZER_NATIVE_KEY_EVENT_LINKS: &[(u16, u16, &str)] = &[(
     0x1532,
     0x00cf,

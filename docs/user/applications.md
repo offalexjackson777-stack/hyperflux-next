@@ -50,7 +50,8 @@ device appears under its own name. You do not need to set anything up.
 
 ## What Does Not Work Yet
 
-- Polychromatic offers Ripple, but over HyperFlux it shows no reactive lighting.
+- Ripple needs one restart after you install Full, and with two receivers
+  only one keyboard reacts to key presses.
 - OpenRGB may call a black keyboard Quartz. Only the description is wrong.
 - Fn lighting shortcuts change the keyboard without the apps noticing.
 - Polychromatic may list the receiver as an unrecognised `1532:00CF` device.

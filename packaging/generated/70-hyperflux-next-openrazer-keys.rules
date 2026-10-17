@@ -5,6 +5,7 @@
 # device. Each line adds that name on the receiver interface that carries
 # the paired keyboard's key presses and gives the logged-in seat user
 # access to it. The uaccess tag only works before 73-seat-late.rules.
+# A file of the same name in /etc/udev/rules.d replaces this one.
 ACTION=="remove", GOTO="hyperflux_next_openrazer_keys_end"
 SUBSYSTEM!="input", GOTO="hyperflux_next_openrazer_keys_end"
 KERNEL!="event*", GOTO="hyperflux_next_openrazer_keys_end"

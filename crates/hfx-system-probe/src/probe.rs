@@ -11,7 +11,7 @@ use hfx_integration_model::{
     OPENRAZER_NATIVE_CAPABILITY_FIELD, OPENRAZER_NATIVE_CAPABILITY_MODULES,
     OPENRAZER_NATIVE_CAPABILITY_VALUE, OPENRAZER_NATIVE_DAEMON_EXECUTABLE_PATH,
     OPENRAZER_NATIVE_DRIVER_MODULES, OPENRAZER_NATIVE_KEY_EVENT_LINKS,
-    OPENRAZER_NATIVE_VERSION_ARGUMENT,
+    OPENRAZER_NATIVE_KEY_EVENT_UDEV_RULES_PATH, OPENRAZER_NATIVE_VERSION_ARGUMENT,
 };
 use hfx_profiles::receiver_profile_by_usb_id;
 use hfx_protocol::{
@@ -43,6 +43,7 @@ const USB_DEVICES_ROOT: &str = "/sys/bus/usb/devices";
 const HID_DEVICES_ROOT: &str = "/sys/bus/hid/devices";
 const DKMS_ROOT: &str = "/var/lib/dkms";
 const INPUT_BY_ID_ROOT: &str = "/dev/input/by-id";
+const UDEV_RULES_OVERRIDE_ROOT: &str = "/etc/udev/rules.d";
 const HID_BUS_USB: &str = "0003";
 const OPENRAZER_GROUP: &str = "openrazer";
 const OPENRAZER_SESSION_BUS_NAME: &str = "org.razer";
@@ -232,7 +233,8 @@ pub struct SystemSnapshot {
     pub retired_driver_registrations: Vec<String>,
     /// `/dev/input/by-id` key-event links the Full udev rules add for an
     /// attached receiver that do not resolve, so `OpenRazer` cannot read the
-    /// keyboard's key presses; sorted and empty without the Full component.
+    /// keyboard's key presses; sorted, and empty without the Full component or
+    /// when an administrator replaced the rules file in `/etc/udev/rules.d`.
     pub missing_openrazer_key_event_links: Vec<String>,
 }
 
@@ -378,6 +380,7 @@ pub struct RealSystemProbe<R = RealCommandRunner> {
     dkms_root: PathBuf,
     usb_devices_root: PathBuf,
     input_by_id_root: PathBuf,
+    udev_rules_override_root: PathBuf,
     openrazer_daemon_path: PathBuf,
     full_component_descriptor_path: PathBuf,
     socket_path: PathBuf,
@@ -394,6 +397,7 @@ impl Default for RealSystemProbe<RealCommandRunner> {
             dkms_root: PathBuf::from(DKMS_ROOT),
             usb_devices_root: PathBuf::from(USB_DEVICES_ROOT),
             input_by_id_root: PathBuf::from(INPUT_BY_ID_ROOT),
+            udev_rules_override_root: PathBuf::from(UDEV_RULES_OVERRIDE_ROOT),
             openrazer_daemon_path: PathBuf::from(OPENRAZER_NATIVE_DAEMON_EXECUTABLE_PATH),
             full_component_descriptor_path: PathBuf::from(FULL_COMPONENT_DESCRIPTOR_PATH),
             socket_path: PathBuf::from(BRIDGE_SOCKET_PATH),
@@ -436,6 +440,7 @@ impl<R: CommandRunner> RealSystemProbe<R> {
             dkms_root: PathBuf::from(DKMS_ROOT),
             usb_devices_root,
             input_by_id_root: PathBuf::from(INPUT_BY_ID_ROOT),
+            udev_rules_override_root: PathBuf::from(UDEV_RULES_OVERRIDE_ROOT),
             openrazer_daemon_path,
             full_component_descriptor_path: PathBuf::from(FULL_COMPONENT_DESCRIPTOR_PATH),
             socket_path,
@@ -928,6 +933,14 @@ impl<R: CommandRunner> RealSystemProbe<R> {
     }
 
     fn missing_openrazer_key_event_links(&self) -> Vec<String> {
+        let replaced = Path::new(OPENRAZER_NATIVE_KEY_EVENT_UDEV_RULES_PATH)
+            .file_name()
+            .is_some_and(|name| {
+                fs::symlink_metadata(self.udev_rules_override_root.join(name)).is_ok()
+            });
+        if replaced {
+            return Vec::new();
+        }
         let attached = self.attached_usb_ids();
         let mut missing = OPENRAZER_NATIVE_KEY_EVENT_LINKS
             .iter()

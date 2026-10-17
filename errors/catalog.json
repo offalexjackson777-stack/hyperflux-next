@@ -345,7 +345,7 @@
       "safe_detail_fields": [
         {"name": "link_path", "type": "text", "required": true, "maximum_length": 256, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Path of the missing /dev/input/by-id link OpenRazer reads the keyboard's key presses from."}
       ],
-      "lifecycle": {"state": "active", "introduced_in": "2.1.1", "deprecated_in": null, "replacement_code": null},
+      "lifecycle": {"state": "active", "introduced_in": "2.1.2", "deprecated_in": null, "replacement_code": null},
       "owner": "integration",
       "technical_cause": "A supported receiver is attached, but the /dev/input/by-id link the Full udev rules add for its keyboard's OpenRazer key-event file is missing. openrazer-daemon looks for it only when it adds the keyboard.",
       "user_explanation": "Ripple and other lighting effects that react to key presses stay still, because OpenRazer cannot see the keyboard's key presses. Other effects and colors still work.",

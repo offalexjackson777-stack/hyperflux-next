@@ -46,11 +46,11 @@ shown in the [installation guide](../user/installation.md). See the
   Tumbleweed packages are already built and checked every week, but not
   published yet. Each will be published only when it works on its own; a delay
   on one does not hold back another.
-- **Optional reactive effects.** Ripple, Reactive, and Fire lighting for
-  devices on the receiver
+- **More reactive effects.** Reactive and Fire lighting for devices on the
+  receiver, and Ripple on both keyboards when two receivers are connected
   ([#54](https://github.com/offalexjackson777-stack/hyperflux-next/issues/54)).
-  Until then, Polychromatic offers Ripple but shows no reactive lighting; see
-  [known limitations](../user/limitations.md#ripple-shows-no-reactive-lighting).
+  Today only one of two keyboards reacts; see
+  [known limitations](../user/limitations.md#ripple-and-other-effects-that-react-to-keys).
 - **Signing key rotation.** The repository signing key will be replaced before
   it expires, following the published fingerprint procedure.
 

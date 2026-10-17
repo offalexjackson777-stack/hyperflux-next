@@ -48,6 +48,28 @@ Polychromatic does not notice by itself when the keyboard comes back.
    `Receivers:` line shows at least 1 and that the last line says
    `Next: no action required`.
 
+## Ripple Stays Still
+
+Doctor reports this as `HFX-INTEGRATION-007`: OpenRazer cannot see the
+keyboard's key presses, so Ripple and other effects that react to keys stay
+still. Other effects and colors still work.
+
+1. Restart the computer with the receiver connected:
+
+   ```sh
+   sudo reboot
+   ```
+
+2. Run `hyperfluxctl doctor` again.
+3. If Doctor still reports it, reinstall the Full package, then restart again:
+
+   ```sh
+   sudo pacman -S hyperflux-next-full
+   ```
+
+With two receivers connected, only one keyboard reacts to key presses. See
+[Ripple and other effects that react to keys](limitations.md#ripple-and-other-effects-that-react-to-keys).
+
 ## The Newly Installed Driver Is Not Active Yet
 
 Doctor reports this as `HFX-KERNEL-001`, usually after an update. Reboot normally

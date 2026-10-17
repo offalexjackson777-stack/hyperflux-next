@@ -84,6 +84,10 @@ def rust_constants(deployment: OpenRazerNativeDeployment, profiles: dict[str, An
             "/// `/dev/input/by-id` names the Full component's udev rules add so",
             "/// `OpenRazer` reads a keyboard's key presses, as receiver USB vendor ID,",
             "/// receiver USB product ID and link name.",
+            "/// Full udev rules file that adds the key-event links. A file of the same",
+            "/// name in `/etc/udev/rules.d` replaces it, which turns the links off.",
+            "pub const OPENRAZER_NATIVE_KEY_EVENT_UDEV_RULES_PATH: &str =",
+            f"    {json.dumps(deployment.key_events.udev_rules_path)};",
             *_rust_key_event_links(_key_event_receivers(deployment, profiles)),
             "",
         ]
@@ -119,6 +123,7 @@ def key_event_udev_rules(
         "# device. Each line adds that name on the receiver interface that carries",
         "# the paired keyboard's key presses and gives the logged-in seat user",
         "# access to it. The uaccess tag only works before 73-seat-late.rules.",
+        "# A file of the same name in /etc/udev/rules.d replaces this one.",
         f'ACTION=="remove", GOTO="{end_label}"',
         f'SUBSYSTEM!="input", GOTO="{end_label}"',
         f'KERNEL!="event*", GOTO="{end_label}"',
@@ -463,6 +468,11 @@ def markdown(
             "both claim the same name and udev keeps one, so only one keyboard receives reactive "
             "effects. Doctor warns when a supported receiver is attached but its link is missing "
             "([error catalog](error-catalog.md#hfx-integration-007)).",
+            "",
+            "An administrator turns the links off with a file of the same name in "
+            "`/etc/udev/rules.d`, which udev uses instead of the packaged file, for example a "
+            "link to `/dev/null`. Doctor treats any such file as a deliberate choice and does "
+            "not warn about missing links.",
             "",
         ]
     )

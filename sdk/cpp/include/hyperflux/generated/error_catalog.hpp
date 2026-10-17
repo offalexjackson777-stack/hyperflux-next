@@ -353,7 +353,7 @@ struct ErrorDescriptor
     std::string_view docs_path;
 };
 
-inline constexpr std::string_view error_catalog_sha256 = "b668ff7340405a67ed1cc96d4b7d3ef169dc9f406a952d5157d933f5f625e5d7";
+inline constexpr std::string_view error_catalog_sha256 = "e3b88ffc730fbc5cbf26176bf112477051348f637adb73f7ed5ca81a6c5459b2";
 inline constexpr std::size_t max_error_count = 256;
 inline constexpr std::size_t max_remediation_count = 128;
 inline constexpr std::size_t max_safe_detail_fields = 12;
@@ -665,7 +665,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorSeverity::Warning, RetryPolicy::AfterRemediation,
         SideEffectCertaintyPolicy::NotApplicable,
         RemediationId::RestoreOpenrazerKeyLink, details_8,
-        {ErrorLifecycleState::Active, "2.1.1", std::nullopt, std::nullopt},
+        {ErrorLifecycleState::Active, "2.1.2", std::nullopt, std::nullopt},
         ErrorOwner::Integration, "A supported receiver is attached, but the /dev/input/by-id link the Full udev rules add for its keyboard's OpenRazer key-event file is missing. openrazer-daemon looks for it only when it adds the keyboard.",
         "Ripple and other lighting effects that react to key presses stay still, because OpenRazer cannot see the keyboard's key presses. Other effects and colors still work.", PrivacyClass::Public,
         "docs/generated/error-catalog.md#hfx-integration-007"

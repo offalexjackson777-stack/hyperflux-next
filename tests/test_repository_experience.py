@@ -924,21 +924,33 @@ class RepositoryExperienceContracts(unittest.TestCase):
         ]
         self.assertEqual(found, [], "\n".join(found))
 
-    def test_ripple_is_documented_as_offered_but_not_reactive(self) -> None:
+    def test_ripple_limits_and_key_press_access_are_documented(self) -> None:
         # Stock OpenRazer advertises Ripple per keyboard model, so pages must
-        # not claim HyperFlux hides it (REL-007).
+        # not claim HyperFlux hides it (REL-007). Ripple now reacts through the
+        # Full key-press link, so pages must not call it inert, and must state
+        # the restart, the one-keyboard limit, and who can read key presses.
         pages = sorted(ROOT.glob("*.md")) + sorted((ROOT / "docs").rglob("*.md"))
-        found = [
-            str(page.relative_to(ROOT))
-            for page in pages
-            if "not advertised over hyperflux"
-            in " ".join(page.read_text(encoding="utf-8").lower().split())
-        ]
-        self.assertEqual(found, [])
-        for path in ("docs/user/applications.md", "docs/user/limitations.md"):
-            page = " ".join((ROOT / path).read_text(encoding="utf-8").split())
-            self.assertIn("Polychromatic offers Ripple", page, path)
-            self.assertIn("no reactive lighting", page, path)
+        for stale in ("not advertised over hyperflux", "no reactive lighting"):
+            found = [
+                str(page.relative_to(ROOT))
+                for page in pages
+                if stale in " ".join(page.read_text(encoding="utf-8").lower().split())
+            ]
+            self.assertEqual(found, [], stale)
+        applications = " ".join(_page("docs/user/applications.md").split())
+        self.assertIn("Ripple needs one restart", applications)
+        self.assertIn("only one keyboard reacts", applications)
+        limitations = " ".join(_page("docs/user/limitations.md").split())
+        for statement in (
+            "restart the computer once",
+            "only one of the two keyboards reacts",
+            "two short vertical lines",
+            "any program you run can read them too",
+            "Other user accounts on the computer cannot.",
+            "/etc/udev/rules.d/70-hyperflux-next-openrazer-keys.rules",
+        ):
+            self.assertIn(statement, limitations)
+        self.assertIn("HFX-INTEGRATION-007", _page("docs/user/troubleshooting.md"))
 
     def test_upstream_application_limitations_are_documented(self) -> None:
         # Firmware shortcuts, the OpenRGB variant label, and the Polychromatic
