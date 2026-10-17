@@ -6,7 +6,7 @@ This page lists what the HyperFlux packages install, what they leave alone, and 
 
 Install manifest digest: `dd2530b90f489df732800f7b6adb546a43510db3460b7c5e5eefe0f990c3a9cd`.
 
-Packages: Core `hyperflux-next-linux` (the receiver driver, background service, SDK, and `hyperfluxctl`) and Full (Core plus OpenRazer and OpenRGB support) at `2.1.1` release `1`.
+Packages at `2.1.1` release `1`: Core is `hyperflux-next-linux` (background service, SDK, and `hyperfluxctl`) with `hyperflux-next-dkms` (receiver driver sources). Full adds `hyperflux-next-openrazer-driver-dkms` (patched OpenRazer driver sources) and `hyperflux-next-full` (the OpenRazer and OpenRGB connections).
 
 ## What Installing Does And Does Not Do
 
@@ -66,7 +66,7 @@ The packages install `34` files. Every file goes under `/etc` or `/usr`, and no 
 
 ## OpenRazer Driver And Updates
 
-The Full package owns the source-bound patched driver at `/usr/src/openrazer-driver-3.12.4` and provides the OpenRazer driver dependency. Distribution packages must conflict with and replace the ordinary `openrazer-driver-dkms` package so a system update cannot install a second owner over the transformed source tree.
+`hyperflux-next-openrazer-driver-dkms` owns the source-bound patched driver at `/usr/src/openrazer-driver-3.12.4`. It provides `openrazer-driver-dkms=3.12.4` and `hyperflux-openrazer-driver-abi=3.12.4` and conflicts with `openrazer-driver-dkms`, so a system update cannot install a second owner over the transformed source tree.
 
 Official OpenRazer `3.12.4` daemon and Python-client packaging may receive distribution release-suffix updates. Runtime readiness is checked with the transformed module capability `hyperflux_native_transport=razer-feature-report-v1`, not a package release string. A different upstream source version fails closed and keeps `hyperflux-next-openrazer-relay.service` stopped until HyperFlux is rebased and reverified.
 

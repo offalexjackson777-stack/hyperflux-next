@@ -109,3 +109,10 @@ lighting.
 SDK clients, such as scripts using the OpenRGB SDK or a second OpenRGB instance, see the
 HyperFlux controllers only when **Settings → Server → Serve All Controllers** is on. Controls
 inside OpenRGB itself are not affected.
+
+OpenRGB may describe a black keyboard as Quartz. OpenRGB reads the colour variant from a
+byte in the keyboard's own information reply, without checking the reply or whether the
+model has variants; HyperFlux passes that reply through unchanged. The device name is
+correct and lighting works. The user-facing note is in
+[known limitations](../user/limitations.md#openrgb-may-call-a-black-keyboard-quartz),
+tracked in [#42](https://github.com/offalexjackson777-stack/hyperflux-next/issues/42).

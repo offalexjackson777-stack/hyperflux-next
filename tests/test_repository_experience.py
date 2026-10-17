@@ -323,7 +323,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
                 for pattern in private_patterns:
                     self.assertIsNone(pattern.search(text))
         root = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("HyperFlux Next 2.0", root)
+        self.assertIn("With HyperFlux Next, a keyboard and mouse", root)
         self.assertIn("hyperflux-next-full", root)
 
     def test_document_render_policy_covers_every_reviewed_page_and_required_preview(self) -> None:
@@ -946,7 +946,11 @@ class RepositoryExperienceContracts(unittest.TestCase):
         limitations = " ".join(
             (ROOT / "docs/user/limitations.md").read_text(encoding="utf-8").split()
         )
-        self.assertIn("HyperFlux passes that reply through unchanged", limitations)
+        self.assertIn("This comes from OpenRGB, not from HyperFlux.", limitations)
+        port = " ".join(
+            (ROOT / "docs/investigations/openrgb-1-0-port.md").read_text(encoding="utf-8").split()
+        )
+        self.assertIn("HyperFlux passes that reply through unchanged", port)
         self.assertIn("lighting inside the keyboard firmware", limitations)
         self.assertIn("unrecognised `1532:00CF` device", limitations)
         self.assertIn("never makes up a value", limitations)

@@ -300,7 +300,10 @@ def _application_paths(device: dict[str, Any]) -> str:
 def _blocked_reason(device: dict[str, Any], entry: dict[str, Any]) -> str:
     pending = [item["application"] for item in entry["upstream_pending"]]
     if pending:
-        return "Upstream support pending for " + ", ".join(sorted(pending))
+        names = {"openrazer": "OpenRazer", "openrgb": "OpenRGB"}
+        return "Waiting for " + " and ".join(
+            names.get(item, item) for item in sorted(pending)
+        ) + " to add support"
     reasons = sorted(
         {
             integration["reason"]
@@ -434,12 +437,12 @@ def markdown(
             "",
             "## What The Tiers Mean",
             "",
-            f"- **Tested on real hardware** (`{PHYSICALLY_PROVEN}`): the device "
+            "- **Tested on real hardware:** the device "
             "passed end-to-end checks of the hardware, the apps, and the device "
             "lifecycle on real hardware. These devices are test references, "
             "not a runtime allowlist: HyperFlux decides what to do from what a device "
             "can do, so other devices on this page can work too.",
-            f"- **Confirmed by owners** (`{OWNER_CONFIRMED}`): an expected-to-work "
+            "- **Confirmed by owners:** an expected-to-work "
             f"device for which at least {minimum_owner_reports} owner "
             f"{'report has' if minimum_owner_reports == 1 else 'reports have'} passed "
             "the checks in "
@@ -447,14 +450,16 @@ def markdown(
             "The owner ticked what they checked by hand; nobody from the project "
             "watched. HyperFlux treats the device exactly as before: this changes "
             "this page, not what HyperFlux does.",
-            f"- **Expected to work** (`{SOURCE_QUALIFIED_OPERATIONAL}`): the pinned "
-            "source code of at least one unmodified app, checked against HyperFlux's "
-            "generated command rules, shows a working path to the device. Nobody has run "
-            "the real-hardware checks on it yet.",
-            f"- **Not supported yet** (`{UPSTREAM_BLOCKED_OR_RESEARCH_ONLY}`): the "
-            "device is on the receiver's compatibility list, but no app's pinned source "
-            "code has a working path to it yet. HyperFlux will not send lighting changes "
-            "to it.",
+            "- **Expected to work:** the source code of at least one app, OpenRazer or "
+            "OpenRGB, has been checked and shows that it can control the device through "
+            "HyperFlux. Nobody has tested the device on real hardware yet.",
+            "- **Not supported yet:** the receiver can pair with the device, but no app "
+            "can control it yet. HyperFlux will not send lighting changes to it.",
+            "",
+            f"For maintainers, the tier ids are `{PHYSICALLY_PROVEN}`, `{OWNER_CONFIRMED}`, "
+            f"`{SOURCE_QUALIFIED_OPERATIONAL}`, and `{UPSTREAM_BLOCKED_OR_RESEARCH_ONLY}`, "
+            "in the order above. \"Expected to work\" means the pinned source of an "
+            "unmodified app was checked against HyperFlux's generated command rules.",
             "",
             "A listed device still gets lighting changes only when the receiver as it is "
             "connected now, the report format, and the command rules all match. A similar "

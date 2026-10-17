@@ -12,7 +12,7 @@ Polychromatic, and OpenRGB on Linux.
 [v2.1.1 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.1).
 <!-- HFX-GENERATED-END: release-summary -->
 
-With HyperFlux Next 2.0, a keyboard and mouse that share one HyperFlux
+With HyperFlux Next, a keyboard and mouse that share one HyperFlux
 receiver show up in your usual lighting and settings apps. You keep the same
 apps and use them the usual way.
 
@@ -125,8 +125,9 @@ Full and Core.
   OpenRGB can do with HyperFlux.
 - [Troubleshooting](docs/user/troubleshooting.md): fix a missing device or a
   failed check.
-- [Updates and removal](docs/user/updates-removal.md): update, go back, or
-  remove HyperFlux.
+- [Updates and removal on Arch Linux](docs/user/updates-removal.md): update,
+  go back, or remove HyperFlux. The other distributions' guides have their own
+  update and removal steps.
 - [Documentation hub](docs/README.md): every guide, plus how HyperFlux works and
   how it was built.
 

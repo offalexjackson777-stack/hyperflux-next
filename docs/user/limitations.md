@@ -104,7 +104,8 @@ The battery level itself is not affected.
 Two devices have been tested end to end on real hardware. Eight more are
 expected to work because support for them has been checked in the source code
 of OpenRazer and OpenRGB, but they have not been tested on real hardware. Two
-more wait for support in OpenRazer; OpenRGB does not support them either. See [hardware](hardware.md) for the list.
+more wait for support in OpenRazer; OpenRGB does not support them either. See
+[hardware](hardware.md) for the list.
 
 A device that an application can use is not the same as a device that has been
 tested on real hardware. If your device is in the second group and something

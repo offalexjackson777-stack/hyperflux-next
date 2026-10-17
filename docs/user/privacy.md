@@ -50,9 +50,10 @@ privately.
 ## Hardware Reports
 
 `hyperfluxctl qualification` makes a smaller report about your receiver and
-devices, for device support requests and bug reports about a device. [Hardware](hardware.md#share-a-hardware-report) shows how to share
-it. It only reads what the HyperFlux service already knows. It sends nothing to
-your devices, writes nothing to them, and uploads nothing.
+devices, for device support requests and bug reports about a device.
+[Hardware](hardware.md#share-a-hardware-report) shows how to share it. It only
+reads what the HyperFlux service already knows. It sends nothing to your
+devices, writes nothing to them, and uploads nothing.
 
 A hardware report contains:
 

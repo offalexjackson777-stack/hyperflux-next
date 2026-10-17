@@ -6,19 +6,22 @@ This page lists the HyperFlux packages, what each one depends on, and what each 
 
 Source digest: `524fb2612923f638b0a65fd06a2753eb74f4ab5632f9bbdd77baa07d9c467312`.
 
-The Arch `pkgbase=hyperflux-next` builds two user-facing packages that never install the same file. Packages for other distributions are tested separately.
+From `2.1.0-1` the Arch `pkgbase=hyperflux-next` builds 4 packages that never install the same file. Core installs `hyperflux-next-dkms` and `hyperflux-next-linux`. Full installs `hyperflux-next-dkms`, `hyperflux-next-linux`, `hyperflux-next-openrazer-driver-dkms` and `hyperflux-next-full`. Packages for other distributions are tested separately.
 
-| Component | Package | Required packages | Optional packages | Conflicts | Provides | Replaces |
+| Package | Edition | Required packages | Optional packages | Conflicts | Provides | Replaces |
 | --- | --- | --- | --- | --- | --- | --- |
-| `linux` | `hyperflux-next-linux` | `dkms`, `glibc`, `libgcc`, `systemd` | none | `hyperflux-v2-linux-dkms` | none | none |
-| `full` | `hyperflux-next-full` | `dkms`, `glibc`, `libgcc`, `systemd`, `hyperflux-next-linux=2.1.1-1`, `qt6-base`, `hidapi`, `libstdc++` | `openrgb` (Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified), `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend) | `hyperflux-next-openrgb=0.0.0_dev.1-2`, `openrazer-driver-dkms` | `openrazer-driver-dkms=3.12.4`, `hyperflux-openrazer-driver-abi=3.12.4` | `hyperflux-next-openrgb=0.0.0_dev.1-2`, `openrazer-driver-dkms` |
+| `hyperflux-next-dkms` | Core | `dkms` | none | `hyperflux-v2-linux-dkms` | none | none |
+| `hyperflux-next-linux` | Core | `glibc`, `libgcc`, `systemd`, `hyperflux-next-dkms=2.1.1-1` | none | none | none | none |
+| `hyperflux-next-openrazer-driver-dkms` | Full | `dkms`, `systemd`, `hyperflux-next-dkms=2.1.1-1` | none | `openrazer-driver-dkms` | `openrazer-driver-dkms=3.12.4`, `hyperflux-openrazer-driver-abi=3.12.4` | none |
+| `hyperflux-next-full` | Full | `glibc`, `libgcc`, `systemd`, `hyperflux-next-linux=2.1.1-1`, `hyperflux-next-openrazer-driver-dkms=2.1.1-1`, `qt6-base`, `hidapi`, `libstdc++` | `openrgb` (Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified), `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend) | `hyperflux-next-openrgb=0.0.0_dev.1-2` | none | `hyperflux-next-openrgb=0.0.0_dev.1-2` |
 
 ## What Each Package Owns
 
-- **Core (`hyperflux-next-linux`):** HyperFlux receiver driver, bridge, SDK, CLI, and base services.
-- **Full (`hyperflux-next-full`):** Core plus the OpenRazer compatibility transport and OpenRGB integration for optional stock applications.
-- Stock applications are optional suggestions rather than package payloads.
-- Stock OpenRazer daemon/client, Polychromatic, and OpenRGB remain distribution-owned applications.
+- **`hyperflux-next-dkms` (Core):** HyperFlux receiver kernel driver sources for DKMS.
+- **`hyperflux-next-linux` (Core):** HyperFlux receiver driver, bridge, SDK, CLI, and base services.
+- **`hyperflux-next-openrazer-driver-dkms` (Full):** OpenRazer kernel driver sources with the HyperFlux native transport, for DKMS.
+- **`hyperflux-next-full` (Full):** Core plus the OpenRazer compatibility transport and OpenRGB integration for optional stock applications.
+- OpenRazer's service and Python client, Polychromatic, and OpenRGB are optional suggestions, never package payloads. They stay packaged by the distribution.
 
 ## Install And First Run
 

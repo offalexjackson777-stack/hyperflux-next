@@ -40,7 +40,7 @@ These terms mean the same thing on every generated page.
 | [Design Coverage](design-coverage.md) | Which Design Book sections are checked by tests and which are still open. | `assurance/design-coverage.json` |
 | [Development Environment](development-environment.md) | The pinned tools, container, and app sources used to build and check HyperFlux. | `toolchains/development-environment.json` |
 | [Device Knowledge](device-knowledge.md) | What is known about each candidate device, where each fact comes from, and what is still unknown. | `knowledge/reviewed-facts.json`, `knowledge/capability-map.json` |
-| [Distribution Packages](distributions.md) | The HyperFlux packages, what each one installs, and which systems they target. | `packaging/distributions.json` |
+| [Distribution Packages](distributions.md) | The HyperFlux packages, what each one installs, and which systems they target. | `packaging/distributions.json`, `packaging/arch-split.json` |
 | [Domain Types](domain-types.md) | The shared value types, their ranges, and their allowed values in every language. | `schemas/domain-catalog.json` |
 | [Error Catalog](error-catalog.md) | Every HFX- error code with what it means, what to do, and whether to retry. | `errors/catalog.json` |
 | [GitHub Governance](github-governance.md) | How the repository is set up on GitHub: workflows, required checks, issue forms, and security settings. | `governance/github.json` |

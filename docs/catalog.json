@@ -571,7 +571,7 @@
       "owner": "packaging",
       "navigation_group": "generated",
       "mode": "generated",
-      "canonical_sources": ["packaging/distributions.json"],
+      "canonical_sources": ["packaging/distributions.json", "packaging/arch-split.json"],
       "generated_block_ids": []
     },
     {

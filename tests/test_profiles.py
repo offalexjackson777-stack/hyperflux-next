@@ -110,11 +110,11 @@ class ProfileCompilerTests(unittest.TestCase):
             "source-qualified-operational",
             "upstream-blocked-or-research-only",
         ):
-            self.assertIn(f"(`{tier}`)", document)
+            self.assertIn(f"`{tier}`", document.split("For maintainers", 1)[1])
         self.assertEqual(document.count("| Razer "), 12)
         self.assertIn("`1532:00ab` / `1532:00aa`", document)
         self.assertIn("`1532:02d2` / `1532:02d4`", document)
-        self.assertIn("Upstream support pending for openrazer", document)
+        self.assertIn("Waiting for OpenRazer to add support", document)
         self.assertIn("not a runtime allowlist", document)
         self.assertNotIn("Admitted methods", document)
 
