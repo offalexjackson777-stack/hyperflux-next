@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import json
 from pathlib import Path
 import sys
 import tomllib
@@ -13,6 +14,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
+from hfxdev.generators.install import full_component_descriptor
 from hfxdev.install import _first_run_activation, load_install_manifest
 from hfxdev.linux_runtime import load_linux_runtime
 from hfxdev.model import ModelError, load_json
@@ -256,6 +258,19 @@ class InstallManifestTests(unittest.TestCase):
         self.assertNotIn("openrazer", bridge)
         self.assertIn("Wants=hyperflux-next-openrazer-relay.service", drop_in)
         self.assertIn("Before=hyperflux-next-openrazer-relay.service", drop_in)
+
+    def test_full_descriptor_without_the_openrgb_plugin_names_only_the_route(self) -> None:
+        runtime = load_linux_runtime(ROOT)
+        generated = (ROOT / "packaging/generated/full-component.json").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(full_component_descriptor(runtime), generated)
+        without = json.loads(full_component_descriptor(runtime, openrgb_plugin=False))
+        self.assertEqual(without["capabilities"], ["openrazer-native-route"])
+        self.assertEqual(
+            {key: value for key, value in without.items() if key != "capabilities"},
+            {key: value for key, value in json.loads(generated).items() if key != "capabilities"},
+        )
 
     def test_loader_rejects_activation_and_destination_drift(self) -> None:
         cases = []

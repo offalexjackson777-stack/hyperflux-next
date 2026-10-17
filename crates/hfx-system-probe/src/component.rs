@@ -11,7 +11,8 @@ const DESCRIPTOR_SCHEMA_REF: &str =
     "https://hyperflux.dev/schemas/distribution-component-descriptor-v1.json";
 const DESCRIPTOR_SCHEMA: &str = "hyperflux-distribution-component-v1";
 const DESCRIPTOR_COMPONENT_ID: &str = "full";
-const DESCRIPTOR_CAPABILITIES: [&str; 2] = ["openrazer-native-route", "openrgb-plugin"];
+const NATIVE_ROUTE_CAPABILITY: &str = "openrazer-native-route";
+const OPENRGB_PLUGIN_CAPABILITY: &str = "openrgb-plugin";
 const MAX_DESCRIPTOR_BYTES: u64 = 4_096;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -40,6 +41,9 @@ impl FullComponentState {
 pub struct FullComponentSnapshot {
     pub state: FullComponentState,
     pub product_version: Option<String>,
+    /// Whether this Full package carries the `OpenRGB` plugin. Distributions
+    /// whose `OpenRGB` cannot load it ship Full without it.
+    pub openrgb_plugin: bool,
 }
 
 impl FullComponentSnapshot {
@@ -48,6 +52,7 @@ impl FullComponentSnapshot {
         Self {
             state: FullComponentState::NotInstalled,
             product_version: None,
+            openrgb_plugin: false,
         }
     }
 
@@ -56,6 +61,15 @@ impl FullComponentSnapshot {
         Self {
             state: FullComponentState::Ready,
             product_version: Some(product_version.to_owned()),
+            openrgb_plugin: true,
+        }
+    }
+
+    #[must_use]
+    pub fn ready_without_openrgb_plugin(product_version: &str) -> Self {
+        Self {
+            openrgb_plugin: false,
+            ..Self::ready(product_version)
         }
     }
 
@@ -80,6 +94,7 @@ fn invalid(state: FullComponentState) -> FullComponentSnapshot {
     FullComponentSnapshot {
         state,
         product_version: None,
+        openrgb_plugin: false,
     }
 }
 
@@ -143,10 +158,17 @@ fn probe_with_ownership(
     if descriptor.product_version != expected_version {
         return invalid(FullComponentState::VersionMismatch);
     }
-    if descriptor.capabilities != DESCRIPTOR_CAPABILITIES {
-        return invalid(FullComponentState::CapabilitiesIncomplete);
+    match descriptor.capabilities.as_slice() {
+        [route, plugin]
+            if route == NATIVE_ROUTE_CAPABILITY && plugin == OPENRGB_PLUGIN_CAPABILITY =>
+        {
+            FullComponentSnapshot::ready(expected_version)
+        }
+        [route] if route == NATIVE_ROUTE_CAPABILITY => {
+            FullComponentSnapshot::ready_without_openrgb_plugin(expected_version)
+        }
+        _ => invalid(FullComponentState::CapabilitiesIncomplete),
     }
-    FullComponentSnapshot::ready(expected_version)
 }
 
 #[must_use]
