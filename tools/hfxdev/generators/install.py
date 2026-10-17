@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+from ..arch_split import ArchSplit
 from ..install import InstallManifest
 from ..linux_runtime import LinuxRuntime
 from ..openrazer_native_route import OpenRazerNativeDeployment
@@ -90,11 +91,23 @@ def compiled_plan(manifest: InstallManifest, runtime: LinuxRuntime) -> str:
     return json.dumps(value, indent=2, sort_keys=False, ensure_ascii=True) + "\n"
 
 
+
+def _relations(values: tuple[str, ...]) -> str:
+    return " and ".join(f"`{value}`" for value in values)
+
 def markdown(
     manifest: InstallManifest,
     runtime: LinuxRuntime,
     openrazer: OpenRazerNativeDeployment,
+    split: ArchSplit,
 ) -> str:
+    receiver = split.output("receiver-dkms").package_name
+    driver_owner = next(
+        output
+        for output in split.outputs
+        if openrazer.driver.source_directory in output.tree_destinations
+    )
+    full = split.edition_output("full").package_name
     required = sum(1 for build in manifest.builds if build.required)
     optional = len(manifest.builds) - required
     preserved = [file for file in manifest.files if file.preserve]
@@ -109,10 +122,11 @@ def markdown(
         "",
         f"Install manifest digest: `{manifest.source_sha256}`.",
         "",
-        f"Packages: Core `{runtime.product.package_name}` (the receiver driver, background "
-        "service, SDK, and `hyperfluxctl`) and Full (Core plus OpenRazer and OpenRGB "
-        f"support) at `{runtime.product.version}` release "
-        f"`{runtime.product.package_release}`.",
+        f"Packages at `{runtime.product.version}` release "
+        f"`{runtime.product.package_release}`: Core is `{runtime.product.package_name}` "
+        f"(background service, SDK, and `hyperfluxctl`) with `{receiver}` (receiver "
+        f"driver sources). Full adds `{driver_owner.package_name}` (patched OpenRazer "
+        f"driver sources) and `{full}` (the OpenRazer and OpenRGB connections).",
         "",
         "## What Installing Does And Does Not Do",
         "",
@@ -172,11 +186,11 @@ def markdown(
             "",
             "## OpenRazer Driver And Updates",
             "",
-            f"The Full package owns the source-bound patched driver at "
-            f"`{openrazer.driver.source_directory}` and provides the OpenRazer "
-            "driver dependency. Distribution packages must conflict with and replace "
-            "the ordinary `openrazer-driver-dkms` package so a system update cannot "
-            "install a second owner over the transformed source tree.",
+            f"`{driver_owner.package_name}` owns the source-bound patched driver at "
+            f"`{openrazer.driver.source_directory}`. It provides "
+            f"{_relations(driver_owner.provides)} and conflicts with "
+            f"{_relations(driver_owner.conflicts)}, so a system update cannot install a "
+            "second owner over the transformed source tree.",
             "",
             f"Official OpenRazer `{openrazer.compatibility.verified_upstream_version}` "
             "daemon and Python-client packaging may receive distribution release-suffix "

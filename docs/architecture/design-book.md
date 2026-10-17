@@ -2,7 +2,7 @@
 
 A HyperFlux V2 receiver puts a Razer keyboard and mouse behind one USB dongle, and stock
 Linux applications cannot reach devices behind it. This book explains how HyperFlux Next
-2.0 closes that gap without taking over what OpenRazer and OpenRGB already do. Each
+closes that gap without taking over what OpenRazer and OpenRGB already do. Each
 numbered subject states one current boundary or rule, with the reason for it. Work labelled
 as future is direction only, not a promise of support.
 

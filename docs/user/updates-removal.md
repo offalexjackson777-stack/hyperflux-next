@@ -1,5 +1,9 @@
 # Updates And Removal
 
+These steps are for Arch Linux. On Ubuntu, Debian, Fedora, and openSUSE, the
+update and removal steps are in your distribution's guide, linked from the
+[install section of the README](../../README.md#install).
+
 ## Update HyperFlux
 
 HyperFlux updates arrive with your normal system update.
@@ -30,7 +34,9 @@ If Doctor still needs attention, see [troubleshooting](troubleshooting.md).
 
 ## Go Back To An Earlier Version
 
-Pacman keeps the packages you installed before in its cache.
+Pacman keeps the packages you installed before in its cache. Every HyperFlux
+package needs the other HyperFlux packages from exactly the same version, so
+always install them together.
 
 1. See which versions you have:
 
@@ -38,8 +44,33 @@ Pacman keeps the packages you installed before in its cache.
    ls /var/cache/pacman/pkg/hyperflux-next-*
    ```
 
-2. Install the earlier Core and Full files together, both from the same
-   version, then reboot with the receiver connected:
+2. Install all the earlier files from one version together, then reboot with
+   the receiver connected. For a 2.1.0 or later version with Full, that is
+   four files:
+
+   ```sh
+   sudo pacman -U \
+     /var/cache/pacman/pkg/hyperflux-next-dkms-VERSION-x86_64.pkg.tar.zst \
+     /var/cache/pacman/pkg/hyperflux-next-linux-VERSION-x86_64.pkg.tar.zst \
+     /var/cache/pacman/pkg/hyperflux-next-openrazer-driver-dkms-VERSION-x86_64.pkg.tar.zst \
+     /var/cache/pacman/pkg/hyperflux-next-full-VERSION-x86_64.pkg.tar.zst
+   sudo reboot
+   ```
+
+   Replace `VERSION` with the same earlier version, for example `2.1.0-1`, in
+   every line. If you use Core alone, install only the `hyperflux-next-dkms`
+   and `hyperflux-next-linux` files.
+
+   Going back to a 2.0.x version is different, because 2.0.x keeps its
+   drivers inside its Core and Full packages. First remove the separate
+   driver packages:
+
+   ```sh
+   sudo pacman -Rdd hyperflux-next-dkms hyperflux-next-openrazer-driver-dkms
+   ```
+
+   If you use Core alone, remove only `hyperflux-next-dkms`. Then straight
+   away install the two 2.0.x files and reboot:
 
    ```sh
    sudo pacman -U \
@@ -48,23 +79,11 @@ Pacman keeps the packages you installed before in its cache.
    sudo reboot
    ```
 
-   Replace `VERSION` with the same earlier version in both lines. If you use
-   Core alone, install only the Core file.
+   With Core alone, leave out the `hyperflux-next-full` line.
 
-   Going from 2.1.0 or later back to a 2.0.x version needs one extra step
-   first, because 2.0.x keeps its drivers inside the Core and Full packages.
-   Remove the separate driver packages, then run the `pacman -U` command above
-   straight away:
-
-   ```sh
-   sudo pacman -Rdd hyperflux-next-dkms hyperflux-next-openrazer-driver-dkms
-   ```
-
-   If you use Core alone, remove only `hyperflux-next-dkms`.
-
-If the cache was cleaned, download both files from that version's GitHub
-release. Do not install the stock `openrazer-driver-dkms` package while going
-back.
+If the cache was cleaned, download all of that version's package files from
+its GitHub release. Do not install Arch's own `openrazer-driver-dkms` package
+while going back.
 
 ## Remove Full And Keep Core
 
@@ -77,7 +96,7 @@ back.
    Core and its services keep working, but your apps can no longer reach
    devices paired to the receiver.
 
-2. If you use OpenRazer or Polychromatic, put the stock driver back:
+2. If you use OpenRazer or Polychromatic, put Arch's own OpenRazer driver back:
 
    ```sh
    sudo pacman -S openrazer-driver-dkms
@@ -107,7 +126,7 @@ back.
    `/etc/hyperflux-next/bridge.json.pacsave`. To remove that copy too, use
    `sudo pacman -Rns` instead of `sudo pacman -Rs`.
 
-3. If you use OpenRazer or Polychromatic, put the stock driver back as in
+3. If you use OpenRazer or Polychromatic, put Arch's own OpenRazer driver back as in
    step 2 of [Remove Full And Keep Core](#remove-full-and-keep-core).
 
 OpenRGB, OpenRazer, and Polychromatic are not removed. They belong to their own

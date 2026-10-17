@@ -73,11 +73,15 @@ New assessment tests cover each state:
 - `unqualified_receiver_is_named_without_blaming_the_bridge`
 - `unreachable_bridge_still_reports_the_service_and_unavailable_status`
 
+On hardware, on 17 October 2026 with 2.1.1, Doctor reported Ready and `hyperfluxctl
+status` agreed: driver active, bridge running, and one qualified receiver.
+
 ## What Is Still Open
 
 #33 also listed a temporarily unavailable route and a receiver bound to an unexpected
 kernel driver. A paired device without a live route is reported as `not-live` under
 `HFX-SERVICE-003`. The kernel-driver case is reported by `HFX-KERNEL-003`, added by the
-[retired DKMS driver](retired-dkms-driver.md) fix. The 2.0.1
-checklist, [#36](https://github.com/offalexjackson777-stack/hyperflux-next/issues/36),
-includes checking on hardware that Doctor's output matches the real state.
+[retired DKMS driver](retired-dkms-driver.md) fix. The missing-mouse case that started
+#33 cannot be reproduced on hardware any more, because the
+[mouse missing after boot](mouse-missing-after-boot.md) fix removed its cause, so the
+tests above are its proof. #33 is closed.

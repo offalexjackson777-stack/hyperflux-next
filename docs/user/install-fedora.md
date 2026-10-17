@@ -1,8 +1,11 @@
 # Install HyperFlux Next on Fedora
 
-This guide installs HyperFlux Next so your Razer keyboard and mouse on a
-HyperFlux receiver work on Fedora. It uses the signed HyperFlux package
-repository, so later updates arrive with your normal system updates.
+This guide installs HyperFlux Next Core on Fedora. Core adds the receiver
+driver, the HyperFlux service, the `hyperfluxctl` tool, and the SDK. OpenRGB
+and Polychromatic cannot change the lighting of devices on the receiver yet on
+Fedora; that needs Full, which is available on Arch Linux only. The guide uses
+the signed HyperFlux package repository, so later updates arrive with your
+normal system updates.
 
 ## What You Need
 
@@ -115,15 +118,26 @@ After you log in again, run:
 hyperfluxctl doctor
 ```
 
-You should see:
+When everything works, it prints:
 
 ```text
 HyperFlux Next is ready.
+Driver active or idle | Bridge running | 1 receiver generation(s)
+Optional Full integration is not installed.
+No action required.
 ```
+
+The second line shows the receiver driver, the HyperFlux service (`Bridge`),
+and how many times the service has found your receiver since it started. The
+line about Full is expected on Fedora: Full, the app connections, is
+available on Arch Linux only.
 
 If you see `HyperFlux Next needs attention.` instead, do what the `Do:` line
 says, then run `hyperfluxctl doctor` again. The
 [troubleshooting guide](troubleshooting.md) covers the common cases.
+
+Next, the [first-run guide](first-run.md) explains what `hyperfluxctl status`
+shows, and the [known limitations](limitations.md) list what does not work yet.
 
 ## Updates
 

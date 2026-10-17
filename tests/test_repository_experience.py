@@ -175,8 +175,15 @@ class RepositoryExperienceContracts(unittest.TestCase):
                 self.assertIn(expected, " ".join(page.split()))
         self.assertIn("sudo pacman -Syu hyperflux-next-full", readme)
         self.assertIn("sudo pacman -Syu hyperflux-next-linux", readme)
-        self.assertIn("signed project-operated Arch repository", readme)
-        self.assertIn("not an official Arch Linux repository", readme)
+        flat_readme = " ".join(readme.split())
+        self.assertIn("signed repository run by the HyperFlux project", flat_readme)
+        self.assertIn("not an official repository of your distribution", flat_readme)
+        # The front door serves every distribution: Arch's commands are named
+        # as Arch's, and the install steps do not read as Arch-only.
+        self.assertIn("Every guide has the same four steps.", flat_readme)
+        self.assertIn("On Arch Linux, install Full", flat_readme)
+        self.assertNotIn("quick steps below are for Arch Linux", flat_readme)
+        self.assertNotIn("is available for Arch Linux", flat_readme)
         self.assertIn(
             load_arch_repository_policy(ROOT).product_release_url, readme
         )
@@ -316,7 +323,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
                 for pattern in private_patterns:
                     self.assertIsNone(pattern.search(text))
         root = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("HyperFlux Next 2.0", root)
+        self.assertIn("With HyperFlux Next, a keyboard and mouse", root)
         self.assertIn("hyperflux-next-full", root)
 
     def test_document_render_policy_covers_every_reviewed_page_and_required_preview(self) -> None:
@@ -939,7 +946,11 @@ class RepositoryExperienceContracts(unittest.TestCase):
         limitations = " ".join(
             (ROOT / "docs/user/limitations.md").read_text(encoding="utf-8").split()
         )
-        self.assertIn("HyperFlux passes that reply through unchanged", limitations)
+        self.assertIn("This comes from OpenRGB, not from HyperFlux.", limitations)
+        port = " ".join(
+            (ROOT / "docs/investigations/openrgb-1-0-port.md").read_text(encoding="utf-8").split()
+        )
+        self.assertIn("HyperFlux passes that reply through unchanged", port)
         self.assertIn("lighting inside the keyboard firmware", limitations)
         self.assertIn("unrecognised `1532:00CF` device", limitations)
         self.assertIn("never makes up a value", limitations)
@@ -1253,8 +1264,10 @@ class UserDocumentationContracts(unittest.TestCase):
         )
 
     def test_support_sends_users_to_the_installation_guide(self) -> None:
+        # Every distribution has its own guide, so Support links the README list of them.
         support = _page("SUPPORT.md")
-        self.assertIn("(docs/user/installation.md)", support)
+        self.assertIn("(README.md#install)", support)
+        self.assertNotIn("(docs/user/installation.md)", support)
         self.assertIsNone(re.search(r"\bunreleased\b", support, re.IGNORECASE))
 
 
@@ -1262,9 +1275,11 @@ class UserDocumentationContracts(unittest.TestCase):
         installation = _page("docs/user/installation.md")
         self.assertIn("Choose one.", installation)
         self.assertNotIn("Install Core and Full together", installation)
-        self.assertEqual(installation.count("sudo pacman -U"), 1)
         fallback = installation.index("## If You Cannot Add The Repository")
-        self.assertGreater(installation.index("sudo pacman -U"), fallback)
+        # The fallback installs Full, with Core alone as a folded alternative.
+        self.assertEqual(installation[fallback:].count("sudo pacman -U"), 2)
+        self.assertNotIn("sudo pacman -U", installation[:fallback])
+        self.assertIn("<summary>Core only</summary>", installation[fallback:])
         for command in (
             "sudo systemctl enable hyperflux-next-bridge.service",
             "sudo reboot",

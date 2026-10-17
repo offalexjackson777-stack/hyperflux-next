@@ -6,7 +6,8 @@ whole time.
 
 ## Make Sure HyperFlux Is Turned On
 
-If you followed every step of the [installation guide](installation.md), skip to
+If you followed every step of your
+[installation guide](../../README.md#install), skip to
 [the next section](#check-that-hyperflux-is-ready).
 
 Otherwise, turn on the HyperFlux service and your desktop connection to it:
@@ -33,8 +34,24 @@ OpenRazer. It does not replace or manage OpenRazer's own background service.
    hyperfluxctl status
    ```
 
-   You should see the driver, the service, and your receiver, followed by a
-   `Next:` line. When nothing needs doing, it says `Next: no action required`.
+   When everything works, you see:
+
+   ```text
+   HyperFlux Next status
+   Driver: active
+   Bridge: running
+   Receivers: 1 generation(s), 1 qualified
+   Next: no action required
+   ```
+
+   - `Driver` is the HyperFlux receiver driver.
+   - `Bridge` is the HyperFlux service.
+   - `Receivers` counts the receivers HyperFlux has found. `1 qualified` means
+     HyperFlux knows exactly how to talk to that receiver.
+   - `Next` says what to do. `no action required` means nothing.
+
+   With Core alone, you also see the line `Full: optional (not installed)`.
+   That is expected.
 
 2. Then run:
 
@@ -42,7 +59,9 @@ OpenRazer. It does not replace or manage OpenRazer's own background service.
    hyperfluxctl doctor
    ```
 
-   You should see `HyperFlux Next is ready.` and `No action required.`
+   You should see `HyperFlux Next is ready.` and `No action required.` With
+   Core alone, Doctor also prints `Optional Full integration is not installed.`
+   That is expected.
 
 If Doctor prints `HyperFlux Next needs attention.`, it names the problem, why it
 matters, one thing to do (`Do:`), and how to check again (`Verify:`). Do that,
@@ -51,7 +70,13 @@ see [troubleshooting](troubleshooting.md).
 
 ## Install Your Apps
 
-The apps are separate projects. Install only the ones you want.
+Lighting apps can reach the devices on your receiver only with Full, which is
+available on Arch Linux only for now. With Core, your keyboard and mouse still
+work normally and their battery level shows on your desktop, but OpenRGB and
+Polychromatic cannot change their lighting. On Core, you can stop here.
+
+The apps are separate projects. Install only the ones you want. The commands
+below are for Arch Linux.
 
 - **OpenRGB** is in the official Arch repositories:
 

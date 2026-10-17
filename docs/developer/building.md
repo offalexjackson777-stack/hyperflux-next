@@ -48,12 +48,13 @@ or rewrite them.
    one earlier release downloadable for downgrades.
 2. Run `./hfx generate`.
 3. Build into a fresh output path, using a private GnuPG home that holds the reviewed key,
-   and verify the result. Pass `--package` once for every package of the release: Core and
-   Full before 2.1.0-1, and all four split packages from 2.1.0-1 on.
+   and verify the result. Pass `--package` once for every package of the release.
 
 ```sh
 ./hfx arch-repository build \
+  --package /path/to/hyperflux-next-dkms.pkg.tar.zst \
   --package /path/to/hyperflux-next-linux.pkg.tar.zst \
+  --package /path/to/hyperflux-next-openrazer-driver-dkms.pkg.tar.zst \
   --package /path/to/hyperflux-next-full.pkg.tar.zst \
   --gnupg-home "$PRIVATE_GNUPG_HOME" \
   --key-fingerprint 8BF8A266E756BD1C24C930918B3F3850007159E8 \
@@ -61,6 +62,9 @@ or rewrite them.
 ./hfx arch-repository verify \
   --repository /path/to/fresh-repository-assets
 ```
+
+   Releases from 2.1.0-1 on have these four packages. A release before 2.1.0-1 has two,
+   `hyperflux-next-linux` and `hyperflux-next-full`.
 
 4. Publish the complete output only on the fixed `arch-repository` machine channel, marked
    as a prerelease so it does not replace the latest human-facing product release.
@@ -82,8 +86,10 @@ What the builder checks and produces:
   output in one atomic step.
 
 Keep the private key and its verified backup outside the repository; publish only the
-tracked public key and its full fingerprint. The user guide has users write the three-line
-Pacman block themselves rather than trust a downloaded configuration file.
+tracked public key and its full fingerprint. The Arch guide's setup command checks the key
+fingerprint and then writes the three-line Pacman block itself, rather than downloading a
+configuration file; a manual route is offered beside it. The apt and rpm guides check the
+same fingerprint, then download a small repository file that points at the signed site.
 
 ## Publish The Package Repository Site
 

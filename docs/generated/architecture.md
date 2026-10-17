@@ -25,7 +25,7 @@ flowchart TB
 
 ## Which Devices HyperFlux Talks To
 
-The generated receiver authority is exact `1532:00CF` plus 12 official child identities from `catalog.razer.hyperflux-v2.2026-07-21`.
+The generated receiver authority is exact `1532:00cf` plus 12 official child identities from `catalog.razer.hyperflux-v2.2026-07-21`.
 It yields 10 operational child routes. Merged OpenRazer source covers 8 of them and merged OpenRGB source covers 9; 7 are covered by both.
 Application admission is decided separately. Hardware assurance records evidence and
 does not by itself admit a device or a write.

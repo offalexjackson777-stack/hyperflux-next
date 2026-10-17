@@ -10,7 +10,8 @@ talk to it, not because its name looks like a known device.
 ## Tested On Real Hardware
 
 These two devices have been tested end to end on real hardware, through the
-receiver and with both stock applications:
+receiver and with both kinds of app: OpenRazer (with Polychromatic) and
+OpenRGB:
 
 - **Razer Basilisk V3 Pro 35K** (mouse): `1532:00cd` through the receiver,
   `1532:00cc` over a USB cable.
@@ -22,9 +23,9 @@ work.
 
 ## Expected To Work
 
-Eight more devices are expected to work. Their support in stock OpenRazer or
-OpenRGB has been checked in the upstream source code, but they have not been
-tested on real hardware with HyperFlux. Some work in only one of the two
+Eight more devices are expected to work. Their support has been checked in the
+source code of OpenRazer or OpenRGB, but they have not been tested on real
+hardware with HyperFlux. Some work in only one of the two
 applications.
 
 If you own one of them, you can
@@ -34,8 +35,9 @@ as confirmed by owners.
 
 ## Waiting For Upstream Support
 
-Two devices are known but cannot be used yet, because stock OpenRazer does not
-support them. HyperFlux leaves them alone until it does.
+Two devices are known but cannot be used yet, because OpenRazer does not
+support them yet, and OpenRGB does not either. HyperFlux leaves them alone until
+OpenRazer does.
 
 ## Check Whether Your Device Is Listed
 
@@ -67,12 +69,16 @@ on your computer and how far each one is tested.
    hyperfluxctl qualification --json --output hyperflux-hardware.json
    ```
 
-   Only you can read the file. Running `hyperfluxctl qualification --json`
-   prints the same report instead.
+   Only you can read the file. The command also prints the report, so you can
+   paste it straight away. If a file with that name already exists, the
+   command stops without changing it: delete or rename the old file first, or
+   choose another name.
 4. Paste the printed report, unchanged, in the
-   [device support form](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=device_support.yml).
-   You can attach the file instead, but a pasted report is quicker for the
-   maintainers to check.
+   [device support form](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=device_support.yml),
+   or, if you are reporting something that does not work, in the
+   [bug form](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=bug_report.yml).
+   Both have a field for it. You can attach the file instead, but a pasted
+   report is quicker for the maintainers to check.
 
 The report only reads what HyperFlux already knows. It sends nothing to your
 devices, uploads nothing, and does not include firmware versions. The

@@ -862,12 +862,24 @@ _SUPPORT_PREVIEW_FIELD = {
     },
 }
 
+_QUALIFICATION_SAFETY = "It only reads what the HyperFlux service already knows; it holds no serial numbers or file paths, and nothing is sent to the device or uploaded. Leave this blank if the command does not run."
+
 _QUALIFICATION_FIELD = {
     "type": "textarea",
     "id": "qualification-report",
     "attributes": {
         "label": "Output of `hyperfluxctl qualification --json`",
-        "description": "Run `hyperfluxctl qualification --json` with the device connected and paste what it prints, unchanged. It only reads what the bridge already knows; it holds no serial numbers or file paths, and nothing is sent to the device or uploaded. Leave this blank if the command does not run.",
+        "description": f"Run `hyperfluxctl qualification --json` with the device connected and paste what it prints, unchanged. {_QUALIFICATION_SAFETY}",
+        "render": "json",
+    },
+}
+
+_BUG_QUALIFICATION_FIELD = {
+    "type": "textarea",
+    "id": "qualification-report",
+    "attributes": {
+        "label": "Output of `hyperfluxctl qualification --json`",
+        "description": f"Optional, for a problem with a device. Run `hyperfluxctl qualification --json` with the device connected and paste what it prints, unchanged. {_QUALIFICATION_SAFETY}",
         "render": "json",
     },
 }
@@ -946,13 +958,14 @@ def bug_report(governance: GitHubGovernance) -> str:
                 "id": "environment",
                 "attributes": {
                     "label": "Your system",
-                    "description": "Linux distribution, kernel version (`uname -r`), HyperFlux version (`pacman -Q hyperflux-next-linux`), and the app you used.",
-                    "placeholder": "Arch Linux; 6.x; 2.0.x; OpenRGB",
+                    "description": "Linux distribution, kernel version (`uname -r`), HyperFlux version, and the app you used. The version command is `pacman -Q hyperflux-next-linux` on Arch Linux, `dpkg-query -W hyperflux-next-linux` on Ubuntu and Debian, and `rpm -q hyperflux-next-linux` on Fedora and openSUSE.",
+                    "placeholder": "Arch Linux; 6.x; 2.x.y-1; OpenRGB",
                 },
                 "validations": {"required": True},
             },
             _DOCTOR_FIELD,
             _SUPPORT_PREVIEW_FIELD,
+            _BUG_QUALIFICATION_FIELD,
             _PRIVACY_FIELD,
         ],
     )

@@ -8,11 +8,11 @@ Polychromatic, and OpenRGB on Linux.
 [![License: GPL-2.0-only](docs/assets/badge-license.svg)](LICENSE)
 
 <!-- HFX-GENERATED-BEGIN: release-summary -->
-**HyperFlux Next 2.1.1 is available for Arch Linux x86_64.** Read the
+**HyperFlux Next 2.1.1 is the current release.** Read the
 [v2.1.1 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.1).
 <!-- HFX-GENERATED-END: release-summary -->
 
-With HyperFlux Next 2.0, a keyboard and mouse that share one HyperFlux
+With HyperFlux Next, a keyboard and mouse that share one HyperFlux
 receiver show up in your usual lighting and settings apps. You keep the same
 apps and use them the usual way.
 
@@ -39,9 +39,9 @@ hardware yet, but they should work:
 - Razer BlackWidow V4 Low-profile Tenkeyless HyperSpeed (keyboard, OpenRGB only)
 - Razer BlackWidow V4 Tenkeyless HyperSpeed (keyboard)
 
-**Not usable yet.** 2 more devices are known, but they need support in OpenRazer
-or OpenRGB first: Razer Cobra HyperSpeed and Razer BlackWidow V4 Low-profile
-HyperSpeed.
+**Not usable yet.** 2 more devices are known, but they wait for support in
+OpenRazer, and OpenRGB does not support them either: Razer Cobra HyperSpeed and
+Razer BlackWidow V4 Low-profile HyperSpeed.
 
 HyperFlux Next is tested with OpenRazer `3.12.4`.
 <!-- HFX-GENERATED-END: compatibility-summary -->
@@ -53,8 +53,9 @@ how to check a device that is not listed. The
 ## Install
 
 <!-- HFX-GENERATED-BEGIN: install-table -->
-Choose the guide for your Linux distribution. Each one adds the signed
-HyperFlux repository and installs the package.
+Pick your Linux distribution and follow its guide. Each guide adds the
+signed HyperFlux repository, installs HyperFlux Next, and checks that it
+works.
 
 | Distribution | Release | Guide | Packages |
 | --- | --- | --- | --- |
@@ -64,26 +65,32 @@ HyperFlux repository and installs the package.
 | Fedora | 44 | [Install on Fedora](docs/user/install-fedora.md) | Not published yet |
 | openSUSE | Tumbleweed | [Install on openSUSE](docs/user/install-opensuse.md) | Not published yet |
 
-The quick steps below are for Arch Linux.
+Packages are published for Arch Linux. The Ubuntu, Debian, Fedora, and
+openSUSE packages are built and tested in CI but not published yet; their
+guides show how installing will work.
 <!-- HFX-GENERATED-END: install-table -->
 
 <!-- HFX-GENERATED-BEGIN: recommended-package -->
-You need Arch Linux on an x86_64 computer and the receiver, with your keyboard
-and mouse paired to it.
+Every guide has the same four steps. You need an x86_64 computer and the
+receiver, with your keyboard and mouse paired to it.
 
-1. **Add the HyperFlux package repository.** You do this once. Follow
-   [step 1 of the installation guide](docs/user/installation.md#1-add-the-hyperflux-repository-one-time-only).
-   It is a signed project-operated Arch repository,
-   not an official Arch Linux repository.
-2. **Install HyperFlux Next.**
+1. **Add the HyperFlux package repository.** You do this once, as your guide
+   shows. On Arch Linux, follow
+   [step 1 of the Arch Linux guide](docs/user/installation.md#1-add-the-hyperflux-repository-one-time-only).
+   It is a signed repository run by the HyperFlux project, not an official
+   repository of your distribution.
+2. **Install HyperFlux Next.** On Arch Linux, install Full, the recommended
+   package:
 
    ```bash
    sudo pacman -Syu hyperflux-next-full
    ```
 
-   This installs Full, the recommended package. It brings Core with it. If you
-   only want the receiver driver and the SDK, without the app connections,
-   install Core instead: `sudo pacman -Syu hyperflux-next-linux`.
+   Full adds the connections to OpenRazer, Polychromatic, and OpenRGB, and
+   brings Core with it. Core alone is the receiver driver, the background
+   service, `hyperfluxctl`, and the SDK: `sudo pacman -Syu hyperflux-next-linux`.
+   The other distributions get Core only for now, without the app
+   connections; their guides give the `apt`, `dnf`, or `zypper` command.
 3. **Turn on HyperFlux and restart.** Keep the receiver plugged in.
 
    ```bash
@@ -101,14 +108,12 @@ and mouse paired to it.
    You should see `HyperFlux Next is ready.` If you see
    `HyperFlux Next needs attention.` instead, do what its `Do:` line says.
 
-   To report how your devices are detected, run `hyperfluxctl qualification`.
-   It only reads, and [Hardware](docs/user/hardware.md) shows how to share it.
-
-Later updates arrive with your normal `sudo pacman -Syu`.
+On Arch Linux, later updates arrive with your normal system update.
 <!-- HFX-GENERATED-END: recommended-package -->
 
-The [installation guide](docs/user/installation.md) explains each step and the
-choice between Full and Core.
+Each guide explains every step. The
+[Arch Linux guide](docs/user/installation.md) also explains the choice between
+Full and Core.
 
 ## Next Steps
 
@@ -117,8 +122,11 @@ choice between Full and Core.
   OpenRGB can do with HyperFlux.
 - [Troubleshooting](docs/user/troubleshooting.md): fix a missing device or a
   failed check.
-- [Updates and removal](docs/user/updates-removal.md): update, go back, or
-  remove HyperFlux.
+- [Hardware](docs/user/hardware.md#share-a-hardware-report): share how your
+  devices are detected, so a device can be listed as confirmed.
+- [Updates and removal on Arch Linux](docs/user/updates-removal.md): update,
+  go back, or remove HyperFlux. The other distributions' guides have their own
+  update and removal steps.
 - [Documentation hub](docs/README.md): every guide, plus how HyperFlux works and
   how it was built.
 
