@@ -16,13 +16,17 @@ FULL_COMPONENT_CAPABILITIES = (
 )
 
 
-def full_component_descriptor(runtime: LinuxRuntime) -> str:
+def full_component_descriptor(runtime: LinuxRuntime, *, openrgb_plugin: bool = True) -> str:
+    """The installed Full descriptor. A distribution whose OpenRGB cannot load
+    the plugin ships Full without it and names only the native route."""
+
+    capabilities = FULL_COMPONENT_CAPABILITIES if openrgb_plugin else FULL_COMPONENT_CAPABILITIES[:1]
     value = {
         "$schema": "https://hyperflux.dev/schemas/distribution-component-descriptor-v1.json",
         "schema": "hyperflux-distribution-component-v1",
         "component_id": "full",
         "product_version": runtime.product.version,
-        "capabilities": list(FULL_COMPONENT_CAPABILITIES),
+        "capabilities": list(capabilities),
     }
     return json.dumps(value, indent=2, sort_keys=False, ensure_ascii=True) + "\n"
 
