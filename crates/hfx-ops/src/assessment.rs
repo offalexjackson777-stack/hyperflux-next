@@ -994,12 +994,7 @@ mod tests {
 
         value.full_component = crate::FullComponentSnapshot::not_installed();
         let without_full = assess_system(&value);
-        assert!(
-            without_full
-                .findings
-                .iter()
-                .all(|finding| finding.code != "HFX-INTEGRATION-007")
-        );
+        assert!(without_full.findings.is_empty());
     }
 
     #[test]
