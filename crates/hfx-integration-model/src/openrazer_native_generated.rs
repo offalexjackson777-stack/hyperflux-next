@@ -20,6 +20,8 @@ pub const OPENRAZER_NATIVE_DRIVER_PREFLIGHT_SERVICE_UNIT: &str =
 /// `/dev/input/by-id` names the Full component's udev rules add so
 /// `OpenRazer` reads a keyboard's key presses, as receiver USB vendor ID,
 /// receiver USB product ID and link name.
-pub const OPENRAZER_NATIVE_KEY_EVENT_LINKS: &[(u16, u16, &str)] = &[
-    (0x1532, 0x00cf, "hyperflux-next-DSV2Pro_TKL_000000000000-if01-event-mouse"),
-];
+pub const OPENRAZER_NATIVE_KEY_EVENT_LINKS: &[(u16, u16, &str)] = &[(
+    0x1532,
+    0x00cf,
+    "hyperflux-next-DSV2Pro_TKL_000000000000-if01-event-mouse",
+)];

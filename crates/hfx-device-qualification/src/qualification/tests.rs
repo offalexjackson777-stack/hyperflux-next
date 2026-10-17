@@ -160,6 +160,7 @@ fn system() -> SystemSnapshot {
         supported_receiver_present: false,
         receiver_interface_drivers: Vec::new(),
         retired_driver_registrations: Vec::new(),
+        missing_openrazer_key_event_links: Vec::new(),
     }
 }
 

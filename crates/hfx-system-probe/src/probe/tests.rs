@@ -203,6 +203,7 @@ fn activation_probe<R: CommandRunner>(
         hid_devices_root: PathBuf::from("/missing-hid-devices"),
         dkms_root: PathBuf::from("/missing-dkms"),
         usb_devices_root,
+        input_by_id_root: PathBuf::from("/missing-input-by-id"),
         openrazer_daemon_path: PathBuf::from("/missing-openrazer"),
         full_component_descriptor_path: PathBuf::from("/missing-full-component.json"),
         socket_path: PathBuf::from("/missing.sock"),
@@ -1249,6 +1250,32 @@ fn only_exact_retired_driver_registrations_are_reported() {
         probe.retired_driver_registrations(),
         vec!["hid-razer-hyperflux-v2/0.1.1".to_owned()]
     );
+    fs::remove_dir_all(root).expect("cleanup");
+}
+
+#[test]
+fn key_event_link_is_reported_only_while_its_receiver_is_attached_and_unresolved() {
+    const LINK: &str = "hyperflux-next-DSV2Pro_TKL_000000000000-if01-event-mouse";
+    let (root, mut probe) = driver_inspection_probe("key-event-link");
+    probe.input_by_id_root = root.join("by-id");
+    fs::create_dir_all(&probe.input_by_id_root).expect("by-id root");
+    assert!(probe.missing_openrazer_key_event_links().is_empty());
+
+    let receiver = probe.usb_devices_root.join("3-4");
+    fs::create_dir_all(&receiver).expect("receiver fixture");
+    fs::write(receiver.join("idVendor"), "1532\n").expect("vendor");
+    fs::write(receiver.join("idProduct"), "00cf\n").expect("product");
+    let expected = vec![format!("/dev/input/by-id/{LINK}")];
+    assert_eq!(probe.missing_openrazer_key_event_links(), expected);
+
+    let link = probe.input_by_id_root.join(LINK);
+    symlink(root.join("event-absent"), &link).expect("dangling link");
+    assert_eq!(probe.missing_openrazer_key_event_links(), expected);
+
+    fs::write(root.join("event7"), "").expect("event node");
+    fs::remove_file(&link).expect("remove dangling link");
+    symlink(root.join("event7"), &link).expect("resolving link");
+    assert!(probe.missing_openrazer_key_event_links().is_empty());
     fs::remove_dir_all(root).expect("cleanup");
 }
 

@@ -129,6 +129,13 @@
       "automatic": false
     },
     {
+      "id": "restore-openrazer-key-link",
+      "title": "Restore the key-press link",
+      "safe_action": "Restart the computer so the HyperFlux Full rules add the link and OpenRazer finds it when it adds the keyboard. If Doctor still reports it after the restart, reinstall the HyperFlux Full package.",
+      "verification": "Run Doctor and confirm the missing key-press link finding is absent, then choose Ripple in Polychromatic and press a key on the keyboard.",
+      "automatic": false
+    },
+    {
       "id": "retry-bounded",
       "title": "Retry within the declared bound",
       "safe_action": "Retry with bounded backoff only while the original deadline remains valid.",
@@ -327,6 +334,23 @@
       "user_explanation": "The optional Full integration component does not match this HyperFlux Core installation.",
       "privacy": "public",
       "docs_path": "docs/generated/error-catalog.md#hfx-integration-006"
+    },
+    {
+      "code": "HFX-INTEGRATION-007",
+      "class": "integration",
+      "severity": "warning",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "restore-openrazer-key-link",
+      "safe_detail_fields": [
+        {"name": "link_path", "type": "text", "required": true, "maximum_length": 256, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Path of the missing /dev/input/by-id link OpenRazer reads the keyboard's key presses from."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "2.1.1", "deprecated_in": null, "replacement_code": null},
+      "owner": "integration",
+      "technical_cause": "A supported receiver is attached, but the /dev/input/by-id link the Full udev rules add for its keyboard's OpenRazer key-event file is missing. openrazer-daemon looks for it only when it adds the keyboard.",
+      "user_explanation": "Ripple and other lighting effects that react to key presses stay still, because OpenRazer cannot see the keyboard's key presses. Other effects and colors still work.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-integration-007"
     },
     {
       "code": "HFX-INTERNAL-001",

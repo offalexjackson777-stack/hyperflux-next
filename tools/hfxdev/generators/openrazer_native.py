@@ -84,15 +84,27 @@ def rust_constants(deployment: OpenRazerNativeDeployment, profiles: dict[str, An
             "/// `/dev/input/by-id` names the Full component's udev rules add so",
             "/// `OpenRazer` reads a keyboard's key presses, as receiver USB vendor ID,",
             "/// receiver USB product ID and link name.",
-            "pub const OPENRAZER_NATIVE_KEY_EVENT_LINKS: &[(u16, u16, &str)] = &[",
-            *(
-                f"    (0x{vendor:04x}, 0x{product:04x}, {json.dumps(name)}),"
-                for vendor, product, _, name in _key_event_receivers(deployment, profiles)
-            ),
-            "];",
+            *_rust_key_event_links(_key_event_receivers(deployment, profiles)),
             "",
         ]
     )
+
+
+def _rust_key_event_links(receivers: list[tuple[int, int, int, str]]) -> list[str]:
+    head = "pub const OPENRAZER_NATIVE_KEY_EVENT_LINKS: &[(u16, u16, &str)] = &["
+    fields = [
+        [f"0x{vendor:04x},", f"0x{product:04x},", f"{json.dumps(name)},"]
+        for vendor, product, _, name in receivers
+    ]
+    # Match rustfmt: a single tuple overflows into the brackets, several
+    # tuples each break one field per line.
+    if len(fields) == 1:
+        return [head + "(", *(f"    {field}" for field in fields[0]), ")];"]
+    lines = [head]
+    for item in fields:
+        lines.extend(["    (", *(f"        {field}" for field in item), "    ),"])
+    lines.append("];")
+    return lines
 
 
 def key_event_udev_rules(
@@ -449,8 +461,8 @@ def markdown(
             "user's session can therefore read the receiver's key presses. The rules file sorts "
             "before `73-seat-late.rules`, where udev applies the tag. With two receivers attached, "
             "both claim the same name and udev keeps one, so only one keyboard receives reactive "
-            "effects. Doctor reports `HFX-INTEGRATION-007` when a supported receiver is attached "
-            "but its link is missing.",
+            "effects. Doctor warns when a supported receiver is attached but its link is missing "
+            "([error catalog](error-catalog.md#hfx-integration-007)).",
             "",
         ]
     )

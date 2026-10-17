@@ -10,7 +10,8 @@ use hfx_domain::{
 use hfx_integration_model::{
     OPENRAZER_NATIVE_CAPABILITY_FIELD, OPENRAZER_NATIVE_CAPABILITY_MODULES,
     OPENRAZER_NATIVE_CAPABILITY_VALUE, OPENRAZER_NATIVE_DAEMON_EXECUTABLE_PATH,
-    OPENRAZER_NATIVE_DRIVER_MODULES, OPENRAZER_NATIVE_VERSION_ARGUMENT,
+    OPENRAZER_NATIVE_DRIVER_MODULES, OPENRAZER_NATIVE_KEY_EVENT_LINKS,
+    OPENRAZER_NATIVE_VERSION_ARGUMENT,
 };
 use hfx_profiles::receiver_profile_by_usb_id;
 use hfx_protocol::{
@@ -41,6 +42,7 @@ const MAX_DRIVER_BINDINGS: usize = 256;
 const USB_DEVICES_ROOT: &str = "/sys/bus/usb/devices";
 const HID_DEVICES_ROOT: &str = "/sys/bus/hid/devices";
 const DKMS_ROOT: &str = "/var/lib/dkms";
+const INPUT_BY_ID_ROOT: &str = "/dev/input/by-id";
 const HID_BUS_USB: &str = "0003";
 const OPENRAZER_GROUP: &str = "openrazer";
 const OPENRAZER_SESSION_BUS_NAME: &str = "org.razer";
@@ -228,6 +230,10 @@ pub struct SystemSnapshot {
     pub receiver_interface_drivers: Vec<Option<String>>,
     /// Registered DKMS trees of retired `HyperFlux` drivers, as `name/version`.
     pub retired_driver_registrations: Vec<String>,
+    /// `/dev/input/by-id` key-event links the Full udev rules add for an
+    /// attached receiver that do not resolve, so `OpenRazer` cannot read the
+    /// keyboard's key presses; sorted and empty without the Full component.
+    pub missing_openrazer_key_event_links: Vec<String>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -371,6 +377,7 @@ pub struct RealSystemProbe<R = RealCommandRunner> {
     hid_devices_root: PathBuf,
     dkms_root: PathBuf,
     usb_devices_root: PathBuf,
+    input_by_id_root: PathBuf,
     openrazer_daemon_path: PathBuf,
     full_component_descriptor_path: PathBuf,
     socket_path: PathBuf,
@@ -386,6 +393,7 @@ impl Default for RealSystemProbe<RealCommandRunner> {
             hid_devices_root: PathBuf::from(HID_DEVICES_ROOT),
             dkms_root: PathBuf::from(DKMS_ROOT),
             usb_devices_root: PathBuf::from(USB_DEVICES_ROOT),
+            input_by_id_root: PathBuf::from(INPUT_BY_ID_ROOT),
             openrazer_daemon_path: PathBuf::from(OPENRAZER_NATIVE_DAEMON_EXECUTABLE_PATH),
             full_component_descriptor_path: PathBuf::from(FULL_COMPONENT_DESCRIPTOR_PATH),
             socket_path: PathBuf::from(BRIDGE_SOCKET_PATH),
@@ -427,6 +435,7 @@ impl<R: CommandRunner> RealSystemProbe<R> {
             hid_devices_root: PathBuf::from(HID_DEVICES_ROOT),
             dkms_root: PathBuf::from(DKMS_ROOT),
             usb_devices_root,
+            input_by_id_root: PathBuf::from(INPUT_BY_ID_ROOT),
             openrazer_daemon_path,
             full_component_descriptor_path: PathBuf::from(FULL_COMPONENT_DESCRIPTOR_PATH),
             socket_path,
@@ -895,22 +904,42 @@ impl<R: CommandRunner> RealSystemProbe<R> {
     }
 
     fn supported_receiver_present(&self) -> bool {
+        self.attached_usb_ids()
+            .iter()
+            .any(|&(vendor_id, product_id)| {
+                receiver_profile_by_usb_id(vendor_id, product_id).is_some()
+            })
+    }
+
+    fn attached_usb_ids(&self) -> BTreeSet<(u16, u16)> {
         let Ok(entries) = fs::read_dir(&self.usb_devices_root) else {
-            return false;
+            return BTreeSet::new();
         };
         entries
             .filter_map(Result::ok)
             .take(MAX_USB_DEVICE_ENTRIES)
-            .any(|entry| {
+            .filter_map(|entry| {
                 let path = entry.path();
-                let Some(vendor_id) = read_usb_hex_id(&path.join("idVendor")) else {
-                    return false;
-                };
-                let Some(product_id) = read_usb_hex_id(&path.join("idProduct")) else {
-                    return false;
-                };
-                receiver_profile_by_usb_id(vendor_id, product_id).is_some()
+                let vendor_id = read_usb_hex_id(&path.join("idVendor"))?;
+                let product_id = read_usb_hex_id(&path.join("idProduct"))?;
+                Some((vendor_id, product_id))
             })
+            .collect()
+    }
+
+    fn missing_openrazer_key_event_links(&self) -> Vec<String> {
+        let attached = self.attached_usb_ids();
+        let mut missing = OPENRAZER_NATIVE_KEY_EVENT_LINKS
+            .iter()
+            .filter(|(vendor_id, product_id, _)| attached.contains(&(*vendor_id, *product_id)))
+            .filter(|(_, _, link_name)| {
+                fs::metadata(self.input_by_id_root.join(link_name)).is_err()
+            })
+            .map(|(_, _, link_name)| format!("{INPUT_BY_ID_ROOT}/{link_name}"))
+            .collect::<Vec<_>>();
+        missing.sort();
+        missing.dedup();
+        missing
     }
 
     #[doc(hidden)]
@@ -1106,6 +1135,11 @@ impl<R: CommandRunner> SystemProbe for RealSystemProbe<R> {
             } else {
                 None
             };
+        let missing_openrazer_key_event_links = if full_component.is_ready() {
+            self.missing_openrazer_key_event_links()
+        } else {
+            Vec::new()
+        };
         SystemSnapshot {
             package_version: PRODUCT_VERSION.to_owned(),
             full_component,
@@ -1121,6 +1155,7 @@ impl<R: CommandRunner> SystemProbe for RealSystemProbe<R> {
             supported_receiver_present: self.supported_receiver_present(),
             receiver_interface_drivers: self.receiver_interface_drivers(),
             retired_driver_registrations: self.retired_driver_registrations(),
+            missing_openrazer_key_event_links,
         }
     }
 }

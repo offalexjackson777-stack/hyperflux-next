@@ -496,6 +496,23 @@ fn readiness_finding(snapshot: &SystemSnapshot, bridge_responding: bool) -> Asse
     )
 }
 
+fn classify_openrazer_key_event_links(
+    snapshot: &SystemSnapshot,
+    findings: &mut Vec<AssessmentFinding>,
+) {
+    findings.extend(
+        snapshot
+            .missing_openrazer_key_event_links
+            .iter()
+            .map(|link_path| {
+                local_finding(
+                    ErrorCode::HfxIntegration007,
+                    BTreeMap::from([("link_path".to_owned(), link_path.clone())]),
+                )
+            }),
+    );
+}
+
 fn assess_full_component(
     snapshot: &SystemSnapshot,
     working: &mut Vec<String>,
@@ -511,6 +528,7 @@ fn assess_full_component(
             classify_openrazer_driver(snapshot, working, findings);
             classify_openrazer_runtime(snapshot, working, findings);
             classify_openrazer_access(snapshot, working, findings);
+            classify_openrazer_key_event_links(snapshot, findings);
         }
         state => findings.push(local_finding(
             ErrorCode::HfxIntegration006,
@@ -901,6 +919,7 @@ mod tests {
             supported_receiver_present: false,
             receiver_interface_drivers: Vec::new(),
             retired_driver_registrations: Vec::new(),
+            missing_openrazer_key_event_links: Vec::new(),
         }
     }
 
@@ -950,6 +969,36 @@ mod tests {
         assert_eq!(
             assessment.findings[0].details["component_state"],
             "descriptor-invalid"
+        );
+    }
+
+    #[test]
+    fn missing_key_event_link_is_a_full_component_warning() {
+        const LINK: &str =
+            "/dev/input/by-id/hyperflux-next-DSV2Pro_TKL_000000000000-if01-event-mouse";
+        let mut value = snapshot();
+        value.missing_openrazer_key_event_links = vec![LINK.to_owned()];
+
+        let assessment = assess_system(&value);
+
+        assert_eq!(assessment.state, AssessmentState::NeedsAttention);
+        assert_eq!(assessment.components[0].state, ComponentState::Ready);
+        assert_eq!(
+            assessment.components[1].state,
+            ComponentState::NeedsAttention
+        );
+        assert_eq!(assessment.findings.len(), 1);
+        assert_eq!(assessment.findings[0].code, "HFX-INTEGRATION-007");
+        assert_eq!(assessment.findings[0].severity, "warning");
+        assert_eq!(assessment.findings[0].details["link_path"], LINK);
+
+        value.full_component = crate::FullComponentSnapshot::not_installed();
+        let without_full = assess_system(&value);
+        assert!(
+            without_full
+                .findings
+                .iter()
+                .all(|finding| finding.code != "HFX-INTEGRATION-007")
         );
     }
 
