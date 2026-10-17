@@ -54,14 +54,16 @@ struct hfx_native_result_tombstone {
 };
 
 /*
- * One child lane's bridge-forwarded battery state.  psy, hdev, owner, and
- * desc change only under battery_lock; the published values change only
- * under value_lock.
+ * One child lane's bridge-forwarded battery state.  psy, parent, hdev, owner,
+ * and desc change only under battery_lock; the published values change only
+ * under value_lock.  hdev is the lane's own input interface; parent is the
+ * interface psy is registered under.
  */
 struct hfx_battery_lane {
 	struct power_supply *psy;
 	struct power_supply_desc desc;
 	struct hid_device *hdev;
+	struct hid_device *parent;
 	struct hfx_file_context *owner;
 	const char *suffix;
 	spinlock_t value_lock;
@@ -119,6 +121,8 @@ struct hfx_receiver {
 	u32 native_tombstone_count;
 	struct mutex battery_lock;
 	struct hfx_battery_lane battery[HFX_BATTERY_LANES];
+	struct hid_device *battery_parent;
+	int battery_parent_interface;
 };
 
 struct hfx_interface {
