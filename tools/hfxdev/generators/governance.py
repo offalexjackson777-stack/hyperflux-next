@@ -389,6 +389,13 @@ def kernel_canary_workflow(governance: GitHubGovernance, base_image: str) -> str
     return _yaml(value, governance)
 
 
+# Fedora and openSUSE ship no OpenRazer, so the RPM checks install the stock
+# service from OpenRazer's own openSUSE Build Service repository, the one its
+# install instructions name. The repository's signing key is the `hardware`
+# project key; read 18 October 2026, valid until May 2028. A new key fails the
+# check until its fingerprint is reviewed and pinned here.
+OPENRAZER_REPOSITORY = "https://download.opensuse.org/repositories/hardware:/razer"
+OPENRAZER_REPOSITORY_KEY = "E96C496E4E77C159C2FCA053062F9FD4D6D11CE4"
 DISTRIBUTION_PACKAGE_OUTPUT = "build/ci/distributions"
 REPOSITORY_SITE_OUTPUT = "build/ci/repositories/site"
 REPOSITORY_SITE_ARTIFACT = "hyperflux-package-repositories-unsigned"
@@ -415,6 +422,8 @@ DISTRIBUTION_PACKAGE_RELEASES = {
         "headers": "kernel-devel kernel-devel/fedora",
         "install": "dnf install -y --setopt=install_weak_deps=False",
         "remove": "dnf remove -y",
+        "openrazer_repository": f"{OPENRAZER_REPOSITORY}/Fedora_44",
+        "openrazer_sources": 'install -m 0644 "$repository" /etc/yum.repos.d/hardware_razer.repo',
     },
     "opensuse": {
         "format": "rpm",
@@ -423,8 +432,41 @@ DISTRIBUTION_PACKAGE_RELEASES = {
         "headers": "kernel-longterm-devel kernel-default-devel",
         "install": "zypper --non-interactive install --no-recommends --allow-unsigned-rpm",
         "remove": "zypper --non-interactive remove",
+        "openrazer_repository": f"{OPENRAZER_REPOSITORY}/openSUSE_Tumbleweed",
+        "openrazer_sources": (
+            'install -m 0644 "$repository" /etc/zypp/repos.d/hardware_razer.repo && '
+            "zypper --non-interactive refresh hardware_razer"
+        ),
     },
 }
+# The check is required on main, so every pull request into main runs it. Pull
+# requests into other branches run it only when they change what the packages
+# are made from or how they are checked; otherwise it reports as skipped. Changes
+# to the programs themselves are covered by the verification workflows and by
+# the weekly run. Patterns are matched as shell globs, where `*` also crosses `/`.
+PACKAGING_CHANGES_CHECK = "Packaging changes"
+DISTRIBUTION_PACKAGE_PATHS = (
+    ".github/workflows/distribution-packages.yml",
+    "packaging/**",
+    "driver/**",
+    "runtime/linux.json",
+    "integrations/catalog.json",
+    "tools/hfxdev/distribution*.py",
+    "tools/hfxdev/package_pipeline*.py",
+    "tools/hfxdev/package_repositories.py",
+    "tools/hfxdev/arch_split*.py",
+    "tools/hfxdev/install.py",
+    "tools/hfxdev/linux_runtime.py",
+    "tools/hfxdev/tree_metadata.py",
+    "schemas/distribution-*.schema.json",
+    "schemas/debian-package-build.schema.json",
+    "schemas/rpm-package-build.schema.json",
+    "schemas/package-build-manifest.schema.json",
+    "schemas/arch-split-packages.schema.json",
+    "schemas/install-manifest.schema.json",
+    "schemas/linux-runtime.schema.json",
+    "schemas/repository-site.schema.json",
+)
 DEBIAN_PACKAGE_CHECKS = r"""set -eu
 output=build/ci/distributions
 trap 'chown -R "$HFX_HOST_OWNER" "$output"' EXIT
@@ -583,11 +625,37 @@ test "$built" -ge 2
 test -f /var/lib/dkms/mok.pub
 openssl x509 -inform DER -in /var/lib/dkms/mok.pub -noout -subject
 # Full: the OpenRazer driver package stands in for OpenRazer's own one from
-# the openSUSE Build Service, which the release itself does not ship.
+# the openSUSE Build Service, which the release itself does not ship, so that
+# repository's stock OpenRazer service and Python client install on top of it.
 $HFX_RELEASE_INSTALL "./$packages"/hyperflux-next-openrazer-driver-dkms-*.rpm "./$packages"/hyperflux-next-full-*.rpm
 rpm -q --whatprovides openrazer-kernel-modules-dkms | grep -q '^hyperflux-next-openrazer-driver-dkms-'
-if find /etc/systemd -name '*hyperflux*' -print | grep -q .; then
-  echo "Installing Full enabled a service." >&2
+# Trust the repository's signing key only when it is the pinned one. The
+# repository keeps its package signature checks on.
+key=$(mktemp)
+curl -fsSL --proto '=https' "$HFX_OPENRAZER_REPOSITORY/repodata/repomd.xml.key" -o "$key"
+test "$(gpg --show-keys --with-colons "$key" | grep -c '^pub:')" -eq 1
+test "$(gpg --show-keys --with-colons "$key" | grep '^fpr:' | head -n 1 | cut -d: -f10)" = "$HFX_OPENRAZER_KEY"
+rpm --import "$key"
+repository=$(mktemp)
+curl -fsSL --proto '=https' "$HFX_OPENRAZER_REPOSITORY/hardware:razer.repo" -o "$repository"
+grep -qx 'gpgcheck=1' "$repository"
+grep -qx "baseurl=$HFX_OPENRAZER_REPOSITORY/" "$repository"
+# The package manager reads the key from the checked copy, never a fresh download.
+sed -i "s|^gpgkey=.*|gpgkey=file://$key|" "$repository"
+eval "$HFX_OPENRAZER_SOURCES"
+# zypper's --allow-unsigned-rpm covers only RPM files named on the command line.
+$HFX_RELEASE_INSTALL openrazer-daemon python3-openrazer
+if rpm -q openrazer-kernel-modules-dkms >/dev/null 2>&1; then
+  echo "OpenRazer's own driver package was installed next to Full." >&2
+  exit 1
+fi
+rpm -q --whatprovides openrazer-kernel-modules-dkms | grep -q '^hyperflux-next-openrazer-driver-dkms-'
+keyid=$(printf '%s' "$HFX_OPENRAZER_KEY" | tail -c 16 | tr 'A-F' 'a-f')
+for package in openrazer-daemon python3-openrazer; do
+  rpm -q --queryformat '%{RSAHEADER:pgpsig}\n' "$package" | grep -q "Key ID $keyid\$"
+done
+if find /etc/systemd \( -name '*hyperflux*' -o -name '*openrazer*' \) -print | grep -q .; then
+  echo "Installing Full or the stock OpenRazer service enabled a service." >&2
   exit 1
 fi
 source=$(find /usr/src -maxdepth 1 -name 'openrazer-driver-*' -print -quit)
@@ -617,13 +685,40 @@ for file in $(rpm -ql hyperflux-next-linux hyperflux-next-full); do
   if [ -n "$needed" ] && newer "$needed" "$glibc"; then exit 1; fi
   if [ -n "$strong" ] && newer "$strong" "$floor"; then exit 1; fi
 done
-$HFX_RELEASE_REMOVE hyperflux-next-full hyperflux-next-openrazer-driver-dkms hyperflux-next-linux hyperflux-next-dkms
+$HFX_RELEASE_REMOVE openrazer-daemon python3-openrazer hyperflux-next-full hyperflux-next-openrazer-driver-dkms hyperflux-next-linux hyperflux-next-dkms
+if rpm -qa 'openrazer-*' 'python3-openrazer' | grep -q .; then
+  echo "Removing the packages left an OpenRazer package installed." >&2
+  exit 1
+fi
 if dkms status | grep -q .; then
   echo "Removing the packages left a driver registered with DKMS." >&2
   exit 1
 fi
 """
 DISTRIBUTION_PACKAGE_CHECKS = {"deb": DEBIAN_PACKAGE_CHECKS, "rpm": RPM_PACKAGE_CHECKS}
+
+# Lists every changed file that matches a packaging pattern. Renames count under
+# both names, so moving a file out of the packaging inputs still runs the check.
+PACKAGING_CHANGES_SCRIPT = r"""set -euo pipefail
+packaging=false
+if [ "$GITHUB_EVENT_NAME" != pull_request ]; then
+  packaging=true
+else
+  changed=$(git diff --no-renames --name-only "$HFX_BASE...$HFX_HEAD")
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    while IFS= read -r pattern; do
+      # shellcheck disable=SC2053
+      if [[ $file == $pattern ]]; then
+        echo "$file changes the packages ($pattern)."
+        packaging=true
+        break
+      fi
+    done <<< "$HFX_PACKAGING_PATHS"
+  done <<< "$changed"
+fi
+echo "packaging=$packaging" >> "$GITHUB_OUTPUT"
+"""
 
 
 def distribution_package_workflow(governance: GitHubGovernance) -> str:
@@ -649,6 +744,9 @@ def distribution_package_workflow(governance: GitHubGovernance) -> str:
         if release["format"] == "rpm":
             environment["HFX_RELEASE_INSTALL"] = release["install"]
             environment["HFX_RELEASE_REMOVE"] = release["remove"]
+            environment["HFX_OPENRAZER_REPOSITORY"] = release["openrazer_repository"]
+            environment["HFX_OPENRAZER_SOURCES"] = release["openrazer_sources"]
+            environment["HFX_OPENRAZER_KEY"] = OPENRAZER_REPOSITORY_KEY
         environment["HFX_PACKAGE_CHECKS"] = DISTRIBUTION_PACKAGE_CHECKS[release["format"]]
         passed = " ".join(f"--env {name}" for name in list(environment)[1:])
         steps.append(
@@ -695,21 +793,53 @@ def distribution_package_workflow(governance: GitHubGovernance) -> str:
             if_no_files_found="warn",
         )
     )
+    changes = {
+        "name": PACKAGING_CHANGES_CHECK,
+        "runs-on": governance.runner,
+        "timeout-minutes": 10,
+        "outputs": {"packaging": "${{ steps.changes.outputs.packaging }}"},
+        "steps": [
+            _checkout(governance),
+            {
+                "name": "Find changes to what the packages are made from",
+                "id": "changes",
+                "env": {
+                    "HFX_BASE": "${{ github.event.pull_request.base.sha }}",
+                    "HFX_HEAD": "${{ github.event.pull_request.head.sha }}",
+                    "HFX_PACKAGING_PATHS": "\n".join(DISTRIBUTION_PACKAGE_PATHS),
+                },
+                "run": PACKAGING_CHANGES_SCRIPT,
+            },
+        ],
+    }
+    target = governance.default_branch
     value = {
         "name": "Distribution packages",
         "on": {
+            "pull_request": {},
             "workflow_dispatch": {},
             "schedule": [{"cron": governance.distribution_package_cron}],
         },
         "permissions": {"contents": "read"},
+        # A new push to the same pull request replaces the run still going.
         "concurrency": {
             "group": "distribution-packages-${{ github.ref }}",
             "cancel-in-progress": True,
         },
         "env": {"HFX_CI_IMAGE": governance.development_image},
         "jobs": {
+            "packaging-changes": changes,
             "distribution-packages": {
                 "name": DISTRIBUTION_PACKAGE_CHECK,
+                "needs": "packaging-changes",
+                # If finding the changes fails, the packages are still checked, so a
+                # broken first job never lets the required check pass as skipped.
+                "if": (
+                    "${{ !cancelled() && (github.event_name != 'pull_request' || "
+                    f"github.base_ref == '{target}' || "
+                    "needs.packaging-changes.result != 'success' || "
+                    "needs.packaging-changes.outputs.packaging == 'true') }}"
+                ),
                 "runs-on": governance.runner,
                 "timeout-minutes": 120,
                 "steps": steps,
@@ -1364,17 +1494,17 @@ def markdown(governance: GitHubGovernance, arch_repository: ArchRepositoryPolicy
         "| CodeQL | Pull requests, main, weekly | GitHub service only | None | C/C++ and Python analysis |",
         "| Dependency review | Pull requests | GitHub service only | None | Dependency policy decision |",
         "| Kernel canary | Weekly or manual | Arch mirrors, kernel.org, and the pinned app sources | None | Driver builds against coming kernels; never required for merging |",
-        "| Distribution packages | Weekly or manual | Ubuntu, Debian, Fedora and openSUSE archives for the check tools | None | Ubuntu 24.04 and Debian 13 `.deb` files and Fedora 44 and openSUSE Tumbleweed `.rpm` files, checked and not published; never required for merging |",
+        "| Distribution packages | Pull requests, weekly, or manual | Ubuntu, Debian, Fedora and openSUSE archives for the check tools, and OpenRazer's openSUSE Build Service repository | None | Ubuntu 24.04 and Debian 13 `.deb` files and Fedora 44 and openSUSE Tumbleweed `.rpm` files, checked and not published; required for merging into `main` |",
         "",
         "The development image may use the network only to fetch its pinned packages and tools while it is built. The pinned app sources are prepared before the checks start. Every check then runs in the pinned image with `--network none`, no devices, no privileges, no extra capabilities, and write access only to the checkout.",
         "",
         "The kernel canary is the one deliberate exception, because its purpose is to follow kernels that move after the image is pinned. It starts from the same digest-pinned Arch base image and installs this week's `linux-headers` and `linux-lts-headers`. It also stages the next Arch kernel from `core-testing`, when there is one, and the newest mainline tag from kernel.org prepared with `modules_prepare`. Then `./hfx kernel-canary` builds the HyperFlux driver and the patched OpenRazer driver against each kernel with `W=1`. It only compiles: nothing is loaded and no device is touched. Its result never gates a merge. A failure is an early warning that a kernel interface changes before it reaches users.",
         "",
-        "The distribution packages workflow is a second non-gating check. It builds the package artifacts once, offline in the pinned development image, exactly as the Arch packages are built. Then, for Ubuntu 24.04, Debian 13, Fedora 44 and openSUSE Tumbleweed in turn, it starts that release's digest-pinned image without extra privileges and installs the check tools from the release's own archive. In that container `./hfx package distro` turns the artifacts into the Core packages `hyperflux-next-dkms` and `hyperflux-next-linux` and the Full packages `hyperflux-next-openrazer-driver-dkms` and `hyperflux-next-full`, which leave out the OpenRGB plugin because no OpenRGB those releases ship can load it. "
+        "The distribution packages workflow reaches outside the pinned image like the kernel canary, but unlike it, it is required for merging into `main`. It runs every week, when started by hand, and on every pull request. A small first job, `Packaging changes`, lists the files the pull request changes. Every pull request into `main` runs the `Distribution packages` job. A pull request into another branch runs it only when it changes what the packages are made from or how they are checked: the packaging inputs, the driver sources, the package tools and their schemas, or the workflow itself. Otherwise the job reports as skipped, which GitHub counts as passing. If the first job fails, the packages are checked anyway, so a broken first job never lets the check pass unseen. A new push to the same pull request cancels the run still going. It builds the package artifacts once, offline in the pinned development image, exactly as the Arch packages are built. Then, for Ubuntu 24.04, Debian 13, Fedora 44 and openSUSE Tumbleweed in turn, it starts that release's digest-pinned image without extra privileges and installs the check tools from the release's own archive. In that container `./hfx package distro` turns the artifacts into the Core packages `hyperflux-next-dkms` and `hyperflux-next-linux` and the Full packages `hyperflux-next-openrazer-driver-dkms` and `hyperflux-next-full`, which leave out the OpenRGB plugin because no OpenRGB those releases ship can load it. "
         "On Ubuntu and Debian the workflow inspects every `.deb` file with `dpkg-deb`, fails on any `lintian` error, and installs Core and then Full with `apt-get` while `policy-rc.d` refuses every service start. With Full installed it adds the release's own `openrazer-daemon` and `python3-openrazer`, and fails if apt pulls in the release's OpenRazer driver package instead of the HyperFlux one. "
-        "On Fedora and openSUSE `rpmbuild` builds every `.rpm` file from one generated spec inside the release image, so the host never needs RPM tools. The workflow prints each header, file list and scriptlet with `rpm`, fails on any `rpmlint` error except those the generated `rpmlint` configuration accepts by name and reason, and installs Core and then Full with `dnf` or `zypper`; the stock OpenRazer service is not added there because those releases do not ship it. The scriptlets only register and build the DKMS sources and never enable or start a unit, which the workflow checks under `/etc/systemd`. "
+        "On Fedora and openSUSE `rpmbuild` builds every `.rpm` file from one generated spec inside the release image, so the host never needs RPM tools. The workflow prints each header, file list and scriptlet with `rpm`, fails on any `rpmlint` error except those the generated `rpmlint` configuration accepts by name and reason, and installs Core and then Full with `dnf` or `zypper`. Those releases do not ship OpenRazer, so with Full installed the workflow adds OpenRazer's own `hardware:razer` repository from the openSUSE Build Service and installs its `openrazer-daemon` and `python3-openrazer`. It trusts the repository's signing key only when the key's fingerprint matches the one pinned in the generator, keeps package signature checks on, checks that both packages carry that key's signature, and fails if OpenRazer's own driver package is installed instead of the HyperFlux one. The scriptlets only register and build the DKMS sources and never enable or start a unit, which the workflow checks under `/etc/systemd`. "
         "Then `dkms build` compiles the HyperFlux driver and the Full OpenRazer driver against two kernels for each release: Ubuntu's generic and HWE kernels, Debian's stock and backports kernels, Fedora's release and updates kernels, and openSUSE's longterm and default kernels. `modinfo` checks each module's vermagic, and every installed program is checked against the glibc that the release ships; on Fedora and openSUSE strong symbol references must also stay within the declared glibc floor, and the DKMS signing certificate must exist at `/var/lib/dkms/mok.pub`. "
-        "Finally the packages are removed, and DKMS must no longer list either driver. The package files are kept as a workflow artifact for 14 days and are never published. Nothing is loaded and no device is touched.",
+        "Finally the packages are removed, including the stock OpenRazer service, and DKMS must no longer list either driver. The package files are kept as a workflow artifact for 14 days and are never published. Nothing is loaded and no device is touched.",
         "",
         "## Checks Required Before Merging",
         "",

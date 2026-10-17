@@ -258,8 +258,9 @@ def _debian_format(
         f"## {release.distribution} {release.version} (CI-built, not published yet)",
         "",
         f"HyperFlux builds `.deb` packages for {release.distribution} {release.version} "
-        f"(`{release.codename}`) every week in CI. They are not published, so there is "
-        "nothing to install from yet. They carry both editions, Core and Full.",
+        f"(`{release.codename}`) in CI every week and whenever a pull request changes how "
+        "they are made. They are not published, so there is nothing to install from yet. "
+        "They carry both editions, Core and Full.",
         "",
         "| Package | Version | Architecture | Depends |",
         "| --- | --- | --- | --- |",
@@ -323,9 +324,9 @@ def _rpm_format(
         "",
         f"## {name} (CI-built, not published yet)",
         "",
-        f"HyperFlux builds `.rpm` packages for {name} every week in CI. They are not "
-        "published, so there is nothing to install from yet. They carry both editions, "
-        "Core and Full.",
+        f"HyperFlux builds `.rpm` packages for {name} in CI every week and whenever a "
+        "pull request changes how they are made. They are not published, so there is "
+        "nothing to install from yet. They carry both editions, Core and Full.",
         "",
         "| Package | Version | Architecture | Requires |",
         "| --- | --- | --- | --- |",
