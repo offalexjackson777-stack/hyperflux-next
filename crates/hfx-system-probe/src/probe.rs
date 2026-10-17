@@ -11,6 +11,7 @@ use hfx_integration_model::{
     OPENRAZER_NATIVE_CAPABILITY_FIELD, OPENRAZER_NATIVE_CAPABILITY_MODULES,
     OPENRAZER_NATIVE_CAPABILITY_VALUE, OPENRAZER_NATIVE_DAEMON_EXECUTABLE_PATH,
     OPENRAZER_NATIVE_DRIVER_MODULES, OPENRAZER_NATIVE_VERSION_ARGUMENT,
+    SourceValidatedDeviceCatalog,
 };
 use hfx_profiles::receiver_profile_by_usb_id;
 use hfx_protocol::{
@@ -41,6 +42,12 @@ const MAX_DRIVER_BINDINGS: usize = 256;
 const USB_DEVICES_ROOT: &str = "/sys/bus/usb/devices";
 const HID_DEVICES_ROOT: &str = "/sys/bus/hid/devices";
 const DKMS_ROOT: &str = "/var/lib/dkms";
+const INPUT_BY_ID_ROOT: &str = "/dev/input/by-id";
+const MAX_INPUT_BY_ID_ENTRIES: usize = 512;
+const MAX_BROKEN_EVENT_LINKS: usize = 16;
+/// Key-event file suffixes `OpenRazer` event-file patterns end with.
+const OPENRAZER_EVENT_FILE_SUFFIXES: &[&str] = &["-event-kbd", "-event-mouse"];
+const REGEX_METACHARACTERS: &str = "\\.^$|?*+()[]{}";
 const HID_BUS_USB: &str = "0003";
 const OPENRAZER_GROUP: &str = "openrazer";
 const OPENRAZER_SESSION_BUS_NAME: &str = "org.razer";
@@ -228,6 +235,11 @@ pub struct SystemSnapshot {
     pub receiver_interface_drivers: Vec<Option<String>>,
     /// Registered DKMS trees of retired `HyperFlux` drivers, as `name/version`.
     pub retired_driver_registrations: Vec<String>,
+    /// Dangling `/dev/input/by-id` links whose names could match the
+    /// `OpenRazer` key-event file pattern of a presented device, as full paths
+    /// in stable order. `openrazer-daemon` opens every matching name and
+    /// stops adding devices when one of them cannot be opened.
+    pub broken_openrazer_event_links: Vec<String>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -371,6 +383,7 @@ pub struct RealSystemProbe<R = RealCommandRunner> {
     hid_devices_root: PathBuf,
     dkms_root: PathBuf,
     usb_devices_root: PathBuf,
+    input_by_id_root: PathBuf,
     openrazer_daemon_path: PathBuf,
     full_component_descriptor_path: PathBuf,
     socket_path: PathBuf,
@@ -386,6 +399,7 @@ impl Default for RealSystemProbe<RealCommandRunner> {
             hid_devices_root: PathBuf::from(HID_DEVICES_ROOT),
             dkms_root: PathBuf::from(DKMS_ROOT),
             usb_devices_root: PathBuf::from(USB_DEVICES_ROOT),
+            input_by_id_root: PathBuf::from(INPUT_BY_ID_ROOT),
             openrazer_daemon_path: PathBuf::from(OPENRAZER_NATIVE_DAEMON_EXECUTABLE_PATH),
             full_component_descriptor_path: PathBuf::from(FULL_COMPONENT_DESCRIPTOR_PATH),
             socket_path: PathBuf::from(BRIDGE_SOCKET_PATH),
@@ -427,6 +441,7 @@ impl<R: CommandRunner> RealSystemProbe<R> {
             hid_devices_root: PathBuf::from(HID_DEVICES_ROOT),
             dkms_root: PathBuf::from(DKMS_ROOT),
             usb_devices_root,
+            input_by_id_root: PathBuf::from(INPUT_BY_ID_ROOT),
             openrazer_daemon_path,
             full_component_descriptor_path: PathBuf::from(FULL_COMPONENT_DESCRIPTOR_PATH),
             socket_path,
@@ -894,6 +909,43 @@ impl<R: CommandRunner> RealSystemProbe<R> {
             .collect()
     }
 
+    /// Lists dangling `/dev/input/by-id` links that `openrazer-daemon` would
+    /// try to open for a presented device. Read-only: it only lists the
+    /// directory and inspects each link; nothing is opened, removed or changed.
+    /// A missing or unreadable directory reports nothing.
+    fn broken_openrazer_event_links(&self) -> Vec<String> {
+        let patterns = openrazer_event_file_patterns();
+        if patterns.is_empty() {
+            return Vec::new();
+        }
+        let Ok(entries) = fs::read_dir(&self.input_by_id_root) else {
+            return Vec::new();
+        };
+        let mut links = entries
+            .filter_map(Result::ok)
+            .take(MAX_INPUT_BY_ID_ENTRIES)
+            .filter_map(|entry| {
+                let name = entry.file_name().into_string().ok()?;
+                if !patterns.iter().any(|pattern| pattern.may_match(&name)) {
+                    return None;
+                }
+                let path = entry.path();
+                let is_link = fs::symlink_metadata(&path).ok()?.file_type().is_symlink();
+                let dangling = matches!(
+                    fs::metadata(&path),
+                    Err(error) if error.kind() == io::ErrorKind::NotFound
+                );
+                if !(is_link && dangling) {
+                    return None;
+                }
+                path.to_str().map(str::to_owned)
+            })
+            .collect::<Vec<_>>();
+        links.sort();
+        links.truncate(MAX_BROKEN_EVENT_LINKS);
+        links
+    }
+
     fn supported_receiver_present(&self) -> bool {
         let Ok(entries) = fs::read_dir(&self.usb_devices_root) else {
             return false;
@@ -1095,6 +1147,15 @@ impl<R: CommandRunner> SystemProbe for RealSystemProbe<R> {
                     OpenRazerAccessState::NotApplicable,
                 )
             };
+        // Only OpenRazer reads these links, and HyperFlux presents devices to
+        // it only through the Full component.
+        let broken_openrazer_event_links = if full_component.is_ready()
+            && openrazer_runtime.state == OpenRazerRuntimeState::Detected
+        {
+            self.broken_openrazer_event_links()
+        } else {
+            Vec::new()
+        };
         let openrazer_published_devices =
             if full_component.is_ready() && openrazer_access == OpenRazerAccessState::Ready {
                 if let Ok(devices) = self.openrazer_published_devices() {
@@ -1121,6 +1182,7 @@ impl<R: CommandRunner> SystemProbe for RealSystemProbe<R> {
             supported_receiver_present: self.supported_receiver_present(),
             receiver_interface_drivers: self.receiver_interface_drivers(),
             retired_driver_registrations: self.retired_driver_registrations(),
+            broken_openrazer_event_links,
         }
     }
 }
@@ -1393,6 +1455,66 @@ fn hid_device_usb_id(name: &str) -> Option<(u16, u16)> {
     let (product, _instance) = parts.next()?.split_once('.')?;
     let product_id = u16::from_str_radix(product, 16).ok()?;
     Some((vendor_id, product_id))
+}
+
+/// A conservative stand-in for one `OpenRazer` `EVENT_FILE_REGEX`.
+///
+/// `OpenRazer` checks each `/dev/input/by-id` name with Python `re.match`,
+/// and every presented-device pattern has the form `.*<stem><rest><suffix>`,
+/// where `<stem>` is plain text (for example `DSV2Pro_TKL_000000000000-if01`),
+/// `<rest>` may hold small groups such as `(-if01)?`, and `<suffix>` is
+/// `-event-kbd` or `-event-mouse`. A name may match only if it contains the
+/// stem and, somewhere after it, the suffix. Checking just that never misses a
+/// real match; it can over-report a name the regex would reject, which is
+/// acceptable because only links that are already broken are reported.
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct EventFilePattern {
+    stem: String,
+    suffix: &'static str,
+}
+
+impl EventFilePattern {
+    fn from_regex(regex: &str) -> Option<Self> {
+        let body = regex.strip_prefix(".*")?;
+        let suffix = OPENRAZER_EVENT_FILE_SUFFIXES
+            .iter()
+            .copied()
+            .find(|suffix| body.ends_with(suffix))?;
+        let middle = &body[..body.len() - suffix.len()];
+        let stem_end = middle
+            .find(|character: char| REGEX_METACHARACTERS.contains(character))
+            .unwrap_or(middle.len());
+        let stem = &middle[..stem_end];
+        if stem.is_empty() {
+            return None;
+        }
+        Some(Self {
+            stem: stem.to_owned(),
+            suffix,
+        })
+    }
+
+    fn may_match(&self, name: &str) -> bool {
+        name.find(self.stem.as_str())
+            .is_some_and(|start| name[start + self.stem.len()..].contains(self.suffix))
+    }
+}
+
+/// Event-file patterns of every device `HyperFlux` presents to `OpenRazer`,
+/// taken from the embedded source-validated catalog.
+fn openrazer_event_file_patterns() -> Vec<EventFilePattern> {
+    let Ok(catalog) = SourceValidatedDeviceCatalog::load() else {
+        return Vec::new();
+    };
+    let mut patterns = catalog
+        .devices()
+        .iter()
+        .filter_map(|device| device.openrazer.as_ref()?.event_file_regex.as_deref())
+        .filter_map(EventFilePattern::from_regex)
+        .collect::<Vec<_>>();
+    patterns.sort_by(|left, right| (&left.stem, left.suffix).cmp(&(&right.stem, right.suffix)));
+    patterns.dedup();
+    patterns
 }
 
 fn read_usb_hex_id(path: &Path) -> Option<u16> {
