@@ -117,10 +117,21 @@ recorded, the writer is revoked, and no new session can begin for that
 generation. The module never sends an active query to fill missing identity or
 battery data.
 
+A child reports its battery in a passive status report only every several
+minutes, the first one often long after boot. Host applications such as the
+OpenRazer daemon ask for it sooner through the native exchange. When such an
+exchange is a battery-level query (class `0x07`, command `0x80`, no arguments)
+and the matched reply has status `0x02`, the module also records the reply's
+level byte as a battery observation with source `HID_FEATURE`, on the same
+0-255 scale as the passive report. The module still sends nothing of its own:
+it only reads the answer to a query an application already made. Because a
+queried level is not part of a keyboard status report, the bridge reads a
+keyboard charge state only from the route field that follows a passive level.
+
 ## Child Battery Publication
 
 The module publishes bridge-forwarded battery state in `power_supply`; never
-queries. The bridge decodes passive battery reports as before and forwards each
+queries. The bridge decodes battery observations, passive or queried, and forwards each
 changed lane state through `HFX_UAPI_IOCTL_REPORT_CHILD_BATTERY`, a write-only
 64-byte record defined by `uapi/power-supply-v3.json`. Only the current writer
 file may forward, and only for its exact receiver generation; no authorization
