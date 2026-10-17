@@ -1324,6 +1324,29 @@ fn valid_link_matching_a_presented_event_file_is_ignored() {
 }
 
 #[test]
+fn broken_links_are_checked_only_with_full_and_a_detected_openrazer() {
+    let (root, probe) = input_by_id_probe("by-id-gate");
+    let link = probe.input_by_id_root.join(BROKEN_KEYBOARD_LINK);
+    symlink("../eventN", &link).expect("dangling link");
+
+    assert_eq!(
+        probe.presented_broken_openrazer_event_links(true, OpenRazerRuntimeState::Detected),
+        vec![link.to_str().expect("UTF-8 path").to_owned()]
+    );
+    assert!(
+        probe
+            .presented_broken_openrazer_event_links(false, OpenRazerRuntimeState::Detected)
+            .is_empty()
+    );
+    assert!(
+        probe
+            .presented_broken_openrazer_event_links(true, OpenRazerRuntimeState::NotInstalled)
+            .is_empty()
+    );
+    fs::remove_dir_all(root).expect("cleanup");
+}
+
+#[test]
 fn missing_input_by_id_directory_reports_no_broken_links() {
     let (root, mut probe) = driver_inspection_probe("by-id-missing");
     probe.input_by_id_root = root.join("absent");
@@ -1447,4 +1470,23 @@ fn default_probe_reads_the_real_system_locations() {
     );
     assert_eq!(probe.socket_path, Path::new(BRIDGE_SOCKET_PATH));
     assert_eq!(probe.timeout, Duration::from_millis(STATUS_TIMEOUT_MS));
+}
+
+#[test]
+fn service_states_report_stable_finding_values() {
+    for bridge_present in [false, true] {
+        assert_eq!(
+            ServiceState::Active.finding_value(bridge_present),
+            "active-unready"
+        );
+    }
+    for (state, value) in [
+        (ServiceState::Activating, "activating"),
+        (ServiceState::Failed, "failed"),
+        (ServiceState::Inactive, "inactive"),
+        (ServiceState::Stopping, "stopping"),
+        (ServiceState::Unavailable, "unavailable"),
+    ] {
+        assert_eq!(state.finding_value(false), value);
+    }
 }

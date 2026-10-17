@@ -925,9 +925,6 @@ impl<R: CommandRunner> RealSystemProbe<R> {
     /// A missing or unreadable directory reports nothing.
     fn broken_openrazer_event_links(&self) -> Vec<String> {
         let patterns = openrazer_event_file_patterns();
-        if patterns.is_empty() {
-            return Vec::new();
-        }
         let Ok(entries) = fs::read_dir(&self.input_by_id_root) else {
             return Vec::new();
         };
@@ -935,25 +932,38 @@ impl<R: CommandRunner> RealSystemProbe<R> {
             .filter_map(Result::ok)
             .take(MAX_INPUT_BY_ID_ENTRIES)
             .filter_map(|entry| {
-                let name = entry.file_name().into_string().ok()?;
+                let name = entry.file_name();
+                let name = name.to_string_lossy();
                 if !patterns.iter().any(|pattern| pattern.may_match(&name)) {
                     return None;
                 }
                 let path = entry.path();
-                let is_link = fs::symlink_metadata(&path).ok()?.file_type().is_symlink();
+                let is_link = fs::symlink_metadata(&path)
+                    .is_ok_and(|metadata| metadata.file_type().is_symlink());
                 let dangling = matches!(
                     fs::metadata(&path),
                     Err(error) if error.kind() == io::ErrorKind::NotFound
                 );
-                if !(is_link && dangling) {
-                    return None;
-                }
-                path.to_str().map(str::to_owned)
+                (is_link && dangling).then(|| path.to_string_lossy().into_owned())
             })
             .collect::<Vec<_>>();
         links.sort();
         links.truncate(MAX_BROKEN_EVENT_LINKS);
         links
+    }
+
+    /// Only `OpenRazer` reads these links, and `HyperFlux` presents devices to
+    /// it only through the Full component, so the links are checked only then.
+    fn presented_broken_openrazer_event_links(
+        &self,
+        full_component_ready: bool,
+        openrazer_runtime: OpenRazerRuntimeState,
+    ) -> Vec<String> {
+        if full_component_ready && openrazer_runtime == OpenRazerRuntimeState::Detected {
+            self.broken_openrazer_event_links()
+        } else {
+            Vec::new()
+        }
     }
 
     fn supported_receiver_present(&self) -> bool {
@@ -1185,15 +1195,10 @@ impl<R: CommandRunner> SystemProbe for RealSystemProbe<R> {
                     OpenRazerAccessState::NotApplicable,
                 )
             };
-        // Only OpenRazer reads these links, and HyperFlux presents devices to
-        // it only through the Full component.
-        let broken_openrazer_event_links = if full_component.is_ready()
-            && openrazer_runtime.state == OpenRazerRuntimeState::Detected
-        {
-            self.broken_openrazer_event_links()
-        } else {
-            Vec::new()
-        };
+        let broken_openrazer_event_links = self.presented_broken_openrazer_event_links(
+            full_component.is_ready(),
+            openrazer_runtime.state,
+        );
         let openrazer_published_devices =
             if full_component.is_ready() && openrazer_access == OpenRazerAccessState::Ready {
                 if let Ok(devices) = self.openrazer_published_devices() {
@@ -1547,12 +1552,10 @@ impl EventFilePattern {
 /// Event-file patterns of every device `HyperFlux` presents to `OpenRazer`,
 /// taken from the embedded source-validated catalog.
 fn openrazer_event_file_patterns() -> Vec<EventFilePattern> {
-    let Ok(catalog) = SourceValidatedDeviceCatalog::load() else {
-        return Vec::new();
-    };
+    let catalog = SourceValidatedDeviceCatalog::load().ok();
     let mut patterns = catalog
-        .devices()
         .iter()
+        .flat_map(SourceValidatedDeviceCatalog::devices)
         .filter_map(|device| device.openrazer.as_ref()?.event_file_regex.as_deref())
         .filter_map(EventFilePattern::from_regex)
         .collect::<Vec<_>>();
