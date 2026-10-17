@@ -1,17 +1,17 @@
 {
   "$schema": "../schemas/documentation-audit.schema.json",
   "schema": "hyperflux-documentation-audit-v3",
-  "source_revision": "73eb75ff3905b41ffc9184cb1bcfaea65e9965f9",
+  "source_revision": "577c77de46a7eadd827c65a13ebbdc81dce571ca",
   "inputs": {
     "catalog_sha256": "faa80d20205f307b4c68013ebaafa6258abdd6b2970c54ec38c96f2cc15bb1a7",
     "policy_sha256": "dabb7014747af7749d0d7dd246ed3a52400124df4c448826f2c785068df57939",
     "renderer_sha256": "741ae4b06daa2a85f6adddb36728f825b3d670be457d12e03c67ae762a17c631",
     "journey_source_coverage_sha256": "7dc3e929079eb76fe8ce82b0b026c2a373af8dc4c829352f38374a6d6983495a",
-    "rendered_documents_sha256": "f37b8257a19c9822549ab81ee5166856c8cb341932251a17ac87c5cba9b680f6"
+    "rendered_documents_sha256": "805ad1743828c1baca62b7d7440f20486233ff1a96274db116294c7fb1fa6cf7"
   },
   "render": {
     "status": "passed",
-    "result_sha256": "ea8b15d0740f45eeec0534907ebd39e041aae1232f29b152bc08633d7d247adf",
+    "result_sha256": "d52e3a0a2d20b8ec3f3955a80bea05e8c82f9e4b3cfa52ae0f4465f9ebccf19f",
     "document_count": 93,
     "check_count": 558,
     "screenshot_count": 108,
@@ -27,7 +27,7 @@
       "light",
       "dark"
     ],
-    "screenshot_manifest_sha256": "e08a02bca58112120303db5afb9fd8ef128ad3e0538b17c49f53ad5557b31b68",
+    "screenshot_manifest_sha256": "6c8f45e1a8918816db54f92eaba378a8d6a8de4f7b2c02e076b97cdf62ef9240",
     "capture_mode": "full-page",
     "max_page_height": 32768,
     "render_contract": "github-compatible-gfm-v2",
@@ -103,7 +103,7 @@
       },
       {
         "file": "screenshots/docs__user__hardware--1280--dark.png",
-        "sha256": "2c909263521cc515469268c93aa652d2715a801902becadb18a291fefddf0a4a"
+        "sha256": "44a718d770e818d7583a10b550cfa6c4c5a7706d9b3980fc7bf746fdffbc88a1"
       },
       {
         "file": "screenshots/docs__user__installation--768--light.png",
@@ -111,7 +111,7 @@
       },
       {
         "file": "screenshots/docs__user__troubleshooting--375--dark.png",
-        "sha256": "aa176a4a831dfd995d67d161d7aeb54c1e4f2fbbec26dd58f70b5756e186f1df"
+        "sha256": "2793531881c10796febc2f45647d534389e124b2390b382461d0341550080f0e"
       }
     ]
   },
