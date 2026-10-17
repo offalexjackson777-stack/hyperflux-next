@@ -99,7 +99,7 @@ class DistributionCatalogTests(unittest.TestCase):
         self.assertIsNotNone(target.release)
         assert target.release is not None
         self.assertEqual(
-            (target.release.version, target.release.codename), ("24.04", "noble")
+            (target.release.version, target.release.codename), ("26.10", "stonking")
         )
         self.assertEqual(target.architecture_for("x86_64-unknown-linux-gnu"), "amd64")
         with self.assertRaises(ModelError):
@@ -131,8 +131,8 @@ class DistributionCatalogTests(unittest.TestCase):
         # Full stands in for every OpenRazer driver version the daemon pins.
         self.assertEqual(full.conflicts, ("openrazer-driver-dkms", "openrazer-kernel-modules-dkms"))
         self.assertEqual(full.replaces, full.conflicts)
-        self.assertIn("openrazer-driver-dkms (= 3.7.0+dfsg-1ubuntu0.3)", full.provides)
-        self.assertIn("openrazer-driver-dkms (= 3.12.4~ubuntu24.04.1)", full.provides)
+        self.assertIn("openrazer-driver-dkms (= 3.12.4+dfsg-1)", full.provides)
+        self.assertIn("openrazer-driver-dkms (= 3.12.4~ubuntu26.10.1)", full.provides)
         self.assertEqual(
             [item.package for item in full.optional_dependencies],
             ["openrazer-daemon", "python3-openrazer"],
@@ -151,7 +151,7 @@ class DistributionCatalogTests(unittest.TestCase):
                 target.release.codename,
                 target.release.c_runtime_version,
             ),
-            ("Debian", "13", "trixie", "2.41"),
+            ("Debian", "14", "forky", "2.43"),
         )
         self.assertEqual(tuple(target.components), ("linux", "full"))
         self.assertFalse(target.openrgb_plugin)
@@ -181,7 +181,7 @@ class DistributionCatalogTests(unittest.TestCase):
             }
 
         def runtime_above_release(target, _value):
-            target["dependency_roles"]["c-runtime"] = "libc6 (>= 2.42)"
+            target["dependency_roles"]["c-runtime"] = "libc6 (>= 2.44)"
 
         def ubuntu_release(target, value):
             target["release"] = copy.deepcopy(value["targets"]["ubuntu"]["release"])
@@ -466,7 +466,7 @@ class DistributionCatalogTests(unittest.TestCase):
             "pacman format": set_field("package_format", "pacman"),
             "unknown maturity": set_field("maturity", "nightly"),
             "other release": set_field("release", "codename", "jammy"),
-            "runtime above release": set_role("c-runtime", "libc6 (>= 2.40)"),
+            "runtime above release": set_role("c-runtime", "libc6 (>= 2.45)"),
             "runtime without floor": set_role("c-runtime", "libc6"),
             "arch runtime name": set_role("c-runtime", "glibc (>= 2.34)"),
             "arch relation syntax": set_role("c-runtime", "libc6>=2.34"),

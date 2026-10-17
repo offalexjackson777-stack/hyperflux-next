@@ -9,7 +9,9 @@ normal system updates.
 
 ## What You Need
 
-- Ubuntu 24.04 (noble) on an x86_64 computer.
+- Ubuntu 26.10 (stonking) on an x86_64 computer. Ubuntu 26.04 LTS is not
+  supported, because its OpenRazer is too old for some keyboards; see the
+  [known limitations](limitations.md#only-the-newest-ubuntu-and-debian).
 - The HyperFlux receiver, plugged in, with your keyboard and mouse paired to it.
 - A user account that can run `sudo`.
 
@@ -22,7 +24,7 @@ connections in the Arch Full package are not available on Ubuntu yet.
 
 <!-- HFX-GENERATED-BEGIN: ubuntu-repository-setup -->
 > [!NOTE]
-> The Ubuntu 24.04 packages are not published yet. These steps show how
+> The Ubuntu 26.10 packages are not published yet. These steps show how
 > installing will work once they are. Until then the repository address does
 > not answer, and the key download in step 1 stops with an error.
 
@@ -66,7 +68,7 @@ You do steps 1 to 3 once. The key's fingerprint is
    ```text
    Types: deb
    URIs: https://offalexjackson777-stack.github.io/hyperflux-next/ubuntu
-   Suites: noble
+   Suites: stonking
    Components: main
    Architectures: amd64
    Signed-By: /etc/apt/keyrings/hyperflux-next.asc

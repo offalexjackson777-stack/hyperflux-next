@@ -228,8 +228,8 @@ def markdown(
             "configuration remains preserved across supported package transitions.",
             "",
             "The Arch package base consumes independently staged `linux` and payload-bearing "
-            "`full` components. Ubuntu 24.04 and Debian 13 `.deb` packages and Fedora 44 "
-            "and openSUSE Tumbleweed `.rpm` packages of the Core edition are built and "
+            "`full` components. Ubuntu 26.10 and Debian 14 `.deb` packages and Fedora 44 "
+            "and openSUSE Tumbleweed `.rpm` packages of both editions are built and "
             "checked in CI every week but not published yet.",
             "",
         ]

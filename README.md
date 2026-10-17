@@ -60,8 +60,8 @@ works.
 | Distribution | Release | Guide | Packages |
 | --- | --- | --- | --- |
 | Arch Linux | rolling | [Install on Arch Linux](docs/user/installation.md) | Ready |
-| Ubuntu | 24.04 | [Install on Ubuntu](docs/user/install-ubuntu.md) | Not published yet |
-| Debian | 13 | [Install on Debian](docs/user/install-debian.md) | Not published yet |
+| Ubuntu | 26.10 | [Install on Ubuntu](docs/user/install-ubuntu.md) | Not published yet |
+| Debian | 14 | [Install on Debian](docs/user/install-debian.md) | Not published yet |
 | Fedora | 44 | [Install on Fedora](docs/user/install-fedora.md) | Not published yet |
 | openSUSE | Tumbleweed | [Install on openSUSE](docs/user/install-opensuse.md) | Not published yet |
 

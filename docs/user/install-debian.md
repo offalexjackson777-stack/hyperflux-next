@@ -9,7 +9,9 @@ normal system updates.
 
 ## What You Need
 
-- Debian 13 (trixie) on an x86_64 computer.
+- Debian 14 (forky) on an x86_64 computer. Debian 14 is still Debian's testing
+  release, and Debian 13 is not supported; see the
+  [known limitations](limitations.md#only-the-newest-ubuntu-and-debian).
 - The HyperFlux receiver, plugged in, with your keyboard and mouse paired to it.
 - A user account that can run `sudo`.
 
@@ -22,7 +24,7 @@ connections in the Arch Full package are not available on Debian yet.
 
 <!-- HFX-GENERATED-BEGIN: debian-repository-setup -->
 > [!NOTE]
-> The Debian 13 packages are not published yet. These steps show how
+> The Debian 14 packages are not published yet. These steps show how
 > installing will work once they are. Until then the repository address does
 > not answer, and the key download in step 1 stops with an error.
 
@@ -66,7 +68,7 @@ You do steps 1 to 3 once. The key's fingerprint is
    ```text
    Types: deb
    URIs: https://offalexjackson777-stack.github.io/hyperflux-next/debian
-   Suites: trixie
+   Suites: forky
    Components: main
    Architectures: amd64
    Signed-By: /etc/apt/keyrings/hyperflux-next.asc

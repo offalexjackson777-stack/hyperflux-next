@@ -42,7 +42,7 @@ shown in the [installation guide](../user/installation.md). See the
 
 ## Later
 
-- **Other distributions.** Ubuntu 24.04, Debian 13, Fedora 44 and openSUSE
+- **Other distributions.** Ubuntu 26.10, Debian 14, Fedora 44 and openSUSE
   Tumbleweed packages are already built and checked every week, but not
   published yet. Each will be published only when it works on its own; a delay
   on one does not hold back another.

@@ -270,7 +270,7 @@ class PackageRepositorySiteTests(unittest.TestCase):
     def test_targets_cover_each_distribution_release_with_pinned_images(self) -> None:
         self.assertEqual(("ubuntu", "debian", "fedora", "opensuse"), tuple(self.targets))
         self.assertEqual(
-            {"ubuntu": "noble", "debian": "trixie", "fedora": "44", "opensuse": "tumbleweed"},
+            {"ubuntu": "stonking", "debian": "forky", "fedora": "44", "opensuse": "tumbleweed"},
             {target_id: target.suite for target_id, target in self.targets.items()},
         )
         for target in self.targets.values():
@@ -291,7 +291,7 @@ class PackageRepositorySiteTests(unittest.TestCase):
         url = self.policy.site_url
         sources = repositories.configuration_text(self.policy, self.targets["ubuntu"], url)
         self.assertIn(f"URIs: {url}/ubuntu\n", sources)
-        self.assertIn("Suites: noble\n", sources)
+        self.assertIn("Suites: stonking\n", sources)
         self.assertIn("Signed-By: /etc/apt/keyrings/hyperflux-next.asc\n", sources)
         fedora = repositories.configuration_text(self.policy, self.targets["fedora"], url)
         self.assertIn(f"baseurl={url}/fedora/$releasever/$basearch/\n", fedora)
@@ -335,8 +335,8 @@ class PackageRepositorySiteTests(unittest.TestCase):
             "repository-site.json",
             "hyperflux-next-repository-key.asc",
             "ubuntu/hyperflux-next.sources",
-            "ubuntu/dists/noble/Release",
-            "debian/dists/trixie/main/binary-amd64/Packages.gz",
+            "ubuntu/dists/stonking/Release",
+            "debian/dists/forky/main/binary-amd64/Packages.gz",
             "debian/pool/main/h/hyperflux-next/hyperflux-next-linux_2.1.0-1_amd64.deb",
             "fedora/hyperflux-next.repo",
             "fedora/44/x86_64/repodata/repomd.xml",
@@ -347,7 +347,7 @@ class PackageRepositorySiteTests(unittest.TestCase):
         self.assertFalse((site / "arch").exists())
         page = (site / "index.html").read_text()
         self.assertIn("<h1>Choose your distribution</h1>", page)
-        for name in ("Arch Linux", "Ubuntu 24.04", "Debian 13", "Fedora 44", "openSUSE Tumbleweed"):
+        for name in ("Arch Linux", "Ubuntu 26.10", "Debian 14", "Fedora 44", "openSUSE Tumbleweed"):
             self.assertIn(name, page)
         self.assertIn(" ".join(re.findall("....", PRIMARY)), page)
         self.assertEqual(
@@ -384,7 +384,7 @@ class PackageRepositorySiteTests(unittest.TestCase):
     def test_unsigned_verification_catches_tampering(self) -> None:
         site = self.assemble()
         cases = {
-            "Packages": site / "ubuntu/dists/noble/main/binary-amd64/Packages",
+            "Packages": site / "ubuntu/dists/stonking/main/binary-amd64/Packages",
             "front page": site / "index.html",
             "repo file": site / "fedora/hyperflux-next.repo",
             "package": site / "opensuse/tumbleweed/x86_64/packages/hyperflux-next-dkms-2.1.0-1.noarch.rpm",
@@ -417,9 +417,9 @@ class PackageRepositorySiteTests(unittest.TestCase):
         before = (unsigned / "fedora/44/x86_64/repodata/repomd.xml").read_bytes()
         site = self.sign(unsigned)
         for name in (
-            "ubuntu/dists/noble/InRelease",
-            "ubuntu/dists/noble/Release.gpg",
-            "debian/dists/trixie/InRelease",
+            "ubuntu/dists/stonking/InRelease",
+            "ubuntu/dists/stonking/Release.gpg",
+            "debian/dists/forky/InRelease",
             "fedora/44/x86_64/repodata/repomd.xml.asc",
             "opensuse/tumbleweed/x86_64/repodata/repomd.xml.asc",
             "arch/hyperflux-next.db.sig",
@@ -475,8 +475,8 @@ class PackageRepositorySiteTests(unittest.TestCase):
             self.assertRaisesRegex(ModelError, "unexpected key"),
         ):
             repositories.verify_site(ROOT, site)
-        inrelease = site / "debian/dists/trixie/InRelease"
-        inrelease.write_text(inrelease.read_text().replace("Suite: trixie", "Suite: sid"))
+        inrelease = site / "debian/dists/forky/InRelease"
+        inrelease.write_text(inrelease.read_text().replace("Suite: forky", "Suite: sid"))
         with self.assertRaisesRegex(ModelError, "InRelease does not carry the same Release"):
             self.verify_signed(site)
 
@@ -516,8 +516,8 @@ class PackageRepositorySiteTests(unittest.TestCase):
 
     def test_metadata_scripts_use_pinned_distribution_tools(self) -> None:
         script = repositories.apt_metadata_script(self.policy, self.targets["debian"])
-        self.assertIn("apt-ftparchive --arch amd64 packages pool/main > dists/trixie/main/binary-amd64/Packages", script)
-        self.assertIn("APT::FTPArchive::Release::Codename=trixie", script)
+        self.assertIn("apt-ftparchive --arch amd64 packages pool/main > dists/forky/main/binary-amd64/Packages", script)
+        self.assertIn("APT::FTPArchive::Release::Codename=forky", script)
         self.assertNotIn("Valid-Until", script)
         self.assertIn("createrepo_c", repositories.rpm_metadata_script())
         with patch.object(repositories.shutil, "which", side_effect=lambda name: f"/usr/bin/{name}"), patch.dict(

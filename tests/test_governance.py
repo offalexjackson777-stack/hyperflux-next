@@ -472,8 +472,8 @@ class GitHubGovernanceTests(unittest.TestCase):
             list(images.items()),
         )
         headers = {step["env"]["HFX_DISTRIBUTION"]: step["env"]["HFX_RELEASE_HEADERS"] for step in checks}
-        self.assertIn("linux-headers-generic-hwe-24.04", headers["ubuntu"])
-        self.assertIn("linux-headers-amd64/trixie-backports", headers["debian"])
+        self.assertEqual(headers["ubuntu"], "linux-headers-generic")
+        self.assertEqual(headers["debian"], "linux-headers-amd64 linux-headers-rt-amd64")
         self.assertEqual(headers["fedora"], "kernel-devel kernel-devel/fedora")
         self.assertEqual(headers["opensuse"], "kernel-longterm-devel kernel-default-devel")
         scripts = {step["env"]["HFX_DISTRIBUTION"]: step["env"]["HFX_PACKAGE_CHECKS"] for step in checks}
@@ -502,7 +502,7 @@ class GitHubGovernanceTests(unittest.TestCase):
             "dkms build --force",
             'ln -s "$directory" "/lib/modules/$kernel/build"',
             "modinfo -F vermagic",
-            'test "$built" -ge 2',
+            'test "$built" -ge "$(set -- $HFX_RELEASE_HEADERS; echo $#)"',
             "/var/lib/dkms/mok.pub",
             "objdump -T",
             "glibc >= ",

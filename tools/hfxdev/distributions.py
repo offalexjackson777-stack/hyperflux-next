@@ -26,10 +26,11 @@ TARGET_COMPONENT_IDS = {
     "opensuse": COMPONENT_IDS,
 }
 # Full carries the OpenRGB plugin only where the release ships an OpenRGB that
-# can load it: OpenRGB 1.0 final, plugin API 5. Checked 17 October 2026:
-# Ubuntu 24.04 and Debian 13 ship no OpenRGB, and Fedora 44 and openSUSE
-# Tumbleweed ship a 1.0 release candidate with plugin API 4. Full there is
-# the OpenRazer route alone.
+# can load it: OpenRGB 1.0 final, plugin API 5, built with Qt 6. Checked
+# 18 October 2026: Ubuntu 26.10 ships a 1.0 development snapshot with plugin
+# API 4, Debian 14 ships 1.0 final built with Qt 5, and Fedora 44 and openSUSE
+# Tumbleweed ship a 1.0 release candidate with plugin API 4. Full there is the
+# OpenRazer route alone.
 OPENRGB_PLUGIN_TARGET_IDS = ("arch",)
 # The Arch packages only the OpenRGB plugin needs. A target without the plugin
 # leaves them out.
@@ -594,8 +595,8 @@ def _check_arch_contract(target: DistributionTarget, sibling_version: str) -> No
 # Each Debian-format target is held to one exact release. Both use the same
 # package names for their dependency roles.
 DEBIAN_FORMAT_RELEASES = {
-    "ubuntu": ("Ubuntu", "24.04", "noble"),
-    "debian": ("Debian", "13", "trixie"),
+    "ubuntu": ("Ubuntu", "26.10", "stonking"),
+    "debian": ("Debian", "14", "forky"),
 }
 DEBIAN_FORMAT_ROLES = {
     "dkms": "dkms",
@@ -670,8 +671,8 @@ def _check_core_contract(
 #
 # Ubuntu and Debian: the daemon depends on `openrazer-driver-dkms` at its own
 # exact version, so Full provides every version a supported source ships:
-# Ubuntu 24.04 release and noble-updates, OpenRazer's PPA, and Debian 13. Read
-# from the archives on 17 October 2026. A new upstream version needs a new
+# Ubuntu 26.10, OpenRazer's PPA, and Debian 14. Read from the archives on
+# 18 October 2026. A new upstream version needs a new
 # entry here; until then apt holds that daemon upgrade back.
 #
 # Fedora and openSUSE ship no OpenRazer. OpenRazer's own openSUSE Build
@@ -681,9 +682,8 @@ DISTRIBUTION_FULL_RELATIONS = {
     "ubuntu": (
         ("openrazer-driver-dkms", "openrazer-kernel-modules-dkms"),
         (
-            "openrazer-driver-dkms (= 3.7.0+dfsg-1)",
-            "openrazer-driver-dkms (= 3.7.0+dfsg-1ubuntu0.3)",
-            "openrazer-driver-dkms (= 3.12.4~ubuntu24.04.1)",
+            "openrazer-driver-dkms (= 3.12.4+dfsg-1)",
+            "openrazer-driver-dkms (= 3.12.4~ubuntu26.10.1)",
             "openrazer-kernel-modules-dkms",
             "hyperflux-openrazer-driver-abi (= 3.12.4)",
         ),
@@ -692,7 +692,7 @@ DISTRIBUTION_FULL_RELATIONS = {
     "debian": (
         ("openrazer-driver-dkms", "openrazer-kernel-modules-dkms"),
         (
-            "openrazer-driver-dkms (= 3.10.2+dfsg-1)",
+            "openrazer-driver-dkms (= 3.12.4+dfsg-1)",
             "openrazer-kernel-modules-dkms",
             "hyperflux-openrazer-driver-abi (= 3.12.4)",
         ),
