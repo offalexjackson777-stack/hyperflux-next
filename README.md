@@ -39,9 +39,9 @@ hardware yet, but they should work:
 - Razer BlackWidow V4 Low-profile Tenkeyless HyperSpeed (keyboard, OpenRGB only)
 - Razer BlackWidow V4 Tenkeyless HyperSpeed (keyboard)
 
-**Not usable yet.** 2 more devices are known, but they need support in OpenRazer
-or OpenRGB first: Razer Cobra HyperSpeed and Razer BlackWidow V4 Low-profile
-HyperSpeed.
+**Not usable yet.** 2 more devices are known, but they wait for support in
+OpenRazer, and OpenRGB does not support them either: Razer Cobra HyperSpeed and
+Razer BlackWidow V4 Low-profile HyperSpeed.
 
 HyperFlux Next is tested with OpenRazer `3.12.4`.
 <!-- HFX-GENERATED-END: compatibility-summary -->
@@ -87,8 +87,8 @@ receiver, with your keyboard and mouse paired to it.
    ```
 
    Full adds the connections to OpenRazer, Polychromatic, and OpenRGB, and
-   brings Core with it. Core alone is the receiver driver and the SDK:
-   `sudo pacman -Syu hyperflux-next-linux`.
+   brings Core with it. Core alone is the receiver driver, the background
+   service, `hyperfluxctl`, and the SDK: `sudo pacman -Syu hyperflux-next-linux`.
    The other distributions get Core only for now, without the app
    connections; their guides give the `apt`, `dnf`, or `zypper` command.
 3. **Turn on HyperFlux and restart.** Keep the receiver plugged in.
@@ -108,10 +108,7 @@ receiver, with your keyboard and mouse paired to it.
    You should see `HyperFlux Next is ready.` If you see
    `HyperFlux Next needs attention.` instead, do what its `Do:` line says.
 
-   To report how your devices are detected, run `hyperfluxctl qualification`.
-   It only reads, and [Hardware](docs/user/hardware.md) shows how to share it.
-
-Later updates arrive with your normal system update.
+On Arch Linux, later updates arrive with your normal system update.
 <!-- HFX-GENERATED-END: recommended-package -->
 
 Each guide explains every step. The
@@ -125,6 +122,8 @@ Full and Core.
   OpenRGB can do with HyperFlux.
 - [Troubleshooting](docs/user/troubleshooting.md): fix a missing device or a
   failed check.
+- [Hardware](docs/user/hardware.md#share-a-hardware-report): share how your
+  devices are detected, so a device can be listed as confirmed.
 - [Updates and removal on Arch Linux](docs/user/updates-removal.md): update,
   go back, or remove HyperFlux. The other distributions' guides have their own
   update and removal steps.

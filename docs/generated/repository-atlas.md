@@ -50,7 +50,7 @@ The full list of files each part owns is in [`architecture/repository-atlas.json
 | [Kernel driver contract](../../driver/README.md) | `implemented` | Defines the interface between the kernel driver and the programs that use it. New versions only add to it, so existing programs keep working. |
 | [Linux HID kernel module](../../driver/kernel/README.md) | `implemented` | The Linux kernel driver for the receiver. It keeps the keyboard and mouse working as normal input devices and carries lighting and battery messages between them and the background service. |
 | [Linux runtime authority](../../runtime/README.md) | `implemented` | Defines, in one place, the package version, service names, file paths, permissions and default settings the installed system uses. |
-| [Packaging and installation](../../packaging/README.md) | `implemented` | Builds the Arch packages the same way every time, and the signed Pacman repository that serves them. |
+| [Packaging and installation](../../packaging/README.md) | `implemented` | Builds the HyperFlux packages for Arch Linux and the other distributions the same way every time, and the signed repositories that serve them. |
 | [C++ SDK](../../sdk/cpp/README.md) | `implemented` | The C++ library apps use to talk to the HyperFlux background service. |
 | [Python SDK](../../sdk/python/README.md) | `implemented` | The Python library scripts and apps use to talk to the HyperFlux background service. |
 | [Repository tooling](../../tools/README.md) | `implemented` | The `./hfx` developer command: it loads the repository's data files, generates documentation and code from them, and runs the checks. |

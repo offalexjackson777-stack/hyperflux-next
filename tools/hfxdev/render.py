@@ -259,7 +259,7 @@ def architecture_markdown(
             "## Which Devices HyperFlux Talks To",
             "",
             f"The generated receiver authority is exact "
-            f"`{official['vendor_id']:04X}:{official['receiver_product_id']:04X}` plus "
+            f"`{official['vendor_id']:04x}:{official['receiver_product_id']:04x}` plus "
             f"{len(official['entries'])} official child identities from `{official['snapshot_id']}`.",
             f"It yields {operational} operational child routes. Merged OpenRazer source covers "
             f"{openrazer} of them and merged OpenRGB source covers {openrgb}; {both} are covered by both.",

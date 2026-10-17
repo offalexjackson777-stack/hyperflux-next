@@ -16,6 +16,7 @@ and the [known limitations](docs/user/limitations.md).
 | Find a guide | Start at the [documentation hub](docs/README.md) |
 | Install or update HyperFlux Next | Follow the guide for your distribution, linked from the [install section of the README](README.md#install) |
 | Ask how to use or build HyperFlux | Open a [Help discussion](https://github.com/offalexjackson777-stack/hyperflux-next/discussions/categories/help) |
+| Plan tests for a device that is expected to work | Start a [Hardware qualification discussion](https://github.com/offalexjackson777-stack/hyperflux-next/discussions/categories/hardware-qualification) |
 | Explore an early idea | Start an [Ideas discussion](https://github.com/offalexjackson777-stack/hyperflux-next/discussions/categories/ideas) |
 | Report something that does not work | Use the [bug form](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=bug_report.yml) |
 | Ask for a device to be supported | Use the [device support form](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=device_support.yml) |

@@ -129,8 +129,8 @@ receiver, with your keyboard and mouse paired to it.
    ```
 
    Full adds the connections to OpenRazer, Polychromatic, and OpenRGB, and
-   brings Core with it. Core alone is the receiver driver and the SDK:
-   `sudo pacman -Syu {core.package_name}`.{other_distributions}
+   brings Core with it. Core alone is the receiver driver, the background
+   service, `hyperfluxctl`, and the SDK: `sudo pacman -Syu {core.package_name}`.{other_distributions}
 3. **Turn on HyperFlux and restart.** Keep the receiver plugged in.
 
    ```bash
@@ -148,10 +148,7 @@ receiver, with your keyboard and mouse paired to it.
    You should see `HyperFlux Next is ready.` If you see
    `HyperFlux Next needs attention.` instead, do what its `Do:` line says.
 
-   To report how your devices are detected, run `hyperfluxctl qualification`.
-   It only reads, and [Hardware](docs/user/hardware.md) shows how to share it.
-
-Later updates arrive with your normal system update."""
+On Arch Linux, later updates arrive with your normal system update."""
 
 
 def _wrapped(text: str) -> str:
@@ -231,7 +228,8 @@ def compatibility_summary(
     )
     waiting = _wrapped(
         f"**Not usable yet.** {counts[UPSTREAM_BLOCKED_OR_RESEARCH_ONLY]} more "
-        "devices are known, but they need support in OpenRazer or OpenRGB first: "
+        "devices are known, but they wait for support in OpenRazer, and OpenRGB "
+        "does not support them either: "
         + _series(
             [device["model_name"] for device in grouped[UPSTREAM_BLOCKED_OR_RESEARCH_ONLY]]
         )

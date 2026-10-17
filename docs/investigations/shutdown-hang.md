@@ -67,12 +67,14 @@ Both units are generated, so both changes were made in the unit generator under
 - `systemd-analyze verify` is clean for the bridge, preflight, relay, socket, and socket
   proxy units.
 - The fast verification lane passed 25 of 25 checks in the pinned container.
+- On the project's own machine, the six shutdowns after the 2.0.1 update, between 15
+  and 17 October 2026 on 2.0.1, 2.0.2, 2.1.0, and 2.1.1, were five reboots and one
+  power-off. None logged an ordering cycle, and OpenRazer stopped in under half a second
+  each time. The three shutdowns on 2.0.0 the day before each logged the ordering cycle,
+  and one of them waited for OpenRazer's stop timeout.
 
 ## What Is Still Open
 
-A timed shutdown on real hardware is part of the 2.0.1 release checklist,
-[#36](https://github.com/offalexjackson777-stack/hyperflux-next/issues/36): five normal
-reboots and one poweroff with no long stop job and no ordering-cycle messages. #30 is done
-when OpenRazer exits normally in under two seconds at shutdown across that series. #31 is
-done when there are no ordering-cycle messages at boot or shutdown and on-demand socket
-activation still works. Both issues stay open until those checks are recorded.
+Nothing. The timed series that the 2.0.1 release checklist,
+[#36](https://github.com/offalexjackson777-stack/hyperflux-next/issues/36), asked for is
+recorded above, and #30 and #31 are closed.

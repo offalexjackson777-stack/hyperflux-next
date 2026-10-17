@@ -71,9 +71,14 @@ at. In exchange it never unloads a live driver, never adds a blacklist, never cl
 - On a real machine without the old driver, Doctor stays Ready with no false finding, and
   the migration preview reports nothing to do.
 - `--apply` without root refuses.
+- On 17 October 2026 the same machine took a kernel update (`linux-lts` 6.18.52 to
+  6.18.57) together with 2.1.1. After the reboot Doctor reported Ready, with no
+  `HFX-KERNEL-003` or `HFX-KERNEL-004` finding.
 
 ## What Is Still Open
 
-The issue is done when a supported kernel update after migration cannot bring the old
-driver back. That physical check is part of the 2.0.1 release checklist,
-[#36](https://github.com/offalexjackson777-stack/hyperflux-next/issues/36).
+#34 is closed. The migration's `--apply` path has unit tests but no hardware check yet,
+because no machine that still carries the old driver has been available. If you have one,
+run the preview, `hyperflux-next-activate migrate-retired-dkms`, and include its output
+in a
+[bug report](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=bug_report.yml).

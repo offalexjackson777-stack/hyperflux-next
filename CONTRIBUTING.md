@@ -53,8 +53,11 @@ to avoid. If you fixed a problem that reached users, add a page under
 
 ## Generated Files
 
-Some files are generated, and each one names its source at the top. Do not edit
-them by hand. Change the source it names, then run `./hfx generate`.
+Some files, and some marked blocks inside pages, are generated. A generated file
+says so near the top, and a generated block sits between `HFX-GENERATED-BEGIN`
+and `HFX-GENERATED-END` comments. Do not edit them by hand. `docs/catalog.json`
+lists the sources of each page under `canonical_sources`, and each folder README
+names its source at the top. Change the source, then run `./hfx generate`.
 
 ## Review
 

@@ -281,6 +281,28 @@ sudo pacman -U -- \
 
 `sha256sum` should print `OK` for every file. If it prints `FAILED`, delete the
 files and download them again.
+
+<details>
+<summary>Core only</summary>
+
+These commands download and install only the two Core package files.
+
+```bash
+curl --proto '=https' --tlsv1.2 --fail --location --remote-name-all -- \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.1.1/hyperflux-next-dkms-2.1.1-1-x86_64.pkg.tar.zst \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.1.1/hyperflux-next-linux-2.1.1-1-x86_64.pkg.tar.zst \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.1.1/SHA256SUMS
+awk '$2 == "hyperflux-next-dkms-2.1.1-1-x86_64.pkg.tar.zst" || \
+     $2 == "hyperflux-next-linux-2.1.1-1-x86_64.pkg.tar.zst"' \
+  SHA256SUMS > SHA256SUMS-packages
+test "$(wc -l < SHA256SUMS-packages)" -eq 2
+sha256sum -c SHA256SUMS-packages
+sudo pacman -U -- \
+  ./hyperflux-next-dkms-2.1.1-1-x86_64.pkg.tar.zst \
+  ./hyperflux-next-linux-2.1.1-1-x86_64.pkg.tar.zst
+```
+
+</details>
 <!-- HFX-GENERATED-END: package-fallback -->
 
 Then continue with

@@ -20,6 +20,11 @@ later. Nothing under Next or Later is available yet.
   packages, so Full is now four packages and Core two. `sudo pacman -Syu` moves
   a 2.0.x system to the new packages. The guides were rewritten to be shorter
   and plainer.
+- **2.1.1:** battery level and charging status for the mouse and keyboard in
+  the desktop battery widget, such as the one in KDE Plasma, and a
+  `hyperfluxctl qualification` command that writes a hardware report. A few
+  charging states show as unknown; see
+  [known limitations](../user/limitations.md#charging-status-is-partial).
 
 Install the current release from the signed HyperFlux Pacman repository, as
 shown in the [installation guide](../user/installation.md). See the
@@ -27,13 +32,9 @@ shown in the [installation guide](../user/installation.md). See the
 
 ## Next
 
-- **Battery level on the desktop.** The mouse and keyboard paired to the
-  receiver will show their battery level in the desktop battery widget, such
-  as the one in KDE Plasma.
 - **An AUR package.** Publishing HyperFlux Next on the Arch User Repository is
   planned. It is not published yet; until it is, use the
   [installation guide](../user/installation.md).
-
 - **Old SDK protocol versions removed in 2.2.** Versions 1 to 4 and 6 of the
   local SDK protocol are deprecated in 2.1 and will be removed in 2.2. The
   bundled SDK and the OpenRGB integration already use the remaining versions,
@@ -45,6 +46,11 @@ shown in the [installation guide](../user/installation.md). See the
   Tumbleweed packages are already built and checked every week, but not
   published yet. Each will be published only when it works on its own; a delay
   on one does not hold back another.
+- **Optional reactive effects.** Ripple, Reactive, and Fire lighting for
+  devices on the receiver
+  ([#54](https://github.com/offalexjackson777-stack/hyperflux-next/issues/54)).
+  Until then, Polychromatic offers Ripple but shows no reactive lighting; see
+  [known limitations](../user/limitations.md#ripple-shows-no-reactive-lighting).
 - **Signing key rotation.** The repository signing key will be replaced before
   it expires, following the published fingerprint procedure.
 
@@ -54,5 +60,5 @@ shown in the [installation guide](../user/installation.md). See the
 - Device support depends on what HyperFlux knows about a device, not on a fixed
   list of tested devices.
 - You install and update HyperFlux with your distribution's package manager.
-- Stock OpenRazer, Polychromatic, and OpenRGB stay separate projects that
+- OpenRazer, Polychromatic, and OpenRGB stay separate projects that
   HyperFlux does not own.

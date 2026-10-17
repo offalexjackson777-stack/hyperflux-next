@@ -89,6 +89,7 @@ the internet.
 
 
 _COUNT_WORDS = {3: "three", 4: "four", 5: "five", 6: "six"}
+_CORE_PACKAGES = ("hyperflux-next-dkms", "hyperflux-next-linux")
 
 
 def package_fallback(policy: ArchRepositoryPolicy) -> str:
@@ -99,6 +100,7 @@ def package_fallback(policy: ArchRepositoryPolicy) -> str:
     )
     files = [package.filename for package in policy.packages]
     names = {package.name for package in policy.packages}
+    core_only = ""
     if names == {"hyperflux-next-linux", "hyperflux-next-full"}:
         by_name = {package.name: package.filename for package in policy.packages}
         files = [by_name["hyperflux-next-linux"], by_name["hyperflux-next-full"]]
@@ -114,12 +116,31 @@ checks them against the release's checksum list, and installs them in one step.
 Full needs the other packages, and without the repository Pacman cannot fetch
 them by itself."""
         each = "every file"
+        core = [package.filename for package in policy.packages if package.name in _CORE_PACKAGES]
+        if len(core) == len(_CORE_PACKAGES):
+            core_only = f"""
+
+<details>
+<summary>Core only</summary>
+
+These commands download and install only the two Core package files.
+
+{_fallback_commands(download, core)}
+
+</details>"""
+    return f"""{introduction}
+
+{_fallback_commands(download, files)}
+
+`sha256sum` should print `OK` for {each}. If it prints `FAILED`, delete the
+files and download them again.{core_only}"""
+
+
+def _fallback_commands(download: str, files: list[str]) -> str:
     downloads = "".join(f"  {download}/{name} \\\n" for name in files)
     selection = " || \\\n     ".join(f'$2 == "{name}"' for name in files)
     installs = " \\\n".join(f"  ./{name}" for name in files)
-    return f"""{introduction}
-
-```bash
+    return f"""```bash
 curl --proto '=https' --tlsv1.2 --fail --location --remote-name-all -- \\
 {downloads}  {download}/SHA256SUMS
 awk '{selection}' \\
@@ -128,10 +149,7 @@ test "$(wc -l < SHA256SUMS-packages)" -eq {len(files)}
 sha256sum -c SHA256SUMS-packages
 sudo pacman -U -- \\
 {installs}
-```
-
-`sha256sum` should print `OK` for {each}. If it prints `FAILED`, delete the
-files and download them again."""
+```"""
 
 
 def _indent(text: str, prefix: str) -> str:

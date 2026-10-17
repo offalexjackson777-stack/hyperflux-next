@@ -1275,9 +1275,11 @@ class UserDocumentationContracts(unittest.TestCase):
         installation = _page("docs/user/installation.md")
         self.assertIn("Choose one.", installation)
         self.assertNotIn("Install Core and Full together", installation)
-        self.assertEqual(installation.count("sudo pacman -U"), 1)
         fallback = installation.index("## If You Cannot Add The Repository")
-        self.assertGreater(installation.index("sudo pacman -U"), fallback)
+        # The fallback installs Full, with Core alone as a folded alternative.
+        self.assertEqual(installation[fallback:].count("sudo pacman -U"), 2)
+        self.assertNotIn("sudo pacman -U", installation[:fallback])
+        self.assertIn("<summary>Core only</summary>", installation[fallback:])
         for command in (
             "sudo systemctl enable hyperflux-next-bridge.service",
             "sudo reboot",
