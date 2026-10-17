@@ -4,7 +4,15 @@
   "title": "HyperFlux OpenRazer native-route deployment",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "schema", "relay", "driver", "access", "compatibility"],
+  "required": [
+    "$schema",
+    "schema",
+    "relay",
+    "driver",
+    "access",
+    "key_events",
+    "compatibility"
+  ],
   "properties": {
     "$schema": {"const": "../../../schemas/openrazer-native-deployment.schema.json"},
     "schema": {"const": "hyperflux-openrazer-native-deployment-v2"},
@@ -76,6 +84,47 @@
         "mount_helper_source": {"const": "install_files/udev/razer_mount"},
         "mount_helper_path": {"const": "/usr/lib/udev/razer_mount"},
         "sysusers_path": {"const": "/usr/lib/sysusers.d/openrazer.conf"}
+      }
+    },
+    "key_events": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["udev_rules_path", "access", "links"],
+      "properties": {
+        "udev_rules_path": {
+          "const": "/usr/lib/udev/rules.d/70-hyperflux-next-openrazer-keys.rules"
+        },
+        "access": {"const": "active-seat-user"},
+        "links": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "profile_id",
+              "receiver_profile_id",
+              "receiver_usb_interface",
+              "link_name"
+            ],
+            "properties": {
+              "profile_id": {
+                "type": "string",
+                "pattern": "^child\\.[a-z0-9][a-z0-9.-]{0,127}$"
+              },
+              "receiver_profile_id": {
+                "type": "string",
+                "pattern": "^receiver\\.[a-z0-9][a-z0-9.-]{0,127}$"
+              },
+              "receiver_usb_interface": {"type": "integer", "minimum": 0, "maximum": 31},
+              "link_name": {
+                "type": "string",
+                "pattern": "^hyperflux-next-[A-Za-z0-9_.-]{1,200}-event-(kbd|mouse)$"
+              }
+            }
+          }
+        }
       }
     },
     "compatibility": {

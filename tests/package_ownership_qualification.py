@@ -46,6 +46,7 @@ FULL_REQUIRED_FILES = {
     "usr/lib/systemd/system/hyperflux-next-openrazer-relay.service",
     "usr/lib/sysusers.d/openrazer.conf",
     "usr/lib/udev/razer_mount",
+    "usr/lib/udev/rules.d/70-hyperflux-next-openrazer-keys.rules",
     "usr/lib/udev/rules.d/99-razer.rules",
     "usr/share/hyperflux-next/components/full.json",
     "usr/share/licenses/hyperflux-next-full/LICENSE",

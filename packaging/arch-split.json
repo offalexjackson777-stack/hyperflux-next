@@ -129,6 +129,7 @@
         "openrazer-native-relay-service",
         "openrazer-native-driver-preflight-service",
         "openrazer-native-modules-load",
+        "openrazer-native-key-event-links",
         "full-bridge-integration-drop-in",
         "full-component-descriptor",
         "openrgb-license"

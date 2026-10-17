@@ -118,6 +118,7 @@ from .generators.linux_runtime import (
 )
 from .generators.openrazer_native import (
     bridge_drop_in as openrazer_bridge_drop_in,
+    key_event_udev_rules as openrazer_key_event_udev_rules,
     driver_preflight_service as openrazer_driver_preflight_service,
     markdown as openrazer_native_markdown,
     relay_service as openrazer_native_relay_service,
@@ -541,7 +542,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
         / "hfx-integration-model"
         / "src"
         / "openrazer_native_generated.rs": openrazer_native_rust_constants(
-            openrazer_native
+            openrazer_native, profiles
         ),
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "integration_catalog.py": integration_python_catalog(integrations),
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "openrazer_metadata.py": python_openrazer_metadata(openrazer_metadata),
@@ -600,6 +601,12 @@ def rendered_files(root: Path) -> dict[Path, str]:
         / "generated"
         / "hyperflux-next-openrazer.modules-load.conf": openrazer_native_modules_load(
             openrazer_native
+        ),
+        root
+        / "packaging"
+        / "generated"
+        / "70-hyperflux-next-openrazer-keys.rules": openrazer_key_event_udev_rules(
+            openrazer_native, profiles
         ),
         root / "packaging" / "generated" / "hyperflux-next.sysusers": sysusers(linux_runtime),
         root / "packaging" / "generated" / "hyperflux-next.tmpfiles": tmpfiles(linux_runtime),

@@ -712,6 +712,17 @@ def _check_cross_contract(
         or modules_load.preserve
     ):
         raise ModelError("OpenRazer native boot module list is missing from the package")
+    key_event_links = payload_by_id.get("openrazer-native-key-event-links")
+    if (
+        key_event_links is None
+        or key_event_links.distribution_component != "full"
+        or key_event_links.source
+        != "packaging/generated/70-hyperflux-next-openrazer-keys.rules"
+        or key_event_links.destination != openrazer.key_events.udev_rules_path
+        or key_event_links.mode != 0o644
+        or key_event_links.preserve
+    ):
+        raise ModelError("OpenRazer key-event udev rules are missing from the package")
     configuration = payload_by_id.get("default-configuration")
     if (
         configuration is None
@@ -741,6 +752,7 @@ def _check_cross_contract(
         "openrazer-native-driver-preflight-service",
         "openrazer-system-group",
         "openrazer-native-modules-load",
+        "openrazer-native-key-event-links",
         "full-bridge-integration-drop-in",
         "full-component-descriptor",
         "openrgb-license",

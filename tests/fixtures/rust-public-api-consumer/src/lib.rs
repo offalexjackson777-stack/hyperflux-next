@@ -410,6 +410,7 @@ use hfx_integration_model::OPENRAZER_NATIVE_DKMS_NAME as _;
 use hfx_integration_model::OPENRAZER_NATIVE_DKMS_VERSION as _;
 use hfx_integration_model::OPENRAZER_NATIVE_DRIVER_MODULES as _;
 use hfx_integration_model::OPENRAZER_NATIVE_DRIVER_PREFLIGHT_SERVICE_UNIT as _;
+use hfx_integration_model::OPENRAZER_NATIVE_KEY_EVENT_LINKS as _;
 use hfx_integration_model::OPENRAZER_NATIVE_RELAY_SERVICE_UNIT as _;
 use hfx_integration_model::OPENRAZER_NATIVE_UPSTREAM_COMMIT as _;
 use hfx_integration_model::OPENRAZER_NATIVE_VERIFIED_UPSTREAM_VERSION as _;
