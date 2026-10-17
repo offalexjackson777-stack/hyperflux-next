@@ -154,9 +154,46 @@ class DistributionCatalogTests(unittest.TestCase):
             ("Debian", "14", "forky", "2.43"),
         )
         self.assertEqual(tuple(target.components), ("linux", "full"))
-        self.assertFalse(target.openrgb_plugin)
-        self.assertEqual(target.dependency_roles, ubuntu.dependency_roles)
-        self.assertEqual(target.component("linux"), ubuntu.component("linux"))
+        # Debian 14's OpenRGB 1.0 is built with Qt 5, so Full carries a plugin
+        # built inside the release against that Qt.
+        self.assertTrue(target.openrgb_plugin)
+        self.assertTrue(target.openrgb_plugin_release_build)
+        self.assertEqual(target.openrgb_qt_major, 5)
+        # The plugin built inside Debian 14 needs Debian 14's glibc, so the
+        # packages declare it instead of Ubuntu's portable floor.
+        self.assertEqual(
+            target.dependency_roles,
+            {**ubuntu.dependency_roles, "c-runtime": "libc6 (>= 2.43)"},
+        )
+        self.assertEqual(c_runtime_floor(target), "2.43")
+        self.assertEqual(
+            target.component("linux").dependencies,
+            ("dkms", "libc6 (>= 2.43)", "libgcc-s1", "systemd", "udev"),
+        )
+        full = target.component("full")
+        self.assertEqual(
+            full.dependencies,
+            (
+                *target.component("linux").dependencies,
+                "libqt5core5t64",
+                "libqt5gui5t64",
+                "libqt5widgets5t64",
+                "libhidapi-hidraw0",
+                "libstdc++6",
+            ),
+        )
+        self.assertEqual(
+            [item.package for item in full.optional_dependencies],
+            ["openrgb", "openrazer-daemon", "python3-openrazer"],
+        )
+        self.assertEqual(
+            full.description, self.catalog.targets["arch"].component("full").description
+        )
+        arch = self.catalog.targets["arch"]
+        self.assertFalse(arch.openrgb_plugin_release_build)
+        self.assertEqual(arch.openrgb_qt_major, 6)
+        with self.assertRaises(ModelError):
+            _ = ubuntu.openrgb_qt_major
 
     def test_debian_mutations_fail_closed(self) -> None:
         def mutate(change):
@@ -183,16 +220,34 @@ class DistributionCatalogTests(unittest.TestCase):
         def runtime_above_release(target, _value):
             target["dependency_roles"]["c-runtime"] = "libc6 (>= 2.44)"
 
+        def portable_runtime(target, _value):
+            target["dependency_roles"]["c-runtime"] = "libc6 (>= 2.34)"
+
         def ubuntu_release(target, value):
             target["release"] = copy.deepcopy(value["targets"]["ubuntu"]["release"])
 
+        def without_plugin_library(target, _value):
+            target["components"]["full"]["dependencies"].remove("libqt5gui5t64")
+
+        def without_openrgb(target, _value):
+            target["components"]["full"]["optional_dependencies"].pop(0)
+
+        def ubuntu_full(target, value):
+            target["components"]["full"]["description"] = value["targets"]["ubuntu"][
+                "components"
+            ]["full"]["description"]
+
         cases = {
             "missing target": drop_debian,
+            "missing plugin library": without_plugin_library,
+            "missing openrgb application": without_openrgb,
+            "full without openrgb description": ubuntu_full,
             "reordered targets": reorder,
             "other codename": set_release("codename", "bookworm"),
             "other version": set_release("version", "12"),
             "other distribution": set_release("distribution", "Devuan"),
             "runtime above release": runtime_above_release,
+            "portable runtime with a release-built plugin": portable_runtime,
             "ubuntu release": ubuntu_release,
         }
         for name, change in cases.items():

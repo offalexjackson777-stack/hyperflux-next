@@ -294,8 +294,8 @@ class DebianDocumentationTests(unittest.TestCase):
         for expected in (
             "(`forky`)",
             "carry both editions, Core and Full.",
-            "**Full on Debian has no OpenRGB plugin.**",
-            "Debian 14 packages OpenRGB 1.0 final, but built with Qt 5, and a plugin",
+            "**Full on Debian includes the OpenRGB plugin.**",
+            "built inside Debian 14 against Debian's own Qt 5",
             "`sudo gpasswd -a \"$USER\" openrazer`",
             "### Secure Boot on Debian",
             "sudo mokutil --import /var/lib/dkms/mok.pub",
@@ -418,9 +418,15 @@ class DebianBuildTests(unittest.TestCase):
                 component: str,
                 *,
                 openrgb_plugin: bool = True,
+                openrgb_plugin_module: Path | None = None,
             ):
                 self.assertIn(component, {"linux", "full"})
-                self.assertEqual(openrgb_plugin, component == "linux")
+                # Debian 14 carries its own plugin build; Ubuntu leaves it out.
+                self.assertEqual(openrgb_plugin, plugin or component == "linux")
+                self.assertEqual(
+                    openrgb_plugin_module,
+                    plugin_module if plugin and component == "full" else None,
+                )
                 shutil.copytree(stages[component].root, destination)
                 return stages[component].__class__(
                     root=destination,
@@ -430,14 +436,26 @@ class DebianBuildTests(unittest.TestCase):
                     file_count=stages[component].file_count,
                 )
 
+            plugin = distribution == "debian"
+            plugin_module = workspace / "plugin" / "hyperflux-next-openrgb.so"
+            built: list[str] = []
+
+            def build_plugin(_root, _artifacts, target, _work):
+                built.append(target.id)
+                return plugin_module
+
             with (
                 mock.patch.object(distribution_debian, "load_artifact_set", return_value=artifacts),
                 mock.patch.object(distribution_debian, "stage_rootfs", side_effect=stage),
                 mock.patch.object(distribution_debian, "load_arch_split", return_value=self.split),
+                mock.patch.object(
+                    distribution_debian, "build_release_openrgb_plugin", side_effect=build_plugin
+                ),
             ):
                 result = build_distribution_package(
                     ROOT, build_manifest, distribution, workspace / "out"
                 )
+            self.assertEqual(built, ["debian"] if plugin else [])
             self.assertEqual(result.distribution, distribution)
             self.assertEqual(result.architecture, "amd64")
             manifest = json.loads(result.manifest.read_text(encoding="utf-8"))
@@ -459,6 +477,15 @@ class DebianBuildTests(unittest.TestCase):
                 path = result.manifest.parent / "packages" / package["file"]
                 self.assertTrue(path.is_file())
             self.assertEqual([package["file"] for package in manifest["packages"]], EXPECTED_FILES)
+            full = next(
+                package for package in manifest["packages"] if package["name"] == "hyperflux-next-full"
+            )
+            # Full depends on the libraries its plugin links only where it carries one.
+            self.assertEqual(
+                "libqt5widgets5t64" in full["depends"] and "libhidapi-hidraw0" in full["depends"],
+                plugin,
+            )
+            self.assertFalse(any("qt6" in relation for relation in full["depends"]))
 
 
 class DistributionDispatchTests(unittest.TestCase):

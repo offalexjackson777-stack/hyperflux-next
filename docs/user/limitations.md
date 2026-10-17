@@ -13,24 +13,24 @@ published yet, so there is nothing to install from yet. They carry both
 editions, Core and Full. The [roadmap](../project/roadmap.md) shows what comes
 next.
 
-### No OpenRGB Plugin Outside Arch Linux
+### No OpenRGB Plugin On Ubuntu, Fedora, And openSUSE
 
-Full on Ubuntu, Debian, Fedora, and openSUSE comes without the OpenRGB plugin.
-This is not a HyperFlux limit. It is what those distributions package:
+Full on Ubuntu, Fedora, and openSUSE comes without the OpenRGB plugin. This is
+not a HyperFlux limit. It is what those distributions package:
 
 - Ubuntu 26.10 packages a development snapshot of OpenRGB from before 1.0.
   It loads only plugins built for plugin interface 4.
-- Debian 14 packages OpenRGB 1.0 final, but built with Qt 5. The HyperFlux
-  plugin uses Qt 6, and a plugin must use the same Qt as OpenRGB itself.
 - Fedora 44 and openSUSE Tumbleweed package an OpenRGB 1.0 release candidate.
   It loads only plugins built for plugin interface 4.
 
-The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, with
-Qt 6, and OpenRGB refuses a plugin built for anything else. Arch Linux packages
-exactly that, so Full there includes the plugin. OpenRazer apps and
-Polychromatic still work with Full everywhere, and `hyperfluxctl doctor`
-reports Full as ready without the plugin. When a distribution packages
-OpenRGB 1.0 final with Qt 6, its Full packages can include the plugin too.
+The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, and
+OpenRGB refuses a plugin built for anything else. Arch Linux and Debian 14
+package OpenRGB 1.0 final, so Full there includes the plugin. Debian builds its
+OpenRGB with Qt 5 rather than Qt 6, so Full on Debian carries a copy of the
+plugin built against Debian's own Qt 5. OpenRazer apps and Polychromatic still
+work with Full everywhere, and `hyperfluxctl doctor` reports Full as ready
+without the plugin. When a distribution packages OpenRGB 1.0 final, its Full
+packages can include the plugin too.
 
 ### Only The Newest Ubuntu And Debian
 

@@ -4,7 +4,7 @@ This guide installs HyperFlux Next on openSUSE, so your Razer keyboard and
 mouse on a HyperFlux receiver work in OpenRazer apps such as Polychromatic.
 OpenRGB cannot reach them on openSUSE yet, because openSUSE does not package an
 OpenRGB that can load the HyperFlux plugin; the [known
-limitations](limitations.md#no-openrgb-plugin-outside-arch-linux) explain why.
+limitations](limitations.md#no-openrgb-plugin-on-ubuntu-fedora-and-opensuse) explain why.
 The guide uses the signed HyperFlux package repository, so later updates arrive
 with your normal system updates.
 
