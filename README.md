@@ -60,8 +60,8 @@ works.
 | Distribution | Release | Guide | Packages |
 | --- | --- | --- | --- |
 | Arch Linux | rolling | [Install on Arch Linux](docs/user/installation.md) | Ready |
-| Ubuntu | 24.04 | [Install on Ubuntu](docs/user/install-ubuntu.md) | Not published yet |
-| Debian | 13 | [Install on Debian](docs/user/install-debian.md) | Not published yet |
+| Ubuntu | 26.10 | [Install on Ubuntu](docs/user/install-ubuntu.md) | Not published yet |
+| Debian | 14 | [Install on Debian](docs/user/install-debian.md) | Not published yet |
 | Fedora | 44 | [Install on Fedora](docs/user/install-fedora.md) | Not published yet |
 | openSUSE | Tumbleweed | [Install on openSUSE](docs/user/install-opensuse.md) | Not published yet |
 
@@ -89,6 +89,8 @@ receiver, with your keyboard and mouse paired to it.
    Full adds the connections to OpenRazer, Polychromatic, and OpenRGB, and
    brings Core with it. Core alone is the receiver driver, the background
    service, `hyperfluxctl`, and the SDK: `sudo pacman -Syu hyperflux-next-linux`.
+   The other distributions get Full too, without the OpenRGB connection;
+   their guides give the `apt`, `dnf`, or `zypper` command.
 3. **Turn on HyperFlux and restart.** Keep the receiver plugged in.
 
    ```bash

@@ -432,7 +432,7 @@ class RpmDocumentationTests(unittest.TestCase):
             load_first_run_activation(ROOT),
             candidate_split(),
         )
-        debian_start = text.index("## Debian 13 (CI-built, not published yet)")
+        debian_start = text.index("## Debian 14 (CI-built, not published yet)")
         fedora_start = text.index("## Fedora 44 (CI-built, not published yet)")
         opensuse_start = text.index("## openSUSE Tumbleweed (CI-built, not published yet)")
         self.assertLess(debian_start, fedora_start)

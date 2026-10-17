@@ -116,13 +116,13 @@ jobs:
       run: ./hfx ci prepare --image "$HFX_CI_IMAGE"
     - name: Build the package artifacts offline
       run: ./hfx ci package --image "$HFX_CI_IMAGE" --output build/ci/distributions/artifacts
-    - name: Build, lint, install, and compile the Ubuntu 24.04 packages
+    - name: Build, lint, install, and compile the Ubuntu 26.10 packages
       env:
-        HFX_RELEASE_IMAGE: docker.io/library/ubuntu@sha256:f610ab94648195aa356059f5b41d6085c9d4d903c072430cdd1af7bdb646106b
+        HFX_RELEASE_IMAGE: docker.io/library/ubuntu@sha256:1b798ba0017f24244ca02af25e3cfb1160db35e270e7b3beef708910b468bd92
         HFX_DISTRIBUTION: ubuntu
-        HFX_RELEASE_NAME: Ubuntu 24.04
+        HFX_RELEASE_NAME: Ubuntu 26.10
         HFX_RELEASE_SOURCES: ''
-        HFX_RELEASE_HEADERS: linux-headers-generic linux-headers-generic-hwe-24.04
+        HFX_RELEASE_HEADERS: linux-headers-generic
         HFX_PACKAGE_CHECKS: |
           set -eu
           output=build/ci/distributions
@@ -166,7 +166,7 @@ jobs:
             test "$(modinfo -F vermagic "$module" | cut -d' ' -f1)" = "$kernel"
             built=$((built + 1))
           done
-          test "$built" -ge 2
+          test "$built" -ge "$(set -- $HFX_RELEASE_HEADERS; echo $#)"
           # Full: the OpenRazer driver package stands in for the release's own one, so
           # the release's stock OpenRazer service and Python client install on top of it.
           apt-get install -y --no-install-recommends "./$packages"/hyperflux-next-openrazer-driver-dkms_*.deb "./$packages"/hyperflux-next-full_*.deb
@@ -192,7 +192,7 @@ jobs:
             test "$(modinfo -F vermagic "$module" | cut -d' ' -f1)" = "$kernel"
             built=$((built + 1))
           done
-          test "$built" -ge 2
+          test "$built" -ge "$(set -- $HFX_RELEASE_HEADERS; echo $#)"
           glibc=$(ldd --version | head -n 1 | awk '{print $NF}')
           for file in $(dpkg -L hyperflux-next-linux hyperflux-next-full); do
             test -f "$file" && test ! -L "$file" || continue
@@ -207,13 +207,13 @@ jobs:
             exit 1
           fi
       run: docker run --rm --security-opt no-new-privileges --env HFX_HOST_OWNER="$(id -u):$(id -g)" --env HFX_DISTRIBUTION --env HFX_RELEASE_NAME --env HFX_RELEASE_SOURCES --env HFX_RELEASE_HEADERS --env HFX_PACKAGE_CHECKS --volume "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" --workdir "$GITHUB_WORKSPACE" "$HFX_RELEASE_IMAGE" /bin/bash -c "$HFX_PACKAGE_CHECKS"
-    - name: Build, lint, install, and compile the Debian 13 packages
+    - name: Build, lint, install, and compile the Debian 14 packages
       env:
-        HFX_RELEASE_IMAGE: docker.io/library/debian@sha256:bcf83fd8af414eda0c0a99d25a4e61dedd88e7aac7f7bc519d04555ff0c40ec5
+        HFX_RELEASE_IMAGE: docker.io/library/debian@sha256:bdfaf17803b5c8007fc79111026bfe29c2e121ad22575c5a555fa8f8bb9c8802
         HFX_DISTRIBUTION: debian
-        HFX_RELEASE_NAME: Debian 13
-        HFX_RELEASE_SOURCES: echo 'deb http://deb.debian.org/debian trixie-backports main' > /etc/apt/sources.list.d/backports.list
-        HFX_RELEASE_HEADERS: linux-headers-amd64 linux-headers-amd64/trixie-backports
+        HFX_RELEASE_NAME: Debian 14
+        HFX_RELEASE_SOURCES: ''
+        HFX_RELEASE_HEADERS: linux-headers-amd64 linux-headers-rt-amd64
         HFX_PACKAGE_CHECKS: |
           set -eu
           output=build/ci/distributions
@@ -257,7 +257,7 @@ jobs:
             test "$(modinfo -F vermagic "$module" | cut -d' ' -f1)" = "$kernel"
             built=$((built + 1))
           done
-          test "$built" -ge 2
+          test "$built" -ge "$(set -- $HFX_RELEASE_HEADERS; echo $#)"
           # Full: the OpenRazer driver package stands in for the release's own one, so
           # the release's stock OpenRazer service and Python client install on top of it.
           apt-get install -y --no-install-recommends "./$packages"/hyperflux-next-openrazer-driver-dkms_*.deb "./$packages"/hyperflux-next-full_*.deb
@@ -283,7 +283,7 @@ jobs:
             test "$(modinfo -F vermagic "$module" | cut -d' ' -f1)" = "$kernel"
             built=$((built + 1))
           done
-          test "$built" -ge 2
+          test "$built" -ge "$(set -- $HFX_RELEASE_HEADERS; echo $#)"
           glibc=$(ldd --version | head -n 1 | awk '{print $NF}')
           for file in $(dpkg -L hyperflux-next-linux hyperflux-next-full); do
             test -f "$file" && test ! -L "$file" || continue
@@ -381,7 +381,7 @@ jobs:
             check_module "$kernel"
             built=$((built + 1))
           done
-          test "$built" -ge 2
+          test "$built" -ge "$(set -- $HFX_RELEASE_HEADERS; echo $#)"
           # DKMS signs the driver with the key the Secure Boot guide enrolls.
           test -f /var/lib/dkms/mok.pub
           openssl x509 -inform DER -in /var/lib/dkms/mok.pub -noout -subject
@@ -431,7 +431,7 @@ jobs:
             test "$(modinfo -F vermagic "$module" | cut -d' ' -f1)" = "$kernel"
             built=$((built + 1))
           done
-          test "$built" -ge 2
+          test "$built" -ge "$(set -- $HFX_RELEASE_HEADERS; echo $#)"
           glibc=$(ldd --version | head -n 1 | awk '{print $NF}')
           floor=$(rpm -q --requires hyperflux-next-linux | sed -n 's/^glibc >= //p')
           test -n "$floor"
@@ -539,7 +539,7 @@ jobs:
             check_module "$kernel"
             built=$((built + 1))
           done
-          test "$built" -ge 2
+          test "$built" -ge "$(set -- $HFX_RELEASE_HEADERS; echo $#)"
           # DKMS signs the driver with the key the Secure Boot guide enrolls.
           test -f /var/lib/dkms/mok.pub
           openssl x509 -inform DER -in /var/lib/dkms/mok.pub -noout -subject
@@ -589,7 +589,7 @@ jobs:
             test "$(modinfo -F vermagic "$module" | cut -d' ' -f1)" = "$kernel"
             built=$((built + 1))
           done
-          test "$built" -ge 2
+          test "$built" -ge "$(set -- $HFX_RELEASE_HEADERS; echo $#)"
           glibc=$(ldd --version | head -n 1 | awk '{print $NF}')
           floor=$(rpm -q --requires hyperflux-next-linux | sed -n 's/^glibc >= //p')
           test -n "$floor"

@@ -113,7 +113,7 @@ class DebianPlanTests(unittest.TestCase):
         )
         self.assertEqual(driver.conflicts, ("openrazer-driver-dkms", "openrazer-kernel-modules-dkms"))
         self.assertEqual(driver.replaces, driver.conflicts)
-        self.assertIn("openrazer-driver-dkms (= 3.7.0+dfsg-1ubuntu0.3)", driver.provides)
+        self.assertIn("openrazer-driver-dkms (= 3.12.4~ubuntu26.10.1)", driver.provides)
         self.assertIn("hyperflux-openrazer-driver-abi (= 3.12.4)", driver.provides)
         self.assertEqual(
             full.depends,
@@ -131,7 +131,7 @@ class DebianPlanTests(unittest.TestCase):
                 self.assertFalse(
                     any(item.startswith(dependency) for item in plan.depends), plan.package_name
                 )
-        self.assertIn("no OpenRGB in Ubuntu 24.04 can load it", "\n".join(full.extended_description))
+        self.assertIn("no OpenRGB in Ubuntu 26.10 can load it", "\n".join(full.extended_description))
 
     def test_maintainer_scripts_never_start_services_or_load_modules(self) -> None:
         dkms, core, driver, full = self.plans
@@ -195,7 +195,7 @@ class DebianPlanTests(unittest.TestCase):
         self.assertEqual(changelog, changelog_bytes(core, EPOCH))
         self.assertEqual(changelog[4:8], b"\0\0\0\0")
         text = gzip.decompress(changelog).decode("utf-8")
-        self.assertTrue(text.startswith("hyperflux-next-linux (2.1.0-1) noble; urgency=medium\n"))
+        self.assertTrue(text.startswith("hyperflux-next-linux (2.1.0-1) stonking; urgency=medium\n"))
         self.assertIn("  Thu, 01 Jan 2026 00:00:00 +0000\n", text)
 
     def test_relations_translate_or_fail_closed(self) -> None:
@@ -259,7 +259,7 @@ class DebianDocumentationTests(unittest.TestCase):
             load_first_run_activation(ROOT),
             candidate_split(),
         )
-        ubuntu = text[text.index("## Ubuntu 24.04 (CI-built, not published yet)"):]
+        ubuntu = text[text.index("## Ubuntu 26.10 (CI-built, not published yet)"):]
         for expected in (
             "| `hyperflux-next-dkms` | `2.1.0-1` | `all` | `dkms` |",
             "`hyperflux-next-dkms (= 2.1.0-1)`",
@@ -272,8 +272,8 @@ class DebianDocumentationTests(unittest.TestCase):
             self.assertIn(expected, ubuntu)
         self.assertIn("| `hyperflux-next-full` | `2.1.0-1` | `amd64` |", ubuntu)
         self.assertIn("**Full on Ubuntu has no OpenRGB plugin.**", ubuntu)
-        self.assertIn("Ubuntu 24.04 does not package OpenRGB at all.", ubuntu)
-        self.assertIn("`ppa:openrazer/stable`", ubuntu)
+        self.assertIn("Ubuntu 26.10 packages a development snapshot of OpenRGB from before 1.0", ubuntu)
+        self.assertIn("Ubuntu 26.10 packages OpenRazer 3.12.4 as `openrazer-daemon`.", ubuntu)
 
     def test_debian_section_uses_the_dkms_signing_key(self) -> None:
         from hfxdev.generators.distributions import markdown
@@ -285,21 +285,21 @@ class DebianDocumentationTests(unittest.TestCase):
             load_first_run_activation(ROOT),
             candidate_split(),
         )
-        start = text.index("## Ubuntu 24.04 (CI-built, not published yet)")
-        debian_start = text.index("## Debian 13 (CI-built, not published yet)")
+        start = text.index("## Ubuntu 26.10 (CI-built, not published yet)")
+        debian_start = text.index("## Debian 14 (CI-built, not published yet)")
         self.assertLess(start, debian_start)
         ubuntu = text[start:debian_start]
         debian = text[debian_start:]
         self.assertIn("carry both editions, Core and Full.", ubuntu)
         for expected in (
-            "(`trixie`)",
+            "(`forky`)",
             "carry both editions, Core and Full.",
             "**Full on Debian has no OpenRGB plugin.**",
-            "Debian 13 does not package OpenRGB at all.",
+            "Debian 14 packages OpenRGB 1.0 final, but built with Qt 5, and a plugin",
             "`sudo gpasswd -a \"$USER\" openrazer`",
             "### Secure Boot on Debian",
             "sudo mokutil --import /var/lib/dkms/mok.pub",
-            "glibc 2.41 that Debian 13 ships",
+            "glibc 2.43 that Debian 14 ships",
             "modinfo -F signer hid_hyperflux_next",
         ):
             self.assertIn(expected, debian)
@@ -385,7 +385,7 @@ class DebianBuildTests(unittest.TestCase):
                 self.assertEqual(conffiles.read(), b"/etc/hyperflux-next/bridge.json\n")
 
     def test_distro_command_writes_a_schema_shaped_manifest(self) -> None:
-        for distribution, codename in (("ubuntu", "noble"), ("debian", "trixie")):
+        for distribution, codename in (("ubuntu", "stonking"), ("debian", "forky")):
             with self.subTest(distribution=distribution):
                 self._distro_command(distribution, codename)
 

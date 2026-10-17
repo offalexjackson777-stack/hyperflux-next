@@ -18,20 +18,42 @@ next.
 Full on Ubuntu, Debian, Fedora, and openSUSE comes without the OpenRGB plugin.
 This is not a HyperFlux limit. It is what those distributions package:
 
-- Ubuntu 24.04 and Debian 13 do not package OpenRGB at all.
+- Ubuntu 26.10 packages a development snapshot of OpenRGB from before 1.0.
+  It loads only plugins built for plugin interface 4.
+- Debian 14 packages OpenRGB 1.0 final, but built with Qt 5. The HyperFlux
+  plugin uses Qt 6, and a plugin must use the same Qt as OpenRGB itself.
 - Fedora 44 and openSUSE Tumbleweed package an OpenRGB 1.0 release candidate.
   It loads only plugins built for plugin interface 4.
 
-The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, and
-OpenRGB refuses a plugin built for another interface. Arch Linux packages
-OpenRGB 1.0 final, so Full there includes the plugin. OpenRazer apps and
+The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, with
+Qt 6, and OpenRGB refuses a plugin built for anything else. Arch Linux packages
+exactly that, so Full there includes the plugin. OpenRazer apps and
 Polychromatic still work with Full everywhere, and `hyperfluxctl doctor`
 reports Full as ready without the plugin. When a distribution packages
-OpenRGB 1.0 final, its Full packages can include the plugin too.
+OpenRGB 1.0 final with Qt 6, its Full packages can include the plugin too.
 
-On Ubuntu 24.04, the stock OpenRazer service is version 3.7.0. It does not
-know devices released after it, such as the Basilisk V3 Pro 35K. For those,
-add OpenRazer's own PPA (`ppa:openrazer/stable`) before you install it.
+### Only The Newest Ubuntu And Debian
+
+The packages are built for Ubuntu 26.10 and Debian 14, not for the older
+releases many people still run:
+
+- **Ubuntu 26.04 LTS** packages OpenRazer 3.11.0, which does not know the
+  BlackWidow V4 Tenkeyless HyperSpeed.
+- **Debian 13** packages OpenRazer 3.10.2, which does not know the BlackWidow
+  V4 Mini HyperSpeed or the BlackWidow V4 Tenkeyless HyperSpeed, and it does
+  not package OpenRGB at all.
+
+Full uses the OpenRazer service that your distribution packages, so on those
+releases some supported keyboards would not appear in OpenRazer apps. Ubuntu
+26.10 and Debian 14 both package OpenRazer 3.12.4, which knows every device
+HyperFlux supports.
+
+Keep in mind:
+
+- **Debian 14 is still Debian's testing release.** It changes more often than
+  a stable release until Debian releases it.
+- **Ubuntu 26.10 is supported by Ubuntu until July 2027.** The packages move to
+  the next Ubuntu release before then.
 
 ### Not In The Official Arch Repositories Or The AUR
 

@@ -111,7 +111,8 @@ def recommended_package(catalog: DistributionCatalog) -> str:
         "\n   The other distributions get Core only for now, without the app\n"
         "   connections; their guides give the `apt`, `dnf`, or `zypper` command."
         if core_only
-        else ""
+        else "\n   The other distributions get Full too, without the OpenRGB connection;\n"
+        "   their guides give the `apt`, `dnf`, or `zypper` command."
     )
     return f"""Every guide has the same four steps. You need an x86_64 computer and the
 receiver, with your keyboard and mouse paired to it.

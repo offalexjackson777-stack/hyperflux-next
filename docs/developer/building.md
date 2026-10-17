@@ -95,7 +95,7 @@ same fingerprint, then download a small repository file that points at the signe
 
 One GitHub Pages site carries the package repositories for every distribution:
 `/arch/` (a Pacman database), `/ubuntu/` and `/debian/` (apt `dists` and `pool`, suites
-`noble` and `trixie`), `/fedora/` and `/opensuse/` (rpm-md, each with a `.repo` file that
+`stonking` and `forky`), `/fedora/` and `/opensuse/` (rpm-md, each with a `.repo` file that
 sets `gpgcheck=1` and `repo_gpgcheck=1`), the public key
 `hyperflux-next-repository-key.asc`, and a plain front page. Every repository is signed by
 the same Arch repository key. `packaging/repository-site.json` names the site, and its

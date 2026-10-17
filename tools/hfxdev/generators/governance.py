@@ -399,21 +399,24 @@ OPENRAZER_REPOSITORY_KEY = "E96C496E4E77C159C2FCA053062F9FD4D6D11CE4"
 DISTRIBUTION_PACKAGE_OUTPUT = "build/ci/distributions"
 REPOSITORY_SITE_OUTPUT = "build/ci/repositories/site"
 REPOSITORY_SITE_ARTIFACT = "hyperflux-package-repositories-unsigned"
-# Each release compiles the driver for its stock kernel and for the newer kernel
-# it offers, so a new kernel interface shows up before users meet it. A header
-# package written `name/repository` comes from that repository only.
+# Each release compiles the driver for every kernel build it offers next to its
+# stock one, so a kernel interface a user can install shows up here first:
+# Fedora's updates kernel, openSUSE's default kernel next to its longterm one,
+# and Debian's realtime kernel. Ubuntu 26.10 offers only its generic kernel.
+# Every listed header package must give one more built kernel. A header package
+# written `name/repository` comes from that repository only.
 DISTRIBUTION_PACKAGE_RELEASES = {
     "ubuntu": {
         "format": "deb",
-        "name": "Ubuntu 24.04",
+        "name": "Ubuntu 26.10",
         "sources": "",
-        "headers": "linux-headers-generic linux-headers-generic-hwe-24.04",
+        "headers": "linux-headers-generic",
     },
     "debian": {
         "format": "deb",
-        "name": "Debian 13",
-        "sources": "echo 'deb http://deb.debian.org/debian trixie-backports main' > /etc/apt/sources.list.d/backports.list",
-        "headers": "linux-headers-amd64 linux-headers-amd64/trixie-backports",
+        "name": "Debian 14",
+        "sources": "",
+        "headers": "linux-headers-amd64 linux-headers-rt-amd64",
     },
     "fedora": {
         "format": "rpm",
@@ -509,7 +512,7 @@ for directory in /lib/modules/*/build; do
   test "$(modinfo -F vermagic "$module" | cut -d' ' -f1)" = "$kernel"
   built=$((built + 1))
 done
-test "$built" -ge 2
+test "$built" -ge "$(set -- $HFX_RELEASE_HEADERS; echo $#)"
 # Full: the OpenRazer driver package stands in for the release's own one, so
 # the release's stock OpenRazer service and Python client install on top of it.
 apt-get install -y --no-install-recommends "./$packages"/hyperflux-next-openrazer-driver-dkms_*.deb "./$packages"/hyperflux-next-full_*.deb
@@ -535,7 +538,7 @@ for directory in /lib/modules/*/build; do
   test "$(modinfo -F vermagic "$module" | cut -d' ' -f1)" = "$kernel"
   built=$((built + 1))
 done
-test "$built" -ge 2
+test "$built" -ge "$(set -- $HFX_RELEASE_HEADERS; echo $#)"
 glibc=$(ldd --version | head -n 1 | awk '{print $NF}')
 for file in $(dpkg -L hyperflux-next-linux hyperflux-next-full); do
   test -f "$file" && test ! -L "$file" || continue
@@ -620,7 +623,7 @@ for directory in /lib/modules/*/build /usr/src/kernels/* /usr/src/linux-*-obj/*/
   check_module "$kernel"
   built=$((built + 1))
 done
-test "$built" -ge 2
+test "$built" -ge "$(set -- $HFX_RELEASE_HEADERS; echo $#)"
 # DKMS signs the driver with the key the Secure Boot guide enrolls.
 test -f /var/lib/dkms/mok.pub
 openssl x509 -inform DER -in /var/lib/dkms/mok.pub -noout -subject
@@ -670,7 +673,7 @@ for kernel in $seen; do
   test "$(modinfo -F vermagic "$module" | cut -d' ' -f1)" = "$kernel"
   built=$((built + 1))
 done
-test "$built" -ge 2
+test "$built" -ge "$(set -- $HFX_RELEASE_HEADERS; echo $#)"
 glibc=$(ldd --version | head -n 1 | awk '{print $NF}')
 floor=$(rpm -q --requires hyperflux-next-linux | sed -n 's/^glibc >= //p')
 test -n "$floor"
@@ -1494,16 +1497,16 @@ def markdown(governance: GitHubGovernance, arch_repository: ArchRepositoryPolicy
         "| CodeQL | Pull requests, main, weekly | GitHub service only | None | C/C++ and Python analysis |",
         "| Dependency review | Pull requests | GitHub service only | None | Dependency policy decision |",
         "| Kernel canary | Weekly or manual | Arch mirrors, kernel.org, and the pinned app sources | None | Driver builds against coming kernels; never required for merging |",
-        "| Distribution packages | Pull requests, weekly, or manual | Ubuntu, Debian, Fedora and openSUSE archives for the check tools, and OpenRazer's openSUSE Build Service repository | None | Ubuntu 24.04 and Debian 13 `.deb` files and Fedora 44 and openSUSE Tumbleweed `.rpm` files, checked and not published; required for merging into `main` |",
+        "| Distribution packages | Pull requests, weekly, or manual | Ubuntu, Debian, Fedora and openSUSE archives for the check tools, and OpenRazer's openSUSE Build Service repository | None | Ubuntu 26.10 and Debian 14 `.deb` files and Fedora 44 and openSUSE Tumbleweed `.rpm` files, checked and not published; required for merging into `main` |",
         "",
         "The development image may use the network only to fetch its pinned packages and tools while it is built. The pinned app sources are prepared before the checks start. Every check then runs in the pinned image with `--network none`, no devices, no privileges, no extra capabilities, and write access only to the checkout.",
         "",
         "The kernel canary is the one deliberate exception, because its purpose is to follow kernels that move after the image is pinned. It starts from the same digest-pinned Arch base image and installs this week's `linux-headers` and `linux-lts-headers`. It also stages the next Arch kernel from `core-testing`, when there is one, and the newest mainline tag from kernel.org prepared with `modules_prepare`. Then `./hfx kernel-canary` builds the HyperFlux driver and the patched OpenRazer driver against each kernel with `W=1`. It only compiles: nothing is loaded and no device is touched. Its result never gates a merge. A failure is an early warning that a kernel interface changes before it reaches users.",
         "",
-        "The distribution packages workflow reaches outside the pinned image like the kernel canary, but unlike it, it is required for merging into `main`. It runs every week, when started by hand, and on every pull request. A small first job, `Packaging changes`, lists the files the pull request changes. Every pull request into `main` runs the `Distribution packages` job. A pull request into another branch runs it only when it changes what the packages are made from or how they are checked: the packaging inputs, the driver sources, the package tools and their schemas, or the workflow itself. Otherwise the job reports as skipped, which GitHub counts as passing. If the first job fails, the packages are checked anyway, so a broken first job never lets the check pass unseen. A new push to the same pull request cancels the run still going. It builds the package artifacts once, offline in the pinned development image, exactly as the Arch packages are built. Then, for Ubuntu 24.04, Debian 13, Fedora 44 and openSUSE Tumbleweed in turn, it starts that release's digest-pinned image without extra privileges and installs the check tools from the release's own archive. In that container `./hfx package distro` turns the artifacts into the Core packages `hyperflux-next-dkms` and `hyperflux-next-linux` and the Full packages `hyperflux-next-openrazer-driver-dkms` and `hyperflux-next-full`, which leave out the OpenRGB plugin because no OpenRGB those releases ship can load it. "
+        "The distribution packages workflow reaches outside the pinned image like the kernel canary, but unlike it, it is required for merging into `main`. It runs every week, when started by hand, and on every pull request. A small first job, `Packaging changes`, lists the files the pull request changes. Every pull request into `main` runs the `Distribution packages` job. A pull request into another branch runs it only when it changes what the packages are made from or how they are checked: the packaging inputs, the driver sources, the package tools and their schemas, or the workflow itself. Otherwise the job reports as skipped, which GitHub counts as passing. If the first job fails, the packages are checked anyway, so a broken first job never lets the check pass unseen. A new push to the same pull request cancels the run still going. It builds the package artifacts once, offline in the pinned development image, exactly as the Arch packages are built. Then, for Ubuntu 26.10, Debian 14, Fedora 44 and openSUSE Tumbleweed in turn, it starts that release's digest-pinned image without extra privileges and installs the check tools from the release's own archive. In that container `./hfx package distro` turns the artifacts into the Core packages `hyperflux-next-dkms` and `hyperflux-next-linux` and the Full packages `hyperflux-next-openrazer-driver-dkms` and `hyperflux-next-full`, which leave out the OpenRGB plugin because no OpenRGB those releases ship can load it. "
         "On Ubuntu and Debian the workflow inspects every `.deb` file with `dpkg-deb`, fails on any `lintian` error, and installs Core and then Full with `apt-get` while `policy-rc.d` refuses every service start. With Full installed it adds the release's own `openrazer-daemon` and `python3-openrazer`, and fails if apt pulls in the release's OpenRazer driver package instead of the HyperFlux one. "
         "On Fedora and openSUSE `rpmbuild` builds every `.rpm` file from one generated spec inside the release image, so the host never needs RPM tools. The workflow prints each header, file list and scriptlet with `rpm`, fails on any `rpmlint` error except those the generated `rpmlint` configuration accepts by name and reason, and installs Core and then Full with `dnf` or `zypper`. Those releases do not ship OpenRazer, so with Full installed the workflow adds OpenRazer's own `hardware:razer` repository from the openSUSE Build Service and installs its `openrazer-daemon` and `python3-openrazer`. It trusts the repository's signing key only when the key's fingerprint matches the one pinned in the generator, keeps package signature checks on, checks that both packages carry that key's signature, and fails if OpenRazer's own driver package is installed instead of the HyperFlux one. The scriptlets only register and build the DKMS sources and never enable or start a unit, which the workflow checks under `/etc/systemd`. "
-        "Then `dkms build` compiles the HyperFlux driver and the Full OpenRazer driver against two kernels for each release: Ubuntu's generic and HWE kernels, Debian's stock and backports kernels, Fedora's release and updates kernels, and openSUSE's longterm and default kernels. `modinfo` checks each module's vermagic, and every installed program is checked against the glibc that the release ships; on Fedora and openSUSE strong symbol references must also stay within the declared glibc floor, and the DKMS signing certificate must exist at `/var/lib/dkms/mok.pub`. "
+        "Then `dkms build` compiles the HyperFlux driver and the Full OpenRazer driver against every kernel each release offers: Ubuntu's generic kernel, which is the only one Ubuntu 26.10 ships, Debian's stock and realtime kernels, Fedora's release and updates kernels, and openSUSE's longterm and default kernels. `modinfo` checks each module's vermagic, and every installed program is checked against the glibc that the release ships; on Fedora and openSUSE strong symbol references must also stay within the declared glibc floor, and the DKMS signing certificate must exist at `/var/lib/dkms/mok.pub`. "
         "Finally the packages are removed, including the stock OpenRazer service, and DKMS must no longer list either driver. The package files are kept as a workflow artifact for 14 days and are never published. Nothing is loaded and no device is touched.",
         "",
         "## Checks Required Before Merging",

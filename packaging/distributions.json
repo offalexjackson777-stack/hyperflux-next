@@ -98,9 +98,9 @@
       "maturity": "ci-only",
       "release": {
         "distribution": "Ubuntu",
-        "version": "24.04",
-        "codename": "noble",
-        "c_runtime_version": "2.39"
+        "version": "26.10",
+        "codename": "stonking",
+        "c_runtime_version": "2.44"
       },
       "architectures": {
         "x86_64-unknown-linux-gnu": "amd64"
@@ -157,9 +157,8 @@
             "openrazer-kernel-modules-dkms"
           ],
           "provides": [
-            "openrazer-driver-dkms (= 3.7.0+dfsg-1)",
-            "openrazer-driver-dkms (= 3.7.0+dfsg-1ubuntu0.3)",
-            "openrazer-driver-dkms (= 3.12.4~ubuntu24.04.1)",
+            "openrazer-driver-dkms (= 3.12.4+dfsg-1)",
+            "openrazer-driver-dkms (= 3.12.4~ubuntu26.10.1)",
             "openrazer-kernel-modules-dkms",
             "hyperflux-openrazer-driver-abi (= @openrazer_driver_version@)"
           ],
@@ -175,9 +174,9 @@
       "maturity": "ci-only",
       "release": {
         "distribution": "Debian",
-        "version": "13",
-        "codename": "trixie",
-        "c_runtime_version": "2.41"
+        "version": "14",
+        "codename": "forky",
+        "c_runtime_version": "2.43"
       },
       "architectures": {
         "x86_64-unknown-linux-gnu": "amd64"
@@ -234,7 +233,7 @@
             "openrazer-kernel-modules-dkms"
           ],
           "provides": [
-            "openrazer-driver-dkms (= 3.10.2+dfsg-1)",
+            "openrazer-driver-dkms (= 3.12.4+dfsg-1)",
             "openrazer-kernel-modules-dkms",
             "hyperflux-openrazer-driver-abi (= @openrazer_driver_version@)"
           ],

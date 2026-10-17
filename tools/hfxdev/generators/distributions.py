@@ -54,10 +54,16 @@ SECURE_BOOT_ENROLLMENT = {
 DKMS_SERVICE_DISABLED = {"opensuse"}
 
 # Why Full on each release leaves out the OpenRGB plugin. The plugin needs
-# OpenRGB 1.0 final, plugin interface 5. Checked 17 October 2026.
+# OpenRGB 1.0 final, plugin interface 5, built with Qt 6. Checked 18 October 2026.
 OPENRGB_PLUGIN_ABSENT = {
-    "ubuntu": "Ubuntu 24.04 does not package OpenRGB at all.",
-    "debian": "Debian 13 does not package OpenRGB at all.",
+    "ubuntu": (
+        "Ubuntu 26.10 packages a development snapshot of OpenRGB from before 1.0, "
+        "which loads plugins built for plugin interface 4 only."
+    ),
+    "debian": (
+        "Debian 14 packages OpenRGB 1.0 final, but built with Qt 5, and a plugin "
+        "must use the same Qt as OpenRGB itself."
+    ),
     "fedora": (
         "Fedora 44 packages an OpenRGB 1.0 release candidate, which loads plugins "
         "built for plugin interface 4 only."
@@ -78,13 +84,8 @@ RPM_DRIVER_SWAP = {
 # Where each release's stock OpenRazer service comes from, for Full users who
 # want the stock OpenRazer applications.
 OPENRAZER_SOURCE = {
-    "ubuntu": (
-        "Ubuntu 24.04 packages OpenRazer 3.7.0 as `openrazer-daemon`. That version "
-        "does not know devices released after it, such as the Basilisk V3 Pro 35K. "
-        "For those, add OpenRazer's own PPA (`ppa:openrazer/stable`) before you "
-        "install the stock service."
-    ),
-    "debian": "Debian 13 packages OpenRazer 3.10.2 as `openrazer-daemon`.",
+    "ubuntu": "Ubuntu 26.10 packages OpenRazer 3.12.4 as `openrazer-daemon`.",
+    "debian": "Debian 14 packages OpenRazer 3.12.4 as `openrazer-daemon`.",
     "fedora": (
         "Fedora does not package OpenRazer. OpenRazer's own repository on the "
         "openSUSE Build Service provides the stock service and Polychromatic; follow "
@@ -163,11 +164,11 @@ def _full_edition(target: DistributionTarget, plans: list) -> list[str]:
         "",
         f"**Full on {release.distribution} has no OpenRGB plugin.** That is a limit of "
         f"what {name} packages, not of HyperFlux: {OPENRGB_PLUGIN_ABSENT[target.id]} "
-        "The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, and "
-        "OpenRGB refuses a plugin built for another interface. Doctor reports Full as "
-        "ready without it. Arch Linux packages OpenRGB 1.0 final, so Full there "
-        f"includes the plugin. When {release.distribution} packages OpenRGB 1.0 final, "
-        "its Full packages can include the plugin too.",
+        "The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, with "
+        "Qt 6, and OpenRGB refuses a plugin built for another interface. Doctor reports "
+        "Full as ready without it. Arch Linux packages OpenRGB 1.0 final with Qt 6, so "
+        f"Full there includes the plugin. When {release.distribution} packages that "
+        "too, its Full packages can include the plugin.",
     ]
 
 

@@ -70,13 +70,16 @@ see [troubleshooting](troubleshooting.md).
 
 ## Install Your Apps
 
-Lighting apps can reach the devices on your receiver only with Full, which is
-available on Arch Linux only for now. With Core, your keyboard and mouse still
-work normally and their battery level shows on your desktop, but OpenRGB and
-Polychromatic cannot change their lighting. On Core, you can stop here.
+Lighting apps can reach the devices on your receiver only with Full. With
+Core, your keyboard and mouse still work normally and their battery level shows
+on your desktop, but OpenRGB and Polychromatic cannot change their lighting. On
+Core, you can stop here.
 
 The apps are separate projects. Install only the ones you want. The commands
-below are for Arch Linux.
+below are for Arch Linux. On Ubuntu, Debian, Fedora, and openSUSE, Full works
+with OpenRazer and Polychromatic but not with OpenRGB;
+[Core and Full on your distribution](../generated/distributions.md) shows
+where your distribution's OpenRazer comes from.
 
 - **OpenRGB** is in the official Arch repositories:
 
