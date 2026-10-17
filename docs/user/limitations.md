@@ -127,6 +127,18 @@ Keep these points in mind:
 
 The battery level itself is not affected.
 
+### The Mouse Shows A Keyboard Icon
+
+In the desktop battery widget, the mouse shows a keyboard icon. Its name,
+battery level, and charging status are right.
+
+The widget learns what kind of device a battery belongs to from the desktop's
+battery service, UPower. UPower looks at everything that arrives through the
+same USB receiver. When it finds a keyboard there, it treats every battery on
+that receiver as a keyboard, because it prefers a keyboard over a mouse. Your
+mouse and keyboard share one receiver, so the mouse gets the keyboard icon too.
+HyperFlux cannot change this from its side; it needs a change in UPower.
+
 ## Hardware
 
 Two devices have been tested end to end on real hardware. Eight more are

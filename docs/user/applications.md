@@ -38,7 +38,8 @@ change its settings.
 
 While HyperFlux is running, your mouse and keyboard show their battery level in
 the desktop battery widget, for example the battery icon in KDE Plasma. Each
-device appears under its own name. You do not need to set anything up.
+device appears under its own name, such as Basilisk V3 Pro 35K. You do not
+need to set anything up.
 
 - A device appears once it reports its battery. After you start the computer
   or switch the device on, this can take a few minutes.
@@ -47,6 +48,8 @@ device appears under its own name. You do not need to set anything up.
 - The widget also shows whether each device is charging, discharging, or
   full. Sometimes it shows the charging status as unknown instead; see
   [Charging Status Is Partial](limitations.md#charging-status-is-partial).
+- The mouse shows a keyboard icon. Its name and level are right; see
+  [The Mouse Shows A Keyboard Icon](limitations.md#the-mouse-shows-a-keyboard-icon).
 
 ## What Does Not Work Yet
 
@@ -57,5 +60,6 @@ device appears under its own name. You do not need to set anything up.
 - Polychromatic may list the receiver as an unrecognised `1532:00CF` device.
 - Polychromatic needs F5 after a device switches off and back on.
 - Some devices do not report their current brightness.
+- The mouse shows a keyboard icon in the desktop battery widget.
 
 See [known limitations](limitations.md) for what to do about each one.

@@ -132,13 +132,28 @@ of at most 31 bytes. Malformed headers fail with `EPROTO`, invalid values with
 not bound with `EHOSTDOWN`.
 
 A present record registers one `power_supply` per lane named
-`<session-name>-mouse` or `<session-name>-keyboard`, parented to that lane's
-HID interface, with `SCOPE=Device`, `PRESENT`, `CAPACITY`, `STATUS`,
-`MODEL_NAME`, and `MANUFACTURER=Razer`. Every property is answered from the
-stored forwarded value under a per-lane spinlock; the kernel holds no model
-name table and never sends a report to the receiver for a property read. A
-changed model name re-registers the supply instead of rewriting a string a
-reader may hold.
+`<session-name>-mouse` or `<session-name>-keyboard`, with `SCOPE=Device`,
+`PRESENT`, `CAPACITY`, `STATUS`, `MODEL_NAME`, and `MANUFACTURER=Razer`.
+Every property is answered from the stored forwarded value under a per-lane
+spinlock; the kernel holds no model name table and never sends a report to the
+receiver for a property read. A changed model name re-registers the supply
+instead of rewriting a string a reader may hold.
+
+Both supplies are parented to the receiver's lowest-numbered bound interface
+that hid core gave no input device. On the `1532:00cf` receiver that is
+interface 3. UPower groups every battery and input under one USB device. It
+types a battery from the highest-ranked input in the group, and a keyboard
+outranks a mouse. When the battery and an input share a parent, UPower also
+replaces the battery's model with that input's name. Every input of the
+receiver carries the receiver's name, so a supply parented to the lane's own
+input interface showed `Razer Razer HyperFlux V2` instead of its child's
+model name. An input-less parent keeps `MODEL_NAME`. The type stays keyboard
+for both lanes, because the keyboard input remains in the group; only a change
+in UPower can give the mouse lane its own type. A receiver without an
+input-less interface parents each supply to its lane's input interface. When
+the shared parent is bound after a supply exists, or is removed before the
+receiver is, the supply is re-registered under the new parent with its
+forwarded values and owner kept.
 
 Each supply is unregistered when the bridge forwards an absent lane (child
 unpaired, gone, stale, or its battery unavailable), when the writer file that
