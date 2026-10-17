@@ -1,11 +1,12 @@
 # Install HyperFlux Next on Ubuntu
 
-This guide installs HyperFlux Next Core on Ubuntu. Core adds the receiver
-driver, the HyperFlux service, the `hyperfluxctl` tool, and the SDK. OpenRGB
-and Polychromatic cannot change the lighting of devices on the receiver yet on
-Ubuntu; that needs Full, which is available on Arch Linux only. The guide uses
-the signed HyperFlux package repository, so later updates arrive with your
-normal system updates.
+This guide installs HyperFlux Next on Ubuntu, so your Razer keyboard and mouse
+on a HyperFlux receiver work in OpenRazer apps such as Polychromatic. OpenRGB
+cannot reach them on Ubuntu yet, because Ubuntu does not package an OpenRGB
+that can load the HyperFlux plugin; the [known
+limitations](limitations.md#no-openrgb-plugin-outside-arch-linux) explain why.
+The guide uses the signed HyperFlux package repository, so later updates arrive
+with your normal system updates.
 
 ## What You Need
 
@@ -15,10 +16,18 @@ normal system updates.
 - The HyperFlux receiver, plugged in, with your keyboard and mouse paired to it.
 - A user account that can run `sudo`.
 
-On Ubuntu there is one package, `hyperflux-next-linux`. It installs the
-receiver driver, the background service, the `hyperfluxctl` tool, and the SDK.
-It brings the driver sources, `hyperflux-next-dkms`, with it. The app
-connections in the Arch Full package are not available on Ubuntu yet.
+HyperFlux Next comes in two editions:
+
+- **Full (`hyperflux-next-full`), recommended:** your keyboard and mouse work in
+  OpenRazer apps such as Polychromatic. Full installs Core for you.
+- **Core (`hyperflux-next-linux`):** only the receiver driver, the background
+  service, the `hyperfluxctl` tool, and the SDK, without the app connections.
+
+If you are not sure, choose Full. Full works with the stock OpenRazer service,
+which Ubuntu packages as `openrazer-daemon`. The apps themselves are separate;
+[Core and Full on
+Ubuntu](../generated/distributions.md#core-and-full-on-ubuntu) shows where they
+come from.
 
 ## 1. Add The Repository And Install
 
@@ -74,15 +83,19 @@ You do steps 1 to 3 once. The key's fingerprint is
    Signed-By: /etc/apt/keyrings/hyperflux-next.asc
    ```
 
-4. **Install HyperFlux Next.**
+4. **Install HyperFlux Next.** This installs Full:
 
    ```bash
    sudo apt update
-   sudo apt install hyperflux-next-linux
+   sudo apt install hyperflux-next-full
    ```
 
+   To install Core instead, run `sudo apt install hyperflux-next-linux`.
+
    apt lists what it is about to install and asks
-   `Do you want to continue? [Y/n]`. Press Enter.
+   `Do you want to continue? [Y/n]`. Press Enter. If Ubuntu's own
+   `openrazer-driver-dkms` package is installed, apt removes it. Full brings
+   its own copy of that driver, so OpenRazer keeps working.
 
 This is a signed repository run by the HyperFlux project, not an official
 Ubuntu repository.
@@ -121,14 +134,16 @@ When everything works, it prints:
 ```text
 HyperFlux Next is ready.
 Driver active or idle | Bridge running | 1 receiver generation(s)
-Optional Full integration is not installed.
+Full integration has no OpenRGB plugin here: this distribution does not ship an OpenRGB that can load it.
 No action required.
 ```
 
 The second line shows the receiver driver, the HyperFlux service (`Bridge`),
 and how many times the service has found your receiver since it started. The
-line about Full is expected on Ubuntu: Full, the app connections, is
-available on Arch Linux only.
+third line is expected on Ubuntu: OpenRazer apps work, only the OpenRGB plugin
+is missing. With Core, that line reads
+`Optional Full integration is not installed.` instead. That is expected too:
+it only means the app connections are not installed.
 
 If you see `HyperFlux Next needs attention.` instead, do what the `Do:` line
 says, then run `hyperfluxctl doctor` again. The
@@ -145,10 +160,11 @@ HyperFlux updates arrive with your normal system update:
 sudo apt update && sudo apt upgrade
 ```
 
-To remove HyperFlux, turn its service off and remove both packages:
+To remove HyperFlux, turn its service off and remove its packages. apt
+skips the Full packages if you installed Core:
 
 ```bash
 sudo systemctl disable --now hyperflux-next-bridge.service \
   "hyperflux-next-client@$(id -u).socket"
-sudo apt remove hyperflux-next-linux hyperflux-next-dkms
+sudo apt remove hyperflux-next-full hyperflux-next-openrazer-driver-dkms hyperflux-next-linux hyperflux-next-dkms
 ```

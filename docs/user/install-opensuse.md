@@ -1,11 +1,12 @@
 # Install HyperFlux Next on openSUSE
 
-This guide installs HyperFlux Next Core on openSUSE. Core adds the receiver
-driver, the HyperFlux service, the `hyperfluxctl` tool, and the SDK. OpenRGB
-and Polychromatic cannot change the lighting of devices on the receiver yet on
-openSUSE; that needs Full, which is available on Arch Linux only. The guide uses
-the signed HyperFlux package repository, so later updates arrive with your
-normal system updates.
+This guide installs HyperFlux Next on openSUSE, so your Razer keyboard and
+mouse on a HyperFlux receiver work in OpenRazer apps such as Polychromatic.
+OpenRGB cannot reach them on openSUSE yet, because openSUSE does not package an
+OpenRGB that can load the HyperFlux plugin; the [known
+limitations](limitations.md#no-openrgb-plugin-outside-arch-linux) explain why.
+The guide uses the signed HyperFlux package repository, so later updates arrive
+with your normal system updates.
 
 ## What You Need
 
@@ -13,10 +14,19 @@ normal system updates.
 - The HyperFlux receiver, plugged in, with your keyboard and mouse paired to it.
 - A user account that can run `sudo`.
 
-On openSUSE there is one package, `hyperflux-next-linux`. It installs the
-receiver driver, the background service, the `hyperfluxctl` tool, and the SDK.
-It brings the driver sources, `hyperflux-next-dkms`, with it. The app
-connections in the Arch Full package are not available on openSUSE yet.
+HyperFlux Next comes in two editions:
+
+- **Full (`hyperflux-next-full`), recommended:** your keyboard and mouse work in
+  OpenRazer apps such as Polychromatic. Full installs Core for you.
+- **Core (`hyperflux-next-linux`):** only the receiver driver, the background
+  service, the `hyperfluxctl` tool, and the SDK, without the app connections.
+
+If you are not sure, choose Full. Full works with the stock OpenRazer service,
+which OpenRazer's own repository on the openSUSE Build Service provides,
+because openSUSE does not package OpenRazer. The apps themselves are separate;
+[Core and Full on
+openSUSE](../generated/distributions.md#core-and-full-on-opensuse) shows where
+they come from.
 
 ## 1. Add The Repository And Install
 
@@ -77,14 +87,19 @@ You do steps 1 to 3 once. The key's fingerprint is
    gpgkey=https://offalexjackson777-stack.github.io/hyperflux-next/hyperflux-next-repository-key.asc
    ```
 
-4. **Install HyperFlux Next.**
+4. **Install HyperFlux Next.** This installs Full:
 
    ```bash
-   sudo zypper install hyperflux-next-linux
+   sudo zypper install hyperflux-next-full
    ```
 
+   To install Core instead, run `sudo zypper install hyperflux-next-linux`.
+
    zypper lists what it is about to install and asks `Continue? [y/n/v/...? shows all options] (y)`.
-   Press Enter.
+   Press Enter. If OpenRazer's own `openrazer-kernel-modules-dkms` package is
+   installed, zypper reports a conflict and offers solutions. Choose the one
+   that deinstalls `openrazer-kernel-modules-dkms`. Full brings its own copy
+   of that driver, so OpenRazer keeps working.
 
 This is a signed repository run by the HyperFlux project, not an official
 openSUSE repository.
@@ -127,14 +142,16 @@ When everything works, it prints:
 ```text
 HyperFlux Next is ready.
 Driver active or idle | Bridge running | 1 receiver generation(s)
-Optional Full integration is not installed.
+Full integration has no OpenRGB plugin here: this distribution does not ship an OpenRGB that can load it.
 No action required.
 ```
 
 The second line shows the receiver driver, the HyperFlux service (`Bridge`),
 and how many times the service has found your receiver since it started. The
-line about Full is expected on openSUSE: Full, the app connections, is
-available on Arch Linux only.
+third line is expected on openSUSE: OpenRazer apps work, only the OpenRGB plugin
+is missing. With Core, that line reads
+`Optional Full integration is not installed.` instead. That is expected too:
+it only means the app connections are not installed.
 
 If you see `HyperFlux Next needs attention.` instead, do what the `Do:` line
 says, then run `hyperfluxctl doctor` again. The
@@ -151,10 +168,14 @@ HyperFlux updates arrive with your normal system update:
 sudo zypper dup
 ```
 
-To remove HyperFlux, turn its service off and remove both packages:
+To remove HyperFlux, turn its service off and remove its packages. With
+Full:
 
 ```bash
 sudo systemctl disable --now hyperflux-next-bridge.service \
   "hyperflux-next-client@$(id -u).socket"
-sudo zypper remove hyperflux-next-linux hyperflux-next-dkms
+sudo zypper remove hyperflux-next-full hyperflux-next-openrazer-driver-dkms hyperflux-next-linux hyperflux-next-dkms
 ```
+
+With Core, the last command is
+`sudo zypper remove hyperflux-next-linux hyperflux-next-dkms`.

@@ -43,7 +43,7 @@ class RepositoryGuideTests(unittest.TestCase):
             self.assertIn(f"Main key: `{ARCH.primary_fingerprint}`", text)
             self.assertIn(f"Signing subkey: `{ARCH.signing_subkey_fingerprint}`", text)
             self.assertIn(f"{self.site.site_url}/{self.site.public_key_asset}", text)
-            install = text.index("hyperflux-next-linux")
+            install = text.index("hyperflux-next-full")
             self.assertLess(check, install, target.id)
 
     def test_apt_guides_pin_the_key_to_the_repository(self) -> None:
@@ -54,7 +54,8 @@ class RepositoryGuideTests(unittest.TestCase):
             self.assertIn("--output /etc/apt/sources.list.d/hyperflux-next.sources", text)
             self.assertIn(f"   Suites: {target.suite}", text)
             self.assertIn("   Signed-By: /etc/apt/keyrings/hyperflux-next.asc", text)
-            self.assertIn("sudo apt update\n   sudo apt install hyperflux-next-linux", text)
+            self.assertIn("sudo apt update\n   sudo apt install hyperflux-next-full", text)
+            self.assertIn("run `sudo apt install hyperflux-next-linux`", text)
             self.assertNotIn("rpm --import", text)
             for line in repositories.configuration_text(self.site, target, self.site.site_url).splitlines():
                 self.assertIn(f"   {line}".rstrip(), text)
@@ -63,12 +64,14 @@ class RepositoryGuideTests(unittest.TestCase):
         fedora = guides.repository_setup(self.site, ARCH, self.targets["fedora"], "ci-only")
         self.assertIn("sudo rpm --import hyperflux-next-repository-key.asc", fedora)
         self.assertIn("--output /etc/yum.repos.d/hyperflux-next.repo", fedora)
-        self.assertIn("sudo dnf install hyperflux-next-linux", fedora)
+        self.assertIn("sudo dnf install hyperflux-next-full", fedora)
+        self.assertIn("run `sudo dnf install hyperflux-next-linux`", fedora)
         opensuse = guides.repository_setup(self.site, ARCH, self.targets["opensuse"], "ci-only")
         self.assertIn(
             f"sudo zypper addrepo {self.site.site_url}/opensuse/hyperflux-next.repo", opensuse
         )
-        self.assertIn("sudo zypper install hyperflux-next-linux", opensuse)
+        self.assertIn("sudo zypper install hyperflux-next-full", opensuse)
+        self.assertIn("run `sudo zypper install hyperflux-next-linux`", opensuse)
         for text in (fedora, opensuse):
             self.assertIn("   gpgcheck=1", text)
             self.assertIn("   repo_gpgcheck=1", text)
