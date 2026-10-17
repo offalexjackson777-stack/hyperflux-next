@@ -11,7 +11,7 @@ The Arch `pkgbase=hyperflux-next` builds two user-facing packages that never ins
 | Component | Package | Required packages | Optional packages | Conflicts | Provides | Replaces |
 | --- | --- | --- | --- | --- | --- | --- |
 | `linux` | `hyperflux-next-linux` | `dkms`, `glibc`, `libgcc`, `systemd` | none | `hyperflux-v2-linux-dkms` | none | none |
-| `full` | `hyperflux-next-full` | `dkms`, `glibc`, `libgcc`, `systemd`, `hyperflux-next-linux=2.1.0-1`, `qt6-base`, `hidapi`, `libstdc++` | `openrgb` (Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified), `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend) | `hyperflux-next-openrgb=0.0.0_dev.1-2`, `openrazer-driver-dkms` | `openrazer-driver-dkms=3.12.4`, `hyperflux-openrazer-driver-abi=3.12.4` | `hyperflux-next-openrgb=0.0.0_dev.1-2`, `openrazer-driver-dkms` |
+| `full` | `hyperflux-next-full` | `dkms`, `glibc`, `libgcc`, `systemd`, `hyperflux-next-linux=2.1.1-1`, `qt6-base`, `hidapi`, `libstdc++` | `openrgb` (Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified), `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend) | `hyperflux-next-openrgb=0.0.0_dev.1-2`, `openrazer-driver-dkms` | `openrazer-driver-dkms=3.12.4`, `hyperflux-openrazer-driver-abi=3.12.4` | `hyperflux-next-openrgb=0.0.0_dev.1-2`, `openrazer-driver-dkms` |
 
 ## What Each Package Owns
 
@@ -39,8 +39,8 @@ HyperFlux builds `.deb` packages for Ubuntu 24.04 (`noble`) every week in CI. Th
 
 | Package | Version | Architecture | Depends |
 | --- | --- | --- | --- |
-| `hyperflux-next-dkms` | `2.1.0-1` | `all` | `dkms` |
-| `hyperflux-next-linux` | `2.1.0-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-dkms (= 2.1.0-1)` |
+| `hyperflux-next-dkms` | `2.1.1-1` | `all` | `dkms` |
+| `hyperflux-next-linux` | `2.1.1-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-dkms (= 2.1.1-1)` |
 
 Dependency roles map to packages on each distribution:
 
@@ -114,8 +114,8 @@ HyperFlux builds `.deb` packages for Debian 13 (`trixie`) every week in CI. They
 
 | Package | Version | Architecture | Depends |
 | --- | --- | --- | --- |
-| `hyperflux-next-dkms` | `2.1.0-1` | `all` | `dkms` |
-| `hyperflux-next-linux` | `2.1.0-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-dkms (= 2.1.0-1)` |
+| `hyperflux-next-dkms` | `2.1.1-1` | `all` | `dkms` |
+| `hyperflux-next-linux` | `2.1.1-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-dkms (= 2.1.1-1)` |
 
 Dependency roles map to packages on each distribution:
 
@@ -183,8 +183,8 @@ HyperFlux builds `.rpm` packages for Fedora 44 every week in CI. They are not pu
 
 | Package | Version | Architecture | Requires |
 | --- | --- | --- | --- |
-| `hyperflux-next-dkms` | `2.1.0-1` | `noarch` | `dkms` |
-| `hyperflux-next-linux` | `2.1.0-1` | `x86_64` | `glibc >= 2.34`, `libgcc`, `systemd`, `systemd-udev`, `hyperflux-next-dkms = 2.1.0-1` |
+| `hyperflux-next-dkms` | `2.1.1-1` | `noarch` | `dkms` |
+| `hyperflux-next-linux` | `2.1.1-1` | `x86_64` | `glibc >= 2.34`, `libgcc`, `systemd`, `systemd-udev`, `hyperflux-next-dkms = 2.1.1-1` |
 
 Dependency roles map to packages on each distribution:
 
@@ -252,8 +252,8 @@ HyperFlux builds `.rpm` packages for openSUSE Tumbleweed every week in CI. They 
 
 | Package | Version | Architecture | Requires |
 | --- | --- | --- | --- |
-| `hyperflux-next-dkms` | `2.1.0-1` | `noarch` | `dkms` |
-| `hyperflux-next-linux` | `2.1.0-1` | `x86_64` | `glibc >= 2.34`, `libgcc_s1`, `systemd`, `udev`, `hyperflux-next-dkms = 2.1.0-1` |
+| `hyperflux-next-dkms` | `2.1.1-1` | `noarch` | `dkms` |
+| `hyperflux-next-linux` | `2.1.1-1` | `x86_64` | `glibc >= 2.34`, `libgcc_s1`, `systemd`, `udev`, `hyperflux-next-dkms = 2.1.1-1` |
 
 Dependency roles map to packages on each distribution:
 

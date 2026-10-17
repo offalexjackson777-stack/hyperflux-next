@@ -98,9 +98,9 @@ class DebianPlanTests(unittest.TestCase):
         self.assertEqual([name for name, _ in core.scripts], ["postinst", "postrm"])
         postinst = dict(dkms.scripts)["postinst"]
         self.assertIn(
-            '/usr/lib/dkms/common.postinst hid-hyperflux-next 2.1.0 "" "" "${2:-}"', postinst
+            '/usr/lib/dkms/common.postinst hid-hyperflux-next 2.1.1 "" "" "${2:-}"', postinst
         )
-        self.assertIn("dkms remove -m hid-hyperflux-next -v 2.1.0 --all", dict(dkms.scripts)["prerm"])
+        self.assertIn("dkms remove -m hid-hyperflux-next -v 2.1.1 --all", dict(dkms.scripts)["prerm"])
         core_postinst = dict(core.scripts)["postinst"]
         self.assertIn("systemd-sysusers hyperflux-next.conf", core_postinst)
         self.assertIn("systemd-tmpfiles --create hyperflux-next.conf", core_postinst)

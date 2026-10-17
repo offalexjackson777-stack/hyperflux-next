@@ -137,14 +137,14 @@ class RpmPlanTests(unittest.TestCase):
             self.assertEqual([name for name, _ in dkms.scripts], ["post", "preun"])
             self.assertEqual([name for name, _ in core.scripts], ["post", "postun"])
             post = dict(dkms.scripts)["post"]
-            self.assertIn("dkms add -m hid-hyperflux-next -v 2.1.0 --rpm_safe_upgrade", post)
+            self.assertIn("dkms add -m hid-hyperflux-next -v 2.1.1 --rpm_safe_upgrade", post)
             # The upgrade lock directory exists before `dkms add` takes the lock.
             self.assertLess(
                 post.index("systemd-tmpfiles --create dkms.conf"), post.index("dkms add")
             )
-            self.assertIn('dkms build -m hid-hyperflux-next -v 2.1.0 -k "$kernel"', post)
+            self.assertIn('dkms build -m hid-hyperflux-next -v 2.1.1 -k "$kernel"', post)
             self.assertIn(
-                "dkms remove -m hid-hyperflux-next -v 2.1.0 --all --rpm_safe_upgrade",
+                "dkms remove -m hid-hyperflux-next -v 2.1.1 --all --rpm_safe_upgrade",
                 dict(dkms.scripts)["preun"],
             )
             core_post = dict(core.scripts)["post"]
