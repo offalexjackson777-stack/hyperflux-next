@@ -323,6 +323,8 @@ class RpmLintTests(unittest.TestCase):
         "hyperflux-next-dkms.noarch: E: filelist-forbidden-fhs23 /usr/src/hid-hyperflux-next-2.1.0",
         "hyperflux-next-dkms.noarch: E: devel-file-in-non-devel-package (Badness: 50) /usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-core.c",
         "hyperflux-next-full.x86_64: E: incorrect-fsf-address /usr/share/licenses/hyperflux-next-full/LICENSE",
+        "hyperflux-next-full.x86_64: E: spelling-error ('openSUSE', '%description -l en_US openSUSE -> opens Use, open SUSE, open-SUSE')",
+        "hyperflux-next-openrazer-driver-dkms.noarch: E: spelling-error ('openSUSE', '%description -l en_US openSUSE -> opens Use, open SUSE, open-SUSE')",
         "hyperflux-next-full.x86_64: E: explicit-lib-dependency libgcc",
         "hyperflux-next-full.x86_64: E: systemd-service-without-service_add_post hyperflux-next-openrazer-relay.service",
         "hyperflux-next-openrazer-driver-dkms.noarch: E: incorrect-fsf-address /usr/src/openrazer-driver-3.12.4/LICENSES/GPL-2.0-or-later.txt",
@@ -349,6 +351,7 @@ class RpmLintTests(unittest.TestCase):
         "hyperflux-next-openrazer-driver-dkms.noarch: E: incorrect-fsf-address /usr/share/doc/README",
         "hyperflux-next-openrazer-driver-dkms.noarch: E: devel-file-in-non-devel-package /usr/include/razer.h",
         "hyperflux-next-full.x86_64: E: systemd-service-without-service_add_post other.service",
+        "hyperflux-next-full.x86_64: E: spelling-error ('razr', '%description -l en_US razr')",
     )
 
     def setUp(self) -> None:
@@ -376,7 +379,8 @@ class RpmLintTests(unittest.TestCase):
                 # Each filter names one of these packages and only accepts errors.
                 self.assertRegex(
                     pattern,
-                    r"^hyperflux-next-(dkms|linux|openrazer-driver-dkms|\(dkms\|linux\)|\(linux\|full\))\\\.",
+                    r"^hyperflux-next-(dkms|linux|openrazer-driver-dkms|\(linux\|full\)"
+                    r"|\(dkms\|linux\|full\|openrazer-driver-dkms\))\\\.",
                 )
                 self.assertIn(": E: ", pattern)
 

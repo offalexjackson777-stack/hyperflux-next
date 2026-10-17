@@ -159,7 +159,9 @@ RPMLINT_FILTERS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ),
     (
         "openSUSE and the package name hyperflux-next-linux are spelled as intended.",
-        (r"hyperflux-next-(dkms|linux)\.[^:]+: E: spelling-error \(.(openSUSE|linux).,",),
+        (
+            r"hyperflux-next-(dkms|linux|full|openrazer-driver-dkms)\.[^:]+: E: spelling-error \(.(openSUSE|linux).,",
+        ),
     ),
 )
 
