@@ -61,6 +61,14 @@ receiver. Keep these points in mind:
   key you press. OpenRazer treats the keyboard as just six rows of lights, so
   the ring often looks like two short vertical lines moving apart. This is how OpenRazer
   draws Ripple; it is not a fault.
+- **The ring can start one key to the right.** OpenRazer uses one key map
+  for every keyboard. That map assumes a column of macro keys left of Esc. On
+  a keyboard without that column, such as the DeathStalker V2 Pro, OpenRazer
+  places each key one column too far right, so Ripple starts at the key next
+  to the one you pressed. This comes from OpenRazer's own code, so it happens
+  over a cable too. HyperFlux passes OpenRazer's lighting through unchanged
+  and does not shift it back, because that would move the lights Polychromatic
+  and OpenRGB set for each key.
 - **Who can read your key presses.** To make this work, Full lets your user
   account read the keyboard's key presses from the receiver while you are
   logged in at the computer. That means any program you run can read them
