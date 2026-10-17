@@ -501,7 +501,7 @@ mod tests {
 
         // An accepted forward ends the retry; a new writer starts clean.
         forwarder.record(&reported(20), lookup);
-        assert_eq!(forwarder.flush(|_, _| Err(())), 0);
+        assert!(sent(&mut forwarder).is_empty());
         forwarder.writer_installed();
         assert_eq!(sent(&mut forwarder).len(), 1);
         assert!(sent(&mut forwarder).is_empty());
