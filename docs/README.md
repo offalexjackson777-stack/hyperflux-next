@@ -3,7 +3,7 @@
 Start with the door that fits what you want to do.
 
 <!-- HFX-GENERATED-BEGIN: release-summary -->
-**HyperFlux Next 2.1.1 is available for Arch Linux x86_64.** Read the
+**HyperFlux Next 2.1.1 is the current release.** Read the
 [v2.1.1 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.1).
 <!-- HFX-GENERATED-END: release-summary -->
 

@@ -8,6 +8,8 @@ describe exactly the files ``./hfx repositories assemble`` writes.
 
 from __future__ import annotations
 
+import textwrap
+
 from ..arch_repository import ArchRepositoryPolicy
 from ..package_repositories import (
     APT_KEYRING_DIRECTORY,
@@ -195,6 +197,22 @@ def install_table(
             return "Ready"
         return "Not published yet"
 
+    def listed(names: list[str]) -> str:
+        if len(names) < 3:
+            return " and ".join(names)
+        return f"{', '.join(names[:-1])}, and {names[-1]}"
+
+    names = {"arch": "Arch Linux", **{t.id: t.distribution for t in targets.values()}}
+    ready = [names[t] for t in names if state(t) == "Ready"]
+    waiting = [names[t] for t in names if state(t) != "Ready"]
+    availability = (
+        f"Packages are published for {listed(ready)}. The {listed(waiting)} "
+        "packages are built and tested in CI but not published yet; their guides "
+        "show how installing will work."
+        if waiting
+        else "Packages are published for every distribution in the table."
+    )
+
     rows = [
         f"| Arch Linux | rolling | [Install on Arch Linux]({GUIDES['arch']}) | {state('arch')} |",
         *(
@@ -205,13 +223,14 @@ def install_table(
     ]
     return "\n".join(
         (
-            "Choose the guide for your Linux distribution. Each one adds the signed",
-            "HyperFlux repository and installs the package.",
+            "Pick your Linux distribution and follow its guide. Each guide adds the",
+            "signed HyperFlux repository, installs HyperFlux Next, and checks that it",
+            "works.",
             "",
             "| Distribution | Release | Guide | Packages |",
             "| --- | --- | --- | --- |",
             *rows,
             "",
-            "The quick steps below are for Arch Linux.",
+            *textwrap.wrap(availability, width=78, break_long_words=False, break_on_hyphens=False),
         )
     )

@@ -175,8 +175,15 @@ class RepositoryExperienceContracts(unittest.TestCase):
                 self.assertIn(expected, " ".join(page.split()))
         self.assertIn("sudo pacman -Syu hyperflux-next-full", readme)
         self.assertIn("sudo pacman -Syu hyperflux-next-linux", readme)
-        self.assertIn("signed project-operated Arch repository", readme)
-        self.assertIn("not an official Arch Linux repository", readme)
+        flat_readme = " ".join(readme.split())
+        self.assertIn("signed repository run by the HyperFlux project", flat_readme)
+        self.assertIn("not an official repository of your distribution", flat_readme)
+        # The front door serves every distribution: Arch's commands are named
+        # as Arch's, and the install steps do not read as Arch-only.
+        self.assertIn("Every guide has the same four steps.", flat_readme)
+        self.assertIn("On Arch Linux, install Full", flat_readme)
+        self.assertNotIn("quick steps below are for Arch Linux", flat_readme)
+        self.assertNotIn("is available for Arch Linux", flat_readme)
         self.assertIn(
             load_arch_repository_policy(ROOT).product_release_url, readme
         )
