@@ -26,6 +26,7 @@ enum class ErrorCode
     HfxIntegration005,
     HfxIntegration006,
     HfxIntegration007,
+    HfxIntegration008,
     HfxInternal001,
     HfxKernel001,
     HfxKernel002,
@@ -64,6 +65,7 @@ enum class ErrorCode
         case ErrorCode::HfxIntegration005: return "HFX-INTEGRATION-005";
         case ErrorCode::HfxIntegration006: return "HFX-INTEGRATION-006";
         case ErrorCode::HfxIntegration007: return "HFX-INTEGRATION-007";
+        case ErrorCode::HfxIntegration008: return "HFX-INTEGRATION-008";
         case ErrorCode::HfxInternal001: return "HFX-INTERNAL-001";
         case ErrorCode::HfxKernel001: return "HFX-KERNEL-001";
         case ErrorCode::HfxKernel002: return "HFX-KERNEL-002";
@@ -110,6 +112,7 @@ enum class RemediationId
     ReinstallFullComponent,
     ReinstallOpenrazerRouteDriver,
     ReleaseOwner,
+    RemoveBrokenInputLink,
     RepairStateStorage,
     RestoreOpenrazerKeyLink,
     RetryBounded,
@@ -143,6 +146,7 @@ enum class RemediationId
         case RemediationId::ReinstallFullComponent: return "reinstall-full-component";
         case RemediationId::ReinstallOpenrazerRouteDriver: return "reinstall-openrazer-route-driver";
         case RemediationId::ReleaseOwner: return "release-owner";
+        case RemediationId::RemoveBrokenInputLink: return "remove-broken-input-link";
         case RemediationId::RepairStateStorage: return "repair-state-storage";
         case RemediationId::RestoreOpenrazerKeyLink: return "restore-openrazer-key-link";
         case RemediationId::RetryBounded: return "retry-bounded";
@@ -353,13 +357,13 @@ struct ErrorDescriptor
     std::string_view docs_path;
 };
 
-inline constexpr std::string_view error_catalog_sha256 = "e3b88ffc730fbc5cbf26176bf112477051348f637adb73f7ed5ca81a6c5459b2";
+inline constexpr std::string_view error_catalog_sha256 = "17801d934340db6478334b35bac955657f758321b4c299c63a4df106b192098f";
 inline constexpr std::size_t max_error_count = 256;
 inline constexpr std::size_t max_remediation_count = 128;
 inline constexpr std::size_t max_safe_detail_fields = 12;
 inline constexpr std::size_t max_safe_detail_length = 256;
 
-inline constexpr std::array<RemediationDescriptor, 27> remediations {{
+inline constexpr std::array<RemediationDescriptor, 28> remediations {{
     {RemediationId::AcquireNewLease, "Acquire a current lease", "Request a new lease for the complete resource set before submitting another operation.", "Read the ownership snapshot and confirm the new lease is current.", false},
     {RemediationId::ActivateInstalledDriver, "Activate the installed driver", "Reboot, or disconnect every supported HyperFlux receiver and run sudo /usr/lib/hyperflux-next/hyperflux-next-activate activate-disconnected-driver. Reconnect only after matching installed and loaded identities are reported.", "Run Doctor and confirm the loaded and installed driver identities match.", false},
     {RemediationId::ActivateOpenrazerRouteDriver, "Activate the OpenRazer route driver", "Reboot to activate the source-bound OpenRazer route driver. If Doctor still reports a missing module, reinstall the current HyperFlux package before retrying.", "Run Doctor and confirm every installed OpenRazer route module is either unloaded or matches its loaded identity.", false},
@@ -377,6 +381,7 @@ inline constexpr std::array<RemediationDescriptor, 27> remediations {{
     {RemediationId::ReinstallFullComponent, "Restore the matching Full integration component", "Install or reinstall the exact HyperFlux Next Full package version required by the installed Core package.", "Run Doctor and confirm the Full component is ready or explicitly reported as optional and not installed.", false},
     {RemediationId::ReinstallOpenrazerRouteDriver, "Restore the OpenRazer native-route capability", "Reinstall the current HyperFlux Next package, then use the driver activation action reported by Doctor.", "Run Doctor and confirm the OpenRazer native-route capability finding is absent.", false},
     {RemediationId::ReleaseOwner, "Release the current owner", "Release control in the owning application or close it, then request ownership again.", "Read the ownership snapshot and confirm the resource has no conflicting owner.", false},
+    {RemediationId::RemoveBrokenInputLink, "Remove the broken input link", "Run sudo rm {link_path}, then run systemctl --user restart openrazer-daemon. HyperFlux never removes or changes the link itself.", "Run Doctor and confirm the broken input link finding is absent, then confirm OpenRazer apps such as Polychromatic list your devices again.", false},
     {RemediationId::RepairStateStorage, "Repair state storage", "Restore writable, schema-compatible state storage without deleting the last known-good copy.", "Restart the bridge and confirm it can read and transactionally commit its state.", false},
     {RemediationId::RestoreOpenrazerKeyLink, "Restore the key-press link", "Restart the computer so the HyperFlux Full rules add the link and OpenRazer finds it when it adds the keyboard. If Doctor still reports it after the restart, reinstall the HyperFlux Full package.", "Run Doctor and confirm the missing key-press link finding is absent, then choose Ripple in Polychromatic and press a key on the keyboard.", false},
     {RemediationId::RetryBounded, "Retry within the declared bound", "Retry with bounded backoff only while the original deadline remains valid.", "Confirm the new attempt is admitted once and produces one terminal outcome.", true},
@@ -439,147 +444,151 @@ inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_8 {{
     {"link_path", SafeDetailKind::Text, true, 256ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Path of the missing /dev/input/by-id link OpenRazer reads the keyboard's key presses from."},
 }};
 
-inline constexpr std::array<std::string_view, 6> detail_values_9_1 {{"bridge", "kernel", "persistence", "protocol", "sdk", "transport"}};
-
-inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_9 {{
-    {"invariant_id", SafeDetailKind::Identifier, true, 64ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Stable violated invariant identifier."},
-    {"subsystem", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_9_1, PrivacyClass::Public, "Subsystem that raised the invariant failure."},
+inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_9 {{
+    {"link_path", SafeDetailKind::Text, true, 256ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Path of the broken /dev/input/by-id link that OpenRazer would try to open."},
 }};
 
+inline constexpr std::array<std::string_view, 6> detail_values_10_1 {{"bridge", "kernel", "persistence", "protocol", "sdk", "transport"}};
+
 inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_10 {{
+    {"invariant_id", SafeDetailKind::Identifier, true, 64ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Stable violated invariant identifier."},
+    {"subsystem", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_10_1, PrivacyClass::Public, "Subsystem that raised the invariant failure."},
+}};
+
+inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_11 {{
     {"installed_abi", SafeDetailKind::Identifier, true, 64ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Installed kernel interface identity."},
     {"loaded_abi", SafeDetailKind::Identifier, true, 64ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Currently loaded kernel interface identity."},
 }};
 
-inline constexpr std::array<SafeDetailFieldDescriptor, 3> details_11 {{
+inline constexpr std::array<SafeDetailFieldDescriptor, 3> details_12 {{
     {"installed_abi", SafeDetailKind::Identifier, true, 64ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Installed OpenRazer module source identity."},
     {"loaded_abi", SafeDetailKind::Identifier, true, 64ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Loaded OpenRazer module source identity or activation state."},
     {"module", SafeDetailKind::Identifier, true, 64ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "OpenRazer native-route kernel module name."},
 }};
 
-inline constexpr std::array<std::string_view, 3> detail_values_12_1 {{"retired-hyperflux", "unbound", "unknown"}};
+inline constexpr std::array<std::string_view, 3> detail_values_13_1 {{"retired-hyperflux", "unbound", "unknown"}};
 
-inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_12 {{
+inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_13 {{
     {"actual_driver", SafeDetailKind::Identifier, true, 64ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Kernel driver bound to the receiver interface, or unbound."},
-    {"owner_kind", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_12_1, PrivacyClass::Public, "Whether the owner is a known retired HyperFlux driver, no driver, or an unknown driver."},
-}};
-
-inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_13 {{
-    {"registration", SafeDetailKind::Identifier, true, 64ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Retired DKMS registration as name/version."},
+    {"owner_kind", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_13_1, PrivacyClass::Public, "Whether the owner is a known retired HyperFlux driver, no driver, or an unknown driver."},
 }};
 
 inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_14 {{
+    {"registration", SafeDetailKind::Identifier, true, 64ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Retired DKMS registration as name/version."},
+}};
+
+inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_15 {{
     {"transaction_id", SafeDetailKind::Identifier, true, 128ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::PublicSummary, "Transaction identity that has no retained or eviction record."},
 }};
 
-inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_15 {{
+inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_16 {{
     {"history_capacity", SafeDetailKind::U16, true, std::nullopt, 4096ULL, std::span<const std::string_view>{}, PrivacyClass::Public, "Configured retained outcome capacity."},
     {"transaction_id", SafeDetailKind::Identifier, true, 128ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::PublicSummary, "Transaction identity whose terminal record aged out."},
 }};
 
-inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_16 {{
+inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_17 {{
     {"owner_name", SafeDetailKind::Text, false, 96ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::PublicSummary, "Current application owner when available."},
     {"resource_id", SafeDetailKind::Identifier, true, 128ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::PublicSummary, "Contended logical resource."},
 }};
 
-inline constexpr std::array<std::string_view, 3> detail_values_17_1 {{"expired", "released", "revoked"}};
-
-inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_17 {{
-    {"lease_id", SafeDetailKind::Identifier, true, 128ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::PublicSummary, "Expired or revoked lease identity."},
-    {"lease_state", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_17_1, PrivacyClass::Public, "Terminal lease state."},
-}};
-
-inline constexpr std::array<std::string_view, 3> detail_values_18_0 {{"load", "migrate", "validate"}};
-
-inline constexpr std::array<std::string_view, 4> detail_values_18_1 {{"corrupt", "incompatible-schema", "missing", "permission-denied"}};
+inline constexpr std::array<std::string_view, 3> detail_values_18_1 {{"expired", "released", "revoked"}};
 
 inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_18 {{
-    {"operation", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_18_0, PrivacyClass::Public, "Failed state-read phase."},
-    {"reason", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_18_1, PrivacyClass::Public, "Sanitized failure reason."},
+    {"lease_id", SafeDetailKind::Identifier, true, 128ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::PublicSummary, "Expired or revoked lease identity."},
+    {"lease_state", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_18_1, PrivacyClass::Public, "Terminal lease state."},
 }};
 
-inline constexpr std::array<std::string_view, 3> detail_values_19_0 {{"commit", "rollback", "snapshot"}};
+inline constexpr std::array<std::string_view, 3> detail_values_19_0 {{"load", "migrate", "validate"}};
 
-inline constexpr std::array<std::string_view, 3> detail_values_19_1 {{"io-failure", "permission-denied", "validation-failed"}};
+inline constexpr std::array<std::string_view, 4> detail_values_19_1 {{"corrupt", "incompatible-schema", "missing", "permission-denied"}};
 
 inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_19 {{
-    {"operation", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_19_0, PrivacyClass::Public, "Failed state-write phase."},
+    {"operation", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_19_0, PrivacyClass::Public, "Failed state-read phase."},
     {"reason", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_19_1, PrivacyClass::Public, "Sanitized failure reason."},
 }};
 
+inline constexpr std::array<std::string_view, 3> detail_values_20_0 {{"commit", "rollback", "snapshot"}};
+
+inline constexpr std::array<std::string_view, 3> detail_values_20_1 {{"io-failure", "permission-denied", "validation-failed"}};
+
 inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_20 {{
+    {"operation", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_20_0, PrivacyClass::Public, "Failed state-write phase."},
+    {"reason", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_20_1, PrivacyClass::Public, "Sanitized failure reason."},
+}};
+
+inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_21 {{
     {"capability", SafeDetailKind::Identifier, true, 96ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Requested semantic capability."},
     {"product_id", SafeDetailKind::U16, false, std::nullopt, 65535ULL, std::span<const std::string_view>{}, PrivacyClass::Public, "Observed USB product identifier when available."},
 }};
 
-inline constexpr std::array<SafeDetailFieldDescriptor, 3> details_21 {{
+inline constexpr std::array<SafeDetailFieldDescriptor, 3> details_22 {{
     {"active_digest", SafeDetailKind::Identifier, true, 64ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Digest bound to the active generation."},
     {"catalog_digest", SafeDetailKind::Identifier, true, 64ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Digest from the generated profile catalog."},
     {"profile_id", SafeDetailKind::Identifier, true, 128ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Selected profile identity."},
 }};
 
-inline constexpr std::array<SafeDetailFieldDescriptor, 4> details_22 {{
+inline constexpr std::array<SafeDetailFieldDescriptor, 4> details_23 {{
     {"client_max_version", SafeDetailKind::U16, true, std::nullopt, 65535ULL, std::span<const std::string_view>{}, PrivacyClass::Public, "Highest protocol version supported by the client."},
     {"client_min_version", SafeDetailKind::U16, true, std::nullopt, 65535ULL, std::span<const std::string_view>{}, PrivacyClass::Public, "Lowest protocol version supported by the client."},
     {"server_max_version", SafeDetailKind::U16, true, std::nullopt, 65535ULL, std::span<const std::string_view>{}, PrivacyClass::Public, "Highest protocol version supported by the bridge."},
     {"server_min_version", SafeDetailKind::U16, true, std::nullopt, 65535ULL, std::span<const std::string_view>{}, PrivacyClass::Public, "Lowest protocol version supported by the bridge."},
 }};
 
-inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_23 {{
+inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_24 {{
     {"feature", SafeDetailKind::Identifier, true, 64ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Requested protocol feature identifier."},
 }};
 
-inline constexpr std::array<std::string_view, 5> detail_values_24_1 {{"configuration", "diagnostics", "effects", "events", "restore"}};
+inline constexpr std::array<std::string_view, 5> detail_values_25_1 {{"configuration", "diagnostics", "effects", "events", "restore"}};
 
-inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_24 {{
+inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_25 {{
     {"capacity", SafeDetailKind::U16, true, std::nullopt, 4096ULL, std::span<const std::string_view>{}, PrivacyClass::Public, "Configured queue capacity."},
-    {"queue", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_24_1, PrivacyClass::Public, "Bounded queue that rejected admission."},
+    {"queue", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_25_1, PrivacyClass::Public, "Bounded queue that rejected admission."},
 }};
 
-inline constexpr std::array<std::string_view, 5> detail_values_25_1 {{"duplicate", "missing", "out-of-range", "unknown", "unsupported"}};
+inline constexpr std::array<std::string_view, 5> detail_values_26_1 {{"duplicate", "missing", "out-of-range", "unknown", "unsupported"}};
 
-inline constexpr std::array<SafeDetailFieldDescriptor, 3> details_25 {{
+inline constexpr std::array<SafeDetailFieldDescriptor, 3> details_26 {{
     {"field", SafeDetailKind::Text, true, 128ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Schema field path without request data."},
-    {"reason", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_25_1, PrivacyClass::Public, "Sanitized validation reason."},
+    {"reason", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_26_1, PrivacyClass::Public, "Sanitized validation reason."},
     {"request_id", SafeDetailKind::Identifier, false, 128ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::PublicSummary, "Request identity when parsing reached it."},
 }};
 
-inline constexpr std::array<std::string_view, 6> detail_values_26_0 {{"activating", "active-unready", "failed", "inactive", "stopping", "unavailable"}};
-
-inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_26 {{
-    {"service_state", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_26_0, PrivacyClass::Public, "Sanitized bridge service state."},
-}};
-
-inline constexpr std::array<std::string_view, 2> detail_values_27_0 {{"not-registered", "unqualified"}};
+inline constexpr std::array<std::string_view, 6> detail_values_27_0 {{"activating", "active-unready", "failed", "inactive", "stopping", "unavailable"}};
 
 inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_27 {{
-    {"receiver_state", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_27_0, PrivacyClass::Public, "Sanitized receiver registration state."},
+    {"service_state", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_27_0, PrivacyClass::Public, "Sanitized bridge service state."},
 }};
 
-inline constexpr std::array<std::string_view, 2> detail_values_28_0 {{"no-paired-device", "not-live"}};
+inline constexpr std::array<std::string_view, 2> detail_values_28_0 {{"not-registered", "unqualified"}};
 
 inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_28 {{
-    {"route_state", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_28_0, PrivacyClass::Public, "Sanitized paired-device route state."},
+    {"receiver_state", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_28_0, PrivacyClass::Public, "Sanitized receiver registration state."},
 }};
 
-inline constexpr std::array<std::string_view, 3> detail_values_29_0 {{"device-absent", "session-unavailable", "transport-busy"}};
+inline constexpr std::array<std::string_view, 2> detail_values_29_0 {{"no-paired-device", "not-live"}};
 
-inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_29 {{
-    {"reason", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_29_0, PrivacyClass::Public, "Sanitized pre-dispatch failure reason."},
+inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_29 {{
+    {"route_state", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_29_0, PrivacyClass::Public, "Sanitized paired-device route state."},
+}};
+
+inline constexpr std::array<std::string_view, 3> detail_values_30_0 {{"device-absent", "session-unavailable", "transport-busy"}};
+
+inline constexpr std::array<SafeDetailFieldDescriptor, 2> details_30 {{
+    {"reason", SafeDetailKind::Enum, true, std::nullopt, std::nullopt, detail_values_30_0, PrivacyClass::Public, "Sanitized pre-dispatch failure reason."},
     {"transaction_id", SafeDetailKind::Identifier, true, 128ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::PublicSummary, "Transaction that did not begin transport."},
 }};
 
-inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_30 {{
+inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_31 {{
     {"transaction_id", SafeDetailKind::Identifier, true, 128ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::PublicSummary, "Transaction whose transport outcome is uncertain."},
 }};
 
-inline constexpr std::array<SafeDetailFieldDescriptor, 3> details_31 {{
+inline constexpr std::array<SafeDetailFieldDescriptor, 3> details_32 {{
     {"delivered_frames", SafeDetailKind::U16, true, std::nullopt, 4096ULL, std::span<const std::string_view>{}, PrivacyClass::Public, "Frames terminally delivered before failure."},
     {"total_frames", SafeDetailKind::U16, true, std::nullopt, 4096ULL, std::span<const std::string_view>{}, PrivacyClass::Public, "Frames declared by the transaction."},
     {"transaction_id", SafeDetailKind::Identifier, true, 128ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::PublicSummary, "Partially delivered transaction identity."},
 }};
 
-inline constexpr std::array<ErrorDescriptor, 32> errors {{
+inline constexpr std::array<ErrorDescriptor, 33> errors {{
     {
         ErrorCode::HfxDeadline001, ErrorClass::Deadline,
         ErrorSeverity::Warning, RetryPolicy::Never,
@@ -671,10 +680,20 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         "docs/generated/error-catalog.md#hfx-integration-007"
     },
     {
+        ErrorCode::HfxIntegration008, ErrorClass::Integration,
+        ErrorSeverity::Error, RetryPolicy::AfterRemediation,
+        SideEffectCertaintyPolicy::NotApplicable,
+        RemediationId::RemoveBrokenInputLink, details_9,
+        {ErrorLifecycleState::Active, "2.1.2", std::nullopt, std::nullopt},
+        ErrorOwner::Integration, "A /dev/input/by-id link named like an OpenRazer key-event file for a presented device points to a file that does not exist. openrazer-daemon fails to open it and stops adding devices.",
+        "A broken input link stops OpenRazer from showing any devices. Polychromatic and other OpenRazer apps show nothing while the link exists.", PrivacyClass::Public,
+        "docs/generated/error-catalog.md#hfx-integration-008"
+    },
+    {
         ErrorCode::HfxInternal001, ErrorClass::Internal,
         ErrorSeverity::Critical, RetryPolicy::Never,
         SideEffectCertaintyPolicy::RuntimeReported,
-        RemediationId::CollectSupportBundle, details_9,
+        RemediationId::CollectSupportBundle, details_10,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "A declared HyperFlux invariant was violated.",
         "HyperFlux stopped the affected operation because an internal safety rule failed.", PrivacyClass::PublicSummary,
@@ -684,7 +703,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxKernel001, ErrorClass::Kernel,
         ErrorSeverity::Error, RetryPolicy::AfterRemediation,
         SideEffectCertaintyPolicy::NotApplicable,
-        RemediationId::ActivateInstalledDriver, details_10,
+        RemediationId::ActivateInstalledDriver, details_11,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Packaging, "The loaded kernel interface does not match the installed userspace contract.",
         "The newly installed driver is not active yet.", PrivacyClass::Public,
@@ -694,7 +713,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxKernel002, ErrorClass::Kernel,
         ErrorSeverity::Error, RetryPolicy::AfterRemediation,
         SideEffectCertaintyPolicy::NotApplicable,
-        RemediationId::ActivateOpenrazerRouteDriver, details_11,
+        RemediationId::ActivateOpenrazerRouteDriver, details_12,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Packaging, "A required OpenRazer native-route kernel module is missing or an older module remains active.",
         "The OpenRazer route driver is not ready yet.", PrivacyClass::Public,
@@ -704,7 +723,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxKernel003, ErrorClass::Kernel,
         ErrorSeverity::Error, RetryPolicy::AfterRemediation,
         SideEffectCertaintyPolicy::NotApplicable,
-        RemediationId::MigrateRetiredDriver, details_12,
+        RemediationId::MigrateRetiredDriver, details_13,
         {ErrorLifecycleState::Active, "2.0.1", std::nullopt, std::nullopt},
         ErrorOwner::Packaging, "A qualified receiver interface is bound to a driver other than the released HyperFlux driver, or to no driver at all.",
         "Another driver has taken the HyperFlux receiver.", PrivacyClass::Public,
@@ -714,7 +733,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxKernel004, ErrorClass::Kernel,
         ErrorSeverity::Warning, RetryPolicy::AfterRemediation,
         SideEffectCertaintyPolicy::NotApplicable,
-        RemediationId::MigrateRetiredDriver, details_13,
+        RemediationId::MigrateRetiredDriver, details_14,
         {ErrorLifecycleState::Active, "2.0.1", std::nullopt, std::nullopt},
         ErrorOwner::Packaging, "A retired HyperFlux DKMS driver is still registered; a kernel update rebuilds it and it can take the receiver at the next boot.",
         "An old HyperFlux driver is still installed and may take over after a kernel update.", PrivacyClass::Public,
@@ -724,7 +743,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxOutcome001, ErrorClass::Outcome,
         ErrorSeverity::Warning, RetryPolicy::Never,
         SideEffectCertaintyPolicy::NotApplicable,
-        RemediationId::ReconcileTransactionState, details_14,
+        RemediationId::ReconcileTransactionState, details_15,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "The bounded bridge history has no retained or eviction record for the requested transaction.",
         "HyperFlux cannot determine the result of this transaction from its current history.", PrivacyClass::PublicSummary,
@@ -734,7 +753,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxOutcome002, ErrorClass::Outcome,
         ErrorSeverity::Info, RetryPolicy::Never,
         SideEffectCertaintyPolicy::NotApplicable,
-        RemediationId::ReconcileTransactionState, details_15,
+        RemediationId::ReconcileTransactionState, details_16,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "The transaction was known, but its terminal result aged out of bounded retained history.",
         "The transaction result is older than the history HyperFlux keeps in memory.", PrivacyClass::PublicSummary,
@@ -744,7 +763,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxOwnership001, ErrorClass::Ownership,
         ErrorSeverity::Warning, RetryPolicy::AfterRemediation,
         SideEffectCertaintyPolicy::MustBeNone,
-        RemediationId::ReleaseOwner, details_16,
+        RemediationId::ReleaseOwner, details_17,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "Another live client owns at least one requested resource.",
         "Another application currently controls this device function.", PrivacyClass::Public,
@@ -754,7 +773,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxOwnership002, ErrorClass::Ownership,
         ErrorSeverity::Warning, RetryPolicy::AfterRemediation,
         SideEffectCertaintyPolicy::MustBeNone,
-        RemediationId::AcquireNewLease, details_17,
+        RemediationId::AcquireNewLease, details_18,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "The lease no longer authorizes the requested resource set.",
         "The application's control lease ended before the operation started.", PrivacyClass::Public,
@@ -764,7 +783,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxPersistence001, ErrorClass::Persistence,
         ErrorSeverity::Error, RetryPolicy::AfterRemediation,
         SideEffectCertaintyPolicy::NotApplicable,
-        RemediationId::RepairStateStorage, details_18,
+        RemediationId::RepairStateStorage, details_19,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "Persisted bridge state could not be loaded and validated safely.",
         "HyperFlux could not read its saved state and kept hardware restoration disabled.", PrivacyClass::PublicSummary,
@@ -774,7 +793,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxPersistence002, ErrorClass::Persistence,
         ErrorSeverity::Error, RetryPolicy::AfterRemediation,
         SideEffectCertaintyPolicy::NotApplicable,
-        RemediationId::RepairStateStorage, details_19,
+        RemediationId::RepairStateStorage, details_20,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "A transactional state update could not be committed or rolled back safely.",
         "HyperFlux could not save its latest stable state.", PrivacyClass::PublicSummary,
@@ -784,7 +803,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxProfile001, ErrorClass::Profile,
         ErrorSeverity::Warning, RetryPolicy::AfterRemediation,
         SideEffectCertaintyPolicy::MustBeNone,
-        RemediationId::QualifyDevice, details_20,
+        RemediationId::QualifyDevice, details_21,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "No evidence-backed profile qualifies the requested device capability.",
         "The device is visible, but this operation is not qualified for it.", PrivacyClass::Public,
@@ -794,7 +813,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxProfile002, ErrorClass::Profile,
         ErrorSeverity::Error, RetryPolicy::AfterRemediation,
         SideEffectCertaintyPolicy::MustBeNone,
-        RemediationId::VerifyProfileCatalog, details_21,
+        RemediationId::VerifyProfileCatalog, details_22,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "The active profile binding does not match the generated profile catalog.",
         "HyperFlux paused writes because its hardware profile changed.", PrivacyClass::Public,
@@ -804,7 +823,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxProtocol001, ErrorClass::Protocol,
         ErrorSeverity::Error, RetryPolicy::AfterRemediation,
         SideEffectCertaintyPolicy::NotApplicable,
-        RemediationId::UpdateProtocolPeer, details_22,
+        RemediationId::UpdateProtocolPeer, details_23,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Sdk, "The client and bridge protocol version ranges do not overlap.",
         "The application and HyperFlux service are not protocol-compatible.", PrivacyClass::Public,
@@ -814,7 +833,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxProtocol002, ErrorClass::Protocol,
         ErrorSeverity::Warning, RetryPolicy::AfterRemediation,
         SideEffectCertaintyPolicy::NotApplicable,
-        RemediationId::DisableUnsupportedFeature, details_23,
+        RemediationId::DisableUnsupportedFeature, details_24,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Sdk, "The request requires a feature that was not enabled during negotiation.",
         "This feature is unavailable with the current application and service combination.", PrivacyClass::Public,
@@ -824,7 +843,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxQueue001, ErrorClass::Queue,
         ErrorSeverity::Warning, RetryPolicy::BoundedBackoff,
         SideEffectCertaintyPolicy::MustBeNone,
-        RemediationId::RetryBounded, details_24,
+        RemediationId::RetryBounded, details_25,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "The bounded queue had no admissible capacity before the request deadline.",
         "HyperFlux is temporarily busy and did not start this operation.", PrivacyClass::Public,
@@ -834,7 +853,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxRequest001, ErrorClass::Request,
         ErrorSeverity::Error, RetryPolicy::Never,
         SideEffectCertaintyPolicy::MustBeNone,
-        RemediationId::CorrectRequest, details_25,
+        RemediationId::CorrectRequest, details_26,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Sdk, "The request violates the negotiated bounded protocol schema.",
         "The application sent a request HyperFlux cannot safely accept.", PrivacyClass::PublicSummary,
@@ -844,7 +863,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxService001, ErrorClass::Service,
         ErrorSeverity::Error, RetryPolicy::AfterRemediation,
         SideEffectCertaintyPolicy::NotApplicable,
-        RemediationId::StartBridge, details_26,
+        RemediationId::StartBridge, details_27,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Packaging, "The compatible bridge service is stopped or is not ready to accept SDK requests.",
         "The HyperFlux service is not ready yet.", PrivacyClass::Public,
@@ -854,7 +873,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxService002, ErrorClass::Service,
         ErrorSeverity::Warning, RetryPolicy::AfterRemediation,
         SideEffectCertaintyPolicy::NotApplicable,
-        RemediationId::ReconnectReceiver, details_27,
+        RemediationId::ReconnectReceiver, details_28,
         {ErrorLifecycleState::Active, "2.0.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "The bridge is responding, but no profile-qualified receiver generation is registered for an attached supported receiver.",
         "HyperFlux is running, but the receiver is not ready yet.", PrivacyClass::Public,
@@ -864,7 +883,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxService003, ErrorClass::Service,
         ErrorSeverity::Warning, RetryPolicy::AfterRemediation,
         SideEffectCertaintyPolicy::NotApplicable,
-        RemediationId::WakePairedDevice, details_28,
+        RemediationId::WakePairedDevice, details_29,
         {ErrorLifecycleState::Active, "2.0.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "The bridge and receiver are ready, but no paired device has a live qualified HyperFlux wireless route.",
         "HyperFlux is running, but no paired device is online yet.", PrivacyClass::Public,
@@ -874,7 +893,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxTransport001, ErrorClass::Transport,
         ErrorSeverity::Warning, RetryPolicy::BoundedBackoff,
         SideEffectCertaintyPolicy::MustBeNone,
-        RemediationId::RetryBounded, details_29,
+        RemediationId::RetryBounded, details_30,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "Transport failed before any hardware frame was dispatched.",
         "The receiver was unavailable before HyperFlux sent anything.", PrivacyClass::PublicSummary,
@@ -884,7 +903,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxTransport002, ErrorClass::Transport,
         ErrorSeverity::Error, RetryPolicy::OutcomeLookupOnly,
         SideEffectCertaintyPolicy::Possible,
-        RemediationId::LookupTransactionOutcome, details_30,
+        RemediationId::LookupTransactionOutcome, details_31,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "Transport began, but the bridge could not prove whether the receiver accepted a frame.",
         "The operation may have reached the receiver, so HyperFlux will not repeat it automatically.", PrivacyClass::PublicSummary,
@@ -894,7 +913,7 @@ inline constexpr std::array<ErrorDescriptor, 32> errors {{
         ErrorCode::HfxTransport003, ErrorClass::Transport,
         ErrorSeverity::Error, RetryPolicy::OutcomeLookupOnly,
         SideEffectCertaintyPolicy::Partial,
-        RemediationId::LookupTransactionOutcome, details_31,
+        RemediationId::LookupTransactionOutcome, details_32,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
         ErrorOwner::Bridge, "At least one declared frame was delivered before a later frame failed.",
         "The operation was only partly delivered and will not be repeated automatically.", PrivacyClass::PublicSummary,

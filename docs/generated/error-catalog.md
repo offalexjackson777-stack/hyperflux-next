@@ -5,7 +5,7 @@
 This page lists every HyperFlux error code with what it means, what to do about it,
 and whether it is safe to retry, for anyone who saw an `HFX-` code and wants to look it up.
 
-Catalog source: `e3b88ffc730fbc5cbf26176bf112477051348f637adb73f7ed5ca81a6c5459b2`
+Catalog source: `17801d934340db6478334b35bac955657f758321b4c299c63a4df106b192098f`
 
 Every HyperFlux error code is defined here and nowhere else. These parts of the code use it:
 
@@ -52,6 +52,7 @@ machine identifiers, private paths, and free-form exception or log text are neve
 | [`HFX-INTEGRATION-005`](#hfx-integration-005) | `integration` | `error` | `after-remediation` | `not-applicable` | `integration` | `active` |
 | [`HFX-INTEGRATION-006`](#hfx-integration-006) | `integration` | `error` | `after-remediation` | `not-applicable` | `integration` | `active` |
 | [`HFX-INTEGRATION-007`](#hfx-integration-007) | `integration` | `warning` | `after-remediation` | `not-applicable` | `integration` | `active` |
+| [`HFX-INTEGRATION-008`](#hfx-integration-008) | `integration` | `error` | `after-remediation` | `not-applicable` | `integration` | `active` |
 | [`HFX-INTERNAL-001`](#hfx-internal-001) | `internal` | `critical` | `never` | `runtime-reported` | `bridge` | `active` |
 | [`HFX-KERNEL-001`](#hfx-kernel-001) | `kernel` | `error` | `after-remediation` | `not-applicable` | `packaging` | `active` |
 | [`HFX-KERNEL-002`](#hfx-kernel-002) | `kernel` | `error` | `after-remediation` | `not-applicable` | `packaging` | `active` |
@@ -97,6 +98,7 @@ machine identifiers, private paths, and free-form exception or log text are neve
 | `reinstall-full-component` | Install or reinstall the exact HyperFlux Next Full package version required by the installed Core package. | Run Doctor and confirm the Full component is ready or explicitly reported as optional and not installed. | false |
 | `reinstall-openrazer-route-driver` | Reinstall the current HyperFlux Next package, then use the driver activation action reported by Doctor. | Run Doctor and confirm the OpenRazer native-route capability finding is absent. | false |
 | `release-owner` | Release control in the owning application or close it, then request ownership again. | Read the ownership snapshot and confirm the resource has no conflicting owner. | false |
+| `remove-broken-input-link` | Run sudo rm {link_path}, then run systemctl --user restart openrazer-daemon. HyperFlux never removes or changes the link itself. | Run Doctor and confirm the broken input link finding is absent, then confirm OpenRazer apps such as Polychromatic list your devices again. | false |
 | `repair-state-storage` | Restore writable, schema-compatible state storage without deleting the last known-good copy. | Restart the bridge and confirm it can read and transactionally commit its state. | false |
 | `restore-openrazer-key-link` | Restart the computer so the HyperFlux Full rules add the link and OpenRazer finds it when it adds the keyboard. If Doctor still reports it after the restart, reinstall the HyperFlux Full package. | Run Doctor and confirm the missing key-press link finding is absent, then choose Ripple in Polychromatic and press a key on the keyboard. | false |
 | `retry-bounded` | Retry with bounded backoff only while the original deadline remains valid. | Confirm the new attempt is admitted once and produces one terminal outcome. | true |
@@ -323,6 +325,30 @@ Ripple and other lighting effects that react to key presses stay still, because 
 **Safe action (`restore-openrazer-key-link`):** Restart the computer so the HyperFlux Full rules add the link and OpenRazer finds it when it adds the keyboard. If Doctor still reports it after the restart, reinstall the HyperFlux Full package.
 
 **Verify:** Run Doctor and confirm the missing key-press link finding is absent, then choose Ripple in Polychromatic and press a key on the keyboard.
+
+### Detail Fields
+
+| Field | Type | Required | Bound | Privacy |
+| --- | --- | --- | --- | --- |
+| `link_path` | `text` | true | max 256 characters | `public` |
+
+## HFX-INTEGRATION-008
+
+A broken input link stops OpenRazer from showing any devices. Polychromatic and other OpenRazer apps show nothing while the link exists.
+
+**Technical cause:** A /dev/input/by-id link named like an OpenRazer key-event file for a presented device points to a file that does not exist. openrazer-daemon fails to open it and stops adding devices.
+
+**Class / severity:** `integration` / `error`
+
+**Retry / side effects:** `after-remediation` / `not-applicable`
+
+**Owner / privacy:** `integration` / `public`
+
+**Lifecycle:** `active` since `2.1.2`
+
+**Safe action (`remove-broken-input-link`):** Run sudo rm {link_path}, then run systemctl --user restart openrazer-daemon. HyperFlux never removes or changes the link itself.
+
+**Verify:** Run Doctor and confirm the broken input link finding is absent, then confirm OpenRazer apps such as Polychromatic list your devices again.
 
 ### Detail Fields
 

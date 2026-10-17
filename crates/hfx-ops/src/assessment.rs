@@ -361,6 +361,27 @@ fn classify_openrazer_access(
     }
 }
 
+const LINK_PATH_PLACEHOLDER: &str = "{link_path}";
+
+/// One finding per dangling `/dev/input/by-id` link that `openrazer-daemon`
+/// would try to open. The link is the root cause of an empty `OpenRazer`
+/// device list, so it is reported before the publication symptom. The safe
+/// action names the exact path to remove; Doctor itself never removes it.
+fn broken_openrazer_event_link_findings(snapshot: &SystemSnapshot) -> Vec<AssessmentFinding> {
+    snapshot
+        .broken_openrazer_event_links
+        .iter()
+        .map(|path| {
+            let mut finding = local_finding(
+                ErrorCode::HfxIntegration008,
+                BTreeMap::from([("link_path".to_owned(), path.clone())]),
+            );
+            finding.safe_action = finding.safe_action.replace(LINK_PATH_PLACEHOLDER, path);
+            finding
+        })
+        .collect()
+}
+
 fn expected_openrazer_published_devices(
     snapshot: &SystemSnapshot,
 ) -> Result<Vec<OpenRazerPublishedDevice>, ()> {
@@ -527,6 +548,7 @@ fn assess_full_component(
             working.push("the Full integration component is installed".to_owned());
             classify_openrazer_driver(snapshot, working, findings);
             classify_openrazer_runtime(snapshot, working, findings);
+            findings.extend(broken_openrazer_event_link_findings(snapshot));
             classify_openrazer_access(snapshot, working, findings);
             classify_openrazer_key_event_links(snapshot, findings);
         }
@@ -920,6 +942,7 @@ mod tests {
             receiver_interface_drivers: Vec::new(),
             retired_driver_registrations: Vec::new(),
             missing_openrazer_key_event_links: Vec::new(),
+            broken_openrazer_event_links: Vec::new(),
         }
     }
 
@@ -1093,6 +1116,88 @@ mod tests {
         let complete = assess_system(&value);
         assert_eq!(complete.state, AssessmentState::Ready);
         assert!(complete.findings.is_empty());
+    }
+
+    #[test]
+    fn broken_openrazer_event_link_is_reported_first_with_the_exact_fix() {
+        let link = "/dev/input/by-id/test-DSV2Pro_TKL_000000000000-if01-event-mouse";
+        let mut value = snapshot();
+        value.supported_receiver_present = true;
+        value.bridge = Some(bridge_with_sibling(RouteState::Available, true));
+        value.openrazer_published_devices = Some(Vec::new());
+        value.broken_openrazer_event_links = vec![link.to_owned()];
+
+        let assessment = assess_system(&value);
+
+        assert!(assessment.bridge_ready, "Core route health is unaffected");
+        assert_eq!(assessment.state, AssessmentState::NeedsAttention);
+        assert_eq!(assessment.components[0].state, ComponentState::Ready);
+        assert_eq!(
+            assessment.components[1].state,
+            ComponentState::NeedsAttention
+        );
+        let finding = &assessment.findings[0];
+        assert_eq!(finding.code, "HFX-INTEGRATION-008");
+        assert_eq!(finding.details["link_path"], link);
+        assert!(
+            finding
+                .user_explanation
+                .contains("stops OpenRazer from showing any devices")
+        );
+        assert_eq!(
+            finding.safe_action,
+            format!(
+                "Run sudo rm {link}, then run systemctl --user restart openrazer-daemon. HyperFlux never removes or changes the link itself."
+            )
+        );
+        assert_eq!(assessment.next_action, finding.safe_action);
+        assert_eq!(assessment.findings[1].code, "HFX-INTEGRATION-003");
+        let text = render_doctor_text(&assessment, false);
+        assert!(text.contains("Primary issue: [HFX-INTEGRATION-008]"));
+        assert!(text.contains(&format!(
+            "Do: Run sudo rm {link}, then run systemctl --user restart openrazer-daemon."
+        )));
+    }
+
+    #[test]
+    fn every_broken_openrazer_event_link_gets_its_own_finding() {
+        let mut value = snapshot();
+        value.broken_openrazer_event_links = vec![
+            "/dev/input/by-id/a-DSV2Pro_TKL_000000000000-if01-event-mouse".to_owned(),
+            "/dev/input/by-id/b-DSV2Pro_TKL_000000000000-if01-event-mouse".to_owned(),
+        ];
+
+        let assessment = assess_system(&value);
+
+        let paths = assessment
+            .findings
+            .iter()
+            .filter(|finding| finding.code == "HFX-INTEGRATION-008")
+            .map(|finding| finding.details["link_path"].as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            paths,
+            vec![
+                "/dev/input/by-id/a-DSV2Pro_TKL_000000000000-if01-event-mouse",
+                "/dev/input/by-id/b-DSV2Pro_TKL_000000000000-if01-event-mouse",
+            ]
+        );
+        assert!(
+            assessment
+                .findings
+                .iter()
+                .all(|finding| !finding.safe_action.contains("{link_path}"))
+        );
+    }
+
+    #[test]
+    fn broken_openrazer_event_links_are_ignored_without_the_full_component() {
+        let mut value = snapshot();
+        value.full_component = crate::FullComponentSnapshot::not_installed();
+        value.broken_openrazer_event_links =
+            vec!["/dev/input/by-id/a-DSV2Pro_TKL_000000000000-if01-event-mouse".to_owned()];
+
+        assert_eq!(assess_system(&value).state, AssessmentState::Ready);
     }
 
     #[test]

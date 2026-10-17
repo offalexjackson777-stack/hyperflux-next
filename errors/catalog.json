@@ -122,6 +122,13 @@
       "automatic": false
     },
     {
+      "id": "remove-broken-input-link",
+      "title": "Remove the broken input link",
+      "safe_action": "Run sudo rm {link_path}, then run systemctl --user restart openrazer-daemon. HyperFlux never removes or changes the link itself.",
+      "verification": "Run Doctor and confirm the broken input link finding is absent, then confirm OpenRazer apps such as Polychromatic list your devices again.",
+      "automatic": false
+    },
+    {
       "id": "repair-state-storage",
       "title": "Repair state storage",
       "safe_action": "Restore writable, schema-compatible state storage without deleting the last known-good copy.",
@@ -351,6 +358,23 @@
       "user_explanation": "Ripple and other lighting effects that react to key presses stay still, because OpenRazer cannot see the keyboard's key presses. Other effects and colors still work.",
       "privacy": "public",
       "docs_path": "docs/generated/error-catalog.md#hfx-integration-007"
+    },
+    {
+      "code": "HFX-INTEGRATION-008",
+      "class": "integration",
+      "severity": "error",
+      "retry_policy": "after-remediation",
+      "side_effect_certainty_policy": "not-applicable",
+      "remediation_id": "remove-broken-input-link",
+      "safe_detail_fields": [
+        {"name": "link_path", "type": "text", "required": true, "maximum_length": 256, "maximum_value": null, "allowed_values": [], "privacy": "public", "description": "Path of the broken /dev/input/by-id link that OpenRazer would try to open."}
+      ],
+      "lifecycle": {"state": "active", "introduced_in": "2.1.2", "deprecated_in": null, "replacement_code": null},
+      "owner": "integration",
+      "technical_cause": "A /dev/input/by-id link named like an OpenRazer key-event file for a presented device points to a file that does not exist. openrazer-daemon fails to open it and stops adding devices.",
+      "user_explanation": "A broken input link stops OpenRazer from showing any devices. Polychromatic and other OpenRazer apps show nothing while the link exists.",
+      "privacy": "public",
+      "docs_path": "docs/generated/error-catalog.md#hfx-integration-008"
     },
     {
       "code": "HFX-INTERNAL-001",

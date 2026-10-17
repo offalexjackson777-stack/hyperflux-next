@@ -72,6 +72,7 @@ wire_enum!(ErrorCode {
     HfxIntegration005 => "HFX-INTEGRATION-005",
     HfxIntegration006 => "HFX-INTEGRATION-006",
     HfxIntegration007 => "HFX-INTEGRATION-007",
+    HfxIntegration008 => "HFX-INTEGRATION-008",
     HfxInternal001 => "HFX-INTERNAL-001",
     HfxKernel001 => "HFX-KERNEL-001",
     HfxKernel002 => "HFX-KERNEL-002",
@@ -115,6 +116,7 @@ wire_enum!(RemediationId {
     ReinstallFullComponent => "reinstall-full-component",
     ReinstallOpenrazerRouteDriver => "reinstall-openrazer-route-driver",
     ReleaseOwner => "release-owner",
+    RemoveBrokenInputLink => "remove-broken-input-link",
     RepairStateStorage => "repair-state-storage",
     RestoreOpenrazerKeyLink => "restore-openrazer-key-link",
     RetryBounded => "retry-bounded",
@@ -231,7 +233,7 @@ pub struct ErrorDescriptor {
 }
 
 pub const ERROR_CATALOG_SHA256: &str =
-    "e3b88ffc730fbc5cbf26176bf112477051348f637adb73f7ed5ca81a6c5459b2";
+    "17801d934340db6478334b35bac955657f758321b4c299c63a4df106b192098f";
 pub const MAX_ERROR_COUNT: usize = 256;
 pub const MAX_REMEDIATION_COUNT: usize = 128;
 pub const MAX_SAFE_DETAIL_FIELDS: usize = 12;
@@ -355,6 +357,13 @@ pub const REMEDIATIONS: &[RemediationDescriptor] = &[
         title: "Release the current owner",
         safe_action: "Release control in the owning application or close it, then request ownership again.",
         verification: "Read the ownership snapshot and confirm the resource has no conflicting owner.",
+        automatic: false,
+    },
+    RemediationDescriptor {
+        id: RemediationId::RemoveBrokenInputLink,
+        title: "Remove the broken input link",
+        safe_action: "Run sudo rm {link_path}, then run systemctl --user restart openrazer-daemon. HyperFlux never removes or changes the link itself.",
+        verification: "Run Doctor and confirm the broken input link finding is absent, then confirm OpenRazer apps such as Polychromatic list your devices again.",
         automatic: false,
     },
     RemediationDescriptor {
@@ -614,7 +623,18 @@ const DETAILS_8: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
     description: "Path of the missing /dev/input/by-id link OpenRazer reads the keyboard's key presses from.",
 }];
 
-const DETAIL_VALUES_9_1: &[&str] = &[
+const DETAILS_9: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
+    name: "link_path",
+    kind: SafeDetailKind::Text,
+    required: true,
+    maximum_length: Some(256),
+    maximum_value: None,
+    allowed_values: &[],
+    privacy: PrivacyClass::Public,
+    description: "Path of the broken /dev/input/by-id link that OpenRazer would try to open.",
+}];
+
+const DETAIL_VALUES_10_1: &[&str] = &[
     "bridge",
     "kernel",
     "persistence",
@@ -623,7 +643,7 @@ const DETAIL_VALUES_9_1: &[&str] = &[
     "transport",
 ];
 
-const DETAILS_9: &[SafeDetailFieldDescriptor] = &[
+const DETAILS_10: &[SafeDetailFieldDescriptor] = &[
     SafeDetailFieldDescriptor {
         name: "invariant_id",
         kind: SafeDetailKind::Identifier,
@@ -640,13 +660,13 @@ const DETAILS_9: &[SafeDetailFieldDescriptor] = &[
         required: true,
         maximum_length: None,
         maximum_value: None,
-        allowed_values: DETAIL_VALUES_9_1,
+        allowed_values: DETAIL_VALUES_10_1,
         privacy: PrivacyClass::Public,
         description: "Subsystem that raised the invariant failure.",
     },
 ];
 
-const DETAILS_10: &[SafeDetailFieldDescriptor] = &[
+const DETAILS_11: &[SafeDetailFieldDescriptor] = &[
     SafeDetailFieldDescriptor {
         name: "installed_abi",
         kind: SafeDetailKind::Identifier,
@@ -669,7 +689,7 @@ const DETAILS_10: &[SafeDetailFieldDescriptor] = &[
     },
 ];
 
-const DETAILS_11: &[SafeDetailFieldDescriptor] = &[
+const DETAILS_12: &[SafeDetailFieldDescriptor] = &[
     SafeDetailFieldDescriptor {
         name: "installed_abi",
         kind: SafeDetailKind::Identifier,
@@ -702,9 +722,9 @@ const DETAILS_11: &[SafeDetailFieldDescriptor] = &[
     },
 ];
 
-const DETAIL_VALUES_12_1: &[&str] = &["retired-hyperflux", "unbound", "unknown"];
+const DETAIL_VALUES_13_1: &[&str] = &["retired-hyperflux", "unbound", "unknown"];
 
-const DETAILS_12: &[SafeDetailFieldDescriptor] = &[
+const DETAILS_13: &[SafeDetailFieldDescriptor] = &[
     SafeDetailFieldDescriptor {
         name: "actual_driver",
         kind: SafeDetailKind::Identifier,
@@ -721,13 +741,13 @@ const DETAILS_12: &[SafeDetailFieldDescriptor] = &[
         required: true,
         maximum_length: None,
         maximum_value: None,
-        allowed_values: DETAIL_VALUES_12_1,
+        allowed_values: DETAIL_VALUES_13_1,
         privacy: PrivacyClass::Public,
         description: "Whether the owner is a known retired HyperFlux driver, no driver, or an unknown driver.",
     },
 ];
 
-const DETAILS_13: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
+const DETAILS_14: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
     name: "registration",
     kind: SafeDetailKind::Identifier,
     required: true,
@@ -738,7 +758,7 @@ const DETAILS_13: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
     description: "Retired DKMS registration as name/version.",
 }];
 
-const DETAILS_14: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
+const DETAILS_15: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
     name: "transaction_id",
     kind: SafeDetailKind::Identifier,
     required: true,
@@ -749,7 +769,7 @@ const DETAILS_14: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
     description: "Transaction identity that has no retained or eviction record.",
 }];
 
-const DETAILS_15: &[SafeDetailFieldDescriptor] = &[
+const DETAILS_16: &[SafeDetailFieldDescriptor] = &[
     SafeDetailFieldDescriptor {
         name: "history_capacity",
         kind: SafeDetailKind::U16,
@@ -772,7 +792,7 @@ const DETAILS_15: &[SafeDetailFieldDescriptor] = &[
     },
 ];
 
-const DETAILS_16: &[SafeDetailFieldDescriptor] = &[
+const DETAILS_17: &[SafeDetailFieldDescriptor] = &[
     SafeDetailFieldDescriptor {
         name: "owner_name",
         kind: SafeDetailKind::Text,
@@ -795,9 +815,9 @@ const DETAILS_16: &[SafeDetailFieldDescriptor] = &[
     },
 ];
 
-const DETAIL_VALUES_17_1: &[&str] = &["expired", "released", "revoked"];
+const DETAIL_VALUES_18_1: &[&str] = &["expired", "released", "revoked"];
 
-const DETAILS_17: &[SafeDetailFieldDescriptor] = &[
+const DETAILS_18: &[SafeDetailFieldDescriptor] = &[
     SafeDetailFieldDescriptor {
         name: "lease_id",
         kind: SafeDetailKind::Identifier,
@@ -814,47 +834,20 @@ const DETAILS_17: &[SafeDetailFieldDescriptor] = &[
         required: true,
         maximum_length: None,
         maximum_value: None,
-        allowed_values: DETAIL_VALUES_17_1,
+        allowed_values: DETAIL_VALUES_18_1,
         privacy: PrivacyClass::Public,
         description: "Terminal lease state.",
     },
 ];
 
-const DETAIL_VALUES_18_0: &[&str] = &["load", "migrate", "validate"];
+const DETAIL_VALUES_19_0: &[&str] = &["load", "migrate", "validate"];
 
-const DETAIL_VALUES_18_1: &[&str] = &[
+const DETAIL_VALUES_19_1: &[&str] = &[
     "corrupt",
     "incompatible-schema",
     "missing",
     "permission-denied",
 ];
-
-const DETAILS_18: &[SafeDetailFieldDescriptor] = &[
-    SafeDetailFieldDescriptor {
-        name: "operation",
-        kind: SafeDetailKind::Enum,
-        required: true,
-        maximum_length: None,
-        maximum_value: None,
-        allowed_values: DETAIL_VALUES_18_0,
-        privacy: PrivacyClass::Public,
-        description: "Failed state-read phase.",
-    },
-    SafeDetailFieldDescriptor {
-        name: "reason",
-        kind: SafeDetailKind::Enum,
-        required: true,
-        maximum_length: None,
-        maximum_value: None,
-        allowed_values: DETAIL_VALUES_18_1,
-        privacy: PrivacyClass::Public,
-        description: "Sanitized failure reason.",
-    },
-];
-
-const DETAIL_VALUES_19_0: &[&str] = &["commit", "rollback", "snapshot"];
-
-const DETAIL_VALUES_19_1: &[&str] = &["io-failure", "permission-denied", "validation-failed"];
 
 const DETAILS_19: &[SafeDetailFieldDescriptor] = &[
     SafeDetailFieldDescriptor {
@@ -865,7 +858,7 @@ const DETAILS_19: &[SafeDetailFieldDescriptor] = &[
         maximum_value: None,
         allowed_values: DETAIL_VALUES_19_0,
         privacy: PrivacyClass::Public,
-        description: "Failed state-write phase.",
+        description: "Failed state-read phase.",
     },
     SafeDetailFieldDescriptor {
         name: "reason",
@@ -879,7 +872,34 @@ const DETAILS_19: &[SafeDetailFieldDescriptor] = &[
     },
 ];
 
+const DETAIL_VALUES_20_0: &[&str] = &["commit", "rollback", "snapshot"];
+
+const DETAIL_VALUES_20_1: &[&str] = &["io-failure", "permission-denied", "validation-failed"];
+
 const DETAILS_20: &[SafeDetailFieldDescriptor] = &[
+    SafeDetailFieldDescriptor {
+        name: "operation",
+        kind: SafeDetailKind::Enum,
+        required: true,
+        maximum_length: None,
+        maximum_value: None,
+        allowed_values: DETAIL_VALUES_20_0,
+        privacy: PrivacyClass::Public,
+        description: "Failed state-write phase.",
+    },
+    SafeDetailFieldDescriptor {
+        name: "reason",
+        kind: SafeDetailKind::Enum,
+        required: true,
+        maximum_length: None,
+        maximum_value: None,
+        allowed_values: DETAIL_VALUES_20_1,
+        privacy: PrivacyClass::Public,
+        description: "Sanitized failure reason.",
+    },
+];
+
+const DETAILS_21: &[SafeDetailFieldDescriptor] = &[
     SafeDetailFieldDescriptor {
         name: "capability",
         kind: SafeDetailKind::Identifier,
@@ -902,7 +922,7 @@ const DETAILS_20: &[SafeDetailFieldDescriptor] = &[
     },
 ];
 
-const DETAILS_21: &[SafeDetailFieldDescriptor] = &[
+const DETAILS_22: &[SafeDetailFieldDescriptor] = &[
     SafeDetailFieldDescriptor {
         name: "active_digest",
         kind: SafeDetailKind::Identifier,
@@ -935,7 +955,7 @@ const DETAILS_21: &[SafeDetailFieldDescriptor] = &[
     },
 ];
 
-const DETAILS_22: &[SafeDetailFieldDescriptor] = &[
+const DETAILS_23: &[SafeDetailFieldDescriptor] = &[
     SafeDetailFieldDescriptor {
         name: "client_max_version",
         kind: SafeDetailKind::U16,
@@ -978,7 +998,7 @@ const DETAILS_22: &[SafeDetailFieldDescriptor] = &[
     },
 ];
 
-const DETAILS_23: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
+const DETAILS_24: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
     name: "feature",
     kind: SafeDetailKind::Identifier,
     required: true,
@@ -989,7 +1009,7 @@ const DETAILS_23: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
     description: "Requested protocol feature identifier.",
 }];
 
-const DETAIL_VALUES_24_1: &[&str] = &[
+const DETAIL_VALUES_25_1: &[&str] = &[
     "configuration",
     "diagnostics",
     "effects",
@@ -997,7 +1017,7 @@ const DETAIL_VALUES_24_1: &[&str] = &[
     "restore",
 ];
 
-const DETAILS_24: &[SafeDetailFieldDescriptor] = &[
+const DETAILS_25: &[SafeDetailFieldDescriptor] = &[
     SafeDetailFieldDescriptor {
         name: "capacity",
         kind: SafeDetailKind::U16,
@@ -1014,13 +1034,13 @@ const DETAILS_24: &[SafeDetailFieldDescriptor] = &[
         required: true,
         maximum_length: None,
         maximum_value: None,
-        allowed_values: DETAIL_VALUES_24_1,
+        allowed_values: DETAIL_VALUES_25_1,
         privacy: PrivacyClass::Public,
         description: "Bounded queue that rejected admission.",
     },
 ];
 
-const DETAIL_VALUES_25_1: &[&str] = &[
+const DETAIL_VALUES_26_1: &[&str] = &[
     "duplicate",
     "missing",
     "out-of-range",
@@ -1028,7 +1048,7 @@ const DETAIL_VALUES_25_1: &[&str] = &[
     "unsupported",
 ];
 
-const DETAILS_25: &[SafeDetailFieldDescriptor] = &[
+const DETAILS_26: &[SafeDetailFieldDescriptor] = &[
     SafeDetailFieldDescriptor {
         name: "field",
         kind: SafeDetailKind::Text,
@@ -1045,7 +1065,7 @@ const DETAILS_25: &[SafeDetailFieldDescriptor] = &[
         required: true,
         maximum_length: None,
         maximum_value: None,
-        allowed_values: DETAIL_VALUES_25_1,
+        allowed_values: DETAIL_VALUES_26_1,
         privacy: PrivacyClass::Public,
         description: "Sanitized validation reason.",
     },
@@ -1061,7 +1081,7 @@ const DETAILS_25: &[SafeDetailFieldDescriptor] = &[
     },
 ];
 
-const DETAIL_VALUES_26_0: &[&str] = &[
+const DETAIL_VALUES_27_0: &[&str] = &[
     "activating",
     "active-unready",
     "failed",
@@ -1070,53 +1090,53 @@ const DETAIL_VALUES_26_0: &[&str] = &[
     "unavailable",
 ];
 
-const DETAILS_26: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
-    name: "service_state",
-    kind: SafeDetailKind::Enum,
-    required: true,
-    maximum_length: None,
-    maximum_value: None,
-    allowed_values: DETAIL_VALUES_26_0,
-    privacy: PrivacyClass::Public,
-    description: "Sanitized bridge service state.",
-}];
-
-const DETAIL_VALUES_27_0: &[&str] = &["not-registered", "unqualified"];
-
 const DETAILS_27: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
-    name: "receiver_state",
+    name: "service_state",
     kind: SafeDetailKind::Enum,
     required: true,
     maximum_length: None,
     maximum_value: None,
     allowed_values: DETAIL_VALUES_27_0,
     privacy: PrivacyClass::Public,
-    description: "Sanitized receiver registration state.",
+    description: "Sanitized bridge service state.",
 }];
 
-const DETAIL_VALUES_28_0: &[&str] = &["no-paired-device", "not-live"];
+const DETAIL_VALUES_28_0: &[&str] = &["not-registered", "unqualified"];
 
 const DETAILS_28: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
-    name: "route_state",
+    name: "receiver_state",
     kind: SafeDetailKind::Enum,
     required: true,
     maximum_length: None,
     maximum_value: None,
     allowed_values: DETAIL_VALUES_28_0,
     privacy: PrivacyClass::Public,
+    description: "Sanitized receiver registration state.",
+}];
+
+const DETAIL_VALUES_29_0: &[&str] = &["no-paired-device", "not-live"];
+
+const DETAILS_29: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
+    name: "route_state",
+    kind: SafeDetailKind::Enum,
+    required: true,
+    maximum_length: None,
+    maximum_value: None,
+    allowed_values: DETAIL_VALUES_29_0,
+    privacy: PrivacyClass::Public,
     description: "Sanitized paired-device route state.",
 }];
 
-const DETAIL_VALUES_29_0: &[&str] = &["device-absent", "session-unavailable", "transport-busy"];
+const DETAIL_VALUES_30_0: &[&str] = &["device-absent", "session-unavailable", "transport-busy"];
 
-const DETAILS_29: &[SafeDetailFieldDescriptor] = &[
+const DETAILS_30: &[SafeDetailFieldDescriptor] = &[
     SafeDetailFieldDescriptor {
         name: "reason",
         kind: SafeDetailKind::Enum,
         required: true,
         maximum_length: None,
         maximum_value: None,
-        allowed_values: DETAIL_VALUES_29_0,
+        allowed_values: DETAIL_VALUES_30_0,
         privacy: PrivacyClass::Public,
         description: "Sanitized pre-dispatch failure reason.",
     },
@@ -1132,7 +1152,7 @@ const DETAILS_29: &[SafeDetailFieldDescriptor] = &[
     },
 ];
 
-const DETAILS_30: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
+const DETAILS_31: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
     name: "transaction_id",
     kind: SafeDetailKind::Identifier,
     required: true,
@@ -1143,7 +1163,7 @@ const DETAILS_30: &[SafeDetailFieldDescriptor] = &[SafeDetailFieldDescriptor {
     description: "Transaction whose transport outcome is uncertain.",
 }];
 
-const DETAILS_31: &[SafeDetailFieldDescriptor] = &[
+const DETAILS_32: &[SafeDetailFieldDescriptor] = &[
     SafeDetailFieldDescriptor {
         name: "delivered_frames",
         kind: SafeDetailKind::U16,
@@ -1358,13 +1378,33 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         docs_path: "docs/generated/error-catalog.md#hfx-integration-007",
     },
     ErrorDescriptor {
+        code: ErrorCode::HfxIntegration008,
+        error_class: ErrorClass::Integration,
+        severity: ErrorSeverity::Error,
+        retry_policy: RetryPolicy::AfterRemediation,
+        side_effect_certainty_policy: SideEffectCertaintyPolicy::NotApplicable,
+        remediation_id: RemediationId::RemoveBrokenInputLink,
+        safe_detail_fields: DETAILS_9,
+        lifecycle: LifecycleDescriptor {
+            state: ErrorLifecycleState::Active,
+            introduced_in: "2.1.2",
+            deprecated_in: None,
+            replacement_code: None,
+        },
+        owner: ErrorOwner::Integration,
+        technical_cause: "A /dev/input/by-id link named like an OpenRazer key-event file for a presented device points to a file that does not exist. openrazer-daemon fails to open it and stops adding devices.",
+        user_explanation: "A broken input link stops OpenRazer from showing any devices. Polychromatic and other OpenRazer apps show nothing while the link exists.",
+        privacy: PrivacyClass::Public,
+        docs_path: "docs/generated/error-catalog.md#hfx-integration-008",
+    },
+    ErrorDescriptor {
         code: ErrorCode::HfxInternal001,
         error_class: ErrorClass::Internal,
         severity: ErrorSeverity::Critical,
         retry_policy: RetryPolicy::Never,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::RuntimeReported,
         remediation_id: RemediationId::CollectSupportBundle,
-        safe_detail_fields: DETAILS_9,
+        safe_detail_fields: DETAILS_10,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1384,7 +1424,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::AfterRemediation,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::NotApplicable,
         remediation_id: RemediationId::ActivateInstalledDriver,
-        safe_detail_fields: DETAILS_10,
+        safe_detail_fields: DETAILS_11,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1404,7 +1444,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::AfterRemediation,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::NotApplicable,
         remediation_id: RemediationId::ActivateOpenrazerRouteDriver,
-        safe_detail_fields: DETAILS_11,
+        safe_detail_fields: DETAILS_12,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1424,7 +1464,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::AfterRemediation,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::NotApplicable,
         remediation_id: RemediationId::MigrateRetiredDriver,
-        safe_detail_fields: DETAILS_12,
+        safe_detail_fields: DETAILS_13,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "2.0.1",
@@ -1444,7 +1484,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::AfterRemediation,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::NotApplicable,
         remediation_id: RemediationId::MigrateRetiredDriver,
-        safe_detail_fields: DETAILS_13,
+        safe_detail_fields: DETAILS_14,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "2.0.1",
@@ -1464,7 +1504,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::Never,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::NotApplicable,
         remediation_id: RemediationId::ReconcileTransactionState,
-        safe_detail_fields: DETAILS_14,
+        safe_detail_fields: DETAILS_15,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1484,7 +1524,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::Never,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::NotApplicable,
         remediation_id: RemediationId::ReconcileTransactionState,
-        safe_detail_fields: DETAILS_15,
+        safe_detail_fields: DETAILS_16,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1504,7 +1544,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::AfterRemediation,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::MustBeNone,
         remediation_id: RemediationId::ReleaseOwner,
-        safe_detail_fields: DETAILS_16,
+        safe_detail_fields: DETAILS_17,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1524,7 +1564,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::AfterRemediation,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::MustBeNone,
         remediation_id: RemediationId::AcquireNewLease,
-        safe_detail_fields: DETAILS_17,
+        safe_detail_fields: DETAILS_18,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1544,7 +1584,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::AfterRemediation,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::NotApplicable,
         remediation_id: RemediationId::RepairStateStorage,
-        safe_detail_fields: DETAILS_18,
+        safe_detail_fields: DETAILS_19,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1564,7 +1604,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::AfterRemediation,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::NotApplicable,
         remediation_id: RemediationId::RepairStateStorage,
-        safe_detail_fields: DETAILS_19,
+        safe_detail_fields: DETAILS_20,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1584,7 +1624,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::AfterRemediation,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::MustBeNone,
         remediation_id: RemediationId::QualifyDevice,
-        safe_detail_fields: DETAILS_20,
+        safe_detail_fields: DETAILS_21,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1604,7 +1644,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::AfterRemediation,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::MustBeNone,
         remediation_id: RemediationId::VerifyProfileCatalog,
-        safe_detail_fields: DETAILS_21,
+        safe_detail_fields: DETAILS_22,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1624,7 +1664,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::AfterRemediation,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::NotApplicable,
         remediation_id: RemediationId::UpdateProtocolPeer,
-        safe_detail_fields: DETAILS_22,
+        safe_detail_fields: DETAILS_23,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1644,7 +1684,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::AfterRemediation,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::NotApplicable,
         remediation_id: RemediationId::DisableUnsupportedFeature,
-        safe_detail_fields: DETAILS_23,
+        safe_detail_fields: DETAILS_24,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1664,7 +1704,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::BoundedBackoff,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::MustBeNone,
         remediation_id: RemediationId::RetryBounded,
-        safe_detail_fields: DETAILS_24,
+        safe_detail_fields: DETAILS_25,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1684,7 +1724,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::Never,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::MustBeNone,
         remediation_id: RemediationId::CorrectRequest,
-        safe_detail_fields: DETAILS_25,
+        safe_detail_fields: DETAILS_26,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1704,7 +1744,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::AfterRemediation,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::NotApplicable,
         remediation_id: RemediationId::StartBridge,
-        safe_detail_fields: DETAILS_26,
+        safe_detail_fields: DETAILS_27,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1724,7 +1764,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::AfterRemediation,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::NotApplicable,
         remediation_id: RemediationId::ReconnectReceiver,
-        safe_detail_fields: DETAILS_27,
+        safe_detail_fields: DETAILS_28,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "2.0.1",
@@ -1744,7 +1784,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::AfterRemediation,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::NotApplicable,
         remediation_id: RemediationId::WakePairedDevice,
-        safe_detail_fields: DETAILS_28,
+        safe_detail_fields: DETAILS_29,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "2.0.1",
@@ -1764,7 +1804,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::BoundedBackoff,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::MustBeNone,
         remediation_id: RemediationId::RetryBounded,
-        safe_detail_fields: DETAILS_29,
+        safe_detail_fields: DETAILS_30,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1784,7 +1824,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::OutcomeLookupOnly,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::Possible,
         remediation_id: RemediationId::LookupTransactionOutcome,
-        safe_detail_fields: DETAILS_30,
+        safe_detail_fields: DETAILS_31,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
@@ -1804,7 +1844,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
         retry_policy: RetryPolicy::OutcomeLookupOnly,
         side_effect_certainty_policy: SideEffectCertaintyPolicy::Partial,
         remediation_id: RemediationId::LookupTransactionOutcome,
-        safe_detail_fields: DETAILS_31,
+        safe_detail_fields: DETAILS_32,
         lifecycle: LifecycleDescriptor {
             state: ErrorLifecycleState::Active,
             introduced_in: "0.0.0-dev.1",
