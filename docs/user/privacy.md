@@ -22,6 +22,8 @@ hyperfluxctl support-bundle --output hyperflux-support.json
 
 You should see `Support bundle written: hyperflux-support.json`. Only you can
 read the file. Nothing is uploaded. You decide whether to attach it to a report.
+If a file with that name already exists, the command stops without changing it:
+delete or rename the old file first, or choose another name.
 
 ## What A Bundle Contains
 
@@ -47,15 +49,15 @@ privately.
 
 ## Hardware Reports
 
-`hyperfluxctl qualification` makes a smaller report for device support
-requests. [Hardware](hardware.md#share-a-hardware-report) shows how to share
+`hyperfluxctl qualification` makes a smaller report about your receiver and
+devices, for device support requests and bug reports about a device. [Hardware](hardware.md#share-a-hardware-report) shows how to share
 it. It only reads what the HyperFlux service already knows. It sends nothing to
 your devices, writes nothing to them, and uploads nothing.
 
 A hardware report contains:
 
-- whether HyperFlux is ready, the HyperFlux version, and the service protocol
-  version;
+- whether HyperFlux is ready, the HyperFlux version, and the version of the
+  protocol that apps use to talk to the HyperFlux service;
 - the installed driver and service versions;
 - each receiver and device by model name and USB ID (such as `1532:00cd`),
   numbered `receiver-1`, `device-1`, and so on;

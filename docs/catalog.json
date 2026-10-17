@@ -972,7 +972,7 @@
     },
     {
       "path": "docs/user/installation.md",
-      "title": "Install HyperFlux Next",
+      "title": "Install HyperFlux Next On Arch Linux",
       "audience": "users",
       "purpose": "Walks a new user through adding the repository, choosing Full or Core, turning HyperFlux on, and checking that it works.",
       "owner": "documentation",

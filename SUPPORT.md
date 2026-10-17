@@ -1,8 +1,9 @@
 # Support
 
 Find the right place for your question or report below. To install or update
-HyperFlux Next, follow the [installation guide](docs/user/installation.md). Only
-the latest release is supported; see
+HyperFlux Next, follow the guide for your distribution, linked from the
+[install section of the README](README.md#install). Only the latest release is
+supported; see
 [SECURITY.md](SECURITY.md#supported-versions).
 
 Before you ask, try the [troubleshooting guide](docs/user/troubleshooting.md)
@@ -13,7 +14,7 @@ and the [known limitations](docs/user/limitations.md).
 | Need | Next action |
 | --- | --- |
 | Find a guide | Start at the [documentation hub](docs/README.md) |
-| Install or update HyperFlux Next | Follow the [installation guide](docs/user/installation.md) |
+| Install or update HyperFlux Next | Follow the guide for your distribution, linked from the [install section of the README](README.md#install) |
 | Ask how to use or build HyperFlux | Open a [Help discussion](https://github.com/offalexjackson777-stack/hyperflux-next/discussions/categories/help) |
 | Explore an early idea | Start an [Ideas discussion](https://github.com/offalexjackson777-stack/hyperflux-next/discussions/categories/ideas) |
 | Report something that does not work | Use the [bug form](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=bug_report.yml) |
@@ -23,8 +24,9 @@ and the [known limitations](docs/user/limitations.md).
 
 ## What To Include
 
-If `hyperfluxctl` works on your computer, include these. If it does not, report
-anyway.
+If `hyperfluxctl` works on your computer, include these. Both the bug form and
+the device support form have a field for each one. If a command does not run on
+your computer, leave its field empty and report anyway.
 
 1. The output of `hyperfluxctl doctor`.
 2. The output of `hyperfluxctl support-bundle --preview`. It uploads nothing and

@@ -1260,8 +1260,10 @@ class UserDocumentationContracts(unittest.TestCase):
         )
 
     def test_support_sends_users_to_the_installation_guide(self) -> None:
+        # Every distribution has its own guide, so Support links the README list of them.
         support = _page("SUPPORT.md")
-        self.assertIn("(docs/user/installation.md)", support)
+        self.assertIn("(README.md#install)", support)
+        self.assertNotIn("(docs/user/installation.md)", support)
         self.assertIsNone(re.search(r"\bunreleased\b", support, re.IGNORECASE))
 
 
