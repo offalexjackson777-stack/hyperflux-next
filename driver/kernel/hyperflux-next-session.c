@@ -187,6 +187,7 @@ static int hfx_session_release_file(struct inode *inode, struct file *file)
 		}
 		spin_unlock_irqrestore(&receiver->authorization_lock, flags);
 		mutex_unlock(&receiver->transport_lock);
+		hfx_battery_release_owner(receiver, context);
 	}
 	kref_put(&receiver->refcount, hfx_receiver_release);
 	kfree(context);
@@ -357,6 +358,8 @@ static long hfx_session_ioctl(struct file *file, unsigned int command,
 		return hfx_native_exchange_submit(receiver, context, user_arg);
 	case HFX_UAPI_IOCTL_GET_NATIVE_EXCHANGE_RESULT:
 		return hfx_native_exchange_get_result(receiver, context, user_arg);
+	case HFX_UAPI_IOCTL_REPORT_CHILD_BATTERY:
+		return hfx_battery_report(receiver, context, user_arg);
 	default:
 		return -ENOTTY;
 	}

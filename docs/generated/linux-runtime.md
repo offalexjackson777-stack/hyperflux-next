@@ -4,14 +4,14 @@
 
 This page lists the files, accounts, services, and limits HyperFlux uses on a running Linux system, for packagers, contributors, and anyone checking what HyperFlux puts where.
 
-Source digest: `e228f8219ee80e0595e6d9f7ac1e121ce03d9e450ef2061e3bcc548197d506ea`.
+Source digest: `6cffc778713d86f4a3da2637062d8567fda96821773c9bb9469020b8a19c58e5`.
 
 ## Product
 
 | Field | Value |
 | --- | --- |
 | Name | HyperFlux Next |
-| Version | `2.1.0` |
+| Version | `2.1.1` |
 | Package | `hyperflux-next-linux` release `1` |
 
 ## Background Service
@@ -36,9 +36,13 @@ Installing never starts, stops, enables, or restarts this service. On first run 
 
 ## Loading The Kernel Driver
 
-The DKMS module is `hid-hyperflux-next` version `2.1.0` and creates `hyperflux-next-*` devices, with a new name each time the driver attaches to the receiver, for the service account.
+The DKMS module is `hid-hyperflux-next` version `2.1.1` and creates `hyperflux-next-*` devices, with a new name each time the driver attaches to the receiver, for the service account.
 
 If the loaded kernel module is not the installed one, reboot normally to switch, or run the activation command that disconnects the receiver, but only when another keyboard, mouse, or SSH session can still reach the machine. Package hooks never load modules or start services. `hyperfluxctl doctor` reports this as a driver activation problem, not a service failure.
+
+## Hardware Qualification Report
+
+`hyperfluxctl qualification` prints the console's `hyperflux-local-qualification-v1` view of the installed system; `--json` prints it as JSON and `--output PATH` writes it to a new owner-only file. It uses only the bridge's read-only `snapshot`, `diagnostics`, and `integration-view` requests, sends no active device query, and records firmware as not collected. Receiver, device, and generation identifiers are replaced with ordinals, bridge findings keep only their catalog code and severity, and serial numbers, file paths, raw HID data, journal text, and user or host names are never included. It exits `0` when the companion state is ready and `2` otherwise.
 
 ## Limits
 

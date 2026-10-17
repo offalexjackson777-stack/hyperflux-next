@@ -37,6 +37,7 @@ Runs the device testing workflow behind the qualification console: the test step
 - [`crates/hfx-device-qualification/Cargo.toml`](Cargo.toml)
 - [`crates/hfx-device-qualification/src/lib.rs`](src/lib.rs)
 - [`crates/hfx-device-qualification/src/qualification.rs`](src/qualification.rs)
+- [`crates/hfx-device-qualification/src/qualification_report.rs`](src/qualification_report.rs)
 - [`crates/hfx-device-qualification/src/qualification_lifecycle.rs`](src/qualification_lifecycle.rs)
 - [`crates/hfx-device-qualification/src/qualification_server.rs`](src/qualification_server.rs)
 - [`crates/hfx-device-qualification/src/bin/hyperflux-next-device-qualification.rs`](src/bin/hyperflux-next-device-qualification.rs)

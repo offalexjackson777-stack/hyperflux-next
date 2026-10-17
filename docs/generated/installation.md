@@ -6,7 +6,7 @@ This page lists what the HyperFlux packages install, what they leave alone, and 
 
 Install manifest digest: `dd2530b90f489df732800f7b6adb546a43510db3460b7c5e5eefe0f990c3a9cd`.
 
-Packages: Core `hyperflux-next-linux` (the receiver driver, background service, SDK, and `hyperfluxctl`) and Full (Core plus OpenRazer and OpenRGB support) at `2.1.0` release `1`.
+Packages: Core `hyperflux-next-linux` (the receiver driver, background service, SDK, and `hyperfluxctl`) and Full (Core plus OpenRazer and OpenRGB support) at `2.1.1` release `1`.
 
 ## What Installing Does And Does Not Do
 
@@ -37,11 +37,11 @@ The build plan contains `8` required and `0` optional build products.
 
 ## Installed Files
 
-The packages install `32` files. Every file goes under `/etc` or `/usr`, and no two files share a path.
+The packages install `34` files. Every file goes under `/etc` or `/usr`, and no two files share a path.
 
 | Payload | Distribution component | Files | Preserved destination |
 | --- | --- | ---: | --- |
-| `kernel-source` | `linux` | 15 | `-` |
+| `kernel-source` | `linux` | 17 | `-` |
 | `dkms-configuration` | `linux` | 1 | `-` |
 | `bridge-service` | `linux` | 1 | `-` |
 | `desktop-bridge-socket` | `linux` | 1 | `-` |
@@ -79,8 +79,8 @@ sudo systemctl enable hyperflux-next-bridge.service "hyperflux-next-client@$(id 
 sudo reboot
 ```
 
-After login, run the read-only `hyperfluxctl doctor`. Live activation without a reboot requires disconnecting the receiver, so use `sudo /usr/lib/hyperflux-next/hyperflux-next-activate activate-disconnected-driver` only when another keyboard, mouse, or verified SSH session can recover the machine.
+After login, run the read-only `hyperfluxctl doctor`; the read-only `hyperfluxctl qualification --json` report is what a hardware report asks for. Live activation without a reboot requires disconnecting the receiver, so use `sudo /usr/lib/hyperflux-next/hyperflux-next-activate activate-disconnected-driver` only when another keyboard, mouse, or verified SSH session can recover the machine.
 
 Rollback uses a complete prior source-bound Core/Full pair through the package manager. Do not copy files into `/usr/src`, overwrite DKMS trees, or mix an upstream OpenRazer driver package with the HyperFlux-owned transform. Existing configuration remains preserved across supported package transitions.
 
-The Arch package base consumes independently staged `linux` and payload-bearing `full` components. Ubuntu 24.04 `.deb` packages of the Core edition are built and checked in CI but not published yet; Fedora output is deferred.
+The Arch package base consumes independently staged `linux` and payload-bearing `full` components. Ubuntu 24.04 and Debian 13 `.deb` packages and Fedora 44 and openSUSE Tumbleweed `.rpm` packages of the Core edition are built and checked in CI every week but not published yet.

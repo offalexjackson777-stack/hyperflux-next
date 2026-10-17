@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include "hyperflux-next-battery.h"
 #include "hyperflux-next-pairing-inventory.h"
 #include "hyperflux-next-passive.h"
 #include "hyperflux-next-wire.h"
@@ -191,6 +192,114 @@ static struct hfx_uapi_frame mouse_frame(void)
 	return frame;
 }
 
+static struct hfx_uapi_child_battery present_battery(void)
+{
+	struct hfx_uapi_child_battery report;
+
+	memset(&report, 0, sizeof(report));
+	report.version = HFX_UAPI_POWER_SUPPLY_ABI_VERSION;
+	report.size = sizeof(report);
+	report.receiver_generation = 7;
+	report.endpoint_slot = HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE;
+	report.presence = HFX_UAPI_BATTERY_PRESENCE_PRESENT;
+	report.capacity = 62;
+	report.status = HFX_UAPI_BATTERY_STATUS_UNKNOWN;
+	memcpy(report.model_name, "Razer Viper Ultimate", 20);
+	return report;
+}
+
+static void test_child_battery(void)
+{
+	struct hfx_uapi_child_battery report = present_battery();
+
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALID);
+	assert(hfx_battery_lane_index(HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE) ==
+	       HFX_BATTERY_POINTER);
+	assert(hfx_battery_lane_index(HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE) ==
+	       HFX_BATTERY_KEYBOARD);
+	assert(hfx_battery_lane_index(HFX_UAPI_ENDPOINT_SLOT_RECEIVER) < 0);
+
+	report.capacity = HFX_UAPI_BATTERY_MAX_CAPACITY;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALID);
+	report.capacity = HFX_UAPI_BATTERY_MAX_CAPACITY + 1;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALUE);
+
+	report = present_battery();
+	report.status = HFX_UAPI_BATTERY_STATUS_FULL + 1;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALUE);
+	report = present_battery();
+	report.presence = 2;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALUE);
+	report = present_battery();
+	report.version = HFX_UAPI_POWER_SUPPLY_ABI_VERSION + 1;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_HEADER);
+	report = present_battery();
+	report.size = sizeof(report) - 1;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_HEADER);
+	report = present_battery();
+	report.endpoint_slot = HFX_UAPI_ENDPOINT_SLOT_RECEIVER;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_SLOT);
+
+	report = present_battery();
+	report.model_name[3] = '\n';
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_MODEL_NAME);
+	report = present_battery();
+	report.model_name[25] = 'X';
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_MODEL_NAME);
+	report = present_battery();
+	memset(report.model_name, 'A', sizeof(report.model_name));
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_MODEL_NAME);
+	report = present_battery();
+	memset(report.model_name, 0, sizeof(report.model_name));
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALID);
+
+	report = present_battery();
+	report.presence = HFX_UAPI_BATTERY_PRESENCE_ABSENT;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALUE);
+	report.capacity = 0;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_MODEL_NAME);
+	memset(report.model_name, 0, sizeof(report.model_name));
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALID);
+	report.status = HFX_UAPI_BATTERY_STATUS_DISCHARGING;
+	assert(hfx_battery_check_report(&report) == HFX_BATTERY_VALUE);
+}
+
+static void test_pointer_identity_without_product(void)
+{
+	/* A wired Basilisk makes the receiver send 05 3b 01 00 00. */
+	const __u8 valid_identity[] = { 0x05, 0x3b, 0x01, 0x00, 0xcd };
+	const __u8 zero_identity[] = { 0x05, 0x3b, 0x01, 0x00, 0x00 };
+	const __u8 erased_identity[] = { 0x05, 0x3b, 0x06, 0xff, 0xff };
+	struct hfx_passive_report report;
+
+	assert(hfx_passive_parse(HFX_PASSIVE_REPORT_INTERFACE, valid_identity,
+				 sizeof(valid_identity), &report) ==
+	       HFX_PASSIVE_POINTER_IDENTITY);
+	assert(report.product_id == 0x00cd);
+
+	/*
+	 * The whole report is invalid: no product ID and no contact byte
+	 * survive, so hfx_observe_passive() returns before the ring or the
+	 * cached pointer identity is touched.
+	 */
+	assert(hfx_passive_parse(HFX_PASSIVE_REPORT_INTERFACE, zero_identity,
+				 sizeof(zero_identity), &report) ==
+	       HFX_PASSIVE_INVALID);
+	assert(report.kind == HFX_PASSIVE_NONE);
+	assert(report.product_id == 0);
+	assert(report.contact_raw == 0);
+
+	assert(hfx_passive_parse(HFX_PASSIVE_REPORT_INTERFACE, erased_identity,
+				 sizeof(erased_identity), &report) ==
+	       HFX_PASSIVE_INVALID);
+	assert(report.kind == HFX_PASSIVE_NONE);
+	assert(report.product_id == 0);
+	assert(report.contact_raw == 0);
+
+	assert(hfx_passive_parse(4, zero_identity, sizeof(zero_identity),
+				 &report) == HFX_PASSIVE_NONE);
+}
+
 int main(void)
 {
 	struct hfx_uapi_frame frame = mouse_frame();
@@ -257,5 +366,7 @@ int main(void)
 				  &activity_slot));
 
 	test_pairing_inventory();
+	test_child_battery();
+	test_pointer_identity_without_product();
 	return 0;
 }

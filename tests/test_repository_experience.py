@@ -57,7 +57,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
     def test_readme_is_a_human_owned_github_front_door(self) -> None:
         readiness = public_readiness(ROOT)
         self.assertEqual(
-            load_json(ROOT / "generated" / "public-readiness.json"), readiness
+            load_json(ROOT / "spec" / "catalog" / "public-readiness.json"), readiness
         )
         deployment = load_native_deployment(ROOT)
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -67,6 +67,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
         readme_blocks = (
             "release-summary",
             "compatibility-summary",
+            "install-table",
             "recommended-package",
         )
         self.assertEqual(record.generated_block_ids, readme_blocks)
@@ -280,6 +281,20 @@ class RepositoryExperienceContracts(unittest.TestCase):
                 with self.assertRaises(ModelError):
                     generated_markers(mutation)
 
+    def test_document_catalog_schema_declares_every_generated_block(self) -> None:
+        # The schema and the loader must accept the same block ids, and every
+        # repository guide target needs its setup block declared.
+        from hfxdev.generators.repository_guides import block_id
+        from hfxdev.package_repositories import SITE_TARGET_IDS
+
+        schema = load_json(ROOT / "schemas/document-catalog.schema.json")
+        blocks = schema["$defs"]["document"]["properties"]["generated_block_ids"]
+        self.assertEqual(tuple(blocks["items"]["enum"]), GENERATED_BLOCK_IDS)
+        self.assertEqual(blocks["maxItems"], len(GENERATED_BLOCK_IDS))
+        for target_id in SITE_TARGET_IDS:
+            with self.subTest(target=target_id):
+                self.assertIn(block_id(target_id), GENERATED_BLOCK_IDS)
+
     def test_human_document_experience_is_bounded_and_privacy_safe(self) -> None:
         catalog = load_document_catalog(ROOT)
         private_patterns = (
@@ -332,6 +347,8 @@ class RepositoryExperienceContracts(unittest.TestCase):
             "page-horizontal-overflow",
             "element-outside-viewport",
             "clipped-text",
+            "clipped-horizontal-overflow",
+            "table-word-break",
             "broken-image",
             "missing-image-alt",
             "table-column-bound",
@@ -341,6 +358,82 @@ class RepositoryExperienceContracts(unittest.TestCase):
             'fullPage: true',
         ):
             self.assertIn(contract, renderer)
+
+    def test_document_render_wraps_like_github_so_wide_tables_scroll(self) -> None:
+        # overflow-wrap:anywhere lowers every cell's minimum width to one letter, so a
+        # wide table squeezes its columns instead of scrolling inside its own box.
+        renderer = (ROOT / "tools" / "documentation_preview.cjs").read_text(
+            encoding="utf-8"
+        )
+        style = renderer.split("<style>", 1)[1].split("</style>", 1)[0]
+        self.assertIn("article { min-width:0; overflow-wrap:break-word; }", style)
+        self.assertIn(
+            "table { display:block; width:max-content; max-width:100%; overflow-x:auto;",
+            style,
+        )
+        self.assertIn(
+            "table th, table td, table th *, table td * "
+            "{ overflow-wrap:break-word; word-break:normal; }",
+            style,
+        )
+        self.assertIn("pre { max-width:100%; overflow:auto;", style)
+        for rule in re.findall(r"[^{}]+\{[^}]*overflow-wrap:anywhere[^}]*\}", style):
+            selectors = rule.split("{", 1)[0]
+            self.assertNotRegex(selectors, r"\b(?:article|table|th|td)\b", rule)
+
+    @unittest.skipIf(shutil.which("node") is None, "Node.js is not available")
+    def test_document_render_flags_clipped_boxes_and_squeezed_tables(self) -> None:
+        script = (
+            "const { layoutIssues } = require(process.argv[1]);"
+            "const input = JSON.parse(require('node:fs').readFileSync(0, 'utf8'));"
+            "process.stdout.write(JSON.stringify(input.map(layoutIssues)));"
+        )
+        box = {"tag": "pre", "scroll_width": 900, "client_width": 300}
+        word = {"table": 1, "cell": "th", "word": "Required", "lines": 8}
+        cases = [
+            # A wide box that scrolls is fine; one that hides or clips cuts content off.
+            {"overflowing": [{**box, "overflow_x": "auto"}], "broken_words": []},
+            {"overflowing": [{**box, "overflow_x": "scroll"}], "broken_words": []},
+            {"overflowing": [{**box, "overflow_x": "hidden"}], "broken_words": []},
+            {"overflowing": [{**box, "overflow_x": "clip"}], "broken_words": []},
+            # A word on one line is fine; a split word is reported once per table.
+            {"overflowing": [], "broken_words": [{**word, "lines": 1}]},
+            {
+                "overflowing": [],
+                "broken_words": [
+                    word,
+                    {**word, "cell": "td", "word": "yes", "lines": 3},
+                    {**word, "table": 2, "word": "Component", "lines": 2},
+                ],
+            },
+        ]
+        completed = subprocess.run(
+            [
+                shutil.which("node"),
+                "-e",
+                script,
+                str(ROOT / "tools" / "documentation_preview.cjs"),
+            ],
+            input=json.dumps(cases),
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=60,
+        )
+        self.assertEqual(
+            json.loads(completed.stdout),
+            [
+                [],
+                [],
+                [{"kind": "clipped-horizontal-overflow", "detail": "pre 900>300"}],
+                [{"kind": "clipped-horizontal-overflow", "detail": "pre 900>300"}],
+                [],
+                [
+                    {"kind": "table-word-break", "detail": "table 1 th Required"},
+                    {"kind": "table-word-break", "detail": "table 2 th Component"},
+                ],
+            ],
+        )
 
     def test_document_render_policy_rejects_missing_theme_or_unreviewed_screenshot(self) -> None:
         canonical = load_json(ROOT / "docs" / "render-preview.json")
@@ -563,26 +656,24 @@ class RepositoryExperienceContracts(unittest.TestCase):
                 with self.assertRaises(ModelError):
                     load_documentation_review(root, load_document_catalog(ROOT))
 
-    def test_document_render_audit_binds_sources_visual_review_and_fast_gate(self) -> None:
+    def test_document_render_audit_binds_manifest_visual_review_and_publication(self) -> None:
+        # Every pull request checks the release record's structure; it is not tied to
+        # any commit literal, so landing another pull request cannot make this stale.
         audit = load_documentation_render_audit(ROOT)
         policy = load_documentation_render_policy(ROOT)
-        self.assertEqual(audit.source_revision, "2a22f5853bd11002544e78a574008a8efdfa71e7")
-        self.assertEqual(audit.check_count, policy.check_count)
+        manifest = load_json(ROOT / "assurance" / "documentation-screenshot-manifest.json")
+        self.assertEqual(audit.source_revision, manifest["source_revision"])
+        self.assertEqual(audit.result_sha256, manifest["render_result_sha256"])
         self.assertEqual(audit.screenshot_count, policy.screenshot_count)
         self.assertEqual(audit.capture_mode, "full-page")
-        self.assertEqual(audit.fast_run_id, "hfxv-591106dafead36b83b77")
-        self.assertEqual(audit.full_run_id, "hfxv-9d9fe8246a443a155051")
-        self.assertEqual(
-            audit.full_source_revision,
-            "446c2c064444e98b0f89b5ef2ee7db5e8ce546a0",
-        )
+        self.assertNotIn(manifest["source_revision"], Path(__file__).read_text(encoding="utf-8"))
 
         canonical = load_json(ROOT / "assurance" / "documentation-audit.json")
         mutations = (
             lambda value: value["render"].update(issue_count=1),
-            lambda value: value["verification"].update(
-                release_gate_changes=[]
-            ),
+            lambda value: value["render"].update(outbound_network_requests=1),
+            lambda value: value["render"].update(screenshot_manifest_sha256="0" * 64),
+            lambda value: value["publication"].update(release_gate_changes=[]),
             lambda value: value["visual_review"]["reviewed_screenshots"].__setitem__(
                 0,
                 value["visual_review"]["reviewed_screenshots"][1],
@@ -590,17 +681,24 @@ class RepositoryExperienceContracts(unittest.TestCase):
             lambda value: value["visual_review"]["reviewed_screenshots"][0].update(
                 sha256="0" * 64
             ),
+            lambda value: value.update(verification={}),
         )
         for mutate in mutations:
             value = copy.deepcopy(canonical)
             mutate(value)
             with self.subTest(mutation=mutate), self.assertRaises(ModelError):
                 validate_documentation_render_audit(ROOT, value)
+
+        # Edited documents leave the structure valid; only release mode needs a new render.
+        # The tree's own digests are replaced so this holds between releases too.
+        edited_tree = {**canonical["inputs"], "rendered_documents_sha256": "0" * 64}
         with patch(
-            "hfxdev.documentation_preview.rendered_documents_sha256",
-            return_value="0" * 64,
-        ), self.assertRaisesRegex(ModelError, "rendered_documents_sha256 is stale"):
+            "hfxdev.documentation_preview.documentation_render_inputs",
+            return_value=edited_tree,
+        ):
             validate_documentation_render_audit(ROOT, canonical)
+            with self.assertRaisesRegex(ModelError, "rendered_documents_sha256 is stale"):
+                validate_documentation_render_audit(ROOT, canonical, release_evidence=True)
 
     def test_all_repository_markdown_links_and_anchors_resolve(self) -> None:
         issues = repository_link_issues(ROOT)
@@ -920,8 +1018,9 @@ class RepositoryExperienceContracts(unittest.TestCase):
         expected = {
             ".devcontainer",
             "apps",
-            "generated",
             "sdk",
+            "spec",
+            "spec/catalog",
             "uapi",
         }
         for directory in expected:
@@ -1200,6 +1299,25 @@ class UserDocumentationContracts(unittest.TestCase):
         for word in ("non-writable", "lease", "unqualified", "boundary"):
             self.assertNotIn(word, troubleshooting)
         self.assertIn("> [!WARNING]", troubleshooting)
+
+    def test_hardware_page_shows_how_to_share_a_qualification_report(self) -> None:
+        hardware = _page("docs/user/hardware.md")
+        section = hardware.split("## Share A Hardware Report", 1)[1].split("\n## ", 1)[0]
+        order = [
+            "hyperfluxctl qualification\n",
+            "State: ready",
+            "hyperfluxctl qualification --json --output",
+            "template=device_support.yml",
+        ]
+        positions = [section.index(step) for step in order]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("does not include firmware versions", section)
+        privacy = _page("docs/user/privacy.md")
+        report = privacy.split("## Hardware Reports", 1)[1]
+        for excluded in ("serial numbers", "firmware versions", "file paths", "raw HID"):
+            self.assertIn(excluded, report.split("A hardware report leaves out:", 1)[1])
+        self.assertIn("hyperfluxctl qualification --json", _page("SUPPORT.md"))
+        self.assertIn("hyperfluxctl qualification --json", _page("docs/user/troubleshooting.md"))
 
     def test_known_limitations_page_is_linked_from_user_pages(self) -> None:
         limitations = _page("docs/user/limitations.md")

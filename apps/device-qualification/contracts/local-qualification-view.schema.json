@@ -36,9 +36,40 @@
     },
     "receivers": {"type": "array", "maxItems": 8, "items": {"$ref": "#/$defs/receiver"}},
     "plans": {"type": "array", "maxItems": 32, "items": {"$ref": "#/$defs/plan"}},
-    "actions": {"type": "array", "maxItems": 256, "items": {"$ref": "#/$defs/action"}}
+    "actions": {"type": "array", "maxItems": 256, "items": {"$ref": "#/$defs/action"}},
+    "collection": {"$ref": "#/$defs/collection"}
   },
   "$defs": {
+    "collection": {
+      "description": "Present only in a report written by hyperfluxctl qualification: the read-only bridge requests it used and what it did not collect.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["producer", "bridge_requests", "active_device_query_executed", "firmware", "diagnostic_findings"],
+      "properties": {
+        "producer": {"const": "hyperfluxctl qualification"},
+        "bridge_requests": {
+          "type": "array",
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {"enum": ["snapshot", "diagnostics", "integration-view"]}
+        },
+        "active_device_query_executed": {"const": false},
+        "firmware": {"const": "not-collected"},
+        "diagnostic_findings": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["finding_id", "severity"],
+            "properties": {
+              "finding_id": {"type": "string", "pattern": "^HFX-[A-Z0-9-]{1,60}$"},
+              "severity": {"enum": ["info", "warning", "error", "critical"]}
+            }
+          }
+        }
+      }
+    },
     "generationId": {
       "type": "string",
       "minLength": 1,

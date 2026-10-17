@@ -8,8 +8,8 @@ Polychromatic, and OpenRGB on Linux.
 [![License: GPL-2.0-only](docs/assets/badge-license.svg)](LICENSE)
 
 <!-- HFX-GENERATED-BEGIN: release-summary -->
-**HyperFlux Next 2.1.0 is available for Arch Linux x86_64.** Read the
-[v2.1.0 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.0).
+**HyperFlux Next 2.1.1 is available for Arch Linux x86_64.** Read the
+[v2.1.1 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.1).
 <!-- HFX-GENERATED-END: release-summary -->
 
 With HyperFlux Next 2.0, a keyboard and mouse that share one HyperFlux
@@ -52,6 +52,21 @@ how to check a device that is not listed. The
 
 ## Install
 
+<!-- HFX-GENERATED-BEGIN: install-table -->
+Choose the guide for your Linux distribution. Each one adds the signed
+HyperFlux repository and installs the package.
+
+| Distribution | Release | Guide | Packages |
+| --- | --- | --- | --- |
+| Arch Linux | rolling | [Install on Arch Linux](docs/user/installation.md) | Ready |
+| Ubuntu | 24.04 | [Install on Ubuntu](docs/user/install-ubuntu.md) | Not published yet |
+| Debian | 13 | [Install on Debian](docs/user/install-debian.md) | Not published yet |
+| Fedora | 44 | [Install on Fedora](docs/user/install-fedora.md) | Not published yet |
+| openSUSE | Tumbleweed | [Install on openSUSE](docs/user/install-opensuse.md) | Not published yet |
+
+The quick steps below are for Arch Linux.
+<!-- HFX-GENERATED-END: install-table -->
+
 <!-- HFX-GENERATED-BEGIN: recommended-package -->
 You need Arch Linux on an x86_64 computer and the receiver, with your keyboard
 and mouse paired to it.
@@ -85,6 +100,9 @@ and mouse paired to it.
 
    You should see `HyperFlux Next is ready.` If you see
    `HyperFlux Next needs attention.` instead, do what its `Do:` line says.
+
+   To report how your devices are detected, run `hyperfluxctl qualification`.
+   It only reads, and [Hardware](docs/user/hardware.md) shows how to share it.
 
 Later updates arrive with your normal `sudo pacman -Syu`.
 <!-- HFX-GENERATED-END: recommended-package -->

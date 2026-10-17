@@ -22,9 +22,10 @@ Open the repository in a Development Containers-compatible editor, or build `.de
 ```sh
 ./hfx upstream prepare --output .hfx/upstreams
 CARGO_NET_OFFLINE=false cargo fetch --locked
+install -d .hfx/documentation-render && install -m 0644 toolchains/documentation-render/package.json toolchains/documentation-render/package-lock.json .hfx/documentation-render/ && npm ci --prefix .hfx/documentation-render --ignore-scripts --no-audit --no-fund --no-update-notifier --cache /tmp/hfx-home/npm
 ```
 
-This is the only ordinary setup step that uses the network. It creates clean, detached upstream checkouts and fetches the exact `Cargo.lock` dependency set into the workspace-local `.hfx/cargo/` cache. The reviewed upstream commits are:
+This is the only ordinary setup step that uses the network. It creates clean, detached upstream checkouts, fetches the exact `Cargo.lock` dependency set into the workspace-local `.hfx/cargo/` cache, and installs the locked documentation renderer packages (Playwright and marked, from `toolchains/documentation-render/package-lock.json`) into `.hfx/documentation-render/`. The reviewed upstream commits are:
 
 | Upstream | Commit | Contract |
 | --- | --- | --- |
@@ -43,7 +44,7 @@ These commands use the host directly when it exactly matches the repository pins
 
 ## When It Uses The Network
 
-Container construction may read the immutable Arch snapshot, install the exact Rust toolchain, and fetch the exact RustSec advisory database commit. Post-create preparation may fetch only cataloged repositories and locked Rust crates. Verification reuses those workspace-local inputs without network access; missing, dirty, or mismatched inputs fail with a remediation command.
+Container construction may read the immutable Arch snapshot, install the exact Rust toolchain, and fetch the exact RustSec advisory database commit. Post-create preparation may fetch only cataloged repositories, locked Rust crates, and the locked documentation renderer packages. The documentation render (`./hfx docs render`) then uses the image's own Node.js, Chromium and Noto fonts without network access. Verification reuses those workspace-local inputs without network access; missing, dirty, or mismatched inputs fail with a remediation command.
 
 Archive package retrieval permits up to 3 attempts. Low-speed transfer expiry is disabled. Package signatures and exact-version constraints remain mandatory.
 
@@ -56,6 +57,7 @@ Archive package retrieval permits up to 3 attempts. Low-speed transfer expiry is
 | `ca-certificates` | `20240618-1` |
 | `cargo-audit` | `0.22.2-1` |
 | `cargo-llvm-cov` | `0.8.7-1` |
+| `chromium` | `150.0.7871.128-1` |
 | `clang` | `22.1.8-1` |
 | `cmake` | `4.4.0-1` |
 | `curl` | `8.21.0-1` |
@@ -73,19 +75,27 @@ Archive package retrieval permits up to 3 attempts. Low-speed transfer expiry is
 | `make` | `4.4.1-3` |
 | `mbedtls` | `3.6.5-1` |
 | `ninja` | `1.13.2-3` |
+| `nodejs` | `26.4.0-1` |
+| `noto-fonts` | `1:2026.07.01-1` |
+| `npm` | `12.0.1-1` |
 | `patchelf` | `0.19.1-1` |
 | `pkgconf` | `3.0.3-1` |
 | `python` | `3.14.6-1` |
+| `python-attrs` | `26.1.0-1` |
 | `python-colorama` | `0.4.6-6` |
 | `python-colour` | `0.1.5-16` |
 | `python-daemonize` | `2.5.0-10` |
 | `python-dbus` | `1.4.0-2` |
 | `python-gobject` | `3.56.3-1` |
+| `python-jsonschema` | `4.26.0-1` |
+| `python-jsonschema-specifications` | `2025.9.1-2` |
 | `python-markdown` | `3.10.2-1` |
 | `python-numpy` | `2.5.1-1` |
 | `python-pip` | `26.1.2-1` |
 | `python-pyudev` | `0.24.4-1` |
+| `python-referencing` | `0.37.0-3` |
 | `python-requests` | `2.34.2-1` |
+| `python-rpds-py` | `2026.6.3-1` |
 | `python-setproctitle` | `1.3.7-2` |
 | `python-setuptools` | `1:83.0.0-1` |
 | `python-wheel` | `0.47.0-1` |

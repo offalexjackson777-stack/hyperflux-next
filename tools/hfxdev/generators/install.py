@@ -197,7 +197,9 @@ def markdown(
             manifest.first_run_activation.activation_command(),
             "```",
             "",
-            "After login, run the read-only `hyperfluxctl doctor`. Live activation without a "
+            "After login, run the read-only `hyperfluxctl doctor`; the read-only "
+            "`hyperfluxctl qualification --json` report is what a hardware report asks for. "
+            "Live activation without a "
             "reboot requires disconnecting the receiver, so use "
             f"`{manifest.first_run_activation.disconnected_command(runtime)}` only when "
             "another keyboard, mouse, or verified SSH session can recover the machine.",
@@ -208,8 +210,9 @@ def markdown(
             "configuration remains preserved across supported package transitions.",
             "",
             "The Arch package base consumes independently staged `linux` and payload-bearing "
-            "`full` components. Ubuntu 24.04 `.deb` packages of the Core edition are "
-            "built and checked in CI but not published yet; Fedora output is deferred.",
+            "`full` components. Ubuntu 24.04 and Debian 13 `.deb` packages and Fedora 44 "
+            "and openSUSE Tumbleweed `.rpm` packages of the Core edition are built and "
+            "checked in CI every week but not published yet.",
             "",
         ]
     )

@@ -15,8 +15,17 @@ from .arch_repository import build_arch_repository, verify_arch_repository
 from .arch_repository_public import verify_public_arch_repository
 from .ci import (
     PINNED_VERIFICATION_ENVIRONMENT,
+    RELEASE_EVIDENCE_MODES,
     container_invocation,
     run_container,
+)
+from .documentation_evidence import (
+    DEFAULT_CHROMIUM,
+    DEFAULT_RENDER_TIMEOUT_SECONDS,
+    bind as bind_documentation_render,
+    check_render as check_documentation_render,
+    review as review_documentation_render,
+    run_render as run_documentation_render,
 )
 from .ci_openrgb import run_external_openrgb_qualification
 from .governance import load_github_governance
@@ -41,6 +50,8 @@ from .github_sync import plan as plan_github
 from .github_sync import verify as verify_github
 from .knowledge import import_upstream_catalogs
 from .openrazer import write_imported_metadata
+from .owner_reports import CONFIRMATION_LABELS as OWNER_CONFIRMATION_LABELS
+from .owner_reports import build_owner_record, write_owner_record
 from .openrazer_capability import write_userspace_capability_catalog
 from .openrazer_native_route import (
     prepare_openrazer_native_source,
@@ -52,6 +63,7 @@ from .source_validated import write_source_validated_catalog
 from .testgraph import format_plan, load_test_catalog
 from .upstreams import prepare_upstreams
 from .verification_run import git_changed_paths, run_verification
+from .documentation_preview import RELEASE_EVIDENCE_ENVIRONMENT
 
 
 def _root() -> Path:
@@ -82,10 +94,75 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="require the host toolchain instead of selecting the pinned container",
     )
+    verify.add_argument(
+        "--release-evidence",
+        choices=RELEASE_EVIDENCE_MODES,
+        help=(
+            "how to check the committed documentation render record: structure "
+            "(default, every pull request) or required (release pull requests, which "
+            "must carry a render of these exact documents)"
+        ),
+    )
+
+    docs = commands.add_parser(
+        "docs", help="render documentation and manage the release render record"
+    )
+    docs_commands = docs.add_subparsers(dest="docs_command", required=True)
+    docs_render = docs_commands.add_parser(
+        "render",
+        help="render every cataloged document offline and fail on any layout or network issue",
+    )
+    docs_render.add_argument("--output", required=True, type=Path, help="new directory")
+    docs_render.add_argument(
+        "--changed-from",
+        metavar="REVISION",
+        help="skip the render when no render input changed since this revision",
+    )
+    docs_render.add_argument("--chromium", default=DEFAULT_CHROMIUM)
+    docs_render.add_argument("--node-modules", type=Path)
+    docs_render.add_argument(
+        "--timeout", type=int, default=DEFAULT_RENDER_TIMEOUT_SECONDS, help="seconds"
+    )
+    docs_check = docs_commands.add_parser(
+        "check-render", help="prove a render matches this tree and found no issue"
+    )
+    docs_check.add_argument("--render", required=True, type=Path)
+    docs_bind = docs_commands.add_parser(
+        "bind",
+        help="record a checked render as this release's documentation render evidence",
+    )
+    docs_bind.add_argument("--render", required=True, type=Path)
+    docs_bind.add_argument("--revision", help="source revision (default: HEAD)")
+    docs_review = docs_commands.add_parser(
+        "review",
+        help="list changed critical screenshots and record the ones you have looked at",
+    )
+    docs_review.add_argument("--render", required=True, type=Path)
+    docs_review.add_argument(
+        "--confirm",
+        action="append",
+        default=[],
+        metavar="screenshots/FILE.png",
+        help="a screenshot you have looked at; repeat for each one",
+    )
 
     generate = commands.add_parser("generate", help="regenerate canonical derived files")
     generate.add_argument("--check", action="store_true", help="reserved for compatibility; verify performs the check")
 
+    coverage = commands.add_parser("coverage", help="maintain the Rust coverage ratchet")
+    coverage_commands = coverage.add_subparsers(dest="coverage_command", required=True)
+    coverage_tighten = coverage_commands.add_parser(
+        "tighten",
+        help="lower the committed not-covered limits to a measured llvm-cov summary",
+    )
+    coverage_tighten.add_argument(
+        "--report",
+        type=Path,
+        help=(
+            "llvm-cov JSON summary to read, for example from the "
+            "hyperflux-full-evidence CI artifact (default: build/rust-coverage-current.json)"
+        ),
+    )
     test = commands.add_parser("test", help="inspect typed verification metadata")
     test_commands = test.add_subparsers(dest="test_command", required=True)
     plan = test_commands.add_parser("plan", help="show the dependency-ordered verification plan")
@@ -186,6 +263,36 @@ def _parser() -> argparse.ArgumentParser:
     native_promote.add_argument("--parity", required=True, type=Path)
     native_promote.add_argument("--output-dir", type=Path)
 
+    qualification = commands.add_parser(
+        "qualification", help="accept hardware reports from device owners"
+    )
+    qualification_commands = qualification.add_subparsers(
+        dest="qualification_command", required=True
+    )
+    qualification_ingest = qualification_commands.add_parser(
+        "ingest",
+        help="check one owner hardware report and write its public record",
+    )
+    qualification_ingest.add_argument(
+        "report",
+        type=Path,
+        help="saved device support issue body, or the raw report JSON; - reads standard input",
+    )
+    qualification_ingest.add_argument("--issue", required=True, type=int)
+    qualification_ingest.add_argument(
+        "--device", help="device-N from the report, when it shows more than one candidate"
+    )
+    qualification_ingest.add_argument(
+        "--confirmed",
+        action="append",
+        choices=sorted(OWNER_CONFIRMATION_LABELS),
+        help="what the owner checked by hand; only for a raw report, repeat as needed",
+    )
+    qualification_ingest.add_argument("--output-dir", type=Path)
+    qualification_ingest.add_argument(
+        "--check", action="store_true", help="check the report and print the record without writing it"
+    )
+
     upstream = commands.add_parser("upstream", help="manage immutable upstream checkouts")
     upstream_commands = upstream.add_subparsers(dest="upstream_command", required=True)
     upstream_prepare = upstream_commands.add_parser(
@@ -224,6 +331,19 @@ def _parser() -> argparse.ArgumentParser:
     ci_verify.add_argument("--output", required=True, type=Path)
     ci_verify.add_argument("--changed-from")
     ci_verify.add_argument("--openrgb-qualification", type=Path)
+    ci_verify.add_argument("--release-evidence", choices=RELEASE_EVIDENCE_MODES)
+    ci_docs_prepare = ci_commands.add_parser(
+        "docs-prepare",
+        help="install the locked documentation renderer packages with bounded network access",
+    )
+    ci_docs_prepare.add_argument("--image", required=True)
+    ci_docs_render = ci_commands.add_parser(
+        "docs-render",
+        help="render the documentation offline in the pinned container",
+    )
+    ci_docs_render.add_argument("--image", required=True)
+    ci_docs_render.add_argument("--output", required=True, type=Path)
+    ci_docs_render.add_argument("--changed-from")
     ci_openrgb = ci_commands.add_parser(
         "qualify-openrgb",
         help="qualify exact packaged OpenRGB bytes in a dedicated OCI sandbox",
@@ -423,7 +543,136 @@ def _parser() -> argparse.ArgumentParser:
         help="prove the anonymous HTTPS repository with an isolated Pacman state",
     )
     arch_repository_verify_public.add_argument("--output", required=True, type=Path)
+
+    repositories = commands.add_parser(
+        "repositories",
+        help="assemble, sign, verify, or publish the package repository site",
+    )
+    repositories_commands = repositories.add_subparsers(
+        dest="repositories_command", required=True
+    )
+    repositories_assemble = repositories_commands.add_parser(
+        "assemble", help="build the unsigned site from release packages"
+    )
+    repositories_assemble.add_argument(
+        "--packages",
+        dest="packages",
+        action="append",
+        required=True,
+        metavar="TARGET=DIRECTORY",
+        help="the release packages of one distribution; repeat for ubuntu, debian, fedora, opensuse",
+    )
+    repositories_assemble.add_argument("--output", required=True, type=Path)
+    repositories_assemble.add_argument(
+        "--site-url", help="override the published address (for local proofs)"
+    )
+    repositories_assemble.add_argument(
+        "--tools", choices=("container", "local"), default="container"
+    )
+    repositories_sign = repositories_commands.add_parser(
+        "sign", help="sign an assembled site with the repository key on this machine"
+    )
+    repositories_sign.add_argument("site", type=Path)
+    repositories_sign.add_argument("--arch-repository", required=True, type=Path)
+    repositories_sign.add_argument("--gnupg-home", required=True, type=Path)
+    repositories_sign.add_argument("--key-fingerprint", required=True)
+    repositories_sign.add_argument("--output", required=True, type=Path)
+    repositories_sign.add_argument(
+        "--tools", choices=("container", "local"), default="container"
+    )
+    repositories_verify = repositories_commands.add_parser(
+        "verify", help="check every file, hash, and signature of a site"
+    )
+    repositories_verify.add_argument("site", type=Path)
+    repositories_verify.add_argument(
+        "--unsigned", action="store_true", help="check an unsigned assembly"
+    )
+    repositories_publish = repositories_commands.add_parser(
+        "publish", help="push a signed site to gh-pages and refresh the Arch mirror"
+    )
+    repositories_publish.add_argument("site", type=Path)
+    repositories_publish.add_argument(
+        "--execute", action="store_true", help="run the commands instead of printing them"
+    )
+    repositories_publish.add_argument("--remote", help="git remote URL (default: origin)")
+    repositories_rehearse = repositories_commands.add_parser(
+        "rehearse",
+        help="sign with a throwaway key and install from the site in every pinned image",
+    )
+    repositories_rehearse.add_argument(
+        "--packages", dest="packages", action="append", required=True,
+        metavar="TARGET=DIRECTORY",
+    )
+    repositories_rehearse.add_argument("--arch-repository", required=True, type=Path)
+    repositories_rehearse.add_argument("--output", required=True, type=Path)
     return parser
+
+
+def _package_directories(values: list[str]) -> dict[str, Path]:
+    directories: dict[str, Path] = {}
+    for value in values:
+        target, separator, directory = value.partition("=")
+        if not separator or not target or not directory or target in directories:
+            raise ModelError("--packages takes TARGET=DIRECTORY once per distribution")
+        directories[target] = Path(directory).resolve()
+    return directories
+
+
+def _repositories(root: Path, args: argparse.Namespace) -> int:
+    from . import package_repositories as site
+
+    command = args.repositories_command
+    if command == "assemble":
+        manifest = site.assemble_site(
+            root,
+            packages=_package_directories(args.packages),
+            output=args.output.resolve(),
+            site_url=args.site_url,
+            tools=site.metadata_tools(args.tools),
+        )
+        print(f"Unsigned repository site: {manifest.parent}")
+        return 0
+    if command == "sign":
+        from .arch_repository import load_arch_repository_policy
+
+        arch = load_arch_repository_policy(root)
+        if args.key_fingerprint != arch.primary_fingerprint:
+            raise ModelError("--key-fingerprint must be the repository primary key")
+        manifest = site.sign_site(
+            root,
+            args.site.resolve(),
+            output=args.output.resolve(),
+            identity=site.SigningIdentity(
+                gnupg_home=args.gnupg_home.resolve(),
+                primary_fingerprint=arch.primary_fingerprint,
+                signing_subkey_fingerprint=arch.signing_subkey_fingerprint,
+            ),
+            arch_repository=args.arch_repository.resolve(),
+            tools=site.metadata_tools(args.tools),
+        )
+        print(f"Signed and verified repository site: {manifest.parent}")
+        return 0
+    if command == "verify":
+        report = site.verify_site(
+            root, args.site.resolve(), require_signatures=not args.unsigned
+        )
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 0
+    if command == "publish":
+        site.publish_site(
+            root, args.site.resolve(), execute=args.execute, remote=args.remote
+        )
+        return 0
+    from .package_repositories_rehearsal import rehearse
+
+    receipt = rehearse(
+        root,
+        packages=_package_directories(args.packages),
+        arch_repository=args.arch_repository.resolve(),
+        output=args.output.resolve(),
+    )
+    print(f"Repository rehearsal receipt: {receipt}")
+    return 0
 
 
 def _candidate_split(root: Path, value: str | None):
@@ -533,6 +782,55 @@ def _package_aur(root: Path, args: argparse.Namespace) -> int:
     return 0
 
 
+def _docs(root: Path, args: argparse.Namespace) -> int:
+    if args.docs_command == "render":
+        output = args.output if args.output.is_absolute() else Path.cwd() / args.output
+        run_documentation_render(
+            root,
+            output,
+            changed_from=args.changed_from,
+            chromium=args.chromium,
+            node_modules=args.node_modules.resolve() if args.node_modules else None,
+            timeout_seconds=args.timeout,
+        )
+        print((output / "summary.md").read_text(encoding="utf-8"), end="")
+        return 0
+    if args.docs_command == "check-render":
+        checked = check_documentation_render(root, args.render)
+        counts = checked.result["counts"]
+        print(
+            f"Documentation render: PASS ({counts['documents']} documents, "
+            f"{counts['checks']} checks, {counts['screenshots']} screenshots, 0 issues)"
+        )
+        return 0
+    if args.docs_command == "bind":
+        outcome = bind_documentation_render(root, args.render, args.revision)
+        render = args.render.resolve()
+        print(f"Bound {render} as the documentation render evidence.")
+        print(f"Screenshots that changed: {len(outcome.changed_screenshots)}")
+        for file in outcome.changed_screenshots:
+            print(f"  {file}")
+        return _report_pending_review(render, outcome.pending_review)
+    remaining = review_documentation_render(root, args.render, tuple(args.confirm))
+    if args.confirm:
+        print(f"Recorded review of {len(args.confirm)} screenshot(s).")
+    return _report_pending_review(args.render.resolve(), remaining)
+
+
+def _report_pending_review(render: Path, pending: tuple[str, ...]) -> int:
+    if not pending:
+        print("Visual review: complete; every critical screenshot matches its review.")
+        return 0
+    print(f"Visual review: {len(pending)} critical screenshot(s) changed and need a person to look:")
+    for file in pending:
+        print(f"  {render / file}")
+    print(
+        "Open each image, then record it with: ./hfx docs review --render "
+        f"{render} --confirm screenshots/NAME.png [--confirm ...]"
+    )
+    return 1
+
+
 def main(arguments: list[str] | None = None) -> int:
     args = _parser().parse_args(arguments)
     root = _root()
@@ -542,6 +840,8 @@ def main(arguments: list[str] | None = None) -> int:
             from .toolchains import verify_current_toolchain
 
             lane = "fast" if args.fast else "full-software"
+            if args.release_evidence is not None:
+                os.environ[RELEASE_EVIDENCE_ENVIRONMENT] = args.release_evidence
             running_pinned = os.environ.get(PINNED_VERIFICATION_ENVIRONMENT) == "1"
             if not args.host_toolchain and not running_pinned:
                 try:
@@ -569,6 +869,7 @@ def main(arguments: list[str] | None = None) -> int:
                         lane="fast" if args.fast else "full",
                         output=output,
                         changed_from=changed_from,
+                        release_evidence=args.release_evidence,
                     )
                     print(
                         "HyperFlux Next verification environment: pinned container "
@@ -591,11 +892,24 @@ def main(arguments: list[str] | None = None) -> int:
                 print(f"  FAIL  {node_id}")
             print(f"Evidence: {outcome.output / 'evidence.json'}")
             return 0 if outcome.status == "passed" else 1
+        if args.command == "docs":
+            return _docs(root, args)
         if args.command == "generate":
             from .render import write_generated
 
             write_generated(root)
             print("Generated repository views are current.")
+            return 0
+        if args.command == "coverage":
+            from .coverage import POLICY_PATH, tighten_rust_coverage_policy
+
+            report = None if args.report is None else args.report.expanduser().resolve()
+            result = tighten_rust_coverage_policy(root, report)
+            print(result.table())
+            if result.written:
+                print(f"Rust coverage limits tightened: commit {POLICY_PATH}")
+            else:
+                print("Rust coverage limits are already tight; nothing was written.")
             return 0
         if args.command == "test":
             lane = "fast" if args.fast else "full-software"
@@ -780,6 +1094,31 @@ def main(arguments: list[str] | None = None) -> int:
                 print("Write authority: not granted automatically")
                 print(f"Privacy-safe assessment: {destination}")
                 return 0
+        if args.command == "qualification":
+            try:
+                submission = (
+                    sys.stdin.read()
+                    if str(args.report) == "-"
+                    else args.report.read_text(encoding="utf-8")
+                )
+            except (OSError, UnicodeDecodeError) as error:
+                raise ModelError(f"cannot read the report: {error}") from error
+            record = build_owner_record(
+                root,
+                submission,
+                issue=args.issue,
+                device_id=args.device,
+                confirmations=args.confirmed,
+            )
+            print(f"Owner report accepted: {record['model_name']} ({record['route_id']})")
+            print(f"Confirmed: {', '.join(record['confirmations'])}")
+            if args.check:
+                print(json.dumps(record, indent=2))
+                return 0
+            destination = write_owner_record(root, record, args.output_dir)
+            print(f"Public record: {destination}")
+            print("Run ./hfx generate to update the supported-hardware page.")
+            return 0
         if args.command == "upstream":
             prepared = prepare_upstreams(root, args.output)
             for identifier in prepared.fetched:
@@ -861,6 +1200,19 @@ def main(arguments: list[str] | None = None) -> int:
                     output=args.output,
                     changed_from=args.changed_from,
                     openrgb_qualification=args.openrgb_qualification,
+                    release_evidence=args.release_evidence,
+                )
+            elif args.ci_command == "docs-prepare":
+                invocation = container_invocation(
+                    root, image=args.image, operation="docs-prepare"
+                )
+            elif args.ci_command == "docs-render":
+                invocation = container_invocation(
+                    root,
+                    image=args.image,
+                    operation="docs-render",
+                    output=args.output,
+                    changed_from=args.changed_from,
                 )
             print(
                 f"HyperFlux CI: {invocation.operation} "
@@ -973,6 +1325,8 @@ def main(arguments: list[str] | None = None) -> int:
             receipt = verify_public_arch_repository(root, args.output.resolve())
             print(f"Public Arch repository receipt: {receipt}")
             return 0
+        if args.command == "repositories":
+            return _repositories(root, args)
     except ModelError as error:
         print(f"hfx: {error}", file=sys.stderr)
         return 1

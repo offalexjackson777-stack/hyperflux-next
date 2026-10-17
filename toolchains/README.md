@@ -31,6 +31,8 @@ Pins the compiler, interpreter, upstream source and development container versio
 
 - [`toolchains/pins.json`](pins.json)
 - [`toolchains/development-environment.json`](development-environment.json)
+- [`toolchains/documentation-render/package.json`](documentation-render/package.json)
+- [`toolchains/documentation-render/package-lock.json`](documentation-render/package-lock.json)
 
 ## Verify
 

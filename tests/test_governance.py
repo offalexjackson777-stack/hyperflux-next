@@ -39,20 +39,20 @@ from hfxdev.generators.governance import (
     dependabot,
     dependency_review_workflow,
     device_support,
+    distribution_package_workflow,
     documentation_report,
     experience_plan,
     feature_request,
     full_verification_workflow,
     kernel_canary_workflow,
     protection_plan,
-    ubuntu_package_workflow,
     verification_workflow,
 )
 from hfxdev.generators.supply_chain import spdx_json
 from hfxdev.development import load_development_environment
 from hfxdev.governance import (
+    DISTRIBUTION_PACKAGE_CHECK,
     KERNEL_CANARY_CHECK,
-    UBUNTU_PACKAGE_CHECK,
     load_github_governance,
 )
 from hfxdev.model import ModelError
@@ -158,7 +158,7 @@ class GitHubGovernanceTests(unittest.TestCase):
             "kernel-canary": kernel_canary_workflow(
                 self.governance, load_development_environment(ROOT).image
             ),
-            "ubuntu-packages": ubuntu_package_workflow(self.governance),
+            "distribution-packages": distribution_package_workflow(self.governance),
         }
         allowed = {action.commit for action in self.governance.actions}
         observed: set[str] = set()
@@ -225,6 +225,7 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertEqual(upload["if"], "${{ always() }}")
         self.assertIn("build/rust-coverage-current.lcov", upload["with"]["path"])
         self.assertIn("build/rust-coverage-current.json", upload["with"]["path"])
+        self.assertIn("build/schema-instances-report.json", upload["with"]["path"])
         self.assertNotIn("release", fast["on"])
         self.assertNotIn("release", full["on"])
         self.assertIn("pull_request", full["on"])
@@ -245,6 +246,113 @@ class GitHubGovernanceTests(unittest.TestCase):
             self.assertIn("integrations/catalog.json", upstream["key"])
             self.assertNotIn(".hfx/upstreams", build["path"])
             self.assertEqual(build["restore-keys"], "hfx-build-${{ runner.os }}-\n")
+
+    def test_documentation_render_is_a_required_offline_check_on_every_pull_request(
+        self,
+    ) -> None:
+        fast = yaml.safe_load(verification_workflow(self.governance))
+        full = yaml.safe_load(full_verification_workflow(self.governance))
+        self.assertEqual(fast["on"]["pull_request"], {})
+        job = fast["jobs"]["documentation-render"]
+        self.assertEqual(job["name"], "Documentation render")
+        self.assertIn("Documentation render", self.governance.required_checks)
+        self.assertTrue(self.governance.strict_required_status_checks)
+        steps = {step["name"]: step for step in job["steps"]}
+        self.assertEqual(
+            steps["Install the locked documentation renderer"]["run"],
+            './hfx ci docs-prepare --image "$HFX_CI_IMAGE"',
+        )
+        render = steps["Render every document offline and fail on any issue"]
+        self.assertIn("./hfx ci docs-render", render["run"])
+        self.assertIn('--changed-from "$HFX_CHANGED_FROM"', render["run"])
+        self.assertNotIn("continue-on-error", render)
+        upload = steps["Upload hyperflux-documentation-render"]
+        self.assertEqual(upload["if"], "${{ always() }}")
+        self.assertEqual(upload["with"]["path"], "build/ci/documentation-render")
+
+        # Only pull requests into, and pushes to, the default branch are releases.
+        branch = self.governance.default_branch
+        expected = (
+            f"${{{{ (github.base_ref == '{branch}' || github.ref == 'refs/heads/{branch}') "
+            "&& 'required' || 'structure' }}"
+        )
+        for workflow, job_id in ((fast, "fast-software"), (full, "full-software")):
+            verify = next(
+                step
+                for step in workflow["jobs"][job_id]["steps"]
+                if "./hfx ci verify" in step.get("run", "")
+            )
+            with self.subTest(job=job_id):
+                self.assertEqual(verify["env"]["HFX_RELEASE_EVIDENCE"], expected)
+                self.assertIn('--release-evidence "$HFX_RELEASE_EVIDENCE"', verify["run"])
+
+    @patch("hfxdev.ci.shutil.which", return_value="/usr/bin/docker")
+    def test_documentation_render_fetches_locked_packages_then_renders_offline(
+        self, _which
+    ) -> None:
+        common = {
+            "image": self.governance.development_image,
+            "engine": "docker",
+            "uid": 1000,
+            "gid": 1000,
+        }
+        prepare = container_invocation(ROOT, operation="docs-prepare", **common)
+        render = container_invocation(
+            ROOT,
+            operation="docs-render",
+            output=Path("build/ci/documentation-render"),
+            changed_from="b" * 40,
+            **common,
+        )
+        self.assertEqual(prepare.network, "bridge")
+        prepare_command = " ".join(prepare.command)
+        self.assertIn("npm ci --prefix .hfx/documentation-render --ignore-scripts", prepare_command)
+        self.assertIn("toolchains/documentation-render/package-lock.json", prepare_command)
+        self.assertNotIn("HFX_PINNED_VERIFICATION_ENVIRONMENT", prepare_command)
+        self.assertEqual(render.network, "none")
+        render_command = " ".join(render.command)
+        self.assertIn("HFX_PINNED_VERIFICATION_ENVIRONMENT=1", render_command)
+        self.assertTrue(
+            render_command.endswith(
+                "./hfx docs render --output build/ci/documentation-render "
+                "--chromium /usr/bin/chromium "
+                "--node-modules .hfx/documentation-render/node_modules "
+                "--changed-from " + "b" * 40
+            )
+        )
+        for bad in (
+            {"operation": "docs-render"},
+            {"operation": "docs-render", "output": Path("/tmp/render")},
+            {"operation": "docs-render", "output": Path("build/x"), "lane": "fast"},
+            {"operation": "docs-prepare", "output": Path("build/x")},
+            {"operation": "docs-prepare", "changed_from": "b" * 40},
+            {
+                "operation": "package-artifacts",
+                "output": Path("build/x"),
+                "release_evidence": "required",
+            },
+            {
+                "operation": "verify",
+                "lane": "fast",
+                "output": Path("build/x"),
+                "release_evidence": "always",
+            },
+        ):
+            with self.subTest(arguments=bad), self.assertRaises(ModelError):
+                container_invocation(ROOT, **bad, **common)
+        verify = container_invocation(
+            ROOT,
+            operation="verify",
+            lane="full",
+            output=Path("build/ci/full"),
+            release_evidence="required",
+            **common,
+        )
+        self.assertTrue(
+            " ".join(verify.command).endswith(
+                "./hfx verify --full --output build/ci/full --release-evidence required"
+            )
+        )
 
     def test_kernel_canary_follows_new_kernels_without_gating_merges(self) -> None:
         image = load_development_environment(ROOT).image
@@ -282,46 +390,104 @@ class GitHubGovernanceTests(unittest.TestCase):
             ):
                 load_github_governance(ROOT)
 
-    def test_ubuntu_packages_are_checked_weekly_without_gating_merges(self) -> None:
-        text = ubuntu_package_workflow(self.governance)
+    def test_distribution_packages_are_checked_weekly_without_gating_merges(self) -> None:
+        text = distribution_package_workflow(self.governance)
         document = yaml.safe_load(text)
         self.assertEqual(set(document["on"]), {"workflow_dispatch", "schedule"})
         self.assertEqual(
-            document["on"]["schedule"], [{"cron": self.governance.ubuntu_package_cron}]
+            document["on"]["schedule"], [{"cron": self.governance.distribution_package_cron}]
         )
         self.assertNotIn(
-            self.governance.ubuntu_package_cron,
+            self.governance.distribution_package_cron,
             {self.governance.kernel_canary_cron, self.governance.full_verification_cron},
         )
         self.assertEqual(document["permissions"], {"contents": "read"})
-        job = document["jobs"]["ubuntu-packages"]
-        self.assertEqual(job["name"], UBUNTU_PACKAGE_CHECK)
-        self.assertNotIn(UBUNTU_PACKAGE_CHECK, self.governance.required_checks)
-        self.assertRegex(
-            self.governance.ubuntu_package_image,
-            r"^docker\.io/library/ubuntu@sha256:[0-9a-f]{64}$",
-        )
+        job = document["jobs"]["distribution-packages"]
+        self.assertEqual(job["name"], DISTRIBUTION_PACKAGE_CHECK)
+        self.assertNotIn(DISTRIBUTION_PACKAGE_CHECK, self.governance.required_checks)
+        images = dict(self.governance.distribution_package_images)
+        self.assertEqual(tuple(images), ("ubuntu", "debian", "fedora", "opensuse"))
+        registries = {
+            "ubuntu": r"docker\.io/library/ubuntu",
+            "debian": r"docker\.io/library/debian",
+            "fedora": r"registry\.fedoraproject\.org/fedora",
+            "opensuse": r"registry\.opensuse\.org/opensuse/tumbleweed",
+        }
+        for target, image in images.items():
+            self.assertRegex(image, rf"^{registries[target]}@sha256:[0-9a-f]{{64}}$")
         runs = [step.get("run", "") for step in job["steps"]]
-        self.assertIn(
-            './hfx ci package --image "$HFX_CI_IMAGE" --output build/ci/ubuntu/artifacts',
-            runs,
+        self.assertEqual(
+            runs.count(
+                './hfx ci package --image "$HFX_CI_IMAGE" --output build/ci/distributions/artifacts'
+            ),
+            1,
         )
-        checks = next(step for step in job["steps"] if "HFX_UBUNTU_CHECKS" in step.get("env", {}))
-        self.assertEqual(checks["env"]["HFX_UBUNTU_IMAGE"], self.governance.ubuntu_package_image)
-        script = checks["env"]["HFX_UBUNTU_CHECKS"]
+        checks = [step for step in job["steps"] if "HFX_PACKAGE_CHECKS" in step.get("env", {})]
+        self.assertEqual(
+            [(step["env"]["HFX_DISTRIBUTION"], step["env"]["HFX_RELEASE_IMAGE"]) for step in checks],
+            list(images.items()),
+        )
+        headers = {step["env"]["HFX_DISTRIBUTION"]: step["env"]["HFX_RELEASE_HEADERS"] for step in checks}
+        self.assertIn("linux-headers-generic-hwe-24.04", headers["ubuntu"])
+        self.assertIn("linux-headers-amd64/trixie-backports", headers["debian"])
+        self.assertEqual(headers["fedora"], "kernel-devel kernel-devel/fedora")
+        self.assertEqual(headers["opensuse"], "kernel-longterm-devel kernel-default-devel")
+        scripts = {step["env"]["HFX_DISTRIBUTION"]: step["env"]["HFX_PACKAGE_CHECKS"] for step in checks}
+        self.assertEqual(scripts["ubuntu"], scripts["debian"])
+        self.assertEqual(scripts["fedora"], scripts["opensuse"])
+        self.assertNotEqual(scripts["ubuntu"], scripts["fedora"])
+        for step in checks:
+            # The container receives exactly the variables the step defines.
+            passed = [name for name in step["env"] if name != "HFX_RELEASE_IMAGE"]
+            for name in passed:
+                self.assertIn(f"--env {name} ", step["run"])
+            self.assertEqual(step["run"].count("--env "), len(passed) + 1)
+            rpm = step["env"]["HFX_DISTRIBUTION"] in {"fedora", "opensuse"}
+            self.assertEqual("HFX_RELEASE_INSTALL" in step["env"], rpm)
+        self.assertTrue(checks[2]["env"]["HFX_RELEASE_INSTALL"].startswith("dnf install -y"))
+        self.assertIn("--allow-unsigned-rpm", checks[3]["env"]["HFX_RELEASE_INSTALL"])
+        rpm_script = scripts["fedora"]
         for required in (
-            "./hfx package distro --distribution ubuntu",
+            './hfx package distro --distribution "$HFX_DISTRIBUTION"',
+            "rpm -qpi",
+            "rpm -qplv",
+            'rpmlint --config "$rpms/rpmlint" "$packages"/*.rpm',
+            "checked; 0 errors,",
+            "$HFX_RELEASE_INSTALL",
+            "find /etc/systemd -name '*hyperflux*'",
+            "dkms build --force",
+            'ln -s "$directory" "/lib/modules/$kernel/build"',
+            "modinfo -F vermagic",
+            'test "$built" -ge 2',
+            "/var/lib/dkms/mok.pub",
+            "objdump -T",
+            "glibc >= ",
+            "$HFX_RELEASE_REMOVE hyperflux-next-linux hyperflux-next-dkms",
+        ):
+            self.assertIn(required, rpm_script)
+        self.assertNotRegex(rpm_script, r"-v [0-9]")
+        self.assertNotIn("dkms install", rpm_script)
+        # dkms.conf must follow the kernel sources DKMS chose, so the driver is
+        # built once before the /lib/modules link exists.
+        self.assertLess(
+            rpm_script.index('-k "$kernel" --kernelsourcedir "$directory"'),
+            rpm_script.index('ln -s "$directory" "/lib/modules/$kernel/build"'),
+        )
+        script = scripts["ubuntu"]
+        for required in (
+            './hfx package distro --distribution "$HFX_DISTRIBUTION"',
             "dpkg-deb --info",
             "dpkg-deb --contents",
             "lintian --fail-on error",
             "policy-rc.d",
-            "linux-headers-generic-hwe-24.04",
             "dkms build",
             "modinfo",
             "objdump -T",
             "apt-get purge",
         ):
             self.assertIn(required, script)
+        # The DKMS version comes from the installed package, never a pinned number.
+        self.assertNotRegex(script, r"-v [0-9]")
         for forbidden in (
             "insmod",
             "modprobe",
@@ -337,18 +503,71 @@ class GitHubGovernanceTests(unittest.TestCase):
         authority = json.loads((ROOT / "governance" / "github.json").read_text())
         gated = json.loads(json.dumps(authority))
         gated["protection"]["required_checks"] = sorted(
-            [*authority["protection"]["required_checks"], UBUNTU_PACKAGE_CHECK]
+            [*authority["protection"]["required_checks"], DISTRIBUTION_PACKAGE_CHECK]
         )
         daily = json.loads(json.dumps(authority))
-        daily["automation"]["ubuntu_package_cron"] = "23 6 * * *"
+        daily["automation"]["distribution_package_cron"] = "23 6 * * *"
         floating = json.loads(json.dumps(authority))
-        floating["automation"]["ubuntu_package_image"] = "docker.io/library/ubuntu:24.04"
-        for candidate in (gated, daily, floating):
+        floating["automation"]["distribution_package_images"]["debian"] = "docker.io/library/debian:13"
+        swapped = json.loads(json.dumps(authority))
+        swapped["automation"]["distribution_package_images"]["debian"] = authority["automation"][
+            "distribution_package_images"
+        ]["ubuntu"]
+        reordered = json.loads(json.dumps(authority))
+        reordered["automation"]["distribution_package_images"] = dict(
+            reversed(list(authority["automation"]["distribution_package_images"].items()))
+        )
+        docker_fedora = json.loads(json.dumps(authority))
+        docker_fedora["automation"]["distribution_package_images"]["fedora"] = (
+            "docker.io/library/fedora@sha256:" + "0" * 64
+        )
+        floating_opensuse = json.loads(json.dumps(authority))
+        floating_opensuse["automation"]["distribution_package_images"]["opensuse"] = (
+            "registry.opensuse.org/opensuse/tumbleweed:latest"
+        )
+        missing_opensuse = json.loads(json.dumps(authority))
+        del missing_opensuse["automation"]["distribution_package_images"]["opensuse"]
+        swapped_rpm = json.loads(json.dumps(authority))
+        swapped_rpm["automation"]["distribution_package_images"]["opensuse"] = authority[
+            "automation"
+        ]["distribution_package_images"]["fedora"]
+        for candidate in (
+            gated,
+            daily,
+            floating,
+            swapped,
+            reordered,
+            docker_fedora,
+            floating_opensuse,
+            missing_opensuse,
+            swapped_rpm,
+        ):
             with (
                 patch("hfxdev.governance.load_json", return_value=candidate),
                 self.assertRaises(ModelError),
             ):
                 load_github_governance(ROOT)
+
+    def test_distribution_packages_assemble_an_unsigned_repository_site(self) -> None:
+        job = yaml.safe_load(distribution_package_workflow(self.governance))["jobs"][
+            "distribution-packages"
+        ]
+        names = [step["name"] for step in job["steps"]]
+        assemble = job["steps"][names.index("Assemble the unsigned package repository site")]
+        self.assertEqual({"HFX_OCI_ENGINE": "docker"}, assemble["env"])
+        for target, _ in self.governance.distribution_package_images:
+            self.assertIn(
+                f"--packages {target}=build/ci/distributions/{target}/packages", assemble["run"]
+            )
+        self.assertIn("--output build/ci/repositories/site", assemble["run"])
+        self.assertNotIn("sign", assemble["run"])
+        upload = job["steps"][names.index("Upload hyperflux-package-repositories-unsigned")]
+        self.assertNotIn("if", upload)
+        self.assertEqual("build/ci/repositories/site", upload["with"]["path"])
+        self.assertTrue(upload["with"]["include-hidden-files"])
+        self.assertEqual("error", upload["with"]["if-no-files-found"])
+        checks = [index for index, name in enumerate(names) if name.startswith("Build, lint")]
+        self.assertGreater(names.index(assemble["name"]), max(checks))
 
     @patch("hfxdev.ci.shutil.which", return_value="/usr/bin/docker")
     def test_package_artifacts_build_offline_in_the_pinned_image(self, _which) -> None:
@@ -356,7 +575,7 @@ class GitHubGovernanceTests(unittest.TestCase):
             ROOT,
             image=self.governance.development_image,
             operation="package-artifacts",
-            output=Path("build/ci/ubuntu/artifacts"),
+            output=Path("build/ci/distributions/artifacts"),
             engine="docker",
             uid=1000,
             gid=1000,
@@ -366,7 +585,7 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertIn("--cap-drop ALL", command)
         self.assertIn("HFX_PINNED_VERIFICATION_ENVIRONMENT=1", command)
         self.assertTrue(
-            command.endswith("./hfx ci package-artifacts --output build/ci/ubuntu/artifacts")
+            command.endswith("./hfx ci package-artifacts --output build/ci/distributions/artifacts")
         )
         for bad in ("/tmp/out", "build/../out"):
             with self.assertRaises(ModelError):
@@ -961,6 +1180,11 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertIn("I removed serial numbers, machine and user names", hardware)
         self.assertIn("support-bundle --preview", hardware)
         self.assertIn("Output of `hyperfluxctl doctor`", hardware)
+        qualification = hardware.split("id: qualification-report", 1)[1].split("- type:", 1)[0]
+        self.assertIn("Output of `hyperfluxctl qualification --json`", qualification)
+        self.assertIn("render: json", qualification)
+        self.assertNotIn("required: true", qualification)
+        self.assertNotIn("qualification-report", bug)
         # Reporters describe what they saw; maintainers classify it (FORM-001…004).
         self.assertIn("2.0.x", bug)
         self.assertNotIn("; 0.x;", bug)

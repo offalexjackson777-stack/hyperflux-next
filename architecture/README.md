@@ -15,6 +15,7 @@ Holds the rules every part of the project follows and the map of which directory
 
 - [Declarative Native Route Selector](../docs/architecture/decisions/declarative-route-selector.md)
 - [Device-Knowledge Integration](../docs/architecture/decisions/device-knowledge-integration.md)
+- [Documentation Render Evidence](../docs/architecture/decisions/documentation-render-evidence.md)
 - [Repository Documentation And Local Hardware Authority](../docs/architecture/decisions/repository-documentation-and-local-hardware-authority.md)
 
 ## Limitations
@@ -42,6 +43,6 @@ Holds the rules every part of the project follows and the map of which directory
 
 ## Verify
 
-Run `foundation-contracts` `repository-atlas-contracts` after changing this area, and run `./hfx generate` to refresh its 8 generated file(s).
+Run `foundation-contracts` `repository-atlas-contracts` after changing this area, and run `./hfx generate` to refresh its 9 generated file(s).
 
 Maintainers can find the areas this one depends on and the areas that use it in the [Repository Atlas](../docs/generated/repository-atlas.md).

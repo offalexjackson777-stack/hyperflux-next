@@ -5,7 +5,7 @@
   "generated_at": "2026-07-22T12:00:00Z",
   "companion": {
     "state": "ready",
-    "version": "2.1.0",
+    "version": "2.1.1",
     "bridge_protocol": 5,
     "endpoint": "http://127.0.0.1:47821",
     "simulation": false,
@@ -13,9 +13,9 @@
     "hardware_write_executed": false
   },
   "system": {
-    "driver_version": "2.1.0",
-    "bridge_version": "2.1.0",
-    "profile_catalog_digest": "81abe092071f46953bd1f1c40878de97d710ccd197c3ca036c3555e29627ea12"
+    "driver_version": "2.1.1",
+    "bridge_version": "2.1.1",
+    "profile_catalog_digest": "4712398520bf3677e988bd0372346fc3c1910b63832a756077c5950234daa448"
   },
   "receivers": [
     {
@@ -38,7 +38,7 @@
           "product_id": 205,
           "profile": {
             "id": "child.razer.basilisk-v3-pro-35k.00cd",
-            "digest": "9a7d3407360b3829aa5bfc5ce61a686f015703c9670c9a2fa1839cbdb7763d18"
+            "digest": "031d1af5fdbc04b754e62119d88f77ef5a8c6e28bc16249b26093442138d8934"
           },
           "presence": "active",
           "support": "production-qualified",
@@ -113,6 +113,11 @@
               "support_level": "telemetry-qualified"
             },
             {
+              "id": "telemetry.charging-state",
+              "access": "read",
+              "support_level": "telemetry-qualified"
+            },
+            {
               "id": "telemetry.connection-evidence",
               "access": "read",
               "support_level": "telemetry-qualified"
@@ -132,7 +137,7 @@
           "product_id": 662,
           "profile": {
             "id": "child.razer.deathstalker-v2-pro-tkl.0296",
-            "digest": "6a322a5f384bcc8d2ddf40ce9940173e9f4e0bda6e72277451f8c16ef34c02be"
+            "digest": "c235f7b917b81f39189edbd1ee4bfbd2ace1238e6abd50e99f674cb971e5c867"
           },
           "presence": "active",
           "support": "production-qualified",
@@ -207,6 +212,11 @@
               "support_level": "telemetry-qualified"
             },
             {
+              "id": "telemetry.charging-state",
+              "access": "read",
+              "support_level": "telemetry-qualified"
+            },
+            {
               "id": "telemetry.connection-evidence",
               "access": "read",
               "support_level": "telemetry-qualified"
@@ -224,7 +234,7 @@
       "device_id": "mouse-test",
       "profile_binding": {
         "id": "child.razer.basilisk-v3-pro-35k.00cd",
-        "digest": "9a7d3407360b3829aa5bfc5ce61a686f015703c9670c9a2fa1839cbdb7763d18"
+        "digest": "031d1af5fdbc04b754e62119d88f77ef5a8c6e28bc16249b26093442138d8934"
       },
       "verdict": "not-run",
       "summary": "5 evidence checks for this exact profile and receiver generation.",
@@ -454,7 +464,7 @@
       "device_id": "keyboard-test",
       "profile_binding": {
         "id": "child.razer.deathstalker-v2-pro-tkl.0296",
-        "digest": "6a322a5f384bcc8d2ddf40ce9940173e9f4e0bda6e72277451f8c16ef34c02be"
+        "digest": "c235f7b917b81f39189edbd1ee4bfbd2ace1238e6abd50e99f674cb971e5c867"
       },
       "verdict": "not-run",
       "summary": "5 evidence checks for this exact profile and receiver generation.",

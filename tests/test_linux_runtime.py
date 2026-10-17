@@ -70,7 +70,7 @@ class LinuxRuntimeTests(unittest.TestCase):
             kernel.source_directory,
             f"/usr/src/{kernel.dkms_name}-{kernel.dkms_version}",
         )
-        self.assertEqual(kernel.dkms_version, "2.1.0")
+        self.assertEqual(kernel.dkms_version, "2.1.1")
 
     def test_dkms_identity_and_output_match_arch_hook_contract(self) -> None:
         kernel = self.runtime.kernel
@@ -82,7 +82,7 @@ class LinuxRuntimeTests(unittest.TestCase):
         self.assertIn(f'PACKAGE_NAME="{hook_name}"', config)
         self.assertIn(f'PACKAGE_VERSION="{hook_version}"', config)
         self.assertIn('BUILT_MODULE_LOCATION[0]="."', config)
-        self.assertIn('MAKE[0]="make KDIR=/lib/modules/${kernelver}/build dkms"', config)
+        self.assertIn('MAKE[0]="make KDIR=${kernel_source_dir} dkms"', config)
         self.assertNotIn("MO=", config)
         self.assertNotIn("CLEAN=", config)
 
@@ -248,7 +248,11 @@ class LinuxRuntimeTests(unittest.TestCase):
             ROOT / "crates" / "hfx-ops" / "src" / "bin" / "hyperfluxctl.rs"
         ).read_text().partition("#[cfg(test)]")[0]
         self.assertNotIn('"--repair"', source)
-        self.assertNotIn('"qualification" =>', source)
+        # The installed qualification command only reports; the console
+        # server and the evidence lifecycle stay source-only.
+        self.assertIn('"qualification" => qualification(rest)', source)
+        self.assertNotIn("serve_qualification_console", source)
+        self.assertNotIn("qualification_lifecycle", source)
         self.assertNotIn('"native" =>', source)
         self.assertNotIn("restart_bridge", source)
         self.assertNotIn("enable_qualification_configuration", source)

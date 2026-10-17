@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": ["$schema", "schema", "generated_from", "publication", "software", "hardware", "evidence", "repository", "qualification_console_access"],
   "properties": {
-    "$schema": {"const": "../schemas/public-readiness.schema.json"},
+    "$schema": {"const": "../../schemas/public-readiness.schema.json"},
     "schema": {"const": "hyperflux-public-readiness-v3"},
     "generated_from": {
       "type": "array",

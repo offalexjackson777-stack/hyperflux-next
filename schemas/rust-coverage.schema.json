@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://hyperflux.dev/schemas/rust-coverage-v1.json",
+  "$id": "https://hyperflux.dev/schemas/rust-coverage-v2.json",
   "title": "HyperFlux Rust coverage baseline and ratchet",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "schema", "tool", "command", "baseline", "metrics"],
+  "required": ["$schema", "schema", "tool", "command", "baseline", "tolerance", "metrics", "ratio_floor"],
   "properties": {
     "$schema": {"type": "string"},
-    "schema": {"const": "hyperflux-rust-coverage-v1"},
+    "schema": {"const": "hyperflux-rust-coverage-v2"},
     "tool": {
       "type": "object",
       "additionalProperties": false,
@@ -35,6 +35,16 @@
         "report_format": {"const": "llvm.coverage.json.export-3.1.0"}
       }
     },
+    "tolerance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lines", "functions", "regions"],
+      "properties": {
+        "lines": {"$ref": "#/$defs/tolerance"},
+        "functions": {"$ref": "#/$defs/tolerance"},
+        "regions": {"$ref": "#/$defs/tolerance"}
+      }
+    },
     "metrics": {
       "type": "object",
       "additionalProperties": false,
@@ -44,9 +54,37 @@
         "functions": {"$ref": "#/$defs/metric"},
         "regions": {"$ref": "#/$defs/metric"}
       }
+    },
+    "ratio_floor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lines", "functions", "regions"],
+      "properties": {
+        "lines": {"$ref": "#/$defs/ratio_floor"},
+        "functions": {"$ref": "#/$defs/ratio_floor"},
+        "regions": {"$ref": "#/$defs/ratio_floor"}
+      }
     }
   },
   "$defs": {
+    "ratio_floor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["covered", "count"],
+      "properties": {
+        "covered": {"type": "integer", "minimum": 1},
+        "count": {"type": "integer", "minimum": 1}
+      }
+    },
+    "tolerance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tighten_margin", "stale_tolerance"],
+      "properties": {
+        "tighten_margin": {"type": "integer", "minimum": 0},
+        "stale_tolerance": {"type": "integer", "minimum": 0, "maximum": 100}
+      }
+    },
     "metric": {
       "type": "object",
       "additionalProperties": false,

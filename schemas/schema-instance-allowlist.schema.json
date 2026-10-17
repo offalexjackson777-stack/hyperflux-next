@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyperflux.dev/schemas/schema-instance-allowlist-v1.json",
+  "title": "HyperFlux known JSON Schema instance violations",
+  "description": "Violations the schema-instances node tolerates for now. Each entry names one reported violation, an owner and a reason. The ceiling equals the entry count and may only fall.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "ceiling", "entries"],
+  "properties": {
+    "$schema": {"const": "../schemas/schema-instance-allowlist.schema.json"},
+    "schema": {"const": "hyperflux-schema-instance-allowlist-v1"},
+    "ceiling": {"type": "integer", "minimum": 0, "maximum": 256},
+    "entries": {
+      "type": "array",
+      "maxItems": 256,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/entry"}
+    }
+  },
+  "$defs": {
+    "pointer": {"type": "string", "maxLength": 512, "pattern": "^(/[^/]*)*$"},
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["document", "path", "keyword", "schema_path", "owner", "reason"],
+      "properties": {
+        "document": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+\\.json$"
+        },
+        "path": {"$ref": "#/$defs/pointer"},
+        "keyword": {"type": "string", "pattern": "^[A-Za-z$]{1,64}$"},
+        "schema_path": {"$ref": "#/$defs/pointer"},
+        "owner": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+        "reason": {"type": "string", "minLength": 20, "maxLength": 320}
+      }
+    }
+  }
+}

@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
+use crate::qualification_report::QualificationCollection;
 use crate::{BridgeIntegration, ServiceState, SystemSnapshot};
 use hfx_domain::{
-    DeviceKind, FreshnessState, InventoryAvailability, ReceiverLifecycleState, SupportLevel,
-    TelemetryAvailability,
+    DeviceKind, FreshnessState, InventoryAvailability, ProtocolVersion, ReceiverLifecycleState,
+    SupportLevel, TelemetryAvailability,
 };
 use hfx_profiles::{PROFILE_SOURCE_SHA256, RuntimeProfile, RuntimeProfileCatalog};
-use hfx_protocol::{BatteryObservation, DeviceInventoryView, IntegrationReceiverView};
+use hfx_protocol::{
+    BatteryObservation, DeviceInventoryView, IntegrationReceiverView, IntegrationView,
+};
 use hfx_runtime::PRODUCT_VERSION;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -337,6 +340,9 @@ pub struct QualificationView {
     pub receivers: Vec<ReceiverView>,
     pub plans: Vec<QualificationPlan>,
     pub actions: Vec<CompanionAction>,
+    /// Present only in a report written by `hyperfluxctl qualification`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub collection: Option<QualificationCollection>,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -381,11 +387,31 @@ pub fn build_qualification_view(
     view_revision: u64,
     generated_at: String,
 ) -> QualificationView {
-    let state = companion_state(system, integration);
+    build_projected_view(
+        system,
+        integration.map(|value| (value.protocol_version, &value.view)),
+        catalog,
+        runner,
+        view_revision,
+        generated_at,
+    )
+}
+
+/// Builds the view from the bridge's integration projection alone, so a
+/// caller that never subscribes to events can reuse the same producer.
+pub(crate) fn build_projected_view(
+    system: &SystemSnapshot,
+    projection: Option<(ProtocolVersion, &IntegrationView)>,
+    catalog: &RuntimeProfileCatalog,
+    runner: RunnerCapabilities,
+    view_revision: u64,
+    generated_at: String,
+) -> QualificationView {
+    let state = companion_state(system, projection.map(|(_, view)| view));
     let mut receivers = Vec::new();
     let mut plans = Vec::new();
-    if let Some(integration) = integration {
-        for receiver in &integration.view.receivers {
+    if let Some((_, view)) = projection {
+        for receiver in &view.receivers {
             receivers.push(receiver_view(receiver, catalog));
             for device in &receiver.inventory {
                 if let Some(plan) = qualification_plan(receiver, device, catalog, runner) {
@@ -403,7 +429,7 @@ pub fn build_qualification_view(
         companion: CompanionView {
             state,
             version: PRODUCT_VERSION.to_owned(),
-            bridge_protocol: integration.map(|value| value.protocol_version.get()),
+            bridge_protocol: projection.map(|(version, _)| version.get()),
             endpoint: QUALIFICATION_ENDPOINT.to_owned(),
             simulation: false,
             network_upload_executed: false,
@@ -414,18 +440,19 @@ pub fn build_qualification_view(
                 .loaded_module_identity
                 .as_ref()
                 .map(|_| system.package_version.clone()),
-            bridge_version: integration.map(|_| system.package_version.clone()),
+            bridge_version: projection.map(|_| system.package_version.clone()),
             profile_catalog_digest: Some(PROFILE_SOURCE_SHA256.to_owned()),
         },
         receivers,
         plans,
         actions,
+        collection: None,
     }
 }
 
 fn companion_state(
     system: &SystemSnapshot,
-    integration: Option<&BridgeIntegration>,
+    integration: Option<&IntegrationView>,
 ) -> CompanionState {
     if matches!(
         (&system.installed_module_identity, &system.loaded_module_identity),
@@ -434,7 +461,7 @@ fn companion_state(
         return CompanionState::DriverPending;
     }
     if system.service_state == ServiceState::Active && integration.is_some() {
-        return if integration.is_some_and(|value| value.view.receivers.is_empty()) {
+        return if integration.is_some_and(|value| value.receivers.is_empty()) {
             CompanionState::NoReceiver
         } else {
             CompanionState::Ready

@@ -7,17 +7,18 @@ mod qualification;
 mod qualification_event_evidence;
 mod qualification_lifecycle;
 mod qualification_migration;
+mod qualification_report;
 mod qualification_runner;
 mod qualification_server;
 mod qualification_state;
 
-pub(crate) use hfx_system_probe::{
-    BridgeIntegration, RealSystemProbe, ServiceState, SystemProbe, SystemSnapshot,
-};
 #[cfg(test)]
 pub(crate) use hfx_system_probe::{
-    FullComponentSnapshot, KernelModuleIdentitySnapshot, OpenRazerAccessState,
+    BridgeHealth, FullComponentSnapshot, KernelModuleIdentitySnapshot, OpenRazerAccessState,
     OpenRazerDriverSnapshot, OpenRazerRuntimeSnapshot, OpenRazerRuntimeState,
+};
+pub(crate) use hfx_system_probe::{
+    BridgeIntegration, RealSystemProbe, ServiceState, SystemProbe, SystemSnapshot,
 };
 
 pub use native_onboarding::{
@@ -34,6 +35,10 @@ pub use qualification::{
     ReceiverLifecycleView, ReceiverView, RiskLevel, RunnerAvailability, RunnerCapabilities,
     StageKind, StageResult, StageStatus, SupportView, VerdictState, build_qualification_view,
     qualification_generated_at,
+};
+pub use qualification_report::{
+    FirmwareCollection, QUALIFICATION_REPORT_PRODUCER, QualificationCollection,
+    ReportBridgeRequest, ReportFinding, ReportFindingSeverity, build_qualification_report,
 };
 pub use qualification_server::{
     QualificationServerConfig, QualificationServerError, serve_qualification_console,

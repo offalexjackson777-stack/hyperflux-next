@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/repository-site.schema.json",
+  "schema": "hyperflux-repository-site-v1",
+  "state": "unpublished",
+  "site_url": "https://offalexjackson777-stack.github.io/hyperflux-next",
+  "publication_branch": "gh-pages",
+  "repository_id": "hyperflux-next",
+  "label": "HyperFlux Next",
+  "public_key_asset": "hyperflux-next-repository-key.asc",
+  "apt_component": "main"
+}

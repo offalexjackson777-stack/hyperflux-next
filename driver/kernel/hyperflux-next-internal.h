@@ -8,9 +8,11 @@
 #include <linux/list.h>
 #include <linux/miscdevice.h>
 #include <linux/mutex.h>
+#include <linux/power_supply.h>
 #include <linux/spinlock.h>
 #include <linux/usb.h>
 
+#include "hyperflux-next-battery.h"
 #include "hyperflux-next-profile.h"
 #include "uapi/hyperflux_next.h"
 
@@ -19,6 +21,7 @@
 #define HFX_RESULT_CAPACITY 64U
 #define HFX_TOMBSTONE_CAPACITY 64U
 #define HFX_ACTIVITY_INTERVAL_NS 250000000ULL
+#define HFX_BATTERY_NAME_BYTES 64
 
 struct hfx_file_context;
 struct hfx_pairing_inventory;
@@ -48,6 +51,24 @@ struct hfx_native_result_tombstone {
 	bool valid;
 	struct hfx_uapi_native_exchange_result result;
 	u8 request[HFX_UAPI_NATIVE_REPORT_BYTES];
+};
+
+/*
+ * One child lane's bridge-forwarded battery state.  psy, hdev, owner, and
+ * desc change only under battery_lock; the published values change only
+ * under value_lock.
+ */
+struct hfx_battery_lane {
+	struct power_supply *psy;
+	struct power_supply_desc desc;
+	struct hid_device *hdev;
+	struct hfx_file_context *owner;
+	const char *suffix;
+	spinlock_t value_lock;
+	u32 capacity;
+	u32 status;
+	char name[HFX_BATTERY_NAME_BYTES];
+	char model_name[HFX_UAPI_BATTERY_MODEL_NAME_BYTES];
 };
 
 struct hfx_receiver {
@@ -96,6 +117,8 @@ struct hfx_receiver {
 	struct hfx_native_result_tombstone *native_result_tombstones;
 	u32 native_tombstone_head;
 	u32 native_tombstone_count;
+	struct mutex battery_lock;
+	struct hfx_battery_lane battery[HFX_BATTERY_LANES];
 };
 
 struct hfx_interface {
@@ -153,5 +176,18 @@ long hfx_native_exchange_get_result(struct hfx_receiver *receiver,
 				    struct hfx_file_context *context,
 				    void __user *user_arg);
 void hfx_native_exchange_free_journal(struct hfx_receiver *receiver);
+
+void hfx_battery_init(struct hfx_receiver *receiver);
+long hfx_battery_report(struct hfx_receiver *receiver,
+			struct hfx_file_context *context,
+			void __user *user_arg);
+void hfx_battery_attach_interface(struct hfx_receiver *receiver,
+				  int interface_number,
+				  struct hid_device *hdev);
+void hfx_battery_detach_interface(struct hfx_receiver *receiver,
+				  int interface_number);
+void hfx_battery_release_owner(struct hfx_receiver *receiver,
+			       struct hfx_file_context *context);
+void hfx_battery_teardown(struct hfx_receiver *receiver);
 
 #endif

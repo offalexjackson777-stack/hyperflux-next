@@ -206,7 +206,7 @@ Reviewed sources:
 | Pinned Linux semantic | Presentation | HyperFlux state | Missing capability |
 | --- | --- | --- | --- |
 | `telemetry.battery-percent` | `status` | `enabled` | none |
-| `telemetry.charging-state` | `status` | `blocked` | `telemetry.charging-state` |
+| `telemetry.charging-state` | `status` | `enabled` | none |
 | `identity.device-kind` | `status` | `enabled` | none |
 | `input.dpi-maximum` | `status` | `blocked` | `input.dpi-maximum` |
 | `input.dpi-stages` | `collection` | `blocked` | `input.dpi-stages` |
@@ -987,7 +987,7 @@ Reviewed sources:
 | Pinned Linux semantic | Presentation | HyperFlux state | Missing capability |
 | --- | --- | --- | --- |
 | `telemetry.battery-percent` | `status` | `enabled` | none |
-| `telemetry.charging-state` | `status` | `blocked` | `telemetry.charging-state` |
+| `telemetry.charging-state` | `status` | `enabled` | none |
 | `identity.device-kind` | `status` | `enabled` | none |
 | `input.game-mode` | `toggle` | `blocked` | `input.game-mode` |
 | `lighting.direct-frame` | `lighting-frame` | `enabled` | none |

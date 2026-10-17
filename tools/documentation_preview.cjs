@@ -7,14 +7,13 @@ const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL, fileURLToPath } = require("node:url");
-const { chromium } = require("playwright");
-const { marked } = require("marked");
 
 process.umask(0o077);
 
 const SCRIPT_SCHEMA = "hyperflux-documentation-render-result-v2";
 const RENDER_CONTRACT = "github-compatible-gfm-v2";
 const SAFE_PATH = /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$)).+$/;
+const MAX_ISSUES_PER_CHECK = 128;
 
 function fail(message) {
   throw new Error(message);
@@ -84,7 +83,8 @@ html[data-theme="dark"] { color-scheme: dark; --bg:#0d1117; --fg:#e6edf3; --mute
 html, body { margin:0; min-width:0; background:var(--bg); color:var(--fg); }
 body { font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; letter-spacing:0; }
 main { width:min(100% - 32px, 980px); margin:0 auto; padding:32px 0 64px; min-width:0; }
-article { min-width:0; overflow-wrap:anywhere; }
+/* Wrap like GitHub. overflow-wrap:anywhere would let table columns shrink to one letter instead of scrolling. */
+article { min-width:0; overflow-wrap:break-word; }
 h1,h2,h3,h4,h5,h6 { line-height:1.25; letter-spacing:0; margin:1.5em 0 .55em; overflow-wrap:anywhere; }
 h1 { font-size:2rem; padding-bottom:.3em; border-bottom:1px solid var(--line); margin-top:0; }
 h2 { font-size:1.5rem; padding-bottom:.25em; border-bottom:1px solid var(--line); }
@@ -103,6 +103,7 @@ pre { max-width:100%; overflow:auto; background:var(--soft); border:1px solid va
 pre code { padding:0; background:transparent; white-space:pre; }
 table { display:block; width:max-content; max-width:100%; overflow-x:auto; border-collapse:collapse; }
 th,td { border:1px solid var(--line); padding:6px 13px; min-width:0; }
+table th, table td, table th *, table td * { overflow-wrap:break-word; word-break:normal; }
 tr:nth-child(2n) { background:var(--soft); }
 img { max-width:100%; height:auto; }
 hr { height:1px; border:0; background:var(--line); margin:24px 0; }
@@ -217,6 +218,8 @@ async function inspectPage(page, maxTableColumns) {
     const add = (kind, detail) => {
       if (issues.length < 128) issues.push({ kind, detail });
     };
+    const overflowing = [];
+    const brokenWords = [];
     const root = document.documentElement;
     const body = document.body;
     if (root.scrollWidth > window.innerWidth + 1 || body.scrollWidth > window.innerWidth + 1) {
@@ -226,7 +229,7 @@ async function inspectPage(page, maxTableColumns) {
       let current = element.parentElement;
       while (current && current !== body) {
         const style = getComputedStyle(current);
-        if (["auto", "scroll", "hidden", "clip"].includes(style.overflowX)) return true;
+        if (["auto", "scroll"].includes(style.overflowX)) return true;
         current = current.parentElement;
       }
       return false;
@@ -244,6 +247,34 @@ async function inspectPage(page, maxTableColumns) {
       if (["hidden", "clip"].includes(style.overflowY) && element.scrollHeight > element.clientHeight + 1 && element.textContent.trim()) {
         add("clipped-text", element.tagName.toLowerCase());
       }
+      if (element.scrollWidth > element.clientWidth + 1 && overflowing.length < 256) {
+        overflowing.push({
+          tag: element.tagName.toLowerCase(),
+          overflow_x: style.overflowX,
+          scroll_width: element.scrollWidth,
+          client_width: element.clientWidth,
+        });
+      }
+    }
+    // A word in a table cell must sit on one line. Splitting at anything but a
+    // letter or digit (hyphen, slash, dot) is an ordinary line break.
+    const tables = [...document.querySelectorAll("table")];
+    for (const cell of document.querySelectorAll("th, td")) {
+      const table = tables.indexOf(cell.closest("table")) + 1;
+      const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        for (const match of node.data.matchAll(/[\p{L}\p{N}]+/gu)) {
+          const range = document.createRange();
+          range.setStart(node, match.index);
+          range.setEnd(node, match.index + match[0].length);
+          const lines = new Set(
+            [...range.getClientRects()].filter((rect) => rect.width > 0).map((rect) => Math.round(rect.top)),
+          );
+          if (lines.size > 1 && brokenWords.length < 256) {
+            brokenWords.push({ table, cell: cell.tagName.toLowerCase(), word: match[0].slice(0, 40), lines: lines.size });
+          }
+        }
+      }
     }
     for (const image of document.images) {
       if (!image.complete || image.naturalWidth <= 0 || image.naturalHeight <= 0) {
@@ -258,6 +289,8 @@ async function inspectPage(page, maxTableColumns) {
     }
     return {
       issues,
+      overflowing,
+      broken_words: brokenWords,
       metrics: {
         viewport_width: window.innerWidth,
         page_width: Math.max(root.scrollWidth, body.scrollWidth),
@@ -269,7 +302,39 @@ async function inspectPage(page, maxTableColumns) {
   }, maxTableColumns);
 }
 
+// Decide which measured layouts are broken. Kept out of the browser so it can be
+// tested without one.
+function layoutIssues(measured) {
+  const issues = [];
+  for (const box of measured.overflowing) {
+    // Content wider than a box that cannot scroll is cut off for the reader.
+    if (["hidden", "clip"].includes(box.overflow_x)) {
+      issues.push({ kind: "clipped-horizontal-overflow", detail: `${box.tag} ${box.scroll_width}>${box.client_width}` });
+    }
+  }
+  // A table column narrower than one of its words: the table squeezed its columns
+  // instead of scrolling. Report each table once, with its first broken word.
+  const reported = new Set();
+  for (const word of measured.broken_words) {
+    if (word.lines > 1 && !reported.has(word.table)) {
+      reported.add(word.table);
+      issues.push({ kind: "table-word-break", detail: `table ${word.table} ${word.cell} ${word.word}` });
+    }
+  }
+  return issues;
+}
+
+async function inspectLayout(page, maxTableColumns) {
+  const measured = await inspectPage(page, maxTableColumns);
+  return {
+    issues: [...measured.issues, ...layoutIssues(measured)].slice(0, MAX_ISSUES_PER_CHECK),
+    metrics: measured.metrics,
+  };
+}
+
 async function main() {
+  const { chromium } = require("playwright");
+  const { marked } = require("marked");
   const args = parseArguments(process.argv.slice(2));
   if (fs.existsSync(args.output)) fail("output directory must be absent");
   fs.mkdirSync(path.join(args.output, "screenshots"), { recursive: true, mode: 0o700 });
@@ -345,7 +410,7 @@ async function main() {
           const html = htmlTemplate(rendered, record.title, theme, baseUrl);
           await page.setContent(html, { waitUntil: "load", timeout: 5000 });
           await page.evaluate(() => document.fonts.ready);
-          const inspection = await inspectPage(page, policy.limits.max_table_columns);
+          const inspection = await inspectLayout(page, policy.limits.max_table_columns);
           checks.push({
             path: record.path,
             width: viewport.width,
@@ -415,7 +480,11 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  process.stderr.write(`documentation preview failed: ${error.message}\n`);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch((error) => {
+    process.stderr.write(`documentation preview failed: ${error.message}\n`);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { inspectLayout, layoutIssues };

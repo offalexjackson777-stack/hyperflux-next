@@ -785,12 +785,25 @@ def _run_package_contracts(root: Path, node: TestNode) -> None:
 
     first = stages["linux"][0]
 
-    _run_command(
-        root,
-        [str(first.root / "usr/bin/hyperfluxctl"), "--help"],
-        "staged operations CLI",
-        node.timeout_seconds,
-    )
+    try:
+        operations_help = subprocess.run(
+            [str(first.root / "usr/bin/hyperfluxctl"), "--help"],
+            cwd=root,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=node.timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise ModelError(
+            f"staged operations CLI exceeded its {node.timeout_seconds}s timeout"
+        ) from error
+    if operations_help.returncode != 0:
+        raise ModelError(
+            f"staged operations CLI failed with exit status {operations_help.returncode}"
+        )
+    if "hyperfluxctl qualification [--json] [--output PATH]" not in operations_help.stdout:
+        raise ModelError("staged operations CLI does not offer the qualification report")
     _run_command(
         root,
         [

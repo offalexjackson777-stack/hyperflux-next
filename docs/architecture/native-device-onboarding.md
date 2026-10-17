@@ -35,9 +35,14 @@ guess which source is physically correct.
 ## Development Boundary
 
 The installed `hyperfluxctl` deliberately exposes only status, read-only doctor,
-and bounded support-bundle commands. Native route observation remains a
-source-side verification facility; it is not installed as an ordinary-user
-runtime command and cannot enable a route.
+bounded support-bundle, and read-only `qualification` report commands. The
+report is the `hyperflux-local-qualification-v1` view projected from the
+bridge's `snapshot`, `diagnostics`, and `integration-view` answers with
+ordinal receiver, device, and generation identifiers; it sends no active
+device query, so it can seed an onboarding conversation but is not an
+observation. Native route observation remains a source-side verification
+facility; it is not installed as an ordinary-user runtime command and cannot
+enable a route.
 
 ## Maintainer Steps
 

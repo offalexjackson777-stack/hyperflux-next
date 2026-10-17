@@ -8,7 +8,7 @@ Holds the definition of the interface between the kernel driver and user space.
 
 | Owner | Source files | Generated files |
 | --- | ---: | ---: |
-| [Kernel driver contract](../driver/README.md) | 3 | 0 |
+| [Kernel driver contract](../driver/README.md) | 4 | 0 |
 
 ## Change Workflow
 

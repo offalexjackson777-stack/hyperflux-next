@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-use crate::{KernelTransportError, KernelTransportErrorKind};
+use crate::{
+    ChildBatteryLane, ChildBatteryPublisher, ChildBatteryState, KernelTransportError,
+    KernelTransportErrorKind,
+};
 use hfx_core::{
     NativeTransportDispatch, NativeTransportOutcome, NativeTransportResult, ReceiverTransport,
     TransportDispatch, TransportReceipt, TransportReconciliation,
@@ -152,6 +155,32 @@ impl<T> KernelTransportRouter<T> {
     }
 }
 
+impl<T: ChildBatteryPublisher> KernelTransportRouter<T> {
+    /// Forwards one lane's battery state through the exact writable route.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SessionUnavailable` for a missing, read-only, or replaced
+    /// generation, or the writer's own error when the kernel rejects it.
+    pub fn publish_child_battery(
+        &self,
+        receiver_id: &ReceiverId,
+        generation_id: GenerationId,
+        lane: ChildBatteryLane,
+        state: &ChildBatteryState,
+    ) -> Result<(), KernelTransportError> {
+        match self.routes.get(receiver_id) {
+            Some(KernelRoute::Writable {
+                generation_id: active,
+                transport,
+            }) if *active == generation_id => transport.publish_child_battery(lane, state),
+            _ => Err(KernelTransportError::safe(
+                KernelTransportErrorKind::SessionUnavailable,
+            )),
+        }
+    }
+}
+
 impl<T> ReceiverTransport for KernelTransportRouter<T>
 where
     T: ReceiverTransport<Error = KernelTransportError>,
@@ -251,6 +280,18 @@ mod tests {
         receiver_id: ReceiverId,
         generation_id: GenerationId,
         dispatches: Cell<usize>,
+        batteries: Cell<usize>,
+    }
+
+    impl ChildBatteryPublisher for FakeTransport {
+        fn publish_child_battery(
+            &self,
+            _lane: ChildBatteryLane,
+            _state: &ChildBatteryState,
+        ) -> Result<(), KernelTransportError> {
+            self.batteries.set(self.batteries.get() + 1);
+            Ok(())
+        }
     }
 
     impl FakeTransport {
@@ -259,6 +300,7 @@ mod tests {
                 receiver_id: text(receiver_id),
                 generation_id: generation(generation_id),
                 dispatches: Cell::new(0),
+                batteries: Cell::new(0),
             }
         }
     }
@@ -367,6 +409,58 @@ mod tests {
                 device_application: DeviceApplicationState::Unverified,
             }
         );
+    }
+
+    #[test]
+    fn battery_forwarding_needs_the_exact_writable_generation() {
+        let receiver_id: ReceiverId = text("receiver-1");
+        let state = ChildBatteryState::present(
+            40,
+            crate::ChildBatteryStatus::Unknown,
+            "Razer Basilisk V3 Pro 35K",
+        );
+        let mut router = KernelTransportRouter::<FakeTransport>::new(capacity(2));
+        router
+            .observe(receiver_id.clone(), generation(1))
+            .expect("observed route fits");
+        let error = router
+            .publish_child_battery(
+                &receiver_id,
+                generation(1),
+                ChildBatteryLane::Pointer,
+                &state,
+            )
+            .expect_err("read-only route forwards nothing");
+        assert_eq!(error.kind(), KernelTransportErrorKind::SessionUnavailable);
+
+        router
+            .install_writable(
+                receiver_id.clone(),
+                generation(1),
+                FakeTransport::new("receiver-1", 1),
+            )
+            .expect("writer route matches");
+        router
+            .publish_child_battery(
+                &receiver_id,
+                generation(1),
+                ChildBatteryLane::Pointer,
+                &state,
+            )
+            .expect("writer forwards");
+        let error = router
+            .publish_child_battery(
+                &receiver_id,
+                generation(2),
+                ChildBatteryLane::Pointer,
+                &state,
+            )
+            .expect_err("another generation forwards nothing");
+        assert_eq!(error.kind(), KernelTransportErrorKind::SessionUnavailable);
+        let Some(KernelRoute::Writable { transport, .. }) = router.routes.get(&receiver_id) else {
+            panic!("route stays writable");
+        };
+        assert_eq!(transport.batteries.get(), 1);
     }
 
     #[test]

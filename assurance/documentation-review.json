@@ -15,7 +15,7 @@
         "The release summary matches the public readiness record.",
         "Compatibility claims stay within the source-validated native route."
       ],
-      "authorities": ["packaging/distributions.json", "generated/public-readiness.json", "integrations/native-route/source-validated.json"]
+      "authorities": ["packaging/distributions.json", "spec/catalog/public-readiness.json", "integrations/native-route/source-validated.json"]
     },
     {
       "path": "docs/user/installation.md",
@@ -71,14 +71,14 @@
         "Work described as shipped is present in the current release.",
         "Future targets are not described as available."
       ],
-      "authorities": ["generated/public-readiness.json", "assurance/design-coverage.json"]
+      "authorities": ["spec/catalog/public-readiness.json", "assurance/design-coverage.json"]
     },
     {
       "path": "docs/project/release-status.md",
       "checks": [
         "Release state, gates, and repository details match the release records."
       ],
-      "authorities": ["generated/public-readiness.json", "assurance/release-gates.json", "assurance/arch-repository.json"]
+      "authorities": ["spec/catalog/public-readiness.json", "assurance/release-gates.json", "assurance/arch-repository.json"]
     }
   ]
 }

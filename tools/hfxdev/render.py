@@ -28,6 +28,7 @@ from .generators.governance import (
     dependency_review_workflow as github_dependency_review_workflow,
     dependabot as github_dependabot,
     device_support as github_device_support,
+    distribution_package_workflow as github_distribution_package_workflow,
     documentation_report as github_documentation_report,
     experience_plan as github_experience_plan,
     feature_request as github_feature_request,
@@ -39,7 +40,6 @@ from .generators.governance import (
     protection_plan as github_protection_plan,
     pull_request_template as github_pull_request_template,
     release_notes as github_release_notes,
-    ubuntu_package_workflow as github_ubuntu_package_workflow,
     verification_workflow as github_verification_workflow,
 )
 from .generators.performance import performance_budgets_markdown
@@ -55,6 +55,16 @@ from .generators.readme import (
 from .generators.installation import (
     package_fallback as installation_package_fallback,
     repository_setup as installation_repository_setup,
+)
+from .generators.repository_guides import (
+    block_id as repository_guide_block_id,
+    install_table as repository_install_table,
+    repository_setup as repository_guide_setup,
+)
+from .package_repositories import (
+    arch_policy_for_guides,
+    load_repository_site_policy,
+    site_targets,
 )
 from .generators.social_preview import render_social_preview
 from .generators.supply_chain import spdx_json, supply_chain_markdown
@@ -152,7 +162,7 @@ from .governance import load_github_governance
 from .install import load_first_run_activation, load_install_manifest
 from .distributions import load_distribution_catalog
 from .documentation import load_document_catalog, replace_generated_blocks
-from .model import ModelError, load_foundation, load_json
+from .model import CATALOG_ROOT, ModelError, load_foundation, load_json
 from .linux_runtime import load_linux_runtime
 from .licensing import load_licensing_policy
 from .local_companion import load_local_companion
@@ -163,6 +173,11 @@ from .openrazer_native_route import (
     load_native_route_catalog,
 )
 from .source_validated import load_source_validated_catalog
+from .owner_reports import (
+    load_owner_report_policy,
+    load_owner_reports,
+    owner_confirmed_routes,
+)
 from .openrazer_version_matrix import load_openrazer_version_compatibility
 from .performance import load_performance_budgets
 from .profiles import compiled_catalog, composition_fixtures
@@ -307,6 +322,10 @@ def rendered_files(root: Path) -> dict[Path, str]:
     openrazer_native = load_native_deployment(root)
     openrazer_native_routes = load_native_route_catalog(root)
     source_validated_devices = load_source_validated_catalog(root)
+    owner_report_policy = load_owner_report_policy(root)
+    owner_confirmed = owner_confirmed_routes(
+        load_owner_reports(root), owner_report_policy
+    )
     test_catalog = load_test_catalog(root)
     linux_runtime = load_linux_runtime(root)
     distribution_catalog = load_distribution_catalog(root)
@@ -325,6 +344,13 @@ def rendered_files(root: Path) -> dict[Path, str]:
     arch_repository = load_arch_repository_policy(root)
     local_companion = load_local_companion(root)
     licensing_policy = load_licensing_policy(root)
+    repository_site = load_repository_site_policy(root)
+    repository_targets = site_targets(root)
+    repository_maturities = {
+        target_id: distribution_catalog.targets[target_id].maturity
+        for target_id in repository_targets
+    }
+    guide_arch_repository = arch_policy_for_guides(arch_repository, repository_site)
     readme_renderers = {
         "release-summary": lambda: readme_release_summary(readiness, arch_repository),
         "release-status": lambda: readme_release_status(readiness, arch_repository),
@@ -332,10 +358,24 @@ def rendered_files(root: Path) -> dict[Path, str]:
             distribution_catalog
         ),
         "compatibility-summary": lambda: readme_compatibility_summary(
-            readiness, openrazer_native, source_validated_devices
+            readiness, openrazer_native, source_validated_devices, owner_confirmed
         ),
-        "repository-setup": lambda: installation_repository_setup(arch_repository),
-        "package-fallback": lambda: installation_package_fallback(arch_repository),
+        "repository-setup": lambda: installation_repository_setup(guide_arch_repository),
+        "package-fallback": lambda: installation_package_fallback(guide_arch_repository),
+        "install-table": lambda: repository_install_table(
+            repository_site, repository_targets, repository_maturities
+        ),
+        **{
+            repository_guide_block_id(target_id): (
+                lambda target=target: repository_guide_setup(
+                    repository_site,
+                    arch_repository,
+                    target,
+                    repository_maturities[target.id],
+                )
+            )
+            for target_id, target in repository_targets.items()
+        },
     }
     hybrid_documents = {
         root / document.path: replace_generated_blocks(
@@ -351,7 +391,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
     }
     files = {
         **hybrid_documents,
-        root / "generated" / "public-readiness.json": json.dumps(
+        root / CATALOG_ROOT / "public-readiness.json": json.dumps(
             readiness, indent=2, sort_keys=True
         )
         + "\n",
@@ -405,7 +445,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / ".github" / "workflows" / "kernel-canary.yml": github_kernel_canary_workflow(
             github_governance, development_environment.image
         ),
-        root / ".github" / "workflows" / "ubuntu-packages.yml": github_ubuntu_package_workflow(
+        root / ".github" / "workflows" / "distribution-packages.yml": github_distribution_package_workflow(
             github_governance
         ),
         root / ".github" / "workflows" / "codeql.yml": github_codeql_workflow(
@@ -457,13 +497,20 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "domain_types.py": python_types(domain_catalog),
         root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "domain_types.hpp": cpp_types(domain_catalog),
         root / "sdk" / "cpp" / "include" / "hyperflux" / "generated" / "domain_json.hpp": domain_cpp_json(domain_catalog),
-        root / "generated" / "profiles" / "catalog.json": profile_compiled_json(profiles),
-        root / "generated" / "knowledge" / "catalog.json": knowledge_compiled_json(
+        root / CATALOG_ROOT / "profiles" / "catalog.json": profile_compiled_json(profiles),
+        root / CATALOG_ROOT / "knowledge" / "catalog.json": knowledge_compiled_json(
             knowledge
         ),
         root / "tests" / "fixtures" / "generated" / "profile-compositions.json": profile_fixtures_json(profile_fixtures),
         root / "docs" / "generated" / "supported-hardware.md": profile_markdown(
-            profiles, source_validated_devices
+            profiles,
+            source_validated_devices,
+            owner_confirmed,
+            issues_url=(
+                f"https://github.com/{github_governance.owner}/"
+                f"{github_governance.repository}/issues"
+            ),
+            minimum_owner_reports=owner_report_policy["minimum_reports"],
         ),
         root / "docs" / "generated" / "device-knowledge.md": render_knowledge_markdown(
             knowledge
@@ -486,7 +533,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root / "driver" / "kernel" / "uapi" / "hyperflux_next.h": kernel_uapi_c_header(kernel_uapi),
         root / "crates" / "hfx-kernel-transport" / "src" / "generated.rs": kernel_uapi_rust_bindings(kernel_uapi),
         root / "docs" / "generated" / "kernel-uapi.md": kernel_uapi_markdown(kernel_uapi),
-        root / "generated" / "integrations" / "catalog.json": integration_compiled_json(integrations),
+        root / CATALOG_ROOT / "integrations" / "catalog.json": integration_compiled_json(integrations),
         root / "docs" / "generated" / "integrations.md": integration_markdown(integrations),
         root / "crates" / "hfx-integration-model" / "src" / "generated.rs": integration_rust_catalog(integrations),
         root

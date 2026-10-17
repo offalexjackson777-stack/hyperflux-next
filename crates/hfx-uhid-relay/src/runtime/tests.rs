@@ -1073,3 +1073,505 @@ fn startup_bridge_retry_honors_termination_before_connecting() {
     assert_eq!(result, None);
     assert_eq!(attempts.get(), 0);
 }
+
+// Wired precedence: a Basilisk on its USB cable is shown by OpenRazer as the
+// real wired 1532:00CC device, so the relay must hide its virtual 00CD device
+// while the same serial is present and bring it back when the cable goes.
+
+const BASILISK_PROFILE: &str = "child.razer.basilisk-v3-pro-35k.00cd";
+const WIRED_BASILISK: &str = "0003:1532:00CC.0001";
+const BASILISK_SERIAL: &[u8] = b"BASILISK-SERIAL";
+
+static WIRED_TEST_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+
+fn wired_test_id() -> u64 {
+    WIRED_TEST_ID.fetch_add(1, Ordering::Relaxed)
+}
+
+struct RefusingBridgeBackend;
+
+impl hfx_bridge::BridgeRpcBackend for RefusingBridgeBackend {
+    fn snapshot(
+        &mut self,
+        _context: hfx_bridge::BackendRequestContext<'_>,
+    ) -> Result<hfx_protocol::BridgeSnapshot, hfx_bridge::RpcFailure> {
+        Err(hfx_bridge::RpcFailure::internal())
+    }
+
+    fn integration_view(
+        &mut self,
+        _context: hfx_bridge::BackendRequestContext<'_>,
+    ) -> Result<hfx_protocol::IntegrationView, hfx_bridge::RpcFailure> {
+        Err(hfx_bridge::RpcFailure::internal())
+    }
+
+    fn acquire_lease(
+        &mut self,
+        _context: hfx_bridge::BackendRequestContext<'_>,
+        _request: hfx_protocol::LeaseRequest,
+    ) -> Result<hfx_protocol::LeaseResult, hfx_bridge::RpcFailure> {
+        Err(hfx_bridge::RpcFailure::internal())
+    }
+
+    fn renew_lease(
+        &mut self,
+        _context: hfx_bridge::BackendRequestContext<'_>,
+        _request: hfx_protocol::RenewLeaseRequest,
+    ) -> Result<hfx_protocol::LeaseResult, hfx_bridge::RpcFailure> {
+        Err(hfx_bridge::RpcFailure::internal())
+    }
+
+    fn release_lease(
+        &mut self,
+        _context: hfx_bridge::BackendRequestContext<'_>,
+        _request: hfx_protocol::ReleaseLeaseRequest,
+    ) -> Result<hfx_protocol::LeaseResult, hfx_bridge::RpcFailure> {
+        Err(hfx_bridge::RpcFailure::internal())
+    }
+
+    fn submit_transaction(
+        &mut self,
+        _context: hfx_bridge::BackendRequestContext<'_>,
+        _request: hfx_protocol::TransactionRequest,
+    ) -> Result<hfx_protocol::TransactionResult, hfx_bridge::RpcFailure> {
+        Err(hfx_bridge::RpcFailure::internal())
+    }
+
+    fn transaction_outcome(
+        &mut self,
+        _context: hfx_bridge::BackendRequestContext<'_>,
+        _request: hfx_protocol::TransactionLookup,
+    ) -> Result<hfx_protocol::TransactionResult, hfx_bridge::RpcFailure> {
+        Err(hfx_bridge::RpcFailure::internal())
+    }
+
+    fn subscribe(
+        &mut self,
+        _context: hfx_bridge::BackendRequestContext<'_>,
+        _request: hfx_protocol::SubscriptionRequest,
+    ) -> Result<hfx_protocol::EventBatch, hfx_bridge::RpcFailure> {
+        Err(hfx_bridge::RpcFailure::internal())
+    }
+
+    fn diagnostics(
+        &mut self,
+        _context: hfx_bridge::BackendRequestContext<'_>,
+    ) -> Result<hfx_protocol::DiagnosticSnapshot, hfx_bridge::RpcFailure> {
+        Err(hfx_bridge::RpcFailure::internal())
+    }
+
+    fn disconnect(
+        &mut self,
+        _session: &hfx_bridge::AuthorizedSession,
+    ) -> Result<(), hfx_bridge::RpcFailure> {
+        Ok(())
+    }
+}
+
+struct CountingSessionIdentities(u8);
+
+impl hfx_bridge::SessionIdentitySource for CountingSessionIdentities {
+    fn fill_bytes(
+        &mut self,
+        destination: &mut [u8],
+    ) -> Result<(), hfx_bridge::SessionIdentityError> {
+        for byte in destination {
+            *byte = self.0;
+            self.0 = self.0.wrapping_add(1);
+        }
+        Ok(())
+    }
+}
+
+/// An in-process bridge on a temporary socket. It only negotiates, which is
+/// all a relay route needs to connect; serial reads are not served here.
+struct NegotiatingBridge {
+    socket: PathBuf,
+    connections: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    stop: std::sync::Arc<AtomicBool>,
+    acceptor: Option<thread::JoinHandle<()>>,
+}
+
+impl NegotiatingBridge {
+    fn start() -> Self {
+        let unique = wired_test_id();
+        let socket =
+            std::env::temp_dir().join(format!("hfx-wired-{}-{unique}.sock", std::process::id()));
+        let listener =
+            std::os::unix::net::UnixListener::bind(&socket).expect("test bridge socket binds");
+        let connections = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let stop = std::sync::Arc::new(AtomicBool::new(false));
+        let acceptor = {
+            let connections = std::sync::Arc::clone(&connections);
+            let stop = std::sync::Arc::clone(&stop);
+            thread::spawn(move || {
+                for stream in listener.incoming() {
+                    if stop.load(Ordering::SeqCst) {
+                        break;
+                    }
+                    let Ok(mut stream) = stream else {
+                        break;
+                    };
+                    let number = connections.fetch_add(1, Ordering::SeqCst) + 1;
+                    thread::spawn(move || {
+                        let config = hfx_bridge::BridgeSessionConfig {
+                            server_instance_id: hfx_domain::ServerInstanceId::try_from(
+                                "relay-wired-precedence".to_owned(),
+                            )
+                            .expect("server instance is valid"),
+                            bridge_version: hfx_domain::ComponentVersion::try_from(
+                                "0.0.0-test".to_owned(),
+                            )
+                            .expect("bridge version is valid"),
+                            event_buffer_capacity: hfx_domain::QueueCapacity::try_from(8)
+                                .expect("capacity is valid"),
+                        };
+                        let mut sessions = hfx_bridge::SessionRegistry::new(
+                            hfx_domain::QueueCapacity::try_from(4).expect("capacity is valid"),
+                        );
+                        let _ = hfx_bridge::serve_connection(
+                            &mut stream,
+                            config,
+                            &mut CountingSessionIdentities(
+                                u8::try_from(number % 16).unwrap_or(1).wrapping_mul(16),
+                            ),
+                            &mut sessions,
+                            &mut RefusingBridgeBackend,
+                        );
+                    });
+                }
+            })
+        };
+        Self {
+            socket,
+            connections,
+            stop,
+            acceptor: Some(acceptor),
+        }
+    }
+
+    fn connections(&self) -> usize {
+        self.connections.load(Ordering::SeqCst)
+    }
+}
+
+impl Drop for NegotiatingBridge {
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::SeqCst);
+        let _ = std::os::unix::net::UnixStream::connect(&self.socket);
+        if let Some(acceptor) = self.acceptor.take() {
+            let _ = acceptor.join();
+        }
+        let _ = fs::remove_file(&self.socket);
+    }
+}
+
+/// A temporary stand-in for the `OpenRazer` HID driver directories in sysfs.
+struct DriverRoot(PathBuf);
+
+impl DriverRoot {
+    fn create() -> Self {
+        let unique = wired_test_id();
+        let path =
+            std::env::temp_dir().join(format!("hfx-wired-drivers-{}-{unique}", std::process::id()));
+        fs::create_dir_all(path.join("razermouse")).expect("driver directory is created");
+        Self(path)
+    }
+
+    fn plug(&self, identity: &str, serial: Option<&[u8]>) -> PathBuf {
+        let device = self.0.join("razermouse").join(identity);
+        fs::create_dir_all(&device).expect("wired device directory is created");
+        if let Some(serial) = serial {
+            fs::write(device.join("device_serial"), serial).expect("serial is written");
+        }
+        device
+    }
+
+    fn unplug(&self, identity: &str) {
+        fs::remove_dir_all(self.0.join("razermouse").join(identity))
+            .expect("wired device directory is removed");
+    }
+}
+
+impl Drop for DriverRoot {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
+fn basilisk_native_route() -> NativeRoute {
+    let receiver_id =
+        hfx_domain::ReceiverId::try_from("receiver-1".to_owned()).expect("receiver is valid");
+    let generation_id = hfx_domain::GenerationId::try_from(1_u64).expect("generation is valid");
+    let device_id = hfx_domain::LogicalDeviceId::try_from("paired-mouse-00cd".to_owned())
+        .expect("device is valid");
+    NativeRoute {
+        receiver_id: receiver_id.clone(),
+        generation_id,
+        device_id: device_id.clone(),
+        endpoint_id: hfx_domain::EndpointId::try_from("hyperflux-pointer".to_owned())
+            .expect("endpoint is valid"),
+        device_kind: hfx_domain::DeviceKind::Mouse,
+        vendor_id: hfx_domain::VendorId::try_from(0x1532_u16).expect("vendor is valid"),
+        product_id: hfx_domain::ProductId::try_from(0x00cd_u16).expect("product is valid"),
+        route_state: hfx_domain::NativeRouteState::Available,
+        access: hfx_domain::NativeRouteAccess::Qualified,
+        protocol_family: hfx_domain::NativeProtocolFamily::try_from(
+            "razer-feature-report-v1".to_owned(),
+        )
+        .expect("protocol family is valid"),
+        report_bytes: hfx_domain::NativeReportByteCount::try_from(90_u16).expect("size is valid"),
+        route_token: Some(
+            hfx_domain::NativeRouteToken::try_from("a".repeat(64)).expect("token is valid"),
+        ),
+        resource: Some(hfx_protocol::ResourceKey {
+            receiver_id,
+            generation_id,
+            device_id,
+            kind: hfx_domain::ResourceKind::NativeControl,
+        }),
+    }
+}
+
+fn wired_paths(bridge: &NegotiatingBridge, drivers: &DriverRoot, uhid: PathBuf) -> RelayPaths {
+    RelayPaths {
+        bridge_socket: bridge.socket.clone(),
+        uhid_device: uhid,
+        hid_driver_root: drivers.0.clone(),
+        status_file: PathBuf::from("/unused/status.json"),
+    }
+}
+
+fn start_basilisk_route(paths: &RelayPaths, label: &str) -> ManagedRoute {
+    let catalog = NativeRouteCatalog::load().expect("native catalog loads");
+    let record = catalog
+        .profile(BASILISK_PROFILE)
+        .expect("mouse route exists")
+        .clone();
+    let (device, _) = fixture_from_record(&catalog, &record, label);
+    ManagedRoute::start(paths, basilisk_native_route(), record, device, 1)
+        .expect("route connects to the test bridge")
+}
+
+/// Stands in for two matching serial reads from the wireless mouse; the
+/// two-read gate itself is pinned by the publication tests above.
+fn pass_serial_gate(route: &mut ManagedRoute, serial: &[u8]) {
+    route.publication.ready_fingerprint =
+        Some(crate::fingerprint_serial_bytes(serial).expect("serial is valid"));
+    assert!(route.publication_ready());
+}
+
+/// Each virtual device opens its own UHID handle, which starts at offset 0 of
+/// a regular file, so every publication below gets its own transcript file.
+fn uhid_event_types(path: &Path) -> Vec<u32> {
+    fs::read(path)
+        .expect("UHID transcript reads")
+        .chunks(UHID_EVENT_BYTES)
+        .map(|event| u32::from_ne_bytes(event[0..4].try_into().expect("event type")))
+        .collect()
+}
+
+const CREATE: u32 = 11;
+const DESTROY: u32 = 1;
+
+#[test]
+fn wired_basilisk_with_matching_serial_hides_then_restores_the_virtual_device() {
+    let catalog = NativeRouteCatalog::load().expect("native catalog loads");
+    let bridge = NegotiatingBridge::start();
+    let drivers = DriverRoot::create();
+    let uhid = temporary_uhid_file();
+    let paths = wired_paths(&bridge, &drivers, uhid.clone());
+    let mut scanner = DirectRouteScanner::new(drivers.0.clone());
+    let mut next_instance = 2;
+    let mut route = start_basilisk_route(&paths, "wired-precedence");
+    assert_eq!(bridge.connections(), 1);
+
+    // Wireless only: the virtual 00CD device is published.
+    pass_serial_gate(&mut route, BASILISK_SERIAL);
+    route.complete_publication(&paths, &scanner.scan(&catalog).expect("scan succeeds"));
+    assert!(route.endpoint.is_some());
+    assert_eq!(route.status().state, RelayPublicationState::CreateSent);
+    assert_eq!(uhid_event_types(&uhid), vec![CREATE]);
+
+    // Cable in: the wired 00CC with the same serial hides the virtual device.
+    drivers.plug(WIRED_BASILISK, Some(b"BASILISK-SERIAL\n"));
+    let wired = scanner.scan(&catalog).expect("scan succeeds");
+    assert_eq!(
+        wired.transition(BASILISK_PROFILE, route.serial_fingerprint.as_ref(), true),
+        DirectRouteTransition::Suppress
+    );
+    route
+        .refresh_direct(&paths, &wired, &mut next_instance)
+        .expect("direct refresh succeeds");
+    assert!(route.endpoint.is_none());
+    assert!(route.publication.direct_suppressed);
+    assert_eq!(
+        route.status().state,
+        RelayPublicationState::DirectSuppressed
+    );
+    assert_eq!(uhid_event_types(&uhid), vec![CREATE, DESTROY]);
+
+    // Further scans while the cable stays in change nothing.
+    for _ in 0..2 {
+        let still_wired = scanner.scan(&catalog).expect("scan succeeds");
+        route
+            .refresh_direct(&paths, &still_wired, &mut next_instance)
+            .expect("direct refresh succeeds");
+        route.probe_publication();
+        assert!(!route.publication_ready());
+        assert_eq!(
+            route.status().state,
+            RelayPublicationState::DirectSuppressed
+        );
+    }
+    assert_eq!(next_instance, 2);
+    assert_eq!(bridge.connections(), 1);
+    assert_eq!(uhid_event_types(&uhid), vec![CREATE, DESTROY]);
+
+    // Cable out: a fresh publication starts on a new bridge connection and
+    // must pass a new serial check before the virtual device returns.
+    drivers.unplug(WIRED_BASILISK);
+    let wireless = scanner.scan(&catalog).expect("scan succeeds");
+    assert!(!wireless.has_profile_candidate(BASILISK_PROFILE));
+    route
+        .refresh_direct(&paths, &wireless, &mut next_instance)
+        .expect("direct refresh succeeds");
+    assert!(!route.publication.direct_suppressed);
+    assert!(route.publication.bridge.is_some());
+    assert!(route.serial_fingerprint.is_none());
+    assert!(route.endpoint.is_none());
+    assert_eq!(route.status().state, RelayPublicationState::Pending);
+    assert_eq!(next_instance, 3);
+    assert_eq!(bridge.connections(), 2);
+    assert_eq!(uhid_event_types(&uhid), vec![CREATE, DESTROY]);
+
+    let restored_uhid = temporary_uhid_file();
+    let restored_paths = wired_paths(&bridge, &drivers, restored_uhid.clone());
+    pass_serial_gate(&mut route, BASILISK_SERIAL);
+    route.complete_publication(
+        &restored_paths,
+        &scanner.scan(&catalog).expect("scan succeeds"),
+    );
+    assert!(route.endpoint.is_some());
+    assert_eq!(route.status().state, RelayPublicationState::CreateSent);
+    assert_eq!(uhid_event_types(&uhid), vec![CREATE, DESTROY]);
+    assert_eq!(uhid_event_types(&restored_uhid), vec![CREATE]);
+
+    route.destroy();
+    assert_eq!(uhid_event_types(&restored_uhid), vec![CREATE, DESTROY]);
+    fs::remove_file(uhid).expect("transcript is removed");
+    fs::remove_file(restored_uhid).expect("transcript is removed");
+}
+
+#[test]
+fn wired_basilisk_present_at_publication_never_creates_the_virtual_device() {
+    let catalog = NativeRouteCatalog::load().expect("native catalog loads");
+    let bridge = NegotiatingBridge::start();
+    let drivers = DriverRoot::create();
+    let uhid = temporary_uhid_file();
+    let paths = wired_paths(&bridge, &drivers, uhid.clone());
+    let mut scanner = DirectRouteScanner::new(drivers.0.clone());
+    let mut next_instance = 2;
+    let mut route = start_basilisk_route(&paths, "wired-at-publication");
+
+    drivers.plug(WIRED_BASILISK, Some(b"BASILISK-SERIAL\n"));
+    pass_serial_gate(&mut route, BASILISK_SERIAL);
+    route.complete_publication(&paths, &scanner.scan(&catalog).expect("scan succeeds"));
+    assert!(route.endpoint.is_none());
+    assert!(route.publication.direct_suppressed);
+    assert!(route.publication.bridge.is_none());
+    assert_eq!(
+        route.status().state,
+        RelayPublicationState::DirectSuppressed
+    );
+    assert!(uhid_event_types(&uhid).is_empty());
+
+    drivers.unplug(WIRED_BASILISK);
+    route
+        .refresh_direct(
+            &paths,
+            &scanner.scan(&catalog).expect("scan succeeds"),
+            &mut next_instance,
+        )
+        .expect("direct refresh succeeds");
+    assert!(!route.publication.direct_suppressed);
+    assert!(route.publication.bridge.is_some());
+    assert_eq!(route.status().state, RelayPublicationState::Pending);
+    assert_eq!(bridge.connections(), 2);
+
+    pass_serial_gate(&mut route, BASILISK_SERIAL);
+    route.complete_publication(&paths, &scanner.scan(&catalog).expect("scan succeeds"));
+    assert!(route.endpoint.is_some());
+    route.destroy();
+    assert_eq!(uhid_event_types(&uhid), vec![CREATE, DESTROY]);
+    fs::remove_file(uhid).expect("transcript is removed");
+}
+
+#[test]
+fn wired_basilisk_without_a_readable_matching_serial_hides_nothing() {
+    let catalog = NativeRouteCatalog::load().expect("native catalog loads");
+    let bridge = NegotiatingBridge::start();
+    let drivers = DriverRoot::create();
+    let uhid = temporary_uhid_file();
+    let paths = wired_paths(&bridge, &drivers, uhid.clone());
+    let mut scanner = DirectRouteScanner::new(drivers.0.clone());
+    let mut next_instance = 2;
+    let mut route = start_basilisk_route(&paths, "wired-unreadable");
+    pass_serial_gate(&mut route, BASILISK_SERIAL);
+    route.complete_publication(&paths, &scanner.scan(&catalog).expect("scan succeeds"));
+    assert!(route.endpoint.is_some());
+
+    // Missing, empty and unreadable serials, and another mouse's serial.
+    for (number, serial) in [
+        (1, None),
+        (2, Some(&b""[..])),
+        (3, Some(&b"\n"[..])),
+        (4, Some(&b"ANOTHER-BASILISK\n"[..])),
+    ] {
+        let identity = format!("0003:1532:00CC.{number:04X}");
+        drivers.plug(&identity, serial);
+        let wired = scanner.scan(&catalog).expect("scan succeeds");
+        assert!(wired.has_profile_candidate(BASILISK_PROFILE));
+        route
+            .refresh_direct(&paths, &wired, &mut next_instance)
+            .expect("direct refresh succeeds");
+        assert!(
+            route.endpoint.is_some(),
+            "serial case {number} hides nothing"
+        );
+        assert!(!route.publication.direct_suppressed);
+        assert_eq!(route.status().state, RelayPublicationState::CreateSent);
+        drivers.unplug(&identity);
+    }
+    let identity = "0003:1532:00CC.0005";
+    let device = drivers.plug(identity, None);
+    fs::create_dir(device.join("device_serial")).expect("unreadable serial is created");
+    let wired = scanner.scan(&catalog).expect("scan succeeds");
+    assert!(wired.has_profile_candidate(BASILISK_PROFILE));
+    route
+        .refresh_direct(&paths, &wired, &mut next_instance)
+        .expect("direct refresh succeeds");
+    assert!(
+        route.endpoint.is_some(),
+        "an unreadable serial hides nothing"
+    );
+
+    // The same holds when the cable is already in at publication time.
+    let late_uhid = temporary_uhid_file();
+    let late_paths = wired_paths(&bridge, &drivers, late_uhid.clone());
+    let mut late = start_basilisk_route(&late_paths, "wired-unreadable-late");
+    pass_serial_gate(&mut late, BASILISK_SERIAL);
+    late.complete_publication(&late_paths, &wired);
+    assert!(late.endpoint.is_some());
+    assert!(!late.publication.direct_suppressed);
+
+    assert_eq!(next_instance, 2);
+    assert_eq!(uhid_event_types(&uhid), vec![CREATE]);
+    assert_eq!(uhid_event_types(&late_uhid), vec![CREATE]);
+    late.destroy();
+    route.destroy();
+    assert_eq!(uhid_event_types(&uhid), vec![CREATE, DESTROY]);
+    assert_eq!(uhid_event_types(&late_uhid), vec![CREATE, DESTROY]);
+    fs::remove_file(uhid).expect("transcript is removed");
+    fs::remove_file(late_uhid).expect("transcript is removed");
+}

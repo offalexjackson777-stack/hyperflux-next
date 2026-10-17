@@ -293,6 +293,29 @@ mod tests {
     }
 
     #[test]
+    fn creator_that_loses_the_publish_race_adopts_the_existing_secret() {
+        let directory = temporary_path();
+        fs::create_dir(&directory).expect("temporary directory creates");
+        let path = directory.join("identity-secret");
+        let winner = ReceiverIdentityAuthority::load_or_create(&path).expect("secret creates");
+        let loser = ReceiverIdentityAuthority::create(&path).expect("losing creator adopts");
+        assert_eq!(
+            winner
+                .derive(Path::new("/sys/test"), typed(1), typed(2))
+                .expect("winner derives"),
+            loser
+                .derive(Path::new("/sys/test"), typed(1), typed(2))
+                .expect("loser derives")
+        );
+        assert_eq!(
+            fs::read_dir(&directory).expect("directory lists").count(),
+            1,
+            "the losing creator removes its temporary file"
+        );
+        fs::remove_dir_all(directory).expect("temporary directory removes");
+    }
+
+    #[test]
     fn concurrent_first_start_converges_on_one_secret() {
         let directory = temporary_path();
         fs::create_dir(&directory).expect("temporary directory creates");

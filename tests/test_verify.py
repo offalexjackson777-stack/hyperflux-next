@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import re
 import tempfile
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from tools.hfxdev.model import ModelError
+from tools.hfxdev.model import ModelError, load_json, repository_files
 from tools.hfxdev.verify import (
     _check_build_cache_clock,
     _kernel_build_directories,
@@ -20,6 +21,218 @@ from tools.hfxdev.verify import (
     _run_openrgb_native_route_contracts,
     _run_openrgb_thread_sanitizer,
 )
+from tools.hfxdev.verify_repository import (
+    SCHEMA_CLOSURE_EXEMPTIONS,
+    SCHEMA_DECLARATION_EXEMPTIONS,
+    _check_schema_closure,
+    _check_schema_declarations,
+    _check_schema_references,
+)
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class SchemaDeclarationTests(unittest.TestCase):
+    def test_document_with_schema_needs_no_exemption(self) -> None:
+        _check_schema_declarations({"a.json": {"$schema": "x.schema.json"}}, {})
+
+    def test_document_without_schema_must_be_exempted(self) -> None:
+        documents = {"a.json": {"$schema": "x.schema.json"}, "new.json": {"value": 1}}
+        with self.assertRaisesRegex(ModelError, "new.json"):
+            _check_schema_declarations(documents, {})
+        _check_schema_declarations(documents, {"new.json": "byte-frozen: golden"})
+
+    def test_exemption_needs_a_reason(self) -> None:
+        with self.assertRaisesRegex(ModelError, "needs a reason"):
+            _check_schema_declarations({"a.json": {}}, {"a.json": " "})
+
+    def test_stale_exemptions_are_refused(self) -> None:
+        with self.assertRaisesRegex(ModelError, "names no tracked JSON file"):
+            _check_schema_declarations({}, {"gone.json": "byte-frozen: golden"})
+        with self.assertRaisesRegex(ModelError, "remove its schema declaration exemption"):
+            _check_schema_declarations(
+                {"a.json": {"$schema": "x.schema.json"}},
+                {"a.json": "byte-frozen: golden"},
+            )
+
+    def test_exempted_repository_files_exist_and_carry_reasons(self) -> None:
+        for relative, reason in SCHEMA_DECLARATION_EXEMPTIONS.items():
+            with self.subTest(relative=relative):
+                self.assertTrue((ROOT / relative).is_file())
+                self.assertTrue(reason.strip())
+
+
+def _closed(**properties: dict) -> dict:
+    return {"type": "object", "additionalProperties": False, "properties": properties}
+
+
+class SchemaClosureTests(unittest.TestCase):
+    def test_closed_objects_pass(self) -> None:
+        schema = {
+            **_closed(name={"type": "string"}, inner={"$ref": "#/$defs/inner"}),
+            "$defs": {
+                "inner": {"type": "object", "unevaluatedProperties": False, "properties": {"a": {}}},
+            },
+        }
+        _check_schema_closure({"s.schema.json": schema}, {})
+
+    def test_open_objects_anywhere_are_refused(self) -> None:
+        open_object = {"type": "object", "properties": {"a": {"type": "string"}}}
+        cases = {
+            "/": open_object,
+            "/properties/inner": _closed(inner=open_object),
+            "/$defs/thing": {**_closed(), "$defs": {"thing": open_object}},
+            "/properties/list/items": _closed(list={"type": "array", "items": open_object}),
+            "/properties/tuple/prefixItems/0": _closed(tuple={"prefixItems": [open_object]}),
+            "/properties/map/additionalProperties": _closed(
+                map={"type": "object", "additionalProperties": open_object}
+            ),
+            "/properties/explicit": _closed(explicit={**open_object, "additionalProperties": True}),
+            "/properties/typed": _closed(typed={**open_object, "additionalProperties": {"type": "string"}}),
+            "/properties/x/then/properties/y": _closed(
+                x={**_closed(y={}), "then": {"properties": {"y": open_object}}}
+            ),
+        }
+        for pointer, schema in cases.items():
+            with self.subTest(pointer=pointer):
+                with self.assertRaisesRegex(ModelError, re.escape(f"s.schema.json{pointer}: object schema")):
+                    _check_schema_closure({"s.schema.json": schema}, {})
+                _check_schema_closure(
+                    {"s.schema.json": schema}, {("s.schema.json", "" if pointer == "/" else pointer): "reason"}
+                )
+
+    def test_branches_of_a_closed_object_must_name_their_keys_on_it(self) -> None:
+        good = {
+            **_closed(state={"enum": ["a", "b"]}, value={}),
+            "oneOf": [
+                {"properties": {"state": {"const": "a"}, "value": {"type": "null"}}},
+                {"properties": {"state": {"const": "b"}}},
+            ],
+            "allOf": [{"if": {"properties": {"state": {"const": "a"}}}, "then": {"properties": {"value": {}}}}],
+        }
+        _check_schema_closure({"s.schema.json": good}, {})
+        # additionalProperties only sees keys named beside it, so keys named
+        # only in a branch are always rejected: the source-validated bug.
+        bad = {"type": "object", "additionalProperties": False, "required": ["state"],
+               "oneOf": [{"properties": {"state": {"const": "a"}}}]}
+        with self.assertRaisesRegex(ModelError, "oneOf/0: an in-place branch names state"):
+            _check_schema_closure({"s.schema.json": bad}, {})
+        then_bad = {**_closed(state={}), "allOf": [{"if": {"properties": {"state": {}}}, "then": {"properties": {"extra": {}}}}]}
+        with self.assertRaisesRegex(ModelError, "allOf/0/then: an in-place branch names extra"):
+            _check_schema_closure({"s.schema.json": then_bad}, {})
+        # unevaluatedProperties sees through branches, so they may add keys.
+        unevaluated = {"type": "object", "unevaluatedProperties": False,
+                       "allOf": [{"properties": {"a": {}}}, {"properties": {"b": {}}}]}
+        _check_schema_closure({"s.schema.json": unevaluated}, {})
+
+    def test_ref_refinements_follow_their_closed_target(self) -> None:
+        target = {"oneOf": [_closed(name={}, state={"const": "x"}), _closed(name={}, state={"const": "y"})]}
+        refine = {"$ref": "#/$defs/target", "properties": {"name": {"const": "n"}}}
+        schema = {**_closed(item=refine), "$defs": {"target": target}}
+        _check_schema_closure({"s.schema.json": schema}, {})
+        refine_bad = {"$ref": "#/$defs/target", "properties": {"other": {}}}
+        schema_bad = {**_closed(item=refine_bad), "$defs": {"target": target}}
+        with self.assertRaisesRegex(ModelError, "a \\$ref refinement names other"):
+            _check_schema_closure({"s.schema.json": schema_bad}, {})
+        open_target = {**_closed(item=refine), "$defs": {"target": {"properties": {"name": {}}}}}
+        with self.assertRaisesRegex(ModelError, "properties/item: object schema"):
+            _check_schema_closure({"s.schema.json": open_target}, {("s.schema.json", "/$defs/target"): "r"})
+
+    def test_conditions_are_not_checked(self) -> None:
+        schema = {
+            **_closed(a={}),
+            "allOf": [{"if": {"properties": {"a": {"properties": {"deep": {}}}}}, "then": {"required": ["a"]}}],
+            "not": {"properties": {"a": {"const": 1}}},
+        }
+        _check_schema_closure({"s.schema.json": schema}, {})
+
+    def test_exemptions_need_reasons_and_must_still_be_open(self) -> None:
+        open_schema = {"type": "object", "properties": {"a": {}}}
+        with self.assertRaisesRegex(ModelError, "needs a reason"):
+            _check_schema_closure({"s.schema.json": open_schema}, {("s.schema.json", ""): " "})
+        with self.assertRaisesRegex(ModelError, "remove its schema closure exemption"):
+            _check_schema_closure({"s.schema.json": _closed(a={})}, {("s.schema.json", ""): "reason"})
+        with self.assertRaisesRegex(ModelError, "remove its schema closure exemption"):
+            _check_schema_closure({}, {("gone.schema.json", ""): "reason"})
+
+    def test_repository_exemptions_name_real_schemas_with_reasons(self) -> None:
+        for (relative, pointer), reason in SCHEMA_CLOSURE_EXEMPTIONS.items():
+            with self.subTest(relative=relative, pointer=pointer):
+                self.assertTrue((ROOT / relative).is_file())
+                self.assertTrue(reason.strip())
+
+
+BASE = "https://hyperflux.dev/schemas/"
+
+
+def _policy_schema() -> dict:
+    return {
+        "$id": f"{BASE}example-policy-v1.json",
+        "$defs": {"matcher": {"type": "string"}, "a/b~c": {"type": "integer"}},
+        "type": "object",
+    }
+
+
+def _catalog_schema(reference: str) -> dict:
+    return {
+        "$id": f"{BASE}example-catalog-v1.json",
+        "$defs": {"name": {"type": "string"}},
+        "type": "object",
+        "properties": {
+            "name": {"$ref": "#/$defs/name"},
+            "matcher": {"$ref": reference},
+            "default": {"const": {"$ref": "not a reference"}},
+        },
+    }
+
+
+class SchemaReferenceTests(unittest.TestCase):
+    def check(self, reference: str) -> None:
+        _check_schema_references(
+            {
+                "schemas/example-policy.schema.json": _policy_schema(),
+                "schemas/example-catalog.schema.json": _catalog_schema(reference),
+            }
+        )
+
+    def test_references_to_registered_ids_and_local_pointers_resolve(self) -> None:
+        self.check(f"{BASE}example-policy-v1.json#/$defs/matcher")
+        self.check("example-policy-v1.json#/$defs/matcher")
+        self.check(f"{BASE}example-policy-v1.json#/$defs/a~1b~0c")
+        self.check(f"{BASE}example-policy-v1.json")
+        self.check("#/$defs/name")
+
+    def test_reference_to_an_unregistered_id_is_refused(self) -> None:
+        # The relative file name resolves against $id to a URL nobody registers.
+        with self.assertRaisesRegex(ModelError, "names no registered schema \\$id"):
+            self.check("example-policy.schema.json#/$defs/matcher")
+
+    def test_reference_to_a_missing_pointer_is_refused(self) -> None:
+        with self.assertRaisesRegex(ModelError, "#/properties/matcher: .*points at nothing"):
+            self.check(f"{BASE}example-policy-v1.json#/$defs/missing")
+        with self.assertRaisesRegex(ModelError, "points at nothing"):
+            self.check("#/$defs/missing")
+        with self.assertRaisesRegex(ModelError, "points at nothing"):
+            self.check("#anchor")
+
+    def test_nested_ids_and_duplicate_ids_are_refused(self) -> None:
+        nested = _catalog_schema("#/$defs/name")
+        nested["$defs"]["name"]["$id"] = f"{BASE}nested.json"
+        with self.assertRaisesRegex(ModelError, "nested \\$id"):
+            _check_schema_references({"schemas/a.schema.json": nested})
+        with self.assertRaisesRegex(ModelError, "duplicate JSON Schema id"):
+            _check_schema_references(
+                {"schemas/a.schema.json": _policy_schema(), "schemas/b.schema.json": _policy_schema()}
+            )
+
+    def test_repository_schemas_resolve_every_reference(self) -> None:
+        schemas = {
+            path.relative_to(ROOT).as_posix(): load_json(path)
+            for path in repository_files(ROOT)
+            if path.name.endswith(".schema.json")
+        }
+        self.assertIn("schemas/openrazer-native-command-catalog.schema.json", schemas)
+        _check_schema_references(schemas)
 
 
 class VerificationGuardTests(unittest.TestCase):

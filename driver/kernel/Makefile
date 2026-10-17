@@ -1,6 +1,7 @@
 obj-m += hid-hyperflux-next.o
 
 hid-hyperflux-next-y := \
+	hyperflux-next-battery.o \
 	hyperflux-next-core.o \
 	hyperflux-next-observation.o \
 	hyperflux-next-profile.o \

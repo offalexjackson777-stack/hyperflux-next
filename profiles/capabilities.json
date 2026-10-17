@@ -20,6 +20,7 @@
     {"id": "route.hyperflux-wireless", "summary": "Represent the receiver-backed wireless route independently from logical identity.", "access": "read", "owner": "bridge", "resource": null, "profile_kinds": ["receiver", "child"]},
     {"id": "surface.firmware-status-indicator", "summary": "Describe a firmware-owned charging or status indicator without exposing RGB control.", "access": "read", "owner": "sdk", "resource": null, "profile_kinds": ["surface"]},
     {"id": "telemetry.battery-percent", "summary": "Expose bounded battery percentage with age and unknown semantics.", "access": "read", "owner": "bridge", "resource": null, "profile_kinds": ["child"]},
+    {"id": "telemetry.charging-state", "summary": "Expose charging, discharging, or full state with unknown semantics.", "access": "read", "owner": "bridge", "resource": null, "profile_kinds": ["child"]},
     {"id": "telemetry.connection-evidence", "summary": "Expose role-specific passive connection evidence without equating it with power state.", "access": "read", "owner": "bridge", "resource": null, "profile_kinds": ["child"]},
     {"id": "telemetry.mouse-contact", "summary": "Expose passive mouse contact evidence as its own state dimension.", "access": "read", "owner": "bridge", "resource": null, "profile_kinds": ["child"]}
   ]

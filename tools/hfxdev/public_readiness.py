@@ -8,6 +8,7 @@ from typing import Any
 from .arch_repository import load_arch_repository_policy, published_arch_release
 from .atlas import load_repository_atlas
 from .knowledge import compiled_knowledge_catalog
+from .model import CATALOG_ROOT
 from .release import load_release_context
 from .source_validated import load_source_validated_catalog
 from .source_validated_catalog import (
@@ -41,13 +42,13 @@ def public_readiness(root: Path) -> dict[str, Any]:
     lifecycle_gate_label = "gate" if lifecycle_remaining == 1 else "gates"
     published = atlas.publication_state == "public-arch-release"
     return {
-        "$schema": "../schemas/public-readiness.schema.json",
+        "$schema": "../../schemas/public-readiness.schema.json",
         "schema": "hyperflux-public-readiness-v3",
         "generated_from": [
             "architecture/repository-atlas.json",
             "assurance/release-gates.json",
             "assurance/arch-repository.json",
-            "generated/knowledge/catalog.json",
+            (CATALOG_ROOT / "knowledge" / "catalog.json").as_posix(),
             "integrations/native-route/source-validated.json",
         ],
         "publication": {

@@ -61,7 +61,7 @@ class RepositoryAtlasTests(unittest.TestCase):
             atlas.by_id["governance"].canonical_files,
         )
         self.assertIn(
-            "generated/public-readiness.json",
+            "spec/catalog/public-readiness.json",
             atlas.by_id["documentation"].generated_files,
         )
         self.assertIn("tools/hfxdev/render.py", atlas.by_id["tooling"].canonical_files)

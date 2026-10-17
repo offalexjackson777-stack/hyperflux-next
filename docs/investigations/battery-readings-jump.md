@@ -69,7 +69,10 @@ unknown.
 We chose to report "unknown" rather than the last good value. The cost is that a battery
 level can briefly disappear; the benefit is that the number on screen is never wrong.
 
-Non-battery replies are unchanged. The `HFX-OPENRAZER-RELAY-BATTERY` journal line now
+The same rule now covers every forwarded read, such as charging state, brightness and
+firmware version: a reply is passed on only when its status is success and its
+transaction, class and command match the request. Writes are passed through unchanged.
+The `HFX-OPENRAZER-RELAY-BATTERY` journal line now
 records `reply_tx` and `outcome=value|unknown`, so a hardware log shows which reply was
 accepted.
 

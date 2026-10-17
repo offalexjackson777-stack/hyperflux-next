@@ -32,6 +32,7 @@ Defines the interface between the kernel driver and the programs that use it. Ne
 - [`uapi/registry.json`](../uapi/registry.json)
 - [`uapi/kernel-uapi.json`](../uapi/kernel-uapi.json)
 - [`uapi/native-exchange-v2.json`](../uapi/native-exchange-v2.json)
+- [`uapi/power-supply-v3.json`](../uapi/power-supply-v3.json)
 
 ## Verify
 

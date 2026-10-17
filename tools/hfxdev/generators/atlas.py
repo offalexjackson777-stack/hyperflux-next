@@ -111,7 +111,7 @@ def folder_readme(
                 "python3 tests/qualification_console_fixture_server.py --port 47821",
                 "```",
                 "",
-                "Run this from the repository root and open the local address it prints. It only previews the interface with sample data: it does not read your installed HyperFlux, test hardware, or add a `hyperfluxctl qualification` command.",
+                "Run this from the repository root and open the local address it prints. It only previews the interface with sample data: it does not read your installed HyperFlux or test hardware. The installed, read-only report of the same view is `hyperfluxctl qualification`.",
                 "",
             ]
         )
@@ -153,22 +153,31 @@ COLLECTION_TITLES = {
     ".devcontainer": "Development Container",
     ".github": "GitHub Automation",
     "apps": "Source-Only Applications",
-    "generated": "Generated Catalogs",
     "sdk": "Language SDKs",
+    "spec": "Specifications",
+    "spec/catalog": "Generated Catalogs",
     "uapi": "Userspace ABI",
 }
 
 COLLECTION_PURPOSES = {
     ".devcontainer": "Pins the offline development and release tools used for checks on your machine and in CI.",
     "apps": "Holds local tools that are only available from source and are left out of the Core and Full packages on purpose.",
-    "generated": "Holds catalogs generated from the project's data files and used by builds, SDKs, and checks.",
     "sdk": "Holds the SDKs, one per language, that apps use to talk to the HyperFlux background service.",
+    "spec": "Holds machine-readable files that describe HyperFlux, built from the project's data files for builds, SDKs, and checks to read.",
+    "spec/catalog": "Holds catalogs generated from the project's data files and used by builds, SDKs, and checks.",
     "uapi": "Holds the definition of the interface between the kernel driver and user space.",
 }
 
 
 def collection_readme(atlas: RepositoryAtlas, path: str) -> str:
     children = tuple(node for node in atlas.nodes if node.path.startswith(path + "/"))
+    subcollections = tuple(
+        sorted(
+            item
+            for item in COLLECTION_TITLES
+            if item.startswith(path + "/") and "/" not in item.removeprefix(path + "/")
+        )
+    )
     owners: dict[str, tuple[int, int]] = {}
     for node in atlas.nodes:
         canonical = sum(item.startswith(path + "/") for item in node.canonical_files)
@@ -192,7 +201,7 @@ def collection_readme(atlas: RepositoryAtlas, path: str) -> str:
         ),
         "",
     ]
-    if children:
+    if children or subcollections:
         lines.extend(
             [
                 "## What Is Inside",
@@ -201,6 +210,10 @@ def collection_readme(atlas: RepositoryAtlas, path: str) -> str:
                 "| --- | --- |",
             ]
         )
+        for item in subcollections:
+            lines.append(
+                f"| {_link(path, item + '/README.md', COLLECTION_TITLES[item])} | {COLLECTION_PURPOSES[item]} |"
+            )
         for node in children:
             lines.append(
                 f"| {_link(path, node.path + '/README.md', node.title)} | {node.purpose} |"
