@@ -443,8 +443,15 @@ class RpmDocumentationTests(unittest.TestCase):
             ):
                 self.assertIn(expected, section)
             self.assertIn("| `hyperflux-next-full` | `2.1.0-1` | `x86_64` |", section)
-            for forbidden in ("update-secureboot-policy", "shim-signed", "ppa:openrazer"):
+            for forbidden in (
+                "update-secureboot-policy",
+                "shim-signed",
+                "ppa:openrazer",
+                "replaces the OpenRazer driver package",
+            ):
                 self.assertNotIn(forbidden, section)
+        self.assertIn("`sudo dnf install --allowerasing hyperflux-next-full`", fedora)
+        self.assertIn("choose the solution that deinstalls it", opensuse)
         self.assertNotIn("dkms.service", fedora)
         self.assertIn("sudo systemctl enable dkms.service", opensuse)
         self.assertLess(

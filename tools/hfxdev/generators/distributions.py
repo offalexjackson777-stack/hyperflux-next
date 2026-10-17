@@ -68,6 +68,13 @@ OPENRGB_PLUGIN_ABSENT = {
     ),
 }
 
+# RPM targets do not obsolete OpenRazer's own driver package: an Obsoletes
+# would let a plain upgrade swap it for ours on a computer that never asked for
+# Full. So the swap is an explicit step when that package is already installed.
+RPM_DRIVER_SWAP = {
+    "fedora": "`sudo dnf install --allowerasing {package}`",
+    "opensuse": "`sudo zypper install {package}`, then choose the solution that deinstalls it",
+}
 # Where each release's stock OpenRazer service comes from, for Full users who
 # want the stock OpenRazer applications.
 OPENRAZER_SOURCE = {
@@ -148,9 +155,7 @@ def _full_edition(target: DistributionTarget, plans: list) -> list[str]:
         "OpenRazer compatibility transport, so stock OpenRazer applications can use "
         "your devices too.",
         "",
-        f"- `{driver[0].package_name}` replaces the OpenRazer driver package of "
-        f"{release.distribution} ({_items(full.conflicts)}) and stands in for it, so "
-        "the stock OpenRazer service still installs.",
+        _driver_swap(target, driver[0], full),
         f"- {OPENRAZER_SOURCE[target.id]}",
         f"- Optional stock applications: {_optional_items(full)}.",
         "- To use the stock OpenRazer service, add yourself to the `openrazer` group, then "
@@ -164,6 +169,23 @@ def _full_edition(target: DistributionTarget, plans: list) -> list[str]:
         f"includes the plugin. When {release.distribution} packages OpenRGB 1.0 final, "
         "its Full packages can include the plugin too.",
     ]
+
+
+def _driver_swap(target: DistributionTarget, driver, full) -> str:
+    release = target.release
+    if driver.replaces:
+        return (
+            f"- `{driver.package_name}` replaces the OpenRazer driver package of "
+            f"{release.distribution} ({_items(full.conflicts)}) and stands in for it, so "
+            "the stock OpenRazer service still installs."
+        )
+    command = RPM_DRIVER_SWAP[target.id].format(package=full.package_name)
+    return (
+        f"- `{driver.package_name}` takes the place of OpenRazer's own driver package "
+        f"({_items(full.conflicts)}) and stands in for it, so the stock OpenRazer "
+        "service still installs. If OpenRazer's driver package is already installed, "
+        f"the two conflict; let the package manager remove it: {command}."
+    )
 
 
 def _secure_boot(target_id: str, release: DistributionRelease, module: str) -> list[str]:

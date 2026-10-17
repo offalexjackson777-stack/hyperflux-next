@@ -231,7 +231,7 @@ Dependency roles map to packages on each distribution:
 
 Core is `hyperflux-next-linux`. Full is `hyperflux-next-full`: Core plus the OpenRazer compatibility transport, so stock OpenRazer applications can use your devices too.
 
-- `hyperflux-next-openrazer-driver-dkms` replaces the OpenRazer driver package of Fedora (`openrazer-kernel-modules-dkms`) and stands in for it, so the stock OpenRazer service still installs.
+- `hyperflux-next-openrazer-driver-dkms` takes the place of OpenRazer's own driver package (`openrazer-kernel-modules-dkms`) and stands in for it, so the stock OpenRazer service still installs. If OpenRazer's driver package is already installed, the two conflict; let the package manager remove it: `sudo dnf install --allowerasing hyperflux-next-full`.
 - Fedora does not package OpenRazer. OpenRazer's own repository on the openSUSE Build Service provides the stock service and Polychromatic; follow OpenRazer's Fedora instructions to add it.
 - Optional stock applications: `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python3-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend).
 - To use the stock OpenRazer service, add yourself to the `openrazer` group, then log out and back in: `sudo gpasswd -a "$USER" openrazer`.
@@ -313,7 +313,7 @@ Dependency roles map to packages on each distribution:
 
 Core is `hyperflux-next-linux`. Full is `hyperflux-next-full`: Core plus the OpenRazer compatibility transport, so stock OpenRazer applications can use your devices too.
 
-- `hyperflux-next-openrazer-driver-dkms` replaces the OpenRazer driver package of openSUSE (`openrazer-kernel-modules-dkms`) and stands in for it, so the stock OpenRazer service still installs.
+- `hyperflux-next-openrazer-driver-dkms` takes the place of OpenRazer's own driver package (`openrazer-kernel-modules-dkms`) and stands in for it, so the stock OpenRazer service still installs. If OpenRazer's driver package is already installed, the two conflict; let the package manager remove it: `sudo zypper install hyperflux-next-full`, then choose the solution that deinstalls it.
 - openSUSE does not package OpenRazer. OpenRazer's own repository on the openSUSE Build Service provides the stock service and Polychromatic; follow OpenRazer's openSUSE instructions to add it.
 - Optional stock applications: `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python3-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend).
 - To use the stock OpenRazer service, add yourself to the `openrazer` group, then log out and back in: `sudo gpasswd -a "$USER" openrazer`.
