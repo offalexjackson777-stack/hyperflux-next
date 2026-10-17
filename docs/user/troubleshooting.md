@@ -44,8 +44,9 @@ Polychromatic does not notice by itself when the keyboard comes back.
 1. Wait a few seconds after switching the keyboard on.
 2. Press F5 on Polychromatic's Devices tab. Retry on the device page, or
    View → Force Refresh, also works.
-3. If the keyboard is still missing, run `hyperfluxctl status` and check that
-   the receiver is listed and the `Next:` line asks for nothing.
+3. If the keyboard is still missing, run `hyperfluxctl status`. Check that the
+   `Receivers:` line shows at least 1 and that the last line says
+   `Next: no action required`.
 
 ## The Newly Installed Driver Is Not Active Yet
 
@@ -87,11 +88,18 @@ a normal reboot.
 
 ## Go Back To An Earlier Version
 
-See [updates and removal](updates-removal.md#go-back-to-an-earlier-version).
+On Arch Linux, see
+[updates and removal](updates-removal.md#go-back-to-an-earlier-version).
 
 ## Ask For Help
 
-1. Preview what a support bundle would contain:
+1. Run Doctor and keep what it prints:
+
+   ```sh
+   hyperfluxctl doctor
+   ```
+
+2. Preview what a support bundle would contain:
 
    ```sh
    hyperfluxctl support-bundle --preview
@@ -100,7 +108,7 @@ See [updates and removal](updates-removal.md#go-back-to-an-earlier-version).
    The preview uploads nothing, does not query your devices, and changes
    nothing.
 
-2. If the problem is about a device, make a hardware report as well:
+3. If the problem is about a device, make a hardware report as well:
 
    ```sh
    hyperfluxctl qualification --json
@@ -109,8 +117,16 @@ See [updates and removal](updates-removal.md#go-back-to-an-earlier-version).
    It only reads what HyperFlux already knows and sends nothing to your
    devices.
 
-3. Open a [support request](../../SUPPORT.md) and include the Doctor output,
-   the preview, and any hardware report.
+4. Open the form that fits:
+   - something does not work: the
+     [bug form](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=bug_report.yml);
+   - you want a device to be supported, or to confirm that one works: the
+     [device support form](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=device_support.yml).
+
+   Both forms have a field for each output: paste the Doctor output, the
+   preview, and the hardware report, unchanged, each into its own field. If a
+   command does not run on your computer, leave its field empty and report
+   anyway. [Support](../../SUPPORT.md) lists the other places to ask.
 
 Never post raw HID captures, hardware serial numbers, private file paths, or a
 full system journal in a public issue. The [privacy guide](privacy.md) lists

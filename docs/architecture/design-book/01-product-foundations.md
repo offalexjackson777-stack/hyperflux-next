@@ -18,7 +18,7 @@ binding.
 
 ## 2. Relationship To Earlier Implementations
 
-HyperFlux Next 2.0 keeps verified behavior while replacing accidental coupling
+HyperFlux Next keeps verified behavior while replacing accidental coupling
 with explicit boundaries, schemas, and generated projections. Earlier
 implementation details are not public product authority. Current profiles,
 source-bound catalogs, tests, and release evidence are the maintained sources of

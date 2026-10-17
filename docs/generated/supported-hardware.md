@@ -37,15 +37,17 @@ No owner has confirmed a device yet. If you own one of the devices listed as exp
 
 | Device | Type | Wireless / USB cable ID | Why not yet |
 | --- | --- | --- | --- |
-| Razer Cobra HyperSpeed | mouse | `1532:00db` / `1532:00da` | Upstream support pending for openrazer |
-| Razer BlackWidow V4 Low-profile HyperSpeed | keyboard | `1532:02c9` / `1532:02cc` | Upstream support pending for openrazer |
+| Razer Cobra HyperSpeed | mouse | `1532:00db` / `1532:00da` | Waiting for OpenRazer to add support |
+| Razer BlackWidow V4 Low-profile HyperSpeed | keyboard | `1532:02c9` / `1532:02cc` | Waiting for OpenRazer to add support |
 
 ## What The Tiers Mean
 
-- **Tested on real hardware** (`physically-proven`): the device passed end-to-end checks of the hardware, the apps, and the device lifecycle on real hardware. These devices are test references, not a runtime allowlist: HyperFlux decides what to do from what a device can do, so other devices on this page can work too.
-- **Confirmed by owners** (`owner-confirmed`): an expected-to-work device for which at least 1 owner report has passed the checks in [owner reports](../developer/device-onboarding.md#owner-reports). The owner ticked what they checked by hand; nobody from the project watched. HyperFlux treats the device exactly as before: this changes this page, not what HyperFlux does.
-- **Expected to work** (`source-qualified-operational`): the pinned source code of at least one unmodified app, checked against HyperFlux's generated command rules, shows a working path to the device. Nobody has run the real-hardware checks on it yet.
-- **Not supported yet** (`upstream-blocked-or-research-only`): the device is on the receiver's compatibility list, but no app's pinned source code has a working path to it yet. HyperFlux will not send lighting changes to it.
+- **Tested on real hardware:** the device passed end-to-end checks of the hardware, the apps, and the device lifecycle on real hardware. These devices are test references, not a runtime allowlist: HyperFlux decides what to do from what a device can do, so other devices on this page can work too.
+- **Confirmed by owners:** an expected-to-work device for which at least 1 owner report has passed the checks in [owner reports](../developer/device-onboarding.md#owner-reports). The owner ticked what they checked by hand; nobody from the project watched. HyperFlux treats the device exactly as before: this changes this page, not what HyperFlux does.
+- **Expected to work:** the source code of at least one app, OpenRazer or OpenRGB, has been checked and shows that it can control the device through HyperFlux. Nobody has tested the device on real hardware yet.
+- **Not supported yet:** the receiver can pair with the device, but no app can control it yet. HyperFlux will not send lighting changes to it.
+
+For maintainers, the tier ids are `physically-proven`, `owner-confirmed`, `source-qualified-operational`, and `upstream-blocked-or-research-only`, in the order above. "Expected to work" means the pinned source of an unmodified app was checked against HyperFlux's generated command rules.
 
 A listed device still gets lighting changes only when the receiver as it is connected now, the report format, and the command rules all match. A similar name, a match on the vendor alone, a pairing record, or a local USB path is never enough.
 

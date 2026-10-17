@@ -44,7 +44,7 @@ body:
   id: qualification-report
   attributes:
     label: Output of `hyperfluxctl qualification --json`
-    description: Run `hyperfluxctl qualification --json` with the device connected and paste what it prints, unchanged. It only reads what the bridge already knows; it holds no serial numbers or file paths, and nothing is sent to the device or uploaded. Leave this blank if the command does not run.
+    description: Run `hyperfluxctl qualification --json` with the device connected and paste what it prints, unchanged. It only reads what the HyperFlux service already knows; it holds no serial numbers or file paths, and nothing is sent to the device or uploaded. Leave this blank if the command does not run.
     render: json
 - type: checkboxes
   id: owner-check

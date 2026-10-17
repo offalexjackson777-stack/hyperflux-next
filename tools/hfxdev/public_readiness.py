@@ -72,7 +72,7 @@ def public_readiness(root: Path) -> dict[str, Any]:
         },
         "software": {
             "state": "partial" if gates_ready < len(gates) else "ready",
-            "label": "2.0 verification",
+            "label": "Release verification",
             "gates_ready": gates_ready,
             "gates_total": len(gates),
             "summary": (
@@ -106,12 +106,12 @@ def public_readiness(root: Path) -> dict[str, Any]:
             "reviewed_facts": reviewed_facts,
             "known_gaps": known_gaps,
             "summary": (
-                f"The 2.0 release retains {hardware_remaining} physical "
+                f"The current release retains {hardware_remaining} physical "
                 f"{hardware_gate_label} and {lifecycle_remaining} lifecycle "
                 f"{lifecycle_gate_label}; publication was authorized separately from "
                 "technical verification."
                 if published
-                else f"The 2.0 candidate retains {hardware_remaining} physical "
+                else f"The release candidate retains {hardware_remaining} physical "
                 f"{hardware_gate_label} and {lifecycle_remaining} lifecycle "
                 f"{lifecycle_gate_label}; technical evidence does not authorize publication."
             ),

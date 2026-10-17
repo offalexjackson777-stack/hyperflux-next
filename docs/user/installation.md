@@ -1,4 +1,4 @@
-# Install HyperFlux Next
+# Install HyperFlux Next On Arch Linux
 
 This guide installs HyperFlux Next so your Razer keyboard and mouse on a
 HyperFlux receiver work in OpenRazer, Polychromatic, and OpenRGB.
@@ -160,7 +160,7 @@ To install Core instead, run `sudo pacman -Syu hyperflux-next-linux`.
 Pacman lists the packages it is about to install and asks
 `Proceed with installation? [Y/n]`. Press Enter to continue.
 
-If the stock `openrazer-driver-dkms` package is already installed, Pacman says
+If Arch's own `openrazer-driver-dkms` package is already installed, Pacman says
 it conflicts with `hyperflux-next-openrazer-driver-dkms` and asks whether to
 remove it. Type `y`. Full brings its own copy of that driver, so OpenRazer
 keeps working.
@@ -190,31 +190,49 @@ After you log in again, run:
 hyperfluxctl doctor
 ```
 
-You should see:
+When everything works, it prints:
 
 ```text
 HyperFlux Next is ready.
+Driver active or idle | Bridge running | 1 receiver generation(s)
+No action required.
 ```
 
-The next line shows the driver, the background service, and the receiver.
+The second line shows the receiver driver, the HyperFlux service (`Bridge`),
+and how many times the service has found your receiver since it started. With
+Core, Doctor also prints `Optional Full integration is not installed.` before
+the last line. That is expected: it only means the app connections are not
+installed.
+
 If you see `HyperFlux Next needs attention.` instead, do what the `Do:` line
 says, then run `hyperfluxctl doctor` again. The
 [troubleshooting guide](troubleshooting.md) covers the common cases.
 
-Next, open your apps with the [first-run guide](first-run.md).
+Next, set up your apps with the [first-run guide](first-run.md).
 
 ## What Each Package Installs
 
-Full installs four packages. Core installs the first two. Pacman describes
-them like this:
+Full installs four packages. Core installs the first two.
+
+- `hyperflux-next-dkms`: the receiver driver.
+- `hyperflux-next-linux` (Core): the HyperFlux service, the `hyperfluxctl`
+  tool, and the SDK.
+- `hyperflux-next-openrazer-driver-dkms`: a copy of OpenRazer's driver that can
+  reach devices on the receiver.
+- `hyperflux-next-full` (Full): the connections to OpenRazer and OpenRGB.
+
+<details>
+<summary>What Pacman shows for each package</summary>
 
 - `hyperflux-next-dkms`: HyperFlux receiver kernel driver sources for DKMS.
-- `hyperflux-next-linux` (Core): HyperFlux receiver driver, bridge, SDK, CLI,
-  and base services.
+- `hyperflux-next-linux`: HyperFlux receiver driver, bridge, SDK, CLI, and base
+  services.
 - `hyperflux-next-openrazer-driver-dkms`: OpenRazer kernel driver sources with
   the HyperFlux native transport, for DKMS.
-- `hyperflux-next-full` (Full): Core plus the OpenRazer compatibility transport
-  and OpenRGB integration for optional stock applications.
+- `hyperflux-next-full`: Core plus the OpenRazer compatibility transport and
+  OpenRGB integration for optional stock applications.
+
+</details>
 
 The two `-dkms` packages hold kernel driver sources. DKMS builds them again for
 each kernel you install, so a kernel update does not break the driver.
@@ -263,6 +281,28 @@ sudo pacman -U -- \
 
 `sha256sum` should print `OK` for every file. If it prints `FAILED`, delete the
 files and download them again.
+
+<details>
+<summary>Core only</summary>
+
+These commands download and install only the two Core package files.
+
+```bash
+curl --proto '=https' --tlsv1.2 --fail --location --remote-name-all -- \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.1.1/hyperflux-next-dkms-2.1.1-1-x86_64.pkg.tar.zst \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.1.1/hyperflux-next-linux-2.1.1-1-x86_64.pkg.tar.zst \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.1.1/SHA256SUMS
+awk '$2 == "hyperflux-next-dkms-2.1.1-1-x86_64.pkg.tar.zst" || \
+     $2 == "hyperflux-next-linux-2.1.1-1-x86_64.pkg.tar.zst"' \
+  SHA256SUMS > SHA256SUMS-packages
+test "$(wc -l < SHA256SUMS-packages)" -eq 2
+sha256sum -c SHA256SUMS-packages
+sudo pacman -U -- \
+  ./hyperflux-next-dkms-2.1.1-1-x86_64.pkg.tar.zst \
+  ./hyperflux-next-linux-2.1.1-1-x86_64.pkg.tar.zst
+```
+
+</details>
 <!-- HFX-GENERATED-END: package-fallback -->
 
 Then continue with

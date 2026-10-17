@@ -87,6 +87,22 @@ class RepositoryGuideTests(unittest.TestCase):
         ready = guides.install_table(self.live, self.targets, {**maturities, "fedora": "published"})
         self.assertIn("[Install on Fedora](docs/user/install-fedora.md) | Ready |", ready)
         self.assertIn("[Install on Debian](docs/user/install-debian.md) | Not published yet |", ready)
+        flat = " ".join(table.split())
+        self.assertIn(
+            "Packages are published for Arch Linux. The Ubuntu, Debian, Fedora, and "
+            "openSUSE packages are built and tested in CI but not published yet;",
+            flat,
+        )
+        self.assertNotIn("quick steps", flat)
+        flat_ready = " ".join(ready.split())
+        self.assertIn("Packages are published for Arch Linux and Fedora.", flat_ready)
+        all_ready = guides.install_table(
+            self.live, self.targets, {target_id: "published" for target_id in self.targets}
+        )
+        self.assertIn(
+            "Packages are published for every distribution in the table.",
+            " ".join(all_ready.split()),
+        )
 
     def test_catalog_registers_each_guide_with_its_block(self) -> None:
         catalog = {entry["path"]: entry for entry in json.loads((ROOT / "docs/catalog.json").read_text())["documents"]}

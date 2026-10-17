@@ -5,10 +5,13 @@ and what to do.
 
 ## Platform And Packages
 
-### Arch Linux Only
+### Published For Arch Linux Only
 
-HyperFlux Next is published only for Arch Linux on x86_64. Other distributions
-are on the [roadmap](../project/roadmap.md), but no packages exist for them yet.
+HyperFlux Next is published only for Arch Linux on x86_64. Packages for Ubuntu,
+Debian, Fedora, and openSUSE are built and tested every week, but they are not
+published yet, so there is nothing to install from yet. When they are
+published, they will carry Core only, without the app connections. The
+[roadmap](../project/roadmap.md) shows what comes next.
 
 ### Not In The Official Arch Repositories Or The AUR
 
@@ -18,28 +21,26 @@ but not published yet.
 
 ## Applications
 
-Stock OpenRazer, Polychromatic, and OpenRGB are optional. They are separate
+OpenRazer, Polychromatic, and OpenRGB are optional. They are separate
 projects with their own packages, settings, and bugs. HyperFlux does not install,
 patch, or own them. It lets them reach the devices paired to your receiver.
 
 ### Ripple Shows No Reactive Lighting
 
-Polychromatic offers Ripple for keyboards whose stock OpenRazer model supports
-it, but over HyperFlux it shows no reactive lighting. Ripple needs to see your
-key presses through the receiver, and stock OpenRazer cannot do that yet. Choose
-another effect.
+Polychromatic offers Ripple for keyboards that OpenRazer supports, but over
+HyperFlux it shows no reactive lighting. Ripple needs to see your key presses
+through the receiver, and OpenRazer cannot do that yet. Choose another effect.
 
 ### OpenRGB May Call A Black Keyboard Quartz
 
-OpenRGB reads the colour variant from a byte in the keyboard's own information
-reply, without checking the reply or whether the model has variants; HyperFlux
-passes that reply through unchanged. The device name is correct and lighting
-works. Only the description is affected.
+OpenRGB may describe a black keyboard as Quartz. This comes from OpenRGB, not
+from HyperFlux. The device name is correct and lighting works; only the
+description is wrong.
 
 ### Keyboard Lighting Shortcuts
 
 The keyboard's own lighting shortcuts, such as Fn brightness and effect keys,
-change lighting inside the keyboard firmware. Stock OpenRazer and Polychromatic
+change lighting inside the keyboard firmware. OpenRazer and Polychromatic
 keep their last known brightness and effect and do not notice the change, and
 HyperFlux does not react to it. To take control back, apply the effect again in
 OpenRGB, or in Polychromatic change the brightness and then apply the effect
@@ -101,9 +102,10 @@ The battery level itself is not affected.
 ## Hardware
 
 Two devices have been tested end to end on real hardware. Eight more are
-expected to work because their stock application support has been checked in
-the upstream source, but they have not been tested on real hardware. Two more
-wait for upstream OpenRazer support. See [hardware](hardware.md) for the list.
+expected to work because support for them has been checked in the source code
+of OpenRazer and OpenRGB, but they have not been tested on real hardware. Two
+more wait for support in OpenRazer; OpenRGB does not support them either. See
+[hardware](hardware.md) for the list.
 
 A device that an application can use is not the same as a device that has been
 tested on real hardware. If your device is in the second group and something

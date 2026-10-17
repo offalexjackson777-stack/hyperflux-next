@@ -373,7 +373,7 @@
     },
     {
       "id": "packaging", "title": "Packaging and installation", "path": "packaging", "category": "delivery", "status": "implemented",
-      "purpose": "Builds the Arch packages the same way every time, and the signed Pacman repository that serves them.",
+      "purpose": "Builds the HyperFlux packages for Arch Linux and the other distributions the same way every time, and the signed repositories that serve them.",
       "owns": ["Install manifest", "Distribution projections", "Reproducible package inventory", "Published package-signing public key"],
       "must_not_own": ["Runtime naming duplicates", "Hidden post-install writes", "Release decisions"],
       "inputs": ["Runtime authority", "Built modules and adapters", "Distribution catalog"],

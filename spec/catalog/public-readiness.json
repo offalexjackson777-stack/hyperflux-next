@@ -7,7 +7,7 @@
     "lifecycle_gates": 0,
     "reviewed_facts": 191,
     "state": "ready",
-    "summary": "The 2.0 release retains 0 physical gates and 0 lifecycle gates; publication was authorized separately from technical verification."
+    "summary": "The current release retains 0 physical gates and 0 lifecycle gates; publication was authorized separately from technical verification."
   },
   "generated_from": [
     "architecture/repository-atlas.json",
@@ -40,7 +40,7 @@
   "software": {
     "gates_ready": 10,
     "gates_total": 10,
-    "label": "2.0 verification",
+    "label": "Release verification",
     "state": "ready",
     "summary": "10 of 10 release gates are verified; publication remains a separate decision."
   }

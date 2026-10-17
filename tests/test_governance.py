@@ -1184,9 +1184,16 @@ class GitHubGovernanceTests(unittest.TestCase):
         self.assertIn("Output of `hyperfluxctl qualification --json`", qualification)
         self.assertIn("render: json", qualification)
         self.assertNotIn("required: true", qualification)
-        self.assertNotIn("qualification-report", bug)
+        # Support asks for the hardware report with a device problem, so the bug form takes it too.
+        bug_qualification = bug.split("id: qualification-report", 1)[1].split("- type:", 1)[0]
+        self.assertIn("Optional, for a problem with a device.", bug_qualification)
+        self.assertIn("render: json", bug_qualification)
+        self.assertNotIn("required: true", bug_qualification)
+        self.assertNotIn("bridge", qualification + bug_qualification)
         # Reporters describe what they saw; maintainers classify it (FORM-001…004).
-        self.assertIn("2.0.x", bug)
+        for command in ("pacman -Q", "dpkg-query -W", "rpm -q"):
+            self.assertIn(command, bug)
+        self.assertIn("2.x.y-1", bug)
         self.assertNotIn("; 0.x;", bug)
         self.assertNotIn("adapter", bug)
         self.assertNotIn("generated", documentation.lower().split("\n", 1)[1])

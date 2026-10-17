@@ -161,7 +161,7 @@ split made ownership clearer. Public crate paths stayed available through
 compatibility exports. Generated contracts stayed generated, and the guides
 became shorter and task-focused.
 
-The two-package design became deliberate. Core is useful on its own as the
+The two-edition design became deliberate. Core is useful on its own as the
 receiver bridge and SDK. Full is the optional layer for the stock OpenRazer and
 OpenRGB applications. Arch is the reference platform; other distributions must
 earn their own build, lifecycle, and hardware evidence instead of inheriting an
@@ -179,9 +179,18 @@ boundary. Version 2.0.0 was published for Arch Linux x86_64 on 2026-08-04.
 
 After the release, real systems showed problems the tests had not: a shutdown
 hang, a retired driver taking the receiver, a mouse missing after boot, slow
-returns after sleep, and battery readings that jumped. Some were fixed in 2.0.1;
-the rest have fixes waiting for 2.0.2. I wrote each one up, with its cause, its
-fix, and what is still unproven, in [Investigations](../investigations/README.md).
+returns after sleep, and battery readings that jumped. Some were fixed in 2.0.1
+and the rest in 2.0.2. I wrote each one up, with its cause, its fix, and what is
+still unproven, in [Investigations](../investigations/README.md).
+
+Version 2.1.0 kept the two editions but split them into four packages: the
+receiver driver and the patched OpenRazer driver moved into their own DKMS
+packages, so Core became two packages and Full four, and no two packages
+install the same file. Version 2.1.1 brought battery level and charging status
+to the desktop battery widget and the hardware report that owners attach when
+they confirm a device. Packages for Ubuntu, Debian, Fedora, and openSUSE are
+built and tested every week, but they stay unpublished until each one has its
+own repository and hardware evidence.
 
 ## Technical Appendix
 

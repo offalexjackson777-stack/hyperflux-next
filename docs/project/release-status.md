@@ -9,8 +9,9 @@
 
 ## What Is Out Now
 
-The current release runs on Arch Linux on x86_64 computers. It comes in two
-editions:
+The current release runs on Arch Linux on x86_64 computers. Packages for
+Ubuntu, Debian, Fedora, and openSUSE are built and tested but not published
+yet. The Arch release comes in two editions:
 
 - **Full (`hyperflux-next-full`):** the recommended edition. Your keyboard and
   mouse work in OpenRazer, Polychromatic, and OpenRGB.
