@@ -38,7 +38,7 @@ From `2.1.0-1` the Arch `pkgbase=hyperflux-next` builds 4 packages that never in
 
 ## Ubuntu 24.04 (CI-built, not published yet)
 
-HyperFlux builds `.deb` packages for Ubuntu 24.04 (`noble`) every week in CI. They are not published, so there is nothing to install from yet. They carry both editions, Core and Full.
+HyperFlux builds `.deb` packages for Ubuntu 24.04 (`noble`) in CI every week and whenever a pull request changes how they are made. They are not published, so there is nothing to install from yet. They carry both editions, Core and Full.
 
 | Package | Version | Architecture | Depends |
 | --- | --- | --- | --- |
@@ -126,7 +126,7 @@ Removing the packages does not stop the HyperFlux services, so turn them off fir
 
 ## Debian 13 (CI-built, not published yet)
 
-HyperFlux builds `.deb` packages for Debian 13 (`trixie`) every week in CI. They are not published, so there is nothing to install from yet. They carry both editions, Core and Full.
+HyperFlux builds `.deb` packages for Debian 13 (`trixie`) in CI every week and whenever a pull request changes how they are made. They are not published, so there is nothing to install from yet. They carry both editions, Core and Full.
 
 | Package | Version | Architecture | Depends |
 | --- | --- | --- | --- |
@@ -208,7 +208,7 @@ Removing the packages does not stop the HyperFlux services, so turn them off fir
 
 ## Fedora 44 (CI-built, not published yet)
 
-HyperFlux builds `.rpm` packages for Fedora 44 every week in CI. They are not published, so there is nothing to install from yet. They carry both editions, Core and Full.
+HyperFlux builds `.rpm` packages for Fedora 44 in CI every week and whenever a pull request changes how they are made. They are not published, so there is nothing to install from yet. They carry both editions, Core and Full.
 
 | Package | Version | Architecture | Requires |
 | --- | --- | --- | --- |
@@ -290,7 +290,7 @@ Removing the packages does not stop the HyperFlux services, so turn them off fir
 
 ## openSUSE Tumbleweed (CI-built, not published yet)
 
-HyperFlux builds `.rpm` packages for openSUSE Tumbleweed every week in CI. They are not published, so there is nothing to install from yet. They carry both editions, Core and Full.
+HyperFlux builds `.rpm` packages for openSUSE Tumbleweed in CI every week and whenever a pull request changes how they are made. They are not published, so there is nothing to install from yet. They carry both editions, Core and Full.
 
 | Package | Version | Architecture | Requires |
 | --- | --- | --- | --- |

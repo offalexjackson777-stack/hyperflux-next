@@ -500,8 +500,6 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         raise ModelError("required GitHub checks must be sorted")
     if KERNEL_CANARY_CHECK in required_checks:
         raise ModelError("the kernel canary follows moving kernels and may never gate merges")
-    if DISTRIBUTION_PACKAGE_CHECK in required_checks:
-        raise ModelError("the distribution packages are CI-only and may never gate merges")
 
     raw_labels = value["labels"]
     if not isinstance(raw_labels, list) or not raw_labels:
