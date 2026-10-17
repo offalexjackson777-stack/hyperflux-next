@@ -82,6 +82,10 @@ pub struct Assessment {
     /// `bridge_ready` keeps its published meaning (bridge and child routes ready).
     #[serde(skip)]
     pub bridge_responding: bool,
+    /// Whether the installed Full package was built without the `OpenRGB`
+    /// plugin. Not part of the JSON contract.
+    #[serde(skip)]
+    pub full_without_openrgb_plugin: bool,
     pub receiver_generations: usize,
     pub qualified_generations: usize,
     pub working: Vec<String>,
@@ -534,6 +538,10 @@ fn classify_openrazer_key_event_links(
     );
 }
 
+/// Said when a distribution's Full package leaves the `OpenRGB` plugin out
+/// because that distribution's `OpenRGB` cannot load it.
+const OPENRGB_PLUGIN_ABSENT: &str = "the Full integration component on this distribution has no OpenRGB plugin, because this distribution does not ship an OpenRGB that can load it";
+
 fn assess_full_component(
     snapshot: &SystemSnapshot,
     working: &mut Vec<String>,
@@ -546,6 +554,9 @@ fn assess_full_component(
         }
         FullComponentState::Ready => {
             working.push("the Full integration component is installed".to_owned());
+            if !snapshot.full_component.openrgb_plugin {
+                working.push(OPENRGB_PLUGIN_ABSENT.to_owned());
+            }
             classify_openrazer_driver(snapshot, working, findings);
             classify_openrazer_runtime(snapshot, working, findings);
             findings.extend(broken_openrazer_event_link_findings(snapshot));
@@ -693,6 +704,8 @@ pub fn assess_system(snapshot: &SystemSnapshot) -> Assessment {
         driver,
         bridge_ready,
         bridge_responding,
+        full_without_openrgb_plugin: snapshot.full_component.state == FullComponentState::Ready
+            && !snapshot.full_component.openrgb_plugin,
         receiver_generations,
         qualified_generations,
         working,
@@ -710,8 +723,13 @@ pub fn render_doctor_text(assessment: &Assessment, explain: bool) -> String {
             .find(|component| component.component == ComponentId::Full)
             .filter(|component| component.state == ComponentState::OptionalNotInstalled)
             .map_or("", |_| "Optional Full integration is not installed.\n");
+        let openrgb = if assessment.full_without_openrgb_plugin {
+            "Full integration has no OpenRGB plugin here: this distribution does not ship an OpenRGB that can load it.\n"
+        } else {
+            ""
+        };
         return format!(
-            "HyperFlux Next is ready.\nDriver active or idle | Bridge running | {} receiver generation(s)\n{optional}No action required.\n",
+            "HyperFlux Next is ready.\nDriver active or idle | Bridge running | {} receiver generation(s)\n{optional}{openrgb}No action required.\n",
             assessment.receiver_generations,
         );
     }
@@ -956,6 +974,35 @@ mod tests {
     }
 
     #[test]
+    fn full_without_the_openrgb_plugin_is_ready_and_says_why() {
+        let mut value = snapshot();
+        value.full_component = crate::FullComponentSnapshot::ready_without_openrgb_plugin("2.0.0");
+        let assessment = assess_system(&value);
+        assert_eq!(assessment.state, AssessmentState::Ready);
+        assert_eq!(assessment.components[1].state, ComponentState::Ready);
+        assert!(assessment.full_without_openrgb_plugin);
+        assert!(
+            assessment
+                .working
+                .iter()
+                .any(|line| line == OPENRGB_PLUGIN_ABSENT)
+        );
+        assert_eq!(
+            render_doctor_text(&assessment, false),
+            "HyperFlux Next is ready.\nDriver active or idle | Bridge running | 0 receiver generation(s)\nFull integration has no OpenRGB plugin here: this distribution does not ship an OpenRGB that can load it.\nNo action required.\n"
+        );
+
+        let with_plugin = assess_system(&snapshot());
+        assert!(!with_plugin.full_without_openrgb_plugin);
+        assert!(
+            !with_plugin
+                .working
+                .iter()
+                .any(|line| line == OPENRGB_PLUGIN_ABSENT)
+        );
+    }
+
+    #[test]
     fn healthy_core_does_not_require_optional_full_integrations() {
         let mut value = snapshot();
         value.full_component = crate::FullComponentSnapshot::not_installed();
@@ -980,6 +1027,7 @@ mod tests {
         value.full_component = crate::FullComponentSnapshot {
             state: FullComponentState::DescriptorInvalid,
             product_version: None,
+            openrgb_plugin: false,
         };
         let assessment = assess_system(&value);
         assert_eq!(assessment.state, AssessmentState::NeedsAttention);

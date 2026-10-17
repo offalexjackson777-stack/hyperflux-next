@@ -59,6 +59,10 @@ RELEASE = re.compile(r"^([0-9]+(?:\.[0-9]+)*)-([1-9][0-9]*)$")
 CONTROL_CHARACTER = re.compile(r"[\x00-\x1f\x7f]")
 
 
+# Build kinds that install source files rather than compiled machine code.
+SOURCE_BUILD_KINDS = frozenset({"source-transform", "source-transform-file"})
+
+
 @dataclass(frozen=True)
 class RetiredRelation:
     output: str
@@ -88,6 +92,9 @@ class SplitOutput:
     file_destinations: tuple[str, ...]
     tree_destinations: tuple[str, ...]
     directory_modes: tuple[tuple[str, int], ...]
+    # Whether any build compiles machine code. An output of sources, scripts
+    # and data alone is architecture-independent on Debian and RPM targets.
+    compiled: bool = True
 
 
 @dataclass(frozen=True)
@@ -588,6 +595,10 @@ def load_arch_split(
                 file_destinations=files,
                 tree_destinations=trees,
                 directory_modes=owned_modes,
+                compiled=any(
+                    install.build(build_id).kind not in SOURCE_BUILD_KINDS
+                    for build_id in item["builds"]
+                ),
             )
         )
     split_outputs = tuple(outputs)

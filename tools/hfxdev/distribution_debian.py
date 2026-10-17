@@ -1,13 +1,16 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
-"""Debian-format packages for the Core-only Ubuntu 24.04 and Debian 13 targets.
+"""Debian-format packages for the Ubuntu 24.04 and Debian 13 targets.
 
-The Arch split authority already partitions the Core edition into the
-outputs that own its files: the DKMS receiver sources and the bridge
-runtime. A Debian target reuses that partition unchanged, so both
-channels install the same files under the same package names. Only the
-metadata differs: dependency roles map through the Debian target in
-`packaging/distributions.json`, and siblings pin `name (= version)`.
+The Arch split authority already partitions each edition into the outputs
+that own its files: for Core the DKMS receiver sources and the bridge
+runtime, for Full the OpenRazer driver sources and the compatibility
+transport. A Debian target reuses that partition, so both channels install
+the same files under the same package names. Only the metadata differs:
+dependency roles map through the Debian target in
+`packaging/distributions.json`, siblings pin `name (= version)`, and Full
+stands in for the release's own OpenRazer driver package. Full leaves out
+the OpenRGB plugin, which no OpenRGB in these releases can load.
 
 Each `.deb` carries the staged payload plus `/usr/share/doc/<package>/`
 copyright and changelog files, which Debian policy requires. Maintainer
@@ -44,6 +47,8 @@ from .distribution_package import (
 from .distribution_native import tree_files
 from .distributions import (
     DEBIAN_RELATION,
+    OPENRGB_PLUGIN_ARCH_DEPENDENCIES,
+    OPENRGB_PLUGIN_BUILD,
     DistributionCatalog,
     DistributionTarget,
     c_runtime_floor,
@@ -175,18 +180,147 @@ def edition_outputs(split: ArchSplit, target: DistributionTarget) -> tuple[Split
     return outputs
 
 
+EDITION_NAMES = {"linux": "Core", "full": "Full"}
+# DKMS keeps a module's sources in /usr/src/<name>-<version>.
+DKMS_SOURCE_DIRECTORY = re.compile(
+    r"/usr/src/(?P<name>[a-z0-9][a-z0-9_.+-]*)-(?P<version>[0-9][A-Za-z0-9_.+~]*)"
+)
+
+
+def dkms_module(output: SplitOutput, runtime: LinuxRuntime) -> tuple[str, str]:
+    """The DKMS module name and version a DKMS output registers.
+
+    The receiver sources are staged file by file and must carry their
+    `dkms.conf`; the OpenRazer driver sources are one staged tree.
+    """
+
+    kernel = runtime.kernel
+    sources = [
+        tree for tree in output.tree_destinations if tree.startswith("/usr/src/")
+    ]
+    if any(path.startswith(kernel.source_directory + "/") for path in output.file_destinations):
+        if f"{kernel.source_directory}/dkms.conf" not in output.file_destinations:
+            raise ModelError(
+                f"{output.package_name}: the DKMS output does not own "
+                f"{kernel.source_directory}/dkms.conf"
+            )
+        sources.append(kernel.source_directory)
+    if len(sources) != 1:
+        raise ModelError(f"{output.package_name}: a DKMS output owns exactly one module source")
+    match = DKMS_SOURCE_DIRECTORY.fullmatch(sources[0])
+    if match is None:
+        raise ModelError(f"{output.package_name}: {sources[0]} is not a DKMS source directory")
+    if sources[0] == kernel.source_directory and (
+        match.group("name"),
+        match.group("version"),
+    ) != (kernel.dkms_name, kernel.dkms_version):
+        raise ModelError(f"{output.package_name}: the receiver DKMS identity is inconsistent")
+    return match.group("name"), match.group("version")
+
+
+def owns_system_users(output: SplitOutput) -> bool:
+    return any(
+        path.startswith(SYSUSERS_DIRECTORY) and path.endswith(".conf")
+        for path in output.file_destinations
+    )
+
+
+def role_dependencies(output: SplitOutput, target: DistributionTarget) -> tuple[str, ...]:
+    """The target packages an output's roles map to.
+
+    `systemd-sysusers` comes with the service manager. On Arch it shares one
+    package with the device manager, so an output that registers system users
+    with only the device-manager role still gets the service manager here.
+    """
+
+    roles = list(output.dependency_roles)
+    if owns_system_users(output) and "service-manager" not in roles:
+        roles.append("service-manager")
+    return tuple(dict.fromkeys(target.dependency_roles[role] for role in roles))
+
+
+def check_arch_dependencies(
+    output: SplitOutput, target: DistributionTarget, catalog: DistributionCatalog, label: str
+) -> None:
+    """Fail unless the split names only Arch role packages for this output.
+
+    The split records Arch role packages plus any Arch-only package names. A
+    Debian- or RPM-format target maps roles only, so Arch-only names are
+    allowed only for the OpenRGB plugin, which such a target leaves out.
+    """
+
+    arch_roles = catalog.targets["arch"].dependency_roles
+    names = set(output.external_dependencies)
+    if not target.openrgb_plugin and OPENRGB_PLUGIN_BUILD in output.builds:
+        names -= set(OPENRGB_PLUGIN_ARCH_DEPENDENCIES)
+    if names != {arch_roles[role] for role in output.dependency_roles}:
+        raise ModelError(
+            f"{label}: {target.package_format} outputs depend only on roles and siblings, "
+            "not on Arch package names"
+        )
+
+
+def output_relations(
+    split: ArchSplit, output: SplitOutput, target: DistributionTarget
+) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
+    """The conflicts, provides and replaces one output declares on a target.
+
+    Core keeps the split relations. Full takes its relations from the target:
+    they name the release's own OpenRazer driver package, which the Full
+    DKMS output replaces, and nothing else in Full declares any.
+    """
+
+    if output.edition != "full":
+        return output.conflicts, output.provides, output.replaces
+    driver = [item for item in split.outputs if item.edition == "full" and "dkms" in item.dependency_roles]
+    if len(driver) != 1:
+        raise ModelError("Arch split: Full has exactly one DKMS output")
+    if output.id != driver[0].id:
+        return (), (), ()
+    component = target.component("full")
+    return component.conflicts, component.provides, component.replaces
+
+
+def output_text(
+    split: ArchSplit,
+    output: SplitOutput,
+    target: DistributionTarget,
+    runtime: LinuxRuntime,
+) -> tuple[str, tuple[str, ...]]:
+    """One output's summary line and description paragraph."""
+
+    release = target.release
+    if release is None:
+        raise ModelError(f"distribution {target.id} names no release")
+    request = split.edition_output(output.edition)
+    component = target.component(output.edition)
+    plugin_left_out = output.edition == "full" and not target.openrgb_plugin
+    summary = (
+        component.description
+        if plugin_left_out and request.id == output.id
+        else output.description
+    )
+    lines = [
+        f"Part of the {runtime.product.display_name} {EDITION_NAMES[output.edition]} "
+        f"edition for {release.distribution} {release.version}.",
+        "This package installs the whole edition."
+        if request.id == output.id
+        else f"It is installed as a dependency of {request.package_name}.",
+    ]
+    if plugin_left_out and request.id == output.id:
+        lines.append(
+            "It leaves out the OpenRGB plugin: no OpenRGB in "
+            f"{release.distribution} {release.version} can load it."
+        )
+    return summary, tuple(lines)
+
+
 def _scripts(output: SplitOutput, runtime: LinuxRuntime) -> tuple[tuple[str, str], ...]:
     configure: list[str] = []
     remove: list[str] = []
     after_remove: list[str] = []
     if "dkms" in output.dependency_roles:
-        kernel = runtime.kernel
-        source = PurePosixPath(kernel.source_directory)
-        if f"{source}/dkms.conf" not in output.file_destinations:
-            raise ModelError(
-                f"{output.package_name}: the DKMS output does not own {source}/dkms.conf"
-            )
-        name, version = kernel.dkms_name, kernel.dkms_version
+        name, version = dkms_module(output, runtime)
         configure.append(f'{DKMS_COMMON_POSTINST} {name} {version} "" "" "${{2:-}}"')
         remove.extend(
             [
@@ -273,17 +407,10 @@ def debian_plans(
         component = target.component(output.edition)
         if any(role not in component.dependency_roles for role in output.dependency_roles):
             raise ModelError(f"{label}: dependency role is outside the edition contract")
-        role_packages = tuple(target.dependency_roles[role] for role in output.dependency_roles)
-        # The split records Arch role packages plus any Arch-only package
-        # names. A Debian target maps roles only; Arch names have no meaning.
-        arch_roles = catalog.targets["arch"].dependency_roles
-        if set(output.external_dependencies) != {
-            arch_roles[role] for role in output.dependency_roles
-        }:
-            raise ModelError(
-                f"{label}: Debian outputs depend only on roles and siblings, "
-                "not on Arch package names"
-            )
+        role_packages = role_dependencies(output, target)
+        check_arch_dependencies(output, target, catalog, label)
+        conflicts, provides, replaces = output_relations(split, output, target)
+        summary, description = output_text(split, output, target, runtime)
         siblings = tuple(
             debian_exact(split.output(sibling).package_name, version)
             for sibling in output.sibling_dependencies
@@ -294,41 +421,25 @@ def debian_plans(
             path.startswith("/usr/src/") for path in output.file_destinations
         ):
             raise ModelError(f"{label}: an output without builds must be DKMS sources")
-        entry_request = split.edition_output(output.edition).package_name
-        role_line = (
-            "This package installs the whole edition."
-            if request
-            else f"It is installed as a dependency of {entry_request}."
-        )
         plans.append(
             DebianPlan(
                 output=output.id,
                 package_name=output.package_name,
                 version=version,
-                # Outputs without builds carry only sources and data.
-                architecture="all" if not output.builds else architecture,
+                # Outputs that compile nothing carry only sources, scripts and data.
+                architecture="all" if not output.compiled else architecture,
                 section="kernel" if "dkms" in output.dependency_roles else "admin",
                 homepage=catalog.homepage,
-                synopsis=output.description,
-                extended_description=(
-                    f"Part of the {runtime.product.display_name} Core edition for "
-                    f"{release.distribution} {release.version}.",
-                    role_line,
-                ),
+                synopsis=summary,
+                extended_description=description,
                 licenses=output.licenses,
                 depends=tuple(dict.fromkeys([*role_packages, *siblings])),
                 suggests=tuple(
                     debian_relation(item.package, f"{label} suggestion") for item in optional
                 ),
-                conflicts=tuple(
-                    debian_relation(item, f"{label} conflict") for item in output.conflicts
-                ),
-                provides=tuple(
-                    debian_relation(item, f"{label} provide") for item in output.provides
-                ),
-                replaces=tuple(
-                    debian_relation(item, f"{label} replace") for item in output.replaces
-                ),
+                conflicts=tuple(debian_relation(item, f"{label} conflict") for item in conflicts),
+                provides=tuple(debian_relation(item, f"{label} provide") for item in provides),
+                replaces=tuple(debian_relation(item, f"{label} replace") for item in replaces),
                 conffiles=tuple(sorted("/" + item for item in output.backup)),
                 scripts=_scripts(output, runtime),
                 changelog_entry=(
@@ -375,6 +486,13 @@ def check_edition_contract(
             component.provides or component.replaces
         ):
             raise ModelError(f"{target.id} {edition}: packages may not provide or replace")
+        if component.provides or component.replaces:
+            provides = {item for plan in members for item in plan.provides}
+            replaces = {item for plan in members for item in plan.replaces}
+            if (provides, replaces) != (set(component.provides), set(component.replaces)):
+                raise ModelError(
+                    f"{target.id} {edition}: package provides or replaces differ from the edition"
+                )
 
 
 def control_text(plan: DebianPlan, installed_size: int) -> str:
@@ -857,6 +975,7 @@ def build_debian_distribution(
                 build_manifest,
                 workspace_root / f"{component_id}-root",
                 component_id,
+                openrgb_plugin=component_id != "full" or target.openrgb_plugin,
             )
             for component_id in target.components
         }

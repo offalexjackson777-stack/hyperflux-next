@@ -1,13 +1,15 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
-"""RPM packages for the Core-only Fedora and openSUSE targets.
+"""RPM packages for the Fedora and openSUSE targets.
 
 An RPM target reuses the Arch split partition exactly as a Debian target
-does: the DKMS receiver sources and the bridge runtime become the same two
-packages under the same names. One generated spec builds both outputs as
-subpackages of `hyperflux-next`, the RPM counterpart of the Arch pkgbase.
-Dependency roles map through the target in `packaging/distributions.json`
-and siblings pin `name = version-release`.
+does: every output becomes the same package under the same name. One
+generated spec builds the outputs as subpackages of `hyperflux-next`, the
+RPM counterpart of the Arch pkgbase. Dependency roles map through the
+target in `packaging/distributions.json`, siblings pin
+`name = version-release`, and Full stands in for the OpenRazer driver
+package of OpenRazer's own repository. Full leaves out the OpenRGB plugin,
+which no OpenRGB in these releases can load.
 
 Scriptlets mirror the Debian maintainer scripts with one difference. The
 Fedora and openSUSE DKMS configuration loads a module as soon as it is
@@ -36,9 +38,15 @@ from .arch_split import ArchSplit, SplitOutput, load_arch_split
 from .arch_split_package import SplitStage, split_edition_stages
 from .distribution_debian import (
     ARCH_RELATION,
+    check_arch_dependencies,
     check_c_runtime,
     check_edition_contract,
+    dkms_module,
     edition_outputs,
+    output_relations,
+    output_text,
+    owns_system_users,
+    role_dependencies,
 )
 from .distribution_package import (
     BUILD_MANIFEST_NAME,
@@ -116,27 +124,30 @@ RPMLINT_FILTERS: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        "The license file is the verbatim GPL-2.0 text, which carries an older FSF address.",
+        "The license files are the verbatim GPL-2.0 texts, which carry an older FSF address.",
         (
-            r"hyperflux-next-linux\.[^:]+: E: incorrect-fsf-address /usr/share/licenses/hyperflux-next-linux/LICENSE",
+            r"hyperflux-next-(linux|full)\.[^:]+: E: incorrect-fsf-address /usr/share/licenses/hyperflux-next-\1/LICENSE",
+            r"hyperflux-next-openrazer-driver-dkms\.noarch: E: incorrect-fsf-address /usr/src/openrazer-driver-[^/]+/LICENSES/GPL-2\.0-or-later\.txt",
         ),
     ),
     (
         "Automatic requirements are off; the catalog names the C runtime package itself.",
-        (r"hyperflux-next-linux\.[^:]+: E: explicit-lib-dependency libgcc(_s1)?$",),
+        (r"hyperflux-next-(linux|full)\.[^:]+: E: explicit-lib-dependency libgcc(_s1)?$",),
     ),
     (
         "DKMS builds the driver from its sources under /usr/src.",
         (
             r"hyperflux-next-dkms\.noarch: E: devel-file-in-non-devel-package .*/usr/src/hid-hyperflux-next-",
             r"hyperflux-next-dkms\.noarch: E: filelist-forbidden-fhs23 /usr/src/hid-hyperflux-next-",
+            r"hyperflux-next-openrazer-driver-dkms\.noarch: E: devel-file-in-non-devel-package .*/usr/src/openrazer-driver-",
+            r"hyperflux-next-openrazer-driver-dkms\.noarch: E: filelist-forbidden-fhs23 /usr/src/openrazer-driver-",
         ),
     ),
     (
         "The packages never enable, start or stop a unit; the first run enables them and the "
         "computer restarts.",
         (
-            r"hyperflux-next-linux\.[^:]+: E: systemd-service-without-service_(add|del)_(pre|post|preun|postun) hyperflux-next-",
+            r"hyperflux-next-(linux|full)\.[^:]+: E: systemd-service-without-service_(add|del)_(pre|post|preun|postun) hyperflux-next-",
         ),
     ),
     (
@@ -148,7 +159,9 @@ RPMLINT_FILTERS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ),
     (
         "openSUSE and the package name hyperflux-next-linux are spelled as intended.",
-        (r"hyperflux-next-(dkms|linux)\.[^:]+: E: spelling-error \(.(openSUSE|linux).,",),
+        (
+            r"hyperflux-next-(dkms|linux|full|openrazer-driver-dkms)\.[^:]+: E: spelling-error \(.(openSUSE|linux).,",
+        ),
     ),
 )
 
@@ -283,13 +296,7 @@ def _scripts(output: SplitOutput, runtime: LinuxRuntime) -> tuple[tuple[str, str
     preun: list[str] = []
     postun: list[str] = []
     if "dkms" in output.dependency_roles:
-        kernel = runtime.kernel
-        source = PurePosixPath(kernel.source_directory)
-        if f"{source}/dkms.conf" not in output.file_destinations:
-            raise ModelError(
-                f"{output.package_name}: the DKMS output does not own {source}/dkms.conf"
-            )
-        name, version = kernel.dkms_name, kernel.dkms_version
+        name, version = dkms_module(output, runtime)
         # Register and build only. On Fedora and openSUSE `dkms install`
         # loads the module into the running kernel; DKMS installs the built
         # module itself at the next boot.
@@ -370,11 +377,8 @@ def _scriptlet_requires(
     if "dkms" in output.dependency_roles:
         package = target.dependency_roles["dkms"]
         required.extend([("post", package), ("preun", package)])
-    if any(path.startswith(SYSUSERS_DIRECTORY) for path in output.file_destinations):
-        if "service-manager" not in output.dependency_roles:
-            raise ModelError(
-                f"{output.package_name}: system users need the service-manager role"
-            )
+    if owns_system_users(output):
+        # `systemd-sysusers` comes with the service manager.
         required.append(("post", target.dependency_roles["service-manager"]))
     if any(phase not in phases for phase, _ in required):
         raise ModelError(f"{output.package_name}: a scriptlet requirement has no scriptlet")
@@ -404,16 +408,10 @@ def rpm_plans(
         component = target.component(output.edition)
         if any(role not in component.dependency_roles for role in output.dependency_roles):
             raise ModelError(f"{label}: dependency role is outside the edition contract")
-        role_packages = tuple(target.dependency_roles[role] for role in output.dependency_roles)
-        # The split records Arch role packages; an RPM target maps roles only.
-        arch_roles = catalog.targets["arch"].dependency_roles
-        if set(output.external_dependencies) != {
-            arch_roles[role] for role in output.dependency_roles
-        }:
-            raise ModelError(
-                f"{label}: RPM outputs depend only on roles and siblings, "
-                "not on Arch package names"
-            )
+        role_packages = role_dependencies(output, target)
+        check_arch_dependencies(output, target, catalog, label)
+        conflicts, provides, replaces = output_relations(split, output, target)
+        summary, description = output_text(split, output, target, runtime)
         siblings = tuple(
             rpm_exact(split.output(sibling).package_name, full_version)
             for sibling in output.sibling_dependencies
@@ -424,12 +422,6 @@ def rpm_plans(
             path.startswith("/usr/src/") for path in output.file_destinations
         ):
             raise ModelError(f"{label}: an output without builds must be DKMS sources")
-        entry_request = split.edition_output(output.edition).package_name
-        role_line = (
-            "This package installs the whole edition."
-            if request
-            else f"It is installed as a dependency of {entry_request}."
-        )
         for item in output.backup:
             if not SPEC_PATH.fullmatch("/" + item):
                 raise ModelError(f"{label}: configuration path {item!r} is not representable")
@@ -440,29 +432,19 @@ def rpm_plans(
                 package_name=output.package_name,
                 version=version,
                 release=package_release,
-                # Outputs without builds carry only sources and data.
-                architecture="noarch" if not output.builds else architecture,
-                summary=output.description,
-                description=(
-                    f"Part of the {runtime.product.display_name} Core edition for "
-                    f"{release.distribution} {release.version}.",
-                    role_line,
-                ),
+                # Outputs that compile nothing carry only sources, scripts and data.
+                architecture="noarch" if not output.compiled else architecture,
+                summary=summary,
+                description=description,
                 licenses=output.licenses,
                 depends=tuple(dict.fromkeys([*role_packages, *siblings])),
                 scriptlet_requires=_scriptlet_requires(output, target, scripts),
                 suggests=tuple(
                     rpm_relation(item.package, f"{label} suggestion") for item in optional
                 ),
-                conflicts=tuple(
-                    rpm_relation(item, f"{label} conflict") for item in output.conflicts
-                ),
-                provides=tuple(
-                    rpm_relation(item, f"{label} provide") for item in output.provides
-                ),
-                replaces=tuple(
-                    rpm_relation(item, f"{label} replace") for item in output.replaces
-                ),
+                conflicts=tuple(rpm_relation(item, f"{label} conflict") for item in conflicts),
+                provides=tuple(rpm_relation(item, f"{label} provide") for item in provides),
+                replaces=tuple(rpm_relation(item, f"{label} replace") for item in replaces),
                 config_files=tuple(sorted("/" + item for item in output.backup)),
                 scripts=scripts,
                 changelog_entry=(
@@ -991,6 +973,7 @@ def build_rpm_distribution(
                 build_manifest,
                 workspace_root / f"{component_id}-root",
                 component_id,
+                openrgb_plugin=component_id != "full" or target.openrgb_plugin,
             )
             for component_id in target.components
         }

@@ -37,6 +37,7 @@ class DistributionCatalogTests(unittest.TestCase):
         )
         target = self.catalog.targets["arch"]
         self.assertEqual((target.package_format, target.maturity), ("pacman", "published"))
+        self.assertTrue(target.openrgb_plugin)
         self.assertIsNone(target.release)
         self.assertEqual(set(target.dependency_roles), DEPENDENCY_ROLES)
         self.assertEqual(tuple(target.components), COMPONENT_IDS)
@@ -91,7 +92,7 @@ class DistributionCatalogTests(unittest.TestCase):
                 )
             )
 
-    def test_ubuntu_target_carries_only_core_with_debian_relations(self) -> None:
+    def test_ubuntu_target_carries_both_editions_with_debian_relations(self) -> None:
         target = self.catalog.targets["ubuntu"]
         self.assertEqual((target.package_format, target.maturity), ("deb", "ci-only"))
         self.assertFalse(target.published)
@@ -103,9 +104,8 @@ class DistributionCatalogTests(unittest.TestCase):
         self.assertEqual(target.architecture_for("x86_64-unknown-linux-gnu"), "amd64")
         with self.assertRaises(ModelError):
             target.architecture_for("aarch64-unknown-linux-gnu")
-        self.assertEqual(tuple(target.components), ("linux",))
-        with self.assertRaises(ModelError):
-            target.component("full")
+        self.assertEqual(tuple(target.components), ("linux", "full"))
+        self.assertFalse(target.openrgb_plugin)
         self.assertEqual(
             target.dependency_roles,
             {
@@ -125,6 +125,18 @@ class DistributionCatalogTests(unittest.TestCase):
             linux.dependencies,
             ("dkms", "libc6 (>= 2.34)", "libgcc-s1", "systemd", "udev"),
         )
+        full = target.component("full")
+        self.assertEqual(full.package_name, "hyperflux-next-full")
+        self.assertEqual(full.dependencies, linux.dependencies)
+        # Full stands in for every OpenRazer driver version the daemon pins.
+        self.assertEqual(full.conflicts, ("openrazer-driver-dkms", "openrazer-kernel-modules-dkms"))
+        self.assertEqual(full.replaces, full.conflicts)
+        self.assertIn("openrazer-driver-dkms (= 3.7.0+dfsg-1ubuntu0.3)", full.provides)
+        self.assertIn("openrazer-driver-dkms (= 3.12.4~ubuntu24.04.1)", full.provides)
+        self.assertEqual(
+            [item.package for item in full.optional_dependencies],
+            ["openrazer-daemon", "python3-openrazer"],
+        )
 
     def test_debian_target_mirrors_ubuntu_on_its_own_release(self) -> None:
         ubuntu = self.catalog.targets["ubuntu"]
@@ -141,7 +153,8 @@ class DistributionCatalogTests(unittest.TestCase):
             ),
             ("Debian", "13", "trixie", "2.41"),
         )
-        self.assertEqual(tuple(target.components), ("linux",))
+        self.assertEqual(tuple(target.components), ("linux", "full"))
+        self.assertFalse(target.openrgb_plugin)
         self.assertEqual(target.dependency_roles, ubuntu.dependency_roles)
         self.assertEqual(target.component("linux"), ubuntu.component("linux"))
 
@@ -230,7 +243,15 @@ class DistributionCatalogTests(unittest.TestCase):
                 )
                 self.assertIsNone(target.release.codename)
                 self.assertEqual(target.architecture_for("x86_64-unknown-linux-gnu"), "x86_64")
-                self.assertEqual(tuple(target.components), ("linux",))
+                self.assertEqual(tuple(target.components), ("linux", "full"))
+                self.assertFalse(target.openrgb_plugin)
+                full = target.component("full")
+                self.assertEqual(full.conflicts, ("openrazer-kernel-modules-dkms",))
+                self.assertEqual(full.replaces, ())
+                self.assertEqual(
+                    [item.package for item in full.optional_dependencies],
+                    ["openrazer-daemon", "python3-openrazer", "polychromatic"],
+                )
                 self.assertEqual(c_runtime_floor(target), "2.34")
                 linux = target.component("linux")
                 self.assertEqual(linux.package_name, arch_linux.package_name)
@@ -256,10 +277,23 @@ class DistributionCatalogTests(unittest.TestCase):
         def with_codename(target, _value):
             target["release"]["codename"] = "rawhide"
 
-        def with_full(target, _value):
+        def with_arch_full(target, _value):
             target["components"]["full"] = copy.deepcopy(
                 self.value["targets"]["arch"]["components"]["full"]
             )
+
+        def without_full(target, _value):
+            del target["components"]["full"]
+
+        def full_field(key, change):
+            def apply(target, _value):
+                target["components"]["full"][key] = change(
+                    copy.deepcopy(target["components"]["full"][key])
+                )
+            return apply
+
+        def with_openrgb(items):
+            return [*items, {"package": "openrgb", "purpose": "Stock RGB application"}]
 
         def drop_target(target_id):
             def change(_target, value):
@@ -297,7 +331,18 @@ class DistributionCatalogTests(unittest.TestCase):
             "deb format": lambda _id: as_deb,
             "published": lambda _id: published,
             "codename": lambda _id: with_codename,
-            "full edition": lambda _id: with_full,
+            "Arch full edition": lambda _id: with_arch_full,
+            "missing full edition": lambda _id: without_full,
+            "full renamed": lambda _id: full_field("package_name", lambda _: "hyperflux-next-full-route"),
+            "full names the plugin": lambda _id: full_field(
+                "description", lambda value: value + " and OpenRGB integration"
+            ),
+            "full extra dependency": lambda _id: full_field("dependencies", lambda items: [*items, "qt6-base"]),
+            "full drops a conflict": lambda _id: full_field("conflicts", lambda items: items[1:]),
+            "full extra provide": lambda _id: full_field("provides", lambda items: [*items, "openrgb"]),
+            "full drops a provide": lambda _id: full_field("provides", lambda items: items[1:]),
+            "full openrgb application": lambda _id: full_field("optional_dependencies", with_openrgb),
+            "full drops an application": lambda _id: full_field("optional_dependencies", lambda items: items[1:]),
             "other version": lambda _id: set_release("version", "43"),
             "other distribution": lambda _id: set_release("distribution", "CentOS"),
             "runtime above release": lambda _id: set_role("c-runtime", "glibc >= 2.45"),
@@ -339,10 +384,23 @@ class DistributionCatalogTests(unittest.TestCase):
             change(candidate["targets"]["ubuntu"], candidate)
             return candidate
 
-        def with_full(target, _value):
+        def with_arch_full(target, _value):
             target["components"]["full"] = copy.deepcopy(
                 self.value["targets"]["arch"]["components"]["full"]
             )
+
+        def without_full(target, _value):
+            del target["components"]["full"]
+
+        def full_field(key, change):
+            def apply(target, _value):
+                target["components"]["full"][key] = change(
+                    copy.deepcopy(target["components"]["full"][key])
+                )
+            return apply
+
+        def with_openrgb(items):
+            return [*items, {"package": "openrgb", "purpose": "Stock RGB application"}]
 
         def set_role(role, package):
             def change(target, _value):
@@ -387,7 +445,18 @@ class DistributionCatalogTests(unittest.TestCase):
             target["components"]["linux"]["conflicts"].append("openrazer-driver-dkms")
 
         cases = {
-            "full edition": with_full,
+            "Arch full edition": with_arch_full,
+            "missing full edition": without_full,
+            "full renamed": full_field("package_name", lambda _: "hyperflux-next-full-route"),
+            "full names the plugin": full_field(
+                "description", lambda value: value + " and OpenRGB integration"
+            ),
+            "full extra dependency": full_field("dependencies", lambda items: [*items, "qt6-base"]),
+            "full drops a conflict": full_field("conflicts", lambda items: items[1:]),
+            "full extra provide": full_field("provides", lambda items: [*items, "openrgb"]),
+            "full drops a provide": full_field("provides", lambda items: items[1:]),
+            "full openrgb application": full_field("optional_dependencies", with_openrgb),
+            "full drops an application": full_field("optional_dependencies", lambda items: items[1:]),
             "missing target": drop_ubuntu,
             "reordered targets": reorder,
             "missing release": drop_release,

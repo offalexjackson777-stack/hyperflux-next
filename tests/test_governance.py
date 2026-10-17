@@ -462,9 +462,20 @@ class GitHubGovernanceTests(unittest.TestCase):
             "/var/lib/dkms/mok.pub",
             "objdump -T",
             "glibc >= ",
-            "$HFX_RELEASE_REMOVE hyperflux-next-linux hyperflux-next-dkms",
+            '"./$packages"/hyperflux-next-openrazer-driver-dkms-*.rpm "./$packages"/hyperflux-next-full-*.rpm',
+            "rpm -q --whatprovides openrazer-kernel-modules-dkms",
+            'dkms build --force -m openrazer-driver -v "$openrazer" -k "$kernel"',
+            "rpm -ql hyperflux-next-linux hyperflux-next-full",
+            "$HFX_RELEASE_REMOVE hyperflux-next-full hyperflux-next-openrazer-driver-dkms "
+            "hyperflux-next-linux hyperflux-next-dkms",
+            "if dkms status | grep -q .; then",
         ):
             self.assertIn(required, rpm_script)
+        # Core installs and builds alone before Full is added.
+        self.assertLess(
+            rpm_script.index("hyperflux-next-linux-*.rpm"),
+            rpm_script.index("hyperflux-next-full-*.rpm"),
+        )
         self.assertNotRegex(rpm_script, r"-v [0-9]")
         self.assertNotIn("dkms install", rpm_script)
         # dkms.conf must follow the kernel sources DKMS chose, so the driver is
@@ -483,9 +494,19 @@ class GitHubGovernanceTests(unittest.TestCase):
             "dkms build",
             "modinfo",
             "objdump -T",
-            "apt-get purge",
+            '"./$packages"/hyperflux-next-openrazer-driver-dkms_*.deb "./$packages"/hyperflux-next-full_*.deb',
+            "apt-get install -y --no-install-recommends openrazer-daemon python3-openrazer",
+            "if dpkg -s openrazer-driver-dkms >/dev/null 2>&1; then",
+            'dkms build --force -m openrazer-driver -v "$openrazer" -k "$kernel"',
+            "dpkg -L hyperflux-next-linux hyperflux-next-full",
+            "apt-get purge -y openrazer-daemon python3-openrazer hyperflux-next-full "
+            "hyperflux-next-openrazer-driver-dkms hyperflux-next-linux hyperflux-next-dkms",
+            "if dkms status | grep -q .; then",
         ):
             self.assertIn(required, script)
+        self.assertLess(
+            script.index("hyperflux-next-linux_*.deb"), script.index("hyperflux-next-full_*.deb")
+        )
         # The DKMS version comes from the installed package, never a pinned number.
         self.assertNotRegex(script, r"-v [0-9]")
         for forbidden in (

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
-"""RPM-format Core packages built from the Arch split outputs."""
+"""RPM-format Core and Full packages built from the Arch split outputs."""
 
 from __future__ import annotations
 
@@ -53,6 +53,12 @@ from hfxdev.model import ModelError  # noqa: E402
 
 
 RPM_TARGETS = ("fedora", "opensuse")
+EXPECTED_FILES = [
+    "hyperflux-next-dkms-2.1.0-1.noarch.rpm",
+    "hyperflux-next-full-2.1.0-1.x86_64.rpm",
+    "hyperflux-next-linux-2.1.0-1.x86_64.rpm",
+    "hyperflux-next-openrazer-driver-dkms-2.1.0-1.noarch.rpm",
+]
 
 
 def rpm_tools_available() -> bool:
@@ -83,17 +89,22 @@ class RpmPlanTests(unittest.TestCase):
             for target_id in RPM_TARGETS
         }
 
-    def test_rpm_targets_carry_the_core_split_outputs_only(self) -> None:
+    def test_rpm_targets_carry_both_editions(self) -> None:
         for target_id in RPM_TARGETS:
             with self.subTest(target=target_id):
                 target = self.catalog.targets[target_id]
                 self.assertEqual(
                     [output.id for output in target_outputs(self.split, target)],
-                    ["receiver-dkms", "core"],
+                    ["receiver-dkms", "core", "openrazer-driver", "full"],
                 )
                 self.assertEqual(
                     [plan.package_name for plan in self.plans[target_id]],
-                    ["hyperflux-next-dkms", "hyperflux-next-linux"],
+                    [
+                        "hyperflux-next-dkms",
+                        "hyperflux-next-linux",
+                        "hyperflux-next-openrazer-driver-dkms",
+                        "hyperflux-next-full",
+                    ],
                 )
         for target_id in ("arch", "ubuntu", "debian"):
             with self.subTest(target=target_id), self.assertRaisesRegex(
@@ -108,7 +119,7 @@ class RpmPlanTests(unittest.TestCase):
         }
         for target_id, (compiler, device) in expected.items():
             with self.subTest(target=target_id):
-                dkms, core = self.plans[target_id]
+                dkms, core, driver, full = self.plans[target_id]
                 self.assertEqual((dkms.version, dkms.release), ("2.1.0", "1"))
                 self.assertEqual(dkms.architecture, "noarch")
                 self.assertEqual(dkms.depends, ("dkms",))
@@ -130,12 +141,57 @@ class RpmPlanTests(unittest.TestCase):
                 self.assertEqual(core.config_files, ("/etc/hyperflux-next/bridge.json",))
                 self.assertEqual(core.file_name, "hyperflux-next-linux-2.1.0-1.x86_64.rpm")
                 self.assertIn(self.catalog.targets[target_id].release.distribution, core.description[0])
+                self.assertEqual(
+                    driver.depends, ("dkms", device, "systemd", "hyperflux-next-dkms = 2.1.0-1")
+                )
+                self.assertEqual(
+                    driver.scriptlet_requires,
+                    (("post", "dkms"), ("preun", "dkms"), ("post", "systemd")),
+                )
+                self.assertEqual(driver.conflicts, ("openrazer-kernel-modules-dkms",))
+                self.assertEqual(
+                    driver.provides,
+                    (
+                        "openrazer-kernel-modules-dkms = 3.12.4",
+                        "hyperflux-openrazer-driver-abi = 3.12.4",
+                    ),
+                )
+                self.assertEqual(
+                    full.depends,
+                    (
+                        "glibc >= 2.34",
+                        compiler,
+                        "systemd",
+                        device,
+                        "hyperflux-next-linux = 2.1.0-1",
+                        "hyperflux-next-openrazer-driver-dkms = 2.1.0-1",
+                    ),
+                )
+                for plan in (dkms, core, full):
+                    self.assertEqual((plan.provides, plan.replaces), ((), ()))
+                self.assertEqual((driver.replaces, full.conflicts), ((), ()))
+                for plan in self.plans[target_id]:
+                    for dependency in ("qt6", "hidapi", "libstdc++", "openrgb"):
+                        self.assertFalse(
+                            any(dependency in item.lower() for item in plan.depends),
+                            plan.package_name,
+                        )
+                self.assertIn("It leaves out the OpenRGB plugin", full.description[-1])
 
     def test_scriptlets_never_start_services_or_load_modules(self) -> None:
         for target_id in RPM_TARGETS:
-            dkms, core = self.plans[target_id]
+            dkms, core, driver, full = self.plans[target_id]
             self.assertEqual([name for name, _ in dkms.scripts], ["post", "preun"])
             self.assertEqual([name for name, _ in core.scripts], ["post", "postun"])
+            self.assertEqual([name for name, _ in driver.scripts], ["post", "preun", "postun"])
+            self.assertEqual([name for name, _ in full.scripts], ["post", "postun"])
+            driver_post = dict(driver.scripts)["post"]
+            self.assertIn("dkms add -m openrazer-driver -v 3.12.4 --rpm_safe_upgrade", driver_post)
+            self.assertIn("systemd-sysusers openrazer.conf", driver_post)
+            self.assertIn(
+                "dkms remove -m openrazer-driver -v 3.12.4 --all --rpm_safe_upgrade",
+                dict(driver.scripts)["preun"],
+            )
             post = dict(dkms.scripts)["post"]
             self.assertIn("dkms add -m hid-hyperflux-next -v 2.1.1 --rpm_safe_upgrade", post)
             # The upgrade lock directory exists before `dkms add` takes the lock.
@@ -185,7 +241,6 @@ class RpmPlanTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             stages = synthetic_edition_stages(self.split, workspace)
-            del stages["full"]
             split_root = workspace / "split"
             split_root.mkdir()
             split_stages = split_edition_stages(
@@ -267,6 +322,14 @@ class RpmLintTests(unittest.TestCase):
         "hyperflux-next-linux.x86_64: E: permissions-directory-setuid-bit (Badness: 10) /etc/hyperflux-next is packaged with setuid/setgid bits (02751)",
         "hyperflux-next-dkms.noarch: E: filelist-forbidden-fhs23 /usr/src/hid-hyperflux-next-2.1.0",
         "hyperflux-next-dkms.noarch: E: devel-file-in-non-devel-package (Badness: 50) /usr/src/hid-hyperflux-next-2.1.0/hyperflux-next-core.c",
+        "hyperflux-next-full.x86_64: E: incorrect-fsf-address /usr/share/licenses/hyperflux-next-full/LICENSE",
+        "hyperflux-next-full.x86_64: E: spelling-error ('openSUSE', '%description -l en_US openSUSE -> opens Use, open SUSE, open-SUSE')",
+        "hyperflux-next-openrazer-driver-dkms.noarch: E: spelling-error ('openSUSE', '%description -l en_US openSUSE -> opens Use, open SUSE, open-SUSE')",
+        "hyperflux-next-full.x86_64: E: explicit-lib-dependency libgcc",
+        "hyperflux-next-full.x86_64: E: systemd-service-without-service_add_post hyperflux-next-openrazer-relay.service",
+        "hyperflux-next-openrazer-driver-dkms.noarch: E: incorrect-fsf-address /usr/src/openrazer-driver-3.12.4/LICENSES/GPL-2.0-or-later.txt",
+        "hyperflux-next-openrazer-driver-dkms.noarch: E: devel-file-in-non-devel-package (Badness: 50) /usr/src/openrazer-driver-3.12.4/driver/razerkbd_driver.c",
+        "hyperflux-next-openrazer-driver-dkms.noarch: E: filelist-forbidden-fhs23 /usr/src/openrazer-driver-3.12.4",
     )
     # Neighbouring findings that must stay errors.
     REJECTED = (
@@ -282,6 +345,13 @@ class RpmLintTests(unittest.TestCase):
         "hyperflux-next-linux.x86_64: E: setuid-binary /usr/bin/hyperfluxctl root 04755",
         "other-package.x86_64: E: non-standard-dir-perm /etc/hyperflux-next 2751",
         "hyperflux-next-linux.x86_64: W: non-standard-dir-perm /etc/hyperflux-next 2751",
+        "hyperflux-next-linux.x86_64: E: incorrect-fsf-address /usr/share/licenses/hyperflux-next-full/LICENSE",
+        "hyperflux-next-full.x86_64: E: explicit-lib-dependency libssl3",
+        "hyperflux-next-openrazer-driver-dkms.x86_64: E: no-binary",
+        "hyperflux-next-openrazer-driver-dkms.noarch: E: incorrect-fsf-address /usr/share/doc/README",
+        "hyperflux-next-openrazer-driver-dkms.noarch: E: devel-file-in-non-devel-package /usr/include/razer.h",
+        "hyperflux-next-full.x86_64: E: systemd-service-without-service_add_post other.service",
+        "hyperflux-next-full.x86_64: E: spelling-error ('razr', '%description -l en_US razr')",
     )
 
     def setUp(self) -> None:
@@ -307,7 +377,11 @@ class RpmLintTests(unittest.TestCase):
             self.assertIn(f"# {reason}", text)
             for pattern in patterns:
                 # Each filter names one of these packages and only accepts errors.
-                self.assertRegex(pattern, r"^hyperflux-next-(dkms|linux|\(dkms\|linux\))\\\.")
+                self.assertRegex(
+                    pattern,
+                    r"^hyperflux-next-(dkms|linux|openrazer-driver-dkms|\(linux\|full\)"
+                    r"|\(dkms\|linux\|full\|openrazer-driver-dkms\))\\\.",
+                )
                 self.assertIn(": E: ", pattern)
 
     def test_override_only_unblocks_the_named_filters(self) -> None:
@@ -371,7 +445,11 @@ class RpmDocumentationTests(unittest.TestCase):
         ):
             for expected in (
                 "`.rpm` packages",
-                f"no Full edition for {distribution}.",
+                "carry both editions, Core and Full.",
+                f"**Full on {distribution} has no OpenRGB plugin.**",
+                "plugin interface 4 only",
+                "openSUSE Build Service",
+                "`sudo gpasswd -a \"$USER\" openrazer`",
                 "| `hyperflux-next-dkms` | `2.1.0-1` | `noarch` | `dkms` |",
                 f"`{compiler}`, `systemd`, `{device}`, `hyperflux-next-dkms = 2.1.0-1`",
                 "never loads the driver",
@@ -383,8 +461,16 @@ class RpmDocumentationTests(unittest.TestCase):
                 "modinfo -F signer hid_hyperflux_next",
             ):
                 self.assertIn(expected, section)
-            for forbidden in ("update-secureboot-policy", "shim-signed", "hyperflux-next-full"):
+            self.assertIn("| `hyperflux-next-full` | `2.1.0-1` | `x86_64` |", section)
+            for forbidden in (
+                "update-secureboot-policy",
+                "shim-signed",
+                "ppa:openrazer",
+                "replaces the OpenRazer driver package",
+            ):
                 self.assertNotIn(forbidden, section)
+        self.assertIn("`sudo dnf install --allowerasing hyperflux-next-full`", fedora)
+        self.assertIn("choose the solution that deinstalls it", opensuse)
         self.assertNotIn("dkms.service", fedora)
         self.assertIn("sudo systemctl enable dkms.service", opensuse)
         self.assertLess(
@@ -446,7 +532,6 @@ class RpmBuildTests(unittest.TestCase):
         workspace.mkdir()
         target = cls.catalog.targets[target_id]
         stages = synthetic_edition_stages(cls.split, workspace)
-        del stages["full"]
         split_root = workspace / "split"
         split_root.mkdir()
         split_stages = split_edition_stages(
@@ -479,8 +564,7 @@ class RpmBuildTests(unittest.TestCase):
     def test_rpmbuild_builds_verified_reproducible_packages(self) -> None:
         again = self._build(self.workspace / "second", "fedora")
         self.assertEqual(
-            [package.name for _, _, package in self.built],
-            ["hyperflux-next-dkms-2.1.0-1.noarch.rpm", "hyperflux-next-linux-2.1.0-1.x86_64.rpm"],
+            sorted(package.name for _, _, package in self.built), EXPECTED_FILES
         )
         for (plan, _, package), (_, _, repeated) in zip(self.built, again, strict=True):
             self.assertEqual(package.read_bytes(), repeated.read_bytes(), plan.package_name)
@@ -583,8 +667,16 @@ class RpmBuildTests(unittest.TestCase):
                 omitted=(),
             )
 
-            def stage(_root: Path, _manifest: Path, destination: Path, component: str):
-                self.assertEqual(component, "linux")
+            def stage(
+                _root: Path,
+                _manifest: Path,
+                destination: Path,
+                component: str,
+                *,
+                openrgb_plugin: bool = True,
+            ):
+                self.assertIn(component, {"linux", "full"})
+                self.assertEqual(openrgb_plugin, component == "linux")
                 shutil.copytree(stages[component].root, destination)
                 return stages[component].__class__(
                     root=destination,
@@ -634,10 +726,7 @@ class RpmBuildTests(unittest.TestCase):
             )
             for name, text in rpmlint_configs():
                 self.assertEqual((lint / name).read_text(encoding="utf-8"), text)
-            self.assertEqual(
-                [package["file"] for package in manifest["packages"]],
-                ["hyperflux-next-dkms-2.1.0-1.noarch.rpm", "hyperflux-next-linux-2.1.0-1.x86_64.rpm"],
-            )
+            self.assertEqual([package["file"] for package in manifest["packages"]], EXPECTED_FILES)
 
 
 if __name__ == "__main__":

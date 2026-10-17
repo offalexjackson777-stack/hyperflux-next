@@ -52,6 +52,9 @@ def synthetic_rpm(signature: bytes = b"OPENPGP-SIGNATURE") -> bytes:
     return lead + signature_header + padding + main_header + b"payload"
 
 
+FULL_PACKAGES = ("hyperflux-next-openrazer-driver-dkms", "hyperflux-next-full")
+
+
 def write_packages(base: Path) -> dict[str, Path]:
     directories: dict[str, Path] = {}
     for target_id in ("ubuntu", "debian"):
@@ -59,6 +62,8 @@ def write_packages(base: Path) -> dict[str, Path]:
         directory.mkdir(parents=True)
         (directory / f"hyperflux-next-dkms_{VERSION}_all.deb").write_bytes(b"dkms " + target_id.encode())
         (directory / f"hyperflux-next-linux_{VERSION}_amd64.deb").write_bytes(b"linux " + target_id.encode())
+        for name in FULL_PACKAGES:
+            (directory / f"{name}_{VERSION}_amd64.deb").write_bytes(name.encode() + target_id.encode())
         (directory / "build.log").write_text("ignored\n")
         directories[target_id] = directory
     for target_id in ("fedora", "opensuse"):
@@ -68,6 +73,8 @@ def write_packages(base: Path) -> dict[str, Path]:
         (directory / f"hyperflux-next-linux-{VERSION}.x86_64.rpm").write_bytes(
             synthetic_rpm(b"OTHER-SIGNATURE")
         )
+        for name in FULL_PACKAGES:
+            (directory / f"{name}-{VERSION}.x86_64.rpm").write_bytes(synthetic_rpm())
         directories[target_id] = directory
     return directories
 
@@ -268,7 +275,15 @@ class PackageRepositorySiteTests(unittest.TestCase):
         )
         for target in self.targets.values():
             self.assertRegex(target.image, r"@sha256:[0-9a-f]{64}$")
-            self.assertEqual(("hyperflux-next-dkms", "hyperflux-next-linux"), target.required_packages)
+            self.assertEqual(
+                (
+                    "hyperflux-next-dkms",
+                    "hyperflux-next-full",
+                    "hyperflux-next-linux",
+                    "hyperflux-next-openrazer-driver-dkms",
+                ),
+                target.required_packages,
+            )
         self.assertEqual("fedora/44/x86_64", self.targets["fedora"].repository_path)
         self.assertEqual("ubuntu/pool/main/h/hyperflux-next", self.targets["ubuntu"].package_directory)
 
