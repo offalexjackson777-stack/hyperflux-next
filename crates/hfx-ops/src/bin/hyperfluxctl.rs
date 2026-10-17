@@ -10,7 +10,7 @@ use std::env;
 use std::path::PathBuf;
 
 fn usage() -> &'static str {
-    "Usage:\n  hyperfluxctl status [--json]\n  hyperfluxctl doctor [--explain] [--json]\n  hyperfluxctl support-bundle --preview\n  hyperfluxctl support-bundle --output PATH\n  hyperfluxctl qualification [--json] [--output PATH]\n"
+    "Usage:\n  hyperfluxctl status [--json]\n  hyperfluxctl doctor [--explain] [--json]\n  hyperfluxctl support-bundle --preview\n  hyperfluxctl support-bundle [--output PATH]\n  hyperfluxctl qualification [--json] [--output PATH]\n"
 }
 
 fn json<T: serde::Serialize>(value: &T) -> Result<String, String> {
