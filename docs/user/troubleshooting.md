@@ -48,6 +48,28 @@ Polychromatic does not notice by itself when the keyboard comes back.
    `Receivers:` line shows at least 1 and that the last line says
    `Next: no action required`.
 
+### Polychromatic Shows No Devices At All
+
+Doctor reports this as `HFX-INTEGRATION-008`: a broken link in
+`/dev/input/by-id` makes OpenRazer stop before it adds any device. Doctor
+prints the exact link.
+
+1. Remove the link Doctor names, for example:
+
+   ```sh
+   sudo rm /dev/input/by-id/NAME-FROM-DOCTOR
+   ```
+
+2. Restart OpenRazer:
+
+   ```sh
+   systemctl --user restart openrazer-daemon
+   ```
+
+3. Press F5 in Polychromatic, then run `hyperfluxctl doctor` again.
+
+HyperFlux never removes or changes the link itself.
+
 ## Ripple Stays Still
 
 Doctor reports this as `HFX-INTEGRATION-007`: OpenRazer cannot see the

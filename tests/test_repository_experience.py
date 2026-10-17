@@ -952,6 +952,15 @@ class RepositoryExperienceContracts(unittest.TestCase):
             self.assertIn(statement, limitations)
         self.assertIn("HFX-INTEGRATION-007", _page("docs/user/troubleshooting.md"))
 
+    def test_broken_openrazer_event_link_fix_is_documented(self) -> None:
+        # Doctor's HFX-INTEGRATION-008 names the link; the page gives the
+        # removal and restart steps and says HyperFlux never removes it.
+        troubleshooting = " ".join(_page("docs/user/troubleshooting.md").split())
+        self.assertIn("HFX-INTEGRATION-008", troubleshooting)
+        self.assertIn("sudo rm /dev/input/by-id/NAME-FROM-DOCTOR", troubleshooting)
+        self.assertIn("systemctl --user restart openrazer-daemon", troubleshooting)
+        self.assertIn("HyperFlux never removes or changes the link itself.", troubleshooting)
+
     def test_upstream_application_limitations_are_documented(self) -> None:
         # Firmware shortcuts, the OpenRGB variant label, and the Polychromatic
         # receiver entry come from stock behaviour (REL-006, REL-008, REL-018).
