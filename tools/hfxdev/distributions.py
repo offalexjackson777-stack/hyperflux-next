@@ -26,8 +26,8 @@ TARGET_COMPONENT_IDS = {
     "opensuse": COMPONENT_IDS,
 }
 # Full carries the OpenRGB plugin only where the release ships an OpenRGB that
-# can load it: OpenRGB 1.0 final, plugin API 5. Checked 18 October 2026:
-# Arch builds it with Qt 6 and Debian 14 with Qt 5.15; Ubuntu 26.10 ships a
+# can load it: OpenRGB 1.0 final or newer, plugin API 5. Checked 18 October
+# 2026: Arch ships 1.1 built with Qt 6 and Debian 14 ships 1.0 with Qt 5.15; Ubuntu 26.10 ships a
 # 1.0 development snapshot with plugin API 4, and Fedora 44 and openSUSE
 # Tumbleweed ship a 1.0 release candidate with plugin API 4. Full there is the
 # OpenRazer route alone.

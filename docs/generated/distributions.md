@@ -11,9 +11,9 @@ From `2.1.0-1` the Arch `pkgbase=hyperflux-next` builds 4 packages that never in
 | Package | Edition | Required packages | Optional packages | Conflicts | Provides | Replaces |
 | --- | --- | --- | --- | --- | --- | --- |
 | `hyperflux-next-dkms` | Core | `dkms` | none | `hyperflux-v2-linux-dkms` | none | none |
-| `hyperflux-next-linux` | Core | `glibc`, `libgcc`, `systemd`, `hyperflux-next-dkms=2.1.1-1` | none | none | none | none |
-| `hyperflux-next-openrazer-driver-dkms` | Full | `dkms`, `systemd`, `hyperflux-next-dkms=2.1.1-1` | none | `openrazer-driver-dkms` | `openrazer-driver-dkms=3.12.4`, `hyperflux-openrazer-driver-abi=3.12.4` | none |
-| `hyperflux-next-full` | Full | `glibc`, `libgcc`, `systemd`, `hyperflux-next-linux=2.1.1-1`, `hyperflux-next-openrazer-driver-dkms=2.1.1-1`, `qt6-base`, `hidapi`, `libstdc++` | `openrgb` (Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified), `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend) | `hyperflux-next-openrgb=0.0.0_dev.1-2` | none | `hyperflux-next-openrgb=0.0.0_dev.1-2` |
+| `hyperflux-next-linux` | Core | `glibc`, `libgcc`, `systemd`, `hyperflux-next-dkms=2.1.2-1` | none | none | none | none |
+| `hyperflux-next-openrazer-driver-dkms` | Full | `dkms`, `systemd`, `hyperflux-next-dkms=2.1.2-1` | none | `openrazer-driver-dkms` | `openrazer-driver-dkms=3.12.4`, `hyperflux-openrazer-driver-abi=3.12.4` | none |
+| `hyperflux-next-full` | Full | `glibc`, `libgcc`, `systemd`, `hyperflux-next-linux=2.1.2-1`, `hyperflux-next-openrazer-driver-dkms=2.1.2-1`, `qt6-base`, `hidapi`, `libstdc++` | `openrgb` (Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified), `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend) | `hyperflux-next-openrgb=0.0.0_dev.1-2` | none | `hyperflux-next-openrgb=0.0.0_dev.1-2` |
 
 ## What Each Package Owns
 
@@ -42,10 +42,10 @@ HyperFlux builds `.deb` packages for Ubuntu 26.10 (`stonking`) in CI every week 
 
 | Package | Version | Architecture | Depends |
 | --- | --- | --- | --- |
-| `hyperflux-next-dkms` | `2.1.1-1` | `all` | `dkms` |
-| `hyperflux-next-linux` | `2.1.1-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-dkms (= 2.1.1-1)` |
-| `hyperflux-next-openrazer-driver-dkms` | `2.1.1-1` | `all` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms (= 2.1.1-1)` |
-| `hyperflux-next-full` | `2.1.1-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-linux (= 2.1.1-1)`, `hyperflux-next-openrazer-driver-dkms (= 2.1.1-1)` |
+| `hyperflux-next-dkms` | `2.1.2-1` | `all` | `dkms` |
+| `hyperflux-next-linux` | `2.1.2-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-dkms (= 2.1.2-1)` |
+| `hyperflux-next-openrazer-driver-dkms` | `2.1.2-1` | `all` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms (= 2.1.2-1)` |
+| `hyperflux-next-full` | `2.1.2-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-linux (= 2.1.2-1)`, `hyperflux-next-openrazer-driver-dkms (= 2.1.2-1)` |
 
 Dependency roles map to packages on each distribution:
 
@@ -66,7 +66,7 @@ Core is `hyperflux-next-linux`. Full is `hyperflux-next-full`: Core plus the Ope
 - Optional stock applications: `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python3-openrazer` (Official Python OpenRazer client API).
 - To use the stock OpenRazer service, add yourself to the `openrazer` group, then log out and back in: `sudo gpasswd -a "$USER" openrazer`.
 
-**Full on Ubuntu has no OpenRGB plugin.** That is a limit of what Ubuntu 26.10 packages, not of HyperFlux: Ubuntu 26.10 packages a development snapshot of OpenRGB from before 1.0, which loads plugins built for plugin interface 4 only. The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, and OpenRGB refuses a plugin built for another interface. Doctor reports Full as ready without it. Arch Linux and Debian 14 package OpenRGB 1.0 final, so Full there includes the plugin. When Ubuntu packages OpenRGB 1.0 final too, its Full packages can include the plugin.
+**Full on Ubuntu has no OpenRGB plugin.** That is a limit of what Ubuntu 26.10 packages, not of HyperFlux: Ubuntu 26.10 packages a development snapshot of OpenRGB from before 1.0, which loads plugins built for plugin interface 4 only. The HyperFlux plugin is built for plugin interface 5, which OpenRGB 1.0 final and 1.1 use, and OpenRGB refuses a plugin built for another interface. Doctor reports Full as ready without it. Arch Linux packages OpenRGB 1.1 and Debian 14 packages OpenRGB 1.0 final, so Full there includes the plugin. When Ubuntu packages OpenRGB 1.0 final or newer, its Full packages can include the plugin.
 
 - Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable, start or stop a service.
 - `hyperflux-next-dkms` and the Full OpenRazer driver package hand their driver sources to DKMS when they are installed and remove every built copy when they are removed.
@@ -130,10 +130,10 @@ HyperFlux builds `.deb` packages for Debian 14 (`forky`) in CI every week and wh
 
 | Package | Version | Architecture | Depends |
 | --- | --- | --- | --- |
-| `hyperflux-next-dkms` | `2.1.1-1` | `all` | `dkms` |
-| `hyperflux-next-linux` | `2.1.1-1` | `amd64` | `libc6 (>= 2.43)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-dkms (= 2.1.1-1)` |
-| `hyperflux-next-openrazer-driver-dkms` | `2.1.1-1` | `all` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms (= 2.1.1-1)` |
-| `hyperflux-next-full` | `2.1.1-1` | `amd64` | `libc6 (>= 2.43)`, `libgcc-s1`, `systemd`, `udev`, `libqt5core5t64`, `libqt5gui5t64`, `libqt5widgets5t64`, `libhidapi-hidraw0`, `libstdc++6`, `hyperflux-next-linux (= 2.1.1-1)`, `hyperflux-next-openrazer-driver-dkms (= 2.1.1-1)` |
+| `hyperflux-next-dkms` | `2.1.2-1` | `all` | `dkms` |
+| `hyperflux-next-linux` | `2.1.2-1` | `amd64` | `libc6 (>= 2.43)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-dkms (= 2.1.2-1)` |
+| `hyperflux-next-openrazer-driver-dkms` | `2.1.2-1` | `all` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms (= 2.1.2-1)` |
+| `hyperflux-next-full` | `2.1.2-1` | `amd64` | `libc6 (>= 2.43)`, `libgcc-s1`, `systemd`, `udev`, `libqt5core5t64`, `libqt5gui5t64`, `libqt5widgets5t64`, `libhidapi-hidraw0`, `libstdc++6`, `hyperflux-next-linux (= 2.1.2-1)`, `hyperflux-next-openrazer-driver-dkms (= 2.1.2-1)` |
 
 Dependency roles map to packages on each distribution:
 
@@ -213,10 +213,10 @@ HyperFlux builds `.rpm` packages for Fedora 44 in CI every week and whenever a p
 
 | Package | Version | Architecture | Requires |
 | --- | --- | --- | --- |
-| `hyperflux-next-dkms` | `2.1.1-1` | `noarch` | `dkms` |
-| `hyperflux-next-linux` | `2.1.1-1` | `x86_64` | `glibc >= 2.34`, `libgcc`, `systemd`, `systemd-udev`, `hyperflux-next-dkms = 2.1.1-1` |
-| `hyperflux-next-openrazer-driver-dkms` | `2.1.1-1` | `noarch` | `dkms`, `systemd-udev`, `systemd`, `hyperflux-next-dkms = 2.1.1-1` |
-| `hyperflux-next-full` | `2.1.1-1` | `x86_64` | `glibc >= 2.34`, `libgcc`, `systemd`, `systemd-udev`, `hyperflux-next-linux = 2.1.1-1`, `hyperflux-next-openrazer-driver-dkms = 2.1.1-1` |
+| `hyperflux-next-dkms` | `2.1.2-1` | `noarch` | `dkms` |
+| `hyperflux-next-linux` | `2.1.2-1` | `x86_64` | `glibc >= 2.34`, `libgcc`, `systemd`, `systemd-udev`, `hyperflux-next-dkms = 2.1.2-1` |
+| `hyperflux-next-openrazer-driver-dkms` | `2.1.2-1` | `noarch` | `dkms`, `systemd-udev`, `systemd`, `hyperflux-next-dkms = 2.1.2-1` |
+| `hyperflux-next-full` | `2.1.2-1` | `x86_64` | `glibc >= 2.34`, `libgcc`, `systemd`, `systemd-udev`, `hyperflux-next-linux = 2.1.2-1`, `hyperflux-next-openrazer-driver-dkms = 2.1.2-1` |
 
 Dependency roles map to packages on each distribution:
 
@@ -237,7 +237,7 @@ Core is `hyperflux-next-linux`. Full is `hyperflux-next-full`: Core plus the Ope
 - Optional stock applications: `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python3-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend).
 - To use the stock OpenRazer service, add yourself to the `openrazer` group, then log out and back in: `sudo gpasswd -a "$USER" openrazer`.
 
-**Full on Fedora has no OpenRGB plugin.** That is a limit of what Fedora 44 packages, not of HyperFlux: Fedora 44 packages an OpenRGB 1.0 release candidate, which loads plugins built for plugin interface 4 only. The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, and OpenRGB refuses a plugin built for another interface. Doctor reports Full as ready without it. Arch Linux and Debian 14 package OpenRGB 1.0 final, so Full there includes the plugin. When Fedora packages OpenRGB 1.0 final too, its Full packages can include the plugin.
+**Full on Fedora has no OpenRGB plugin.** That is a limit of what Fedora 44 packages, not of HyperFlux: Fedora 44 packages an OpenRGB 1.0 release candidate, which loads plugins built for plugin interface 4 only. The HyperFlux plugin is built for plugin interface 5, which OpenRGB 1.0 final and 1.1 use, and OpenRGB refuses a plugin built for another interface. Doctor reports Full as ready without it. Arch Linux packages OpenRGB 1.1 and Debian 14 packages OpenRGB 1.0 final, so Full there includes the plugin. When Fedora packages OpenRGB 1.0 final or newer, its Full packages can include the plugin.
 
 - Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable, start or stop a service.
 - `hyperflux-next-dkms` and the Full OpenRazer driver package hand their driver sources to DKMS and build them for every kernel whose development files are installed. DKMS installs the built driver when the computer next starts, so installing the package never loads the driver. Removing the package removes every built copy.
@@ -295,10 +295,10 @@ HyperFlux builds `.rpm` packages for openSUSE Tumbleweed in CI every week and wh
 
 | Package | Version | Architecture | Requires |
 | --- | --- | --- | --- |
-| `hyperflux-next-dkms` | `2.1.1-1` | `noarch` | `dkms` |
-| `hyperflux-next-linux` | `2.1.1-1` | `x86_64` | `glibc >= 2.34`, `libgcc_s1`, `systemd`, `udev`, `hyperflux-next-dkms = 2.1.1-1` |
-| `hyperflux-next-openrazer-driver-dkms` | `2.1.1-1` | `noarch` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms = 2.1.1-1` |
-| `hyperflux-next-full` | `2.1.1-1` | `x86_64` | `glibc >= 2.34`, `libgcc_s1`, `systemd`, `udev`, `hyperflux-next-linux = 2.1.1-1`, `hyperflux-next-openrazer-driver-dkms = 2.1.1-1` |
+| `hyperflux-next-dkms` | `2.1.2-1` | `noarch` | `dkms` |
+| `hyperflux-next-linux` | `2.1.2-1` | `x86_64` | `glibc >= 2.34`, `libgcc_s1`, `systemd`, `udev`, `hyperflux-next-dkms = 2.1.2-1` |
+| `hyperflux-next-openrazer-driver-dkms` | `2.1.2-1` | `noarch` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms = 2.1.2-1` |
+| `hyperflux-next-full` | `2.1.2-1` | `x86_64` | `glibc >= 2.34`, `libgcc_s1`, `systemd`, `udev`, `hyperflux-next-linux = 2.1.2-1`, `hyperflux-next-openrazer-driver-dkms = 2.1.2-1` |
 
 Dependency roles map to packages on each distribution:
 
@@ -319,7 +319,7 @@ Core is `hyperflux-next-linux`. Full is `hyperflux-next-full`: Core plus the Ope
 - Optional stock applications: `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python3-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend).
 - To use the stock OpenRazer service, add yourself to the `openrazer` group, then log out and back in: `sudo gpasswd -a "$USER" openrazer`.
 
-**Full on openSUSE has no OpenRGB plugin.** That is a limit of what openSUSE Tumbleweed packages, not of HyperFlux: openSUSE Tumbleweed packages an OpenRGB 1.0 release candidate, which loads plugins built for plugin interface 4 only. The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, and OpenRGB refuses a plugin built for another interface. Doctor reports Full as ready without it. Arch Linux and Debian 14 package OpenRGB 1.0 final, so Full there includes the plugin. When openSUSE packages OpenRGB 1.0 final too, its Full packages can include the plugin.
+**Full on openSUSE has no OpenRGB plugin.** That is a limit of what openSUSE Tumbleweed packages, not of HyperFlux: openSUSE Tumbleweed packages an OpenRGB 1.0 release candidate, which loads plugins built for plugin interface 4 only. The HyperFlux plugin is built for plugin interface 5, which OpenRGB 1.0 final and 1.1 use, and OpenRGB refuses a plugin built for another interface. Doctor reports Full as ready without it. Arch Linux packages OpenRGB 1.1 and Debian 14 packages OpenRGB 1.0 final, so Full there includes the plugin. When openSUSE packages OpenRGB 1.0 final or newer, its Full packages can include the plugin.
 
 - Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable, start or stop a service.
 - `hyperflux-next-dkms` and the Full OpenRazer driver package hand their driver sources to DKMS and build them for every kernel whose development files are installed. DKMS installs the built driver when the computer next starts, so installing the package never loads the driver. Removing the package removes every built copy.

@@ -89,8 +89,9 @@ receiver, with your keyboard and mouse paired to it.
    Full adds the connections to OpenRazer, Polychromatic, and OpenRGB, and
    brings Core with it. Core alone is the receiver driver, the background
    service, `hyperfluxctl`, and the SDK: `sudo pacman -Syu hyperflux-next-linux`.
-   The other distributions get Full too, without the OpenRGB connection;
-   their guides give the `apt`, `dnf`, or `zypper` command.
+   The other distributions get Full too, although on Ubuntu, Fedora, and
+   openSUSE without the OpenRGB connection; their guides give the `apt`,
+   `dnf`, or `zypper` command.
 3. **Turn on HyperFlux and restart.** Keep the receiver plugged in.
 
    ```bash

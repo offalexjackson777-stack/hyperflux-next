@@ -64,7 +64,7 @@ class DistributionCatalogTests(unittest.TestCase):
                 "glibc",
                 "libgcc",
                 "systemd",
-                "hyperflux-next-linux=2.1.1-1",
+                "hyperflux-next-linux=2.1.2-1",
                 "qt6-base",
                 "hidapi",
                 "libstdc++",

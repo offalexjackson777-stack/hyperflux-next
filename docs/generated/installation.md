@@ -6,7 +6,7 @@ This page lists what the HyperFlux packages install, what they leave alone, and 
 
 Install manifest digest: `2a861e829965eaf5e1de4d37c6efa3e39b2fa11ad6c72726e831f94478905d96`.
 
-Packages at `2.1.1` release `1`: Core is `hyperflux-next-linux` (background service, SDK, and `hyperfluxctl`) with `hyperflux-next-dkms` (receiver driver sources). Full adds `hyperflux-next-openrazer-driver-dkms` (patched OpenRazer driver sources) and `hyperflux-next-full` (the OpenRazer and OpenRGB connections).
+Packages at `2.1.2` release `1`: Core is `hyperflux-next-linux` (background service, SDK, and `hyperfluxctl`) with `hyperflux-next-dkms` (receiver driver sources). Full adds `hyperflux-next-openrazer-driver-dkms` (patched OpenRazer driver sources) and `hyperflux-next-full` (the OpenRazer and OpenRGB connections).
 
 ## What Installing Does And Does Not Do
 
