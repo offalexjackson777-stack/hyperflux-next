@@ -48,6 +48,7 @@ from hfxdev.licensing import (
 from hfxdev.local_companion import load_local_companion
 from hfxdev.model import ModelError, load_json, repository_files
 from hfxdev.openrazer_native_route import load_native_deployment
+from hfxdev.package_repositories import arch_policy_for_guides, load_repository_site_policy
 from hfxdev.public_readiness import public_readiness
 from hfxdev.render import rendered_files
 from hfxdev.repository_docs import markdown_files, repository_link_issues
@@ -78,7 +79,10 @@ class RepositoryExperienceContracts(unittest.TestCase):
         # DOC-003: landing pages carry one short sentence. Release Status names
         # the current release and its notes in plain words, without the
         # repository's internal channel wording.
-        repository = load_arch_repository_policy(ROOT)
+        # The guides name the Pages site once it is published, the release before.
+        repository = arch_policy_for_guides(
+            load_arch_repository_policy(ROOT), load_repository_site_policy(ROOT)
+        )
         release_status = rendered_views[ROOT / "docs/project/release-status.md"]
         flat_status = " ".join(release_status.replace("\n> ", "\n").split())
         version = repository.product_release_tag.removeprefix("v")
@@ -225,7 +229,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
         self.assertNotIn("SigLevel = Never", installation_guide)
         self.assertNotIn("releases/latest/download", installation_guide)
         self.assertNotIn("./hyperflux-next.conf", installation_guide)
-        self.assertIn("releases/download/arch-repository", installation_guide)
+        self.assertIn(repository.server_url, installation_guide)
         self.assertIn("SHA256SUMS-packages", installation_guide)
         installation = (ROOT / "docs/generated/installation.md").read_text(
             encoding="utf-8"

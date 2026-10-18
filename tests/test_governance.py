@@ -121,7 +121,7 @@ class GitHubGovernanceTests(unittest.TestCase):
                 "product_release": "published",
                 "release_publication": "maintainer-operated",
                 "release_workflows": "none",
-                "pages": "disabled",
+                "pages": "served-from-branch",
                 "hardware_ci": "none",
             },
         )
@@ -1405,7 +1405,7 @@ class GitHubGovernanceTests(unittest.TestCase):
     def test_collaboration_security_and_service_plans_are_complete_and_bounded(self) -> None:
         plan = json.loads(experience_plan(self.governance))
         self.assertEqual(plan["publication_state"]["product_release"], "published")
-        self.assertEqual(plan["publication_state"]["pages"], "disabled")
+        self.assertEqual(plan["publication_state"]["pages"], "served-from-branch")
         self.assertNotIn("source_repository_authorized", plan)
         self.assertEqual(plan["external_apps_installed"], [])
         self.assertEqual(

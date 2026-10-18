@@ -11,14 +11,14 @@
     "homepage": "",
     "social_preview_asset": "docs/assets/social-preview.png",
     "topics": ["device-driver", "hid", "hyperflux", "linux", "openrazer", "openrgb", "polychromatic", "razer", "rgb-lighting"],
-    "pages_source": "disabled"
+    "pages_source": {"build_type": "legacy", "branch": "gh-pages", "path": "/", "https_enforced": true}
   },
   "publication_state": {
     "source_repository": "public",
     "product_release": "published",
     "release_publication": "maintainer-operated",
     "release_workflows": "none",
-    "pages": "disabled",
+    "pages": "served-from-branch",
     "hardware_ci": "none"
   },
   "collaboration": {

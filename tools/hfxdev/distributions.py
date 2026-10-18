@@ -642,7 +642,28 @@ DEBIAN_FORMAT_ROLES = {
 }
 
 
-def _check_debian_format_contract(target: DistributionTarget, arch: DistributionTarget) -> None:
+def repository_site_published(root: Path) -> bool:
+    """Whether the signed repository site that carries these packages is live."""
+
+    # The site policy names the distribution targets, so it is read lazily.
+    from .package_repositories import load_repository_site_policy
+
+    return load_repository_site_policy(root).published
+
+
+def _check_publication(target: DistributionTarget, name: str, site_published: bool) -> None:
+    """A release is published only through the live signed repository site."""
+
+    if target.published and not site_published:
+        raise ModelError(
+            f"{name} packages cannot be published while the repository site is unpublished; "
+            "set packaging/repository-site.json state to published first"
+        )
+
+
+def _check_debian_format_contract(
+    target: DistributionTarget, arch: DistributionTarget, *, site_published: bool
+) -> None:
     """Hold a Debian-format Core package to the Arch Core product contract."""
 
     name, version, codename = DEBIAN_FORMAT_RELEASES[target.id]
@@ -653,8 +674,7 @@ def _check_debian_format_contract(target: DistributionTarget, arch: Distribution
         codename,
     ):
         raise ModelError(f"{name} target must name exactly {name} {version} {codename}")
-    if target.maturity != "ci-only":
-        raise ModelError(f"{name} packages are CI-built only until a publication channel exists")
+    _check_publication(target, name, site_published)
     if target.architectures != {"x86_64-unknown-linux-gnu": "amd64"}:
         raise ModelError(f"{name} target is amd64 only")
     roles = {key: value for key, value in target.dependency_roles.items() if key != "c-runtime"}
@@ -839,7 +859,9 @@ RPM_FORMAT_ROLES = {
 }
 
 
-def _check_rpm_format_contract(target: DistributionTarget, arch: DistributionTarget) -> None:
+def _check_rpm_format_contract(
+    target: DistributionTarget, arch: DistributionTarget, *, site_published: bool
+) -> None:
     """Hold an RPM-format Core package to the Arch Core product contract."""
 
     name, version = RPM_FORMAT_RELEASES[target.id]
@@ -850,8 +872,7 @@ def _check_rpm_format_contract(target: DistributionTarget, arch: DistributionTar
         None,
     ):
         raise ModelError(f"{name} target must name exactly {name} {version}")
-    if target.maturity != "ci-only":
-        raise ModelError(f"{name} packages are CI-built only until a publication channel exists")
+    _check_publication(target, name, site_published)
     if target.architectures != {"x86_64-unknown-linux-gnu": "x86_64"}:
         raise ModelError(f"{name} target is x86_64 only")
     roles = {key: value for key, value in target.dependency_roles.items() if key != "c-runtime"}
@@ -901,6 +922,7 @@ def load_distribution_catalog(root: Path) -> DistributionCatalog:
         raise ModelError("distribution sibling version cannot be represented on Arch")
     sibling_version = f"{version}-{runtime.product.package_release}"
     openrazer_version = load_native_deployment(root).driver.dkms_version
+    site_published = repository_site_published(root)
     target = _target(
         "arch",
         targets_value["arch"],
@@ -918,7 +940,9 @@ def load_distribution_catalog(root: Path) -> DistributionCatalog:
                 runtime.product.version, runtime.product.package_release
             ),
         )
-        _check_debian_format_contract(targets[target_id], target)
+        _check_debian_format_contract(
+            targets[target_id], target, site_published=site_published
+        )
     for target_id in RPM_FORMAT_TARGET_IDS:
         targets[target_id] = _target(
             target_id,
@@ -926,7 +950,9 @@ def load_distribution_catalog(root: Path) -> DistributionCatalog:
             openrazer_version=openrazer_version,
             sibling_version=rpm_version(runtime.product.version, runtime.product.package_release),
         )
-        _check_rpm_format_contract(targets[target_id], target)
+        _check_rpm_format_contract(
+            targets[target_id], target, site_published=site_published
+        )
     return DistributionCatalog(
         source_sha256=sha256_file(path),
         description=description,

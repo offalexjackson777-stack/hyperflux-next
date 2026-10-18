@@ -113,6 +113,56 @@ REMOVE_COMMAND = {
 }
 
 
+# Releases that are not final yet. Their own packages can still change.
+PRERELEASE_NOTE = {
+    "debian": (
+        "Debian 14 is still Debian's testing release, so Debian's own packages can "
+        "change before it is released."
+    ),
+}
+
+# The install guide for each release, relative to this generated page.
+INSTALL_GUIDE = {
+    "ubuntu": "../user/install-ubuntu.md",
+    "debian": "../user/install-debian.md",
+    "fedora": "../user/install-fedora.md",
+    "opensuse": "../user/install-opensuse.md",
+}
+
+
+def section_heading(target: DistributionTarget) -> str:
+    """The heading of one release's section, which says whether it is published."""
+
+    release = target.release
+    if release is None:
+        raise ModelError(f"the {target.id} target names no release")
+    name = f"{release.distribution} {release.version}"
+    if target.published:
+        return f"## {name} (published, not yet confirmed on real hardware)"
+    return f"## {name} (CI-built, not published yet)"
+
+
+def _availability(target: DistributionTarget, kind: str, name: str) -> list[str]:
+    """Where a release's packages come from, in two or three plain sentences."""
+
+    if not target.published:
+        return [
+            f"HyperFlux builds `{kind}` packages for {name} in CI every week and whenever a "
+            "pull request changes how they are made. They are not published, so there is "
+            "nothing to install from yet. They carry both editions, Core and Full."
+        ]
+    text = (
+        f"HyperFlux publishes `{kind}` packages for {name} in its signed package "
+        f"repository. [Install on {target.release.distribution}]({INSTALL_GUIDE[target.id]}) "
+        "shows how to add it. The packages are built and tested automatically, every week "
+        "and whenever a pull request changes how they are made, but not yet confirmed on "
+        "real hardware. They carry both editions, Core and Full."
+    )
+    if target.id in PRERELEASE_NOTE:
+        text = f"{text} {PRERELEASE_NOTE[target.id]}"
+    return [text]
+
+
 def _removal(
     target_id: str,
     release: DistributionRelease,
@@ -275,8 +325,8 @@ def _debian_format(
 ) -> list[str]:
     target = catalog.targets[target_id]
     release = target.release
-    if release is None or target.published:
-        raise ModelError(f"the {target_id} target must be an unpublished release")
+    if release is None or target.package_format != "deb":
+        raise ModelError(f"the {target_id} target must be a Debian-format release")
     arch_roles = catalog.targets["arch"].dependency_roles
     from ..distribution_debian import debian_plans
 
@@ -284,12 +334,11 @@ def _debian_format(
     module = runtime.kernel.module_name.replace("-", "_")
     lines = [
         "",
-        f"## {release.distribution} {release.version} (CI-built, not published yet)",
+        section_heading(target),
         "",
-        f"HyperFlux builds `.deb` packages for {release.distribution} {release.version} "
-        f"(`{release.codename}`) in CI every week and whenever a pull request changes how "
-        "they are made. They are not published, so there is nothing to install from yet. "
-        "They carry both editions, Core and Full.",
+        *_availability(
+            target, ".deb", f"{release.distribution} {release.version} (`{release.codename}`)"
+        ),
         "",
         "| Package | Version | Architecture | Depends |",
         "| --- | --- | --- | --- |",
@@ -350,8 +399,8 @@ def _rpm_format(
 ) -> list[str]:
     target = catalog.targets[target_id]
     release = target.release
-    if release is None or target.published or target.package_format != "rpm":
-        raise ModelError(f"the {target_id} target must be an unpublished RPM release")
+    if release is None or target.package_format != "rpm":
+        raise ModelError(f"the {target_id} target must be an RPM release")
     arch_roles = catalog.targets["arch"].dependency_roles
     from ..distribution_rpm import rpm_plans
 
@@ -360,11 +409,9 @@ def _rpm_format(
     name = f"{release.distribution} {release.version}"
     lines = [
         "",
-        f"## {name} (CI-built, not published yet)",
+        section_heading(target),
         "",
-        f"HyperFlux builds `.rpm` packages for {name} in CI every week and whenever a "
-        "pull request changes how they are made. They are not published, so there is "
-        "nothing to install from yet. They carry both editions, Core and Full.",
+        *_availability(target, ".rpm", name),
         "",
         "| Package | Version | Architecture | Requires |",
         "| --- | --- | --- | --- |",

@@ -15,7 +15,7 @@ the signed Arch repository are published by the maintainer, not by a GitHub work
 - Signed Arch repository: [`arch-repository`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/arch-repository)
 - Release, tag, and package publication: `maintainer-operated`
 - Release workflows: `none`
-- Pages: `disabled`
+- Pages: `served-from-branch` (the `gh-pages` branch, path `/`, HTTPS enforced)
 - Hardware CI: `none`
 
 `./hfx github apply` applies the repository settings, labels, security settings,

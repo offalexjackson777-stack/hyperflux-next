@@ -104,6 +104,8 @@ def markdown(
     runtime: LinuxRuntime,
     openrazer: OpenRazerNativeDeployment,
     split: ArchSplit,
+    *,
+    distributions_published: bool = False,
 ) -> str:
     receiver = split.output("receiver-dkms").package_name
     driver_owner = next(
@@ -230,7 +232,12 @@ def markdown(
             "The Arch package base consumes independently staged `linux` and payload-bearing "
             "`full` components. Ubuntu 26.10 and Debian 14 `.deb` packages and Fedora 44 "
             "and openSUSE Tumbleweed `.rpm` packages of both editions are built and "
-            "checked in CI every week but not published yet.",
+            + (
+                "tested automatically every week and published in the signed package "
+                "repository, but not yet confirmed on real hardware."
+                if distributions_published
+                else "checked in CI every week but not published yet."
+            ),
             "",
         ]
     )

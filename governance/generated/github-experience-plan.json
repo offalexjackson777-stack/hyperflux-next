@@ -35,7 +35,7 @@
   },
   "publication_state": {
     "hardware_ci": "none",
-    "pages": "disabled",
+    "pages": "served-from-branch",
     "product_release": "published",
     "release_publication": "maintainer-operated",
     "release_workflows": "none",

@@ -423,18 +423,19 @@ class RpmLintTests(unittest.TestCase):
 
 class RpmDocumentationTests(unittest.TestCase):
     def test_rpm_sections_are_unpublished_and_explain_activation(self) -> None:
-        from hfxdev.generators.distributions import markdown
+        from hfxdev.generators.distributions import markdown, section_heading
         from hfxdev.install import load_first_run_activation
 
+        catalog = load_distribution_catalog(ROOT)
         text = markdown(
-            load_distribution_catalog(ROOT),
+            catalog,
             load_linux_runtime(ROOT),
             load_first_run_activation(ROOT),
             candidate_split(),
         )
-        debian_start = text.index("## Debian 14 (CI-built, not published yet)")
-        fedora_start = text.index("## Fedora 44 (CI-built, not published yet)")
-        opensuse_start = text.index("## openSUSE Tumbleweed (CI-built, not published yet)")
+        debian_start = text.index(section_heading(catalog.targets["debian"]))
+        fedora_start = text.index(section_heading(catalog.targets["fedora"]))
+        opensuse_start = text.index(section_heading(catalog.targets["opensuse"]))
         self.assertLess(debian_start, fedora_start)
         self.assertLess(fedora_start, opensuse_start)
         fedora = text[fedora_start:opensuse_start]
@@ -706,7 +707,10 @@ class RpmBuildTests(unittest.TestCase):
                 manifest["release"]["version"],
                 schema["properties"]["release"]["properties"]["version"]["pattern"],
             )
-            self.assertEqual(manifest["maturity"], "ci-only")
+            self.assertEqual(
+                manifest["maturity"],
+                load_distribution_catalog(ROOT).targets[distribution].maturity,
+            )
             package_schema = schema["$defs"]["package"]
             for package in manifest["packages"]:
                 self.assertEqual(set(package), set(package_schema["required"]))

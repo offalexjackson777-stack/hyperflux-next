@@ -30,6 +30,7 @@ from hfxdev.arch_repository import (
     retained_asset_names,
     verify_retained_packages,
 )
+from hfxdev.package_repositories import arch_policy_for_guides, load_repository_site_policy
 from hfxdev.arch_repository_public import (
     _require_tools,
     _run,
@@ -209,7 +210,10 @@ class ArchRepositoryTests(unittest.TestCase):
         self.assertNotIn("curl |", script)
         self.assertNotIn(f"{policy.server_url}/hyperflux-next.conf", script)
         self.assertLess(script.index("fingerprint mismatch"), script.index("sudo"))
-        fenced = f"```bash\n{script}\n```"
+        # The guide shows the block for the address new installs use: the Pages
+        # site once it is published, the release before.
+        guide_policy = arch_policy_for_guides(policy, load_repository_site_policy(ROOT))
+        fenced = f"```bash\n{repository_setup_script(guide_policy).rstrip()}\n```"
         # The README links to the guide; only the guide shows the setup block.
         for path, blocks in (
             (ROOT / "README.md", 0),
