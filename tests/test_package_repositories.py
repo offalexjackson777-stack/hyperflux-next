@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 import gzip
 import hashlib
 import json
@@ -22,13 +23,24 @@ sys.path.insert(0, str(ROOT / "tools"))
 from hfxdev import package_repositories as repositories
 from hfxdev import package_repositories_rehearsal as rehearsal
 from hfxdev.arch_repository import load_arch_repository_policy
+from hfxdev.distributions import debian_version, rpm_version
+from hfxdev.linux_runtime import load_linux_runtime
 from hfxdev.model import ModelError
 
 
 ARCH = load_arch_repository_policy(ROOT)
 PRIMARY = ARCH.primary_fingerprint
 SUBKEY = ARCH.signing_subkey_fingerprint
-VERSION = "2.1.0-1"
+RUNTIME = load_linux_runtime(ROOT)
+# The packages a release carries are at the product version in runtime/linux.json.
+VERSION = debian_version(RUNTIME.product.version, RUNTIME.product.package_release)
+RPM_VERSION = rpm_version(RUNTIME.product.version, RUNTIME.product.package_release)
+OTHER_VERSION = "0.9.0-1"
+
+
+def runtime_at(version: str):
+    """The checkout's runtime with a different product version."""
+    return replace(RUNTIME, product=replace(RUNTIME.product, version=version))
 
 
 def synthetic_rpm(signature: bytes = b"OPENPGP-SIGNATURE") -> bytes:
@@ -55,26 +67,28 @@ def synthetic_rpm(signature: bytes = b"OPENPGP-SIGNATURE") -> bytes:
 FULL_PACKAGES = ("hyperflux-next-openrazer-driver-dkms", "hyperflux-next-full")
 
 
-def write_packages(base: Path) -> dict[str, Path]:
+def write_packages(
+    base: Path, deb_version: str = VERSION, rpm_version: str = RPM_VERSION
+) -> dict[str, Path]:
     directories: dict[str, Path] = {}
     for target_id in ("ubuntu", "debian"):
         directory = base / target_id
         directory.mkdir(parents=True)
-        (directory / f"hyperflux-next-dkms_{VERSION}_all.deb").write_bytes(b"dkms " + target_id.encode())
-        (directory / f"hyperflux-next-linux_{VERSION}_amd64.deb").write_bytes(b"linux " + target_id.encode())
+        (directory / f"hyperflux-next-dkms_{deb_version}_all.deb").write_bytes(b"dkms " + target_id.encode())
+        (directory / f"hyperflux-next-linux_{deb_version}_amd64.deb").write_bytes(b"linux " + target_id.encode())
         for name in FULL_PACKAGES:
-            (directory / f"{name}_{VERSION}_amd64.deb").write_bytes(name.encode() + target_id.encode())
+            (directory / f"{name}_{deb_version}_amd64.deb").write_bytes(name.encode() + target_id.encode())
         (directory / "build.log").write_text("ignored\n")
         directories[target_id] = directory
     for target_id in ("fedora", "opensuse"):
         directory = base / target_id
         directory.mkdir(parents=True)
-        (directory / f"hyperflux-next-dkms-{VERSION}.noarch.rpm").write_bytes(synthetic_rpm())
-        (directory / f"hyperflux-next-linux-{VERSION}.x86_64.rpm").write_bytes(
+        (directory / f"hyperflux-next-dkms-{rpm_version}.noarch.rpm").write_bytes(synthetic_rpm())
+        (directory / f"hyperflux-next-linux-{rpm_version}.x86_64.rpm").write_bytes(
             synthetic_rpm(b"OTHER-SIGNATURE")
         )
         for name in FULL_PACKAGES:
-            (directory / f"{name}-{VERSION}.x86_64.rpm").write_bytes(synthetic_rpm())
+            (directory / f"{name}-{rpm_version}.x86_64.rpm").write_bytes(synthetic_rpm())
         directories[target_id] = directory
     return directories
 
@@ -305,22 +319,81 @@ class PackageRepositorySiteTests(unittest.TestCase):
     def test_collect_packages_requires_exact_set_at_one_version(self) -> None:
         ubuntu = self.targets["ubuntu"]
         found = repositories.collect_packages(ubuntu, self.packages["ubuntu"])
-        self.assertEqual({"2.1.0-1"}, {package.version for package in found})
-        (self.packages["ubuntu"] / "hyperflux-next-extra_2.1.0-1_amd64.deb").write_bytes(b"x")
+        self.assertEqual({VERSION}, {package.version for package in found})
+        (self.packages["ubuntu"] / f"hyperflux-next-extra_{VERSION}_amd64.deb").write_bytes(b"x")
         with self.assertRaisesRegex(ModelError, "needs exactly"):
             repositories.collect_packages(ubuntu, self.packages["ubuntu"])
         fedora = self.targets["fedora"]
         directory = self.packages["fedora"]
-        (directory / f"hyperflux-next-linux-{VERSION}.x86_64.rpm").rename(
-            directory / "hyperflux-next-linux-2.1.1-1.x86_64.rpm"
+        (directory / f"hyperflux-next-linux-{RPM_VERSION}.x86_64.rpm").rename(
+            directory / f"hyperflux-next-linux-{OTHER_VERSION}.x86_64.rpm"
         )
         with self.assertRaisesRegex(ModelError, "different versions"):
             repositories.collect_packages(fedora, directory)
-        (directory / "hyperflux-next-linux-2.1.1-1.x86_64.rpm").rename(
-            directory / f"hyperflux-next-linux-{VERSION}.aarch64.rpm"
+        (directory / f"hyperflux-next-linux-{OTHER_VERSION}.x86_64.rpm").rename(
+            directory / f"hyperflux-next-linux-{RPM_VERSION}.aarch64.rpm"
         )
         with self.assertRaisesRegex(ModelError, "wrong architecture"):
             repositories.collect_packages(fedora, directory)
+
+    def test_targets_expect_the_product_version_from_the_runtime(self) -> None:
+        for target in self.targets.values():
+            expected = VERSION if target.package_format == "deb" else RPM_VERSION
+            self.assertEqual(expected, target.version)
+
+    def test_collect_packages_refuses_packages_of_another_version(self) -> None:
+        stale = write_packages(self.base / "stale", OTHER_VERSION, OTHER_VERSION)
+        for target_id in ("ubuntu", "fedora"):
+            with self.subTest(target=target_id), self.assertRaisesRegex(
+                ModelError, f"version {re.escape(OTHER_VERSION)}, but runtime/linux.json"
+            ):
+                repositories.collect_packages(self.targets[target_id], stale[target_id])
+        with self.assertRaisesRegex(ModelError, "rebuild the packages"):
+            repositories.assemble_site(
+                ROOT, packages=stale, output=self.base / "stale-site", tools=FakeTools()
+            )
+        self.assertFalse((self.base / "stale-site").exists())
+
+    def stale_site(self) -> Path:
+        """A site assembled while the checkout was still at an older version."""
+        stale = write_packages(self.base / "stale", OTHER_VERSION, OTHER_VERSION)
+        output = self.base / "stale-site"
+        with patch.object(repositories, "load_linux_runtime", return_value=runtime_at("0.9.0")):
+            repositories.assemble_site(ROOT, packages=stale, output=output, tools=FakeTools())
+        return output
+
+    def test_unsigned_verification_refuses_a_site_at_another_version(self) -> None:
+        site = self.stale_site()
+        with self.assertRaisesRegex(ModelError, "Ubuntu 26.10 packages are version 0.9.0-1"):
+            repositories.verify_site(ROOT, site, require_signatures=False)
+        # A manifest edited to claim the right version does not hide the packages.
+        manifest_path = site / "repository-site.json"
+        manifest = json.loads(manifest_path.read_text())
+        for entry in manifest["targets"].values():
+            entry["version"] = VERSION
+        manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+        with self.assertRaisesRegex(ModelError, "packages are version 0.9.0-1"):
+            repositories.verify_site(ROOT, site, require_signatures=False)
+
+    def test_signed_verification_and_publish_refuse_a_site_at_another_version(self) -> None:
+        with patch.object(repositories, "load_linux_runtime", return_value=runtime_at("0.9.0")):
+            site = self.sign(self.stale_site())
+            self.verify_signed(site)
+        with self.assertRaisesRegex(ModelError, "packages are version 0.9.0-1"):
+            self.verify_signed(site)
+        calls: list[list[str]] = []
+
+        def record(command, **arguments):
+            calls.append(command)
+            return fake_gpg(command, **arguments)
+
+        with (
+            patch.object(repositories, "_execute", side_effect=record),
+            patch.object(repositories, "verify_arch_repository", return_value={"ok": True}),
+            self.assertRaisesRegex(ModelError, "rebuild the packages"),
+        ):
+            repositories.publish_site(ROOT, site, execute=True, remote="r", emit=lambda _: None)
+        self.assertFalse(any(command[:1] in (["git"], ["gh"]) for command in calls))
 
     def test_assembly_builds_the_published_layout_without_any_key(self) -> None:
         tools = FakeTools()
@@ -337,10 +410,10 @@ class PackageRepositorySiteTests(unittest.TestCase):
             "ubuntu/hyperflux-next.sources",
             "ubuntu/dists/stonking/Release",
             "debian/dists/forky/main/binary-amd64/Packages.gz",
-            "debian/pool/main/h/hyperflux-next/hyperflux-next-linux_2.1.0-1_amd64.deb",
+            f"debian/pool/main/h/hyperflux-next/hyperflux-next-linux_{VERSION}_amd64.deb",
             "fedora/hyperflux-next.repo",
             "fedora/44/x86_64/repodata/repomd.xml",
-            "opensuse/tumbleweed/x86_64/packages/hyperflux-next-dkms-2.1.0-1.noarch.rpm",
+            f"opensuse/tumbleweed/x86_64/packages/hyperflux-next-dkms-{RPM_VERSION}.noarch.rpm",
         ):
             self.assertIn(expected, names)
         self.assertFalse(any(name.endswith(("InRelease", "Release.gpg", ".asc")) and "/" in name for name in names))
@@ -387,7 +460,7 @@ class PackageRepositorySiteTests(unittest.TestCase):
             "Packages": site / "ubuntu/dists/stonking/main/binary-amd64/Packages",
             "front page": site / "index.html",
             "repo file": site / "fedora/hyperflux-next.repo",
-            "package": site / "opensuse/tumbleweed/x86_64/packages/hyperflux-next-dkms-2.1.0-1.noarch.rpm",
+            "package": site / f"opensuse/tumbleweed/x86_64/packages/hyperflux-next-dkms-{RPM_VERSION}.noarch.rpm",
         }
         for label, path in cases.items():
             with self.subTest(label=label):
@@ -427,7 +500,7 @@ class PackageRepositorySiteTests(unittest.TestCase):
             self.assertTrue((site / name).is_file(), name)
         self.assertNotEqual(before, (site / "fedora/44/x86_64/repodata/repomd.xml").read_bytes())
         self.assertTrue(
-            (site / "fedora/44/x86_64/packages/hyperflux-next-dkms-2.1.0-1.noarch.rpm").read_bytes().endswith(b"signed")
+            (site / f"fedora/44/x86_64/packages/hyperflux-next-dkms-{RPM_VERSION}.noarch.rpm").read_bytes().endswith(b"signed")
         )
         manifest = json.loads((site / "repository-site.json").read_text())
         self.assertTrue(manifest["signed"])

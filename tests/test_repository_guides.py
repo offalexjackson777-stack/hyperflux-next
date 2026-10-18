@@ -22,9 +22,10 @@ ARCH = load_arch_repository_policy(ROOT)
 
 class RepositoryGuideTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.site = repositories.load_repository_site_policy(ROOT)
+        policy = repositories.load_repository_site_policy(ROOT)
+        self.site = replace(policy, state="unpublished")
         self.targets = repositories.site_targets(ROOT)
-        self.live = replace(self.site, state="published")
+        self.live = replace(policy, state="published")
 
     def test_unpublished_guides_say_so_before_the_steps(self) -> None:
         for target in self.targets.values():
@@ -35,6 +36,26 @@ class RepositoryGuideTests(unittest.TestCase):
         self.assertIn("not published yet", live)
         ready = guides.repository_setup(self.live, ARCH, self.targets["fedora"], "published")
         self.assertNotIn("not published yet", ready)
+
+    def test_published_guides_say_the_packages_are_not_yet_hardware_confirmed(self) -> None:
+        for target in self.targets.values():
+            text = guides.repository_setup(self.live, ARCH, target, "published")
+            flat = " ".join(text.replace("\n> ", "\n").split())
+            self.assertTrue(text.startswith("> [!NOTE]"), target.id)
+            self.assertIn(
+                f"The {target.name} packages are built and tested automatically, "
+                "but not yet confirmed on real hardware.",
+                flat,
+            )
+            self.assertEqual(target.id == "debian", "Debian's testing release" in flat, target.id)
+        table = guides.install_table(
+            self.live, self.targets, {target_id: "published" for target_id in self.targets}
+        )
+        self.assertIn(
+            "The Ubuntu, Debian, Fedora, and openSUSE packages are built and tested "
+            "automatically, but not yet confirmed on real hardware.",
+            " ".join(table.split()),
+        )
 
     def test_every_guide_checks_both_fingerprints_before_trusting_the_key(self) -> None:
         for target in self.targets.values():

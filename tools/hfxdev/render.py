@@ -714,7 +714,15 @@ def rendered_files(root: Path) -> dict[Path, str]:
     )
     files[install_plan_path] = compiled_install_plan(install_manifest, linux_runtime)
     files[installation_document_path] = install_markdown(
-        install_manifest, linux_runtime, openrazer_native, load_arch_split(root)
+        install_manifest,
+        linux_runtime,
+        openrazer_native,
+        load_arch_split(root),
+        distributions_published=repository_site.published
+        and all(
+            distribution_catalog.targets[target_id].published
+            for target_id in repository_targets
+        ),
     )
     return files
 

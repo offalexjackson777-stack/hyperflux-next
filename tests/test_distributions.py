@@ -19,10 +19,18 @@ from hfxdev.distributions import (
     debian_exact,
     debian_version,
     load_distribution_catalog,
+    repository_site_published,
     rpm_exact,
     rpm_version,
 )
 from hfxdev.model import ModelError, load_json
+
+
+# The four distribution targets are published exactly when the repository
+# site is; while the site is unpublished they are CI-only.
+SITE_PUBLISHED = repository_site_published(ROOT)
+DISTRIBUTION_MATURITY = "published" if SITE_PUBLISHED else "ci-only"
+DISTRIBUTION_TARGET_IDS = ("ubuntu", "debian", "fedora", "opensuse")
 
 
 class DistributionCatalogTests(unittest.TestCase):
@@ -94,8 +102,8 @@ class DistributionCatalogTests(unittest.TestCase):
 
     def test_ubuntu_target_carries_both_editions_with_debian_relations(self) -> None:
         target = self.catalog.targets["ubuntu"]
-        self.assertEqual((target.package_format, target.maturity), ("deb", "ci-only"))
-        self.assertFalse(target.published)
+        self.assertEqual((target.package_format, target.maturity), ("deb", DISTRIBUTION_MATURITY))
+        self.assertEqual(SITE_PUBLISHED, target.published)
         self.assertIsNotNone(target.release)
         assert target.release is not None
         self.assertEqual(
@@ -141,8 +149,8 @@ class DistributionCatalogTests(unittest.TestCase):
     def test_debian_target_mirrors_ubuntu_on_its_own_release(self) -> None:
         ubuntu = self.catalog.targets["ubuntu"]
         target = self.catalog.targets["debian"]
-        self.assertEqual((target.package_format, target.maturity), ("deb", "ci-only"))
-        self.assertFalse(target.published)
+        self.assertEqual((target.package_format, target.maturity), ("deb", DISTRIBUTION_MATURITY))
+        self.assertEqual(SITE_PUBLISHED, target.published)
         assert target.release is not None
         self.assertEqual(
             (
@@ -285,8 +293,8 @@ class DistributionCatalogTests(unittest.TestCase):
         for target_id, (release, dependencies) in expected.items():
             with self.subTest(target=target_id):
                 target = self.catalog.targets[target_id]
-                self.assertEqual((target.package_format, target.maturity), ("rpm", "ci-only"))
-                self.assertFalse(target.published)
+                self.assertEqual((target.package_format, target.maturity), ("rpm", DISTRIBUTION_MATURITY))
+                self.assertEqual(SITE_PUBLISHED, target.published)
                 assert target.release is not None
                 self.assertEqual(
                     (
@@ -373,9 +381,6 @@ class DistributionCatalogTests(unittest.TestCase):
         def extra_dependency(target, _value):
             target["components"]["linux"]["dependencies"] = ["openrgb"]
 
-        def published(target, _value):
-            target["maturity"] = "published"
-
         def swap_roles(target, value):
             other = "opensuse" if value["targets"]["fedora"] is target else "fedora"
             target["dependency_roles"] = copy.deepcopy(value["targets"][other]["dependency_roles"])
@@ -384,7 +389,6 @@ class DistributionCatalogTests(unittest.TestCase):
             "missing target": lambda target_id: drop_target(target_id),
             "reordered targets": lambda _id: reorder,
             "deb format": lambda _id: as_deb,
-            "published": lambda _id: published,
             "codename": lambda _id: with_codename,
             "Arch full edition": lambda _id: with_arch_full,
             "missing full edition": lambda _id: without_full,
@@ -420,6 +424,38 @@ class DistributionCatalogTests(unittest.TestCase):
                 ):
                     with self.assertRaises(ModelError):
                         load_distribution_catalog(ROOT)
+
+    def test_published_maturity_follows_the_repository_site(self) -> None:
+        def with_maturity(target_id, maturity):
+            candidate = copy.deepcopy(self.value)
+            candidate["targets"][target_id]["maturity"] = maturity
+            return candidate
+
+        for target_id in DISTRIBUTION_TARGET_IDS:
+            with self.subTest(target=target_id, site="unpublished"), patch(
+                "hfxdev.distributions.load_json",
+                return_value=with_maturity(target_id, "published"),
+            ), patch("hfxdev.distributions.repository_site_published", return_value=False):
+                with self.assertRaisesRegex(
+                    ModelError,
+                    "packages cannot be published while the repository site is unpublished; "
+                    "set packaging/repository-site.json state to published first",
+                ):
+                    load_distribution_catalog(ROOT)
+            for site_published, maturity in ((True, "published"), (True, "ci-only"), (False, "ci-only")):
+                with self.subTest(target=target_id, site=site_published, maturity=maturity), patch(
+                    "hfxdev.distributions.load_json",
+                    return_value=with_maturity(target_id, maturity),
+                ), patch(
+                    "hfxdev.distributions.repository_site_published", return_value=site_published
+                ):
+                    target = load_distribution_catalog(ROOT).targets[target_id]
+                    self.assertEqual(maturity, target.maturity)
+                    self.assertEqual(maturity == "published", target.published)
+
+    def test_repository_site_state_decides_publication(self) -> None:
+        site = load_json(ROOT / "packaging" / "repository-site.json")
+        self.assertEqual(site["state"] == "published", SITE_PUBLISHED)
 
     def test_rpm_versions_and_relations(self) -> None:
         self.assertEqual(rpm_version("2.1.0", 1), "2.1.0-1")
@@ -517,7 +553,6 @@ class DistributionCatalogTests(unittest.TestCase):
             "missing release": drop_release,
             "arch maturity": arch_not_published,
             "arch format": arch_as_deb,
-            "published": set_field("maturity", "published"),
             "pacman format": set_field("package_format", "pacman"),
             "unknown maturity": set_field("maturity", "nightly"),
             "other release": set_field("release", "codename", "jammy"),

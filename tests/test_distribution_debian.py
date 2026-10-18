@@ -250,16 +250,17 @@ class DebianPlanTests(unittest.TestCase):
 @unittest.skipUnless(dpkg_deb_available(), "dpkg-deb is required")
 class DebianDocumentationTests(unittest.TestCase):
     def test_ubuntu_section_is_unpublished_and_explains_secure_boot(self) -> None:
-        from hfxdev.generators.distributions import markdown
+        from hfxdev.generators.distributions import markdown, section_heading
         from hfxdev.install import load_first_run_activation
 
+        catalog = load_distribution_catalog(ROOT)
         text = markdown(
-            load_distribution_catalog(ROOT),
+            catalog,
             load_linux_runtime(ROOT),
             load_first_run_activation(ROOT),
             candidate_split(),
         )
-        ubuntu = text[text.index("## Ubuntu 26.10 (CI-built, not published yet)"):]
+        ubuntu = text[text.index(section_heading(catalog.targets["ubuntu"])):]
         for expected in (
             "| `hyperflux-next-dkms` | `2.1.0-1` | `all` | `dkms` |",
             "`hyperflux-next-dkms (= 2.1.0-1)`",
@@ -276,17 +277,18 @@ class DebianDocumentationTests(unittest.TestCase):
         self.assertIn("Ubuntu 26.10 packages OpenRazer 3.12.4 as `openrazer-daemon`.", ubuntu)
 
     def test_debian_section_uses_the_dkms_signing_key(self) -> None:
-        from hfxdev.generators.distributions import markdown
+        from hfxdev.generators.distributions import markdown, section_heading
         from hfxdev.install import load_first_run_activation
 
+        catalog = load_distribution_catalog(ROOT)
         text = markdown(
-            load_distribution_catalog(ROOT),
+            catalog,
             load_linux_runtime(ROOT),
             load_first_run_activation(ROOT),
             candidate_split(),
         )
-        start = text.index("## Ubuntu 26.10 (CI-built, not published yet)")
-        debian_start = text.index("## Debian 14 (CI-built, not published yet)")
+        start = text.index(section_heading(catalog.targets["ubuntu"]))
+        debian_start = text.index(section_heading(catalog.targets["debian"]))
         self.assertLess(start, debian_start)
         ubuntu = text[start:debian_start]
         debian = text[debian_start:]
@@ -463,7 +465,10 @@ class DebianBuildTests(unittest.TestCase):
             self.assertEqual(manifest["schema"], schema["properties"]["schema"]["const"])
             self.assertEqual(manifest["$schema"], schema["$id"])
             self.assertEqual(manifest["release"]["codename"], codename)
-            self.assertEqual(manifest["maturity"], "ci-only")
+            self.assertEqual(
+                manifest["maturity"],
+                load_distribution_catalog(ROOT).targets[distribution].maturity,
+            )
             package_schema = schema["$defs"]["package"]
             for package in manifest["packages"]:
                 self.assertEqual(set(package), set(package_schema["required"]))

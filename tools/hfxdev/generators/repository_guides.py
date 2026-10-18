@@ -18,6 +18,7 @@ from ..package_repositories import (
     SiteTarget,
     configuration_text,
 )
+from .distributions import PRERELEASE_NOTE
 
 
 FULL_PACKAGE = "hyperflux-next-full"
@@ -34,7 +35,14 @@ def _grouped(fingerprint: str) -> str:
 
 def _not_yet(site: RepositorySitePolicy, target: SiteTarget, maturity: str) -> str:
     if site.published and maturity == "published":
-        return ""
+        lines = [
+            f"The {target.name} packages are built and tested automatically, but not yet "
+            "confirmed on real hardware.",
+        ]
+        if target.id in PRERELEASE_NOTE:
+            lines.append(PRERELEASE_NOTE[target.id])
+        wrapped = textwrap.wrap(" ".join(lines), width=74, break_long_words=False)
+        return "> [!NOTE]\n" + "\n".join(f"> {line}" for line in wrapped) + "\n\n"
     return f"""> [!NOTE]
 > The {target.name} packages are not published yet. These steps show how
 > installing will work once they are. Until then the repository address does
@@ -227,6 +235,12 @@ def install_table(
         if waiting
         else "Packages are published for every distribution in the table."
     )
+    untested = [names[t] for t in names if t != "arch" and state(t) == "Ready"]
+    if untested:
+        availability += (
+            f" The {listed(untested)} packages are built and tested automatically, "
+            "but not yet confirmed on real hardware."
+        )
 
     rows = [
         f"| Arch Linux | rolling | [Install on Arch Linux]({GUIDES['arch']}) | {state('arch')} |",

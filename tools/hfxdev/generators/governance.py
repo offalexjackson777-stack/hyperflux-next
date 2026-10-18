@@ -1508,7 +1508,9 @@ def markdown(governance: GitHubGovernance, arch_repository: ArchRepositoryPolicy
         f"({arch_repository.release_url})",
         f"- Release, tag, and package publication: `{state['release_publication']}`",
         f"- Release workflows: `{state['release_workflows']}`",
-        f"- Pages: `{state['pages']}`",
+        f"- Pages: `{state['pages']}` (the `{governance.pages_source.branch}` branch, "
+        f"path `{governance.pages_source.path}`"
+        + (", HTTPS enforced)" if governance.pages_source.https_enforced else ")"),
         f"- Hardware CI: `{state['hardware_ci']}`",
         "",
         "`./hfx github apply` applies the repository settings, labels, security settings,",
