@@ -4,7 +4,7 @@
 
 This page lists the HyperFlux packages, what each one depends on, and what each one replaces, for packagers and anyone choosing between Core and Full.
 
-Source digest: `fc2e59a3adb1d09c8c1999a5074717238fa9cdd522b1f696ed2b554a8dea5bbf`.
+Source digest: `97c3ac58f10f5fa4e01ad5a77f4d36c26d4719369d3500a73976983373a1ecb6`.
 
 From `2.1.0-1` the Arch `pkgbase=hyperflux-next` builds 4 packages that never install the same file. Core installs `hyperflux-next-dkms` and `hyperflux-next-linux`. Full installs `hyperflux-next-dkms`, `hyperflux-next-linux`, `hyperflux-next-openrazer-driver-dkms` and `hyperflux-next-full`. Packages for other distributions are tested separately.
 
@@ -36,9 +36,9 @@ From `2.1.0-1` the Arch `pkgbase=hyperflux-next` builds 4 packages that never in
 
 `aarch64-unknown-linux-gnu` maps to `aarch64`, `x86_64-unknown-linux-gnu` maps to `x86_64`.
 
-## Ubuntu 26.10 (CI-built, not published yet)
+## Ubuntu 26.10 (published, not yet confirmed on real hardware)
 
-HyperFlux builds `.deb` packages for Ubuntu 26.10 (`stonking`) in CI every week and whenever a pull request changes how they are made. They are not published, so there is nothing to install from yet. They carry both editions, Core and Full.
+HyperFlux publishes `.deb` packages for Ubuntu 26.10 (`stonking`) in its signed package repository. [Install on Ubuntu](../user/install-ubuntu.md) shows how to add it. The packages are built and tested automatically, every week and whenever a pull request changes how they are made, but not yet confirmed on real hardware. They carry both editions, Core and Full.
 
 | Package | Version | Architecture | Depends |
 | --- | --- | --- | --- |
@@ -124,9 +124,9 @@ Removing the packages does not stop the HyperFlux services, so turn them off fir
 
    This also removes every built copy of the driver from DKMS.
 
-## Debian 14 (CI-built, not published yet)
+## Debian 14 (published, not yet confirmed on real hardware)
 
-HyperFlux builds `.deb` packages for Debian 14 (`forky`) in CI every week and whenever a pull request changes how they are made. They are not published, so there is nothing to install from yet. They carry both editions, Core and Full.
+HyperFlux publishes `.deb` packages for Debian 14 (`forky`) in its signed package repository. [Install on Debian](../user/install-debian.md) shows how to add it. The packages are built and tested automatically, every week and whenever a pull request changes how they are made, but not yet confirmed on real hardware. They carry both editions, Core and Full. Debian 14 is still Debian's testing release, so Debian's own packages can change before it is released.
 
 | Package | Version | Architecture | Depends |
 | --- | --- | --- | --- |
@@ -207,9 +207,9 @@ Removing the packages does not stop the HyperFlux services, so turn them off fir
 
    This also removes every built copy of the driver from DKMS.
 
-## Fedora 44 (CI-built, not published yet)
+## Fedora 44 (published, not yet confirmed on real hardware)
 
-HyperFlux builds `.rpm` packages for Fedora 44 in CI every week and whenever a pull request changes how they are made. They are not published, so there is nothing to install from yet. They carry both editions, Core and Full.
+HyperFlux publishes `.rpm` packages for Fedora 44 in its signed package repository. [Install on Fedora](../user/install-fedora.md) shows how to add it. The packages are built and tested automatically, every week and whenever a pull request changes how they are made, but not yet confirmed on real hardware. They carry both editions, Core and Full.
 
 | Package | Version | Architecture | Requires |
 | --- | --- | --- | --- |
@@ -289,9 +289,9 @@ Removing the packages does not stop the HyperFlux services, so turn them off fir
 
    This also removes every built copy of the driver from DKMS.
 
-## openSUSE Tumbleweed (CI-built, not published yet)
+## openSUSE Tumbleweed (published, not yet confirmed on real hardware)
 
-HyperFlux builds `.rpm` packages for openSUSE Tumbleweed in CI every week and whenever a pull request changes how they are made. They are not published, so there is nothing to install from yet. They carry both editions, Core and Full.
+HyperFlux publishes `.rpm` packages for openSUSE Tumbleweed in its signed package repository. [Install on openSUSE](../user/install-opensuse.md) shows how to add it. The packages are built and tested automatically, every week and whenever a pull request changes how they are made, but not yet confirmed on real hardware. They carry both editions, Core and Full.
 
 | Package | Version | Architecture | Requires |
 | --- | --- | --- | --- |
