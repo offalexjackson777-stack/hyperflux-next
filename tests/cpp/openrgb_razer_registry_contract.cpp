@@ -141,8 +141,8 @@ int main()
         openrgb::KeyboardLayoutVariant::AnsiQwerty);
     if(!mouse || mouse.value().model_name != "Razer Basilisk V3 Pro 35K (Wireless)"
        || mouse.value().zones.size() != 3 || mouse.value().leds.size() != 13
-       || mouse.value().zones[0].name != "Scroll Wheel"
-       || mouse.value().zones[1].name != "Logo"
+       || mouse.value().zones[0].name != "Logo"
+       || mouse.value().zones[1].name != "Scroll Wheel"
        || mouse.value().zones[2].name != "LED Strip"
        || mouse.value().zones[2].slot_count != 11)
     {

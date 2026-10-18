@@ -56,6 +56,13 @@ for(path, RESOURCES) {
 }
 RESOURCES = $$HFX_REBASED_RESOURCES
 
+# OpenRGB 1.1 adds a precompiled header, named relative to its source tree.
+HFX_REBASED_PRECOMPILED_HEADER =
+for(path, PRECOMPILED_HEADER) {
+    HFX_REBASED_PRECOMPILED_HEADER += $$absolute_path($$path, $$HFX_OPENRGB_SOURCE_DIR)
+}
+PRECOMPILED_HEADER = $$HFX_REBASED_PRECOMPILED_HEADER
+
 HFX_REBASED_INCLUDEPATH =
 for(path, INCLUDEPATH) {
     HFX_REBASED_INCLUDEPATH += $$absolute_path($$path, $$HFX_OPENRGB_SOURCE_DIR)

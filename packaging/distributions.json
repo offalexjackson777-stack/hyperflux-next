@@ -63,7 +63,7 @@
           "optional_dependencies": [
             {
               "package": "openrgb",
-              "purpose": "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified"
+              "purpose": "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0 and 1.1/plugin API 5 verified"
             },
             {
               "package": "openrazer-daemon",
@@ -227,7 +227,7 @@
           "optional_dependencies": [
             {
               "package": "openrgb",
-              "purpose": "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified"
+              "purpose": "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0 and 1.1/plugin API 5 verified"
             },
             {
               "package": "openrazer-daemon",

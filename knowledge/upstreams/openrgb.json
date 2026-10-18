@@ -4,22 +4,22 @@
   "source": {
     "upstream_id": "openrgb",
     "repository": "https://github.com/CalcProgrammer1/OpenRGB.git",
-    "version": "1.0",
-    "commit": "81bbe18a84c2e507006f19dd252e397e40a56bfe",
+    "version": "1.1",
+    "commit": "8e16de27858cf2be6af54a33ce003df74cb9fd3e",
     "license_expression": "GPL-2.0-only",
     "extractor": "cpp-initializer-v1",
     "source_files": [
       {
         "path": "Controllers/RazerController/RazerControllerDetect.cpp",
-        "sha256": "36085f7af923c5b074142b79084c6ed0acad3e7a783da1503aeeb336e82b71bd"
+        "sha256": "522c6a8ba79259761f1282e0b4fb9203890889a5a9fce8a6796d2d8df7721863"
       },
       {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "sha256": "0018d5741583df069f83c13474b41c38904979f73e6680f48b9807ea4048bf0c"
+        "sha256": "c39e58031c852b579287a0ae94b9262433f5c7064ae59916b9539184286f5913"
       },
       {
         "path": "Controllers/RazerController/RazerDevices.h",
-        "sha256": "a2c2e08691ad3b49fddc379a1e1337bf6d8160988677cc6921f59a2320f2b2c7"
+        "sha256": "2027cf2ebc59d165e7bf8de566c2ae059aea65a1b04983e4f7e7eca4a02a294f"
       }
     ]
   },
@@ -551,13 +551,13 @@
         "application_slot_count": 13,
         "zones": [
           {
-            "name": "Scroll Wheel",
+            "name": "Logo",
             "type": "ZONE_TYPE_SINGLE",
             "rows": 1,
             "columns": 1
           },
           {
-            "name": "Logo",
+            "name": "Scroll Wheel",
             "type": "ZONE_TYPE_SINGLE",
             "rows": 1,
             "columns": 1
@@ -598,13 +598,13 @@
         "application_slot_count": 13,
         "zones": [
           {
-            "name": "Scroll Wheel",
+            "name": "Logo",
             "type": "ZONE_TYPE_SINGLE",
             "rows": 1,
             "columns": 1
           },
           {
-            "name": "Logo",
+            "name": "Scroll Wheel",
             "type": "ZONE_TYPE_SINGLE",
             "rows": 1,
             "columns": 1
@@ -3620,7 +3620,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 8893
+        "line": 8968
       }
     },
     {
@@ -3755,7 +3755,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 7427
+        "line": 7502
       }
     },
     {
@@ -3932,6 +3932,100 @@
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
         "line": 7205
+      }
+    },
+    {
+      "record_id": "openrgb:naga_pro_v3_wired_device",
+      "source_device_key": "naga_pro_v3_wired_device",
+      "model_name": "Razer Naga Pro V3 (Wired)",
+      "device_kind": "mouse",
+      "source_route": "direct-usb",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 231
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 3,
+        "application_slot_count": 3,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Numpad",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 7260
+      }
+    },
+    {
+      "record_id": "openrgb:naga_pro_v3_wireless_device",
+      "source_device_key": "naga_pro_v3_wireless_device",
+      "model_name": "Razer Naga Pro V3 (Wireless)",
+      "device_kind": "mouse",
+      "source_route": "vendor-wireless-receiver",
+      "usb_identity": {
+        "vendor_id": 5426,
+        "product_id": 232
+      },
+      "lighting_topology": {
+        "matrix_type": "RAZER_MATRIX_TYPE_EXTENDED",
+        "rows": 1,
+        "columns": 3,
+        "application_slot_count": 3,
+        "zones": [
+          {
+            "name": "Logo",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Scroll Wheel",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          },
+          {
+            "name": "Numpad",
+            "type": "ZONE_TYPE_SINGLE",
+            "rows": 1,
+            "columns": 1
+          }
+        ],
+        "layout_key": null
+      },
+      "settings_methods": [],
+      "facts": {
+        "detector_registered": true,
+        "transaction_id": 31
+      },
+      "source_location": {
+        "path": "Controllers/RazerController/RazerDevices.cpp",
+        "line": 7280
       }
     },
     {
@@ -4352,7 +4446,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 7240
+        "line": 7315
       }
     },
     {
@@ -4387,7 +4481,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 7380
+        "line": 7455
       }
     },
     {
@@ -4422,7 +4516,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 7275
+        "line": 7350
       }
     },
     {
@@ -4457,7 +4551,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 7310
+        "line": 7385
       }
     },
     {
@@ -4492,7 +4586,7 @@
       },
       "source_location": {
         "path": "Controllers/RazerController/RazerDevices.cpp",
-        "line": 7345
+        "line": 7420
       }
     }
   ]

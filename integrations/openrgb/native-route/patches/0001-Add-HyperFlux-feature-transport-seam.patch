@@ -1,5 +1,5 @@
 diff --git a/Controllers/RazerController/RazerController/RazerController.cpp b/Controllers/RazerController/RazerController/RazerController.cpp
-index e534ca9..3f2ed58 100644
+index 86fe9e4f..793a1b9c 100644
 --- a/Controllers/RazerController/RazerController/RazerController.cpp
 +++ b/Controllers/RazerController/RazerController/RazerController.cpp
 @@ -10,6 +10,7 @@
@@ -26,7 +26,7 @@ index e534ca9..3f2ed58 100644
      dev               = dev_handle;
      dev_argb          = dev_argb_handle;
      dev_pid           = pid;
-@@ -204,7 +211,10 @@ RazerController::~RazerController()
+@@ -214,7 +221,10 @@ RazerController::~RazerController()
          keepalive_thread->join();
      }
  
@@ -38,7 +38,7 @@ index e534ca9..3f2ed58 100644
      delete guard_manager_ptr;
  }
  
-@@ -1111,7 +1121,7 @@ std::string RazerController::razer_get_serial()
+@@ -1400,7 +1410,7 @@ unsigned int RazerController::GetPairedDevicePIDs(unsigned short* pids, unsigned
  
  void RazerController::razer_get_keyboard_info(unsigned char* layout, unsigned char* variant)
  {
@@ -47,7 +47,7 @@ index e534ca9..3f2ed58 100644
      struct razer_report response_report     = razer_create_response();
  
      std::this_thread::sleep_for(1ms);
-@@ -1889,6 +1899,10 @@ void RazerController::razer_set_mode_wave(unsigned char direction)
+@@ -2178,6 +2188,10 @@ void RazerController::razer_set_mode_wave(unsigned char direction)
  
  int RazerController::razer_usb_receive(razer_report* report)
  {
@@ -58,17 +58,18 @@ index e534ca9..3f2ed58 100644
      return hid_get_feature_report(dev, (unsigned char*)report, sizeof(*report));
  }
  
-@@ -1897,11 +1911,19 @@ int RazerController::razer_usb_send(razer_report* report)
-     report->crc = razer_calculate_crc(report);
+@@ -2187,6 +2201,10 @@ int RazerController::razer_usb_send(razer_report* report)
  
+     std::lock_guard<std::mutex> send_lock(send_mutex);
      DeviceGuardLock _ = guard_manager_ptr->AwaitExclusiveAccess();
 +    if(feature_transport != nullptr)
 +    {
 +        return feature_transport->SendFeatureReport((unsigned char*)report, sizeof(*report));
 +    }
-     return hid_send_feature_report(dev, (unsigned char*)report, sizeof(*report));
- }
+     int ret = hid_send_feature_report(dev, (unsigned char*)report, sizeof(*report));
  
+     /*-----------------------------------------------------------------*\
+@@ -2224,5 +2242,9 @@ int RazerController::razer_usb_send(razer_report* report)
  int RazerController::razer_usb_send_argb(razer_argb_report* report)
  {
      DeviceGuardLock _ = guard_manager_ptr->AwaitExclusiveAccess();
@@ -79,7 +80,7 @@ index e534ca9..3f2ed58 100644
      return hid_send_feature_report(dev_argb, (unsigned char*)report, sizeof(*report));
  }
 diff --git a/Controllers/RazerController/RazerController/RazerController.h b/Controllers/RazerController/RazerController/RazerController.h
-index 759f997..baef28f 100644
+index 65379bce..db59489f 100644
 --- a/Controllers/RazerController/RazerController/RazerController.h
 +++ b/Controllers/RazerController/RazerController/RazerController.h
 @@ -13,6 +13,7 @@
@@ -87,10 +88,10 @@ index 759f997..baef28f 100644
  #include <atomic>
  #include <chrono>
 +#include <memory>
+ #include <mutex>
  #include <string>
  #include <thread>
- #include <hidapi.h>
-@@ -218,10 +219,25 @@ PACK(struct razer_argb_report
+@@ -262,10 +263,25 @@ PACK(struct razer_argb_report
      unsigned char color_data[315];
  });
  
@@ -117,7 +118,7 @@ index 759f997..baef28f 100644
      ~RazerController();
  
      unsigned int            GetDeviceIndex();
-@@ -257,6 +273,7 @@ private:
+@@ -312,6 +328,7 @@ private:
      hid_device*             dev;
      hid_device*             dev_argb;
      unsigned short          dev_pid;
@@ -126,7 +127,7 @@ index 759f997..baef28f 100644
      /*---------------------------------------------------------*\
      | Device-specific protocol settings                         |
 diff --git a/RGBController/RGBController.cpp b/RGBController/RGBController.cpp
-index 544eb3d..92b7f4e 100644
+index a97b894d..33ffcd02 100644
 --- a/RGBController/RGBController.cpp
 +++ b/RGBController/RGBController.cpp
 @@ -16,6 +16,16 @@
@@ -144,18 +145,18 @@ index 544eb3d..92b7f4e 100644
 +#endif
 +
  /*---------------------------------------------------------*\
- | Macros for copying data fields from set descriptor buffer |
- | while ensuring we don't access out of bounds              |
-@@ -91,6 +101,8 @@ RGBController::RGBController()
+ | Upper bound for WaitForDeviceUpdate(), in milliseconds    |
+ \*---------------------------------------------------------*/
+@@ -96,6 +106,8 @@ RGBController::RGBController()
      /*-----------------------------------------------------*\
      | Initialize device thread                              |
      \*-----------------------------------------------------*/
 +    CallFlag_UpdateLEDs = false;
 +    CallFlag_UpdateMode = false;
+     DeviceCallActive    = false;
      DeviceThreadRunning = true;
      DeviceCallThread    = new std::thread(&RGBController::DeviceCallThreadFunction, this);
- }
-@@ -1992,6 +2004,7 @@ void RGBController::Shutdown()
+@@ -2023,6 +2035,7 @@ void RGBController::WaitForDeviceUpdate()
  
  void RGBController::UpdateLEDs()
  {
@@ -163,7 +164,7 @@ index 544eb3d..92b7f4e 100644
      CallFlag_UpdateLEDs = true;
  
      SignalUpdate(RGBCONTROLLER_UPDATE_REASON_UPDATELEDS);
-@@ -2017,6 +2030,7 @@ void RGBController::UpdateSingleLED(int led)
+@@ -2052,6 +2065,7 @@ void RGBController::UpdateSingleLED(int led)
  
  void RGBController::UpdateMode()
  {
@@ -171,7 +172,7 @@ index 544eb3d..92b7f4e 100644
      CallFlag_UpdateMode = true;
  
      SignalUpdate(RGBCONTROLLER_UPDATE_REASON_UPDATEMODE);
-@@ -2042,13 +2056,11 @@ void RGBController::SaveMode()
+@@ -2081,9 +2095,6 @@ void RGBController::SaveMode()
  
  void RGBController::DeviceCallThreadFunction()
  {
@@ -180,15 +181,18 @@ index 544eb3d..92b7f4e 100644
 -
      while(DeviceThreadRunning.load() == true)
      {
-         if(CallFlag_UpdateMode.load() == true)
+         /*-------------------------------------------------*\
+@@ -2109,6 +2120,7 @@ void RGBController::DeviceCallThreadFunction()
+ 
+         if(update_mode == true)
          {
 +            HFX_TSAN_ACQUIRE(this);
              if(flags & CONTROLLER_FLAG_RESET_BEFORE_UPDATE)
              {
                  AccessMutex.lock_shared();
-@@ -2066,6 +2078,7 @@ void RGBController::DeviceCallThreadFunction()
+@@ -2130,6 +2142,7 @@ void RGBController::DeviceCallThreadFunction()
          }
-         if(CallFlag_UpdateLEDs.load() == true)
+         if(update_leds == true)
          {
 +            HFX_TSAN_ACQUIRE(this);
              if(flags & CONTROLLER_FLAG_RESET_BEFORE_UPDATE)

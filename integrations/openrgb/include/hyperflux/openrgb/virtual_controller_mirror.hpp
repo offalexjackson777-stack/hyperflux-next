@@ -29,9 +29,10 @@ struct VirtualControllerMirrorOptions
 ///
 /// LED and mode updates are forwarded from the host's update callback, which
 /// runs synchronously on the thread that requested the update. The host's
-/// device thread is not used: OpenRGB 1.0 keeps only CONTROLLER_FLAG_VIRTUAL
-/// from a virtual controller's setup flags, so that thread clears an update
-/// flag after its hook returns and drops a request made meanwhile. Zone-mode
+/// device thread is not used: OpenRGB 1.0 and 1.1 keep only
+/// CONTROLLER_FLAG_VIRTUAL from a virtual controller's setup flags, so that
+/// thread clears an update flag after its hook returns and drops a request
+/// made meanwhile. Zone-mode
 /// and save-mode updates already run synchronously through their hooks.
 ///
 /// Create and destroy mirrors on the Qt application thread. Registration and
@@ -88,9 +89,9 @@ private:
 /// never presented twice. Same threading contract as VirtualControllerMirror.
 ///
 /// After begin_unload(), removals retire host controllers instead of deleting
-/// them. OpenRGB 1.0 stops its GUI device-list updates before it unloads
-/// plugins on exit, so its device pages still reference those controllers
-/// and use them in their destructors after Unload has returned. Retired
+/// them. OpenRGB 1.0 and 1.1 stop their GUI device-list updates before they
+/// unload plugins on exit, so their device pages still reference those
+/// controllers and use them in their destructors after Unload has returned. Retired
 /// controllers stay allocated until a later set is created for the same
 /// plugin API. That only happens on a reload, and the GUI has dropped the
 /// pages synchronously during the unregistration that preceded it. On exit

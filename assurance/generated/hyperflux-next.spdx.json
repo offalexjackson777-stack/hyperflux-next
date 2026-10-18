@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "HyperFlux Next source dependency inventory",
-  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/a3af5bdd175a29aa5393c2ca6c19e8b08e3a1ccc70a17a41f50809cdb14ed13d",
+  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/beffa550a586e257b43d023a90d017787a77bf060a484cf31698e5704ca7cd60",
   "creationInfo": {
     "created": "2026-07-20T00:00:00Z",
     "creators": [
@@ -1128,15 +1128,15 @@
       "comment": "Pinned integration source commit 1ef8a91712906a89fd332a2ed62bbd105315d6d1."
     },
     {
-      "SPDXID": "SPDXRef-Upstream-openrgb-81bbe18a84c2e507006f19dd252e397e40a56bfe",
+      "SPDXID": "SPDXRef-Upstream-openrgb-8e16de27858cf2be6af54a33ce003df74cb9fd3e",
       "name": "OpenRGB",
-      "versionInfo": "1.0",
+      "versionInfo": "1.1",
       "downloadLocation": "https://github.com/CalcProgrammer1/OpenRGB.git",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "GPL-2.0-only",
       "copyrightText": "NOASSERTION",
-      "comment": "Pinned integration source commit 81bbe18a84c2e507006f19dd252e397e40a56bfe."
+      "comment": "Pinned integration source commit 8e16de27858cf2be6af54a33ce003df74cb9fd3e."
     },
     {
       "SPDXID": "SPDXRef-Upstream-polychromatic-716737bf444ab7e962f4d3b7a5188b2f07c0c4a1",
@@ -2189,7 +2189,7 @@
       "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-2.1.2"
     },
     {
-      "spdxElementId": "SPDXRef-Upstream-openrgb-81bbe18a84c2e507006f19dd252e397e40a56bfe",
+      "spdxElementId": "SPDXRef-Upstream-openrgb-8e16de27858cf2be6af54a33ce003df74cb9fd3e",
       "relationshipType": "BUILD_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-2.1.2"
     },

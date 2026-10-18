@@ -37,7 +37,7 @@ class OpenRgbNativeRouteTests(unittest.TestCase):
         worker = patch.index("void RGBController::DeviceCallThreadFunction()")
         self.assertIn("-    CallFlag_UpdateLEDs = false;", patch[worker:])
         self.assertIn("-    CallFlag_UpdateMode = false;", patch[worker:])
-        # OpenRGB 1.0 joins the worker in Shutdown(); the transform no longer
+        # OpenRGB 1.0 and 1.1 join the worker in Shutdown(); the transform no longer
         # carries a private stop hook.
         self.assertNotIn("StopDeviceCallThread", patch)
 

@@ -61,7 +61,7 @@ class DistributionPackageTests(unittest.TestCase):
         self.assertIn("install=hyperflux-next-full.install", recipe)
         self.assertIn(
             "'openrgb: Stock OpenRGB host for the HyperFlux plugin; "
-            "OpenRGB 1.0/plugin API 5 verified'",
+            "OpenRGB 1.0 and 1.1/plugin API 5 verified'",
             recipe,
         )
         self.assertIn("'qt6-base'", recipe)
