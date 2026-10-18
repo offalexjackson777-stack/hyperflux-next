@@ -427,7 +427,10 @@ class DistributionCatalogTests(unittest.TestCase):
 
     def test_published_maturity_follows_the_repository_site(self) -> None:
         def with_maturity(target_id, maturity):
+            # The other three stay CI-only, which is valid for either site state.
             candidate = copy.deepcopy(self.value)
+            for other in DISTRIBUTION_TARGET_IDS:
+                candidate["targets"][other]["maturity"] = "ci-only"
             candidate["targets"][target_id]["maturity"] = maturity
             return candidate
 

@@ -657,8 +657,9 @@ class PackageRepositorySiteTests(unittest.TestCase):
         self.assertIn("Dry run", text)
 
     def test_arch_guides_switch_to_pages_only_once_published(self) -> None:
-        self.assertEqual(ARCH, repositories.arch_policy_for_guides(ARCH, self.policy))
-        published = repositories.RepositorySitePolicy(**{**self.policy.__dict__, "state": "published"})
+        unpublished = replace(self.policy, state="unpublished")
+        self.assertEqual(ARCH, repositories.arch_policy_for_guides(ARCH, unpublished))
+        published = replace(self.policy, state="published")
         self.assertEqual(
             f"{self.policy.site_url}/arch",
             repositories.arch_policy_for_guides(ARCH, published).server_url,
