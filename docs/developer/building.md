@@ -151,6 +151,9 @@ What publishing does:
 
 - It commits the signed site as the only commit of `gh-pages` and force-pushes that
   branch, so the branch never keeps old packages.
+- That commit is authored by `publication_author` in `packaging/repository-site.json`
+  (the owner's GitHub noreply address) and is never signed, so publishing does not
+  depend on the machine's git identity or `commit.gpgsign` setting.
 - It uploads the Arch database, files, and their signatures to the `arch-repository`
   release with `--clobber`, and adds package files the release does not have yet. It
   refuses to replace a package file whose bytes differ from the one already there. The

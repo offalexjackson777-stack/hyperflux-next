@@ -7,5 +7,9 @@
   "repository_id": "hyperflux-next",
   "label": "HyperFlux Next",
   "public_key_asset": "hyperflux-next-repository-key.asc",
-  "apt_component": "main"
+  "apt_component": "main",
+  "publication_author": {
+    "name": "offalexjackson777-stack",
+    "email": "offalexjackson777-stack@users.noreply.github.com"
+  }
 }
