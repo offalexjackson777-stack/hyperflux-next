@@ -53,7 +53,7 @@ public:
             hyperflux::openrgb::EnqueueDisposition::Accepted);
     }
 
-    /// OpenRGB 1.0 applies mode changes on the controller's device thread.
+    /// OpenRGB 1.0 and 1.1 apply mode changes on the controller's device thread.
     [[nodiscard]] bool wait_for_stable(std::size_t count)
     {
         std::unique_lock lock(mutex);
@@ -163,7 +163,7 @@ int main()
         || controller->GetModeName(2) != "Static" || controller->GetZoneCount() != 3
         || controller->GetLEDCount() != 13
         || controller->GetActiveMode() != static_cast<int>(ControllerMode::Direct)
-        || controller->GetZoneName(0) != "Scroll Wheel" || controller->GetZoneName(1) != "Logo"
+        || controller->GetZoneName(0) != "Logo" || controller->GetZoneName(1) != "Scroll Wheel"
         || controller->GetZoneName(2) != "LED Strip")
     {
         return failure(__LINE__);

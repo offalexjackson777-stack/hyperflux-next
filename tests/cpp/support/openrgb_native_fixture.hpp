@@ -92,8 +92,8 @@ inline v5::ControllerView native_controller_view(DeviceKind kind,
         {
             text<UpstreamId>("openrgb"),
             text<UpstreamOwner>("OpenRGB"),
-            text<ComponentVersion>("1.0"),
-            text<SourceRevision>("81bbe18a84c2e507006f19dd252e397e40a56bfe"),
+            text<ComponentVersion>("1.1"),
+            text<SourceRevision>("8e16de27858cf2be6af54a33ce003df74cb9fd3e"),
             text<PresentationKey>(fixture.model_key),
             fixture.layout_key.has_value()
                 ? std::optional<PresentationKey>(text<PresentationKey>(*fixture.layout_key))

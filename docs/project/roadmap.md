@@ -30,8 +30,11 @@ later. Nothing under Next or Later is available yet.
   each battery shows under its own device name, and Doctor finds two more
   problems that hide OpenRazer devices or keep Ripple still.
 
-Install the current release from the signed HyperFlux Pacman repository, as
-shown in the [installation guide](../user/installation.md). See the
+Install the current release from the signed HyperFlux package repository.
+The [installation guide](../user/installation.md) covers Arch Linux, and there
+are guides for [Ubuntu](../user/install-ubuntu.md),
+[Debian](../user/install-debian.md), [Fedora](../user/install-fedora.md), and
+[openSUSE](../user/install-opensuse.md). See the
 [release status](release-status.md) for details.
 
 ## Next
@@ -46,10 +49,10 @@ shown in the [installation guide](../user/installation.md). See the
 
 ## Later
 
-- **Other distributions.** Ubuntu 26.10, Debian 14, Fedora 44 and openSUSE
-  Tumbleweed packages are already built and checked every week, but not
-  published yet. Each will be published only when it works on its own; a delay
-  on one does not hold back another.
+- **Real-hardware checks on other distributions.** The Ubuntu 26.10, Debian
+  14, Fedora 44, and openSUSE Tumbleweed packages are published. They are
+  built and tested automatically, but not yet confirmed on real hardware. Each
+  one is checked on its own; a delay on one does not hold back another.
 - **More reactive effects.** Reactive and Fire lighting for devices on the
   receiver, and Ripple on both keyboards when two receivers are connected
   ([#54](https://github.com/offalexjackson777-stack/hyperflux-next/issues/54)).

@@ -153,7 +153,7 @@ NativeController::NativeController(const ControllerModel& model,
 NativeController::~NativeController()
 {
     Shutdown();
-    // OpenRGB 1.0's Shutdown() returns with AccessMutex exclusively locked and
+    // Shutdown() in OpenRGB 1.0 and 1.1 returns with AccessMutex exclusively locked and
     // never releases it. Destroying an owned shared_mutex is undefined, and
     // ThreadSanitizer would keep the destroyed lock in this thread's held set,
     // reporting a false lock-order inversion with any lock taken afterwards.

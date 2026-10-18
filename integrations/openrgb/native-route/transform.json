@@ -4,27 +4,27 @@
   "upstream": {
     "id": "openrgb",
     "repository": "https://github.com/CalcProgrammer1/OpenRGB.git",
-    "commit": "81bbe18a84c2e507006f19dd252e397e40a56bfe"
+    "commit": "8e16de27858cf2be6af54a33ce003df74cb9fd3e"
   },
   "patch": {
     "path": "patches/0001-Add-HyperFlux-feature-transport-seam.patch",
-    "sha256": "828d55a5b083d0cfd5d8a591486194717fb171b37c23bf3b33ef4da62d45796b"
+    "sha256": "8beb6bc3e5368e66ed22e2640e121d2cc956a245f7d25664f0a7fbf48aedda45"
   },
   "files": [
     {
       "path": "Controllers/RazerController/RazerController/RazerController.cpp",
-      "source_sha256": "cf5cd98f56a750f9d7f26828bd935f674fea1627be52971f703ed893ad7fb1c6",
-      "transformed_sha256": "c5027dfee3cd63a68aebbcd70c9e6b49883f938691dacc1523cebe047954ca6c"
+      "source_sha256": "6eee0f197266d793d8a0fa640d1d82344706609e1bc3c74b301da8440bd4b132",
+      "transformed_sha256": "3dffc9943304b0debc59c9c0abe3ad2671ef288ea8f7760b68a05d268ea09b8a"
     },
     {
       "path": "Controllers/RazerController/RazerController/RazerController.h",
-      "source_sha256": "e05415d4982bb63bd475884d288a6f898c1486d85d38efa62318e2ac1f170c90",
-      "transformed_sha256": "0ecd93121abbdd41e346842a1afc12fc20d9598b2a2dba8ab8e3fe6ee3c70dd5"
+      "source_sha256": "625e1b12688447cebd9daa34de103b93c8b136e020988f4ed76e6b431a81615a",
+      "transformed_sha256": "f0866cdb978fbd64e67067fda9d254ec32faed24298ac0ea1b8cdf358d5855d7"
     },
     {
       "path": "RGBController/RGBController.cpp",
-      "source_sha256": "9434c7dde305f506ef1d1c55bc7749f4084c0c6d955789b3b95d2b199710e8a7",
-      "transformed_sha256": "ea63c1035ab2ecf57b66ef9d41315ddc41112873d61790860d3c6dd9d1d0bf6d"
+      "source_sha256": "eaebe16d6ebb1837ce4d8da96db8f92c58226484c49182fc2809bf9d8d218c91",
+      "transformed_sha256": "10f7062b4abb2c893f6c8d623a061e1eb82fe277410574daad78252564eef41c"
     }
   ]
 }

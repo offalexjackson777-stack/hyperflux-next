@@ -258,9 +258,9 @@ class PackageRepositorySiteTests(unittest.TestCase):
         ):
             return repositories.verify_site(ROOT, site)
 
-    def test_policy_is_unpublished_pages_site_on_gh_pages(self) -> None:
-        self.assertEqual("unpublished", self.policy.state)
-        self.assertFalse(self.policy.published)
+    def test_policy_is_published_pages_site_on_gh_pages(self) -> None:
+        self.assertEqual("published", self.policy.state)
+        self.assertTrue(self.policy.published)
         self.assertEqual("gh-pages", self.policy.publication_branch)
         self.assertTrue(self.policy.site_url.endswith(".github.io/hyperflux-next"))
         schema = json.loads((ROOT / "schemas/repository-site.schema.json").read_text())

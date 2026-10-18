@@ -115,8 +115,8 @@ int main()
        || mouse.GetLocation() != "HID: hyperflux-next/native/v1/route"
        || mouse.GetVersion() != "v3.7" || mouse.GetSerial() != "HFX-NATIVE-SERIAL-0001"
        || mouse.GetZoneCount() != 3 || mouse.GetLEDCount() != 13
-       || mouse.GetZoneName(0) != "Scroll Wheel" || mouse.GetZoneLEDsCount(0) != 1
-       || mouse.GetZoneName(1) != "Logo" || mouse.GetZoneLEDsCount(1) != 1
+       || mouse.GetZoneName(0) != "Logo" || mouse.GetZoneLEDsCount(0) != 1
+       || mouse.GetZoneName(1) != "Scroll Wheel" || mouse.GetZoneLEDsCount(1) != 1
        || mouse.GetZoneName(2) != "LED Strip" || mouse.GetZoneLEDsCount(2) != 11)
     {
         return 1;

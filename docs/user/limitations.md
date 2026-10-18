@@ -5,13 +5,17 @@ and what to do.
 
 ## Platform And Packages
 
-### Published For Arch Linux Only
+### Ubuntu, Debian, Fedora, And openSUSE Are Not Yet Confirmed On Hardware
 
-HyperFlux Next is published only for Arch Linux on x86_64. Packages for Ubuntu,
-Debian, Fedora, and openSUSE are built and tested every week, but they are not
-published yet, so there is nothing to install from yet. They carry both
-editions, Core and Full. The [roadmap](../project/roadmap.md) shows what comes
-next.
+HyperFlux Next is published for Arch Linux, Ubuntu 26.10, Debian 14, Fedora 44,
+and openSUSE Tumbleweed, on x86_64 only. The Ubuntu, Debian, Fedora, and
+openSUSE packages are built and tested automatically, but not yet confirmed on
+real hardware. They carry both editions, Core and Full.
+
+If something does not work on one of them, run `hyperfluxctl doctor` and
+[report it](../../SUPPORT.md) with the output. Debian 14 is still Debian's
+testing release, so Debian's own packages can change under you. The
+[roadmap](../project/roadmap.md) shows what comes next.
 
 ### No OpenRGB Plugin On Ubuntu, Fedora, And openSUSE
 

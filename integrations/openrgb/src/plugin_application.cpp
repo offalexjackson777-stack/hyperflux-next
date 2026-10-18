@@ -276,7 +276,7 @@ std::vector<InventoryReceiverModel> OpenRgbPluginApplication::inventory() const
 
 void OpenRgbPluginApplication::detection_completed() noexcept
 {
-    // Plugin controllers survive OpenRGB 1.0 rescans, so only the completed
+    // Plugin controllers survive OpenRGB 1.0 and 1.1 rescans, so only the completed
     // device list needs reconciling. Registration changes must run on the Qt
     // application thread: OpenRGB refreshes its device list there and blocks
     // any other registering thread until the refresh is done.

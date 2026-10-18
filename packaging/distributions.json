@@ -63,7 +63,7 @@
           "optional_dependencies": [
             {
               "package": "openrgb",
-              "purpose": "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified"
+              "purpose": "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0 and 1.1/plugin API 5 verified"
             },
             {
               "package": "openrazer-daemon",
@@ -95,7 +95,7 @@
     },
     "ubuntu": {
       "package_format": "deb",
-      "maturity": "ci-only",
+      "maturity": "published",
       "release": {
         "distribution": "Ubuntu",
         "version": "26.10",
@@ -171,7 +171,7 @@
     },
     "debian": {
       "package_format": "deb",
-      "maturity": "ci-only",
+      "maturity": "published",
       "release": {
         "distribution": "Debian",
         "version": "14",
@@ -227,7 +227,7 @@
           "optional_dependencies": [
             {
               "package": "openrgb",
-              "purpose": "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified"
+              "purpose": "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0 and 1.1/plugin API 5 verified"
             },
             {
               "package": "openrazer-daemon",
@@ -256,7 +256,7 @@
     },
     "fedora": {
       "package_format": "rpm",
-      "maturity": "ci-only",
+      "maturity": "published",
       "release": {
         "distribution": "Fedora",
         "version": "44",
@@ -329,7 +329,7 @@
     },
     "opensuse": {
       "package_format": "rpm",
-      "maturity": "ci-only",
+      "maturity": "published",
       "release": {
         "distribution": "openSUSE",
         "version": "Tumbleweed",

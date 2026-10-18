@@ -778,7 +778,7 @@ DISTRIBUTION_FULL_RELATIONS = {
     ),
 }
 OPENRGB_APPLICATION_PURPOSE = (
-    "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified"
+    "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0 and 1.1/plugin API 5 verified"
 )
 # Polychromatic is in no Ubuntu or Debian archive. OpenRazer's openSUSE Build
 # Service repository carries it for Fedora and openSUSE.

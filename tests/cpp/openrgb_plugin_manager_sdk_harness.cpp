@@ -114,7 +114,7 @@ void sdk_snapshot(unsigned short port)
         return;
     }
 
-    // OpenRGB 1.0 reports the client online only after every controller
+    // OpenRGB 1.0 and 1.1 report the client online only after every controller
     // announced by the server has been received.
     write_snapshot("sdk-snapshot", client.GetRGBControllers());
     client.StopClient();
@@ -245,7 +245,7 @@ int main(int argc, char** argv)
 
     QApplication application(argc, argv);
     auto* resources = ResourceManager::get();
-    // OpenRGB 1.0 serves only hardware controllers to SDK clients unless
+    // OpenRGB 1.0 and 1.1 serve only hardware controllers to SDK clients unless
     // "Serve All Controllers" is enabled; plugin controllers need it.
     auto* settings = resources->GetSettingsManager();
     auto server_settings = settings->GetSettings("Server");

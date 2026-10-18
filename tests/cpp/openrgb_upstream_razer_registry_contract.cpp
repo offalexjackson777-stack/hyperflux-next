@@ -223,7 +223,7 @@ public:
     }
 };
 
-// OpenRGB 1.0 offers no getter for a mode's protocol value; read the
+// OpenRGB 1.0 and 1.1 offer no getter for a mode's protocol value; read the
 // controller's mode table directly for contract inspection.
 struct ControllerState : RGBController
 {
