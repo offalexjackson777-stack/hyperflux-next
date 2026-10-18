@@ -25,6 +25,10 @@ later. Nothing under Next or Later is available yet.
   `hyperfluxctl qualification` command that writes a hardware report. A few
   charging states show as unknown; see
   [known limitations](../user/limitations.md#charging-status-is-partial).
+- **2.1.2:** Ripple in Polychromatic reacts to key presses through the
+  receiver, per-key lighting reaches the keyboard about three times faster,
+  each battery shows under its own device name, and Doctor finds two more
+  problems that hide OpenRazer devices or keep Ripple still.
 
 Install the current release from the signed HyperFlux Pacman repository, as
 shown in the [installation guide](../user/installation.md). See the

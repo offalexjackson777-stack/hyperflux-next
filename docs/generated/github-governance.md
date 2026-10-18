@@ -11,7 +11,7 @@ the signed Arch repository are published by the maintainer, not by a GitHub work
 
 - Repository: `offalexjackson777-stack/hyperflux-next` (`public`)
 - Remote state: `public-released`
-- Current release: [`v2.1.1`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.1)
+- Current release: [`v2.1.2`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.2)
 - Signed Arch repository: [`arch-repository`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/arch-repository)
 - Release, tag, and package publication: `maintainer-operated`
 - Release workflows: `none`
