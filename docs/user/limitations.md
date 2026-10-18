@@ -23,14 +23,15 @@ not a HyperFlux limit. It is what those distributions package:
 - Fedora 44 and openSUSE Tumbleweed package an OpenRGB 1.0 release candidate.
   It loads only plugins built for plugin interface 4.
 
-The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, and
-OpenRGB refuses a plugin built for anything else. Arch Linux and Debian 14
-package OpenRGB 1.0 final, so Full there includes the plugin. Debian builds its
-OpenRGB with Qt 5 rather than Qt 6, so Full on Debian carries a copy of the
-plugin built against Debian's own Qt 5. OpenRazer apps and Polychromatic still
-work with Full everywhere, and `hyperfluxctl doctor` reports Full as ready
-without the plugin. When a distribution packages OpenRGB 1.0 final, its Full
-packages can include the plugin too.
+The HyperFlux plugin is built for plugin interface 5, which OpenRGB 1.0 final
+and OpenRGB 1.1 use, and OpenRGB refuses a plugin built for anything else. Arch
+Linux packages OpenRGB 1.1 and Debian 14 packages OpenRGB 1.0 final, so Full
+there includes the plugin. Debian builds its OpenRGB with Qt 5 rather than
+Qt 6, so Full on Debian carries a copy of the plugin built against Debian's own
+Qt 5. OpenRazer apps and Polychromatic still work with Full everywhere, and
+`hyperfluxctl doctor` reports Full as ready without the plugin. When a
+distribution packages OpenRGB 1.0 final or newer, its Full packages can include
+the plugin too.
 
 ### Only The Newest Ubuntu And Debian
 

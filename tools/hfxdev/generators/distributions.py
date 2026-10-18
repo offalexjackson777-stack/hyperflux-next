@@ -54,7 +54,7 @@ SECURE_BOOT_ENROLLMENT = {
 DKMS_SERVICE_DISABLED = {"opensuse"}
 
 # Why Full on each release leaves out the OpenRGB plugin. The plugin needs
-# OpenRGB 1.0 final, plugin interface 5. Checked 18 October 2026.
+# plugin interface 5, used by OpenRGB 1.0 final and 1.1. Checked 18 October 2026.
 OPENRGB_PLUGIN_ABSENT = {
     "ubuntu": (
         "Ubuntu 26.10 packages a development snapshot of OpenRGB from before 1.0, "
@@ -242,11 +242,12 @@ def _openrgb_plugin_note(target: DistributionTarget, name: str) -> list[str]:
     return [
         f"**Full on {release.distribution} has no OpenRGB plugin.** That is a limit of "
         f"what {name} packages, not of HyperFlux: {OPENRGB_PLUGIN_ABSENT[target.id]} "
-        "The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, and "
-        "OpenRGB refuses a plugin built for another interface. Doctor reports Full as "
-        "ready without it. Arch Linux and Debian 14 package OpenRGB 1.0 final, so Full "
-        f"there includes the plugin. When {release.distribution} packages OpenRGB 1.0 "
-        "final too, its Full packages can include the plugin.",
+        "The HyperFlux plugin is built for plugin interface 5, which OpenRGB 1.0 final "
+        "and 1.1 use, and OpenRGB refuses a plugin built for another interface. Doctor "
+        "reports Full as ready without it. Arch Linux packages OpenRGB 1.1 and Debian 14 "
+        "packages OpenRGB 1.0 final, so Full there includes the plugin. When "
+        f"{release.distribution} packages OpenRGB 1.0 final or newer, its Full packages "
+        "can include the plugin.",
     ]
 
 

@@ -244,7 +244,7 @@ class InstallManifestTests(unittest.TestCase):
                 "$schema": "https://hyperflux.dev/schemas/distribution-component-descriptor-v1.json",
                 "schema": "hyperflux-distribution-component-v1",
                 "component_id": "full",
-                "product_version": "2.1.1",
+                "product_version": "2.1.2",
                 "capabilities": ["openrazer-native-route", "openrgb-plugin"],
             },
         )

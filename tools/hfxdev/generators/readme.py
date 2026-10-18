@@ -97,6 +97,22 @@ def release_status(
 > Read the [{repository.product_release_tag} release notes]({repository.product_release_url})."""
 
 
+def full_openrgb_exceptions(catalog: DistributionCatalog) -> str:
+    """Name the other distributions whose Full leaves out the OpenRGB plugin."""
+    names = [
+        target.release.distribution
+        for target_id, target in catalog.targets.items()
+        if target_id != "arch" and target.release is not None and not target.openrgb_plugin
+    ]
+    if not names:
+        return ""
+    if len(names) == 1:
+        listed = names[0]
+    else:
+        listed = ", ".join(names[:-1]) + ", and " + names[-1]
+    return f", although on {listed} without the OpenRGB connection"
+
+
 def recommended_package(catalog: DistributionCatalog) -> str:
     """The four steps every install guide shares, with Arch's commands named as Arch's."""
     arch = catalog.targets["arch"]
@@ -111,8 +127,15 @@ def recommended_package(catalog: DistributionCatalog) -> str:
         "\n   The other distributions get Core only for now, without the app\n"
         "   connections; their guides give the `apt`, `dnf`, or `zypper` command."
         if core_only
-        else "\n   The other distributions get Full too, without the OpenRGB connection;\n"
-        "   their guides give the `apt`, `dnf`, or `zypper` command."
+        else "\n"
+        + textwrap.fill(
+            "The other distributions get Full too"
+            + full_openrgb_exceptions(catalog)
+            + "; their guides give the `apt`, `dnf`, or `zypper` command.",
+            width=78,
+            initial_indent="   ",
+            subsequent_indent="   ",
+        )
     )
     return f"""Every guide has the same four steps. You need an x86_64 computer and the
 receiver, with your keyboard and mouse paired to it.

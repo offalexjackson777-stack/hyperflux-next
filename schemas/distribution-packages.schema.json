@@ -153,7 +153,7 @@
       }
     },
     "debTarget": {
-      "description": "A Debian-format target. It carries Core and Full; Full there has no OpenRGB plugin, because the release ships no OpenRGB that can load it.",
+      "description": "A Debian-format target. It carries Core and Full; Full there carries the OpenRGB plugin only when the release ships an OpenRGB that can load it.",
       "type": "object",
       "additionalProperties": false,
       "required": ["package_format", "maturity", "release", "architectures", "dependency_roles", "components"],

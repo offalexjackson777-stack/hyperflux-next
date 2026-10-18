@@ -9,8 +9,8 @@ transport. A Debian target reuses that partition, so both channels install
 the same files under the same package names. Only the metadata differs:
 dependency roles map through the Debian target in
 `packaging/distributions.json`, siblings pin `name (= version)`, and Full
-stands in for the release's own OpenRazer driver package. Full leaves out
-the OpenRGB plugin, which no OpenRGB in these releases can load.
+stands in for the release's own OpenRazer driver package. Full carries the
+OpenRGB plugin only where the release ships an OpenRGB that can load it.
 
 Each `.deb` carries the staged payload plus `/usr/share/doc/<package>/`
 copyright and changelog files, which Debian policy requires. Maintainer
