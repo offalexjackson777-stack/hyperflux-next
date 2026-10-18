@@ -755,7 +755,7 @@
     },
     {
       "evidence_level": "source-reviewed",
-      "id": "claim.presentation.openrgb-1.0-model-layouts",
+      "id": "claim.presentation.openrgb-1.1-model-layouts",
       "limitations": [
         "Upstream presentation cannot authorize a receiver command or qualify an unknown child."
       ],
@@ -1191,7 +1191,7 @@
         "claim.children.complete-static-black",
         "claim.children.software-effect-frame-continuity",
         "claim.children.static-off-brightness",
-        "claim.presentation.openrgb-1.0-model-layouts"
+        "claim.presentation.openrgb-1.1-model-layouts"
       ],
       "identity": {
         "authority": "paired-product-id",
@@ -1205,8 +1205,8 @@
         "layout_key": null,
         "model_key": "basilisk_v3_pro_35k_wireless_device",
         "owner": "OpenRGB",
-        "project_version": "1.0",
-        "source_commit": "81bbe18a84c2e507006f19dd252e397e40a56bfe",
+        "project_version": "1.1",
+        "source_commit": "8e16de27858cf2be6af54a33ce003df74cb9fd3e",
         "transport_variant": "wireless",
         "upstream_id": "openrgb"
       },
@@ -1459,7 +1459,7 @@
         "claim.children.complete-static-black",
         "claim.children.software-effect-frame-continuity",
         "claim.children.static-off-brightness",
-        "claim.presentation.openrgb-1.0-model-layouts"
+        "claim.presentation.openrgb-1.1-model-layouts"
       ],
       "identity": {
         "authority": "paired-product-id",
@@ -1473,8 +1473,8 @@
         "layout_key": "razer_deathstalker_v2_pro_tkl_layout",
         "model_key": "deathstalker_v2_pro_tkl_wireless_device",
         "owner": "OpenRGB",
-        "project_version": "1.0",
-        "source_commit": "81bbe18a84c2e507006f19dd252e397e40a56bfe",
+        "project_version": "1.1",
+        "source_commit": "8e16de27858cf2be6af54a33ce003df74cb9fd3e",
         "transport_variant": "wireless",
         "upstream_id": "openrgb"
       },
@@ -1902,5 +1902,5 @@
     }
   ],
   "schema": "hyperflux-compiled-profile-catalog-v1",
-  "source_sha256": "4712398520bf3677e988bd0372346fc3c1910b63832a756077c5950234daa448"
+  "source_sha256": "2e50cd2c408215947570935e520cab1a617d9b7421ba5adfc49456a67d1f6e68"
 }

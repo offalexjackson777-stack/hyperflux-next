@@ -99,8 +99,11 @@ One GitHub Pages site carries the package repositories for every distribution:
 sets `gpgcheck=1` and `repo_gpgcheck=1`), the public key
 `hyperflux-next-repository-key.asc`, and a plain front page. Every repository is signed by
 the same Arch repository key. `packaging/repository-site.json` names the site, and its
-`state` stays `unpublished` until the site is live. While it does, the user guides say the
-packages are not published yet and the Arch guide keeps the release address.
+`state` is `published`. That lets the Ubuntu, Debian, Fedora, and openSUSE targets in
+`packaging/distributions.json` carry `maturity: "published"`; the catalog refuses that
+maturity while the site state is `unpublished`. With the site published, the user guides
+give the Pages addresses, say the packages are not yet confirmed on real hardware, and the
+Arch guide points new installs at `/arch/` on the site.
 
 The work is split so the private key never reaches CI.
 
@@ -157,5 +160,9 @@ What publishing does:
 key inside the signing container, on a memory-only mount, and never writes the secret key
 out. It signs a site with it, installs `hyperflux-next-linux` with apt on Ubuntu and Debian,
 dnf on Fedora, zypper on openSUSE, and pacman on Arch, and checks that each client refuses
-the same site under a different key. Turning Pages on and changing `state` to `published`
-are repository-settings changes for the maintainer.
+the same site under a different key.
+
+`governance/github.json` wants Pages served from the `gh-pages` branch, path `/`, legacy
+build type, HTTPS enforced. After the first `./hfx repositories publish --execute` has
+created `gh-pages`, the maintainer runs `./hfx github apply --component pages` once to point
+Pages at it. `./hfx github verify` reports any later drift.

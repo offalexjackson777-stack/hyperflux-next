@@ -1159,7 +1159,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "bluetooth",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5279",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L5279",
           "usb_identity": {
             "product_id": 172,
             "vendor_id": null
@@ -1207,7 +1207,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L4948",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L4948",
           "usb_identity": {
             "product_id": 170,
             "vendor_id": 5426
@@ -1255,7 +1255,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5007",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L5007",
           "usb_identity": {
             "product_id": 171,
             "vendor_id": 5426
@@ -2493,13 +2493,13 @@
             "zones": [
               {
                 "columns": 1,
-                "name": "Scroll Wheel",
+                "name": "Logo",
                 "rows": 1,
                 "type": "ZONE_TYPE_SINGLE"
               },
               {
                 "columns": 1,
-                "name": "Logo",
+                "name": "Scroll Wheel",
                 "rows": 1,
                 "type": "ZONE_TYPE_SINGLE"
               },
@@ -2520,7 +2520,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5065",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L5065",
           "usb_identity": {
             "product_id": 204,
             "vendor_id": 5426
@@ -2541,13 +2541,13 @@
             "zones": [
               {
                 "columns": 1,
-                "name": "Scroll Wheel",
+                "name": "Logo",
                 "rows": 1,
                 "type": "ZONE_TYPE_SINGLE"
               },
               {
                 "columns": 1,
-                "name": "Logo",
+                "name": "Scroll Wheel",
                 "rows": 1,
                 "type": "ZONE_TYPE_SINGLE"
               },
@@ -2568,7 +2568,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5124",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L5124",
           "usb_identity": {
             "product_id": 205,
             "vendor_id": 5426
@@ -3540,7 +3540,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "bluetooth",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L1578",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L1578",
           "usb_identity": {
             "product_id": 603,
             "vendor_id": null
@@ -3576,7 +3576,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L1543",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L1543",
           "usb_identity": {
             "product_id": 602,
             "vendor_id": 5426
@@ -3612,7 +3612,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L1613",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L1613",
           "usb_identity": {
             "product_id": 604,
             "vendor_id": 5426
@@ -5092,7 +5092,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2098",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L2098",
           "usb_identity": {
             "product_id": 724,
             "vendor_id": 5426
@@ -5128,7 +5128,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2133",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L2133",
           "usb_identity": {
             "product_id": 722,
             "vendor_id": 5426
@@ -7312,7 +7312,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2028",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L2028",
           "usb_identity": {
             "product_id": 727,
             "vendor_id": 5426
@@ -7348,7 +7348,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2063",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L2063",
           "usb_identity": {
             "product_id": 725,
             "vendor_id": 5426
@@ -8945,7 +8945,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5408",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L5408",
           "usb_identity": {
             "product_id": 175,
             "vendor_id": 5426
@@ -8993,7 +8993,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L5467",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L5467",
           "usb_identity": {
             "product_id": 176,
             "vendor_id": 5426
@@ -9893,7 +9893,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2750",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L2750",
           "usb_identity": {
             "product_id": 658,
             "vendor_id": 5426
@@ -9929,7 +9929,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2715",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L2715",
           "usb_identity": {
             "product_id": 656,
             "vendor_id": 5426
@@ -10876,7 +10876,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2660",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L2660",
           "usb_identity": {
             "product_id": 664,
             "vendor_id": 5426
@@ -10912,7 +10912,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L2680",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L2680",
           "usb_identity": {
             "product_id": 662,
             "vendor_id": 5426
@@ -12072,7 +12072,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "direct-usb",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L7185",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L7185",
           "usb_identity": {
             "product_id": 167,
             "vendor_id": 5426
@@ -12114,7 +12114,7 @@
             "path": "Controllers/RazerController/RazerDevices.cpp"
           },
           "source_route": "vendor-wireless-receiver",
-          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/81bbe18a84c2e507006f19dd252e397e40a56bfe/Controllers/RazerController/RazerDevices.cpp#L7205",
+          "source_url": "https://github.com/CalcProgrammer1/OpenRGB/blob/8e16de27858cf2be6af54a33ce003df74cb9fd3e/Controllers/RazerController/RazerDevices.cpp#L7205",
           "usb_identity": {
             "product_id": 168,
             "vendor_id": 5426
@@ -12626,7 +12626,7 @@
     }
   ],
   "schema": "hyperflux-compiled-device-knowledge-v1",
-  "source_sha256": "6f7c8c9adc64a01b1b7e0d674870124f0e582d0fff02e353c6b78f2831846c66",
+  "source_sha256": "0e5195ede523e7c5735db8b77f8c4aa884f5ad56b630272f982e6fbbd37d45bd",
   "upstreams": [
     {
       "commit": "1ef8a91712906a89fd332a2ed62bbd105315d6d1",
@@ -12652,27 +12652,27 @@
       "version": "3.12.4"
     },
     {
-      "commit": "81bbe18a84c2e507006f19dd252e397e40a56bfe",
+      "commit": "8e16de27858cf2be6af54a33ce003df74cb9fd3e",
       "extractor": "cpp-initializer-v1",
       "license_expression": "GPL-2.0-only",
-      "record_count": 113,
+      "record_count": 115,
       "repository": "https://github.com/CalcProgrammer1/OpenRGB.git",
       "source_files": [
         {
           "path": "Controllers/RazerController/RazerControllerDetect.cpp",
-          "sha256": "36085f7af923c5b074142b79084c6ed0acad3e7a783da1503aeeb336e82b71bd"
+          "sha256": "522c6a8ba79259761f1282e0b4fb9203890889a5a9fce8a6796d2d8df7721863"
         },
         {
           "path": "Controllers/RazerController/RazerDevices.cpp",
-          "sha256": "0018d5741583df069f83c13474b41c38904979f73e6680f48b9807ea4048bf0c"
+          "sha256": "c39e58031c852b579287a0ae94b9262433f5c7064ae59916b9539184286f5913"
         },
         {
           "path": "Controllers/RazerController/RazerDevices.h",
-          "sha256": "a2c2e08691ad3b49fddc379a1e1337bf6d8160988677cc6921f59a2320f2b2c7"
+          "sha256": "2027cf2ebc59d165e7bf8de566c2ae059aea65a1b04983e4f7e7eca4a02a294f"
         }
       ],
       "upstream_id": "openrgb",
-      "version": "1.0"
+      "version": "1.1"
     }
   ]
 }

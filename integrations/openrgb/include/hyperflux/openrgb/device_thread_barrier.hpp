@@ -12,7 +12,7 @@ class RGBControllerInterface;
 namespace hyperflux::openrgb::native
 {
 
-/// Confirms that an OpenRGB 1.0 controller's device thread is running and
+/// Confirms that an OpenRGB 1.0 or 1.1 controller's device thread is running and
 /// holds no barrier probe before anyone else can reach the controller.
 ///
 /// RGBController starts its device thread in its constructor, and the thread

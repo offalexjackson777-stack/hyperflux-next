@@ -30,7 +30,7 @@
       "id": "openrgb-source-catalog",
       "role": "pinned upstream OpenRGB source and plugin integration authority",
       "path": "integrations/catalog.json",
-      "sha256": "882915c90207796a0761374a8f0916cca1e865c2af95e27c2cf96248c9f1409f"
+      "sha256": "a50cefca09789740fb364ae827c534a7efc8fb1c1dfe83fbb825ba1fc73800fe"
     },
     {
       "id": "passive-charge-basilisk-v3-pro-35k-00cd-20261017",

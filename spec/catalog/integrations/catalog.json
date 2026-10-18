@@ -65,7 +65,7 @@
     }
   ],
   "schema": "hyperflux-integration-catalog-v1",
-  "source_sha256": "06e0be4badec64310049941434689a0246a0dffd56697bee1f0d311660774c80",
+  "source_sha256": "8833fa83ca84c66498d05864ba340917b3db9df3d87c3ebbd6f512938c1fd671",
   "upstreams": [
     {
       "api_contract": "org.razer 3.x metadata and D-Bus vocabulary",
@@ -85,7 +85,7 @@
     {
       "api_contract": "OpenRGB plugin API 5",
       "build_network_access": false,
-      "commit": "81bbe18a84c2e507006f19dd252e397e40a56bfe",
+      "commit": "8e16de27858cf2be6af54a33ce003df74cb9fd3e",
       "id": "openrgb",
       "license_expression": "GPL-2.0-only",
       "name": "OpenRGB",
@@ -95,7 +95,7 @@
         "model-layout-registry",
         "plugin-build-contract"
       ],
-      "version": "1.0"
+      "version": "1.1"
     },
     {
       "api_contract": "Polychromatic 0.9.7 stock OpenRazer backend contract",

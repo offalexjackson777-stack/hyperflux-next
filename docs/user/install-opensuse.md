@@ -32,9 +32,8 @@ they come from.
 
 <!-- HFX-GENERATED-BEGIN: opensuse-repository-setup -->
 > [!NOTE]
-> The openSUSE Tumbleweed packages are not published yet. These steps show how
-> installing will work once they are. Until then the repository address does
-> not answer, and the key download in step 1 stops with an error.
+> The openSUSE Tumbleweed packages are built and tested automatically, but
+> not yet confirmed on real hardware.
 
 You do steps 1 to 3 once. The key's fingerprint is
 `8BF8 A266 E756 BD1C 24C9 3091 8B3F 3850 0071 59E8`.

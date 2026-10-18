@@ -92,8 +92,8 @@ def release_status(
         return "\n".join(["> [!IMPORTANT]", *(f"> {line}" for line in lines)])
     version = repository.product_release_tag.removeprefix("v")
     return f"""> [!IMPORTANT]
-> **HyperFlux Next {version} is the current release.** It is available for Arch
-> Linux x86_64 from the signed HyperFlux package repository.
+> **HyperFlux Next {version} is the current release.** It is available for
+> x86_64 computers from the signed HyperFlux package repository.
 > Read the [{repository.product_release_tag} release notes]({repository.product_release_url})."""
 
 

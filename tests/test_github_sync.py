@@ -232,6 +232,16 @@ class GitHubSyncTests(unittest.TestCase):
         ):
             verify(ROOT, api=FakeGitHubApi(ruleset_drift=True))
 
+    def test_main_accepts_only_squash_merges_which_github_signs(self) -> None:
+        governance = load_github_governance(ROOT)
+        self.assertTrue(_repository_payload(governance)["allow_squash_merge"])
+        pull_request = next(
+            rule
+            for rule in _ruleset_payload(governance)["rules"]
+            if rule["type"] == "pull_request"
+        )
+        self.assertEqual(pull_request["parameters"]["allowed_merge_methods"], ["squash"])
+
 
 if __name__ == "__main__":
     unittest.main()

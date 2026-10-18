@@ -133,7 +133,7 @@
       "limitations": ["Intermediate brightness linearity and firmware effects are not qualified."]
     },
     {
-      "id": "claim.presentation.openrgb-1.0-model-layouts",
+      "id": "claim.presentation.openrgb-1.1-model-layouts",
       "summary": "Pinned OpenRGB metadata supplies exact model presentation and keyboard geometry without becoming identity or transport authority.",
       "evidence_level": "source-reviewed",
       "privacy": "public",

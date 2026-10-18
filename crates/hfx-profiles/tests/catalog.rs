@@ -177,7 +177,7 @@ fn runtime_catalog_is_typed_profile_local_and_canonical() {
         .as_ref()
         .expect("qualified child presentation exists");
     assert_eq!(presentation.upstream_id, "openrgb");
-    assert_eq!(presentation.project_version, "1.0");
+    assert_eq!(presentation.project_version, "1.1");
     assert_eq!(presentation.transport_variant, "wireless");
     assert_eq!(
         mouse

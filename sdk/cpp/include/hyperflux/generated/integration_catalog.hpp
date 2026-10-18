@@ -33,7 +33,7 @@ struct AdapterRecord
     std::string_view coexistence_policy;
 };
 
-inline constexpr std::string_view integration_source_sha256 = "06e0be4badec64310049941434689a0246a0dffd56697bee1f0d311660774c80";
+inline constexpr std::string_view integration_source_sha256 = "8833fa83ca84c66498d05864ba340917b3db9df3d87c3ebbd6f512938c1fd671";
 
 inline constexpr std::array<std::string_view, 3> upstream_uses_0 {{"daemon-client-api-contract", "driver-transform", "metadata-import"}};
 inline constexpr std::array<std::string_view, 3> upstream_uses_1 {{"effect-engine", "model-layout-registry", "plugin-build-contract"}};
@@ -47,7 +47,7 @@ inline constexpr std::array<std::string_view, 4> adapter_features_1 {{"availabil
 
 inline constexpr std::array<UpstreamRecord, 3> upstreams {{
     {"openrazer", "OpenRazer", "https://github.com/openrazer/openrazer.git", "3.12.4", "1ef8a91712906a89fd332a2ed62bbd105315d6d1", "GPL-2.0-or-later AND CC-BY-SA-4.0", "org.razer 3.x metadata and D-Bus vocabulary", upstream_uses_0},
-    {"openrgb", "OpenRGB", "https://github.com/CalcProgrammer1/OpenRGB.git", "1.0", "81bbe18a84c2e507006f19dd252e397e40a56bfe", "GPL-2.0-only", "OpenRGB plugin API 5", upstream_uses_1},
+    {"openrgb", "OpenRGB", "https://github.com/CalcProgrammer1/OpenRGB.git", "1.1", "8e16de27858cf2be6af54a33ce003df74cb9fd3e", "GPL-2.0-only", "OpenRGB plugin API 5", upstream_uses_1},
     {"polychromatic", "Polychromatic", "https://github.com/polychromatic/polychromatic.git", "0.9.7-7-g716737b", "716737bf444ab7e962f4d3b7a5188b2f07c0c4a1", "GPL-3.0-only", "Polychromatic 0.9.7 stock OpenRazer backend contract", upstream_uses_2},
 }};
 

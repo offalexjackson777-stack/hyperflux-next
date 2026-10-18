@@ -46,7 +46,7 @@ set -euo pipefail
 
 expected_primary='8BF8A266E756BD1C24C930918B3F3850007159E8'
 expected_signing='4C64CE4C855BC6844B4C1670C67DD9C42253ED27'
-key_url='https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository/hyperflux-next-arch-repository-key.asc'
+key_url='https://offalexjackson777-stack.github.io/hyperflux-next/arch/hyperflux-next-arch-repository-key.asc'
 key_dir="$(mktemp -d)"
 trap 'rm -rf "$key_dir"' EXIT
 key_file="$key_dir/hyperflux-next-arch-repository-key.asc"
@@ -87,7 +87,7 @@ sudo install -d -m 0755 /etc/pacman.d
 sudo install -m 0644 /dev/stdin "$include_path" <<'EOF'
 [hyperflux-next]
 SigLevel = Required DatabaseRequired TrustedOnly
-Server = https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository
+Server = https://offalexjackson777-stack.github.io/hyperflux-next/arch
 EOF
 if [[ "$include_count" -eq 0 ]]; then
   printf '\n%s\n' "$include_line" | sudo tee -a /etc/pacman.conf >/dev/null
@@ -109,7 +109,7 @@ the internet.
 
    ```bash
    curl --proto '=https' --tlsv1.2 --fail --location --remote-name -- \
-     https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository/hyperflux-next-arch-repository-key.asc
+     https://offalexjackson777-stack.github.io/hyperflux-next/arch/hyperflux-next-arch-repository-key.asc
    ```
 
 2. Show its fingerprints:
@@ -137,7 +137,7 @@ the internet.
    ```ini
    [hyperflux-next]
    SigLevel = Required DatabaseRequired TrustedOnly
-   Server = https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository
+   Server = https://offalexjackson777-stack.github.io/hyperflux-next/arch
    ```
 
 </details>

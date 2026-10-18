@@ -26,7 +26,7 @@ pub struct AdapterRecord {
 }
 
 pub const INTEGRATION_SOURCE_SHA256: &str =
-    "06e0be4badec64310049941434689a0246a0dffd56697bee1f0d311660774c80";
+    "8833fa83ca84c66498d05864ba340917b3db9df3d87c3ebbd6f512938c1fd671";
 
 pub const UPSTREAMS: &[UpstreamRecord] = &[
     UpstreamRecord {
@@ -47,8 +47,8 @@ pub const UPSTREAMS: &[UpstreamRecord] = &[
         id: "openrgb",
         name: "OpenRGB",
         repository: "https://github.com/CalcProgrammer1/OpenRGB.git",
-        version: "1.0",
-        commit: "81bbe18a84c2e507006f19dd252e397e40a56bfe",
+        version: "1.1",
+        commit: "8e16de27858cf2be6af54a33ce003df74cb9fd3e",
         license_expression: "GPL-2.0-only",
         api_contract: "OpenRGB plugin API 5",
         uses: &[
