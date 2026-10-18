@@ -229,7 +229,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
         self.assertNotIn("SigLevel = Never", installation_guide)
         self.assertNotIn("releases/latest/download", installation_guide)
         self.assertNotIn("./hyperflux-next.conf", installation_guide)
-        self.assertIn("releases/download/arch-repository", installation_guide)
+        self.assertIn(repository.server_url, installation_guide)
         self.assertIn("SHA256SUMS-packages", installation_guide)
         installation = (ROOT / "docs/generated/installation.md").read_text(
             encoding="utf-8"
