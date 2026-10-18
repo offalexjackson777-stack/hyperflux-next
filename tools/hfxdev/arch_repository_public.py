@@ -38,12 +38,14 @@ def _run(
     *,
     label: str,
     timeout_seconds: int = 180,
+    input_text: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     try:
         result = subprocess.run(
             command,
             check=False,
             text=True,
+            input=input_text,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             timeout=timeout_seconds,
@@ -61,7 +63,7 @@ def _run(
 def _require_tools() -> None:
     missing = [
         command
-        for command in ("curl", "fakeroot", "gpg", "pacman", "pacman-key")
+        for command in ("curl", "fakeroot", "gpg", "pacman")
         if shutil.which(command) is None
     ]
     if missing:
@@ -274,29 +276,18 @@ def verify_public_arch_repository(root: Path, output: Path) -> Path:
             ),
             encoding="utf-8",
         )
+        # pacman-key insists on root even for a throwaway keyring, so the
+        # keyring is built with plain gpg: import the exact public key, then
+        # trust it directly, which makes its signatures valid to Pacman.
+        keyring = ["gpg", "--batch", "--no-tty", "--homedir", str(pacman / "gnupg")]
         _run(
-            ["pacman-key", "--gpgdir", str(pacman / "gnupg"), "--init"],
-            label="initialize isolated Pacman keyring",
-        )
-        _run(
-            [
-                "pacman-key",
-                "--gpgdir",
-                str(pacman / "gnupg"),
-                "--add",
-                str(repository / policy.public_key_asset),
-            ],
+            [*keyring, "--import", str(repository / policy.public_key_asset)],
             label="import exact repository public key",
         )
         _run(
-            [
-                "pacman-key",
-                "--gpgdir",
-                str(pacman / "gnupg"),
-                "--lsign-key",
-                policy.primary_fingerprint,
-            ],
-            label="locally trust exact repository public key",
+            [*keyring, "--import-ownertrust"],
+            label="trust exact repository public key",
+            input_text=f"{policy.primary_fingerprint}:6:\n",
         )
         key_listing = _run(
             [

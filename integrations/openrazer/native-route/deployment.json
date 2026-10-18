@@ -22,6 +22,18 @@
     "mount_helper_path": "/usr/lib/udev/razer_mount",
     "sysusers_path": "/usr/lib/sysusers.d/openrazer.conf"
   },
+  "key_events": {
+    "udev_rules_path": "/usr/lib/udev/rules.d/70-hyperflux-next-openrazer-keys.rules",
+    "access": "active-seat-user",
+    "links": [
+      {
+        "profile_id": "child.razer.deathstalker-v2-pro-tkl.0296",
+        "receiver_profile_id": "receiver.razer.hyperflux-v2.1532-00cf",
+        "receiver_usb_interface": 1,
+        "link_name": "hyperflux-next-DSV2Pro_TKL_000000000000-if01-event-mouse"
+      }
+    ]
+  },
   "compatibility": {
     "verified_upstream_version": "3.12.4",
     "daemon_executable_path": "/usr/bin/openrazer-daemon",

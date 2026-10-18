@@ -48,6 +48,55 @@ Polychromatic does not notice by itself when the keyboard comes back.
    `Receivers:` line shows at least 1 and that the last line says
    `Next: no action required`.
 
+### Polychromatic Shows No Devices At All
+
+Doctor reports this as `HFX-INTEGRATION-008`: a broken link in
+`/dev/input/by-id` makes OpenRazer stop before it adds any device. Doctor
+prints the exact link.
+
+1. Remove the link Doctor names, for example:
+
+   ```sh
+   sudo rm /dev/input/by-id/NAME-FROM-DOCTOR
+   ```
+
+2. Restart OpenRazer:
+
+   ```sh
+   systemctl --user restart openrazer-daemon
+   ```
+
+3. Press F5 in Polychromatic, then run `hyperfluxctl doctor` again.
+
+HyperFlux never removes or changes the link itself.
+
+## Ripple Stays Still
+
+If Ripple stopped right after you changed the brightness, choose another
+effect and then Ripple again. OpenRazer stops Ripple on every brightness
+change; see
+[Ripple and other effects that react to keys](limitations.md#ripple-and-other-effects-that-react-to-keys).
+
+Otherwise, run `hyperfluxctl doctor`. If it reports `HFX-INTEGRATION-007`,
+OpenRazer cannot see the keyboard's key presses, so Ripple and other effects
+that react to keys stay still. Other effects and colors still work.
+
+1. Restart the computer with the receiver connected:
+
+   ```sh
+   sudo reboot
+   ```
+
+2. Run `hyperfluxctl doctor` again.
+3. If Doctor still reports it, reinstall the Full package, then restart again:
+
+   ```sh
+   sudo pacman -S hyperflux-next-full
+   ```
+
+With two receivers connected, only one keyboard reacts to key presses. See
+[Ripple and other effects that react to keys](limitations.md#ripple-and-other-effects-that-react-to-keys).
+
 ## The Newly Installed Driver Is Not Active Yet
 
 Doctor reports this as `HFX-KERNEL-001`, usually after an update. Reboot normally

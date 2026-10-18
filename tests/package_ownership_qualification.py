@@ -46,6 +46,7 @@ FULL_REQUIRED_FILES = {
     "usr/lib/systemd/system/hyperflux-next-openrazer-relay.service",
     "usr/lib/sysusers.d/openrazer.conf",
     "usr/lib/udev/razer_mount",
+    "usr/lib/udev/rules.d/70-hyperflux-next-openrazer-keys.rules",
     "usr/lib/udev/rules.d/99-razer.rules",
     "usr/share/hyperflux-next/components/full.json",
     "usr/share/licenses/hyperflux-next-full/LICENSE",
@@ -184,7 +185,7 @@ def assert_no_application_relations(record: dict[str, Any]) -> None:
 
 
 def assert_component_contract(linux: dict[str, Any], full: dict[str, Any]) -> None:
-    if linux["name"] != "hyperflux-next-linux" or linux["version"] != "2.1.1-1":
+    if linux["name"] != "hyperflux-next-linux" or linux["version"] != "2.1.2-1":
         raise RuntimeError("core component identity differs from the release contract")
     if full["name"] != "hyperflux-next-full" or full["version"] != linux["version"]:
         raise RuntimeError("full component identity differs from the release contract")

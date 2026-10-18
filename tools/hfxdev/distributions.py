@@ -17,15 +17,41 @@ TARGET_IDS = ("arch", "ubuntu", "debian", "fedora", "opensuse")
 DEBIAN_FORMAT_TARGET_IDS = ("ubuntu", "debian")
 RPM_FORMAT_TARGET_IDS = ("fedora", "opensuse")
 COMPONENT_IDS = ("linux", "full")
-# Arch carries both editions. Debian- and RPM-format targets carry Core only;
-# Full and its OpenRazer/OpenRGB integrations stay Arch-only.
+# Every target carries both editions.
 TARGET_COMPONENT_IDS = {
     "arch": COMPONENT_IDS,
-    "ubuntu": ("linux",),
-    "debian": ("linux",),
-    "fedora": ("linux",),
-    "opensuse": ("linux",),
+    "ubuntu": COMPONENT_IDS,
+    "debian": COMPONENT_IDS,
+    "fedora": COMPONENT_IDS,
+    "opensuse": COMPONENT_IDS,
 }
+# Full carries the OpenRGB plugin only where the release ships an OpenRGB that
+# can load it: OpenRGB 1.0 final or newer, plugin API 5. Checked 18 October
+# 2026: Arch ships 1.1 built with Qt 6 and Debian 14 ships 1.0 with Qt 5.15; Ubuntu 26.10 ships a
+# 1.0 development snapshot with plugin API 4, and Fedora 44 and openSUSE
+# Tumbleweed ship a 1.0 release candidate with plugin API 4. Full there is the
+# OpenRazer route alone.
+OPENRGB_PLUGIN_TARGET_IDS = ("arch", "debian")
+# The Qt major version each plugin target's OpenRGB is built with. The plugin
+# must use the same one, so a target other than Arch builds the plugin inside
+# its own release against the release's Qt.
+OPENRGB_PLUGIN_QT_MAJOR = {"arch": 6, "debian": 5}
+# The Arch packages only the OpenRGB plugin needs. A target without the plugin
+# leaves them out.
+OPENRGB_PLUGIN_ARCH_DEPENDENCIES = ("qt6-base", "hidapi", "libstdc++")
+# The release packages that hold the libraries the plugin links on each
+# plugin target other than Arch, read from the plugin built there.
+OPENRGB_PLUGIN_RELEASE_DEPENDENCIES = {
+    "debian": (
+        "libqt5core5t64",
+        "libqt5gui5t64",
+        "libqt5widgets5t64",
+        "libhidapi-hidraw0",
+        "libstdc++6",
+    ),
+}
+# The split build and payload that make up the OpenRGB plugin.
+OPENRGB_PLUGIN_BUILD = "openrgb-native"
 TARGET_PACKAGE_FORMATS = {
     "arch": "pacman",
     "ubuntu": "deb",
@@ -123,6 +149,33 @@ class DistributionTarget:
     @property
     def published(self) -> bool:
         return self.maturity == "published"
+
+    @property
+    def openrgb_plugin(self) -> bool:
+        """Whether this target's Full package carries the OpenRGB plugin."""
+
+        return self.id in OPENRGB_PLUGIN_TARGET_IDS
+
+    @property
+    def openrgb_plugin_release_build(self) -> bool:
+        """Whether the plugin is built inside this target's release.
+
+        Arch Full stages the plugin from the shared build. Any other plugin
+        target builds it against its own release's Qt.
+        """
+
+        return self.openrgb_plugin and self.id != "arch"
+
+    @property
+    def openrgb_qt_major(self) -> int:
+        """The Qt major version the plugin is built against on this target."""
+
+        try:
+            return OPENRGB_PLUGIN_QT_MAJOR[self.id]
+        except KeyError as error:
+            raise ModelError(
+                f"distribution {self.id}: Full carries no OpenRGB plugin"
+            ) from error
 
     def architecture_for(self, build_target: str) -> str:
         try:
@@ -561,14 +614,12 @@ def _check_arch_contract(target: DistributionTarget, sibling_version: str) -> No
         target.dependency_roles["service-manager"],
         target.dependency_roles["device-manager"],
         f"hyperflux-next-linux={sibling_version}",
-        "qt6-base",
-        "hidapi",
-        "libstdc++",
+        *OPENRGB_PLUGIN_ARCH_DEPENDENCIES,
     }
     if set(full.dependencies) != expected_full:
         raise ModelError("full-package dependencies differ from the adapter contract")
     expected_optional = {
-        "openrgb": "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified",
+        "openrgb": OPENRGB_APPLICATION_PURPOSE,
         "openrazer-daemon": "Stock OpenRazer service for compatible application access",
         "python-openrazer": "Official Python OpenRazer client API",
         "polychromatic": "Stock graphical OpenRazer frontend",
@@ -580,8 +631,8 @@ def _check_arch_contract(target: DistributionTarget, sibling_version: str) -> No
 # Each Debian-format target is held to one exact release. Both use the same
 # package names for their dependency roles.
 DEBIAN_FORMAT_RELEASES = {
-    "ubuntu": ("Ubuntu", "24.04", "noble"),
-    "debian": ("Debian", "13", "trixie"),
+    "ubuntu": ("Ubuntu", "26.10", "stonking"),
+    "debian": ("Debian", "14", "forky"),
 }
 DEBIAN_FORMAT_ROLES = {
     "dkms": "dkms",
@@ -591,7 +642,28 @@ DEBIAN_FORMAT_ROLES = {
 }
 
 
-def _check_debian_format_contract(target: DistributionTarget, arch: DistributionTarget) -> None:
+def repository_site_published(root: Path) -> bool:
+    """Whether the signed repository site that carries these packages is live."""
+
+    # The site policy names the distribution targets, so it is read lazily.
+    from .package_repositories import load_repository_site_policy
+
+    return load_repository_site_policy(root).published
+
+
+def _check_publication(target: DistributionTarget, name: str, site_published: bool) -> None:
+    """A release is published only through the live signed repository site."""
+
+    if target.published and not site_published:
+        raise ModelError(
+            f"{name} packages cannot be published while the repository site is unpublished; "
+            "set packaging/repository-site.json state to published first"
+        )
+
+
+def _check_debian_format_contract(
+    target: DistributionTarget, arch: DistributionTarget, *, site_published: bool
+) -> None:
     """Hold a Debian-format Core package to the Arch Core product contract."""
 
     name, version, codename = DEBIAN_FORMAT_RELEASES[target.id]
@@ -602,14 +674,14 @@ def _check_debian_format_contract(target: DistributionTarget, arch: Distribution
         codename,
     ):
         raise ModelError(f"{name} target must name exactly {name} {version} {codename}")
-    if target.maturity != "ci-only":
-        raise ModelError(f"{name} packages are CI-built only until a publication channel exists")
+    _check_publication(target, name, site_published)
     if target.architectures != {"x86_64-unknown-linux-gnu": "amd64"}:
         raise ModelError(f"{name} target is amd64 only")
     roles = {key: value for key, value in target.dependency_roles.items() if key != "c-runtime"}
     if roles != DEBIAN_FORMAT_ROLES:
         raise ModelError(f"{name} dependency roles differ from the {codename} package names")
     _check_core_contract(target, arch, name, "libc6")
+    _check_full_contract(target, arch, name)
 
 
 def _check_core_contract(
@@ -618,7 +690,7 @@ def _check_core_contract(
     name: str,
     c_runtime: str,
 ) -> None:
-    """Hold a Core-only target's C runtime and Core package to the Arch Core contract."""
+    """Hold a target's C runtime and Core package to the Arch Core contract."""
 
     release = target.release
     if release is None:
@@ -628,6 +700,12 @@ def _check_core_contract(
         raise ModelError(f"{name} C runtime role must name {c_runtime}")
     if version_key(floor) > version_key(release.c_runtime_version):
         raise ModelError(f"{name} C runtime floor exceeds the release C runtime")
+    # A plugin built inside the release links against that release's glibc,
+    # so the packages declare that glibc rather than the portable floor.
+    if target.openrgb_plugin_release_build and floor != release.c_runtime_version:
+        raise ModelError(
+            f"{name} builds the OpenRGB plugin itself and must declare its release C runtime"
+        )
     linux = target.component("linux")
     arch_linux = arch.component("linux")
     if (linux.package_name, linux.description) != (
@@ -647,6 +725,115 @@ def _check_core_contract(
         target.dependency_roles.values()
     ):
         raise ModelError(f"{name} Core may depend only on its mapped dependency roles")
+
+
+# Full on a Debian- or RPM-format target replaces the release's OpenRazer
+# driver package, as Full on Arch replaces `openrazer-driver-dkms`, and stands
+# in for it so the release's own OpenRazer daemon still installs.
+#
+# Ubuntu and Debian: the daemon depends on `openrazer-driver-dkms` at its own
+# exact version, so Full provides every version a supported source ships:
+# Ubuntu 26.10, OpenRazer's PPA, and Debian 14. Read from the archives on
+# 18 October 2026. A new upstream version needs a new
+# entry here; until then apt holds that daemon upgrade back.
+#
+# Fedora and openSUSE ship no OpenRazer. OpenRazer's own openSUSE Build
+# Service repository names the driver `openrazer-kernel-modules-dkms`, and its
+# daemon depends on it without a version.
+DISTRIBUTION_FULL_RELATIONS = {
+    "ubuntu": (
+        ("openrazer-driver-dkms", "openrazer-kernel-modules-dkms"),
+        (
+            "openrazer-driver-dkms (= 3.12.4+dfsg-1)",
+            "openrazer-driver-dkms (= 3.12.4~ubuntu26.10.1)",
+            "openrazer-kernel-modules-dkms",
+            "hyperflux-openrazer-driver-abi (= 3.12.4)",
+        ),
+        ("openrazer-driver-dkms", "openrazer-kernel-modules-dkms"),
+    ),
+    "debian": (
+        ("openrazer-driver-dkms", "openrazer-kernel-modules-dkms"),
+        (
+            "openrazer-driver-dkms (= 3.12.4+dfsg-1)",
+            "openrazer-kernel-modules-dkms",
+            "hyperflux-openrazer-driver-abi (= 3.12.4)",
+        ),
+        ("openrazer-driver-dkms", "openrazer-kernel-modules-dkms"),
+    ),
+    "fedora": (
+        ("openrazer-kernel-modules-dkms",),
+        (
+            "openrazer-kernel-modules-dkms = 3.12.4",
+            "hyperflux-openrazer-driver-abi = 3.12.4",
+        ),
+        (),
+    ),
+    "opensuse": (
+        ("openrazer-kernel-modules-dkms",),
+        (
+            "openrazer-kernel-modules-dkms = 3.12.4",
+            "hyperflux-openrazer-driver-abi = 3.12.4",
+        ),
+        (),
+    ),
+}
+OPENRGB_APPLICATION_PURPOSE = (
+    "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified"
+)
+# Polychromatic is in no Ubuntu or Debian archive. OpenRazer's openSUSE Build
+# Service repository carries it for Fedora and openSUSE.
+DISTRIBUTION_FULL_APPLICATIONS = {
+    "deb": {
+        "openrazer-daemon": "Stock OpenRazer service for compatible application access",
+        "python3-openrazer": "Official Python OpenRazer client API",
+    },
+    "rpm": {
+        "openrazer-daemon": "Stock OpenRazer service for compatible application access",
+        "python3-openrazer": "Official Python OpenRazer client API",
+        "polychromatic": "Stock graphical OpenRazer frontend",
+    },
+}
+
+
+def _check_full_contract(target: DistributionTarget, arch: DistributionTarget, name: str) -> None:
+    """Hold a Debian- or RPM-format Full package to the Arch Full product contract.
+
+    It is Arch Full with the release's own plugin libraries and OpenRGB
+    where the release can load the plugin, and Arch Full without the plugin
+    elsewhere: no plugin libraries and no OpenRGB application. Either way it
+    stands in for the release's OpenRazer driver package instead of Arch's.
+    """
+
+    full = target.component("full")
+    arch_full = arch.component("full")
+    if target.openrgb_plugin and target.id not in OPENRGB_PLUGIN_RELEASE_DEPENDENCIES:
+        raise ModelError(f"{name} ships no OpenRGB that can load the HyperFlux plugin")
+    if full.package_name != arch_full.package_name:
+        raise ModelError(f"{name} Full package name differs from the Arch Full package")
+    description = (
+        arch_full.description
+        if target.openrgb_plugin
+        else "Core plus the OpenRazer compatibility transport for optional stock applications"
+    )
+    if full.description != description:
+        raise ModelError(f"{name} Full description must name exactly what it carries")
+    if full.dependency_roles != arch_full.dependency_roles:
+        raise ModelError(f"{name} Full dependency roles differ from the Arch Full package")
+    plugin_dependencies = (
+        OPENRGB_PLUGIN_RELEASE_DEPENDENCIES[target.id] if target.openrgb_plugin else ()
+    )
+    if set(full.dependencies) != {*target.dependency_roles.values(), *plugin_dependencies}:
+        raise ModelError(
+            f"{name} Full may depend only on its mapped dependency roles"
+            + (" and the plugin libraries" if target.openrgb_plugin else "")
+        )
+    if (full.conflicts, full.provides, full.replaces) != DISTRIBUTION_FULL_RELATIONS[target.id]:
+        raise ModelError(f"{name} Full OpenRazer driver relations differ from the contract")
+    applications = dict(DISTRIBUTION_FULL_APPLICATIONS[target.package_format])
+    if target.openrgb_plugin:
+        applications = {"openrgb": OPENRGB_APPLICATION_PURPOSE, **applications}
+    if {item.package: item.purpose for item in full.optional_dependencies} != applications:
+        raise ModelError(f"{name} Full optional applications differ from the contract")
 
 
 # Each RPM-format target is held to one exact release and to the package names
@@ -672,7 +859,9 @@ RPM_FORMAT_ROLES = {
 }
 
 
-def _check_rpm_format_contract(target: DistributionTarget, arch: DistributionTarget) -> None:
+def _check_rpm_format_contract(
+    target: DistributionTarget, arch: DistributionTarget, *, site_published: bool
+) -> None:
     """Hold an RPM-format Core package to the Arch Core product contract."""
 
     name, version = RPM_FORMAT_RELEASES[target.id]
@@ -683,14 +872,14 @@ def _check_rpm_format_contract(target: DistributionTarget, arch: DistributionTar
         None,
     ):
         raise ModelError(f"{name} target must name exactly {name} {version}")
-    if target.maturity != "ci-only":
-        raise ModelError(f"{name} packages are CI-built only until a publication channel exists")
+    _check_publication(target, name, site_published)
     if target.architectures != {"x86_64-unknown-linux-gnu": "x86_64"}:
         raise ModelError(f"{name} target is x86_64 only")
     roles = {key: value for key, value in target.dependency_roles.items() if key != "c-runtime"}
     if roles != RPM_FORMAT_ROLES[target.id]:
         raise ModelError(f"{name} dependency roles differ from the {name} {version} package names")
     _check_core_contract(target, arch, name, "glibc")
+    _check_full_contract(target, arch, name)
 
 
 def load_distribution_catalog(root: Path) -> DistributionCatalog:
@@ -733,6 +922,7 @@ def load_distribution_catalog(root: Path) -> DistributionCatalog:
         raise ModelError("distribution sibling version cannot be represented on Arch")
     sibling_version = f"{version}-{runtime.product.package_release}"
     openrazer_version = load_native_deployment(root).driver.dkms_version
+    site_published = repository_site_published(root)
     target = _target(
         "arch",
         targets_value["arch"],
@@ -750,7 +940,9 @@ def load_distribution_catalog(root: Path) -> DistributionCatalog:
                 runtime.product.version, runtime.product.package_release
             ),
         )
-        _check_debian_format_contract(targets[target_id], target)
+        _check_debian_format_contract(
+            targets[target_id], target, site_published=site_published
+        )
     for target_id in RPM_FORMAT_TARGET_IDS:
         targets[target_id] = _target(
             target_id,
@@ -758,7 +950,9 @@ def load_distribution_catalog(root: Path) -> DistributionCatalog:
             openrazer_version=openrazer_version,
             sibling_version=rpm_version(runtime.product.version, runtime.product.package_release),
         )
-        _check_rpm_format_contract(targets[target_id], target)
+        _check_rpm_format_contract(
+            targets[target_id], target, site_published=site_published
+        )
     return DistributionCatalog(
         source_sha256=sha256_file(path),
         description=description,

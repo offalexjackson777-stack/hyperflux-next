@@ -16,13 +16,17 @@ FULL_COMPONENT_CAPABILITIES = (
 )
 
 
-def full_component_descriptor(runtime: LinuxRuntime) -> str:
+def full_component_descriptor(runtime: LinuxRuntime, *, openrgb_plugin: bool = True) -> str:
+    """The installed Full descriptor. A distribution whose OpenRGB cannot load
+    the plugin ships Full without it and names only the native route."""
+
+    capabilities = FULL_COMPONENT_CAPABILITIES if openrgb_plugin else FULL_COMPONENT_CAPABILITIES[:1]
     value = {
         "$schema": "https://hyperflux.dev/schemas/distribution-component-descriptor-v1.json",
         "schema": "hyperflux-distribution-component-v1",
         "component_id": "full",
         "product_version": runtime.product.version,
-        "capabilities": list(FULL_COMPONENT_CAPABILITIES),
+        "capabilities": list(capabilities),
     }
     return json.dumps(value, indent=2, sort_keys=False, ensure_ascii=True) + "\n"
 
@@ -100,6 +104,8 @@ def markdown(
     runtime: LinuxRuntime,
     openrazer: OpenRazerNativeDeployment,
     split: ArchSplit,
+    *,
+    distributions_published: bool = False,
 ) -> str:
     receiver = split.output("receiver-dkms").package_name
     driver_owner = next(
@@ -224,9 +230,14 @@ def markdown(
             "configuration remains preserved across supported package transitions.",
             "",
             "The Arch package base consumes independently staged `linux` and payload-bearing "
-            "`full` components. Ubuntu 24.04 and Debian 13 `.deb` packages and Fedora 44 "
-            "and openSUSE Tumbleweed `.rpm` packages of the Core edition are built and "
-            "checked in CI every week but not published yet.",
+            "`full` components. Ubuntu 26.10 and Debian 14 `.deb` packages and Fedora 44 "
+            "and openSUSE Tumbleweed `.rpm` packages of both editions are built and "
+            + (
+                "tested automatically every week and published in the signed package "
+                "repository, but not yet confirmed on real hardware."
+                if distributions_published
+                else "checked in CI every week but not published yet."
+            ),
             "",
         ]
     )

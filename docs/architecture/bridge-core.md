@@ -51,11 +51,20 @@ admission, and response correlation. It treats the report's device command and
 status as upstream-owned opaque data.
 
 OpenRGB may hold NativeControl for an explicit controller session. The
-feature-only OpenRazer UHID relay acquires the same child-local resource for one
-Feature exchange and releases it afterward, so an idle virtual endpoint cannot
-exclude another application. NativeControl conflicts with the retained semantic
-lighting, settings, and pairing resources for that child only. Siblings, other
-receivers, and newer generations remain independent.
+feature-only OpenRazer UHID relay acquires the same child-local resource when a
+burst of Feature exchanges starts and keeps it while the exchanges keep
+matching. OpenRazer writes one lighting frame as several back-to-back
+exchanges, one per row, so acquiring and releasing around every exchange would
+add two bridge round trips to each of them. The relay gives the lease back 25
+ms after the last matched exchange, and at once when an exchange is not sent,
+may have been sent, or cannot be decoded; the next exchange then acquires a
+fresh lease. It never repeats an exchange to recover a lease. A lease held for
+half its 30-second duration is renewed before the next exchange uses it.
+Teardown, route recycling, kernel-binding recovery, and relay shutdown release
+the lease explicitly, so an idle virtual endpoint cannot exclude another
+application for longer than one burst plus 25 ms. NativeControl conflicts with
+the retained semantic lighting, settings, and pairing resources for that child
+only. Siblings, other receivers, and newer generations remain independent.
 
 Protocol v6, UAPI v1, semantic carrier encoding, stable-state persistence, and
 restoration remain installed as a noncompeting compatibility fallback. They are
@@ -302,13 +311,25 @@ claim, partial checkpoint, or failed target blocks a false complete result.
 Software effects remain application computations and restart through the
 application's saved startup profile.
 
-Transporting completed application frames does not prove an input-reactive
-effect. Stock OpenRazer Ripple also requires an evdev key source associated with
-the exact child route. Its global model-name matcher is ambiguous when more than
-one same-model receiver exists, so HyperFlux does not claim Ripple as
-operational until a route- and generation-bound event source is proven. The
-shared matrix-row and custom-mode Feature commands remain valid transport
-operations.
+Transporting completed application frames does not make an input-reactive
+effect work. Stock OpenRazer Ripple draws from key presses it reads from an evdev
+file, which it finds once, when it adds the keyboard, by matching
+`/dev/input/by-id` names against a per-model pattern. Through the receiver the
+keyboard's key presses arrive on the receiver's own input interface, whose name
+matches no keyboard pattern. The Full component's udev rules therefore add a
+second by-id name on that interface that matches the paired keyboard's pattern
+and no other presented device's, and tag the node `uaccess` so only the
+logged-in seat user can open it. We chose this over a daemon-side change because
+it leaves OpenRazer untouched; the cost is that any program in that user's
+session can read the receiver's key presses, which the
+[known limitations](../user/limitations.md#ripple-and-other-effects-that-react-to-keys)
+state plainly. The matcher is still global per model, not bound to a child route
+or generation: with two same-model receivers, udev keeps one link and only one
+keyboard reacts. The links are listed in the
+[deployment reference](../generated/openrazer-native-deployment.md#key-presses-for-reactive-effects).
+Doctor reports `HFX-INTEGRATION-007` when an attached receiver's link is
+missing. The shared matrix-row and custom-mode Feature commands remain valid
+transport operations.
 
 `DurableRestorationRuntime` is the bridge's one persistence owner and snapshot
 source. Its generation-retirement operation first consumes an exact retained

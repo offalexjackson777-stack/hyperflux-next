@@ -56,13 +56,33 @@ fn exact_descriptor_is_ready_and_drift_fails_closed() {
 
     fs::write(
         &path,
-        descriptor("2.0.0").replace("openrgb-plugin", "unexpected"),
+        descriptor("2.0.0").replace(",\"openrgb-plugin\"", ""),
     )
-    .expect("write drift");
+    .expect("write route-only descriptor");
     assert_eq!(
-        probe_fixture(&path, "2.0.0").state,
-        FullComponentState::CapabilitiesIncomplete
+        probe_fixture(&path, "2.0.0"),
+        FullComponentSnapshot::ready_without_openrgb_plugin("2.0.0")
     );
+
+    for drift in [
+        descriptor("2.0.0").replace("openrgb-plugin", "unexpected"),
+        descriptor("2.0.0").replace("\"openrazer-native-route\",", ""),
+        descriptor("2.0.0").replace(
+            "\"openrazer-native-route\",\"openrgb-plugin\"",
+            "\"openrgb-plugin\",\"openrazer-native-route\"",
+        ),
+        descriptor("2.0.0").replace(
+            "\"openrgb-plugin\"",
+            "\"openrgb-plugin\",\"openrgb-plugin\"",
+        ),
+        descriptor("2.0.0").replace("\"openrazer-native-route\",\"openrgb-plugin\"", ""),
+    ] {
+        fs::write(&path, drift).expect("write drift");
+        assert_eq!(
+            probe_fixture(&path, "2.0.0").state,
+            FullComponentState::CapabilitiesIncomplete
+        );
+    }
     fs::remove_dir_all(root).expect("remove root");
 }
 

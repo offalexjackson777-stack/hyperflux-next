@@ -16,6 +16,14 @@
  * this file sends a report to the receiver: a lane without a forwarded value
  * has no power_supply at all.
  *
+ * Each supply is registered under the receiver's lowest-numbered interface
+ * that has no input device, not under the lane's own input interface.  upower
+ * groups every battery and input of one USB device together, ranks a keyboard
+ * above a mouse, and replaces a battery's model with the name of an input that
+ * shares the battery's parent.  The receiver's inputs all carry the receiver's
+ * name, so a supply beside one of them would lose its model name.  Without
+ * such an interface the lane's own input interface is the parent.
+ *
  * battery_lock serializes registration and teardown and is taken before
  * state_lock and authorization_lock.  It is never taken with registry_lock or
  * transport_lock held.  get_property reads a lane only under its value_lock,
@@ -102,16 +110,18 @@ static int hfx_battery_get_property(struct power_supply *psy,
 	return ret;
 }
 
-static void hfx_battery_unregister_locked(struct hfx_battery_lane *lane)
+static struct hid_device *
+hfx_battery_parent(struct hfx_receiver *receiver,
+		   struct hfx_battery_lane *lane)
 {
-	struct power_supply *psy = lane->psy;
+	return receiver->battery_parent ? receiver->battery_parent : lane->hdev;
+}
+
+static void hfx_battery_forget_locked(struct hfx_battery_lane *lane)
+{
 	unsigned long flags;
 
-	if (!psy)
-		return;
-	lane->psy = NULL;
 	lane->owner = NULL;
-	power_supply_unregister(psy);
 	spin_lock_irqsave(&lane->value_lock, flags);
 	lane->capacity = 0;
 	lane->status = HFX_UAPI_BATTERY_STATUS_UNKNOWN;
@@ -119,17 +129,25 @@ static void hfx_battery_unregister_locked(struct hfx_battery_lane *lane)
 	spin_unlock_irqrestore(&lane->value_lock, flags);
 }
 
-static int hfx_battery_register_locked(struct hfx_receiver *receiver,
-				       struct hfx_battery_lane *lane,
-				       struct hfx_file_context *context)
+static void hfx_battery_unregister_locked(struct hfx_battery_lane *lane)
+{
+	struct power_supply *psy = lane->psy;
+
+	if (!psy)
+		return;
+	lane->psy = NULL;
+	lane->parent = NULL;
+	power_supply_unregister(psy);
+	hfx_battery_forget_locked(lane);
+}
+
+static int hfx_battery_publish_locked(struct hfx_receiver *receiver,
+				      struct hfx_battery_lane *lane)
 {
 	struct power_supply_config config = { .drv_data = lane };
+	struct hid_device *parent = hfx_battery_parent(receiver, lane);
 	struct power_supply *psy;
 
-	/*
-	 * The lane's own input interface is the parent so desktop battery
-	 * services find the mouse or keyboard input device as a sibling.
-	 */
 	snprintf(lane->name, sizeof(lane->name), "%s-%s",
 		 receiver->session_name, lane->suffix);
 	lane->desc.name = lane->name;
@@ -137,12 +155,50 @@ static int hfx_battery_register_locked(struct hfx_receiver *receiver,
 	lane->desc.properties = hfx_battery_properties;
 	lane->desc.num_properties = ARRAY_SIZE(hfx_battery_properties);
 	lane->desc.get_property = hfx_battery_get_property;
-	psy = power_supply_register(&lane->hdev->dev, &lane->desc, &config);
+	psy = power_supply_register(&parent->dev, &lane->desc, &config);
 	if (IS_ERR(psy))
 		return PTR_ERR(psy);
 	lane->psy = psy;
-	lane->owner = context;
+	lane->parent = parent;
 	return 0;
+}
+
+static int hfx_battery_register_locked(struct hfx_receiver *receiver,
+				       struct hfx_battery_lane *lane,
+				       struct hfx_file_context *context)
+{
+	int ret = hfx_battery_publish_locked(receiver, lane);
+
+	if (!ret)
+		lane->owner = context;
+	return ret;
+}
+
+/*
+ * Re-registers a published supply whose parent is no longer the preferred
+ * one.  The forwarded values and the owner are kept, so the battery stays
+ * published without waiting for the bridge's next report.
+ */
+static void hfx_battery_move_locked(struct hfx_receiver *receiver,
+				    struct hfx_battery_lane *lane)
+{
+	struct power_supply *psy = lane->psy;
+
+	if (!psy || lane->parent == hfx_battery_parent(receiver, lane))
+		return;
+	lane->psy = NULL;
+	lane->parent = NULL;
+	power_supply_unregister(psy);
+	if (hfx_battery_publish_locked(receiver, lane))
+		hfx_battery_forget_locked(lane);
+}
+
+static void hfx_battery_move_all_locked(struct hfx_receiver *receiver)
+{
+	size_t index;
+
+	for (index = 0; index < HFX_BATTERY_LANES; index++)
+		hfx_battery_move_locked(receiver, &receiver->battery[index]);
 }
 
 long hfx_battery_report(struct hfx_receiver *receiver,
@@ -239,6 +295,11 @@ static void hfx_battery_unregister_locked(struct hfx_battery_lane *lane)
 	(void)lane;
 }
 
+static void hfx_battery_move_all_locked(struct hfx_receiver *receiver)
+{
+	(void)receiver;
+}
+
 #endif
 
 void hfx_battery_init(struct hfx_receiver *receiver)
@@ -250,31 +311,51 @@ void hfx_battery_init(struct hfx_receiver *receiver)
 	receiver->battery[HFX_BATTERY_KEYBOARD].suffix = "keyboard";
 }
 
+/* Called after hid_hw_start, once hid core has decided on an input device. */
 void hfx_battery_attach_interface(struct hfx_receiver *receiver,
 				  int interface_number,
 				  struct hid_device *hdev)
 {
 	struct hfx_battery_lane *lane =
 		hfx_battery_lane_for_interface(receiver, interface_number);
+	bool inputless = !(hdev->claimed & HID_CLAIMED_INPUT);
 
-	if (!lane)
+	if (!lane && !inputless)
 		return;
 	mutex_lock(&receiver->battery_lock);
-	lane->hdev = hdev;
+	if (lane)
+		lane->hdev = hdev;
+	if (inputless && (!receiver->battery_parent ||
+			  interface_number < receiver->battery_parent_interface)) {
+		receiver->battery_parent = hdev;
+		receiver->battery_parent_interface = interface_number;
+		hfx_battery_move_all_locked(receiver);
+	}
 	mutex_unlock(&receiver->battery_lock);
 }
 
+/*
+ * Called before hid_hw_stop.  When the shared parent goes, the remaining
+ * supplies move to their own input interfaces; another input-less interface
+ * is not searched for, because one goes away only when the receiver does or
+ * when an administrator unbinds it.
+ */
 void hfx_battery_detach_interface(struct hfx_receiver *receiver,
 				  int interface_number)
 {
 	struct hfx_battery_lane *lane =
 		hfx_battery_lane_for_interface(receiver, interface_number);
 
-	if (!lane)
-		return;
 	mutex_lock(&receiver->battery_lock);
-	hfx_battery_unregister_locked(lane);
-	lane->hdev = NULL;
+	if (lane) {
+		hfx_battery_unregister_locked(lane);
+		lane->hdev = NULL;
+	}
+	if (receiver->battery_parent &&
+	    receiver->battery_parent_interface == interface_number) {
+		receiver->battery_parent = NULL;
+		hfx_battery_move_all_locked(receiver);
+	}
 	mutex_unlock(&receiver->battery_lock);
 }
 
@@ -300,5 +381,6 @@ void hfx_battery_teardown(struct hfx_receiver *receiver)
 		hfx_battery_unregister_locked(&receiver->battery[index]);
 		receiver->battery[index].hdev = NULL;
 	}
+	receiver->battery_parent = NULL;
 	mutex_unlock(&receiver->battery_lock);
 }

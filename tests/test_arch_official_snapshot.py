@@ -165,7 +165,7 @@ class SnapshotImportContracts(unittest.TestCase):
 
     def test_committed_snapshot_is_valid_and_targets_the_candidate(self) -> None:
         value = load_snapshot(ROOT)
-        self.assertEqual("2.1.1-1", value["candidate"])
+        self.assertEqual("2.1.2-1", value["candidate"])
         self.assertEqual(list(watched_packages(candidate_split())), value["watched_packages"])
         self.assertEqual(list(REPOSITORIES), [item["name"] for item in value["repositories"]])
         self.assertTrue((ROOT / AUTHORITY).is_file())

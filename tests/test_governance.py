@@ -32,7 +32,11 @@ from hfxdev.ci import (
 )
 from hfxdev.ci_openrgb import openrgb_qualification_container_command
 from hfxdev.generators.governance import (
+    DISTRIBUTION_PACKAGE_PATHS,
     EXACT_SOURCE_REVISION,
+    OPENRAZER_REPOSITORY_KEY,
+    PACKAGING_CHANGES_CHECK,
+    PACKAGING_CHANGES_SCRIPT,
     bug_report,
     codeowners,
     codeql_workflow,
@@ -117,7 +121,7 @@ class GitHubGovernanceTests(unittest.TestCase):
                 "product_release": "published",
                 "release_publication": "maintainer-operated",
                 "release_workflows": "none",
-                "pages": "disabled",
+                "pages": "served-from-branch",
                 "hardware_ci": "none",
             },
         )
@@ -390,10 +394,50 @@ class GitHubGovernanceTests(unittest.TestCase):
             ):
                 load_github_governance(ROOT)
 
-    def test_distribution_packages_are_checked_weekly_without_gating_merges(self) -> None:
+    def test_distribution_packages_are_checked_weekly_and_gate_main(self) -> None:
         text = distribution_package_workflow(self.governance)
         document = yaml.safe_load(text)
-        self.assertEqual(set(document["on"]), {"workflow_dispatch", "schedule"})
+        self.assertEqual(set(document["on"]), {"pull_request", "workflow_dispatch", "schedule"})
+        # A required check must start on every pull request, so the trigger has no
+        # path filter; the first job decides whether the packages need checking.
+        self.assertEqual(document["on"]["pull_request"], {})
+        self.assertEqual(document["on"]["workflow_dispatch"], {})
+        self.assertEqual(list(document["jobs"]), ["packaging-changes", "distribution-packages"])
+        changes = document["jobs"]["packaging-changes"]
+        self.assertEqual(changes["name"], PACKAGING_CHANGES_CHECK)
+        self.assertNotIn("container", changes)
+        self.assertNotIn("needs", changes)
+        self.assertNotIn("if", changes)
+        self.assertEqual(changes["outputs"], {"packaging": "${{ steps.changes.outputs.packaging }}"})
+        self.assertEqual(changes["steps"][0]["with"]["ref"], EXACT_SOURCE_REVISION)
+        self.assertEqual(changes["steps"][0]["with"]["fetch-depth"], 0)
+        detect = changes["steps"][1]
+        self.assertEqual(detect["id"], "changes")
+        self.assertEqual(detect["run"], PACKAGING_CHANGES_SCRIPT)
+        self.assertEqual(
+            detect["env"],
+            {
+                "HFX_BASE": "${{ github.event.pull_request.base.sha }}",
+                "HFX_HEAD": "${{ github.event.pull_request.head.sha }}",
+                "HFX_PACKAGING_PATHS": "\n".join(DISTRIBUTION_PACKAGE_PATHS),
+            },
+        )
+        # Every pull request into main runs the packages, other pull requests only
+        # when packaging changed, and a failed first job never skips them.
+        job = document["jobs"]["distribution-packages"]
+        self.assertEqual(job["needs"], "packaging-changes")
+        self.assertEqual(
+            job["if"],
+            "${{ !cancelled() && (github.event_name != 'pull_request' || "
+            "github.base_ref == 'main' || needs.packaging-changes.result != 'success' || "
+            "needs.packaging-changes.outputs.packaging == 'true') }}",
+        )
+        self.assertEqual(
+            document["concurrency"],
+            {"group": "distribution-packages-${{ github.ref }}", "cancel-in-progress": True},
+        )
+        checkout = document["jobs"]["distribution-packages"]["steps"][0]
+        self.assertEqual(checkout["with"]["ref"], EXACT_SOURCE_REVISION)
         self.assertEqual(
             document["on"]["schedule"], [{"cron": self.governance.distribution_package_cron}]
         )
@@ -402,9 +446,9 @@ class GitHubGovernanceTests(unittest.TestCase):
             {self.governance.kernel_canary_cron, self.governance.full_verification_cron},
         )
         self.assertEqual(document["permissions"], {"contents": "read"})
-        job = document["jobs"]["distribution-packages"]
         self.assertEqual(job["name"], DISTRIBUTION_PACKAGE_CHECK)
-        self.assertNotIn(DISTRIBUTION_PACKAGE_CHECK, self.governance.required_checks)
+        self.assertIn(DISTRIBUTION_PACKAGE_CHECK, self.governance.required_checks)
+        self.assertNotIn(PACKAGING_CHANGES_CHECK, self.governance.required_checks)
         images = dict(self.governance.distribution_package_images)
         self.assertEqual(tuple(images), ("ubuntu", "debian", "fedora", "opensuse"))
         registries = {
@@ -428,8 +472,8 @@ class GitHubGovernanceTests(unittest.TestCase):
             list(images.items()),
         )
         headers = {step["env"]["HFX_DISTRIBUTION"]: step["env"]["HFX_RELEASE_HEADERS"] for step in checks}
-        self.assertIn("linux-headers-generic-hwe-24.04", headers["ubuntu"])
-        self.assertIn("linux-headers-amd64/trixie-backports", headers["debian"])
+        self.assertEqual(headers["ubuntu"], "linux-headers-generic")
+        self.assertEqual(headers["debian"], "linux-headers-amd64 linux-headers-rt-amd64")
         self.assertEqual(headers["fedora"], "kernel-devel kernel-devel/fedora")
         self.assertEqual(headers["opensuse"], "kernel-longterm-devel kernel-default-devel")
         scripts = {step["env"]["HFX_DISTRIBUTION"]: step["env"]["HFX_PACKAGE_CHECKS"] for step in checks}
@@ -458,13 +502,69 @@ class GitHubGovernanceTests(unittest.TestCase):
             "dkms build --force",
             'ln -s "$directory" "/lib/modules/$kernel/build"',
             "modinfo -F vermagic",
-            'test "$built" -ge 2',
+            'test "$built" -ge "$(set -- $HFX_RELEASE_HEADERS; echo $#)"',
             "/var/lib/dkms/mok.pub",
             "objdump -T",
             "glibc >= ",
-            "$HFX_RELEASE_REMOVE hyperflux-next-linux hyperflux-next-dkms",
+            '"./$packages"/hyperflux-next-openrazer-driver-dkms-*.rpm "./$packages"/hyperflux-next-full-*.rpm',
+            "rpm -q --whatprovides openrazer-kernel-modules-dkms",
+            '"$HFX_OPENRAZER_REPOSITORY/repodata/repomd.xml.key"',
+            '= "$HFX_OPENRAZER_KEY"',
+            'rpm --import "$key"',
+            "grep -qx 'gpgcheck=1' \"$repository\"",
+            'sed -i "s|^gpgkey=.*|gpgkey=file://$key|" "$repository"',
+            'eval "$HFX_OPENRAZER_SOURCES"',
+            "$HFX_RELEASE_INSTALL openrazer-daemon python3-openrazer",
+            "if rpm -q openrazer-kernel-modules-dkms >/dev/null 2>&1; then",
+            'grep -q "Key ID $keyid\\$"',
+            "find /etc/systemd \\( -name '*hyperflux*' -o -name '*openrazer*' \\)",
+            'dkms build --force -m openrazer-driver -v "$openrazer" -k "$kernel"',
+            "rpm -ql hyperflux-next-linux hyperflux-next-full",
+            "$HFX_RELEASE_REMOVE openrazer-daemon python3-openrazer hyperflux-next-full "
+            "hyperflux-next-openrazer-driver-dkms hyperflux-next-linux hyperflux-next-dkms",
+            "if rpm -qa 'openrazer-*' 'python3-openrazer' | grep -q .; then",
+            "if dkms status | grep -q .; then",
         ):
             self.assertIn(required, rpm_script)
+        # Core installs and builds alone before Full is added.
+        self.assertLess(
+            rpm_script.index("hyperflux-next-linux-*.rpm"),
+            rpm_script.index("hyperflux-next-full-*.rpm"),
+        )
+        # The stock OpenRazer service comes after Full, so Full's driver package
+        # already stands in for OpenRazer's own one; the key is checked before trust.
+        self.assertLess(
+            rpm_script.index("hyperflux-next-full-*.rpm"),
+            rpm_script.index('eval "$HFX_OPENRAZER_SOURCES"'),
+        )
+        self.assertLess(
+            rpm_script.index('= "$HFX_OPENRAZER_KEY"'), rpm_script.index('rpm --import "$key"')
+        )
+        self.assertLess(
+            rpm_script.index('rpm --import "$key"'),
+            rpm_script.index("$HFX_RELEASE_INSTALL openrazer-daemon python3-openrazer"),
+        )
+        for forbidden in ("--nogpgcheck", "--no-gpg-checks", "gpgcheck=0", "--gpg-auto-import-keys"):
+            self.assertNotIn(forbidden, text)
+        repositories = {
+            step["env"]["HFX_DISTRIBUTION"]: step["env"]["HFX_OPENRAZER_REPOSITORY"]
+            for step in checks
+            if "HFX_OPENRAZER_REPOSITORY" in step["env"]
+        }
+        self.assertEqual(
+            repositories,
+            {
+                "fedora": "https://download.opensuse.org/repositories/hardware:/razer/Fedora_44",
+                "opensuse": (
+                    "https://download.opensuse.org/repositories/hardware:/razer/openSUSE_Tumbleweed"
+                ),
+            },
+        )
+        for step in checks[2:]:
+            self.assertEqual(step["env"]["HFX_OPENRAZER_KEY"], OPENRAZER_REPOSITORY_KEY)
+        self.assertRegex(OPENRAZER_REPOSITORY_KEY, r"^[0-9A-F]{40}$")
+        self.assertIn("/etc/yum.repos.d/", checks[2]["env"]["HFX_OPENRAZER_SOURCES"])
+        self.assertIn("/etc/zypp/repos.d/", checks[3]["env"]["HFX_OPENRAZER_SOURCES"])
         self.assertNotRegex(rpm_script, r"-v [0-9]")
         self.assertNotIn("dkms install", rpm_script)
         # dkms.conf must follow the kernel sources DKMS chose, so the driver is
@@ -483,9 +583,19 @@ class GitHubGovernanceTests(unittest.TestCase):
             "dkms build",
             "modinfo",
             "objdump -T",
-            "apt-get purge",
+            '"./$packages"/hyperflux-next-openrazer-driver-dkms_*.deb "./$packages"/hyperflux-next-full_*.deb',
+            "apt-get install -y --no-install-recommends openrazer-daemon python3-openrazer",
+            "if dpkg -s openrazer-driver-dkms >/dev/null 2>&1; then",
+            'dkms build --force -m openrazer-driver -v "$openrazer" -k "$kernel"',
+            "dpkg -L hyperflux-next-linux hyperflux-next-full",
+            "apt-get purge -y openrazer-daemon python3-openrazer hyperflux-next-full "
+            "hyperflux-next-openrazer-driver-dkms hyperflux-next-linux hyperflux-next-dkms",
+            "if dkms status | grep -q .; then",
         ):
             self.assertIn(required, script)
+        self.assertLess(
+            script.index("hyperflux-next-linux_*.deb"), script.index("hyperflux-next-full_*.deb")
+        )
         # The DKMS version comes from the installed package, never a pinned number.
         self.assertNotRegex(script, r"-v [0-9]")
         for forbidden in (
@@ -501,10 +611,6 @@ class GitHubGovernanceTests(unittest.TestCase):
             self.assertNotIn(forbidden, text)
 
         authority = json.loads((ROOT / "governance" / "github.json").read_text())
-        gated = json.loads(json.dumps(authority))
-        gated["protection"]["required_checks"] = sorted(
-            [*authority["protection"]["required_checks"], DISTRIBUTION_PACKAGE_CHECK]
-        )
         daily = json.loads(json.dumps(authority))
         daily["automation"]["distribution_package_cron"] = "23 6 * * *"
         floating = json.loads(json.dumps(authority))
@@ -532,7 +638,6 @@ class GitHubGovernanceTests(unittest.TestCase):
             "automation"
         ]["distribution_package_images"]["fedora"]
         for candidate in (
-            gated,
             daily,
             floating,
             swapped,
@@ -547,6 +652,79 @@ class GitHubGovernanceTests(unittest.TestCase):
                 self.assertRaises(ModelError),
             ):
                 load_github_governance(ROOT)
+
+    def test_packaging_changes_job_reports_only_packaging_pull_requests(self) -> None:
+        def run(event: str, files: tuple[str, ...], *, base: str | None = None) -> str:
+            with tempfile.TemporaryDirectory() as raw:
+                repo = Path(raw)
+                git = ["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid"]
+                subprocess.run([*git, "init", "-q", str(repo)], check=True)
+                (repo / "README.md").write_text("base\n")
+                subprocess.run([*git, "-C", str(repo), "add", "-A"], check=True)
+                subprocess.run([*git, "-C", str(repo), "commit", "-qm", "base"], check=True)
+                start = subprocess.run(
+                    ["git", "-C", str(repo), "rev-parse", "HEAD"],
+                    check=True, capture_output=True, text=True,
+                ).stdout.strip()
+                for name in files:
+                    path = repo / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text("change\n")
+                subprocess.run([*git, "-C", str(repo), "add", "-A"], check=True)
+                subprocess.run(
+                    [*git, "-C", str(repo), "commit", "-qm", "change", "--allow-empty"],
+                    check=True,
+                )
+                output = repo / "github-output"
+                environment = {
+                    **os.environ,
+                    "GITHUB_EVENT_NAME": event,
+                    "GITHUB_OUTPUT": str(output),
+                    "HFX_BASE": base or start,
+                    "HFX_HEAD": "HEAD",
+                    "HFX_PACKAGING_PATHS": "\n".join(DISTRIBUTION_PACKAGE_PATHS),
+                }
+                result = subprocess.run(
+                    ["bash", "-c", PACKAGING_CHANGES_SCRIPT],
+                    cwd=repo, env=environment, capture_output=True, text=True,
+                )
+                if result.returncode:
+                    return "failed"
+                return output.read_text().strip()
+
+        self.assertEqual(run("pull_request", ("packaging/rpm/spec.in",)), "packaging=true")
+        self.assertEqual(run("pull_request", ("driver/src/a/b.c",)), "packaging=true")
+        self.assertEqual(run("pull_request", ("tools/hfxdev/distribution_rpm.py",)), "packaging=true")
+        self.assertEqual(
+            run("pull_request", (".github/workflows/distribution-packages.yml",)), "packaging=true"
+        )
+        self.assertEqual(run("pull_request", ("docs/user/guide.md",)), "packaging=false")
+        self.assertEqual(run("pull_request", ("crates/app/src/main.rs",)), "packaging=false")
+        self.assertEqual(run("pull_request", ()), "packaging=false")
+        self.assertEqual(run("schedule", ()), "packaging=true")
+        self.assertEqual(run("workflow_dispatch", ()), "packaging=true")
+        # A base the job cannot compare against fails the job instead of passing it.
+        self.assertEqual(run("pull_request", ("docs/a.md",), base="0" * 40), "failed")
+
+    def test_distribution_package_paths_name_existing_package_inputs(self) -> None:
+        for pattern in DISTRIBUTION_PACKAGE_PATHS:
+            with self.subTest(pattern=pattern):
+                self.assertFalse(pattern.startswith(("/", "!")))
+                self.assertTrue(any(ROOT.glob(pattern)), pattern)
+        # The modules that build, stage, and assemble the packages are all covered.
+        for module in (
+            "distribution_debian",
+            "distribution_rpm",
+            "distribution_package",
+            "distributions",
+            "package_pipeline_build",
+            "package_repositories",
+            "arch_split",
+        ):
+            path = f"tools/hfxdev/{module}.py"
+            self.assertTrue(
+                any(Path(path).match(pattern) for pattern in DISTRIBUTION_PACKAGE_PATHS), path
+            )
 
     def test_distribution_packages_assemble_an_unsigned_repository_site(self) -> None:
         job = yaml.safe_load(distribution_package_workflow(self.governance))["jobs"][
@@ -612,6 +790,7 @@ class GitHubGovernanceTests(unittest.TestCase):
         workflows = (
             codeql_workflow(self.governance),
             dependency_review_workflow(self.governance),
+            distribution_package_workflow(self.governance),
             full_verification_workflow(self.governance),
             verification_workflow(self.governance),
         )
@@ -620,6 +799,9 @@ class GitHubGovernanceTests(unittest.TestCase):
             document = yaml.safe_load(text)
             for job in document["jobs"].values():
                 name = job["name"]
+                # Only decides whether the required distribution package job runs.
+                if name == PACKAGING_CHANGES_CHECK:
+                    continue
                 matrix = job.get("strategy", {}).get("matrix", {})
                 languages = matrix.get("language")
                 if languages is None:
@@ -1223,7 +1405,7 @@ class GitHubGovernanceTests(unittest.TestCase):
     def test_collaboration_security_and_service_plans_are_complete_and_bounded(self) -> None:
         plan = json.loads(experience_plan(self.governance))
         self.assertEqual(plan["publication_state"]["product_release"], "published")
-        self.assertEqual(plan["publication_state"]["pages"], "disabled")
+        self.assertEqual(plan["publication_state"]["pages"], "served-from-branch")
         self.assertNotIn("source_repository_authorized", plan)
         self.assertEqual(plan["external_apps_installed"], [])
         self.assertEqual(

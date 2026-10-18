@@ -1,8 +1,8 @@
 {
   "$schema": "../schemas/documentation-screenshot-manifest.schema.json",
   "schema": "hyperflux-documentation-screenshot-manifest-v1",
-  "source_revision": "b0111d303ea1e8ff8bf551850b13261901ec838f",
-  "render_result_sha256": "d9e8bf13a2f693c718197af4f6137e51a6e760445250834ae213efd77de273a7",
+  "source_revision": "bb70c9fcb70ba8ec6c62a98663a3b89929acae99",
+  "render_result_sha256": "8a2f90ebff7bd1b4f231e264c4e89bb9564b159c92cfe5b5fde96c8b5bf30e1b",
   "screenshots": [
     {
       "file": "screenshots/CONTRIBUTING--1280--dark.png",
@@ -11,7 +11,7 @@
       "height": 900,
       "theme": "dark",
       "sha256": "cd4b6361f781ae4e7dda9213a8c9584d96d187e70f164433c381a47197a6a1ca",
-      "bytes": 220251
+      "bytes": 240596
     },
     {
       "file": "screenshots/CONTRIBUTING--1280--light.png",
@@ -20,7 +20,7 @@
       "height": 900,
       "theme": "light",
       "sha256": "4e047025b855d57035eee19b643ab109c59b0c3cbf2536498beaa280578f4894",
-      "bytes": 215798
+      "bytes": 235898
     },
     {
       "file": "screenshots/CONTRIBUTING--375--dark.png",
@@ -29,7 +29,7 @@
       "height": 812,
       "theme": "dark",
       "sha256": "95b706568c9f44837d1115e1e59edebe8402dd85f691005e96ae2530a50a4e8e",
-      "bytes": 215980
+      "bytes": 236749
     },
     {
       "file": "screenshots/CONTRIBUTING--375--light.png",
@@ -38,7 +38,7 @@
       "height": 812,
       "theme": "light",
       "sha256": "ed7076c2d0c616e7e84210658c45dbe7ce8e24b9bfb241b2df4419de7e20b2b6",
-      "bytes": 211473
+      "bytes": 231936
     },
     {
       "file": "screenshots/CONTRIBUTING--768--dark.png",
@@ -47,7 +47,7 @@
       "height": 1024,
       "theme": "dark",
       "sha256": "bdc4e4c8b31713fb947df34eee884a6824c3e59268ac9cffc6574b2f4eefc231",
-      "bytes": 228400
+      "bytes": 250058
     },
     {
       "file": "screenshots/CONTRIBUTING--768--light.png",
@@ -56,7 +56,7 @@
       "height": 1024,
       "theme": "light",
       "sha256": "8c963aa32c58741b70d9c8f38e08bf34815a106cb554b982467755c4df4816a4",
-      "bytes": 223473
+      "bytes": 244457
     },
     {
       "file": "screenshots/README--1280--dark.png",
@@ -64,8 +64,8 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "e60e4dda5a823b9bc6a66039a846559a109e3a067025772649205c564d20ca3a",
-      "bytes": 370890
+      "sha256": "da34f45694458755918b3cc92e531df67508292dc718a109b2ce5bfcdb7aa2f6",
+      "bytes": 407254
     },
     {
       "file": "screenshots/README--1280--light.png",
@@ -73,8 +73,8 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "19ed237036fe55688bd11407461dbd108144d4ebebda090561ab80274aa92a4c",
-      "bytes": 364498
+      "sha256": "2f89c4d1f8bb0f41972139e485f2246dd1b8d9056c334a443c1f606fed96fa8b",
+      "bytes": 400000
     },
     {
       "file": "screenshots/README--375--dark.png",
@@ -82,8 +82,8 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "2c13e6bc57d03829e05246a07181cfc7d14c95e9193a119b9452c47d165b6363",
-      "bytes": 344828
+      "sha256": "968ebe9447c996fef1c4155c0a63d3fbcbe007938a16beb3f382527cb5503855",
+      "bytes": 383581
     },
     {
       "file": "screenshots/README--375--light.png",
@@ -91,8 +91,8 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "b269937ea281486bbe139aefe21f473e70eca4c3c1a2d16ee69b799f85b4b940",
-      "bytes": 337210
+      "sha256": "7339c6cdf4fd4f12064b5c43870f78af37315ad0f1e8564331840bb9ff12bea9",
+      "bytes": 376186
     },
     {
       "file": "screenshots/README--768--dark.png",
@@ -100,8 +100,8 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "defc2664ca4402f53b778620e2c547859864c4a282f47860e98539772ea94f2a",
-      "bytes": 363758
+      "sha256": "b06c36afb21b5ac144b6914a788a6415611589a261cafa5895702945b09a8f08",
+      "bytes": 406377
     },
     {
       "file": "screenshots/README--768--light.png",
@@ -109,8 +109,8 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "6f196c14c2605f3f21a0d755a27020dd1f36bcb915613c658736269e03c58a6d",
-      "bytes": 356277
+      "sha256": "c5fb96f7263540ce7fbbad22b9879fb246e27057faffe8d4c8e84088b772c001",
+      "bytes": 397600
     },
     {
       "file": "screenshots/SECURITY--1280--dark.png",
@@ -118,7 +118,7 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "e8f5c10b3c420bf69a2b42ee4b36e747a7e53f158cbda93e221ccf8ad4d0e7a4",
+      "sha256": "71d17ba58558e528bc61d556807d465d452fb7eacd1786f350a5c89edbf1fbc5",
       "bytes": 230689
     },
     {
@@ -127,7 +127,7 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "fbb360ad32c0f49f0467d0aa56031adbe359808e996196489a4db975b49a0b78",
+      "sha256": "dbdccb1bf24229a0408ef7e14a33c4314bbfb48bb303fb1f8891a6d90c0c25e2",
       "bytes": 226279
     },
     {
@@ -136,7 +136,7 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "bacfb3082ef595b2405313a197d4bed0f1fcd2d6be35f9e6b9b931d67f9408b9",
+      "sha256": "6be717dcfa2611e28ac5f40a082d8f3833b5032e54a54cf2cf20c409f73ad4da",
       "bytes": 220976
     },
     {
@@ -145,7 +145,7 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "7367c3903e6dec6f7eb5dcdea567061a582b45541e7f4c394ed7a8d4354ec1f3",
+      "sha256": "52780e95a376de1ba685e4d8f45aa9cf205b8c83075fb1f9ff11e66744d18023",
       "bytes": 215923
     },
     {
@@ -154,7 +154,7 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "09bd6b41fa45f53b79a1f7d4dea25ab93614e23fda6f9874c5209c6a5b17d87e",
+      "sha256": "1fcd6e92b42500985bec911078333a59425f8e6aff6a5127d8b80f67ae742f4a",
       "bytes": 234111
     },
     {
@@ -163,7 +163,7 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "28e9573371059f82bd7eccb87a983af469a39afdaa12e12817dc3412248d0d1c",
+      "sha256": "ffe94c852db099b65f113854ff3d9bab272d62511a48cca7862fedf3880866c5",
       "bytes": 229214
     },
     {
@@ -173,7 +173,7 @@
       "height": 900,
       "theme": "dark",
       "sha256": "a3374702ae0fd11aecb43f52348c68582cda4f99385f323c62026d70267e99be",
-      "bytes": 160624
+      "bytes": 186217
     },
     {
       "file": "screenshots/SUPPORT--1280--light.png",
@@ -182,7 +182,7 @@
       "height": 900,
       "theme": "light",
       "sha256": "dad468078c2f7d1aaf061a579065b99f78b7c35b945e46054308390f90b702a8",
-      "bytes": 157875
+      "bytes": 182606
     },
     {
       "file": "screenshots/SUPPORT--375--dark.png",
@@ -191,7 +191,7 @@
       "height": 812,
       "theme": "dark",
       "sha256": "3c910026f6c8b5bf6b79fd0d9c892b2de22a9024a849a6507bd5fafaea2f85f5",
-      "bytes": 152495
+      "bytes": 180343
     },
     {
       "file": "screenshots/SUPPORT--375--light.png",
@@ -200,7 +200,7 @@
       "height": 812,
       "theme": "light",
       "sha256": "5db473e80ab6184f036525ee3aecc9d64fec57943fc109cf704322840a4cb134",
-      "bytes": 149315
+      "bytes": 176560
     },
     {
       "file": "screenshots/SUPPORT--768--dark.png",
@@ -209,7 +209,7 @@
       "height": 1024,
       "theme": "dark",
       "sha256": "c561c11f54c312b7b7e53983bbcc363417c54ea3967c0a7c640dd52948a1306d",
-      "bytes": 158694
+      "bytes": 188449
     },
     {
       "file": "screenshots/SUPPORT--768--light.png",
@@ -218,7 +218,7 @@
       "height": 1024,
       "theme": "light",
       "sha256": "e97933c1ba0463c3ad9018824fa36bf7f986828981dfed5e1755f1a443e6d8f6",
-      "bytes": 155549
+      "bytes": 184974
     },
     {
       "file": "screenshots/docs__README--1280--dark.png",
@@ -226,8 +226,8 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "a3e40681571e128dcfd163dd30673626d0548b19d9e05edd3d873d97dc26314a",
-      "bytes": 138944
+      "sha256": "ac6d66abd7be7f85f08fcc1d06f68f1aea0a34c12c24f345ec46ba09ab61cc03",
+      "bytes": 136960
     },
     {
       "file": "screenshots/docs__README--1280--light.png",
@@ -235,8 +235,8 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "7e3175f27ff1d36c15fd24130f07811b09935a2d5d11fc8955714bf6e51fe90c",
-      "bytes": 136123
+      "sha256": "1a891ccbf54e68e2904cb8940653b7fce92896894d90da7ab802b8361120cee1",
+      "bytes": 134490
     },
     {
       "file": "screenshots/docs__README--375--dark.png",
@@ -244,8 +244,8 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "d8d191581d005e806265a5f3bd6c83000d5e24998274b0b68803e657296aaed1",
-      "bytes": 126122
+      "sha256": "540915ffe0836a6f7ffe826dc2d3b4aa6c82466a2206a7ff158c50e4f129157b",
+      "bytes": 124468
     },
     {
       "file": "screenshots/docs__README--375--light.png",
@@ -253,8 +253,8 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "63397a72f87b4f1a2a2d9c64c174816e8ee9fc6cc55474178a4e1df75515dc95",
-      "bytes": 122598
+      "sha256": "3cbe7d8b9fd4bf8a6d35d5960181fd4dc9b59c430dc3add8e69f0b082e24147d",
+      "bytes": 121005
     },
     {
       "file": "screenshots/docs__README--768--dark.png",
@@ -262,8 +262,8 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "cec41d3e63e6db023ef5a161d1889ec0050573e412a61f6e5fa242f700d99dca",
-      "bytes": 135556
+      "sha256": "40b0c70e4446e89d2088cfc177a89e35ebc63f2743106f92efaa6af88442e41b",
+      "bytes": 133920
     },
     {
       "file": "screenshots/docs__README--768--light.png",
@@ -271,8 +271,8 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "1e2b3e2bf9830f38232b3203146136ab6402f17679eb14455d891678aaf0f2ff",
-      "bytes": 132620
+      "sha256": "2f4049fa5ed7c8b2568219641bb82d15d70cf759f3a13210978ef44813b6360f",
+      "bytes": 130956
     },
     {
       "file": "screenshots/docs__architecture__design__book--1280--dark.png",
@@ -281,7 +281,7 @@
       "height": 900,
       "theme": "dark",
       "sha256": "7c07169b30dc3c434a9d78bf4d5592a925f08fdc160d5f22c4709d8dd3d82942",
-      "bytes": 396822
+      "bytes": 395877
     },
     {
       "file": "screenshots/docs__architecture__design__book--1280--light.png",
@@ -290,7 +290,7 @@
       "height": 900,
       "theme": "light",
       "sha256": "ab60f4d3a4f8efb8091ae5dae600ac951152ae3d3f1c806d8e3f41357d94816d",
-      "bytes": 386470
+      "bytes": 385591
     },
     {
       "file": "screenshots/docs__architecture__design__book--375--dark.png",
@@ -299,7 +299,7 @@
       "height": 812,
       "theme": "dark",
       "sha256": "eb9dcf75ada8bb0b39963c61219d3fed90758e56ec9f9b14c1fb7fa10bcd056a",
-      "bytes": 330397
+      "bytes": 329653
     },
     {
       "file": "screenshots/docs__architecture__design__book--375--light.png",
@@ -308,7 +308,7 @@
       "height": 812,
       "theme": "light",
       "sha256": "11f5527dee766f5bd06f540b07617adb20fda6edce051962790957fe509c10e3",
-      "bytes": 319732
+      "bytes": 318793
     },
     {
       "file": "screenshots/docs__architecture__design__book--768--dark.png",
@@ -317,7 +317,7 @@
       "height": 1024,
       "theme": "dark",
       "sha256": "3423bf4802e28fd9da7a0ac89d69cf1f400576de65f93cce0f2108ec18e14e6e",
-      "bytes": 387463
+      "bytes": 387212
     },
     {
       "file": "screenshots/docs__architecture__design__book--768--light.png",
@@ -326,7 +326,7 @@
       "height": 1024,
       "theme": "light",
       "sha256": "6d20117625b05fb99476c9f1c7a324bf78e19d982a957c5ad1477c8f9a4fcf25",
-      "bytes": 376008
+      "bytes": 375780
     },
     {
       "file": "screenshots/docs__developer__architecture--1280--dark.png",
@@ -388,8 +388,8 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "a54809d0ab33ec067beded603400ad62188fcf0699a1acdd6985201b2e8aefdd",
-      "bytes": 1181057
+      "sha256": "5330d0585ee336114f4aa3ceaefcbd18c14290db1c494e2ffdb2ef1dc924cec5",
+      "bytes": 1235354
     },
     {
       "file": "screenshots/docs__generated__distributions--1280--light.png",
@@ -397,8 +397,8 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "550e9358f6bb43fcd7f6ff2ef9f21d589e88bc74ae7c325c801500ed298a8666",
-      "bytes": 1160921
+      "sha256": "0d00e60fdb59d70441c013ed688b97986ceadcdf31792f9c5c81179030b9c070",
+      "bytes": 1213882
     },
     {
       "file": "screenshots/docs__generated__distributions--375--dark.png",
@@ -406,8 +406,8 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "38e0395d71ea1a1a4307f071f3e56b6470101a4d7b38ebdb08611033fce73d68",
-      "bytes": 1032713
+      "sha256": "d00f426b7eba923d285b3ebd86ba1ae3e38d71724201e41fc3f135911b18bec0",
+      "bytes": 1089777
     },
     {
       "file": "screenshots/docs__generated__distributions--375--light.png",
@@ -415,8 +415,8 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "19015ae516bea755c4f6564d522ef327827d033825e821953f57f7e453bb06a5",
-      "bytes": 1010619
+      "sha256": "2c379d0db64e2473ceb52c773669377a49389c6a8a95f98f5d6b1cb9854000a1",
+      "bytes": 1067206
     },
     {
       "file": "screenshots/docs__generated__distributions--768--dark.png",
@@ -424,8 +424,8 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "c19c738f8e3e848cbb4a6dc3420b30801b5ba505e40951ee7da62197056f6dff",
-      "bytes": 1140959
+      "sha256": "e59b13d49c1e7c2347b08eb8b1a64074fc9e682e99152753e8918c18e7586ce6",
+      "bytes": 1197535
     },
     {
       "file": "screenshots/docs__generated__distributions--768--light.png",
@@ -433,8 +433,8 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "56822fa054922509be3d3391ed52adc2db7e367cc18d745abe70086e65263b2c",
-      "bytes": 1119072
+      "sha256": "8481482baabf3f24ec8878d06b0e8b0b0f2a90d982d4588faa53d3edaceca3c2",
+      "bytes": 1174176
     },
     {
       "file": "screenshots/docs__generated__installation--1280--dark.png",
@@ -442,8 +442,8 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "7fcc0368ae0cf7252ab47c8854f1c2553c1b8f8700820d4c2b8529feebc9b7f1",
-      "bytes": 456593
+      "sha256": "52ce704c9372f1c92aef1e446987dc276ef9c4ba4fc63b974a6aa2cda9658d57",
+      "bytes": 473544
     },
     {
       "file": "screenshots/docs__generated__installation--1280--light.png",
@@ -451,8 +451,8 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "665f8b467b65dd88875b3ae0e7c17c367b2e7fc027abd68a243e94e5a9a0c684",
-      "bytes": 448020
+      "sha256": "a13c60367681f39d8d71f521f0a407a5323526678a644539c37dccf358747fb4",
+      "bytes": 464719
     },
     {
       "file": "screenshots/docs__generated__installation--375--dark.png",
@@ -460,8 +460,8 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "d78b117d60305b3b50f663da771a6c8354dca32e8722a2308fc51b72c89edbc1",
-      "bytes": 410852
+      "sha256": "6f817d8b42cb12822f88a1ed7e7e8e01298e1aeb4c99c978e973f2e4adf6665f",
+      "bytes": 428942
     },
     {
       "file": "screenshots/docs__generated__installation--375--light.png",
@@ -469,8 +469,8 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "43b0abfae7642cb75134b5059998ad1dae011eca356c4b294dfa9dd5fca8fcaa",
-      "bytes": 403698
+      "sha256": "96446717fcddc6d65506d4aa893fcd6d54ea279daf06e3deceb5e1beb969009e",
+      "bytes": 421101
     },
     {
       "file": "screenshots/docs__generated__installation--768--dark.png",
@@ -478,8 +478,8 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "815702992139cd802ced22a79cab241c901bc0f0f149a9b2ee476c2cef46b31d",
-      "bytes": 459966
+      "sha256": "f93d81cf1dae65f67abf257ded2b83afb5734b511968ccad69c1fdf319bee5a7",
+      "bytes": 477994
     },
     {
       "file": "screenshots/docs__generated__installation--768--light.png",
@@ -487,8 +487,8 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "a494db5b7781ba130186db2e25a71b9f8861575ac5c0091c637f53e0818d4568",
-      "bytes": 451634
+      "sha256": "15d8d2ba41ab8f5ac21f5b48c1fd6f20475a439cfcb5d7eeb850b8d805f773c2",
+      "bytes": 469206
     },
     {
       "file": "screenshots/docs__generated__repository__atlas--1280--dark.png",
@@ -497,7 +497,7 @@
       "height": 900,
       "theme": "dark",
       "sha256": "a72cf8d5239d5aa53805b08aa20a9332ddc2d83e99a66cbbadce1ee1961c74c3",
-      "bytes": 1196323
+      "bytes": 1199620
     },
     {
       "file": "screenshots/docs__generated__repository__atlas--1280--light.png",
@@ -506,7 +506,7 @@
       "height": 900,
       "theme": "light",
       "sha256": "c9f9188cd6c8d0e66b7e668677f4be4e260456c647a98b868d9a7245c3a492c1",
-      "bytes": 1180145
+      "bytes": 1183398
     },
     {
       "file": "screenshots/docs__generated__repository__atlas--375--dark.png",
@@ -515,7 +515,7 @@
       "height": 812,
       "theme": "dark",
       "sha256": "02cb7f61d8b12f1714b1c9385fc1a2d7ac75c4f1b7737aa44a57522faa870757",
-      "bytes": 1269762
+      "bytes": 1272911
     },
     {
       "file": "screenshots/docs__generated__repository__atlas--375--light.png",
@@ -524,7 +524,7 @@
       "height": 812,
       "theme": "light",
       "sha256": "dce45bd616100fb1ffdac5fec7501028bb905660a08a2af3f75c15f67e34dea6",
-      "bytes": 1249152
+      "bytes": 1252398
     },
     {
       "file": "screenshots/docs__generated__repository__atlas--768--dark.png",
@@ -533,7 +533,7 @@
       "height": 1024,
       "theme": "dark",
       "sha256": "72886c9b687b406f48673054e737209380f5f64151859b3c5eb458586e34c6ed",
-      "bytes": 1226380
+      "bytes": 1229622
     },
     {
       "file": "screenshots/docs__generated__repository__atlas--768--light.png",
@@ -542,7 +542,7 @@
       "height": 1024,
       "theme": "light",
       "sha256": "d3422d79a725e76eec8da84bc02bdc8adf6b41751eea80f1d6080525b825f8fd",
-      "bytes": 1206668
+      "bytes": 1210167
     },
     {
       "file": "screenshots/docs__generated__supported__hardware--1280--dark.png",
@@ -551,7 +551,7 @@
       "height": 900,
       "theme": "dark",
       "sha256": "6276ae5ecd314d90d8b14ed2e9df091c44f476d4ffc9b51a526772612e9ea3a5",
-      "bytes": 363317
+      "bytes": 368596
     },
     {
       "file": "screenshots/docs__generated__supported__hardware--1280--light.png",
@@ -560,7 +560,7 @@
       "height": 900,
       "theme": "light",
       "sha256": "40d6053c39e0816aa7fa7dfe97a497a3323c5d4a27f305eaeaa938369031b16f",
-      "bytes": 356952
+      "bytes": 362164
     },
     {
       "file": "screenshots/docs__generated__supported__hardware--375--dark.png",
@@ -569,7 +569,7 @@
       "height": 812,
       "theme": "dark",
       "sha256": "2df5fd972bb90b3c3390336361b36492d28ecce8e6ebca1e08c5ec342c98de44",
-      "bytes": 316988
+      "bytes": 325799
     },
     {
       "file": "screenshots/docs__generated__supported__hardware--375--light.png",
@@ -578,7 +578,7 @@
       "height": 812,
       "theme": "light",
       "sha256": "fe97f00e9a2e378ac0aa40c6a8d989d8994de03379edfb8b14e0cf70a3e76aad",
-      "bytes": 311212
+      "bytes": 319817
     },
     {
       "file": "screenshots/docs__generated__supported__hardware--768--dark.png",
@@ -587,7 +587,7 @@
       "height": 1024,
       "theme": "dark",
       "sha256": "12b3e4b37fe3c343f32183a855fbdc2b129d86a0d4e4762e3022412f2ad3feb1",
-      "bytes": 362057
+      "bytes": 370781
     },
     {
       "file": "screenshots/docs__generated__supported__hardware--768--light.png",
@@ -596,7 +596,7 @@
       "height": 1024,
       "theme": "light",
       "sha256": "1802fc5e07779ef5e3d115f28c7edb66c99c920baf24bb22325ea2649ff89894",
-      "bytes": 354975
+      "bytes": 363234
     },
     {
       "file": "screenshots/docs__generated__verification--1280--dark.png",
@@ -658,8 +658,8 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "0c6d7edb839b43728b6795cbb43a776e0d77194066b823c9e2a5b7d0ed01eb44",
-      "bytes": 898760
+      "sha256": "19a76fd0398c1b240aa3e394f6d306b569e883b19a29aec11efc23d36934b807",
+      "bytes": 941919
     },
     {
       "file": "screenshots/docs__project__journey--1280--light.png",
@@ -667,8 +667,8 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "28e0a4b7ceb9fd564dbe8c6a131ed872014b853dd0db10ef6e61ec2259399aea",
-      "bytes": 880559
+      "sha256": "048a7035b5b7a2d4e92c6d977360e06a44576fe8853b5e5a49cb7461b17d78c1",
+      "bytes": 923254
     },
     {
       "file": "screenshots/docs__project__journey--375--dark.png",
@@ -676,8 +676,8 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "1aa836af9c62bd80bfcd38f7020fa0fc3ae9678f751ebb38b2d0680beca713e7",
-      "bytes": 859320
+      "sha256": "71a69a7ca6dd8c8d32a8802cfdb663c82f924f8843bf600d2f5e6020059a31d4",
+      "bytes": 900778
     },
     {
       "file": "screenshots/docs__project__journey--375--light.png",
@@ -685,8 +685,8 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "a256503c25f7c06cd1c40be21c6def4320b912411fb805ab33a3848a209efc6b",
-      "bytes": 843124
+      "sha256": "2e3b52b9c83d4069647ae4574ef088e90337cca442af2813e128bf5b999f8995",
+      "bytes": 883766
     },
     {
       "file": "screenshots/docs__project__journey--768--dark.png",
@@ -694,8 +694,8 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "b33fe36a28256a1785fdc9104d9fcb9a917a1630c68ca072ce57b09bb0ebec60",
-      "bytes": 930735
+      "sha256": "ab8622738fcd76dfa508823becdfe7dbe4494027a50add38ed44420419424d2f",
+      "bytes": 974789
     },
     {
       "file": "screenshots/docs__project__journey--768--light.png",
@@ -703,8 +703,8 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "a9e142baba62a0885fca0dcdecd8a8d932bf99a3c73a055d349c514a319ac602",
-      "bytes": 910392
+      "sha256": "748cea5d3ddc34a73e31907fb9f0583e56aba87b2d8b5bfa23be685720e087f9",
+      "bytes": 953359
     },
     {
       "file": "screenshots/docs__project__release__status--1280--dark.png",
@@ -712,8 +712,8 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "f7943c605c8a80dd38ed09859b99ed92f49a0b8814d4e6f7ed458eb6bd64eb39",
-      "bytes": 176861
+      "sha256": "692ef96e928e77e30b1592d67bb3209bf5e62a444aa1fb95d11bb1f92c3153d3",
+      "bytes": 185143
     },
     {
       "file": "screenshots/docs__project__release__status--1280--light.png",
@@ -721,8 +721,8 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "67930bc343ef49c9be51dae33ba6c661b9b34befe480c5b02bf9bd58b687e03a",
-      "bytes": 173346
+      "sha256": "204aef46033ada60e1d7c0f6d64d69b224a9d8efece38a36bfce162e82d432d3",
+      "bytes": 181676
     },
     {
       "file": "screenshots/docs__project__release__status--375--dark.png",
@@ -730,8 +730,8 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "5d4ed5671d9867c0aeddda979234badc7aaa14bb318bbc0b9d29b652ebaba307",
-      "bytes": 172152
+      "sha256": "6d2e2a64bb15706a629b680deeb3f375003e9f3450128c99d25b70ab2ea8ebed",
+      "bytes": 180924
     },
     {
       "file": "screenshots/docs__project__release__status--375--light.png",
@@ -739,8 +739,8 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "72fe66a86419378d2f06edc02559e506ade50e61cff68026ece65a7aabc6d62b",
-      "bytes": 168066
+      "sha256": "a6bc2817c15ce9e04e9a5ddcac1d79cfdb5a38b9456e1256da91d333771eb054",
+      "bytes": 176346
     },
     {
       "file": "screenshots/docs__project__release__status--768--dark.png",
@@ -748,8 +748,8 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "0536e4019dba3f449f54c9ffbb28201561e2ddf131f14b89d5eda9b619ca0ead",
-      "bytes": 181078
+      "sha256": "e3fab4d92c30072e5bcd16769ae77b741dc2bcaf7a038e66ed9c26ea2ceb355c",
+      "bytes": 189937
     },
     {
       "file": "screenshots/docs__project__release__status--768--light.png",
@@ -757,8 +757,8 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "b98b40f476e27fd86065ad0854c0a36e0abd45c7962b6f8651fe4a9496729fc0",
-      "bytes": 177724
+      "sha256": "f2504862e95b1fcbd0252f76bc3e4cc7c362e4cc6195da281c7a5ef7914aa9ef",
+      "bytes": 186366
     },
     {
       "file": "screenshots/docs__user__first__run--1280--dark.png",
@@ -766,8 +766,8 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "ec9ec503f6b7a479a9add72d4981f5c1b9b7293d31609ae0e1308a6358ec0756",
-      "bytes": 230229
+      "sha256": "01333195339df843aabea961f29eab10ffa11ea2572d9c1021f0c49b7b8c6e80",
+      "bytes": 303118
     },
     {
       "file": "screenshots/docs__user__first__run--1280--light.png",
@@ -775,8 +775,8 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "d8757c49b083d5d8c02815680425f913e0577205189cc296a94cdcb100c4b0cd",
-      "bytes": 226934
+      "sha256": "f1aeba92d42fcbc5ffdcf7214f5ad6134f21b524105c91aee611836e3b2614e3",
+      "bytes": 298367
     },
     {
       "file": "screenshots/docs__user__first__run--375--dark.png",
@@ -784,8 +784,8 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "07f1e850ea22f8e4e095f75d0759f461e94be0f667a2e70602ac36d0ae00e5a2",
-      "bytes": 218695
+      "sha256": "a7355065e33cf59f9d5f330d9f484afec19ad6e89ec411354c9ba7d83017faed",
+      "bytes": 289000
     },
     {
       "file": "screenshots/docs__user__first__run--375--light.png",
@@ -793,8 +793,8 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "0bf36048b5315e2b30711edf5dca9b9c0b9368dcc865e772c57c0aa9608bf1e8",
-      "bytes": 214799
+      "sha256": "d7d57c9a07be74e046344b728a9d9a55adb2c6a9e822d11e71c10ff1428c406c",
+      "bytes": 284106
     },
     {
       "file": "screenshots/docs__user__first__run--768--dark.png",
@@ -802,8 +802,8 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "71893f570bed9babd888ba5b6d1dce2cf64e64785b9669f8a26da8e31da82646",
-      "bytes": 229271
+      "sha256": "642409635203359983617c6e853581d36540eeb9bf71a609379377eb1cba6a40",
+      "bytes": 301572
     },
     {
       "file": "screenshots/docs__user__first__run--768--light.png",
@@ -811,8 +811,8 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "0233831f001cc8c9b53108f68bdc941bcd6662f9c413c15b0876bbd9ecad4998",
-      "bytes": 224882
+      "sha256": "c48508b9a353135b5b4ad973a6b21796b1b323fce09755d787bf434ead34bfe3",
+      "bytes": 296062
     },
     {
       "file": "screenshots/docs__user__hardware--1280--dark.png",
@@ -820,8 +820,8 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "2c909263521cc515469268c93aa652d2715a801902becadb18a291fefddf0a4a",
-      "bytes": 404912
+      "sha256": "44a718d770e818d7583a10b550cfa6c4c5a7706d9b3980fc7bf746fdffbc88a1",
+      "bytes": 447952
     },
     {
       "file": "screenshots/docs__user__hardware--1280--light.png",
@@ -829,8 +829,8 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "07d69b636c1998538b246008f2e177c9716ae47e051cca88d8928d9dcc0093b7",
-      "bytes": 396841
+      "sha256": "c9a77dd34a7c312080324e94019646a3ab077ecc5719dfb2796af802b86b76bb",
+      "bytes": 438884
     },
     {
       "file": "screenshots/docs__user__hardware--375--dark.png",
@@ -838,8 +838,8 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "df0978bf7ff0f1e27cbf5a5d5c3b2e64aaa2edf01cf2271ff9ba161b3f387249",
-      "bytes": 392228
+      "sha256": "f287891b1d1a1605daf88b23e0fba9e29a51b04c498508b90ceb0a5a510fb811",
+      "bytes": 434699
     },
     {
       "file": "screenshots/docs__user__hardware--375--light.png",
@@ -847,8 +847,8 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "e648793d5eaf0a84a93c29e3e3b5c68235efbf389fc2a6d6688ce3c5d9bfe936",
-      "bytes": 382396
+      "sha256": "901fe5b9aba88f53a4e74c2aa497b3b2116563382ef2172101ab80b5ced5cb24",
+      "bytes": 423296
     },
     {
       "file": "screenshots/docs__user__hardware--768--dark.png",
@@ -856,8 +856,8 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "683a4c8cca5e85ba6813adeb28e8c1583761cca4825f99c4aaedcc5f8fc6d179",
-      "bytes": 417981
+      "sha256": "82d48ffee4383bfaeae36cd227b51f21335b4e67cab59f6bd7cf2e270f33f686",
+      "bytes": 462453
     },
     {
       "file": "screenshots/docs__user__hardware--768--light.png",
@@ -865,8 +865,8 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "607ec4fe0be2f98fecc24aa4e8fc2aa78f0ee290d74bb71aef6eb944d3901d3c",
-      "bytes": 408690
+      "sha256": "3602665cdccd1544a32cd7543734bd383bd9c8143d4cc5171e583f4f19720c7b",
+      "bytes": 452131
     },
     {
       "file": "screenshots/docs__user__installation--1280--dark.png",
@@ -874,8 +874,8 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "a683335738a89d9cabb13cf210bdccbde7d2b74e8707c5156843f4a268b6b192",
-      "bytes": 534497
+      "sha256": "3742d13c519b7bb3fcaf54f4ac86132251c2a26874e0e35a1b944c5b78ca2c20",
+      "bytes": 562884
     },
     {
       "file": "screenshots/docs__user__installation--1280--light.png",
@@ -883,8 +883,8 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "dfd12757e57d656d13eb29db075eb00474305d9eac48788d7a4fa8d8e415045f",
-      "bytes": 526638
+      "sha256": "e1ae3baa259b7faacad94c8fe1456c56d612331d7356cd5a5c07b693ff85ce4c",
+      "bytes": 554438
     },
     {
       "file": "screenshots/docs__user__installation--375--dark.png",
@@ -892,8 +892,8 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "b8217c2667a15e07f6dfa3ff21b3dce04279def744a26bb72e2c7f7dbbc3cb34",
-      "bytes": 455337
+      "sha256": "997993216ffeec28933d404f9b7cc2d0067d6198228cce58d13424db2c70b2ae",
+      "bytes": 475372
     },
     {
       "file": "screenshots/docs__user__installation--375--light.png",
@@ -901,8 +901,8 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "e6dc7dd6853c5565757b14a2156c737eb5fd74d184fa73d3c141f7f566788af1",
-      "bytes": 447111
+      "sha256": "dad50552258e5cca573fd6722323a81308a8ecd09a74efda77354e6341a77bc4",
+      "bytes": 466936
     },
     {
       "file": "screenshots/docs__user__installation--768--dark.png",
@@ -910,8 +910,8 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "3e2121f8375eff7e50be7168c9b707a2d84482537378988deb2eb2d3761b4507",
-      "bytes": 534673
+      "sha256": "83f736d3394184ea63b660ebf9d28612e39969aede5162bdc80d1b775bd0be39",
+      "bytes": 562636
     },
     {
       "file": "screenshots/docs__user__installation--768--light.png",
@@ -919,8 +919,8 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "660615fc7855c0bbf3793d9776c2cf2b07280f41e81a374327de19def5b80e24",
-      "bytes": 525971
+      "sha256": "3226fb47412846837e25ebfc5497827402f485f56829f170b7a672c928bc41c4",
+      "bytes": 553457
     },
     {
       "file": "screenshots/docs__user__troubleshooting--1280--dark.png",
@@ -928,8 +928,8 @@
       "width": 1280,
       "height": 900,
       "theme": "dark",
-      "sha256": "a924559b2710346a179ba19a5774784718f4c6633df0c474fa9994592964c22d",
-      "bytes": 254895
+      "sha256": "62be6e97a3be485ee52e1ac3b6631f962763ef2b25c2f6639c395918778702df",
+      "bytes": 396248
     },
     {
       "file": "screenshots/docs__user__troubleshooting--1280--light.png",
@@ -937,8 +937,8 @@
       "width": 1280,
       "height": 900,
       "theme": "light",
-      "sha256": "f5407e9224dad2b94c1d6fddd8c82711878c71401d970db95c8920eaca30f2c1",
-      "bytes": 250139
+      "sha256": "13c9d7e78d8a835010e4e9d6aee742a8091d2d6bbd3454645f89e87523eff3e1",
+      "bytes": 389244
     },
     {
       "file": "screenshots/docs__user__troubleshooting--375--dark.png",
@@ -946,8 +946,8 @@
       "width": 375,
       "height": 812,
       "theme": "dark",
-      "sha256": "b5b7ce166a119a72129e9057eea8eef112b4cca8bf2c296f296928cc42ac798b",
-      "bytes": 246611
+      "sha256": "560d6ad1edf3f1d52458f073e2dbdee5bdd1e2e56ae8c1ad0c16169e1969e8fb",
+      "bytes": 380165
     },
     {
       "file": "screenshots/docs__user__troubleshooting--375--light.png",
@@ -955,8 +955,8 @@
       "width": 375,
       "height": 812,
       "theme": "light",
-      "sha256": "11eff1955ba1661da38925236b0840f865848179b88e75f03da4336b7c86b164",
-      "bytes": 240654
+      "sha256": "5516d705b24edd2ccbd474d304d471974d4d334c195516cc6019b62e692ec7e0",
+      "bytes": 371497
     },
     {
       "file": "screenshots/docs__user__troubleshooting--768--dark.png",
@@ -964,8 +964,8 @@
       "width": 768,
       "height": 1024,
       "theme": "dark",
-      "sha256": "87773e4b5e3ee7d87d2fd9c14620c83c3b5f2cf432bc59fbf9d64146aa014672",
-      "bytes": 256257
+      "sha256": "c407be5801f238484e5546559e7169047519c61c9fa7cac33e104c0324b1c8f2",
+      "bytes": 395831
     },
     {
       "file": "screenshots/docs__user__troubleshooting--768--light.png",
@@ -973,8 +973,8 @@
       "width": 768,
       "height": 1024,
       "theme": "light",
-      "sha256": "a7693924101a0191c9ce43aa874a4752263c3244c3677f3fe2f498f470b5be65",
-      "bytes": 250718
+      "sha256": "18020c5192e8fe79ad55ddb043f8e2aa7dd8e1131f859c6a4926e04217db7b96",
+      "bytes": 387786
     }
   ]
 }

@@ -24,11 +24,19 @@ from hfxdev.model import ModelError
 
 
 class FakeGitHubApi:
-    def __init__(self, *, ruleset_drift: bool = False, pages_enabled: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        ruleset_drift: bool = False,
+        pages: str = "current",
+        pages_branch: bool = True,
+    ) -> None:
         self.governance = load_github_governance(ROOT)
         self.calls: list[tuple[str, str, object]] = []
         self.ruleset_drift = ruleset_drift
-        self.pages_enabled = pages_enabled
+        # "missing", "workflow" (Pages built by a workflow from main), or "current".
+        self.pages = pages
+        self.pages_branch = pages_branch
 
     def call(
         self,
@@ -40,6 +48,9 @@ class FakeGitHubApi:
     ) -> object:
         self.calls.append((method, endpoint, payload))
         repo = f"/repos/{self.governance.owner}/{self.governance.repository}"
+        if endpoint == f"{repo}/pages" and method in {"POST", "PUT"}:
+            # GitHub serves its own github.io address over HTTPS.
+            self.pages = "current"
         if method != "GET":
             return None
         if endpoint == repo:
@@ -67,17 +78,20 @@ class FakeGitHubApi:
         if endpoint == f"{repo}/automated-security-fixes":
             return {"enabled": True, "paused": False}
         if endpoint == f"{repo}/pages":
+            if self.pages == "missing":
+                return MISSING
+            source = self.governance.pages_source
             return {
-                "build_type": "workflow",
-                "html_url": self.governance.homepage,
-            } if self.pages_enabled else MISSING
-        if endpoint == f"{repo}/environments/github-pages":
-            return {
-                "deployment_branch_policy": {
-                    "protected_branches": False,
-                    "custom_branch_policies": True,
-                }
-            } if self.pages_enabled else MISSING
+                "build_type": "workflow" if self.pages == "workflow" else source.build_type,
+                "source": {
+                    "branch": "main" if self.pages == "workflow" else source.branch,
+                    "path": "/",
+                },
+                "https_enforced": True,
+                "html_url": "https://offalexjackson777-stack.github.io/hyperflux-next/",
+            }
+        if endpoint == f"{repo}/branches/gh-pages":
+            return {"name": "gh-pages"} if self.pages_branch else MISSING
         if endpoint == f"{repo}/rulesets?includes_parents=false":
             return [{"id": 7, "name": "Protected main", "enforcement": "active"}]
         if endpoint == f"{repo}/rulesets/7":
@@ -111,20 +125,33 @@ class GitHubSyncTests(unittest.TestCase):
                 plan(ROOT, [component])
 
     def test_apply_is_idempotent_and_bounded_to_reviewed_repository_surfaces(self) -> None:
-        api = FakeGitHubApi(pages_enabled=True)
+        api = FakeGitHubApi(pages="workflow")
         result = apply(ROOT, api=api)
         self.assertEqual(result.mode, "apply")
         endpoints = "\n".join(endpoint for _, endpoint, _ in api.calls)
         for fragment in ("/releases", "/git/tags", "/packages", "/actions/runners"):
             self.assertNotIn(fragment, endpoints)
-        deletes = {
-            endpoint for method, endpoint, _ in api.calls if method == "DELETE"
-        }
-        self.assertIn(
-            f"/repos/{api.governance.owner}/{api.governance.repository}/pages",
-            deletes,
+        deletes = [endpoint for method, endpoint, _ in api.calls if method == "DELETE"]
+        self.assertEqual(deletes, [])
+        pages_writes = [
+            (method, payload)
+            for method, endpoint, payload in api.calls
+            if method != "GET" and endpoint.endswith("/pages")
+        ]
+        self.assertEqual(
+            pages_writes,
+            [("PUT", {"build_type": "legacy", "source": {"branch": "gh-pages", "path": "/"}})],
         )
-        self.assertTrue(any(endpoint.endswith("/environments/github-pages") for endpoint in deletes))
+        self.assertIn(
+            {
+                "component": "pages",
+                "operation": "serve-site-from-branch",
+                "status": "updated",
+                "branch": "gh-pages",
+                "path": "/",
+            },
+            result.operations,
+        )
         ruleset_payload = next(
             payload
             for method, endpoint, payload in api.calls
@@ -138,6 +165,66 @@ class GitHubSyncTests(unittest.TestCase):
         self.assertTrue(
             all(operation["status"] == "current" for operation in result.operations)
         )
+
+    def test_plan_serves_pages_from_the_gh_pages_branch(self) -> None:
+        result = plan(ROOT, ["pages"])
+        self.assertEqual(
+            result.operations,
+            (
+                {
+                    "component": "pages",
+                    "operation": "serve-site-from-branch",
+                    "build_type": "legacy",
+                    "branch": "gh-pages",
+                    "path": "/",
+                    "https_enforced": True,
+                },
+            ),
+        )
+        self.assertNotIn("disable", result.as_json())
+
+    def test_apply_creates_pages_when_missing_and_leaves_current_pages_alone(self) -> None:
+        missing = FakeGitHubApi(pages="missing")
+        result = apply(ROOT, ["pages"], api=missing)
+        writes = [(method, payload) for method, _, payload in missing.calls if method != "GET"]
+        self.assertEqual(
+            writes,
+            [("POST", {"build_type": "legacy", "source": {"branch": "gh-pages", "path": "/"}})],
+        )
+        self.assertEqual(result.operations[0]["status"], "created")
+
+        current = FakeGitHubApi(pages="current")
+        result = apply(ROOT, ["pages"], api=current)
+        self.assertEqual([call for call in current.calls if call[0] != "GET"], [])
+        self.assertEqual(result.operations[0]["status"], "current")
+
+    def test_apply_refuses_pages_before_the_site_branch_exists(self) -> None:
+        api = FakeGitHubApi(pages="workflow", pages_branch=False)
+        with self.assertRaisesRegex(ModelError, "repositories publish --execute"):
+            apply(ROOT, ["pages"], api=api)
+        self.assertEqual([call for call in api.calls if call[0] != "GET"], [])
+
+    def test_apply_enforces_https_when_it_is_off(self) -> None:
+        api = FakeGitHubApi(pages="current")
+        original = api.call
+
+        def without_https(method, endpoint, payload=None, *, allow_missing=False):
+            value = original(method, endpoint, payload, allow_missing=allow_missing)
+            if method == "GET" and endpoint.endswith("/pages") and isinstance(value, dict):
+                return {**value, "https_enforced": False}
+            return value
+
+        api.call = without_https
+        apply(ROOT, ["pages"], api=api)
+        self.assertIn(("PUT", {"https_enforced": True}), [(m, p) for m, _, p in api.calls])
+
+    def test_verify_reports_pages_built_from_main_as_drift(self) -> None:
+        with self.assertRaisesRegex(
+            ModelError, "GitHub remote state differs from canonical governance"
+        ):
+            verify(ROOT, ["pages"], api=FakeGitHubApi(pages="workflow"))
+        result = verify(ROOT, ["pages"], api=FakeGitHubApi(pages="current"))
+        self.assertEqual(result.operations[0]["mismatches"], [])
 
     def test_verify_rejects_semantic_ruleset_drift_after_normalization(self) -> None:
         with self.assertRaisesRegex(

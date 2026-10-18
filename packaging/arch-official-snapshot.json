@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/arch-official-snapshot.schema.json",
   "schema": "hyperflux-arch-official-snapshot-v1",
-  "candidate": "2.1.1-1",
+  "candidate": "2.1.2-1",
   "rule": "Refresh at every candidate from the official extra, extra-testing and extra-staging sync databases; an unobserved repository fails the gate.",
   "watched_packages": [
     "openrazer-daemon",
@@ -14,8 +14,8 @@
     {
       "name": "extra",
       "state": "observed",
-      "database_sha256": "334802ae5309db88a62bd28d257c525b0e71bc4eb35027ed049de803d39ac3be",
-      "database_modified": "2026-10-16T07:00:11Z",
+      "database_sha256": "5fcd2cb7a0741d909d79702f54ae2b560f196f80cb15cc08d24f1c4e891b37f1",
+      "database_modified": "2026-10-18T07:52:12Z",
       "packages": [
         {
           "base": "openrazer",
@@ -51,7 +51,7 @@
         },
         {
           "base": "openrgb",
-          "build_date": 1789203567,
+          "build_date": 1792249318,
           "conflicts": [],
           "depends": [
             "glibc",
@@ -63,11 +63,11 @@
             "mbedtls3",
             "qt6-base"
           ],
-          "filename": "openrgb-1.0-2-x86_64.pkg.tar.zst",
+          "filename": "openrgb-1.1-1-x86_64.pkg.tar.zst",
           "name": "openrgb",
           "provides": [],
-          "sha256": "9c30e4c499846a2b8c6a80399d20444079396d36fd574df52d52c75cc3e5acce",
-          "version": "1.0-2"
+          "sha256": "34b99239ecd1ea2a07919e83f76d435b0a6e1f0e87d58ace064afdd2f5de64c2",
+          "version": "1.1-1"
         },
         {
           "base": "openrazer",

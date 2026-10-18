@@ -156,8 +156,23 @@ if(NOT HFX_OPENRGB_NATIVE_SOURCE_DIR AND DEFINED ENV{HFX_OPENRGB_NATIVE_SOURCE_D
     set(HFX_OPENRGB_NATIVE_SOURCE_DIR "$ENV{HFX_OPENRGB_NATIVE_SOURCE_DIR}")
 endif()
 
+# OpenRGB loads plugins built against its own Qt. Arch builds OpenRGB with
+# Qt 6; Debian 14 builds it with Qt 5.15.
+set(HFX_OPENRGB_QT_MAJOR "6" CACHE STRING "Qt major version of the OpenRGB host")
+if(HFX_OPENRGB_QT_MAJOR STREQUAL "6")
+    set(HFX_OPENRGB_QT_MINIMUM "6.5")
+elseif(HFX_OPENRGB_QT_MAJOR STREQUAL "5")
+    set(HFX_OPENRGB_QT_MINIMUM "5.15")
+else()
+    message(FATAL_ERROR "HFX_OPENRGB_QT_MAJOR must be 5 or 6")
+endif()
+set(HFX_OPENRGB_QT "Qt${HFX_OPENRGB_QT_MAJOR}")
+
 if(HFX_OPENRGB_SOURCE_DIR)
-    find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Widgets)
+    find_package(
+        ${HFX_OPENRGB_QT} ${HFX_OPENRGB_QT_MINIMUM} REQUIRED
+        COMPONENTS Core Gui Widgets
+    )
 
     execute_process(
         COMMAND git rev-parse HEAD
@@ -512,7 +527,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
     )
     target_link_libraries(
         hyperflux_openrgb_qt_shell
-        PUBLIC hyperflux_openrgb_native_controller Qt6::Core Qt6::Gui Qt6::Widgets
+        PUBLIC hyperflux_openrgb_native_controller ${HFX_OPENRGB_QT}::Core ${HFX_OPENRGB_QT}::Gui ${HFX_OPENRGB_QT}::Widgets
     )
     if(TARGET hyperflux_openrgb_upstream_razer_registry)
         target_link_libraries(
@@ -548,7 +563,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
     )
     target_link_libraries(
         hyperflux_openrgb_qt_widget
-        PUBLIC hyperflux_openrgb_qt_shell Qt6::Core Qt6::Gui Qt6::Widgets
+        PUBLIC hyperflux_openrgb_qt_shell ${HFX_OPENRGB_QT}::Core ${HFX_OPENRGB_QT}::Gui ${HFX_OPENRGB_QT}::Widgets
     )
     hfx_openrgb_enable_thread_sanitizer(hyperflux_openrgb_qt_widget)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -583,7 +598,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
     )
     target_link_libraries(
         hyperflux-next-openrgb
-        PRIVATE hyperflux_openrgb_qt_widget Qt6::Core Qt6::Gui Qt6::Widgets
+        PRIVATE hyperflux_openrgb_qt_widget ${HFX_OPENRGB_QT}::Core ${HFX_OPENRGB_QT}::Gui ${HFX_OPENRGB_QT}::Widgets
     )
     hfx_openrgb_enable_thread_sanitizer(hyperflux-next-openrgb)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -887,7 +902,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
         )
         target_link_libraries(
             openrgb-plugin-application-contract
-            PRIVATE hyperflux_openrgb_qt_shell Qt6::Core
+            PRIVATE hyperflux_openrgb_qt_shell ${HFX_OPENRGB_QT}::Core
         )
         hfx_openrgb_enable_thread_sanitizer(openrgb-plugin-application-contract)
         if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -911,7 +926,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
         )
         target_link_libraries(
             openrgb-qt-dispatcher-contract
-            PRIVATE hyperflux_openrgb_qt_shell Qt6::Core Threads::Threads
+            PRIVATE hyperflux_openrgb_qt_shell ${HFX_OPENRGB_QT}::Core Threads::Threads
         )
         hfx_openrgb_enable_thread_sanitizer(openrgb-qt-dispatcher-contract)
         if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -987,7 +1002,7 @@ if(HFX_OPENRGB_SOURCE_DIR)
         )
         target_link_libraries(
             openrgb-plugin-loader-contract
-            PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets
+            PRIVATE ${HFX_OPENRGB_QT}::Core ${HFX_OPENRGB_QT}::Gui ${HFX_OPENRGB_QT}::Widgets
         )
         hfx_openrgb_enable_thread_sanitizer(openrgb-plugin-loader-contract)
         if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")

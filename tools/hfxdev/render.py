@@ -118,6 +118,7 @@ from .generators.linux_runtime import (
 )
 from .generators.openrazer_native import (
     bridge_drop_in as openrazer_bridge_drop_in,
+    key_event_udev_rules as openrazer_key_event_udev_rules,
     driver_preflight_service as openrazer_driver_preflight_service,
     markdown as openrazer_native_markdown,
     relay_service as openrazer_native_relay_service,
@@ -541,7 +542,7 @@ def rendered_files(root: Path) -> dict[Path, str]:
         / "hfx-integration-model"
         / "src"
         / "openrazer_native_generated.rs": openrazer_native_rust_constants(
-            openrazer_native
+            openrazer_native, profiles
         ),
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "integration_catalog.py": integration_python_catalog(integrations),
         root / "sdk" / "python" / "hyperflux_sdk" / "generated" / "openrazer_metadata.py": python_openrazer_metadata(openrazer_metadata),
@@ -573,6 +574,12 @@ def rendered_files(root: Path) -> dict[Path, str]:
         root
         / "packaging"
         / "generated"
+        / "full-component-route-only.json": full_component_descriptor(
+            linux_runtime, openrgb_plugin=False
+        ),
+        root
+        / "packaging"
+        / "generated"
         / linux_runtime.desktop_access.socket_unit: desktop_bridge_socket(linux_runtime),
         root
         / "packaging"
@@ -600,6 +607,12 @@ def rendered_files(root: Path) -> dict[Path, str]:
         / "generated"
         / "hyperflux-next-openrazer.modules-load.conf": openrazer_native_modules_load(
             openrazer_native
+        ),
+        root
+        / "packaging"
+        / "generated"
+        / "70-hyperflux-next-openrazer-keys.rules": openrazer_key_event_udev_rules(
+            openrazer_native, profiles
         ),
         root / "packaging" / "generated" / "hyperflux-next.sysusers": sysusers(linux_runtime),
         root / "packaging" / "generated" / "hyperflux-next.tmpfiles": tmpfiles(linux_runtime),
@@ -701,7 +714,15 @@ def rendered_files(root: Path) -> dict[Path, str]:
     )
     files[install_plan_path] = compiled_install_plan(install_manifest, linux_runtime)
     files[installation_document_path] = install_markdown(
-        install_manifest, linux_runtime, openrazer_native, load_arch_split(root)
+        install_manifest,
+        linux_runtime,
+        openrazer_native,
+        load_arch_split(root),
+        distributions_published=repository_site.published
+        and all(
+            distribution_catalog.targets[target_id].published
+            for target_id in repository_targets
+        ),
     )
     return files
 

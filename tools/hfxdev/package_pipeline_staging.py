@@ -183,35 +183,61 @@ def _component_directory_modes(
     )
 
 
+# A Full package without the OpenRGB plugin leaves out the plugin build and
+# installs the descriptor that names the OpenRazer route alone. A release that
+# builds the plugin against its own Qt stages that module in place of the
+# shared one.
+OPENRGB_PLUGIN_BUILD = "openrgb-native"
+FULL_COMPONENT_DESCRIPTOR = "full-component-descriptor"
+FULL_COMPONENT_ROUTE_ONLY_SOURCE = "packaging/generated/full-component-route-only.json"
+
+
 def stage_rootfs(
     root: Path,
     manifest_path: Path,
     stage_root: Path,
     distribution_component: str = "linux",
+    *,
+    openrgb_plugin: bool = True,
+    openrgb_plugin_module: Path | None = None,
 ) -> StageResult:
     root = root.resolve()
     install = load_install_manifest(root)
     if distribution_component not in {"linux", "full"}:
         raise ModelError("package staging: unsupported distribution component")
+    if not openrgb_plugin and distribution_component != "full":
+        raise ModelError("package staging: only Full carries the OpenRGB plugin")
+    if openrgb_plugin_module is not None and (
+        not openrgb_plugin or distribution_component != "full"
+    ):
+        raise ModelError("package staging: a release plugin module needs Full with the plugin")
     artifacts = load_artifact_set(root, manifest_path)
     stage_root = _new_output_directory(stage_root, "package staging")
 
     for file in install.files_for(distribution_component):
+        source = file.source
+        if not openrgb_plugin and file.component == FULL_COMPONENT_DESCRIPTOR:
+            source = root / FULL_COMPONENT_ROUTE_ONLY_SOURCE
         _copy_to_stage(
-            file.source,
+            source,
             _stage_path(stage_root, file.destination),
             file.mode,
         )
     for artifact in artifacts.artifacts:
         if artifact.distribution_component != distribution_component:
             continue
+        if not openrgb_plugin and artifact.build_id == OPENRGB_PLUGIN_BUILD:
+            continue
         if artifact.kind == "source-tree":
             _install_source_tree(stage_root, artifact)
             continue
         if artifact.destination is None:
             raise ModelError(f"artifact {artifact.build_id}: missing destination")
+        source = artifact.path
+        if openrgb_plugin_module is not None and artifact.build_id == OPENRGB_PLUGIN_BUILD:
+            source = openrgb_plugin_module
         _copy_to_stage(
-            artifact.path,
+            source,
             _stage_path(stage_root, artifact.destination),
             artifact.mode,
         )
@@ -232,6 +258,7 @@ def stage_rootfs(
     inventory_value = {
         "schema": "hyperflux-staged-files-v2",
         "distribution_component": distribution_component,
+        "openrgb_plugin": openrgb_plugin,
         "source_revision": artifacts.revision,
         "source_date_epoch": artifacts.source_date_epoch,
         "install_manifest_sha256": install.source_sha256,
