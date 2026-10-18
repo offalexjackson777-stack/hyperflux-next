@@ -5,27 +5,27 @@
   "packages": [
     {
       "name": "hyperflux-next-dkms",
-      "version": "2.1.0-1",
-      "filename": "hyperflux-next-dkms-2.1.0-1-x86_64.pkg.tar.zst",
-      "sha256": "fc1fea9b810234ba8f99ddb51e0b6e38d09abbf5f70b480d11e86b8c4c21ed84"
+      "version": "2.1.1-1",
+      "filename": "hyperflux-next-dkms-2.1.1-1-x86_64.pkg.tar.zst",
+      "sha256": "d3f145a4409a2d4ef8629840332b7770d52be852746cc1031431a208c5749ffc"
     },
     {
       "name": "hyperflux-next-linux",
-      "version": "2.1.0-1",
-      "filename": "hyperflux-next-linux-2.1.0-1-x86_64.pkg.tar.zst",
-      "sha256": "c582698b2e6fe335d9ca54455b3207784273046fb54c8b258fb3382a3f2e42c7"
+      "version": "2.1.1-1",
+      "filename": "hyperflux-next-linux-2.1.1-1-x86_64.pkg.tar.zst",
+      "sha256": "13e3e2e94b2de49bb958b43f4a8275ec710a4b8b5194b100a9030e2f4e3d810a"
     },
     {
       "name": "hyperflux-next-openrazer-driver-dkms",
-      "version": "2.1.0-1",
-      "filename": "hyperflux-next-openrazer-driver-dkms-2.1.0-1-x86_64.pkg.tar.zst",
-      "sha256": "d07439b9b163bef463932c7f66e7703324b9d0f779c0aeabdfc2c5e7e700a8c3"
+      "version": "2.1.1-1",
+      "filename": "hyperflux-next-openrazer-driver-dkms-2.1.1-1-x86_64.pkg.tar.zst",
+      "sha256": "1a4d44ef7bdc0036f801c05edde646ab91fab34256ffbe569de41aae1da6a4df"
     },
     {
       "name": "hyperflux-next-full",
-      "version": "2.1.0-1",
-      "filename": "hyperflux-next-full-2.1.0-1-x86_64.pkg.tar.zst",
-      "sha256": "4431ff857f02fef1f9f02f463ecafa3bf37038a55e461a095f87d97381dfb3e5"
+      "version": "2.1.1-1",
+      "filename": "hyperflux-next-full-2.1.1-1-x86_64.pkg.tar.zst",
+      "sha256": "5b5c4a812255c897d27eb2dbb81872c9e449fdc0421a1408ac5c28ec99017182"
     }
   ]
 }
