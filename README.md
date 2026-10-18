@@ -60,14 +60,14 @@ works.
 | Distribution | Release | Guide | Packages |
 | --- | --- | --- | --- |
 | Arch Linux | rolling | [Install on Arch Linux](docs/user/installation.md) | Ready |
-| Ubuntu | 26.10 | [Install on Ubuntu](docs/user/install-ubuntu.md) | Not published yet |
-| Debian | 14 | [Install on Debian](docs/user/install-debian.md) | Not published yet |
-| Fedora | 44 | [Install on Fedora](docs/user/install-fedora.md) | Not published yet |
-| openSUSE | Tumbleweed | [Install on openSUSE](docs/user/install-opensuse.md) | Not published yet |
+| Ubuntu | 26.10 | [Install on Ubuntu](docs/user/install-ubuntu.md) | Ready |
+| Debian | 14 | [Install on Debian](docs/user/install-debian.md) | Ready |
+| Fedora | 44 | [Install on Fedora](docs/user/install-fedora.md) | Ready |
+| openSUSE | Tumbleweed | [Install on openSUSE](docs/user/install-opensuse.md) | Ready |
 
-Packages are published for Arch Linux. The Ubuntu, Debian, Fedora, and
-openSUSE packages are built and tested in CI but not published yet; their
-guides show how installing will work.
+Packages are published for every distribution in the table. The Ubuntu,
+Debian, Fedora, and openSUSE packages are built and tested automatically, but
+not yet confirmed on real hardware.
 <!-- HFX-GENERATED-END: install-table -->
 
 <!-- HFX-GENERATED-BEGIN: recommended-package -->

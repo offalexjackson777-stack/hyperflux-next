@@ -95,7 +95,7 @@
     },
     "ubuntu": {
       "package_format": "deb",
-      "maturity": "ci-only",
+      "maturity": "published",
       "release": {
         "distribution": "Ubuntu",
         "version": "26.10",
@@ -171,7 +171,7 @@
     },
     "debian": {
       "package_format": "deb",
-      "maturity": "ci-only",
+      "maturity": "published",
       "release": {
         "distribution": "Debian",
         "version": "14",
@@ -256,7 +256,7 @@
     },
     "fedora": {
       "package_format": "rpm",
-      "maturity": "ci-only",
+      "maturity": "published",
       "release": {
         "distribution": "Fedora",
         "version": "44",
@@ -329,7 +329,7 @@
     },
     "opensuse": {
       "package_format": "rpm",
-      "maturity": "ci-only",
+      "maturity": "published",
       "release": {
         "distribution": "openSUSE",
         "version": "Tumbleweed",

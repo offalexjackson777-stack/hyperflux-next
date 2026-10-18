@@ -84,4 +84,4 @@ After login, run the read-only `hyperfluxctl doctor`; the read-only `hyperfluxct
 
 Rollback uses a complete prior source-bound Core/Full pair through the package manager. Do not copy files into `/usr/src`, overwrite DKMS trees, or mix an upstream OpenRazer driver package with the HyperFlux-owned transform. Existing configuration remains preserved across supported package transitions.
 
-The Arch package base consumes independently staged `linux` and payload-bearing `full` components. Ubuntu 26.10 and Debian 14 `.deb` packages and Fedora 44 and openSUSE Tumbleweed `.rpm` packages of both editions are built and checked in CI every week but not published yet.
+The Arch package base consumes independently staged `linux` and payload-bearing `full` components. Ubuntu 26.10 and Debian 14 `.deb` packages and Fedora 44 and openSUSE Tumbleweed `.rpm` packages of both editions are built and tested automatically every week and published in the signed package repository, but not yet confirmed on real hardware.
