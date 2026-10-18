@@ -54,15 +54,11 @@ SECURE_BOOT_ENROLLMENT = {
 DKMS_SERVICE_DISABLED = {"opensuse"}
 
 # Why Full on each release leaves out the OpenRGB plugin. The plugin needs
-# OpenRGB 1.0 final, plugin interface 5, built with Qt 6. Checked 18 October 2026.
+# OpenRGB 1.0 final, plugin interface 5. Checked 18 October 2026.
 OPENRGB_PLUGIN_ABSENT = {
     "ubuntu": (
         "Ubuntu 26.10 packages a development snapshot of OpenRGB from before 1.0, "
         "which loads plugins built for plugin interface 4 only."
-    ),
-    "debian": (
-        "Debian 14 packages OpenRGB 1.0 final, but built with Qt 5, and a plugin "
-        "must use the same Qt as OpenRGB itself."
     ),
     "fedora": (
         "Fedora 44 packages an OpenRGB 1.0 release candidate, which loads plugins "
@@ -71,6 +67,16 @@ OPENRGB_PLUGIN_ABSENT = {
     "opensuse": (
         "openSUSE Tumbleweed packages an OpenRGB 1.0 release candidate, which loads "
         "plugins built for plugin interface 4 only."
+    ),
+}
+
+# How Full on each release other than Arch carries the OpenRGB plugin. A plugin
+# must use the same Qt as the OpenRGB that loads it.
+OPENRGB_PLUGIN_RELEASE_BUILD = {
+    "debian": (
+        "Debian 14 packages OpenRGB 1.0 final, plugin interface 5, built with Qt 5. "
+        "So Full on Debian carries a copy of the plugin built inside Debian 14 against "
+        "Debian's own Qt 5, from the same source as the Arch Linux one."
     ),
 }
 
@@ -140,21 +146,27 @@ def _removal(
 
 def _full_edition(target: DistributionTarget, plans: list) -> list[str]:
     release = target.release
-    if release is None or target.openrgb_plugin:
-        raise ModelError(f"the {target.id} target must be a release without the OpenRGB plugin")
+    if release is None or target.id == "arch":
+        raise ModelError(f"the {target.id} target must be a release other than Arch Linux")
     full = target.component("full")
     linux = target.component("linux")
     driver = [plan for plan in plans if plan.provides]
     if len(driver) != 1:
         raise ModelError(f"the {target.id} Full edition must have one package that provides")
     name = f"{release.distribution} {release.version}"
+    carries = (
+        "OpenRazer compatibility transport and the OpenRGB plugin, so stock OpenRazer "
+        "applications and OpenRGB can use your devices too."
+        if target.openrgb_plugin
+        else "OpenRazer compatibility transport, so stock OpenRazer applications can use "
+        "your devices too."
+    )
     return [
         "",
         f"### Core and Full on {release.distribution}",
         "",
         f"Core is `{linux.package_name}`. Full is `{full.package_name}`: Core plus the "
-        "OpenRazer compatibility transport, so stock OpenRazer applications can use "
-        "your devices too.",
+        f"{carries}",
         "",
         _driver_swap(target, driver[0], full),
         f"- {OPENRAZER_SOURCE[target.id]}",
@@ -162,13 +174,29 @@ def _full_edition(target: DistributionTarget, plans: list) -> list[str]:
         "- To use the stock OpenRazer service, add yourself to the `openrazer` group, then "
         "log out and back in: `sudo gpasswd -a \"$USER\" openrazer`.",
         "",
+        *_openrgb_plugin_note(target, name),
+    ]
+
+
+def _openrgb_plugin_note(target: DistributionTarget, name: str) -> list[str]:
+    release = target.release
+    if target.openrgb_plugin:
+        return [
+            f"**Full on {release.distribution} includes the OpenRGB plugin.** "
+            f"{OPENRGB_PLUGIN_RELEASE_BUILD[target.id]} Install `openrgb` from "
+            f"{release.distribution} to use it. Every change to the packages is checked "
+            f"by starting {name}'s own OpenRGB and confirming it loads the plugin. "
+            "The deeper check that drives the plugin through OpenRGB's software "
+            "interface runs on the Arch Linux build only.",
+        ]
+    return [
         f"**Full on {release.distribution} has no OpenRGB plugin.** That is a limit of "
         f"what {name} packages, not of HyperFlux: {OPENRGB_PLUGIN_ABSENT[target.id]} "
-        "The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, with "
-        "Qt 6, and OpenRGB refuses a plugin built for another interface. Doctor reports "
-        "Full as ready without it. Arch Linux packages OpenRGB 1.0 final with Qt 6, so "
-        f"Full there includes the plugin. When {release.distribution} packages that "
-        "too, its Full packages can include the plugin.",
+        "The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, and "
+        "OpenRGB refuses a plugin built for another interface. Doctor reports Full as "
+        "ready without it. Arch Linux and Debian 14 package OpenRGB 1.0 final, so Full "
+        f"there includes the plugin. When {release.distribution} packages OpenRGB 1.0 "
+        "final too, its Full packages can include the plugin.",
     ]
 
 
@@ -294,6 +322,15 @@ def _debian_format(
             "when they are removed.",
             f"- Programs must run on the glibc {release.c_runtime_version} that "
             f"{release.distribution} {release.version} ships.",
+            *(
+                [
+                    f"- Full carries an OpenRGB plugin built inside {release.distribution} "
+                    f"{release.version}, which needs that release's glibc, so the packages "
+                    f"declare `{target.dependency_roles['c-runtime']}`."
+                ]
+                if target.openrgb_plugin_release_build
+                else []
+            ),
             "",
             *_secure_boot(target_id, release, module),
             *_removal(

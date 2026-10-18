@@ -1,10 +1,8 @@
 # Install HyperFlux Next on Debian
 
 This guide installs HyperFlux Next on Debian, so your Razer keyboard and mouse
-on a HyperFlux receiver work in OpenRazer apps such as Polychromatic. OpenRGB
-cannot reach them on Debian yet, because Debian does not package an OpenRGB
-that can load the HyperFlux plugin; the [known
-limitations](limitations.md#no-openrgb-plugin-outside-arch-linux) explain why.
+on a HyperFlux receiver work in OpenRGB and in OpenRazer apps such as
+Polychromatic.
 The guide uses the signed HyperFlux package repository, so later updates arrive
 with your normal system updates.
 
@@ -19,12 +17,14 @@ with your normal system updates.
 HyperFlux Next comes in two editions:
 
 - **Full (`hyperflux-next-full`), recommended:** your keyboard and mouse work in
-  OpenRazer apps such as Polychromatic. Full installs Core for you.
+  OpenRGB and in OpenRazer apps such as Polychromatic. Full installs Core for
+  you.
 - **Core (`hyperflux-next-linux`):** only the receiver driver, the background
   service, the `hyperfluxctl` tool, and the SDK, without the app connections.
 
-If you are not sure, choose Full. Full works with the stock OpenRazer service,
-which Debian packages as `openrazer-daemon`. The apps themselves are separate;
+If you are not sure, choose Full. Full works with Debian's own `openrgb`
+package and with the stock OpenRazer service, which Debian packages as
+`openrazer-daemon`. The apps themselves are separate;
 [Core and Full on
 Debian](../generated/distributions.md#core-and-full-on-debian) shows where they
 come from.
@@ -134,16 +134,13 @@ When everything works, it prints:
 ```text
 HyperFlux Next is ready.
 Driver active or idle | Bridge running | 1 receiver generation(s)
-Full integration has no OpenRGB plugin here: this distribution does not ship an OpenRGB that can load it.
 No action required.
 ```
 
 The second line shows the receiver driver, the HyperFlux service (`Bridge`),
-and how many times the service has found your receiver since it started. The
-third line is expected on Debian: OpenRazer apps work, only the OpenRGB plugin
-is missing. With Core, that line reads
-`Optional Full integration is not installed.` instead. That is expected too:
-it only means the app connections are not installed.
+and how many times the service has found your receiver since it started. With
+Core, a third line reads `Optional Full integration is not installed.` That is
+expected: it only means the app connections are not installed.
 
 If you see `HyperFlux Next needs attention.` instead, do what the `Do:` line
 says, then run `hyperfluxctl doctor` again. The

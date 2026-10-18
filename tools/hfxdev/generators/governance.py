@@ -405,18 +405,24 @@ REPOSITORY_SITE_ARTIFACT = "hyperflux-package-repositories-unsigned"
 # and Debian's realtime kernel. Ubuntu 26.10 offers only its generic kernel.
 # Every listed header package must give one more built kernel. A header package
 # written `name/repository` comes from that repository only.
+#
+# A Debian-format release whose OpenRGB can load the plugin but uses another Qt
+# than Arch's names the packages that build the plugin there; the check then
+# proves the release's own OpenRGB loads it.
 DISTRIBUTION_PACKAGE_RELEASES = {
     "ubuntu": {
         "format": "deb",
         "name": "Ubuntu 26.10",
         "sources": "",
         "headers": "linux-headers-generic",
+        "plugin_build": "",
     },
     "debian": {
         "format": "deb",
         "name": "Debian 14",
         "sources": "",
         "headers": "linux-headers-amd64 linux-headers-rt-amd64",
+        "plugin_build": "cmake g++ make patch pkgconf qtbase5-dev libhidapi-dev",
     },
     "fedora": {
         "format": "rpm",
@@ -454,6 +460,7 @@ DISTRIBUTION_PACKAGE_PATHS = (
     "driver/**",
     "runtime/linux.json",
     "integrations/catalog.json",
+    "integrations/openrgb/**",
     "tools/hfxdev/distribution*.py",
     "tools/hfxdev/package_pipeline*.py",
     "tools/hfxdev/package_repositories.py",
@@ -482,6 +489,11 @@ for headers in $HFX_RELEASE_HEADERS; do
   apt-get install -y --no-install-recommends "$headers"
 done
 git config --global --add safe.directory "$PWD"
+if [ -n "$HFX_RELEASE_PLUGIN_BUILD" ]; then
+  # Full's OpenRGB plugin is built here against the release's own Qt.
+  apt-get install -y --no-install-recommends $HFX_RELEASE_PLUGIN_BUILD
+  git config --global --add safe.directory "$PWD/.hfx/upstreams/openrgb"
+fi
 debs=$output/$HFX_DISTRIBUTION
 ./hfx package distro --distribution "$HFX_DISTRIBUTION" --build-manifest "$output/artifacts/package-build-manifest.json" --output "$debs"
 packages=$debs/packages
@@ -539,6 +551,19 @@ for directory in /lib/modules/*/build; do
   built=$((built + 1))
 done
 test "$built" -ge "$(set -- $HFX_RELEASE_HEADERS; echo $#)"
+if [ -n "$HFX_RELEASE_PLUGIN_BUILD" ]; then
+  # The release's own OpenRGB loads the plugin Full installed.
+  dpkg -L hyperflux-next-full | grep -q '^/usr/lib/openrgb/plugins/hyperflux-next-openrgb.so$'
+  apt-get install -y --no-install-recommends openrgb
+  mkdir -p /tmp/openrgb-home
+  HOME=/tmp/openrgb-home QT_QPA_PLATFORM=offscreen timeout 30 openrgb --verbose --loglevel 6 --noautoconnect > /tmp/openrgb.log 2>&1 || true
+  if ! grep -q 'Loaded plugin HyperFlux Next' /tmp/openrgb.log; then
+    cat /tmp/openrgb.log >&2
+    echo "$HFX_RELEASE_NAME's OpenRGB did not load the plugin." >&2
+    exit 1
+  fi
+  apt-get purge -y openrgb
+fi
 glibc=$(ldd --version | head -n 1 | awk '{print $NF}')
 for file in $(dpkg -L hyperflux-next-linux hyperflux-next-full); do
   test -f "$file" && test ! -L "$file" || continue
@@ -744,6 +769,8 @@ def distribution_package_workflow(governance: GitHubGovernance) -> str:
             "HFX_RELEASE_SOURCES": release["sources"],
             "HFX_RELEASE_HEADERS": release["headers"],
         }
+        if release["format"] == "deb":
+            environment["HFX_RELEASE_PLUGIN_BUILD"] = release["plugin_build"]
         if release["format"] == "rpm":
             environment["HFX_RELEASE_INSTALL"] = release["install"]
             environment["HFX_RELEASE_REMOVE"] = release["remove"]
@@ -1503,8 +1530,8 @@ def markdown(governance: GitHubGovernance, arch_repository: ArchRepositoryPolicy
         "",
         "The kernel canary is the one deliberate exception, because its purpose is to follow kernels that move after the image is pinned. It starts from the same digest-pinned Arch base image and installs this week's `linux-headers` and `linux-lts-headers`. It also stages the next Arch kernel from `core-testing`, when there is one, and the newest mainline tag from kernel.org prepared with `modules_prepare`. Then `./hfx kernel-canary` builds the HyperFlux driver and the patched OpenRazer driver against each kernel with `W=1`. It only compiles: nothing is loaded and no device is touched. Its result never gates a merge. A failure is an early warning that a kernel interface changes before it reaches users.",
         "",
-        "The distribution packages workflow reaches outside the pinned image like the kernel canary, but unlike it, it is required for merging into `main`. It runs every week, when started by hand, and on every pull request. A small first job, `Packaging changes`, lists the files the pull request changes. Every pull request into `main` runs the `Distribution packages` job. A pull request into another branch runs it only when it changes what the packages are made from or how they are checked: the packaging inputs, the driver sources, the package tools and their schemas, or the workflow itself. Otherwise the job reports as skipped, which GitHub counts as passing. If the first job fails, the packages are checked anyway, so a broken first job never lets the check pass unseen. A new push to the same pull request cancels the run still going. It builds the package artifacts once, offline in the pinned development image, exactly as the Arch packages are built. Then, for Ubuntu 26.10, Debian 14, Fedora 44 and openSUSE Tumbleweed in turn, it starts that release's digest-pinned image without extra privileges and installs the check tools from the release's own archive. In that container `./hfx package distro` turns the artifacts into the Core packages `hyperflux-next-dkms` and `hyperflux-next-linux` and the Full packages `hyperflux-next-openrazer-driver-dkms` and `hyperflux-next-full`, which leave out the OpenRGB plugin because no OpenRGB those releases ship can load it. "
-        "On Ubuntu and Debian the workflow inspects every `.deb` file with `dpkg-deb`, fails on any `lintian` error, and installs Core and then Full with `apt-get` while `policy-rc.d` refuses every service start. With Full installed it adds the release's own `openrazer-daemon` and `python3-openrazer`, and fails if apt pulls in the release's OpenRazer driver package instead of the HyperFlux one. "
+        "The distribution packages workflow reaches outside the pinned image like the kernel canary, but unlike it, it is required for merging into `main`. It runs every week, when started by hand, and on every pull request. A small first job, `Packaging changes`, lists the files the pull request changes. Every pull request into `main` runs the `Distribution packages` job. A pull request into another branch runs it only when it changes what the packages are made from or how they are checked: the packaging inputs, the driver sources, the package tools and their schemas, or the workflow itself. Otherwise the job reports as skipped, which GitHub counts as passing. If the first job fails, the packages are checked anyway, so a broken first job never lets the check pass unseen. A new push to the same pull request cancels the run still going. It builds the package artifacts once, offline in the pinned development image, exactly as the Arch packages are built. Then, for Ubuntu 26.10, Debian 14, Fedora 44 and openSUSE Tumbleweed in turn, it starts that release's digest-pinned image without extra privileges and installs the check tools from the release's own archive. In that container `./hfx package distro` turns the artifacts into the Core packages `hyperflux-next-dkms` and `hyperflux-next-linux` and the Full packages `hyperflux-next-openrazer-driver-dkms` and `hyperflux-next-full`. On Debian 14, whose OpenRGB 1.0 is built with Qt 5, the same container first builds the OpenRGB plugin from the pinned sources against Debian's own Qt 5, and Full carries that copy. Full on the other releases leaves out the plugin because no OpenRGB they ship can load it. "
+        "On Ubuntu and Debian the workflow inspects every `.deb` file with `dpkg-deb`, fails on any `lintian` error, and installs Core and then Full with `apt-get` while `policy-rc.d` refuses every service start. With Full installed it adds the release's own `openrazer-daemon` and `python3-openrazer`, and fails if apt pulls in the release's OpenRazer driver package instead of the HyperFlux one. On Debian it then checks that Full installed the plugin, installs Debian's own `openrgb`, starts it without a display, and fails unless OpenRGB reports that it loaded the HyperFlux plugin. "
         "On Fedora and openSUSE `rpmbuild` builds every `.rpm` file from one generated spec inside the release image, so the host never needs RPM tools. The workflow prints each header, file list and scriptlet with `rpm`, fails on any `rpmlint` error except those the generated `rpmlint` configuration accepts by name and reason, and installs Core and then Full with `dnf` or `zypper`. Those releases do not ship OpenRazer, so with Full installed the workflow adds OpenRazer's own `hardware:razer` repository from the openSUSE Build Service and installs its `openrazer-daemon` and `python3-openrazer`. It trusts the repository's signing key only when the key's fingerprint matches the one pinned in the generator, keeps package signature checks on, checks that both packages carry that key's signature, and fails if OpenRazer's own driver package is installed instead of the HyperFlux one. The scriptlets only register and build the DKMS sources and never enable or start a unit, which the workflow checks under `/etc/systemd`. "
         "Then `dkms build` compiles the HyperFlux driver and the Full OpenRazer driver against every kernel each release offers: Ubuntu's generic kernel, which is the only one Ubuntu 26.10 ships, Debian's stock and realtime kernels, Fedora's release and updates kernels, and openSUSE's longterm and default kernels. `modinfo` checks each module's vermagic, and every installed program is checked against the glibc that the release ships; on Fedora and openSUSE strong symbol references must also stay within the declared glibc floor, and the DKMS signing certificate must exist at `/var/lib/dkms/mok.pub`. "
         "Finally the packages are removed, including the stock OpenRazer service, and DKMS must no longer list either driver. The package files are kept as a workflow artifact for 14 days and are never published. Nothing is loaded and no device is touched.",

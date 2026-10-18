@@ -45,10 +45,12 @@ from .distribution_package import (
     DistributionPackageResult,
 )
 from .distribution_native import tree_files
+from .distribution_openrgb import build_release_openrgb_plugin
 from .distributions import (
     DEBIAN_RELATION,
     OPENRGB_PLUGIN_ARCH_DEPENDENCIES,
     OPENRGB_PLUGIN_BUILD,
+    OPENRGB_PLUGIN_RELEASE_DEPENDENCIES,
     DistributionCatalog,
     DistributionTarget,
     c_runtime_floor,
@@ -246,18 +248,27 @@ def check_arch_dependencies(
 
     The split records Arch role packages plus any Arch-only package names. A
     Debian- or RPM-format target maps roles only, so Arch-only names are
-    allowed only for the OpenRGB plugin, which such a target leaves out.
+    allowed only for the OpenRGB plugin, which such a target either leaves
+    out or builds against its own release's libraries.
     """
 
     arch_roles = catalog.targets["arch"].dependency_roles
     names = set(output.external_dependencies)
-    if not target.openrgb_plugin and OPENRGB_PLUGIN_BUILD in output.builds:
+    if OPENRGB_PLUGIN_BUILD in output.builds:
         names -= set(OPENRGB_PLUGIN_ARCH_DEPENDENCIES)
     if names != {arch_roles[role] for role in output.dependency_roles}:
         raise ModelError(
             f"{label}: {target.package_format} outputs depend only on roles and siblings, "
             "not on Arch package names"
         )
+
+
+def plugin_dependencies(output: SplitOutput, target: DistributionTarget) -> tuple[str, ...]:
+    """The release packages the output's OpenRGB plugin links, if it carries one."""
+
+    if not target.openrgb_plugin or OPENRGB_PLUGIN_BUILD not in output.builds:
+        return ()
+    return OPENRGB_PLUGIN_RELEASE_DEPENDENCIES[target.id]
 
 
 def output_relations(
@@ -433,7 +444,11 @@ def debian_plans(
                 synopsis=summary,
                 extended_description=description,
                 licenses=output.licenses,
-                depends=tuple(dict.fromkeys([*role_packages, *siblings])),
+                depends=tuple(
+                    dict.fromkeys(
+                        [*role_packages, *plugin_dependencies(output, target), *siblings]
+                    )
+                ),
                 suggests=tuple(
                     debian_relation(item.package, f"{label} suggestion") for item in optional
                 ),
@@ -969,6 +984,13 @@ def build_debian_distribution(
     packages.mkdir()
     with tempfile.TemporaryDirectory(prefix=f"hyperflux-{target.id}-package-") as temporary:
         workspace_root = Path(temporary)
+        plugin_module = (
+            build_release_openrgb_plugin(
+                root, artifacts, target, workspace_root / "openrgb-plugin"
+            )
+            if target.openrgb_plugin_release_build
+            else None
+        )
         stages = {
             component_id: stage_rootfs(
                 root,
@@ -976,6 +998,7 @@ def build_debian_distribution(
                 workspace_root / f"{component_id}-root",
                 component_id,
                 openrgb_plugin=component_id != "full" or target.openrgb_plugin,
+                openrgb_plugin_module=plugin_module if component_id == "full" else None,
             )
             for component_id in target.components
         }

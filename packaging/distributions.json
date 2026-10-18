@@ -183,7 +183,7 @@
       },
       "dependency_roles": {
         "dkms": "dkms",
-        "c-runtime": "libc6 (>= 2.34)",
+        "c-runtime": "libc6 (>= 2.43)",
         "compiler-runtime": "libgcc-s1",
         "service-manager": "systemd",
         "device-manager": "udev"
@@ -209,7 +209,7 @@
         },
         "full": {
           "package_name": "hyperflux-next-full",
-          "description": "Core plus the OpenRazer compatibility transport for optional stock applications",
+          "description": "Core plus the OpenRazer compatibility transport and OpenRGB integration for optional stock applications",
           "dependency_roles": [
             "dkms",
             "c-runtime",
@@ -217,8 +217,18 @@
             "service-manager",
             "device-manager"
           ],
-          "dependencies": [],
+          "dependencies": [
+            "libqt5core5t64",
+            "libqt5gui5t64",
+            "libqt5widgets5t64",
+            "libhidapi-hidraw0",
+            "libstdc++6"
+          ],
           "optional_dependencies": [
+            {
+              "package": "openrgb",
+              "purpose": "Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified"
+            },
             {
               "package": "openrazer-daemon",
               "purpose": "Stock OpenRazer service for compatible application access"

@@ -4,7 +4,7 @@
 
 This page lists the HyperFlux packages, what each one depends on, and what each one replaces, for packagers and anyone choosing between Core and Full.
 
-Source digest: `d9e2b76e403ba6f569592506bc0aa5109f8c984014e7913782ab0b0603138315`.
+Source digest: `fc2e59a3adb1d09c8c1999a5074717238fa9cdd522b1f696ed2b554a8dea5bbf`.
 
 From `2.1.0-1` the Arch `pkgbase=hyperflux-next` builds 4 packages that never install the same file. Core installs `hyperflux-next-dkms` and `hyperflux-next-linux`. Full installs `hyperflux-next-dkms`, `hyperflux-next-linux`, `hyperflux-next-openrazer-driver-dkms` and `hyperflux-next-full`. Packages for other distributions are tested separately.
 
@@ -66,7 +66,7 @@ Core is `hyperflux-next-linux`. Full is `hyperflux-next-full`: Core plus the Ope
 - Optional stock applications: `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python3-openrazer` (Official Python OpenRazer client API).
 - To use the stock OpenRazer service, add yourself to the `openrazer` group, then log out and back in: `sudo gpasswd -a "$USER" openrazer`.
 
-**Full on Ubuntu has no OpenRGB plugin.** That is a limit of what Ubuntu 26.10 packages, not of HyperFlux: Ubuntu 26.10 packages a development snapshot of OpenRGB from before 1.0, which loads plugins built for plugin interface 4 only. The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, with Qt 6, and OpenRGB refuses a plugin built for another interface. Doctor reports Full as ready without it. Arch Linux packages OpenRGB 1.0 final with Qt 6, so Full there includes the plugin. When Ubuntu packages that too, its Full packages can include the plugin.
+**Full on Ubuntu has no OpenRGB plugin.** That is a limit of what Ubuntu 26.10 packages, not of HyperFlux: Ubuntu 26.10 packages a development snapshot of OpenRGB from before 1.0, which loads plugins built for plugin interface 4 only. The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, and OpenRGB refuses a plugin built for another interface. Doctor reports Full as ready without it. Arch Linux and Debian 14 package OpenRGB 1.0 final, so Full there includes the plugin. When Ubuntu packages OpenRGB 1.0 final too, its Full packages can include the plugin.
 
 - Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable, start or stop a service.
 - `hyperflux-next-dkms` and the Full OpenRazer driver package hand their driver sources to DKMS when they are installed and remove every built copy when they are removed.
@@ -131,34 +131,35 @@ HyperFlux builds `.deb` packages for Debian 14 (`forky`) in CI every week and wh
 | Package | Version | Architecture | Depends |
 | --- | --- | --- | --- |
 | `hyperflux-next-dkms` | `2.1.1-1` | `all` | `dkms` |
-| `hyperflux-next-linux` | `2.1.1-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-dkms (= 2.1.1-1)` |
+| `hyperflux-next-linux` | `2.1.1-1` | `amd64` | `libc6 (>= 2.43)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-dkms (= 2.1.1-1)` |
 | `hyperflux-next-openrazer-driver-dkms` | `2.1.1-1` | `all` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms (= 2.1.1-1)` |
-| `hyperflux-next-full` | `2.1.1-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-linux (= 2.1.1-1)`, `hyperflux-next-openrazer-driver-dkms (= 2.1.1-1)` |
+| `hyperflux-next-full` | `2.1.1-1` | `amd64` | `libc6 (>= 2.43)`, `libgcc-s1`, `systemd`, `udev`, `libqt5core5t64`, `libqt5gui5t64`, `libqt5widgets5t64`, `libhidapi-hidraw0`, `libstdc++6`, `hyperflux-next-linux (= 2.1.1-1)`, `hyperflux-next-openrazer-driver-dkms (= 2.1.1-1)` |
 
 Dependency roles map to packages on each distribution:
 
 | Role | Arch | Debian |
 | --- | --- | --- |
 | `dkms` | `dkms` | `dkms` |
-| `c-runtime` | `glibc` | `libc6 (>= 2.34)` |
+| `c-runtime` | `glibc` | `libc6 (>= 2.43)` |
 | `compiler-runtime` | `libgcc` | `libgcc-s1` |
 | `service-manager` | `systemd` | `systemd` |
 | `device-manager` | `systemd` | `udev` |
 
 ### Core and Full on Debian
 
-Core is `hyperflux-next-linux`. Full is `hyperflux-next-full`: Core plus the OpenRazer compatibility transport, so stock OpenRazer applications can use your devices too.
+Core is `hyperflux-next-linux`. Full is `hyperflux-next-full`: Core plus the OpenRazer compatibility transport and the OpenRGB plugin, so stock OpenRazer applications and OpenRGB can use your devices too.
 
 - `hyperflux-next-openrazer-driver-dkms` replaces the OpenRazer driver package of Debian (`openrazer-driver-dkms`, `openrazer-kernel-modules-dkms`) and stands in for it, so the stock OpenRazer service still installs.
 - Debian 14 packages OpenRazer 3.12.4 as `openrazer-daemon`.
-- Optional stock applications: `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python3-openrazer` (Official Python OpenRazer client API).
+- Optional stock applications: `openrgb` (Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified), `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python3-openrazer` (Official Python OpenRazer client API).
 - To use the stock OpenRazer service, add yourself to the `openrazer` group, then log out and back in: `sudo gpasswd -a "$USER" openrazer`.
 
-**Full on Debian has no OpenRGB plugin.** That is a limit of what Debian 14 packages, not of HyperFlux: Debian 14 packages OpenRGB 1.0 final, but built with Qt 5, and a plugin must use the same Qt as OpenRGB itself. The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, with Qt 6, and OpenRGB refuses a plugin built for another interface. Doctor reports Full as ready without it. Arch Linux packages OpenRGB 1.0 final with Qt 6, so Full there includes the plugin. When Debian packages that too, its Full packages can include the plugin.
+**Full on Debian includes the OpenRGB plugin.** Debian 14 packages OpenRGB 1.0 final, plugin interface 5, built with Qt 5. So Full on Debian carries a copy of the plugin built inside Debian 14 against Debian's own Qt 5, from the same source as the Arch Linux one. Install `openrgb` from Debian to use it. Every change to the packages is checked by starting Debian 14's own OpenRGB and confirming it loads the plugin. The deeper check that drives the plugin through OpenRGB's software interface runs on the Arch Linux build only.
 
 - Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable, start or stop a service.
 - `hyperflux-next-dkms` and the Full OpenRazer driver package hand their driver sources to DKMS when they are installed and remove every built copy when they are removed.
 - Programs must run on the glibc 2.43 that Debian 14 ships.
+- Full carries an OpenRGB plugin built inside Debian 14, which needs that release's glibc, so the packages declare `libc6 (>= 2.43)`.
 
 ### Secure Boot on Debian
 
@@ -236,7 +237,7 @@ Core is `hyperflux-next-linux`. Full is `hyperflux-next-full`: Core plus the Ope
 - Optional stock applications: `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python3-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend).
 - To use the stock OpenRazer service, add yourself to the `openrazer` group, then log out and back in: `sudo gpasswd -a "$USER" openrazer`.
 
-**Full on Fedora has no OpenRGB plugin.** That is a limit of what Fedora 44 packages, not of HyperFlux: Fedora 44 packages an OpenRGB 1.0 release candidate, which loads plugins built for plugin interface 4 only. The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, with Qt 6, and OpenRGB refuses a plugin built for another interface. Doctor reports Full as ready without it. Arch Linux packages OpenRGB 1.0 final with Qt 6, so Full there includes the plugin. When Fedora packages that too, its Full packages can include the plugin.
+**Full on Fedora has no OpenRGB plugin.** That is a limit of what Fedora 44 packages, not of HyperFlux: Fedora 44 packages an OpenRGB 1.0 release candidate, which loads plugins built for plugin interface 4 only. The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, and OpenRGB refuses a plugin built for another interface. Doctor reports Full as ready without it. Arch Linux and Debian 14 package OpenRGB 1.0 final, so Full there includes the plugin. When Fedora packages OpenRGB 1.0 final too, its Full packages can include the plugin.
 
 - Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable, start or stop a service.
 - `hyperflux-next-dkms` and the Full OpenRazer driver package hand their driver sources to DKMS and build them for every kernel whose development files are installed. DKMS installs the built driver when the computer next starts, so installing the package never loads the driver. Removing the package removes every built copy.
@@ -318,7 +319,7 @@ Core is `hyperflux-next-linux`. Full is `hyperflux-next-full`: Core plus the Ope
 - Optional stock applications: `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python3-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend).
 - To use the stock OpenRazer service, add yourself to the `openrazer` group, then log out and back in: `sudo gpasswd -a "$USER" openrazer`.
 
-**Full on openSUSE has no OpenRGB plugin.** That is a limit of what openSUSE Tumbleweed packages, not of HyperFlux: openSUSE Tumbleweed packages an OpenRGB 1.0 release candidate, which loads plugins built for plugin interface 4 only. The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, with Qt 6, and OpenRGB refuses a plugin built for another interface. Doctor reports Full as ready without it. Arch Linux packages OpenRGB 1.0 final with Qt 6, so Full there includes the plugin. When openSUSE packages that too, its Full packages can include the plugin.
+**Full on openSUSE has no OpenRGB plugin.** That is a limit of what openSUSE Tumbleweed packages, not of HyperFlux: openSUSE Tumbleweed packages an OpenRGB 1.0 release candidate, which loads plugins built for plugin interface 4 only. The HyperFlux plugin is built for OpenRGB 1.0 final, plugin interface 5, and OpenRGB refuses a plugin built for another interface. Doctor reports Full as ready without it. Arch Linux and Debian 14 package OpenRGB 1.0 final, so Full there includes the plugin. When openSUSE packages OpenRGB 1.0 final too, its Full packages can include the plugin.
 
 - Package scripts mirror the Arch hooks: they create the system user and directories and reload systemd and udev. They never enable, start or stop a service.
 - `hyperflux-next-dkms` and the Full OpenRazer driver package hand their driver sources to DKMS and build them for every kernel whose development files are installed. DKMS installs the built driver when the computer next starts, so installing the package never loads the driver. Removing the package removes every built copy.

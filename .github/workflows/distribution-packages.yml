@@ -37,6 +37,7 @@ jobs:
           driver/**
           runtime/linux.json
           integrations/catalog.json
+          integrations/openrgb/**
           tools/hfxdev/distribution*.py
           tools/hfxdev/package_pipeline*.py
           tools/hfxdev/package_repositories.py
@@ -123,6 +124,7 @@ jobs:
         HFX_RELEASE_NAME: Ubuntu 26.10
         HFX_RELEASE_SOURCES: ''
         HFX_RELEASE_HEADERS: linux-headers-generic
+        HFX_RELEASE_PLUGIN_BUILD: ''
         HFX_PACKAGE_CHECKS: |
           set -eu
           output=build/ci/distributions
@@ -136,6 +138,11 @@ jobs:
             apt-get install -y --no-install-recommends "$headers"
           done
           git config --global --add safe.directory "$PWD"
+          if [ -n "$HFX_RELEASE_PLUGIN_BUILD" ]; then
+            # Full's OpenRGB plugin is built here against the release's own Qt.
+            apt-get install -y --no-install-recommends $HFX_RELEASE_PLUGIN_BUILD
+            git config --global --add safe.directory "$PWD/.hfx/upstreams/openrgb"
+          fi
           debs=$output/$HFX_DISTRIBUTION
           ./hfx package distro --distribution "$HFX_DISTRIBUTION" --build-manifest "$output/artifacts/package-build-manifest.json" --output "$debs"
           packages=$debs/packages
@@ -193,6 +200,19 @@ jobs:
             built=$((built + 1))
           done
           test "$built" -ge "$(set -- $HFX_RELEASE_HEADERS; echo $#)"
+          if [ -n "$HFX_RELEASE_PLUGIN_BUILD" ]; then
+            # The release's own OpenRGB loads the plugin Full installed.
+            dpkg -L hyperflux-next-full | grep -q '^/usr/lib/openrgb/plugins/hyperflux-next-openrgb.so$'
+            apt-get install -y --no-install-recommends openrgb
+            mkdir -p /tmp/openrgb-home
+            HOME=/tmp/openrgb-home QT_QPA_PLATFORM=offscreen timeout 30 openrgb --verbose --loglevel 6 --noautoconnect > /tmp/openrgb.log 2>&1 || true
+            if ! grep -q 'Loaded plugin HyperFlux Next' /tmp/openrgb.log; then
+              cat /tmp/openrgb.log >&2
+              echo "$HFX_RELEASE_NAME's OpenRGB did not load the plugin." >&2
+              exit 1
+            fi
+            apt-get purge -y openrgb
+          fi
           glibc=$(ldd --version | head -n 1 | awk '{print $NF}')
           for file in $(dpkg -L hyperflux-next-linux hyperflux-next-full); do
             test -f "$file" && test ! -L "$file" || continue
@@ -206,7 +226,7 @@ jobs:
             echo "Removing the packages left a driver registered with DKMS." >&2
             exit 1
           fi
-      run: docker run --rm --security-opt no-new-privileges --env HFX_HOST_OWNER="$(id -u):$(id -g)" --env HFX_DISTRIBUTION --env HFX_RELEASE_NAME --env HFX_RELEASE_SOURCES --env HFX_RELEASE_HEADERS --env HFX_PACKAGE_CHECKS --volume "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" --workdir "$GITHUB_WORKSPACE" "$HFX_RELEASE_IMAGE" /bin/bash -c "$HFX_PACKAGE_CHECKS"
+      run: docker run --rm --security-opt no-new-privileges --env HFX_HOST_OWNER="$(id -u):$(id -g)" --env HFX_DISTRIBUTION --env HFX_RELEASE_NAME --env HFX_RELEASE_SOURCES --env HFX_RELEASE_HEADERS --env HFX_RELEASE_PLUGIN_BUILD --env HFX_PACKAGE_CHECKS --volume "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" --workdir "$GITHUB_WORKSPACE" "$HFX_RELEASE_IMAGE" /bin/bash -c "$HFX_PACKAGE_CHECKS"
     - name: Build, lint, install, and compile the Debian 14 packages
       env:
         HFX_RELEASE_IMAGE: docker.io/library/debian@sha256:bdfaf17803b5c8007fc79111026bfe29c2e121ad22575c5a555fa8f8bb9c8802
@@ -214,6 +234,7 @@ jobs:
         HFX_RELEASE_NAME: Debian 14
         HFX_RELEASE_SOURCES: ''
         HFX_RELEASE_HEADERS: linux-headers-amd64 linux-headers-rt-amd64
+        HFX_RELEASE_PLUGIN_BUILD: cmake g++ make patch pkgconf qtbase5-dev libhidapi-dev
         HFX_PACKAGE_CHECKS: |
           set -eu
           output=build/ci/distributions
@@ -227,6 +248,11 @@ jobs:
             apt-get install -y --no-install-recommends "$headers"
           done
           git config --global --add safe.directory "$PWD"
+          if [ -n "$HFX_RELEASE_PLUGIN_BUILD" ]; then
+            # Full's OpenRGB plugin is built here against the release's own Qt.
+            apt-get install -y --no-install-recommends $HFX_RELEASE_PLUGIN_BUILD
+            git config --global --add safe.directory "$PWD/.hfx/upstreams/openrgb"
+          fi
           debs=$output/$HFX_DISTRIBUTION
           ./hfx package distro --distribution "$HFX_DISTRIBUTION" --build-manifest "$output/artifacts/package-build-manifest.json" --output "$debs"
           packages=$debs/packages
@@ -284,6 +310,19 @@ jobs:
             built=$((built + 1))
           done
           test "$built" -ge "$(set -- $HFX_RELEASE_HEADERS; echo $#)"
+          if [ -n "$HFX_RELEASE_PLUGIN_BUILD" ]; then
+            # The release's own OpenRGB loads the plugin Full installed.
+            dpkg -L hyperflux-next-full | grep -q '^/usr/lib/openrgb/plugins/hyperflux-next-openrgb.so$'
+            apt-get install -y --no-install-recommends openrgb
+            mkdir -p /tmp/openrgb-home
+            HOME=/tmp/openrgb-home QT_QPA_PLATFORM=offscreen timeout 30 openrgb --verbose --loglevel 6 --noautoconnect > /tmp/openrgb.log 2>&1 || true
+            if ! grep -q 'Loaded plugin HyperFlux Next' /tmp/openrgb.log; then
+              cat /tmp/openrgb.log >&2
+              echo "$HFX_RELEASE_NAME's OpenRGB did not load the plugin." >&2
+              exit 1
+            fi
+            apt-get purge -y openrgb
+          fi
           glibc=$(ldd --version | head -n 1 | awk '{print $NF}')
           for file in $(dpkg -L hyperflux-next-linux hyperflux-next-full); do
             test -f "$file" && test ! -L "$file" || continue
@@ -297,7 +336,7 @@ jobs:
             echo "Removing the packages left a driver registered with DKMS." >&2
             exit 1
           fi
-      run: docker run --rm --security-opt no-new-privileges --env HFX_HOST_OWNER="$(id -u):$(id -g)" --env HFX_DISTRIBUTION --env HFX_RELEASE_NAME --env HFX_RELEASE_SOURCES --env HFX_RELEASE_HEADERS --env HFX_PACKAGE_CHECKS --volume "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" --workdir "$GITHUB_WORKSPACE" "$HFX_RELEASE_IMAGE" /bin/bash -c "$HFX_PACKAGE_CHECKS"
+      run: docker run --rm --security-opt no-new-privileges --env HFX_HOST_OWNER="$(id -u):$(id -g)" --env HFX_DISTRIBUTION --env HFX_RELEASE_NAME --env HFX_RELEASE_SOURCES --env HFX_RELEASE_HEADERS --env HFX_RELEASE_PLUGIN_BUILD --env HFX_PACKAGE_CHECKS --volume "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" --workdir "$GITHUB_WORKSPACE" "$HFX_RELEASE_IMAGE" /bin/bash -c "$HFX_PACKAGE_CHECKS"
     - name: Build, lint, install, and compile the Fedora 44 packages
       env:
         HFX_RELEASE_IMAGE: registry.fedoraproject.org/fedora@sha256:923dd7d4362a78ef7edc1887cb599720e9f59ff8669a38c81062c6e2aaa83204

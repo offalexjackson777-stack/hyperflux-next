@@ -76,10 +76,12 @@ on your desktop, but OpenRGB and Polychromatic cannot change their lighting. On
 Core, you can stop here.
 
 The apps are separate projects. Install only the ones you want. The commands
-below are for Arch Linux. On Ubuntu, Debian, Fedora, and openSUSE, Full works
-with OpenRazer and Polychromatic but not with OpenRGB;
-[Core and Full on your distribution](../generated/distributions.md) shows
-where your distribution's OpenRazer comes from.
+below are for Arch Linux. On Debian, Full works with OpenRGB, OpenRazer, and
+Polychromatic, and Debian packages OpenRGB and OpenRazer:
+`sudo apt install openrgb openrazer-daemon python3-openrazer`. On Ubuntu,
+Fedora, and openSUSE, Full works with OpenRazer and Polychromatic but not with
+OpenRGB; [Core and Full on your distribution](../generated/distributions.md)
+shows where your distribution's OpenRazer comes from.
 
 - **OpenRGB** is in the official Arch repositories:
 
