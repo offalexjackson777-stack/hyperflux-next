@@ -57,6 +57,8 @@ need to set anything up.
 
 - Ripple needs one restart after you install Full, and with two receivers
   only one keyboard reacts to key presses.
+- Ripple stops after a brightness change until you choose it again, and
+  through the receiver its ring skips some keys.
 - OpenRGB may call a black keyboard Quartz. Only the description is wrong.
 - Fn lighting shortcuts change the keyboard without the apps noticing.
 - Polychromatic may list the receiver as an unrecognised `1532:00CF` device.

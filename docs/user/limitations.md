@@ -91,6 +91,20 @@ receiver. Keep these points in mind:
   over a cable too. HyperFlux passes OpenRazer's lighting through unchanged
   and does not shift it back, because that would move the lights Polychromatic
   and OpenRGB set for each key.
+- **Ripple stops when you change the brightness.** OpenRazer draws Ripple
+  itself and stops drawing it as soon as anything else changes the lighting,
+  and it counts a brightness change as such a change. Polychromatic still
+  shows Ripple as chosen, but the keys stay dark when you press them. Choose
+  another effect and then Ripple again, or set the brightness first and choose
+  Ripple after. This comes from OpenRazer's own code, so it happens over a
+  cable too.
+- **The ring skips some keys.** Through the receiver, sending one picture of
+  the keyboard takes about 80 ms, and OpenRazer waits another 50 ms before
+  the next one. In that time the ring grows about three keys, but OpenRazer
+  draws it only two keys wide, so some keys along its path never light. Over
+  a cable a picture takes only a few milliseconds, so the ring has no gaps
+  there. Polychromatic's Ripple speed setting does not change this, because
+  Polychromatic does not pass it on to OpenRazer.
 - **Who can read your key presses.** To make this work, Full lets your user
   account read the keyboard's key presses from the receiver while you are
   logged in at the computer. That means any program you run can read them

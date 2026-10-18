@@ -72,9 +72,14 @@ HyperFlux never removes or changes the link itself.
 
 ## Ripple Stays Still
 
-Doctor reports this as `HFX-INTEGRATION-007`: OpenRazer cannot see the
-keyboard's key presses, so Ripple and other effects that react to keys stay
-still. Other effects and colors still work.
+If Ripple stopped right after you changed the brightness, choose another
+effect and then Ripple again. OpenRazer stops Ripple on every brightness
+change; see
+[Ripple and other effects that react to keys](limitations.md#ripple-and-other-effects-that-react-to-keys).
+
+Otherwise, run `hyperfluxctl doctor`. If it reports `HFX-INTEGRATION-007`,
+OpenRazer cannot see the keyboard's key presses, so Ripple and other effects
+that react to keys stay still. Other effects and colors still work.
 
 1. Restart the computer with the receiver connected:
 
