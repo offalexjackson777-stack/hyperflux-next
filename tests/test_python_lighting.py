@@ -55,8 +55,8 @@ def _controller() -> v5.ControllerView:
             "presentation": {
                 "upstream_id": "openrgb",
                 "owner": "OpenRGB",
-                "project_version": "1.0",
-                "source_revision": "81bbe18a84c2e507006f19dd252e397e40a56bfe",
+                "project_version": "1.1",
+                "source_revision": "8e16de27858cf2be6af54a33ce003df74cb9fd3e",
                 "model_key": "basilisk_v3_pro_35k_wireless_device",
                 "layout_key": None,
                 "transport_variant": "wireless",

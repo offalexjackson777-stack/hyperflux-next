@@ -211,7 +211,7 @@ def assert_component_contract(linux: dict[str, Any], full: dict[str, Any]) -> No
     if set(full["info"].get("depend", ())) != expected_full_dependencies:
         raise RuntimeError("full dependencies differ from the direct ELF audit")
     expected_optional_dependencies = {
-        "openrgb: Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified",
+        "openrgb: Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0 and 1.1/plugin API 5 verified",
         "openrazer-daemon: Stock OpenRazer service for compatible application access",
         "python-openrazer: Official Python OpenRazer client API",
         "polychromatic: Stock graphical OpenRazer frontend",

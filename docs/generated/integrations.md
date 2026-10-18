@@ -4,7 +4,7 @@
 
 This page lists the apps HyperFlux works with, the exact versions it was built against, and the rules every integration follows, for anyone checking app compatibility or changing an integration.
 
-Integration source digest: `06e0be4badec64310049941434689a0246a0dffd56697bee1f0d311660774c80`
+Integration source digest: `8833fa83ca84c66498d05864ba340917b3db9df3d87c3ebbd6f512938c1fd671`
 
 Every integration talks to HyperFlux only through the versioned HyperFlux SDK, leaves the app's other devices alone, and never builds receiver messages itself.
 
@@ -13,7 +13,7 @@ Every integration talks to HyperFlux only through the versioned HyperFlux SDK, l
 | Project | Version | Commit | Interface used | Network during build |
 | --- | --- | --- | --- | --- |
 | [OpenRazer](https://github.com/openrazer/openrazer) | `3.12.4` | `1ef8a9171290` | org.razer 3.x metadata and D-Bus vocabulary | disabled |
-| [OpenRGB](https://github.com/CalcProgrammer1/OpenRGB) | `1.0` | `81bbe18a84c2` | OpenRGB plugin API 5 | disabled |
+| [OpenRGB](https://github.com/CalcProgrammer1/OpenRGB) | `1.1` | `8e16de27858c` | OpenRGB plugin API 5 | disabled |
 | [Polychromatic](https://github.com/polychromatic/polychromatic) | `0.9.7-7-g716737b` | `716737bf444a` | Polychromatic 0.9.7 stock OpenRazer backend contract | disabled |
 
 ## Integrations

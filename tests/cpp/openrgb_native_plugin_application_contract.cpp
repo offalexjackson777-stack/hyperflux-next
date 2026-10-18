@@ -488,8 +488,8 @@ int main(int argc, char** argv)
         }
     }
 
-    // OpenRGB 1.0 keeps plugin controllers across rescans and reports
-    // completion from its worker threads: reconcile without churn.
+    // OpenRGB 1.0 and 1.1 keep plugin controllers across rescans and report
+    // completion from their worker threads: reconcile without churn.
     const auto enumerations = discovery_state->enumerate_calls.load();
     std::thread detection_thread([&plugin]
     {
@@ -567,7 +567,7 @@ int main(int argc, char** argv)
         }
     }
 
-    // OpenRGB 1.0 exit: the GUI stops following the device list before it
+    // OpenRGB 1.0 and 1.1 exit: the GUI stops following the device list before it
     // unloads plugins, so its device pages release the controllers we
     // presented only after Unload has returned.
     {

@@ -87,7 +87,7 @@ class IntegrationCatalogTests(unittest.TestCase):
         upstreams = {value["id"]: value for value in self.catalog["upstreams"]}
         self.assertEqual(
             upstreams["openrgb"]["commit"],
-            "81bbe18a84c2e507006f19dd252e397e40a56bfe",
+            "8e16de27858cf2be6af54a33ce003df74cb9fd3e",
         )
         self.assertEqual(
             upstreams["openrazer"]["commit"],

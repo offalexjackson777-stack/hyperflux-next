@@ -4,7 +4,7 @@
 
 This page lists the HyperFlux packages, what each one depends on, and what each one replaces, for packagers and anyone choosing between Core and Full.
 
-Source digest: `97c3ac58f10f5fa4e01ad5a77f4d36c26d4719369d3500a73976983373a1ecb6`.
+Source digest: `e4577091fbbc71f969a66d1d1b2deb93635342b23ab262492fc6b69bc11f6668`.
 
 From `2.1.0-1` the Arch `pkgbase=hyperflux-next` builds 4 packages that never install the same file. Core installs `hyperflux-next-dkms` and `hyperflux-next-linux`. Full installs `hyperflux-next-dkms`, `hyperflux-next-linux`, `hyperflux-next-openrazer-driver-dkms` and `hyperflux-next-full`. Packages for other distributions are tested separately.
 
@@ -13,7 +13,7 @@ From `2.1.0-1` the Arch `pkgbase=hyperflux-next` builds 4 packages that never in
 | `hyperflux-next-dkms` | Core | `dkms` | none | `hyperflux-v2-linux-dkms` | none | none |
 | `hyperflux-next-linux` | Core | `glibc`, `libgcc`, `systemd`, `hyperflux-next-dkms=2.1.2-1` | none | none | none | none |
 | `hyperflux-next-openrazer-driver-dkms` | Full | `dkms`, `systemd`, `hyperflux-next-dkms=2.1.2-1` | none | `openrazer-driver-dkms` | `openrazer-driver-dkms=3.12.4`, `hyperflux-openrazer-driver-abi=3.12.4` | none |
-| `hyperflux-next-full` | Full | `glibc`, `libgcc`, `systemd`, `hyperflux-next-linux=2.1.2-1`, `hyperflux-next-openrazer-driver-dkms=2.1.2-1`, `qt6-base`, `hidapi`, `libstdc++` | `openrgb` (Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified), `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend) | `hyperflux-next-openrgb=0.0.0_dev.1-2` | none | `hyperflux-next-openrgb=0.0.0_dev.1-2` |
+| `hyperflux-next-full` | Full | `glibc`, `libgcc`, `systemd`, `hyperflux-next-linux=2.1.2-1`, `hyperflux-next-openrazer-driver-dkms=2.1.2-1`, `qt6-base`, `hidapi`, `libstdc++` | `openrgb` (Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0 and 1.1/plugin API 5 verified), `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend) | `hyperflux-next-openrgb=0.0.0_dev.1-2` | none | `hyperflux-next-openrgb=0.0.0_dev.1-2` |
 
 ## What Each Package Owns
 
@@ -151,7 +151,7 @@ Core is `hyperflux-next-linux`. Full is `hyperflux-next-full`: Core plus the Ope
 
 - `hyperflux-next-openrazer-driver-dkms` replaces the OpenRazer driver package of Debian (`openrazer-driver-dkms`, `openrazer-kernel-modules-dkms`) and stands in for it, so the stock OpenRazer service still installs.
 - Debian 14 packages OpenRazer 3.12.4 as `openrazer-daemon`.
-- Optional stock applications: `openrgb` (Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0/plugin API 5 verified), `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python3-openrazer` (Official Python OpenRazer client API).
+- Optional stock applications: `openrgb` (Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0 and 1.1/plugin API 5 verified), `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python3-openrazer` (Official Python OpenRazer client API).
 - To use the stock OpenRazer service, add yourself to the `openrazer` group, then log out and back in: `sudo gpasswd -a "$USER" openrazer`.
 
 **Full on Debian includes the OpenRGB plugin.** Debian 14 packages OpenRGB 1.0 final, plugin interface 5, built with Qt 5. So Full on Debian carries a copy of the plugin built inside Debian 14 against Debian's own Qt 5, from the same source as the Arch Linux one. Install `openrgb` from Debian to use it. Every change to the packages is checked by starting Debian 14's own OpenRGB and confirming it loads the plugin. The deeper check that drives the plugin through OpenRGB's software interface runs on the Arch Linux build only.

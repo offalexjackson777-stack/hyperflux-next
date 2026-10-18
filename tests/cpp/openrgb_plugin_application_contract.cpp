@@ -132,8 +132,9 @@ int main(int argc, char** argv)
         original = state->original_identities;
     }
 
-    // OpenRGB 1.0 reports completed detection from its worker threads. Plugin
-    // controllers survive the rescan, so completion must not churn them.
+    // OpenRGB 1.0 and 1.1 report completed detection from their worker
+    // threads. Plugin controllers survive the rescan, so completion must not
+    // churn them.
     const auto before = notifications.load(std::memory_order_relaxed);
     std::thread detection_thread([&plugin]
     {

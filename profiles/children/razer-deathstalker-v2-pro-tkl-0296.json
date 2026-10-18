@@ -33,7 +33,7 @@
     {"from_runtime_sha256": "8c96caf63c960dbcd3207b4e43321e7d034301cf8bbe87291452d4d2f7d4890d", "preserve_stage_roles": ["lighting", "map", "telemetry"]},
     {"from_runtime_sha256": "fcdd53fe104e649cc7d2c38c939bbd41095dc3eb53488ebb30a8615a76bbfba6", "preserve_stage_roles": ["lighting", "map"]}
   ],
-  "presentation": {"upstream_id": "openrgb", "owner": "OpenRGB", "project_version": "1.0", "source_commit": "81bbe18a84c2e507006f19dd252e397e40a56bfe", "model_key": "deathstalker_v2_pro_tkl_wireless_device", "layout_key": "razer_deathstalker_v2_pro_tkl_layout", "transport_variant": "wireless"},
+  "presentation": {"upstream_id": "openrgb", "owner": "OpenRGB", "project_version": "1.1", "source_commit": "8e16de27858cf2be6af54a33ce003df74cb9fd3e", "model_key": "deathstalker_v2_pro_tkl_wireless_device", "layout_key": "razer_deathstalker_v2_pro_tkl_layout", "transport_variant": "wireless"},
   "capabilities": [
     {"id": "identity.model", "support_level": "identified", "evidence_claims": ["claim.child.0296.passive-identity-telemetry"]},
     {"id": "identity.paired-product-id", "support_level": "read-only", "evidence_claims": ["claim.child.0296.passive-identity-telemetry"]},
@@ -51,6 +51,6 @@
     {"id": "telemetry.charging-state", "support_level": "telemetry-qualified", "evidence_claims": ["claim.child.0296.passive-charge-state"]},
     {"id": "telemetry.connection-evidence", "support_level": "telemetry-qualified", "evidence_claims": ["claim.child.0296.passive-identity-telemetry"]}
   ],
-  "evidence_claims": ["claim.child.0296.complete-keyboard-map", "claim.child.0296.native-feature-report-parity", "claim.child.0296.passive-charge-state", "claim.child.0296.passive-identity-telemetry", "claim.children.complete-static-black", "claim.children.software-effect-frame-continuity", "claim.children.static-off-brightness", "claim.presentation.openrgb-1.0-model-layouts"],
+  "evidence_claims": ["claim.child.0296.complete-keyboard-map", "claim.child.0296.native-feature-report-parity", "claim.child.0296.passive-charge-state", "claim.child.0296.passive-identity-telemetry", "claim.children.complete-static-black", "claim.children.software-effect-frame-continuity", "claim.children.static-off-brightness", "claim.presentation.openrgb-1.1-model-layouts"],
   "restrictions": ["Another DeathStalker name, PID, or physical layout inherits no map.", "OpenRGB owns key names, geometry, and ANSI or ISO presentation.", "External power does not establish a direct USB data route.", "Only the status-report route words 0x0001 and 0x0101 read as charging and 0x0000 as discharging; every other word, and any route word not paired with the battery level before it, leaves the charge state unknown.", "Receiver route value 0x0101 is indeterminate and cannot override observed keyboard activity.", "Native Feature-report authority is limited to receiver child PID 0x0296, the exact 90-byte report family, and generated OpenRazer command policy."]
 }

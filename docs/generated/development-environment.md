@@ -30,7 +30,7 @@ This is the only ordinary setup step that uses the network. It creates clean, de
 | Upstream | Commit | Contract |
 | --- | --- | --- |
 | OpenRazer | `1ef8a91712906a89fd332a2ed62bbd105315d6d1` | org.razer 3.x metadata and D-Bus vocabulary |
-| OpenRGB | `81bbe18a84c2e507006f19dd252e397e40a56bfe` | OpenRGB plugin API 5 |
+| OpenRGB | `8e16de27858cf2be6af54a33ce003df74cb9fd3e` | OpenRGB plugin API 5 |
 | Polychromatic | `716737bf444ab7e962f4d3b7a5188b2f07c0c4a1` | Polychromatic 0.9.7 stock OpenRazer backend contract |
 
 Then run either software lane without network access:
