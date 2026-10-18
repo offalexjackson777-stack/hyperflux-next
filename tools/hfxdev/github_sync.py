@@ -111,7 +111,7 @@ def _repository_payload(governance: GitHubGovernance) -> dict[str, Any]:
         "has_wiki": False,
         "has_discussions": True,
         "allow_merge_commit": False,
-        "allow_squash_merge": False,
+        "allow_squash_merge": True,
         "allow_rebase_merge": True,
         "allow_auto_merge": True,
         "delete_branch_on_merge": True,
@@ -142,7 +142,8 @@ def _ruleset_payload(governance: GitHubGovernance) -> dict[str, Any]:
                     "require_code_owner_review": governance.require_code_owner_reviews,
                     "require_last_push_approval": False,
                     "required_review_thread_resolution": True,
-                    "allowed_merge_methods": ["rebase"],
+                    # GitHub signs squash merges, so every commit on main is verified.
+                    "allowed_merge_methods": ["squash"],
                 },
             },
             {
