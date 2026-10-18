@@ -117,10 +117,21 @@ recorded, the writer is revoked, and no new session can begin for that
 generation. The module never sends an active query to fill missing identity or
 battery data.
 
+A child reports its battery in a passive status report only every several
+minutes, the first one often long after boot. Host applications such as the
+OpenRazer daemon ask for it sooner through the native exchange. When such an
+exchange is a battery-level query (class `0x07`, command `0x80`, no arguments)
+and the matched reply has status `0x02`, the module also records the reply's
+level byte as a battery observation with source `HID_FEATURE`, on the same
+0-255 scale as the passive report. The module still sends nothing of its own:
+it only reads the answer to a query an application already made. Because a
+queried level is not part of a keyboard status report, the bridge reads a
+keyboard charge state only from the route field that follows a passive level.
+
 ## Child Battery Publication
 
 The module publishes bridge-forwarded battery state in `power_supply`; never
-queries. The bridge decodes passive battery reports as before and forwards each
+queries. The bridge decodes battery observations, passive or queried, and forwards each
 changed lane state through `HFX_UAPI_IOCTL_REPORT_CHILD_BATTERY`, a write-only
 64-byte record defined by `uapi/power-supply-v3.json`. Only the current writer
 file may forward, and only for its exact receiver generation; no authorization
@@ -132,13 +143,28 @@ of at most 31 bytes. Malformed headers fail with `EPROTO`, invalid values with
 not bound with `EHOSTDOWN`.
 
 A present record registers one `power_supply` per lane named
-`<session-name>-mouse` or `<session-name>-keyboard`, parented to that lane's
-HID interface, with `SCOPE=Device`, `PRESENT`, `CAPACITY`, `STATUS`,
-`MODEL_NAME`, and `MANUFACTURER=Razer`. Every property is answered from the
-stored forwarded value under a per-lane spinlock; the kernel holds no model
-name table and never sends a report to the receiver for a property read. A
-changed model name re-registers the supply instead of rewriting a string a
-reader may hold.
+`<session-name>-mouse` or `<session-name>-keyboard`, with `SCOPE=Device`,
+`PRESENT`, `CAPACITY`, `STATUS`, `MODEL_NAME`, and `MANUFACTURER=Razer`.
+Every property is answered from the stored forwarded value under a per-lane
+spinlock; the kernel holds no model name table and never sends a report to the
+receiver for a property read. A changed model name re-registers the supply
+instead of rewriting a string a reader may hold.
+
+Both supplies are parented to the receiver's lowest-numbered bound interface
+that hid core gave no input device. On the `1532:00cf` receiver that is
+interface 3. UPower groups every battery and input under one USB device. It
+types a battery from the highest-ranked input in the group, and a keyboard
+outranks a mouse. When the battery and an input share a parent, UPower also
+replaces the battery's model with that input's name. Every input of the
+receiver carries the receiver's name, so a supply parented to the lane's own
+input interface showed `Razer Razer HyperFlux V2` instead of its child's
+model name. An input-less parent keeps `MODEL_NAME`. The type stays keyboard
+for both lanes, because the keyboard input remains in the group; only a change
+in UPower can give the mouse lane its own type. A receiver without an
+input-less interface parents each supply to its lane's input interface. When
+the shared parent is bound after a supply exists, or is removed before the
+receiver is, the supply is re-registered under the new parent with its
+forwarded values and owner kept.
 
 Each supply is unregistered when the bridge forwards an absent lane (child
 unpaired, gone, stale, or its battery unavailable), when the writer file that

@@ -82,6 +82,10 @@ pub struct Assessment {
     /// `bridge_ready` keeps its published meaning (bridge and child routes ready).
     #[serde(skip)]
     pub bridge_responding: bool,
+    /// Whether the installed Full package was built without the `OpenRGB`
+    /// plugin. Not part of the JSON contract.
+    #[serde(skip)]
+    pub full_without_openrgb_plugin: bool,
     pub receiver_generations: usize,
     pub qualified_generations: usize,
     pub working: Vec<String>,
@@ -361,6 +365,27 @@ fn classify_openrazer_access(
     }
 }
 
+const LINK_PATH_PLACEHOLDER: &str = "{link_path}";
+
+/// One finding per dangling `/dev/input/by-id` link that `openrazer-daemon`
+/// would try to open. The link is the root cause of an empty `OpenRazer`
+/// device list, so it is reported before the publication symptom. The safe
+/// action names the exact path to remove; Doctor itself never removes it.
+fn broken_openrazer_event_link_findings(snapshot: &SystemSnapshot) -> Vec<AssessmentFinding> {
+    snapshot
+        .broken_openrazer_event_links
+        .iter()
+        .map(|path| {
+            let mut finding = local_finding(
+                ErrorCode::HfxIntegration008,
+                BTreeMap::from([("link_path".to_owned(), path.clone())]),
+            );
+            finding.safe_action = finding.safe_action.replace(LINK_PATH_PLACEHOLDER, path);
+            finding
+        })
+        .collect()
+}
+
 fn expected_openrazer_published_devices(
     snapshot: &SystemSnapshot,
 ) -> Result<Vec<OpenRazerPublishedDevice>, ()> {
@@ -496,6 +521,27 @@ fn readiness_finding(snapshot: &SystemSnapshot, bridge_responding: bool) -> Asse
     )
 }
 
+fn classify_openrazer_key_event_links(
+    snapshot: &SystemSnapshot,
+    findings: &mut Vec<AssessmentFinding>,
+) {
+    findings.extend(
+        snapshot
+            .missing_openrazer_key_event_links
+            .iter()
+            .map(|link_path| {
+                local_finding(
+                    ErrorCode::HfxIntegration007,
+                    BTreeMap::from([("link_path".to_owned(), link_path.clone())]),
+                )
+            }),
+    );
+}
+
+/// Said when a distribution's Full package leaves the `OpenRGB` plugin out
+/// because that distribution's `OpenRGB` cannot load it.
+const OPENRGB_PLUGIN_ABSENT: &str = "the Full integration component on this distribution has no OpenRGB plugin, because this distribution does not ship an OpenRGB that can load it";
+
 fn assess_full_component(
     snapshot: &SystemSnapshot,
     working: &mut Vec<String>,
@@ -508,9 +554,14 @@ fn assess_full_component(
         }
         FullComponentState::Ready => {
             working.push("the Full integration component is installed".to_owned());
+            if !snapshot.full_component.openrgb_plugin {
+                working.push(OPENRGB_PLUGIN_ABSENT.to_owned());
+            }
             classify_openrazer_driver(snapshot, working, findings);
             classify_openrazer_runtime(snapshot, working, findings);
+            findings.extend(broken_openrazer_event_link_findings(snapshot));
             classify_openrazer_access(snapshot, working, findings);
+            classify_openrazer_key_event_links(snapshot, findings);
         }
         state => findings.push(local_finding(
             ErrorCode::HfxIntegration006,
@@ -653,6 +704,8 @@ pub fn assess_system(snapshot: &SystemSnapshot) -> Assessment {
         driver,
         bridge_ready,
         bridge_responding,
+        full_without_openrgb_plugin: snapshot.full_component.state == FullComponentState::Ready
+            && !snapshot.full_component.openrgb_plugin,
         receiver_generations,
         qualified_generations,
         working,
@@ -670,8 +723,13 @@ pub fn render_doctor_text(assessment: &Assessment, explain: bool) -> String {
             .find(|component| component.component == ComponentId::Full)
             .filter(|component| component.state == ComponentState::OptionalNotInstalled)
             .map_or("", |_| "Optional Full integration is not installed.\n");
+        let openrgb = if assessment.full_without_openrgb_plugin {
+            "Full integration has no OpenRGB plugin here: this distribution does not ship an OpenRGB that can load it.\n"
+        } else {
+            ""
+        };
         return format!(
-            "HyperFlux Next is ready.\nDriver active or idle | Bridge running | {} receiver generation(s)\n{optional}No action required.\n",
+            "HyperFlux Next is ready.\nDriver active or idle | Bridge running | {} receiver generation(s)\n{optional}{openrgb}No action required.\n",
             assessment.receiver_generations,
         );
     }
@@ -901,6 +959,8 @@ mod tests {
             supported_receiver_present: false,
             receiver_interface_drivers: Vec::new(),
             retired_driver_registrations: Vec::new(),
+            missing_openrazer_key_event_links: Vec::new(),
+            broken_openrazer_event_links: Vec::new(),
         }
     }
 
@@ -911,6 +971,35 @@ mod tests {
         assert!(assessment.findings.is_empty());
         assert_eq!(assessment.next_action, "no action required");
         assert_eq!(assessment.components[1].state, ComponentState::Ready);
+    }
+
+    #[test]
+    fn full_without_the_openrgb_plugin_is_ready_and_says_why() {
+        let mut value = snapshot();
+        value.full_component = crate::FullComponentSnapshot::ready_without_openrgb_plugin("2.0.0");
+        let assessment = assess_system(&value);
+        assert_eq!(assessment.state, AssessmentState::Ready);
+        assert_eq!(assessment.components[1].state, ComponentState::Ready);
+        assert!(assessment.full_without_openrgb_plugin);
+        assert!(
+            assessment
+                .working
+                .iter()
+                .any(|line| line == OPENRGB_PLUGIN_ABSENT)
+        );
+        assert_eq!(
+            render_doctor_text(&assessment, false),
+            "HyperFlux Next is ready.\nDriver active or idle | Bridge running | 0 receiver generation(s)\nFull integration has no OpenRGB plugin here: this distribution does not ship an OpenRGB that can load it.\nNo action required.\n"
+        );
+
+        let with_plugin = assess_system(&snapshot());
+        assert!(!with_plugin.full_without_openrgb_plugin);
+        assert!(
+            !with_plugin
+                .working
+                .iter()
+                .any(|line| line == OPENRGB_PLUGIN_ABSENT)
+        );
     }
 
     #[test]
@@ -938,6 +1027,7 @@ mod tests {
         value.full_component = crate::FullComponentSnapshot {
             state: FullComponentState::DescriptorInvalid,
             product_version: None,
+            openrgb_plugin: false,
         };
         let assessment = assess_system(&value);
         assert_eq!(assessment.state, AssessmentState::NeedsAttention);
@@ -951,6 +1041,31 @@ mod tests {
             assessment.findings[0].details["component_state"],
             "descriptor-invalid"
         );
+    }
+
+    #[test]
+    fn missing_key_event_link_is_a_full_component_warning() {
+        const LINK: &str =
+            "/dev/input/by-id/hyperflux-next-DSV2Pro_TKL_000000000000-if01-event-mouse";
+        let mut value = snapshot();
+        value.missing_openrazer_key_event_links = vec![LINK.to_owned()];
+
+        let assessment = assess_system(&value);
+
+        assert_eq!(assessment.state, AssessmentState::NeedsAttention);
+        assert_eq!(assessment.components[0].state, ComponentState::Ready);
+        assert_eq!(
+            assessment.components[1].state,
+            ComponentState::NeedsAttention
+        );
+        assert_eq!(assessment.findings.len(), 1);
+        assert_eq!(assessment.findings[0].code, "HFX-INTEGRATION-007");
+        assert_eq!(assessment.findings[0].severity, "warning");
+        assert_eq!(assessment.findings[0].details["link_path"], LINK);
+
+        value.full_component = crate::FullComponentSnapshot::not_installed();
+        let without_full = assess_system(&value);
+        assert!(without_full.findings.is_empty());
     }
 
     #[test]
@@ -1049,6 +1164,88 @@ mod tests {
         let complete = assess_system(&value);
         assert_eq!(complete.state, AssessmentState::Ready);
         assert!(complete.findings.is_empty());
+    }
+
+    #[test]
+    fn broken_openrazer_event_link_is_reported_first_with_the_exact_fix() {
+        let link = "/dev/input/by-id/test-DSV2Pro_TKL_000000000000-if01-event-mouse";
+        let mut value = snapshot();
+        value.supported_receiver_present = true;
+        value.bridge = Some(bridge_with_sibling(RouteState::Available, true));
+        value.openrazer_published_devices = Some(Vec::new());
+        value.broken_openrazer_event_links = vec![link.to_owned()];
+
+        let assessment = assess_system(&value);
+
+        assert!(assessment.bridge_ready, "Core route health is unaffected");
+        assert_eq!(assessment.state, AssessmentState::NeedsAttention);
+        assert_eq!(assessment.components[0].state, ComponentState::Ready);
+        assert_eq!(
+            assessment.components[1].state,
+            ComponentState::NeedsAttention
+        );
+        let finding = &assessment.findings[0];
+        assert_eq!(finding.code, "HFX-INTEGRATION-008");
+        assert_eq!(finding.details["link_path"], link);
+        assert!(
+            finding
+                .user_explanation
+                .contains("stops OpenRazer from showing any devices")
+        );
+        assert_eq!(
+            finding.safe_action,
+            format!(
+                "Run sudo rm {link}, then run systemctl --user restart openrazer-daemon. HyperFlux never removes or changes the link itself."
+            )
+        );
+        assert_eq!(assessment.next_action, finding.safe_action);
+        assert_eq!(assessment.findings[1].code, "HFX-INTEGRATION-003");
+        let text = render_doctor_text(&assessment, false);
+        assert!(text.contains("Primary issue: [HFX-INTEGRATION-008]"));
+        assert!(text.contains(&format!(
+            "Do: Run sudo rm {link}, then run systemctl --user restart openrazer-daemon."
+        )));
+    }
+
+    #[test]
+    fn every_broken_openrazer_event_link_gets_its_own_finding() {
+        let mut value = snapshot();
+        value.broken_openrazer_event_links = vec![
+            "/dev/input/by-id/a-DSV2Pro_TKL_000000000000-if01-event-mouse".to_owned(),
+            "/dev/input/by-id/b-DSV2Pro_TKL_000000000000-if01-event-mouse".to_owned(),
+        ];
+
+        let assessment = assess_system(&value);
+
+        let paths = assessment
+            .findings
+            .iter()
+            .filter(|finding| finding.code == "HFX-INTEGRATION-008")
+            .map(|finding| finding.details["link_path"].as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            paths,
+            vec![
+                "/dev/input/by-id/a-DSV2Pro_TKL_000000000000-if01-event-mouse",
+                "/dev/input/by-id/b-DSV2Pro_TKL_000000000000-if01-event-mouse",
+            ]
+        );
+        assert!(
+            assessment
+                .findings
+                .iter()
+                .all(|finding| !finding.safe_action.contains("{link_path}"))
+        );
+    }
+
+    #[test]
+    fn broken_openrazer_event_links_are_ignored_without_the_full_component() {
+        let mut value = snapshot();
+        value.full_component = crate::FullComponentSnapshot::not_installed();
+        value.broken_openrazer_event_links =
+            vec!["/dev/input/by-id/a-DSV2Pro_TKL_000000000000-if01-event-mouse".to_owned()];
+
+        assert_eq!(assess_system(&value).state, AssessmentState::Ready);
     }
 
     #[test]

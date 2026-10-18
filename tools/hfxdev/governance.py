@@ -134,6 +134,26 @@ class ServiceEvaluation:
 
 
 @dataclass(frozen=True)
+class PagesSource:
+    """Where GitHub Pages serves the signed repository site from."""
+
+    build_type: str
+    branch: str
+    path: str
+    https_enforced: bool
+
+
+# GitHub Pages serves the repository site straight from the gh-pages branch,
+# which `./hfx repositories publish` replaces; no workflow builds it.
+PAGES_SOURCE = {
+    "build_type": "legacy",
+    "branch": "gh-pages",
+    "path": "/",
+    "https_enforced": True,
+}
+
+
+@dataclass(frozen=True)
 class GitHubGovernance:
     owner: str
     repository: str
@@ -144,7 +164,7 @@ class GitHubGovernance:
     homepage: str
     social_preview_asset: str
     topics: tuple[str, ...]
-    pages_source: str
+    pages_source: PagesSource
     publication_state: tuple[tuple[str, str], ...]
     discussions: tuple[DiscussionCategory, ...]
     project_enabled: bool
@@ -260,7 +280,7 @@ def load_github_governance(root: Path) -> GitHubGovernance:
             "razer",
             "rgb-lighting",
         ],
-        "pages_source": "disabled",
+        "pages_source": PAGES_SOURCE,
     }
     if repository != expected_repository:
         raise ModelError("GitHub repository identity or public release metadata drifted")
@@ -273,7 +293,7 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         "product_release": "published",
         "release_publication": "maintainer-operated",
         "release_workflows": "none",
-        "pages": "disabled",
+        "pages": "served-from-branch",
         "hardware_ci": "none",
     }
     publication = _exact(
@@ -500,8 +520,6 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         raise ModelError("required GitHub checks must be sorted")
     if KERNEL_CANARY_CHECK in required_checks:
         raise ModelError("the kernel canary follows moving kernels and may never gate merges")
-    if DISTRIBUTION_PACKAGE_CHECK in required_checks:
-        raise ModelError("the distribution packages are CI-only and may never gate merges")
 
     raw_labels = value["labels"]
     if not isinstance(raw_labels, list) or not raw_labels:
@@ -610,7 +628,7 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         homepage=repository["homepage"],
         social_preview_asset=repository["social_preview_asset"],
         topics=tuple(repository["topics"]),
-        pages_source=repository["pages_source"],
+        pages_source=PagesSource(**repository["pages_source"]),
         publication_state=tuple(
             (key, publication[key]) for key in expected_publication
         ),

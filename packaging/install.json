@@ -206,6 +206,16 @@
       "include": []
     },
     {
+      "id": "openrazer-native-key-event-links",
+      "distribution_component": "full",
+      "kind": "file",
+      "source": "packaging/generated/70-hyperflux-next-openrazer-keys.rules",
+      "destination": "/usr/lib/udev/rules.d/70-hyperflux-next-openrazer-keys.rules",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
       "id": "full-bridge-integration-drop-in",
       "distribution_component": "full",
       "kind": "file",

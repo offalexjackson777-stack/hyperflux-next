@@ -60,11 +60,13 @@ from hfxdev.generators.integrations import python_openrazer_metadata
 from hfxdev.generators.linux_runtime import systemd_service
 from hfxdev.generators.openrazer_native import (
     driver_preflight_service,
+    key_event_udev_rules,
     modules_load,
     relay_service,
 )
 from hfxdev.linux_runtime import load_linux_runtime
 from hfxdev.openrazer_native_route import load_native_deployment
+from hfxdev.profiles import compiled_catalog as compiled_profile_catalog
 from hfxdev.profiles import load_profile_inputs
 
 
@@ -689,6 +691,78 @@ class IntegrationCatalogTests(unittest.TestCase):
             side_effect=substituted_load,
         ), self.assertRaisesRegex(ModelError, "automatic restart must remain disabled"):
             load_native_deployment(ROOT)
+
+    def test_openrazer_key_event_links_match_only_their_keyboard(self) -> None:
+        deployment = load_native_deployment(ROOT)
+        catalog = load_native_route_catalog(ROOT)
+        matchers = {
+            route["profile_id"]: route["event_file_regex"] for route in catalog["routes"]
+        }
+        self.assertEqual(
+            deployment.key_events.udev_rules_path,
+            "/usr/lib/udev/rules.d/70-hyperflux-next-openrazer-keys.rules",
+        )
+        for link in deployment.key_events.links:
+            self.assertRegex(link.link_name, matchers[link.profile_id])
+            self.assertTrue(link.link_name.startswith("hyperflux-next-"))
+
+        rules = key_event_udev_rules(deployment, compiled_profile_catalog(ROOT))
+        self.assertIn(
+            'ENV{ID_BUS}=="usb", ENV{ID_VENDOR_ID}=="1532", ENV{ID_MODEL_ID}=="00cf", '
+            'ENV{ID_USB_INTERFACE_NUM}=="01", SYMLINK+="input/by-id/'
+            'hyperflux-next-DSV2Pro_TKL_000000000000-if01-event-mouse", TAG+="uaccess"',
+            rules,
+        )
+        self.assertIn('ACTION=="remove", GOTO=', rules)
+        self.assertNotIn("GROUP=", rules)
+        self.assertNotIn("MODE=", rules)
+
+        source = model_load_json(ROOT / "integrations/openrazer/native-route/deployment.json")
+        basilisk = "child.razer.basilisk-v3-pro-35k.00cd"
+        cases = {
+            "does not match the OpenRazer event pattern": lambda value: value["key_events"][
+                "links"
+            ][0].update(link_name="hyperflux-next-Other_000000000000-if01-event-mouse"),
+            "also matches another OpenRazer device": lambda value: value["key_events"][
+                "links"
+            ][0].update(
+                link_name=(
+                    "hyperflux-next-DSV2Pro_TKL_000000000000-if01-event-mouse-"
+                    "Razer_Basilisk_V3_Pro_35K_000000000000-if01-event-kbd"
+                )
+            ),
+            "profile has no native route": lambda value: value["key_events"]["links"][
+                0
+            ].update(profile_id="child.razer.unknown.0000"),
+            "link name is invalid": lambda value: value["key_events"]["links"][0].update(
+                link_name="DSV2Pro_TKL_000000000000-if01-event-mouse"
+            ),
+            "receiver USB interface is invalid": lambda value: value["key_events"]["links"][
+                0
+            ].update(receiver_usb_interface=True),
+            "access must stay with the seat user": lambda value: value["key_events"].update(
+                access="group"
+            ),
+            "udev rules path differs": lambda value: value["key_events"].update(
+                udev_rules_path="/usr/lib/udev/rules.d/99-hyperflux-next-openrazer-keys.rules"
+            ),
+        }
+        self.assertIn(basilisk, matchers)
+        for message, mutate in cases.items():
+            invalid = deepcopy(source)
+            mutate(invalid)
+
+            def substituted_load(path: Path, invalid=invalid):
+                if path == ROOT / "integrations/openrazer/native-route/deployment.json":
+                    return deepcopy(invalid)
+                return model_load_json(path)
+
+            with self.subTest(message), patch.object(
+                openrazer_native_route,
+                "load_json",
+                side_effect=substituted_load,
+            ), self.assertRaisesRegex(ModelError, message):
+                load_native_deployment(ROOT)
 
     def test_openrazer_native_route_catalog_matches_exact_checkout_when_available(self) -> None:
         source_value = os.environ.get("HFX_OPENRAZER_SOURCE_DIR")

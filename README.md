@@ -8,8 +8,8 @@ Polychromatic, and OpenRGB on Linux.
 [![License: GPL-2.0-only](docs/assets/badge-license.svg)](LICENSE)
 
 <!-- HFX-GENERATED-BEGIN: release-summary -->
-**HyperFlux Next 2.1.1 is the current release.** Read the
-[v2.1.1 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.1).
+**HyperFlux Next 2.1.2 is the current release.** Read the
+[v2.1.2 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.2).
 <!-- HFX-GENERATED-END: release-summary -->
 
 With HyperFlux Next, a keyboard and mouse that share one HyperFlux
@@ -60,8 +60,8 @@ works.
 | Distribution | Release | Guide | Packages |
 | --- | --- | --- | --- |
 | Arch Linux | rolling | [Install on Arch Linux](docs/user/installation.md) | Ready |
-| Ubuntu | 24.04 | [Install on Ubuntu](docs/user/install-ubuntu.md) | Not published yet |
-| Debian | 13 | [Install on Debian](docs/user/install-debian.md) | Not published yet |
+| Ubuntu | 26.10 | [Install on Ubuntu](docs/user/install-ubuntu.md) | Not published yet |
+| Debian | 14 | [Install on Debian](docs/user/install-debian.md) | Not published yet |
 | Fedora | 44 | [Install on Fedora](docs/user/install-fedora.md) | Not published yet |
 | openSUSE | Tumbleweed | [Install on openSUSE](docs/user/install-opensuse.md) | Not published yet |
 
@@ -89,8 +89,9 @@ receiver, with your keyboard and mouse paired to it.
    Full adds the connections to OpenRazer, Polychromatic, and OpenRGB, and
    brings Core with it. Core alone is the receiver driver, the background
    service, `hyperfluxctl`, and the SDK: `sudo pacman -Syu hyperflux-next-linux`.
-   The other distributions get Core only for now, without the app
-   connections; their guides give the `apt`, `dnf`, or `zypper` command.
+   The other distributions get Full too, although on Ubuntu, Fedora, and
+   openSUSE without the OpenRGB connection; their guides give the `apt`,
+   `dnf`, or `zypper` command.
 3. **Turn on HyperFlux and restart.** Keep the receiver plugged in.
 
    ```bash

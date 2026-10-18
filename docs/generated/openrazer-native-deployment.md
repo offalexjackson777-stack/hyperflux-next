@@ -4,7 +4,7 @@
 
 This page lists how HyperFlux makes unmodified OpenRazer and Polychromatic work through the receiver: the patched OpenRazer driver, the relay service, the OpenRazer versions tested, and the device commands allowed, for packagers and contributors who work on the OpenRazer integration.
 
-Deployment digest: `b744f6748cb76f325c8e6c55fb8363418e979aa9079bb324f97e2d8ba2805ce2`.
+Deployment digest: `6421b13f7a6fc2c8f326a83538411551785cb5210b819e349784964c9eb026a0`.
 
 ## Relay Service
 
@@ -70,3 +70,17 @@ The generated native command catalog contains `64` profile-bound rules. Each rul
 | Sysusers declaration | `/usr/lib/sysusers.d/openrazer.conf` |
 
 The rules and helper are selected from the same transformed, pinned OpenRazer tree as the DKMS source. The package manager owns every deployed file, and the distribution group substitution is part of the reviewed source transform.
+
+## Key Presses for Reactive Effects
+
+| Keyboard profile | Receiver profile | Receiver interface | Link name |
+| --- | --- | --- | --- |
+| `child.razer.deathstalker-v2-pro-tkl.0296` | `receiver.razer.hyperflux-v2.1532-00cf` | `01` | `/dev/input/by-id/hyperflux-next-DSV2Pro_TKL_000000000000-if01-event-mouse` |
+
+Udev rules: `/usr/lib/udev/rules.d/70-hyperflux-next-openrazer-keys.rules`. Access: `active-seat-user`.
+
+OpenRazer draws reactive effects such as Ripple from key presses it reads from a `/dev/input/by-id` file. It looks for that file once, when it adds the device, by matching each name against the device class's `EVENT_FILE_REGEX`. Through the receiver, the keyboard's key presses arrive on the receiver's own input interface, whose by-id name does not match. The Full component's udev rules add a second name on that interface which matches the keyboard's pattern and no other presented device's; the generator checks both against the pinned OpenRazer source. The link exists from the moment the receiver is attached, so OpenRazer finds it whenever it adds the keyboard.
+
+The rules tag the node `uaccess`, so the logged-in seat user gets read and write access through an ACL and nobody else gains access. Any program running in that user's session can therefore read the receiver's key presses. The rules file sorts before `73-seat-late.rules`, where udev applies the tag. With two receivers attached, both claim the same name and udev keeps one, so only one keyboard receives reactive effects. Doctor warns when a supported receiver is attached but its link is missing ([error catalog](error-catalog.md#hfx-integration-007)).
+
+An administrator turns the links off with a file of the same name in `/etc/udev/rules.d`, which udev uses instead of the packaged file, for example a link to `/dev/null`. Doctor treats any such file as a deliberate choice and does not warn about missing links.

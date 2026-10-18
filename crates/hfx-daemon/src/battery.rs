@@ -37,6 +37,11 @@ pub struct ChildBatteryForwarder {
     desired: [ChildBatteryState; 2],
     published: [ChildBatteryState; 2],
     charge: [ChildChargeReading; 2],
+    /// The kernel rejected the last forward of this lane.
+    rejected: [bool; 2],
+    /// A new reading arrived since that rejection, so the next flush sends
+    /// the lane again even when the reading itself did not change.
+    resend: [bool; 2],
 }
 
 impl ChildBatteryForwarder {
@@ -55,6 +60,7 @@ impl ChildBatteryForwarder {
             return;
         };
         let index = lane.index();
+        self.resend[index] = self.rejected[index];
         if let Some(capacity) = reading {
             let status = charge_status(capacity, self.charge[index]);
             self.desired[index] = ChildBatteryState::present(capacity, status, model_name);
@@ -83,6 +89,8 @@ impl ChildBatteryForwarder {
     /// A new writer file starts with no published battery.
     pub fn writer_installed(&mut self) {
         self.published = Default::default();
+        self.rejected = Default::default();
+        self.resend = Default::default();
     }
 
     /// Closing the writer file unregisters every battery it published, and
@@ -91,11 +99,16 @@ impl ChildBatteryForwarder {
         self.published = Default::default();
         self.desired = Default::default();
         self.charge = Default::default();
+        self.rejected = Default::default();
+        self.resend = Default::default();
     }
 
     /// Forwards every lane whose desired state differs from the published
-    /// one. A rejected forward is not retried until the lane changes again,
-    /// so one unbound interface cannot turn every tick into a kernel call.
+    /// one. A rejected forward is not retried on every tick, so one unbound
+    /// interface cannot turn every tick into a kernel call. It is retried
+    /// with the lane's next reading, even an unchanged one: a level rejected
+    /// before the child's interface was bound must not stay unpublished
+    /// until the level itself changes.
     /// Returns the number of forwards that the kernel accepted.
     pub fn flush<E>(
         &mut self,
@@ -104,12 +117,15 @@ impl ChildBatteryForwarder {
         let mut accepted = 0;
         for lane in ChildBatteryLane::ALL {
             let index = lane.index();
-            if self.desired[index] == self.published[index] {
+            if self.desired[index] == self.published[index] && !self.resend[index] {
                 continue;
             }
-            if publish(lane, &self.desired[index]).is_ok() {
+            let ok = publish(lane, &self.desired[index]).is_ok();
+            if ok {
                 accepted += 1;
             }
+            self.rejected[index] = !ok;
+            self.resend[index] = false;
             self.published[index] = self.desired[index].clone();
         }
         accepted
@@ -468,5 +484,26 @@ mod tests {
         assert!(sent(&mut forwarder).is_empty());
         forwarder.record(&reported(19), lookup);
         assert_eq!(sent(&mut forwarder).len(), 1);
+    }
+
+    #[test]
+    fn a_rejected_forward_is_retried_with_the_next_unchanged_reading() {
+        let mut forwarder = ChildBatteryForwarder::default();
+        forwarder.record(&reported(20), lookup);
+        assert_eq!(forwarder.flush(|_, _| Err(())), 0);
+        assert!(sent(&mut forwarder).is_empty());
+
+        // The same level read again is sent again, once.
+        forwarder.record(&reported(20), lookup);
+        assert_eq!(sent(&mut forwarder).len(), 1);
+        forwarder.record(&reported(20), lookup);
+        assert!(sent(&mut forwarder).is_empty());
+
+        // An accepted forward ends the retry; a new writer starts clean.
+        forwarder.record(&reported(20), lookup);
+        assert!(sent(&mut forwarder).is_empty());
+        forwarder.writer_installed();
+        assert_eq!(sent(&mut forwarder).len(), 1);
+        assert!(sent(&mut forwarder).is_empty());
     }
 }

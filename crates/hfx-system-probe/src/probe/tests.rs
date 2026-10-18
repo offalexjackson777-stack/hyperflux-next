@@ -203,6 +203,8 @@ fn activation_probe<R: CommandRunner>(
         hid_devices_root: PathBuf::from("/missing-hid-devices"),
         dkms_root: PathBuf::from("/missing-dkms"),
         usb_devices_root,
+        input_by_id_root: PathBuf::from("/missing-input-by-id"),
+        udev_rules_override_root: PathBuf::from("/missing-udev-rules"),
         openrazer_daemon_path: PathBuf::from("/missing-openrazer"),
         full_component_descriptor_path: PathBuf::from("/missing-full-component.json"),
         socket_path: PathBuf::from("/missing.sock"),
@@ -1252,6 +1254,191 @@ fn only_exact_retired_driver_registrations_are_reported() {
     fs::remove_dir_all(root).expect("cleanup");
 }
 
+const BROKEN_KEYBOARD_LINK: &str = "test-DSV2Pro_TKL_000000000000-if01-event-mouse";
+
+fn input_by_id_probe(prefix: &str) -> (PathBuf, RealSystemProbe<FakeRunner>) {
+    let (root, mut probe) = driver_inspection_probe(prefix);
+    probe.input_by_id_root = root.join("by-id");
+    fs::create_dir_all(&probe.input_by_id_root).expect("by-id root");
+    (root, probe)
+}
+
+#[test]
+fn dangling_link_matching_a_presented_event_file_is_reported() {
+    let (root, probe) = input_by_id_probe("by-id-dangling-match");
+    let link = probe.input_by_id_root.join(BROKEN_KEYBOARD_LINK);
+    symlink("../eventN", &link).expect("dangling link");
+
+    assert_eq!(
+        probe.broken_openrazer_event_links(),
+        vec![link.to_str().expect("UTF-8 path").to_owned()]
+    );
+    assert!(
+        fs::symlink_metadata(&link).is_ok(),
+        "the probe must never remove the link"
+    );
+    fs::remove_dir_all(root).expect("cleanup");
+}
+
+#[test]
+fn dangling_link_with_an_unrelated_name_is_ignored() {
+    let (root, probe) = input_by_id_probe("by-id-dangling-unrelated");
+    symlink(
+        "../event98",
+        probe
+            .input_by_id_root
+            .join("usb-Logitech_USB_Receiver-if01-event-mouse"),
+    )
+    .expect("unrelated dangling link");
+    symlink(
+        "../event99",
+        probe
+            .input_by_id_root
+            .join("usb-Razer_DSV2Pro_TKL_000000000000-if01-mouse"),
+    )
+    .expect("non-event dangling link");
+
+    assert!(probe.broken_openrazer_event_links().is_empty());
+    fs::remove_dir_all(root).expect("cleanup");
+}
+
+#[test]
+fn valid_link_matching_a_presented_event_file_is_ignored() {
+    let (root, probe) = input_by_id_probe("by-id-valid-match");
+    fs::write(root.join("event7"), b"").expect("event node stand-in");
+    symlink(
+        "../event7",
+        probe.input_by_id_root.join(BROKEN_KEYBOARD_LINK),
+    )
+    .expect("valid link");
+    fs::write(
+        probe
+            .input_by_id_root
+            .join("usb-Razer_Basilisk_V3_Pro_35K_000000000000-if02-event-kbd"),
+        b"",
+    )
+    .expect("matching regular file");
+
+    assert!(probe.broken_openrazer_event_links().is_empty());
+    fs::remove_dir_all(root).expect("cleanup");
+}
+
+#[test]
+fn broken_links_are_checked_only_with_full_and_a_detected_openrazer() {
+    let (root, probe) = input_by_id_probe("by-id-gate");
+    let link = probe.input_by_id_root.join(BROKEN_KEYBOARD_LINK);
+    symlink("../eventN", &link).expect("dangling link");
+
+    assert_eq!(
+        probe.presented_broken_openrazer_event_links(true, OpenRazerRuntimeState::Detected),
+        vec![link.to_str().expect("UTF-8 path").to_owned()]
+    );
+    assert!(
+        probe
+            .presented_broken_openrazer_event_links(false, OpenRazerRuntimeState::Detected)
+            .is_empty()
+    );
+    assert!(
+        probe
+            .presented_broken_openrazer_event_links(true, OpenRazerRuntimeState::NotInstalled)
+            .is_empty()
+    );
+    fs::remove_dir_all(root).expect("cleanup");
+}
+
+#[test]
+fn missing_input_by_id_directory_reports_no_broken_links() {
+    let (root, mut probe) = driver_inspection_probe("by-id-missing");
+    probe.input_by_id_root = root.join("absent");
+
+    assert!(probe.broken_openrazer_event_links().is_empty());
+    fs::remove_dir_all(root).expect("cleanup");
+}
+
+#[test]
+fn every_presented_openrazer_event_file_regex_yields_a_pattern() {
+    let catalog = SourceValidatedDeviceCatalog::load().expect("embedded catalog");
+    let regexes = catalog
+        .devices()
+        .iter()
+        .filter_map(|device| device.openrazer.as_ref()?.event_file_regex.clone())
+        .collect::<Vec<_>>();
+    assert!(!regexes.is_empty());
+    for regex in &regexes {
+        assert!(
+            EventFilePattern::from_regex(regex).is_some(),
+            "no conservative pattern for {regex}"
+        );
+    }
+    assert!(!openrazer_event_file_patterns().is_empty());
+}
+
+#[test]
+fn event_file_patterns_cover_every_name_the_regex_accepts() {
+    let fixed = EventFilePattern::from_regex(".*DSV2Pro_TKL_000000000000-if01-event-mouse")
+        .expect("fixed pattern");
+    assert_eq!(fixed.stem, "DSV2Pro_TKL_000000000000-if01");
+    assert_eq!(fixed.suffix, "-event-mouse");
+    assert!(fixed.may_match("usb-Razer_DSV2Pro_TKL_000000000000-if01-event-mouse"));
+    assert!(fixed.may_match(BROKEN_KEYBOARD_LINK));
+    assert!(!fixed.may_match("usb-Razer_DSV2Pro_TKL_000000000000-if01-event-kbd"));
+    assert!(!fixed.may_match("usb-Razer_DSV2Pro_TKL_000000000000-if02-event-mouse"));
+
+    let grouped =
+        EventFilePattern::from_regex(r".*Razer_Razer_BlackWidow_V3_Pro(_\d+)?(-if01)?-event-kbd")
+            .expect("grouped pattern");
+    assert_eq!(grouped.stem, "Razer_Razer_BlackWidow_V3_Pro");
+    assert!(grouped.may_match("usb-Razer_Razer_BlackWidow_V3_Pro-event-kbd"));
+    assert!(grouped.may_match("usb-Razer_Razer_BlackWidow_V3_Pro_123-if01-event-kbd"));
+    assert!(!grouped.may_match("usb-Razer_Razer_BlackWidow_V3_Pro-if01-event-mouse"));
+
+    assert_eq!(EventFilePattern::from_regex("DSV2Pro-event-mouse"), None);
+    assert_eq!(EventFilePattern::from_regex(".*(a|b)-event-kbd"), None);
+    assert_eq!(
+        EventFilePattern::from_regex(".*Razer_Mouse-event-joystick"),
+        None
+    );
+}
+
+#[test]
+fn key_event_link_is_reported_only_while_its_receiver_is_attached_and_unresolved() {
+    const LINK: &str = "hyperflux-next-DSV2Pro_TKL_000000000000-if01-event-mouse";
+    let (root, mut probe) = driver_inspection_probe("key-event-link");
+    probe.input_by_id_root = root.join("by-id");
+    fs::create_dir_all(&probe.input_by_id_root).expect("by-id root");
+    assert!(probe.missing_openrazer_key_event_links().is_empty());
+
+    let receiver = probe.usb_devices_root.join("3-4");
+    fs::create_dir_all(&receiver).expect("receiver fixture");
+    fs::write(receiver.join("idVendor"), "1532\n").expect("vendor");
+    fs::write(receiver.join("idProduct"), "00cf\n").expect("product");
+    let expected = vec![format!("/dev/input/by-id/{LINK}")];
+    assert_eq!(probe.missing_openrazer_key_event_links(), expected);
+
+    let link = probe.input_by_id_root.join(LINK);
+    symlink(root.join("event-absent"), &link).expect("dangling link");
+    assert_eq!(probe.missing_openrazer_key_event_links(), expected);
+
+    fs::write(root.join("event7"), "").expect("event node");
+    fs::remove_file(&link).expect("remove dangling link");
+    symlink(root.join("event7"), &link).expect("resolving link");
+    assert!(probe.missing_openrazer_key_event_links().is_empty());
+
+    fs::remove_file(&link).expect("remove resolving link");
+    assert_eq!(probe.missing_openrazer_key_event_links(), expected);
+    probe.udev_rules_override_root = root.join("etc-udev-rules");
+    fs::create_dir_all(&probe.udev_rules_override_root).expect("override root");
+    symlink(
+        "/dev/null",
+        probe
+            .udev_rules_override_root
+            .join("70-hyperflux-next-openrazer-keys.rules"),
+    )
+    .expect("masking rule");
+    assert!(probe.missing_openrazer_key_event_links().is_empty());
+    fs::remove_dir_all(root).expect("cleanup");
+}
+
 #[test]
 fn hid_device_names_yield_only_usb_bus_identities() {
     assert_eq!(
@@ -1272,6 +1459,7 @@ fn default_probe_reads_the_real_system_locations() {
     assert_eq!(probe.hid_devices_root, Path::new(HID_DEVICES_ROOT));
     assert_eq!(probe.dkms_root, Path::new(DKMS_ROOT));
     assert_eq!(probe.usb_devices_root, Path::new(USB_DEVICES_ROOT));
+    assert_eq!(probe.input_by_id_root, Path::new("/dev/input/by-id"));
     assert_eq!(
         probe.openrazer_daemon_path,
         Path::new(OPENRAZER_NATIVE_DAEMON_EXECUTABLE_PATH)
@@ -1282,4 +1470,23 @@ fn default_probe_reads_the_real_system_locations() {
     );
     assert_eq!(probe.socket_path, Path::new(BRIDGE_SOCKET_PATH));
     assert_eq!(probe.timeout, Duration::from_millis(STATUS_TIMEOUT_MS));
+}
+
+#[test]
+fn service_states_report_stable_finding_values() {
+    for bridge_present in [false, true] {
+        assert_eq!(
+            ServiceState::Active.finding_value(bridge_present),
+            "active-unready"
+        );
+    }
+    for (state, value) in [
+        (ServiceState::Activating, "activating"),
+        (ServiceState::Failed, "failed"),
+        (ServiceState::Inactive, "inactive"),
+        (ServiceState::Stopping, "stopping"),
+        (ServiceState::Unavailable, "unavailable"),
+    ] {
+        assert_eq!(state.finding_value(false), value);
+    }
 }

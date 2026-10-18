@@ -48,6 +48,7 @@ from hfxdev.licensing import (
 from hfxdev.local_companion import load_local_companion
 from hfxdev.model import ModelError, load_json, repository_files
 from hfxdev.openrazer_native_route import load_native_deployment
+from hfxdev.package_repositories import arch_policy_for_guides, load_repository_site_policy
 from hfxdev.public_readiness import public_readiness
 from hfxdev.render import rendered_files
 from hfxdev.repository_docs import markdown_files, repository_link_issues
@@ -78,7 +79,10 @@ class RepositoryExperienceContracts(unittest.TestCase):
         # DOC-003: landing pages carry one short sentence. Release Status names
         # the current release and its notes in plain words, without the
         # repository's internal channel wording.
-        repository = load_arch_repository_policy(ROOT)
+        # The guides name the Pages site once it is published, the release before.
+        repository = arch_policy_for_guides(
+            load_arch_repository_policy(ROOT), load_repository_site_policy(ROOT)
+        )
         release_status = rendered_views[ROOT / "docs/project/release-status.md"]
         flat_status = " ".join(release_status.replace("\n> ", "\n").split())
         version = repository.product_release_tag.removeprefix("v")
@@ -225,7 +229,7 @@ class RepositoryExperienceContracts(unittest.TestCase):
         self.assertNotIn("SigLevel = Never", installation_guide)
         self.assertNotIn("releases/latest/download", installation_guide)
         self.assertNotIn("./hyperflux-next.conf", installation_guide)
-        self.assertIn("releases/download/arch-repository", installation_guide)
+        self.assertIn(repository.server_url, installation_guide)
         self.assertIn("SHA256SUMS-packages", installation_guide)
         installation = (ROOT / "docs/generated/installation.md").read_text(
             encoding="utf-8"
@@ -924,21 +928,42 @@ class RepositoryExperienceContracts(unittest.TestCase):
         ]
         self.assertEqual(found, [], "\n".join(found))
 
-    def test_ripple_is_documented_as_offered_but_not_reactive(self) -> None:
+    def test_ripple_limits_and_key_press_access_are_documented(self) -> None:
         # Stock OpenRazer advertises Ripple per keyboard model, so pages must
-        # not claim HyperFlux hides it (REL-007).
+        # not claim HyperFlux hides it (REL-007). Ripple now reacts through the
+        # Full key-press link, so pages must not call it inert, and must state
+        # the restart, the one-keyboard limit, and who can read key presses.
         pages = sorted(ROOT.glob("*.md")) + sorted((ROOT / "docs").rglob("*.md"))
-        found = [
-            str(page.relative_to(ROOT))
-            for page in pages
-            if "not advertised over hyperflux"
-            in " ".join(page.read_text(encoding="utf-8").lower().split())
-        ]
-        self.assertEqual(found, [])
-        for path in ("docs/user/applications.md", "docs/user/limitations.md"):
-            page = " ".join((ROOT / path).read_text(encoding="utf-8").split())
-            self.assertIn("Polychromatic offers Ripple", page, path)
-            self.assertIn("no reactive lighting", page, path)
+        for stale in ("not advertised over hyperflux", "no reactive lighting"):
+            found = [
+                str(page.relative_to(ROOT))
+                for page in pages
+                if stale in " ".join(page.read_text(encoding="utf-8").lower().split())
+            ]
+            self.assertEqual(found, [], stale)
+        applications = " ".join(_page("docs/user/applications.md").split())
+        self.assertIn("Ripple needs one restart", applications)
+        self.assertIn("only one keyboard reacts", applications)
+        limitations = " ".join(_page("docs/user/limitations.md").split())
+        for statement in (
+            "restart the computer once",
+            "only one of the two keyboards reacts",
+            "two short vertical lines",
+            "any program you run can read them too",
+            "Other user accounts on the computer cannot.",
+            "/etc/udev/rules.d/70-hyperflux-next-openrazer-keys.rules",
+        ):
+            self.assertIn(statement, limitations)
+        self.assertIn("HFX-INTEGRATION-007", _page("docs/user/troubleshooting.md"))
+
+    def test_broken_openrazer_event_link_fix_is_documented(self) -> None:
+        # Doctor's HFX-INTEGRATION-008 names the link; the page gives the
+        # removal and restart steps and says HyperFlux never removes it.
+        troubleshooting = " ".join(_page("docs/user/troubleshooting.md").split())
+        self.assertIn("HFX-INTEGRATION-008", troubleshooting)
+        self.assertIn("sudo rm /dev/input/by-id/NAME-FROM-DOCTOR", troubleshooting)
+        self.assertIn("systemctl --user restart openrazer-daemon", troubleshooting)
+        self.assertIn("HyperFlux never removes or changes the link itself.", troubleshooting)
 
     def test_upstream_application_limitations_are_documented(self) -> None:
         # Firmware shortcuts, the OpenRGB variant label, and the Polychromatic

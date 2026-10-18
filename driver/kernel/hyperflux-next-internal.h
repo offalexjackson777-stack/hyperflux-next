@@ -54,14 +54,16 @@ struct hfx_native_result_tombstone {
 };
 
 /*
- * One child lane's bridge-forwarded battery state.  psy, hdev, owner, and
- * desc change only under battery_lock; the published values change only
- * under value_lock.
+ * One child lane's bridge-forwarded battery state.  psy, parent, hdev, owner,
+ * and desc change only under battery_lock; the published values change only
+ * under value_lock.  hdev is the lane's own input interface; parent is the
+ * interface psy is registered under.
  */
 struct hfx_battery_lane {
 	struct power_supply *psy;
 	struct power_supply_desc desc;
 	struct hid_device *hdev;
+	struct hid_device *parent;
 	struct hfx_file_context *owner;
 	const char *suffix;
 	spinlock_t value_lock;
@@ -119,6 +121,8 @@ struct hfx_receiver {
 	u32 native_tombstone_count;
 	struct mutex battery_lock;
 	struct hfx_battery_lane battery[HFX_BATTERY_LANES];
+	struct hid_device *battery_parent;
+	int battery_parent_interface;
 };
 
 struct hfx_interface {
@@ -154,6 +158,9 @@ void hfx_observe_activity(struct hfx_receiver *receiver, int interface_number,
 			  unsigned int report_id, int size);
 void hfx_observe_passive(struct hfx_receiver *receiver, int interface_number,
 			 const u8 *data, int size);
+void hfx_observe_feature_battery(struct hfx_receiver *receiver,
+				 u32 endpoint_slot, const u8 *request,
+				 const u8 *response);
 bool hfx_observation_identity_complete(struct hfx_receiver *receiver);
 bool hfx_observe_pairing_inventory(struct hfx_receiver *receiver,
 				   const struct hfx_pairing_inventory *inventory);

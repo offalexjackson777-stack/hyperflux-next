@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 pub const OPENRAZER_NATIVE_DEPLOYMENT_SHA256: &str =
-    "b744f6748cb76f325c8e6c55fb8363418e979aa9079bb324f97e2d8ba2805ce2";
+    "6421b13f7a6fc2c8f326a83538411551785cb5210b819e349784964c9eb026a0";
 pub const OPENRAZER_NATIVE_UPSTREAM_COMMIT: &str = "1ef8a91712906a89fd332a2ed62bbd105315d6d1";
 pub const OPENRAZER_NATIVE_DKMS_NAME: &str = "openrazer-driver";
 pub const OPENRAZER_NATIVE_DKMS_VERSION: &str = "3.12.4";
@@ -17,3 +17,15 @@ pub const OPENRAZER_NATIVE_VERSION_ARGUMENT: &str = "--version";
 pub const OPENRAZER_NATIVE_RELAY_SERVICE_UNIT: &str = "hyperflux-next-openrazer-relay.service";
 pub const OPENRAZER_NATIVE_DRIVER_PREFLIGHT_SERVICE_UNIT: &str =
     "hyperflux-next-openrazer-driver-preflight.service";
+/// `/dev/input/by-id` names the Full component's udev rules add so
+/// `OpenRazer` reads a keyboard's key presses, as receiver USB vendor ID,
+/// receiver USB product ID and link name.
+/// Full udev rules file that adds the key-event links. A file of the same
+/// name in `/etc/udev/rules.d` replaces it, which turns the links off.
+pub const OPENRAZER_NATIVE_KEY_EVENT_UDEV_RULES_PATH: &str =
+    "/usr/lib/udev/rules.d/70-hyperflux-next-openrazer-keys.rules";
+pub const OPENRAZER_NATIVE_KEY_EVENT_LINKS: &[(u16, u16, &str)] = &[(
+    0x1532,
+    0x00cf,
+    "hyperflux-next-DSV2Pro_TKL_000000000000-if01-event-mouse",
+)];

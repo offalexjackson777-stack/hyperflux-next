@@ -73,6 +73,11 @@ on your computer and how far each one is tested.
    paste it straight away. If a file with that name already exists, the
    command stops without changing it: delete or rename the old file first, or
    choose another name.
+
+   In the report, every test stage, such as `Profile binding` and the lighting
+   and reconnect checks, shows as `blocked` or `not-run`. That is expected:
+   this version does not include the guided test runner yet, so nothing is
+   tested and nothing is written to your devices. The report is still complete.
 4. Paste the printed report, unchanged, in the
    [device support form](https://github.com/offalexjackson777-stack/hyperflux-next/issues/new?template=device_support.yml),
    or, if you are reporting something that does not work, in the

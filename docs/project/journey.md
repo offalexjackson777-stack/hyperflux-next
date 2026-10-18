@@ -244,7 +244,7 @@ default.
 
 ### Accepted limitations
 
-The limits users can see today, such as Ripple showing no reactive lighting and
+The limits users can see today, such as Ripple reacting on only one of two keyboards and
 the Quartz label in OpenRGB, are listed with what to do about each in
 [known limitations](../user/limitations.md).
 

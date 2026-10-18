@@ -40,7 +40,17 @@
           "uniqueItems": true,
           "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,49}$"}
         },
-        "pages_source": {"const": "disabled"}
+        "pages_source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["build_type", "branch", "path", "https_enforced"],
+          "properties": {
+            "build_type": {"const": "legacy"},
+            "branch": {"const": "gh-pages"},
+            "path": {"const": "/"},
+            "https_enforced": {"const": true}
+          }
+        }
       }
     },
     "publication_state": {
@@ -52,7 +62,7 @@
         "product_release": {"const": "published"},
         "release_publication": {"const": "maintainer-operated"},
         "release_workflows": {"const": "none"},
-        "pages": {"const": "disabled"},
+        "pages": {"const": "served-from-branch"},
         "hardware_ci": {"const": "none"}
       }
     },

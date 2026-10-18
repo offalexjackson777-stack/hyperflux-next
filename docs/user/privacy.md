@@ -25,6 +25,10 @@ read the file. Nothing is uploaded. You decide whether to attach it to a report.
 If a file with that name already exists, the command stops without changing it:
 delete or rename the old file first, or choose another name.
 
+Without `--output`, `hyperfluxctl support-bundle` saves the bundle in the
+current folder under a name of its own, such as
+`hyperflux-next-support-<id>.json`, and prints that name.
+
 ## What A Bundle Contains
 
 - whether the packages are installed and the driver is active;

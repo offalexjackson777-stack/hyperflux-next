@@ -244,11 +244,16 @@ def _desired_plan(governance: GitHubGovernance, components: tuple[str, ...]) -> 
             if identifier != "artifact_attestations"
         )
     if "pages" in components:
-        operations.extend(
-            [
-                {"component": "pages", "operation": "disable-pages"},
-                {"component": "pages", "operation": "remove-pages-environment"},
-            ]
+        source = governance.pages_source
+        operations.append(
+            {
+                "component": "pages",
+                "operation": "serve-site-from-branch",
+                "build_type": source.build_type,
+                "branch": source.branch,
+                "path": source.path,
+                "https_enforced": source.https_enforced,
+            }
         )
     if "ruleset" in components:
         operations.append(
@@ -333,22 +338,67 @@ def _apply_security(api: GhApi, governance: GitHubGovernance) -> list[dict[str, 
     return operations
 
 
+def _pages_source_payload(governance: GitHubGovernance) -> dict[str, Any]:
+    source = governance.pages_source
+    return {
+        "build_type": source.build_type,
+        "source": {"branch": source.branch, "path": source.path},
+    }
+
+
+def _pages_drift(governance: GitHubGovernance, current: object) -> list[str]:
+    """The Pages settings that differ from governance; a missing site is all of them."""
+    if current is MISSING or not isinstance(current, dict):
+        return ["site"]
+    source = governance.pages_source
+    actual = current.get("source") or {}
+    drift: list[str] = []
+    if current.get("build_type") != source.build_type:
+        drift.append("build_type")
+    if actual.get("branch") != source.branch or actual.get("path") != source.path:
+        drift.append("source")
+    if current.get("https_enforced") is not source.https_enforced:
+        drift.append("https_enforced")
+    return drift
+
+
 def _apply_pages(api: GhApi, governance: GitHubGovernance) -> list[dict[str, Any]]:
+    """Serve the repository site from its branch; never delete the site."""
     repo = f"/repos/{governance.owner}/{governance.repository}"
+    source = governance.pages_source
     current = api.call("GET", f"{repo}/pages", allow_missing=True)
-    environment_endpoint = f"{repo}/environments/github-pages"
-    environment = api.call("GET", environment_endpoint, allow_missing=True)
-    if current is not MISSING:
-        api.call("DELETE", f"{repo}/pages")
-    if environment is not MISSING:
-        api.call("DELETE", environment_endpoint)
+    drift = _pages_drift(governance, current)
+    if not drift:
+        status = "current"
+    else:
+        branch = api.call(
+            "GET", f"{repo}/branches/{quote(source.branch, safe='')}", allow_missing=True
+        )
+        if branch is MISSING:
+            raise ModelError(
+                f"Pages cannot serve the {source.branch} branch before it exists; "
+                "publish the repository site with ./hfx repositories publish --execute first"
+            )
+        if current is MISSING:
+            api.call("POST", f"{repo}/pages", _pages_source_payload(governance))
+            status = "created"
+        else:
+            if "build_type" in drift or "source" in drift:
+                api.call("PUT", f"{repo}/pages", _pages_source_payload(governance))
+            status = "updated"
+        # GitHub sets HTTPS on its own github.io address; ask for it only when it is off.
+        if source.https_enforced:
+            updated = api.call("GET", f"{repo}/pages", allow_missing=True)
+            if isinstance(updated, dict) and updated.get("https_enforced") is not True:
+                api.call("PUT", f"{repo}/pages", {"https_enforced": True})
     return [
-        {"component": "pages", "operation": "site", "status": "disabled"},
         {
             "component": "pages",
-            "operation": "deployment-environment",
-            "status": "removed",
-        },
+            "operation": "serve-site-from-branch",
+            "status": status,
+            "branch": source.branch,
+            "path": source.path,
+        }
     ]
 
 
@@ -388,8 +438,11 @@ def apply(
         "ruleset": _apply_ruleset,
     }
     for component in selected:
-        if component == "pages" and dict(governance.publication_state)["pages"] != "disabled":
-            raise ModelError("Pages disablement conflicts with the declared Pages state")
+        if (
+            component == "pages"
+            and dict(governance.publication_state)["pages"] != "served-from-branch"
+        ):
+            raise ModelError("the Pages source conflicts with the declared Pages state")
         operations.extend(handlers[component](client, governance))
     return SyncResult(
         mode="apply",
@@ -460,14 +513,13 @@ def verify(
         )
     if "pages" in selected:
         pages = client.call("GET", f"{repo}/pages", allow_missing=True)
-        environment = client.call("GET", f"{repo}/environments/github-pages", allow_missing=True)
-        current = pages is MISSING and environment is MISSING
+        drift = _pages_drift(governance, pages)
         operations.append(
             {
                 "component": "pages",
-                "status": "current" if current else "drifted",
+                "status": "current" if not drift else "drifted",
                 "site": "disabled" if pages is MISSING else "enabled",
-                "environment": "absent" if environment is MISSING else "present",
+                "mismatches": drift,
             }
         )
     if "ruleset" in selected:

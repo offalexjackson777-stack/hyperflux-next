@@ -206,7 +206,8 @@ class KernelDriverContracts(unittest.TestCase):
             self.assertNotIn(forbidden, source)
         self.assertIn("POWER_SUPPLY_SCOPE_DEVICE", source)
         self.assertIn('value->strval = "Razer";', source)
-        self.assertIn("power_supply_register(&lane->hdev->dev", source)
+        self.assertIn("power_supply_register(&parent->dev", source)
+        self.assertNotIn("power_supply_register(&lane->hdev->dev", source)
         report_start = source.index("long hfx_battery_report(")
         report_end = source.index("\n}\n", report_start)
         report = source[report_start:report_end]
@@ -215,6 +216,39 @@ class KernelDriverContracts(unittest.TestCase):
         self.assertIn("-ESTALE", report)
         self.assertIn(
             "lane->owner = context;\n\t\tpower_supply_changed(lane->psy);", report
+        )
+
+    def test_child_battery_is_parented_beside_no_input(self) -> None:
+        source = (ROOT / "driver/kernel/hyperflux-next-battery.c").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "receiver->battery_parent ? receiver->battery_parent : lane->hdev",
+            source,
+        )
+        attach_start = source.index("void hfx_battery_attach_interface(")
+        attach = source[attach_start : source.index("\n}\n", attach_start)]
+        self.assertIn("!(hdev->claimed & HID_CLAIMED_INPUT)", attach)
+        self.assertIn(
+            "interface_number < receiver->battery_parent_interface", attach
+        )
+        self.assertIn("hfx_battery_move_all_locked(receiver);", attach)
+        detach_start = source.index("void hfx_battery_detach_interface(")
+        detach = source[detach_start : source.index("\n}\n", detach_start)]
+        self.assertLess(
+            detach.index("receiver->battery_parent = NULL;"),
+            detach.index("hfx_battery_move_all_locked(receiver);"),
+        )
+        move_start = source.index("static void hfx_battery_move_locked(")
+        move = source[move_start : source.index("\n}\n", move_start)]
+        self.assertNotIn("lane->owner = NULL", move)
+        self.assertIn("hfx_battery_publish_locked(receiver, lane)", move)
+        core = (ROOT / "driver/kernel/hyperflux-next-core.c").read_text(
+            encoding="utf-8"
+        )
+        self.assertLess(
+            core.index("hid_hw_start(hdev, HID_CONNECT_DEFAULT)"),
+            core.index("hfx_battery_attach_interface(interface->receiver"),
         )
 
     def test_child_battery_is_torn_down_on_every_exit(self) -> None:

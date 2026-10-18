@@ -11,14 +11,14 @@
     "homepage": "",
     "social_preview_asset": "docs/assets/social-preview.png",
     "topics": ["device-driver", "hid", "hyperflux", "linux", "openrazer", "openrgb", "polychromatic", "razer", "rgb-lighting"],
-    "pages_source": "disabled"
+    "pages_source": {"build_type": "legacy", "branch": "gh-pages", "path": "/", "https_enforced": true}
   },
   "publication_state": {
     "source_repository": "public",
     "product_release": "published",
     "release_publication": "maintainer-operated",
     "release_workflows": "none",
-    "pages": "disabled",
+    "pages": "served-from-branch",
     "hardware_ci": "none"
   },
   "collaboration": {
@@ -104,6 +104,7 @@
       "Analyze (c-cpp)",
       "Analyze (python)",
       "Dependency review",
+      "Distribution packages",
       "Documentation render",
       "Fast software",
       "Full software"
@@ -131,8 +132,8 @@
     "kernel_canary_cron": "41 5 * * 1",
     "distribution_package_cron": "23 6 * * 3",
     "distribution_package_images": {
-      "ubuntu": "docker.io/library/ubuntu@sha256:f610ab94648195aa356059f5b41d6085c9d4d903c072430cdd1af7bdb646106b",
-      "debian": "docker.io/library/debian@sha256:bcf83fd8af414eda0c0a99d25a4e61dedd88e7aac7f7bc519d04555ff0c40ec5",
+      "ubuntu": "docker.io/library/ubuntu@sha256:1b798ba0017f24244ca02af25e3cfb1160db35e270e7b3beef708910b468bd92",
+      "debian": "docker.io/library/debian@sha256:bdfaf17803b5c8007fc79111026bfe29c2e121ad22575c5a555fa8f8bb9c8802",
       "fedora": "registry.fedoraproject.org/fedora@sha256:923dd7d4362a78ef7edc1887cb599720e9f59ff8669a38c81062c6e2aaa83204",
       "opensuse": "registry.opensuse.org/opensuse/tumbleweed@sha256:fe80b7a696238a86c273cb9efd798a5d56240567b0b7ab8ed3bf4606a2e117ac"
     },

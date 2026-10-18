@@ -36,8 +36,20 @@ DEPLOYMENT_KEYS = {
     "relay",
     "driver",
     "access",
+    "key_events",
     "compatibility",
 }
+KEY_EVENTS_KEYS = {"udev_rules_path", "access", "links"}
+KEY_EVENT_LINK_KEYS = {
+    "profile_id",
+    "receiver_profile_id",
+    "receiver_usb_interface",
+    "link_name",
+}
+# udev applies the uaccess tag in 73-seat-late.rules, so the key-event rules
+# must sort before it for the logged-in seat user to receive access.
+KEY_EVENT_UDEV_RULES_PATH = "/usr/lib/udev/rules.d/70-hyperflux-next-openrazer-keys.rules"
+KEY_EVENT_LINK_PREFIX = "hyperflux-next-"
 RELAY_KEYS = {
     "executable_path",
     "service_unit",
@@ -139,6 +151,21 @@ class OpenRazerAccessDeployment:
 
 
 @dataclass(frozen=True)
+class OpenRazerKeyEventLink:
+    profile_id: str
+    receiver_profile_id: str
+    receiver_usb_interface: int
+    link_name: str
+
+
+@dataclass(frozen=True)
+class OpenRazerKeyEventDeployment:
+    udev_rules_path: str
+    access: str
+    links: tuple[OpenRazerKeyEventLink, ...]
+
+
+@dataclass(frozen=True)
 class OpenRazerRuntimeCapability:
     modinfo_field: str
     expected_value: str
@@ -163,6 +190,7 @@ class OpenRazerNativeDeployment:
     relay: OpenRazerRelayDeployment
     driver: OpenRazerDriverDeployment
     access: OpenRazerAccessDeployment
+    key_events: OpenRazerKeyEventDeployment
     compatibility: OpenRazerCompatibilityDeployment
 
 
@@ -521,6 +549,8 @@ def load_native_deployment(root: Path) -> OpenRazerNativeDeployment:
         if access[key] != expected:
             raise ModelError(f"OpenRazer native access {key} differs from its deployment contract")
 
+    key_events = _key_event_deployment(root, value["key_events"])
+
     compatibility = value["compatibility"]
     if not isinstance(compatibility, dict):
         raise ModelError("OpenRazer native compatibility deployment must be an object")
@@ -599,6 +629,7 @@ def load_native_deployment(root: Path) -> OpenRazerNativeDeployment:
             mount_helper_path=access["mount_helper_path"],
             sysusers_path=access["sysusers_path"],
         ),
+        key_events=key_events,
         compatibility=OpenRazerCompatibilityDeployment(
             verified_upstream_version=verified_version,
             daemon_executable_path=daemon_executable,
@@ -611,6 +642,83 @@ def load_native_deployment(root: Path) -> OpenRazerNativeDeployment:
                 modules=tuple(capability_modules),
             ),
         ),
+    )
+
+
+def _key_event_deployment(root: Path, value: Any) -> OpenRazerKeyEventDeployment:
+    """Validate the by-id names that give OpenRazer a keyboard's key presses.
+
+    OpenRazer opens a device's key-event file once, when it adds the device, by
+    matching every /dev/input/by-id name against the device's EVENT_FILE_REGEX
+    with Python re.match. Each link name must therefore match the pattern of
+    its own keyboard and of no other presented device.
+    """
+
+    if not isinstance(value, dict):
+        raise ModelError("OpenRazer native key-event deployment must be an object")
+    _exact_keys(value, KEY_EVENTS_KEYS, "OpenRazer native key-event deployment")
+    if value["udev_rules_path"] != KEY_EVENT_UDEV_RULES_PATH:
+        raise ModelError("OpenRazer native key-event udev rules path differs from its contract")
+    if value["access"] != "active-seat-user":
+        raise ModelError("OpenRazer native key-event access must stay with the seat user")
+    links = value["links"]
+    if not isinstance(links, list) or not 1 <= len(links) <= 16:
+        raise ModelError("OpenRazer native key-event links are empty or oversized")
+    matchers = {
+        route["profile_id"]: route["event_file_regex"]
+        for route in load_native_route_catalog(root)["routes"]
+    }
+    parsed: list[OpenRazerKeyEventLink] = []
+    for index, link in enumerate(links):
+        label = f"OpenRazer native key-event link {index}"
+        if not isinstance(link, dict):
+            raise ModelError(f"{label}: expected an object")
+        _exact_keys(link, KEY_EVENT_LINK_KEYS, label)
+        profile_id = link["profile_id"]
+        if profile_id not in matchers:
+            raise ModelError(f"{label}: profile has no native route")
+        receiver_profile_id = link["receiver_profile_id"]
+        if (
+            not isinstance(receiver_profile_id, str)
+            or re.fullmatch(r"receiver\.[a-z0-9][a-z0-9.-]{0,127}", receiver_profile_id)
+            is None
+        ):
+            raise ModelError(f"{label}: receiver profile id is invalid")
+        interface = link["receiver_usb_interface"]
+        if (
+            not isinstance(interface, int)
+            or isinstance(interface, bool)
+            or not 0 <= interface <= 31
+        ):
+            raise ModelError(f"{label}: receiver USB interface is invalid")
+        name = link["link_name"]
+        if (
+            not isinstance(name, str)
+            or re.fullmatch(r"[A-Za-z0-9_.-]{1,240}", name) is None
+            or not name.startswith(KEY_EVENT_LINK_PREFIX)
+        ):
+            raise ModelError(f"{label}: link name is invalid")
+        if re.match(matchers[profile_id], name) is None:
+            raise ModelError(f"{label}: link name does not match the OpenRazer event pattern")
+        if any(
+            other != profile_id and re.match(matcher, name) is not None
+            for other, matcher in matchers.items()
+        ):
+            raise ModelError(f"{label}: link name also matches another OpenRazer device")
+        parsed.append(
+            OpenRazerKeyEventLink(
+                profile_id=profile_id,
+                receiver_profile_id=receiver_profile_id,
+                receiver_usb_interface=interface,
+                link_name=name,
+            )
+        )
+    require_unique([link.link_name for link in parsed], "OpenRazer key-event link name")
+    require_unique([link.profile_id for link in parsed], "OpenRazer key-event link profile")
+    return OpenRazerKeyEventDeployment(
+        udev_rules_path=value["udev_rules_path"],
+        access=value["access"],
+        links=tuple(parsed),
     )
 
 

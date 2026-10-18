@@ -19,10 +19,18 @@ from hfxdev.distributions import (
     debian_exact,
     debian_version,
     load_distribution_catalog,
+    repository_site_published,
     rpm_exact,
     rpm_version,
 )
 from hfxdev.model import ModelError, load_json
+
+
+# The four distribution targets are published exactly when the repository
+# site is; while the site is unpublished they are CI-only.
+SITE_PUBLISHED = repository_site_published(ROOT)
+DISTRIBUTION_MATURITY = "published" if SITE_PUBLISHED else "ci-only"
+DISTRIBUTION_TARGET_IDS = ("ubuntu", "debian", "fedora", "opensuse")
 
 
 class DistributionCatalogTests(unittest.TestCase):
@@ -37,6 +45,7 @@ class DistributionCatalogTests(unittest.TestCase):
         )
         target = self.catalog.targets["arch"]
         self.assertEqual((target.package_format, target.maturity), ("pacman", "published"))
+        self.assertTrue(target.openrgb_plugin)
         self.assertIsNone(target.release)
         self.assertEqual(set(target.dependency_roles), DEPENDENCY_ROLES)
         self.assertEqual(tuple(target.components), COMPONENT_IDS)
@@ -55,7 +64,7 @@ class DistributionCatalogTests(unittest.TestCase):
                 "glibc",
                 "libgcc",
                 "systemd",
-                "hyperflux-next-linux=2.1.1-1",
+                "hyperflux-next-linux=2.1.2-1",
                 "qt6-base",
                 "hidapi",
                 "libstdc++",
@@ -91,21 +100,20 @@ class DistributionCatalogTests(unittest.TestCase):
                 )
             )
 
-    def test_ubuntu_target_carries_only_core_with_debian_relations(self) -> None:
+    def test_ubuntu_target_carries_both_editions_with_debian_relations(self) -> None:
         target = self.catalog.targets["ubuntu"]
-        self.assertEqual((target.package_format, target.maturity), ("deb", "ci-only"))
-        self.assertFalse(target.published)
+        self.assertEqual((target.package_format, target.maturity), ("deb", DISTRIBUTION_MATURITY))
+        self.assertEqual(SITE_PUBLISHED, target.published)
         self.assertIsNotNone(target.release)
         assert target.release is not None
         self.assertEqual(
-            (target.release.version, target.release.codename), ("24.04", "noble")
+            (target.release.version, target.release.codename), ("26.10", "stonking")
         )
         self.assertEqual(target.architecture_for("x86_64-unknown-linux-gnu"), "amd64")
         with self.assertRaises(ModelError):
             target.architecture_for("aarch64-unknown-linux-gnu")
-        self.assertEqual(tuple(target.components), ("linux",))
-        with self.assertRaises(ModelError):
-            target.component("full")
+        self.assertEqual(tuple(target.components), ("linux", "full"))
+        self.assertFalse(target.openrgb_plugin)
         self.assertEqual(
             target.dependency_roles,
             {
@@ -125,12 +133,24 @@ class DistributionCatalogTests(unittest.TestCase):
             linux.dependencies,
             ("dkms", "libc6 (>= 2.34)", "libgcc-s1", "systemd", "udev"),
         )
+        full = target.component("full")
+        self.assertEqual(full.package_name, "hyperflux-next-full")
+        self.assertEqual(full.dependencies, linux.dependencies)
+        # Full stands in for every OpenRazer driver version the daemon pins.
+        self.assertEqual(full.conflicts, ("openrazer-driver-dkms", "openrazer-kernel-modules-dkms"))
+        self.assertEqual(full.replaces, full.conflicts)
+        self.assertIn("openrazer-driver-dkms (= 3.12.4+dfsg-1)", full.provides)
+        self.assertIn("openrazer-driver-dkms (= 3.12.4~ubuntu26.10.1)", full.provides)
+        self.assertEqual(
+            [item.package for item in full.optional_dependencies],
+            ["openrazer-daemon", "python3-openrazer"],
+        )
 
     def test_debian_target_mirrors_ubuntu_on_its_own_release(self) -> None:
         ubuntu = self.catalog.targets["ubuntu"]
         target = self.catalog.targets["debian"]
-        self.assertEqual((target.package_format, target.maturity), ("deb", "ci-only"))
-        self.assertFalse(target.published)
+        self.assertEqual((target.package_format, target.maturity), ("deb", DISTRIBUTION_MATURITY))
+        self.assertEqual(SITE_PUBLISHED, target.published)
         assert target.release is not None
         self.assertEqual(
             (
@@ -139,11 +159,49 @@ class DistributionCatalogTests(unittest.TestCase):
                 target.release.codename,
                 target.release.c_runtime_version,
             ),
-            ("Debian", "13", "trixie", "2.41"),
+            ("Debian", "14", "forky", "2.43"),
         )
-        self.assertEqual(tuple(target.components), ("linux",))
-        self.assertEqual(target.dependency_roles, ubuntu.dependency_roles)
-        self.assertEqual(target.component("linux"), ubuntu.component("linux"))
+        self.assertEqual(tuple(target.components), ("linux", "full"))
+        # Debian 14's OpenRGB 1.0 is built with Qt 5, so Full carries a plugin
+        # built inside the release against that Qt.
+        self.assertTrue(target.openrgb_plugin)
+        self.assertTrue(target.openrgb_plugin_release_build)
+        self.assertEqual(target.openrgb_qt_major, 5)
+        # The plugin built inside Debian 14 needs Debian 14's glibc, so the
+        # packages declare it instead of Ubuntu's portable floor.
+        self.assertEqual(
+            target.dependency_roles,
+            {**ubuntu.dependency_roles, "c-runtime": "libc6 (>= 2.43)"},
+        )
+        self.assertEqual(c_runtime_floor(target), "2.43")
+        self.assertEqual(
+            target.component("linux").dependencies,
+            ("dkms", "libc6 (>= 2.43)", "libgcc-s1", "systemd", "udev"),
+        )
+        full = target.component("full")
+        self.assertEqual(
+            full.dependencies,
+            (
+                *target.component("linux").dependencies,
+                "libqt5core5t64",
+                "libqt5gui5t64",
+                "libqt5widgets5t64",
+                "libhidapi-hidraw0",
+                "libstdc++6",
+            ),
+        )
+        self.assertEqual(
+            [item.package for item in full.optional_dependencies],
+            ["openrgb", "openrazer-daemon", "python3-openrazer"],
+        )
+        self.assertEqual(
+            full.description, self.catalog.targets["arch"].component("full").description
+        )
+        arch = self.catalog.targets["arch"]
+        self.assertFalse(arch.openrgb_plugin_release_build)
+        self.assertEqual(arch.openrgb_qt_major, 6)
+        with self.assertRaises(ModelError):
+            _ = ubuntu.openrgb_qt_major
 
     def test_debian_mutations_fail_closed(self) -> None:
         def mutate(change):
@@ -168,18 +226,36 @@ class DistributionCatalogTests(unittest.TestCase):
             }
 
         def runtime_above_release(target, _value):
-            target["dependency_roles"]["c-runtime"] = "libc6 (>= 2.42)"
+            target["dependency_roles"]["c-runtime"] = "libc6 (>= 2.44)"
+
+        def portable_runtime(target, _value):
+            target["dependency_roles"]["c-runtime"] = "libc6 (>= 2.34)"
 
         def ubuntu_release(target, value):
             target["release"] = copy.deepcopy(value["targets"]["ubuntu"]["release"])
 
+        def without_plugin_library(target, _value):
+            target["components"]["full"]["dependencies"].remove("libqt5gui5t64")
+
+        def without_openrgb(target, _value):
+            target["components"]["full"]["optional_dependencies"].pop(0)
+
+        def ubuntu_full(target, value):
+            target["components"]["full"]["description"] = value["targets"]["ubuntu"][
+                "components"
+            ]["full"]["description"]
+
         cases = {
             "missing target": drop_debian,
+            "missing plugin library": without_plugin_library,
+            "missing openrgb application": without_openrgb,
+            "full without openrgb description": ubuntu_full,
             "reordered targets": reorder,
             "other codename": set_release("codename", "bookworm"),
             "other version": set_release("version", "12"),
             "other distribution": set_release("distribution", "Devuan"),
             "runtime above release": runtime_above_release,
+            "portable runtime with a release-built plugin": portable_runtime,
             "ubuntu release": ubuntu_release,
         }
         for name, change in cases.items():
@@ -217,8 +293,8 @@ class DistributionCatalogTests(unittest.TestCase):
         for target_id, (release, dependencies) in expected.items():
             with self.subTest(target=target_id):
                 target = self.catalog.targets[target_id]
-                self.assertEqual((target.package_format, target.maturity), ("rpm", "ci-only"))
-                self.assertFalse(target.published)
+                self.assertEqual((target.package_format, target.maturity), ("rpm", DISTRIBUTION_MATURITY))
+                self.assertEqual(SITE_PUBLISHED, target.published)
                 assert target.release is not None
                 self.assertEqual(
                     (
@@ -230,7 +306,15 @@ class DistributionCatalogTests(unittest.TestCase):
                 )
                 self.assertIsNone(target.release.codename)
                 self.assertEqual(target.architecture_for("x86_64-unknown-linux-gnu"), "x86_64")
-                self.assertEqual(tuple(target.components), ("linux",))
+                self.assertEqual(tuple(target.components), ("linux", "full"))
+                self.assertFalse(target.openrgb_plugin)
+                full = target.component("full")
+                self.assertEqual(full.conflicts, ("openrazer-kernel-modules-dkms",))
+                self.assertEqual(full.replaces, ())
+                self.assertEqual(
+                    [item.package for item in full.optional_dependencies],
+                    ["openrazer-daemon", "python3-openrazer", "polychromatic"],
+                )
                 self.assertEqual(c_runtime_floor(target), "2.34")
                 linux = target.component("linux")
                 self.assertEqual(linux.package_name, arch_linux.package_name)
@@ -256,10 +340,23 @@ class DistributionCatalogTests(unittest.TestCase):
         def with_codename(target, _value):
             target["release"]["codename"] = "rawhide"
 
-        def with_full(target, _value):
+        def with_arch_full(target, _value):
             target["components"]["full"] = copy.deepcopy(
                 self.value["targets"]["arch"]["components"]["full"]
             )
+
+        def without_full(target, _value):
+            del target["components"]["full"]
+
+        def full_field(key, change):
+            def apply(target, _value):
+                target["components"]["full"][key] = change(
+                    copy.deepcopy(target["components"]["full"][key])
+                )
+            return apply
+
+        def with_openrgb(items):
+            return [*items, {"package": "openrgb", "purpose": "Stock RGB application"}]
 
         def drop_target(target_id):
             def change(_target, value):
@@ -284,9 +381,6 @@ class DistributionCatalogTests(unittest.TestCase):
         def extra_dependency(target, _value):
             target["components"]["linux"]["dependencies"] = ["openrgb"]
 
-        def published(target, _value):
-            target["maturity"] = "published"
-
         def swap_roles(target, value):
             other = "opensuse" if value["targets"]["fedora"] is target else "fedora"
             target["dependency_roles"] = copy.deepcopy(value["targets"][other]["dependency_roles"])
@@ -295,9 +389,19 @@ class DistributionCatalogTests(unittest.TestCase):
             "missing target": lambda target_id: drop_target(target_id),
             "reordered targets": lambda _id: reorder,
             "deb format": lambda _id: as_deb,
-            "published": lambda _id: published,
             "codename": lambda _id: with_codename,
-            "full edition": lambda _id: with_full,
+            "Arch full edition": lambda _id: with_arch_full,
+            "missing full edition": lambda _id: without_full,
+            "full renamed": lambda _id: full_field("package_name", lambda _: "hyperflux-next-full-route"),
+            "full names the plugin": lambda _id: full_field(
+                "description", lambda value: value + " and OpenRGB integration"
+            ),
+            "full extra dependency": lambda _id: full_field("dependencies", lambda items: [*items, "qt6-base"]),
+            "full drops a conflict": lambda _id: full_field("conflicts", lambda items: items[1:]),
+            "full extra provide": lambda _id: full_field("provides", lambda items: [*items, "openrgb"]),
+            "full drops a provide": lambda _id: full_field("provides", lambda items: items[1:]),
+            "full openrgb application": lambda _id: full_field("optional_dependencies", with_openrgb),
+            "full drops an application": lambda _id: full_field("optional_dependencies", lambda items: items[1:]),
             "other version": lambda _id: set_release("version", "43"),
             "other distribution": lambda _id: set_release("distribution", "CentOS"),
             "runtime above release": lambda _id: set_role("c-runtime", "glibc >= 2.45"),
@@ -321,6 +425,41 @@ class DistributionCatalogTests(unittest.TestCase):
                     with self.assertRaises(ModelError):
                         load_distribution_catalog(ROOT)
 
+    def test_published_maturity_follows_the_repository_site(self) -> None:
+        def with_maturity(target_id, maturity):
+            # The other three stay CI-only, which is valid for either site state.
+            candidate = copy.deepcopy(self.value)
+            for other in DISTRIBUTION_TARGET_IDS:
+                candidate["targets"][other]["maturity"] = "ci-only"
+            candidate["targets"][target_id]["maturity"] = maturity
+            return candidate
+
+        for target_id in DISTRIBUTION_TARGET_IDS:
+            with self.subTest(target=target_id, site="unpublished"), patch(
+                "hfxdev.distributions.load_json",
+                return_value=with_maturity(target_id, "published"),
+            ), patch("hfxdev.distributions.repository_site_published", return_value=False):
+                with self.assertRaisesRegex(
+                    ModelError,
+                    "packages cannot be published while the repository site is unpublished; "
+                    "set packaging/repository-site.json state to published first",
+                ):
+                    load_distribution_catalog(ROOT)
+            for site_published, maturity in ((True, "published"), (True, "ci-only"), (False, "ci-only")):
+                with self.subTest(target=target_id, site=site_published, maturity=maturity), patch(
+                    "hfxdev.distributions.load_json",
+                    return_value=with_maturity(target_id, maturity),
+                ), patch(
+                    "hfxdev.distributions.repository_site_published", return_value=site_published
+                ):
+                    target = load_distribution_catalog(ROOT).targets[target_id]
+                    self.assertEqual(maturity, target.maturity)
+                    self.assertEqual(maturity == "published", target.published)
+
+    def test_repository_site_state_decides_publication(self) -> None:
+        site = load_json(ROOT / "packaging" / "repository-site.json")
+        self.assertEqual(site["state"] == "published", SITE_PUBLISHED)
+
     def test_rpm_versions_and_relations(self) -> None:
         self.assertEqual(rpm_version("2.1.0", 1), "2.1.0-1")
         self.assertEqual(rpm_version("2.1.0-rc.1", 2), "2.1.0~rc.1-2")
@@ -339,10 +478,23 @@ class DistributionCatalogTests(unittest.TestCase):
             change(candidate["targets"]["ubuntu"], candidate)
             return candidate
 
-        def with_full(target, _value):
+        def with_arch_full(target, _value):
             target["components"]["full"] = copy.deepcopy(
                 self.value["targets"]["arch"]["components"]["full"]
             )
+
+        def without_full(target, _value):
+            del target["components"]["full"]
+
+        def full_field(key, change):
+            def apply(target, _value):
+                target["components"]["full"][key] = change(
+                    copy.deepcopy(target["components"]["full"][key])
+                )
+            return apply
+
+        def with_openrgb(items):
+            return [*items, {"package": "openrgb", "purpose": "Stock RGB application"}]
 
         def set_role(role, package):
             def change(target, _value):
@@ -387,17 +539,27 @@ class DistributionCatalogTests(unittest.TestCase):
             target["components"]["linux"]["conflicts"].append("openrazer-driver-dkms")
 
         cases = {
-            "full edition": with_full,
+            "Arch full edition": with_arch_full,
+            "missing full edition": without_full,
+            "full renamed": full_field("package_name", lambda _: "hyperflux-next-full-route"),
+            "full names the plugin": full_field(
+                "description", lambda value: value + " and OpenRGB integration"
+            ),
+            "full extra dependency": full_field("dependencies", lambda items: [*items, "qt6-base"]),
+            "full drops a conflict": full_field("conflicts", lambda items: items[1:]),
+            "full extra provide": full_field("provides", lambda items: [*items, "openrgb"]),
+            "full drops a provide": full_field("provides", lambda items: items[1:]),
+            "full openrgb application": full_field("optional_dependencies", with_openrgb),
+            "full drops an application": full_field("optional_dependencies", lambda items: items[1:]),
             "missing target": drop_ubuntu,
             "reordered targets": reorder,
             "missing release": drop_release,
             "arch maturity": arch_not_published,
             "arch format": arch_as_deb,
-            "published": set_field("maturity", "published"),
             "pacman format": set_field("package_format", "pacman"),
             "unknown maturity": set_field("maturity", "nightly"),
             "other release": set_field("release", "codename", "jammy"),
-            "runtime above release": set_role("c-runtime", "libc6 (>= 2.40)"),
+            "runtime above release": set_role("c-runtime", "libc6 (>= 2.45)"),
             "runtime without floor": set_role("c-runtime", "libc6"),
             "arch runtime name": set_role("c-runtime", "glibc (>= 2.34)"),
             "arch relation syntax": set_role("c-runtime", "libc6>=2.34"),

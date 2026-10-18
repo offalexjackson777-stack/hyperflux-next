@@ -4,9 +4,9 @@
 
 This page lists what the HyperFlux packages install, what they leave alone, and how to turn HyperFlux on or roll it back, for packagers and for anyone who wants to know what an install changes on their system.
 
-Install manifest digest: `dd2530b90f489df732800f7b6adb546a43510db3460b7c5e5eefe0f990c3a9cd`.
+Install manifest digest: `2a861e829965eaf5e1de4d37c6efa3e39b2fa11ad6c72726e831f94478905d96`.
 
-Packages at `2.1.1` release `1`: Core is `hyperflux-next-linux` (background service, SDK, and `hyperfluxctl`) with `hyperflux-next-dkms` (receiver driver sources). Full adds `hyperflux-next-openrazer-driver-dkms` (patched OpenRazer driver sources) and `hyperflux-next-full` (the OpenRazer and OpenRGB connections).
+Packages at `2.1.2` release `1`: Core is `hyperflux-next-linux` (background service, SDK, and `hyperfluxctl`) with `hyperflux-next-dkms` (receiver driver sources). Full adds `hyperflux-next-openrazer-driver-dkms` (patched OpenRazer driver sources) and `hyperflux-next-full` (the OpenRazer and OpenRGB connections).
 
 ## What Installing Does And Does Not Do
 
@@ -37,7 +37,7 @@ The build plan contains `8` required and `0` optional build products.
 
 ## Installed Files
 
-The packages install `34` files. Every file goes under `/etc` or `/usr`, and no two files share a path.
+The packages install `35` files. Every file goes under `/etc` or `/usr`, and no two files share a path.
 
 | Payload | Distribution component | Files | Preserved destination |
 | --- | --- | ---: | --- |
@@ -51,6 +51,7 @@ The packages install `34` files. Every file goes under `/etc` or `/usr`, and no 
 | `system-users` | `linux` | 1 | `-` |
 | `openrazer-system-group` | `full` | 1 | `-` |
 | `openrazer-native-modules-load` | `full` | 1 | `-` |
+| `openrazer-native-key-event-links` | `full` | 1 | `-` |
 | `full-bridge-integration-drop-in` | `full` | 1 | `-` |
 | `full-component-descriptor` | `full` | 1 | `-` |
 | `runtime-directories` | `linux` | 1 | `-` |
@@ -83,4 +84,4 @@ After login, run the read-only `hyperfluxctl doctor`; the read-only `hyperfluxct
 
 Rollback uses a complete prior source-bound Core/Full pair through the package manager. Do not copy files into `/usr/src`, overwrite DKMS trees, or mix an upstream OpenRazer driver package with the HyperFlux-owned transform. Existing configuration remains preserved across supported package transitions.
 
-The Arch package base consumes independently staged `linux` and payload-bearing `full` components. Ubuntu 24.04 and Debian 13 `.deb` packages and Fedora 44 and openSUSE Tumbleweed `.rpm` packages of the Core edition are built and checked in CI every week but not published yet.
+The Arch package base consumes independently staged `linux` and payload-bearing `full` components. Ubuntu 26.10 and Debian 14 `.deb` packages and Fedora 44 and openSUSE Tumbleweed `.rpm` packages of both editions are built and checked in CI every week but not published yet.

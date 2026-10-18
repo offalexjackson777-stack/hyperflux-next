@@ -18,9 +18,11 @@ from ..package_repositories import (
     SiteTarget,
     configuration_text,
 )
+from .distributions import PRERELEASE_NOTE
 
 
-INSTALL_PACKAGE = "hyperflux-next-linux"
+FULL_PACKAGE = "hyperflux-next-full"
+CORE_PACKAGE = "hyperflux-next-linux"
 
 
 def block_id(target_id: str) -> str:
@@ -33,7 +35,14 @@ def _grouped(fingerprint: str) -> str:
 
 def _not_yet(site: RepositorySitePolicy, target: SiteTarget, maturity: str) -> str:
     if site.published and maturity == "published":
-        return ""
+        lines = [
+            f"The {target.name} packages are built and tested automatically, but not yet "
+            "confirmed on real hardware.",
+        ]
+        if target.id in PRERELEASE_NOTE:
+            lines.append(PRERELEASE_NOTE[target.id])
+        wrapped = textwrap.wrap(" ".join(lines), width=74, break_long_words=False)
+        return "> [!NOTE]\n" + "\n".join(f"> {line}" for line in wrapped) + "\n\n"
     return f"""> [!NOTE]
 > The {target.name} packages are not published yet. These steps show how
 > installing will work once they are. Until then the repository address does
@@ -88,15 +97,19 @@ def _apt_steps(site: RepositorySitePolicy, arch: ArchRepositoryPolicy, target: S
 {_indent(contents)}
    ```
 
-4. **Install HyperFlux Next.**
+4. **Install HyperFlux Next.** This installs Full:
 
    ```bash
    sudo apt update
-   sudo apt install {INSTALL_PACKAGE}
+   sudo apt install {FULL_PACKAGE}
    ```
 
+   To install Core instead, run `sudo apt install {CORE_PACKAGE}`.
+
    apt lists what it is about to install and asks
-   `Do you want to continue? [Y/n]`. Press Enter."""
+   `Do you want to continue? [Y/n]`. Press Enter. If {target.distribution}'s own
+   `openrazer-driver-dkms` package is installed, apt removes it. Full brings
+   its own copy of that driver, so OpenRazer keeps working."""
 
 
 def _rpm_steps(site: RepositorySitePolicy, arch: ArchRepositoryPolicy, target: SiteTarget) -> str:
@@ -110,11 +123,16 @@ def _rpm_steps(site: RepositorySitePolicy, arch: ArchRepositoryPolicy, target: S
      {repo_url}
    ```"""
         install = f"""   ```bash
-   sudo dnf install {INSTALL_PACKAGE}
+   sudo dnf install {FULL_PACKAGE}
    ```
 
+   To install Core instead, run `sudo dnf install {CORE_PACKAGE}`.
+
    dnf lists what it is about to install and asks `Is this ok [y/N]`. Type `y`
-   and press Enter."""
+   and press Enter. If OpenRazer's own `openrazer-kernel-modules-dkms` package
+   is installed, dnf stops because the two conflict. Then run
+   `sudo dnf install --allowerasing {FULL_PACKAGE}`, which removes it. Full
+   brings its own copy of that driver, so OpenRazer keeps working."""
         tool = "dnf"
     else:
         add = f"""   ```bash
@@ -122,11 +140,16 @@ def _rpm_steps(site: RepositorySitePolicy, arch: ArchRepositoryPolicy, target: S
    sudo zypper refresh
    ```"""
         install = f"""   ```bash
-   sudo zypper install {INSTALL_PACKAGE}
+   sudo zypper install {FULL_PACKAGE}
    ```
 
+   To install Core instead, run `sudo zypper install {CORE_PACKAGE}`.
+
    zypper lists what it is about to install and asks `Continue? [y/n/v/...? shows all options] (y)`.
-   Press Enter."""
+   Press Enter. If OpenRazer's own `openrazer-kernel-modules-dkms` package is
+   installed, zypper reports a conflict and offers solutions. Choose the one
+   that deinstalls `openrazer-kernel-modules-dkms`. Full brings its own copy
+   of that driver, so OpenRazer keeps working."""
         tool = "zypper"
     return f"""1. **Download the HyperFlux key.** The key proves that the packages really
    come from HyperFlux.
@@ -157,7 +180,7 @@ def _rpm_steps(site: RepositorySitePolicy, arch: ArchRepositoryPolicy, target: S
 {_indent(contents)}
    ```
 
-4. **Install HyperFlux Next.**
+4. **Install HyperFlux Next.** This installs Full:
 
 {install}"""
 
@@ -212,6 +235,12 @@ def install_table(
         if waiting
         else "Packages are published for every distribution in the table."
     )
+    untested = [names[t] for t in names if t != "arch" and state(t) == "Ready"]
+    if untested:
+        availability += (
+            f" The {listed(untested)} packages are built and tested automatically, "
+            "but not yet confirmed on real hardware."
+        )
 
     rows = [
         f"| Arch Linux | rolling | [Install on Arch Linux]({GUIDES['arch']}) | {state('arch')} |",

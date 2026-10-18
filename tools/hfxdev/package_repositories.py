@@ -39,6 +39,7 @@ import tempfile
 from typing import Any, Callable, Protocol
 import xml.etree.ElementTree as ElementTree
 
+from .arch_split import load_arch_split
 from .arch_repository import (
     ArchRepositoryPolicy,
     _publish_atomic_directory,
@@ -49,9 +50,13 @@ from .arch_repository import (
 from .distributions import (
     DEBIAN_FORMAT_TARGET_IDS,
     RPM_FORMAT_TARGET_IDS,
+    debian_version,
     load_distribution_catalog,
+    rpm_version,
 )
+from .distribution_debian import edition_outputs
 from .governance import load_github_governance
+from .linux_runtime import load_linux_runtime
 from .model import ModelError, load_json, sha256_file
 
 
@@ -120,6 +125,9 @@ class SiteTarget:
     architecture: str
     image: str
     required_packages: tuple[str, ...]
+    # The package version-release every package must carry: the product
+    # version from runtime/linux.json in this format's spelling.
+    version: str
 
     @property
     def name(self) -> str:
@@ -241,7 +249,13 @@ def load_repository_site_policy(root: Path) -> RepositorySitePolicy:
 
 def site_targets(root: Path) -> dict[str, SiteTarget]:
     catalog = load_distribution_catalog(root)
+    split = load_arch_split(root)
     images = dict(load_github_governance(root).distribution_package_images)
+    product = load_linux_runtime(root).product
+    versions = {
+        "deb": debian_version(product.version, product.package_release),
+        "rpm": rpm_version(product.version, product.package_release),
+    }
     targets: dict[str, SiteTarget] = {}
     for target_id in SITE_TARGET_IDS:
         target = catalog.targets[target_id]
@@ -256,12 +270,10 @@ def site_targets(root: Path) -> dict[str, SiteTarget]:
             raise ModelError(f"distribution {target_id} names no suite")
         if target_id not in images:
             raise ModelError(f"distribution {target_id} has no pinned image")
-        required = tuple(
-            sorted(
-                {DKMS_PACKAGE}
-                | {component.package_name for component in target.components.values()}
-            )
-        )
+        # Every split output of the editions the release carries is one package.
+        required = tuple(sorted(output.package_name for output in edition_outputs(split, target)))
+        if DKMS_PACKAGE not in required:
+            raise ModelError(f"distribution {target_id} does not carry {DKMS_PACKAGE}")
         targets[target_id] = SiteTarget(
             id=target_id,
             package_format=target.package_format,
@@ -271,6 +283,7 @@ def site_targets(root: Path) -> dict[str, SiteTarget]:
             architecture=architectures[0],
             image=images[target_id],
             required_packages=required,
+            version=versions[target.package_format],
         )
     return targets
 
@@ -549,8 +562,36 @@ def metadata_tools(choice: str) -> MetadataTools:
 # --- Packages -----------------------------------------------------------------
 
 
+def _version_mismatch(target: SiteTarget, found: str) -> ModelError:
+    return ModelError(
+        f"{target.name} packages are version {found}, but runtime/linux.json makes this "
+        f"release {target.version}; rebuild the packages for this version"
+    )
+
+
+def _package_filename_version(target: SiteTarget, filename: str) -> str:
+    pattern = DEB_FILENAME if target.package_format == "deb" else RPM_FILENAME
+    match = pattern.fullmatch(filename)
+    if match is None:
+        raise ModelError(f"{target.name} package name is not recognized: {filename}")
+    if target.package_format == "rpm":
+        return f"{match.group('version')}-{match.group('release')}"
+    return match.group("version")
+
+
+def _check_site_versions(site: Path, target: SiteTarget, manifest: dict[str, Any]) -> None:
+    """Every package of the target is at this checkout's product version."""
+    recorded = manifest["targets"][target.id].get("version")
+    if recorded != target.version:
+        raise _version_mismatch(target, str(recorded))
+    for path in sorted((site / target.package_directory).iterdir()):
+        found = _package_filename_version(target, path.name)
+        if found != target.version:
+            raise _version_mismatch(target, found)
+
+
 def collect_packages(target: SiteTarget, directory: Path) -> tuple[SitePackage, ...]:
-    """The exact release packages of one target, all at one version."""
+    """The exact release packages of one target, all at the product version."""
     if not directory.is_dir() or directory.is_symlink():
         raise ModelError(f"{target.name} package directory is missing: {directory}")
     pattern = DEB_FILENAME if target.package_format == "deb" else RPM_FILENAME
@@ -582,8 +623,11 @@ def collect_packages(target: SiteTarget, directory: Path) -> tuple[SitePackage, 
         raise ModelError(
             f"{target.name} needs exactly {', '.join(target.required_packages)}; found {', '.join(names) or 'none'}"
         )
-    if len({package.version for package in packages}) != 1:
+    versions = sorted({package.version for package in packages})
+    if len(versions) != 1:
         raise ModelError(f"{target.name} packages carry different versions")
+    if versions[0] != target.version:
+        raise _version_mismatch(target, versions[0])
     return tuple(packages)
 
 
@@ -1228,6 +1272,7 @@ def verify_site(
         listed = manifest["targets"][target.id]["packages"]
         if listed != _manifest_packages(site, target):
             raise ModelError(f"{target.name} packages differ from the site manifest")
+        _check_site_versions(site, target, manifest)
     key = trusted_key if trusted_key is not None else root / arch.public_key_path
     if (site / policy.public_key_asset).read_bytes() != key.read_bytes():
         raise ModelError("site public key differs from the trusted key")
