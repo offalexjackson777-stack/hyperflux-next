@@ -96,6 +96,8 @@ RPM_LEAD_MAGIC = b"\xed\xab\xee\xdb"
 RPM_HEADER_MAGIC = b"\x8e\xad\xe8\x01"
 RPM_SIGNATURE_TAGS = (268, 267)  # RSAHEADER, DSAHEADER: OpenPGP over the header.
 APT_KEYRING_DIRECTORY = "/etc/apt/keyrings"
+GITHUB_LOGIN = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]{0,38}")
+NOREPLY_EMAIL = re.compile(r"(?:[0-9]+\+)?[A-Za-z0-9][A-Za-z0-9-]{0,38}@users\.noreply\.github\.com")
 
 
 @dataclass(frozen=True)
@@ -107,6 +109,7 @@ class RepositorySitePolicy:
     label: str
     public_key_asset: str
     apt_component: str
+    publication_author: tuple[str, str]
 
     @property
     def published(self) -> bool:
@@ -208,6 +211,7 @@ def load_repository_site_policy(root: Path) -> RepositorySitePolicy:
         "label",
         "public_key_asset",
         "apt_component",
+        "publication_author",
     }
     if set(value) != expected:
         raise ModelError("repository site policy has missing or unknown fields")
@@ -236,6 +240,16 @@ def load_repository_site_policy(root: Path) -> RepositorySitePolicy:
         raise ModelError("repository site public key asset is invalid")
     if value["apt_component"] != "main":
         raise ModelError("repository site apt component must be main")
+    author = value["publication_author"]
+    if (
+        not isinstance(author, dict)
+        or set(author) != {"name", "email"}
+        or not isinstance(author["name"], str)
+        or not GITHUB_LOGIN.fullmatch(author["name"])
+        or not isinstance(author["email"], str)
+        or not NOREPLY_EMAIL.fullmatch(author["email"])
+    ):
+        raise ModelError("repository site publication author must be a GitHub login and its noreply address")
     return RepositorySitePolicy(
         state=value["state"],
         site_url=site_url,
@@ -244,6 +258,7 @@ def load_repository_site_policy(root: Path) -> RepositorySitePolicy:
         label=value["label"],
         public_key_asset=value["public_key_asset"],
         apt_component=value["apt_component"],
+        publication_author=(author["name"], author["email"]),
     )
 
 
@@ -1346,12 +1361,18 @@ def publish_steps(
             uploads.append(path)
         elif digest != sha256_file(path):
             raise ModelError(f"the Arch release already holds different bytes for {path.name}")
+    # The commit names its author and turns signing off itself, so it works the
+    # same on a machine with no git identity or with commit.gpgsign set.
+    name, email = policy.publication_author
+    commit_identity = (
+        "-c", f"user.name={name}", "-c", f"user.email={email}", "-c", "commit.gpgsign=false"
+    )
     steps = [
         PublishStep("Start an empty gh-pages history", ("git", "init", "--quiet", "--initial-branch", policy.publication_branch), work),
         PublishStep("Stage the whole site", ("git", "add", "--all"), work),
         PublishStep(
             "Record the site in one commit",
-            ("git", "commit", "--quiet", "--message", f"Publish the {policy.label} package repositories"),
+            ("git", *commit_identity, "commit", "--quiet", "--message", f"Publish the {policy.label} package repositories"),
             work,
         ),
         PublishStep(
