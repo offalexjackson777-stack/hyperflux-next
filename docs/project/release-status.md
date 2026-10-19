@@ -48,15 +48,16 @@ the same key. Each distribution has its own guide:
 
 ## Planned Change In 2.2
 
-HyperFlux 2.2 will stop accepting old versions of its local SDK protocol.
-Versions 1 to 4 and 6 are deprecated in 2.1 and will be removed in 2.2. From
-2.2 the bridge will speak only versions 5 and 7. The SDK and the OpenRGB
-integration that ship with HyperFlux already use those versions, so nothing
-changes for you if you only use them.
+HyperFlux 2.2 will stop accepting old versions of its local SDK protocol. The
+bridge will speak only versions 5 and 7. The OpenRGB integration and the SDK
+that ship with HyperFlux already use those versions, so nothing changes for you
+if you only use them.
 
-If you run your own program that talks to HyperFlux, make sure it offers
-version 5 or 7. Everything version 6 added is also in version 7. The
-[SDK connector guide](../developer/sdk-connectors.md#deprecated-protocol-versions)
+If you run your own program that talks to HyperFlux and it only offers
+versions 1 to 4 or 6, it will be refused with error `HFX-PROTOCOL-001`. The
+error message ends with the versions HyperFlux accepts, for example
+`Supported protocol versions: 5, 7.` Update your program to version 5 or 7. The
+[SDK connector guide](../developer/sdk-connectors.md#retired-protocol-versions-22)
 lists the details.
 
 ## What Comes Next

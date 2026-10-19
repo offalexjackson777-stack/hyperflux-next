@@ -30,12 +30,7 @@ These terms mean the same thing on every generated page.
 | [Application Integrations](integrations.md) | The supported apps, the exact versions HyperFlux was built against, and the rules every integration follows. | `integrations/catalog.json` |
 | [Architecture Rules](architecture.md) | Which part of HyperFlux owns what and which way the parts may depend on each other. | `architecture/constitution.json` |
 | [Bridge Protocol](bridge-protocol.md) | Every method and message in the current bridge protocol and which versions are still accepted. | `protocol/registry.json` |
-| [Bridge Protocol V1](bridge-protocol-v1.md) | Version 1 of the bridge protocol exactly as it was released. | `protocol/v1/catalog.json` |
-| [Bridge Protocol V2](bridge-protocol-v2.md) | Version 2 of the bridge protocol exactly as it was released. | `protocol/v2/catalog.json` |
-| [Bridge Protocol V3](bridge-protocol-v3.md) | Version 3 of the bridge protocol exactly as it was released. | `protocol/v3/catalog.json` |
-| [Bridge Protocol V4](bridge-protocol-v4.md) | Version 4 of the bridge protocol exactly as it was released. | `protocol/v4/catalog.json` |
 | [Bridge Protocol V5](bridge-protocol-v5.md) | Version 5 of the bridge protocol exactly as it was released. | `protocol/v5/catalog.json` |
-| [Bridge Protocol V6](bridge-protocol-v6.md) | Version 6 of the bridge protocol exactly as it was released. | `protocol/v6/catalog.json` |
 | [Bridge Protocol V7](bridge-protocol-v7.md) | Version 7 of the bridge protocol, the current version. | `protocol/v7/catalog.json` |
 | [Design Coverage](design-coverage.md) | Which Design Book sections are checked by tests and which are still open. | `assurance/design-coverage.json` |
 | [Development Environment](development-environment.md) | The pinned tools, container, and app sources used to build and check HyperFlux. | `toolchains/development-environment.json` |

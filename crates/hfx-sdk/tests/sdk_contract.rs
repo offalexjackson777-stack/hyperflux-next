@@ -5,10 +5,10 @@ use hfx_bridge::{
     SessionIdentityError, SessionIdentitySource, SessionRegistry, serve_connection,
 };
 use hfx_domain::{
-    ClientId, ClientName, ColorChannel, ComponentVersion, DroppedEventCount, LeaseId,
-    NativeExchangeTimeoutMs, NativeReportHex, NativeRouteToken, ProjectionRevision,
-    ProtocolFeatureId, ProtocolVersion, QueueCapacity, RequestId, SequenceNumber, ServerInstanceId,
-    StableLightingMode, StreamEpoch, StreamId, SubscriptionId,
+    ClientId, ClientName, ComponentVersion, DroppedEventCount, LeaseId, NativeExchangeTimeoutMs,
+    NativeReportHex, NativeRouteToken, ProjectionRevision, ProtocolFeatureId, ProtocolVersion,
+    QueueCapacity, RequestId, SequenceNumber, ServerInstanceId, StreamEpoch, StreamId,
+    SubscriptionId,
 };
 use hfx_protocol::{
     BridgeSnapshot, DiagnosticSnapshot, EventBatch, EventCursor, FrameError, IntegrationView,
@@ -212,8 +212,8 @@ fn client_config() -> SdkClientConfig {
     SdkClientConfig {
         client_id: id::<ClientId>("sdk-client-test"),
         client_name: id::<ClientName>("SDK contract test"),
-        minimum_version: ProtocolVersion::try_from(2_u16).expect("v2 is valid"),
-        maximum_version: ProtocolVersion::try_from(2_u16).expect("v2 is valid"),
+        minimum_version: ProtocolVersion::try_from(5_u16).expect("v5 is valid"),
+        maximum_version: ProtocolVersion::try_from(5_u16).expect("v5 is valid"),
         required_features: Vec::new(),
         optional_features: Vec::new(),
     }
@@ -274,7 +274,7 @@ fn empty_integration_view() -> IntegrationView {
 
 fn scripted_hello(server: &str) -> ServerHello {
     ServerHello {
-        selected_version: ProtocolVersion::try_from(2_u16).expect("v2 is valid"),
+        selected_version: ProtocolVersion::try_from(5_u16).expect("v5 is valid"),
         server_instance_id: id::<ServerInstanceId>(server),
         protocol_session_id: id("sdk-protocol-session"),
         negotiation_token: id("sdk-negotiation-token"),
@@ -341,7 +341,7 @@ fn sdk_negotiates_and_binds_session_data_over_the_real_bridge_runtime() {
         DeterministicRequestIdentities::default(),
     )
     .expect("SDK negotiation succeeds");
-    assert_eq!(client.server_hello().selected_version.get(), 2);
+    assert_eq!(client.server_hello().selected_version.get(), 5);
     assert_eq!(client.snapshot(), Ok(empty_snapshot()));
     client
         .into_inner()
@@ -586,41 +586,31 @@ fn sdk_rejects_bridge_instance_change_after_negotiation() {
 
 #[test]
 fn sdk_channel_emits_nothing_for_an_unsafe_legacy_downgrade() {
-    let transaction: serde_json::Value = serde_json::from_str(include_str!(
-        "../../../protocol/v2/fixtures/transaction-request-canonical.json"
-    ))
-    .expect("frozen v2 fixture is JSON");
     let bytes = serde_json::to_vec(&json!({
-        "method": "submit-transaction",
+        "method": "native-enumerate",
         "request": {
-            "request_id": "request-digest",
+            "request_id": "request-native-enumerate",
             "protocol_session_id": "protocol-session-1",
             "negotiation_token": "negotiation-1",
-            "params": transaction
+            "params": {}
         }
     }))
     .expect("request serializes");
-    let mut request = decode_rpc_request_for_version(
+    let request = decode_rpc_request_for_version(
         &bytes,
-        ProtocolVersion::try_from(2_u16).expect("v2 is valid"),
+        ProtocolVersion::try_from(7_u16).expect("v7 is valid"),
     )
-    .expect("frozen v2 request normalizes");
-    let RpcRequest::SubmitTransaction(envelope) = &mut request else {
-        panic!("fixture must remain a transaction");
-    };
-    envelope.params.stable_intents[0].mode = StableLightingMode::Off;
-    envelope.params.frames[0].colors[0].red = ColorChannel::try_from(0_u8).expect("black red");
-    envelope.params.frames[0].colors[0].green = ColorChannel::try_from(0_u8).expect("black green");
-    envelope.params.frames[0].colors[0].blue = ColorChannel::try_from(0_u8).expect("black blue");
+    .expect("v7 native request decodes");
+    assert!(matches!(request, RpcRequest::NativeEnumerate(_)));
 
     let mut channel = FramedIoChannel::new(RecordingIo::default());
     assert_eq!(
         channel.exchange(
             &request,
-            Some(ProtocolVersion::try_from(2_u16).expect("v2 is valid")),
+            Some(ProtocolVersion::try_from(5_u16).expect("v5 is valid")),
         ),
         Err(SdkError::Frame(FrameError::InvalidRequest(
-            ProtocolWireError::VersionTranslation
+            ProtocolWireError::UnsupportedVersionMethod
         )))
     );
     assert!(channel.into_inner().bytes.is_empty());

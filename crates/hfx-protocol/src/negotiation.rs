@@ -13,6 +13,27 @@ pub struct ProtocolContract<'a> {
     pub versions: &'a [ProtocolVersionDescriptor],
 }
 
+impl<'a> ProtocolContract<'a> {
+    /// Every protocol version this contract serves, in ascending order.
+    ///
+    /// Retired versions leave gaps, so this set is not the same as the range
+    /// between the lowest and highest served version.
+    pub fn served_versions(self) -> impl Iterator<Item = u16> + 'a {
+        self.versions.iter().map(|version| version.version)
+    }
+
+    /// The served versions as an ascending comma-separated list, such as
+    /// `5,7`. This is the format of the `server_supported_versions` safe
+    /// detail of `HFX-PROTOCOL-001`.
+    #[must_use]
+    pub fn served_versions_list(self) -> String {
+        self.served_versions()
+            .map(|version| version.to_string())
+            .collect::<Vec<_>>()
+            .join(",")
+    }
+}
+
 pub const GENERATED_CONTRACT: ProtocolContract<'static> = ProtocolContract {
     versions: GENERATED_PROTOCOL_VERSIONS,
 };

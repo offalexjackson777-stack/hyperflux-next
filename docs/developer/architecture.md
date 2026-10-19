@@ -12,8 +12,8 @@ The kernel driver keeps ordinary keyboard and mouse input working and gives user
 narrow way to talk to the receiver. The bridge is the only program that writes to the
 receiver: it decides which devices are present, which may be written, and in what order.
 Connectors use the published SDK to read the bridge's decisions and pass each
-application's own commands through. Protocol versions 1 through 7 and the kernel interface
-are generated from checked-in registries, so no adapter can submit arbitrary receiver
+application's own commands through. The served protocol versions (5 and 7) and the kernel
+interface are generated from checked-in registries, so no adapter can submit arbitrary receiver
 frames or invent a device.
 
 ## Words You Will Meet

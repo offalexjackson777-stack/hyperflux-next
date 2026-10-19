@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import copy
+import json
 from pathlib import Path
+import shutil
 import sys
+import tempfile
+from typing import Any
 import unittest
 
 
@@ -11,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from hfxdev.generators.protocol import cpp_types, python_types, rust_types
+from hfxdev.model import ModelError
 from hfxdev.protocol import (
     RESERVED_FIELD_NAMES,
     load_protocol_catalog,
@@ -22,76 +28,49 @@ class ProtocolCompilerTests(unittest.TestCase):
     def test_catalog_is_versioned_and_generated_deterministically(self) -> None:
         registry = load_protocol_registry(ROOT)
         self.assertEqual(registry.current_version, 7)
-        self.assertEqual([item.version for item in registry.versions], [1, 2, 3, 4, 5, 6, 7])
+        self.assertEqual([item.version for item in registry.versions], [5, 7])
         self.assertEqual(
-            registry.versions[0].source_sha256,
+            [(item.version, item.retired_in) for item in registry.retired],
+            [(1, "2.2.0"), (2, "2.2.0"), (3, "2.2.0"), (4, "2.2.0"), (6, "2.2.0")],
+        )
+        self.assertEqual(
+            registry.retired[0].source_sha256,
             "ed3df1f1627ca8a836f509ead3ab7dc7a4cbc6116f6da4accb2cc53e7500859f",
         )
         self.assertTrue(
             all(len(item.source_sha256) == 64 for item in registry.versions)
         )
-        v1_transaction = next(
-            record
-            for record in registry.versions[0].catalog.records
-            if record.name == "TransactionRequest"
+        v5 = registry.versions[0].catalog
+        v7 = registry.versions[1].catalog
+        v5_transaction = next(
+            record for record in v5.records if record.name == "TransactionRequest"
         )
-        v2_transaction = next(
-            record
-            for record in registry.versions[1].catalog.records
-            if record.name == "TransactionRequest"
-        )
-        v3_transaction = next(
-            record
-            for record in registry.versions[2].catalog.records
-            if record.name == "TransactionRequest"
-        )
-        v4_snapshot = next(
-            record
-            for record in registry.versions[3].catalog.records
-            if record.name == "ReceiverSnapshot"
-        )
-        v5 = registry.versions[4].catalog
-        v6 = registry.versions[5].catalog
-        v7 = registry.versions[6].catalog
-        self.assertNotIn(
-            "device_profiles", [field.name for field in v1_transaction.fields]
+        v5_snapshot = next(
+            record for record in v5.records if record.name == "ReceiverSnapshot"
         )
         self.assertIn(
-            "device_profiles", [field.name for field in v2_transaction.fields]
-        )
-        self.assertNotIn(
-            "stable_intents", [field.name for field in v2_transaction.fields]
+            "device_profiles", [field.name for field in v5_transaction.fields]
         )
         self.assertIn(
-            "stable_intents", [field.name for field in v3_transaction.fields]
+            "stable_intents", [field.name for field in v5_transaction.fields]
         )
-        self.assertNotIn(
-            "atomic-transactions", registry.versions[0].served_features
-        )
+        self.assertIn("profile_digest", [field.name for field in v5_snapshot.fields])
         self.assertIn(
-            "profile-bound-transactions", registry.versions[1].served_features
+            "integration-view-projection", registry.versions[0].served_features
         )
-        self.assertNotIn(
-            "semantic-stable-lighting", registry.versions[1].served_features
-        )
-        self.assertIn(
-            "semantic-stable-lighting", registry.versions[2].served_features
-        )
-        self.assertIn(
-            "snapshot-profile-bindings", registry.versions[3].served_features
-        )
-        self.assertIn("profile_digest", [field.name for field in v4_snapshot.fields])
-        self.assertIn("integration-view-projection", registry.versions[4].served_features)
         self.assertIn("ControllerOwnership", [union.name for union in v5.unions])
+        self.assertNotIn(
+            "return-lifecycle-projection", registry.versions[0].served_features
+        )
         self.assertIn(
-            "return-lifecycle-projection", registry.versions[5].served_features
+            "return-lifecycle-projection", registry.versions[1].served_features
         )
-        self.assertIn("ReturnEpoch", [record.name for record in v6.records])
-        v6_endpoint = next(
-            record for record in v6.records if record.name == "EndpointSnapshot"
+        self.assertIn("ReturnEpoch", [record.name for record in v7.records])
+        v7_endpoint = next(
+            record for record in v7.records if record.name == "EndpointSnapshot"
         )
-        self.assertIn("return_epoch", [field.name for field in v6_endpoint.fields])
-        self.assertIn("native-receiver-tunnel", registry.versions[6].served_features)
+        self.assertIn("return_epoch", [field.name for field in v7_endpoint.fields])
+        self.assertIn("native-receiver-tunnel", registry.versions[1].served_features)
         self.assertEqual(
             [
                 method.name
@@ -182,6 +161,109 @@ class ProtocolCompilerTests(unittest.TestCase):
             [variant.wire for variant in unions["TransactionResult"].variants],
             ["progress", "terminal", "unavailable"],
         )
+
+
+
+class RetiredProtocolRegistryTests(unittest.TestCase):
+    """A retired version number must never come back with another catalog."""
+
+    def setUp(self) -> None:
+        self._directory = tempfile.TemporaryDirectory()
+        self.root = Path(self._directory.name)
+        shutil.copytree(ROOT / "protocol", self.root / "protocol")
+        (self.root / "schemas").mkdir()
+        shutil.copy2(
+            ROOT / "schemas" / "domain-catalog.json",
+            self.root / "schemas" / "domain-catalog.json",
+        )
+        self.registry = json.loads(
+            (ROOT / "protocol" / "registry.json").read_text(encoding="utf-8")
+        )
+
+    def tearDown(self) -> None:
+        self._directory.cleanup()
+
+    def _load(self, registry: dict[str, Any]):
+        (self.root / "protocol" / "registry.json").write_text(
+            json.dumps(registry, indent=2) + "\n", encoding="utf-8"
+        )
+        return load_protocol_registry(self.root)
+
+    def _retire_oldest(self) -> tuple[dict[str, Any], dict[str, Any]]:
+        registry = copy.deepcopy(self.registry)
+        oldest = registry["versions"][0]
+        self.assertNotEqual(oldest["version"], registry["current_version"])
+        registry["versions"] = registry["versions"][1:]
+        entry = {
+            "version": oldest["version"],
+            "retired_in": "9.9.0",
+            "sha256": oldest["sha256"],
+        }
+        registry["retired"] = sorted(
+            [*registry.get("retired", []), entry], key=lambda item: item["version"]
+        )
+        return registry, entry
+
+    def test_retired_versions_load_and_stay_out_of_the_served_set(self) -> None:
+        registry, entry = self._retire_oldest()
+        loaded = self._load(registry)
+        retired = {item.version: item for item in loaded.retired}
+        self.assertEqual(retired[entry["version"]].retired_in, "9.9.0")
+        self.assertEqual(retired[entry["version"]].source_sha256, entry["sha256"])
+        self.assertNotIn(
+            entry["version"], [item.version for item in loaded.versions]
+        )
+
+    def test_retired_version_cannot_be_served_again(self) -> None:
+        registry, entry = self._retire_oldest()
+        current = next(
+            item
+            for item in registry["versions"]
+            if item["version"] == registry["current_version"]
+        )
+        registry["retired"] = sorted(
+            [
+                *registry["retired"],
+                {
+                    "version": current["version"],
+                    "retired_in": "9.9.0",
+                    "sha256": current["sha256"],
+                },
+            ],
+            key=lambda item: item["version"],
+        )
+        with self.assertRaisesRegex(ModelError, "cannot be served again"):
+            self._load(registry)
+
+    def test_retired_entries_are_unique_sorted_and_exact(self) -> None:
+        registry, entry = self._retire_oldest()
+        duplicate = copy.deepcopy(registry)
+        duplicate["retired"].append(dict(entry))
+        with self.assertRaisesRegex(ModelError, "protocol retired version"):
+            self._load(duplicate)
+
+        unsorted = copy.deepcopy(registry)
+        unsorted["retired"].append(
+            {"version": 65_535, "retired_in": "9.9.0", "sha256": entry["sha256"]}
+        )
+        unsorted["retired"].reverse()
+        with self.assertRaisesRegex(ModelError, "must be sorted"):
+            self._load(unsorted)
+
+        bad_release = copy.deepcopy(registry)
+        bad_release["retired"][-1]["retired_in"] = "2.2"
+        with self.assertRaisesRegex(ModelError, "release version"):
+            self._load(bad_release)
+
+        bad_digest = copy.deepcopy(registry)
+        bad_digest["retired"][-1]["sha256"] = "0" * 63
+        with self.assertRaisesRegex(ModelError, "invalid source digest"):
+            self._load(bad_digest)
+
+        unknown_field = copy.deepcopy(registry)
+        unknown_field["retired"][-1]["catalog"] = "v1/catalog.json"
+        with self.assertRaisesRegex(ModelError, "unknown fields catalog"):
+            self._load(unknown_field)
 
 
 if __name__ == "__main__":

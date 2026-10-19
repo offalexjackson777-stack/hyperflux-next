@@ -15,7 +15,7 @@ where
 fn authorization(client: &str, session: &str, epoch: u64) -> AuthorizedSession {
     AuthorizedSession {
         client_id: id::<ClientId>(client),
-        selected_version: ProtocolVersion::try_from(2).expect("version must be valid"),
+        selected_version: ProtocolVersion::try_from(5).expect("version must be valid"),
         session_id: id::<SessionId>(session),
         authorization_epoch: AuthorizationEpoch::try_from(epoch).expect("epoch must be valid"),
     }

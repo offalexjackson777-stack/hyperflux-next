@@ -176,6 +176,39 @@ class ErrorCatalogTests(unittest.TestCase):
                 {"transaction_id": "transaction-1", "raw_payload": "forbidden"},
             )
 
+    def test_protocol_rejection_lists_served_versions_alongside_the_range(self) -> None:
+        registry = json.loads((ROOT / "protocol" / "registry.json").read_text(encoding="utf-8"))
+        served = [entry["version"] for entry in registry["versions"]]
+        retired = {entry["version"] for entry in registry["retired"]}
+        fields = {
+            field.name: field
+            for field in ERRORS_BY_CODE[ErrorCode.HFX_PROTOCOL_001].safe_detail_fields
+        }
+        # The range fields keep their type and stay required for existing readers.
+        for name in ("client_min_version", "client_max_version", "server_min_version", "server_max_version"):
+            self.assertTrue(fields[name].required, name)
+        self.assertFalse(fields["server_supported_versions"].required)
+        range_only = {
+            "client_min_version": 6,
+            "client_max_version": 6,
+            "server_min_version": min(served),
+            "server_max_version": max(served),
+        }
+        validate_safe_details(ErrorCode.HFX_PROTOCOL_001, range_only)
+        listed = ",".join(str(version) for version in served)
+        validate_safe_details(
+            ErrorCode.HFX_PROTOCOL_001,
+            {**range_only, "server_supported_versions": listed},
+        )
+        # A retired version inside the range is visible as missing from the list.
+        gaps = retired & set(range(min(served), max(served) + 1))
+        self.assertFalse(gaps & {int(version) for version in listed.split(",")})
+        with self.assertRaises(ValueError):
+            validate_safe_details(
+                ErrorCode.HFX_PROTOCOL_001,
+                {**range_only, "server_supported_versions": "7," * 65},
+            )
+
     def test_lifecycle_replacements_must_be_declared_and_non_self_referential(self) -> None:
         invalid = deepcopy(self.raw)
         entry = invalid["errors"][0]

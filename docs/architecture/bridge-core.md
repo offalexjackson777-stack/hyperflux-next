@@ -20,7 +20,8 @@ effects, persistence, or physical qualification claims.
 - **NativeControl lease**: permission for one application to send native exchanges to one
   device. It is held per device, so sibling devices stay free.
 - **Protocol v7**: the current version of the local protocol between the SDK and the bridge.
-- **Migration path**: the protocol-v6 semantic lighting path, kept for rollback.
+- **Migration path**: the semantic lighting path served through protocol v5 and kept in
+  v7, retained for rollback.
 
 ## Dependency Direction
 
@@ -66,8 +67,8 @@ application for longer than one burst plus 25 ms. NativeControl conflicts with
 the retained semantic lighting, settings, and pairing resources for that child
 only. Siblings, other receivers, and newer generations remain independent.
 
-Protocol v6, UAPI v1, semantic carrier encoding, stable-state persistence, and
-restoration remain installed as a noncompeting compatibility fallback. They are
+The semantic protocol records, UAPI v1, semantic carrier encoding, stable-state
+persistence, and restoration remain installed as a noncompeting compatibility fallback. They are
 not the target architecture and cannot be removed before physical parity,
 rollback, and maintainer review of the retirement.
 
@@ -159,11 +160,17 @@ Framing is not the SDK contract; generated protocol records are. The initial
 `negotiate` exchange is the deliberately stable base handshake and has one
 invariant shape across every retained version. A successful response selects one
 exact frozen version; every later request and response is encoded and decoded
-only through that version. Versions 1 through 6 preserve the additive semantic
-migration contract. Version 7 preserves those records and independently adds
-qualified native-route enumeration, availability events, NativeControl
-ownership, and fixed-size Feature exchanges. A payload or method from an
-adjacent version is rejected instead of being guessed from fields.
+only through that version. The bridge serves versions 5 and 7. Version 5
+carries the semantic migration contract: profile-bound transactions, explicit
+Static and Off intents, profile bindings, and the integration view. Version 7
+preserves those records, adds the return-lifecycle projection that version 6
+introduced, and independently adds qualified native-route enumeration,
+availability events, NativeControl ownership, and fixed-size Feature exchanges.
+A payload or method from another version is rejected instead of being guessed
+from fields. Versions 1 through 4 and 6 were retired in 2.2. The registry keeps
+their numbers and source digests so they cannot be served again, and a hello
+that offers only those versions receives the catalogued incompatible-version
+error instead of a dropped connection.
 
 One connection runtime owns the dispatcher lifetime. Clean EOF and every
 terminal framing or write failure converge on the same disconnect path, which
@@ -257,7 +264,7 @@ receivers and multiple children without fixed mouse/keyboard slots while
 leaving siblings independent.
 
 Lease acquisition is atomic. If any requested resource is owned by another
-client, none are granted. Forced takeover is not part of protocol version 1.
+client, none are granted. Forced takeover is not part of the protocol.
 Read-only snapshots, telemetry, and diagnostics remain shared.
 
 Battery telemetry is a generation-bound lifecycle fact, not adapter-owned UI
@@ -340,7 +347,7 @@ claims change through one atomic batch compare-and-set, so a mouse claim cannot
 retire while its keyboard sibling remains accidentally active because a later
 file operation failed.
 
-After a definitive version 3 Static transaction succeeds, the bridge captures
+After a definitive Static transaction succeeds, the bridge captures
 its explicit Static or Off declarations automatically. An exact terminal replay
 is idempotent: it neither advances the intent revision nor replaces the original
 capture time. Capture happens after immutable hardware completion is recorded. A
@@ -360,7 +367,10 @@ revision.
 ## Protocol Evolution
 
 Clients offer a protocol range and optional feature identifiers. The bridge
-selects one exact version and emits that version's exact record shapes. Hardware
+selects one exact version and emits that version's exact record shapes. The
+served versions form a set that can have gaps, not a range, so a client range with
+no served version is rejected with `HFX-PROTOCOL-001` and a message that lists the
+served set. Hardware
 capability discovery is separate from protocol feature negotiation.
 
 Values that may exceed IEEE-754's exact integer range, including receiver
