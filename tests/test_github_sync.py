@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
 from pathlib import Path
 import sys
 import unittest
@@ -241,6 +242,12 @@ class GitHubSyncTests(unittest.TestCase):
             if rule["type"] == "pull_request"
         )
         self.assertEqual(pull_request["parameters"]["allowed_merge_methods"], ["squash"])
+
+    def test_homepage_is_the_package_site(self) -> None:
+        governance = load_github_governance(ROOT)
+        site = json.loads((ROOT / "packaging/repository-site.json").read_text(encoding="utf-8"))
+        self.assertEqual(governance.homepage, site["site_url"] + "/")
+        self.assertEqual(_repository_payload(governance)["homepage"], governance.homepage)
 
 
 if __name__ == "__main__":
