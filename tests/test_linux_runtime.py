@@ -70,7 +70,7 @@ class LinuxRuntimeTests(unittest.TestCase):
             kernel.source_directory,
             f"/usr/src/{kernel.dkms_name}-{kernel.dkms_version}",
         )
-        self.assertEqual(kernel.dkms_version, "2.1.2")
+        self.assertEqual(kernel.dkms_version, "2.2.0")
 
     def test_dkms_identity_and_output_match_arch_hook_contract(self) -> None:
         kernel = self.runtime.kernel

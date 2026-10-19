@@ -266,7 +266,7 @@ class QualificationRecipeContracts(unittest.TestCase):
         self.assertIn("# Qualification only: openrazer", self.pkgbuild)
         # The committed snapshot does not prove alignment yet, and the
         # qualification recipe says so instead of claiming it.
-        self.assertIn("# Qualification only: provider gate: official extra-testing", self.pkgbuild)
+        self.assertIn("# Qualification only: provider gate: no physical application receipt", self.pkgbuild)
 
     def test_recipe_has_no_install_scripts_dkms_calls_or_local_inputs(self) -> None:
         for name, text in self.recipe.files.items():
@@ -731,7 +731,7 @@ class PublicationRecipeContracts(unittest.TestCase):
             ),
             "provider gate": (
                 lambda: self._generate(provider_alignment=None),
-                "OpenRazer provider alignment gate failed: .*not observed",
+                "OpenRazer provider alignment gate failed: .*no physical application receipt",
             ),
             "stale provider gate": (
                 lambda: self._generate(

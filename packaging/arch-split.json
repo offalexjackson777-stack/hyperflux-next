@@ -164,7 +164,7 @@
       "output": "full",
       "relation": "hyperflux-next-openrgb=0.0.0_dev.1-2",
       "reason": "The pre-2.0 connector package owned the OpenRGB plugin path that Full now owns; the exact-version conflict and replace migrate hosts that still carry that one retired build.",
-      "expires_before_release": "2.2.0-1"
+      "expires_before_release": "2.3.0-1"
     }
   ]
 }
