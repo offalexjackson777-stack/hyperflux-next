@@ -258,18 +258,25 @@ void hfx_observe_feature_battery(struct hfx_receiver *receiver,
 				 const u8 *response)
 {
 	u8 battery_raw;
+	u8 charge_raw;
 
 	if (endpoint_slot != HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE &&
 	    endpoint_slot != HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE)
 		return;
-	if (!hfx_feature_battery_parse(request, response,
-				       HFX_UAPI_NATIVE_REPORT_BYTES,
-				       &battery_raw))
-		return;
-	hfx_observation_emit(receiver,
-			     HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW,
-			     endpoint_slot, HFX_UAPI_OBSERVATION_SOURCE_HID_FEATURE,
-			     HFX_UAPI_OBSERVATION_CONFIDENCE_RAW, battery_raw, 0);
+	if (hfx_feature_battery_parse(request, response,
+				      HFX_UAPI_NATIVE_REPORT_BYTES,
+				      &battery_raw))
+		hfx_observation_emit(
+			receiver, HFX_UAPI_OBSERVATION_KIND_ENDPOINT_BATTERY_RAW,
+			endpoint_slot, HFX_UAPI_OBSERVATION_SOURCE_HID_FEATURE,
+			HFX_UAPI_OBSERVATION_CONFIDENCE_RAW, battery_raw, 0);
+	else if (hfx_feature_charge_parse(request, response,
+					  HFX_UAPI_NATIVE_REPORT_BYTES,
+					  &charge_raw))
+		hfx_observation_emit(
+			receiver, HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CHARGE_RAW,
+			endpoint_slot, HFX_UAPI_OBSERVATION_SOURCE_HID_FEATURE,
+			HFX_UAPI_OBSERVATION_CONFIDENCE_RAW, charge_raw, 0);
 }
 
 long hfx_observation_read(struct hfx_receiver *receiver, void __user *user_arg)

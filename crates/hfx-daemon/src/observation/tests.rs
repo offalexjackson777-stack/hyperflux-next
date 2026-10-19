@@ -1544,3 +1544,108 @@ fn a_queried_battery_level_reads_like_a_passive_one_but_reads_no_charge() {
         Some((ChildBatteryLane::Keyboard, ChildChargeReading::Discharging))
     );
 }
+
+#[test]
+fn a_queried_charging_answer_reads_charging_without_waiting_for_a_status_report() {
+    let feature_charge = |sequence, slot, value| {
+        let mut observation = raw(
+            sequence,
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CHARGE_RAW,
+            slot,
+            value,
+        );
+        observation.source = HFX_UAPI_OBSERVATION_SOURCE_HID_FEATURE;
+        observation
+    };
+    let mut translator = translator();
+
+    let unbound = translator
+        .translate(feature_charge(1, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE, 1))
+        .expect("unbound queried charge translates");
+    assert_eq!(unbound.disposition, PassiveDisposition::IgnoredUnknownLane);
+
+    // After boot the mouse can rest on its mat for minutes before its status
+    // report arrives; a host application's charging query answers at once,
+    // with no contact report around it.
+    identify(
+        &mut translator,
+        2,
+        HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+        0x00cd,
+    );
+    let charging = translator
+        .translate(feature_charge(3, HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE, 1))
+        .expect("queried mouse charge translates");
+    assert_eq!(charging.disposition, PassiveDisposition::Applied);
+    assert_eq!(
+        charging.charge,
+        Some((ChildBatteryLane::Pointer, ChildChargeReading::Charging))
+    );
+    assert!(matches!(
+        charging.observations.as_slice(),
+        [LifecycleObservation {
+            kind: LifecycleObservationKind::BatteryCharge {
+                charge: Some(BatteryCharge::Charging),
+                ..
+            },
+            ..
+        }]
+    ));
+
+    // A child also answers "not charging" while it sits full on its charger,
+    // so that answer and any other value leave the charge state unchanged.
+    for value in [0, 2, 0xff] {
+        let other = translator
+            .translate(feature_charge(
+                4,
+                HFX_UAPI_ENDPOINT_SLOT_POINTER_LANE,
+                value,
+            ))
+            .expect("other queried mouse charge translates");
+        assert_eq!(
+            other.disposition,
+            PassiveDisposition::IgnoredIndeterminateSemantic
+        );
+        assert_eq!(other.charge, None);
+        assert!(other.observations.is_empty());
+    }
+
+    // A child without a qualified charge field is not read from the query.
+    identify(
+        &mut translator,
+        5,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x0296,
+    );
+    let keyboard = translator
+        .translate(feature_charge(6, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 1))
+        .expect("queried keyboard charge translates");
+    assert_eq!(
+        keyboard.disposition,
+        PassiveDisposition::IgnoredUnqualifiedSemantic
+    );
+    assert_eq!(keyboard.charge, None);
+
+    // A child without any passive record is not read from the query either.
+    identify(
+        &mut translator,
+        7,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x1234,
+    );
+    let unknown = translator
+        .translate(feature_charge(8, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 1))
+        .expect("queried unknown charge translates");
+    assert_eq!(
+        unknown.disposition,
+        PassiveDisposition::IgnoredUnqualifiedSemantic
+    );
+    assert_eq!(unknown.charge, None);
+
+    // The passive status report still reads its charge in context.
+    let off_mat = charge_after_contact(&mut translator, 10, Some(0), 0);
+    assert_eq!(
+        off_mat.charge,
+        Some((ChildBatteryLane::Pointer, ChildChargeReading::Discharging))
+    );
+}

@@ -188,9 +188,18 @@ Keep these points in mind:
   its cable has not been tested yet. The keyboard keeps showing charging for
   about four seconds after you unplug its cable.
 - **Full.** Neither device reports full by itself. The widget shows full when
-  the device is charging and its level reads 100 percent. What the keyboard
+  the device is charging and its level reads 100 percent. The widget also
+  shows full at 100 percent while you use a device without its cable: UPower,
+  which feeds the widget, calls every device battery at 100 percent full,
+  whatever the device reports. HyperFlux reports discharging, and the widget
+  shows it once the level drops to 99 percent. What the keyboard
   reports once its battery is full on the cable has not been tested. If it
   reports something HyperFlux has not seen, the widget shows unknown.
+- **After boot.** The mouse tells HyperFlux its charging state by itself only
+  every few minutes. The Polychromatic tray asks the mouse at login, so it
+  shows charging right away when the mouse is on its mat. If the mouse is off
+  the mat at login, the widget shows unknown until you place it on the mat or
+  the mouse reports by itself.
 - **Unknown.** If a device reports something HyperFlux has not seen before,
   the widget shows unknown instead of a guess.
 
