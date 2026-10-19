@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
-#include <hyperflux/openrgb/build_config.hpp>
 #include <hyperflux/openrgb/plugin_view_model.hpp>
 
 #include <algorithm>
+#include <ctime>
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -24,90 +24,99 @@ std::string controller_type(DeviceKind kind)
     }
 }
 
-std::string pairing(PairingState value)
+constexpr std::string_view doctor_command = "hyperfluxctl doctor --explain";
+
+std::string presence(InventoryAvailability value)
 {
     switch(value)
     {
-        case PairingState::Paired: return "Paired";
-        case PairingState::Unpaired: return "Not paired";
-        case PairingState::Unknown: return "Unknown";
+        case InventoryAvailability::Sleeping: return "Asleep";
+        case InventoryAvailability::Unavailable:
+        case InventoryAvailability::ReceiverUnavailable: return "Not reachable";
+        case InventoryAvailability::Available:
+        case InventoryAvailability::Unknown:
+        case InventoryAvailability::Unpaired:
+        case InventoryAvailability::PairingUnknown: return {};
     }
-    return "Unknown";
+    return {};
 }
 
-std::string availability(InventoryAvailability value)
+std::string presence(ControllerAvailability value)
 {
-    switch(value)
+    return value == ControllerAvailability::Ready ? std::string() : std::string("Asleep");
+}
+
+#if HFX_OPENRGB_NATIVE_ROUTE_ENABLED
+constexpr std::string_view wired_note = "OpenRGB controls it over the cable until it is unplugged.";
+
+std::string presence(const std::optional<PresenceState>& value)
+{
+    if(!value.has_value())
     {
-        case InventoryAvailability::Available: return "Available";
-        case InventoryAvailability::Sleeping: return "Sleeping";
-        case InventoryAvailability::Unavailable: return "Unavailable";
-        case InventoryAvailability::Unknown: return "Status unknown";
-        case InventoryAvailability::Unpaired: return "Not paired";
-        case InventoryAvailability::PairingUnknown: return "Pairing unknown";
-        case InventoryAvailability::ReceiverUnavailable: return "Receiver unavailable";
+        return {};
     }
-    return "Status unknown";
+    switch(*value)
+    {
+        case PresenceState::Sleeping: return "Asleep";
+        case PresenceState::Unavailable: return "Not reachable";
+        case PresenceState::Available:
+        case PresenceState::Unknown: return {};
+    }
+    return {};
 }
+#endif
 
-std::string availability(ControllerAvailability value)
+/// Age of a reading, or nothing when it has no time or one from another boot.
+template<typename Observation>
+std::optional<std::uint64_t> age(const Observation& observation, std::uint64_t now_ms)
 {
-    return value == ControllerAvailability::Ready ? "Available" : "Sleeping";
+    if(!observation.observed_at_ms.has_value() || observation.observed_at_ms->value() > now_ms)
+    {
+        return std::nullopt;
+    }
+    return now_ms - observation.observed_at_ms->value();
 }
 
 template<typename Observation>
-std::string battery(const Observation& observation)
+void apply_battery(PluginDeviceRow& row, const Observation& observation, std::uint64_t now_ms)
 {
-    if(observation.availability == TelemetryAvailability::Unavailable)
-    {
-        return "Not reported";
-    }
     if(observation.availability != TelemetryAvailability::Reported
        || !observation.percentage.has_value())
     {
-        return "Waiting for report";
-    }
-    std::string result = std::to_string(observation.percentage->value()) + "%";
-    if(observation.freshness == FreshnessState::Stale)
-    {
-        result += " - update overdue";
-    }
-    else if(observation.freshness == FreshnessState::Unknown)
-    {
-        result += " - freshness unknown";
-    }
-    return result;
-}
-
-template<typename Observation>
-void apply_battery(PluginDeviceRow& row, const Observation& observation)
-{
-    row.battery = battery(observation);
-    const bool reported = observation.availability == TelemetryAvailability::Reported
-        && observation.percentage.has_value();
-    if(!reported)
-    {
-        row.battery_note = row.battery;
         return;
     }
     const auto percent = observation.percentage->value();
     row.battery_percent = static_cast<std::uint8_t>(percent);
     if(observation.freshness == FreshnessState::Stale)
     {
-        row.battery_note = "Update overdue";
-    }
-    else if(observation.freshness == FreshnessState::Unknown)
-    {
-        row.battery_note = "Freshness unknown";
+        const auto elapsed = age(observation, now_ms);
+        row.stale = elapsed.has_value() ? "No update for " + elapsed_phrase(*elapsed) : "Update overdue";
     }
     if constexpr(requires { observation.charge; })
     {
-        if(observation.freshness == FreshnessState::Fresh && observation.charge.has_value())
+        if(observation.freshness == FreshnessState::Fresh && observation.charge.has_value()
+           && *observation.charge == BatteryCharge::Charging)
         {
-            row.charge = *observation.charge == BatteryCharge::Charging
-                ? (percent >= 100 ? "Full" : "Charging")
-                : "On battery";
+            row.charge = percent >= 100 ? "Full" : "Charging";
         }
+    }
+}
+
+/// The newest reading across devices, for the banner that says how old they are.
+template<typename Observation>
+void track_newest(
+    std::optional<std::uint64_t>& newest,
+    const Observation& observation,
+    std::uint64_t now_ms)
+{
+    if(observation.availability != TelemetryAvailability::Reported)
+    {
+        return;
+    }
+    const auto elapsed = age(observation, now_ms);
+    if(elapsed.has_value() && (!newest.has_value() || *elapsed < *newest))
+    {
+        newest = elapsed;
     }
 }
 
@@ -127,51 +136,6 @@ void split_connection(PluginDeviceRow& row)
     }
 }
 
-std::string lighting(const ControllerModel& controller)
-{
-    const auto slots = controller.lighting.application_slot_count.value();
-    const auto rows = controller.lighting.rows.value();
-    const auto columns = controller.lighting.columns.value();
-    if(controller.device_kind == DeviceKind::Keyboard && rows > 1 && columns > 1)
-    {
-        return std::to_string(slots) + " keys, " + std::to_string(rows) + " x "
-            + std::to_string(columns) + " layout";
-    }
-    return std::to_string(slots) + (slots == 1 ? " LED" : " LEDs");
-}
-
-std::string control(const ControllerControlState& state)
-{
-    switch(state.ownership)
-    {
-        case ControllerOwnerState::OwnedByOpenRgb:
-            return "Controlled by OpenRGB";
-        case ControllerOwnerState::OwnedByAnotherClient:
-            return state.owner_client_id.has_value()
-                ? "Controlled by " + std::string(state.owner_client_id->value())
-                : "Controlled by another application";
-        case ControllerOwnerState::Unowned:
-            return state.actions.can_acquire ? "Available" : "Read only";
-    }
-    return "Unknown";
-}
-
-std::string support(SupportLevel value)
-{
-    switch(value)
-    {
-        case SupportLevel::Candidate: return "Candidate";
-        case SupportLevel::Identified: return "Identified";
-        case SupportLevel::ReadOnly: return "Read only";
-        case SupportLevel::TelemetryQualified: return "Telemetry qualified";
-        case SupportLevel::LightingQualified: return "Lighting qualified";
-        case SupportLevel::SettingsQualified: return "Settings qualified";
-        case SupportLevel::PairingQualified: return "Pairing qualified";
-        case SupportLevel::ProductionQualified: return "Production qualified";
-    }
-    return "Unknown";
-}
-
 std::string fallback_device_name(const InventoryDeviceModel& device)
 {
     if(device.model_name.has_value())
@@ -185,150 +149,37 @@ std::string fallback_device_name(const InventoryDeviceModel& device)
     return output.str();
 }
 
-const ControllerModel* controller_for(
-    const InventoryDeviceModel& device,
-    const std::vector<ControllerModel>& controllers)
+PluginDeviceRow row(const InventoryDeviceModel& device, std::uint64_t now_ms)
 {
-    const auto found = std::find_if(
-        controllers.begin(),
-        controllers.end(),
-        [&device](const ControllerModel& controller) {
-            return controller.authority.receiver_id == device.receiver_id
-                && controller.authority.generation_id == device.generation_id
-                && controller.authority.device_id == device.device_id;
-        });
-    return found == controllers.end() ? nullptr : &*found;
-}
-
-PluginDeviceRow row(
-    const InventoryDeviceModel& device,
-    const std::vector<ControllerModel>& controllers)
-{
-    const auto* controller = controller_for(device, controllers);
     PluginDeviceRow result {
         device.stable_id,
         fallback_device_name(device),
         controller_type(device.device_kind),
-        pairing(device.pairing),
-        availability(device.availability),
-        battery(device.battery),
-        support(device.support_level),
-        controller == nullptr
-            ? "Not exposed"
-            : lighting(*controller) + " | " + control(controller->control),
     };
-    apply_battery(result, device.battery);
+    result.presence = presence(device.availability);
+    apply_battery(result, device.battery, now_ms);
     split_connection(result);
     return result;
 }
 
-PluginDeviceRow fallback_row(const ControllerModel& controller)
+PluginDeviceRow fallback_row(const ControllerModel& controller, std::uint64_t now_ms)
 {
     PluginDeviceRow result {
         controller.stable_id,
         std::string(controller.model_name.value()),
         controller_type(controller.device_kind),
-        "Unknown",
-        availability(controller.availability),
-        battery(controller.battery),
-        "Qualified controller",
-        lighting(controller) + " | " + control(controller.control),
     };
-    apply_battery(result, controller.battery);
+    result.presence = presence(controller.availability);
+    apply_battery(result, controller.battery, now_ms);
     split_connection(result);
     return result;
 }
 
-void runtime_summary(
-    PluginInformationViewModel& result,
-    const PluginApplicationStatus& status)
+void sort_devices(std::vector<PluginDeviceRow>& devices)
 {
-    if(!status.loaded)
-    {
-        result.tone = PluginHealthTone::Neutral;
-        result.headline = "Not loaded";
-        result.summary = "The OpenRGB integration is not active.";
-        return;
-    }
-    if(status.coordinator.last_error.has_value())
-    {
-        result.technical_detail = status.coordinator.last_error->message;
-    }
-    switch(status.coordinator.worker_state)
-    {
-        case WorkerState::Running:
-            result.tone = PluginHealthTone::Positive;
-            result.headline = status.coordinator.controllers == 0
-                ? "No controllable devices"
-                : "Ready";
-            if(result.devices.empty())
-            {
-                result.summary = "The bridge is connected; no paired device is reported.";
-            }
-            else if(status.coordinator.controllers == 0)
-            {
-                result.summary = std::to_string(result.devices.size())
-                    + (result.devices.size() == 1
-                           ? " paired device is known, but it is not currently exposed for lighting."
-                           : " paired devices are known, but none is currently exposed for lighting.");
-            }
-            else
-            {
-                result.summary = std::to_string(result.devices.size())
-                    + (result.devices.size() == 1 ? " paired device; " : " paired devices; ")
-                    + std::to_string(status.coordinator.controllers)
-                    + (status.coordinator.controllers == 1
-                           ? " controller is exposed in OpenRGB."
-                           : " controllers are exposed in OpenRGB.");
-            }
-            return;
-        case WorkerState::Created:
-        case WorkerState::Starting:
-        case WorkerState::Recovering:
-            result.tone = PluginHealthTone::Warning;
-            result.headline = "Connecting";
-            result.summary = "Waiting for the local HyperFlux bridge.";
-            return;
-        case WorkerState::Failed:
-            result.tone = PluginHealthTone::Negative;
-            result.headline = "Needs attention";
-            result.summary = "The integration could not continue.";
-            return;
-        case WorkerState::Stopping:
-        case WorkerState::Stopped:
-            result.tone = PluginHealthTone::Neutral;
-            result.headline = "Stopped";
-            result.summary = "The OpenRGB integration is stopped.";
-            return;
-    }
-}
-
-} // namespace
-
-PluginInformationViewModel make_plugin_information_view_model(
-    const PluginApplicationStatus& status,
-    const std::vector<InventoryReceiverModel>& inventory,
-    const std::vector<ControllerModel>& controllers)
-{
-    PluginInformationViewModel result;
-    for(const auto& receiver : inventory)
-    {
-        for(const auto& device : receiver.devices)
-        {
-            result.devices.push_back(row(device, controllers));
-        }
-    }
-    if(result.devices.empty() && !controllers.empty())
-    {
-        std::transform(
-            controllers.begin(),
-            controllers.end(),
-            std::back_inserter(result.devices),
-            fallback_row);
-    }
     std::sort(
-        result.devices.begin(),
-        result.devices.end(),
+        devices.begin(),
+        devices.end(),
         [](const PluginDeviceRow& left, const PluginDeviceRow& right)
         {
             if(left.type != right.type)
@@ -337,134 +188,222 @@ PluginInformationViewModel make_plugin_information_view_model(
             }
             return left.device < right.device;
         });
-    runtime_summary(result, status);
-    result.lighting_transport =
-        "Direct, Static, Off, brightness, and per-LED frames use the local bridge.";
-    result.effects_authority =
-        "Animations are generated by the official OpenRGB Effects plugin and transported as Direct frames.";
-    result.build_identity = std::string("Version ")
-        + std::string(build_config::component_version) + " | OpenRGB API 5 | Source "
-        + std::string(build_config::source_revision);
+}
+
+enum class Runtime
+{
+    NotLoaded,
+    Running,
+    Connecting,
+    Recovering,
+    Failed,
+    Stopped,
+};
+
+/// Header chip, banner and empty state. Normal states stay quiet: the banner
+/// appears only when the readings on screen are old or the bridge has failed.
+void summarise(
+    PluginInformationViewModel& result,
+    Runtime runtime,
+    std::optional<std::uint64_t> newest_reading_age)
+{
+    const bool has_devices = !result.devices.empty();
+    const std::string age_clause = newest_reading_age.has_value()
+        ? "from " + elapsed_phrase(*newest_reading_age) + " ago"
+        : std::string();
+    switch(runtime)
+    {
+        case Runtime::NotLoaded:
+            result.tone = PluginHealthTone::Neutral;
+            result.headline = "Not loaded";
+            return;
+        case Runtime::Stopped:
+            result.tone = PluginHealthTone::Neutral;
+            result.headline = "Stopped";
+            return;
+        case Runtime::Running:
+            result.tone = PluginHealthTone::Positive;
+            result.headline = "Ready";
+            if(!has_devices)
+            {
+                result.empty_state = "No devices found on a supported receiver";
+            }
+            return;
+        case Runtime::Connecting:
+        case Runtime::Recovering:
+            result.tone = PluginHealthTone::Warning;
+            result.headline = "Connecting";
+            // Without old readings on screen the chip already says everything.
+            if(has_devices && !age_clause.empty())
+            {
+                result.attention = PluginAttention {
+                    PluginHealthTone::Warning,
+                    "Connecting to the HyperFlux bridge. These readings are " + age_clause + ".",
+                };
+            }
+            return;
+        case Runtime::Failed:
+            result.tone = PluginHealthTone::Negative;
+            result.headline = "Needs attention";
+            result.attention = PluginAttention {
+                PluginHealthTone::Negative,
+                std::string("The HyperFlux bridge is not answering")
+                    + (has_devices && !age_clause.empty()
+                           ? ", so these readings are " + age_clause + ". "
+                           : ". ")
+                    + "Run " + std::string(doctor_command) + " in a terminal to see the fix.",
+                std::string(doctor_command),
+            };
+            return;
+    }
+}
+
+Runtime runtime(const PluginApplicationStatus& status)
+{
+    if(!status.loaded)
+    {
+        return Runtime::NotLoaded;
+    }
+    switch(status.coordinator.worker_state)
+    {
+        case WorkerState::Running: return Runtime::Running;
+        case WorkerState::Created:
+        case WorkerState::Starting: return Runtime::Connecting;
+        case WorkerState::Recovering: return Runtime::Recovering;
+        case WorkerState::Failed: return Runtime::Failed;
+        case WorkerState::Stopping:
+        case WorkerState::Stopped: return Runtime::Stopped;
+    }
+    return Runtime::Stopped;
+}
+
+#if HFX_OPENRGB_NATIVE_ROUTE_ENABLED
+Runtime runtime(const NativePluginApplicationStatus& status)
+{
+    if(!status.loaded)
+    {
+        return Runtime::NotLoaded;
+    }
+    switch(status.coordinator.worker_state)
+    {
+        case NativeRouteWorkerState::Running: return Runtime::Running;
+        case NativeRouteWorkerState::Created:
+        case NativeRouteWorkerState::Starting: return Runtime::Connecting;
+        case NativeRouteWorkerState::Recovering: return Runtime::Recovering;
+        case NativeRouteWorkerState::Failed: return Runtime::Failed;
+        case NativeRouteWorkerState::Stopping:
+        case NativeRouteWorkerState::Stopped: return Runtime::Stopped;
+    }
+    return Runtime::Stopped;
+}
+#endif
+
+} // namespace
+
+std::uint64_t monotonic_now_ms() noexcept
+{
+    timespec now {};
+    if(clock_gettime(CLOCK_MONOTONIC, &now) != 0)
+    {
+        return 0;
+    }
+    return static_cast<std::uint64_t>(now.tv_sec) * 1000U
+        + static_cast<std::uint64_t>(now.tv_nsec) / 1000000U;
+}
+
+std::string elapsed_phrase(std::uint64_t milliseconds)
+{
+    const auto minutes = std::max<std::uint64_t>(1, milliseconds / 60000U);
+    if(minutes < 60)
+    {
+        return std::to_string(minutes) + (minutes == 1 ? " minute" : " minutes");
+    }
+    const auto hours = minutes / 60;
+    if(hours < 48)
+    {
+        return std::to_string(hours) + (hours == 1 ? " hour" : " hours");
+    }
+    return std::to_string(hours / 24) + " days";
+}
+
+PluginInformationViewModel make_plugin_information_view_model(
+    const PluginApplicationStatus& status,
+    const std::vector<InventoryReceiverModel>& inventory,
+    const std::vector<ControllerModel>& controllers,
+    std::uint64_t now_ms)
+{
+    PluginInformationViewModel result;
+    std::optional<std::uint64_t> newest;
+    for(const auto& receiver : inventory)
+    {
+        for(const auto& device : receiver.devices)
+        {
+            result.devices.push_back(row(device, now_ms));
+            track_newest(newest, device.battery, now_ms);
+        }
+    }
+    if(result.devices.empty())
+    {
+        for(const auto& controller : controllers)
+        {
+            result.devices.push_back(fallback_row(controller, now_ms));
+            track_newest(newest, controller.battery, now_ms);
+        }
+    }
+    sort_devices(result.devices);
+    if(status.loaded && status.coordinator.last_error.has_value())
+    {
+        result.technical_detail = status.coordinator.last_error->message;
+    }
+    summarise(result, runtime(status), newest);
     return result;
 }
 
 #if HFX_OPENRGB_NATIVE_ROUTE_ENABLED
 PluginInformationViewModel make_plugin_information_view_model(
     const NativePluginApplicationStatus& status,
-    const std::vector<UpstreamRazerControllerSummary>& controllers)
+    const std::vector<UpstreamRazerControllerSummary>& controllers,
+    std::uint64_t now_ms)
 {
     PluginInformationViewModel result;
+    std::optional<std::uint64_t> newest;
     for(const auto& controller : controllers)
     {
         PluginDeviceRow row {
             controller.stable_id,
             controller.name,
             controller_type(controller.device_kind),
-            "Receiver route",
-            controller.direct_suppressed
-                ? "Direct USB active"
-                : (controller.registered ? "Available" : "Waiting"),
-            "Waiting for report",
-            "Full support",
-            controller.direct_suppressed
-                ? "OpenRGB is using the USB cable"
-                : (controller.registered ? "Controlled by OpenRGB" : "Waiting for OpenRGB"),
         };
         if(controller.battery.has_value())
         {
-            apply_battery(row, *controller.battery);
+            apply_battery(row, *controller.battery, now_ms);
+            track_newest(newest, *controller.battery, now_ms);
+        }
+        split_connection(row);
+        if(controller.direct_suppressed)
+        {
+            // OpenRGB found the same serial on a cable, so the device is wired
+            // whatever its receiver name says, and the bridge's wireless
+            // presence says nothing about it.
+            row.connection = "Wired";
+            row.note = std::string(wired_note);
         }
         else
         {
-            row.battery_note = row.battery;
-        }
-        split_connection(row);
-        if(row.connection.empty())
-        {
-            row.connection = controller.direct_suppressed ? "Wired" : "Wireless";
+            if(row.connection.empty())
+            {
+                row.connection = "Wireless";
+            }
+            row.presence = presence(controller.presence);
         }
         result.devices.push_back(std::move(row));
     }
-    std::sort(
-        result.devices.begin(),
-        result.devices.end(),
-        [](const PluginDeviceRow& left, const PluginDeviceRow& right)
-        {
-            if(left.type != right.type)
-            {
-                return left.type < right.type;
-            }
-            return left.device < right.device;
-        });
-
-    if(!status.loaded)
+    sort_devices(result.devices);
+    if(status.loaded && status.coordinator.last_error.has_value())
     {
-        result.tone = PluginHealthTone::Neutral;
-        result.headline = "Not loaded";
-        result.summary = "The native OpenRGB transport is not active.";
+        result.technical_detail = status.coordinator.last_error->message;
     }
-    else
-    {
-        if(status.coordinator.last_error.has_value())
-        {
-            result.technical_detail = status.coordinator.last_error->message;
-        }
-        switch(status.coordinator.worker_state)
-        {
-            case NativeRouteWorkerState::Running:
-                result.tone = PluginHealthTone::Positive;
-                result.headline = status.coordinator.registered_controllers == 0
-                    ? "No receiver-routed devices"
-                    : "Native transport ready";
-                result.summary = std::to_string(status.coordinator.registered_controllers)
-                    + (status.coordinator.registered_controllers == 1
-                           ? " upstream Razer controller is active."
-                           : " upstream Razer controllers are active.");
-                if(status.coordinator.direct_suppressed_controllers > 0)
-                {
-                    result.summary += " "
-                        + std::to_string(status.coordinator.direct_suppressed_controllers)
-                        + (status.coordinator.direct_suppressed_controllers == 1
-                               ? " matching receiver route is paused for direct USB."
-                               : " matching receiver routes are paused for direct USB.");
-                }
-                break;
-            case NativeRouteWorkerState::Created:
-            case NativeRouteWorkerState::Starting:
-            case NativeRouteWorkerState::Recovering:
-                result.tone = PluginHealthTone::Warning;
-                result.headline = "Connecting";
-                result.summary = "Waiting for the local HyperFlux native tunnel.";
-                if(status.coordinator.worker_state == NativeRouteWorkerState::Recovering)
-                {
-                    result.attention =
-                        "HyperFlux can't reach your devices right now. Run "
-                        "hyperfluxctl doctor --explain in a terminal for the fix.";
-                }
-                break;
-            case NativeRouteWorkerState::Failed:
-                result.tone = PluginHealthTone::Negative;
-                result.headline = "Needs attention";
-                result.summary = "The native OpenRGB transport could not continue.";
-                result.attention =
-                    "HyperFlux can't reach your devices right now. Run "
-                    "hyperfluxctl doctor --explain in a terminal for the fix.";
-                break;
-            case NativeRouteWorkerState::Stopping:
-            case NativeRouteWorkerState::Stopped:
-                result.tone = PluginHealthTone::Neutral;
-                result.headline = "Stopped";
-                result.summary = "The native OpenRGB transport is stopped.";
-                break;
-        }
-    }
-    result.lighting_transport =
-        "OpenRGB's upstream Razer controller sends standard Feature reports through the local HyperFlux tunnel.";
-    result.effects_authority =
-        "OpenRGB owns hardware modes, layouts, profiles and software effects; HyperFlux transports their reports unchanged.";
-    result.build_identity = std::string("Version ")
-        + std::string(build_config::component_version) + " | OpenRGB API 5 | Source "
-        + std::string(build_config::source_revision);
+    summarise(result, runtime(status), newest);
     return result;
 }
 #endif

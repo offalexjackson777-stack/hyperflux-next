@@ -377,6 +377,7 @@ UpstreamRazerPluginCoordinator::controllers() const
                 if(device.device_id == controller.device_id)
                 {
                     controller.battery = device.battery;
+                    controller.presence = device.presence;
                 }
             }
         }

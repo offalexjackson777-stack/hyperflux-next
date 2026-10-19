@@ -2,19 +2,29 @@
 
 #include "plugin_widget.hpp"
 
+#include "svg_icon.hpp"
+
+#include <QApplication>
 #include <QDesktopServices>
+#include <QEvent>
+#include <QFontDatabase>
 #include <QFrame>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QProgressBar>
+#include <QPainter>
+#include <QPushButton>
 #include <QScrollArea>
-#include <QStyle>
-#include <QToolButton>
+#include <QStackedWidget>
+#include <QTabBar>
+#include <QTabWidget>
+#include <QTimer>
 #include <QUrl>
 #include <QVariant>
 #include <QVBoxLayout>
 
+#include <algorithm>
+#include <cmath>
 #include <utility>
 
 namespace hyperflux::openrgb::native
@@ -22,187 +32,511 @@ namespace hyperflux::openrgb::native
 namespace
 {
 
-// Semantic colours stay readable on OpenRGB's light and dark themes; everything
-// else follows the host palette.
-constexpr const char* good_colour = "#2e9d5b";
-constexpr const char* warning_colour = "#c98a12";
-constexpr const char* bad_colour = "#d0453b";
+// ------------------------------------------------------------------ colour
+// The page takes its neutrals from the host palette and its meanings from
+// Tailwind: the 400 shades on dark windows and the 700 shades on light ones,
+// each at least 4.4:1 on the window and 5:1 on a card.
 
-constexpr const char* page_style = R"(
-QFrame#hyperfluxDeviceCard {
-    border: 1px solid palette(mid);
-    border-radius: 10px;
-    background: palette(base);
-}
-QFrame#hyperfluxAttention {
-    border: 1px solid #c98a12;
-    border-radius: 10px;
-}
-QLabel#hyperfluxDeviceConnection {
-    border: 1px solid palette(highlight);
-    border-radius: 9px;
-    padding: 1px 9px;
-}
-QToolButton#hyperfluxRepository {
-    border: 1px solid palette(highlight);
-    border-radius: 13px;
-    padding: 4px 14px;
-    background: palette(highlight);
-    color: palette(highlighted-text);
-    font-weight: bold;
-}
-QToolButton#hyperfluxRepository:hover {
-    background: palette(button);
-    color: palette(button-text);
-}
-QProgressBar#hyperfluxBatteryBar {
-    border: none;
-    border-radius: 4px;
-    background: palette(midlight);
-}
-)";
+struct Tones
+{
+    QColor good;
+    QColor warn;
+    QColor bad;
+    QColor wireless;
+};
 
-QString text(const std::string& value)
+bool is_dark(const QPalette& palette)
+{
+    return palette.color(QPalette::Window).lightness() < 128;
+}
+
+Tones tones(const QPalette& palette)
+{
+    if(is_dark(palette))
+    {
+        return {QColor(0x4A, 0xDE, 0x80), QColor(0xFB, 0x92, 0x3C), QColor(0xF8, 0x71, 0x71),
+                QColor(0x60, 0xA5, 0xFA)};
+    }
+    return {QColor(0x15, 0x80, 0x3D), QColor(0xC2, 0x41, 0x0C), QColor(0xB9, 0x1C, 0x1C),
+            QColor(0x1D, 0x4E, 0xD8)};
+}
+
+QColor mix(const QColor& from, const QColor& to, double amount)
+{
+    return QColor::fromRgbF(
+        static_cast<float>(from.redF() * (1.0 - amount) + to.redF() * amount),
+        static_cast<float>(from.greenF() * (1.0 - amount) + to.greenF() * amount),
+        static_cast<float>(from.blueF() * (1.0 - amount) + to.blueF() * amount));
+}
+
+QString css(const QColor& colour)
+{
+    return colour.name(QColor::HexRgb);
+}
+
+/// WCAG 2 contrast ratio.
+double contrast(const QColor& first, const QColor& second)
+{
+    const auto luminance = [](const QColor& colour)
+    {
+        const auto channel = [](double value)
+        {
+            return value <= 0.03928 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
+        };
+        return 0.2126 * channel(colour.redF()) + 0.7152 * channel(colour.greenF())
+            + 0.0722 * channel(colour.blueF());
+    };
+    const double a = luminance(first);
+    const double b = luminance(second);
+    return (std::max(a, b) + 0.05) / (std::min(a, b) + 0.05);
+}
+
+/// Every colour the page draws with, computed once per render from the palette.
+struct Colours
+{
+    Tones tone;
+    QColor ink;
+    QColor window;
+    QColor card;
+    QColor muted;
+    QColor border;
+    QColor wired;
+    double tint;
+};
+
+Colours colours(const QPalette& palette)
+{
+    Colours result {};
+    result.tone = tones(palette);
+    result.ink = palette.color(QPalette::WindowText);
+    result.window = palette.color(QPalette::Window);
+    // A translucent view colour (Kvantum) is flattened onto the window.
+    const QColor base = palette.color(QPalette::Base);
+    result.card = base.alpha() < 255
+        ? mix(result.window, QColor(base.red(), base.green(), base.blue()), base.alphaF())
+        : base;
+    // Text mixed 38 % toward the window, pulled back until it reaches 4.5:1 on any scheme.
+    result.muted = result.ink;
+    for(double amount = 0.38; amount > 0.0; amount -= 0.02)
+    {
+        const QColor candidate = mix(result.ink, result.window, amount);
+        if(contrast(candidate, result.window) >= 4.5)
+        {
+            result.muted = candidate;
+            break;
+        }
+    }
+    result.border = mix(result.card, result.ink, 0.12);
+    result.wired = mix(result.ink, result.card, 0.45);
+    result.tint = is_dark(palette) ? 0.15 : 0.12;
+    return result;
+}
+
+QColor tone_colour(const Colours& colours, PluginHealthTone tone)
+{
+    switch(tone)
+    {
+        case PluginHealthTone::Positive: return colours.tone.good;
+        case PluginHealthTone::Warning: return colours.tone.warn;
+        case PluginHealthTone::Negative: return colours.tone.bad;
+        case PluginHealthTone::Neutral: return colours.wired;
+    }
+    return colours.wired;
+}
+
+// ------------------------------------------------------------------ shape and type
+// One radius (KDE Kirigami's 5 px) and four gaps on an 18 px grid.
+constexpr int small_gap = 4;
+constexpr int medium_gap = 6;
+constexpr int large_gap = 8;
+constexpr int grid_unit = 18;
+constexpr int radius = 5;
+
+/// Skins set "* { font-family; font-size }", which beats setFont(); a
+/// widget's own sheet beats the skin, so each label pins its font there.
+void pin_font(QWidget* widget, const QString& extra)
+{
+    const QFont font = widget->font();
+    const QString size = font.pixelSize() > 0
+        ? QString("%1px").arg(font.pixelSize())
+        : QString("%1pt").arg(font.pointSizeF());
+    widget->setStyleSheet(
+        QString("font-family: \"%1\"; font-size: %2; font-weight: %3; background: transparent; border: none; %4")
+            .arg(font.family(), size, font.bold() ? QString("bold") : QString("normal"), extra));
+}
+
+/// Scales a font whether its size is in points or pixels.
+void scale(QFont& font, double factor, double add_points)
+{
+    if(font.pixelSize() > 0)
+    {
+        font.setPixelSize(std::max(1, static_cast<int>(std::lround(font.pixelSize() * factor + add_points * 4.0 / 3.0))));
+    }
+    else
+    {
+        font.setPointSizeF(std::max(1.0, font.pointSizeF() * factor + add_points));
+    }
+}
+
+enum class Text
+{
+    Body,
+    Muted,
+    Name,
+    Title,
+    Percent,
+};
+
+QLabel* text(const QString& value, const Colours& colours, Text kind = Text::Body, QColor colour = QColor())
+{
+    auto* label = new QLabel(value);
+    label->setTextFormat(Qt::PlainText);
+    QFont font = QApplication::font();
+    switch(kind)
+    {
+        case Text::Body:
+        case Text::Muted: break;
+        case Text::Name: scale(font, 1.0, 2.0); font.setBold(true); break;
+        case Text::Title: scale(font, 1.0, 5.0); font.setBold(true); break;
+        case Text::Percent: scale(font, 1.6, 0.0); font.setBold(true); break;
+    }
+    label->setFont(font);
+    if(!colour.isValid())
+    {
+        colour = kind == Text::Muted ? colours.muted : colours.ink;
+    }
+    pin_font(label, QString("color: %1;").arg(css(colour)));
+    return label;
+}
+
+// ------------------------------------------------------------------ building blocks
+
+/// A Lucide icon drawn as vectors at the screen's own pixel density.
+class Icon final : public QWidget
+{
+public:
+    Icon(std::string_view name, int size, QColor colour, const QString& accessible_name = QString())
+        : name_(name), colour_(std::move(colour))
+    {
+        setFixedSize(size, size);
+        setAttribute(Qt::WA_TransparentForMouseEvents);
+        setObjectName("hyperfluxIcon");
+        setProperty("icon", QString::fromUtf8(name.data(), static_cast<int>(name.size())));
+        if(!accessible_name.isEmpty())
+        {
+            setAccessibleName(accessible_name);
+        }
+    }
+
+protected:
+    void paintEvent(QPaintEvent* /*event*/) override
+    {
+        QPainter painter(this);
+        paint_svg(painter, embedded_icon(name_), QRectF(rect()), colour_);
+    }
+
+private:
+    std::string_view name_;
+    QColor colour_;
+};
+
+QHBoxLayout* row_layout(int spacing)
+{
+    auto* layout = new QHBoxLayout();
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(spacing);
+    return layout;
+}
+
+QFrame* frame(const char* name, const QColor& background, const QColor& border)
+{
+    auto* result = new QFrame();
+    result->setObjectName(name);
+    result->setStyleSheet(QString("QFrame#%1 { background: %2; border: 1px solid %3; border-radius: %4px; }")
+                              .arg(name, css(background), css(border))
+                              .arg(radius));
+    return result;
+}
+
+/// 22 px tall: a tint of the meaning colour, the word in text colour, the icon in the meaning colour.
+QFrame* chip(
+    const QString& word,
+    std::string_view icon,
+    const QColor& tone,
+    const Colours& colours,
+    const char* name = "hyperfluxChip")
+{
+    const QColor fill = mix(colours.card, tone, colours.tint);
+    auto* result = frame(name, fill, fill);
+    result->setFixedHeight(22);
+    result->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    result->setProperty("word", word);
+    auto* layout = row_layout(small_gap);
+    layout->setContentsMargins(large_gap, 0, large_gap, 0);
+    result->setLayout(layout);
+    layout->addWidget(new Icon(icon, 16, tone), 0, Qt::AlignVCenter);
+    layout->addWidget(text(word, colours), 0, Qt::AlignVCenter);
+    return result;
+}
+
+QPushButton* help_button(const Colours& colours)
+{
+    auto* button = new QPushButton();
+    button->setObjectName("hyperfluxHelp");
+    button->setAccessibleName("Help");
+    auto* layout = row_layout(medium_gap);
+    layout->setContentsMargins(large_gap + 2, small_gap, large_gap + 2, small_gap);
+    button->setLayout(layout);
+    layout->addWidget(new Icon("circle-help", 16, colours.ink), 0, Qt::AlignVCenter);
+    auto* word = text("Help", colours);
+    word->setAttribute(Qt::WA_TransparentForMouseEvents);
+    layout->addWidget(word, 0, Qt::AlignVCenter);
+    // The trailing arrow says the guide opens outside OpenRGB.
+    layout->addWidget(new Icon("external-link", 16, colours.muted), 0, Qt::AlignVCenter);
+    const QSize size = layout->sizeHint().expandedTo(QSize(0, 30));
+    button->setFixedSize(size);
+    // Its own sheet with a pinned size: a skin's "QPushButton { min-width }" cannot resize or restyle it.
+    button->setStyleSheet(
+        QString("QPushButton#hyperfluxHelp { background: %1; border: 1px solid %2; border-radius: %3px; padding: 0;"
+                " min-width: %4px; max-width: %4px; min-height: %5px; max-height: %5px; }"
+                "QPushButton#hyperfluxHelp:hover { background: %6; }"
+                "QPushButton#hyperfluxHelp:pressed { background: %2; }")
+            .arg(css(mix(colours.card, colours.ink, 0.06)), css(mix(colours.card, colours.ink, 0.18)))
+            .arg(radius)
+            .arg(size.width() - 2)
+            .arg(size.height() - 2)
+            .arg(css(mix(colours.card, colours.ink, 0.11))));
+    button->setCursor(Qt::PointingHandCursor);
+    const QString url = QString::fromUtf8(repository_url.data(), static_cast<int>(repository_url.size()))
+        + "/blob/main/docs/user/troubleshooting.md";
+    button->setToolTip(url);
+    QObject::connect(button, &QPushButton::clicked, button, [url] { QDesktopServices::openUrl(QUrl(url)); });
+    return button;
+}
+
+/// Lucide draws 0-3 bars; each bar stands for about a third, so the picture agrees with the number.
+std::string_view battery_icon(int percent)
+{
+    if(percent <= 10)
+    {
+        return "battery";
+    }
+    if(percent <= 40)
+    {
+        return "battery-low";
+    }
+    return percent <= 75 ? "battery-medium" : "battery-full";
+}
+
+QColor battery_tone(int percent, const Colours& colours)
+{
+    if(percent <= 10)
+    {
+        return colours.tone.bad;
+    }
+    return percent <= 20 ? colours.tone.warn : colours.tone.good;
+}
+
+std::string_view type_icon(const std::string& type)
+{
+    if(type == "Mouse")
+    {
+        return "mouse";
+    }
+    if(type == "Keyboard")
+    {
+        return "keyboard";
+    }
+    return "hyperflux-symbolic";
+}
+
+QString from(const std::string& value)
 {
     return QString::fromStdString(value);
 }
 
-QString pill_style(const char* colour)
+QFrame* device_card(const PluginDeviceRow& device, const Colours& colours)
 {
-    return QString("border: 1px solid %1; border-radius: 9px; padding: 1px 9px; color: %1;")
-        .arg(colour);
-}
-
-const char* tone_colour(PluginHealthTone tone)
-{
-    switch(tone)
-    {
-        case PluginHealthTone::Positive: return good_colour;
-        case PluginHealthTone::Warning: return warning_colour;
-        case PluginHealthTone::Negative: return bad_colour;
-        case PluginHealthTone::Neutral: return nullptr;
-    }
-    return nullptr;
-}
-
-QStyle::StandardPixmap health_icon(PluginHealthTone tone)
-{
-    switch(tone)
-    {
-        case PluginHealthTone::Positive: return QStyle::SP_DialogApplyButton;
-        case PluginHealthTone::Warning: return QStyle::SP_MessageBoxWarning;
-        case PluginHealthTone::Negative: return QStyle::SP_MessageBoxCritical;
-        case PluginHealthTone::Neutral: return QStyle::SP_MessageBoxInformation;
-    }
-    return QStyle::SP_MessageBoxInformation;
-}
-
-const char* battery_colour(std::uint8_t percent)
-{
-    if(percent <= 15)
-    {
-        return bad_colour;
-    }
-    return percent <= 30 ? warning_colour : good_colour;
-}
-
-QLabel* muted(const QString& value, QWidget* parent)
-{
-    auto* label = new QLabel(value, parent);
-    label->setForegroundRole(QPalette::PlaceholderText);
-    label->setWordWrap(true);
-    return label;
-}
-
-QLabel* section(const QString& value, QWidget* parent)
-{
-    auto* label = new QLabel(value, parent);
-    QFont font = label->font();
-    font.setBold(true);
-    label->setFont(font);
-    return label;
-}
-
-QFrame* device_card(const PluginDeviceRow& device, QWidget* parent)
-{
-    auto* card = new QFrame(parent);
-    card->setObjectName("hyperfluxDeviceCard");
-    card->setProperty("stableId", QVariant(text(device.stable_id)));
+    auto* card = frame("hyperfluxDeviceCard", colours.card, colours.border);
+    card->setProperty("stableId", QVariant(from(device.stable_id)));
     auto* layout = new QVBoxLayout(card);
-    layout->setContentsMargins(16, 14, 16, 14);
-    layout->setSpacing(8);
+    layout->setContentsMargins(grid_unit, grid_unit - 2, grid_unit, grid_unit - 2);
+    layout->setSpacing(large_gap);
 
-    auto* heading = new QHBoxLayout();
-    auto* names = new QVBoxLayout();
-    names->setSpacing(1);
-    auto* name = new QLabel(text(device.device), card);
+    // Who: the type icon (it names the type for screen readers), the name, and how it is connected.
+    auto* head = row_layout(large_gap + 2);
+    const QColor tile_colour = mix(colours.card, colours.ink, 0.06);
+    auto* tile = frame("hyperfluxDeviceTile", tile_colour, tile_colour);
+    tile->setFixedSize(40, 40);
+    auto* tile_layout = row_layout(0);
+    tile->setLayout(tile_layout);
+    tile_layout->addWidget(new Icon(type_icon(device.type), 22, colours.ink, from(device.type)), 0, Qt::AlignCenter);
+    head->addWidget(tile, 0, Qt::AlignVCenter);
+    auto* name = text(from(device.device), colours, Text::Name);
     name->setObjectName("hyperfluxDeviceName");
-    QFont name_font = name->font();
-    name_font.setBold(true);
-    name_font.setPointSize(name_font.pointSize() + 1);
-    name->setFont(name_font);
     name->setWordWrap(true);
-    names->addWidget(name);
-    auto* state = muted(text(device.type + " \xC2\xB7 " + device.availability), card);
-    state->setObjectName("hyperfluxDeviceState");
-    names->addWidget(state);
-    heading->addLayout(names, 1);
-    if(!device.connection.empty())
+    head->addWidget(name, 1, Qt::AlignVCenter);
+    if(device.connection == "Wired")
     {
-        auto* connection = new QLabel(text(device.connection), card);
-        connection->setObjectName("hyperfluxDeviceConnection");
-        heading->addWidget(connection, 0, Qt::AlignTop);
+        head->addWidget(chip("Wired", "cable", colours.wired, colours), 0, Qt::AlignVCenter);
     }
-    layout->addLayout(heading);
-
-    auto* reading = new QHBoxLayout();
-    reading->setSpacing(10);
-    auto* percent = new QLabel(
-        device.battery_percent.has_value()
-            ? QString::number(*device.battery_percent) + "%"
-            : QString::fromUtf8("\xE2\x80\x94"),
-        card);
-    percent->setObjectName("hyperfluxBatteryPercent");
-    QFont percent_font = percent->font();
-    percent_font.setBold(true);
-    percent_font.setPointSize(percent_font.pointSize() + 9);
-    percent->setFont(percent_font);
-    reading->addWidget(percent, 0, Qt::AlignBottom);
-    if(!device.charge.empty())
+    else if(device.connection == "Wireless")
     {
-        auto* charge = new QLabel(text(device.charge), card);
-        charge->setObjectName("hyperfluxBatteryCharge");
-        charge->setStyleSheet(
-            device.charge == "On battery"
-                ? QString("border: 1px solid palette(mid); border-radius: 9px; padding: 1px 9px;")
-                : pill_style(good_colour));
-        reading->addWidget(charge, 0, Qt::AlignVCenter);
+        head->addWidget(chip("Wireless", "wifi", colours.tone.wireless, colours), 0, Qt::AlignVCenter);
     }
-    reading->addStretch(1);
-    auto* note = muted(text(device.battery_note), card);
-    note->setObjectName("hyperfluxBatteryNote");
-    note->setWordWrap(false);
-    reading->addWidget(note, 0, Qt::AlignVCenter);
-    layout->addLayout(reading);
+    layout->addLayout(head);
+    layout->addSpacing(small_gap);
 
-    auto* bar = new QProgressBar(card);
-    bar->setObjectName("hyperfluxBatteryBar");
-    bar->setRange(0, 100);
-    bar->setValue(device.battery_percent.value_or(0));
-    bar->setTextVisible(false);
-    bar->setFixedHeight(8);
+    // How much: the one number people come for, with an icon that agrees with it.
+    auto* reading = row_layout(large_gap);
     if(device.battery_percent.has_value())
     {
-        bar->setStyleSheet(
-            QString("QProgressBar#hyperfluxBatteryBar::chunk { border-radius: 4px; background: %1; }")
-                .arg(battery_colour(*device.battery_percent)));
+        const int percent = *device.battery_percent;
+        reading->addWidget(new Icon(battery_icon(percent), 22, battery_tone(percent, colours)), 0, Qt::AlignVCenter);
+        auto* number = text(QString("%1%").arg(percent), colours, Text::Percent);
+        number->setObjectName("hyperfluxBatteryPercent");
+        reading->addWidget(number, 0, Qt::AlignVCenter);
     }
-    layout->addWidget(bar);
-
-    auto* control = muted(text(device.openrgb + " \xC2\xB7 " + device.support), card);
-    control->setObjectName("hyperfluxDeviceControl");
-    layout->addWidget(control);
+    else
+    {
+        auto* missing = text("Battery level not reported yet", colours, Text::Muted);
+        missing->setObjectName("hyperfluxBatteryPercent");
+        reading->addWidget(missing, 0, Qt::AlignVCenter);
+    }
+    reading->addSpacing(small_gap);
+    if(!device.charge.empty())
+    {
+        reading->addWidget(chip(from(device.charge), "plug-zap", colours.tone.good, colours), 0, Qt::AlignVCenter);
+    }
+    if(device.presence == "Asleep")
+    {
+        reading->addWidget(chip("Asleep", "moon", colours.wired, colours), 0, Qt::AlignVCenter);
+    }
+    else if(!device.presence.empty())
+    {
+        reading->addWidget(chip(from(device.presence), "wifi-off", colours.tone.warn, colours), 0, Qt::AlignVCenter);
+    }
+    if(!device.stale.empty())
+    {
+        reading->addWidget(chip(from(device.stale), "clock", colours.tone.warn, colours), 0, Qt::AlignVCenter);
+    }
+    reading->addStretch(1);
+    layout->addLayout(reading);
+    if(!device.note.empty())
+    {
+        auto* note = text(from(device.note), colours, Text::Muted);
+        note->setObjectName("hyperfluxDeviceNote");
+        note->setWordWrap(true);
+        layout->addWidget(note);
+    }
+    layout->addStretch(1); // a taller neighbour must not float this card's content
     return card;
+}
+
+QFrame* attention_banner(const PluginAttention& attention, const Colours& colours)
+{
+    const QColor tone = tone_colour(colours, attention.tone);
+    auto* banner = frame("hyperfluxAttention", mix(colours.window, tone, colours.tint), mix(colours.window, tone, 0.45));
+    auto* layout = row_layout(large_gap + 2);
+    layout->setContentsMargins(grid_unit - 4, large_gap + 2, grid_unit - 4, large_gap + 2);
+    banner->setLayout(layout);
+    layout->addWidget(new Icon("triangle-alert", 16, tone), 0, Qt::AlignTop);
+    auto* message = text(QString(), colours);
+    message->setObjectName("hyperfluxAttentionText");
+    QString html = from(attention.message).toHtmlEscaped();
+    if(!attention.command.empty())
+    {
+        // The command is something to type, so it is shown as code and can be selected.
+        const QString command = from(attention.command).toHtmlEscaped();
+        const QString family = QFontDatabase::systemFont(QFontDatabase::FixedFont).family().toHtmlEscaped();
+        html.replace(command, QString("<span style=\"font-family: '%1';\">%2</span>").arg(family, command));
+    }
+    message->setTextFormat(Qt::RichText);
+    message->setText(html);
+    message->setWordWrap(true);
+    message->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    layout->addWidget(message, 1);
+    return banner;
+}
+
+QWidget* build_page(const PluginInformationViewModel& model, const Colours& colours)
+{
+    auto* root = new QWidget();
+    root->setObjectName("hyperfluxPage");
+    root->setAttribute(Qt::WA_StyledBackground, false);
+    auto* page = new QVBoxLayout(root);
+    page->setContentsMargins(grid_unit, grid_unit, grid_unit, grid_unit);
+    page->setSpacing(grid_unit);
+
+    // Header: the mark and name identify the page, one chip gives the overall state, one button gets help.
+    auto* head = row_layout(large_gap + 4);
+    head->addWidget(new Icon("hyperflux-mark", 44, QColor(), "HyperFlux Next"), 0, Qt::AlignVCenter);
+    head->addWidget(text("HyperFlux Next", colours, Text::Title), 0, Qt::AlignVCenter);
+    head->addSpacing(medium_gap);
+    std::string_view state_icon = "circle-pause";
+    switch(model.tone)
+    {
+        case PluginHealthTone::Positive: state_icon = "circle-check"; break;
+        case PluginHealthTone::Warning: state_icon = "refresh-cw"; break;
+        case PluginHealthTone::Negative: state_icon = "triangle-alert"; break;
+        case PluginHealthTone::Neutral: break;
+    }
+    auto* state = chip(from(model.headline), state_icon, tone_colour(colours, model.tone), colours, "hyperfluxHealth");
+    if(model.technical_detail.has_value())
+    {
+        state->setToolTip(from(*model.technical_detail));
+    }
+    head->addWidget(state, 0, Qt::AlignVCenter);
+    head->addStretch(1);
+    head->addWidget(help_button(colours), 0, Qt::AlignVCenter);
+    page->addLayout(head);
+
+    // One place says the readings are old, instead of a label on every card.
+    if(model.attention.has_value())
+    {
+        page->addWidget(attention_banner(*model.attention, colours));
+    }
+
+    if(model.empty_state.has_value())
+    {
+        auto* empty = text(from(*model.empty_state), colours, Text::Muted);
+        empty->setObjectName("hyperfluxEmptyState");
+        page->addWidget(empty);
+    }
+    else if(!model.devices.empty())
+    {
+        auto* cards = new QWidget();
+        cards->setObjectName("hyperfluxDeviceCards");
+        auto* grid = new QGridLayout(cards);
+        grid->setContentsMargins(0, 0, 0, 0);
+        grid->setHorizontalSpacing(grid_unit);
+        grid->setVerticalSpacing(grid_unit);
+        grid->setColumnStretch(0, 1);
+        grid->setColumnStretch(1, 1);
+        for(std::size_t index = 0; index < model.devices.size(); ++index)
+        {
+            grid->addWidget(
+                device_card(model.devices[index], colours),
+                static_cast<int>(index / 2),
+                static_cast<int>(index % 2));
+        }
+        page->addWidget(cards);
+
+        // The one lighting fact this page adds: where lighting is changed.
+        auto* lighting = new QWidget();
+        lighting->setObjectName("hyperfluxLighting");
+        auto* line = row_layout(small_gap);
+        lighting->setLayout(line);
+        line->addWidget(new Icon("lightbulb", 16, colours.muted), 0, Qt::AlignVCenter);
+        line->addWidget(
+            text("Colours and effects for these devices are set in the Devices tab.", colours, Text::Muted),
+            0,
+            Qt::AlignVCenter);
+        line->addStretch(1);
+        page->addWidget(lighting);
+    }
+    page->addStretch(1);
+    return root;
 }
 
 } // namespace
@@ -212,125 +546,33 @@ PluginInformationWidget::PluginInformationWidget(
     QWidget* parent)
     : QWidget(parent),
       provider_(std::move(provider)),
-      health_icon_(nullptr),
-      health_title_(nullptr),
-      health_summary_(nullptr),
-      attention_(nullptr),
-      attention_text_(nullptr),
-      empty_state_(nullptr),
-      devices_(nullptr),
-      device_grid_(nullptr),
-      lighting_transport_(nullptr),
-      effects_authority_(nullptr),
-      build_identity_(nullptr),
-      repository_(nullptr)
+      page_(nullptr),
+      timer_(new QTimer(this))
 {
     setObjectName("hyperfluxNextInformation");
-    setStyleSheet(page_style);
     auto* outer = new QVBoxLayout(this);
     outer->setContentsMargins(0, 0, 0, 0);
     auto* scroll = new QScrollArea(this);
+    scroll->setObjectName("hyperfluxScroll");
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setWidgetResizable(true);
+    scroll->setStyleSheet("QScrollArea#hyperfluxScroll { background: transparent; border: none; }");
+    scroll->viewport()->setAutoFillBackground(false);
     outer->addWidget(scroll);
-    auto* content = new QWidget(scroll);
-    scroll->setWidget(content);
+    auto* holder = new QWidget(scroll);
+    holder->setObjectName("hyperfluxPageHolder");
+    holder->setAutoFillBackground(false);
+    scroll->setWidget(holder);
+    page_ = new QVBoxLayout(holder);
+    page_->setContentsMargins(0, 0, 0, 0);
 
-    auto* page = new QVBoxLayout(content);
-    page->setContentsMargins(20, 18, 20, 18);
-    page->setSpacing(14);
-
-    auto* heading = new QHBoxLayout();
-    heading->setSpacing(10);
-    auto* titles = new QVBoxLayout();
-    titles->setSpacing(2);
-    auto* title = new QLabel("HyperFlux Next", content);
-    QFont title_font = title->font();
-    title_font.setBold(true);
-    title_font.setPointSize(title_font.pointSize() + 5);
-    title->setFont(title_font);
-    titles->addWidget(title);
-    health_summary_ = muted(QString(), content);
-    health_summary_->setObjectName("hyperfluxHealthSummary");
-    titles->addWidget(health_summary_);
-    heading->addLayout(titles, 1);
-
-    health_icon_ = new QLabel(content);
-    health_icon_->setObjectName("hyperfluxHealthIcon");
-    health_icon_->setFixedSize(20, 20);
-    heading->addWidget(health_icon_, 0, Qt::AlignVCenter);
-    health_title_ = new QLabel(content);
-    health_title_->setObjectName("hyperfluxHealthTitle");
-    QFont health_font = health_title_->font();
-    health_font.setBold(true);
-    health_title_->setFont(health_font);
-    heading->addWidget(health_title_, 0, Qt::AlignVCenter);
-
-    auto* refresh_button = new QToolButton(content);
-    refresh_button->setObjectName("hyperfluxRefresh");
-    refresh_button->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
-    refresh_button->setToolTip("Refresh status");
-    refresh_button->setAutoRaise(true);
-    connect(refresh_button, &QToolButton::clicked, this, [this] { refresh(); });
-    heading->addWidget(refresh_button, 0, Qt::AlignVCenter);
-
-    repository_ = new QToolButton(content);
-    repository_->setObjectName("hyperfluxRepository");
-    repository_->setText(QString::fromUtf8("GitHub \xE2\x86\x97"));
-    repository_->setToolTip(QString::fromUtf8(repository_url.data(), static_cast<int>(repository_url.size())));
-    repository_->setCursor(Qt::PointingHandCursor);
-    connect(repository_, &QToolButton::clicked, this, []
-    {
-        QDesktopServices::openUrl(QUrl(QString::fromUtf8(
-            repository_url.data(), static_cast<int>(repository_url.size()))));
-    });
-    heading->addWidget(repository_, 0, Qt::AlignVCenter);
-    page->addLayout(heading);
-
-    attention_ = new QFrame(content);
-    attention_->setObjectName("hyperfluxAttention");
-    auto* attention_layout = new QHBoxLayout(attention_);
-    attention_layout->setContentsMargins(14, 10, 14, 10);
-    auto* attention_icon = new QLabel(attention_);
-    attention_icon->setPixmap(
-        style()->standardIcon(QStyle::SP_MessageBoxWarning).pixmap(22, 22));
-    attention_layout->addWidget(attention_icon, 0, Qt::AlignTop);
-    attention_text_ = new QLabel(attention_);
-    attention_text_->setObjectName("hyperfluxAttentionText");
-    attention_text_->setWordWrap(true);
-    attention_text_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    attention_layout->addWidget(attention_text_, 1);
-    attention_->hide();
-    page->addWidget(attention_);
-
-    empty_state_ = muted(QString(), content);
-    empty_state_->setObjectName("hyperfluxControllerEmptyState");
-    page->addWidget(empty_state_);
-
-    devices_ = new QWidget(content);
-    devices_->setObjectName("hyperfluxDeviceCards");
-    device_grid_ = new QGridLayout(devices_);
-    device_grid_->setContentsMargins(0, 0, 0, 0);
-    device_grid_->setHorizontalSpacing(14);
-    device_grid_->setVerticalSpacing(14);
-    device_grid_->setColumnStretch(0, 1);
-    device_grid_->setColumnStretch(1, 1);
-    page->addWidget(devices_);
-
-    page->addWidget(section("Lighting", content));
-    lighting_transport_ = muted(QString(), content);
-    lighting_transport_->setObjectName("hyperfluxLightingTransport");
-    effects_authority_ = muted(QString(), content);
-    effects_authority_->setObjectName("hyperfluxEffectsAuthority");
-    page->addWidget(lighting_transport_);
-    page->addWidget(effects_authority_);
-    page->addStretch(1);
-
-    build_identity_ = muted(QString(), content);
-    build_identity_->setObjectName("hyperfluxBuildIdentity");
-    page->addWidget(build_identity_);
+    timer_->setInterval(refresh_interval_ms);
+    connect(timer_, &QTimer::timeout, this, [this] { refresh(); });
+    timer_->start();
 
     refresh();
+    // OpenRGB adds the page to its Information list after creating it.
+    QTimer::singleShot(0, this, [this] { install_list_icon(); });
 }
 
 void PluginInformationWidget::refresh()
@@ -339,52 +581,87 @@ void PluginInformationWidget::refresh()
     {
         return;
     }
-    const auto model = provider_();
+    auto model = provider_();
     if(!has_rendered_ || model != rendered_)
     {
         render(model);
-        rendered_ = model;
+        rendered_ = std::move(model);
         has_rendered_ = true;
+    }
+}
+
+void PluginInformationWidget::changeEvent(QEvent* event)
+{
+    QWidget::changeEvent(event);
+    if(rendering_ || !has_rendered_)
+    {
+        return;
+    }
+    if((event->type() == QEvent::PaletteChange || event->type() == QEvent::ApplicationFontChange)
+       && !restyle_pending_)
+    {
+        // Qt is still walking the old children; rebuild once it has finished.
+        restyle_pending_ = true;
+        QMetaObject::invokeMethod(
+            this,
+            [this]
+            {
+                restyle_pending_ = false;
+                render(rendered_);
+                paint_list_icon();
+            },
+            Qt::QueuedConnection);
     }
 }
 
 void PluginInformationWidget::render(const PluginInformationViewModel& model)
 {
-    health_icon_->setPixmap(style()->standardIcon(health_icon(model.tone)).pixmap(18, 18));
-    health_title_->setText(text(model.headline));
-    const char* colour = tone_colour(model.tone);
-    health_title_->setStyleSheet(colour == nullptr ? QString() : QString("color: %1;").arg(colour));
-    health_summary_->setText(text(model.summary));
-    health_summary_->setToolTip(
-        model.technical_detail.has_value() ? text(*model.technical_detail) : QString());
-
-    attention_->setVisible(model.attention.has_value());
-    attention_text_->setText(model.attention.has_value() ? text(*model.attention) : QString());
-
-    const bool empty = model.devices.empty();
-    empty_state_->setVisible(empty);
-    empty_state_->setText(empty ? "No paired device is reported by the bridge." : "");
-    devices_->setVisible(!empty);
-    render_cards(model);
-
-    lighting_transport_->setText(text(model.lighting_transport));
-    effects_authority_->setText(text(model.effects_authority));
-    build_identity_->setText(text(model.build_identity));
+    rendering_ = true;
+    auto* next = build_page(model, colours(palette()));
+    if(content_ != nullptr)
+    {
+        page_->removeWidget(content_);
+        delete content_;
+    }
+    content_ = next;
+    page_->addWidget(content_);
+    rendering_ = false;
 }
 
-void PluginInformationWidget::render_cards(const PluginInformationViewModel& model)
+void PluginInformationWidget::install_list_icon()
 {
-    while(auto* item = device_grid_->takeAt(0))
+    // OpenRGB shows a generic puzzle-piece glyph for every plugin in the list.
+    // The page swaps in its own mark on that label and changes nothing else;
+    // if OpenRGB's layout ever differs, the glyph simply stays.
+    QWidget* child = this;
+    for(QWidget* ancestor = parentWidget(); ancestor != nullptr; ancestor = ancestor->parentWidget())
     {
-        delete item->widget();
-        delete item;
+        auto* stack = qobject_cast<QStackedWidget*>(ancestor);
+        auto* tabs = stack == nullptr ? nullptr : qobject_cast<QTabWidget*>(stack->parentWidget());
+        if(tabs != nullptr)
+        {
+            const int index = tabs->indexOf(child);
+            QWidget* button = index < 0 ? nullptr : tabs->tabBar()->tabButton(index, QTabBar::LeftSide);
+            list_icon_ = button == nullptr ? nullptr : button->findChild<QLabel*>("icon");
+            paint_list_icon();
+            return;
+        }
+        child = ancestor;
     }
-    for(std::size_t index = 0; index < model.devices.size(); ++index)
+}
+
+void PluginInformationWidget::paint_list_icon()
+{
+    if(list_icon_.isNull())
     {
-        device_grid_->addWidget(
-            device_card(model.devices[index], devices_),
-            static_cast<int>(index / 2),
-            static_cast<int>(index % 2));
+        return;
+    }
+    // Symbolic, in the list's own text colour, like the glyphs around it.
+    const QColor colour = list_icon_->palette().color(QPalette::WindowText);
+    const QPixmap pixmap = icon_pixmap("hyperflux-symbolic", 22, list_icon_->devicePixelRatioF(), colour);
+    if(!pixmap.isNull())
+    {
+        list_icon_->setPixmap(pixmap);
     }
 }
 

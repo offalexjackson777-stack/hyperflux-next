@@ -110,6 +110,8 @@ struct UpstreamRazerControllerSummary
     bool direct_suppressed;
     /// Bridge battery observation for this device, when the bridge reported one.
     std::optional<v8::BatteryObservation> battery {};
+    /// Whether the bridge last saw the device awake, asleep or out of reach.
+    std::optional<PresenceState> presence {};
 
     friend bool operator==(
         const UpstreamRazerControllerSummary&,
