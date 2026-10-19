@@ -1627,13 +1627,17 @@ fn a_queried_charging_answer_reads_charging_without_waiting_for_a_status_report(
     assert_eq!(keyboard.charge, None);
 
     // A child without any passive record is not read from the query either.
-    identify(
-        &mut translator,
+    // The keyboard lane above is already bound, so a second identity there
+    // would only conflict; the unknown child is bound on a fresh receiver.
+    let mut unknown_translator = self::translator();
+    let unknown_identity = identify(
+        &mut unknown_translator,
         7,
         HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
         0x1234,
     );
-    let unknown = translator
+    assert_eq!(unknown_identity.disposition, PassiveDisposition::Applied);
+    let unknown = unknown_translator
         .translate(feature_charge(8, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 1))
         .expect("queried unknown charge translates");
     assert_eq!(
@@ -1641,6 +1645,7 @@ fn a_queried_charging_answer_reads_charging_without_waiting_for_a_status_report(
         PassiveDisposition::IgnoredUnqualifiedSemantic
     );
     assert_eq!(unknown.charge, None);
+    assert!(unknown.observations.is_empty());
 
     // The passive status report still reads its charge in context.
     let off_mat = charge_after_contact(&mut translator, 10, Some(0), 0);
