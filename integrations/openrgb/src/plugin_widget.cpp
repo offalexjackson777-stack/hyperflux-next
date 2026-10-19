@@ -12,6 +12,7 @@
 #include <QStyle>
 #include <QToolButton>
 #include <QUrl>
+#include <QVariant>
 #include <QVBoxLayout>
 
 #include <utility>
@@ -126,7 +127,7 @@ QFrame* device_card(const PluginDeviceRow& device, QWidget* parent)
 {
     auto* card = new QFrame(parent);
     card->setObjectName("hyperfluxDeviceCard");
-    card->setProperty("stableId", text(device.stable_id));
+    card->setProperty("stableId", QVariant(text(device.stable_id)));
     auto* layout = new QVBoxLayout(card);
     layout->setContentsMargins(16, 14, 16, 14);
     layout->setSpacing(8);
