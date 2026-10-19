@@ -6,6 +6,7 @@ from typing import ClassVar, Generic, TypeAlias, TypeVar
 
 from .domain_types import (
     ActivityState,
+    BatteryCharge,
     BatteryPercent,
     CapabilityId,
     ClientId,
@@ -97,8 +98,8 @@ from .domain_types import (
 
 T = TypeVar("T")
 
-MINIMUM_PROTOCOL_VERSION = 7
-MAXIMUM_PROTOCOL_VERSION = 7
+MINIMUM_PROTOCOL_VERSION = 8
+MAXIMUM_PROTOCOL_VERSION = 8
 MAX_WIRE_MESSAGE_BYTES = 1048576
 MAX_JSON_DEPTH = 128
 FIELD_LIMITS = {
@@ -282,6 +283,7 @@ class BatteryObservation:
     """Battery availability and value without collapsing unknown and unavailable."""
     availability: TelemetryAvailability
     percentage: BatteryPercent | None
+    charge: BatteryCharge | None
     freshness: FreshnessState
     confidence: EvidenceConfidence
     observed_at_ms: MonotonicMs | None

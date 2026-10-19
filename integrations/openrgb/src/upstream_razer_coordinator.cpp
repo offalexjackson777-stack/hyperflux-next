@@ -80,6 +80,13 @@ UpstreamRazerPluginCoordinator::create(
                     owner->queue_error(std::move(error));
                 }
             },
+            [weak](std::optional<v8::BridgeSnapshot> status)
+            {
+                if(auto owner = weak.lock())
+                {
+                    owner->record_device_status(std::move(status));
+                }
+            },
         });
     if(!worker)
     {
@@ -325,6 +332,7 @@ void UpstreamRazerPluginCoordinator::shutdown() noexcept
         registered_controller_count_ = 0;
         direct_suppressed_controller_count_ = 0;
         controllers_.clear();
+        device_status_.reset();
     }
     notify_state_changed();
 }
@@ -350,7 +358,49 @@ std::vector<UpstreamRazerControllerSummary>
 UpstreamRazerPluginCoordinator::controllers() const
 {
     std::lock_guard lock(state_mutex_);
-    return controllers_;
+    auto result = controllers_;
+    if(!device_status_.has_value())
+    {
+        return result;
+    }
+    for(auto& controller : result)
+    {
+        for(const auto& receiver : device_status_->receivers)
+        {
+            if(receiver.receiver_id != controller.receiver_id
+               || receiver.generation_id != controller.generation_id)
+            {
+                continue;
+            }
+            for(const auto& device : receiver.devices)
+            {
+                if(device.device_id == controller.device_id)
+                {
+                    controller.battery = device.battery;
+                }
+            }
+        }
+    }
+    return result;
+}
+
+void UpstreamRazerPluginCoordinator::record_device_status(
+    std::optional<v8::BridgeSnapshot> status) noexcept
+{
+    try
+    {
+        std::lock_guard lock(state_mutex_);
+        if(stopped_)
+        {
+            return;
+        }
+        device_status_ = std::move(status);
+    }
+    catch(...)
+    {
+        return;
+    }
+    notify_state_changed();
 }
 
 void UpstreamRazerPluginCoordinator::notify_state_changed() noexcept

@@ -4,7 +4,7 @@
 
 use super::codec::{decode, encode};
 use super::{ProtocolWireError, validate_rpc_request, validate_rpc_response};
-use crate::{CURRENT_PROTOCOL_VERSION, LeaseResult, RpcRequest, RpcResponse, v5, v7};
+use crate::{CURRENT_PROTOCOL_VERSION, LeaseResult, RpcRequest, RpcResponse, v5, v7, v8};
 use hfx_domain::{ProtocolVersion, ResourceKind};
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
@@ -116,7 +116,7 @@ pub fn encode_rpc_request(request: &RpcRequest) -> Result<Vec<u8>, ProtocolWireE
 /// Encodes one current request into the exact frozen schema selected for the
 /// connection.
 ///
-/// Only the served versions 5 and 7 have an encoder; retired version numbers
+/// Only the served versions 5, 7 and 8 have an encoder; retired version numbers
 /// fail before any request field is translated.
 ///
 /// # Errors
@@ -137,6 +137,7 @@ fn encode_rpc_request_version(
     let encoder: fn(Value) -> Result<Vec<u8>, ProtocolWireError> = match version {
         5 => frozen_encoding::<v5::RpcRequest>,
         7 => frozen_encoding::<v7::RpcRequest>,
+        8 => frozen_encoding::<v8::RpcRequest>,
         _ => return Err(ProtocolWireError::UnsupportedProtocolVersion),
     };
     validate_rpc_request(request)?;
@@ -149,7 +150,7 @@ fn encode_rpc_request_version(
 
 /// Decodes a request using the exact frozen schema selected for the connection.
 ///
-/// Only the served versions 5 and 7 decode; retired version numbers are
+/// Only the served versions 5, 7 and 8 decode; retired version numbers are
 /// rejected without parsing.
 ///
 /// # Errors
@@ -167,6 +168,7 @@ fn decode_rpc_request_version(bytes: &[u8], version: u16) -> Result<RpcRequest, 
     let request = match version {
         5 => transcode_request(decode::<v5::RpcRequest>(bytes)?),
         7 => transcode_request(decode::<v7::RpcRequest>(bytes)?),
+        8 => transcode_request(decode::<v8::RpcRequest>(bytes)?),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
     }?;
     if version < 7 && request_requires_v7(&request) {
@@ -206,6 +208,7 @@ fn decode_rpc_response_version(
     let response = match version {
         5 => transcode_response(decode::<v5::RpcResponse>(bytes)?),
         7 => transcode_response(decode::<v7::RpcResponse>(bytes)?),
+        8 => transcode_response(decode::<v8::RpcResponse>(bytes)?),
         _ => Err(ProtocolWireError::UnsupportedProtocolVersion),
     }?;
     if version < 7 && response_requires_v7(&response) {
@@ -226,7 +229,7 @@ pub fn encode_rpc_response(response: &RpcResponse) -> Result<Vec<u8>, ProtocolWi
 /// Encodes one current response into the exact frozen schema selected for the
 /// connection.
 ///
-/// Only the served versions 5 and 7 have an encoder; retired version numbers
+/// Only the served versions 5, 7 and 8 have an encoder; retired version numbers
 /// fail before any response field is translated.
 ///
 /// # Errors
@@ -247,6 +250,7 @@ fn encode_rpc_response_version(
     let encoder: fn(Value) -> Result<Vec<u8>, ProtocolWireError> = match version {
         5 => frozen_encoding::<v5::RpcResponse>,
         7 => frozen_encoding::<v7::RpcResponse>,
+        8 => frozen_encoding::<v8::RpcResponse>,
         _ => return Err(ProtocolWireError::UnsupportedProtocolVersion),
     };
     validate_rpc_response(response)?;
@@ -261,7 +265,51 @@ fn encode_rpc_response_version(
     if version < 7 {
         remove_native_control_snapshot_ownership(response, &mut value)?;
     }
+    if version < 8 {
+        remove_battery_charge(response, &mut value)?;
+    }
     encoder(value)
+}
+
+/// Versions before 8 have no battery charge field, so it is dropped from
+/// every device and controller battery those versions carry.
+fn remove_battery_charge(
+    response: &RpcResponse,
+    value: &mut Value,
+) -> Result<(), ProtocolWireError> {
+    let collections: &[&str] = match response {
+        RpcResponse::SnapshotSuccess(_) => &["devices"],
+        RpcResponse::IntegrationViewSuccess(_) => &["inventory", "controllers"],
+        _ => return Ok(()),
+    };
+    let receivers = value
+        .as_object_mut()
+        .and_then(|root| root.get_mut("response"))
+        .and_then(Value::as_object_mut)
+        .and_then(|response| response.get_mut("result"))
+        .and_then(Value::as_object_mut)
+        .and_then(|result| result.get_mut("receivers"))
+        .and_then(Value::as_array_mut)
+        .ok_or(ProtocolWireError::VersionTranslation)?;
+    for receiver in receivers {
+        let receiver = receiver
+            .as_object_mut()
+            .ok_or(ProtocolWireError::VersionTranslation)?;
+        for collection in collections {
+            let items = receiver
+                .get_mut(*collection)
+                .and_then(Value::as_array_mut)
+                .ok_or(ProtocolWireError::VersionTranslation)?;
+            for item in items {
+                item.as_object_mut()
+                    .and_then(|item| item.get_mut("battery"))
+                    .and_then(Value::as_object_mut)
+                    .ok_or(ProtocolWireError::VersionTranslation)?
+                    .remove("charge");
+            }
+        }
+    }
+    Ok(())
 }
 
 fn remove_native_control_snapshot_ownership(

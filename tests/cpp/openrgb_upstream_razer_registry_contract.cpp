@@ -48,7 +48,7 @@ T number(std::uint64_t value)
     return *decoded;
 }
 
-hyperflux::v7::NativeRoute route(
+hyperflux::v8::NativeRoute route(
     hyperflux::DeviceKind kind,
     std::string_view device_id,
     std::string_view endpoint_id,
@@ -57,7 +57,7 @@ hyperflux::v7::NativeRoute route(
     char token_fill = 'a')
 {
     using namespace hyperflux;
-    const v7::ResourceKey resource {
+    const v8::ResourceKey resource {
         text<ReceiverId>("receiver-1"),
         number<GenerationId>(generation),
         text<LogicalDeviceId>(device_id),

@@ -34,6 +34,12 @@ change its settings.
    by its own name.
 3. Choose a colour or a mode.
 
+OpenRGB also gets a **HyperFlux Next** tab at the top of its window. It shows
+one card per paired device with its battery level, whether it is charging, and
+whether it is connected wirelessly or by cable. If HyperFlux cannot reach your
+devices, the tab tells you what to run. The **GitHub** button opens the project
+page.
+
 ## See Battery Level On Your Desktop
 
 While HyperFlux is running, your mouse and keyboard show their battery level in

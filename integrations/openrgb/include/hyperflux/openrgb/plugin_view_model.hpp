@@ -8,12 +8,17 @@
 #include "native_plugin_application.hpp"
 #endif
 
+#include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace hyperflux::openrgb::native
 {
+
+inline constexpr std::string_view repository_url =
+    "https://github.com/offalexjackson777-stack/hyperflux-next";
 
 enum class PluginHealthTone
 {
@@ -33,6 +38,13 @@ struct PluginDeviceRow
     std::string battery;
     std::string support;
     std::string openrgb;
+    /// Card presentation: "Wired" or "Wireless", empty when unknown.
+    std::string connection {};
+    std::optional<std::uint8_t> battery_percent {};
+    /// "Charging", "Full" or "On battery"; empty when the bridge did not report it.
+    std::string charge {};
+    /// Short qualifier shown beside the battery, empty when the reading is current.
+    std::string battery_note {};
 
     friend bool operator==(const PluginDeviceRow&, const PluginDeviceRow&) = default;
 };
@@ -47,6 +59,8 @@ struct PluginInformationViewModel
     std::string lighting_transport;
     std::string effects_authority;
     std::string build_identity;
+    /// Plain next step shown as a banner when devices cannot be reached.
+    std::optional<std::string> attention {};
 
     friend bool operator==(
         const PluginInformationViewModel&,

@@ -55,7 +55,8 @@ std::string availability(ControllerAvailability value)
     return value == ControllerAvailability::Ready ? "Available" : "Sleeping";
 }
 
-std::string battery(const v5::BatteryObservation& observation)
+template<typename Observation>
+std::string battery(const Observation& observation)
 {
     if(observation.availability == TelemetryAvailability::Unavailable)
     {
@@ -76,6 +77,54 @@ std::string battery(const v5::BatteryObservation& observation)
         result += " - freshness unknown";
     }
     return result;
+}
+
+template<typename Observation>
+void apply_battery(PluginDeviceRow& row, const Observation& observation)
+{
+    row.battery = battery(observation);
+    const bool reported = observation.availability == TelemetryAvailability::Reported
+        && observation.percentage.has_value();
+    if(!reported)
+    {
+        row.battery_note = row.battery;
+        return;
+    }
+    const auto percent = observation.percentage->value();
+    row.battery_percent = static_cast<std::uint8_t>(percent);
+    if(observation.freshness == FreshnessState::Stale)
+    {
+        row.battery_note = "Update overdue";
+    }
+    else if(observation.freshness == FreshnessState::Unknown)
+    {
+        row.battery_note = "Freshness unknown";
+    }
+    if constexpr(requires { observation.charge; })
+    {
+        if(observation.freshness == FreshnessState::Fresh && observation.charge.has_value())
+        {
+            row.charge = *observation.charge == BatteryCharge::Charging
+                ? (percent >= 100 ? "Full" : "Charging")
+                : "On battery";
+        }
+    }
+}
+
+/// OpenRGB names receiver devices "<model> (Wireless)" or "<model> (Wired)";
+/// the card shows the model and moves the suffix into the connection chip.
+void split_connection(PluginDeviceRow& row)
+{
+    for(const std::string_view suffix : {std::string_view(" (Wireless)"), std::string_view(" (Wired)")})
+    {
+        if(row.device.size() > suffix.size()
+           && std::string_view(row.device).substr(row.device.size() - suffix.size()) == suffix)
+        {
+            row.connection = std::string(suffix.substr(2, suffix.size() - 3));
+            row.device.resize(row.device.size() - suffix.size());
+            return;
+        }
+    }
 }
 
 std::string lighting(const ControllerModel& controller)
@@ -156,7 +205,7 @@ PluginDeviceRow row(
     const std::vector<ControllerModel>& controllers)
 {
     const auto* controller = controller_for(device, controllers);
-    return {
+    PluginDeviceRow result {
         device.stable_id,
         fallback_device_name(device),
         controller_type(device.device_kind),
@@ -168,11 +217,14 @@ PluginDeviceRow row(
             ? "Not exposed"
             : lighting(*controller) + " | " + control(controller->control),
     };
+    apply_battery(result, device.battery);
+    split_connection(result);
+    return result;
 }
 
 PluginDeviceRow fallback_row(const ControllerModel& controller)
 {
-    return {
+    PluginDeviceRow result {
         controller.stable_id,
         std::string(controller.model_name.value()),
         controller_type(controller.device_kind),
@@ -182,6 +234,9 @@ PluginDeviceRow fallback_row(const ControllerModel& controller)
         "Qualified controller",
         lighting(controller) + " | " + control(controller.control),
     };
+    apply_battery(result, controller.battery);
+    split_connection(result);
+    return result;
 }
 
 void runtime_summary(
@@ -301,7 +356,7 @@ PluginInformationViewModel make_plugin_information_view_model(
     PluginInformationViewModel result;
     for(const auto& controller : controllers)
     {
-        result.devices.push_back({
+        PluginDeviceRow row {
             controller.stable_id,
             controller.name,
             controller_type(controller.device_kind),
@@ -309,10 +364,26 @@ PluginInformationViewModel make_plugin_information_view_model(
             controller.direct_suppressed
                 ? "Direct USB active"
                 : (controller.registered ? "Available" : "Waiting"),
-            "Reported by HyperFlux diagnostics",
-            "Qualified native route",
-            "Upstream modes, zones, LEDs and layout",
-        });
+            "Waiting for report",
+            "Full support",
+            controller.direct_suppressed
+                ? "OpenRGB is using the USB cable"
+                : (controller.registered ? "Controlled by OpenRGB" : "Waiting for OpenRGB"),
+        };
+        if(controller.battery.has_value())
+        {
+            apply_battery(row, *controller.battery);
+        }
+        else
+        {
+            row.battery_note = row.battery;
+        }
+        split_connection(row);
+        if(row.connection.empty())
+        {
+            row.connection = controller.direct_suppressed ? "Wired" : "Wireless";
+        }
+        result.devices.push_back(std::move(row));
     }
     std::sort(
         result.devices.begin(),
@@ -364,11 +435,20 @@ PluginInformationViewModel make_plugin_information_view_model(
                 result.tone = PluginHealthTone::Warning;
                 result.headline = "Connecting";
                 result.summary = "Waiting for the local HyperFlux native tunnel.";
+                if(status.coordinator.worker_state == NativeRouteWorkerState::Recovering)
+                {
+                    result.attention =
+                        "HyperFlux can't reach your devices right now. Run "
+                        "hyperfluxctl doctor --explain in a terminal for the fix.";
+                }
                 break;
             case NativeRouteWorkerState::Failed:
                 result.tone = PluginHealthTone::Negative;
                 result.headline = "Needs attention";
                 result.summary = "The native OpenRGB transport could not continue.";
+                result.attention =
+                    "HyperFlux can't reach your devices right now. Run "
+                    "hyperfluxctl doctor --explain in a terminal for the fix.";
                 break;
             case NativeRouteWorkerState::Stopping:
             case NativeRouteWorkerState::Stopped:

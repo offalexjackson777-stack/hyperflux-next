@@ -12,6 +12,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -32,7 +33,7 @@ public:
 
     [[nodiscard]] RGBController& controller() noexcept;
     [[nodiscard]] const RGBController& controller() const noexcept;
-    [[nodiscard]] const v7::NativeRoute& route() const noexcept;
+    [[nodiscard]] const v8::NativeRoute& route() const noexcept;
     [[nodiscard]] std::string_view name() const noexcept;
     [[nodiscard]] std::string_view serial() const noexcept;
 
@@ -40,11 +41,11 @@ private:
     friend class UpstreamRazerControllerFactory;
 
     UpstreamRazerControllerInstance(
-        v7::NativeRoute route,
+        v8::NativeRoute route,
         std::unique_ptr<NativeFeatureExchange> exchange,
         std::unique_ptr<RGBController> controller);
 
-    v7::NativeRoute route_;
+    v8::NativeRoute route_;
     std::unique_ptr<NativeFeatureExchange> exchange_;
     std::unique_ptr<RGBController> controller_;
     std::string name_;
@@ -68,7 +69,7 @@ public:
             process_openrgb_client_id_factory(OpenRgbClientRole::Feature));
 
     [[nodiscard]] sdk::Result<std::unique_ptr<UpstreamRazerControllerInstance>> create(
-        const v7::NativeRoute& route);
+        const v8::NativeRoute& route);
 
 private:
     NativeFeatureExchangeFactory exchange_factory_;
@@ -102,8 +103,13 @@ struct UpstreamRazerControllerSummary
     std::string name;
     DeviceKind device_kind;
     ProductId product_id;
+    ReceiverId receiver_id;
+    GenerationId generation_id;
+    LogicalDeviceId device_id;
     bool registered;
     bool direct_suppressed;
+    /// Bridge battery observation for this device, when the bridge reported one.
+    std::optional<v8::BatteryObservation> battery {};
 
     friend bool operator==(
         const UpstreamRazerControllerSummary&,
@@ -126,7 +132,7 @@ public:
     ~UpstreamRazerControllerRegistry();
 
     [[nodiscard]] sdk::Result<UpstreamRegistryUpdate> apply_routes(
-        std::vector<v7::NativeRoute> routes);
+        std::vector<v8::NativeRoute> routes);
     [[nodiscard]] UpstreamRegistryUpdate apply_direct_serials(
         std::vector<std::string> physically_queried_serials);
     void shutdown() noexcept;
@@ -146,7 +152,7 @@ private:
         bool direct_suppressed = false;
     };
 
-    [[nodiscard]] static std::string stable_id(const v7::NativeRoute& route);
+    [[nodiscard]] static std::string stable_id(const v8::NativeRoute& route);
     [[nodiscard]] bool should_suppress(const Entry& entry) const;
     void reconcile_registration(Entry& entry, UpstreamRegistryUpdate& update);
     [[nodiscard]] std::size_t registered_count_internal() const noexcept;
@@ -158,7 +164,7 @@ private:
     bool stopped_ = false;
 };
 
-[[nodiscard]] bool is_eligible_upstream_razer_route(const v7::NativeRoute& route) noexcept;
+[[nodiscard]] bool is_eligible_upstream_razer_route(const v8::NativeRoute& route) noexcept;
 [[nodiscard]] std::string canonical_queried_serial(std::string_view serial);
 [[nodiscard]] std::vector<std::string> collect_direct_razer_serials(
     const std::vector<RGBControllerInterface*>& controllers);

@@ -15,12 +15,12 @@ namespace hyperflux::sdk
 namespace
 {
 
-const RequestId* response_request_id(const v7::RpcResponse& response)
+const RequestId* response_request_id(const v8::RpcResponse& response)
 {
     return std::visit(
         [](const auto& alternative) -> const RequestId* {
             using Alternative = std::decay_t<decltype(alternative)>;
-            if constexpr(std::is_same_v<Alternative, v7::ErrorEnvelope>)
+            if constexpr(std::is_same_v<Alternative, v8::ErrorEnvelope>)
             {
                 return alternative.request_id.has_value() ? &*alternative.request_id : nullptr;
             }
@@ -32,12 +32,12 @@ const RequestId* response_request_id(const v7::RpcResponse& response)
         response);
 }
 
-const ServerInstanceId& response_server_instance(const v7::RpcResponse& response)
+const ServerInstanceId& response_server_instance(const v8::RpcResponse& response)
 {
     return std::visit(
         [](const auto& alternative) -> const ServerInstanceId& {
             using Alternative = std::decay_t<decltype(alternative)>;
-            if constexpr(std::is_same_v<Alternative, v7::ErrorEnvelope>)
+            if constexpr(std::is_same_v<Alternative, v8::ErrorEnvelope>)
             {
                 return alternative.server_instance_id;
             }
@@ -49,7 +49,7 @@ const ServerInstanceId& response_server_instance(const v7::RpcResponse& response
         response);
 }
 
-Error server_error(const v7::ErrorEnvelope& envelope)
+Error server_error(const v8::ErrorEnvelope& envelope)
 {
     return {
         ErrorCode::ServerRejected,
@@ -66,7 +66,7 @@ bool contains_feature(
 }
 
 template<typename Wrapper, typename ResultType>
-Result<ResultType> unwrap_success(Result<v7::RpcResponse> response, std::string expected)
+Result<ResultType> unwrap_success(Result<v8::RpcResponse> response, std::string expected)
 {
     if(!response)
     {
@@ -90,7 +90,7 @@ NativeClient::NativeClient(
     std::unique_ptr<NativeRpcChannel> channel,
     std::unique_ptr<IdentitySource> identities,
     ClientId client_id,
-    v7::ServerHello hello)
+    v8::ServerHello hello)
     : channel_(std::move(channel)),
       identities_(std::move(identities)),
       client_id_(std::move(client_id)),
@@ -117,16 +117,16 @@ Result<NativeClient> NativeClient::connect(
         return Result<NativeClient>::failure(request_id.error());
     }
     const auto expected_request_id = request_id.value();
-    const auto version = ProtocolVersion::from(7);
+    const auto version = ProtocolVersion::from(8);
     if(!version.has_value())
     {
         return Result<NativeClient>::failure({
             ErrorCode::InvalidProtocol,
-            "protocol version 7 violates the generated domain contract",
+            "protocol version 8 violates the generated domain contract",
             std::nullopt,
         });
     }
-    const v7::RpcRequest request = v7::RpcRequestNegotiate {
+    const v8::RpcRequest request = v8::RpcRequestNegotiate {
         {
             std::move(request_id).value(),
             {
@@ -153,18 +153,18 @@ Result<NativeClient> NativeClient::connect(
             std::nullopt,
         });
     }
-    if(const auto* error = std::get_if<v7::ErrorEnvelope>(&response.value()))
+    if(const auto* error = std::get_if<v8::ErrorEnvelope>(&response.value()))
     {
         return Result<NativeClient>::failure(server_error(*error));
     }
-    const auto* success = std::get_if<v7::RpcResponseNegotiateSuccess>(&response.value());
+    const auto* success = std::get_if<v8::RpcResponseNegotiateSuccess>(&response.value());
     if(success == nullptr
        || success->response.server_instance_id != success->response.result.server_instance_id
        || success->response.result.selected_version != *version)
     {
         return Result<NativeClient>::failure({
             ErrorCode::NegotiationFailed,
-            "bridge returned an invalid protocol-v7 negotiation",
+            "bridge returned an invalid protocol-v8 negotiation",
             std::nullopt,
         });
     }
@@ -206,7 +206,7 @@ Result<NativeClient> NativeClient::connect_unix(
         std::move(client_config));
 }
 
-const v7::ServerHello& NativeClient::server_hello() const noexcept
+const v8::ServerHello& NativeClient::server_hello() const noexcept
 {
     return hello_;
 }
@@ -221,8 +221,8 @@ Result<RequestId> NativeClient::next_request_id()
     return identities_->next_request_id();
 }
 
-Result<v7::RpcResponse> NativeClient::exchange_checked(
-    const v7::RpcRequest& request,
+Result<v8::RpcResponse> NativeClient::exchange_checked(
+    const v8::RpcRequest& request,
     const RequestId& request_id)
 {
     auto response = channel_->exchange(request);
@@ -233,7 +233,7 @@ Result<v7::RpcResponse> NativeClient::exchange_checked(
     const auto* actual_request_id = response_request_id(response.value());
     if(actual_request_id == nullptr || *actual_request_id != request_id)
     {
-        return Result<v7::RpcResponse>::failure({
+        return Result<v8::RpcResponse>::failure({
             ErrorCode::ResponseRequestMismatch,
             "bridge response does not match the native SDK request identity",
             std::nullopt,
@@ -241,108 +241,124 @@ Result<v7::RpcResponse> NativeClient::exchange_checked(
     }
     if(response_server_instance(response.value()) != hello_.server_instance_id)
     {
-        return Result<v7::RpcResponse>::failure({
+        return Result<v8::RpcResponse>::failure({
             ErrorCode::ServerInstanceChanged,
             "bridge process identity changed; reconnect before issuing another request",
             std::nullopt,
         });
     }
-    if(const auto* error = std::get_if<v7::ErrorEnvelope>(&response.value()))
+    if(const auto* error = std::get_if<v8::ErrorEnvelope>(&response.value()))
     {
-        return Result<v7::RpcResponse>::failure(server_error(*error));
+        return Result<v8::RpcResponse>::failure(server_error(*error));
     }
     return response;
 }
 
-Result<v7::LeaseResult> NativeClient::acquire_lease(
-    std::vector<v7::ResourceKey> resources,
+Result<v8::LeaseResult> NativeClient::acquire_lease(
+    std::vector<v8::ResourceKey> resources,
     LeaseDurationMs duration_ms)
 {
     auto request_id = next_request_id();
     if(!request_id)
     {
-        return Result<v7::LeaseResult>::failure(request_id.error());
+        return Result<v8::LeaseResult>::failure(request_id.error());
     }
     const auto expected = request_id.value();
     const auto params_id = request_id.value();
-    const v7::RpcRequest request = v7::RpcRequestAcquireLease {
+    const v8::RpcRequest request = v8::RpcRequestAcquireLease {
         envelope(
             std::move(request_id).value(),
-            v7::LeaseRequest {
+            v8::LeaseRequest {
                 params_id,
                 client_id_,
                 std::move(resources),
                 duration_ms,
             }),
     };
-    return unwrap_success<v7::RpcResponseAcquireLeaseSuccess, v7::LeaseResult>(
+    return unwrap_success<v8::RpcResponseAcquireLeaseSuccess, v8::LeaseResult>(
         exchange_checked(request, expected),
         "native lease acquisition");
 }
 
-Result<v7::LeaseResult> NativeClient::renew_lease(
+Result<v8::LeaseResult> NativeClient::renew_lease(
     LeaseId lease_id,
     LeaseDurationMs duration_ms)
 {
     auto request_id = next_request_id();
     if(!request_id)
     {
-        return Result<v7::LeaseResult>::failure(request_id.error());
+        return Result<v8::LeaseResult>::failure(request_id.error());
     }
     const auto expected = request_id.value();
     const auto params_id = request_id.value();
-    const v7::RpcRequest request = v7::RpcRequestRenewLease {
+    const v8::RpcRequest request = v8::RpcRequestRenewLease {
         envelope(
             std::move(request_id).value(),
-            v7::RenewLeaseRequest {
+            v8::RenewLeaseRequest {
                 params_id,
                 client_id_,
                 std::move(lease_id),
                 duration_ms,
             }),
     };
-    return unwrap_success<v7::RpcResponseRenewLeaseSuccess, v7::LeaseResult>(
+    return unwrap_success<v8::RpcResponseRenewLeaseSuccess, v8::LeaseResult>(
         exchange_checked(request, expected),
         "native lease renewal");
 }
 
-Result<v7::LeaseResult> NativeClient::release_lease(LeaseId lease_id)
+Result<v8::LeaseResult> NativeClient::release_lease(LeaseId lease_id)
 {
     auto request_id = next_request_id();
     if(!request_id)
     {
-        return Result<v7::LeaseResult>::failure(request_id.error());
+        return Result<v8::LeaseResult>::failure(request_id.error());
     }
     const auto expected = request_id.value();
     const auto params_id = request_id.value();
-    const v7::RpcRequest request = v7::RpcRequestReleaseLease {
+    const v8::RpcRequest request = v8::RpcRequestReleaseLease {
         envelope(
             std::move(request_id).value(),
-            v7::ReleaseLeaseRequest {
+            v8::ReleaseLeaseRequest {
                 params_id,
                 client_id_,
                 std::move(lease_id),
             }),
     };
-    return unwrap_success<v7::RpcResponseReleaseLeaseSuccess, v7::LeaseResult>(
+    return unwrap_success<v8::RpcResponseReleaseLeaseSuccess, v8::LeaseResult>(
         exchange_checked(request, expected),
         "native lease release");
 }
 
-Result<v7::NativeRouteInventory> NativeClient::native_enumerate()
+Result<v8::NativeRouteInventory> NativeClient::native_enumerate()
 {
     auto request_id = next_request_id();
     if(!request_id)
     {
-        return Result<v7::NativeRouteInventory>::failure(request_id.error());
+        return Result<v8::NativeRouteInventory>::failure(request_id.error());
     }
     const auto expected = request_id.value();
-    const v7::RpcRequest request = v7::RpcRequestNativeEnumerate {
-        envelope(std::move(request_id).value(), v7::EmptyRequest {}),
+    const v8::RpcRequest request = v8::RpcRequestNativeEnumerate {
+        envelope(std::move(request_id).value(), v8::EmptyRequest {}),
     };
-    return unwrap_success<v7::RpcResponseNativeEnumerateSuccess, v7::NativeRouteInventory>(
+    return unwrap_success<v8::RpcResponseNativeEnumerateSuccess, v8::NativeRouteInventory>(
         exchange_checked(request, expected),
         "native route enumeration");
+}
+
+Result<v8::BridgeSnapshot> NativeClient::snapshot()
+{
+    auto request_id = next_request_id();
+    if(!request_id)
+    {
+        return Result<v8::BridgeSnapshot>::failure(request_id.error());
+    }
+    const auto expected = request_id.value();
+    const v8::RpcRequest request = v8::RpcRequestSnapshot {
+        envelope(std::move(request_id).value(), v8::EmptyRequest {}),
+    };
+    return unwrap_success<v8::RpcResponseSnapshotSuccess, v8::BridgeSnapshot>(
+        exchange_checked(request, expected),
+        "bridge snapshot");
 }
 
 Result<NativeExchangeSubmission> NativeClient::prepare_native_exchange(
@@ -365,13 +381,13 @@ Result<NativeExchangeSubmission> NativeClient::prepare_native_exchange(
     });
 }
 
-Result<v7::NativeExchangeOutcome> NativeClient::native_transact(
+Result<v8::NativeExchangeOutcome> NativeClient::native_transact(
     const NativeExchangeSubmission& submission)
 {
-    const v7::RpcRequest request = v7::RpcRequestNativeTransact {
+    const v8::RpcRequest request = v8::RpcRequestNativeTransact {
         envelope(
             submission.request_id,
-            v7::NativeExchangeRequest {
+            v8::NativeExchangeRequest {
                 submission.request_id,
                 client_id_,
                 submission.lease_id,
@@ -380,31 +396,31 @@ Result<v7::NativeExchangeOutcome> NativeClient::native_transact(
                 submission.timeout_ms,
             }),
     };
-    return unwrap_success<v7::RpcResponseNativeTransactSuccess, v7::NativeExchangeOutcome>(
+    return unwrap_success<v8::RpcResponseNativeTransactSuccess, v8::NativeExchangeOutcome>(
         exchange_checked(request, submission.request_id),
         "native receiver exchange");
 }
 
-Result<v7::NativeRouteEventBatch> NativeClient::native_watch(
+Result<v8::NativeRouteEventBatch> NativeClient::native_watch(
     NativeEventSubscription subscription)
 {
     auto request_id = next_request_id();
     if(!request_id)
     {
-        return Result<v7::NativeRouteEventBatch>::failure(request_id.error());
+        return Result<v8::NativeRouteEventBatch>::failure(request_id.error());
     }
     const auto expected = request_id.value();
-    const v7::RpcRequest request = v7::RpcRequestNativeWatch {
+    const v8::RpcRequest request = v8::RpcRequestNativeWatch {
         envelope(
             std::move(request_id).value(),
-            v7::SubscriptionRequest {
+            v8::SubscriptionRequest {
                 client_id_,
                 std::move(subscription.subscription_id),
                 std::move(subscription.expected_cursor),
                 subscription.max_events,
             }),
     };
-    return unwrap_success<v7::RpcResponseNativeWatchSuccess, v7::NativeRouteEventBatch>(
+    return unwrap_success<v8::RpcResponseNativeWatchSuccess, v8::NativeRouteEventBatch>(
         exchange_checked(request, expected),
         "native route watch");
 }

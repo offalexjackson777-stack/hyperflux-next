@@ -2689,6 +2689,31 @@ template<>
 }
 
 template<>
+[[nodiscard]] inline BatteryCharge decode<BatteryCharge>(const Json& value)
+{
+    if(!value.is_string())
+    {
+        throw CodecError("expected BatteryCharge wire string");
+    }
+    const auto wire = value.get<std::string>();
+    if(wire == "charging")
+    {
+        return BatteryCharge::Charging;
+    }
+    if(wire == "discharging")
+    {
+        return BatteryCharge::Discharging;
+    }
+    throw CodecError("unknown BatteryCharge wire value");
+}
+
+template<>
+[[nodiscard]] inline Json encode<BatteryCharge>(const BatteryCharge& value)
+{
+    return Json(std::string(to_string(value)));
+}
+
+template<>
 [[nodiscard]] inline LeaseOutcome decode<LeaseOutcome>(const Json& value)
 {
     if(!value.is_string())

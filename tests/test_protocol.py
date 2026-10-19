@@ -27,8 +27,8 @@ from hfxdev.protocol import (
 class ProtocolCompilerTests(unittest.TestCase):
     def test_catalog_is_versioned_and_generated_deterministically(self) -> None:
         registry = load_protocol_registry(ROOT)
-        self.assertEqual(registry.current_version, 7)
-        self.assertEqual([item.version for item in registry.versions], [5, 7])
+        self.assertEqual(registry.current_version, 8)
+        self.assertEqual([item.version for item in registry.versions], [5, 7, 8])
         self.assertEqual(
             [(item.version, item.retired_in) for item in registry.retired],
             [(1, "2.2.0"), (2, "2.2.0"), (3, "2.2.0"), (4, "2.2.0"), (6, "2.2.0")],
@@ -79,6 +79,17 @@ class ProtocolCompilerTests(unittest.TestCase):
             ],
             ["native-enumerate", "native-transact", "native-watch"],
         )
+        battery_fields = {
+            item.version: [
+                field.name
+                for record in item.catalog.records
+                if record.name == "BatteryObservation"
+                for field in record.fields
+            ]
+            for item in registry.versions[1:]
+        }
+        self.assertNotIn("charge", battery_fields[7])
+        self.assertIn("charge", battery_fields[8])
         first = load_protocol_catalog(ROOT)
         second = load_protocol_catalog(ROOT)
         self.assertEqual(first, second)

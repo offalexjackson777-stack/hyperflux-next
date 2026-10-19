@@ -2638,6 +2638,22 @@ enum class TelemetryAvailability
     return "unknown";
 }
 
+enum class BatteryCharge
+{
+    Charging,
+    Discharging,
+};
+
+[[nodiscard]] constexpr std::string_view to_string(BatteryCharge value)
+{
+    switch(value)
+    {
+        case BatteryCharge::Charging: return "charging";
+        case BatteryCharge::Discharging: return "discharging";
+    }
+    return "unknown";
+}
+
 enum class LeaseOutcome
 {
     Granted,

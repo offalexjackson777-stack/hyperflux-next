@@ -26,7 +26,8 @@ The SDK is the supported contract for integrations. Protocol v5 preserves
 logical-device discovery, semantic migration APIs, telemetry, ownership, and
 diagnostics. Protocol v7 adds qualified native-route enumeration, bounded
 availability events, NativeControl ownership, and exact fixed-size Feature
-exchanges while still hiding socket framing, credentials, receiver carrier
+exchanges. Protocol v8 keeps all of v7 and adds an optional charging state to
+battery observations, all while still hiding socket framing, credentials, receiver carrier
 frames, and bridge-internal actors. C++, Rust, and Python clients share
 generated protocol types and language-appropriate convenience APIs.
 

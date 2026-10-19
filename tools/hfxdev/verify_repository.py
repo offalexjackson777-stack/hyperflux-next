@@ -143,6 +143,8 @@ SCHEMA_DECLARATION_EXEMPTIONS: dict[str, str] = {
             "v7/native-watch-response",
             "v7/negotiate-request",
             "v7/snapshot-response",
+            "v8/negotiate-request",
+            "v8/snapshot-response",
         )
     },
     "toolchains/documentation-render/package-lock.json": _FOREIGN_FORMAT,

@@ -196,7 +196,7 @@ mod tests {
         let state = ChildBatteryState::present(
             62,
             ChildBatteryStatus::Unknown,
-            "Razer DeathStalker V2 Pro Tenkeyless",
+            "Razer DeathStalker V2 Pro TKL",
         );
         assert!(state.is_present());
         let request = state
@@ -215,10 +215,7 @@ mod tests {
             .iter()
             .position(|byte| *byte == 0)
             .expect("name is terminated");
-        assert_eq!(
-            &request.model_name[..end],
-            b"DeathStalker V2 Pro Tenkeyless"
-        );
+        assert_eq!(&request.model_name[..end], b"DeathStalker V2 Pro TKL");
         assert!(request.model_name[end..].iter().all(|byte| *byte == 0));
     }
 

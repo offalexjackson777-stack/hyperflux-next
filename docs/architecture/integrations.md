@@ -24,7 +24,7 @@ The integration model deliberately exposes two related collections:
   grant a route or claim that a child is asleep or powered off.
 - **Native routes** contain only devices with exact receiver and child profile
   bindings, a qualified report family, an opaque route token, and one of the
-  protocol-v7 states `available`, `temporarily-unavailable`, or `withdrawn`.
+  native-protocol states `available`, `temporarily-unavailable`, or `withdrawn`.
 
 A direct data route wins only when its nonempty, physically queried serial
 matches the receiver-backed child. HyperFlux then withdraws that one virtual
@@ -64,9 +64,9 @@ unchanged.
 
 OpenRazer keeps its daemon, D-Bus API, Python classes, methods, images, and
 persistence. A source-pinned driver patch accepts trusted feature-only UHID
-devices and sends their reports through protocol v7. Polychromatic therefore
-uses its ordinary OpenRazer backend rather than learning HyperFlux device
-semantics.
+devices and sends their reports through the native protocol (version 7 or 8).
+Polychromatic therefore uses its ordinary OpenRazer backend rather than learning
+HyperFlux device semantics.
 
 ## OpenRazer Source And Package Ownership
 

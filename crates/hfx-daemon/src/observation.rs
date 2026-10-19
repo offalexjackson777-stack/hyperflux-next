@@ -114,10 +114,14 @@ impl PassiveTranslation {
         }
     }
 
-    fn charge(lane: ChildBatteryLane, reading: ChildChargeReading) -> Self {
+    fn charge(
+        lane: ChildBatteryLane,
+        reading: ChildChargeReading,
+        observation: LifecycleObservation,
+    ) -> Self {
         Self {
             disposition: PassiveDisposition::Applied,
-            observations: Vec::new(),
+            observations: vec![observation],
             restore_ready: None,
             charge: Some((lane, reading)),
         }
@@ -661,17 +665,41 @@ impl PassiveObservationTranslator {
         } else {
             ChildChargeReading::Unknown
         };
-        PassiveTranslation::charge(lane, reading)
+        let device_id = binding.device_id.clone();
+        let observation = self.charge_observation(device_id, reading, stamp.clone());
+        PassiveTranslation::charge(lane, reading, observation)
     }
 
     /// Decodes one route value. The keyboard status report also carries its
     /// charge state in that value, so the route word is read a second time
     /// through the route charge decoder without changing the route decoding.
+    /// The charge observation follows the route observation, so the route
+    /// fact is applied first at the shared report position.
     fn route(&mut self, slot: u32, value: u32, stamp: ObservationStamp) -> PassiveTranslation {
         let charge = self.route_charge(slot, value, &stamp);
+        let charge_observation = charge.and_then(|(_, reading)| {
+            let device_id = self.lanes.get(&slot)?.device_id.clone();
+            Some(self.charge_observation(device_id, reading, stamp.clone()))
+        });
         let mut translation = self.route_state(slot, value, stamp);
         translation.charge = charge;
+        translation.observations.extend(charge_observation);
         translation
+    }
+
+    fn charge_observation(
+        &self,
+        device_id: LogicalDeviceId,
+        reading: ChildChargeReading,
+        stamp: ObservationStamp,
+    ) -> LifecycleObservation {
+        self.observation(
+            stamp,
+            LifecycleObservationKind::BatteryCharge {
+                device_id,
+                charge: reading.battery_charge(),
+            },
+        )
     }
 
     /// Reads the charge state from a keyboard status-report route word.

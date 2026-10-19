@@ -31,7 +31,8 @@ These terms mean the same thing on every generated page.
 | [Architecture Rules](architecture.md) | Which part of HyperFlux owns what and which way the parts may depend on each other. | `architecture/constitution.json` |
 | [Bridge Protocol](bridge-protocol.md) | Every method and message in the current bridge protocol and which versions are still accepted. | `protocol/registry.json` |
 | [Bridge Protocol V5](bridge-protocol-v5.md) | Version 5 of the bridge protocol exactly as it was released. | `protocol/v5/catalog.json` |
-| [Bridge Protocol V7](bridge-protocol-v7.md) | Version 7 of the bridge protocol, the current version. | `protocol/v7/catalog.json` |
+| [Bridge Protocol V7](bridge-protocol-v7.md) | Version 7 of the bridge protocol, still accepted for older clients. | `protocol/v7/catalog.json` |
+| [Bridge Protocol V8](bridge-protocol-v8.md) | Version 8 of the bridge protocol, the current version. | `protocol/v8/catalog.json` |
 | [Design Coverage](design-coverage.md) | Which Design Book sections are checked by tests and which are still open. | `assurance/design-coverage.json` |
 | [Development Environment](development-environment.md) | The pinned tools, container, and app sources used to build and check HyperFlux. | `toolchains/development-environment.json` |
 | [Device Knowledge](device-knowledge.md) | What is known about each candidate device, where each fact comes from, and what is still unknown. | `knowledge/reviewed-facts.json`, `knowledge/capability-map.json` |

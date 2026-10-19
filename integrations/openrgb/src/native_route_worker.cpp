@@ -203,6 +203,12 @@ std::optional<sdk::Error> NativeRouteWorker::last_error() const
     return last_error_;
 }
 
+std::optional<v8::BridgeSnapshot> NativeRouteWorker::device_status() const
+{
+    std::lock_guard lock(mutex_);
+    return device_status_;
+}
+
 bool NativeRouteWorker::should_stop() const noexcept
 {
     std::lock_guard lock(mutex_);
@@ -247,6 +253,31 @@ bool NativeRouteWorker::publish(NativeRouteSnapshot snapshot) noexcept
     {
         fail_unexpected("route snapshot publication failed");
         return false;
+    }
+}
+
+void NativeRouteWorker::publish_status(std::optional<v8::BridgeSnapshot> status) noexcept
+{
+    try
+    {
+        {
+            std::lock_guard lock(mutex_);
+            const bool unchanged = status.has_value() == device_status_.has_value()
+                && (!status.has_value() || status->receivers == device_status_->receivers);
+            device_status_ = status;
+            if(unchanged)
+            {
+                return;
+            }
+        }
+        if(callbacks_.on_device_status)
+        {
+            callbacks_.on_device_status(std::move(status));
+        }
+    }
+    catch(...)
+    {
+        // Device status is display-only; it never interrupts native routing.
     }
 }
 
@@ -298,6 +329,7 @@ void NativeRouteWorker::fail_unexpected(const char* operation, const char* detai
 
 void NativeRouteWorker::recover(sdk::Error error, std::uint32_t& delay_ms) noexcept
 {
+    publish_status(std::nullopt);
     {
         std::lock_guard lock(mutex_);
         last_error_ = error;
@@ -348,9 +380,22 @@ void NativeRouteWorker::run() noexcept
             }
             recovery_delay = config_.reconnect_initial_ms;
             std::optional<SubscriptionId> subscription_id;
+            std::optional<std::chrono::steady_clock::time_point> status_read_at;
 
             while(!should_stop())
             {
+                const auto now = std::chrono::steady_clock::now();
+                if(config_.status_interval_ms != 0
+                   && (!status_read_at.has_value()
+                       || now - *status_read_at
+                           >= std::chrono::milliseconds(config_.status_interval_ms)))
+                {
+                    status_read_at = now;
+                    auto status = client->snapshot();
+                    publish_status(
+                        status ? std::optional<v8::BridgeSnapshot>(std::move(status).value())
+                               : std::nullopt);
+                }
                 bool force_rescan = false;
                 {
                     std::lock_guard lock(mutex_);
