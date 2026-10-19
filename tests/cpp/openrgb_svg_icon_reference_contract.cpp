@@ -38,19 +38,27 @@ struct Comparison
 
 /// Pixels the reference draws, and pixels where the two drawings differ by
 /// more than antialiasing does between Qt releases.
-Comparison compare(const QImage& reference, int reference_column, const QImage& ours, int our_column, int size)
+Comparison compare(const QImage& reference, const QImage& ours)
 {
     Comparison result;
-    for(int y = 0; y < size; ++y)
+    for(int y = 0; y < reference.height(); ++y)
     {
-        for(int x = 0; x < size; ++x)
+        for(int x = 0; x < reference.width(); ++x)
         {
-            const QRgb expected = reference.pixel(reference_column * size + x, y);
+            const QRgb expected = reference.pixel(x, y);
             result.inked += qAlpha(expected) > 0 ? 1 : 0;
-            result.off += difference(expected, ours.pixel(our_column * size + x, y)) > 32 ? 1 : 0;
+            result.off += difference(expected, ours.pixel(x, y)) > 32 ? 1 : 0;
         }
     }
     return result;
+}
+
+/// One icon's cell. Converting a cell rather than the whole sheet keeps Qt
+/// from splitting the conversion across its thread pool, which the
+/// ThreadSanitizer lane would report inside Qt.
+QImage cell(const QImage& sheet, int column, int size)
+{
+    return sheet.copy(column * size, 0, size, size).convertToFormat(QImage::Format_ARGB32_Premultiplied);
 }
 
 /// Same drawing, within one percent of its inked pixels.
@@ -67,8 +75,7 @@ int main(int argc, char** argv)
     int failures = 0;
     for(const int size : hyperflux::openrgb::native::reference_sizes)
     {
-        const QImage reference = QImage(QString(HFX_OPENRGB_ICON_REFERENCE_DIR "/reference-%1.png").arg(size))
-                                     .convertToFormat(QImage::Format_ARGB32_Premultiplied);
+        const QImage reference(QString(HFX_OPENRGB_ICON_REFERENCE_DIR "/reference-%1.png").arg(size));
         QImage ours = hyperflux::openrgb::native::blank_sheet(size);
         if(reference.size() != ours.size())
         {
@@ -79,8 +86,8 @@ int main(int argc, char** argv)
         painter.setRenderHint(QPainter::Antialiasing);
         for(std::size_t column = 0; column < embedded_icons.size(); ++column)
         {
-            const QRectF cell(static_cast<double>(column) * size, 0, size, size);
-            if(!hyperflux::openrgb::native::paint_svg(painter, embedded_icons[column].svg, cell, Qt::black))
+            const QRectF target(static_cast<double>(column) * size, 0, size, size);
+            if(!hyperflux::openrgb::native::paint_svg(painter, embedded_icons[column].svg, target, Qt::black))
             {
                 std::cerr << embedded_icons[column].name << ": not understood\n";
                 ++failures;
@@ -90,7 +97,7 @@ int main(int argc, char** argv)
         for(std::size_t column = 0; column < embedded_icons.size(); ++column)
         {
             const int index = static_cast<int>(column);
-            const Comparison comparison = compare(reference, index, ours, index, size);
+            const Comparison comparison = compare(cell(reference, index, size), cell(ours, index, size));
             if(!matches(comparison))
             {
                 std::cerr << embedded_icons[column].name << " at " << size << " px: " << comparison.off << " of "
@@ -99,7 +106,7 @@ int main(int argc, char** argv)
             }
         }
         // The comparison must notice a different icon, or it proves nothing.
-        if(matches(compare(reference, 0, ours, 1, size)))
+        if(matches(compare(cell(reference, 0, size), cell(ours, 1, size))))
         {
             std::cerr << "the comparison cannot tell " << embedded_icons[0].name << " from "
                       << embedded_icons[1].name << '\n';
