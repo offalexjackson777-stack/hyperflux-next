@@ -165,7 +165,7 @@ class SnapshotImportContracts(unittest.TestCase):
 
     def test_committed_snapshot_is_valid_and_targets_the_candidate(self) -> None:
         value = load_snapshot(ROOT)
-        self.assertEqual("2.1.2-1", value["candidate"])
+        self.assertEqual("2.2.0-1", value["candidate"])
         self.assertEqual(list(watched_packages(candidate_split())), value["watched_packages"])
         self.assertEqual(list(REPOSITORIES), [item["name"] for item in value["repositories"]])
         self.assertTrue((ROOT / AUTHORITY).is_file())
@@ -271,10 +271,10 @@ class ProviderGateContracts(unittest.TestCase):
         self.assertFalse(result.passed)
         self.assertIn("official snapshot is unusable", result.problems[0])
 
-    def test_committed_snapshot_does_not_pass_without_testing_staging_and_receipts(self) -> None:
+    def test_committed_snapshot_does_not_pass_without_physical_receipts(self) -> None:
         result = evaluate_provider_alignment(ROOT, split=self.split)
         self.assertFalse(result.passed)
-        self.assertTrue(any("extra-testing was not observed" in item for item in result.problems))
+        self.assertTrue(any("no physical application receipt" in item for item in result.problems))
 
 
 if __name__ == "__main__":

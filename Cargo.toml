@@ -3,7 +3,7 @@ members = ["crates/hfx-bridge", "crates/hfx-core", "crates/hfx-daemon", "crates/
 resolver = "3"
 
 [workspace.package]
-version = "2.1.2"
+version = "2.2.0"
 edition = "2024"
 rust-version = "1.95"
 license = "GPL-2.0-only"
