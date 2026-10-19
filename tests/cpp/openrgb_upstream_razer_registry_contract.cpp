@@ -215,8 +215,13 @@ public:
 class TestController final : public RGBController
 {
 public:
-    TestController(std::string device_vendor, std::string device_location, std::string device_serial)
+    TestController(
+        std::string device_vendor,
+        std::string device_location,
+        std::string device_serial,
+        std::string device_name = {})
     {
+        name = std::move(device_name);
         vendor = std::move(device_vendor);
         location = std::move(device_location);
         serial = std::move(device_serial);
@@ -714,7 +719,8 @@ int main()
         return 3;
     }
 
-    TestController direct_mouse_controller("Razer", "HID: /dev/hidraw-direct-mouse", "MOUSE-SERIAL-0001     ");
+    TestController direct_mouse_controller(
+        "Razer", "HID: /dev/hidraw-direct-mouse", "MOUSE-SERIAL-0001     ", "Razer Basilisk V3 Pro (Wireless)");
     TestController network_controller("Razer", "Network: 127.0.0.1", "MOUSE-SERIAL-0001");
     TestController unrelated_controller("Other", "HID: /dev/hidraw-other", "MOUSE-SERIAL-0001");
     TestController blank_serial_controller("Razer", "HID: /dev/hidraw-blank", "                      ");
@@ -737,6 +743,41 @@ int main()
               != "KEYBOARD-SERIAL-0001")
     {
         return 4;
+    }
+
+    // OpenRGB's own name says how it reaches the device; the summary repeats it
+    // for the suppressed entry only, and suppression itself never reads it.
+    const auto connections = collect_direct_razer_connections({
+        &direct_mouse_controller,
+        &network_controller,
+        &unrelated_controller,
+        &blank_serial_controller,
+        nullptr,
+    });
+    if(connections != std::map<std::string, std::string, std::less<>> {{"MOUSE-SERIAL-0001", "Wireless"}})
+    {
+        return 40;
+    }
+    registry.note_direct_connections(connections);
+    bool reported_wireless = false;
+    for(const auto& summary : registry.summaries())
+    {
+        if(summary.direct_suppressed != (summary.direct_connection == "Wireless"))
+        {
+            return 41;
+        }
+        reported_wireless = reported_wireless || summary.direct_connection == "Wireless";
+    }
+    TestController wired_twin(
+        "Razer", "HID: /dev/hidraw-wired-mouse", "MOUSE-SERIAL-0001", "Razer Basilisk V3 Pro (Wired)");
+    TestController plain_name("Razer", "HID: /dev/hidraw-plain", "PLAIN-SERIAL", "Razer Basilisk");
+    const auto ambiguous = collect_direct_razer_connections({&direct_mouse_controller, &wired_twin, &plain_name});
+    if(!reported_wireless
+       || ambiguous
+              != std::map<std::string, std::string, std::less<>> {
+                  {"MOUSE-SERIAL-0001", ""}, {"PLAIN-SERIAL", ""}})
+    {
+        return 42;
     }
 
     const auto repeat_direct = registry.apply_direct_serials({"MOUSE-SERIAL-0001"});

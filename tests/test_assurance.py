@@ -46,7 +46,7 @@ class AssuranceTests(unittest.TestCase):
         self.assertTrue(self.inventory.rust_security.deny_warnings)
         self.assertEqual(len(self.inventory.python_projects), 1)
         self.assertEqual(len(self.inventory.python_packages), 1)
-        self.assertEqual(len(self.inventory.vendored_packages), 1)
+        self.assertEqual(len(self.inventory.vendored_packages), 20)
         self.assertEqual(
             {package.id for package in self.inventory.upstream_packages},
             {"openrazer", "openrgb", "polychromatic"},

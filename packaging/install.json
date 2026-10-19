@@ -294,6 +294,16 @@
       "mode": "0644",
       "preserve": false,
       "include": []
+    },
+    {
+      "id": "lucide-license",
+      "distribution_component": "full",
+      "kind": "file",
+      "source": "integrations/openrgb/icons/LICENSE-lucide",
+      "destination": "/usr/share/licenses/hyperflux-next-full/LICENSE-lucide",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
     }
   ]
 }

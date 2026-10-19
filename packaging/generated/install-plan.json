@@ -1,6 +1,6 @@
 {
   "schema": "hyperflux-compiled-install-plan-v2",
-  "install_manifest_sha256": "2a861e829965eaf5e1de4d37c6efa3e39b2fa11ad6c72726e831f94478905d96",
+  "install_manifest_sha256": "048975153bfb2234437e506b154ea255197f76517a8a0031ee7e23988676b8ae",
   "product": {
     "name": "hyperflux-next-linux",
     "version": "2.2.0",
@@ -380,6 +380,14 @@
       "distribution_component": "full",
       "source": "LICENSE",
       "destination": "/usr/share/licenses/hyperflux-next-full/LICENSE",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "lucide-license",
+      "distribution_component": "full",
+      "source": "integrations/openrgb/icons/LICENSE-lucide",
+      "destination": "/usr/share/licenses/hyperflux-next-full/LICENSE-lucide",
       "mode": "0644",
       "preserve": false
     }

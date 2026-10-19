@@ -39,10 +39,10 @@ The signing subkey belongs to primary key `8BF8A266E756BD1C24C930918B3F385000715
 - Checksummed Rust registry packages: 29
 - Repository Python projects: 1
 - Distribution-provided Python packages: 1
-- Vendored source packages: 1
+- Vendored source packages: 20
 - Pinned application upstreams: 3
 - Immutable workflow actions: 7
-- Dependency list SHA-256: `a9785ec2755f6e6ff4854f72220a342a0a3d8e5e005d4bd4bc4e466835abd405`
+- Dependency list SHA-256: `0f889c7aae3009050eead9f4fac4f19d2b031923d8ae654fb6d2565646979c05`
 
 ## Allowed Licenses
 
@@ -55,6 +55,7 @@ The signing subkey belongs to primary key `8BF8A266E756BD1C24C930918B3F385000715
 - `GPL-2.0-or-later`
 - `GPL-2.0-or-later AND CC-BY-SA-4.0`
 - `GPL-3.0-only`
+- `ISC`
 - `LGPL-2.1-or-later`
 - `MIT`
 - `MIT OR Apache-2.0`

@@ -192,6 +192,7 @@ class InstallManifestTests(unittest.TestCase):
                 "full-bridge-integration-drop-in",
                 "full-component-descriptor",
                 "openrgb-license",
+                "lucide-license",
             },
         )
         self.assertEqual(
@@ -205,6 +206,7 @@ class InstallManifestTests(unittest.TestCase):
                 "/usr/lib/systemd/system/hyperflux-next-bridge.service.d/50-full.conf",
                 "/usr/share/hyperflux-next/components/full.json",
                 "/usr/share/licenses/hyperflux-next-full/LICENSE",
+                "/usr/share/licenses/hyperflux-next-full/LICENSE-lucide",
             },
         )
         self.assertNotIn(
@@ -368,6 +370,21 @@ class InstallManifestTests(unittest.TestCase):
             ):
                 with self.assertRaises(ModelError):
                     load_install_manifest(ROOT)
+
+
+class OpenRGBHelpTargetTests(unittest.TestCase):
+    def test_the_plugin_help_names_the_guide_the_package_installs(self) -> None:
+        header = (
+            ROOT / "integrations/openrgb/include/hyperflux/openrgb/plugin_view_model.hpp"
+        ).read_text(encoding="utf-8")
+        payload = next(
+            item
+            for item in load_json(ROOT / "packaging" / "install.json")["payloads"]
+            if item["id"] == "operator-troubleshooting"
+        )
+        self.assertIn(f'installed_help_path = "{payload["destination"]}";', header)
+        self.assertIn(f'/blob/main/{payload["source"]}";', header)
+        self.assertTrue((ROOT / payload["source"]).is_file())
 
 
 if __name__ == "__main__":

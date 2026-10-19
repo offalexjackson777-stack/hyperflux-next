@@ -4,7 +4,7 @@
 
 This page lists the HyperFlux packages, what each one depends on, and what each one replaces, for packagers and anyone choosing between Core and Full.
 
-Source digest: `e4577091fbbc71f969a66d1d1b2deb93635342b23ab262492fc6b69bc11f6668`.
+Source digest: `334b43763854e699eadae3742bebcee221a0651edc6450ca090ff41b9b4ad168`.
 
 From `2.1.0-1` the Arch `pkgbase=hyperflux-next` builds 4 packages that never install the same file. Core installs `hyperflux-next-dkms` and `hyperflux-next-linux`. Full installs `hyperflux-next-dkms`, `hyperflux-next-linux`, `hyperflux-next-openrazer-driver-dkms` and `hyperflux-next-full`. Packages for other distributions are tested separately.
 

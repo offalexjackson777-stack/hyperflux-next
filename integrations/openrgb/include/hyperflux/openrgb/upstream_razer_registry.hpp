@@ -110,6 +110,11 @@ struct UpstreamRazerControllerSummary
     bool direct_suppressed;
     /// Bridge battery observation for this device, when the bridge reported one.
     std::optional<v8::BatteryObservation> battery {};
+    /// Whether the bridge last saw the device awake, asleep or out of reach.
+    std::optional<PresenceState> presence {};
+    /// When direct_suppressed: "Wired" or "Wireless" as OpenRGB's own Razer
+    /// controller for the same serial names it, or empty when its name does not say.
+    std::string direct_connection {};
 
     friend bool operator==(
         const UpstreamRazerControllerSummary&,
@@ -135,6 +140,9 @@ public:
         std::vector<v8::NativeRoute> routes);
     [[nodiscard]] UpstreamRegistryUpdate apply_direct_serials(
         std::vector<std::string> physically_queried_serials);
+    /// Records how OpenRGB's own controllers reach each direct serial, for
+    /// display only. Suppression never reads it.
+    void note_direct_connections(std::map<std::string, std::string, std::less<>> connections);
     void shutdown() noexcept;
 
     [[nodiscard]] std::size_t size() const noexcept;
@@ -161,12 +169,17 @@ private:
     UpstreamRazerControllerFactory* factory_;
     std::map<std::string, Entry, std::less<>> entries_;
     std::set<std::string, std::less<>> direct_serials_;
+    std::map<std::string, std::string, std::less<>> direct_connections_;
     bool stopped_ = false;
 };
 
 [[nodiscard]] bool is_eligible_upstream_razer_route(const v8::NativeRoute& route) noexcept;
 [[nodiscard]] std::string canonical_queried_serial(std::string_view serial);
 [[nodiscard]] std::vector<std::string> collect_direct_razer_serials(
+    const std::vector<RGBControllerInterface*>& controllers);
+/// "Wired" or "Wireless" per direct serial, read from the "(Wired)" or
+/// "(Wireless)" suffix OpenRGB puts on its own Razer controller names.
+[[nodiscard]] std::map<std::string, std::string, std::less<>> collect_direct_razer_connections(
     const std::vector<RGBControllerInterface*>& controllers);
 
 } // namespace hyperflux::openrgb::native

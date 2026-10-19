@@ -16,6 +16,7 @@ EXPRESSIONS = {
     "GPL-2.0-or-later",
     "GPL-2.0 WITH Linux-syscall-note",
     "GPL-3.0-only",
+    "ISC",
     "MIT",
 }
 POLICY_KEYS = {

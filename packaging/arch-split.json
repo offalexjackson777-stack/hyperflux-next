@@ -119,7 +119,8 @@
       "licenses": [
         "GPL-2.0-only",
         "GPL-2.0-or-later",
-        "GPL-3.0-only"
+        "GPL-3.0-only",
+        "ISC"
       ],
       "builds": [
         "openrazer-native-relay",
@@ -132,7 +133,8 @@
         "openrazer-native-key-event-links",
         "full-bridge-integration-drop-in",
         "full-component-descriptor",
-        "openrgb-license"
+        "openrgb-license",
+        "lucide-license"
       ],
       "dependency_roles": [
         "c-runtime",

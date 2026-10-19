@@ -198,6 +198,21 @@ class DebianPlanTests(unittest.TestCase):
         self.assertTrue(text.startswith("hyperflux-next-linux (2.1.0-1) stonking; urgency=medium\n"))
         self.assertIn("  Thu, 01 Jan 2026 00:00:00 +0000\n", text)
 
+    def test_copyright_scopes_the_bundled_icon_license_to_its_files(self) -> None:
+        full = next(plan for plan in self.plans if "ISC" in plan.licenses)
+        text = copyright_text(full)
+        paragraphs = text.split("\n\n")
+        self.assertNotIn("ISC", paragraphs[1])
+        self.assertTrue(paragraphs[2].startswith("Files: integrations/openrgb/icons/*\n"))
+        self.assertIn("Lucide Contributors", paragraphs[2])
+        self.assertTrue(paragraphs[2].endswith("License: ISC"))
+        self.assertTrue(paragraphs[3].startswith("Files: integrations/openrgb/icons/hyperflux-*\n"))
+        self.assertNotIn("ISC", paragraphs[3])
+        self.assertIn("\nLicense: ISC\n Permission to use, copy, modify", text)
+        for plan in self.plans:
+            if "ISC" not in plan.licenses:
+                self.assertNotIn("Lucide", copyright_text(plan))
+
     def test_relations_translate_or_fail_closed(self) -> None:
         self.assertEqual(debian_relation("foo", "x"), "foo")
         self.assertEqual(debian_relation("foo=1.0-1", "x"), "foo (= 1.0-1)")

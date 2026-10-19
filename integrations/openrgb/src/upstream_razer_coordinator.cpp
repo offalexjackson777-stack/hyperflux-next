@@ -169,6 +169,7 @@ void UpstreamRazerPluginCoordinator::apply_snapshot(NativeRouteSnapshot snapshot
         }
         static_cast<void>(registry_->apply_direct_serials(
             collect_direct_razer_serials(host_->controllers())));
+        registry_->note_direct_connections(collect_direct_razer_connections(host_->controllers()));
         refresh_registry_state();
     }
     catch(const std::exception& error)
@@ -284,6 +285,7 @@ void UpstreamRazerPluginCoordinator::detection_finished() noexcept
     {
         static_cast<void>(registry_->apply_direct_serials(
             collect_direct_razer_serials(host_->controllers())));
+        registry_->note_direct_connections(collect_direct_razer_connections(host_->controllers()));
         refresh_registry_state();
         worker_->request_rescan();
     }
@@ -377,6 +379,7 @@ UpstreamRazerPluginCoordinator::controllers() const
                 if(device.device_id == controller.device_id)
                 {
                     controller.battery = device.battery;
+                    controller.presence = device.presence;
                 }
             }
         }

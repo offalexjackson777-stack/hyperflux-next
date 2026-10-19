@@ -100,7 +100,7 @@ int main(int argc, char** argv)
     if(info.Name != "HyperFlux Next" || info.Version != "2.2.0"
        || info.Commit.empty()
        || info.URL != "https://github.com/offalexjackson777-stack/hyperflux-next"
-       || info.Location != OPENRGB_PLUGIN_LOCATION_TOP
+       || info.Location != OPENRGB_PLUGIN_LOCATION_INFORMATION
        || info.Label != "HyperFlux Next" || info.ProtocolVersion != 0)
     {
         return failure(__LINE__);
