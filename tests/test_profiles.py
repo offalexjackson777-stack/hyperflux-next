@@ -675,6 +675,29 @@ class ProfileCompilerTests(unittest.TestCase):
         unknown = next(case for case in cases if case["id"].endswith(":unknown-child"))
         self.assertEqual(unknown["expected_unknown_writable_capabilities"], [])
 
+    def test_child_model_names_follow_the_openrazer_name_for_their_usb_identity(self) -> None:
+        # Desktop widgets and the OpenRGB cards show this name, so every model
+        # uses the one OpenRazer, Polychromatic, and OpenRGB already show
+        # ("TKL" where OpenRazer says TKL, "Tenkeyless" where it says that),
+        # without the connection suffix the cards show separately.
+        upstream = json.loads(
+            (ROOT / "knowledge" / "upstreams" / "openrazer.json").read_text(encoding="utf-8")
+        )["records"]
+        names: dict[tuple[int, int], set[str]] = {}
+        for record in upstream:
+            identity = record["usb_identity"]
+            name = record["model_name"].removesuffix(" (Wireless)").removesuffix(" (Wired)")
+            names.setdefault((identity["vendor_id"], identity["product_id"]), set()).add(name)
+        children = [profile for profile in self.inputs.profiles if profile["kind"] == "child"]
+        self.assertTrue(children)
+        for profile in children:
+            identity = profile["identity"]
+            with self.subTest(profile=profile["profile_id"]):
+                self.assertEqual(
+                    {identity["model_name"]},
+                    names.get((identity["vendor_id"], identity["product_id"])),
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
