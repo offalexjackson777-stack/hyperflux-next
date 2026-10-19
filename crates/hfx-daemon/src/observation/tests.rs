@@ -1626,8 +1626,24 @@ fn a_queried_charging_answer_reads_charging_without_waiting_for_a_status_report(
     );
     assert_eq!(keyboard.charge, None);
 
+    // A child without any passive record is not read from the query either.
+    identify(
+        &mut translator,
+        7,
+        HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE,
+        0x1234,
+    );
+    let unknown = translator
+        .translate(feature_charge(8, HFX_UAPI_ENDPOINT_SLOT_KEYBOARD_LANE, 1))
+        .expect("queried unknown charge translates");
+    assert_eq!(
+        unknown.disposition,
+        PassiveDisposition::IgnoredUnqualifiedSemantic
+    );
+    assert_eq!(unknown.charge, None);
+
     // The passive status report still reads its charge in context.
-    let off_mat = charge_after_contact(&mut translator, 8, Some(0), 0);
+    let off_mat = charge_after_contact(&mut translator, 10, Some(0), 0);
     assert_eq!(
         off_mat.charge,
         Some((ChildBatteryLane::Pointer, ChildChargeReading::Discharging))
