@@ -1034,6 +1034,55 @@ if(HFX_OPENRGB_SOURCE_DIR)
             PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
         )
 
+        # The plugin's own SVG renderer against images Qt SVG drew from the
+        # same icons. Qt SVG is needed only to redraw those images.
+        add_executable(
+            openrgb-svg-icon-reference-contract
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_svg_icon_reference_contract.cpp"
+        )
+        target_include_directories(
+            openrgb-svg-icon-reference-contract
+            PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src" "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp"
+        )
+        target_compile_definitions(
+            openrgb-svg-icon-reference-contract
+            PRIVATE
+                HFX_OPENRGB_ICON_REFERENCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/fixtures/openrgb-icons"
+        )
+        target_link_libraries(
+            openrgb-svg-icon-reference-contract
+            PRIVATE hyperflux_openrgb_qt_widget
+        )
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            target_compile_options(
+                openrgb-svg-icon-reference-contract
+                PRIVATE -Wall -Wextra -Werror -pedantic
+            )
+        endif()
+        add_test(
+            NAME openrgb-svg-icon-reference-contract
+            COMMAND openrgb-svg-icon-reference-contract
+        )
+        set_tests_properties(
+            openrgb-svg-icon-reference-contract
+            PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+        )
+        find_package(${HFX_OPENRGB_QT} QUIET COMPONENTS Svg)
+        if(TARGET ${HFX_OPENRGB_QT}::Svg)
+            add_executable(
+                openrgb-svg-icon-reference-writer
+                "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_svg_icon_reference_writer.cpp"
+            )
+            target_include_directories(
+                openrgb-svg-icon-reference-writer
+                PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp" "${HFX_OPENRGB_GENERATED_INCLUDE_DIR}"
+            )
+            target_link_libraries(
+                openrgb-svg-icon-reference-writer
+                PRIVATE ${HFX_OPENRGB_QT}::Gui ${HFX_OPENRGB_QT}::Svg
+            )
+        endif()
+
         add_executable(
             openrgb-plugin-loader-contract
             "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/cpp/openrgb_plugin_loader_contract.cpp"

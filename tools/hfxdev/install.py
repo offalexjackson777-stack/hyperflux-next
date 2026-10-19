@@ -756,6 +756,7 @@ def _check_cross_contract(
         "full-bridge-integration-drop-in",
         "full-component-descriptor",
         "openrgb-license",
+        "lucide-license",
     }:
         raise ModelError("full component payload ownership differs from the product contract")
     bridge_drop_in = payload_by_id["full-bridge-integration-drop-in"]
@@ -787,6 +788,16 @@ def _check_cross_contract(
         or full_license.include
     ):
         raise ModelError("full package license differs from the exact payload contract")
+    icon_license = payload_by_id["lucide-license"]
+    if (
+        icon_license.source != "integrations/openrgb/icons/LICENSE-lucide"
+        or icon_license.destination
+        != "/usr/share/licenses/hyperflux-next-full/LICENSE-lucide"
+        or icon_license.mode != 0o644
+        or icon_license.preserve
+        or icon_license.include
+    ):
+        raise ModelError("bundled icon license differs from the exact payload contract")
 
     build_destinations = {build.destination for build in builds if build.destination is not None}
     payload_destinations = {str(file.destination) for file in files}

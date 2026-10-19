@@ -11,7 +11,9 @@
 #include <QPushButton>
 #include <QTabBar>
 #include <QTabWidget>
+#include <QTemporaryFile>
 #include <QTimer>
+#include <QUrl>
 #include <QVBoxLayout>
 
 #include <array>
@@ -186,6 +188,20 @@ int main(int argc, char** argv)
         return failure(__LINE__);
     }
 
+    // Help opens the installed guide when there is one and the online guide otherwise.
+    const QString online = QString::fromUtf8(online_help_url.data(), static_cast<int>(online_help_url.size()));
+    QTemporaryFile installed_guide;
+    if(!installed_guide.open() || help_target(installed_guide.fileName()) != QUrl::fromLocalFile(installed_guide.fileName())
+       || help_target(installed_guide.fileName() + ".missing") != QUrl(online)
+       || !online.startsWith("https://github.com/offalexjackson777-stack/hyperflux-next/")
+       || !online.endsWith("/docs/user/troubleshooting.md"))
+    {
+        return failure(__LINE__);
+    }
+    const QUrl help_url = help_target(
+        QString::fromUtf8(installed_help_path.data(), static_cast<int>(installed_help_path.size())));
+    const QString help_tooltip = help_url.isLocalFile() ? help_url.toLocalFile() : help_url.toString();
+
     auto* health = widget->findChild<QFrame*>("hyperfluxHealth");
     auto* cards = widget->findChild<QWidget*>("hyperfluxDeviceCards");
     auto* help = widget->findChild<QPushButton*>("hyperfluxHelp");
@@ -196,8 +212,7 @@ int main(int argc, char** argv)
        || widget->findChild<QLabel*>("hyperfluxEmptyState") != nullptr
        || widget->findChild<QWidget*>("hyperfluxLighting") == nullptr
        || help == nullptr || help->accessibleName() != "Help"
-       || !help->toolTip().startsWith("https://github.com/offalexjackson777-stack/hyperflux-next")
-       || !help->toolTip().endsWith("docs/user/troubleshooting.md") || timers.size() != 1
+       || help->toolTip() != help_tooltip || timers.size() != 1
        || timers.front()->interval() != PluginInformationWidget::refresh_interval_ms
        || !timers.front()->isActive())
     {
@@ -285,6 +300,34 @@ int main(int argc, char** argv)
     widget->setPalette(light);
     QApplication::processEvents();
     if(label_text(widget, "hyperfluxEmptyState") != "No devices found on a supported receiver")
+    {
+        return failure(__LINE__);
+    }
+    // Light themes get a neutral tile with the cyan glyph, dark ones the slate mark.
+    const auto header_icons = [widget]
+    {
+        QStringList names;
+        for(const auto* icon : widget->findChildren<QWidget*>("hyperfluxIcon"))
+        {
+            if(icon->accessibleName() == "HyperFlux Next")
+            {
+                names << icon->property("icon").toString();
+            }
+        }
+        return names;
+    };
+    if(widget->findChild<QFrame*>("hyperfluxMarkTile") == nullptr
+       || header_icons() != QStringList({"hyperflux-symbolic"}))
+    {
+        return failure(__LINE__);
+    }
+    QPalette dark = widget->palette();
+    dark.setColor(QPalette::Window, QColor(0x1E, 0x1E, 0x1E));
+    dark.setColor(QPalette::WindowText, Qt::white);
+    widget->setPalette(dark);
+    QApplication::processEvents();
+    if(widget->findChild<QFrame*>("hyperfluxMarkTile") != nullptr
+       || header_icons() != QStringList({"hyperflux-mark"}))
     {
         return failure(__LINE__);
     }

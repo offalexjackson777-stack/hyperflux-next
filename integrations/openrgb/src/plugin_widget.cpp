@@ -7,6 +7,7 @@
 #include <QApplication>
 #include <QDesktopServices>
 #include <QEvent>
+#include <QFileInfo>
 #include <QFontDatabase>
 #include <QFrame>
 #include <QGridLayout>
@@ -101,7 +102,10 @@ struct Colours
     QColor muted;
     QColor border;
     QColor wired;
+    /// The HyperFlux cyan: Tailwind cyan-400 on dark windows, cyan-700 on light ones.
+    QColor brand;
     double tint;
+    bool dark;
 };
 
 Colours colours(const QPalette& palette)
@@ -128,7 +132,9 @@ Colours colours(const QPalette& palette)
     }
     result.border = mix(result.card, result.ink, 0.12);
     result.wired = mix(result.ink, result.card, 0.45);
-    result.tint = is_dark(palette) ? 0.15 : 0.12;
+    result.dark = is_dark(palette);
+    result.brand = result.dark ? QColor(0x22, 0xD3, 0xEE) : QColor(0x0E, 0x74, 0x90);
+    result.tint = result.dark ? 0.15 : 0.12;
     return result;
 }
 
@@ -279,6 +285,11 @@ QFrame* chip(
     return result;
 }
 
+QString from(std::string_view value)
+{
+    return QString::fromUtf8(value.data(), static_cast<int>(value.size()));
+}
+
 QPushButton* help_button(const Colours& colours)
 {
     auto* button = new QPushButton();
@@ -307,10 +318,15 @@ QPushButton* help_button(const Colours& colours)
             .arg(size.height() - 2)
             .arg(css(mix(colours.card, colours.ink, 0.11))));
     button->setCursor(Qt::PointingHandCursor);
-    const QString url = QString::fromUtf8(repository_url.data(), static_cast<int>(repository_url.size()))
-        + "/blob/main/docs/user/troubleshooting.md";
-    button->setToolTip(url);
-    QObject::connect(button, &QPushButton::clicked, button, [url] { QDesktopServices::openUrl(QUrl(url)); });
+    const QUrl target = help_target(from(installed_help_path));
+    button->setToolTip(target.isLocalFile() ? target.toLocalFile() : target.toString());
+    QObject::connect(button, &QPushButton::clicked, button, [target] {
+        // A desktop with no handler for Markdown files still gets the guide, from the web.
+        if(!QDesktopServices::openUrl(target) && target.isLocalFile())
+        {
+            QDesktopServices::openUrl(QUrl(from(online_help_url)));
+        }
+    });
     return button;
 }
 
@@ -470,7 +486,22 @@ QWidget* build_page(const PluginInformationViewModel& model, const Colours& colo
 
     // Header: the mark and name identify the page, one chip gives the overall state, one button gets help.
     auto* head = row_layout(large_gap + 4);
-    head->addWidget(new Icon("hyperflux-mark", 44, QColor(), "HyperFlux Next"), 0, Qt::AlignVCenter);
+    if(colours.dark)
+    {
+        head->addWidget(new Icon("hyperflux-mark", 44, QColor(), "HyperFlux Next"), 0, Qt::AlignVCenter);
+    }
+    else
+    {
+        // The mark's slate tile would be the only dark block on a light page,
+        // so light themes get the device tiles' neutral with the glyph in cyan.
+        const QColor tile_colour = mix(colours.window, colours.ink, 0.06);
+        auto* tile = frame("hyperfluxMarkTile", tile_colour, tile_colour);
+        tile->setFixedSize(44, 44);
+        auto* tile_layout = row_layout(0);
+        tile->setLayout(tile_layout);
+        tile_layout->addWidget(new Icon("hyperflux-symbolic", 26, colours.brand, "HyperFlux Next"), 0, Qt::AlignCenter);
+        head->addWidget(tile, 0, Qt::AlignVCenter);
+    }
     head->addWidget(text("HyperFlux Next", colours, Text::Title), 0, Qt::AlignVCenter);
     head->addSpacing(medium_gap);
     std::string_view state_icon = "circle-pause";
@@ -540,6 +571,15 @@ QWidget* build_page(const PluginInformationViewModel& model, const Colours& colo
 }
 
 } // namespace
+
+QUrl help_target(const QString& installed_path)
+{
+    if(QFileInfo(installed_path).isReadable())
+    {
+        return QUrl::fromLocalFile(installed_path);
+    }
+    return QUrl(from(online_help_url));
+}
 
 PluginInformationWidget::PluginInformationWidget(
     ModelProvider provider,

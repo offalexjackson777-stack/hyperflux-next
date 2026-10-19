@@ -336,6 +336,12 @@ UpstreamRegistryUpdate UpstreamRazerControllerRegistry::apply_direct_serials(
     return update;
 }
 
+void UpstreamRazerControllerRegistry::note_direct_connections(
+    std::map<std::string, std::string, std::less<>> connections)
+{
+    direct_connections_ = std::move(connections);
+}
+
 void UpstreamRazerControllerRegistry::shutdown() noexcept
 {
     if(stopped_)
@@ -352,6 +358,7 @@ void UpstreamRazerControllerRegistry::shutdown() noexcept
     }
     entries_.clear();
     direct_serials_.clear();
+    direct_connections_.clear();
     stopped_ = true;
 }
 
@@ -401,6 +408,12 @@ UpstreamRazerControllerRegistry::summaries() const
     for(const auto& [id, entry] : entries_)
     {
         const auto& route = entry.instance->route();
+        std::string direct_connection;
+        if(entry.direct_suppressed)
+        {
+            const auto found = direct_connections_.find(canonical_queried_serial(entry.instance->serial()));
+            direct_connection = found == direct_connections_.end() ? std::string() : found->second;
+        }
         result.push_back({
             id,
             std::string(entry.instance->name()),
@@ -411,6 +424,9 @@ UpstreamRazerControllerRegistry::summaries() const
             route.device_id,
             entry.registered,
             entry.direct_suppressed,
+            std::nullopt,
+            std::nullopt,
+            std::move(direct_connection),
         });
     }
     return result;
@@ -450,31 +466,74 @@ std::string canonical_queried_serial(std::string_view serial)
     return std::string(serial.substr(first, last - first + 1));
 }
 
+namespace
+{
+
+/// The serial of a Razer controller OpenRGB drives itself over local HID, or
+/// empty for anything else, including HyperFlux's own receiver-routed ones.
+std::string direct_razer_serial(RGBControllerInterface* controller)
+{
+    constexpr std::string_view hid_prefix = "HID: ";
+    constexpr std::string_view native_prefix = "HID: hyperflux-next/native/";
+    if(controller == nullptr || controller->GetVendor() != "Razer")
+    {
+        return {};
+    }
+    const std::string location = controller->GetLocation();
+    if(!location.starts_with(hid_prefix) || location.starts_with(native_prefix)
+       || location.size() == hid_prefix.size())
+    {
+        return {};
+    }
+    return canonical_queried_serial(controller->GetSerial());
+}
+
+} // namespace
+
 std::vector<std::string> collect_direct_razer_serials(
     const std::vector<RGBControllerInterface*>& controllers)
 {
     std::set<std::string, std::less<>> unique;
-    constexpr std::string_view hid_prefix = "HID: ";
-    constexpr std::string_view native_prefix = "HID: hyperflux-next/native/";
     for(auto* controller : controllers)
     {
-        if(controller == nullptr || controller->GetVendor() != "Razer")
-        {
-            continue;
-        }
-        const std::string location = controller->GetLocation();
-        if(!location.starts_with(hid_prefix) || location.starts_with(native_prefix)
-           || location.size() == hid_prefix.size())
-        {
-            continue;
-        }
-        auto serial = canonical_queried_serial(controller->GetSerial());
+        auto serial = direct_razer_serial(controller);
         if(!serial.empty())
         {
             unique.insert(std::move(serial));
         }
     }
     return {unique.begin(), unique.end()};
+}
+
+std::map<std::string, std::string, std::less<>> collect_direct_razer_connections(
+    const std::vector<RGBControllerInterface*>& controllers)
+{
+    std::map<std::string, std::string, std::less<>> result;
+    for(auto* controller : controllers)
+    {
+        auto serial = direct_razer_serial(controller);
+        if(serial.empty())
+        {
+            continue;
+        }
+        const std::string name = controller->GetName();
+        std::string connection;
+        if(name.ends_with("(Wired)"))
+        {
+            connection = "Wired";
+        }
+        else if(name.ends_with("(Wireless)"))
+        {
+            connection = "Wireless";
+        }
+        // Two OpenRGB controllers for one serial that disagree say nothing.
+        const auto [found, inserted] = result.try_emplace(std::move(serial), connection);
+        if(!inserted && found->second != connection)
+        {
+            found->second.clear();
+        }
+    }
+    return result;
 }
 
 } // namespace hyperflux::openrgb::native

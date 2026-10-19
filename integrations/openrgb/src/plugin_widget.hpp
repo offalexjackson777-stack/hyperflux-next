@@ -11,11 +11,17 @@
 
 class QEvent;
 class QLabel;
+class QString;
 class QTimer;
+class QUrl;
 class QVBoxLayout;
 
 namespace hyperflux::openrgb::native
 {
+
+/// Where Help goes: the guide at `installed_path` when it is readable, the
+/// online guide otherwise.
+QUrl help_target(const QString& installed_path);
 
 /// The HyperFlux Next page in OpenRGB's Information list.
 ///

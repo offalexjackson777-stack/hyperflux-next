@@ -117,6 +117,7 @@ SCHEMA_DECLARATION_EXEMPTIONS: dict[str, str] = {
     "governance/generated/github-labels.json": _NO_SCHEMA_GENERATED,
     "governance/generated/github-protection-plan.json": _NO_SCHEMA_GENERATED,
     "packaging/generated/install-plan.json": _NO_SCHEMA_GENERATED,
+    "integrations/openrgb/icons/manifest.json": "no repository schema yet for the vendored dependency manifest",
     "protocol/v5/fixtures/transaction-request-canonical.json": _BYTE_FROZEN_WIRE,
     "sdk/cpp/vendor/manifest.json": "no repository schema yet for the vendored dependency manifest",
     "spec/catalog/integrations/catalog.json": (

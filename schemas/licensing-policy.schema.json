@@ -14,12 +14,13 @@
     "license_texts": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["GPL-2.0-only", "GPL-2.0-or-later", "GPL-2.0 WITH Linux-syscall-note", "GPL-3.0-only", "MIT"],
+      "required": ["GPL-2.0-only", "GPL-2.0-or-later", "GPL-2.0 WITH Linux-syscall-note", "GPL-3.0-only", "ISC", "MIT"],
       "properties": {
         "GPL-2.0-only": {"$ref": "#/$defs/path"},
         "GPL-2.0-or-later": {"$ref": "#/$defs/path"},
         "GPL-2.0 WITH Linux-syscall-note": {"$ref": "#/$defs/path"},
         "GPL-3.0-only": {"$ref": "#/$defs/path"},
+        "ISC": {"$ref": "#/$defs/path"},
         "MIT": {"$ref": "#/$defs/path"}
       }
     }
@@ -32,7 +33,7 @@
       "required": ["path", "expression", "reason"],
       "properties": {
         "path": {"$ref": "#/$defs/path"},
-        "expression": {"enum": ["GPL-2.0-only", "GPL-2.0-or-later", "GPL-2.0 WITH Linux-syscall-note", "GPL-3.0-only", "MIT"]},
+        "expression": {"enum": ["GPL-2.0-only", "GPL-2.0-or-later", "GPL-2.0 WITH Linux-syscall-note", "GPL-3.0-only", "ISC", "MIT"]},
         "reason": {"type": "string", "minLength": 1, "maxLength": 200}
       }
     }

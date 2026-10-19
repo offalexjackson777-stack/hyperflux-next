@@ -84,7 +84,17 @@ DEBIAN_OPERATORS = {"=": "=", ">=": ">=", "<=": "<=", "<": "<<", ">": ">>"}
 GLIBC_SYMBOL = re.compile(r"\((?P<version>GLIBC_[A-Za-z0-9_.]+)\)|\s(?P<bare>GLIBC_[A-Za-z0-9_.]+)\s")
 # DEP-5 license paragraphs for the licenses the catalog admits. Debian ships
 # the full texts in /usr/share/common-licenses, so the paragraphs point there.
-DEP5_LICENSES = {"GPL-2.0-only": "GPL-2", "GPL-2.0-or-later": "GPL-2+", "GPL-3.0-only": "GPL-3"}
+DEP5_LICENSES = {"GPL-2.0-only": "GPL-2", "GPL-2.0-or-later": "GPL-2+", "GPL-3.0-only": "GPL-3", "ISC": "ISC"}
+# Licenses that cover only bundled third-party files, not the package as a
+# whole: the files they cover, their own copyright, and the project files in
+# the same directory that stay under the package licenses.
+THIRD_PARTY_FILES = {
+    "ISC": (
+        "integrations/openrgb/icons/*",
+        "2013-2022 Cole Bemis (portions, as part of Feather), 2022 Lucide Contributors",
+        "integrations/openrgb/icons/hyperflux-*",
+    ),
+}
 LICENSE_PARAGRAPHS = {
     "GPL-2.0-only": (
         "This package is free software; you can redistribute it and/or modify",
@@ -110,6 +120,20 @@ LICENSE_PARAGRAPHS = {
         ".",
         "On Debian systems, the complete text of the GNU General Public License",
         'version 3 can be found in "/usr/share/common-licenses/GPL-3".',
+    ),
+    # Debian has no common-licenses copy of ISC, so the full text goes here.
+    "ISC": (
+        "Permission to use, copy, modify, and/or distribute this software for any",
+        "purpose with or without fee is hereby granted, provided that the above",
+        "copyright notice and this permission notice appear in all copies.",
+        ".",
+        'THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES',
+        "WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF",
+        "MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR",
+        "ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES",
+        "WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN",
+        "ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF",
+        "OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.",
     ),
 }
 
@@ -547,6 +571,7 @@ def _dep5(plan: DebianPlan, license_id: str) -> str:
 
 
 def copyright_text(plan: DebianPlan) -> str:
+    own = " and ".join(_dep5(plan, item) for item in plan.licenses if item not in THIRD_PARTY_FILES)
     lines = [
         "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/",
         "Upstream-Name: hyperflux-next",
@@ -554,8 +579,16 @@ def copyright_text(plan: DebianPlan) -> str:
         "",
         "Files: *",
         f"Copyright: {COPYRIGHT_HOLDER}",
-        f"License: {' and '.join(_dep5(plan, item) for item in plan.licenses)}",
+        f"License: {own}",
     ]
+    # Later paragraphs win in DEP-5, so each third-party directory is followed
+    # by the project files that live beside it.
+    for license_id in plan.licenses:
+        if license_id not in THIRD_PARTY_FILES:
+            continue
+        files, holder, ours = THIRD_PARTY_FILES[license_id]
+        lines.extend(["", f"Files: {files}", f"Copyright: {holder}", f"License: {_dep5(plan, license_id)}"])
+        lines.extend(["", f"Files: {ours}", f"Copyright: {COPYRIGHT_HOLDER}", f"License: {own}"])
     for license_id in plan.licenses:
         paragraph = LICENSE_PARAGRAPHS[license_id]
         lines.extend(["", f"License: {_dep5(plan, license_id)}", *(f" {line}" for line in paragraph)])

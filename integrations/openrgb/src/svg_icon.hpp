@@ -21,6 +21,7 @@ namespace hyperflux::openrgb::native
 ///
 /// The plugin draws its own icons instead of linking Qt SVG so it needs only
 /// the Qt Core, Gui and Widgets libraries OpenRGB itself loads.
+/// openrgb-svg-icon-reference-contract holds every icon to what Qt SVG draws.
 bool paint_svg(QPainter& painter, std::string_view svg, const QRectF& target, const QColor& current);
 
 /// One of the icons built into the plugin, by file name without ".svg".

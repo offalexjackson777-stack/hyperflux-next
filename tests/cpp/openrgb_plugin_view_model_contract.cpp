@@ -9,6 +9,7 @@
 #include <iostream>
 #include <optional>
 #include <string>
+#include <utility>
 
 namespace
 {
@@ -161,6 +162,39 @@ int main()
         return failure(__LINE__);
     }
 
+    // A bridge from another version: retrying cannot help, a restart can.
+    const std::string mismatch_message = "This plugin and the running HyperFlux bridge are different versions. "
+                                         "Restart the computer to finish the update.";
+    for(const auto& [state, error] : {
+            std::pair {WorkerState::Recovering, sdk::Error {sdk::ErrorCode::NegotiationFailed, "x", std::nullopt}},
+            std::pair {WorkerState::Failed, sdk::Error {sdk::ErrorCode::RequiredFeatureMissing, "x", std::nullopt}},
+            std::pair {WorkerState::Starting, sdk::Error {sdk::ErrorCode::ServerRejected, "x", "HFX-PROTOCOL-001"}},
+            std::pair {WorkerState::Recovering, sdk::Error {sdk::ErrorCode::ServerRejected, "x", "HFX-PROTOCOL-002"}},
+        })
+    {
+        status.coordinator.worker_state = state;
+        status.coordinator.last_error = error;
+        const auto mismatch = make_plugin_information_view_model(status, inventory, controllers, now);
+        if(mismatch.tone != PluginHealthTone::Negative || mismatch.headline != "Needs attention"
+           || !mismatch.attention.has_value() || mismatch.attention->message != mismatch_message
+           || !mismatch.attention->command.empty()
+           || mismatch.technical_detail != std::optional<std::string>("x"))
+        {
+            return failure(__LINE__);
+        }
+    }
+    // Any other refusal is not a version problem, and a running plugin is fine.
+    status.coordinator.worker_state = WorkerState::Recovering;
+    status.coordinator.last_error = sdk::Error {sdk::ErrorCode::ServerRejected, "x", "HFX-QUEUE-001"};
+    const auto other_refusal = make_plugin_information_view_model(status, {}, {}, now);
+    status.coordinator.worker_state = WorkerState::Running;
+    status.coordinator.last_error = sdk::Error {sdk::ErrorCode::NegotiationFailed, "x", std::nullopt};
+    const auto recovered = make_plugin_information_view_model(status, inventory, controllers, now);
+    if(other_refusal.headline != "Connecting" || recovered.headline != "Ready" || recovered.attention.has_value())
+    {
+        return failure(__LINE__);
+    }
+
     status.coordinator.worker_state = WorkerState::Stopped;
     const auto stopped = make_plugin_information_view_model(status, inventory, controllers, now);
     status.loaded = false;
@@ -213,6 +247,7 @@ int main()
             true,
             std::nullopt,
             PresenceState::Sleeping,
+            "Wired",
         },
     };
     const auto native_model = make_plugin_information_view_model(
@@ -223,8 +258,8 @@ int main()
         return failure(__LINE__);
     }
     // Cards show the model name with the connection as a chip, never "TenKeyless".
-    // A device OpenRGB also found on a cable reads Wired whatever its receiver
-    // name says, and its wireless presence is not shown.
+    // A device OpenRGB drives itself takes the connection from OpenRGB's own
+    // controller, whatever its receiver name says, and its presence is not shown.
     const auto& keyboard = native_model.devices[0];
     const auto& mouse = native_model.devices[1];
     if(keyboard.device != "Razer DeathStalker V2 Pro TKL" || keyboard.connection != "Wired"
@@ -236,6 +271,21 @@ int main()
        || !mouse.stale.empty())
     {
         return failure(__LINE__);
+    }
+
+    // OpenRGB drives it through its own receiver, or its name does not say how.
+    auto direct = native_controllers;
+    for(const auto& [connection, chip] :
+        {std::pair<std::string, std::string> {"Wireless", "Wireless"}, {"", ""}})
+    {
+        direct[1].direct_connection = connection;
+        const auto model = make_plugin_information_view_model(native_status, direct, 100 + minute);
+        if(model.devices[0].connection != chip
+           || model.devices[0].note != "OpenRGB controls it directly, as its own entry in the device list."
+           || !model.devices[0].presence.empty())
+        {
+            return failure(__LINE__);
+        }
     }
 
     auto variant = native_controllers;
@@ -258,6 +308,14 @@ int main()
     native_status.coordinator.worker_state = NativeRouteWorkerState::Recovering;
     const auto reconnecting = make_plugin_information_view_model(native_status, {}, 100 + minute);
     if(reconnecting.headline != "Connecting" || reconnecting.attention.has_value())
+    {
+        return failure(__LINE__);
+    }
+    native_status.coordinator.last_error = sdk::Error {sdk::ErrorCode::ServerRejected, "x", "HFX-PROTOCOL-001"};
+    const auto native_mismatch = make_plugin_information_view_model(native_status, native_controllers, 100 + minute);
+    native_status.coordinator.last_error.reset();
+    if(native_mismatch.headline != "Needs attention" || !native_mismatch.attention.has_value()
+       || native_mismatch.attention->message != mismatch_message)
     {
         return failure(__LINE__);
     }

@@ -48,6 +48,7 @@ std::string presence(ControllerAvailability value)
 
 #if HFX_OPENRGB_NATIVE_ROUTE_ENABLED
 constexpr std::string_view wired_note = "OpenRGB controls it over the cable until it is unplugged.";
+constexpr std::string_view direct_note = "OpenRGB controls it directly, as its own entry in the device list.";
 
 std::string presence(const std::optional<PresenceState>& value)
 {
@@ -198,7 +199,35 @@ enum class Runtime
     Recovering,
     Failed,
     Stopped,
+    VersionMismatch,
 };
+
+/// The bridge turned this plugin away for its protocol version or features.
+/// After an update the old bridge keeps running until the computer restarts.
+bool version_mismatch(const std::optional<sdk::Error>& error)
+{
+    if(!error.has_value())
+    {
+        return false;
+    }
+    switch(error->code)
+    {
+        case sdk::ErrorCode::NegotiationFailed:
+        case sdk::ErrorCode::RequiredFeatureMissing: return true;
+        case sdk::ErrorCode::ServerRejected:
+            return error->finding_id == std::optional<std::string>("HFX-PROTOCOL-001")
+                || error->finding_id == std::optional<std::string>("HFX-PROTOCOL-002");
+        default: return false;
+    }
+}
+
+/// A version mismatch outranks whatever retry state the worker is in, since
+/// retrying cannot fix it; a plugin that is running or stopped says so instead.
+Runtime with_version_check(Runtime value, const std::optional<sdk::Error>& error)
+{
+    const bool retrying = value == Runtime::Connecting || value == Runtime::Recovering || value == Runtime::Failed;
+    return retrying && version_mismatch(error) ? Runtime::VersionMismatch : value;
+}
 
 /// Header chip, banner and empty state. Normal states stay quiet: the banner
 /// appears only when the readings on screen are old or the bridge has failed.
@@ -241,6 +270,15 @@ void summarise(
                     "Connecting to the HyperFlux bridge. These readings are " + age_clause + ".",
                 };
             }
+            return;
+        case Runtime::VersionMismatch:
+            result.tone = PluginHealthTone::Negative;
+            result.headline = "Needs attention";
+            result.attention = PluginAttention {
+                PluginHealthTone::Negative,
+                "This plugin and the running HyperFlux bridge are different versions. "
+                "Restart the computer to finish the update.",
+            };
             return;
         case Runtime::Failed:
             result.tone = PluginHealthTone::Negative;
@@ -355,7 +393,10 @@ PluginInformationViewModel make_plugin_information_view_model(
     {
         result.technical_detail = status.coordinator.last_error->message;
     }
-    summarise(result, runtime(status), newest);
+    summarise(
+        result,
+        with_version_check(runtime(status), status.loaded ? status.coordinator.last_error : std::nullopt),
+        newest);
     return result;
 }
 
@@ -382,11 +423,11 @@ PluginInformationViewModel make_plugin_information_view_model(
         split_connection(row);
         if(controller.direct_suppressed)
         {
-            // OpenRGB found the same serial on a cable, so the device is wired
-            // whatever its receiver name says, and the bridge's wireless
-            // presence says nothing about it.
-            row.connection = "Wired";
-            row.note = std::string(wired_note);
+            // OpenRGB drives the same serial itself, over the cable or through
+            // its own receiver; only its controller name says which. The
+            // bridge's presence says nothing about a device it does not drive.
+            row.connection = controller.direct_connection;
+            row.note = std::string(row.connection == "Wired" ? wired_note : direct_note);
         }
         else
         {
@@ -403,7 +444,10 @@ PluginInformationViewModel make_plugin_information_view_model(
     {
         result.technical_detail = status.coordinator.last_error->message;
     }
-    summarise(result, runtime(status), newest);
+    summarise(
+        result,
+        with_version_check(runtime(status), status.loaded ? status.coordinator.last_error : std::nullopt),
+        newest);
     return result;
 }
 #endif
