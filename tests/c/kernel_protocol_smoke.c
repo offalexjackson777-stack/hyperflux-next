@@ -357,6 +357,60 @@ static void test_feature_battery_reply(void)
 	assert(battery_raw == 0);
 }
 
+static void test_feature_charge_reply(void)
+{
+	__u8 request[HFX_UAPI_NATIVE_REPORT_BYTES] = { 0 };
+	__u8 response[HFX_UAPI_NATIVE_REPORT_BYTES] = { 0 };
+	__u8 charge_raw = 0xff;
+
+	/* OpenRazer's charging-state query to the mouse and its answer. */
+	request[1] = 0x1f;
+	request[5] = 0x02;
+	request[6] = 0x07;
+	request[7] = 0x84;
+	memcpy(response, request, sizeof(response));
+	response[0] = 0x02;
+	response[9] = 0x01;
+	assert(hfx_feature_charge_parse(request, response, sizeof(response),
+					&charge_raw));
+	assert(charge_raw == 0x01);
+	response[9] = 0x00;
+	assert(hfx_feature_charge_parse(request, response, sizeof(response),
+					&charge_raw));
+	assert(charge_raw == 0x00);
+
+	/* Busy and failed answers carry no charging state. */
+	charge_raw = 0xff;
+	response[0] = 0x01;
+	assert(!hfx_feature_charge_parse(request, response, sizeof(response),
+					 &charge_raw));
+	response[0] = 0x03;
+	assert(!hfx_feature_charge_parse(request, response, sizeof(response),
+					 &charge_raw));
+	response[0] = 0x02;
+
+	/* A level query is not a charging state, and a level reply is not one. */
+	request[7] = 0x80;
+	response[7] = 0x80;
+	assert(!hfx_feature_charge_parse(request, response, sizeof(response),
+					 &charge_raw));
+	request[7] = 0x84;
+	assert(!hfx_feature_charge_parse(request, response, sizeof(response),
+					 &charge_raw));
+	response[7] = 0x84;
+
+	/* A request with arguments is ignored. */
+	request[9] = 0x01;
+	assert(!hfx_feature_charge_parse(request, response, sizeof(response),
+					 &charge_raw));
+	request[9] = 0x00;
+
+	assert(!hfx_feature_charge_parse(request, response, 9, &charge_raw));
+	assert(!hfx_feature_charge_parse(request, NULL, sizeof(response),
+					 &charge_raw));
+	assert(charge_raw == 0xff);
+}
+
 int main(void)
 {
 	struct hfx_uapi_frame frame = mouse_frame();
@@ -426,5 +480,6 @@ int main(void)
 	test_child_battery();
 	test_pointer_identity_without_product();
 	test_feature_battery_reply();
+	test_feature_charge_reply();
 	return 0;
 }

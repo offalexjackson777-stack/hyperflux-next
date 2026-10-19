@@ -124,31 +124,56 @@ hfx_passive_parse(int interface_number, const __u8 *data, int size,
 #define HFX_FEATURE_STATUS_SUCCESS 0x02
 #define HFX_FEATURE_BATTERY_CLASS 0x07
 #define HFX_FEATURE_BATTERY_LEVEL 0x80
+#define HFX_FEATURE_BATTERY_CHARGE 0x84
 #define HFX_FEATURE_BATTERY_MIN_BYTES 10
 
 /*
- * A battery-level query (two argument bytes, class 07, ID 80, both arguments
- * zero) answered with status 02 carries the child's charge in byte 9, on the
- * same 0-255 scale as its passive status report. A child that rarely sends
- * that report is still read whenever a host application asks for its level.
+ * A power query (two argument bytes, class 07, both arguments zero) answered
+ * with status 02 for the same command carries its value in byte 9.
+ */
+static inline int hfx_feature_battery_reply(const __u8 *request,
+					    const __u8 *response, int size,
+					    __u8 command, __u8 *value)
+{
+	if (!request || !response || !value ||
+	    size < HFX_FEATURE_BATTERY_MIN_BYTES)
+		return 0;
+	if (request[5] != 0x02 || request[6] != HFX_FEATURE_BATTERY_CLASS ||
+	    request[7] != command || request[8] != 0 || request[9] != 0)
+		return 0;
+	if (response[0] != HFX_FEATURE_STATUS_SUCCESS ||
+	    response[6] != HFX_FEATURE_BATTERY_CLASS || response[7] != command)
+		return 0;
+	*value = response[9];
+	return 1;
+}
+
+/*
+ * The answer to a battery-level query (ID 80) carries the child's charge on
+ * the same 0-255 scale as its passive status report. A child that rarely
+ * sends that report is still read whenever a host application asks for its
+ * level.
  */
 static inline int hfx_feature_battery_parse(const __u8 *request,
 					    const __u8 *response, int size,
 					    __u8 *battery_raw)
 {
-	if (!request || !response || !battery_raw ||
-	    size < HFX_FEATURE_BATTERY_MIN_BYTES)
-		return 0;
-	if (request[5] != 0x02 || request[6] != HFX_FEATURE_BATTERY_CLASS ||
-	    request[7] != HFX_FEATURE_BATTERY_LEVEL || request[8] != 0 ||
-	    request[9] != 0)
-		return 0;
-	if (response[0] != HFX_FEATURE_STATUS_SUCCESS ||
-	    response[6] != HFX_FEATURE_BATTERY_CLASS ||
-	    response[7] != HFX_FEATURE_BATTERY_LEVEL)
-		return 0;
-	*battery_raw = response[9];
-	return 1;
+	return hfx_feature_battery_reply(request, response, size,
+					 HFX_FEATURE_BATTERY_LEVEL,
+					 battery_raw);
+}
+
+/*
+ * The answer to a charging-state query (ID 84) carries the child's own
+ * charging flag. The value is recorded raw; the bridge decides what it means.
+ */
+static inline int hfx_feature_charge_parse(const __u8 *request,
+					   const __u8 *response, int size,
+					   __u8 *charge_raw)
+{
+	return hfx_feature_battery_reply(request, response, size,
+					 HFX_FEATURE_BATTERY_CHARGE,
+					 charge_raw);
 }
 
 #endif

@@ -123,10 +123,13 @@ OpenRazer daemon ask for it sooner through the native exchange. When such an
 exchange is a battery-level query (class `0x07`, command `0x80`, no arguments)
 and the matched reply has status `0x02`, the module also records the reply's
 level byte as a battery observation with source `HID_FEATURE`, on the same
-0-255 scale as the passive report. The module still sends nothing of its own:
-it only reads the answer to a query an application already made. Because a
-queried level is not part of a keyboard status report, the bridge reads a
-keyboard charge state only from the route field that follows a passive level.
+0-255 scale as the passive report. A charging-state query (command `0x84`,
+same shape) answered with status `0x02` is recorded the same way, its byte 9
+emitted raw as a charge observation with source `HID_FEATURE`. The Polychromatic
+tray asks both at login. The module still sends nothing of its own: it only
+reads the answer to a query an application already made. Because a queried
+level is not part of a keyboard status report, the bridge reads a keyboard
+charge state only from the route field that follows a passive level.
 
 ## Child Battery Publication
 
@@ -188,7 +191,21 @@ reads its proven off-the-mat value `0`. Byte 3 is not only a mat contact: it
 read `6` on a USB cable. Every other byte 3 value, a missing or older one, and
 any charge value the decoder does not list stay `Unknown`. A vendor charge
 limit is not inferred; the mouse itself keeps reporting charging while it
-holds at its limit, and the bridge forwards that. The charge only annotates a
+holds at its limit, and the bridge forwards that.
+
+After boot the mouse can rest on its mat for minutes before its first status
+report. A queried charge answers sooner: for a child whose profile qualifies a
+charge field, the answer `1` becomes `Charging`, or `Full` at a 100 percent
+level, with no contact context needed. Every other answer leaves the charge
+state as it was. `0` is not read as `Discharging`, because a child answers it
+while it sits full on its charger: the DeathStalker V2 Pro TKL answered `0`
+on its cable at 100 percent while its route word read `0x0101`. The keyboard
+profile qualifies no charge field, so a queried keyboard charge is ignored.
+UPower 1.91.5 shows any device-scope battery at 100 percent as fully charged
+whatever `STATUS` reads, so a `Discharging` keyboard at 100 percent appears
+full in the desktop widget.
+
+The charge only annotates a
 lane that has a forwarded level, and the bridge forgets it whenever that lane
 is forwarded absent, when the writer file is released, and with each new
 receiver generation, so an old charge value is never reused. The UAPI carries

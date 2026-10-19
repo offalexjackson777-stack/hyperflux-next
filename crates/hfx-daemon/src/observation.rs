@@ -31,6 +31,10 @@ use hfx_profiles::{
 use std::collections::BTreeMap;
 use std::fmt;
 
+/// The answer a child gives to the charging-state query while it charges,
+/// as `OpenRazer` reads it.
+const QUERIED_CHARGE_CHARGING: u32 = 1;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PassiveDisposition {
     Applied,
@@ -252,6 +256,11 @@ impl PassiveObservationTranslator {
             }
             HFX_UAPI_OBSERVATION_KIND_ENDPOINT_ROUTE_RAW => {
                 Ok(self.route(raw.endpoint_slot, raw.value, stamp))
+            }
+            HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CHARGE_RAW
+                if raw.source == HFX_UAPI_OBSERVATION_SOURCE_HID_FEATURE =>
+            {
+                Ok(self.queried_charge(raw.endpoint_slot, raw.value, &stamp))
             }
             HFX_UAPI_OBSERVATION_KIND_ENDPOINT_CHARGE_RAW => {
                 Ok(self.charge(raw.endpoint_slot, raw.value, &stamp))
@@ -666,6 +675,41 @@ impl PassiveObservationTranslator {
             ChildChargeReading::Unknown
         };
         let device_id = binding.device_id.clone();
+        let observation = self.charge_observation(device_id, reading, stamp.clone());
+        PassiveTranslation::charge(lane, reading, observation)
+    }
+
+    /// Decodes a child's answer to a host application's charging-state query
+    /// (class `0x07`, command `0x84`). The mouse otherwise reports its charge
+    /// only in a status report that can be minutes away after boot. Only a
+    /// child whose own charge field is qualified is read, and only its
+    /// "charging" answer: a child also answers "not charging" while it sits
+    /// full on its charger, so that answer leaves the charge state unchanged.
+    fn queried_charge(
+        &mut self,
+        slot: u32,
+        value: u32,
+        stamp: &ObservationStamp,
+    ) -> PassiveTranslation {
+        let (Some(lane), Some(binding)) = (
+            ChildBatteryLane::from_endpoint_slot(slot),
+            self.lanes.get(&slot),
+        ) else {
+            return PassiveTranslation::disposition(PassiveDisposition::IgnoredUnknownLane);
+        };
+        let Some(passive) = binding.passive else {
+            return PassiveTranslation::disposition(PassiveDisposition::IgnoredUnqualifiedSemantic);
+        };
+        if passive.charge_charging.is_empty() {
+            return PassiveTranslation::disposition(PassiveDisposition::IgnoredUnqualifiedSemantic);
+        }
+        if value != QUERIED_CHARGE_CHARGING {
+            return PassiveTranslation::disposition(
+                PassiveDisposition::IgnoredIndeterminateSemantic,
+            );
+        }
+        let device_id = binding.device_id.clone();
+        let reading = ChildChargeReading::Charging;
         let observation = self.charge_observation(device_id, reading, stamp.clone());
         PassiveTranslation::charge(lane, reading, observation)
     }
