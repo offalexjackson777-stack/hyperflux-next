@@ -5,7 +5,9 @@
 #include <hyperflux/openrgb/plugin_view_model.hpp>
 
 #include <cstdlib>
+#include <cstdint>
 #include <iostream>
+#include <optional>
 #include <string>
 
 namespace
@@ -83,6 +85,10 @@ int main()
     {
         return failure(__LINE__);
     }
+    if(model.attention.has_value())
+    {
+        return failure(__LINE__);
+    }
 
     status.coordinator.worker_state = WorkerState::Recovering;
     status.coordinator.last_error = sdk::Error {
@@ -113,14 +119,28 @@ int main()
             "Razer Basilisk V3 Pro 35K (Wireless)",
             DeviceKind::Mouse,
             hyperflux::test::number<ProductId>(0x00cd),
+            hyperflux::test::text<ReceiverId>("receiver-1"),
+            hyperflux::test::number<GenerationId>(4),
+            hyperflux::test::text<LogicalDeviceId>("mouse-00cd"),
             true,
             false,
+            v8::BatteryObservation {
+                TelemetryAvailability::Reported,
+                hyperflux::test::number<BatteryPercent>(81),
+                BatteryCharge::Charging,
+                FreshnessState::Fresh,
+                EvidenceConfidence::Observed,
+                hyperflux::test::number<MonotonicMs>(100),
+            },
         },
         {
             "receiver-1/keyboard-0296/endpoint-keyboard",
             "Razer DeathStalker V2 Pro TKL (Wireless)",
             DeviceKind::Keyboard,
             hyperflux::test::number<ProductId>(0x0296),
+            hyperflux::test::text<ReceiverId>("receiver-1"),
+            hyperflux::test::number<GenerationId>(4),
+            hyperflux::test::text<LogicalDeviceId>("keyboard-0296"),
             false,
             true,
         },
@@ -141,6 +161,32 @@ int main()
     }
     if(native_model.devices[0].availability != "Direct USB active"
        || native_model.devices[1].availability != "Available")
+    {
+        return failure(__LINE__);
+    }
+    // Cards show the model name with the connection as a chip, never "TenKeyless".
+    const auto& keyboard = native_model.devices[0];
+    const auto& mouse = native_model.devices[1];
+    if(keyboard.device != "Razer DeathStalker V2 Pro TKL" || keyboard.connection != "Wireless"
+       || keyboard.battery_percent.has_value() || keyboard.battery_note != "Waiting for report"
+       || !keyboard.charge.empty() || keyboard.support != "Full support"
+       || mouse.device != "Razer Basilisk V3 Pro 35K" || mouse.connection != "Wireless"
+       || mouse.battery_percent != std::optional<std::uint8_t>(81) || mouse.battery != "81%"
+       || mouse.charge != "Charging" || !mouse.battery_note.empty())
+    {
+        return failure(__LINE__);
+    }
+    auto stale_controllers = native_controllers;
+    stale_controllers[0].battery->freshness = FreshnessState::Stale;
+    const auto stale = make_plugin_information_view_model(native_status, stale_controllers);
+    if(stale.devices[1].charge != "" || stale.devices[1].battery_note != "Update overdue")
+    {
+        return failure(__LINE__);
+    }
+    native_status.coordinator.worker_state = NativeRouteWorkerState::Recovering;
+    const auto unreachable = make_plugin_information_view_model(native_status, {});
+    if(!unreachable.attention.has_value()
+       || unreachable.attention->find("hyperfluxctl doctor --explain") == std::string::npos)
     {
         return failure(__LINE__);
     }

@@ -78,6 +78,7 @@ private:
     void queue_snapshot(NativeRouteSnapshot snapshot) noexcept;
     void apply_snapshot(NativeRouteSnapshot snapshot) noexcept;
     void queue_error(sdk::Error error) noexcept;
+    void record_device_status(std::optional<v8::BridgeSnapshot> status) noexcept;
     void record_error(sdk::Error error) noexcept;
     void record_exception(std::string_view operation) noexcept;
     void record_exception(std::string_view operation, const std::exception& error) noexcept;
@@ -98,6 +99,7 @@ private:
     std::size_t direct_suppressed_controller_count_ = 0;
     std::optional<sdk::Error> last_error_;
     std::vector<UpstreamRazerControllerSummary> controllers_;
+    std::optional<v8::BridgeSnapshot> device_status_;
     std::function<void()> on_state_changed_;
 };
 

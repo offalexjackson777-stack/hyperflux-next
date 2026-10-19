@@ -55,7 +55,7 @@ inline NativeDeviceFixture native_device_fixture(DeviceKind kind)
             102,
             6,
             17,
-            "Razer DeathStalker V2 Pro Tenkeyless",
+            "Razer DeathStalker V2 Pro TKL",
             "deathstalker_v2_pro_tkl_wireless_device",
             "razer_deathstalker_v2_pro_tkl_layout",
         };

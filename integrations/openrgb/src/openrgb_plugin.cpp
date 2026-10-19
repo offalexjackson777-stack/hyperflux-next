@@ -56,8 +56,8 @@ public:
             "Native OpenRGB presentation for devices paired through HyperFlux";
         info.Version = std::string(build_config::component_version);
         info.Commit = std::string(build_config::source_revision);
-        info.URL = "";
-        info.Location = OPENRGB_PLUGIN_LOCATION_INFORMATION;
+        info.URL = std::string(repository_url);
+        info.Location = OPENRGB_PLUGIN_LOCATION_TOP;
         info.Label = "HyperFlux Next";
         info.TabIconString = "";
         // The plugin handles no SDK commands.

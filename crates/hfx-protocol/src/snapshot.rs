@@ -48,7 +48,7 @@ impl fmt::Display for SnapshotValidationError {
             }
             Self::OwnershipTargetsUnknownDevice => "ownership targets an unknown logical device",
             Self::BatteryValueContradiction => {
-                "battery availability contradicts the optional percentage"
+                "battery availability contradicts the optional percentage or charge"
             }
             Self::ReceiverProfileBindingContradiction => {
                 "receiver profile identity and digest are incomplete"
@@ -68,7 +68,9 @@ impl std::error::Error for SnapshotValidationError {}
 
 fn validate_battery(battery: &BatteryObservation) -> Result<(), SnapshotValidationError> {
     let has_value = battery.percentage.is_some();
-    if matches!(battery.availability, TelemetryAvailability::Reported) != has_value {
+    if matches!(battery.availability, TelemetryAvailability::Reported) != has_value
+        || (battery.charge.is_some() && !has_value)
+    {
         return Err(SnapshotValidationError::BatteryValueContradiction);
     }
     Ok(())

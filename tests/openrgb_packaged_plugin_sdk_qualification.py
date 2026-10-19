@@ -688,7 +688,7 @@ class SyntheticNativeBridge:
             "negotiate-success",
             request_id,
             {
-                "selected_version": 7,
+                "selected_version": 8,
                 "server_instance_id": self.server_instance_id,
                 "protocol_session_id": protocol_session_id,
                 "negotiation_token": negotiation_token,

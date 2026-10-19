@@ -6,8 +6,8 @@ use hfx_core::{
     ObservationStamp, ReceiverLifecycleRegistry,
 };
 use hfx_domain::{
-    EvidenceConfidence, GenerationId, MonotonicMs, ReceiverId, RestoreState, SupportLevel,
-    TelemetryAvailability,
+    EvidenceConfidence, FreshnessState, GenerationId, MonotonicMs, ReceiverId, RestoreState,
+    SupportLevel, TelemetryAvailability,
 };
 use hfx_protocol::{
     BatteryObservation, BridgeSnapshot, EndpointSnapshot, LogicalDeviceSnapshot, ReceiverSnapshot,
@@ -235,10 +235,17 @@ fn project_battery(device: &DeviceLifecycle) -> BatteryObservation {
         BatteryValue::Reported(percentage) => (TelemetryAvailability::Reported, Some(percentage)),
     };
     let value_stamp = battery.value().stamp();
+    let freshness = battery.freshness().value();
+    // A charge state is shown only beside a fresh reported value.
+    let charge = battery
+        .charge()
+        .value()
+        .filter(|_| percentage.is_some() && freshness == FreshnessState::Fresh);
     BatteryObservation {
         availability,
         percentage,
-        freshness: battery.freshness().value(),
+        charge,
+        freshness,
         confidence: value_stamp.map_or(EvidenceConfidence::Unknown, ObservationStamp::confidence),
         observed_at_ms: value_stamp.map(ObservationStamp::observed_at_ms),
     }

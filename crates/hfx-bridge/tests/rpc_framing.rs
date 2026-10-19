@@ -315,7 +315,7 @@ fn unsupported_response_version_emits_no_partial_frame() {
         write_rpc_response_for_version(
             &mut output,
             &negotiation_response(),
-            ProtocolVersion::try_from(8_u16).expect("version number is canonical"),
+            ProtocolVersion::try_from(9_u16).expect("version number is canonical"),
         ),
         Err(FrameError::InvalidResponse(
             hfx_protocol::ProtocolWireError::UnsupportedProtocolVersion

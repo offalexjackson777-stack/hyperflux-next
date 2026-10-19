@@ -8,8 +8,10 @@
 
 #include <functional>
 
+class QFrame;
+class QGridLayout;
 class QLabel;
-class QTableWidget;
+class QToolButton;
 
 namespace hyperflux::openrgb::native
 {
@@ -27,6 +29,7 @@ public:
 
 private:
     void render(const PluginInformationViewModel& model);
+    void render_cards(const PluginInformationViewModel& model);
 
     ModelProvider provider_;
     PluginInformationViewModel rendered_;
@@ -34,11 +37,15 @@ private:
     QLabel* health_icon_;
     QLabel* health_title_;
     QLabel* health_summary_;
+    QFrame* attention_;
+    QLabel* attention_text_;
     QLabel* empty_state_;
-    QTableWidget* devices_;
+    QWidget* devices_;
+    QGridLayout* device_grid_;
     QLabel* lighting_transport_;
     QLabel* effects_authority_;
     QLabel* build_identity_;
+    QToolButton* repository_;
 };
 
 } // namespace hyperflux::openrgb::native

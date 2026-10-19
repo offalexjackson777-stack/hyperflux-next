@@ -10,7 +10,7 @@ application reaches the receiver while keeping its own behaviour.
 ## 18. OpenRGB Integration
 
 OpenRGB receives qualified native routes through a dedicated integration that
-depends only on HyperFlux SDK protocol v7. The integration instantiates the
+depends only on HyperFlux SDK protocol v8. The integration instantiates the
 pinned upstream Razer controller with an alternate Feature transport; OpenRGB
 remains responsible for commands, modes, layouts, LED labels, geometry, color
 editing, profiles, effects, and application behavior. HyperFlux supplies exact

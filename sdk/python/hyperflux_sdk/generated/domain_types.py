@@ -1171,6 +1171,11 @@ class TelemetryAvailability(str, Enum):
     REPORTED = "reported"
 
 
+class BatteryCharge(str, Enum):
+    CHARGING = "charging"
+    DISCHARGING = "discharging"
+
+
 class LeaseOutcome(str, Enum):
     GRANTED = "granted"
     CONFLICT = "conflict"
@@ -1318,6 +1323,7 @@ __all__ = [
     "SideEffectCertainty",
     "DeviceApplicationState",
     "TelemetryAvailability",
+    "BatteryCharge",
     "LeaseOutcome",
     "ErrorSeverity",
     "NativeRouteAccess",

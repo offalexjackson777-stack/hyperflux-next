@@ -140,7 +140,7 @@ fn feature_negotiation_selects_intersection_and_rejects_incompatible_versions() 
     let response = negotiate(&spanning, context("protocol-session-4-6")).expect("v5 overlaps");
     assert_eq!(response.selected_version.get(), 5);
 
-    for retired in [1_u16, 2, 3, 4, 6, 8] {
+    for retired in [1_u16, 2, 3, 4, 6, 9] {
         let incompatible = ClientHello {
             minimum_version: number(retired),
             maximum_version: number(retired),

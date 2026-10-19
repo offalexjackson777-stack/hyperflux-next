@@ -93,7 +93,7 @@ work", and no child-profile controls are offered for it.
    semantics, any declared receiver selector translation, and a matching
    standard response cross the receiver route.
 5. The profile declares response correlation and native qualification, after
-   which protocol v7 exposes only the opaque route and bounded exchange.
+   which protocol v7 and v8 expose only the opaque route and bounded exchange.
 
 Only this tier gets child-profile controls, and user-facing pages label it
 "Tested on real hardware".

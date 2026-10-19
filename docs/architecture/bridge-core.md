@@ -8,7 +8,7 @@ it.
 
 The HyperFlux bridge is the sole userspace route, arbitration, and
 receiver-write authority between application SDKs and a generation-bound
-transport. Its primary protocol-v7 path carries qualified upstream Feature
+transport. Its primary native path (protocol v7 and v8) carries qualified upstream Feature
 reports without owning device commands, settings, presentation, layouts,
 effects, persistence, or physical qualification claims.
 
@@ -44,7 +44,7 @@ and raw receiver reports remain behind the concrete kernel adapter.
 
 ## Native Tunnel Path
 
-Protocol v7 exposes three narrow operations: enumerate qualified routes, watch
+Protocol versions 7 and 8 expose three narrow operations: enumerate qualified routes, watch
 bounded availability transitions, and exchange one exact 90-byte Feature report
 through a generation-bound opaque route. The bridge validates route authority,
 profile qualification, NativeControl ownership, report shape, deadlines, queue
@@ -235,7 +235,7 @@ but receive no write authority. A malformed, stale, conflicting, or
 wrong-generation observation changes neither canonical state nor the event
 stream.
 
-Native route availability is a deliberately smaller protocol-v7 projection:
+Native route availability is a deliberately smaller native-protocol projection:
 `available`, `temporarily-unavailable`, or `withdrawn`. It is generation-bound
 and does not claim sleep, power-off, child readiness, or visible application
 state. Older semantic snapshots retain their version-6 presence vocabulary for

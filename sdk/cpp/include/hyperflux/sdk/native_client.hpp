@@ -5,7 +5,7 @@
 #include "identity.hpp"
 #include "native_channel.hpp"
 
-#include <hyperflux/generated/protocol_v7_types.hpp>
+#include <hyperflux/generated/protocol_v8_types.hpp>
 
 #include <memory>
 #include <optional>
@@ -25,7 +25,7 @@ struct NativeClientConfig
 struct NativeEventSubscription
 {
     std::optional<SubscriptionId> subscription_id;
-    std::optional<v7::EventCursor> expected_cursor;
+    std::optional<v8::EventCursor> expected_cursor;
     EventBatchLimit max_events;
 };
 
@@ -43,26 +43,27 @@ class NativeClientApi
 public:
     virtual ~NativeClientApi() = default;
 
-    [[nodiscard]] virtual Result<v7::LeaseResult> acquire_lease(
-        std::vector<v7::ResourceKey> resources,
+    [[nodiscard]] virtual Result<v8::LeaseResult> acquire_lease(
+        std::vector<v8::ResourceKey> resources,
         LeaseDurationMs duration_ms) = 0;
-    [[nodiscard]] virtual Result<v7::LeaseResult> renew_lease(
+    [[nodiscard]] virtual Result<v8::LeaseResult> renew_lease(
         LeaseId lease_id,
         LeaseDurationMs duration_ms) = 0;
-    [[nodiscard]] virtual Result<v7::LeaseResult> release_lease(LeaseId lease_id) = 0;
-    [[nodiscard]] virtual Result<v7::NativeRouteInventory> native_enumerate() = 0;
+    [[nodiscard]] virtual Result<v8::LeaseResult> release_lease(LeaseId lease_id) = 0;
+    [[nodiscard]] virtual Result<v8::NativeRouteInventory> native_enumerate() = 0;
+    [[nodiscard]] virtual Result<v8::BridgeSnapshot> snapshot() = 0;
     [[nodiscard]] virtual Result<NativeExchangeSubmission> prepare_native_exchange(
         LeaseId lease_id,
         NativeRouteToken route_token,
         NativeReportHex report,
         NativeExchangeTimeoutMs timeout_ms) = 0;
-    [[nodiscard]] virtual Result<v7::NativeExchangeOutcome> native_transact(
+    [[nodiscard]] virtual Result<v8::NativeExchangeOutcome> native_transact(
         const NativeExchangeSubmission& submission) = 0;
-    [[nodiscard]] virtual Result<v7::NativeRouteEventBatch> native_watch(
+    [[nodiscard]] virtual Result<v8::NativeRouteEventBatch> native_watch(
         NativeEventSubscription subscription) = 0;
 };
 
-/// Protocol-v7 client for exact receiver-backed native feature exchanges.
+/// Protocol-v8 client for exact receiver-backed native feature exchanges.
 class NativeClient final : public NativeClientApi
 {
 public:
@@ -80,25 +81,26 @@ public:
         const UnixChannelConfig& channel_config,
         NativeClientConfig client_config);
 
-    [[nodiscard]] const v7::ServerHello& server_hello() const noexcept;
+    [[nodiscard]] const v8::ServerHello& server_hello() const noexcept;
     [[nodiscard]] const ClientId& client_id() const noexcept;
 
-    [[nodiscard]] Result<v7::LeaseResult> acquire_lease(
-        std::vector<v7::ResourceKey> resources,
+    [[nodiscard]] Result<v8::LeaseResult> acquire_lease(
+        std::vector<v8::ResourceKey> resources,
         LeaseDurationMs duration_ms) override;
-    [[nodiscard]] Result<v7::LeaseResult> renew_lease(
+    [[nodiscard]] Result<v8::LeaseResult> renew_lease(
         LeaseId lease_id,
         LeaseDurationMs duration_ms) override;
-    [[nodiscard]] Result<v7::LeaseResult> release_lease(LeaseId lease_id) override;
-    [[nodiscard]] Result<v7::NativeRouteInventory> native_enumerate() override;
+    [[nodiscard]] Result<v8::LeaseResult> release_lease(LeaseId lease_id) override;
+    [[nodiscard]] Result<v8::NativeRouteInventory> native_enumerate() override;
+    [[nodiscard]] Result<v8::BridgeSnapshot> snapshot() override;
     [[nodiscard]] Result<NativeExchangeSubmission> prepare_native_exchange(
         LeaseId lease_id,
         NativeRouteToken route_token,
         NativeReportHex report,
         NativeExchangeTimeoutMs timeout_ms) override;
-    [[nodiscard]] Result<v7::NativeExchangeOutcome> native_transact(
+    [[nodiscard]] Result<v8::NativeExchangeOutcome> native_transact(
         const NativeExchangeSubmission& submission) override;
-    [[nodiscard]] Result<v7::NativeRouteEventBatch> native_watch(
+    [[nodiscard]] Result<v8::NativeRouteEventBatch> native_watch(
         NativeEventSubscription subscription) override;
 
 private:
@@ -106,10 +108,10 @@ private:
         std::unique_ptr<NativeRpcChannel> channel,
         std::unique_ptr<IdentitySource> identities,
         ClientId client_id,
-        v7::ServerHello hello);
+        v8::ServerHello hello);
 
     template<typename T>
-    [[nodiscard]] v7::SessionRequestEnvelope<T> envelope(RequestId request_id, T params) const
+    [[nodiscard]] v8::SessionRequestEnvelope<T> envelope(RequestId request_id, T params) const
     {
         return {
             std::move(request_id),
@@ -120,14 +122,14 @@ private:
     }
 
     [[nodiscard]] Result<RequestId> next_request_id();
-    [[nodiscard]] Result<v7::RpcResponse> exchange_checked(
-        const v7::RpcRequest& request,
+    [[nodiscard]] Result<v8::RpcResponse> exchange_checked(
+        const v8::RpcRequest& request,
         const RequestId& request_id);
 
     std::unique_ptr<NativeRpcChannel> channel_;
     std::unique_ptr<IdentitySource> identities_;
     ClientId client_id_;
-    v7::ServerHello hello_;
+    v8::ServerHello hello_;
 };
 
 } // namespace hyperflux::sdk

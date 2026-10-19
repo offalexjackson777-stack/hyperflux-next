@@ -29,7 +29,7 @@ sdk::Error registry_error(std::string message)
     };
 }
 
-const razer_device* upstream_device(const v7::NativeRoute& route)
+const razer_device* upstream_device(const v8::NativeRoute& route)
 {
     const auto product_id = static_cast<unsigned short>(route.product_id.value());
     const auto found = std::find_if(
@@ -51,7 +51,7 @@ const razer_device* upstream_device(const v7::NativeRoute& route)
     return (*found)->type == expected_type ? *found : nullptr;
 }
 
-std::string route_location(const v7::NativeRoute& route)
+std::string route_location(const v8::NativeRoute& route)
 {
     return "hyperflux-next/native/receiver/" + std::string(route.receiver_id.value())
         + "/generation/" + std::to_string(route.generation_id.value())
@@ -62,7 +62,7 @@ std::string route_location(const v7::NativeRoute& route)
 } // namespace
 
 UpstreamRazerControllerInstance::UpstreamRazerControllerInstance(
-    v7::NativeRoute route,
+    v8::NativeRoute route,
     std::unique_ptr<NativeFeatureExchange> exchange,
     std::unique_ptr<RGBController> controller)
     : route_(std::move(route)),
@@ -85,7 +85,7 @@ const RGBController& UpstreamRazerControllerInstance::controller() const noexcep
     return *controller_;
 }
 
-const v7::NativeRoute& UpstreamRazerControllerInstance::route() const noexcept
+const v8::NativeRoute& UpstreamRazerControllerInstance::route() const noexcept
 {
     return route_;
 }
@@ -132,7 +132,7 @@ UpstreamRazerControllerFactory::UpstreamRazerControllerFactory(
 }
 
 sdk::Result<std::unique_ptr<UpstreamRazerControllerInstance>>
-UpstreamRazerControllerFactory::create(const v7::NativeRoute& route)
+UpstreamRazerControllerFactory::create(const v8::NativeRoute& route)
 {
     if(!exchange_factory_ || !client_id_factory_
        || !is_eligible_upstream_razer_route(route))
@@ -192,7 +192,7 @@ UpstreamRazerControllerRegistry::~UpstreamRazerControllerRegistry()
     shutdown();
 }
 
-std::string UpstreamRazerControllerRegistry::stable_id(const v7::NativeRoute& route)
+std::string UpstreamRazerControllerRegistry::stable_id(const v8::NativeRoute& route)
 {
     return std::string(route.receiver_id.value()) + "/" + std::string(route.device_id.value())
         + "/" + std::string(route.endpoint_id.value());
@@ -227,7 +227,7 @@ void UpstreamRazerControllerRegistry::reconcile_registration(
 }
 
 sdk::Result<UpstreamRegistryUpdate> UpstreamRazerControllerRegistry::apply_routes(
-    std::vector<v7::NativeRoute> routes)
+    std::vector<v8::NativeRoute> routes)
 {
     if(stopped_)
     {
@@ -235,7 +235,7 @@ sdk::Result<UpstreamRegistryUpdate> UpstreamRazerControllerRegistry::apply_route
             registry_error("OpenRGB upstream Razer registry is stopped"));
     }
 
-    std::map<std::string, v7::NativeRoute, std::less<>> eligible;
+    std::map<std::string, v8::NativeRoute, std::less<>> eligible;
     for(auto& route : routes)
     {
         if(!is_eligible_upstream_razer_route(route) || upstream_device(route) == nullptr)
@@ -406,6 +406,9 @@ UpstreamRazerControllerRegistry::summaries() const
             std::string(entry.instance->name()),
             route.device_kind,
             route.product_id,
+            route.receiver_id,
+            route.generation_id,
+            route.device_id,
             entry.registered,
             entry.direct_suppressed,
         });
@@ -422,7 +425,7 @@ std::uintptr_t UpstreamRazerControllerRegistry::controller_identity(
                : reinterpret_cast<std::uintptr_t>(&found->second.instance->controller());
 }
 
-bool is_eligible_upstream_razer_route(const v7::NativeRoute& route) noexcept
+bool is_eligible_upstream_razer_route(const v8::NativeRoute& route) noexcept
 {
     return route.route_state == NativeRouteState::Available
         && route.access == NativeRouteAccess::Qualified

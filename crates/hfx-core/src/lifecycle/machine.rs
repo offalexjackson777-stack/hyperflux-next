@@ -8,9 +8,9 @@ use super::{
     ReceiverGenerationLifecycle,
 };
 use hfx_domain::{
-    ActivityState, ApplyOutcome, BatteryPercent, ContactState, EndpointId, FreshnessState,
-    GenerationId, LogicalDeviceId, PairingState, PowerState, ReceiverId, ReceiverLifecycleState,
-    RouteState, SleepState,
+    ActivityState, ApplyOutcome, BatteryCharge, BatteryPercent, ContactState, EndpointId,
+    FreshnessState, GenerationId, LogicalDeviceId, PairingState, PowerState, ReceiverId,
+    ReceiverLifecycleState, RouteState, SleepState,
 };
 use std::collections::VecDeque;
 
@@ -234,6 +234,41 @@ impl ReceiverLifecycleMachine {
         stamp: ObservationStamp,
     ) -> ApplyOutcome {
         self.observe_battery_value(device_id, BatteryValue::Unavailable, stamp)
+    }
+
+    /// Records the charge state reported with the current battery value, or
+    /// clears it when the reading is unknown. A device without a reported
+    /// value cannot carry a charge state.
+    pub fn observe_battery_charge(
+        &mut self,
+        device_id: &LogicalDeviceId,
+        charge: Option<BatteryCharge>,
+        stamp: ObservationStamp,
+    ) -> ApplyOutcome {
+        if let Some(outcome) = self.device_observation_rejection(&stamp) {
+            return outcome;
+        }
+        let Some(current) = self.current.as_mut() else {
+            return ApplyOutcome::RejectedReceiverAbsent;
+        };
+        let Some(device) = current.devices.get_mut(device_id) else {
+            return ApplyOutcome::RejectedUnknownDevice;
+        };
+        if !device.accepts(&stamp) {
+            return ApplyOutcome::IgnoredOlderObservation;
+        }
+        if !matches!(device.battery.value.value(), BatteryValue::Reported(_)) {
+            return ApplyOutcome::RejectedInvalidTransition;
+        }
+        if !device.battery.charge.accepts(&stamp) {
+            return ApplyOutcome::IgnoredOlderObservation;
+        }
+        device.note(&stamp);
+        if device.battery.apply_charge(charge, stamp) {
+            ApplyOutcome::Applied
+        } else {
+            ApplyOutcome::IgnoredOlderObservation
+        }
     }
 
     /// Marks an existing battery observation stale without discarding its value.

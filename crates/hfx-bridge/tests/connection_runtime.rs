@@ -419,7 +419,7 @@ fn assert_incompatible_hello_is_rejected_with_remediation(hello: &[u8]) {
 #[test]
 fn clients_without_a_served_version_get_a_structured_protocol_rejection() {
     assert_incompatible_hello_is_rejected_with_remediation(
-        br#"{"method":"negotiate","request":{"request_id":"request-1","params":{"client_id":"client-1","client_name":"OpenRGB","minimum_version":8,"maximum_version":8,"required_features":[],"optional_features":[]}}}"#,
+        br#"{"method":"negotiate","request":{"request_id":"request-1","params":{"client_id":"client-1","client_name":"OpenRGB","minimum_version":9,"maximum_version":9,"required_features":[],"optional_features":[]}}}"#,
     );
 }
 

@@ -457,11 +457,22 @@
       "path": "docs/generated/bridge-protocol-v7.md",
       "title": "Bridge Protocol V7",
       "audience": "developers",
-      "purpose": "Version 7 of the bridge protocol, the current version.",
+      "purpose": "Version 7 of the bridge protocol, still accepted for older clients.",
       "owner": "protocol",
       "navigation_group": "generated",
       "mode": "generated",
       "canonical_sources": ["protocol/v7/catalog.json"],
+      "generated_block_ids": []
+    },
+    {
+      "path": "docs/generated/bridge-protocol-v8.md",
+      "title": "Bridge Protocol V8",
+      "audience": "developers",
+      "purpose": "Version 8 of the bridge protocol, the current version.",
+      "owner": "protocol",
+      "navigation_group": "generated",
+      "mode": "generated",
+      "canonical_sources": ["protocol/v8/catalog.json"],
       "generated_block_ids": []
     },
     {

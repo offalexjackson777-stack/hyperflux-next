@@ -132,6 +132,7 @@ Each value gets its own type so that, for example, a vendor ID can never be pass
 - `SideEffectCertainty`: `none`, `possible`, `partial`, `committed`
 - `DeviceApplicationState`: `unverified`, `confirmed`, `rejected`
 - `TelemetryAvailability`: `unknown`, `unavailable`, `reported`
+- `BatteryCharge`: `charging`, `discharging`
 - `LeaseOutcome`: `granted`, `conflict`, `rejected`
 - `ErrorSeverity`: `info`, `warning`, `error`, `critical`
 - `NativeRouteAccess`: `qualified`, `candidate`, `backend-required`

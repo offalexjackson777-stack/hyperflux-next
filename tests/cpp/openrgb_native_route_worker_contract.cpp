@@ -40,7 +40,7 @@ T number(std::uint64_t value)
     return *decoded;
 }
 
-hyperflux::v7::EventCursor cursor(std::uint64_t sequence)
+hyperflux::v8::EventCursor cursor(std::uint64_t sequence)
 {
     using namespace hyperflux;
     return {
@@ -51,11 +51,11 @@ hyperflux::v7::EventCursor cursor(std::uint64_t sequence)
     };
 }
 
-hyperflux::v7::NativeRoute route(std::string_view device_id, std::uint16_t product_id)
+hyperflux::v8::NativeRoute route(std::string_view device_id, std::uint16_t product_id)
 {
     using namespace hyperflux;
     const auto kind = product_id == 0x00cd ? DeviceKind::Mouse : DeviceKind::Keyboard;
-    const v7::ResourceKey resource {
+    const v8::ResourceKey resource {
         text<ReceiverId>("receiver-1"),
         number<GenerationId>(4),
         text<LogicalDeviceId>(device_id),
@@ -78,11 +78,51 @@ hyperflux::v7::NativeRoute route(std::string_view device_id, std::uint16_t produ
     };
 }
 
+hyperflux::v8::BridgeSnapshot status_snapshot()
+{
+    using namespace hyperflux;
+    v8::LogicalDeviceSnapshot mouse {
+        text<LogicalDeviceId>("mouse-00cd"),
+        DeviceKind::Mouse,
+        number<ProductId>(0x00cd),
+        std::nullopt,
+        std::nullopt,
+        PairingState::Paired,
+        PresenceState::Available,
+        SupportLevel::LightingQualified,
+        {},
+        {
+            TelemetryAvailability::Reported,
+            number<BatteryPercent>(81),
+            BatteryCharge::Charging,
+            FreshnessState::Fresh,
+            EvidenceConfidence::Observed,
+            number<MonotonicMs>(1'000),
+        },
+        {},
+    };
+    return {
+        cursor(1),
+        {{
+            text<ReceiverId>("receiver-1"),
+            number<GenerationId>(4),
+            std::nullopt,
+            std::nullopt,
+            ReceiverLifecycleState::Active,
+            {std::move(mouse)},
+            {},
+            false,
+            RestoreState::Idle,
+        }},
+    };
+}
+
 struct FakeState
 {
     std::mutex mutex;
     std::size_t enumerate_calls = 0;
     std::size_t watch_calls = 0;
+    std::size_t status_calls = 0;
 };
 
 class FakeClient final : public hyperflux::sdk::NativeClientApi
@@ -93,35 +133,43 @@ public:
     {
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::LeaseResult> acquire_lease(
-        std::vector<hyperflux::v7::ResourceKey>, hyperflux::LeaseDurationMs) override
+    hyperflux::sdk::Result<hyperflux::v8::LeaseResult> acquire_lease(
+        std::vector<hyperflux::v8::ResourceKey>, hyperflux::LeaseDurationMs) override
     {
-        return unsupported<hyperflux::v7::LeaseResult>();
+        return unsupported<hyperflux::v8::LeaseResult>();
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::LeaseResult> renew_lease(
+    hyperflux::sdk::Result<hyperflux::v8::LeaseResult> renew_lease(
         hyperflux::LeaseId, hyperflux::LeaseDurationMs) override
     {
-        return unsupported<hyperflux::v7::LeaseResult>();
+        return unsupported<hyperflux::v8::LeaseResult>();
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::LeaseResult> release_lease(
+    hyperflux::sdk::Result<hyperflux::v8::LeaseResult> release_lease(
         hyperflux::LeaseId) override
     {
-        return unsupported<hyperflux::v7::LeaseResult>();
+        return unsupported<hyperflux::v8::LeaseResult>();
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::NativeRouteInventory> native_enumerate() override
+    hyperflux::sdk::Result<hyperflux::v8::NativeRouteInventory> native_enumerate() override
     {
         std::lock_guard lock(state_->mutex);
         ++state_->enumerate_calls;
         if(state_->enumerate_calls == 1)
         {
-            return hyperflux::sdk::Result<hyperflux::v7::NativeRouteInventory>::success(
+            return hyperflux::sdk::Result<hyperflux::v8::NativeRouteInventory>::success(
                 {cursor(1), {route("mouse-00cd", 0x00cd)}});
         }
-        return hyperflux::sdk::Result<hyperflux::v7::NativeRouteInventory>::success(
+        return hyperflux::sdk::Result<hyperflux::v8::NativeRouteInventory>::success(
             {cursor(2), {route("keyboard-0296", 0x0296)}});
+    }
+
+    hyperflux::sdk::Result<hyperflux::v8::BridgeSnapshot> snapshot() override
+    {
+        std::lock_guard lock(state_->mutex);
+        ++state_->status_calls;
+        return hyperflux::sdk::Result<hyperflux::v8::BridgeSnapshot>::success(
+            status_snapshot());
     }
 
     hyperflux::sdk::Result<hyperflux::sdk::NativeExchangeSubmission>
@@ -134,13 +182,13 @@ public:
         return unsupported<hyperflux::sdk::NativeExchangeSubmission>();
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::NativeExchangeOutcome> native_transact(
+    hyperflux::sdk::Result<hyperflux::v8::NativeExchangeOutcome> native_transact(
         const hyperflux::sdk::NativeExchangeSubmission&) override
     {
-        return unsupported<hyperflux::v7::NativeExchangeOutcome>();
+        return unsupported<hyperflux::v8::NativeExchangeOutcome>();
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::NativeRouteEventBatch> native_watch(
+    hyperflux::sdk::Result<hyperflux::v8::NativeRouteEventBatch> native_watch(
         hyperflux::sdk::NativeEventSubscription) override
     {
         std::lock_guard lock(state_->mutex);
@@ -148,7 +196,7 @@ public:
         if(state_->watch_calls == 1)
         {
             const auto keyboard = route("keyboard-0296", 0x0296);
-            return hyperflux::sdk::Result<hyperflux::v7::NativeRouteEventBatch>::success({
+            return hyperflux::sdk::Result<hyperflux::v8::NativeRouteEventBatch>::success({
                 text<hyperflux::SubscriptionId>("subscription-1"),
                 cursor(2),
                 {{number<hyperflux::SequenceNumber>(2),
@@ -161,7 +209,7 @@ public:
                 false,
             });
         }
-        return hyperflux::sdk::Result<hyperflux::v7::NativeRouteEventBatch>::success({
+        return hyperflux::sdk::Result<hyperflux::v8::NativeRouteEventBatch>::success({
             text<hyperflux::SubscriptionId>("subscription-2"),
             cursor(2),
             {},
@@ -198,6 +246,7 @@ int main()
     std::mutex callback_mutex;
     std::condition_variable callback_wake;
     std::vector<NativeRouteSnapshot> snapshots;
+    std::vector<std::optional<v8::BridgeSnapshot>> statuses;
     std::size_t factory_calls = 0;
 
     auto worker = NativeRouteWorker::create(
@@ -228,6 +277,14 @@ int main()
                 callback_wake.notify_all();
             },
             [](sdk::Error) {},
+            [&](std::optional<v8::BridgeSnapshot> status)
+            {
+                {
+                    std::lock_guard lock(callback_mutex);
+                    statuses.push_back(std::move(status));
+                }
+                callback_wake.notify_all();
+            },
         });
     if(!worker || !worker.value()->start())
     {
@@ -239,7 +296,7 @@ int main()
         if(!callback_wake.wait_for(
                lock,
                std::chrono::seconds(2),
-               [&] { return snapshots.size() >= 2; }))
+               [&] { return snapshots.size() >= 2 && !statuses.empty(); }))
         {
             worker.value()->stop();
             return 2;
@@ -258,10 +315,18 @@ int main()
     }
     {
         std::lock_guard lock(state->mutex);
-        if(state->enumerate_calls < 2 || state->watch_calls < 1)
+        if(state->enumerate_calls < 2 || state->watch_calls < 1 || state->status_calls < 1)
         {
             return 4;
         }
+    }
+    // Device status is published once per change, never per poll.
+    if(statuses.size() != 1 || !statuses.front().has_value()
+       || statuses.front()->receivers.front().devices.front().battery.charge
+              != BatteryCharge::Charging
+       || !worker.value()->device_status().has_value())
+    {
+        return 10;
     }
 
     auto invalid = NativeRouteWorker::create(
@@ -291,6 +356,7 @@ int main()
         {
             [](NativeRouteSnapshot) { throw std::runtime_error("expected callback failure"); },
             [](sdk::Error) {},
+            [](std::optional<v8::BridgeSnapshot>) {},
         });
     if(!callback_failure || !callback_failure.value()->start())
     {

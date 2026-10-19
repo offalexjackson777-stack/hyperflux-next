@@ -37,7 +37,7 @@ T number(std::uint64_t value)
     return *decoded;
 }
 
-const hyperflux::RequestId& request_id(const hyperflux::v7::RpcRequest& request)
+const hyperflux::RequestId& request_id(const hyperflux::v8::RpcRequest& request)
 {
     return std::visit(
         [](const auto& alternative) -> const hyperflux::RequestId& {
@@ -46,7 +46,7 @@ const hyperflux::RequestId& request_id(const hyperflux::v7::RpcRequest& request)
         request);
 }
 
-hyperflux::v7::EventCursor cursor(std::uint64_t sequence)
+hyperflux::v8::EventCursor cursor(std::uint64_t sequence)
 {
     using namespace hyperflux;
     return {
@@ -57,7 +57,7 @@ hyperflux::v7::EventCursor cursor(std::uint64_t sequence)
     };
 }
 
-hyperflux::v7::ResourceKey resource()
+hyperflux::v8::ResourceKey resource()
 {
     using namespace hyperflux;
     return {
@@ -68,7 +68,7 @@ hyperflux::v7::ResourceKey resource()
     };
 }
 
-hyperflux::v7::NativeRoute route()
+hyperflux::v8::NativeRoute route()
 {
     using namespace hyperflux;
     return {
@@ -124,11 +124,11 @@ class FakeNativeChannel final : public hyperflux::sdk::NativeRpcChannel
 public:
     explicit FakeNativeChannel(Fault fault) : fault_(fault) {}
 
-    hyperflux::sdk::Result<hyperflux::v7::RpcResponse> exchange(
-        const hyperflux::v7::RpcRequest& request) override
+    hyperflux::sdk::Result<hyperflux::v8::RpcResponse> exchange(
+        const hyperflux::v8::RpcRequest& request) override
     {
         using namespace hyperflux;
-        if(const auto* negotiation = std::get_if<v7::RpcRequestNegotiate>(&request))
+        if(const auto* negotiation = std::get_if<v8::RpcRequestNegotiate>(&request))
         {
             auto features = negotiation->request.params.required_features;
             if(fault_ == Fault::MissingFeature)
@@ -138,12 +138,12 @@ public:
             const auto response_request = fault_ == Fault::RequestMismatch
                 ? text<RequestId>("wrong-request")
                 : negotiation->request.request_id;
-            return sdk::Result<v7::RpcResponse>::success(v7::RpcResponseNegotiateSuccess {
+            return sdk::Result<v8::RpcResponse>::success(v8::RpcResponseNegotiateSuccess {
                 {
                     response_request,
                     text<ServerInstanceId>("server-1"),
                     {
-                        number<ProtocolVersion>(7),
+                        number<ProtocolVersion>(8),
                         text<ServerInstanceId>("server-1"),
                         text<ProtocolSessionId>("session-1"),
                         text<NegotiationToken>("token-1"),
@@ -156,13 +156,13 @@ public:
         }
 
         const auto server = fault_ == Fault::ServerChanged ? "server-2" : "server-1";
-        if(const auto* acquire = std::get_if<v7::RpcRequestAcquireLease>(&request))
+        if(const auto* acquire = std::get_if<v8::RpcRequestAcquireLease>(&request))
         {
-            return sdk::Result<v7::RpcResponse>::success(v7::RpcResponseAcquireLeaseSuccess {
+            return sdk::Result<v8::RpcResponse>::success(v8::RpcResponseAcquireLeaseSuccess {
                 {
                     request_id(request),
                     text<ServerInstanceId>(server),
-                    v7::LeaseResultGranted {
+                    v8::LeaseResultGranted {
                         {
                             text<LeaseId>("lease-1"),
                             acquire->request.params.client_id,
@@ -174,10 +174,10 @@ public:
                 },
             });
         }
-        if(std::holds_alternative<v7::RpcRequestNativeEnumerate>(request))
+        if(std::holds_alternative<v8::RpcRequestNativeEnumerate>(request))
         {
-            return sdk::Result<v7::RpcResponse>::success(
-                v7::RpcResponseNativeEnumerateSuccess {
+            return sdk::Result<v8::RpcResponse>::success(
+                v8::RpcResponseNativeEnumerateSuccess {
                     {
                         request_id(request),
                         text<ServerInstanceId>(server),
@@ -185,26 +185,26 @@ public:
                     },
                 });
         }
-        if(const auto* transact = std::get_if<v7::RpcRequestNativeTransact>(&request))
+        if(const auto* transact = std::get_if<v8::RpcRequestNativeTransact>(&request))
         {
-            return sdk::Result<v7::RpcResponse>::success(
-                v7::RpcResponseNativeTransactSuccess {
+            return sdk::Result<v8::RpcResponse>::success(
+                v8::RpcResponseNativeTransactSuccess {
                     {
                         request_id(request),
                         text<ServerInstanceId>(server),
                         {
                             transact->request.params.request_id,
                             transact->request.params.route_token,
-                            v7::NativeExchangeResultMatchedResponse {
+                            v8::NativeExchangeResultMatchedResponse {
                                 {text<NativeReportHex>(std::string(180, 'f'))},
                             },
                         },
                     },
                 });
         }
-        if(std::holds_alternative<v7::RpcRequestNativeWatch>(request))
+        if(std::holds_alternative<v8::RpcRequestNativeWatch>(request))
         {
-            return sdk::Result<v7::RpcResponse>::success(v7::RpcResponseNativeWatchSuccess {
+            return sdk::Result<v8::RpcResponse>::success(v8::RpcResponseNativeWatchSuccess {
                 {
                     request_id(request),
                     text<ServerInstanceId>(server),
@@ -221,7 +221,7 @@ public:
                 },
             });
         }
-        return sdk::Result<v7::RpcResponse>::failure({
+        return sdk::Result<v8::RpcResponse>::failure({
             sdk::ErrorCode::UnexpectedResponse,
             "test channel received an unexpected request",
             std::nullopt,
@@ -256,7 +256,7 @@ int main()
 {
     using namespace hyperflux;
     auto client = connect(Fault::None);
-    if(!client || client.value().server_hello().selected_version != number<ProtocolVersion>(7))
+    if(!client || client.value().server_hello().selected_version != number<ProtocolVersion>(8))
     {
         return 1;
     }
@@ -269,7 +269,7 @@ int main()
     auto lease = client.value().acquire_lease(
         {resource()}, number<LeaseDurationMs>(5'000));
     const auto* granted = lease
-        ? std::get_if<v7::LeaseResultGranted>(&lease.value())
+        ? std::get_if<v8::LeaseResultGranted>(&lease.value())
         : nullptr;
     if(granted == nullptr || granted->detail.lease_id != text<LeaseId>("lease-1"))
     {
@@ -288,7 +288,7 @@ int main()
     auto first = client.value().native_transact(submission.value());
     auto replay = client.value().native_transact(submission.value());
     const auto* matched = first
-        ? std::get_if<v7::NativeExchangeResultMatchedResponse>(&first.value().result)
+        ? std::get_if<v8::NativeExchangeResultMatchedResponse>(&first.value().result)
         : nullptr;
     if(matched == nullptr || !replay || first.value().request_id != request_identity
        || replay.value().request_id != request_identity

@@ -4,7 +4,7 @@
 
 This page lists every method and message in the bridge protocol, which the SDK and the app integrations use to talk to the HyperFlux background service, for developers who write or debug a client.
 
-Supported protocol versions: **7 through 7**.
+Supported protocol versions: **8 through 8**.
 
 Maximum encoded message: **1048576 bytes**. Maximum JSON nesting: **128 levels**.
 
@@ -217,6 +217,7 @@ Battery availability and value without collapsing unknown and unavailable.
 | --- | --- | --- | --- |
 | `availability` | `TelemetryAvailability` | `true` | scalar |
 | `percentage` | `BatteryPercent` | `false` | scalar |
+| `charge` | `BatteryCharge` | `false` | scalar |
 | `freshness` | `FreshnessState` | `true` | scalar |
 | `confidence` | `EvidenceConfidence` | `true` | scalar |
 | `observed_at_ms` | `MonotonicMs` | `false` | scalar |

@@ -33,6 +33,7 @@ Defines the messages apps and tools exchange with the HyperFlux background servi
 - [`protocol/registry.json`](registry.json)
 - [`protocol/v5/catalog.json`](v5/catalog.json)
 - [`protocol/v7/catalog.json`](v7/catalog.json)
+- [`protocol/v8/catalog.json`](v8/catalog.json)
 
 ## Verify
 

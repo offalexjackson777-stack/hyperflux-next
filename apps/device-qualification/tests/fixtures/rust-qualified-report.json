@@ -15,7 +15,7 @@
   "system": {
     "driver_version": "2.2.0",
     "bridge_version": "2.2.0",
-    "profile_catalog_digest": "2e50cd2c408215947570935e520cab1a617d9b7421ba5adfc49456a67d1f6e68"
+    "profile_catalog_digest": "097a94bf2cf4cf3bfb60cc98d34af3d88a04111fc4dd34a311c3f3860956b974"
   },
   "receivers": [
     {
@@ -132,7 +132,7 @@
         {
           "device_id": "device-2",
           "kind": "keyboard",
-          "model_name": "Razer DeathStalker V2 Pro Tenkeyless",
+          "model_name": "Razer DeathStalker V2 Pro TKL",
           "vendor_id": 5426,
           "product_id": 662,
           "profile": {

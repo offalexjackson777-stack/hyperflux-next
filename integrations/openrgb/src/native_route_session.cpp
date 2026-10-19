@@ -39,7 +39,7 @@ sdk::Result<T> checked_domain(Value value, std::string_view label)
     return sdk::Result<T>::success(std::move(*decoded));
 }
 
-bool route_is_usable(const v7::NativeRoute& route)
+bool route_is_usable(const v8::NativeRoute& route)
 {
     return route.route_state == NativeRouteState::Available
         && route.access == NativeRouteAccess::Qualified
@@ -108,7 +108,7 @@ std::optional<std::array<std::uint8_t, razer_native_report_bytes>> decode_hex(
 
 } // namespace
 
-NativeRouteIdentity native_route_identity(const v7::NativeRoute& route)
+NativeRouteIdentity native_route_identity(const v8::NativeRoute& route)
 {
     return {
         route.receiver_id,
@@ -148,7 +148,7 @@ sdk::Result<sdk::NativeClientConfig> native_route_client_config(ClientId client_
 
 SdkNativeFeatureExchange::SdkNativeFeatureExchange(
     std::unique_ptr<sdk::NativeClientApi> client,
-    v7::NativeRoute route)
+    v8::NativeRoute route)
     : client_(std::move(client)),
       route_(std::move(route))
 {
@@ -197,7 +197,7 @@ sdk::Result<std::unique_ptr<SdkNativeFeatureExchange>> SdkNativeFeatureExchange:
     const auto found = std::find_if(
         inventory.value().routes.begin(),
         inventory.value().routes.end(),
-        [&expected_route](const v7::NativeRoute& route) {
+        [&expected_route](const v8::NativeRoute& route) {
             return native_route_identity(route) == expected_route;
         });
     if(found == inventory.value().routes.end() || !route_is_usable(*found))
@@ -226,7 +226,7 @@ NativeFeatureExchangeResult SdkNativeFeatureExchange::exchange(
     }
     auto lease = client_->acquire_lease({*route_.resource}, *duration);
     const auto* granted = lease
-        ? std::get_if<v7::LeaseResultGranted>(&lease.value())
+        ? std::get_if<v8::LeaseResultGranted>(&lease.value())
         : nullptr;
     if(granted == nullptr)
     {
@@ -258,16 +258,16 @@ NativeFeatureExchangeResult SdkNativeFeatureExchange::exchange(
     {
         return {NativeExchangeCertainty::MayHaveBeenSent, {}};
     }
-    if(std::holds_alternative<v7::NativeExchangeResultNotSent>(outcome.value().result))
+    if(std::holds_alternative<v8::NativeExchangeResultNotSent>(outcome.value().result))
     {
         return {NativeExchangeCertainty::NotSent, {}};
     }
-    if(std::holds_alternative<v7::NativeExchangeResultMayHaveBeenSent>(
+    if(std::holds_alternative<v8::NativeExchangeResultMayHaveBeenSent>(
            outcome.value().result))
     {
         return {NativeExchangeCertainty::MayHaveBeenSent, {}};
     }
-    const auto* matched = std::get_if<v7::NativeExchangeResultMatchedResponse>(
+    const auto* matched = std::get_if<v8::NativeExchangeResultMatchedResponse>(
         &outcome.value().result);
     if(matched == nullptr)
     {

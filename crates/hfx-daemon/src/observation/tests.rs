@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use super::*;
+use hfx_domain::BatteryCharge;
 use hfx_kernel_transport::HFX_UAPI_ENDPOINT_SLOT_RECEIVER;
 
 const RETURN_RETRIES: &[u64] = &[
@@ -288,7 +289,16 @@ fn qualified_mouse_charge_field_reads_in_the_context_of_its_report() {
 
     let off_mat = charge_after_contact(&mut translator, 4, Some(0), 0);
     assert_eq!(off_mat.disposition, PassiveDisposition::Applied);
-    assert!(off_mat.observations.is_empty());
+    assert!(matches!(
+        off_mat.observations.as_slice(),
+        [LifecycleObservation {
+            kind: LifecycleObservationKind::BatteryCharge {
+                charge: Some(BatteryCharge::Discharging),
+                ..
+            },
+            ..
+        }]
+    ));
     assert_eq!(off_mat.restore_ready, None);
     assert_eq!(
         off_mat.charge,
@@ -717,8 +727,21 @@ fn keyboard_status_route_word_reads_the_charge_state_without_changing_the_route(
             translation.disposition, disposition,
             "route word {word:#06x}"
         );
+        // The route observations come first, then the charge annotation.
+        let (charge, route) = translation
+            .observations
+            .split_last()
+            .expect("the charge annotation is emitted");
+        assert!(
+            matches!(
+                &charge.kind,
+                LifecycleObservationKind::BatteryCharge { charge, .. }
+                    if *charge == reading.battery_charge()
+            ),
+            "route word {word:#06x}"
+        );
         assert_eq!(
-            translation.observations.is_empty(),
+            route.is_empty(),
             disposition != PassiveDisposition::Applied,
             "route word {word:#06x}"
         );
