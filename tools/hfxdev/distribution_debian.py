@@ -93,8 +93,9 @@ DEP5_LICENSES = {
 }
 # Licenses that cover only bundled third-party files, not the package as a
 # whole. Each entry names the license, the outputs that bundle those files, the
-# files, their own copyright, an optional comment, and the project files in the
-# same directory that stay under the package licenses (None when there are none).
+# files, their own copyright, an optional comment, the project files in the
+# same directory that stay under the package licenses (None when there are
+# none), and whether only the OpenRGB plugin bundles them.
 # Rust crates are fetched by Cargo, and the build maps their location to
 # `.cargo`, which is how they appear in the programs.
 THIRD_PARTY_FILES = (
@@ -105,6 +106,7 @@ THIRD_PARTY_FILES = (
         "2013-2022 Cole Bemis (portions, as part of Feather), 2022 Lucide Contributors",
         None,
         "integrations/openrgb/icons/hyperflux-*",
+        True,
     ),
     (
         "MIT",
@@ -114,6 +116,7 @@ THIRD_PARTY_FILES = (
         "Rust crates from crates.io compiled into the programs. Each crate's own\n"
         "notice is in LICENSE-rust-crates beside this package's other licenses.",
         None,
+        False,
     ),
     (
         "MIT",
@@ -122,8 +125,13 @@ THIRD_PARTY_FILES = (
         "2013-2023 Niels Lohmann",
         "nlohmann/json, compiled into the OpenRGB plugin.",
         None,
+        True,
     ),
 )
+# Licenses that only code bundled in the OpenRGB plugin uses. A Full output
+# without the plugin does not declare them. MIT stays: the Rust crates in its
+# other programs use it too.
+OPENRGB_PLUGIN_LICENSES = ("ISC",)
 THIRD_PARTY_LICENSES = frozenset(entry[0] for entry in THIRD_PARTY_FILES)
 LICENSE_PARAGRAPHS = {
     "GPL-2.0-only": (
@@ -201,6 +209,7 @@ class DebianPlan:
     synopsis: str
     extended_description: tuple[str, ...]
     licenses: tuple[str, ...]
+    openrgb_plugin: bool
     depends: tuple[str, ...]
     suggests: tuple[str, ...]
     conflicts: tuple[str, ...]
@@ -343,6 +352,22 @@ def plugin_dependencies(output: SplitOutput, target: DistributionTarget) -> tupl
     if not target.openrgb_plugin or OPENRGB_PLUGIN_BUILD not in output.builds:
         return ()
     return OPENRGB_PLUGIN_RELEASE_DEPENDENCIES[target.id]
+
+
+def carries_openrgb_plugin(output: SplitOutput, target: DistributionTarget) -> bool:
+    return target.openrgb_plugin and OPENRGB_PLUGIN_BUILD in output.builds
+
+
+def output_licenses(output: SplitOutput, target: DistributionTarget) -> tuple[str, ...]:
+    """The licenses of what the output carries on the target.
+
+    A Full output without the OpenRGB plugin drops the licenses that only the
+    plugin's bundled code uses.
+    """
+
+    if OPENRGB_PLUGIN_BUILD not in output.builds or target.openrgb_plugin:
+        return output.licenses
+    return tuple(item for item in output.licenses if item not in OPENRGB_PLUGIN_LICENSES)
 
 
 def output_relations(
@@ -517,7 +542,8 @@ def debian_plans(
                 homepage=catalog.homepage,
                 synopsis=summary,
                 extended_description=description,
-                licenses=output.licenses,
+                licenses=output_licenses(output, target),
+                openrgb_plugin=carries_openrgb_plugin(output, target),
                 depends=tuple(
                     dict.fromkeys(
                         [*role_packages, *plugin_dependencies(output, target), *siblings]
@@ -634,8 +660,8 @@ def copyright_text(plan: DebianPlan) -> str:
     # Later paragraphs win in DEP-5, so each third-party directory is followed
     # by the project files that live beside it.
     declared = set()
-    for license_id, outputs, files, holder, comment, ours in THIRD_PARTY_FILES:
-        if plan.output not in outputs:
+    for license_id, outputs, files, holder, comment, ours, plugin in THIRD_PARTY_FILES:
+        if plan.output not in outputs or (plugin and not plan.openrgb_plugin):
             continue
         if license_id not in plan.licenses:
             raise ModelError(f"{plan.package_name}: bundles {files} but does not declare {license_id}")
