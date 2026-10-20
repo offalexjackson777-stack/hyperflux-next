@@ -24,7 +24,7 @@ struct NativeRouteIdentity
     friend bool operator==(const NativeRouteIdentity&, const NativeRouteIdentity&) = default;
 };
 
-[[nodiscard]] NativeRouteIdentity native_route_identity(const v7::NativeRoute& route);
+[[nodiscard]] NativeRouteIdentity native_route_identity(const v8::NativeRoute& route);
 
 [[nodiscard]] sdk::Result<sdk::NativeClientConfig> native_route_client_config(
     ClientId client_id);
@@ -51,10 +51,10 @@ public:
 private:
     SdkNativeFeatureExchange(
         std::unique_ptr<sdk::NativeClientApi> client,
-        v7::NativeRoute route);
+        v8::NativeRoute route);
 
     std::unique_ptr<sdk::NativeClientApi> client_;
-    v7::NativeRoute route_;
+    v8::NativeRoute route_;
 };
 
 } // namespace hyperflux::openrgb::native

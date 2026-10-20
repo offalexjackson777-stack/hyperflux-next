@@ -882,6 +882,7 @@ mod tests {
                 battery: BatteryObservation {
                     availability: TelemetryAvailability::Unknown,
                     percentage: None,
+                    charge: None,
                     freshness: FreshnessState::Unknown,
                     confidence: EvidenceConfidence::Observed,
                     observed_at_ms: None,

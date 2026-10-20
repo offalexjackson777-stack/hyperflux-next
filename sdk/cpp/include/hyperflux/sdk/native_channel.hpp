@@ -4,7 +4,7 @@
 
 #include "channel.hpp"
 
-#include <hyperflux/generated/protocol_v7_types.hpp>
+#include <hyperflux/generated/protocol_v8_types.hpp>
 
 #include <cstdint>
 #include <memory>
@@ -12,14 +12,14 @@
 namespace hyperflux::sdk
 {
 
-/// Protocol-v7 channel kept separate from the stable protocol-v5 lighting API.
+/// Protocol-v8 channel kept separate from the stable protocol-v5 lighting API.
 class NativeRpcChannel
 {
 public:
     virtual ~NativeRpcChannel() = default;
 
-    [[nodiscard]] virtual Result<v7::RpcResponse> exchange(
-        const v7::RpcRequest& request) = 0;
+    [[nodiscard]] virtual Result<v8::RpcResponse> exchange(
+        const v8::RpcRequest& request) = 0;
 };
 
 class NativeUnixRpcChannel final : public NativeRpcChannel
@@ -38,8 +38,8 @@ public:
         int file_descriptor,
         std::uint32_t timeout_ms);
 
-    [[nodiscard]] Result<v7::RpcResponse> exchange(
-        const v7::RpcRequest& request) override;
+    [[nodiscard]] Result<v8::RpcResponse> exchange(
+        const v8::RpcRequest& request) override;
 
 private:
     explicit NativeUnixRpcChannel(int file_descriptor);

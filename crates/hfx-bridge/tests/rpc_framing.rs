@@ -6,9 +6,8 @@ use hfx_bridge::{
     write_rpc_response, write_rpc_response_for_version,
 };
 use hfx_domain::{
-    ClientId, ClientName, ColorChannel, ComponentVersion, NegotiationToken, ProtocolFeatureId,
-    ProtocolSessionId, ProtocolVersion, QueueCapacity, RequestId, ServerInstanceId,
-    StableLightingMode,
+    ClientId, ClientName, ComponentVersion, NegotiationToken, ProtocolFeatureId, ProtocolSessionId,
+    ProtocolVersion, QueueCapacity, RequestId, ServerInstanceId,
 };
 use hfx_protocol::{
     ClientHello, NegotiationRequestEnvelope, RpcRequest, RpcResponse, ServerHello, SuccessEnvelope,
@@ -30,8 +29,8 @@ fn negotiation_request() -> RpcRequest {
         params: ClientHello {
             client_id: id::<ClientId>("client-test"),
             client_name: id::<ClientName>("Framing test"),
-            minimum_version: ProtocolVersion::try_from(1).expect("version must be valid"),
-            maximum_version: ProtocolVersion::try_from(2).expect("version must be valid"),
+            minimum_version: ProtocolVersion::try_from(5).expect("version must be valid"),
+            maximum_version: ProtocolVersion::try_from(7).expect("version must be valid"),
             required_features: Vec::new(),
             optional_features: vec![id::<ProtocolFeatureId>("structured-diagnostics")],
         },
@@ -43,7 +42,7 @@ fn negotiation_response() -> RpcResponse {
         request_id: id::<RequestId>("request-negotiate"),
         server_instance_id: id::<ServerInstanceId>("server-test"),
         result: ServerHello {
-            selected_version: ProtocolVersion::try_from(2).expect("version must be valid"),
+            selected_version: ProtocolVersion::try_from(5).expect("version must be valid"),
             server_instance_id: id::<ServerInstanceId>("server-test"),
             protocol_session_id: id::<ProtocolSessionId>("protocol-session-test"),
             negotiation_token: id::<NegotiationToken>("negotiation-token-test"),
@@ -70,11 +69,29 @@ fn framed_payload(payload: &[u8]) -> Vec<u8> {
     frame
 }
 
+fn version(number: u16) -> ProtocolVersion {
+    ProtocolVersion::try_from(number).expect("version number is canonical")
+}
+
+/// A method that only version 7 defines.
+fn native_enumerate_frame() -> Vec<u8> {
+    let value = json!({
+        "method": "native-enumerate",
+        "request": {
+            "request_id": "request-native-enumerate",
+            "protocol_session_id": "protocol-session-1",
+            "negotiation_token": "negotiation-1",
+            "params": {}
+        }
+    });
+    framed_payload(&serde_json::to_vec(&value).expect("native request serializes"))
+}
+
 fn framed_transaction_value() -> Value {
     let transaction: Value = serde_json::from_str(include_str!(
-        "../../../protocol/v2/fixtures/transaction-request-canonical.json"
+        "../../../protocol/v5/fixtures/transaction-request-canonical.json"
     ))
-    .expect("frozen v2 fixture is JSON");
+    .expect("frozen v5 fixture is JSON");
     json!({
         "method": "submit-transaction",
         "request": {
@@ -266,40 +283,25 @@ fn response_validation_precedes_io_and_io_stage_is_preserved() {
 
 #[test]
 fn versioned_framing_uses_only_the_exact_negotiated_wire_shape() {
-    let v2_payload =
-        serde_json::to_vec(&framed_transaction_value()).expect("v2 request serializes");
-    let v2_frame = framed_payload(&v2_payload);
-    let normalized = read_rpc_request_for_version(
-        &mut Cursor::new(&v2_frame),
-        ProtocolVersion::try_from(2_u16).expect("v2 is canonical"),
-    )
-    .expect("v2 frame decodes")
-    .expect("v2 frame contains a request");
-    assert!(matches!(normalized, RpcRequest::SubmitTransaction(_)));
-    assert!(matches!(
-        read_rpc_request_for_version(
-            &mut Cursor::new(&v2_frame),
-            ProtocolVersion::try_from(3_u16).expect("v3 is canonical"),
-        ),
-        Err(FrameError::InvalidRequest(
-            hfx_protocol::ProtocolWireError::MalformedJson
-        ))
-    ));
-
-    let v3_payload = serde_json::to_vec(&normalized).expect("normalized v3 request serializes");
-    let v3_frame = framed_payload(&v3_payload);
+    let v5_payload =
+        serde_json::to_vec(&framed_transaction_value()).expect("v5 request serializes");
+    let v5_frame = framed_payload(&v5_payload);
+    let transaction = read_rpc_request_for_version(&mut Cursor::new(&v5_frame), version(5))
+        .expect("v5 frame decodes")
+        .expect("v5 frame contains a request");
+    assert!(matches!(transaction, RpcRequest::SubmitTransaction(_)));
     assert_eq!(
-        read_rpc_request_for_version(
-            &mut Cursor::new(&v3_frame),
-            ProtocolVersion::try_from(3_u16).expect("v3 is canonical"),
-        ),
-        Ok(Some(normalized))
+        read_rpc_request_for_version(&mut Cursor::new(&v5_frame), version(7)),
+        Ok(Some(transaction))
     );
+
+    let v7_frame = native_enumerate_frame();
     assert!(matches!(
-        read_rpc_request_for_version(
-            &mut Cursor::new(&v3_frame),
-            ProtocolVersion::try_from(2_u16).expect("v2 is canonical"),
-        ),
+        read_rpc_request_for_version(&mut Cursor::new(&v7_frame), version(7)),
+        Ok(Some(RpcRequest::NativeEnumerate(_)))
+    ));
+    assert!(matches!(
+        read_rpc_request_for_version(&mut Cursor::new(&v7_frame), version(5)),
         Err(FrameError::InvalidRequest(
             hfx_protocol::ProtocolWireError::MalformedJson
         ))
@@ -313,7 +315,7 @@ fn unsupported_response_version_emits_no_partial_frame() {
         write_rpc_response_for_version(
             &mut output,
             &negotiation_response(),
-            ProtocolVersion::try_from(8_u16).expect("version number is canonical"),
+            ProtocolVersion::try_from(9_u16).expect("version number is canonical"),
         ),
         Err(FrameError::InvalidResponse(
             hfx_protocol::ProtocolWireError::UnsupportedProtocolVersion
@@ -337,7 +339,7 @@ fn shared_framing_round_trips_both_rpc_directions() {
     );
 
     let response = negotiation_response();
-    let version = ProtocolVersion::try_from(2_u16).expect("v2 is canonical");
+    let version = version(5);
     let mut server_output = ChunkedWriter {
         chunk: 3,
         ..ChunkedWriter::default()
@@ -364,30 +366,16 @@ fn current_response_reader_accepts_current_framing() {
 
 #[test]
 fn unsafe_request_downgrade_emits_no_partial_frame() {
-    let payload = serde_json::to_vec(&framed_transaction_value()).expect("v2 request serializes");
-    let mut current = read_rpc_request_for_version(
-        &mut Cursor::new(framed_payload(&payload)),
-        ProtocolVersion::try_from(2_u16).expect("v2 is canonical"),
-    )
-    .expect("v2 frame decodes")
-    .expect("v2 frame contains a request");
-    let RpcRequest::SubmitTransaction(envelope) = &mut current else {
-        panic!("fixture must remain a transaction");
-    };
-    envelope.params.stable_intents[0].mode = StableLightingMode::Off;
-    envelope.params.frames[0].colors[0].red = ColorChannel::try_from(0_u8).expect("black red");
-    envelope.params.frames[0].colors[0].green = ColorChannel::try_from(0_u8).expect("black green");
-    envelope.params.frames[0].colors[0].blue = ColorChannel::try_from(0_u8).expect("black blue");
+    let native =
+        read_rpc_request_for_version(&mut Cursor::new(native_enumerate_frame()), version(7))
+            .expect("v7 frame decodes")
+            .expect("v7 frame contains a request");
 
     let mut output = Vec::new();
     assert_eq!(
-        write_rpc_request_for_version(
-            &mut output,
-            &current,
-            ProtocolVersion::try_from(2_u16).expect("v2 is canonical"),
-        ),
+        write_rpc_request_for_version(&mut output, &native, version(5)),
         Err(FrameError::InvalidRequest(
-            hfx_protocol::ProtocolWireError::VersionTranslation
+            hfx_protocol::ProtocolWireError::UnsupportedVersionMethod
         ))
     );
     assert!(output.is_empty());

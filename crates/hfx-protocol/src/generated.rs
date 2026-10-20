@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_domain::{
-    ActivityState, BatteryPercent, CapabilityId, ClientId, ClientName, ColorChannel,
+    ActivityState, BatteryCharge, BatteryPercent, CapabilityId, ClientId, ClientName, ColorChannel,
     ComponentVersion, ConnectionMode, ContactState, ControllerAvailability, DeliveredFrameCount,
     DeviceApplicationState, DeviceKind, DocumentationPath, DroppedEventCount, EndpointId,
     ErrorSeverity, EventBatchLimit, EventKind, EvidenceClaimId, EvidenceConfidence, FindingId,
@@ -21,8 +21,8 @@ use hfx_domain::{
 };
 use serde::{Deserialize, Serialize};
 
-pub const MINIMUM_PROTOCOL_VERSION: u16 = 7;
-pub const MAXIMUM_PROTOCOL_VERSION: u16 = 7;
+pub const MINIMUM_PROTOCOL_VERSION: u16 = 8;
+pub const MAXIMUM_PROTOCOL_VERSION: u16 = 8;
 pub const MAX_WIRE_MESSAGE_BYTES: usize = 1_048_576;
 pub const MAX_JSON_DEPTH: usize = 128;
 pub const SUPPORTED_FEATURES: &[&str] = &[
@@ -259,6 +259,8 @@ pub struct BatteryObservation {
     pub availability: TelemetryAvailability,
     /// Reported value only when availability is reported.
     pub percentage: Option<BatteryPercent>,
+    /// Whether the device reports charging, only alongside a reported value.
+    pub charge: Option<BatteryCharge>,
     /// Freshness of the battery observation.
     pub freshness: FreshnessState,
     /// How directly the value was established.

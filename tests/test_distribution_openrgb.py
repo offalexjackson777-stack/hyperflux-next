@@ -16,9 +16,10 @@ from arch_split_support import ROOT  # noqa: E402
 
 from hfxdev import distribution_openrgb  # noqa: E402
 from hfxdev.distributions import load_distribution_catalog  # noqa: E402
+from hfxdev.install import load_install_manifest  # noqa: E402
 from hfxdev.model import ModelError  # noqa: E402
 from hfxdev.package_pipeline import ArtifactSet  # noqa: E402
-from hfxdev.package_pipeline_staging import stage_rootfs  # noqa: E402
+from hfxdev.package_pipeline_staging import OPENRGB_PLUGIN_NOTICES, stage_rootfs  # noqa: E402
 
 
 class ReleaseOpenRGBPluginTests(unittest.TestCase):
@@ -119,6 +120,16 @@ class ReleaseOpenRGBPluginTests(unittest.TestCase):
                             openrgb_plugin=plugin,
                             openrgb_plugin_module=module,
                         )
+
+    def test_staging_without_the_plugin_leaves_out_full_license_notices_only(self) -> None:
+        files = {file.component: file for file in load_install_manifest(ROOT).files_for("full")}
+        for notice in OPENRGB_PLUGIN_NOTICES:
+            with self.subTest(notice=notice):
+                self.assertTrue(
+                    str(files[notice].destination).startswith(
+                        "/usr/share/licenses/hyperflux-next-full/LICENSE-"
+                    )
+                )
 
 
 if __name__ == "__main__":

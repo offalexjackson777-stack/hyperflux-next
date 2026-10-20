@@ -192,6 +192,9 @@ class InstallManifestTests(unittest.TestCase):
                 "full-bridge-integration-drop-in",
                 "full-component-descriptor",
                 "openrgb-license",
+                "lucide-license",
+                "full-rust-crates-license",
+                "nlohmann-json-license",
             },
         )
         self.assertEqual(
@@ -205,6 +208,9 @@ class InstallManifestTests(unittest.TestCase):
                 "/usr/lib/systemd/system/hyperflux-next-bridge.service.d/50-full.conf",
                 "/usr/share/hyperflux-next/components/full.json",
                 "/usr/share/licenses/hyperflux-next-full/LICENSE",
+                "/usr/share/licenses/hyperflux-next-full/LICENSE-lucide",
+                "/usr/share/licenses/hyperflux-next-full/LICENSE-rust-crates",
+                "/usr/share/licenses/hyperflux-next-full/LICENSE-nlohmann-json",
             },
         )
         self.assertNotIn(
@@ -244,7 +250,7 @@ class InstallManifestTests(unittest.TestCase):
                 "$schema": "https://hyperflux.dev/schemas/distribution-component-descriptor-v1.json",
                 "schema": "hyperflux-distribution-component-v1",
                 "component_id": "full",
-                "product_version": "2.1.2",
+                "product_version": "2.2.0",
                 "capabilities": ["openrazer-native-route", "openrgb-plugin"],
             },
         )

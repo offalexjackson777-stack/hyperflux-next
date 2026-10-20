@@ -233,7 +233,7 @@ pub struct ErrorDescriptor {
 }
 
 pub const ERROR_CATALOG_SHA256: &str =
-    "17801d934340db6478334b35bac955657f758321b4c299c63a4df106b192098f";
+    "31116bea1ff363c1c7a4bb8d1fb5b3cc26eb9c071e54abed6871f0b9906965d0";
 pub const MAX_ERROR_COUNT: usize = 256;
 pub const MAX_REMEDIATION_COUNT: usize = 128;
 pub const MAX_SAFE_DETAIL_FIELDS: usize = 12;
@@ -418,7 +418,7 @@ pub const REMEDIATIONS: &[RemediationDescriptor] = &[
     RemediationDescriptor {
         id: RemediationId::UpdateProtocolPeer,
         title: "Update the protocol peer",
-        safe_action: "Update either peer so their supported protocol version ranges overlap.",
+        safe_action: "Update either peer so the client offers at least one protocol version the bridge serves.",
         verification: "Repeat negotiation and confirm one common protocol version is selected.",
         automatic: false,
     },
@@ -984,7 +984,7 @@ const DETAILS_23: &[SafeDetailFieldDescriptor] = &[
         maximum_value: Some(65_535),
         allowed_values: &[],
         privacy: PrivacyClass::Public,
-        description: "Highest protocol version supported by the bridge.",
+        description: "Highest protocol version the bridge serves. Lower versions can be retired; see server_supported_versions.",
     },
     SafeDetailFieldDescriptor {
         name: "server_min_version",
@@ -994,7 +994,17 @@ const DETAILS_23: &[SafeDetailFieldDescriptor] = &[
         maximum_value: Some(65_535),
         allowed_values: &[],
         privacy: PrivacyClass::Public,
-        description: "Lowest protocol version supported by the bridge.",
+        description: "Lowest protocol version the bridge serves. Higher versions can be retired; see server_supported_versions.",
+    },
+    SafeDetailFieldDescriptor {
+        name: "server_supported_versions",
+        kind: SafeDetailKind::Text,
+        required: false,
+        maximum_length: Some(128),
+        maximum_value: None,
+        allowed_values: &[],
+        privacy: PrivacyClass::Public,
+        description: "Every protocol version the bridge serves, ascending and comma-separated, such as 5,7.",
     },
 ];
 
@@ -1672,7 +1682,7 @@ pub const ERRORS: &[ErrorDescriptor] = &[
             replacement_code: None,
         },
         owner: ErrorOwner::Sdk,
-        technical_cause: "The client and bridge protocol version ranges do not overlap.",
+        technical_cause: "The client protocol version range contains no version the bridge serves; the bridge can serve a set with gaps, not a full range.",
         user_explanation: "The application and HyperFlux service are not protocol-compatible.",
         privacy: PrivacyClass::Public,
         docs_path: "docs/generated/error-catalog.md#hfx-protocol-001",

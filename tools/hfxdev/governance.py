@@ -267,7 +267,7 @@ def load_github_governance(root: Path) -> GitHubGovernance:
         "remote_state": "public-released",
         "visibility": "public",
         "description": "Linux driver that makes Razer devices on a HyperFlux V2 wireless receiver work with OpenRazer, Polychromatic, and OpenRGB.",
-        "homepage": "",
+        "homepage": "https://offalexjackson777-stack.github.io/hyperflux-next/",
         "social_preview_asset": "docs/assets/social-preview.png",
         "topics": [
             "device-driver",

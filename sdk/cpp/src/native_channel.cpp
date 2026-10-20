@@ -2,7 +2,7 @@
 
 #include <hyperflux/sdk/native_channel.hpp>
 
-#include <hyperflux/generated/protocol_v7_json.hpp>
+#include <hyperflux/generated/protocol_v8_json.hpp>
 
 #include <arpa/inet.h>
 #include <cerrno>
@@ -227,7 +227,7 @@ bool nesting_is_bounded(std::string_view payload)
         else if(character == '{' || character == '[')
         {
             ++depth;
-            if(depth > v7::max_json_depth)
+            if(depth > v8::max_json_depth)
             {
                 return false;
             }
@@ -244,11 +244,11 @@ bool nesting_is_bounded(std::string_view payload)
     return !in_string && depth == 0;
 }
 
-Result<v7::RpcResponse> decode_response(const std::string& payload)
+Result<v8::RpcResponse> decode_response(const std::string& payload)
 {
     if(!nesting_is_bounded(payload))
     {
-        return Result<v7::RpcResponse>::failure({
+        return Result<v8::RpcResponse>::failure({
             ErrorCode::InvalidJson,
             "bridge response exceeds the JSON nesting bound or is structurally incomplete",
             std::nullopt,
@@ -256,14 +256,14 @@ Result<v7::RpcResponse> decode_response(const std::string& payload)
     }
     try
     {
-        return Result<v7::RpcResponse>::success(json_codec::decode<v7::RpcResponse>(
+        return Result<v8::RpcResponse>::success(json_codec::decode<v8::RpcResponse>(
             nlohmann::json::parse(payload)));
     }
     catch(const std::exception&)
     {
-        return Result<v7::RpcResponse>::failure({
+        return Result<v8::RpcResponse>::failure({
             ErrorCode::InvalidProtocol,
-            "bridge response is not a valid protocol-v7 message",
+            "bridge response is not a valid protocol-v8 message",
             std::nullopt,
         });
     }
@@ -379,7 +379,7 @@ Result<std::unique_ptr<NativeUnixRpcChannel>> NativeUnixRpcChannel::adopt_connec
         std::unique_ptr<NativeUnixRpcChannel>(new NativeUnixRpcChannel(file_descriptor)));
 }
 
-Result<v7::RpcResponse> NativeUnixRpcChannel::exchange(const v7::RpcRequest& request)
+Result<v8::RpcResponse> NativeUnixRpcChannel::exchange(const v8::RpcRequest& request)
 {
     std::string payload;
     try
@@ -388,16 +388,16 @@ Result<v7::RpcResponse> NativeUnixRpcChannel::exchange(const v7::RpcRequest& req
     }
     catch(const std::exception&)
     {
-        return Result<v7::RpcResponse>::failure({
+        return Result<v8::RpcResponse>::failure({
             ErrorCode::InvalidProtocol,
-            "SDK request cannot be encoded as a protocol-v7 message",
+            "SDK request cannot be encoded as a protocol-v8 message",
             std::nullopt,
         });
     }
-    if(payload.empty() || payload.size() > v7::max_wire_message_bytes
+    if(payload.empty() || payload.size() > v8::max_wire_message_bytes
        || payload.size() > std::numeric_limits<std::uint32_t>::max())
     {
-        return Result<v7::RpcResponse>::failure({
+        return Result<v8::RpcResponse>::failure({
             ErrorCode::PayloadTooLarge,
             "SDK request is empty or exceeds the bridge message bound",
             std::nullopt,
@@ -410,7 +410,7 @@ Result<v7::RpcResponse> NativeUnixRpcChannel::exchange(const v7::RpcRequest& req
         sizeof(length));
     if(!written)
     {
-        return Result<v7::RpcResponse>::failure(written.error());
+        return Result<v8::RpcResponse>::failure(written.error());
     }
     written = write_all(
         file_descriptor_,
@@ -418,7 +418,7 @@ Result<v7::RpcResponse> NativeUnixRpcChannel::exchange(const v7::RpcRequest& req
         payload.size());
     if(!written)
     {
-        return Result<v7::RpcResponse>::failure(written.error());
+        return Result<v8::RpcResponse>::failure(written.error());
     }
 
     std::uint32_t network_length = 0;
@@ -428,20 +428,20 @@ Result<v7::RpcResponse> NativeUnixRpcChannel::exchange(const v7::RpcRequest& req
         sizeof(network_length));
     if(!read)
     {
-        return Result<v7::RpcResponse>::failure(read.error());
+        return Result<v8::RpcResponse>::failure(read.error());
     }
     const auto response_size = static_cast<std::size_t>(ntohl(network_length));
     if(response_size == 0)
     {
-        return Result<v7::RpcResponse>::failure({
+        return Result<v8::RpcResponse>::failure({
             ErrorCode::InvalidFrame,
             "bridge response declares an empty payload",
             std::nullopt,
         });
     }
-    if(response_size > v7::max_wire_message_bytes)
+    if(response_size > v8::max_wire_message_bytes)
     {
-        return Result<v7::RpcResponse>::failure({
+        return Result<v8::RpcResponse>::failure({
             ErrorCode::PayloadTooLarge,
             "bridge response exceeds the negotiated message bound",
             std::nullopt,
@@ -454,7 +454,7 @@ Result<v7::RpcResponse> NativeUnixRpcChannel::exchange(const v7::RpcRequest& req
         response.size());
     if(!read)
     {
-        return Result<v7::RpcResponse>::failure(read.error());
+        return Result<v8::RpcResponse>::failure(read.error());
     }
     return decode_response(response);
 }

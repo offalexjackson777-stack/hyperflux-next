@@ -273,6 +273,9 @@ class PackageRepositorySiteTests(unittest.TestCase):
             {"site_url": "https://example.com/hyperflux"},
             {"state": "live"},
             {"publication_branch": "main"},
+            {"publication_author": {"name": "someone"}},
+            {"publication_author": {"name": "someone", "email": "someone@example.com"}},
+            {"publication_author": {"name": "", "email": "someone@users.noreply.github.com"}},
         ):
             with self.subTest(change=change):
                 root = self.base / f"root-{len(list(self.base.iterdir()))}"
@@ -617,6 +620,20 @@ class PackageRepositorySiteTests(unittest.TestCase):
         commands = [step.command for step in steps]
         self.assertEqual(("git", "init", "--quiet", "--initial-branch", "gh-pages"), commands[0])
         self.assertEqual(("git", "push", "--force", "git@github.com:o/r.git", "HEAD:refs/heads/gh-pages"), commands[3])
+        self.assertEqual(
+            (
+                "git",
+                "-c",
+                "user.name=offalexjackson777-stack",
+                "-c",
+                "user.email=offalexjackson777-stack@users.noreply.github.com",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+            ),
+            commands[2][:8],
+        )
+        self.assertEqual(("offalexjackson777-stack", "offalexjackson777-stack@users.noreply.github.com"), self.policy.publication_author)
         self.assertTrue(all(step.cwd == work for step in steps[:4]))
         upload, metadata = commands[4], commands[5]
         self.assertNotIn("--clobber", upload)
@@ -653,6 +670,12 @@ class PackageRepositorySiteTests(unittest.TestCase):
         self.assertEqual([["git", "-C", str(ROOT), "remote", "get-url", "origin"]], calls)
         text = "\n".join(lines)
         self.assertIn("git push --force git@github.com:o/r.git HEAD:refs/heads/gh-pages", text)
+        self.assertIn(
+            "git -c user.name=offalexjackson777-stack"
+            " -c user.email=offalexjackson777-stack@users.noreply.github.com"
+            " -c commit.gpgsign=false commit --quiet",
+            text,
+        )
         self.assertIn("gh release upload arch-repository", text)
         self.assertIn("Dry run", text)
 

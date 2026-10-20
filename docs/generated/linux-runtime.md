@@ -4,14 +4,14 @@
 
 This page lists the files, accounts, services, and limits HyperFlux uses on a running Linux system, for packagers, contributors, and anyone checking what HyperFlux puts where.
 
-Source digest: `0b31088e1eb1630e005c942908068147b345914bf31ee20321193c882e5637aa`.
+Source digest: `cee3c01fefa7848e03f8bfe063065d569fae54eeb3131deb81affd89d224e7b3`.
 
 ## Product
 
 | Field | Value |
 | --- | --- |
 | Name | HyperFlux Next |
-| Version | `2.1.2` |
+| Version | `2.2.0` |
 | Package | `hyperflux-next-linux` release `1` |
 
 ## Background Service
@@ -36,7 +36,7 @@ Installing never starts, stops, enables, or restarts this service. On first run 
 
 ## Loading The Kernel Driver
 
-The DKMS module is `hid-hyperflux-next` version `2.1.2` and creates `hyperflux-next-*` devices, with a new name each time the driver attaches to the receiver, for the service account.
+The DKMS module is `hid-hyperflux-next` version `2.2.0` and creates `hyperflux-next-*` devices, with a new name each time the driver attaches to the receiver, for the service account.
 
 If the loaded kernel module is not the installed one, reboot normally to switch, or run the activation command that disconnects the receiver, but only when another keyboard, mouse, or SSH session can still reach the machine. Package hooks never load modules or start services. `hyperfluxctl doctor` reports this as a driver activation problem, not a service failure.
 

@@ -120,6 +120,7 @@
     {"name": "SideEffectCertainty", "values": ["none", "possible", "partial", "committed"]},
     {"name": "DeviceApplicationState", "values": ["unverified", "confirmed", "rejected"]},
     {"name": "TelemetryAvailability", "values": ["unknown", "unavailable", "reported"]},
+    {"name": "BatteryCharge", "values": ["charging", "discharging"]},
     {"name": "LeaseOutcome", "values": ["granted", "conflict", "rejected"]},
     {"name": "ErrorSeverity", "values": ["info", "warning", "error", "critical"]},
     {"name": "NativeRouteAccess", "values": ["qualified", "candidate", "backend-required"]},

@@ -55,7 +55,10 @@ presentation.
 Above it, the bridge protocol grew from version 1 to version 7 without
 rewriting earlier wire contracts. Generated Rust, Python, and C++ clients come
 from the same catalogs. Negotiation makes a missing feature explicit: an older
-client keeps the contract it understands, and an unsafe downgrade fails.
+client keeps the contract it understands, and an unsafe downgrade fails. In
+2.2 the bridge stopped serving versions 1 to 4 and 6, keeping 5 for lighting
+and 7 for the native tunnel; older clients now get a clear incompatible-version
+answer.
 
 This also set the no-duplicate-input rule. The OpenRazer endpoint is
 feature-only. It carries settings and lighting reports but cannot become a

@@ -10,11 +10,11 @@ use hfx_domain::{
 };
 use hfx_errors::{ErrorCode, error_by_code};
 use hfx_protocol::{
-    BridgeSnapshot, DiagnosticSnapshot, ErrorEnvelope, EventBatch, IntegrationView, LeaseRequest,
-    LeaseResult, NativeExchangeOutcome, NativeExchangeRequest, NativeRouteEventBatch,
-    NativeRouteInventory, ReleaseLeaseRequest, RenewLeaseRequest, RpcError, RpcRequest,
-    RpcResponse, SubscriptionRequest, SuccessEnvelope, TransactionLookup, TransactionRequest,
-    TransactionResult,
+    BridgeSnapshot, DiagnosticSnapshot, ErrorEnvelope, EventBatch, GENERATED_CONTRACT,
+    IntegrationView, LeaseRequest, LeaseResult, NativeExchangeOutcome, NativeExchangeRequest,
+    NativeRouteEventBatch, NativeRouteInventory, ProtocolContract, ReleaseLeaseRequest,
+    RenewLeaseRequest, RpcError, RpcRequest, RpcResponse, SubscriptionRequest, SuccessEnvelope,
+    TransactionLookup, TransactionRequest, TransactionResult,
 };
 use std::fmt;
 
@@ -42,6 +42,18 @@ impl<'a> BackendRequestContext<'a> {
     pub const fn sessions(self) -> &'a SessionRegistry {
         self.sessions
     }
+}
+
+/// Appends the exact set of served protocol versions to the catalogued
+/// incompatible-version explanation.
+///
+/// The frozen wire error has no detail fields, so the message is the only
+/// place an old client can learn which versions to offer. Listing the set
+/// instead of a minimum and maximum keeps retired versions inside that range
+/// from looking served.
+fn incompatible_version_explanation(explanation: &str, contract: ProtocolContract<'_>) -> String {
+    let served = contract.served_versions_list().replace(',', ", ");
+    format!("{explanation} Supported protocol versions: {served}.")
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -122,7 +134,12 @@ impl RpcFailure {
 
     fn protocol_error(self, request_id: Option<RequestId>) -> RpcError {
         let descriptor = error_by_code(self.code);
-        let message = HumanMessage::try_from(descriptor.user_explanation).unwrap_or_else(|_| {
+        let explanation = if self.code == ErrorCode::HfxProtocol001 {
+            incompatible_version_explanation(descriptor.user_explanation, GENERATED_CONTRACT)
+        } else {
+            descriptor.user_explanation.to_owned()
+        };
+        let message = HumanMessage::try_from(explanation.as_str()).unwrap_or_else(|_| {
             HumanMessage::try_from("HyperFlux rejected the request safely.")
                 .expect("static fallback message satisfies the domain bound")
         });

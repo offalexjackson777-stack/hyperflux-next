@@ -6,15 +6,17 @@ use hfx_bridge::{
     SessionIdentitySource, SessionRegistry, serve_actor_connection, serve_connection,
 };
 use hfx_domain::{
-    ClientId, ClientName, ComponentVersion, ProjectionRevision, ProtocolVersion, QueueCapacity,
-    RequestId, SequenceNumber, ServerInstanceId, StreamEpoch, StreamId,
+    ClientId, ClientName, ComponentVersion, ProjectionRevision, ProtocolErrorKind, ProtocolVersion,
+    QueueCapacity, RequestId, SequenceNumber, ServerInstanceId, StreamEpoch, StreamId,
 };
+use hfx_errors::{ErrorCode, SafeDetail, SafeDetailValue, error_by_code, validate_safe_details};
 use hfx_protocol::{
     BridgeSnapshot, ClientHello, DiagnosticSnapshot, EmptyRequest, EventBatch, EventCursor,
-    IntegrationView, LeaseRequest, LeaseResult, NegotiationRequestEnvelope, ReleaseLeaseRequest,
-    RenewLeaseRequest, RpcRequest, RpcResponse, SessionRequestEnvelope, SubscriptionRequest,
-    TransactionLookup, TransactionRequest, TransactionResult, read_rpc_response,
-    read_rpc_response_for_version, write_rpc_request, write_rpc_request_for_version,
+    GENERATED_CONTRACT, GENERATED_PROTOCOL_VERSIONS, IntegrationView, LeaseRequest, LeaseResult,
+    NegotiationRequestEnvelope, ReleaseLeaseRequest, RenewLeaseRequest, RpcRequest, RpcResponse,
+    SessionRequestEnvelope, SubscriptionRequest, TransactionLookup, TransactionRequest,
+    TransactionResult, read_rpc_response, read_rpc_response_for_version, write_rpc_request,
+    write_rpc_request_for_version,
 };
 use std::io::Write;
 use std::os::unix::net::UnixStream;
@@ -184,8 +186,8 @@ fn negotiation_for(client_id: &str, request_id: &str) -> RpcRequest {
         params: ClientHello {
             client_id: id::<ClientId>(client_id),
             client_name: id::<ClientName>("Connection runtime test"),
-            minimum_version: ProtocolVersion::try_from(2).expect("version must be valid"),
-            maximum_version: ProtocolVersion::try_from(2).expect("version must be valid"),
+            minimum_version: ProtocolVersion::try_from(5).expect("version must be valid"),
+            maximum_version: ProtocolVersion::try_from(5).expect("version must be valid"),
             required_features: Vec::new(),
             optional_features: Vec::new(),
         },
@@ -264,7 +266,7 @@ fn real_unix_stream_serves_exact_version_and_cleans_up_on_eof() {
     let server = spawn_server(server, false);
 
     let hello = negotiate(&mut client);
-    assert_eq!(hello.selected_version.get(), 2);
+    assert_eq!(hello.selected_version.get(), 5);
     let snapshot = RpcRequest::Snapshot(SessionRequestEnvelope {
         request_id: id::<RequestId>("request-snapshot"),
         protocol_session_id: hello.protocol_session_id,
@@ -292,6 +294,145 @@ fn real_unix_stream_serves_exact_version_and_cleans_up_on_eof() {
     assert_eq!(backend.snapshot_calls, 1);
     assert_eq!(backend.disconnect_calls, 1);
     assert_eq!(remaining_sessions, 0);
+}
+
+fn protocol_rejection_details(served: &str) -> [SafeDetail<'_>; 5] {
+    let mut versions = GENERATED_CONTRACT.served_versions();
+    let minimum = versions.next().expect("bridge serves a version");
+    let maximum = versions.last().unwrap_or(minimum);
+    [
+        ("client_max_version", SafeDetailValue::Unsigned(6)),
+        ("client_min_version", SafeDetailValue::Unsigned(6)),
+        (
+            "server_max_version",
+            SafeDetailValue::Unsigned(maximum.into()),
+        ),
+        (
+            "server_min_version",
+            SafeDetailValue::Unsigned(minimum.into()),
+        ),
+        ("server_supported_versions", SafeDetailValue::Text(served)),
+    ]
+    .map(|(name, value)| SafeDetail { name, value })
+}
+
+#[test]
+fn protocol_rejection_details_stay_valid_with_and_without_the_served_list() {
+    let details = protocol_rejection_details("5,7");
+    validate_safe_details(ErrorCode::HfxProtocol001, &details).expect("full details are valid");
+    // Producers that only know the minimum and maximum remain valid.
+    validate_safe_details(ErrorCode::HfxProtocol001, &details[..4])
+        .expect("range-only details are valid");
+    assert!(
+        validate_safe_details(
+            ErrorCode::HfxProtocol001,
+            &protocol_rejection_details(&"7,".repeat(65))
+        )
+        .is_err(),
+        "the served list is bounded"
+    );
+}
+
+/// Sends one raw negotiate frame and asserts the bridge answers with the
+/// catalogued incompatible-version error instead of dropping the connection.
+fn assert_incompatible_hello_is_rejected_with_remediation(hello: &[u8]) {
+    let (mut client, server) = UnixStream::pair().expect("Unix stream pair creates");
+    client
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .expect("timeout config succeeds");
+    let server = spawn_server(server, false);
+
+    let length = u32::try_from(hello.len()).expect("hello fits in one frame");
+    client
+        .write_all(&length.to_be_bytes())
+        .expect("hello frame length writes");
+    client.write_all(hello).expect("hello frame payload writes");
+    let response = read_rpc_response(&mut client)
+        .expect("rejection frame reads")
+        .expect("bridge answers instead of closing");
+    let RpcResponse::Error(envelope) = response else {
+        panic!("incompatible hello must receive a structured error");
+    };
+    let descriptor = error_by_code(ErrorCode::HfxProtocol001);
+    assert_eq!(
+        envelope.request_id.as_ref().map(RequestId::as_str),
+        Some("request-1")
+    );
+    assert_eq!(envelope.error.request_id, envelope.request_id);
+    assert_eq!(envelope.error.kind, ProtocolErrorKind::IncompatibleVersion);
+    assert_eq!(envelope.error.finding_id.as_str(), "HFX-PROTOCOL-001");
+    assert_eq!(descriptor.remediation_id.as_str(), "update-protocol-peer");
+
+    // The message names every served version explicitly, so a retired version
+    // between the lowest and highest served one never looks served.
+    let served_versions = GENERATED_PROTOCOL_VERSIONS
+        .iter()
+        .map(|version| version.version.to_string())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        envelope.error.message.as_str(),
+        format!(
+            "{} Supported protocol versions: {}.",
+            descriptor.user_explanation,
+            served_versions.join(", ")
+        )
+    );
+    let listed = envelope
+        .error
+        .message
+        .as_str()
+        .rsplit_once("Supported protocol versions: ")
+        .and_then(|(_, list)| list.strip_suffix('.'))
+        .expect("message ends with the served list")
+        .split(", ")
+        .collect::<Vec<_>>();
+    assert_eq!(listed, served_versions);
+    for retired in ["1", "2", "3", "4", "6"] {
+        assert!(
+            !listed.contains(&retired),
+            "retired version {retired} is listed"
+        );
+    }
+    validate_safe_details(
+        ErrorCode::HfxProtocol001,
+        &protocol_rejection_details(&GENERATED_CONTRACT.served_versions_list()),
+    )
+    .expect("served-version list is a valid HFX-PROTOCOL-001 detail");
+
+    // The same connection still accepts a supported hello afterwards.
+    let hello = negotiate(&mut client);
+    client
+        .shutdown(std::net::Shutdown::Write)
+        .expect("client write side closes");
+    let (result, backend, remaining_sessions) = server.join().expect("server thread joins");
+    assert_eq!(
+        result,
+        Ok(hfx_bridge::ConnectionServeReport {
+            requests_served: 2,
+            selected_version: Some(hello.selected_version),
+        })
+    );
+    assert_eq!(backend.disconnect_calls, 1);
+    assert_eq!(remaining_sessions, 0);
+}
+
+#[test]
+fn clients_without_a_served_version_get_a_structured_protocol_rejection() {
+    assert_incompatible_hello_is_rejected_with_remediation(
+        br#"{"method":"negotiate","request":{"request_id":"request-1","params":{"client_id":"client-1","client_name":"OpenRGB","minimum_version":9,"maximum_version":9,"required_features":[],"optional_features":[]}}}"#,
+    );
+}
+
+#[test]
+fn retired_v1_and_v6_client_goldens_get_a_structured_protocol_rejection() {
+    for hello in [
+        include_bytes!("../../../tests/fixtures/protocol/retired/v1-negotiate-request.json")
+            .as_slice(),
+        include_bytes!("../../../tests/fixtures/protocol/retired/v6-negotiate-request.json")
+            .as_slice(),
+    ] {
+        assert_incompatible_hello_is_rejected_with_remediation(hello.trim_ascii_end());
+    }
 }
 
 #[test]

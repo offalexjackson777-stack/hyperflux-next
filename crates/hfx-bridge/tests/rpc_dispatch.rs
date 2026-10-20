@@ -160,8 +160,8 @@ fn negotiation(client: &str, features: &[&str]) -> RpcRequest {
         params: hfx_protocol::ClientHello {
             client_id: id::<ClientId>(client),
             client_name: id::<ClientName>("Dispatch test"),
-            minimum_version: ProtocolVersion::try_from(1).expect("version must be valid"),
-            maximum_version: ProtocolVersion::try_from(2).expect("version must be valid"),
+            minimum_version: ProtocolVersion::try_from(5).expect("version must be valid"),
+            maximum_version: ProtocolVersion::try_from(7).expect("version must be valid"),
             required_features: Vec::new(),
             optional_features: features
                 .iter()

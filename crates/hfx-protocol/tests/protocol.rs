@@ -5,11 +5,12 @@ use hfx_domain::{
     StableLightingMode, TransactionClass,
 };
 use hfx_protocol::{
-    ClientHello, DeviceProfileBinding, LeaseConflict, LeaseRequest, LeaseResult, LightingFrame,
-    NegotiationContext, NegotiationError, NegotiationRequestEnvelope, ProtocolContract,
-    ProtocolValidationError, ProtocolVersionDescriptor, ResourceKey, RgbColor, RpcRequest,
-    RpcResponse, StableLightingIntent, SuccessEnvelope, TransactionRequest, negotiate,
-    negotiate_with_contract, validate_lease_request, validate_transaction,
+    ClientHello, DeviceProfileBinding, GENERATED_CONTRACT, GENERATED_PROTOCOL_VERSIONS,
+    LeaseConflict, LeaseRequest, LeaseResult, LightingFrame, NegotiationContext, NegotiationError,
+    NegotiationRequestEnvelope, ProtocolContract, ProtocolValidationError,
+    ProtocolVersionDescriptor, ResourceKey, RgbColor, RpcRequest, StableLightingIntent,
+    TransactionRequest, negotiate, negotiate_with_contract, validate_lease_request,
+    validate_transaction,
 };
 
 fn value<T: TryFrom<String>>(raw: &str) -> T
@@ -98,59 +99,13 @@ fn black() -> RgbColor {
 
 #[test]
 fn feature_negotiation_selects_intersection_and_rejects_incompatible_versions() {
-    let hello = ClientHello {
+    let v5 = ClientHello {
         client_id: value("client-1"),
         client_name: value("OpenRGB"),
-        minimum_version: number(1),
-        maximum_version: number(1),
-        required_features: vec![value("ownership-leases")],
-        optional_features: vec![value("future-feature")],
-    };
-    let response = negotiate(&hello, context("protocol-session-1")).expect("version overlaps");
-    assert_eq!(response.selected_version.get(), 1);
-    assert_eq!(response.enabled_features, vec![value("ownership-leases")]);
-
-    let v2 = ClientHello {
-        minimum_version: number(2),
-        maximum_version: number(2),
-        required_features: vec![value("profile-bound-transactions")],
-        optional_features: Vec::new(),
-        ..hello
-    };
-    let response = negotiate(&v2, context("protocol-session-2")).expect("v2 overlaps");
-    assert_eq!(response.selected_version.get(), 2);
-
-    let v3 = ClientHello {
-        minimum_version: number(3),
-        maximum_version: number(3),
-        required_features: vec![value("semantic-stable-lighting")],
-        ..v2
-    };
-    let response = negotiate(&v3, context("protocol-session-3")).expect("v3 overlaps");
-    assert_eq!(response.selected_version.get(), 3);
-
-    let v4 = ClientHello {
-        minimum_version: number(4),
-        maximum_version: number(4),
-        required_features: vec![
-            value("semantic-stable-lighting"),
-            value("snapshot-profile-bindings"),
-        ],
-        ..v3
-    };
-    let response = negotiate(&v4, context("protocol-session-4")).expect("v4 overlaps");
-    assert_eq!(response.selected_version.get(), 4);
-    assert!(
-        response
-            .enabled_features
-            .contains(&value("snapshot-profile-bindings"))
-    );
-
-    let v5 = ClientHello {
         minimum_version: number(5),
         maximum_version: number(5),
         required_features: vec![value("integration-view-projection")],
-        ..v4
+        optional_features: vec![value("future-feature")],
     };
     let response = negotiate(&v5, context("protocol-session-5")).expect("v5 overlaps");
     assert_eq!(response.selected_version.get(), 5);
@@ -159,12 +114,13 @@ fn feature_negotiation_selects_intersection_and_rejects_incompatible_versions() 
             .enabled_features
             .contains(&value("integration-view-projection"))
     );
+    assert!(!response.enabled_features.contains(&value("future-feature")));
 
     let v7 = ClientHello {
         minimum_version: number(7),
         maximum_version: number(7),
         required_features: vec![value("native-receiver-tunnel")],
-        ..v5
+        ..v5.clone()
     };
     let response = negotiate(&v7, context("protocol-session-7")).expect("v7 overlaps");
     assert_eq!(response.selected_version.get(), 7);
@@ -174,19 +130,72 @@ fn feature_negotiation_selects_intersection_and_rejects_incompatible_versions() 
             .contains(&value("native-receiver-tunnel"))
     );
 
-    let incompatible = ClientHello {
-        minimum_version: number(8),
-        maximum_version: number(8),
-        ..v7
+    // A range that spans the retired version 6 still lands on a served one.
+    let spanning = ClientHello {
+        minimum_version: number(4),
+        maximum_version: number(6),
+        required_features: Vec::new(),
+        ..v5.clone()
     };
+    let response = negotiate(&spanning, context("protocol-session-4-6")).expect("v5 overlaps");
+    assert_eq!(response.selected_version.get(), 5);
+
+    for retired in [1_u16, 2, 3, 4, 6, 9] {
+        let incompatible = ClientHello {
+            minimum_version: number(retired),
+            maximum_version: number(retired),
+            required_features: Vec::new(),
+            ..v5.clone()
+        };
+        assert_eq!(
+            negotiate(&incompatible, context("protocol-session-retired")),
+            Err(NegotiationError::IncompatibleVersion),
+            "version {retired} must not be served"
+        );
+    }
+}
+
+#[test]
+fn served_versions_list_the_exact_set_including_retirement_gaps() {
+    let registered = GENERATED_PROTOCOL_VERSIONS
+        .iter()
+        .map(|version| version.version)
+        .collect::<Vec<_>>();
     assert_eq!(
-        negotiate(&incompatible, context("protocol-session-8")),
-        Err(NegotiationError::IncompatibleVersion)
+        GENERATED_CONTRACT.served_versions().collect::<Vec<_>>(),
+        registered
+    );
+    assert_eq!(
+        GENERATED_CONTRACT.served_versions_list(),
+        registered
+            .iter()
+            .map(u16::to_string)
+            .collect::<Vec<_>>()
+            .join(",")
+    );
+
+    let versions = [5_u16, 7].map(|version| ProtocolVersionDescriptor {
+        version,
+        catalog_sha256: "test",
+        catalog_features: &[],
+        served_features: &[],
+    });
+    let gapped = ProtocolContract {
+        versions: &versions,
+    };
+    assert_eq!(gapped.served_versions().collect::<Vec<_>>(), vec![5, 7]);
+    assert_eq!(gapped.served_versions_list(), "5,7");
+    assert_eq!(
+        ProtocolContract {
+            versions: &versions[..1],
+        }
+        .served_versions_list(),
+        "5"
     );
 }
 
 #[test]
-fn newer_bridge_serves_v1_client_and_required_features_fail_closed() {
+fn newer_contract_serves_an_older_frozen_version_and_required_features_fail_closed() {
     let hello = ClientHello {
         client_id: value("client-1"),
         client_name: value("OpenRGB"),
@@ -223,23 +232,6 @@ fn newer_bridge_serves_v1_client_and_required_features_fail_closed() {
     assert!(matches!(
         negotiate_with_contract(&unsupported, context("protocol-session-2"), v2_bridge),
         Err(NegotiationError::UnsupportedRequiredFeatures(features)) if features.len() == 1
-    ));
-}
-
-#[test]
-fn frozen_v1_does_not_advertise_unserved_profileless_writes() {
-    let hello = ClientHello {
-        client_id: value("client-1"),
-        client_name: value("legacy-client"),
-        minimum_version: number(1),
-        maximum_version: number(1),
-        required_features: vec![value("atomic-transactions")],
-        optional_features: Vec::new(),
-    };
-    assert!(matches!(
-        negotiate(&hello, context("protocol-session-v1")),
-        Err(NegotiationError::UnsupportedRequiredFeatures(features))
-            if features == vec![value("atomic-transactions")]
     ));
 }
 
@@ -444,55 +436,44 @@ fn tagged_lease_result_cannot_encode_a_grant_and_conflict_together() {
 }
 
 #[test]
-fn frozen_v1_envelopes_match_golden_wire_fixtures() {
-    const NEGOTIATE: &str =
-        include_str!("../../../tests/fixtures/protocol/v1/negotiate-request.json");
-    const CONFLICT: &str =
-        include_str!("../../../tests/fixtures/protocol/v1/lease-conflict-response.json");
+fn retired_client_hellos_keep_the_current_shape_and_are_refused() {
+    const V1: &str =
+        include_str!("../../../tests/fixtures/protocol/retired/v1-negotiate-request.json");
+    const V6: &str =
+        include_str!("../../../tests/fixtures/protocol/retired/v6-negotiate-request.json");
 
-    let request = RpcRequest::Negotiate(NegotiationRequestEnvelope {
-        request_id: value("request-1"),
-        params: ClientHello {
-            client_id: value("client-1"),
-            client_name: value("OpenRGB"),
-            minimum_version: number(1),
-            maximum_version: number(1),
-            required_features: vec![value("ownership-leases")],
-            optional_features: vec![value("atomic-transactions")],
-        },
-    });
-    assert_eq!(
-        format!(
-            "{}\n",
-            serde_json::to_string(&request).expect("request serializes")
-        ),
-        NEGOTIATE
-    );
-    let _: hfx_protocol::v1::RpcRequest =
-        serde_json::from_str(NEGOTIATE).expect("frozen v1 request decodes");
-
-    let response = RpcResponse::AcquireLeaseSuccess(SuccessEnvelope {
-        request_id: value("request-2"),
-        server_instance_id: value("bridge-instance-1"),
-        result: LeaseResult::Conflict(LeaseConflict {
-            conflicting_client: value("client-2"),
-            conflicting_resource: resource("mouse-1"),
-        }),
-    });
-    assert_eq!(
-        format!(
-            "{}\n",
-            serde_json::to_string(&response).expect("response serializes")
-        ),
-        CONFLICT
-    );
-    let frozen: hfx_protocol::v1::RpcResponse =
-        serde_json::from_str(CONFLICT).expect("frozen v1 response decodes");
-    assert_eq!(
-        format!(
-            "{}\n",
-            serde_json::to_string(&frozen).expect("frozen response reserializes")
-        ),
-        CONFLICT
-    );
+    for (golden, version, required, optional) in [
+        (V1, 1_u16, "ownership-leases", Some("atomic-transactions")),
+        (V6, 6_u16, "return-lifecycle-projection", None),
+    ] {
+        let request = RpcRequest::Negotiate(NegotiationRequestEnvelope {
+            request_id: value("request-1"),
+            params: ClientHello {
+                client_id: value("client-1"),
+                client_name: value("OpenRGB"),
+                minimum_version: number(version),
+                maximum_version: number(version),
+                required_features: vec![value(required)],
+                optional_features: optional.into_iter().map(value).collect(),
+            },
+        });
+        assert_eq!(
+            format!(
+                "{}\n",
+                serde_json::to_string(&request).expect("request serializes")
+            ),
+            golden
+        );
+        assert_eq!(
+            hfx_protocol::decode_rpc_request(golden.trim_end().as_bytes()),
+            Ok(request.clone())
+        );
+        let RpcRequest::Negotiate(envelope) = request else {
+            unreachable!("the golden is a negotiate request");
+        };
+        assert_eq!(
+            negotiate(&envelope.params, context("protocol-session-retired")),
+            Err(NegotiationError::IncompatibleVersion)
+        );
+    }
 }

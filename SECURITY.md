@@ -7,7 +7,7 @@ privately as described below. Do not post it in a public issue.
 
 | Version | Platform | Supported |
 | --- | --- | --- |
-| Latest release (currently 2.1.2) | Arch Linux x86_64 | Yes |
+| Latest release (currently 2.2.0) | Arch Linux x86_64 | Yes |
 | Earlier releases, including 2.0.x | Arch Linux x86_64 | No - update to the latest release |
 | Development branches and unpublished builds | Any | No |
 

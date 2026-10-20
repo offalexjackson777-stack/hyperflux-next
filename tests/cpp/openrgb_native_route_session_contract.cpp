@@ -38,7 +38,7 @@ T number(std::uint64_t value)
     return *decoded;
 }
 
-hyperflux::v7::EventCursor cursor()
+hyperflux::v8::EventCursor cursor()
 {
     using namespace hyperflux;
     return {
@@ -49,10 +49,10 @@ hyperflux::v7::EventCursor cursor()
     };
 }
 
-hyperflux::v7::NativeRoute route()
+hyperflux::v8::NativeRoute route()
 {
     using namespace hyperflux;
-    const v7::ResourceKey resource {
+    const v8::ResourceKey resource {
         text<ReceiverId>("receiver-1"),
         number<GenerationId>(4),
         text<LogicalDeviceId>("mouse-00cd"),
@@ -100,7 +100,7 @@ class FakeClient final : public hyperflux::sdk::NativeClientApi
 public:
     FakeClient(
         std::shared_ptr<Counters> counters,
-        hyperflux::v7::NativeRoute route_value,
+        hyperflux::v8::NativeRoute route_value,
         Outcome outcome,
         bool grant = true)
         : counters_(std::move(counters)),
@@ -110,23 +110,23 @@ public:
     {
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::LeaseResult> acquire_lease(
-        std::vector<hyperflux::v7::ResourceKey> resources,
+    hyperflux::sdk::Result<hyperflux::v8::LeaseResult> acquire_lease(
+        std::vector<hyperflux::v8::ResourceKey> resources,
         hyperflux::LeaseDurationMs) override
     {
         ++counters_->acquired;
         if(!grant_)
         {
-            return hyperflux::sdk::Result<hyperflux::v7::LeaseResult>::success(
-                hyperflux::v7::LeaseResultRejected {
+            return hyperflux::sdk::Result<hyperflux::v8::LeaseResult>::success(
+                hyperflux::v8::LeaseResultRejected {
                     {
                         hyperflux::ProtocolErrorKind::OwnershipConflict,
                         text<hyperflux::FindingId>("HFX-TEST-LEASE"),
                     },
                 });
         }
-        return hyperflux::sdk::Result<hyperflux::v7::LeaseResult>::success(
-            hyperflux::v7::LeaseResultGranted {
+        return hyperflux::sdk::Result<hyperflux::v8::LeaseResult>::success(
+            hyperflux::v8::LeaseResultGranted {
                 {
                     text<hyperflux::LeaseId>("lease-1"),
                     text<hyperflux::ClientId>("openrgb-native-route"),
@@ -137,13 +137,13 @@ public:
             });
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::LeaseResult> renew_lease(
+    hyperflux::sdk::Result<hyperflux::v8::LeaseResult> renew_lease(
         hyperflux::LeaseId,
         hyperflux::LeaseDurationMs) override
     {
         ++counters_->renewed;
-        return hyperflux::sdk::Result<hyperflux::v7::LeaseResult>::success(
-            hyperflux::v7::LeaseResultGranted {
+        return hyperflux::sdk::Result<hyperflux::v8::LeaseResult>::success(
+            hyperflux::v8::LeaseResultGranted {
                 {
                     text<hyperflux::LeaseId>("lease-1"),
                     text<hyperflux::ClientId>("openrgb-native-route"),
@@ -154,12 +154,12 @@ public:
             });
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::LeaseResult> release_lease(
+    hyperflux::sdk::Result<hyperflux::v8::LeaseResult> release_lease(
         hyperflux::LeaseId) override
     {
         ++counters_->released;
-        return hyperflux::sdk::Result<hyperflux::v7::LeaseResult>::success(
-            hyperflux::v7::LeaseResultGranted {
+        return hyperflux::sdk::Result<hyperflux::v8::LeaseResult>::success(
+            hyperflux::v8::LeaseResultGranted {
                 {
                     text<hyperflux::LeaseId>("lease-1"),
                     text<hyperflux::ClientId>("openrgb-native-route"),
@@ -170,11 +170,20 @@ public:
             });
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::NativeRouteInventory> native_enumerate() override
+    hyperflux::sdk::Result<hyperflux::v8::NativeRouteInventory> native_enumerate() override
     {
         ++counters_->enumerated;
-        return hyperflux::sdk::Result<hyperflux::v7::NativeRouteInventory>::success(
+        return hyperflux::sdk::Result<hyperflux::v8::NativeRouteInventory>::success(
             {cursor(), {route_}});
+    }
+
+    hyperflux::sdk::Result<hyperflux::v8::BridgeSnapshot> snapshot() override
+    {
+        return hyperflux::sdk::Result<hyperflux::v8::BridgeSnapshot>::failure({
+            hyperflux::sdk::ErrorCode::UnexpectedResponse,
+            "snapshot is outside this contract",
+            std::nullopt,
+        });
     }
 
     hyperflux::sdk::Result<hyperflux::sdk::NativeExchangeSubmission>
@@ -194,13 +203,13 @@ public:
         });
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::NativeExchangeOutcome> native_transact(
+    hyperflux::sdk::Result<hyperflux::v8::NativeExchangeOutcome> native_transact(
         const hyperflux::sdk::NativeExchangeSubmission& submission) override
     {
         ++counters_->transacted;
         if(outcome_ == Outcome::TransportError)
         {
-            return hyperflux::sdk::Result<hyperflux::v7::NativeExchangeOutcome>::failure({
+            return hyperflux::sdk::Result<hyperflux::v8::NativeExchangeOutcome>::failure({
                 hyperflux::sdk::ErrorCode::ReadFailed,
                 "test transport failed after submission",
                 std::nullopt,
@@ -214,10 +223,10 @@ public:
         }
         if(outcome_ == Outcome::NotSent)
         {
-            return hyperflux::sdk::Result<hyperflux::v7::NativeExchangeOutcome>::success({
+            return hyperflux::sdk::Result<hyperflux::v8::NativeExchangeOutcome>::success({
                 request_id,
                 token,
-                hyperflux::v7::NativeExchangeResultNotSent {
+                hyperflux::v8::NativeExchangeResultNotSent {
                     {
                         hyperflux::ProtocolErrorKind::TransportFailure,
                         text<hyperflux::FindingId>("HFX-TEST-NOT-SENT"),
@@ -227,10 +236,10 @@ public:
         }
         if(outcome_ == Outcome::MayHaveBeenSent)
         {
-            return hyperflux::sdk::Result<hyperflux::v7::NativeExchangeOutcome>::success({
+            return hyperflux::sdk::Result<hyperflux::v8::NativeExchangeOutcome>::success({
                 request_id,
                 token,
-                hyperflux::v7::NativeExchangeResultMayHaveBeenSent {
+                hyperflux::v8::NativeExchangeResultMayHaveBeenSent {
                     {
                         hyperflux::ProtocolErrorKind::OutcomeUnknown,
                         text<hyperflux::FindingId>("HFX-TEST-UNCERTAIN"),
@@ -241,19 +250,19 @@ public:
         const auto response = outcome_ == Outcome::MalformedResponse
             ? std::string(180, 'z')
             : std::string(180, 'f');
-        return hyperflux::sdk::Result<hyperflux::v7::NativeExchangeOutcome>::success({
+        return hyperflux::sdk::Result<hyperflux::v8::NativeExchangeOutcome>::success({
             request_id,
             token,
-            hyperflux::v7::NativeExchangeResultMatchedResponse {
+            hyperflux::v8::NativeExchangeResultMatchedResponse {
                 {text<hyperflux::NativeReportHex>(response)},
             },
         });
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::NativeRouteEventBatch> native_watch(
+    hyperflux::sdk::Result<hyperflux::v8::NativeRouteEventBatch> native_watch(
         hyperflux::sdk::NativeEventSubscription) override
     {
-        return hyperflux::sdk::Result<hyperflux::v7::NativeRouteEventBatch>::failure({
+        return hyperflux::sdk::Result<hyperflux::v8::NativeRouteEventBatch>::failure({
             hyperflux::sdk::ErrorCode::UnexpectedResponse,
             "watch is outside this contract",
             std::nullopt,
@@ -262,7 +271,7 @@ public:
 
 private:
     std::shared_ptr<Counters> counters_;
-    hyperflux::v7::NativeRoute route_;
+    hyperflux::v8::NativeRoute route_;
     Outcome outcome_;
     bool grant_;
 };

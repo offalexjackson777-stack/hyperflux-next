@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 use hfx_domain::{
-    ActivityState, BatteryPercent, ClientId, ClientName, ColorChannel, ConnectionMode,
-    ContactState, ControllerAvailability, DeviceKind, EventBatchLimit, EvidenceConfidence,
-    FreshnessState, GenerationId, InventoryAvailability, LeaseDurationMs, LedCount, ModelName,
-    MonotonicMs, NativeExchangeTimeoutMs, NativeProtocolFamily, NativeReportByteCount,
-    NativeReportHex, NativeRouteAccess, NativeRouteEventKind, NativeRouteState, NativeRouteToken,
-    PairingState, PowerState, PresenceState, ProductId, ProjectionRevision, ProtocolFeatureId,
-    ProtocolVersion, ReceiverLifecycleState, ResourceKind, RestoreDeliveryState, RestoreState,
-    ReturnEvidence, ReturnPhase, RouteKind, RouteState, SequenceNumber, SleepState,
-    StableLightingMode, StreamEpoch, SupportLevel, TelemetryAvailability, TransactionClass,
-    VendorId,
+    ActivityState, BatteryCharge, BatteryPercent, ClientId, ClientName, ColorChannel,
+    ConnectionMode, ContactState, ControllerAvailability, DeviceKind, EventBatchLimit,
+    EvidenceConfidence, FreshnessState, GenerationId, InventoryAvailability, LeaseDurationMs,
+    LedCount, ModelName, MonotonicMs, NativeExchangeTimeoutMs, NativeProtocolFamily,
+    NativeReportByteCount, NativeReportHex, NativeRouteAccess, NativeRouteEventKind,
+    NativeRouteState, NativeRouteToken, PairingState, PowerState, PresenceState, ProductId,
+    ProjectionRevision, ProtocolFeatureId, ProtocolVersion, ReceiverLifecycleState, ResourceKind,
+    RestoreDeliveryState, RestoreState, ReturnEvidence, ReturnPhase, RouteKind, RouteState,
+    SequenceNumber, SleepState, StreamEpoch, SupportLevel, TelemetryAvailability, VendorId,
 };
 use hfx_protocol::{
     BatteryObservation, BridgeSnapshot, ClientHello, ControllerActions, ControllerOwnership,
@@ -132,6 +131,7 @@ fn battery(availability: TelemetryAvailability, percentage: Option<u8>) -> Batte
         availability,
         percentage: percentage
             .map(|value| BatteryPercent::try_from(value).expect("battery percentage is valid")),
+        charge: None,
         freshness: FreshnessState::Fresh,
         confidence: EvidenceConfidence::Observed,
         observed_at_ms: Some(hfx_domain::MonotonicMs::try_from(10_u64).expect("time is valid")),
@@ -253,9 +253,9 @@ fn integration_view() -> IntegrationView {
 
 fn framed_transaction_value() -> Value {
     let transaction: Value = serde_json::from_str(include_str!(
-        "../../../protocol/v2/fixtures/transaction-request-canonical.json"
+        "../../../protocol/v5/fixtures/transaction-request-canonical.json"
     ))
-    .expect("frozen v2 fixture is JSON");
+    .expect("frozen v5 fixture is JSON");
     json!({
         "method": "submit-transaction",
         "request": {
@@ -276,11 +276,7 @@ fn negotiation_request(version: u16, feature: &str) -> RpcRequest {
             minimum_version: number(version),
             maximum_version: number(version),
             required_features: vec![text(feature)],
-            optional_features: if version == 1 {
-                vec![text("atomic-transactions")]
-            } else {
-                Vec::new()
-            },
+            optional_features: Vec::new(),
         },
     })
 }
@@ -371,18 +367,17 @@ fn assert_wire_golden(relative: &str, bytes: &[u8]) {
     assert_eq!(fs::read(&path).expect("golden fixture reads"), expected);
 }
 
+const SERVED_VERSIONS: [(u16, &str); 3] = [
+    (5, "integration-view-projection"),
+    (7, "native-receiver-tunnel"),
+    (8, "native-receiver-tunnel"),
+];
+
+const RETIRED_VERSIONS: [u16; 5] = [1, 2, 3, 4, 6];
+
 fn assert_version_wire_goldens() {
-    let features = [
-        "ownership-leases",
-        "profile-bound-transactions",
-        "semantic-stable-lighting",
-        "snapshot-profile-bindings",
-        "integration-view-projection",
-        "return-lifecycle-projection",
-        "native-receiver-tunnel",
-    ];
-    for version in 1_u16..=7 {
-        let request = negotiation_request(version, features[usize::from(version - 1)]);
+    for (version, feature) in SERVED_VERSIONS {
+        let request = negotiation_request(version, feature);
         assert_wire_golden(
             &format!("v{version}/negotiate-request.json"),
             &encode_rpc_request_for_version(&request, number(version))
@@ -396,31 +391,30 @@ fn assert_version_wire_goldens() {
     }
 }
 
-fn assert_transaction_wire_goldens() {
-    let v2 = decode_rpc_request_for_version(
-        &serde_json::to_vec(&framed_transaction_value()).expect("v2 request serializes"),
-        number(2),
-    )
-    .expect("v2 transaction normalizes");
-    assert_wire_golden(
-        "v2/static-transaction-request.json",
-        &encode_rpc_request_for_version(&v2, number(2)).expect("v2 transaction encodes"),
-    );
-
-    let mut off = v2;
-    let RpcRequest::SubmitTransaction(envelope) = &mut off else {
-        panic!("transaction request expected")
-    };
-    envelope.params.stable_intents[0].mode = StableLightingMode::Off;
-    envelope.params.frames[0].colors[0] = hfx_protocol::RgbColor {
-        red: ColorChannel::try_from(0_u8).expect("red is valid"),
-        green: ColorChannel::try_from(0_u8).expect("green is valid"),
-        blue: ColorChannel::try_from(0_u8).expect("blue is valid"),
-    };
-    assert_wire_golden(
-        "v3/off-transaction-request.json",
-        &encode_rpc_request_for_version(&off, number(3)).expect("v3 Off encodes"),
-    );
+fn assert_retired_versions_are_not_encoded_or_decoded() {
+    let request = negotiation_request(5, "integration-view-projection");
+    let request_bytes = serde_json::to_vec(&request).expect("request serializes");
+    let response = snapshot_response(false);
+    let response_bytes = serde_json::to_vec(&response).expect("response serializes");
+    for version in RETIRED_VERSIONS {
+        let version = number(version);
+        assert_eq!(
+            encode_rpc_request_for_version(&request, version),
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
+        );
+        assert_eq!(
+            decode_rpc_request_for_version(&request_bytes, version),
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
+        );
+        assert_eq!(
+            encode_rpc_response_for_version(&response, version),
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
+        );
+        assert_eq!(
+            decode_rpc_response_for_version(&response_bytes, version),
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
+        );
+    }
 }
 
 fn assert_integration_wire_goldens() {
@@ -493,28 +487,23 @@ fn assert_native_wire_goldens() {
 }
 
 #[test]
-fn retained_v1_through_v7_wire_surfaces_are_byte_golden() {
+fn served_v5_v7_and_v8_wire_surfaces_are_byte_golden() {
     assert_version_wire_goldens();
-    assert_transaction_wire_goldens();
     assert_integration_wire_goldens();
     assert_native_wire_goldens();
 }
 
 #[test]
+fn retired_protocol_versions_are_neither_encoded_nor_decoded() {
+    assert_retired_versions_are_not_encoded_or_decoded();
+}
+
+#[test]
 fn seeded_framing_and_version_adapter_mutations_fail_closed() {
-    let features = [
-        "ownership-leases",
-        "profile-bound-transactions",
-        "semantic-stable-lighting",
-        "snapshot-profile-bindings",
-        "integration-view-projection",
-        "return-lifecycle-projection",
-        "native-receiver-tunnel",
-    ];
     let mut state = 0x6a09_e667_f3bc_c909_u64;
-    for version in 1_u16..=7 {
+    for (version, feature) in SERVED_VERSIONS {
         let protocol_version = number(version);
-        let request = negotiation_request(version, features[usize::from(version - 1)]);
+        let request = negotiation_request(version, feature);
         let canonical = encode_rpc_request_for_version(&request, protocol_version)
             .expect("canonical version request encodes");
         for iteration in 0..256_u16 {
@@ -583,8 +572,8 @@ fn decoded_request_collections_are_checked_against_protocol_bounds() {
         params: ClientHello {
             client_id: text::<ClientId>("client-1"),
             client_name: text::<ClientName>("test-client"),
-            minimum_version: number::<ProtocolVersion>(1),
-            maximum_version: number::<ProtocolVersion>(1),
+            minimum_version: number::<ProtocolVersion>(5),
+            maximum_version: number::<ProtocolVersion>(5),
             required_features,
             optional_features: Vec::new(),
         },
@@ -636,10 +625,10 @@ fn v5_integration_view_round_trips_and_cannot_downgrade() {
         decode_rpc_request_for_version(&encoded, number(5)),
         Ok(request.clone())
     );
-    for version in 1_u16..=4 {
+    for version in [1_u16, 2, 3, 4] {
         assert_eq!(
             encode_rpc_request_for_version(&request, number(version)),
-            Err(ProtocolWireError::UnsupportedVersionMethod)
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
         );
     }
 
@@ -654,10 +643,10 @@ fn v5_integration_view_round_trips_and_cannot_downgrade() {
         decode_rpc_response_for_version(&encoded, number(5)),
         Ok(response.clone())
     );
-    for version in 1_u16..=4 {
+    for version in [1_u16, 2, 3, 4] {
         assert_eq!(
             encode_rpc_response_for_version(&response, number(version)),
-            Err(ProtocolWireError::UnsupportedVersionMethod)
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
         );
     }
 }
@@ -679,34 +668,6 @@ fn integration_view_rejects_cross_generation_controller_claims() {
 }
 
 #[test]
-fn v4_preserves_profile_bindings_and_v3_downgrades_them_explicitly() {
-    let response = RpcResponse::SnapshotSuccess(SuccessEnvelope {
-        request_id: text("request-profile-snapshot"),
-        server_instance_id: text("bridge-instance-1"),
-        result: snapshot(battery(TelemetryAvailability::Reported, Some(73))),
-    });
-    let v4 = hfx_protocol::encode_rpc_response_for_version(&response, number(4))
-        .expect("v4 snapshot encodes");
-    assert_eq!(
-        decode_rpc_response_for_version(&v4, number(4)).expect("v4 snapshot decodes"),
-        response
-    );
-
-    let v3 = hfx_protocol::encode_rpc_response_for_version(&response, number(3))
-        .expect("v3 snapshot explicitly omits v4-only bindings");
-    let RpcResponse::SnapshotSuccess(legacy) =
-        decode_rpc_response_for_version(&v3, number(3)).expect("v3 snapshot decodes")
-    else {
-        panic!("snapshot response expected")
-    };
-    let receiver = &legacy.result.receivers[0];
-    assert!(receiver.profile_id.is_none());
-    assert!(receiver.profile_digest.is_none());
-    assert!(receiver.devices[0].profile_id.is_some());
-    assert!(receiver.devices[0].profile_digest.is_none());
-}
-
-#[test]
 fn unknown_rpc_methods_never_reach_dispatch() {
     let encoded = br#"{"method":"raw-hid","request":{}}"#;
     assert_eq!(
@@ -721,136 +682,54 @@ fn color_channel_type_remains_eight_bit_at_the_wire_boundary() {
 }
 
 #[test]
-fn frozen_v2_static_requests_normalize_to_conservative_static_semantics() {
-    let value = framed_transaction_value();
-    let encoded = serde_json::to_vec(&value).expect("request serializes");
-    let decoded = decode_rpc_request_for_version(&encoded, number(2))
-        .expect("frozen v2 Static request is safely normalized");
-    let RpcRequest::SubmitTransaction(envelope) = decoded else {
-        panic!("fixture must remain a transaction")
-    };
-    assert_eq!(
-        envelope.params.transaction_class,
-        TransactionClass::StaticLighting
-    );
-    assert_eq!(envelope.params.stable_intents.len(), 1);
-    assert_eq!(
-        envelope.params.stable_intents[0].mode,
-        StableLightingMode::Static
-    );
-
-    let mut effect = value;
-    effect["request"]["params"]["transaction_class"] = json!("effect-frame");
-    let effect = serde_json::to_vec(&effect).expect("effect request serializes");
-    let RpcRequest::SubmitTransaction(effect) =
-        decode_rpc_request_for_version(&effect, number(2)).expect("v2 effect is normalized")
-    else {
-        panic!("fixture must remain a transaction")
-    };
-    assert!(effect.params.stable_intents.is_empty());
-}
-
-#[test]
-fn frozen_v1_profileless_writes_fail_before_backend_dispatch() {
-    let mut value = framed_transaction_value();
-    let params = value["request"]["params"]
-        .as_object_mut()
-        .expect("transaction params are an object");
-    params.remove("receiver_profile_id");
-    params.remove("receiver_profile_digest");
-    params.remove("device_profiles");
-    let encoded = serde_json::to_vec(&value).expect("legacy request serializes");
-    assert_eq!(
-        decode_rpc_request_for_version(&encoded, number(1)),
-        Err(ProtocolWireError::UnsupportedVersionMethod)
-    );
-
-    let snapshot = json!({
-        "method": "snapshot",
-        "request": {
-            "request_id": "request-snapshot",
-            "protocol_session_id": "protocol-session-1",
-            "negotiation_token": "negotiation-1",
-            "params": {}
-        }
-    });
-    let snapshot = serde_json::to_vec(&snapshot).expect("snapshot serializes");
-    assert!(matches!(
-        decode_rpc_request_for_version(&snapshot, number(1)),
-        Ok(RpcRequest::Snapshot(_))
-    ));
-}
-
-#[test]
 fn versioned_decoders_reject_changed_or_unknown_wire_shapes_instead_of_guessing() {
-    let v2 = serde_json::to_vec(&framed_transaction_value()).expect("request serializes");
+    let v5 = serde_json::to_vec(&framed_transaction_value()).expect("request serializes");
+    let decoded = decode_rpc_request_for_version(&v5, number(5)).expect("v5 request decodes");
     assert_eq!(
-        decode_rpc_request_for_version(&v2, number(3)),
-        Err(ProtocolWireError::MalformedJson)
+        decode_rpc_request_for_version(&v5, number(7)),
+        Ok(decoded.clone())
     );
+    assert_eq!(decode_rpc_request_for_version(&v5, number(8)), Ok(decoded));
+    for version in [1_u16, 2, 3, 4, 6, 9] {
+        assert_eq!(
+            decode_rpc_request_for_version(&v5, number(version)),
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
+        );
+    }
 
-    let normalized = decode_rpc_request_for_version(&v2, number(2)).expect("v2 request normalizes");
-    let v3 = serde_json::to_vec(&normalized).expect("normalized request serializes");
+    let native =
+        encode_rpc_request_for_version(&native_exchange_request(&"00".repeat(90)), number(7))
+            .expect("v7 native request encodes");
+    assert!(decode_rpc_request_for_version(&native, number(7)).is_ok());
     assert_eq!(
-        decode_rpc_request_for_version(&v3, number(2)),
+        decode_rpc_request_for_version(&native, number(5)),
         Err(ProtocolWireError::MalformedJson)
-    );
-    assert_eq!(
-        decode_rpc_request_for_version(&v3, number(4)),
-        Ok(normalized.clone())
-    );
-    assert_eq!(
-        decode_rpc_request_for_version(&v3, number(5)),
-        Ok(normalized.clone())
-    );
-    assert_eq!(
-        decode_rpc_request_for_version(&v3, number(6)),
-        Ok(normalized.clone())
-    );
-    assert_eq!(
-        decode_rpc_request_for_version(&v3, number(7)),
-        Ok(normalized)
-    );
-    assert_eq!(
-        decode_rpc_request_for_version(&v3, number(8)),
-        Err(ProtocolWireError::UnsupportedProtocolVersion)
     );
 }
 
 #[test]
 fn outbound_requests_downgrade_only_when_semantics_are_exactly_representable() {
-    let v2 = serde_json::to_vec(&framed_transaction_value()).expect("request serializes");
-    let mut current =
-        decode_rpc_request_for_version(&v2, number(2)).expect("v2 request normalizes");
+    let v5 = serde_json::to_vec(&framed_transaction_value()).expect("request serializes");
+    let current = decode_rpc_request_for_version(&v5, number(5)).expect("v5 request decodes");
+    for version in [5_u16, 7, 8] {
+        let encoded = encode_rpc_request_for_version(&current, number(version))
+            .expect("transaction semantics are representable by every served version");
+        assert_eq!(
+            decode_rpc_request_for_version(&encoded, number(version)),
+            Ok(current.clone())
+        );
+    }
+    for version in RETIRED_VERSIONS {
+        assert_eq!(
+            encode_rpc_request_for_version(&current, number(version)),
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
+        );
+    }
 
-    let encoded_v2 = encode_rpc_request_for_version(&current, number(2))
-        .expect("Static semantics are representable by v2");
+    let native = native_exchange_request(&"00".repeat(90));
     assert_eq!(
-        decode_rpc_request_for_version(&encoded_v2, number(2)),
-        Ok(current.clone())
-    );
-    assert_eq!(
-        encode_rpc_request_for_version(&current, number(1)),
+        encode_rpc_request_for_version(&native, number(5)),
         Err(ProtocolWireError::UnsupportedVersionMethod)
-    );
-
-    let RpcRequest::SubmitTransaction(envelope) = &mut current else {
-        panic!("fixture must remain a transaction")
-    };
-    envelope.params.stable_intents[0].mode = StableLightingMode::Off;
-    envelope.params.frames[0].colors[0].red = ColorChannel::try_from(0_u8).expect("black red");
-    envelope.params.frames[0].colors[0].green = ColorChannel::try_from(0_u8).expect("black green");
-    envelope.params.frames[0].colors[0].blue = ColorChannel::try_from(0_u8).expect("black blue");
-    assert_eq!(
-        encode_rpc_request_for_version(&current, number(2)),
-        Err(ProtocolWireError::VersionTranslation)
-    );
-
-    let encoded_v3 =
-        encode_rpc_request_for_version(&current, number(3)).expect("v3 preserves explicit Off");
-    assert_eq!(
-        decode_rpc_request_for_version(&encoded_v3, number(3)),
-        Ok(current)
     );
 }
 
@@ -861,51 +740,27 @@ fn responses_are_checked_against_the_exact_negotiated_schema() {
         server_instance_id: text("bridge-instance-1"),
         result: snapshot(battery(TelemetryAvailability::Reported, Some(73))),
     });
-    for version in [1_u16, 2, 3] {
+    for version in [5_u16, 7, 8] {
         let version = number(version);
         validate_rpc_response_for_version(&response, version)
-            .expect("current response is representable by every retained response schema");
-        let encoded = encode_rpc_response_for_version(&response, version)
-            .expect("response encodes in the frozen schema");
-        let RpcResponse::SnapshotSuccess(legacy) =
-            decode_rpc_response_for_version(&encoded, version).expect("legacy response decodes")
-        else {
-            panic!("snapshot response expected")
-        };
-        assert!(legacy.result.receivers[0].profile_id.is_none());
-        assert!(legacy.result.receivers[0].profile_digest.is_none());
-        assert!(
-            legacy.result.receivers[0].devices[0]
-                .profile_digest
-                .is_none()
+            .expect("served versions preserve complete bindings");
+        let encoded =
+            encode_rpc_response_for_version(&response, version).expect("response encodes");
+        assert_eq!(
+            decode_rpc_response_for_version(&encoded, version),
+            Ok(response.clone())
         );
     }
-    let v4 = number(4);
-    validate_rpc_response_for_version(&response, v4).expect("v4 preserves complete bindings");
-    let encoded = encode_rpc_response_for_version(&response, v4).expect("v4 response encodes");
-    assert_eq!(
-        decode_rpc_response_for_version(&encoded, v4),
-        Ok(response.clone())
-    );
-    let v5 = number(5);
-    validate_rpc_response_for_version(&response, v5).expect("v5 preserves complete bindings");
-    let encoded = encode_rpc_response_for_version(&response, v5).expect("v5 response encodes");
-    assert_eq!(decode_rpc_response_for_version(&encoded, v5), Ok(response));
-    assert_eq!(
-        validate_rpc_response_for_version(
-            &RpcResponse::SnapshotSuccess(SuccessEnvelope {
-                request_id: text("request-unsupported-version"),
-                server_instance_id: text("bridge-instance-1"),
-                result: snapshot(battery(TelemetryAvailability::Reported, Some(73))),
-            }),
-            number(8)
-        ),
-        Err(ProtocolWireError::UnsupportedProtocolVersion)
-    );
+    for version in [1_u16, 2, 3, 4, 6, 9] {
+        assert_eq!(
+            validate_rpc_response_for_version(&response, number(version)),
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
+        );
+    }
 }
 
 #[test]
-fn v6_projects_return_epochs_while_v5_omits_them_safely() {
+fn v7_projects_return_epochs_while_v5_omits_them_safely() {
     let mut current = snapshot(battery(TelemetryAvailability::Reported, Some(73)));
     current.receivers[0].devices[0].endpoints[0].return_epoch = Some(return_epoch());
     let response = RpcResponse::SnapshotSuccess(SuccessEnvelope {
@@ -914,11 +769,11 @@ fn v6_projects_return_epochs_while_v5_omits_them_safely() {
         result: current,
     });
 
-    let v6 = number(6);
-    let encoded = encode_rpc_response_for_version(&response, v6)
-        .expect("v6 preserves the return lifecycle projection");
+    let v7 = number(7);
+    let encoded = encode_rpc_response_for_version(&response, v7)
+        .expect("v7 preserves the return lifecycle projection");
     assert_eq!(
-        decode_rpc_response_for_version(&encoded, v6),
+        decode_rpc_response_for_version(&encoded, v7),
         Ok(response.clone())
     );
 
@@ -934,6 +789,59 @@ fn v6_projects_return_epochs_while_v5_omits_them_safely() {
         legacy.result.receivers[0].devices[0].endpoints[0]
             .return_epoch
             .is_none()
+    );
+}
+
+#[test]
+fn v8_projects_battery_charge_while_older_versions_omit_it() {
+    let mut charging = battery(TelemetryAvailability::Reported, Some(73));
+    charging.charge = Some(BatteryCharge::Charging);
+    let snapshot_response = RpcResponse::SnapshotSuccess(SuccessEnvelope {
+        request_id: text("request-battery-charge"),
+        server_instance_id: text("bridge-instance-1"),
+        result: snapshot(charging.clone()),
+    });
+    let mut view = integration_view();
+    for receiver in &mut view.receivers {
+        for device in &mut receiver.inventory {
+            device.battery = charging.clone();
+        }
+        for controller in &mut receiver.controllers {
+            controller.battery = charging.clone();
+        }
+    }
+    let view_response = RpcResponse::IntegrationViewSuccess(SuccessEnvelope {
+        request_id: text("request-integration-view"),
+        server_instance_id: text("bridge-instance-1"),
+        result: view,
+    });
+
+    for response in [&snapshot_response, &view_response] {
+        let v8 = number(8);
+        let encoded =
+            encode_rpc_response_for_version(response, v8).expect("v8 preserves the battery charge");
+        assert_eq!(
+            decode_rpc_response_for_version(&encoded, v8),
+            Ok(response.clone())
+        );
+        for version in [5, 7] {
+            let version = number(version);
+            let encoded = encode_rpc_response_for_version(response, version)
+                .expect("older versions safely omit the optional charge");
+            assert!(!String::from_utf8_lossy(&encoded).contains("\"charge\""));
+            decode_rpc_response_for_version(&encoded, version)
+                .expect("older version response decodes");
+        }
+    }
+}
+
+#[test]
+fn snapshot_rejects_a_battery_charge_without_a_reported_value() {
+    let mut orphan = battery(TelemetryAvailability::Unavailable, None);
+    orphan.charge = Some(BatteryCharge::Discharging);
+    assert_eq!(
+        validate_bridge_snapshot(&snapshot(orphan)),
+        Err(SnapshotValidationError::BatteryValueContradiction)
     );
 }
 
@@ -971,10 +879,14 @@ fn v7_native_exchange_round_trips_and_cannot_downgrade() {
         decode_rpc_request_for_version(&encoded, number(7)),
         Ok(request.clone())
     );
-    for version in 1_u16..=6 {
+    assert_eq!(
+        encode_rpc_request_for_version(&request, number(5)),
+        Err(ProtocolWireError::UnsupportedVersionMethod)
+    );
+    for version in RETIRED_VERSIONS {
         assert_eq!(
             encode_rpc_request_for_version(&request, number(version)),
-            Err(ProtocolWireError::UnsupportedVersionMethod)
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
         );
     }
 
@@ -995,10 +907,14 @@ fn v7_native_exchange_round_trips_and_cannot_downgrade() {
         decode_rpc_response_for_version(&encoded, number(7)),
         Ok(response.clone())
     );
-    for version in 1_u16..=6 {
+    assert_eq!(
+        encode_rpc_response_for_version(&response, number(5)),
+        Err(ProtocolWireError::UnsupportedVersionMethod)
+    );
+    for version in RETIRED_VERSIONS {
         assert_eq!(
             encode_rpc_response_for_version(&response, number(version)),
-            Err(ProtocolWireError::UnsupportedVersionMethod)
+            Err(ProtocolWireError::UnsupportedProtocolVersion)
         );
     }
 }
@@ -1140,12 +1056,12 @@ fn legacy_versions_reject_native_leases_and_hide_native_snapshot_ownership() {
     });
     encode_rpc_request_for_version(&request, number(7)).expect("v7 native lease request is valid");
     assert_eq!(
-        encode_rpc_request_for_version(&request, number(6)),
+        encode_rpc_request_for_version(&request, number(5)),
         Err(ProtocolWireError::UnsupportedVersionMethod)
     );
     let wire = serde_json::to_vec(&request).expect("request serializes");
     assert_eq!(
-        decode_rpc_request_for_version(&wire, number(6)),
+        decode_rpc_request_for_version(&wire, number(5)),
         Err(ProtocolWireError::UnsupportedVersionMethod)
     );
 
@@ -1172,14 +1088,14 @@ fn legacy_versions_reject_native_leases_and_hide_native_snapshot_ownership() {
     };
     assert_eq!(v7.result.receivers[0].ownership.len(), 1);
 
-    let v6 = encode_rpc_response_for_version(&response, number(6))
-        .expect("v6 snapshot safely omits native ownership");
-    let RpcResponse::SnapshotSuccess(v6) =
-        decode_rpc_response_for_version(&v6, number(6)).expect("v6 snapshot decodes")
+    let v5 = encode_rpc_response_for_version(&response, number(5))
+        .expect("v5 snapshot safely omits native ownership");
+    let RpcResponse::SnapshotSuccess(v5) =
+        decode_rpc_response_for_version(&v5, number(5)).expect("v5 snapshot decodes")
     else {
         panic!("snapshot response expected")
     };
-    assert!(v6.result.receivers[0].ownership.is_empty());
+    assert!(v5.result.receivers[0].ownership.is_empty());
 }
 
 fn assert_distinct_messages<E: std::fmt::Display>(errors: &[E]) {
@@ -1310,4 +1226,233 @@ fn every_wire_negotiation_and_framing_error_names_a_distinct_failure() {
         FrameError::InvalidRequest(ProtocolWireError::MalformedJson),
         FrameError::InvalidResponse(ProtocolWireError::MalformedJson),
     ]);
+}
+
+fn session_request(method: &str, params: &Value) -> RpcRequest {
+    serde_json::from_value(json!({
+        "method": method,
+        "request": {
+            "request_id": format!("request-{method}"),
+            "protocol_session_id": "protocol-session-1",
+            "negotiation_token": "negotiation-1",
+            "params": params
+        }
+    }))
+    .expect("session request is valid")
+}
+
+fn success_response(kind: &str, result: &Value) -> RpcResponse {
+    serde_json::from_value(json!({
+        "type": kind,
+        "response": {
+            "request_id": format!("request-{kind}"),
+            "server_instance_id": "bridge-instance-1",
+            "result": result
+        }
+    }))
+    .expect("success response is valid")
+}
+
+fn lighting_resources() -> Value {
+    serde_json::to_value([ResourceKey {
+        receiver_id: text("receiver-1"),
+        generation_id: GenerationId::try_from(1_u64).expect("generation is valid"),
+        device_id: text("keyboard-1"),
+        kind: ResourceKind::Lighting,
+    }])
+    .expect("resources serialize")
+}
+
+fn every_request_method() -> Vec<RpcRequest> {
+    let resources = lighting_resources();
+    let subscription = json!({
+        "client_id": "client-1",
+        "subscription_id": null,
+        "expected_cursor": null,
+        "max_events": 16
+    });
+    let transaction: RpcRequest =
+        serde_json::from_value(framed_transaction_value()).expect("transaction is valid");
+    vec![
+        negotiation_request(8, "native-receiver-tunnel"),
+        session_request("snapshot", &json!({})),
+        session_request("integration-view", &json!({})),
+        session_request(
+            "acquire-lease",
+            &json!({
+                "request_id": "lease-request-1",
+                "client_id": "client-1",
+                "resources": resources,
+                "duration_ms": 5000
+            }),
+        ),
+        session_request(
+            "renew-lease",
+            &json!({
+                "request_id": "lease-request-2",
+                "client_id": "client-1",
+                "lease_id": "lease-1",
+                "duration_ms": 5000
+            }),
+        ),
+        session_request(
+            "release-lease",
+            &json!({
+                "request_id": "lease-request-3",
+                "client_id": "client-1",
+                "lease_id": "lease-1"
+            }),
+        ),
+        transaction,
+        session_request(
+            "transaction-outcome",
+            &json!({
+                "request_id": "lookup-1",
+                "client_id": "client-1",
+                "transaction_id": "transaction-1"
+            }),
+        ),
+        session_request("subscribe", &subscription),
+        session_request("diagnostics", &json!({})),
+        session_request("native-enumerate", &json!({})),
+        native_exchange_request(&"01".repeat(90)),
+        session_request("native-watch", &subscription),
+    ]
+}
+
+fn every_response_kind() -> Vec<RpcResponse> {
+    let grant = json!({
+        "outcome": "granted",
+        "detail": {
+            "lease_id": "lease-1",
+            "client_id": "client-1",
+            "resources": lighting_resources(),
+            "expires_at_ms": "5000",
+            "state": "granted"
+        }
+    });
+    let unavailable = json!({
+        "outcome": "unavailable",
+        "detail": {
+            "transaction_id": "transaction-1",
+            "error_kind": "outcome-evicted",
+            "finding_id": "HFX-PROTOCOL-001"
+        }
+    });
+    let integration = RpcResponse::IntegrationViewSuccess(SuccessEnvelope {
+        request_id: text("request-integration-view"),
+        server_instance_id: text("bridge-instance-1"),
+        result: integration_view(),
+    });
+    vec![
+        success_response(
+            "negotiate-success",
+            &json!({
+                "selected_version": 8,
+                "server_instance_id": "bridge-instance-1",
+                "protocol_session_id": "protocol-session-1",
+                "negotiation_token": "negotiation-1",
+                "bridge_version": "2.2.0",
+                "enabled_features": ["atomic-transactions"],
+                "event_buffer_capacity": 64
+            }),
+        ),
+        snapshot_response(true),
+        integration,
+        success_response("acquire-lease-success", &grant),
+        success_response("renew-lease-success", &grant),
+        success_response("release-lease-success", &grant),
+        success_response("submit-transaction-success", &unavailable),
+        success_response("transaction-outcome-success", &unavailable),
+        success_response(
+            "subscribe-success",
+            &json!({
+                "subscription_id": "subscription-1",
+                "next_cursor": serde_json::to_value(cursor()).expect("cursor serializes"),
+                "events": [],
+                "oldest_available": "0",
+                "latest_available": "0",
+                "dropped_events": "0",
+                "cursor_gap": false,
+                "has_more": false
+            }),
+        ),
+        success_response(
+            "diagnostics-success",
+            &json!({
+                "sequence": "0",
+                "findings": [],
+                "event_buffer_capacity": 64,
+                "transaction_queue_capacity": 16
+            }),
+        ),
+        native_inventory_response(),
+        native_exchange_response(),
+        native_watch_response(),
+        serde_json::from_value(json!({
+            "type": "error",
+            "response": {
+                "request_id": null,
+                "server_instance_id": "bridge-instance-1",
+                "error": {
+                    "request_id": null,
+                    "kind": "invalid-request",
+                    "message": "The request could not be parsed.",
+                    "finding_id": "HFX-PROTOCOL-001"
+                }
+            }
+        }))
+        .expect("error response is valid"),
+    ]
+}
+
+macro_rules! assert_frozen_envelope_accessors {
+    ($module:ident, $version:literal) => {{
+        let mut requests = 0;
+        for request in every_request_method() {
+            match encode_rpc_request_for_version(&request, number($version)) {
+                Ok(bytes) => {
+                    let frozen: hfx_protocol::$module::RpcRequest =
+                        serde_json::from_slice(&bytes).expect("frozen request decodes");
+                    assert_eq!(frozen.request_id(), request.request_id());
+                    assert_eq!(
+                        frozen.method_descriptor().name,
+                        request.method_descriptor().name
+                    );
+                    assert_eq!(frozen.session_credentials(), request.session_credentials());
+                    requests += 1;
+                }
+                Err(error) => assert_eq!(
+                    (error, $version < 7),
+                    (ProtocolWireError::UnsupportedVersionMethod, true)
+                ),
+            }
+        }
+        let mut responses = 0;
+        for response in every_response_kind() {
+            match encode_rpc_response_for_version(&response, number($version)) {
+                Ok(bytes) => {
+                    let frozen: hfx_protocol::$module::RpcResponse =
+                        serde_json::from_slice(&bytes).expect("frozen response decodes");
+                    assert_eq!(frozen.request_id(), response.request_id());
+                    assert_eq!(frozen.server_instance_id(), response.server_instance_id());
+                    responses += 1;
+                }
+                Err(error) => assert_eq!(
+                    (error, $version < 7),
+                    (ProtocolWireError::UnsupportedVersionMethod, true)
+                ),
+            }
+        }
+        (requests, responses)
+    }};
+}
+
+#[test]
+fn frozen_envelopes_expose_the_same_identity_as_the_current_contract() {
+    assert_eq!(every_request_method().len(), 13);
+    assert_eq!(every_response_kind().len(), 14);
+    assert_eq!(assert_frozen_envelope_accessors!(v8, 8), (13, 14));
+    assert_eq!(assert_frozen_envelope_accessors!(v7, 7), (13, 14));
+    assert_eq!(assert_frozen_envelope_accessors!(v5, 5), (10, 11));
 }

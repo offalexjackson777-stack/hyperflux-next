@@ -7,7 +7,9 @@
     "licenses": [
       "GPL-2.0-only",
       "GPL-2.0-or-later",
-      "GPL-3.0-only"
+      "GPL-3.0-only",
+      "ISC",
+      "MIT"
     ]
   },
   "targets": {

@@ -111,9 +111,9 @@ class DossierContracts(unittest.TestCase):
     def test_claims_follow_the_live_gates(self) -> None:
         claims = self._claims(self.bare)
         self.assertEqual("met", claims["four-output-graph"].status)
-        # The committed snapshot leaves extra-testing and extra-staging unobserved.
+        # The committed snapshot observes all three repositories but has no physical receipts.
         self.assertEqual("not-met", claims["openrazer-provider"].status)
-        self.assertIn("official extra-testing was not observed for this candidate", claims["openrazer-provider"].gaps)
+        self.assertTrue(any("no physical application receipt" in gap for gap in claims["openrazer-provider"].gaps))
         self.assertEqual("static-only", claims["lifecycle"].status)
         self.assertEqual("not-evidenced", claims["physical-evidence"].status)
         self.assertEqual("not-evidenced", claims["clean-chroot"].status)

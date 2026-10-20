@@ -286,11 +286,51 @@
       "include": []
     },
     {
+      "id": "core-rust-crates-license",
+      "distribution_component": "linux",
+      "kind": "file",
+      "source": "packaging/licenses/LICENSE-rust-crates",
+      "destination": "/usr/share/licenses/hyperflux-next-linux/LICENSE-rust-crates",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
       "id": "openrgb-license",
       "distribution_component": "full",
       "kind": "file",
       "source": "LICENSE",
       "destination": "/usr/share/licenses/hyperflux-next-full/LICENSE",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "lucide-license",
+      "distribution_component": "full",
+      "kind": "file",
+      "source": "integrations/openrgb/icons/LICENSE-lucide",
+      "destination": "/usr/share/licenses/hyperflux-next-full/LICENSE-lucide",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "full-rust-crates-license",
+      "distribution_component": "full",
+      "kind": "file",
+      "source": "packaging/licenses/LICENSE-rust-crates",
+      "destination": "/usr/share/licenses/hyperflux-next-full/LICENSE-rust-crates",
+      "mode": "0644",
+      "preserve": false,
+      "include": []
+    },
+    {
+      "id": "nlohmann-json-license",
+      "distribution_component": "full",
+      "kind": "file",
+      "source": "sdk/cpp/vendor/LICENSE.MIT",
+      "destination": "/usr/share/licenses/hyperflux-next-full/LICENSE-nlohmann-json",
       "mode": "0644",
       "preserve": false,
       "include": []

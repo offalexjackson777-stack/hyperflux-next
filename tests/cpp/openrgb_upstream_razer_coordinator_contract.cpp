@@ -18,6 +18,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -46,7 +47,7 @@ T number(std::uint64_t value)
     return *decoded;
 }
 
-hyperflux::v7::EventCursor cursor()
+hyperflux::v8::EventCursor cursor()
 {
     using namespace hyperflux;
     return {
@@ -57,7 +58,7 @@ hyperflux::v7::EventCursor cursor()
     };
 }
 
-hyperflux::v7::NativeRoute route(
+hyperflux::v8::NativeRoute route(
     hyperflux::DeviceKind kind,
     std::string_view device_id,
     std::string_view endpoint_id,
@@ -65,7 +66,7 @@ hyperflux::v7::NativeRoute route(
     char token_fill)
 {
     using namespace hyperflux;
-    const v7::ResourceKey resource {
+    const v8::ResourceKey resource {
         text<ReceiverId>("receiver-1"),
         number<GenerationId>(4),
         text<LogicalDeviceId>(device_id),
@@ -88,7 +89,7 @@ hyperflux::v7::NativeRoute route(
     };
 }
 
-std::vector<hyperflux::v7::NativeRoute> routes()
+std::vector<hyperflux::v8::NativeRoute> routes()
 {
     return {
         route(
@@ -106,31 +107,76 @@ std::vector<hyperflux::v7::NativeRoute> routes()
     };
 }
 
+hyperflux::v8::BridgeSnapshot status_snapshot()
+{
+    using namespace hyperflux;
+    v8::LogicalDeviceSnapshot keyboard {
+        text<LogicalDeviceId>("keyboard-0296"),
+        DeviceKind::Keyboard,
+        number<ProductId>(RAZER_DEATHSTALKER_V2_PRO_TKL_WIRELESS_PID),
+        std::nullopt,
+        std::nullopt,
+        PairingState::Paired,
+        PresenceState::Available,
+        SupportLevel::LightingQualified,
+        {},
+        {
+            TelemetryAvailability::Reported,
+            number<BatteryPercent>(64),
+            BatteryCharge::Discharging,
+            FreshnessState::Fresh,
+            EvidenceConfidence::Observed,
+            number<MonotonicMs>(1'000),
+        },
+        {},
+    };
+    return {
+        cursor(),
+        {{
+            text<ReceiverId>("receiver-1"),
+            number<GenerationId>(4),
+            std::nullopt,
+            std::nullopt,
+            ReceiverLifecycleState::Active,
+            {std::move(keyboard)},
+            {},
+            false,
+            RestoreState::Idle,
+        }},
+    };
+}
+
 class DiscoveryClient final : public hyperflux::sdk::NativeClientApi
 {
 public:
-    hyperflux::sdk::Result<hyperflux::v7::LeaseResult> acquire_lease(
-        std::vector<hyperflux::v7::ResourceKey>, hyperflux::LeaseDurationMs) override
+    hyperflux::sdk::Result<hyperflux::v8::LeaseResult> acquire_lease(
+        std::vector<hyperflux::v8::ResourceKey>, hyperflux::LeaseDurationMs) override
     {
-        return unsupported<hyperflux::v7::LeaseResult>();
+        return unsupported<hyperflux::v8::LeaseResult>();
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::LeaseResult> renew_lease(
+    hyperflux::sdk::Result<hyperflux::v8::LeaseResult> renew_lease(
         hyperflux::LeaseId, hyperflux::LeaseDurationMs) override
     {
-        return unsupported<hyperflux::v7::LeaseResult>();
+        return unsupported<hyperflux::v8::LeaseResult>();
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::LeaseResult> release_lease(
+    hyperflux::sdk::Result<hyperflux::v8::LeaseResult> release_lease(
         hyperflux::LeaseId) override
     {
-        return unsupported<hyperflux::v7::LeaseResult>();
+        return unsupported<hyperflux::v8::LeaseResult>();
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::NativeRouteInventory> native_enumerate() override
+    hyperflux::sdk::Result<hyperflux::v8::NativeRouteInventory> native_enumerate() override
     {
-        return hyperflux::sdk::Result<hyperflux::v7::NativeRouteInventory>::success(
+        return hyperflux::sdk::Result<hyperflux::v8::NativeRouteInventory>::success(
             {cursor(), routes()});
+    }
+
+    hyperflux::sdk::Result<hyperflux::v8::BridgeSnapshot> snapshot() override
+    {
+        return hyperflux::sdk::Result<hyperflux::v8::BridgeSnapshot>::success(
+            status_snapshot());
     }
 
     hyperflux::sdk::Result<hyperflux::sdk::NativeExchangeSubmission>
@@ -143,16 +189,16 @@ public:
         return unsupported<hyperflux::sdk::NativeExchangeSubmission>();
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::NativeExchangeOutcome> native_transact(
+    hyperflux::sdk::Result<hyperflux::v8::NativeExchangeOutcome> native_transact(
         const hyperflux::sdk::NativeExchangeSubmission&) override
     {
-        return unsupported<hyperflux::v7::NativeExchangeOutcome>();
+        return unsupported<hyperflux::v8::NativeExchangeOutcome>();
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::NativeRouteEventBatch> native_watch(
+    hyperflux::sdk::Result<hyperflux::v8::NativeRouteEventBatch> native_watch(
         hyperflux::sdk::NativeEventSubscription) override
     {
-        return hyperflux::sdk::Result<hyperflux::v7::NativeRouteEventBatch>::success({
+        return hyperflux::sdk::Result<hyperflux::v8::NativeRouteEventBatch>::success({
             text<hyperflux::SubscriptionId>("subscription-1"),
             cursor(),
             {},
@@ -353,6 +399,29 @@ int main()
        || initial.direct_suppressed_controllers != 0 || host.registered.size() != 2)
     {
         return 2;
+    }
+    // Battery and charging come from the bridge snapshot and join by route identity.
+    std::vector<UpstreamRazerControllerSummary> summaries;
+    for(std::size_t attempt = 0; attempt < 2'000; ++attempt)
+    {
+        summaries = coordinator.value()->controllers();
+        if(std::any_of(summaries.begin(), summaries.end(), [](const auto& controller)
+               { return controller.battery.has_value(); }))
+        {
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    for(const auto& controller : summaries)
+    {
+        const bool keyboard = controller.device_kind == DeviceKind::Keyboard;
+        if(keyboard != controller.battery.has_value()
+           || (keyboard
+               && (controller.battery->percentage != number<BatteryPercent>(64)
+                   || controller.battery->charge != BatteryCharge::Discharging)))
+        {
+            return 6;
+        }
     }
 
     TestController direct_mouse("Razer", "HID: /dev/hidraw-direct-mouse", "MOUSE-SERIAL-0001     ");

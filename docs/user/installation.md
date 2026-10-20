@@ -253,30 +253,30 @@ the repository later to get updates.
 
 <!-- HFX-GENERATED-BEGIN: package-fallback -->
 This downloads the four package files of Full from the release page,
-[v2.1.2](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.2),
+[v2.2.0](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.2.0),
 checks them against the release's checksum list, and installs them in one step.
 Full needs the other packages, and without the repository Pacman cannot fetch
 them by itself.
 
 ```bash
 curl --proto '=https' --tlsv1.2 --fail --location --remote-name-all -- \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.1.2/hyperflux-next-dkms-2.1.2-1-x86_64.pkg.tar.zst \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.1.2/hyperflux-next-linux-2.1.2-1-x86_64.pkg.tar.zst \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.1.2/hyperflux-next-openrazer-driver-dkms-2.1.2-1-x86_64.pkg.tar.zst \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.1.2/hyperflux-next-full-2.1.2-1-x86_64.pkg.tar.zst \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.1.2/SHA256SUMS
-awk '$2 == "hyperflux-next-dkms-2.1.2-1-x86_64.pkg.tar.zst" || \
-     $2 == "hyperflux-next-linux-2.1.2-1-x86_64.pkg.tar.zst" || \
-     $2 == "hyperflux-next-openrazer-driver-dkms-2.1.2-1-x86_64.pkg.tar.zst" || \
-     $2 == "hyperflux-next-full-2.1.2-1-x86_64.pkg.tar.zst"' \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.2.0/hyperflux-next-dkms-2.2.0-1-x86_64.pkg.tar.zst \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.2.0/hyperflux-next-linux-2.2.0-1-x86_64.pkg.tar.zst \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.2.0/hyperflux-next-openrazer-driver-dkms-2.2.0-1-x86_64.pkg.tar.zst \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.2.0/hyperflux-next-full-2.2.0-1-x86_64.pkg.tar.zst \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.2.0/SHA256SUMS
+awk '$2 == "hyperflux-next-dkms-2.2.0-1-x86_64.pkg.tar.zst" || \
+     $2 == "hyperflux-next-linux-2.2.0-1-x86_64.pkg.tar.zst" || \
+     $2 == "hyperflux-next-openrazer-driver-dkms-2.2.0-1-x86_64.pkg.tar.zst" || \
+     $2 == "hyperflux-next-full-2.2.0-1-x86_64.pkg.tar.zst"' \
   SHA256SUMS > SHA256SUMS-packages
 test "$(wc -l < SHA256SUMS-packages)" -eq 4
 sha256sum -c SHA256SUMS-packages
 sudo pacman -U -- \
-  ./hyperflux-next-dkms-2.1.2-1-x86_64.pkg.tar.zst \
-  ./hyperflux-next-linux-2.1.2-1-x86_64.pkg.tar.zst \
-  ./hyperflux-next-openrazer-driver-dkms-2.1.2-1-x86_64.pkg.tar.zst \
-  ./hyperflux-next-full-2.1.2-1-x86_64.pkg.tar.zst
+  ./hyperflux-next-dkms-2.2.0-1-x86_64.pkg.tar.zst \
+  ./hyperflux-next-linux-2.2.0-1-x86_64.pkg.tar.zst \
+  ./hyperflux-next-openrazer-driver-dkms-2.2.0-1-x86_64.pkg.tar.zst \
+  ./hyperflux-next-full-2.2.0-1-x86_64.pkg.tar.zst
 ```
 
 `sha256sum` should print `OK` for every file. If it prints `FAILED`, delete the
@@ -289,17 +289,17 @@ These commands download and install only the two Core package files.
 
 ```bash
 curl --proto '=https' --tlsv1.2 --fail --location --remote-name-all -- \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.1.2/hyperflux-next-dkms-2.1.2-1-x86_64.pkg.tar.zst \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.1.2/hyperflux-next-linux-2.1.2-1-x86_64.pkg.tar.zst \
-  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.1.2/SHA256SUMS
-awk '$2 == "hyperflux-next-dkms-2.1.2-1-x86_64.pkg.tar.zst" || \
-     $2 == "hyperflux-next-linux-2.1.2-1-x86_64.pkg.tar.zst"' \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.2.0/hyperflux-next-dkms-2.2.0-1-x86_64.pkg.tar.zst \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.2.0/hyperflux-next-linux-2.2.0-1-x86_64.pkg.tar.zst \
+  https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/v2.2.0/SHA256SUMS
+awk '$2 == "hyperflux-next-dkms-2.2.0-1-x86_64.pkg.tar.zst" || \
+     $2 == "hyperflux-next-linux-2.2.0-1-x86_64.pkg.tar.zst"' \
   SHA256SUMS > SHA256SUMS-packages
 test "$(wc -l < SHA256SUMS-packages)" -eq 2
 sha256sum -c SHA256SUMS-packages
 sudo pacman -U -- \
-  ./hyperflux-next-dkms-2.1.2-1-x86_64.pkg.tar.zst \
-  ./hyperflux-next-linux-2.1.2-1-x86_64.pkg.tar.zst
+  ./hyperflux-next-dkms-2.2.0-1-x86_64.pkg.tar.zst \
+  ./hyperflux-next-linux-2.2.0-1-x86_64.pkg.tar.zst
 ```
 
 </details>

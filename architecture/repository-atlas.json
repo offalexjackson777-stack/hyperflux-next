@@ -107,10 +107,10 @@
       "inputs": ["Domain types", "Architecture bounds", "SDK compatibility requirements"],
       "outputs": ["Rust, Python, and C++ protocol bindings", "Protocol documentation"],
       "public_contracts": ["Explicit version negotiation", "Bounded frame sizes", "Typed terminal outcomes"],
-      "canonical_files": ["protocol/registry.json", "protocol/v1/catalog.json", "protocol/v2/catalog.json", "protocol/v3/catalog.json", "protocol/v4/catalog.json", "protocol/v5/catalog.json"],
+      "canonical_files": ["protocol/registry.json", "protocol/v5/catalog.json", "protocol/v7/catalog.json", "protocol/v8/catalog.json"],
       "generated_files": ["protocol/README.md", "docs/generated/bridge-protocol.md", "crates/hfx-protocol/src/generated_versions.rs"],
       "verification": ["protocol-contracts", "cpp-sdk-contracts"],
-      "limitations": ["Wire compatibility alone does not admit a hardware route", "Versions 1 to 4 and 6 are deprecated in 2.1 and will be removed in 2.2; negotiate version 5 or 7, and version 7 carries everything version 6 added"],
+      "limitations": ["Wire compatibility alone does not admit a hardware route", "Versions 1 to 4 and 6 were retired in 2.2; negotiate version 5 or 7, and version 7 carries everything version 6 added"],
       "safe_change_workflow": ["Add a new version without rewriting history", "Regenerate all SDKs", "Run protocol, SDK, bridge, and package contracts"],
       "related_docs": ["docs/generated/bridge-protocol.md", "docs/architecture/sdk.md"],
       "depends_on": ["schemas"]

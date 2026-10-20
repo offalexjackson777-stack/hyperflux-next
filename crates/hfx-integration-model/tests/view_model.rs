@@ -89,6 +89,7 @@ fn battery(
         percentage: percentage.map(|value| {
             BatteryPercent::try_from(value).expect("test battery percentage is canonical")
         }),
+        charge: None,
         freshness,
         confidence: EvidenceConfidence::Observed,
         observed_at_ms: Some(time(9)),

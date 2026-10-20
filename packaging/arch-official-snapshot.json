@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/arch-official-snapshot.schema.json",
   "schema": "hyperflux-arch-official-snapshot-v1",
-  "candidate": "2.1.2-1",
+  "candidate": "2.2.0-1",
   "rule": "Refresh at every candidate from the official extra, extra-testing and extra-staging sync databases; an unobserved repository fails the gate.",
   "watched_packages": [
     "openrazer-daemon",
@@ -14,8 +14,8 @@
     {
       "name": "extra",
       "state": "observed",
-      "database_sha256": "5fcd2cb7a0741d909d79702f54ae2b560f196f80cb15cc08d24f1c4e891b37f1",
-      "database_modified": "2026-10-18T07:52:12Z",
+      "database_sha256": "09b4447351a2b922f089645820255f72656d5a0dc187b7f34b96af0198ee6754",
+      "database_modified": "2026-10-19T08:41:56Z",
       "packages": [
         {
           "base": "openrazer",
@@ -87,11 +87,17 @@
     },
     {
       "name": "extra-testing",
-      "state": "unobserved"
+      "state": "observed",
+      "database_sha256": "3593160fae4ec49f2a0b0dd38029abba9485d1b2a091d56d8991a913ac2dce8e",
+      "database_modified": "2026-10-19T08:41:57Z",
+      "packages": []
     },
     {
       "name": "extra-staging",
-      "state": "unobserved"
+      "state": "observed",
+      "database_sha256": "f8c83c68aefa6a78fe895201f7465478104235371a06218957956194114e38db",
+      "database_modified": "2026-10-19T08:41:57Z",
+      "packages": []
     }
   ],
   "app_behavior_receipts": []

@@ -31,7 +31,7 @@
         "remote_state": {"const": "public-released"},
         "visibility": {"const": "public"},
         "description": {"type": "string", "minLength": 1, "maxLength": 350},
-        "homepage": {"const": ""},
+        "homepage": {"const": "https://offalexjackson777-stack.github.io/hyperflux-next/"},
         "social_preview_asset": {"type": "string", "pattern": "^[^/].*\\.png$"},
         "topics": {
           "type": "array",

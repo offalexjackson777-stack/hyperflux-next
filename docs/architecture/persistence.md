@@ -1,7 +1,8 @@
 # Bridge Persistence
 
-> **Migration fallback:** this document describes the retained protocol-v6
-> semantic stable-lighting path. Protocol-v7 native routes do not use bridge
+> **Migration fallback:** this document describes the retained semantic
+> stable-lighting path, served through protocol v5 and kept in protocol v7 and v8.
+> Native routes (protocol v7 and v8) do not use bridge
 > lighting persistence. OpenRazer and OpenRGB own device settings, effects,
 > profiles, and restart behavior exactly as they do for direct devices. The
 > fallback remains available only for rollback until its explicit retirement

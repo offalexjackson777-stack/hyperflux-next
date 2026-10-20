@@ -58,7 +58,7 @@ T number(std::uint64_t value)
     return *decoded;
 }
 
-hyperflux::v7::EventCursor cursor(std::uint64_t sequence)
+hyperflux::v8::EventCursor cursor(std::uint64_t sequence)
 {
     using namespace hyperflux;
     return {
@@ -69,7 +69,7 @@ hyperflux::v7::EventCursor cursor(std::uint64_t sequence)
     };
 }
 
-hyperflux::v7::NativeRoute route(
+hyperflux::v8::NativeRoute route(
     hyperflux::DeviceKind kind,
     std::string_view device_id,
     std::string_view endpoint_id,
@@ -78,7 +78,7 @@ hyperflux::v7::NativeRoute route(
     std::uint64_t generation)
 {
     using namespace hyperflux;
-    const v7::ResourceKey resource {
+    const v8::ResourceKey resource {
         text<ReceiverId>("receiver-1"),
         number<GenerationId>(generation),
         text<LogicalDeviceId>(device_id),
@@ -101,7 +101,7 @@ hyperflux::v7::NativeRoute route(
     };
 }
 
-std::vector<hyperflux::v7::NativeRoute> routes(std::uint64_t generation)
+std::vector<hyperflux::v8::NativeRoute> routes(std::uint64_t generation)
 {
     return {
         route(
@@ -135,29 +135,34 @@ public:
     {
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::LeaseResult> acquire_lease(
-        std::vector<hyperflux::v7::ResourceKey>, hyperflux::LeaseDurationMs) override
+    hyperflux::sdk::Result<hyperflux::v8::LeaseResult> acquire_lease(
+        std::vector<hyperflux::v8::ResourceKey>, hyperflux::LeaseDurationMs) override
     {
-        return unsupported<hyperflux::v7::LeaseResult>();
+        return unsupported<hyperflux::v8::LeaseResult>();
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::LeaseResult> renew_lease(
+    hyperflux::sdk::Result<hyperflux::v8::LeaseResult> renew_lease(
         hyperflux::LeaseId, hyperflux::LeaseDurationMs) override
     {
-        return unsupported<hyperflux::v7::LeaseResult>();
+        return unsupported<hyperflux::v8::LeaseResult>();
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::LeaseResult> release_lease(
+    hyperflux::sdk::Result<hyperflux::v8::LeaseResult> release_lease(
         hyperflux::LeaseId) override
     {
-        return unsupported<hyperflux::v7::LeaseResult>();
+        return unsupported<hyperflux::v8::LeaseResult>();
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::NativeRouteInventory> native_enumerate() override
+    hyperflux::sdk::Result<hyperflux::v8::NativeRouteInventory> native_enumerate() override
     {
         const auto sequence = state_->enumerate_calls.fetch_add(1) + 1;
-        return hyperflux::sdk::Result<hyperflux::v7::NativeRouteInventory>::success(
+        return hyperflux::sdk::Result<hyperflux::v8::NativeRouteInventory>::success(
             {cursor(sequence), routes(state_->generation.load())});
+    }
+
+    hyperflux::sdk::Result<hyperflux::v8::BridgeSnapshot> snapshot() override
+    {
+        return unsupported<hyperflux::v8::BridgeSnapshot>();
     }
 
     hyperflux::sdk::Result<hyperflux::sdk::NativeExchangeSubmission>
@@ -170,17 +175,17 @@ public:
         return unsupported<hyperflux::sdk::NativeExchangeSubmission>();
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::NativeExchangeOutcome> native_transact(
+    hyperflux::sdk::Result<hyperflux::v8::NativeExchangeOutcome> native_transact(
         const hyperflux::sdk::NativeExchangeSubmission&) override
     {
-        return unsupported<hyperflux::v7::NativeExchangeOutcome>();
+        return unsupported<hyperflux::v8::NativeExchangeOutcome>();
     }
 
-    hyperflux::sdk::Result<hyperflux::v7::NativeRouteEventBatch> native_watch(
+    hyperflux::sdk::Result<hyperflux::v8::NativeRouteEventBatch> native_watch(
         hyperflux::sdk::NativeEventSubscription subscription) override
     {
         const auto current = state_->enumerate_calls.load();
-        return hyperflux::sdk::Result<hyperflux::v7::NativeRouteEventBatch>::success({
+        return hyperflux::sdk::Result<hyperflux::v8::NativeRouteEventBatch>::success({
             subscription.subscription_id.value_or(text<hyperflux::SubscriptionId>("routes-1")),
             cursor(current),
             {},
