@@ -267,6 +267,11 @@ class RpmPlanTests(unittest.TestCase):
             "%attr(0644,root,root) %config(noreplace) /etc/hyperflux-next/bridge.json\n", text
         )
         self.assertIn("%license /usr/share/licenses/hyperflux-next-linux/LICENSE\n", text)
+        # Full on Fedora has no OpenRGB plugin, so nothing declares the icons' ISC.
+        without_plugin = "GPL-2.0-only AND GPL-2.0-or-later AND GPL-3.0-only AND MIT"
+        self.assertEqual(plans[-1].license, without_plugin)
+        self.assertIn(f"\nLicense: {without_plugin}\nURL: ", text)
+        self.assertNotIn("ISC", text)
         self.assertIn("%dir %attr(2751,root,root) /etc/hyperflux-next\n", text)
         # Shell parameter expansion survives rpmbuild's macro pass.
         self.assertIn("kernel=${build%%/build}", text)

@@ -184,10 +184,12 @@ def _component_directory_modes(
 
 
 # A Full package without the OpenRGB plugin leaves out the plugin build and
-# installs the descriptor that names the OpenRazer route alone. A release that
-# builds the plugin against its own Qt stages that module in place of the
-# shared one.
+# the notices of the code only the plugin bundles (the Lucide icons and
+# nlohmann/json), and installs the descriptor that names the OpenRazer route
+# alone. A release that builds the plugin against its own Qt stages that
+# module in place of the shared one.
 OPENRGB_PLUGIN_BUILD = "openrgb-native"
+OPENRGB_PLUGIN_NOTICES = ("lucide-license", "nlohmann-json-license")
 FULL_COMPONENT_DESCRIPTOR = "full-component-descriptor"
 FULL_COMPONENT_ROUTE_ONLY_SOURCE = "packaging/generated/full-component-route-only.json"
 
@@ -215,6 +217,8 @@ def stage_rootfs(
     stage_root = _new_output_directory(stage_root, "package staging")
 
     for file in install.files_for(distribution_component):
+        if not openrgb_plugin and file.component in OPENRGB_PLUGIN_NOTICES:
+            continue
         source = file.source
         if not openrgb_plugin and file.component == FULL_COMPONENT_DESCRIPTOR:
             source = root / FULL_COMPONENT_ROUTE_ONLY_SOURCE
